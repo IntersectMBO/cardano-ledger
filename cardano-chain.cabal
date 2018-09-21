@@ -1,0 +1,20 @@
+name:                cardano-chain
+version:             0.1.0.0
+synopsis:            The blockchain layer of Cardano
+description:         The blockchain layer of Cardano
+license:             MIT
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  -- exposed-modules:
+  -- other-modules:
+  build-depends:       base >=4.11 && <4.12
+  default-language:    Haskell2010
