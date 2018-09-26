@@ -7,7 +7,6 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 -}
 
 {-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module UTxO
   (
@@ -25,10 +24,10 @@ module UTxO
   , txins
   , txouts
   , balance
-  , (<|)
-  , (!<|)
+  , (◃)
+  , (⋪)
   , verify
-  , union
+  , (∪)
   , makeWitness
   -- * Signing and Verifying
   , Owner(..)
@@ -49,6 +48,7 @@ import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
+import           Numeric.Natural       (Natural)
 
 -- |A hash
 type Hash = Digest SHA256
@@ -57,8 +57,8 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
--- |The amount of value held by a UTxO output.
-newtype Coin = Coin Int deriving (Show, Eq, Ord)
+-- |The amount of value held by a transaction output.
+newtype Coin = Coin Natural deriving (Show, Eq, Ord)
 
 instance Semigroup Coin where
   (Coin a) <> (Coin b) = Coin (a + b)
@@ -67,13 +67,13 @@ instance Monoid Coin where
   mempty = Coin 0
   mappend = (<>)
 
--- |The address of a UTxO output, used to identify the owner.
+-- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr Hash deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn = TxIn TxId Int deriving (Show, Eq, Ord)
+data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
 data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
@@ -94,7 +94,7 @@ txid = TxId . hash
 txins :: Tx -> Set TxIn
 txins = inputs
 
--- |Compute the UTxO outputs of a transaction.
+-- |Compute the transaction outputs of a transaction.
 txouts :: Tx -> UTxO
 txouts tx = UTxO $
   Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0..]]
@@ -102,7 +102,7 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Int deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
 -- |Signing Key.
 newtype SKey = SKey Owner deriving (Show, Eq, Ord)
@@ -149,35 +149,26 @@ verify :: Eq a => VKey -> a -> Sig a -> Bool
 verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 -- |Domain restriction
---
---     * __TODO__ - better symbol?
-(<|) :: Set TxIn -> UTxO -> UTxO
-ins <| (UTxO utxo) =
+(◃) :: Set TxIn -> UTxO -> UTxO
+ins ◃ (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
---
---     * __TODO__ - better symbol?
-(!<|) :: Set TxIn -> UTxO -> UTxO
-ins !<| (UTxO utxo) =
+(⋪) :: Set TxIn -> UTxO -> UTxO
+ins ⋪ (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
 --
 --     * TODO - Should we return 'Maybe UTxO' so that we can return
 -- Nothing when the collections are not disjoint?
-union :: UTxO -> UTxO -> UTxO
-union (UTxO a) (UTxO b) = UTxO $ Map.union a b
+(∪) :: UTxO -> UTxO -> UTxO
+(UTxO a) ∪ (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO -> Coin
 balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
-
--- TODO is there a better way to get arbitrary hashing?
-instance BA.ByteArrayAccess String where
-  length        = BA.length . BS.pack
-  withByteArray = BA.withByteArray . BS.pack
 
 instance BA.ByteArrayAccess VKey where
   length        = BA.length . BS.pack . show

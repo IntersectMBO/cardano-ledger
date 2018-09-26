@@ -14,6 +14,12 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
   dependencies:
   - bytestring
   - containers
@@ -29,7 +35,10 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -Wall
-    - -Werror
+    - -Wcompat
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wredundant-constraints
     dependencies:
     - utxo
     - hspec

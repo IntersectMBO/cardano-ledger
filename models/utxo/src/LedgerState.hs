@@ -29,7 +29,7 @@ import           UTxO
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
 data ValidationError =
-                     -- | The UTxO inputs in the transaction are not valid.
+                     -- | The transaction inputs are not valid.
                        BadInputs
                      -- | The transaction results in an increased total balance of the ledger.
                      | IncreasedTotalBalance
@@ -59,10 +59,10 @@ newtype LedgerState =
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash "genesis ID"
+genesisId = TxId $ hash (Tx Set.empty [])
 
 -- |Creates the ledger state for an empty ledger which
--- contains the specified UTxO outputs.
+-- contains the specified transaction outputs.
 genesisState :: [TxOut] -> LedgerState
 genesisState outs = LedgerState
   (UTxO (Map.fromList
@@ -81,11 +81,11 @@ validInputs (TxWits tx _) l =
 -- in an acceptable way by a transaction.
 preserveBalance :: TxWits -> LedgerState -> Validity
 preserveBalance (TxWits tx _) l =
-  if balance (txouts tx) <= balance (txins tx <| getUtxo l)
+  if balance (txouts tx) <= balance (txins tx ◃ getUtxo l)
     then Valid
     else Invalid [IncreasedTotalBalance]
 
--- |Determine if a UTxO input is authorized by a given key.
+-- |Determine if a transaction input is authorized by a given key.
 authTxin :: VKey -> TxIn -> UTxO -> Bool
 authTxin key txin (UTxO utxo) =
   case Map.lookup txin utxo of
@@ -116,7 +116,7 @@ valid tx l =
 
 -- |Apply a raw transaction body as a state transition function on the ledger state.
 applyTx :: LedgerState -> Tx -> LedgerState
-applyTx ls tx = LedgerState $ txins tx !<| getUtxo ls `union` txouts tx
+applyTx ls tx = LedgerState $ txins tx ⋪ getUtxo ls ∪ txouts tx
 
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.
@@ -126,4 +126,3 @@ asStateTransition ls tx =
   case valid tx ls of
     Invalid errors -> Left errors
     Valid          -> Right $ applyTx ls (body tx)
-
