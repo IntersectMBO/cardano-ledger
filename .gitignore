@@ -19,3 +19,7 @@
 **/latex/*-blx.aux
 **/latex/*-blx.bib
 **/latex/*.run.xml
+/specs/ledger/hs/.ghc.environment.x86_64-linux-8.4.3
+/specs/ledger/hs/.ghc.environment.x86_64-linux-8.6.0.20180810
+**/*~
+**/dist-newstyle

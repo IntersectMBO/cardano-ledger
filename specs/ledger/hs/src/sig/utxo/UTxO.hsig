@@ -1,0 +1,35 @@
+{- |
+Module : Ledger
+Description : General Ledger
+
+This module defines the types and functions for a simple UTxO Ledger
+as specified in /A Simplified Formal Specification of a UTxO Ledger/.
+-}
+
+signature UTxO where
+
+---------------------------------------------------------------------------------
+-- Core UTxO primitives
+---------------------------------------------------------------------------------
+
+-- | An encoded hash of part of the system.
+data Hash
+
+instance Eq Hash
+instance Ord Hash
+instance Show Hash
+
+-- | A unit of value held by a UTxO.
+data Coin
+
+instance Eq Coin
+instance Show Coin
+instance Semigroup Coin
+instance Monoid Coin
+
+-- | Address of a UTxO, used to identify the owner.
+data Addr
+
+instance Eq Addr
+instance Ord Addr
+instance Show Addr
