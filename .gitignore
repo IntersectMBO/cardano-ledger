@@ -11,6 +11,9 @@
 **/latex/*.cb
 **/latex/*.cb2
 **/latex/*.lb
+**/latex/*.pdf
+**/latex/*.fdb_latexmk
+**/latex/auto
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
 **/latex/*.bbl

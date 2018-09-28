@@ -1,0 +1,370 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\hypersetup{
+  pdftitle={A Simplified Formal Specification of a UTxO Ledger},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+%% TODO: we should package this
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+%%
+%% Types
+%%
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Value}{\type{Value}}
+% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+\newcommand{\Hash}{\type{Hash}}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
+\newcommand{\values}[1]{\fun{values}\ #1}
+\newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
+% Adding witnesses...
+\newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
+\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
+\newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
+\newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}\ #1}
+
+\begin{document}
+
+\title{A Simplified Formal Specification of a UTxO Ledger}
+
+\author{}
+
+\date{September 24, 2018}
+
+\maketitle
+
+\begin{abstract}
+This documents defines the rules for extending a ledger with transactions. It
+is intended to serve as the specification for random generators of transactions
+which adhere to the rules presented here.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\section{Introduction}
+\label{sec:introduction}
+
+This specification models the \textit{conditions} required for the extension of
+a ledger, which is modeled here as a list of transactions. The following
+aspects are part of such conditions:
+
+\begin{description}
+\item[Preservation of value] relationship between the total value of input and outputs
+  in a new transaction, and the unspent outputs.
+\item[Witnesses] cryptographic entities needed to validate the spending
+  of a transaction input.
+\item[Delegation] heavyweight delegation certificates.  
+\end{description}
+
+Aspects that will not be modeled since they are not part of the legacy-free
+implementation:
+\begin{description}
+\item[Stake] outputs do not have a transfer of stake associated to them.
+\item[Update validation] voting mechanism which captures the identification of
+  the voters, and the participants that can post update proposals.
+\end{description}
+\section{Preliminaries}\label{sec:preliminaries}
+
+\begin{description}
+\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
+  the subsets of $X$.
+\item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
+  sequences having elements taken from $\type{X}$. The empty sequence is
+  denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
+  the sequence that results from appending $\type{x} \in \type{X}$ to
+  $\Lambda$.
+\end{description}
+
+\section{Basic definitions}
+\label{sec:basic-definitions}
+
+\section{Auxiliary definitions}
+\label{sec:auxil-defin}
+
+\section{State transitions for UTxO}
+\label{sec:state-trans-utxo-1}
+
+The states of the UTxO transition system, along with their associated functions
+and types are defined in Figure~\ref{fig:state-trans-utxo-defs}. In particular,
+we leave the definition of $\UTxO$ and $\Value$ abstract, and place constraints
+on the choice of these types.
+
+Regarding $\UTxO$, we require that $(\UTxO, \cup, \emptyset)$ is a commutative
+\textit{monoid} where $\cup$ is the addition operation and $\emptyset$ the
+neutral element, with a relation $\subseteq$ and a binary operator $\setminus$
+(called \textit{monus}) where:
+
+\begin{itemize}
+\item $\var{u} \subseteq \var{v}$ iff there exists another element $\var{w}$
+  such that $\var{u} \cup \var{w} = \var{v}$.
+\item $\var{u} \setminus \var{v}$ is the \textbf{unique} smallest element
+  $\var{w}$ such that $\var{u} \subseteq \var{v} + \var{w}$.
+\end{itemize}
+
+Note that the notation chosen suggests that $\UTxO$ is a set, however this does not
+necessarily have to be the case.
+
+As for $\Value$ the only requirement in these rules is that it forms a
+\textit{monoid} w.r.t. a binary operation $+$, and a neutral element $0$. Given
+a sequence of elements $\var{vs} = v_0, \ldots, v_{n-1}$, such that $v_i \in \Value$, we
+write $\sum_{v \in \var{vs}} v$ for the sum of all elements in $\var{vs}$ using
+the $+$ operation.
+
+\begin{figure*}[h]
+  \emph{UTxO States}
+  %
+  \begin{equation*}
+    \var{u} \in \UTxO
+  \end{equation*}
+  %
+  \emph{UTxO Transitions}
+  \begin{equation*}
+    \var{u} \trans{utxo}{tx} \var{u'}
+    \in \UTxO \times \Tx \times \UTxO
+  \end{equation*}
+  %
+  \emph{Abstract Types}
+  \begin{align*}
+    & \type{UTxO} & \text{unspent transaction outputs}
+    \nextdef
+    & \type{Tx} & \text{transactions}
+  \end{align*}
+  \emph{Abstract Functions}
+  \begin{align*}
+    & \txins{} \in \Tx \mapsto \UTxO & \text{transaction inputs (to be spent)}
+    \nextdef
+    & \txouts{} \in \Tx \mapsto \UTxO & \text{transaction outputs}
+    \nextdef
+    & \values{} \in \UTxO \mapsto \seqof{\Value} & \text{values in an UTxO}
+  \end{align*}
+  \emph{Constraints}
+  \begin{align*}
+    & (\Value, +) & \text{monoid}\\
+    & (\UTxO, \cup, \emptyset, \cap, \subseteq) & \text{commutative monoid with monus}
+  \end{align*}
+  \caption{Definitions associated to the UTxO transition system}
+  \label{fig:state-trans-utxo-defs}
+\end{figure*}
+
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:state-trans-utxo}. We make use of function $\balance$, which is
+defined below:
+
+\begin{align*}
+  & \balance{} \in \UTxO \mapsto \Value\\
+  & \balance{u} = \sum_{v \in \values{u}} v
+\end{align*}
+
+\begin{figure}[h]
+
+  \centering
+  \begin{equation}\label{eq:utxo-base}
+    \inference[UTxO-base]
+    {}
+    {\var{u}}
+  \end{equation}
+
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \mathit{u}
+      & \balance{(\txouts{tx})} = \balance{(\txins{tx})}
+    }
+    {u \trans{utxo}{tx} (u \setminus \txins{tx}) \cup \txouts{tx}}
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:state-trans-utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-base} simply states that we can start with any arbitrary
+value for unspent outputs ($\UTxO$).
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output changes
+with a transaction:
+\begin{itemize}
+\item The set spent inputs in the transaction, must be in the set of unspent
+  outputs.
+\item The balance of the unspent outputs in a transaction (i.e. the total
+  amount paid in a transaction) must be equal than the spent inputs. If fees
+  and forged value are present in the model, then we assume fees to be part of
+  the outputs, and forged value to be part of the inputs.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
+
+\subsection{Properties}
+\label{sec:utxo-properties}
+
+\todo{Can we prove properties of the transition system of this section? For
+instance I'd like to formalize ``double spending'' and prove that these rules
+prevent it. Do we want it?}
+
+\section{Witnesses}
+\label{sec:witnesses}
+
+\begin{figure}[h]
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    & \TxIn & \text{transaction input}\\
+    & \TxOut & \text{transaction output}\\
+    & \VKey & \text{verification key}\\
+    & \Sig  & \text{signature}\\
+    & \Data  & \text{data}\\
+    & \Hash  & \text{hash}\\
+  \end{align*}
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    & \witnesses{} \in \Tx \mapsto \powerset{(\VKey \times \Sig)}
+    & \text{witnesses of a transaction}\\
+    %
+    & \inout{\_}{\_}{\_} \in \TxIn \times \UTxO \times \TxOut
+    & \text{input maps to output in utxo}\\
+    %
+    & \inputs{} \in \Tx \mapsto \TxIn
+    & \text{transaction inputs}\\
+    %
+    & \verify{}{}{} \in \VKey \times \Data \times \Sig
+    & \text{verification relation}\\
+    %
+    & \addr{} \in \TxOut \mapsto \Hash
+    & \text{output address} \\
+    %
+    & \hash{} \in \VKey \mapsto \Hash
+    & \text{hash function}
+  \end{align*}
+  \caption{Definitions associated to the UTxO transition system with witnesses}
+  \label{fig:state-trans-utxo-witnesses-defs}
+\end{figure}
+
+The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
+Note that the transition $u \trans{}{tx} u'$ is any arbitrary transition on
+$\UTxO \times \Tx \times \UTxO$, which means that we're defining a family of
+operational rules. This is what allow us to compose operational rules as
+needed.
+
+\begin{figure}[h]
+  \begin{equation}
+    \label{eq:utxo-witness-inductive}
+    \inference[UTxO-wit-inductive]
+    {wits = \witnesses{tx} \wedge \inout{i}{u}{o}
+      & u \trans{}{tx} u'\\
+      & \forall i \in \inputs{tx} ~ ~ \exists (\var{vk}, \sigma) \in wits ~ . ~
+      \verify{vk}{\serialised{tx}}{\sigma}  \wedge \addr{o} = \hash{vk}
+    }
+    {u \trans{utxow}{tx} u'}
+  \end{equation}
+  \caption{UTxO with witnesses inference rules}
+  \label{fig:rules-utxo-witnesses}
+\end{figure}
+
+\section{State transitions for ledgers}
+\label{sec:state-trans-ledg}
+
+To define the state transition system for ledgers we need the definitions
+shown in Figure~\ref{fig:ledger-rules-defs}.
+
+\begin{figure}[h]
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    & \utxo{} \in \seqof{Tx} \mapsto \UTxO
+      & \text{unspent transactions outputs of a ledger}
+  \end{align*}
+  \caption{Definitions used in ledger rules}
+  \label{fig:ledger-rules-defs}
+\end{figure}
+
+Note that the rules presented in Figure~\ref{fig:ledger-rules} do no specify
+anything about the UTxO transition in the premise. We only need that the
+$\utxo{}$ function can be computed for a list of transactions.
+
+\begin{figure}[h]
+  \begin{equation}
+    \label{eq:ledger-base}
+    \inference[Ledger-base]
+    {}
+    {\epsilon}
+  \end{equation}
+
+  \begin{equation}
+    \label{eq:ledger-indutive}
+    \inference[Ledger-inductive]
+    {\utxo{\Lambda} = u & u \trans{}{tx} u' }
+    {\Lambda \trans{ledger}{tx}{\Lambda; \var{tx}}}
+  \end{equation}
+  \caption{Ledger inference rules}
+  \label{fig:ledger-rules}
+\end{figure}
+
+\end{document}
