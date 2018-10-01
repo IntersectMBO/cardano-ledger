@@ -9,6 +9,7 @@ import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
+import Data.Foldable (foldl')
 import           UTxO
 import           Numeric.Natural       (Natural)
 
@@ -26,7 +27,7 @@ newtype TxId = TxId { getTxId :: Hash }
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
-data TxOut = TxOut Addr Coin deriving (Show, Eq)
+data TxOut = TxOut Addr Value deriving (Show, Eq)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq)
@@ -103,18 +104,18 @@ ins ◁ (UTxO utxo) =
 
 -- |Domain exclusion
 --
-(/◁) :: Set TxIn -> UTxO -> UTxO
-ins /◁ (UTxO utxo) =
+(⋪) :: Set TxIn -> UTxO -> UTxO
+ins ⋪ (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
 --
 --     * TODO - Should we return 'Maybe UTxO' so that we can return
 -- Nothing when the collections are not disjoint?
-union :: UTxO -> UTxO -> UTxO
-union (UTxO a) (UTxO b) = UTxO $ Map.union a b
+(∪) :: UTxO -> UTxO -> UTxO
+(UTxO a) ∪ (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO -> Coin
-balance (UTxO utxo) = foldr addCoins mempty utxo
-  where addCoins (TxOut _ a) b = a <> b
+balance :: UTxO -> Value
+balance (UTxO utxo) = foldl' addValues mempty utxo
+  where addValues b (TxOut _ a) = b <> a

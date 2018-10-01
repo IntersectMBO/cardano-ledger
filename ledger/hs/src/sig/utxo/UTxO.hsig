@@ -20,12 +20,12 @@ instance Ord Hash
 instance Show Hash
 
 -- | A unit of value held by a UTxO.
-data Coin
+data Value
 
-instance Eq Coin
-instance Show Coin
-instance Semigroup Coin
-instance Monoid Coin
+instance Eq Value
+instance Show Value
+instance Semigroup Value
+instance Monoid Value
 
 -- | Address of a UTxO, used to identify the owner.
 data Addr

@@ -9,7 +9,7 @@ import           Numeric.Natural       (Natural)
 
 type Hash = Digest SHA256
 
-newtype Coin = Coin Natural
+newtype Value = Value Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
