@@ -28,7 +28,7 @@ instance BA.ByteArrayAccess Tx where
 -- UTxO transitions
 ---------------------------------------------------------------------------------
 getUtxo :: [TxWits] -> UTxO
-getUtxo = foldr (\(TxWits tx _) ls -> txins tx /◁ ls `union` txouts tx ) (UTxO Map.empty)
+getUtxo = foldr (\(TxWits tx _) ls -> txins tx ⋪ ls∪ txouts tx ) (UTxO Map.empty)
 
 utxoInductive :: Transition
 utxoInductive = Transition
