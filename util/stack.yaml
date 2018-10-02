@@ -1,0 +1,8 @@
+resolver: ../snapshot.yaml
+
+packages:
+  - ./
+  - test/
+
+extra-deps:
+  - ../prelude

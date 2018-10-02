@@ -1,0 +1,46 @@
+name:                cardano-util
+version:             0.1.0.0
+synopsis:            Utility types and functions for the Cardano project
+description:         Utility types and functions for the Cardano project
+license:             MIT
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+
+  exposed-modules:
+                       Cardano.Util.Error
+                       Cardano.Util.Formatting
+                       Cardano.Util.Json.Canonical
+                       Cardano.Util.Json.Parse
+                       Cardano.Util.Orphans
+                       Cardano.Util.Parse
+
+  build-depends:       base
+                     , aeson
+                     , aeson-options
+                     , base16-bytestring
+                     , bytestring
+                     , canonical-json
+                     , cardano-prelude
+                     , cborg
+                     , containers
+                     , formatting
+                     , hashable
+                     , mtl
+                     , tagged
+                     , text
+                     , time-units
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Wall
+                       -Werror
