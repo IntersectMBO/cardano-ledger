@@ -1,0 +1,40 @@
+resolver: lts-12.10
+
+name: cardano-snapshot
+
+packages:
+  # Has support for canonical cbor. This commit is pulled into `master`. I've
+  # posted a GitHub issue requesting a Hackage release:
+  # https://github.com/well-typed/cborg/issues/171
+  - git: https://github.com/well-typed/cborg
+    commit: 3d274c14ca3077c3a081ba7ad57c5182da65c8c1
+    subdirs:
+      - cborg
+
+  # Library has never been released on Hackage yet
+  - git: https://github.com/input-output-hk/canonical-json.git
+    commit: f66762e4c4fe484ed109d28ad541fc55cc841c2c
+
+  - git: https://github.com/input-output-hk/cardano-crypto
+    commit: e87fcd3fea18f664d6e4f39c11abb8cafbd25785
+
+  # TODO(parsonsmatt): There have been some breaking changes with Plutus for
+  # cardano-sl and it would be nice to have some help from that team to get this
+  # updated and back on IOHK.
+  - git: https://github.com/avieth/plutus-prototype
+    commit: d094be301195fcd8ab864d793f114970426a4478
+
+
+  # Exposes a custom discovery function so you can specify the prefix.
+  # https://github.com/hedgehogqa/haskell-hedgehog/compare/master...input-output-hk:master
+  - git: https://github.com/input-output-hk/haskell-hedgehog.git
+    commit: 2c9e51804e8217dff89f5c32cbe0d79ce20bc508
+    subdirs:
+      - hedgehog
+
+  - aeson-options-0.0.0 # This is a Serokell package that should be removed
+  - base58-bytestring-0.1.0
+  - half-0.2.2.3
+  - micro-recursion-schemes-5.0.2.2
+  - pvss-0.2.0
+  - time-units-1.0.0
