@@ -4,7 +4,11 @@
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Test.Cardano.Util.QuickCheck.Property
+-- | This module contains a number of helpers for writing QuickCheck properties
+--
+--   TODO: Decide whether or not to remove this from the codebase
+
+module Test.Cardano.Prelude.QuickCheck.Property
        ( -- * Various properties and predicates
          qcIsJust
        , qcIsNothing

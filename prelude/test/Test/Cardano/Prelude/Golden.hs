@@ -1,6 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Util.Golden where
+-- | Helper functions for use in golden testing of datatypes
+
+module Test.Cardano.Prelude.Golden
+       ( discoverGolden
+       , eachOf
+       , goldenTestJSON
+       , getText
+       ) where
 
 import           Cardano.Prelude
 
@@ -17,26 +24,30 @@ import           Hedgehog.Internal.TH (TExpQ)
 discoverGolden :: TExpQ Group
 discoverGolden = discoverPrefix "golden_"
 
+-- | Check that @eachOf@ @testLimit@ generated @things@ @hasProperty@
 eachOf :: (Show a) => TestLimit -> Gen a -> (a -> PropertyT IO ()) -> Property
 eachOf testLimit things hasProperty =
   withTests testLimit . property $ forAll things >>= hasProperty
 
+goldenTestJSON
+  :: (Eq a, FromJSON a, HasCallStack, Show a, ToJSON a)
+  => a
+  -> FilePath
+  -> Property
+goldenTestJSON x path = withFrozenCallStack . withTests 1 . property $ do
+  bs <- liftIO (LB.readFile path)
+  encode x === bs
+  case eitherDecode bs of
+    Left  err -> failWith Nothing $ "could not decode: " <> show err
+    Right x'  -> x === x'
 
-goldenTestJSON :: (Eq a, FromJSON a, HasCallStack, Show a, ToJSON a)
-               => a -> FilePath -> Property
-goldenTestJSON x path = withFrozenCallStack $ do
-    withTests 1 . property $ do
-        bs <- liftIO (LB.readFile path)
-        encode x === bs
-        case eitherDecode bs of
-            Left err -> failWith Nothing $ "could not decode: " <> show err
-            Right x' -> x === x'
-
--- | Changing existing values in this string will break existing golden
--- tests, but it us OK to append more data to the end.
+-- | Text used for example values in a number of golden tests
+--
+--   Changing existing values in this string will break existing golden
+--   tests, but it us OK to append more data to the end.
 staticText :: Text
 staticText
-    = "Kmyw4lDSE5S4fSH6etNouiXezCyEjKc3tG4ja0kFjO8qzai26ZMPUEJfEy15ox5kJ0uKD\
+  = "Kmyw4lDSE5S4fSH6etNouiXezCyEjKc3tG4ja0kFjO8qzai26ZMPUEJfEy15ox5kJ0uKD\
     \bi7i6dLXkuesVZ9JfHgjrctsLFt2NvovXnchsOvX05Y6LohlTNt5mkPFhUoXu1EZSJTIy\
     \3fTU53b412r4AEusD7tcdRgH47yTr5hMO63bJnYBbmNperLHfiT1lP0MLQLh1J1DfoYBs\
     \auoJOzvtAgvjHo6UFttnK6vZ3Cknpuob6uMS2MkJKmuoQsqsAYcRDWbJ2Rgw4bm2ndTM4\

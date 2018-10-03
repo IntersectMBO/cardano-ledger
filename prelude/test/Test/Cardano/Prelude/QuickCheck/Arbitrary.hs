@@ -4,9 +4,11 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- | Common things used in `Cardano.Crypto.Arbitrary` and `Cardano.Util.Arbitrary`
+-- | A number of helpers for QuickCheck, used in the old codebase
+--
+--   TODO: Decide whether or not to remove this module
 
-module Test.Cardano.Util.QuickCheck.Arbitrary
+module Test.Cardano.Prelude.QuickCheck.Arbitrary
        ( Nonrepeating (..)
        , ArbitraryUnsafe (..)
        , SmallGenerator (..)
@@ -36,6 +38,7 @@ makeSmall = scale f
     -- This function is the Golden Function of Testing. It is perfect
     -- for making tested values small. There was profound research
     -- in this area. `f 4` is 3, yes.
+    f :: Int -> Int
     f 0 = 0
     f 1 = 1
     f 2 = 2
@@ -44,7 +47,7 @@ makeSmall = scale f
     f n
       | n < 0 = n
       | otherwise =
-          (round . (sqrt @Double) . realToFrac . (`div` 3)) n
+          (round . sqrt @Double . realToFrac . (`div` 3)) n
 
 newtype SmallGenerator a = SmallGenerator
     { getSmallGenerator :: a

@@ -1,8 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Cardano.Util.Base16
-    ( decode
-    , encode
+-- | Functions to encode and decode @ByteString@s in base 16 with line wrapping
+--
+--   This encoding is used for producing pretty output from golden tests. The
+--   golden values are stored on disk as indexed, line-wrapped hex dumps. These
+--   can then be nicely diffed to provide some indication of where serialisation
+--   errors may have occurred.
+
+module Test.Cardano.Prelude.Base16
+    ( decodeBase16
+    , encodeBase16
     , encodeWithIndex
     ) where
 
@@ -21,39 +28,39 @@ import           Text.Printf (printf)
 ----------------------------------------------------------------------------
 
 -- | Encodes a given ByteString to base-16 and line wraps every 16 bytes.
-encode :: LB.ByteString -> LB.ByteString
-encode = lineWrapBS lineWrapLength . B16.encode
+encodeBase16 :: LB.ByteString -> LB.ByteString
+encodeBase16 = lineWrapBS lineWrapLength . B16.encode
 
 -- | Encodes a given ByteString to base-16 and displays it alongside its byte
 -- offset (line wrapped every 16 bytes).
 encodeWithIndex :: LB.ByteString -> LB.ByteString
 encodeWithIndex bs
-    |
+  |
     -- If the length of the ByteString <= 16 (it hasn't been encoded to base-16
     -- yet so we're not checking for <= 32), then just 'encode' rather than
     -- prepending the byte offsets.
-      LB.length bs <= (lineWrapLength `div` 2) = encode bs
-    | otherwise = LB.concat $ go 0 (chunkBS lineWrapLength $ B16.encode bs)
-  where
-    go :: Int64 -> [LB.ByteString] -> [LB.ByteString]
-    go _ [] = []
-    go acc (x : xs) =
-        let numDigits = numByteOffsetDigits $ LB.length bs
-        in
-            LB.concat [LB.pack $ printf "%0*x: " numDigits acc, x, "\n"]
-                : go (acc + 16) xs
+    LB.length bs <= (lineWrapLength `div` 2) = encodeBase16 bs
+  | otherwise = LB.concat $ go 0 (chunkBS lineWrapLength $ B16.encode bs)
+ where
+  go :: Int64 -> [LB.ByteString] -> [LB.ByteString]
+  go _ [] = []
+  go acc (x : xs) =
+    let numDigits = numByteOffsetDigits $ LB.length bs
+    in
+      LB.concat [LB.pack $ printf "%0*x: " numDigits acc, x, "\n"]
+        : go (acc + 16) xs
 
 -- | Given the number of bytes of data, determine the number of digits required
 -- to represent the base-16 byte offset for a hexdump.
 numByteOffsetDigits :: Int64 -> Int64
 numByteOffsetDigits len
-    | len <= 0xff      = 2
-    | len <= 0xfff     = 3
-    | len <= 0xffff    = 4
-    | len <= 0xfffff   = 5
-    | len <= 0xffffff  = 6
-    | len <= 0xfffffff = 7
-    | otherwise        = 8
+  | len <= 0xff      = 2
+  | len <= 0xfff     = 3
+  | len <= 0xffff    = 4
+  | len <= 0xfffff   = 5
+  | len <= 0xffffff  = 6
+  | len <= 0xfffffff = 7
+  | otherwise        = 8
 
 -- | The length at which our encoding functions will line wrap. We've chosen a
 -- length of 32 because we want only want to display 16 bytes of base-16
@@ -68,9 +75,10 @@ lineWrapBS n s = LB.intercalate "\n" $ chunkBS n s
 -- | Divides a ByteString into x-length "chunks".
 chunkBS :: Int64 -> LB.ByteString -> [LB.ByteString]
 chunkBS n xs = case LB.uncons xs of
-    Nothing -> []
-    Just _ ->
-        let (taken, dropped) = LB.splitAt n xs in taken : chunkBS n dropped
+  Nothing -> []
+  Just _ ->
+    let (taken, dropped) = LB.splitAt n xs in taken : chunkBS n dropped
+
 
 ----------------------------------------------------------------------------
 -- Decoding
@@ -78,14 +86,14 @@ chunkBS n xs = case LB.uncons xs of
 
 -- | Decode a given ByteString which was originally encoded using 'encode' or
 -- 'encodeWithIndex'.
-decode :: LB.ByteString -> Maybe LB.ByteString
-decode bs
-    |
+decodeBase16 :: LB.ByteString -> Maybe LB.ByteString
+decodeBase16 bs
+  |
     -- No complex parsing is required for data whose length is <= 32.
-      LB.length bs <= lineWrapLength = Just $ fst $ B16.decode bs
-    | otherwise = case PLB.maybeResult $ PLB.parse decodeParser bs of
-        Nothing -> Nothing
-        Just r  -> Just $ fst $ B16.decode $ LB.fromStrict $ BC.concat r
+    LB.length bs <= lineWrapLength = Just $ fst $ B16.decode bs
+  | otherwise = case PLB.maybeResult $ PLB.parse decodeParser bs of
+    Nothing -> Nothing
+    Just r  -> Just $ fst $ B16.decode $ LB.fromStrict $ BC.concat r
 
 -- | Parser for several lines of data encoded using 'encode' or
 -- 'encodeWithIndex'.
@@ -96,8 +104,8 @@ decodeParser = many $ encodedEntryParser <* PBC.endOfLine
 -- 'encodeWithIndex'.
 encodedEntryParser :: PBC.Parser ByteString
 encodedEntryParser = do
-    _ <- PBC.hexadecimal :: PBC.Parser Int    -- Read the byte offset
-    PBC.skipWhile (not . PBC.isSpace)         -- Skip until whitespace
-    PBC.skipSpace                             -- Skip the whitespace
-    PBC.takeWhile (not . (`BC.elem` "\n\r"))  -- Consume the data up until LF
+  _ <- PBC.hexadecimal :: PBC.Parser Int    -- Read the byte offset
+  PBC.skipWhile (not . PBC.isSpace)         -- Skip until whitespace
+  PBC.skipSpace                             -- Skip the whitespace
+  PBC.takeWhile (not . (`BC.elem` "\n\r"))  -- Consume the data up until LF
                                               -- or CR.
