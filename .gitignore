@@ -1,8 +1,36 @@
-*.aux
-*.bbl
-*.blg
-*.lof
-*.log
-*.out
-*.pdf
-*.toc
+## Ignore LaTeX build products
+**/latex/*.aux
+**/latex/*.lof
+**/latex/*.log
+**/latex/*.lot
+**/latex/*.fls
+**/latex/*.out
+**/latex/*.toc
+**/latex/*.fmt
+**/latex/*.fot
+**/latex/*.cb
+**/latex/*.cb2
+**/latex/*.lb
+**/latex/*.pdf
+**/latex/*.fdb_latexmk
+**/latex/auto
+
+## Bibliography auxiliary files (bibtex/biblatex/biber):
+**/latex/*.bbl
+**/latex/*.bcf
+**/latex/*.blg
+**/latex/*-blx.aux
+**/latex/*-blx.bib
+**/latex/*.run.xml
+
+# Cabal & Stack
+.stack-work/
+*.cabal
+*/dist
+*~
+
+# Editors
+TAGS
+
+# Emacs auto-generated Emacs-lisp code
+auto/
