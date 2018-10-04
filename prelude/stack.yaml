@@ -1,4 +1,5 @@
-resolver: snapshot.yaml
+resolver: ../snapshot.yaml
 
 packages:
   - .
+  - test
