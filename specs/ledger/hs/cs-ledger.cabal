@@ -50,6 +50,7 @@ library extension-impl-simple
   exposed-modules:     Extension
   default-language:    Haskell2010
   build-depends:       base >=4.12 && <5
+                     , containers
                      , cryptonite
                      , memory
                      , utxo-sig
@@ -57,6 +58,7 @@ library extension-impl-simple
 library ledger-simple
   hs-source-dirs:      src/simple/ledger
   exposed-modules:     Ledger
+  reexported-modules:  UTxO
   default-language:    Haskell2010
   build-depends:       base >=4.11 && <5
                      , bytestring
@@ -67,3 +69,29 @@ library ledger-simple
                      , utxo-impl-simple
                      , extension-sig
                      , extension-impl-simple
+
+library extension-impl-witnessed
+  hs-source-dirs:      src/witnessed/extension
+  exposed-modules:     Extension
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <5
+                     , containers
+                     , cryptonite
+                     , memory
+                     , utxo-sig
+                     , extension-impl-simple
+  mixins:              extension-impl-simple (Extension as Extension.Simple)
+
+library ledger-witnessed
+  hs-source-dirs:      src/witnessed/ledger
+  exposed-modules:     Ledger
+  reexported-modules:  UTxO
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <5
+                     , containers
+                     , utxo-sig
+                     , utxo-impl-simple
+                     , extension-sig
+                     , extension-impl-witnessed
+                     , ledger-simple
+  mixins:              ledger-simple (Ledger as Ledger.Simple)
