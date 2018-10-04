@@ -5,6 +5,6 @@ ghci: ## Run ghci
 	cabal new-repl ledger-simple
 ghcid: ## Run ghcid
 	ghcid \
-					--command "cabal new-repl ledger-simple"
+					--command "cabal new-repl ledger-witnessed"
 
 .PHONY: ghci ghcid help

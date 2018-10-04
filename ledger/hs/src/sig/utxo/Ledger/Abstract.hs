@@ -5,13 +5,13 @@ Core implementation of the ledger logic.
 module Ledger.Abstract where
 
 import qualified Data.ByteString.Char8 as BS
+import           Data.Foldable         (foldl')
 import           Data.Map              (Map)
 import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
-import Data.Foldable (foldl')
-import           UTxO
 import           Numeric.Natural       (Natural)
+import           UTxO
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -52,49 +52,6 @@ txouts tx = UTxO $
   where
     transId = txid tx
 
--- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
-
--- |Signing Key.
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
-
--- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
-
--- |Key Pair.
-data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
-
--- |Return a key pair for a given owner.
-keyPair :: Owner -> KeyPair
-keyPair owner = KeyPair (SKey owner) (VKey owner)
-
--- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
-
--- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey (Sig Tx) deriving (Show, Eq)
-
--- |A fully formed transaction.
---
---     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
-data TxWits = TxWits
-              { body     :: Tx
-              , witneses :: Set Wit
-              } deriving (Show, Eq)
-
--- |Produce a digital signature
-sign :: SKey -> a -> Sig a
-sign (SKey k) d = Sig d k
-
--- |Create a witness for transaction
-makeWitness :: KeyPair -> Tx -> Wit
-makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
-
--- |Verify a digital signature
-verify :: Eq a => VKey -> a -> Sig a -> Bool
-verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
-
 -- |Domain restriction
 --
 --     * __TODO__ - better symbol?
@@ -119,3 +76,55 @@ ins ⋪ (UTxO utxo) =
 balance :: UTxO -> Value
 balance (UTxO utxo) = foldl' addValues mempty utxo
   where addValues b (TxOut _ a) = b <> a
+
+---------------------------------------------------------------------------------
+-- Signing and verification
+---------------------------------------------------------------------------------
+
+-- |Representation of the owner of key pair.
+newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+
+-- |Signing Key.
+newtype SKey = SKey Owner deriving (Show, Eq, Ord)
+
+-- |Verification Key.
+newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+
+-- |Key Pair.
+data KeyPair = KeyPair
+  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
+
+-- |Return a key pair for a given owner.
+keyPair :: Owner -> KeyPair
+keyPair owner = KeyPair (SKey owner) (VKey owner)
+
+-- |A digital signature.
+data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+
+-- |Produce a digital signature
+sign :: SKey -> a -> Sig a
+sign (SKey k) d = Sig d k
+
+-- |Verify a digital signature
+verify :: Eq a => VKey -> a -> Sig a -> Bool
+verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
+
+---------------------------------------------------------------------------------
+-- Transaction witnesses
+---------------------------------------------------------------------------------
+
+-- |Proof/Witness that a transaction is authorized by the given key holder.
+data Wit = Wit VKey (Sig Tx) deriving (Show, Eq)
+
+-- |A fully formed transaction.
+--
+--     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
+data TxWits = TxWits
+              { body     :: Tx
+              , witneses :: Set Wit
+              } deriving (Show, Eq)
+
+-- |Create a witness for transaction
+makeWitness :: KeyPair -> Tx -> Wit
+makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
+
