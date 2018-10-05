@@ -5,8 +5,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Helpers for round-trip testing datatypes
---
---
 
 module Test.Cardano.Prelude.Tripping
        ( runTests
@@ -19,7 +17,7 @@ module Test.Cardano.Prelude.Tripping
 import           Cardano.Prelude
 
 import           Data.Aeson (FromJSON, ToJSON, decode, encode)
-import           Data.Text.Internal.Builder (fromText, toLazyText)
+import           Data.Text.Internal.Builder (toLazyText)
 import           Formatting.Buildable (Buildable (..))
 import           Hedgehog (Group, MonadTest, discoverPrefix, success, tripping)
 import           Hedgehog.Internal.Property (Diff (..), failWith)
@@ -52,7 +50,7 @@ runTests tests' = do
   unless result exitFailure
 
 -- | Round trip using given encode and decode functions for types with a
---   @Buildable@ instance
+--   'Buildable' instance
 trippingBuildable
   :: forall f a b m
    . (Buildable (f a), Eq (f a), Show b, Applicative f, MonadTest m)
@@ -84,8 +82,8 @@ trippingBuildable x enc dec =
               (Just $ Diff "━━━ " "- Original" "/" "+ Roundtrip" " ━━━" diff)
           $ Prelude.unlines ["━━━ Intermediate ━━━", show i]
 
-instance Buildable a => Buildable (Either Text a) where
-    build (Left t)  = fromText t
+instance (Buildable e, Buildable a) => Buildable (Either e a) where
+    build (Left e)  = build e
     build (Right a) = build a
 
 buildPretty :: Buildable a => a -> String

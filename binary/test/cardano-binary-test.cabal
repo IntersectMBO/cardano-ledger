@@ -1,0 +1,54 @@
+name:                cardano-binary-test
+version:             1.3.0
+synopsis:            Test helpers from cardano-binary exposed to other packages
+description:         Test helpers from cardano-binary exposed to other packages
+license:             MIT
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+cabal-version:       >=1.10
+
+flag development
+    description: Disable `-Werror`
+    default: False
+    manual: True
+
+library
+  exposed-modules:
+                       Test.Cardano.Binary.Helpers
+                       Test.Cardano.Binary.Helpers.GoldenRoundTrip
+                       Test.Cardano.Cbor.Canonicity
+                       Test.Cardano.Cbor.RefImpl
+
+  build-depends:       base
+                     , bytestring
+                     , cardano-binary
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , cborg
+                     , cereal
+                     , containers
+                     , cryptonite
+                     , formatting
+                     , half
+                     , hedgehog
+                     , hspec
+                     , mtl
+                     , pretty-show
+                     , QuickCheck
+                     , quickcheck-instances
+                     , text
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-missing-import-lists
+                       -fno-warn-unsafe
+                       -fno-warn-safe
+
+  if (!flag(development))
+    ghc-options:         -Werror

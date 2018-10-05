@@ -1,0 +1,13 @@
+resolver: ../snapshot.yaml
+
+packages:
+  - ./
+  - test/
+
+extra-deps:
+  - ../prelude
+  - ../prelude/test
+
+nix:
+  packages:
+    - zlib
