@@ -1,0 +1,242 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{extarrows}
+\usepackage{float}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage[utf8]{inputenc}
+\usepackage{latexsym}
+\usepackage{mathpazo} % nice fonts
+\usepackage{mathtools}
+\usepackage{microtype}
+\usepackage[colon]{natbib}
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+\usepackage{slashed}
+\usepackage{stmaryrd}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+
+\hypersetup{
+  pdftitle={Specification of the Blockchain Layer},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand\Set[2]{\{\,#1\mid#2\,\}}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+%%
+%% Types
+%%
+\newcommand{\Hash}{\type{Hash}}    % addresses as verification key hashes
+\newcommand{\BHash}{\type{BHash}}  % block hashes
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\HCert}{\type{C}}
+
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\SKeyGen}{\type{SKey_G}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+
+%%
+%% Function and relation names
+%%
+\newcommand{\hashname}{hash}
+\newcommand{\signname}{sign}
+\newcommand{\signedname}{signed}
+\newcommand{\signedseqname}{signedc}
+\newcommand{\verifyname}{verify}
+\newcommand{\delegatename}{delegate}
+\newcommand{\validname}{valid}
+\newcommand{\keypairname}{pair}
+%% 
+%% Functions and relations
+%%
+\newcommand{\sign}[4]{\fun{\signname}\ \var{#1} ~ \var{#2} ~ \var{#3} ~ \var{#4}}
+\newcommand{\signed}[2]{\fun{\signedname}\ \var{#1} ~ \var{#2}}
+\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ \var{#1} ~ \var{#2}}
+\newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
+\newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
+\newcommand{\delegate}[1]{\fun{\delegatename}\ \var{#1}}
+\newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
+\newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
+
+\begin{document}
+
+
+\title{Specification of the Blockchain Layer}
+
+\author{Marko Dimjašević}
+
+\date{October 5, 2018}
+
+\maketitle
+
+\begin{abstract}
+This documents defines a semantics for operations on a blockchain.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\section{Introduction}
+\label{sec:introduction}
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+\section{Basic definitions}
+\label{sec:basic-definitions}
+
+\section{Auxiliary definitions}
+\label{sec:auxil-defin}
+TODO: Put this note on serialisation somewhere more appropriate.
+
+If $s(\cdot)$ is a function for serialising data and $d(\cdot)$ a function for
+deserialising data, their composition $s \circ d$ is not an identity function:
+this is hard to enforce and it is considered a bad practice in cryptography
+design.
+
+\section{State transitions for Blockchain}
+\label{sec:state-trans-chain}
+
+\subsection{Properties}
+\label{sec:chain-properties}
+
+\begin{figure}[h]
+  \emph{Primitive types}
+  %
+  \begin{align*}
+    & sl \in \Slot & \text{slot time-stamp}\\
+    & \Addr = \Hash,\quad hk \in \Addr & \text{address as a key hash}\\
+    & sk \in \SKey & \text{signing key}\\
+    & vk \in \VKey & \text{verification key}
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    & sk_G \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    & \BHash & \text{block hash}\\
+    & c \in \HCert & \text{heavyweight delegation certificate}\\
+    & sig \in \Sig  & \text{signature}\\
+    & data \in \Data  & \text{data}\\
+    & \Block = \BHash \times \Slot \times \Data \times \Sig & \\
+    & (h, sl, d, \sigma) \in \Block
+      & \text{block}
+  \end{align*}
+  %
+  \emph{Functions and relations}
+  %
+  \begin{align*}
+    \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
+    \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
+      & \text{signature function}\\
+    \text{\signedname} & \in \SKey \times \Block & \text{signature relation}\\
+    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
+      & \text{block count function}\\
+    \text{\verifyname} & \in \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \text{\hashname} & \in \VKey \mapsto \Hash
+      & \text{verification key hash function}\\
+    \text{\delegatename} & \in \SKey \mapsto \HCert
+      & \text{delegation function}\\
+    \text{\validname} & \in \Block \times \VKey \times \HCert
+      & \text{block validity relation}
+  \end{align*}
+  \caption{Definitions associated with the blockchain transition system}
+  \label{fig:state-trans-abstract}
+\end{figure}
+
+\subsubsection{Block Validity}
+\label{sec:block-valid}
+% This definition is adopted from legacy-free-plan.md, which is written by
+% Duncan Coutts
+
+A block $\var{b}$ is valid if:
+%
+\begin{enumerate}
+\item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
+  certificate $c = (vk_g, vk_d, \sigma)$ exists,
+\item the corresponding certificate $c$ is signed by a key $sk_g$ from the
+  genesis block, and
+\item in the rolling window of the last $K$ blocks the number of blocks signed
+  by keys that $sk_g$ delegated to is no more than a threshold $K \cdot t$,
+  where $t$ is a constant that we will pick in the range
+  $1/5 \leq t \leq 1/4$.
+\end{enumerate}
+
+Relationship between the $\text{\signname}$ function and the
+$\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
+
+\begin{equation}
+  \label{eq:sign-verify}
+  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\\
+  \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
+\end{equation}
+
+\begin{equation}
+  \label{eq:signed-window}
+  \signedwindow{sk}{s} = \Set{b}{b \in s \wedge \signed{sk}{b}}
+\end{equation}
+
+\begin{align}
+  \label{eq:valid-block}
+    \valid{b}{vk}{c} \implies &
+      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
+      \delegate{sk} = c \wedge \\
+      & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
+        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
+      & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
+\end{align}
+
+\begin{equation}
+  \label{eq:chain-extension}
+  \inference[Chain-extension]
+  {\var{B_0}\var{B_1}\cdots\var{B_{\ell}} & \valid{\var{B_{\ell+1}}}{vk}{c}
+  }
+  {{\var{B_0}\var{B_1}\cdots\var{B_{\ell}}} \trans{}{\var{B_{\ell+1}}} {\var{B_0}\var{B_1}\cdots\var{B_{\ell}}\var{B_{\ell+1}}}}
+\end{equation}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
