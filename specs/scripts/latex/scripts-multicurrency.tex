@@ -1,0 +1,410 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\hypersetup{
+  pdftitle={A Formal Specification of a UTxO Ledger with Scripts and Multi-Currency},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+%% TODO: we should package this
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+
+%%
+%% Types
+%%
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Value}{\type{Value}}
+% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+\newcommand{\Hash}{\type{Hash}}
+
+% Scripts
+\newcommand{\ScrEval}[1]{[\![ #1 ]\!]}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
+\newcommand{\values}[1]{\fun{values}\ #1}
+\newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
+% Adding witnesses...
+\newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
+\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
+\newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
+\newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}\ #1}
+
+\begin{document}
+
+\title{A Formal Specification of a \\
+       UTxO Ledger with Scripts and Multi-Currency}
+
+\author{}
+
+%\date{}
+
+\maketitle
+
+\begin{abstract}
+	This documents specifies the rules for a multi-currency UTxO ledger with scripts, as described in \cite{multi_currency} and \cite{utxo_scripts}.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\section{Types}
+
+[TODO explain scripts, figure 1].
+\todo{these scripts probably also need to take a transaction}
+
+[TODO explain basic types, figure 2].
+
+[TODO explain basic UTxO operations, figure 3].
+
+[TODO explain ledger state, figure 4].
+
+[TODO explain Mutli-currency operations].
+
+\begin{figure}
+\emph{Scripts}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}l@{~,~}r@{~:~}l}
+  \var{validator}
+& \type{Script}
+& \ScrEval{validator}
+& \type{LedgerState} \mapsto \type{T} \mapsto \type{Bool}
+\\
+  \var{redeemer}
+& \type{Script}
+& \ScrEval{redeemer}
+& \type{LedgerState} \mapsto \type{T}
+\end{array}
+\end{equation*}
+\caption{Scripts}
+\label{fig:scripts}
+\end{figure}
+
+
+\begin{figure}
+
+\emph{Primitive types}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+  \var{txid}
+& \type{TxId}
+& \text{transaction id}
+\\
+  ix
+& \type{Ix}
+& \text{index}
+\\
+  \var{addr}
+& \type{Addr}
+& \text{address}
+\\
+  curr
+& \type{Currency}
+& \text{currency identifier}
+\\
+  qty
+& \type{Quantity}
+& \text{currency quantity}
+\end{array}
+\end{equation*}
+
+%
+\emph{Derived types}
+%
+\begin{equation*}
+\begin{array}{r@{~=~}lc@{}r@{~\in~}l}
+  \type{Value}
+& \type{Currency} \mapsto \type{Quantity}
+&
+& (\var{curr}, \var{qty})
+& \type{Value}
+\\
+  \type{TxIn}
+& \type{TxId} \times \type{Ix} \times \type{Script} \times \type{Script}
+&
+& (\var{txid}, \var{ix}, \var{validator}, \var{redeemer})
+& \type{TxIn}
+\\
+  \type{TxOut}
+& \type{Addr} \times \type{Value}
+&
+& (\var{addr}, v)
+& \type{TxOut}
+\\
+  \type{UTxO}
+& \type{TxIn} \mapsto \type{TxOut}
+&
+& \var{txin} \mapsto \var{txout} \in \var{utxo}
+& \type{UTxO}
+\\
+  \type{Create}
+& \type{Optional} (\type{Currency} \times \type{Script})
+&
+& (\var{currency}, \var{validator})
+& \type{Create}
+\\
+  \type{Forge}
+& \type{Value} \times (\type{Currency} \mapsto \type{Script})
+&
+& (\var{value}, \var{curr} \mapsto \var{redeemer})
+& \type{Forge}
+\\
+  \type{Tx}
+& \powerset{\type{TxIn}} \times (\type{Ix} \mapsto
+    \type{TxOut}) \times \type{Forge} \times \type{Value}
+&
+& (\var{txins}, \var{txouts}, \var{forge}, \var{fee})
+& \type{Tx}
+\end{array}
+\end{equation*}
+%
+\emph{Functions}
+%
+\begin{equation*}
+\begin{array}{lr}
+  \fun{txid} \in \type{Tx} \to \type{TxId}
+& \text{compute transaction id}
+\\
+  \fun{hash} \in \type{Script} \to \type{Addr}
+& \text{compute script address}
+\\
+  \fun{forged} \in \type{Tx} \to \type{Value}
+& \text{the forged multi-currency in a transaction}
+\\
+  \fun{fee} \in \type{Tx} \to \type{Value}
+& \text{the fees in a transaction}
+\end{array}
+\end{equation*}
+
+\caption{Basic Definitions}
+\label{fig:basic_definitions}
+\end{figure}
+
+
+\begin{figure}
+\begin{align*}
+& \fun{txins} \in \type{Tx} \to \powerset{\type{TxIn}}
+& \text{transaction inputs} \\
+& \fun{txins} ~ (\var{txins}, \_, \_, \_) = \var{txins}
+\\[1em]
+& \fun{txouts} \in \type{Tx} \to \type{UTxO}
+& \text{transaction outputs as UTxO} \\
+& \fun{txouts} ~ \var{tx} =
+  \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
+  \middle| \begin{array}{l@{~}c@{~}l}
+             (\_, \var{txouts},\_, \_) & = & \var{tx} \\
+             \var{ix} \mapsto \var{txout} & \in & \var{txouts}
+           \end{array}
+  \right\}
+\\[1em]
+& \fun{outRefs} \in \type{Tx} \to \powerset({\type{TxId} \times \type{Ix}})
+& \text{Output References} \\
+	& \fun{outRefs} ~ (\var{txins}, \_, \_, \_)
+	    = \left\{ (id, ix) \middle| (id, ix, \_, \_) \in txins\right\}
+\\[1em]
+& \fun{balance} \in \type{UTxO} \to \type{Value}
+& \text{UTxO balance} \\
+& \fun{balance} ~ utxo = \sum_{(\_ ~ \mapsto (\_, v)) \in \var{utxo}} v
+\end{align*}
+\caption{Operations on transactions and UTxOs}
+\label{fig:auxiliary_ops}
+\end{figure}
+
+
+\begin{figure}
+
+\emph{Ledger State}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+utxo & \type{UTxO} & \text{unspent outputs}
+\\
+currencies & \type{Currency} \mapsto \type{Script}
+  & \text{created currencies with policies}
+\\
+totalMinted & \type{Value} & \text{total currency minted}
+\\
+slot & \type{Slot} & \text{current slot}
+
+\end{array}
+\end{equation*}
+%
+\emph{Initial Ledger State}
+%
+\begin{equation*}
+\begin{array}{llllll}
+utxo = \emptyset
+  & currencies = \emptyset
+  & totalMinted = \vec{0}
+  & slot = 0
+\end{array}
+\end{equation*}
+
+\caption{Ledger State (Delegation in Isolation)}
+\label{fig:delegation_ledger_state}
+\end{figure}
+
+\section{Validation}
+
+\begin{figure}
+\emph{Valid Inputs}
+%
+\begin{equation*}
+\txins{tx} \subseteq \dom \var{utxo}
+\end{equation*}
+
+\emph{Preservation of Value}
+%
+\begin{equation*}
+balance (\txouts tx) + (\fun{fee}\ tx)
+  = balance (\txins tx \restrictdom utxo) + (\fun{forged} ~ tx)
+\end{equation*}
+
+\emph{No Double Spend}
+%
+\begin{equation*}
+\lvert \txins tx \rvert = \lvert \fun{outRefs} ~ tx\rvert
+\end{equation*}
+
+\emph{Scripts Validate}
+%
+\begin{equation*}
+\forall i\in(\txins tx),
+  \ScrEval{i.validator}
+    \left(ledgerState, \ScrEval{i.redeemer}\left(ledgerState\right)\right) = True
+\end{equation*}
+
+\emph{Authorized}
+%
+\begin{equation*}
+\forall i\in(\txins tx),
+  \fun{hash}(i.validator) = (utxo ~ i).addr
+\end{equation*}
+
+\emph{Forge Obeys Policy}
+%
+\begin{equation*}
+\forall c\in(tx.forge.value),
+  \ScrEval{currencies[c]}
+    \left(ledgerState, \ScrEval{tx.forge.proof[c]}\left(ledgerState\right)\right) = True
+\end{equation*}
+
+\emph{Create Only New Currencies}
+%
+\begin{equation*}
+tx.create.currency \notin currencies
+\end{equation*}
+
+\caption{Validation Rules}
+\label{fig:validation_rules}
+\end{figure}
+
+\section{Disabling Multi-Currency}
+
+If we want to disable multi-currency, we can remove the validation rules: ``Forge Obeys Policy" and ``Create Only New Currencies",
+and add:
+\begin{figure}
+\emph{Only ADA}
+%
+\begin{equation*}
+tx.create.currency = \mathsf{ADA}
+\end{equation*}
+
+\caption{Only ADA Rule}
+\label{fig:validation_rules}
+\end{figure}
+
+\todo[inline]{We need to think carefully about how to handle similar names,
+like ``ada", ``Ada", and ``ADA".}
+
+\section{Disabling Scripts}
+
+WIP - We should probably make two types of addresses, pay-to-pubkey addresses and script addresses.
+The pay-to-pubkey addresses will work similiarly to the validation rules defined above, with the
+following changes:
+
+``Scripts Validate" becomes a specific validatior/redeemer pair, where $\mathsf{validator}$ checks a
+digital signature and $\mathsf{redeemer}$ is the constant function returning the signature of the
+transaction body.
+
+``Authorized" is nearly the same, except we hash the stake key instead of the validator script.
+
+``No Double Spend" is no longer needed.
+
+\section{Extended UTxO}
+
+The main documentation is \href{https://github.com/input-output-hk/plutus/tree/master/docs/extended-utxo}{here}.
+Do we only need to add the data script to TxOut?
+$$ \type{TxOut} = \type{Addr} \times \type{Value} \times \type{Script} $$
+How is this more expressive than what we already have?
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
