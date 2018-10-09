@@ -16,7 +16,6 @@
 \hypersetup{
   pdftitle={A Formal Specification of a UTxO Ledger with Scripts and Multi-Currency},
   breaklinks=true,
-  bookmarks=true,
   colorlinks=false,
   linkcolor={blue},
   citecolor={blue},
@@ -28,13 +27,6 @@
 \usepackage{float}
 \floatstyle{boxed}
 \restylefloat{figure}
-
-%%
-%% Package `semantic` can be used for writing inference rules.
-%%
-\usepackage{semantic}
-%% Setup for the semantic package
-\setpremisesspace{20pt}
 
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
@@ -61,37 +53,41 @@
 %%
 %% Types
 %%
-\newcommand{\Tx}{\type{Tx}}
-\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Bool}{\type{Bool}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\Script}{\type{Script}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\Currency}{\type{Currency}}
+\newcommand{\Quantity}{\type{Quantity}}
 \newcommand{\Value}{\type{Value}}
-% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
-\newcommand{\VKey}{\type{VKey}}
-\newcommand{\Sig}{\type{Sig}}
-\newcommand{\Data}{\type{Data}}
-\newcommand{\Hash}{\type{Hash}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Create}{\type{Create}}
+\newcommand{\Forge}{\type{Forge}}
+\newcommand{\TxBody}{\type{TxBody}}
+\newcommand{\Tx}{\type{Tx}}
 
+%%
 % Scripts
-\newcommand{\ScrEval}[1]{[\![ #1 ]\!]}
+%%
+\newcommand{\ScriptEval}[1]{[\![ #1 ]\!]}
 
 %%
 %% Functions
 %%
+\newcommand{\scriptValidate}[3]{\fun{scriptValidate} ~ \var{#1} ~ \var{#2} ~ \var{#3}}
+\newcommand{\txid}[1]{\fun{txid}\ \var{#1}}
 \newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
 \newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
-\newcommand{\values}[1]{\fun{values}\ #1}
-\newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
-% Adding witnesses...
-\newcommand{\inputs}[1]{\fun{inputs}\ \var{#1}}
-\newcommand{\witnesses}[1]{\fun{witnesses}\ \var{#1}}
-\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
-\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
-\newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
-\newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
-% Adding ledgers...
-\newcommand{\utxo}[1]{\fun{utxo}\ #1}
+\newcommand{\forged}[1]{\fun{forged}\ \var{#1}}
+\newcommand{\forgeReedemers}[1]{\fun{forgeReedemers}\ \var{#1}}
+\newcommand{\fee}[1]{\fun{fee}\ \var{#1}}
+\newcommand{\created}[1]{\fun{forged}\ \var{#1}}
+\newcommand{\outRefs}[1]{\fun{outRefs}\ \var{#1}}
 
 \begin{document}
 
@@ -105,7 +101,7 @@
 \maketitle
 
 \begin{abstract}
-	This documents specifies the rules for a multi-currency UTxO ledger with scripts, as described in \cite{multi_currency} and \cite{utxo_scripts}.
+This documents specifies the rules for a multi-currency UTxO ledger with scripts, as described in \cite{multi_currency} and \cite{utxo_scripts}.
 \end{abstract}
 
 \tableofcontents
@@ -113,14 +109,16 @@
 
 \section{Types}
 
-[TODO explain scripts, figure 1].
-\todo{these scripts probably also need to take a transaction}
+[TODO explain scripts, \cref{fig:scripts}].
+\todo{these scripts probably also need to take some of the data in transaction}
 
-[TODO explain basic types, figure 2].
+[TODO explain basic types, \cref{fig:basic_definitions}].
 
-[TODO explain basic UTxO operations, figure 3].
+[TODO explain basic UTxO operations, \cref{fig:auxiliary_ops}].
 
-[TODO explain ledger state, figure 4].
+[TODO explain validation, \cref{fig:validation_rules}].
+
+[TODO explain ledger state, \cref{fig:ledger_state}].
 
 [TODO explain Mutli-currency operations].
 
@@ -130,16 +128,29 @@
 \begin{equation*}
 \begin{array}{r@{~\in~}l@{~,~}r@{~:~}l}
   \var{validator}
-& \type{Script}
-& \ScrEval{validator}
-& \type{LedgerState} \mapsto \type{T} \mapsto \type{Bool}
+& \Script
+& \ScriptEval{validator}
+& \type{LedgerState} \mapsto \type{R} \mapsto \Bool
 \\
   \var{redeemer}
-& \type{Script}
-& \ScrEval{redeemer}
-& \type{LedgerState} \mapsto \type{T}
+& \Script
+& \ScriptEval{redeemer}
+& \type{LedgerState} \mapsto \type{R}
 \end{array}
 \end{equation*}
+
+~ ~ ~ \text{where} \type{R}
+  \text{is an arbitrary type, but must be the same for each validator/redeemer pair.}
+\\
+
+\emph{Script Operations}
+\begin{align*}
+& \fun{scriptValidate} \in
+  \type{LedgerState} \times \Script \times \Script \mapsto \Bool \\
+& \scriptValidate{st}{validator}{redeemer} =
+\ScriptEval{validator} \left(st, \ScriptEval{redeemer}\left(st\right)\right)
+\end{align*}
+
 \caption{Scripts}
 \label{fig:scripts}
 \end{figure}
@@ -152,23 +163,23 @@
 \begin{equation*}
 \begin{array}{r@{~\in~}lr}
   \var{txid}
-& \type{TxId}
+& \TxId
 & \text{transaction id}
 \\
   ix
-& \type{Ix}
+& \Ix
 & \text{index}
 \\
   \var{addr}
-& \type{Addr}
+& Addr
 & \text{address}
 \\
   curr
-& \type{Currency}
+& \Currency
 & \text{currency identifier}
 \\
   qty
-& \type{Quantity}
+& \Quantity
 & \text{currency quantity}
 \end{array}
 \end{equation*}
@@ -178,48 +189,53 @@
 %
 \begin{equation*}
 \begin{array}{r@{~=~}lc@{}r@{~\in~}l}
-  \type{Value}
-& \type{Currency} \mapsto \type{Quantity}
+  \Value
+& \Currency \mapsto \Quantity
 &
 & (\var{curr}, \var{qty})
-& \type{Value}
+& \Value
 \\
-  \type{TxIn}
-& \type{TxId} \times \type{Ix} \times \type{Script} \times \type{Script}
+  \TxIn
+& \TxId \times \Ix \times \Script \times \Script
 &
 & (\var{txid}, \var{ix}, \var{validator}, \var{redeemer})
-& \type{TxIn}
+& \TxIn
 \\
-  \type{TxOut}
-& \type{Addr} \times \type{Value}
+  \TxOut
+& \Addr \times \Value
 &
 & (\var{addr}, v)
-& \type{TxOut}
+& \TxOut
 \\
-  \type{UTxO}
-& \type{TxIn} \mapsto \type{TxOut}
+  \UTxO
+& \TxIn \mapsto \TxOut
 &
 & \var{txin} \mapsto \var{txout} \in \var{utxo}
-& \type{UTxO}
+& \UTxO
 \\
-  \type{Create}
-& \type{Optional} (\type{Currency} \times \type{Script})
+  \Create
+& \type{Optional} (\Currency \times \Script)
 &
 & (\var{currency}, \var{validator})
-& \type{Create}
+& \Create
 \\
-  \type{Forge}
-& \type{Value} \times (\type{Currency} \mapsto \type{Script})
+  \Forge
+& \Value \times (\Currency \mapsto \Script)
 &
 & (\var{value}, \var{curr} \mapsto \var{redeemer})
-& \type{Forge}
+& \Forge
 \\
-  \type{Tx}
-& \powerset{\type{TxIn}} \times (\type{Ix} \mapsto
-    \type{TxOut}) \times \type{Forge} \times \type{Value}
+  \TxBody
+& \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
 &
-& (\var{txins}, \var{txouts}, \var{forge}, \var{fee})
-& \type{Tx}
+& (\var{txins}, \var{txouts})
+& \TxBody
+\\
+  \Tx
+& \TxBody \times \Forge \times \Value \times \Create
+&
+& (\var{txbody}, \var{forge}, \var{fee}, \var{create})
+& \Tx
 \end{array}
 \end{equation*}
 %
@@ -227,17 +243,11 @@
 %
 \begin{equation*}
 \begin{array}{lr}
-  \fun{txid} \in \type{Tx} \to \type{TxId}
+  \fun{txid} \in \Tx \to \TxId
 & \text{compute transaction id}
 \\
-  \fun{hash} \in \type{Script} \to \type{Addr}
+  \fun{hash} \in \Script \to \Addr
 & \text{compute script address}
-\\
-  \fun{forged} \in \type{Tx} \to \type{Value}
-& \text{the forged multi-currency in a transaction}
-\\
-  \fun{fee} \in \type{Tx} \to \type{Value}
-& \text{the fees in a transaction}
 \end{array}
 \end{equation*}
 
@@ -248,28 +258,44 @@
 
 \begin{figure}
 \begin{align*}
-& \fun{txins} \in \type{Tx} \to \powerset{\type{TxIn}}
+& \fun{txins} \in \Tx \to \powerset{\TxIn}
 & \text{transaction inputs} \\
-& \fun{txins} ~ (\var{txins}, \_, \_, \_) = \var{txins}
+& \fun{txins} ~ ((\var{txins}, \_), \_, \_, \_) = \var{txins}
 \\[1em]
-& \fun{txouts} \in \type{Tx} \to \type{UTxO}
+& \fun{txouts} \in \Tx \to \UTxO
 & \text{transaction outputs as UTxO} \\
 & \fun{txouts} ~ \var{tx} =
   \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
   \middle| \begin{array}{l@{~}c@{~}l}
-             (\_, \var{txouts},\_, \_) & = & \var{tx} \\
+             ((\_, \var{txouts}),\_, \_, \_) & = & \var{tx} \\
              \var{ix} \mapsto \var{txout} & \in & \var{txouts}
            \end{array}
   \right\}
 \\[1em]
-& \fun{outRefs} \in \type{Tx} \to \powerset({\type{TxId} \times \type{Ix}})
+& \fun{outRefs} \in \Tx \to \powerset({\TxId \times \Ix})
 & \text{Output References} \\
-	& \fun{outRefs} ~ (\var{txins}, \_, \_, \_)
-	    = \left\{ (id, ix) \middle| (id, ix, \_, \_) \in txins\right\}
+& \fun{outRefs} ~ ((\var{txins}, \_), \_, \_, \_)
+= \left\{ (id, ix) \middle| (id, ix, \_, \_) \in txins\right\}
 \\[1em]
-& \fun{balance} \in \type{UTxO} \to \type{Value}
+& \fun{balance} \in \UTxO \to \Value
 & \text{UTxO balance} \\
 & \fun{balance} ~ utxo = \sum_{(\_ ~ \mapsto (\_, v)) \in \var{utxo}} v
+\\[1em]
+& \fun{created} \in \Tx \to \Create
+& \text{created currency} \\
+& \fun{created} ~ (\_, \_, \_, create) = \var{create}
+\\[1em]
+& \fun{forged} \in \Tx \to \Value
+& \text{the forged multi-currency} \\
+& \fun{forged} ~ (\_, (value, \_), \_, \_) = \var{value}
+\\[1em]
+& \fun{forgeReedemers} \in \Tx \to \Script
+& \text{redeemer scripts for forging} \\
+& \fun{forgeReedemers} ~ ( \_, (\_, \var{redeemers}), \_, \_) = reedemers
+\\[1em]
+& \fun{fee} \in \Tx \to \Value
+& \text{the fees in a transaction} \\
+& \fun{fee} ~ (\_, \_, fee, \_) = \var{fee}
 \end{align*}
 \caption{Operations on transactions and UTxOs}
 \label{fig:auxiliary_ops}
@@ -282,14 +308,14 @@
 %
 \begin{equation*}
 \begin{array}{r@{~\in~}lr}
-utxo & \type{UTxO} & \text{unspent outputs}
+utxo & \UTxO & \text{unspent outputs}
 \\
-currencies & \type{Currency} \mapsto \type{Script}
-  & \text{created currencies with policies}
+currencies & \Currency \mapsto \Script
+  & \text{currencies with policies}
 \\
-totalMinted & \type{Value} & \text{total currency minted}
+totalMinted & \Value & \text{total currency minted}
 \\
-slot & \type{Slot} & \text{current slot}
+slot & \Slot & \text{current slot}
 
 \end{array}
 \end{equation*}
@@ -305,11 +331,12 @@ utxo = \emptyset
 \end{array}
 \end{equation*}
 
-\caption{Ledger State (Delegation in Isolation)}
-\label{fig:delegation_ledger_state}
+\caption{Ledger State}
+\label{fig:ledger_state}
 \end{figure}
 
 \section{Validation}
+See figure \cref{fig:validation_rules} 
 
 \begin{figure}
 \emph{Valid Inputs}
@@ -321,62 +348,81 @@ utxo = \emptyset
 \emph{Preservation of Value}
 %
 \begin{equation*}
-balance (\txouts tx) + (\fun{fee}\ tx)
-  = balance (\txins tx \restrictdom utxo) + (\fun{forged} ~ tx)
+balance (\txouts tx) + (\fee tx)
+  = balance (\txins tx \restrictdom utxo) + (\forged tx)
 \end{equation*}
 
 \emph{No Double Spend}
 %
 \begin{equation*}
-\lvert \txins tx \rvert = \lvert \fun{outRefs} ~ tx\rvert
+\lvert \txins tx \rvert = \lvert \outRefs tx\rvert
 \end{equation*}
 
 \emph{Scripts Validate}
 %
 \begin{equation*}
-\forall i\in(\txins tx),
-  \ScrEval{i.validator}
-    \left(ledgerState, \ScrEval{i.redeemer}\left(ledgerState\right)\right) = True
+\forall (\_, \_, validator, redeemer)\in(\txins tx),
+~ \scriptValidate{state}{validator}{redeemer}
 \end{equation*}
 
 \emph{Authorized}
 %
 \begin{equation*}
-\forall i\in(\txins tx),
-  \fun{hash}(i.validator) = (utxo ~ i).addr
+  \forall (\_, \_, validator, \_)\in(\txins tx),
+  (i \mapsto (addr, \_)) \in \var{utxo} \land \hash validator = addr
 \end{equation*}
 
 \emph{Forge Obeys Policy}
 %
 \begin{equation*}
-\forall c\in(tx.forge.value),
-  \ScrEval{currencies[c]}
-    \left(ledgerState, \ScrEval{tx.forge.proof[c]}\left(ledgerState\right)\right) = True
+\begin{array}{c}
+\forall c\in(\forged tx), \\
+\exists policy, (c, policy) \in \var{currencies} \\
+\exists reedemer, (c, reedemer) \in \forgeReedemers tx \\
+\scriptValidate{state}{policy}{redeemer}
+\end{array}
 \end{equation*}
 
 \emph{Create Only New Currencies}
 %
 \begin{equation*}
-tx.create.currency \notin currencies
+\created tx = (curr, policy), curr \notin \dom currencies
 \end{equation*}
 
 \caption{Validation Rules}
 \label{fig:validation_rules}
 \end{figure}
 
+\section{State Transformations}
+See figure \cref{fig:state_transitions} 
+
+\begin{figure}
+\begin{equation*}
+  \begin{array}{rcl}
+    \var{utxo} & & (\txins tx \subtractdom \var{utxo}) \union \txouts tx \\
+    \var{currencies} & \longrightarrow & \var{currencies} \union (\created tx) \\
+    \var{totalMinted} & & \var{totalMinted} + (\forged tx)\\
+    \var{slot} & & \var{slot} \\
+  \end{array}
+\end{equation*}
+
+\caption{State transition}
+\label{fig:state_transitions}
+\end{figure}
+
 \section{Disabling Multi-Currency}
 
-If we want to disable multi-currency, we can remove the validation rules: ``Forge Obeys Policy" and ``Create Only New Currencies",
-and add:
+If we want to disable multi-currency, we can remove the ``Forge Obeys Policy" rule and
+add \cref{fig:only_ada_rule} 
 \begin{figure}
 \emph{Only ADA}
 %
 \begin{equation*}
-tx.create.currency = \mathsf{ADA}
+\created tx = (curr, policy), curr = \mathsf{ADA}
 \end{equation*}
 
 \caption{Only ADA Rule}
-\label{fig:validation_rules}
+\label{fig:only_ada_rule}
 \end{figure}
 
 \todo[inline]{We need to think carefully about how to handle similar names,
@@ -388,9 +434,9 @@ WIP - We should probably make two types of addresses, pay-to-pubkey addresses an
 The pay-to-pubkey addresses will work similiarly to the validation rules defined above, with the
 following changes:
 
-``Scripts Validate" becomes a specific validatior/redeemer pair, where $\mathsf{validator}$ checks a
-digital signature and $\mathsf{redeemer}$ is the constant function returning the signature of the
-transaction body.
+"Scripts Validate" becomes a specific validator/redeemer pair, where $\mathsf{validator}$ checks a
+digital signature and $\mathsf{redeemer}$ is the constant function returning a signature of the
+part of transaction (perhaps $\outRefs tx$?).
 
 ``Authorized" is nearly the same, except we hash the stake key instead of the validator script.
 
@@ -399,8 +445,9 @@ transaction body.
 \section{Extended UTxO}
 
 The main documentation is \href{https://github.com/input-output-hk/plutus/tree/master/docs/extended-utxo}{here}.
-Do we only need to add the data script to TxOut?
-$$ \type{TxOut} = \type{Addr} \times \type{Value} \times \type{Script} $$
+We need to add the data script to TxOut:
+$$ \TxOut = \Addr \times \Value \times \Script $$
+We also need to provide the validator script with more information.  Is the $\TxBody$ enough?
 How is this more expressive than what we already have?
 
 \addcontentsline{toc}{section}{References}
