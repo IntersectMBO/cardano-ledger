@@ -124,8 +124,7 @@ A few points on notation:
 %
 It is worth noting that we use set theoretic functions in two ways: one
 that corresponds to the types of computations, and one that corresponds to
-finite map data structures. Similarly we use relations sometimes as computable
-predicates (like functions returning boolean) and sometimes as data structures.
+finite map data structures.
 
 In \cref{fig:notation} we define some extra operators on relations (including
 finite mappings) that are not standard set theory notation.
@@ -183,7 +182,7 @@ other side conditions or the final state.
 Delegation requires the following to be tracked by the ledger state:
 the active stake keys, the delegation map from active stake keys to stake pools,
 the active stake pools, and upcoming stake pools retirements.
-Additionally, the blockchain protocol rewards eligible stake, and so we must
+Additionally, the blockchain protocol rewards active stake, and so we must
 also include a mapping from active stake keys to rewards.
 
 In \cref{fig:basic_delegation} we give the delegation primitives, and in
@@ -232,7 +231,7 @@ epoch & \type{Epoch} & \text{epoch}
   \textsc{DeregKey}(c) \in \type{Cert} &\iff& c \in \type{Cert_{deregkey}} \\
   \textsc{Delegate}(c) \in \type{Cert} &\iff& c \in \type{Cert_{delegate}} \\
   \textsc{RegPool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{regpool}} \\
-  \textsc{RetirePool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{RetirePool}} \\
+  \textsc{RetirePool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{retirepool}} \\
 \end{array}
 \end{equation*}
 
@@ -284,6 +283,7 @@ domain of the accounts mapping.  Does including it aid in clarity?}
 \begin{figure}
 \begin{equation*}
 \frac{
+  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{regkey}} \qquad
   \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
   \var{hk_{sk}} \notin \var{stkeys} \qquad
 }{
@@ -291,10 +291,10 @@ domain of the accounts mapping.  Does including it aid in clarity?}
     \var{stkeys} \\
     \var{accounts}
   \end{array}
-  \transitionarrow{register stake key}{}
+  \transitionarrow{register stake key}{\var{hk_{sk}}}
   \begin{array}{l}
     \var{stkeys} \union \{\var{hk_{sk}}\} \\
-    \var{accounts} \union \{\fun{stAcc}~\var{hk_{sk}} \mapsto 0\}
+    \var{accounts} \union \{\var{hk_{sk}} \mapsto 0\}
   \end{array}
 }
 \end{equation*}
@@ -303,13 +303,14 @@ domain of the accounts mapping.  Does including it aid in clarity?}
 %
 \begin{equation*}
 \frac{
+  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{deregkey}} \qquad
   \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
   \var{hk_{sk}} \in \var{stkeys} \qquad
 }{
   \begin{array}{r}
     \var{stkeys} \\ \var{accounts} \\ \var{delegations}
   \end{array}
-  \transitionarrow{deregister stake key}{}
+  \transitionarrow{deregister stake key}{\var{hk_{sk}}}
   \begin{array}{l}
   \var{stkeys} \setminus \{\var{hk_{sk}}\} \\
   \{\fun{skAcc}~\var{hk_{sk}}\} \subtractdom \var{accounts} \\
@@ -322,12 +323,12 @@ domain of the accounts mapping.  Does including it aid in clarity?}
 %
 \begin{equation*}
 \frac{
-  \var{cert} = (\var{vk_{sk}}, \var{hk_{sp}}) \qquad
+  \var{cert} = (\var{vk_{sk}}, \var{hk_{sp}}) \in \type{Cert_{delegate}} \qquad
   \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
   \var{hk_{sk}} \in \var{stkeys} \qquad
 }{
   \var{delegations}
-  \transitionarrow{delegate}{}
+  \transitionarrow{delegate}{\var{hk_{sk}}}
   \var{delegations} \unionoverride \{\var{hk_{sk}} \mapsto \var{hk_{sp}}\}
 }
 \end{equation*}
@@ -341,7 +342,7 @@ domain of the accounts mapping.  Does including it aid in clarity?}
 \begin{equation*}
 \frac{
   \begin{array}{c}
-    \var{cert} = (\var{vk_{sp}}) \qquad
+    \var{cert} = (\var{vk_{sp}}, \_) \in \type{Cert_{regpool}} \qquad
     \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
   \end{array}
 }{
@@ -349,7 +350,7 @@ domain of the accounts mapping.  Does including it aid in clarity?}
     \var{stpools} \\
     \var{retiring}
   \end{array}
-  \transitionarrow{register stake pool}{}
+  \transitionarrow{register stake pool}{\var{hk_{sk}}}
   \begin{array}{l}
     \var{stpools} \unionoverride \{\var{hk_{sp}} \mapsto cert\} \\
     \{\var{hk_{sp}}\} \subtractdom \var{retiring}
@@ -362,7 +363,7 @@ domain of the accounts mapping.  Does including it aid in clarity?}
 \begin{equation*}
 \frac{
   \begin{array}{c}
-    \var{cert} = (\var{vk_{sp}}, e) \qquad
+    \var{cert} = (\var{vk_{sp}}, e, \_) \in \type{Cert_{retirepool}} \qquad
     \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
     \\[0.3em]
     \var{hk_{sp}} \in \dom \var{stpools} \qquad
@@ -370,7 +371,7 @@ domain of the accounts mapping.  Does including it aid in clarity?}
   \end{array}
 }{
   \var{retiring}
-  \transitionarrow{retire stake pool}{}
+  \transitionarrow{retire stake pool}{\var{hk_{sk}}, ~ e}
   \var{retiring} \unionoverride \{ \var{hk_{sp}} \mapsto e \}
 }
 \end{equation*}
