@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
+{-# LANGUAGE NumDecimals         #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -74,13 +75,15 @@ import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.Char as Char
-import           Data.Fixed (Fixed (..), Nano)
+import           Data.Fixed (E12, Fixed (..), Nano, Pico, resolution)
 import           Data.Functor.Foldable
 import qualified Data.Map as M
+import qualified Data.Ratio as R
 import qualified Data.Set as S
 import           Data.Tagged (Tagged (..))
 import qualified Data.Text as Text
 import           Data.Text.Lazy.Builder (Builder)
+import           Data.Time.Clock (NominalDiffTime)
 import           Data.Typeable (TypeRep, typeRep)
 import qualified Data.Vector as Vector
 import qualified Data.Vector.Generic as Vector.Generic
@@ -342,8 +345,21 @@ instance Bi Int64 where
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Nano where
-  encode (MkFixed resolution) = encode resolution
+  encode (MkFixed nanoseconds) = encode nanoseconds
   decode = MkFixed <$> decode
+
+instance Bi Pico where
+  encode (MkFixed picoseconds) = encode picoseconds
+  decode = MkFixed <$> decode
+
+-- | For backwards compatibility we round pico precision to micro
+instance Bi NominalDiffTime where
+  encode = encode . (`div` 1e6) . toPicoseconds
+   where
+    toPicoseconds :: NominalDiffTime -> Integer
+    toPicoseconds t =
+      numerator (toRational t * toRational (resolution $ Proxy @E12))
+  decode = fromRational . (R.% 1e6) <$> decode
 
 instance Bi Natural where
   encode = encode . toInteger

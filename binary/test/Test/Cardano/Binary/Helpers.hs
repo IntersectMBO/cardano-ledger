@@ -72,9 +72,9 @@ import           Test.Cardano.Cbor.Canonicity (perturbCanonicity)
 import qualified Test.Cardano.Cbor.RefImpl as R
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- From/to tests
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Basic binary serialization/deserialization identity.
 binaryEncodeDecode :: (Show a, Eq a, Bi a) => a -> Property
@@ -140,7 +140,7 @@ binaryTest = identityTest @a $ \x ->
 showReadTest :: forall a . IdTestingRequiredClasses Read a => Spec
 showReadTest = identityTest @a showReadId
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- Type to be used to simulate a breaking change in the serialisation
 -- schema, so we can test instances which uses the `UnknownXX` pattern
@@ -224,9 +224,9 @@ extensionProperty = forAll @a (arbitrary :: Gen a) $ \input ->
     (encoded :: a) = unsafeDeserialize (serialize u)   -- Step 3
   in encoded === input
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Message length
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 msgLenLimitedCheck :: Bi a => Limit a -> a -> Property
 msgLenLimitedCheck limit msg = if sz <= fromIntegral limit
@@ -282,15 +282,15 @@ msgLenLimitedTest
   :: forall a . (IdTestingRequiredClasses Bi a) => Limit a -> Spec
 msgLenLimitedTest lim = msgLenLimitedTest' @a lim "" (const True)
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Orphans
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 deriving instance Bi bi => Bi (SmallGenerator bi)
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Static size estimates
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 bshow :: Buildable a => a -> String
 bshow = unpack . toLazyText . bprint build

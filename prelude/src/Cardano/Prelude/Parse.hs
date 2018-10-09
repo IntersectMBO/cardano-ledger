@@ -14,7 +14,9 @@ import           Formatting (bprint, shown, (%))
 import           Formatting.Buildable (Buildable (build))
 
 
-newtype Base16ParseError = Base16IncorrectSuffix ByteString
+newtype Base16ParseError =
+  Base16IncorrectSuffix ByteString
+  deriving (Show)
 
 instance Buildable Base16ParseError where
   build (Base16IncorrectSuffix suffix) =

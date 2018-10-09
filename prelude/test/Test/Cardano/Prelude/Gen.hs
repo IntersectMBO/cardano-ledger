@@ -7,9 +7,12 @@ module Test.Cardano.Prelude.Gen
        , genWord32
        , genWord16
        , genNatural
+       , genNominalDiffTime
        ) where
 
 import           Cardano.Prelude
+
+import           Data.Time (NominalDiffTime)
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -33,3 +36,6 @@ genWord16 = Gen.word16 Range.constantBounded
 
 genNatural :: Gen Natural
 genNatural = Gen.integral $ Range.linear 0 (fromIntegral (maxBound :: Int64))
+
+genNominalDiffTime :: Gen NominalDiffTime
+genNominalDiffTime = fromInteger . toInteger <$> Gen.int Range.constantBounded
