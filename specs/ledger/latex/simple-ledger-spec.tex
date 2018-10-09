@@ -69,8 +69,12 @@
 %% Types
 %%
 \newcommand{\Tx}{\type{Tx}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Addr}{\type{Addr}}
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Value}{\type{Value}}
+\newcommand{\Coin}{\type{Coin}}
 % Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -85,6 +89,7 @@
 %% Functions
 %%
 \newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}\ \var{#1}}
 \newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
 \newcommand{\values}[1]{\fun{values}\ #1}
 \newcommand{\balance}[1]{\fun{balance}\ \var{#1}}
@@ -96,11 +101,15 @@
 \newcommand{\addr}[1]{\fun{addr}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
 \newcommand{\inout}[3]{\var{#1}\mapsto_{#2}\var{#3}}
+% wildcard parameter
+\newcommand{\wcard}[0]{\underline{\phantom{a}}}
 % Adding ledgers...
 \newcommand{\utxo}[1]{\fun{utxo}\ #1}
 % Delegation
 \newcommand{\delegatesName}{\fun{delegates}}
 \newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+
+
 \begin{document}
 
 \title{A Simplified Formal Specification of a UTxO Ledger}
@@ -163,37 +172,57 @@ implementation:
 \section{State transitions for UTxO}
 \label{sec:state-trans-utxo-1}
 
-The states of the UTxO transition system, along with their associated functions
-and types are defined in Figure~\ref{fig:state-trans-utxo-defs}. In particular,
-we leave the definition of $\UTxO$ and $\Value$ abstract, and place constraints
-on the choice of these types.
-
-Regarding $\UTxO$, we require that $(\UTxO, \cup, \emptyset)$ is a commutative
-\textit{monoid} where $\cup$ is the addition operation and $\emptyset$ the
-neutral element, with a relation $\subseteq$ and a binary operator $\setminus$
-(called \textit{monus}) where:
-
-\begin{itemize}
-\item $\var{u} \subseteq \var{v}$ iff there exists another element $\var{w}$
-  such that $\var{u} \cup \var{w} = \var{v}$.
-\item $\var{u} \setminus \var{v}$ is the \textbf{unique} smallest element
-  $\var{w}$ such that $\var{u} \subseteq \var{v} + \var{w}$.
-\end{itemize}
-
-Note that the notation chosen suggests that $\UTxO$ is a set, however this does not
-necessarily have to be the case.
-
-As for $\Value$ the only requirement in these rules is that it forms a
-\textit{monoid} w.r.t. a binary operation $+$, and a neutral element $0$. Given
-a sequence of elements $\var{vs} = v_0, \ldots, v_{n-1}$, such that $v_i \in \Value$, we
-write $\sum_{v \in \var{vs}} v$ for the sum of all elements in $\var{vs}$ using
-the $+$ operation.
+The states of the UTxO transition system, along with their types are defined in
+Figure~\ref{fig:state-trans-utxo-defs}. Functions on these types are defined in
+Figure~\ref{fig:utxo-auxiliary-ops}.
 
 \begin{figure*}
+  \emph{Primitive types}
+  % 
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{txid} & \TxId & \text{transaction id}\\
+      % 
+      ix & \Ix & \text{index}\\
+      %
+      \var{addr} & \Addr & \text{address}\\
+      %
+      c & \Coin & \text{currency value}
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  % 
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{tx}
+      & \Tx
+      & (\var{inputs}, \var{outputs})
+      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+      & \text{transaction}
+      \\
+      \var{txin}
+      & \TxIn
+      & (\var{txid}, \var{ix})
+      & \TxId \times \Ix
+      & \text{transaction input}
+      \\
+      \var{txout}
+      & \type{TxOut}
+      & (\var{addr}, c)
+      & \Addr \times \Coin
+      & \text{transaction output}
+      \\
+      \var{utxo}
+      & \UTxO
+      & \var{txin} \mapsto \var{txout}
+      & \TxIn \mapsto \TxOut
+      & \text{unspent tx outputs}
+    \end{array}
+  \end{equation*}  
   \emph{UTxO States}
   %
   \begin{equation*}
-    \var{u} \in \UTxO
+    \var{utxo} \in \UTxO
   \end{equation*}
   %
   \emph{UTxO Transitions}
@@ -202,61 +231,55 @@ the $+$ operation.
     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
   \end{equation*}
   %
-  \emph{Abstract Types}
-  \begin{align*}
-    & \type{UTxO} & \text{unspent transaction outputs}
-    \nextdef
-    & \type{Tx} & \text{transactions}
-  \end{align*}
   \emph{Abstract Functions}
   \begin{align*}
-    & \txins{} \in \Tx \mapsto \UTxO & \text{transaction inputs (to be spent)}
-    \nextdef
-    & \txouts{} \in \Tx \mapsto \UTxO & \text{transaction outputs}
-    \nextdef
-    & \values{} \in \UTxO \mapsto \seqof{\Value} & \text{values in an UTxO}
-  \end{align*}
-  \emph{Constraints}
-  \begin{align*}
-    & (\Value, +) & \text{monoid}\\
-    & (\UTxO, \cup, \emptyset, \setminus, \subseteq) & \text{commutative monoid with monus}
+    & \txid{} \in \Tx \mapsto \TxId & \text{compute transaction id}
   \end{align*}
   \caption{Definitions associated to the UTxO transition system}
   \label{fig:state-trans-utxo-defs}
 \end{figure*}
 
-The transition rules for unspent outputs are presented in
-Figure~\ref{fig:state-trans-utxo}. We make use of function $\balance{}$, which is
-defined below:
-
-\begin{align*}
-  & \balance{} \in \UTxO \mapsto \Value\\
-  & \balance{u} = \sum_{v \in \values{u}} v
-\end{align*}
-
 \begin{figure}
+  \begin{align*}
+    & \fun{txins} \in \Tx \to \powerset{\TxIn}
+    & \text{transaction inputs} \\
+    & \fun{txins} ~ (\var{inputs}, ~\wcard) = \var{inputs}
+    \nextdef
+    & \fun{txouts} \in \Tx \to \UTxO
+    & \text{transaction outputs as UTxO} \\
+    & \fun{txouts} ~ \var{tx} =
+      \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
+      \middle| \begin{array}{l@{~}c@{~}l}
+                 (\_, \var{outputs}) & = & \var{tx} \\
+                 \var{ix} \mapsto \var{txout} & \in & \var{outputs}
+               \end{array}
+      \right\}
+    \nextdef
+    & \fun{balance} \in \UTxO \to \Coin
+    & \text{UTxO balance} \\
+    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+  \end{align*}
 
-  \centering
-  \begin{equation}\label{eq:utxo-base}
-    \inference[UTxO-base]
-    {}
-    {\var{u}}
-  \end{equation}
-
-  \begin{equation}\label{eq:utxo-inductive}
-    \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \mathit{u}
-      & \balance{(\txouts{tx})} = \balance{(\txins{tx})}
-    }
-    {u \trans{utxo}{tx} (u \setminus \txins{tx}) \cup \txouts{tx}}
-  \end{equation}
-  \caption{UTxO inference rules}
-  \label{fig:state-trans-utxo}
+  \begin{align*}
+    \var{ins} \restrictdom \var{utxo}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \in \var{ins} \}
+    & \text{domain restriction}
+    \\
+    \var{ins} \subtractdom \var{utxo}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \notin \var{ins} \}
+    & \text{domain exclusion}
+    \\
+    \var{utxo} \restrictrange \var{outs}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ o \in \var{outs} \}
+    & \text{range restriction}
+  \end{align*}
+  \caption{UTxO operations}
+  \label{fig:utxo-auxiliary-ops}
 \end{figure}
 
-Rule~\ref{eq:utxo-base} simply states that we can start with any arbitrary
-value for unspent outputs ($\UTxO$).
-
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:state-trans-utxo}. Rule~\ref{eq:utxo-base} simply states that
+we can start with any arbitrary value for unspent outputs ($\UTxO$).
 Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
 be applied to a set of unspent outputs, and how the set of unspent output changes
 with a transaction:
@@ -264,13 +287,34 @@ with a transaction:
 \item The set spent inputs in the transaction, must be in the set of unspent
   outputs.
 \item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal than the spent inputs. If fees
-  and forged value are present in the model, then we assume fees to be part of
-  the outputs, and forged value to be part of the inputs.
+  amount paid in a transaction) must be equal less than the amount of spent
+  inputs.
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
 \end{itemize}
+
+\begin{figure}
+
+  \centering
+  \begin{equation}\label{eq:utxo-base}
+    \inference[UTxO-base]
+    {}
+    {\var{utxo}}
+  \end{equation}
+
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \var{utxo}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx})}
+    }
+    {\var{utxo} \trans{utxo}{tx}
+      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:state-trans-utxo}
+\end{figure}
 
 \subsection{Properties}
 \label{sec:utxo-properties}
@@ -289,8 +333,6 @@ with a transaction:
   \emph{Abstract types}
   %
   \begin{align*}
-    & \TxIn & \text{transaction input}\\
-    & \TxOut & \text{transaction output}\\
     & \VKey & \text{verification key}\\
     & \Sig  & \text{signature}\\
     & \Data  & \text{data}\\
