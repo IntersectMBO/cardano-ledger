@@ -1,0 +1,412 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+%\usepackage[a-1b]{pdfx}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath, amssymb, stmaryrd, latexsym, mathtools}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage{todonotes}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\hypersetup{
+  pdftitle={Delegation Ledger Rules},
+  pdfauthor={},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={black},
+  citecolor={black},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\sequencetype}[1]{#1^\star}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\subtractrange}{\mathbin{\slashed{\restrictrange}}}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\serialised}[1]{\llbracket #1 \rrbracket}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\verified}[3]{\fun{verify} ~ #1 ~ \llbracket #2 \rrbracket ~ #3}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\transitionarrow}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+
+\begin{document}
+
+\title{Delegation Ledger Rules \\
+       {\small (Version 0.1)}}
+\author{}
+%\date{}
+
+\maketitle
+
+\begin{abstract}
+This document is a formal specification of the ledger rules for delegation,
+as described in \cite{delegation_design}.
+Delegation is first specified in isolation.
+Afterwards a simple UTxO ledger is added to delegation rules.
+
+This specification describes ledger rules in isolation of the
+underlying blockchain protocol, Ouroboros, to the extent possible.
+In particular, there is no notion of concurrency or blocks.
+
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\subsection*{Version history}
+
+\begin{description}
+\item[Version 0.1, October ?, 2018] Initial draft.
+\end{description}
+
+\section{Introduction}
+
+We briefly describe the motivation and context for delegation.
+The full context is contained in \cite{delegation_design}.
+
+For stake to be active in the blockchain protocol,
+the associated verification stake key must be registered,
+and its staking rights must be delegated to an active stake pool.
+\footnote{Individuals who wish to participate in the protocol can
+register themselves as a stake pool.}
+
+Stake keys are registered/deregistered through the use of
+registration/deregistration certificates.
+Stake is delegated through the use of delegation certificates.
+Finally, stake pools are registered/retired through the use of
+registration/retirement certificates.
+
+Stake pool retirement is handled a bit differently than stake key deregistration.
+Stake keys are considered inactive as soon as a deregistration certificate
+is applied to the ledger state.
+Stake pool retirement certificates, however, include a epoch in which it will retire,
+and is therefore not actually retired until the corresponding epoch begins.
+
+\section{Notation}
+
+We use set theory and predicate logic as our specification language.
+Sometimes we define a sets that correspond to types that we intentionally
+leave abstract. The interpretation is that any choice will do provided that
+the required operations on these sets all work out.
+
+A few points on notation:
+\begin{itemize}
+\item We use the notation $\powerset{\type{T}}$ to mean the set of sets of
+      $\type{T}$. The corresponding Haskell type would be
+      $\type{Set} ~ \type{T}$.
+\item We use the notation $\sequencetype{\type{T}}$ to mean the set of
+      sequences of $\type{T}$. The corresponding Haskell type would
+      be $[\type{T}]$.
+\item We use $(x,y) \in \type{X} \times \type{Y}$ for tuples as elements of a
+      relation.
+\item We use $x \mapsto y \in \type{X} \mapsto \type{Y}$ for elements of a
+      function.
+\end{itemize}
+%
+It is worth noting that we use set theoretic functions in two ways: one
+that corresponds to the types of computations, and one that corresponds to
+finite map data structures.
+
+In \cref{fig:notation} we define some extra operators on relations (including
+finite mappings) that are not standard set theory notation.
+
+\begin{figure}
+\begin{align*}
+  \var{xs} \restrictdom \var{m}
+& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ x \in \var{xs} \}
+& \text{domain restriction}
+\\
+  \var{xs} \subtractdom \var{m}
+& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ x \notin \var{xs} \}
+& \text{domain exclusion}
+\\
+  \var{m} \restrictrange \var{ys}
+& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ y \in \var{ys} \}
+& \text{range restriction}
+\\
+  \var{m} \subtractrange \var{ys}
+& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ y \notin \var{ys} \}
+& \text{range exclusion}
+\end{align*}
+\caption{Extra non-standard notation on finite mappings}
+\label{fig:notation}
+\end{figure}
+
+\subsection{State Transition Notation}
+
+In this specification we consider transactions and certificates to be
+state transformations of the ledger state.
+The state transition system will be described in terms of a collection of
+rules of the following form:
+
+%
+\begin{equation*}
+\frac{
+  \text{local definitions} \qquad  \text{side conditions}
+}{
+  \var{s}
+  \transitionarrow{}{\var{x}}
+  \var{s}^\prime
+}
+\textsc{rule name}
+\end{equation*}
+%
+
+The way to read this is as follows. The system can transition using this rule
+(``rule name'') from a starting state $s$ to a new state $s^\prime$ provided
+that the side conditions hold. All variables introduced in the transition
+itself -- $x$ in the example -- and in local definitions are in scope for
+other side conditions or the final state.
+
+\section{Delegation in Isolation}
+
+Delegation requires the following to be tracked by the ledger state:
+the active stake keys, the delegation map from active stake keys to stake pools,
+the active stake pools, and upcoming stake pools retirements.
+Additionally, the blockchain protocol rewards active stake, and so we must
+also include a mapping from active stake keys to rewards.
+
+In \cref{fig:basic_delegation} we give the delegation primitives, and in
+\cref{fig:delegation_ledger_state} we give the ledger state needed to handle
+delegation in isolation.
+
+The rules for registering and delegating stake keys are given in \cref{fig:delegation_transitions}.
+The rules for registering stake pools are given in \cref{fig:stake_pool_rules}.
+
+\begin{figure}
+
+\emph{Primitive types}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+  vk & \type{VKey} & \text{verification key}
+\\
+  hk & \type{Hash} & \text{hash of a key}
+\\
+  coin & \type{Coin} & \text{currency value}
+\\
+epoch & \type{Epoch} & \text{epoch}
+\end{array}
+\end{equation*}
+%
+\emph{Hash function}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+  \fun{hash} & \type{VKey} \to \type{Hash}
+& \text{hashing a key}
+\end{array}
+\end{equation*}
+%
+\emph{Certificate types}
+%
+\begin{equation*}
+\begin{array}{r@{}c@{}l}
+  \type{Cert} &=& \type{Cert_{regkey}} \uniondistinct
+                \type{Cert_{deregkey}} \uniondistinct
+                \type{Cert_{delegate}} \\
+              &\hfill\uniondistinct\;&
+                \type{Cert_{regpool}} \uniondistinct
+                \type{Cert_{retirepool}} \\
+  \textsc{RegKey}(c) \in \type{Cert} &\iff& c \in \type{Cert_{regkey}} \\
+  \textsc{DeregKey}(c) \in \type{Cert} &\iff& c \in \type{Cert_{deregkey}} \\
+  \textsc{Delegate}(c) \in \type{Cert} &\iff& c \in \type{Cert_{delegate}} \\
+  \textsc{RegPool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{regpool}} \\
+  \textsc{RetirePool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{retirepool}} \\
+\end{array}
+\end{equation*}
+
+\caption{Basic Delegation Definitions}
+\label{fig:basic_delegation}
+\end{figure}
+
+\begin{figure}
+
+\emph{Ledger State}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+stkeys & \powerset{\type{VKey}} & \text{registered stake keys}
+\\
+accounts & \type{VKey} \mapsto Coin & \text{reward balances}
+\\
+delegations & \type{VKey} \mapsto \type{VKey} & \text{delegations}
+\\
+stpools & \type{VKey} \mapsto \type{Cert_{regpool}} & \text{registered stake pools}
+\\
+retiring & \type{VKey} \mapsto \type{Epoch} & \text{retiring stake pools}
+\\
+epoch & \type{Epoch} & \text{current epoch}
+
+\end{array}
+\end{equation*}
+%
+\emph{Initial Ledger State}
+%
+\begin{equation*}
+\begin{array}{llllll}
+stkeys = \emptyset
+  & accounts = \emptyset
+  & delegations = \emptyset
+  & stpools = \emptyset
+  & retiring = \emptyset
+  & epoch = 0
+\end{array}
+\end{equation*}
+
+\caption{Ledger State (Delegation in Isolation)}
+\label{fig:delegation_ledger_state}
+\end{figure}
+
+\todo[inline]{We do not actually need stKeys since it is equal to the
+domain of the accounts mapping.  Does including it aid in clarity?}
+
+\begin{figure}
+\begin{equation*}
+\frac{
+  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{regkey}} \qquad
+  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
+  \var{hk_{sk}} \notin \var{stkeys} \qquad
+}{
+  \begin{array}{r}
+    \var{stkeys} \\
+    \var{accounts}
+  \end{array}
+  \transitionarrow{register stake key}{\var{hk_{sk}}}
+  \begin{array}{l}
+    \var{stkeys} \union \{\var{hk_{sk}}\} \\
+    \var{accounts} \union \{\var{hk_{sk}} \mapsto 0\}
+  \end{array}
+}
+\end{equation*}
+%
+\\[1em]
+%
+\begin{equation*}
+\frac{
+  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{deregkey}} \qquad
+  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
+  \var{hk_{sk}} \in \var{stkeys} \qquad
+}{
+  \begin{array}{r}
+    \var{stkeys} \\ \var{accounts} \\ \var{delegations}
+  \end{array}
+  \transitionarrow{deregister stake key}{\var{hk_{sk}}}
+  \begin{array}{l}
+  \var{stkeys} \setminus \{\var{hk_{sk}}\} \\
+  \{\fun{skAcc}~\var{hk_{sk}}\} \subtractdom \var{accounts} \\
+  \{\var{hk_{sk}}\} \subtractdom \var{delegations}
+  \end{array}
+}
+\end{equation*}
+%
+\\[1em]
+%
+\begin{equation*}
+\frac{
+  \var{cert} = (\var{vk_{sk}}, \var{hk_{sp}}) \in \type{Cert_{delegate}} \qquad
+  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
+  \var{hk_{sk}} \in \var{stkeys} \qquad
+}{
+  \var{delegations}
+  \transitionarrow{delegate}{\var{hk_{sk}}}
+  \var{delegations} \unionoverride \{\var{hk_{sk}} \mapsto \var{hk_{sp}}\}
+}
+\end{equation*}
+
+\caption{State transitions for stake keys and delegation}
+\label{fig:delegation_transitions}
+\end{figure}
+
+\begin{figure}
+
+\begin{equation*}
+\frac{
+  \begin{array}{c}
+    \var{cert} = (\var{vk_{sp}}, \_) \in \type{Cert_{regpool}} \qquad
+    \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
+  \end{array}
+}{
+  \begin{array}{r}
+    \var{stpools} \\
+    \var{retiring}
+  \end{array}
+  \transitionarrow{register stake pool}{\var{hk_{sk}}}
+  \begin{array}{l}
+    \var{stpools} \unionoverride \{\var{hk_{sp}} \mapsto cert\} \\
+    \{\var{hk_{sp}}\} \subtractdom \var{retiring}
+  \end{array}
+}
+\end{equation*}
+%
+\\[1em]
+%
+\begin{equation*}
+\frac{
+  \begin{array}{c}
+    \var{cert} = (\var{vk_{sp}}, e, \_) \in \type{Cert_{retirepool}} \qquad
+    \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
+    \\[0.3em]
+    \var{hk_{sp}} \in \dom \var{stpools} \qquad
+    \var{epoch} < e < \var{epoch} + E_\var{max} \qquad
+  \end{array}
+}{
+  \var{retiring}
+  \transitionarrow{retire stake pool}{\var{hk_{sk}}, ~ e}
+  \var{retiring} \unionoverride \{ \var{hk_{sp}} \mapsto e \}
+}
+\end{equation*}
+%
+\\[1em]
+%
+\begin{equation*}
+\frac{
+  \var{retiring_{now}} = \{ \var{hk_{sp}} \mid
+                            \var{hk_{sp}} \mapsto e \in \var{retiring}, ~
+                            e = \var{epoch}
+                         \}
+}{
+  \begin{array}{r}
+    \var{stpools} \\
+    \var{retiring}
+  \end{array}
+  \transitionarrow{reap stake pools}{}
+  \begin{array}{l}
+    \var{retiring_{now}} \subtractdom \var{stpools} \\
+    \var{retiring_{now}} \subtractdom \var{retiring}
+  \end{array}
+}
+\end{equation*}
+
+\caption{State transitions for stake pools}
+\label{fig:stake_pool_rules}
+\end{figure}
+
+\section{Delegation with a UTxO Ledger}
+
+\todo[inline]{How should the certificates inside a transaction be ordered?}
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
