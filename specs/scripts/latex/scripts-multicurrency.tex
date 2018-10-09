@@ -101,26 +101,48 @@
 \maketitle
 
 \begin{abstract}
-This documents specifies the rules for a multi-currency UTxO ledger with scripts, as described in \cite{multi_currency} and \cite{utxo_scripts}.
+This documents specifies the rules for a multi-currency UTxO ledger with scripts,
+as described in \cite{multi_currency} and \cite{utxo_scripts}.
 \end{abstract}
 
 \tableofcontents
 \listoffigures
 
-\section{Types}
+\section{Introduction}
 
-[TODO explain scripts, \cref{fig:scripts}].
-\todo{these scripts probably also need to take some of the data in transaction}
+A model of a UTxO ledger utilizing an abstract authorization mechanism is
+described in \cite{utxo_scripts}.  The authorization mechanism involves a
+scripting language, which we leave unspecified and refer to as $\Script$.
+This model is an extension of the model described in \cite{chimeric},
+which includes account based transactions in addition to UTxO transactions.
+We do not include account transactions in this specification.
 
-[TODO explain basic types, \cref{fig:basic_definitions}].
+The model described in \cite{utxo_scripts} was further generalized in
+\cite{multi_currency} to support using multiple currencies on the same ledger.
 
-[TODO explain basic UTxO operations, \cref{fig:auxiliary_ops}].
+In what follows, we describe the multi-currency UTxO ledger model using
+mostly set theory, we state validation rules that determine whether a transaction 
+is valid for a given ledger state, and finally we define the state transformation
+that a valid transaction has on the state.
 
-[TODO explain validation, \cref{fig:validation_rules}].
+\section{Scripts}
 
-[TODO explain ledger state, \cref{fig:ledger_state}].
+We use an abstract scripting language $\Scripts$ to generalize authorization
+mechanisms such as pay-to-pubkey-hash.
+In pay-to-pubkey-hash, an address is the hash of a public key.
+UTxO held by that address are authorized by providing the public key
+and a digital signature.
+Similarly, in the generalized script model, an address
+is the hash of a verification script, and the redeemer script
+plays the role of the digital signature.
+UTxO held by script addresses are authorized by providing both the validator
+and redeemer script.  Analogously to checking a digital signature,
+the authorization succeeds if the redeemer scripts provides evidence to
+that causes the validator script to return true.
+This is made precise in \cref{fig:scripts}.
 
-[TODO explain Mutli-currency operations].
+\todo[inline]{These scripts probably also need to take some of the data
+from the validating transaction}
 
 \begin{figure}
 \emph{Scripts}
@@ -154,7 +176,27 @@ This documents specifies the rules for a multi-currency UTxO ledger with scripts
 \caption{Scripts}
 \label{fig:scripts}
 \end{figure}
+\section{Multi-Currency}
 
+Multi-currency is explained in detail in \cite{multi_currency}, but here we give some
+brief details. The main idea is to replace the currency quantity type with a (finite)
+mapping from currency names to quantity. The understanding is that currencies not in
+a given mapping are assumed to have value 0 (the additive identity). Previous operations
+on the quantity type, such as addition and less-than, are now performed coordinate-wise
+on the new type. We write $\vec{0}$ for the empty map/value.
+
+\section{Basic Types and Operations}
+
+The basic types and operations for this specification are given
+in \cref{fig:basic_definitions}.  Transaction inputs are references to
+previous unspent outputs, together with the scripts needed to authorize it.
+Outputs are the pair of an address (the hash of a validator script) and a
+multi-currency value. A transaction is a collection of inputs and outputs,
+together with other data for creating new currencies, minting currency,
+and paying fees. Currency is authorized to be minted using the same
+mechanism of validator and redeemer scripts.
+Other needed operations on transactions and UTxO are given in 
+\cref{fig:auxiliary_ops}.
 
 \begin{figure}
 
@@ -301,45 +343,30 @@ This documents specifies the rules for a multi-currency UTxO ledger with scripts
 \label{fig:auxiliary_ops}
 \end{figure}
 
+\section{Validation and Ledger State}
+
+Validation is the determination that a transaction is permitted to be appended
+to the ledger, and hence manipulate the state of the ledger.
+The data in the ledger state is given by \cref{fig:ledger_state}.
+Though $\var{totalMinted}$ and $\var{slot}$ do not appear to be used in this specification,
+they are important since they are used by the validator scripts.
+For example, expirations can be implemented using $\var{slot}$, and a currency's
+policy may depend on $\var{totalMinted}$.
+
+The ledger state is defined inductively.
+The initial state is defined in \cref{fig:ledger_state}.
+\todo{Should we hard code $\mathsf{ADA}$ and the corresponding
+monetary policy into the initial ledger state?}
+Given a transaction and a ledger state, first we check that
+the transaction is valid.
+To be valid, it must pass every test given in \cref{fig:validation_rules}.
+Note that these rules depend only on the transaction and the ledger state.
+If a transaction is valid for a given ledger state, it is then
+applied using the state transformation rule given in \cref{fig:state_transition}.
+
 
 \begin{figure}
-
-\emph{Ledger State}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}lr}
-utxo & \UTxO & \text{unspent outputs}
-\\
-currencies & \Currency \mapsto \Script
-  & \text{currencies with policies}
-\\
-totalMinted & \Value & \text{total currency minted}
-\\
-slot & \Slot & \text{current slot}
-
-\end{array}
-\end{equation*}
-%
-\emph{Initial Ledger State}
-%
-\begin{equation*}
-\begin{array}{llllll}
-utxo = \emptyset
-  & currencies = \emptyset
-  & totalMinted = \vec{0}
-  & slot = 0
-\end{array}
-\end{equation*}
-
-\caption{Ledger State}
-\label{fig:ledger_state}
-\end{figure}
-
-\section{Validation}
-See figure \cref{fig:validation_rules} 
-
-\begin{figure}
-\emph{Valid Inputs}
+\emph{Valid Transactions (for a given Ledger State)}
 %
 \begin{equation*}
 \txins{tx} \subseteq \dom \var{utxo}
@@ -393,8 +420,38 @@ balance (\txouts tx) + (\fee tx)
 \label{fig:validation_rules}
 \end{figure}
 
-\section{State Transformations}
-See figure \cref{fig:state_transitions} 
+
+\begin{figure}
+
+\emph{Ledger State}
+%
+\begin{equation*}
+\begin{array}{r@{~\in~}lr}
+utxo & \UTxO & \text{unspent outputs}
+\\
+currencies & \Currency \mapsto \Script
+  & \text{currencies with policies}
+\\
+totalMinted & \Value & \text{total currency minted}
+\\
+slot & \Slot & \text{current slot}
+
+\end{array}
+\end{equation*}
+\emph{Initial Ledger State}
+%
+\begin{equation*}
+\begin{array}{llllll}
+utxo = \emptyset
+  & currencies = \emptyset
+  & totalMinted = \vec{0}
+  & slot = 0
+\end{array}
+\end{equation*}
+
+\caption{Ledger State}
+\label{fig:ledger_state}
+\end{figure}
 
 \begin{figure}
 \begin{equation*}
@@ -407,7 +464,7 @@ See figure \cref{fig:state_transitions}
 \end{equation*}
 
 \caption{State transition}
-\label{fig:state_transitions}
+\label{fig:state_transition}
 \end{figure}
 
 \section{Disabling Multi-Currency}
@@ -431,7 +488,7 @@ like ``ada", ``Ada", and ``ADA".}
 \section{Disabling Scripts}
 
 WIP - We should probably make two types of addresses, pay-to-pubkey addresses and script addresses.
-The pay-to-pubkey addresses will work similiarly to the validation rules defined above, with the
+The pay-to-pubkey addresses will work similarly to the validation rules defined above, with the
 following changes:
 
 "Scripts Validate" becomes a specific validator/redeemer pair, where $\mathsf{validator}$ checks a
