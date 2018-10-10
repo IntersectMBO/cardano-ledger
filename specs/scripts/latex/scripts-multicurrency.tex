@@ -28,6 +28,13 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
 
@@ -80,13 +87,14 @@
 %%
 \newcommand{\scriptValidate}[3]{\fun{scriptValidate} ~ \var{#1} ~ \var{#2} ~ \var{#3}}
 \newcommand{\txid}[1]{\fun{txid}\ \var{#1}}
+\newcommand{\inputAddr}[1]{\fun{inputAddr}\ \var{#1}}
 \newcommand{\txins}[1]{\fun{txins}\ \var{#1}}
 \newcommand{\txouts}[1]{\fun{txouts}\ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}\ \var{#1}}
 \newcommand{\forged}[1]{\fun{forged}\ \var{#1}}
 \newcommand{\forgeReedemers}[1]{\fun{forgeReedemers}\ \var{#1}}
 \newcommand{\fee}[1]{\fun{fee}\ \var{#1}}
-\newcommand{\created}[1]{\fun{forged}\ \var{#1}}
+\newcommand{\created}[1]{\fun{created}\ \var{#1}}
 \newcommand{\outRefs}[1]{\fun{outRefs}\ \var{#1}}
 
 \begin{document}
@@ -121,7 +129,7 @@ The model described in \cite{utxo_scripts} was further generalized in
 \cite{multi_currency} to support using multiple currencies on the same ledger.
 
 In what follows, we describe the multi-currency UTxO ledger model using
-mostly set theory, we state validation rules that determine whether a transaction 
+mostly set theory, we state validation rules that determine whether a transaction
 is valid for a given ledger state, and finally we define the state transformation
 that a valid transaction has on the state.
 
@@ -160,15 +168,19 @@ from the validating transaction}
 & \type{LedgerState} \mapsto \type{R}
 \end{array}
 \end{equation*}
-% ~ ~ ~ \text{where} \type{R}
-%   \text{is an arbitrary type, but must be the same for each validator/redeemer pair.}
-%\\
+~ ~ ~ \text{where $\ScriptEval{script}$ is the pure function denoted
+by $script\in\Script$,}
+
+~ ~ ~ \text{and $\type{R}$ is an arbitrary type, but must be the
+same for each validator/redeemer pair.}
+\\
+\\
 \emph{Script Operations}
 \begin{align*}
 & \fun{scriptValidate} \in
-  \type{LedgerState} \times \Script \times \Script \mapsto \Bool \\
+  \type{LedgerState} \mapsto \Script \mapsto \Script \mapsto \Bool \\
 & \scriptValidate{st}{validator}{redeemer} =
-\ScriptEval{validator} \left(st, \ScriptEval{redeemer}\left(st\right)\right)
+\ScriptEval{validator} ~ state \left(\ScriptEval{redeemer} state\right)
 \end{align*}
 
 \caption{Scripts}
@@ -193,7 +205,7 @@ multi-currency value. A transaction is a collection of inputs and outputs,
 together with other data for creating new currencies, minting currency,
 and paying fees. Currency is authorized to be minted using the same
 mechanism of validator and redeemer scripts.
-Other needed operations on transactions and UTxO are given in 
+Other needed operations on transactions and UTxO are given in
 \cref{fig:auxiliary_ops}.
 
 \begin{figure}
@@ -302,6 +314,11 @@ Other needed operations on transactions and UTxO are given in
 & \text{transaction inputs} \\
 & \fun{txins} ~ ((\var{txins}, \_), \_, \_, \_) = \var{txins}
 \\[1em]
+& \fun{inputAddr} \in \TxIn \to \Addr
+& \text{address for an input} \\
+& \fun{inputAddr} ~ (\_, \_, validator, \_)
+= \hash validator
+\\[1em]
 & \fun{txouts} \in \Tx \to \UTxO
 & \text{transaction outputs as UTxO} \\
 & \fun{txouts} ~ \var{tx} =
@@ -361,29 +378,37 @@ To be valid, it must pass every test given in \cref{fig:validation_rules}.
 Note that these rules depend only on the transaction and the ledger state.
 If a transaction is valid for a given ledger state, it is then
 applied using the state transformation rule given in \cref{fig:state_transition}.
+\todo[inline]{There is a subtlety here involving in the order in which these rules are applied.
+If the UTxO update rule (\cref{eq:utxo-update}) is applied to a transaction before the
+currency creation rule (\cref{eq:create-currency}),
+then a currency cannot be both created and forged in the same transaction.}
 
+Note that two rules from \cite{multi_currency} do not appear in \cref{fig:validation_rules},
+namely ``creator has enough money" and ``fee is non-negative".
+In a model without account transactions, as we have here, we do not need additive
+inverses and can assume that all quantities are nonnegative.
 
 \begin{figure}
-\emph{Valid Transactions (for a given Ledger State)}
+\emph{Valid-Inputs}
 %
 \begin{equation*}
 \txins{tx} \subseteq \dom \var{utxo}
 \end{equation*}
 
-\emph{Preservation of Value}
+\emph{Preservation-of-Value}
 %
 \begin{equation*}
 balance (\txouts tx) + (\fee tx)
   = balance (\txins tx \restrictdom utxo) + (\forged tx)
 \end{equation*}
 
-\emph{No Double Spend}
+\emph{No-Double-Spend}
 %
 \begin{equation*}
 \lvert \txins tx \rvert = \lvert \outRefs tx\rvert
 \end{equation*}
 
-\emph{Scripts Validate}
+\emph{Scripts-Validate}
 %
 \begin{equation*}
 \forall (\_, \_, validator, redeemer)\in(\txins tx),
@@ -393,22 +418,22 @@ balance (\txouts tx) + (\fee tx)
 \emph{Authorized}
 %
 \begin{equation*}
-  \forall (\_, \_, validator, \_)\in(\txins tx),
-  (i \mapsto (addr, \_)) \in \var{utxo} \land \hash validator = addr
+  \forall i\in(\txins tx),
+  (i \mapsto (addr, \_)) \in \var{utxo} \land \inputAddr i = addr
 \end{equation*}
 
-\emph{Forge Obeys Policy}
+\emph{Forge-Obeys-Policy}
 %
 \begin{equation*}
 \begin{array}{c}
 \forall c\in(\forged tx), \\
-\exists policy, (c, policy) \in \var{currencies} \\
-\exists reedemer, (c, reedemer) \in \forgeReedemers tx \\
+\exists policy, (c \mapsto policy) \in \var{currencies} \\
+\exists reedemer, (c \mapsto reedemer) \in \forgeReedemers tx \\
 \scriptValidate{state}{policy}{redeemer}
 \end{array}
 \end{equation*}
 
-\emph{Create Only New Currencies}
+\emph{Create-Only-New-Currencies}
 %
 \begin{equation*}
 \created tx = (curr, policy), curr \notin \dom currencies
@@ -452,23 +477,39 @@ utxo = \emptyset
 \end{figure}
 
 \begin{figure}
-\begin{equation*}
-  \begin{array}{rcl}
-    \var{utxo} & & (\txins tx \subtractdom \var{utxo}) \union \txouts tx \\
-    \var{currencies} & \longrightarrow & \var{currencies} \union (\created tx) \\
-    \var{totalMinted} & & \var{totalMinted} + (\forged tx)\\
-    \var{slot} & & \var{slot} \\
-  \end{array}
-\end{equation*}
+  \centering
+  \begin{equation}\label{eq:utxo-update}
+    \inference[update-UTxO]
+    {
+      \text{Valid-Inputs} & \text{Preservation-of-Value} & \text{No-Double-Spend} \\
+      \text{Scripts-Validate} & \text{Authorized} & \text{Forge-Obeys-Policy}
+    }
+    {
+      \begin{array}{rcl}
+        \var{utxo} & & (\txins tx \subtractdom \var{utxo}) \union \txouts tx \\
+        \var{totalMinted} & \trans{}{tx} & \var{totalMinted} + (\forged tx)\\
+      \end{array}
+    }
+  \end{equation}
 
-\caption{State transition}
-\label{fig:state_transition}
+  \begin{equation}\label{eq:create-currency}
+    \inference[create-currency]
+    {
+      \text{Create-Only-New-Currencies}
+    }
+    {
+      \var{currencies} \trans{}{tx} \var{currencies} \union (\created tx)
+    }
+  \end{equation}
+
+  \caption{State Transitions}
+  \label{fig:state_transition}
 \end{figure}
 
 \section{Disabling Multi-Currency}
 
 If we want to disable multi-currency, we can remove the ``Forge Obeys Policy" rule and
-add \cref{fig:only_ada_rule} 
+add \cref{fig:only_ada_rule}
 \begin{figure}
 \emph{Only ADA}
 %
@@ -481,7 +522,7 @@ add \cref{fig:only_ada_rule}
 \end{figure}
 
 \todo[inline]{We need to think carefully about how to handle similar names,
-like ``ada", ``Ada", and ``ADA".}
+like ``ada", ``Ada", and ``ADA". Allow only uppercase (lowercase)? No unicode?}
 
 \section{Disabling Scripts}
 
