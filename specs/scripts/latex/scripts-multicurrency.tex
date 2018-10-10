@@ -127,7 +127,7 @@ that a valid transaction has on the state.
 
 \section{Scripts}
 
-We use an abstract scripting language $\Scripts$ to generalize authorization
+We use an abstract scripting language $\Script$ to generalize authorization
 mechanisms such as pay-to-pubkey-hash.
 In pay-to-pubkey-hash, an address is the hash of a public key.
 UTxO held by that address are authorized by providing the public key
@@ -160,11 +160,9 @@ from the validating transaction}
 & \type{LedgerState} \mapsto \type{R}
 \end{array}
 \end{equation*}
-
-~ ~ ~ \text{where} \type{R}
-  \text{is an arbitrary type, but must be the same for each validator/redeemer pair.}
-\\
-
+% ~ ~ ~ \text{where} \type{R}
+%   \text{is an arbitrary type, but must be the same for each validator/redeemer pair.}
+%\\
 \emph{Script Operations}
 \begin{align*}
 & \fun{scriptValidate} \in
