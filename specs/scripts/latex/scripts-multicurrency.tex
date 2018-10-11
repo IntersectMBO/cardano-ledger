@@ -70,6 +70,7 @@
 \newcommand{\Quantity}{\type{Quantity}}
 \newcommand{\Value}{\type{Value}}
 \newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\OutRef}{\type{OutRef}}
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Create}{\type{Create}}
@@ -253,6 +254,12 @@ Other needed operations on transactions and UTxO are given in
 & (\var{txid}, \var{ix}, \var{validator}, \var{redeemer})
 & \TxIn
 \\
+  \OutRef
+& \TxId \times \Ix
+&
+& (\var{txid}, \var{ix})
+& \OutRef
+\\
   \TxOut
 & \Addr \times \Value
 &
@@ -260,9 +267,9 @@ Other needed operations on transactions and UTxO are given in
 & \TxOut
 \\
   \UTxO
-& \TxIn \mapsto \TxOut
+& \OutRef \mapsto \TxOut
 &
-& \var{txin} \mapsto \var{txout} \in \var{utxo}
+& \var{outRef} \mapsto \var{txout} \in \var{utxo}
 & \UTxO
 \\
   \Create
@@ -313,11 +320,6 @@ Other needed operations on transactions and UTxO are given in
 & \fun{txins} \in \Tx \to \powerset{\TxIn}
 & \text{transaction inputs} \\
 & \fun{txins} ~ ((\var{txins}, \_), \_, \_, \_) = \var{txins}
-\\[1em]
-& \fun{inputAddr} \in \TxIn \to \Addr
-& \text{address for an input} \\
-& \fun{inputAddr} ~ (\_, \_, validator, \_)
-= \hash validator
 \\[1em]
 & \fun{txouts} \in \Tx \to \UTxO
 & \text{transaction outputs as UTxO} \\
@@ -392,14 +394,14 @@ inverses and can assume that all quantities are nonnegative.
 \emph{Valid-Inputs}
 %
 \begin{equation*}
-\txins{tx} \subseteq \dom \var{utxo}
+\outRefs{tx} \subseteq \dom \var{utxo}
 \end{equation*}
 
 \emph{Preservation-of-Value}
 %
 \begin{equation*}
 balance (\txouts tx) + (\fee tx)
-  = balance (\txins tx \restrictdom utxo) + (\forged tx)
+  = balance (\outRefs tx \restrictdom utxo) + (\forged tx)
 \end{equation*}
 
 \emph{No-Double-Spend}
@@ -418,8 +420,12 @@ balance (\txouts tx) + (\fee tx)
 \emph{Authorized}
 %
 \begin{equation*}
-  \forall i\in(\txins tx),
-  (i \mapsto (addr, \_)) \in \var{utxo} \land \inputAddr i = addr
+\begin{array}{c}
+  \forall i\in(\txins tx),\\
+    i = (txid, ix, validator, \_)
+    \land ((txid, ix) \mapsto (addr, \_)) \in \var{utxo}
+    \land \hash validator = addr
+\end{array}
 \end{equation*}
 
 \emph{Forge-Obeys-Policy}
@@ -486,7 +492,7 @@ utxo = \emptyset
     }
     {
       \begin{array}{rcl}
-        \var{utxo} & & (\txins tx \subtractdom \var{utxo}) \union \txouts tx \\
+        \var{utxo} & & (\outRefs tx \subtractdom \var{utxo}) \union \txouts tx \\
         \var{totalMinted} & \trans{}{tx} & \var{totalMinted} + (\forged tx)\\
       \end{array}
     }
