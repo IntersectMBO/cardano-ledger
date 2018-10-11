@@ -18,7 +18,6 @@ import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..),
                      dropOpeningsMap, dropSharesMap, dropSignedCommitment,
                      dropSscPayload, dropSscProof, dropVssCertificate,
                      dropVssCertificatesMap)
-import           Cardano.Crypto (hash)
 
 import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
                      legacyGoldenDecode, roundTripsBiBuildable,
@@ -27,14 +26,12 @@ import           Test.Cardano.Chain.Common.Example (exampleStakeholderId)
 import           Test.Cardano.Chain.Ssc.Example (exampleCommitment,
                      exampleCommitmentSignature, exampleCommitmentsMap,
                      exampleInnerSharesMap, exampleOpening, exampleOpeningsMap,
-                     exampleSignedCommitment, exampleSscPayload,
-                     exampleSscProof, exampleVssCertificate,
-                     exampleVssCertificatesHash, exampleVssCertificatesMap)
+                     exampleSignedCommitment, exampleVssCertificate,
+                     exampleVssCertificatesMap)
 import           Test.Cardano.Chain.Ssc.Gen (genCommitment,
                      genCommitmentSignature, genCommitmentsMap,
                      genInnerSharesMap, genOpening, genOpeningsMap,
-                     genSharesMap, genSignedCommitment, genSscPayload,
-                     genSscProof, genVssCertificate, genVssCertificatesHash,
+                     genSharesMap, genSignedCommitment, genVssCertificate,
                      genVssCertificatesMap)
 import           Test.Cardano.Crypto.Gen (feedPM)
 
@@ -176,26 +173,11 @@ roundTripSharesMap = eachOf 10 genSharesMap roundTripsBiShow
 -- SscPayload
 --------------------------------------------------------------------------------
 
-golden_SscPayload_CommitmentsPayload :: Property
-golden_SscPayload_CommitmentsPayload = goldenTestBi
-  cP
-  "test/golden/SscPayload_CommitmentsPayload"
- where
-  cP =
-    CommitmentsPayload exampleCommitmentsMap (exampleVssCertificatesMap 10 4)
-
 golden_legacy_SscPayload_CommitmentsPayload :: Property
 golden_legacy_SscPayload_CommitmentsPayload = legacyGoldenDecode
   "SscPayload_CommitmentsPayload"
   dropSscPayload
   "test/golden/SscPayload_CommitmentsPayload"
-
-golden_SscPayload_OpeningsPayload :: Property
-golden_SscPayload_OpeningsPayload = goldenTestBi
-  oP
-  "test/golden/SscPayload_OpeningsPayload"
- where
-  oP = OpeningsPayload exampleOpeningsMap (exampleVssCertificatesMap 10 4)
 
 golden_legacy_SscPayload_OpeningsPayload :: Property
 golden_legacy_SscPayload_OpeningsPayload = legacyGoldenDecode
@@ -203,21 +185,11 @@ golden_legacy_SscPayload_OpeningsPayload = legacyGoldenDecode
   dropSscPayload
   "test/golden/SscPayload_OpeningsPayload"
 
-golden_SscPayload_SharesPayload :: Property
-golden_SscPayload_SharesPayload =
-  goldenTestBi exampleSscPayload "test/golden/SscPayload_SharesPayload"
-
 golden_legacy_SscPayload_SharesPayload :: Property
 golden_legacy_SscPayload_SharesPayload = legacyGoldenDecode
   "SscPayload_SharesPayload"
   dropSscPayload
   "test/golden/SscPayload_SharesPayload"
-
-golden_SscPayload_CertificatesPayload :: Property
-golden_SscPayload_CertificatesPayload = goldenTestBi
-  shP
-  "test/golden/SscPayload_CertificatesPayload"
-  where shP = CertificatesPayload (exampleVssCertificatesMap 10 4)
 
 golden_legacy_SscPayload_CertificatesPayload :: Property
 golden_legacy_SscPayload_CertificatesPayload = legacyGoldenDecode
@@ -226,16 +198,12 @@ golden_legacy_SscPayload_CertificatesPayload = legacyGoldenDecode
   "test/golden/SscPayload_CertificatesPayload"
 
 roundTripSscPayload :: Property
-roundTripSscPayload = eachOf 10 (feedPM genSscPayload) roundTripsBiBuildable
+roundTripSscPayload = eachOf 1 (pure SscPayload) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
 -- SscProof
 --------------------------------------------------------------------------------
-
-golden_SscProof_CommitmentsProof :: Property
-golden_SscProof_CommitmentsProof =
-  goldenTestBi exampleSscProof "test/golden/SscProof_CommitmentsProof"
 
 golden_legacy_SscProof_CommitmentsProof :: Property
 golden_legacy_SscProof_CommitmentsProof = legacyGoldenDecode
@@ -243,40 +211,17 @@ golden_legacy_SscProof_CommitmentsProof = legacyGoldenDecode
   dropSscProof
   "test/golden/SscProof_CommitmentsProof"
 
-golden_SscProof_OpeningsProof :: Property
-golden_SscProof_OpeningsProof = goldenTestBi
-  oP
-  "test/golden/SscProof_OpeningsProof"
- where
-  oP =
-    OpeningsProof (hash exampleOpeningsMap) (exampleVssCertificatesHash 10 4)
-
 golden_legacy_SscProof_OpeningsProof :: Property
 golden_legacy_SscProof_OpeningsProof = legacyGoldenDecode
   "SscProof_OpeningsProof"
   dropSscProof
   "test/golden/SscProof_OpeningsProof"
 
-golden_SscProof_SharesProof :: Property
-golden_SscProof_SharesProof = goldenTestBi
-  sP
-  "test/golden/SscProof_SharesProof"
- where
-  sP = SharesProof (hash exampleSharesMap) (exampleVssCertificatesHash 10 4)
-  exampleSharesMap =
-    Map.fromList $ [(exampleStakeholderId, exampleInnerSharesMap 3 1)]
-
 golden_legacy_SscProof_SharesProof :: Property
 golden_legacy_SscProof_SharesProof = legacyGoldenDecode
   "SscProof_SharesProof"
   dropSscProof
   "test/golden/SscProof_SharesProof"
-
-golden_SscProof_CertificatesProof :: Property
-golden_SscProof_CertificatesProof = goldenTestBi
-  shP
-  "test/golden/SscProof_CertificatesProof"
-  where shP = CertificatesProof (exampleVssCertificatesHash 10 4)
 
 golden_legacy_SscProof_CertificatesProof :: Property
 golden_legacy_SscProof_CertificatesProof = legacyGoldenDecode
@@ -285,7 +230,7 @@ golden_legacy_SscProof_CertificatesProof = legacyGoldenDecode
   "test/golden/SscProof_CertificatesProof"
 
 roundTripSscProof :: Property
-roundTripSscProof = eachOf 10 (feedPM genSscProof) roundTripsBiBuildable
+roundTripSscProof = eachOf 1 (pure SscProof) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -311,14 +256,11 @@ roundTripVssCertificate =
 -- VssCertificatesHash
 --------------------------------------------------------------------------------
 
-golden_VssCertificatesHash :: Property
-golden_VssCertificatesHash = goldenTestBi
-  (exampleVssCertificatesHash 10 4)
+golden_legacy_VssCertificatesHash :: Property
+golden_legacy_VssCertificatesHash = legacyGoldenDecode
+  "VssCertiificatesHash"
+  dropBytes
   "test/golden/VssCertificatesHash"
-
-roundTripVssCertificatesHash :: Property
-roundTripVssCertificatesHash =
-  eachOf 10 (feedPM genVssCertificatesHash) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------

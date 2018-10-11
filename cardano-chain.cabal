@@ -70,8 +70,6 @@ library
                        Cardano.Chain.Ssc.CommitmentsMap
                        Cardano.Chain.Ssc.Opening
                        Cardano.Chain.Ssc.OpeningsMap
-                       Cardano.Chain.Ssc.Payload
-                       Cardano.Chain.Ssc.Proof
                        Cardano.Chain.Ssc.SharesMap
                        Cardano.Chain.Ssc.VssCertificate
                        Cardano.Chain.Ssc.VssCertificatesMap

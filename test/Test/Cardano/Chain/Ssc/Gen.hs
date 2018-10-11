@@ -8,11 +8,8 @@ module Test.Cardano.Chain.Ssc.Gen
        , genSharesMap
        , genOpening
        , genOpeningsMap
-       , genSscPayload
-       , genSscProof
        , genSignedCommitment
        , genVssCertificate
-       , genVssCertificatesHash
        , genVssCertificatesMap
        ) where
 
@@ -28,11 +25,10 @@ import qualified Hedgehog.Range as Range
 import           Cardano.Binary.Class (asBinary)
 import           Cardano.Chain.Ssc (Commitment, CommitmentSignature,
                      CommitmentsMap, InnerSharesMap, Opening, OpeningsMap,
-                     SharesMap, SignedCommitment, SscPayload (..), SscProof,
-                     VssCertificate (..), VssCertificatesHash,
-                     VssCertificatesMap (..), mkCommitmentsMap, mkSscProof,
+                     SharesMap, SignedCommitment, VssCertificate (..),
+                     VssCertificatesMap (..), mkCommitmentsMap,
                      mkVssCertificate, mkVssCertificatesMap)
-import           Cardano.Crypto (ProtocolMagic, deterministic, hash)
+import           Cardano.Crypto (ProtocolMagic, deterministic)
 
 import           Test.Cardano.Chain.Common.Gen (genStakeholderId)
 import           Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
@@ -92,30 +88,12 @@ genSignedCommitment :: ProtocolMagic -> Gen SignedCommitment
 genSignedCommitment pm =
     (,,) <$> genPublicKey <*> genCommitment <*> genCommitmentSignature pm
 
--- We mod the size to the range [0,5000) to give relatively large tests which
--- are still reasonably fast to generate.
-genSscPayload :: ProtocolMagic -> Gen SscPayload
-genSscPayload pm = Gen.scale (`mod` 5000) $ Gen.choice
-    [ CertificatesPayload <$> genVssCertificatesMap pm
-    , CommitmentsPayload <$> genCommitmentsMap pm <*> genVssCertificatesMap pm
-    , OpeningsPayload <$> genOpeningsMap <*> genVssCertificatesMap pm
-    , SharesPayload <$> genSharesMap <*> genVssCertificatesMap pm
-    ]
-
-genSscProof :: ProtocolMagic -> Gen SscProof
-genSscProof pm = mkSscProof <$> genSscPayload pm
-
 genVssCertificate :: ProtocolMagic -> Gen VssCertificate
 genVssCertificate pm =
     mkVssCertificate pm
         <$> genSecretKey
         <*> (asBinary <$> genVssPublicKey)
         <*> genEpochIndex
-
-genVssCertificatesHash :: ProtocolMagic -> Gen VssCertificatesHash
-genVssCertificatesHash pm = hash <$> Gen.map
-    (Range.linear 0 10)
-    ((,) <$> genStakeholderId <*> genVssCertificate pm)
 
 genVssCertificatesMap :: ProtocolMagic -> Gen VssCertificatesMap
 genVssCertificatesMap pm =
