@@ -53,9 +53,9 @@ import           Test.QuickCheck.Gen (Gen, choose)
 import           Test.QuickCheck.Monadic (PropertyM, pick, stop)
 import           Test.QuickCheck.Property (Result (..), failed)
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Various properties and predicates
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 qcIsJust :: Maybe a -> Property
 qcIsJust (Just _) = property True
@@ -96,9 +96,9 @@ qcNotElem x xs =
 qcFail :: Text -> Property
 qcFail s = counterexample (toString s) False
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Monadic testing
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Call stopProperty if boolean value is false.
 assertProperty :: Monad m => Bool -> Text -> PropertyM m ()
@@ -139,9 +139,9 @@ expectedOne desc = \case
   where
     kickOut err = stopProperty $ err <> " (" <> desc <> ")"
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Generators
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Split given integer `total` into `parts` parts
 -- TODO: improve naming!
@@ -164,9 +164,9 @@ sumEquals maxEl restSum = do
 expectationError :: Text -> Expectation
 expectationError = fail . toString
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Monoid/Semigroup laws
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 isAssociative :: (Show m, Eq m, Semigroup m) => m -> m -> m -> Property
 isAssociative m1 m2 m3 =
@@ -197,9 +197,9 @@ formsCommutativeMonoid :: (Show m, Eq m, Semigroup m, Monoid m) => m -> m -> m -
 formsCommutativeMonoid m1 m2 m3 =
     (formsMonoid m1 m2 m3) .&&. (isCommutative m1 m2)
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Helpers
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Extensional equality combinator. Useful to express function properties as functional
 -- equations.

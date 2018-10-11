@@ -1,8 +1,7 @@
-name:                cardano-binary
-version:             1.5.0
-synopsis:            Binary serialization for Cardano
-description:         This package defines a type class for binary serialization,
-                     helpers and instances.
+name:                cardano-crypto-wrapper
+version:             1.3.0
+synopsis:            Cryptographic primitives used in the Cardano project
+description:         Cryptographic primitives used in the Cardano project
 license:             MIT
 license-file:        LICENSE
 author:              IOHK
@@ -21,12 +20,29 @@ flag development
 library
   hs-source-dirs:      src
   exposed-modules:
-                       Cardano.Binary.Class
-                       Cardano.Binary.Limit
+                       Cardano.Crypto
+
+                       Cardano.Crypto.Hashing
+                       Cardano.Crypto.HD
+                       Cardano.Crypto.Limits
+                       Cardano.Crypto.Orphans
+                       Cardano.Crypto.ProtocolMagic
+                       Cardano.Crypto.Random
+                       Cardano.Crypto.SecretSharing
+                       Cardano.Crypto.Signing
+                       Cardano.Crypto.Signing.Redeem
+                       Cardano.Crypto.Signing.Safe
+                       Cardano.Crypto.Signing.Signing
 
   other-modules:
-                       Cardano.Binary.Class.Core
-                       Cardano.Binary.Class.Primitive
+                       Cardano.Crypto.Scrypt
+
+                       Cardano.Crypto.Signing.Check
+                       Cardano.Crypto.Signing.Tag
+                       Cardano.Crypto.Signing.Types.Redeem
+                       Cardano.Crypto.Signing.Types.Safe
+                       Cardano.Crypto.Signing.Types.Signing
+                       Cardano.Crypto.Signing.Types.Tag
 
   build-depends:       base
                      , aeson
@@ -35,19 +51,21 @@ library
                      , binary
                      , bytestring
                      , canonical-json
+                     , cardano-crypto
+                     , cardano-binary
                      , cardano-prelude
                      , cborg
                      , containers
-                     , digest
+                     , cryptonite
+                     , cryptonite-openssl
+                     , data-default
                      , formatting
                      , lens
-                     , micro-recursion-schemes
+                     , memory
                      , mtl
-                     , safe-exceptions
-                     , tagged
+                     , pvss
+                     , scrypt
                      , text
-                     , time
-                     , vector
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -67,30 +85,32 @@ test-suite test
 
   other-modules:
                        Spec
-                       Test.Cardano.Binary.BiSizeBounds
-                       Test.Cardano.Binary.Cbor.CborSpec
-                       Test.Cardano.Binary.Helpers
-                       Test.Cardano.Binary.Helpers.GoldenRoundTrip
-                       Test.Cardano.Cbor.RefImpl
-                       Test.Cardano.Cbor.Canonicity
+                       Test.Cardano.Crypto.Bi
+                       Test.Cardano.Crypto.Arbitrary
+                       Test.Cardano.Crypto.Arbitrary.Unsafe
+                       Test.Cardano.Crypto.CborSpec
+                       Test.Cardano.Crypto.CryptoSpec
+                       Test.Cardano.Crypto.CryptoSpec2
+                       Test.Cardano.Crypto.Dummy
+                       Test.Cardano.Crypto.Gen
 
   build-depends:       base
                      , bytestring
                      , cardano-binary
+                     , cardano-binary-test
+                     , cardano-crypto
+                     , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
-                     , cborg
-                     , cereal
                      , containers
+                     , cryptonite
                      , formatting
-                     , half
+                     , generic-arbitrary
                      , hedgehog
                      , hspec
-                     , mtl
-                     , pretty-show
+                     , memory
                      , QuickCheck
                      , quickcheck-instances
-                     , tagged
                      , text
 
   default-language:    Haskell2010

@@ -23,9 +23,9 @@ import qualified Data.ByteString.Lazy.Char8 as LB
 import           Text.Printf (printf)
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Encoding
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Encodes a given ByteString to base-16 and line wraps every 16 bytes.
 encodeBase16 :: LB.ByteString -> LB.ByteString
@@ -80,9 +80,9 @@ chunkBS n xs = case LB.uncons xs of
     let (taken, dropped) = LB.splitAt n xs in taken : chunkBS n dropped
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Decoding
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Decode a given ByteString which was originally encoded using 'encode' or
 -- 'encodeWithIndex'.

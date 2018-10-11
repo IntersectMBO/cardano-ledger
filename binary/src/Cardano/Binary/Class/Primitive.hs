@@ -192,9 +192,9 @@ deserializeIncremental :: Bi a => ST s (CBOR.Read.IDecode s a)
 deserializeIncremental = CBOR.Read.deserialiseIncremental decode
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Raw
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | A wrapper over 'ByteString' for signalling that a bytestring should be
 --   processed as a sequence of bytes, not as a separate entity. It's used in
@@ -204,9 +204,9 @@ newtype Raw =
   deriving (Bi, Eq, Ord, Show, NFData)
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- Helper functions, types, classes
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | A wrapper over 'ByteString' representing a serialized value of
 --   type 'a'. This wrapper is used to delay decoding of some data. Note
@@ -239,10 +239,10 @@ biSize = fromIntegral . BSL.length . serialize
 {-# INLINE biSize #-}
 
 
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 -- CBORDataItem
 -- https://tools.ietf.org/html/rfc7049#section-2.4.4.1
-----------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 -- | Encode and serialise the given `a` and sorrounds it with the semantic tag 24.
 -- In CBOR diagnostic notation:

@@ -1,7 +1,7 @@
-name:                cardano-prelude-test
-version:             0.1.0.0
-synopsis:            Utility types and functions for testing Cardano
-description:         Utility types and functions for testing Cardano
+name:                cardano-crypto-test
+version:             1.3.0
+synopsis:            Test helpers from cardano-crypto exposed to other packages
+description:         Test helpers from cardano-crypto exposed to other packages
 license:             MIT
 license-file:        LICENSE
 author:              IOHK
@@ -18,32 +18,29 @@ flag development
 
 library
   exposed-modules:
-                       Test.Cardano.Prelude
+                       Test.Cardano.Crypto.Arbitrary
+                       Test.Cardano.Crypto.Bi
+                       Test.Cardano.Crypto.Dummy
+                       Test.Cardano.Crypto.Example
+                       Test.Cardano.Crypto.Gen
 
   other-modules:
-                       Test.Cardano.Prelude.Base16
-                       Test.Cardano.Prelude.Gen
-                       Test.Cardano.Prelude.Golden
-                       Test.Cardano.Prelude.Orphans
-                       Test.Cardano.Prelude.QuickCheck.Arbitrary
-                       Test.Cardano.Prelude.QuickCheck.Property
-                       Test.Cardano.Prelude.Tripping
+                       Test.Cardano.Crypto.Arbitrary.Unsafe
 
   build-depends:       base
-                     , aeson
-                     , attoparsec
-                     , base16-bytestring
                      , bytestring
+                     , cardano-binary
+                     , cardano-binary-test
+                     , cardano-crypto
+                     , cardano-crypto-wrapper
                      , cardano-prelude
+                     , cardano-prelude-test
                      , cryptonite
-                     , formatting
+                     , generic-arbitrary
                      , hedgehog
-                     , hspec
-                     , pretty-show
+                     , memory
                      , QuickCheck
                      , quickcheck-instances
-                     , text
-                     , time
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
