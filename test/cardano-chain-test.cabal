@@ -1,0 +1,54 @@
+name:                cardano-chain-test
+version:             1.3.0
+synopsis:            Test helpers from cardano-chain exposed to other packages
+description:         Test helpers from cardano-chain exposed to other packages
+license:             MIT
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:
+                       Test.Cardano.Chain.Block.Bi
+                       Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Common.Example
+                       Test.Cardano.Chain.Common.Gen
+                       Test.Cardano.Chain.Delegation.Example
+                       Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Slotting.Example
+                       Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Ssc.Example
+                       Test.Cardano.Chain.Ssc.Gen
+                       Test.Cardano.Chain.Txp.Bi
+                       Test.Cardano.Chain.Txp.Example
+                       Test.Cardano.Chain.Txp.Gen
+                       Test.Cardano.Chain.Update.Example
+                       Test.Cardano.Chain.Update.Gen
+
+  build-depends:       base
+                     , base16-bytestring
+                     , cardano-binary
+                     , cardano-binary-test
+                     , cardano-chain
+                     , cardano-crypto
+                     , cardano-crypto-test
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , containers
+                     , cryptonite
+                     , formatting
+                     , hedgehog
+                     , pvss
+                     , time
+                     , vector
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Wall
+                       -Werror
