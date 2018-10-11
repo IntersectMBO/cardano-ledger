@@ -14,7 +14,167 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  -- exposed-modules:
-  -- other-modules:
+  exposed-modules:
+                       Cardano.Chain.Block
+                       Cardano.Chain.Common
+                       Cardano.Chain.Constants
+                       Cardano.Chain.Delegation
+                       Cardano.Chain.Genesis
+                       Cardano.Chain.ProtocolConstants
+                       Cardano.Chain.Slotting
+                       Cardano.Chain.Ssc
+                       Cardano.Chain.Txp
+                       Cardano.Chain.Update
+
+  other-modules:
+                       Cardano.Chain.Block.Block
+                       Cardano.Chain.Block.Boundary
+                       Cardano.Chain.Block.Header
+                       Cardano.Chain.Block.Main
+                       Cardano.Chain.Block.SlogUndo
+                       Cardano.Chain.Block.Undo
+                       Cardano.Chain.Block.Util
+
+                       Cardano.Chain.Common.AddrAttributes
+                       Cardano.Chain.Common.AddrSpendingData
+                       Cardano.Chain.Common.AddrStakeDistribution
+                       Cardano.Chain.Common.Address
+                       Cardano.Chain.Common.AddressHash
+                       Cardano.Chain.Common.Attributes
+                       Cardano.Chain.Common.BlockCount
+                       Cardano.Chain.Common.ChainDifficulty
+                       Cardano.Chain.Common.Coeff
+                       Cardano.Chain.Common.Coin
+                       Cardano.Chain.Common.CoinPortion
+                       Cardano.Chain.Common.Merkle
+                       Cardano.Chain.Common.Script
+                       Cardano.Chain.Common.SlotLeaders
+                       Cardano.Chain.Common.StakeholderId
+                       Cardano.Chain.Common.TxFeePolicy
+                       Cardano.Chain.Common.TxSizeLinear
+
+                       Cardano.Chain.Delegation.HeavyDlgIndex
+                       Cardano.Chain.Delegation.LightDlgIndices
+                       Cardano.Chain.Delegation.Payload
+                       Cardano.Chain.Delegation.Undo
+
+                       Cardano.Chain.Genesis.Hash
+
+                       Cardano.Chain.Slotting.Data
+                       Cardano.Chain.Slotting.EpochIndex
+                       Cardano.Chain.Slotting.LocalSlotIndex
+                       Cardano.Chain.Slotting.SlotCount
+                       Cardano.Chain.Slotting.SlotId
+
+                       Cardano.Chain.Ssc.Commitment
+                       Cardano.Chain.Ssc.CommitmentsMap
+                       Cardano.Chain.Ssc.Opening
+                       Cardano.Chain.Ssc.OpeningsMap
+                       Cardano.Chain.Ssc.Payload
+                       Cardano.Chain.Ssc.Proof
+                       Cardano.Chain.Ssc.SharesMap
+                       Cardano.Chain.Ssc.VssCertificate
+                       Cardano.Chain.Ssc.VssCertificatesMap
+
+                       Cardano.Chain.Txp.Tx
+                       Cardano.Chain.Txp.TxAux
+                       Cardano.Chain.Txp.TxOutAux
+                       Cardano.Chain.Txp.TxPayload
+                       Cardano.Chain.Txp.TxProof
+                       Cardano.Chain.Txp.TxWitness
+                       Cardano.Chain.Txp.Undo
+
+                       Cardano.Chain.Update.ApplicationName
+                       Cardano.Chain.Update.BlockVersion
+                       Cardano.Chain.Update.BlockVersionData
+                       Cardano.Chain.Update.BlockVersionModifier
+                       Cardano.Chain.Update.Data
+                       Cardano.Chain.Update.Payload
+                       Cardano.Chain.Update.Proof
+                       Cardano.Chain.Update.SoftforkRule
+                       Cardano.Chain.Update.SoftwareVersion
+                       Cardano.Chain.Update.SystemTag
+                       Cardano.Chain.Update.Undo
+                       Cardano.Chain.Update.Vote
+
   build-depends:       base >=4.11 && <4.12
+                     , aeson
+                     , aeson-options
+                     , base16-bytestring
+                     , base58-bytestring
+                     , base64-bytestring-type
+                     , bytestring
+                     , canonical-json
+                     , cardano-binary
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cborg
+                     , containers
+                     , cryptonite
+                     , Cabal
+                     , formatting
+                     , hashable
+                     , lens
+                     , memory
+                     , mtl
+                     , plutus-prototype
+                     , servant
+                     , text
+                     , time
+
   default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Wall
+                       -Werror
+
+test-suite test
+  hs-source-dirs:      test
+  main-is:             test.hs
+  type:                exitcode-stdio-1.0
+
+  other-modules:
+                       Test.Cardano.Chain.Block.Bi
+                       Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Common.Example
+                       Test.Cardano.Chain.Common.Gen
+                       Test.Cardano.Chain.Delegation.Bi
+                       Test.Cardano.Chain.Delegation.Example
+                       Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Ssc.Bi
+                       Test.Cardano.Chain.Ssc.Example
+                       Test.Cardano.Chain.Ssc.Gen
+                       Test.Cardano.Chain.Slotting.Example
+                       Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Txp.Bi
+                       Test.Cardano.Chain.Txp.Example
+                       Test.Cardano.Chain.Txp.Gen
+                       Test.Cardano.Chain.Update.Bi
+                       Test.Cardano.Chain.Update.Example
+                       Test.Cardano.Chain.Update.Gen
+                       Test.Cardano.Chain.Update.Json
+
+  build-depends:       base
+                     , base16-bytestring
+                     , bytestring
+                     , cardano-binary
+                     , cardano-binary-test
+                     , cardano-chain
+                     , cardano-crypto
+                     , cardano-crypto-test
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , containers
+                     , cryptonite
+                     , formatting
+                     , hedgehog
+                     , pvss
+                     , time
+                     , vector
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Wall
+                       -Werror

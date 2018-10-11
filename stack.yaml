@@ -1,0 +1,18 @@
+resolver: snapshot.yaml
+
+packages:
+  - .
+  - test
+
+extra-deps:
+  - binary
+  - binary/test
+  - crypto
+  - crypto/test
+  - prelude
+  - prelude/test
+
+nix:
+  packages:
+    - openssl
+    - zlib
