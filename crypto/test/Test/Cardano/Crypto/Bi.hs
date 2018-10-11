@@ -16,29 +16,24 @@ import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import           Cardano.Crypto.Wallet (XPrv, unXPrv, xprv, xpub)
-
 import           Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384,
                      Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
-import           Data.List.NonEmpty (fromList)
 
 import           Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (Bi)
-import           Cardano.Crypto (AbstractHash, EncShare, PassPhrase,
-                     ProtocolMagic (..), ProxyCert, ProxySecretKey,
-                     PublicKey (..), RedeemSignature, SafeSigner (FakeSigner),
-                     Secret, SecretKey (..), SecretProof,
-                     SignTag (SignForTestingOnly), Signature, VssKeyPair,
-                     decryptShare, deriveHDPassphrase, deterministic,
-                     deterministicVssKeyGen, dropDecShare, dropEncShare,
-                     dropSecret, dropSecretProof, dropVssPublicKey,
-                     genSharedSecret, hash, mkSigned, noPassEncrypt,
+import           Cardano.Binary.Class (Bi, Dropper, dropBytes, dropList,
+                     enforceSize)
+import           Cardano.Crypto (AbstractHash, PassPhrase, ProtocolMagic (..),
+                     ProxyCert, ProxySecretKey, PublicKey (..),
+                     RedeemSignature, SafeSigner (FakeSigner), SecretKey (..),
+                     SignTag (SignForTestingOnly), Signature,
+                     deriveHDPassphrase, hash, mkSigned, noPassEncrypt,
                      packHDAddressAttr, proxySign, redeemDeterministicKeyGen,
                      redeemSign, safeCreateProxyCert, safeCreatePsk, sign,
-                     toPublic, toVssPublicKey)
+                     toPublic)
 
 import           Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg,
                      sizeTest)
@@ -55,6 +50,7 @@ import           Test.Cardano.Crypto.Gen
 roundTripProtocolMagicAeson :: Property
 roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
 
+
 --------------------------------------------------------------------------------
 -- PublicKey
 --------------------------------------------------------------------------------
@@ -69,6 +65,7 @@ roundTripPublicKeyBi = eachOf 1000 genPublicKey roundTripsBiBuildable
 roundTripPublicKeyAeson :: Property
 roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
 
+
 --------------------------------------------------------------------------------
 -- SecretKey
 --------------------------------------------------------------------------------
@@ -79,6 +76,7 @@ golden_SecretKey = goldenTestBi skey "test/golden/SecretKey"
 
 roundTripSecretKeyBi :: Property
 roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
+
 
 --------------------------------------------------------------------------------
 -- Signature
@@ -101,6 +99,7 @@ roundTripSignatureBi = eachOf 1000 genUnitSignature roundTripsBiBuildable
 roundTripSignatureAeson :: Property
 roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 
+
 --------------------------------------------------------------------------------
 -- Signed
 --------------------------------------------------------------------------------
@@ -114,6 +113,7 @@ golden_Signed = goldenTestBi signed "test/golden/Signed"
 roundTripSignedBi :: Property
 roundTripSignedBi = eachOf 1000 genUnitSigned roundTripsBiShow
   where genUnitSigned = genSigned (pure ())
+
 
 --------------------------------------------------------------------------------
 -- EncryptedSecretKey
@@ -132,6 +132,7 @@ roundTripEncryptedSecretKeysBi :: Property
 roundTripEncryptedSecretKeysBi =
   eachOf 100 genEncryptedSecretKey roundTripsBiBuildable
 
+
 --------------------------------------------------------------------------------
 -- RedeemPublicKey
 --------------------------------------------------------------------------------
@@ -148,6 +149,7 @@ roundTripRedeemPublicKeyAeson :: Property
 roundTripRedeemPublicKeyAeson =
   eachOf 1000 genRedeemPublicKey roundTripsAesonBuildable
 
+
 --------------------------------------------------------------------------------
 -- RedeemSecretKey
 --------------------------------------------------------------------------------
@@ -159,6 +161,7 @@ golden_RedeemSecretKey = goldenTestBi rsk "test/golden/RedeemSecretKey"
 roundTripRedeemSecretKeyBi :: Property
 roundTripRedeemSecretKeyBi =
   eachOf 1000 genRedeemSecretKey roundTripsBiBuildable
+
 
 --------------------------------------------------------------------------------
 -- RedeemSignature
@@ -183,22 +186,15 @@ roundTripRedeemSignatureAeson :: Property
 roundTripRedeemSignatureAeson =
   eachOf 1000 genUnitRedeemSignature roundTripsAesonBuildable
 
+
 --------------------------------------------------------------------------------
 -- VssPublicKey
 --------------------------------------------------------------------------------
 
-golden_VssPublicKey :: Property
-golden_VssPublicKey = goldenTestBi vpk "test/golden/VssPublicKey"
-  where vpk = toVssPublicKey . deterministicVssKeyGen $ getBytes 0 32
-
 golden_legacy_VssPublicKey :: Property
-golden_legacy_VssPublicKey = legacyGoldenDecode
-  "VssPublicKey"
-  dropVssPublicKey
-  "test/golden/VssPublicKey"
+golden_legacy_VssPublicKey =
+  legacyGoldenDecode "VssPublicKey" dropBytes "test/golden/VssPublicKey"
 
-roundTripVssPublicKeyBi :: Property
-roundTripVssPublicKeyBi = eachOf 1000 genVssPublicKey roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- ProxyCert
@@ -221,6 +217,7 @@ roundTripProxyCertBi = eachOf 100 genUnitProxyCert roundTripsBiBuildable
 
 roundTripProxyCertAeson :: Property
 roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
+
 
 --------------------------------------------------------------------------------
 -- ProxySecretKey
@@ -246,6 +243,7 @@ roundTripProxySecretKeyAeson :: Property
 roundTripProxySecretKeyAeson =
   eachOf 100 genUnitProxySecretKey roundTripsAesonBuildable
 
+
 --------------------------------------------------------------------------------
 -- ProxySignature
 --------------------------------------------------------------------------------
@@ -267,92 +265,48 @@ roundTripProxySignatureBi = eachOf
     pm <- genProtocolMagic
     genProxySignature pm (pure ()) (pure ())
 
---------------------------------------------------------------------------------
--- SharedSecretData
---------------------------------------------------------------------------------
-
-sharedSecretData :: (Secret, SecretProof, [(VssKeyPair, EncShare)])
-sharedSecretData = (s, sp, ys)
- where
-  vssKeyPairs =
-    [ deterministicVssKeyGen $ getBytes 0 32
-    , deterministicVssKeyGen $ getBytes 32 32
-    , deterministicVssKeyGen $ getBytes 64 32
-    , deterministicVssKeyGen $ getBytes 96 32
-    ]
-  vssPublicKeys = map toVssPublicKey vssKeyPairs
-  (s, sp, xs) =
-    deterministic "ss" $ genSharedSecret 2 (fromList vssPublicKeys)
-  ys = zipWith (\(_, y) x -> (x, y)) xs vssKeyPairs
 
 --------------------------------------------------------------------------------
 -- DecShare
 --------------------------------------------------------------------------------
 
-golden_DecShare :: Property
-golden_DecShare = goldenTestBi decShare "test/golden/DecShare"
- where
-  Just decShare = case sharedSecretData of
-    (_, _, xs) ->
-      deterministic "ds" . uncurry decryptShare <$> fmap fst (uncons xs)
-
 golden_legacy_DecShare :: Property
 golden_legacy_DecShare =
-  legacyGoldenDecode "DecShare" dropDecShare "test/golden/DecShare"
+  legacyGoldenDecode "DecShare" dropBytes "test/golden/DecShare"
 
-roundTripDecShareBi :: Property
-roundTripDecShareBi = eachOf 20 genDecShare roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- EncShare
 --------------------------------------------------------------------------------
 
-golden_EncShare :: Property
-golden_EncShare = goldenTestBi encShare "test/golden/EncShare"
- where
-  Just encShare = case sharedSecretData of
-    (_, _, xs) -> snd <$> fmap fst (uncons xs)
-
 golden_legacy_EncShare :: Property
 golden_legacy_EncShare =
-  legacyGoldenDecode "EncShare" dropEncShare "test/golden/EncShare"
+  legacyGoldenDecode "EncShare" dropBytes "test/golden/EncShare"
 
-roundTripEncShareBi :: Property
-roundTripEncShareBi = eachOf 20 genEncShare roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- Secret
 --------------------------------------------------------------------------------
 
-golden_Secret :: Property
-golden_Secret = goldenTestBi secret "test/golden/Secret"
- where
-  secret = case sharedSecretData of
-    (s, _, _) -> s
-
 golden_legacy_Secret :: Property
 golden_legacy_Secret =
-  legacyGoldenDecode "Secret" dropSecret "test/golden/Secret"
+  legacyGoldenDecode "Secret" dropBytes "test/golden/Secret"
 
-roundTripSecretBi :: Property
-roundTripSecretBi = eachOf 20 genSecret roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- SecretProof
 --------------------------------------------------------------------------------
 
-golden_SecretProof :: Property
-golden_SecretProof = goldenTestBi secretProof "test/golden/SecretProof"
- where
-  secretProof = case sharedSecretData of
-    (_, sp, _) -> sp
-
 golden_legacy_SecretProof :: Property
 golden_legacy_SecretProof =
   legacyGoldenDecode "SecretProof" dropSecretProof "test/golden/SecretProof"
+ where
+   dropSecretProof :: Dropper s
+   dropSecretProof = do
+     enforceSize "SecretProof" 4
+     replicateM_ 3 dropBytes
+     dropList dropBytes
 
-roundTripSecretProofBi :: Property
-roundTripSecretProofBi = eachOf 20 genSecretProof roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- AbstractHash

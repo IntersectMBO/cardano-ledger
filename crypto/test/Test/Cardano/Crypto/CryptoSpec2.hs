@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 
 -- | Cardano.Crypto specification
@@ -15,22 +14,19 @@ import           Test.Cardano.Prelude
 
 import           Crypto.Hash (Blake2b_224, Blake2b_256)
 import qualified Data.ByteString as BS
-import qualified Data.Map.Strict as Map
 import           Formatting (sformat)
-import           Prelude ((!!))
 import           Test.Hspec (Expectation, Spec, describe, it, shouldBe)
 import           Test.Hspec.QuickCheck (prop)
-import           Test.QuickCheck (Arbitrary (..), Gen, Property, ioProperty,
+import           Test.QuickCheck (Arbitrary (..), Property, ioProperty,
                      property, vector, (===), (==>))
-import           Test.QuickCheck.Monadic (assert, monadicIO, run)
 
 import           Cardano.Binary.Class (Bi)
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Crypto.Limits (mlAbstractHash, mlDecShare, mlEncShare,
-                     mlPublicKey, mlSecret, mlSignature, mlVssPublicKey)
+import           Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey,
+                     mlSignature)
 
-import           Test.Cardano.Binary.Helpers (msgLenLimitedTest, serDeserId)
-import           Test.Cardano.Crypto.Arbitrary (SharedSecrets (..))
+import           Test.Cardano.Binary.Helpers (msgLenLimitedTest)
+import           Test.Cardano.Crypto.Arbitrary ()
 import           Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
 
@@ -51,24 +47,12 @@ spec =
           $ describe "msgLenLimitedTest"
           $ do
               msgLenLimitedTest mlPublicKey
-              msgLenLimitedTest mlSecret
-              -- msgLenLimitedTest @(C.MaxSize SecretProof)
               msgLenLimitedTest @(Crypto.Signature ()) mlSignature
               msgLenLimitedTest @(Crypto.AbstractHash Blake2b_224 Void)
                 mlAbstractHash
               msgLenLimitedTest @(Crypto.AbstractHash Blake2b_256 Void)
                 mlAbstractHash
-              msgLenLimitedTest mlVssPublicKey
-              msgLenLimitedTest mlEncShare
-              msgLenLimitedTest mlDecShare
 
-        describe "AsBinaryClass" $ do
-          prop
-            "VssPublicKey <-> AsBinary VssPublicKey"
-            (serDeserId @Crypto.VssPublicKey)
-          prop "Secret <-> AsBinary Secret"     (serDeserId @Crypto.Secret)
-          prop "DecShare <-> AsBinary DecShare" (serDeserId @Crypto.DecShare)
-          prop "EncShare <-> AsBinary EncShare" (serDeserId @Crypto.EncShare)
         describe "keys" $ do
           it "derived pubkey equals to generated pubkey" keyDerivation
           prop "formatted key can be parsed back" keyParsing
@@ -132,49 +116,6 @@ spec =
             "turning a secret key into an safe signer and this safe signer into a\
                  \ public key is the same as turning the secret key into a public key"
             skToSafeSigner
-
-        describe "Secret Sharing" $ do
-          prop
-            "VSS key pairs generated from different 'ByteString' seeds are different"
-            keygenInequality
-          prop
-            "successfully verifies correct decryption of an encrypted share"
-            goodShareIsDecrypted
-          prop "verifying encrypted shares works" verifyEncSharesGoodData
-          prop
-            "verifying encrypted shares with invalid secret proof fails"
-            verifyEncSharesBadSecProof
-          prop
-            "verifying encrypted shares with mismatching VSS keys fails"
-            verifyEncSharesWrongKeys
-          prop
-            "successfully verifies a properly decrypted share"
-            verifyShareGoodData
-          prop
-            "verifying a correctly decrypted share with the wrong public key fails"
-            verifyShareBadShare
-          prop
-            "verifying a correctly decrypted share with a mismatching encrypted\
-                \ share fails"
-            verifyShareMismatchingShares
-          prop
-            "successfully verifies a secret proof with its secret"
-            verifyProofGoodData
-          prop
-            "unsuccessfully verifies an invalid secret with an unrelated secret\
-                \ proof"
-            verifyProofBadSecret
-          prop
-            "unsuccessfully verifies a secret with an invalid proof"
-            verifyProofBadSecProof
-          prop
-            "successfully recover a secret given a list of encrypted shares, those\
-                \ decrypted shares and their corresponding VSS public keys"
-            recoverSecretSuccessfully
-          prop
-            "unsuccessfully recovers a secret with insufficient shares for the given\
-                \ threshold"
-            recoverSecBadThreshold
 
 keyDerivation :: Expectation
 keyDerivation = do
@@ -429,127 +370,6 @@ encToPublicToEnc =
 
 skToSafeSigner :: Crypto.SecretKey -> Property
 skToSafeSigner = Crypto.safeToPublic . Crypto.fakeSigner .=. Crypto.toPublic
-
--- | It appears 'Crypto.deterministicVSsKeyGen' ignores all consecutive null
--- characters starting from the beginning of the 'ByteString' seed, so for
--- this property to make sense they need to be dropped.
-keygenInequality :: ByteString -> ByteString -> Property
-keygenInequality a b =
-  (a' /= b')
-    ==> Crypto.deterministicVssKeyGen a'
-    /=  Crypto.deterministicVssKeyGen b'
- where
-  dropNULs = BS.dropWhile ((== "\NUL") . BS.singleton)
-  a'       = dropNULs a
-  b'       = dropNULs b
-
-goodShareIsDecrypted :: Crypto.VssKeyPair -> Crypto.EncShare -> Property
-goodShareIsDecrypted vssKP encShare = monadicIO $ do
-  decShare <- run $ Crypto.decryptShare vssKP encShare
-  assert $ Crypto.verifyDecShare (Crypto.toVssPublicKey vssKP) encShare decShare
-
-verifyEncSharesGoodData :: SharedSecrets -> Property
-verifyEncSharesGoodData SharedSecrets {..} =
-  property $ Crypto.verifyEncShares @Gen
-    ssSecProof
-    ssThreshold
-    (zip ssVssKeys ssEncShares)
-
-verifyEncSharesBadSecProof :: SharedSecrets -> Crypto.SecretProof -> Property
-verifyEncSharesBadSecProof SharedSecrets {..} secProof =
-  (ssSecProof /= secProof) ==> not <$> Crypto.verifyEncShares @Gen
-    secProof
-    ssThreshold
-    (zip ssVssKeys ssEncShares)
-
-verifyEncSharesWrongKeys :: SharedSecrets -> Property
-verifyEncSharesWrongKeys SharedSecrets {..} =
-  (headMay ssVssKeys /= lastMay ssVssKeys)
-    ==> not
-    <$> Crypto.verifyEncShares @Gen
-          ssSecProof
-          ssThreshold
-          (zip (reverse ssVssKeys) ssEncShares)
- where
-  headMay :: [a] -> Maybe a
-  headMay []      = Nothing
-  headMay (x : _) = Just x
-  lastMay :: [a] -> Maybe a
-  lastMay []       = Nothing
-  lastMay [x     ] = Just x
-  lastMay (_ : xs) = lastMay xs
-
-verifyShareGoodData :: SharedSecrets -> Bool
-verifyShareGoodData SharedSecrets {..} = Crypto.verifyDecShare
-  vssPK
-  encShare
-  decShare
- where
-  encShare = ssEncShares !! ssPos
-  decShare = ssDecShares !! ssPos
-  vssPK    = ssVssKeys !! ssPos
-
-verifyShareBadShare :: SharedSecrets -> Int -> Property
-verifyShareBadShare SharedSecrets {..} p =
-  (s1 /= s2 || vssPK1 /= vssPK2)
-    ==> not (Crypto.verifyDecShare vssPK1 encShare1 decShare1)
-    &&  not (Crypto.verifyDecShare vssPK2 encShare2 decShare2)
- where
-  len                       = length ssVssKeys
-  pos                       = abs $ p `mod` len
-  s1@(encShare1, decShare1) = zip ssEncShares ssDecShares !! ssPos
-  s2@(encShare2, decShare2) = zip ssEncShares ssDecShares !! pos
-  vssPK1                    = ssVssKeys !! pos
-  vssPK2                    = ssVssKeys !! ssPos
-
-verifyShareMismatchingShares :: SharedSecrets -> Int -> Property
-verifyShareMismatchingShares SharedSecrets {..} p = (vssPK1 /= vssPK2)
-  ==> not (Crypto.verifyDecShare vssPK1 encShare1 decShare2)
- where
-  len       = length ssVssKeys
-  pos       = abs $ p `mod` len
-  encShare1 = ssEncShares !! ssPos
-  decShare2 = ssDecShares !! pos
-  vssPK1    = ssVssKeys !! pos
-  vssPK2    = ssVssKeys !! ssPos
-
-verifyProofGoodData :: SharedSecrets -> Bool
-verifyProofGoodData SharedSecrets {..} =
-  Crypto.verifySecret ssThreshold ssSecProof ssSecret
-
-verifyProofBadSecret :: SharedSecrets -> Crypto.Secret -> Property
-verifyProofBadSecret SharedSecrets {..} secret = (ssSecret /= secret)
-  ==> not (Crypto.verifySecret ssThreshold ssSecProof secret)
-
-verifyProofBadSecProof :: SharedSecrets -> Crypto.SecretProof -> Property
-verifyProofBadSecProof SharedSecrets {..} secProof = (ssSecProof /= secProof)
-  ==> not (Crypto.verifySecret ssThreshold secProof ssSecret)
-
-recoverSecretSuccessfully :: SharedSecrets -> Property
-recoverSecretSuccessfully SharedSecrets {..} =
-  Crypto.recoverSecret ssThreshold keys' shares === Just ssSecret
- where
-  keys' :: [(Crypto.VssPublicKey, Int)]
-  keys'  = map (, 1) ssVssKeys
-
-  shares :: Map Crypto.VssPublicKey [Crypto.DecShare]
-  shares = Map.fromList $ zip ssVssKeys (map one ssDecShares)
-
-recoverSecBadThreshold :: SharedSecrets -> Integer -> Property
-recoverSecBadThreshold SharedSecrets {..} rnd = (badThreshold > ssThreshold)
-  ==> isNothing (Crypto.recoverSecret badThreshold keys' shares)
- where
-  maxThreshold :: Crypto.Threshold
-  maxThreshold = genericLength ssEncShares
-
-  -- badThreshold is in ]actualThreshold, actualThreshold * 2]
-  badThreshold = maxThreshold + (succ . abs $ rnd `mod` maxThreshold)
-
-  keys' :: [(Crypto.VssPublicKey, Int)]
-  keys'        = map (, 1) ssVssKeys
-
-  shares :: Map Crypto.VssPublicKey [Crypto.DecShare]
-  shares       = Map.fromList $ zip ssVssKeys (map one ssDecShares)
 
 matchingPassphraseWorks :: Crypto.PassPhrase -> Property
 matchingPassphraseWorks passphrase = ioProperty $ do

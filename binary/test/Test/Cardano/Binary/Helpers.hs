@@ -16,7 +16,6 @@ module Test.Cardano.Binary.Helpers
        -- * From/to
        , binaryEncodeDecode
        , binaryTest
-       , serDeserId
        , showReadId
        , showReadTest
        , identityTest
@@ -59,12 +58,11 @@ import           Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, choose,
                      suchThat, vectorOf, (.&&.), (===))
 import           Test.QuickCheck.Instances ()
 
-import           Cardano.Binary.Class (AsBinaryClass (..), Bi (..),
-                     DecoderError (..), Range (..), Size, SizeOverride (..),
-                     decodeFull, decodeListLenCanonicalOf,
-                     decodeUnknownCborDataItem, encodeListLen,
-                     encodeUnknownCborDataItem, serialize, serialize',
-                     szSimplify, szWithCtx, toLazyByteString,
+import           Cardano.Binary.Class (Bi (..), DecoderError (..), Range (..),
+                     Size, SizeOverride (..), decodeFull,
+                     decodeListLenCanonicalOf, decodeUnknownCborDataItem,
+                     encodeListLen, encodeUnknownCborDataItem, serialize,
+                     serialize', szSimplify, szWithCtx, toLazyByteString,
                      unsafeDeserialize)
 import           Cardano.Binary.Limit (Limit (..))
 
@@ -114,10 +112,6 @@ cborCanonicalRep a = property $ do
 
   -- isCanonicityFailure :: DeserialiseFailure -> Bool
   -- isCanonicityFailure (DeserialiseFailure _ s) = "canonic" `L.isInfixOf` s
-
-serDeserId :: forall t . (Show t, Eq t, AsBinaryClass t) => t -> Property
-serDeserId a =
-  either (error . toText) identity (fromBinary $ asBinary @t a) === a
 
 showReadId :: (Show a, Eq a, Read a) => a -> Property
 showReadId a = read (show a) === a

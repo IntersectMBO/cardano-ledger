@@ -26,8 +26,6 @@
 
 module Cardano.Binary.Class.Core
     ( Bi(..)
-    , encodeBinary
-    , decodeBinary
     , enforceSize
     , matchSize
     , DecoderError (..)
@@ -71,7 +69,6 @@ import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as CBOR.Read
 import qualified Codec.CBOR.Write as CBOR.Write
-import qualified Data.Binary as Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.Char as Char
@@ -154,18 +151,6 @@ instance B.Buildable DecoderError where
 --------------------------------------------------------------------------------
 -- Useful primitives
 --------------------------------------------------------------------------------
-
-encodeBinary :: Binary.Binary a => a -> E.Encoding
-encodeBinary = encode . BS.Lazy.toStrict . Binary.encode
-
-decodeBinary :: Binary.Binary a => D.Decoder s a
-decodeBinary = do
-  x <- decode @ByteString
-  toCborError @Text $ case Binary.decodeOrFail (BS.Lazy.fromStrict x) of
-    Left (_, _, err) -> Left (fromString err)
-    Right (bs, _, res)
-      | BS.Lazy.null bs -> Right res
-      | otherwise       -> Left "decodeBinary: unconsumed input"
 
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
