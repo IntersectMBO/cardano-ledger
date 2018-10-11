@@ -22,6 +22,8 @@ module Cardano.Chain.Ssc.VssCertificate
        , checkCertSign
        , getCertId
        , toCertPair
+
+       , dropVssCertificate
        ) where
 
 import           Cardano.Prelude
@@ -35,8 +37,8 @@ import qualified Formatting.Buildable as B (Buildable (..))
 import           Text.JSON.Canonical (FromJSON (..), Int54, JSValue (..),
                      ToJSON (..), fromJSField, mkObject)
 
-import           Cardano.Binary.Class (AsBinary, Bi (..), encodeListLen,
-                     enforceSize)
+import           Cardano.Binary.Class (AsBinary, Bi (..), Dropper, dropBytes,
+                     dropWord64, encodeListLen, enforceSize)
 import           Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import           Cardano.Chain.Slotting (EpochIndex)
 import           Cardano.Crypto (ProtocolMagic, PublicKey, SecretKey,
@@ -88,6 +90,18 @@ instance B.Buildable VssCertificate where
 
 instance B.Buildable (StakeholderId, VssCertificate) where
     build (a, b) = bprint ("(id: "%build%" , cert: "%build%")") a b
+
+dropVssCertificate :: Dropper s
+dropVssCertificate = do
+  enforceSize "VssCertificate" 4
+  -- AsBinary VssPublicKey
+  dropBytes
+  -- EpochIndex
+  dropWord64
+  -- Signature (AsBinary VssPublicKey, EpochIndex)
+  dropBytes
+  -- PublicKey
+  dropBytes
 
 instance Bi VssCertificate where
     encode vssCert = encodeListLen 4

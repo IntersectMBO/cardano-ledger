@@ -26,6 +26,7 @@ library
 
   other-modules:
                        Cardano.Binary.Class.Core
+                       Cardano.Binary.Class.Drop
                        Cardano.Binary.Class.Primitive
 
   build-depends:       base

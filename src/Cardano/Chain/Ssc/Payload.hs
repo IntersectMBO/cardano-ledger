@@ -10,6 +10,7 @@ module Cardano.Chain.Ssc.Payload
        ( SscPayload (..)
        , checkSscPayload
        , spVss
+       , dropSscPayload
        ) where
 
 import           Cardano.Prelude hiding (id)
@@ -20,7 +21,7 @@ import           Data.Text.Lazy.Builder (Builder)
 import           Formatting (Format, bprint, build, int, (%))
 import qualified Formatting.Buildable as B (Buildable (..))
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
+import           Cardano.Binary.Class (Bi (..), DecoderError (..), Dropper,
                      decodeListLenCanonical, encodeListLen, matchSize)
 import           Cardano.Chain.Ssc.CommitmentsMap
 import           Cardano.Chain.Ssc.OpeningsMap
@@ -33,48 +34,42 @@ import           Cardano.Crypto (ProtocolMagic)
 
 -- | Payload included into blocks.
 data SscPayload
-    = CommitmentsPayload !CommitmentsMap
-                        !VssCertificatesMap
-    | OpeningsPayload !OpeningsMap
-                      !VssCertificatesMap
-    | SharesPayload !SharesMap
-                    !VssCertificatesMap
+    = CommitmentsPayload !CommitmentsMap !VssCertificatesMap
+    | OpeningsPayload !OpeningsMap !VssCertificatesMap
+    | SharesPayload !SharesMap !VssCertificatesMap
     | CertificatesPayload !VssCertificatesMap
     deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
 instance B.Buildable SscPayload where
-    build gp
-        | isEmptySscPayload gp = "  no SSC payload"
-        | otherwise = case gp of
-            CommitmentsPayload comms certs ->
-                formatTwo formatCommitments comms certs
-            OpeningsPayload openings certs ->
-                formatTwo formatOpenings openings certs
-            SharesPayload shares certs -> formatTwo formatShares shares certs
-            CertificatesPayload certs  -> formatCertificates certs
-      where
-        formatIfNotNull
-            :: Container c => Format Builder (c -> Builder) -> c -> Builder
-        formatIfNotNull formatter l
-            | null l    = mempty
-            | otherwise = bprint formatter l
-        formatCommitments (getCommitmentsMap -> comms) = formatIfNotNull
-            ("  commitments from: " % listJson % "\n")
-            (Map.keys comms)
-        formatOpenings openings = formatIfNotNull
-            ("  openings from: " % listJson % "\n")
-            (Map.keys openings)
-        formatShares shares = formatIfNotNull
-            ("  shares from: " % listJson % "\n")
-            (Map.keys shares)
-        formatCertificates (getVssCertificatesMap -> certs) = formatIfNotNull
-            ("  certificates from: " % listJson % "\n")
-            (map formatVssCert $ Map.toList certs)
-        formatVssCert (id, cert) =
-            bprint (build % ":" % int) id (vcExpiryEpoch cert)
-        formatTwo formatter hm certs =
-            mconcat [formatter hm, formatCertificates certs]
+  build gp
+    | isEmptySscPayload gp = "  no SSC payload"
+    | otherwise = case gp of
+      CommitmentsPayload comms    certs -> formatTwo formatCommitments comms certs
+      OpeningsPayload    openings certs -> formatTwo formatOpenings openings certs
+      SharesPayload      shares   certs -> formatTwo formatShares shares certs
+      CertificatesPayload certs         -> formatCertificates certs
+   where
+    formatIfNotNull
+      :: Container c => Format Builder (c -> Builder) -> c -> Builder
+    formatIfNotNull formatter l
+      | null l    = mempty
+      | otherwise = bprint formatter l
+    formatCommitments (getCommitmentsMap -> comms) = formatIfNotNull
+      ("  commitments from: " % listJson % "\n")
+      (Map.keys comms)
+    formatOpenings openings = formatIfNotNull
+      ("  openings from: " % listJson % "\n")
+      (Map.keys openings)
+    formatShares shares =
+      formatIfNotNull ("  shares from: " % listJson % "\n") (Map.keys shares)
+    formatCertificates (getVssCertificatesMap -> certs) = formatIfNotNull
+      ("  certificates from: " % listJson % "\n")
+      (map formatVssCert $ Map.toList certs)
+    formatVssCert (id, cert) =
+      bprint (build % ":" % int) id (vcExpiryEpoch cert)
+    formatTwo formatter hm certs =
+      mconcat [formatter hm, formatCertificates certs]
 
 instance Bi SscPayload where
     encode payload = case payload of
@@ -114,6 +109,27 @@ instance Bi SscPayload where
                 matchSize "CertificatesPayload" 2 actualLen
                 CertificatesPayload <$> decode
             t -> cborError $ DecoderErrorUnknownTag "SscPayload" t
+
+dropSscPayload :: Dropper s
+dropSscPayload = do
+  actualLen <- decodeListLenCanonical
+  decode >>= \case
+    0 -> do
+      matchSize "CommitmentsPayload" 3 actualLen
+      dropCommitmentsMap
+      dropVssCertificatesMap
+    1 -> do
+      matchSize "OpeningsPayload" 3 actualLen
+      dropOpeningsMap
+      dropVssCertificatesMap
+    2 -> do
+      matchSize "SharesPayload" 3 actualLen
+      dropSharesMap
+      dropVssCertificatesMap
+    3 -> do
+      matchSize "CertificatesPayload" 2 actualLen
+      dropVssCertificatesMap
+    t -> cborError $ DecoderErrorUnknownTag "SscPayload" t
 
 isEmptySscPayload :: SscPayload -> Bool
 isEmptySscPayload (CommitmentsPayload comms certs) = null comms && null certs

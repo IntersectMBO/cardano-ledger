@@ -9,6 +9,8 @@ module Cardano.Chain.Ssc.CommitmentsMap
        ( CommitmentsMap (getCommitmentsMap)
        , mkCommitmentsMap
        , mkCommitmentsMapUnsafe
+
+       , dropCommitmentsMap
        ) where
 
 import           Cardano.Prelude
@@ -16,9 +18,11 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-import           Cardano.Binary.Class (Bi (..), Decoder, Encoding)
+import           Cardano.Binary.Class (Bi (..), Decoder, Dropper, Encoding,
+                     dropSet)
 import           Cardano.Chain.Common (StakeholderId, mkStakeholderId)
-import           Cardano.Chain.Ssc.Commitment (SignedCommitment)
+import           Cardano.Chain.Ssc.Commitment (SignedCommitment,
+                     dropSignedCommitment)
 
 -- | 'CommitmentsMap' is a wrapper for 'HashMap StakeholderId SignedCommitment'
 -- which ensures that keys are consistent with values, i. e. 'PublicKey'
@@ -36,6 +40,9 @@ mkCommitmentsMap = CommitmentsMap . Map.fromList . map toCommPair
 -- | Unsafe straightforward constructor of 'CommitmentsMap'.
 mkCommitmentsMapUnsafe :: Map StakeholderId SignedCommitment -> CommitmentsMap
 mkCommitmentsMapUnsafe = CommitmentsMap
+
+dropCommitmentsMap :: Dropper s
+dropCommitmentsMap = dropSet dropSignedCommitment
 
 instance Bi CommitmentsMap where
     encode = encodeCommitments

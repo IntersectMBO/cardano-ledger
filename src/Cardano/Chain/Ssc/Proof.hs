@@ -7,6 +7,7 @@ module Cardano.Chain.Ssc.Proof
        ( SscProof (..)
        , mkSscProof
        , VssCertificatesHash
+       , dropSscProof
        ) where
 
 import           Cardano.Prelude
@@ -14,8 +15,9 @@ import           Cardano.Prelude
 import           Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B (Buildable (..))
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
-                     decodeListLenCanonical, encodeListLen, matchSize)
+import           Cardano.Binary.Class (Bi (..), DecoderError (..), Dropper,
+                     decodeListLenCanonical, dropBytes, encodeListLen,
+                     matchSize)
 import           Cardano.Chain.Common (StakeholderId)
 import           Cardano.Chain.Ssc.CommitmentsMap (CommitmentsMap)
 import           Cardano.Chain.Ssc.OpeningsMap (OpeningsMap)
@@ -99,3 +101,24 @@ instance Bi SscProof where
         matchSize "CertificatesProof" 2 actualLen
         CertificatesProof <$> decode
       t -> cborError $ DecoderErrorUnknownTag "SscProof" t
+
+dropSscProof :: Dropper s
+dropSscProof = do
+  actualLen <- decodeListLenCanonical
+  decode >>= \case
+    0 -> do
+      matchSize "CommitmentsProof" 3 actualLen
+      dropBytes
+      dropBytes
+    1 -> do
+      matchSize "OpeningsProof" 3 actualLen
+      dropBytes
+      dropBytes
+    2 -> do
+      matchSize "SharesProof" 3 actualLen
+      dropBytes
+      dropBytes
+    3 -> do
+      matchSize "CertificatesProof" 2 actualLen
+      dropBytes
+    t -> cborError $ DecoderErrorUnknownTag "SscProof" t

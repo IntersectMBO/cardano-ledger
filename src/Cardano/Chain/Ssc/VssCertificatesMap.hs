@@ -24,6 +24,8 @@ module Cardano.Chain.Ssc.VssCertificatesMap
        , lookupVss
        , insertVss
        , deleteVss
+
+       , dropVssCertificatesMap
        ) where
 
 import           Cardano.Prelude hiding (id)
@@ -37,10 +39,11 @@ import           Formatting (build, sformat, (%))
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), expected)
 
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
-                     Encoding)
+                     Dropper, Encoding, dropSet)
 import           Cardano.Chain.Common (StakeholderId)
 import           Cardano.Chain.Ssc.VssCertificate (VssCertificate (..),
-                     checkVssCertificate, getCertId, toCertPair)
+                     checkVssCertificate, dropVssCertificate, getCertId,
+                     toCertPair)
 import           Cardano.Crypto (ProtocolMagic)
 
 
@@ -67,6 +70,9 @@ instance Semigroup VssCertificatesMap where
 instance Monoid VssCertificatesMap where
     mempty = UnsafeVssCertificatesMap mempty
     mappend = (<>)
+
+dropVssCertificatesMap :: Dropper s
+dropVssCertificatesMap = dropSet dropVssCertificate
 
 instance Bi VssCertificatesMap where
     encode = encodeVssCertificates

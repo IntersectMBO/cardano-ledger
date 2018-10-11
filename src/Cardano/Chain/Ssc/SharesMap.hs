@@ -1,11 +1,14 @@
 module Cardano.Chain.Ssc.SharesMap
        ( SharesMap
        , InnerSharesMap
+       , dropInnerSharesMap
+       , dropSharesMap
        ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Binary.Class (AsBinary)
+import           Cardano.Binary.Class (AsBinary, Dropper, dropBytes, dropList,
+                     dropMap)
 import           Cardano.Chain.Common (StakeholderId)
 import           Cardano.Crypto (DecShare)
 
@@ -14,6 +17,9 @@ import           Cardano.Crypto (DecShare)
 -- other nodes (for i-th commitment at i-th element of NonEmpty
 -- list). Then those shares are decrypted.
 type InnerSharesMap = Map StakeholderId (NonEmpty (AsBinary DecShare))
+
+dropInnerSharesMap :: Dropper s
+dropInnerSharesMap = dropMap dropBytes (dropList dropBytes)
 
 -- | In a 'SharesMap', for each node we collect shares which said node
 -- has received and decrypted:
@@ -37,3 +43,6 @@ type InnerSharesMap = Map StakeholderId (NonEmpty (AsBinary DecShare))
 --
 -- (Here there's only one share per node, but in reality there'll be more.)
 type SharesMap = Map StakeholderId InnerSharesMap
+
+dropSharesMap :: Dropper s
+dropSharesMap = dropMap dropBytes dropInnerSharesMap

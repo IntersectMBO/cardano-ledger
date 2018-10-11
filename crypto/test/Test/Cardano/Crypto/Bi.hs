@@ -33,16 +33,18 @@ import           Cardano.Crypto (AbstractHash, EncShare, PassPhrase,
                      Secret, SecretKey (..), SecretProof,
                      SignTag (SignForTestingOnly), Signature, VssKeyPair,
                      decryptShare, deriveHDPassphrase, deterministic,
-                     deterministicVssKeyGen, genSharedSecret, hash, mkSigned,
-                     noPassEncrypt, packHDAddressAttr, proxySign,
-                     redeemDeterministicKeyGen, redeemSign,
-                     safeCreateProxyCert, safeCreatePsk, sign, toPublic,
-                     toVssPublicKey)
+                     deterministicVssKeyGen, dropDecShare, dropEncShare,
+                     dropSecret, dropSecretProof, dropVssPublicKey,
+                     genSharedSecret, hash, mkSigned, noPassEncrypt,
+                     packHDAddressAttr, proxySign, redeemDeterministicKeyGen,
+                     redeemSign, safeCreateProxyCert, safeCreatePsk, sign,
+                     toPublic, toVssPublicKey)
 
 import           Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg,
                      sizeTest)
 import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
-                     roundTripsBiBuildable, roundTripsBiShow)
+                     legacyGoldenDecode, roundTripsBiBuildable,
+                     roundTripsBiShow)
 import           Test.Cardano.Crypto.Gen
 
 
@@ -59,7 +61,7 @@ roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
 
 golden_PublicKey :: Property
 golden_PublicKey = goldenTestBi pkey "test/golden/PublicKey"
-    where Right pkey = PublicKey <$> xpub (getBytes 0 64)
+  where Right pkey = PublicKey <$> xpub (getBytes 0 64)
 
 roundTripPublicKeyBi :: Property
 roundTripPublicKeyBi = eachOf 1000 genPublicKey roundTripsBiBuildable
@@ -73,7 +75,7 @@ roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
 
 golden_SecretKey :: Property
 golden_SecretKey = goldenTestBi skey "test/golden/SecretKey"
-    where Right skey = SecretKey <$> xprv (getBytes 10 128)
+  where Right skey = SecretKey <$> xprv (getBytes 10 128)
 
 roundTripSecretKeyBi :: Property
 roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
@@ -84,13 +86,14 @@ roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
 
 golden_Signature :: Property
 golden_Signature = goldenTestBi sig "test/golden/Signature"
-  where
-    Right skey = SecretKey <$> xprv (getBytes 10 128)
-    sig        = sign (ProtocolMagic 0) SignForTestingOnly skey ()
+ where
+  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  sig        = sign (ProtocolMagic 0) SignForTestingOnly skey ()
 
 genUnitSignature :: Gen (Signature ())
-genUnitSignature = do pm <- genProtocolMagic
-                      genSignature pm (pure ())
+genUnitSignature = do
+  pm <- genProtocolMagic
+  genSignature pm (pure ())
 
 roundTripSignatureBi :: Property
 roundTripSignatureBi = eachOf 1000 genUnitSignature roundTripsBiBuildable
@@ -104,13 +107,13 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 
 golden_Signed :: Property
 golden_Signed = goldenTestBi signed "test/golden/Signed"
-  where
-    Right skey = SecretKey <$> xprv (getBytes 10 128)
-    signed     = mkSigned (ProtocolMagic 0) SignForTestingOnly skey ()
+ where
+  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  signed     = mkSigned (ProtocolMagic 0) SignForTestingOnly skey ()
 
 roundTripSignedBi :: Property
 roundTripSignedBi = eachOf 1000 genUnitSigned roundTripsBiShow
-    where genUnitSigned = genSigned (pure ())
+  where genUnitSigned = genSigned (pure ())
 
 --------------------------------------------------------------------------------
 -- EncryptedSecretKey
@@ -123,11 +126,11 @@ instance Eq XPrv where
 
 golden_EncryptedSecretKey :: Property
 golden_EncryptedSecretKey = goldenTestBi esk "test/golden/EncryptedSecretKey"
-    where Right esk = noPassEncrypt . SecretKey <$> xprv (getBytes 10 128)
+  where Right esk = noPassEncrypt . SecretKey <$> xprv (getBytes 10 128)
 
 roundTripEncryptedSecretKeysBi :: Property
 roundTripEncryptedSecretKeysBi =
-    eachOf 100 genEncryptedSecretKey roundTripsBiBuildable
+  eachOf 100 genEncryptedSecretKey roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- RedeemPublicKey
@@ -135,15 +138,15 @@ roundTripEncryptedSecretKeysBi =
 
 golden_RedeemPublicKey :: Property
 golden_RedeemPublicKey = goldenTestBi rpk "test/golden/RedeemPublicKey"
-    where Just rpk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
+  where Just rpk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
 
 roundTripRedeemPublicKeyBi :: Property
 roundTripRedeemPublicKeyBi =
-    eachOf 1000 genRedeemPublicKey roundTripsBiBuildable
+  eachOf 1000 genRedeemPublicKey roundTripsBiBuildable
 
 roundTripRedeemPublicKeyAeson :: Property
 roundTripRedeemPublicKeyAeson =
-    eachOf 1000 genRedeemPublicKey roundTripsAesonBuildable
+  eachOf 1000 genRedeemPublicKey roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- RedeemSecretKey
@@ -151,11 +154,11 @@ roundTripRedeemPublicKeyAeson =
 
 golden_RedeemSecretKey :: Property
 golden_RedeemSecretKey = goldenTestBi rsk "test/golden/RedeemSecretKey"
-    where Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
+  where Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
 
 roundTripRedeemSecretKeyBi :: Property
 roundTripRedeemSecretKeyBi =
-    eachOf 1000 genRedeemSecretKey roundTripsBiBuildable
+  eachOf 1000 genRedeemSecretKey roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- RedeemSignature
@@ -163,21 +166,22 @@ roundTripRedeemSecretKeyBi =
 
 golden_RedeemSignature :: Property
 golden_RedeemSignature = goldenTestBi rsig "test/golden/RedeemSignature"
-  where
-    Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
-    rsig     = redeemSign (ProtocolMagic 0) SignForTestingOnly rsk ()
+ where
+  Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
+  rsig     = redeemSign (ProtocolMagic 0) SignForTestingOnly rsk ()
 
 genUnitRedeemSignature :: Gen (RedeemSignature ())
-genUnitRedeemSignature = do pm <- genProtocolMagic
-                            genRedeemSignature pm (pure ())
+genUnitRedeemSignature = do
+  pm <- genProtocolMagic
+  genRedeemSignature pm (pure ())
 
 roundTripRedeemSignatureBi :: Property
 roundTripRedeemSignatureBi =
-    eachOf 1000 genUnitRedeemSignature roundTripsBiBuildable
+  eachOf 1000 genUnitRedeemSignature roundTripsBiBuildable
 
 roundTripRedeemSignatureAeson :: Property
 roundTripRedeemSignatureAeson =
-    eachOf 1000 genUnitRedeemSignature roundTripsAesonBuildable
+  eachOf 1000 genUnitRedeemSignature roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- VssPublicKey
@@ -185,7 +189,13 @@ roundTripRedeemSignatureAeson =
 
 golden_VssPublicKey :: Property
 golden_VssPublicKey = goldenTestBi vpk "test/golden/VssPublicKey"
-    where vpk = toVssPublicKey . deterministicVssKeyGen $ getBytes 0 32
+  where vpk = toVssPublicKey . deterministicVssKeyGen $ getBytes 0 32
+
+golden_legacy_VssPublicKey :: Property
+golden_legacy_VssPublicKey = legacyGoldenDecode
+  "VssPublicKey"
+  dropVssPublicKey
+  "test/golden/VssPublicKey"
 
 roundTripVssPublicKeyBi :: Property
 roundTripVssPublicKeyBi = eachOf 1000 genVssPublicKey roundTripsBiShow
@@ -196,14 +206,15 @@ roundTripVssPublicKeyBi = eachOf 1000 genVssPublicKey roundTripsBiShow
 
 golden_ProxyCert :: Property
 golden_ProxyCert = goldenTestBi pcert "test/golden/ProxyCert"
-  where
-    Right pkey = PublicKey <$> xpub (getBytes 0 64)
-    Right skey = SecretKey <$> xprv (getBytes 10 128)
-    pcert      = safeCreateProxyCert (ProtocolMagic 0) (FakeSigner skey) pkey ()
+ where
+  Right pkey = PublicKey <$> xpub (getBytes 0 64)
+  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  pcert      = safeCreateProxyCert (ProtocolMagic 0) (FakeSigner skey) pkey ()
 
 genUnitProxyCert :: Gen (ProxyCert ())
-genUnitProxyCert = do pm <- genProtocolMagic
-                      genProxyCert pm $ pure ()
+genUnitProxyCert = do
+  pm <- genProtocolMagic
+  genProxyCert pm $ pure ()
 
 roundTripProxyCertBi :: Property
 roundTripProxyCertBi = eachOf 100 genUnitProxyCert roundTripsBiBuildable
@@ -217,22 +228,23 @@ roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
 
 golden_ProxySecretKey :: Property
 golden_ProxySecretKey = goldenTestBi psk "test/golden/ProxySecretKey"
-  where
-    Right pkey = PublicKey <$> xpub (getBytes 0 64)
-    Right skey = SecretKey <$> xprv (getBytes 10 128)
-    psk        = safeCreatePsk (ProtocolMagic 0) (FakeSigner skey) pkey ()
+ where
+  Right pkey = PublicKey <$> xpub (getBytes 0 64)
+  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  psk        = safeCreatePsk (ProtocolMagic 0) (FakeSigner skey) pkey ()
 
 genUnitProxySecretKey :: Gen (ProxySecretKey ())
-genUnitProxySecretKey = do pm <- genProtocolMagic
-                           genProxySecretKey pm $ pure ()
+genUnitProxySecretKey = do
+  pm <- genProtocolMagic
+  genProxySecretKey pm $ pure ()
 
 roundTripProxySecretKeyBi :: Property
 roundTripProxySecretKeyBi =
-    eachOf 100 genUnitProxySecretKey roundTripsBiBuildable
+  eachOf 100 genUnitProxySecretKey roundTripsBiBuildable
 
 roundTripProxySecretKeyAeson :: Property
 roundTripProxySecretKeyAeson =
-    eachOf 100 genUnitProxySecretKey roundTripsAesonBuildable
+  eachOf 100 genUnitProxySecretKey roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- ProxySignature
@@ -240,18 +252,20 @@ roundTripProxySecretKeyAeson =
 
 golden_ProxySignature :: Property
 golden_ProxySignature = goldenTestBi psig "test/golden/ProxySignature"
-  where
-    Right skey = SecretKey <$> xprv (getBytes 10 128)
-    psk = safeCreatePsk (ProtocolMagic 0) (FakeSigner skey) (toPublic skey) ()
-    psig = proxySign (ProtocolMagic 0) SignForTestingOnly skey psk ()
+ where
+  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  psk = safeCreatePsk (ProtocolMagic 0) (FakeSigner skey) (toPublic skey) ()
+  psig = proxySign (ProtocolMagic 0) SignForTestingOnly skey psk ()
 
 roundTripProxySignatureBi :: Property
-roundTripProxySignatureBi = eachOf 100
-                                   genUnitProxySignature
-                                   roundTripsBiBuildable
-    where genUnitProxySignature = do
-              pm <- genProtocolMagic
-              genProxySignature pm (pure ()) (pure ())
+roundTripProxySignatureBi = eachOf
+  100
+  genUnitProxySignature
+  roundTripsBiBuildable
+ where
+  genUnitProxySignature = do
+    pm <- genProtocolMagic
+    genProxySignature pm (pure ()) (pure ())
 
 --------------------------------------------------------------------------------
 -- SharedSecretData
@@ -259,17 +273,17 @@ roundTripProxySignatureBi = eachOf 100
 
 sharedSecretData :: (Secret, SecretProof, [(VssKeyPair, EncShare)])
 sharedSecretData = (s, sp, ys)
-  where
-    vssKeyPairs =
-        [ deterministicVssKeyGen $ getBytes 0 32
-        , deterministicVssKeyGen $ getBytes 32 32
-        , deterministicVssKeyGen $ getBytes 64 32
-        , deterministicVssKeyGen $ getBytes 96 32
-        ]
-    vssPublicKeys = map toVssPublicKey vssKeyPairs
-    (s, sp, xs) =
-        deterministic "ss" $ genSharedSecret 2 (fromList vssPublicKeys)
-    ys = zipWith (\(_, y) x -> (x, y)) xs vssKeyPairs
+ where
+  vssKeyPairs =
+    [ deterministicVssKeyGen $ getBytes 0 32
+    , deterministicVssKeyGen $ getBytes 32 32
+    , deterministicVssKeyGen $ getBytes 64 32
+    , deterministicVssKeyGen $ getBytes 96 32
+    ]
+  vssPublicKeys = map toVssPublicKey vssKeyPairs
+  (s, sp, xs) =
+    deterministic "ss" $ genSharedSecret 2 (fromList vssPublicKeys)
+  ys = zipWith (\(_, y) x -> (x, y)) xs vssKeyPairs
 
 --------------------------------------------------------------------------------
 -- DecShare
@@ -277,9 +291,14 @@ sharedSecretData = (s, sp, ys)
 
 golden_DecShare :: Property
 golden_DecShare = goldenTestBi decShare "test/golden/DecShare"
-  where
-    Just decShare = case sharedSecretData of
-        (_, _, xs) -> deterministic "ds" . uncurry decryptShare <$> fmap fst (uncons xs)
+ where
+  Just decShare = case sharedSecretData of
+    (_, _, xs) ->
+      deterministic "ds" . uncurry decryptShare <$> fmap fst (uncons xs)
+
+golden_legacy_DecShare :: Property
+golden_legacy_DecShare =
+  legacyGoldenDecode "DecShare" dropDecShare "test/golden/DecShare"
 
 roundTripDecShareBi :: Property
 roundTripDecShareBi = eachOf 20 genDecShare roundTripsBiShow
@@ -290,9 +309,13 @@ roundTripDecShareBi = eachOf 20 genDecShare roundTripsBiShow
 
 golden_EncShare :: Property
 golden_EncShare = goldenTestBi encShare "test/golden/EncShare"
-  where
-    Just encShare = case sharedSecretData of
-        (_, _, xs) -> snd <$> fmap fst (uncons xs)
+ where
+  Just encShare = case sharedSecretData of
+    (_, _, xs) -> snd <$> fmap fst (uncons xs)
+
+golden_legacy_EncShare :: Property
+golden_legacy_EncShare =
+  legacyGoldenDecode "EncShare" dropEncShare "test/golden/EncShare"
 
 roundTripEncShareBi :: Property
 roundTripEncShareBi = eachOf 20 genEncShare roundTripsBiShow
@@ -303,9 +326,13 @@ roundTripEncShareBi = eachOf 20 genEncShare roundTripsBiShow
 
 golden_Secret :: Property
 golden_Secret = goldenTestBi secret "test/golden/Secret"
-  where
-    secret = case sharedSecretData of
-        (s, _, _) -> s
+ where
+  secret = case sharedSecretData of
+    (s, _, _) -> s
+
+golden_legacy_Secret :: Property
+golden_legacy_Secret =
+  legacyGoldenDecode "Secret" dropSecret "test/golden/Secret"
 
 roundTripSecretBi :: Property
 roundTripSecretBi = eachOf 20 genSecret roundTripsBiShow
@@ -316,9 +343,13 @@ roundTripSecretBi = eachOf 20 genSecret roundTripsBiShow
 
 golden_SecretProof :: Property
 golden_SecretProof = goldenTestBi secretProof "test/golden/SecretProof"
-  where
-    secretProof = case sharedSecretData of
-        (_, sp, _) -> sp
+ where
+  secretProof = case sharedSecretData of
+    (_, sp, _) -> sp
+
+golden_legacy_SecretProof :: Property
+golden_legacy_SecretProof =
+  legacyGoldenDecode "SecretProof" dropSecretProof "test/golden/SecretProof"
 
 roundTripSecretProofBi :: Property
 roundTripSecretProofBi = eachOf 20 genSecretProof roundTripsBiShow
@@ -338,7 +369,7 @@ roundTripAbstractHashBi = eachOf 1000 genUnitAbstractHash roundTripsBiBuildable
 
 roundTripAbstractHashAeson :: Property
 roundTripAbstractHashAeson =
-    eachOf 1000 genUnitAbstractHash roundTripsAesonBuildable
+  eachOf 1000 genUnitAbstractHash roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- PassPhrase
@@ -346,9 +377,9 @@ roundTripAbstractHashAeson =
 
 golden_PassPhrase :: Property
 golden_PassPhrase = goldenTestBi passphrase "test/golden/PassPhrase"
-    where
+  where
     -- PassPhrase has to be 32 bytes in length
-          passphrase = ByteArray.pack (BS.unpack $ getBytes 3 32) :: PassPhrase
+        passphrase = ByteArray.pack (BS.unpack $ getBytes 3 32) :: PassPhrase
 
 roundTripPassPhraseBi :: Property
 roundTripPassPhraseBi = eachOf 1000 genPassPhrase roundTripsBiBuildable
@@ -359,17 +390,17 @@ roundTripPassPhraseBi = eachOf 1000 genPassPhrase roundTripsBiBuildable
 
 golden_HDAddressPayload :: Property
 golden_HDAddressPayload = goldenTestBi hdap "test/golden/HDAddressPayload"
-  where
-    Right hdap =
-        flip packHDAddressAttr [] . deriveHDPassphrase . PublicKey <$> xpub
-            (getBytes 0 64)
+ where
+  Right hdap =
+    flip packHDAddressAttr [] . deriveHDPassphrase . PublicKey <$> xpub
+      (getBytes 0 64)
 
 roundTripHDAddressPayloadBi :: Property
 roundTripHDAddressPayloadBi = eachOf 1000 genHDAddressPayload roundTripsBiShow
 
 roundTripHDAddressPayloadAeson :: Property
 roundTripHDAddressPayloadAeson =
-    eachOf 1000 genHDAddressPayload roundTripsAesonShow
+  eachOf 1000 genHDAddressPayload roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 
@@ -380,7 +411,7 @@ getBytes offset len = BS.take len $ BS.drop offset constantByteString
 -- tests, but it us OK to append more data to the end.
 constantByteString :: ByteString
 constantByteString
-    = "Kmyw4lDSE5S4fSH6etNouiXezCyEjKc3tG4ja0kFjO8qzai26ZMPUEJfEy15ox5kJ0uKD\
+  = "Kmyw4lDSE5S4fSH6etNouiXezCyEjKc3tG4ja0kFjO8qzai26ZMPUEJfEy15ox5kJ0uKD\
     \bi7i6dLXkuesVZ9JfHgjrctsLFt2NvovXnchsOvX05Y6LohlTNt5mkPFhUoXu1EZSJTIy\
     \3fTU53b412r4AEusD7tcdRgH47yTr5hMO63bJnYBbmNperLHfiT1lP0MLQLh1J1DfoYBs\
     \auoJOzvtAgvjHo6UFttnK6vZ3Cknpuob6uMS2MkJKmuoQsqsAYcRDWbJ2Rgw4bm2ndTM4\
@@ -390,30 +421,44 @@ constantByteString
 --------------------------------------------------------------------------------
 
 sizeEstimates :: H.Group
-sizeEstimates = let check :: forall a. (Show a, Bi a) => Gen a -> Property
-                    check g = sizeTest $ scfg { gen = g, precise = True } in
-    H.Group "Encoded size bounds for crypto types."
-        [ ("PublicKey"         , check genPublicKey)
-        , ("AbstractHash Blake2b_224 PublicKey",
-           check @(AbstractHash Blake2b_224 PublicKey) $ genAbstractHash genPublicKey)
-        , ("AbstractHash Blake2b_256 PublicKey",
-           check @(AbstractHash Blake2b_256 PublicKey) $ genAbstractHash genPublicKey)
-        , ("AbstractHash Blake2b_384 PublicKey",
-           check @(AbstractHash Blake2b_384 PublicKey) $ genAbstractHash genPublicKey)
-        , ("AbstractHash Blake2b_512 PublicKey",
-           check @(AbstractHash Blake2b_512 PublicKey) $ genAbstractHash genPublicKey)
-        , ("AbstractHash SHA1 PublicKey",
-           check @(AbstractHash SHA1 PublicKey) $ genAbstractHash genPublicKey)
-        , ("RedeemPublicKey", check genRedeemPublicKey)
-        , ("RedeemSecretKey", check genRedeemSecretKey)
-        , ("RedeemSignature PublicKey", check (genRedeemSignature (ProtocolMagic 0) genPublicKey))
-        ]
+sizeEstimates
+  = let
+      check :: forall a . (Show a, Bi a) => Gen a -> Property
+      check g = sizeTest $ scfg { gen = g, precise = True }
+    in H.Group
+      "Encoded size bounds for crypto types."
+      [ ("PublicKey", check genPublicKey)
+      , ( "AbstractHash Blake2b_224 PublicKey"
+        , check @(AbstractHash Blake2b_224 PublicKey)
+          $ genAbstractHash genPublicKey
+        )
+      , ( "AbstractHash Blake2b_256 PublicKey"
+        , check @(AbstractHash Blake2b_256 PublicKey)
+          $ genAbstractHash genPublicKey
+        )
+      , ( "AbstractHash Blake2b_384 PublicKey"
+        , check @(AbstractHash Blake2b_384 PublicKey)
+          $ genAbstractHash genPublicKey
+        )
+      , ( "AbstractHash Blake2b_512 PublicKey"
+        , check @(AbstractHash Blake2b_512 PublicKey)
+          $ genAbstractHash genPublicKey
+        )
+      , ( "AbstractHash SHA1 PublicKey"
+        , check @(AbstractHash SHA1 PublicKey) $ genAbstractHash genPublicKey
+        )
+      , ("RedeemPublicKey", check genRedeemPublicKey)
+      , ("RedeemSecretKey", check genRedeemSecretKey)
+      , ( "RedeemSignature PublicKey"
+        , check (genRedeemSignature (ProtocolMagic 0) genPublicKey)
+        )
+      ]
 
 --------------------------------------------------------------------------------
 
 tests :: IO Bool
 tests = and <$> sequence
-    [ H.checkSequential $$discoverGolden
-    , H.checkSequential $$discoverRoundTrip
-    , H.checkParallel sizeEstimates
-    ]
+  [ H.checkSequential $$discoverGolden
+  , H.checkSequential $$discoverRoundTrip
+  , H.checkParallel sizeEstimates
+  ]
