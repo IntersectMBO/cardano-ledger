@@ -72,3 +72,24 @@ spec = do
               , TxOut bobAddr (Coin 3) ]
       tx1 = TxWits tx1Body Set.empty
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
+
+  it "Invalid Ledger - Alice tries to spend Bob's UTxO" $ do
+    let
+      tx1Body = Tx
+        (Set.fromList [TxIn genesisId 1])
+              [ TxOut aliceAddr (Coin 1)]
+      aliceTx1Wit = makeWitness alice tx1Body
+      tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
+    ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
+
+  it "Invalid Ledger - Alice provides witness of wrong UTxO" $ do
+    let
+      tx1Body = Tx
+        (Set.fromList [TxIn genesisId 1])
+              [ TxOut aliceAddr (Coin 1)]
+      tx2Body = Tx
+        (Set.fromList [TxIn genesisId 0])
+              [ TxOut aliceAddr (Coin 10)]
+      aliceTx1Wit = makeWitness alice tx2Body
+      tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
+    ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
