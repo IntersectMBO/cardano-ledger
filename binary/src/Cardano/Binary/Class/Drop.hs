@@ -7,11 +7,13 @@
 module Cardano.Binary.Class.Drop
        ( Dropper
        , dropBytes
+       , dropInt32
        , dropList
        , dropMap
        , dropSet
        , dropTuple
        , dropTriple
+       , dropWord8
        , dropWord64
        ) where
 
@@ -24,6 +26,9 @@ type Dropper s = D.Decoder s ()
 
 dropBytes :: Dropper s
 dropBytes = void D.decodeBytesCanonical
+
+dropInt32 :: Dropper s
+dropInt32 = void D.decodeInt32Canonical
 
 -- | Drop a list of values using the supplied `Dropper` for each element
 dropList :: Dropper s -> Dropper s
@@ -54,6 +59,9 @@ dropTriple dropA dropB dropC = do
   dropA
   dropB
   dropC
+
+dropWord8 :: Dropper s
+dropWord8 = void D.decodeWord8Canonical
 
 dropWord64 :: Dropper s
 dropWord64 = void D.decodeWord64Canonical

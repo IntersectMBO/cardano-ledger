@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -13,8 +14,8 @@
 
 module Cardano.Chain.Block.Block
        ( Block
-       , getBlockHeader
-       , verifyBlockInternal
+       , encodeBlock
+       , decodeBlock
 
        -- * GenericBlock
        , GenericBlock
@@ -27,17 +28,7 @@ module Cardano.Chain.Block.Block
        , gbConsensus
 
        -- * BoundaryBlock
-       , BoundaryBlock
-       , mkBoundaryBlock
-       , genesisBlock0
-       , genBlockPrevBlock
-       , genBlockProof
-       , genBlockEpoch
-       , genBlockDifficulty
-       , genBlockHeaderAttributes
-       , genBlockLeaders
-       , genBlockAttributes
-       , verifyBoundaryBlock
+       , dropBoundaryBlock
 
        -- * MainBlock
        , MainBlock
@@ -65,39 +56,33 @@ import           Cardano.Prelude
 
 import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, int, sformat, shown, stext, (%))
+import           Formatting (bprint, build, int, shown, (%))
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Boundary (BoundaryBody (..),
-                     BoundaryBodyAttributes, BoundaryConsensusData (..),
-                     BoundaryExtraBodyData (..), BoundaryExtraHeaderData (..),
-                     BoundaryHeaderAttributes, BoundaryProof (..),
-                     bebAttributes, checkBoundaryProof, gbLeaders)
-import           Cardano.Chain.Block.Header (BlockHeader (..),
-                     BlockSignature (..), GenericBlockHeader, HeaderHash,
-                     MainConsensusData (..), blockHeaderDifficulty,
-                     blockHeaderHash, gbhBodyProof, gbhConsensus, gbhPrevBlock,
-                     genHeaderAttributes, genHeaderDifficulty, genHeaderEpoch,
-                     genHeaderProof, mainHeaderAttributes,
+import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
+                     Dropper, Encoding, encodeListLen, enforceSize)
+import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
+                     dropBoundaryExtraBodyData)
+import           Cardano.Chain.Block.Header (BlockHeader, BlockSignature (..),
+                     GenericBlockHeader, HeaderHash, MainConsensusData (..),
+                     blockHeaderHash, dropBoundaryBlockHeader, gbhBodyProof,
+                     gbhConsensus, gbhPrevBlock, mainHeaderAttributes,
                      mainHeaderBlockVersion, mainHeaderDifficulty,
                      mainHeaderEBDataProof, mainHeaderLeaderKey,
                      mainHeaderProof, mainHeaderSignature, mainHeaderSlot,
-                     mainHeaderSoftwareVersion, mkBoundaryHeader,
-                     mkMainHeaderExplicit, verifyMainBlockHeader)
+                     mainHeaderSoftwareVersion, mkMainHeaderExplicit,
+                     verifyMainBlockHeader)
 import           Cardano.Chain.Block.Main (BlockBodyAttributes,
                      BlockHeaderAttributes, MainBody (..),
                      MainExtraBodyData (..), MainExtraHeaderData (..),
                      MainProof (..), checkMainProof, mbDlgPayload,
                      mbSscPayload, mbTxPayload, mbTxs, mbUpdatePayload,
                      mebAttributes, verifyMainBody)
-import           Cardano.Chain.Common (ChainDifficulty, SlotLeaders,
-                     mkAttributes)
+import           Cardano.Chain.Common (ChainDifficulty, mkAttributes)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
--- import           Cardano.Chain.Genesis.Config as Genesis (Config (..))
 import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
-import           Cardano.Chain.Slotting (EpochIndex, SlotId (..))
+import           Cardano.Chain.Slotting (SlotId (..))
 import           Cardano.Chain.Ssc (SscPayload)
 import           Cardano.Chain.Txp.TxPayload (TxPayload)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
@@ -111,17 +96,28 @@ import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey,
 -- Block
 --------------------------------------------------------------------------------
 
-type Block = Either BoundaryBlock MainBlock
+type Block = MainBlock
 
--- | Take 'BlockHeader' from either 'BoundaryBlock' or 'MainBlock'
-getBlockHeader :: Block -> BlockHeader
-getBlockHeader = \case
-  Left  gb -> BlockHeaderBoundary (_gbHeader gb)
-  Right mb -> BlockHeaderMain (_gbHeader mb)
+-- | Encode a 'Block' accounting for deprecated epoch boundary blocks
+encodeBlock :: Block -> Encoding
+encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
 
--- | Verify a Block in isolation
-verifyBlockInternal :: MonadError Text m => ProtocolMagic -> Block -> m ()
-verifyBlockInternal pm = either verifyBoundaryBlock (verifyMainBlock pm)
+-- | Decode a 'Block' accounting for deprecated epoch boundary blocks
+--
+--   Previous versions of Cardano had an explicit boundary block between epochs.
+--   A 'Block' was then represented as 'Either BoundaryBlock MainBlock'. We have
+--   now deprecated these explicit boundary blocks, but we still need to decode
+--   blocks in the old format. In the case that we find a boundary block, we
+--   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
+decodeBlock :: Decoder s (Maybe Block)
+decodeBlock = do
+  enforceSize "Block" 2
+  decode @Word >>= \case
+    0 -> do
+      dropBoundaryBlock
+      pure Nothing
+    1 -> Just <$> decode
+    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
 
 --------------------------------------------------------------------------------
@@ -160,47 +156,12 @@ mkGenericBlockUnsafe = GenericBlock
 -- BoundaryBlock
 --------------------------------------------------------------------------------
 
-type BoundaryBlock = GenericBlock
-    BoundaryProof
-    BoundaryConsensusData
-    BoundaryExtraHeaderData
-    BoundaryBody
-    BoundaryExtraBodyData
-
-instance B.Buildable BoundaryBlock where
-  build gb = bprint
-    ("BoundaryBlock:\n" % "  " % build % stext)
-    (_gbHeader gb)
-    formatLeaders
-   where
-    body = _gbBody gb
-    formatIfNotNull formatter l =
-      if null l then mempty else sformat formatter l
-    formatLeaders = formatIfNotNull
-      ("  leaders: " % listJson % "\n")
-      (toList $ _gbLeaders body)
-
--- | Smart constructor for 'BoundaryBlock'
-mkBoundaryBlock
-  :: ProtocolMagic
-  -> Either GenesisHash BlockHeader
-  -> EpochIndex
-  -> SlotLeaders
-  -> BoundaryBlock
-mkBoundaryBlock pm prevHeader epoch leaders = GenericBlock header body extra
- where
-  header = mkBoundaryHeader pm prevHeader epoch body
-  body   = BoundaryBody leaders
-  extra  = BoundaryExtraBodyData $ mkAttributes ()
-
--- | Creates the very first genesis block
-genesisBlock0 :: ProtocolMagic -> GenesisHash -> SlotLeaders -> BoundaryBlock
-genesisBlock0 pm genesisHash = mkBoundaryBlock pm (Left genesisHash) 0
-
--- | To verify a genesis block we only have to check the body proof
-verifyBoundaryBlock :: MonadError Text m => BoundaryBlock -> m ()
-verifyBoundaryBlock gb =
-  checkBoundaryProof (_gbBody gb) (_gbHeader gb ^. gbhBodyProof)
+dropBoundaryBlock :: Dropper s
+dropBoundaryBlock = do
+  enforceSize "BoundaryBlock" 3
+  dropBoundaryBlockHeader
+  dropBoundaryBody
+  dropBoundaryExtraBodyData
 
 
 --------------------------------------------------------------------------------
@@ -233,8 +194,9 @@ mkMainBlock pm bv sv prevHeader = mkMainBlockExplicit
   prevHash
   difficulty
  where
-  prevHash   = either getGenesisHash blockHeaderHash prevHeader
-  difficulty = either (const 0) (succ . blockHeaderDifficulty) prevHeader
+  prevHash = either getGenesisHash blockHeaderHash prevHeader
+  difficulty =
+    either (const 0) (succ . _mcdDifficulty . view gbhConsensus) prevHeader
 
 -- | Smart constructor for 'MainBlock', without requiring the entire previous
 --   'BlockHeader'. Instead, you give its hash and the difficulty of this block.
@@ -295,39 +257,6 @@ gbBodyProof = gbHeader . gbhBodyProof
 -- | Lens from 'GenericBlock' to 'ConsensusData'
 gbConsensus :: Lens' (GenericBlock a consensus c d e) consensus
 gbConsensus = gbHeader . gbhConsensus
-
-
---------------------------------------------------------------------------------
--- BoundaryBlock lenses
---------------------------------------------------------------------------------
-
--- | Lens from 'BoundaryBlock' to 'HeaderHash' of its parent
-genBlockPrevBlock :: Lens' BoundaryBlock HeaderHash
-genBlockPrevBlock = gbPrevBlock
-
--- | Lens from 'BoundaryBlock' to 'BoundaryProof'
-genBlockProof :: Lens' BoundaryBlock BoundaryProof
-genBlockProof = gbHeader . genHeaderProof
-
--- | Lens from 'BoundaryBlock' to 'EpochIndex'
-genBlockEpoch :: Lens' BoundaryBlock EpochIndex
-genBlockEpoch = gbHeader . genHeaderEpoch
-
--- | Lens from 'BoundaryBlock' to 'ChainDifficulty'
-genBlockDifficulty :: Lens' BoundaryBlock ChainDifficulty
-genBlockDifficulty = gbHeader . genHeaderDifficulty
-
--- | Lens from 'BoundaryBlock' to 'BoundaryHeaderAttributes'
-genBlockHeaderAttributes :: Lens' BoundaryBlock BoundaryHeaderAttributes
-genBlockHeaderAttributes = gbHeader . genHeaderAttributes
-
--- | Lens from 'BoundaryBlock' to 'SlotLeaders'
-genBlockLeaders :: Lens' BoundaryBlock SlotLeaders
-genBlockLeaders = gbBody . gbLeaders
-
--- | Lens from 'BoundaryBlock' to 'BoundaryBodyAttributes'
-genBlockAttributes :: Lens' BoundaryBlock BoundaryBodyAttributes
-genBlockAttributes = gbExtra . bebAttributes
 
 
 --------------------------------------------------------------------------------

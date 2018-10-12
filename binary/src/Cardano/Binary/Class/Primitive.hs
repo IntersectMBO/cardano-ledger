@@ -14,6 +14,7 @@ module Cardano.Binary.Class.Primitive
        , serializeWith
        , serialize'
        , serializeBuilder
+       , serializeEncoding
 
        -- * Deserialize inside the Decoder monad
        , deserialize
@@ -95,6 +96,11 @@ serializeWith :: Bi a => Int -> Int -> a -> BSL.ByteString
 serializeWith firstChunk nextChunk =
   Builder.toLazyByteStringWith strategy mempty . serializeBuilder
   where strategy = Builder.safeStrategy firstChunk nextChunk
+
+serializeEncoding :: E.Encoding -> BSL.ByteString
+serializeEncoding =
+  Builder.toLazyByteStringWith strategy mempty . CBOR.Write.toBuilder
+  where strategy = Builder.safeStrategy 1024 4096
 
 -- | Deserialize a Haskell value from the external binary representation
 --   (which must have been made using 'serialize' or related function).

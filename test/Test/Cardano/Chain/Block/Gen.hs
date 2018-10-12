@@ -3,10 +3,6 @@ module Test.Cardano.Chain.Block.Gen
        , genBlockHeader
        , genBlockHeaderAttributes
        , genBlockSignature
-       , genBoundaryBlockHeader
-       , genBoundaryBody
-       , genBoundaryConsensusData
-       , genBoundaryProof
        , genHeaderHash
        , genMainBlockHeader
        , genMainBody
@@ -25,25 +21,20 @@ import           Data.Coerce (coerce)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 
-import           Cardano.Chain.Block (BlockBodyAttributes, BlockHeader (..),
-                     BlockHeaderAttributes, BlockSignature (..),
-                     BoundaryBlockHeader, BoundaryBody (..),
-                     BoundaryConsensusData (..), BoundaryProof (..),
-                     HeaderHash, MainBlockHeader, MainBody (..),
-                     MainConsensusData (..), MainExtraBodyData (..),
-                     MainExtraHeaderData (..), MainProof (..), MainToSign (..),
-                     SlogUndo (..), Undo (..), mkBoundaryHeader,
+import           Cardano.Chain.Block (BlockBodyAttributes, BlockHeader,
+                     BlockHeaderAttributes, BlockSignature (..), HeaderHash,
+                     MainBlockHeader, MainBody (..), MainConsensusData (..),
+                     MainExtraBodyData (..), MainExtraHeaderData (..),
+                     MainProof (..), MainToSign (..), SlogUndo (..), Undo (..),
                      mkMainHeaderExplicit)
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Slotting (SlotCount)
 import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
 import           Cardano.Crypto (ProtocolMagic)
 
-import           Test.Cardano.Chain.Common.Gen (genChainDifficulty,
-                     genSlotLeaders)
+import           Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import           Test.Cardano.Chain.Slotting.Gen (genEpochIndex, genFlatSlotId,
-                     genSlotId)
+import           Test.Cardano.Chain.Slotting.Gen (genFlatSlotId, genSlotId)
 import           Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof,
                      genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
@@ -55,10 +46,7 @@ genBlockBodyAttributes :: Gen BlockBodyAttributes
 genBlockBodyAttributes = pure $ mkAttributes ()
 
 genBlockHeader :: ProtocolMagic -> SlotCount -> Gen BlockHeader
-genBlockHeader pm epochSlots = Gen.choice
-  [ BlockHeaderBoundary <$> genBoundaryBlockHeader pm epochSlots
-  , BlockHeaderMain <$> genMainBlockHeader pm epochSlots
-  ]
+genBlockHeader = genMainBlockHeader
 
 genBlockHeaderAttributes :: Gen BlockHeaderAttributes
 genBlockHeaderAttributes = pure $ mkAttributes ()
@@ -73,25 +61,8 @@ genBlockSignature pm epochSlots = Gen.choice
   ]
   where mts = genMainToSign pm epochSlots
 
-genBoundaryBlockHeader :: ProtocolMagic -> SlotCount -> Gen BoundaryBlockHeader
-genBoundaryBlockHeader pm epochSlots = do
-  epoch      <- genEpochIndex
-  body       <- genBoundaryBody
-  prevHeader <- BlockHeaderMain <$> genMainBlockHeader pm epochSlots
-  pure $ mkBoundaryHeader pm (Right prevHeader) epoch body
-
-genBoundaryBody :: Gen BoundaryBody
-genBoundaryBody = BoundaryBody <$> genSlotLeaders
-
-genBoundaryConsensusData :: Gen BoundaryConsensusData
-genBoundaryConsensusData =
-  BoundaryConsensusData <$> genEpochIndex <*> genChainDifficulty
-
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
-
-genBoundaryProof :: Gen BoundaryProof
-genBoundaryProof = BoundaryProof <$> genAbstractHash genSlotLeaders
 
 genMainBody :: ProtocolMagic -> Gen MainBody
 genMainBody pm =

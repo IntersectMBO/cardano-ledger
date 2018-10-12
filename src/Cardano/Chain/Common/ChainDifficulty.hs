@@ -5,6 +5,7 @@
 
 module Cardano.Chain.Common.ChainDifficulty
        ( ChainDifficulty (..)
+       , dropChainDifficulty
        ) where
 
 import           Cardano.Prelude
@@ -12,7 +13,8 @@ import           Cardano.Prelude
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting.Buildable (Buildable)
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
+import           Cardano.Binary.Class (Bi (..), Dropper, dropWord64,
+                     encodeListLen, enforceSize)
 import           Cardano.Chain.Common.BlockCount (BlockCount)
 
 -- | Chain difficulty represents necessary effort to generate a
@@ -37,5 +39,10 @@ instance Bi ChainDifficulty where
     decode = do
         enforceSize "ChainDifficulty" 1
         ChainDifficulty <$> decode
+
+dropChainDifficulty :: Dropper s
+dropChainDifficulty = do
+  enforceSize "ChainDifficulty" 1
+  dropWord64
 
 deriveJSON defaultOptions ''ChainDifficulty

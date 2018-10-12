@@ -10,14 +10,11 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
-       ( BlockHeader (..)
-       , blockHeaderProtocolMagic
-       , blockHeaderHash
-       , blockHeaderDifficulty
-       , choosingBlockHeader
-       , _BlockHeaderBoundary
-       , _BlockHeaderMain
+       ( BlockHeader
+       , encodeBlockHeader
+       , decodeBlockHeader
        , verifyBlockHeader
+       , blockHeaderHash
 
        , HeaderHash
        , headerHashF
@@ -32,13 +29,7 @@ module Cardano.Chain.Block.Header
        , gbhConsensus
        , gbhExtra
 
-       , BoundaryBlockHeader
-       , mkBoundaryHeader
-       , genHeaderPrevBlock
-       , genHeaderProof
-       , genHeaderEpoch
-       , genHeaderDifficulty
-       , genHeaderAttributes
+       , dropBoundaryBlockHeader
 
        , MainBlockHeader
        , mkMainHeader
@@ -72,94 +63,58 @@ module Cardano.Chain.Block.Header
 
 import           Cardano.Prelude
 
-import           Codec.CBOR.Decoding (decodeWordCanonical)
-import           Codec.CBOR.Encoding (encodeWord)
-import           Control.Lens (LensLike', makeLenses, makePrisms)
+import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (Format, bprint, build, int, (%))
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
-                     decodeListLenCanonicalOf, encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Boundary (BoundaryBody,
-                     BoundaryConsensusData (..), BoundaryExtraHeaderData (..),
-                     BoundaryHeaderAttributes, BoundaryProof (..),
-                     gcdDifficulty, gcdEpoch, gehAttributes, mkBoundaryProof)
+import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
+                     Dropper, Encoding, dropBytes, dropInt32, encodeListLen,
+                     enforceSize, serializeEncoding)
+import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
+                     dropBoundaryExtraHeaderData)
 import           Cardano.Chain.Block.Main (BlockHeaderAttributes, MainBody,
                      MainExtraBodyData, MainExtraHeaderData, MainProof (..),
                      mehAttributes, mehBlockVersion, mehEBDataProof,
                      mehSoftwareVersion, mkMainProof)
 import           Cardano.Chain.Common (ChainDifficulty)
-import           Cardano.Chain.Common.Attributes (mkAttributes)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo,
                      ProxySigHeavy)
 import           Cardano.Chain.Delegation.LightDlgIndices (LightDlgIndices (..),
                      ProxySigLight)
 import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
-import           Cardano.Chain.Slotting (EpochIndex (..), SlotId (..), slotIdF)
+import           Cardano.Chain.Slotting (SlotId (..), slotIdF)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
-                     SignTag (..), Signature, checkSig, hash, hashHexF,
+                     SignTag (..), Signature, checkSig, hashHexF,
                      isSelfSignedPsk, proxySign, proxyVerify, psigPsk, sign,
-                     toPublic)
+                     toPublic, unsafeAbstractHash)
 
 
 --------------------------------------------------------------------------------
--- BoundaryBlock ∪ MainBlock
+-- BlockHeader
 --------------------------------------------------------------------------------
 
--- | Either header of ordinary main block or boundary block
-data BlockHeader
-    = BlockHeaderBoundary BoundaryBlockHeader
-    | BlockHeaderMain MainBlockHeader
-    deriving (Eq, Show, Generic, NFData)
+type BlockHeader = MainBlockHeader
 
-instance B.Buildable BlockHeader where
-  build = \case
-    BlockHeaderBoundary bhg -> B.build bhg
-    BlockHeaderMain     bhm -> B.build bhm
+encodeBlockHeader :: BlockHeader -> Encoding
+encodeBlockHeader header = encodeListLen 2 <> encode (1 :: Word) <> encode header
 
-choosingBlockHeader
-  :: Functor f
-  => LensLike' f BoundaryBlockHeader r
-  -> LensLike' f MainBlockHeader r
-  -> LensLike' f BlockHeader r
-choosingBlockHeader onBoundary onMain f = \case
-  BlockHeaderBoundary bh -> BlockHeaderBoundary <$> onBoundary f bh
-  BlockHeaderMain     bh -> BlockHeaderMain <$> onMain f bh
-
-instance Bi BlockHeader where
-  encode x = encodeListLen 2 <> encodeWord tag <> body
-   where
-    (tag, body) = case x of
-      BlockHeaderBoundary bh -> (0, encode bh)
-      BlockHeaderMain     bh -> (1, encode bh)
-
-  decode = do
-    decodeListLenCanonicalOf 2
-    t <- decodeWordCanonical
-    case t of
-      0 -> BlockHeaderBoundary <$!> decode
-      1 -> BlockHeaderMain <$!> decode
-      _ -> cborError $ DecoderErrorUnknownTag "BlockHeader" (fromIntegral t)
-
--- | The 'ProtocolMagic' in a 'BlockHeader'
-blockHeaderProtocolMagic :: BlockHeader -> ProtocolMagic
-blockHeaderProtocolMagic (BlockHeaderBoundary gbh) = _gbhProtocolMagic gbh
-blockHeaderProtocolMagic (BlockHeaderMain     mbh) = _gbhProtocolMagic mbh
-
-blockHeaderDifficulty :: BlockHeader -> ChainDifficulty
-blockHeaderDifficulty (BlockHeaderBoundary gbh) =
-  _gcdDifficulty $ _gbhConsensus gbh
-blockHeaderDifficulty (BlockHeaderMain gbh) =
-  _mcdDifficulty $ _gbhConsensus gbh
+decodeBlockHeader :: Decoder s (Maybe BlockHeader)
+decodeBlockHeader = do
+  enforceSize "BlockHeader" 2
+  decode @Word >>= \case
+    0 -> do
+      dropBoundaryBlockHeader
+      pure Nothing
+    1 -> Just <$!> decode
+    t -> cborError $ DecoderErrorUnknownTag "BlockHeader" (fromIntegral t)
 
 -- | Verify a BlockHeader in isolation. There is nothing to be done for
 --   boundary headers.
 verifyBlockHeader :: MonadError Text m => ProtocolMagic -> BlockHeader -> m ()
-verifyBlockHeader _  (BlockHeaderBoundary _  ) = pure ()
-verifyBlockHeader pm (BlockHeaderMain     bhm) = verifyMainBlockHeader pm bhm
+verifyBlockHeader = verifyMainBlockHeader
 
 
 --------------------------------------------------------------------------------
@@ -173,13 +128,12 @@ type HeaderHash = Hash BlockHeader
 headerHashF :: Format r (HeaderHash -> r)
 headerHashF = build
 
--- | This function is required because type inference fails in attempts to hash
---   only @Right@ or @Left@.
+-- | Hash the serialised representation of a `BlockHeader`
 --
---   Perhaps, it shouldn't be here, but I decided not to create a module for
---   only this function.
+--   For backwards compatibility we have to take the hash of the header
+--   serialised with 'encodeBlockHeader'
 blockHeaderHash :: BlockHeader -> HeaderHash
-blockHeaderHash = hash
+blockHeaderHash = unsafeAbstractHash . serializeEncoding . encodeBlockHeader
 
 
 --------------------------------------------------------------------------------
@@ -238,46 +192,16 @@ mkGenericBlockHeaderUnsafe = GenericBlockHeader
 -- BoundaryBlockHeader
 --------------------------------------------------------------------------------
 
--- | Header of Boundary block
-type BoundaryBlockHeader = GenericBlockHeader
-    BoundaryProof
-    BoundaryConsensusData
-    BoundaryExtraHeaderData
-
-instance B.Buildable BoundaryBlockHeader where
-  build gbh = bprint
-    ( "BoundaryBlockHeader:\n"
-    % "    hash: " % hashHexF % "\n"
-    % "    previous block: " % hashHexF % "\n"
-    % "    epoch: " % build % "\n"
-    % "    difficulty: " % int % "\n"
-    )
-    gbhHeaderHash
-    (_gbhPrevBlock gbh)
-    (_gcdEpoch consensus)
-    (_gcdDifficulty consensus)
-   where
-    gbhHeaderHash :: HeaderHash
-    gbhHeaderHash = blockHeaderHash $ BlockHeaderBoundary gbh
-    consensus     = _gbhConsensus gbh
-
--- | Smart constructor for 'BoundaryBlockHeader'
-mkBoundaryHeader
-  :: ProtocolMagic
-  -> Either GenesisHash BlockHeader
-  -> EpochIndex
-  -> BoundaryBody
-  -> BoundaryBlockHeader
-mkBoundaryHeader pm prevHeader epoch body = GenericBlockHeader
-  pm
-  (either getGenesisHash blockHeaderHash prevHeader)
-  (mkBoundaryProof body)
-  consensus
-  (BoundaryExtraHeaderData $ mkAttributes ())
- where
-  difficulty = either (const 0) blockHeaderDifficulty prevHeader
-  consensus =
-    BoundaryConsensusData {_gcdEpoch = epoch, _gcdDifficulty = difficulty}
+dropBoundaryBlockHeader :: Dropper s
+dropBoundaryBlockHeader = do
+  enforceSize "BoundaryBlockHeader" 5
+  dropInt32
+  -- HeaderHash
+  dropBytes
+  -- BoundaryBodyProof
+  dropBytes
+  dropBoundaryConsensusData
+  dropBoundaryExtraHeaderData
 
 
 --------------------------------------------------------------------------------
@@ -308,7 +232,7 @@ instance B.Buildable MainBlockHeader where
     (_gbhExtra gbh)
    where
     gbhHeaderHash :: HeaderHash
-    gbhHeaderHash = blockHeaderHash $ BlockHeaderMain gbh
+    gbhHeaderHash = blockHeaderHash gbh
     consensus     = _gbhConsensus gbh
 
 -- | Smart constructor for 'MainBlockHeader'
@@ -323,8 +247,9 @@ mkMainHeader
   -> MainBlockHeader
 mkMainHeader pm prevHeader = mkMainHeaderExplicit pm prevHash difficulty
  where
-  prevHash   = either getGenesisHash blockHeaderHash prevHeader
-  difficulty = either (const 0) (succ . blockHeaderDifficulty) prevHeader
+  prevHash = either getGenesisHash blockHeaderHash prevHeader
+  difficulty =
+    either (const 0) (succ . _mcdDifficulty . _gbhConsensus) prevHeader
 
 -- | Make a 'MainBlockHeader' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.
@@ -501,13 +426,6 @@ verifyMainConsensusData mcd = when (selfSignedProxy $ _mcdSignature mcd)
 
 
 --------------------------------------------------------------------------------
--- BlockHeaderBoundary prisms
---------------------------------------------------------------------------------
-
-makePrisms 'BlockHeaderBoundary
-
-
---------------------------------------------------------------------------------
 -- GenericBlockHeader Lenses
 --------------------------------------------------------------------------------
 
@@ -519,31 +437,6 @@ makeLenses ''GenericBlockHeader
 --------------------------------------------------------------------------------
 
 makeLenses 'MainConsensusData
-
-
-----------------------------------------------------------------------------
--- BoundaryBlockHeader lenses
-----------------------------------------------------------------------------
-
--- | Lens from 'BoundaryBlockHeader' to 'HeaderHash' of its parent
-genHeaderPrevBlock :: Lens' BoundaryBlockHeader HeaderHash
-genHeaderPrevBlock = gbhPrevBlock
-
--- | Lens from 'BoundaryBlockHeader' to 'BoundaryProof'
-genHeaderProof :: Lens' BoundaryBlockHeader BoundaryProof
-genHeaderProof = gbhBodyProof
-
--- | Lens from 'BoundaryBlockHeader' to 'EpochIndex'
-genHeaderEpoch :: Lens' BoundaryBlockHeader EpochIndex
-genHeaderEpoch = gbhConsensus . gcdEpoch
-
--- | Lens from 'BoundaryBlockHeader' to 'ChainDifficulty'
-genHeaderDifficulty :: Lens' BoundaryBlockHeader ChainDifficulty
-genHeaderDifficulty = gbhConsensus . gcdDifficulty
-
--- | Lens from 'BoundaryBlockHeader' to 'BoundaryHeaderAttributes'
-genHeaderAttributes :: Lens' BoundaryBlockHeader BoundaryHeaderAttributes
-genHeaderAttributes = gbhExtra . gehAttributes
 
 
 --------------------------------------------------------------------------------

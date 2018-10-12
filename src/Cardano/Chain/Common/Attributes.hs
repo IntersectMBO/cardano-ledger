@@ -6,11 +6,11 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeApplications           #-}
 
--- | Helper data type for block, tx attributes.
+-- | Helper data type for block, tx attributes
 --
--- Map with integer 1-byte keys, arbitrary-type polymorph values.
--- Needed primarily for partial serialization. Values are either
--- parsed and put to some constructor or left as unparsed.
+--   Map with integer 1-byte keys, arbitrary-type polymorph values. Needed
+--   primarily for partial serialization. Values are either parsed and put to
+--   some constructor or left as unparsed.
 
 module Cardano.Chain.Common.Attributes
        ( UnparsedFields(..)
@@ -19,6 +19,7 @@ module Cardano.Chain.Common.Attributes
        , encodeAttributes
        , decodeAttributes
        , mkAttributes
+       , dropAttributes
        ) where
 
 import           Cardano.Prelude
@@ -33,23 +34,24 @@ import           Formatting (bprint, build, int, (%))
 import           Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
 
-import           Cardano.Binary.Class
+import           Cardano.Binary.Class (Bi (..), Decoder, Dropper, Encoding,
+                     dropBytes, dropMap, dropWord8)
+
 
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used
--- for clear backward compatibility between previous representation (which was
--- just a single ByteString) during transition from Store to CBOR.
+--   for clear backward compatibility between previous representation (which was
+--   just a single ByteString) during transition from Store to CBOR.
 newtype UnparsedFields =
-    UnparsedFields (Map Word8 LBS.ByteString)
-    deriving (Eq, Ord, Show, Generic, Typeable, NFData)
+  UnparsedFields (Map Word8 LBS.ByteString)
+  deriving (Eq, Ord, Show, Generic, Typeable, NFData)
 
 instance FromJSON UnparsedFields where
-    parseJSON v = UnparsedFields
-        .   M.map (LBS.fromStrict . getByteString64)
-        <$> parseJSON v
+  parseJSON v =
+    UnparsedFields . M.map (LBS.fromStrict . getByteString64) <$> parseJSON v
 
 instance ToJSON UnparsedFields where
-    toJSON (UnparsedFields fields) =
-        toJSON (M.map (makeByteString64 . LBS.toStrict) fields)
+  toJSON (UnparsedFields fields) =
+    toJSON (M.map (makeByteString64 . LBS.toStrict) fields)
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -59,54 +61,54 @@ fromUnparsedFields (UnparsedFields m) = m
 mkAttributes :: h -> Attributes h
 mkAttributes dat = Attributes dat (UnparsedFields M.empty)
 
--- | Convenient wrapper for the datatype to represent it (in binary
--- format) as k-v map.
+-- | Convenient wrapper for the datatype to represent it (in binary format) as
+--   k-v map
 data Attributes h = Attributes
-    { -- | Data, containing known keys (deserialized)
-      attrData   :: h
-      -- | Remaining, unparsed fields.
-    , attrRemain :: UnparsedFields
-    } deriving (Eq, Ord, Generic, Typeable)
+  { attrData   :: h
+  -- ^ Data, containing known keys (deserialized)
+  , attrRemain :: UnparsedFields
+  -- ^ Remaining, unparsed fields
+  } deriving (Eq, Ord, Generic, Typeable)
 
 instance Show h => Show (Attributes h) where
-    show attr =
-        let
-            remain
-                | areAttributesKnown attr = ""
-                | otherwise = ", remain: <"
-                    <> show (unknownAttributesLength attr)
-                    <> " bytes>"
-        in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
+  show attr =
+    let
+      remain
+        | areAttributesKnown attr
+        = ""
+        | otherwise
+        = ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
+    in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
 
 instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
-    build attr = if areAttributesKnown attr
-        then Buildable.build (attrData attr)
-        else bprint
-            ("Attributes { data: "%build%", remain: <"%int%" bytes> }")
-            (attrData attr)
-            (unknownAttributesLength attr)
+  build attr = if areAttributesKnown attr
+    then Buildable.build (attrData attr)
+    else bprint
+      ("Attributes { data: " % build % ", remain: <" % int % " bytes> }")
+      (attrData attr)
+      (unknownAttributesLength attr)
 
 instance Buildable (Attributes ()) where
-    build attr
-        | areAttributesKnown attr = "<no attributes>"
-        | otherwise = bprint
-            ("Attributes { data: (), remain: <"%int%" bytes> }")
-            (unknownAttributesLength attr)
+  build attr
+    | areAttributesKnown attr = "<no attributes>"
+    | otherwise = bprint
+      ("Attributes { data: (), remain: <" % int % " bytes> }")
+      (unknownAttributesLength attr)
 
 instance Bi (Attributes ()) where
-    encode = encodeAttributes []
-    decode = decodeAttributes () $ \_ _ _ -> pure Nothing
+  encode = encodeAttributes []
+  decode = decodeAttributes () $ \_ _ _ -> pure Nothing
 
 instance NFData h => NFData (Attributes h)
 
--- | Check whether all data from 'Attributes' is known, i. e. was
--- successfully parsed into some structured data.
+-- | Check whether all data from 'Attributes' is known, i. e. was successfully
+--   parsed into some structured data
 areAttributesKnown :: Attributes a -> Bool
 areAttributesKnown = M.null . fromUnparsedFields . attrRemain
 
 unknownAttributesLength :: Attributes a -> Int
 unknownAttributesLength =
-    fromIntegral . sum . map LBS.length . fromUnparsedFields . attrRemain
+  fromIntegral . sum . map LBS.length . fromUnparsedFields . attrRemain
 
 {- NOTE: Attributes serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,47 +159,47 @@ version would be able to parse it).
 -}
 
 encodeAttributes
-    :: forall t . [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
+  :: forall t . [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
 encodeAttributes encs attr = encode
-    $ foldr go (fromUnparsedFields $ attrRemain attr) encs
-  where
-    go
-        :: (Word8, t -> LBS.ByteString)
-        -> Map Word8 LBS.ByteString
-        -> Map Word8 LBS.ByteString
-    go (k, f) = M.alter (insertCheck $ f (attrData attr)) k
-      where
-        insertCheck v Nothing = Just v
-        insertCheck _ (Just v') =
-            error
-                $  "encodeAttributes: impossible: field no. "
-                <> show k
-                <> " is already encoded as unparsed field: "
-                <> show v'
+  $ foldr go (fromUnparsedFields $ attrRemain attr) encs
+ where
+  go
+    :: (Word8, t -> LBS.ByteString)
+    -> Map Word8 LBS.ByteString
+    -> Map Word8 LBS.ByteString
+  go (k, f) = M.alter (insertCheck $ f (attrData attr)) k
+   where
+    insertCheck v Nothing = Just v
+    insertCheck _ (Just v') =
+      error
+        $  "encodeAttributes: impossible: field no. "
+        <> show k
+        <> " is already encoded as unparsed field: "
+        <> show v'
 
 decodeAttributes
-    :: forall t s
-     . t
-    -> (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t))
-    -> Decoder s (Attributes t)
+  :: forall t s
+   . t
+  -> (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t))
+  -> Decoder s (Attributes t)
 decodeAttributes initval updater = do
-    raw <- decode @(Map Word8 LBS.ByteString)
-    foldrM go (Attributes initval $ UnparsedFields raw) $ M.toList raw
-  where
-    go
-        :: (Word8, LBS.ByteString)
-        -> Attributes t
-        -> Decoder s (Attributes t)
-    go (k, v) attr = do
-        updaterData <- updater k v $ attrData attr
-        pure $ case updaterData of
-            Nothing      -> attr
-            Just newData -> Attributes
-                { attrData   = newData
-                , attrRemain = UnparsedFields
-                    . M.delete k
-                    . fromUnparsedFields
-                    $ attrRemain attr
-                }
+  raw <- decode @(Map Word8 LBS.ByteString)
+  foldrM go (Attributes initval $ UnparsedFields raw) $ M.toList raw
+ where
+  go :: (Word8, LBS.ByteString) -> Attributes t -> Decoder s (Attributes t)
+  go (k, v) attr = do
+    updaterData <- updater k v $ attrData attr
+    pure $ case updaterData of
+      Nothing      -> attr
+      Just newData -> Attributes
+        { attrData   = newData
+        , attrRemain = UnparsedFields
+          . M.delete k
+          . fromUnparsedFields
+          $ attrRemain attr
+        }
+
+dropAttributes :: Dropper s
+dropAttributes = dropMap dropWord8 dropBytes
 
 deriveJSON defaultOptions ''Attributes
