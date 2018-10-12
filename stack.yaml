@@ -13,6 +13,4 @@ extra-deps:
   - prelude/test
 
 nix:
-  packages:
-    - openssl
-    - zlib
+  shell-file: scripts/nix/stack-shell.nix

@@ -1,0 +1,16 @@
+steps:
+  - label: 'stack rebuild'
+    env:
+      AWS_REGION: us-west-1
+      S3_BUCKET: appveyor-ci-cache
+      CACHE_S3_MAX_SIZE: 2500MB
+    command:
+      # cache-s3 needs a build directory that is the same across all buildkite agents.
+      # so copy the source into /build/cardano-sl
+      - "rm -rf /build/cardano-sl"
+      - "git clone . /build/cardano-sl"
+      - "cd /build/cardano-sl"
+      - "nix-build scripts/buildkite -o stack-rebuild"
+      - "./stack-rebuild"
+    agents:
+      system: x86_64-linux
