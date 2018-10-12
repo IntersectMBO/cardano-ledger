@@ -4,10 +4,9 @@ Formal and executable specifications for the new features to be introduced by Sh
 
 ## Building LaTeX documents
 
-Change to the latex directory for the spec that you wish to build,
-such as `shelley-ledger-rules/specs/utxo/latex/`.
+Change to the latex directory `shelley-ledger-rules/latex/`.
 
-To build the latex documents run:
+To build the latex document run:
 
 ```shell
 nix-shell --pure --run make
@@ -19,10 +18,9 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch" 
 ```
 
-## Testing the Haskell models
+## Testing the Haskell model
 
-Change to the hs directory for the model that you wish to use,
-such as `shelley-ledger-rules/specs/utxo/hs/`.
+Change to the haskell directory `shelley-ledger-rules/hs/`.
 
 The tests can be run with stack:
 
