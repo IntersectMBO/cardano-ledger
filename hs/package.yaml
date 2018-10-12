@@ -1,10 +1,10 @@
-name:                utxo
+name:                delegation
 version:             0.1.0.0
 github:              "input-output-hk/shelley-ledger-rules"
 author:              "IOHK Formal Metheds Team"
 maintainer:          "formal.methods@iohk.io"
 
-description:         UTxO Executable Model
+description:         Delegation Executable Model
 
 dependencies:
 - base >= 4.7 && < 5
@@ -24,7 +24,7 @@ library:
   - memory
 
 tests:
-  utxo-test:
+  delegation-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -37,7 +37,7 @@ tests:
     - -Wincomplete-uni-patterns
     - -Wredundant-constraints
     dependencies:
-    - utxo
+    - delegation
     - hspec
     - cryptonite
     - containers
