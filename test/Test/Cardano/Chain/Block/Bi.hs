@@ -16,17 +16,21 @@ import           Test.Cardano.Prelude
 
 import           Data.Coerce (coerce)
 import           Data.List ((!!))
+import           Data.Maybe (fromJust)
+
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (dropBytes)
+import           Cardano.Binary.Class (decodeFullDecoder, dropBytes,
+                     serializeEncoding)
 import           Cardano.Chain.Block (BlockHeaderAttributes,
-                     BlockSignature (..), HeaderHash, MainBlockHeader,
-                     MainBody (..), MainConsensusData (..),
-                     MainExtraBodyData (..), MainExtraHeaderData (..),
-                     MainProof (..), MainToSign (..), SlogUndo (..), Undo (..),
-                     dropBoundaryBlockHeader, dropBoundaryBody,
-                     dropBoundaryConsensusData, mkMainHeaderExplicit)
+                     BlockSignature (..), Header, HeaderHash, MainBody (..),
+                     MainConsensusData (..), MainExtraBodyData (..),
+                     MainExtraHeaderData (..), MainProof (..), MainToSign (..),
+                     SlogUndo (..), Undo (..), decodeBlock, decodeHeader,
+                     dropBoundaryBody, dropBoundaryConsensusData,
+                     dropBoundaryHeader, encodeBlock, encodeHeader,
+                     mkHeaderExplicit)
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Delegation as Delegation (Payload (..))
 import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
@@ -65,18 +69,48 @@ roundTripBlockBodyAttributesBi =
 
 
 --------------------------------------------------------------------------------
--- BlockHeader
+-- Header
 --------------------------------------------------------------------------------
 
--- We use `Nothing` as the ProxySKBlockInfo to avoid clashing key errors
--- (since we use example keys which aren't related to each other)
-golden_BlockHeaderMain :: Property
-golden_BlockHeaderMain =
-  goldenTestBi exampleBlockHeaderMain "test/golden/BlockHeaderMain"
+golden_Header :: Property
+golden_Header =
+  goldenTestBi exampleHeader "test/golden/MainBlockHeader"
 
-roundTripBlockHeaderBi :: Property
-roundTripBlockHeaderBi =
-  eachOf 10 (feedPMEpochSlots genBlockHeader) roundTripsBiBuildable
+roundTripHeaderBi :: Property
+roundTripHeaderBi =
+  eachOf 10 (feedPMEpochSlots genHeader) roundTripsBiBuildable
+
+-- | Round-trip test the backwards compatible header encoding/decoding functions
+roundTripHeaderCompat :: Property
+roundTripHeaderCompat = eachOf
+  10
+  (feedPMEpochSlots genHeader)
+  roundTripsHeaderCompat
+ where
+  roundTripsHeaderCompat a = trippingBuildable
+    a
+    (serializeEncoding . encodeHeader)
+    (fmap fromJust . decodeFullDecoder "Header" decodeHeader)
+
+
+--------------------------------------------------------------------------------
+-- Block
+--------------------------------------------------------------------------------
+
+roundTripBlock :: Property
+roundTripBlock = eachOf 10 (feedPMEpochSlots genBlock) roundTripsBiBuildable
+
+-- | Round-trip test the backwards compatible block encoding/decoding functions
+roundTripBlockCompat :: Property
+roundTripBlockCompat = eachOf
+  10
+  (feedPMEpochSlots genBlock)
+  roundTripsBlockCompat
+ where
+  roundTripsBlockCompat a = trippingBuildable
+    a
+    (serializeEncoding . encodeBlock)
+    (fmap fromJust . decodeFullDecoder "Block" decodeBlock)
 
 
 --------------------------------------------------------------------------------
@@ -121,7 +155,7 @@ roundTripBlockSignatureBi =
 golden_legacy_BoundaryBlockHeader :: Property
 golden_legacy_BoundaryBlockHeader = legacyGoldenDecode
   "BoundaryBlockHeader"
-  dropBoundaryBlockHeader
+  dropBoundaryHeader
   "test/golden/BoundaryBlockHeader"
 
 
@@ -170,16 +204,8 @@ golden_legacy_BoundaryProof = legacyGoldenDecode
 
 
 --------------------------------------------------------------------------------
--- MainBlockHeader
+-- Header
 --------------------------------------------------------------------------------
-
-golden_MainBlockHeader :: Property
-golden_MainBlockHeader =
-  goldenTestBi exampleMainBlockHeader "test/golden/MainBlockHeader"
-
-roundTripMainBlockHeaderBi :: Property
-roundTripMainBlockHeaderBi =
-  eachOf 20 (feedPMEpochSlots genMainBlockHeader) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -275,9 +301,9 @@ roundTripUndo = eachOf 20 (feedPMEpochSlots genUndo) roundTripsBiShow
 -- Example golden datatypes
 --------------------------------------------------------------------------------
 
-exampleBlockHeaderMain :: MainBlockHeader
-exampleBlockHeaderMain = mkMainHeaderExplicit
-  (ProtocolMagic 0)
+exampleHeader :: Header
+exampleHeader = mkHeaderExplicit
+  (ProtocolMagic 7)
   exampleHeaderHash
   exampleChainDifficulty
   exampleSlotId
@@ -320,19 +346,6 @@ exampleMainExtraHeaderData = MainExtraHeaderData
   Update.exampleSoftwareVersion
   (mkAttributes ())
   (abstractHash (MainExtraBodyData (mkAttributes ())))
-
--- We use `Nothing` as the ProxySKBlockInfo to avoid clashing key errors
--- (since we use example keys which aren't related to each other)
-exampleMainBlockHeader :: MainBlockHeader
-exampleMainBlockHeader = mkMainHeaderExplicit
-  (ProtocolMagic 7)
-  exampleHeaderHash
-  exampleChainDifficulty
-  exampleSlotId
-  exampleSecretKey
-  Nothing
-  exampleMainBody
-  exampleMainExtraHeaderData
 
 exampleMainProof :: MainProof
 exampleMainProof = MainProof

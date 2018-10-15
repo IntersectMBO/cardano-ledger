@@ -10,41 +10,28 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
-       ( BlockHeader
-       , encodeBlockHeader
-       , decodeBlockHeader
-       , verifyBlockHeader
-       , blockHeaderHash
+       ( Header (..)
+       , mkHeader
+       , mkHeaderExplicit
+       , headerSlot
+       , headerLeaderKey
+       , headerDifficulty
+       , headerSignature
+       , headerBlockVersion
+       , headerSoftwareVersion
+       , headerAttributes
+       , headerEBDataProof
+       , encodeHeader
+       , decodeHeader
+       , verifyHeader
 
        , HeaderHash
        , headerHashF
+       , hashHeader
 
        , BlockSignature (..)
 
-       , GenericBlockHeader
-       , mkGenericBlockHeaderUnsafe
-       , gbhProtocolMagic
-       , gbhPrevBlock
-       , gbhBodyProof
-       , gbhConsensus
-       , gbhExtra
-
-       , dropBoundaryBlockHeader
-
-       , MainBlockHeader
-       , mkMainHeader
-       , mkMainHeaderExplicit
-       , mainHeaderPrevBlock
-       , mainHeaderProof
-       , mainHeaderSlot
-       , mainHeaderLeaderKey
-       , mainHeaderDifficulty
-       , mainHeaderSignature
-       , mainHeaderBlockVersion
-       , mainHeaderSoftwareVersion
-       , mainHeaderAttributes
-       , mainHeaderEBDataProof
-       , verifyMainBlockHeader
+       , dropBoundaryHeader
 
        , MainToSign (..)
        , msHeaderHash
@@ -74,9 +61,8 @@ import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
 import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
                      dropBoundaryExtraHeaderData)
 import           Cardano.Chain.Block.Main (BlockHeaderAttributes, MainBody,
-                     MainExtraBodyData, MainExtraHeaderData, MainProof (..),
-                     mehAttributes, mehBlockVersion, mehEBDataProof,
-                     mehSoftwareVersion, mkMainProof)
+                     MainExtraBodyData, MainExtraHeaderData (..),
+                     MainProof (..), mkMainProof)
 import           Cardano.Chain.Common (ChainDifficulty)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo,
                      ProxySigHeavy)
@@ -93,128 +79,24 @@ import           Cardano.Crypto (Hash, ProtocolMagic (..), PublicKey, SecretKey,
 
 
 --------------------------------------------------------------------------------
--- BlockHeader
+-- Header
 --------------------------------------------------------------------------------
 
-type BlockHeader = MainBlockHeader
-
-encodeBlockHeader :: BlockHeader -> Encoding
-encodeBlockHeader header = encodeListLen 2 <> encode (1 :: Word) <> encode header
-
-decodeBlockHeader :: Decoder s (Maybe BlockHeader)
-decodeBlockHeader = do
-  enforceSize "BlockHeader" 2
-  decode @Word >>= \case
-    0 -> do
-      dropBoundaryBlockHeader
-      pure Nothing
-    1 -> Just <$!> decode
-    t -> cborError $ DecoderErrorUnknownTag "BlockHeader" (fromIntegral t)
-
--- | Verify a BlockHeader in isolation. There is nothing to be done for
---   boundary headers.
-verifyBlockHeader :: MonadError Text m => ProtocolMagic -> BlockHeader -> m ()
-verifyBlockHeader = verifyMainBlockHeader
-
-
---------------------------------------------------------------------------------
--- HeaderHash
---------------------------------------------------------------------------------
-
--- | 'Hash' of block header
-type HeaderHash = Hash BlockHeader
-
--- | Specialized formatter for 'HeaderHash'
-headerHashF :: Format r (HeaderHash -> r)
-headerHashF = build
-
--- | Hash the serialised representation of a `BlockHeader`
---
---   For backwards compatibility we have to take the hash of the header
---   serialised with 'encodeBlockHeader'
-blockHeaderHash :: BlockHeader -> HeaderHash
-blockHeaderHash = unsafeAbstractHash . serializeEncoding . encodeBlockHeader
-
-
---------------------------------------------------------------------------------
--- GenericBlockHeader
---------------------------------------------------------------------------------
-
--- | Header of block contains some kind of summary. There are various benefits
---   which people get by separating header from other data.
---
---   The constructor has `Unsafe' prefix in its name, because there in general
---   there may be some invariants which must hold for the contents of header.
-data GenericBlockHeader bodyProof consensus extra = GenericBlockHeader
-  { _gbhProtocolMagic :: !ProtocolMagic
-  , _gbhPrevBlock     :: !HeaderHash
+data Header = Header
+  { headerProtocolMagic :: !ProtocolMagic
+  , headerPrevHash      :: !HeaderHash
   -- ^ Pointer to the header of the previous block
-  , _gbhBodyProof     :: !bodyProof
+  , headerProof         :: !MainProof
   -- ^ Proof of body
-  , _gbhConsensus     :: !consensus
+  , headerConsensusData :: !MainConsensusData
   -- ^ Consensus data to verify consensus algorithm
-  , _gbhExtra         :: !extra
+  , headerExtraData     :: !MainExtraHeaderData
   -- ^ Any extra data
   } deriving (Eq, Show, Generic, NFData)
 
-instance (Bi bodyProof, Bi consensus, Bi extra)
-    => Bi (GenericBlockHeader bodyProof consensus extra)
-  where
-  encode bh =
-    encodeListLen 5
-      <> encode (getProtocolMagic (_gbhProtocolMagic bh))
-      <> encode (_gbhPrevBlock bh)
-      <> encode (_gbhBodyProof bh)
-      <> encode (_gbhConsensus bh)
-      <> encode (_gbhExtra bh)
-
-  decode = do
-    enforceSize "GenericBlockHeader b" 5
-    GenericBlockHeader
-      <$> (ProtocolMagic <$> decode)
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-
--- | Export the @GenericBlockHeader@ constructor as an unsafe function for tests
-mkGenericBlockHeaderUnsafe
-  :: ProtocolMagic
-  -> HeaderHash
-  -> bodyProof
-  -> consensus
-  -> extra
-  -> GenericBlockHeader bodyProof consensus extra
-mkGenericBlockHeaderUnsafe = GenericBlockHeader
-
-
---------------------------------------------------------------------------------
--- BoundaryBlockHeader
---------------------------------------------------------------------------------
-
-dropBoundaryBlockHeader :: Dropper s
-dropBoundaryBlockHeader = do
-  enforceSize "BoundaryBlockHeader" 5
-  dropInt32
-  -- HeaderHash
-  dropBytes
-  -- BoundaryBodyProof
-  dropBytes
-  dropBoundaryConsensusData
-  dropBoundaryExtraHeaderData
-
-
---------------------------------------------------------------------------------
--- MainBlockHeader
---------------------------------------------------------------------------------
-
--- | Header of generic main block
-type MainBlockHeader =
-    GenericBlockHeader MainProof MainConsensusData MainExtraHeaderData
-
-instance B.Buildable MainBlockHeader where
-  build gbh = bprint
-    ( "MainBlockHeader:\n"
+instance B.Buildable Header where
+  build header = bprint
+    ( "Header:\n"
     % "    hash: " % hashHexF % "\n"
     % "    previous block: " % hashHexF % "\n"
     % "    slot: " % slotIdF % "\n"
@@ -223,37 +105,55 @@ instance B.Buildable MainBlockHeader where
     % "    signature: " % build % "\n"
     % build
     )
-    gbhHeaderHash
-    (_gbhPrevBlock gbh)
+    headerHash
+    (headerPrevHash header)
     (_mcdSlot consensus)
     (_mcdDifficulty consensus)
     (_mcdLeaderKey consensus)
     (_mcdSignature consensus)
-    (_gbhExtra gbh)
+    (headerExtraData header)
    where
-    gbhHeaderHash :: HeaderHash
-    gbhHeaderHash = blockHeaderHash gbh
-    consensus     = _gbhConsensus gbh
+    headerHash :: HeaderHash
+    headerHash = hashHeader header
+    consensus  = headerConsensusData header
 
--- | Smart constructor for 'MainBlockHeader'
-mkMainHeader
+instance Bi Header where
+  encode header =
+    encodeListLen 5
+      <> encode (getProtocolMagic (headerProtocolMagic header))
+      <> encode (headerPrevHash header)
+      <> encode (headerProof header)
+      <> encode (headerConsensusData header)
+      <> encode (headerExtraData header)
+
+  decode = do
+    enforceSize "Header" 5
+    Header
+      <$> (ProtocolMagic <$> decode)
+      <*> decode
+      <*> decode
+      <*> decode
+      <*> decode
+
+-- | Smart constructor for 'Header'
+mkHeader
   :: ProtocolMagic
-  -> Either GenesisHash BlockHeader
+  -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
   -> MainBody
   -> MainExtraHeaderData
-  -> MainBlockHeader
-mkMainHeader pm prevHeader = mkMainHeaderExplicit pm prevHash difficulty
+  -> Header
+mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
  where
-  prevHash = either getGenesisHash blockHeaderHash prevHeader
+  prevHash = either getGenesisHash hashHeader prevHeader
   difficulty =
-    either (const 0) (succ . _mcdDifficulty . _gbhConsensus) prevHeader
+    either (const 0) (succ . _mcdDifficulty . headerConsensusData) prevHeader
 
--- | Make a 'MainBlockHeader' for a given slot, with a given body, parent hash,
+-- | Make a 'Header' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.
-mkMainHeaderExplicit
+mkHeaderExplicit
   :: ProtocolMagic
   -> HeaderHash
   -- ^ Parent
@@ -263,9 +163,9 @@ mkMainHeaderExplicit
   -> ProxySKBlockInfo
   -> MainBody
   -> MainExtraHeaderData
-  -> MainBlockHeader
-mkMainHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
-  GenericBlockHeader pm prevHash proof consensus extra
+  -> Header
+mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
+  Header pm prevHash proof consensus extra
  where
   proof = mkMainProof body
   makeSignature toSign (psk, _) =
@@ -285,15 +185,39 @@ mkMainHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
     , _mcdSignature  = signature
     }
 
+headerSlot :: Header -> SlotId
+headerSlot = _mcdSlot . headerConsensusData
+
+headerLeaderKey :: Header -> PublicKey
+headerLeaderKey = _mcdLeaderKey . headerConsensusData
+
+headerDifficulty :: Header -> ChainDifficulty
+headerDifficulty = _mcdDifficulty . headerConsensusData
+
+headerSignature :: Header -> BlockSignature
+headerSignature = _mcdSignature . headerConsensusData
+
+headerBlockVersion :: Header -> BlockVersion
+headerBlockVersion = _mehBlockVersion . headerExtraData
+
+headerSoftwareVersion :: Header -> SoftwareVersion
+headerSoftwareVersion = _mehSoftwareVersion . headerExtraData
+
+headerAttributes :: Header -> BlockHeaderAttributes
+headerAttributes = _mehAttributes . headerExtraData
+
+headerEBDataProof :: Header -> Hash MainExtraBodyData
+headerEBDataProof = _mehEBDataProof . headerExtraData
+
 -- | Verify a main block header in isolation
-verifyMainBlockHeader
-  :: MonadError Text m => ProtocolMagic -> MainBlockHeader -> m ()
-verifyMainBlockHeader pm gbh = do
+verifyHeader
+  :: MonadError Text m => ProtocolMagic -> Header -> m ()
+verifyHeader pm header = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although
   -- must be checked against the actual body, in verifyMainBlock.
   -- Consensus data and extra header data require validation.
-  verifyMainConsensusData (_gbhConsensus gbh)
+  verifyMainConsensusData consensus
   -- verifyMainExtraHeaderData (_gbhExtra gbh)
   -- Internal consistency: is the signature in the consensus data really for
   -- this block?
@@ -314,15 +238,62 @@ verifyMainBlockHeader pm gbh = do
     proxyVerify pm SignMainBlockHeavy proxySig (const True) signature
 
   signature = MainToSign
-    (_gbhPrevBlock gbh)
-    (_gbhBodyProof gbh)
+    (headerPrevHash header)
+    (headerProof header)
     (_mcdSlot consensus)
     (_mcdDifficulty consensus)
-    (_gbhExtra gbh)
+    (headerExtraData header)
 
   epochId   = siEpoch $ _mcdSlot consensus
 
-  consensus = _gbhConsensus gbh
+  consensus = headerConsensusData header
+
+encodeHeader :: Header -> Encoding
+encodeHeader header = encodeListLen 2 <> encode (1 :: Word) <> encode header
+
+decodeHeader :: Decoder s (Maybe Header)
+decodeHeader = do
+  enforceSize "Header" 2
+  decode @Word >>= \case
+    0 -> do
+      dropBoundaryHeader
+      pure Nothing
+    1 -> Just <$!> decode
+    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+
+--------------------------------------------------------------------------------
+-- HeaderHash
+--------------------------------------------------------------------------------
+
+-- | 'Hash' of block header
+type HeaderHash = Hash Header
+
+-- | Specialized formatter for 'HeaderHash'
+headerHashF :: Format r (HeaderHash -> r)
+headerHashF = build
+
+-- | Hash the serialised representation of a `Header`
+--
+--   For backwards compatibility we have to take the hash of the header
+--   serialised with 'encodeHeader'
+hashHeader :: Header -> HeaderHash
+hashHeader = unsafeAbstractHash . serializeEncoding . encodeHeader
+
+
+--------------------------------------------------------------------------------
+-- BoundaryHeader
+--------------------------------------------------------------------------------
+
+dropBoundaryHeader :: Dropper s
+dropBoundaryHeader = do
+  enforceSize "BoundaryHeader" 5
+  dropInt32
+  -- HeaderHash
+  dropBytes
+  -- BoundaryBodyProof
+  dropBytes
+  dropBoundaryConsensusData
+  dropBoundaryExtraHeaderData
 
 
 --------------------------------------------------------------------------------
@@ -412,7 +383,7 @@ instance Bi MainConsensusData where
       <> encode (_mcdSignature cd)
 
   decode = do
-    enforceSize "ConsensusData MainBlockchain)" 4
+    enforceSize "MainConsensusData" 4
     MainConsensusData <$> decode <*> decode <*> decode <*> decode
 
 -- | Verify the consensus data in isolation
@@ -426,62 +397,10 @@ verifyMainConsensusData mcd = when (selfSignedProxy $ _mcdSignature mcd)
 
 
 --------------------------------------------------------------------------------
--- GenericBlockHeader Lenses
---------------------------------------------------------------------------------
-
-makeLenses ''GenericBlockHeader
-
-
---------------------------------------------------------------------------------
 -- MainConsensusData lenses
 --------------------------------------------------------------------------------
 
 makeLenses 'MainConsensusData
-
-
---------------------------------------------------------------------------------
--- MainBlockHeader lenses
---------------------------------------------------------------------------------
-
--- | Lens from 'MainBlockHeader' to 'HeaderHash' of its parent
-mainHeaderPrevBlock :: Lens' MainBlockHeader HeaderHash
-mainHeaderPrevBlock = gbhPrevBlock
-
--- | Lens from 'MainBlockHeader' to 'MainProof'
-mainHeaderProof :: Lens' MainBlockHeader MainProof
-mainHeaderProof = gbhBodyProof
-
--- | Lens from 'MainBlockHeader' to 'SlotId'
-mainHeaderSlot :: Lens' MainBlockHeader SlotId
-mainHeaderSlot = gbhConsensus . mcdSlot
-
--- | Lens from 'MainBlockHeader' to 'PublicKey'
-mainHeaderLeaderKey :: Lens' MainBlockHeader PublicKey
-mainHeaderLeaderKey = gbhConsensus . mcdLeaderKey
-
--- | Lens from 'MainBlockHeader' to 'ChainDifficulty'
-mainHeaderDifficulty :: Lens' MainBlockHeader ChainDifficulty
-mainHeaderDifficulty = gbhConsensus . mcdDifficulty
-
--- | Lens from 'MainBlockHeader' to 'Signature'
-mainHeaderSignature :: Lens' MainBlockHeader BlockSignature
-mainHeaderSignature = gbhConsensus . mcdSignature
-
--- | Lens from 'MainBlockHeader' to 'BlockVersion'
-mainHeaderBlockVersion :: Lens' MainBlockHeader BlockVersion
-mainHeaderBlockVersion = gbhExtra . mehBlockVersion
-
--- | Lens from 'MainBlockHeader' to 'SoftwareVersion'
-mainHeaderSoftwareVersion :: Lens' MainBlockHeader SoftwareVersion
-mainHeaderSoftwareVersion = gbhExtra . mehSoftwareVersion
-
--- | Lens from 'MainBlockHeader' to 'BlockHeaderAttributes'
-mainHeaderAttributes :: Lens' MainBlockHeader BlockHeaderAttributes
-mainHeaderAttributes = gbhExtra . mehAttributes
-
--- | Lens from 'MainBlockHeader' to 'MainExtraBodyData'
-mainHeaderEBDataProof :: Lens' MainBlockHeader (Hash MainExtraBodyData)
-mainHeaderEBDataProof = gbhExtra . mehEBDataProof
 
 
 ----------------------------------------------------------------------------

@@ -39,12 +39,11 @@ module Cardano.Chain.Block.Main
 import           Cardano.Prelude
 
 import           Control.Lens (makeLenses)
-import           Control.Monad.Except (MonadError)
-import           Formatting (bprint, build, builder, shown, (%))
+import           Control.Monad.Except (MonadError (..))
+import           Formatting (bprint, build, builder, sformat, shown, (%))
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Util (checkBodyProof)
 import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload,
@@ -100,7 +99,20 @@ mkMainProof body = MainProof
   }
 
 checkMainProof :: MonadError Text m => MainBody -> MainProof -> m ()
-checkMainProof = checkBodyProof mkMainProof
+checkMainProof body proof = do
+  let calculatedProof = mkMainProof body
+  let
+    errMsg = sformat
+      ( "Incorrect proof of body. "
+      % "Proof in header: "
+      % build
+      % ", calculated proof: "
+      % build
+      )
+      proof
+      calculatedProof
+  unless (calculatedProof == proof) $ throwError errMsg
+
 
 -- | Represents main block header attributes: map from 1-byte integer to
 --   arbitrary-type value. To be used for extending header with new fields via

@@ -4,57 +4,40 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-{-# OPTIONS_GHC -Wno-redundant-constraints #-} -- for the Getter instances
-
 module Cardano.Chain.Block.Block
        ( Block
        , encodeBlock
        , decodeBlock
-
-       -- * GenericBlock
-       , GenericBlock
-       , mkGenericBlockUnsafe
-       , gbHeader
-       , gbBody
-       , gbExtra
-       , gbPrevBlock
-       , gbBodyProof
-       , gbConsensus
+       , mkBlock
+       , mkBlockExplicit
+       , blockPrevHash
+       , blockProof
+       , blockSlot
+       , blockLeaderKey
+       , blockDifficulty
+       , blockSignature
+       , blockBlockVersion
+       , blockSoftwareVersion
+       , blockHeaderAttributes
+       , blockExtraDataProof
+       , blockTxPayload
+       , blockSscPayload
+       , blockDlgPayload
+       , blockUpdatePayload
+       , blockAttributes
+       , verifyBlock
 
        -- * BoundaryBlock
        , dropBoundaryBlock
-
-       -- * MainBlock
-       , MainBlock
-       , mkMainBlock
-       , mkMainBlockExplicit
-       , mainBlockPrevBlock
-       , mainBlockProof
-       , mainBlockSlot
-       , mainBlockLeaderKey
-       , mainBlockDifficulty
-       , mainBlockSignature
-       , mainBlockBlockVersion
-       , mainBlockSoftwareVersion
-       , mainBlockHeaderAttributes
-       , mainBlockEBDataProof
-       , mainBlockTxPayload
-       , mainBlockSscPayload
-       , mainBlockDlgPayload
-       , mainBlockUpdatePayload
-       , mainBlockAttributes
-       , verifyMainBlock
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, int, shown, (%))
 import qualified Formatting.Buildable as B
@@ -63,21 +46,16 @@ import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, encodeListLen, enforceSize)
 import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
                      dropBoundaryExtraBodyData)
-import           Cardano.Chain.Block.Header (BlockHeader, BlockSignature (..),
-                     GenericBlockHeader, HeaderHash, MainConsensusData (..),
-                     blockHeaderHash, dropBoundaryBlockHeader, gbhBodyProof,
-                     gbhConsensus, gbhPrevBlock, mainHeaderAttributes,
-                     mainHeaderBlockVersion, mainHeaderDifficulty,
-                     mainHeaderEBDataProof, mainHeaderLeaderKey,
-                     mainHeaderProof, mainHeaderSignature, mainHeaderSlot,
-                     mainHeaderSoftwareVersion, mkMainHeaderExplicit,
-                     verifyMainBlockHeader)
+import           Cardano.Chain.Block.Header (BlockSignature (..), Header (..),
+                     HeaderHash, dropBoundaryHeader, hashHeader,
+                     headerAttributes, headerBlockVersion, headerDifficulty,
+                     headerEBDataProof, headerLeaderKey, headerSignature,
+                     headerSlot, headerSoftwareVersion, mkHeaderExplicit,
+                     verifyHeader)
 import           Cardano.Chain.Block.Main (BlockBodyAttributes,
                      BlockHeaderAttributes, MainBody (..),
                      MainExtraBodyData (..), MainExtraHeaderData (..),
-                     MainProof (..), checkMainProof, mbDlgPayload,
-                     mbSscPayload, mbTxPayload, mbTxs, mbUpdatePayload,
-                     mebAttributes, verifyMainBody)
+                     MainProof (..), checkMainProof, mbTxs, verifyMainBody)
 import           Cardano.Chain.Common (ChainDifficulty, mkAttributes)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
@@ -96,7 +74,22 @@ import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey,
 -- Block
 --------------------------------------------------------------------------------
 
-type Block = MainBlock
+data Block = Block
+  { blockHeader    :: Header
+  , blockBody      :: MainBody
+  , blockExtraData :: MainExtraBodyData
+  } deriving (Eq, Show, Generic, NFData)
+
+instance Bi Block where
+  encode block =
+    encodeListLen 3
+      <> encode (blockHeader block)
+      <> encode (blockBody block)
+      <> encode (blockExtraData block)
+
+  decode = do
+    enforceSize "Block" 3
+    Block <$> decode <*> decode <*> decode
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
 encodeBlock :: Block -> Encoding
@@ -121,88 +114,48 @@ decodeBlock = do
 
 
 --------------------------------------------------------------------------------
--- GenericBlock
---------------------------------------------------------------------------------
-
--- | In general Block consists of header and body. It may contain extra data as
---   well
-data GenericBlock bodyProof consensus extraH body extraB = GenericBlock
-  { _gbHeader :: !(GenericBlockHeader bodyProof consensus extraH)
-  , _gbBody   :: !body
-  , _gbExtra  :: !extraB
-  } deriving (Eq, Show, Generic, NFData)
-
-instance
-    (Bi bodyProof , Bi consensus, Bi extraH, Bi body, Bi extraB)
-    => Bi (GenericBlock bodyProof consensus extraH body extraB)
-  where
-  encode gb =
-    encodeListLen 3 <> encode (_gbHeader gb) <> encode (_gbBody gb) <> encode
-      (_gbExtra gb)
-
-  decode = do
-    enforceSize "GenericBlock" 3
-    GenericBlock <$> decode <*> decode <*> decode
-
-mkGenericBlockUnsafe
-  :: GenericBlockHeader bodyProof consensus extraH
-  -> body
-  -> extraB
-  -> GenericBlock bodyProof consensus extraH body extraB
-mkGenericBlockUnsafe = GenericBlock
-
-
---------------------------------------------------------------------------------
 -- BoundaryBlock
 --------------------------------------------------------------------------------
 
 dropBoundaryBlock :: Dropper s
 dropBoundaryBlock = do
   enforceSize "BoundaryBlock" 3
-  dropBoundaryBlockHeader
+  dropBoundaryHeader
   dropBoundaryBody
   dropBoundaryExtraBodyData
 
 
 --------------------------------------------------------------------------------
--- MainBlock
+-- Block
 --------------------------------------------------------------------------------
 
--- | MainBlock is a block with transactions and MPC messages
-type MainBlock = GenericBlock
-    MainProof
-    MainConsensusData
-    MainExtraHeaderData
-    MainBody
-    MainExtraBodyData
-
--- | Smart constructor for 'MainBlock'
-mkMainBlock
+-- | Smart constructor for 'Block'
+mkBlock
   :: ProtocolMagic
   -> BlockVersion
   -> SoftwareVersion
-  -> Either GenesisHash BlockHeader
+  -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
   -> MainBody
-  -> MainBlock
-mkMainBlock pm bv sv prevHeader = mkMainBlockExplicit
+  -> Block
+mkBlock pm bv sv prevHeader = mkBlockExplicit
   pm
   bv
   sv
   prevHash
   difficulty
  where
-  prevHash = either getGenesisHash blockHeaderHash prevHeader
+  prevHash = either getGenesisHash hashHeader prevHeader
   difficulty =
-    either (const 0) (succ . _mcdDifficulty . view gbhConsensus) prevHeader
+    either (const 0) (succ . headerDifficulty) prevHeader
 
--- | Smart constructor for 'MainBlock', without requiring the entire previous
---   'BlockHeader'. Instead, you give its hash and the difficulty of this block.
---   These are derived from the previous header in 'mkMainBlock' so if you have
+-- | Smart constructor for 'Block', without requiring the entire previous
+--   'Header'. Instead, you give its hash and the difficulty of this block.
+--   These are derived from the previous header in 'mkBlock' so if you have
 --   the previous header, consider using that one.
-mkMainBlockExplicit
+mkBlockExplicit
   :: ProtocolMagic
   -> BlockVersion
   -> SoftwareVersion
@@ -212,10 +165,10 @@ mkMainBlockExplicit
   -> SecretKey
   -> ProxySKBlockInfo
   -> MainBody
-  -> MainBlock
-mkMainBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
-  GenericBlock
-    (mkMainHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
+  -> Block
+mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
+  Block
+    (mkHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
     body
     extraB
  where
@@ -224,119 +177,85 @@ mkMainBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
   extraH :: MainExtraHeaderData
   extraH = MainExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
 
-verifyMainBlock :: MonadError Text m => ProtocolMagic -> MainBlock -> m ()
-verifyMainBlock pm gb = do
-  verifyMainBlockHeader pm (_gbHeader gb)
-  verifyMainBody pm (_gbBody gb)
+verifyBlock :: MonadError Text m => ProtocolMagic -> Block -> m ()
+verifyBlock pm block = do
+  verifyHeader pm (blockHeader block)
+  verifyMainBody pm (blockBody block)
   -- No need to verify the main extra body data. It's an 'Attributes ()'
   -- which is valid whenever it's well-formed.
   --
   -- Check internal consistency: the body proofs are all correct.
-  checkMainProof (_gbBody gb) (_gbHeader gb ^. gbhBodyProof)
+  checkMainProof (blockBody block) (blockProof block)
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
-  unless (hash (_gbExtra gb) == (_gbHeader gb ^. mainHeaderEBDataProof))
+  unless (hash (blockExtraData block) == blockExtraDataProof block)
     $ throwError
         "Hash of extra body data is not equal to its representation in the header."
 
 
 --------------------------------------------------------------------------------
--- Generic Block Lenses
----------------------------------------------------------------------------
-
-makeLenses ''GenericBlock
-
--- | Lens from 'GenericBlock' to 'BHeaderHash' of its parent
-gbPrevBlock :: Lens' (GenericBlock a b c d e) HeaderHash
-gbPrevBlock = gbHeader . gbhPrevBlock
-
--- | Lens from 'GenericBlock' to 'BodyProof'
-gbBodyProof :: Lens' (GenericBlock bodyProof b c d e) bodyProof
-gbBodyProof = gbHeader . gbhBodyProof
-
--- | Lens from 'GenericBlock' to 'ConsensusData'
-gbConsensus :: Lens' (GenericBlock a consensus c d e) consensus
-gbConsensus = gbHeader . gbhConsensus
-
-
---------------------------------------------------------------------------------
--- MainBlock lenses
+-- Block lenses
 --------------------------------------------------------------------------------
 
--- | Lens from 'MainBlock' to 'HeaderHash' of its parent
-mainBlockPrevBlock :: Lens' MainBlock HeaderHash
-mainBlockPrevBlock = gbPrevBlock
+blockPrevHash :: Block -> HeaderHash
+blockPrevHash = headerPrevHash . blockHeader
 
--- | Lens from 'MainBlock' to 'MainProof'
-mainBlockProof :: Lens' MainBlock MainProof
-mainBlockProof = gbHeader . mainHeaderProof
+blockProof :: Block -> MainProof
+blockProof = headerProof . blockHeader
 
--- | Lens from 'MainBlock' to 'SlotId'
-mainBlockSlot :: Lens' MainBlock SlotId
-mainBlockSlot = gbHeader . mainHeaderSlot
+blockSlot :: Block -> SlotId
+blockSlot = headerSlot . blockHeader
 
--- | Lens from 'MainBlock' to 'PublicKey'
-mainBlockLeaderKey :: Lens' MainBlock PublicKey
-mainBlockLeaderKey = gbHeader . mainHeaderLeaderKey
+blockLeaderKey :: Block -> PublicKey
+blockLeaderKey = headerLeaderKey . blockHeader
 
--- | Lens from 'MainBlock' to 'ChainDifficulty'
-mainBlockDifficulty :: Lens' MainBlock ChainDifficulty
-mainBlockDifficulty = gbHeader . mainHeaderDifficulty
+blockDifficulty :: Block -> ChainDifficulty
+blockDifficulty = headerDifficulty . blockHeader
 
--- | Lens from 'MainBlock' to 'Signature'
-mainBlockSignature :: Lens' MainBlock BlockSignature
-mainBlockSignature = gbHeader . mainHeaderSignature
+blockSignature :: Block -> BlockSignature
+blockSignature = headerSignature . blockHeader
 
--- | Lens from 'MainBlock' to 'BlockVersion'
-mainBlockBlockVersion :: Lens' MainBlock BlockVersion
-mainBlockBlockVersion = gbHeader . mainHeaderBlockVersion
+blockBlockVersion :: Block -> BlockVersion
+blockBlockVersion = headerBlockVersion . blockHeader
 
--- | Lens from 'MainBlock' to 'SoftwareVersion'
-mainBlockSoftwareVersion :: Lens' MainBlock SoftwareVersion
-mainBlockSoftwareVersion = gbHeader . mainHeaderSoftwareVersion
+blockSoftwareVersion :: Block -> SoftwareVersion
+blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
--- | Lens from 'MainBlock' to 'BlockHeaderAttributes'
-mainBlockHeaderAttributes :: Lens' MainBlock BlockHeaderAttributes
-mainBlockHeaderAttributes = gbHeader . mainHeaderAttributes
+blockHeaderAttributes :: Block -> BlockHeaderAttributes
+blockHeaderAttributes = headerAttributes . blockHeader
 
--- | Lens from 'MainBlock' to proof (hash) of 'MainExtraBodyData'
-mainBlockEBDataProof :: Lens' MainBlock (Hash MainExtraBodyData)
-mainBlockEBDataProof = gbHeader . mainHeaderEBDataProof
+blockExtraDataProof :: Block -> Hash MainExtraBodyData
+blockExtraDataProof = headerEBDataProof . blockHeader
 
--- | Lens from 'MainBlock' to 'TxPayload'
-mainBlockTxPayload :: Lens' MainBlock TxPayload
-mainBlockTxPayload = gbBody . mbTxPayload
+blockTxPayload :: Block -> TxPayload
+blockTxPayload = _mbTxPayload . blockBody
 
--- | Lens from 'MainBlock' to 'SscPayload'
-mainBlockSscPayload :: Lens' MainBlock SscPayload
-mainBlockSscPayload = gbBody . mbSscPayload
+blockSscPayload :: Block -> SscPayload
+blockSscPayload = _mbSscPayload . blockBody
 
--- | Lens from 'MainBlock' to 'Update.Payload'
-mainBlockUpdatePayload :: Lens' MainBlock Update.Payload
-mainBlockUpdatePayload = gbBody . mbUpdatePayload
+blockUpdatePayload :: Block -> Update.Payload
+blockUpdatePayload = _mbUpdatePayload . blockBody
 
--- | Lens from 'MainBlock' to 'Delegation.Payload'
-mainBlockDlgPayload :: Lens' MainBlock Delegation.Payload
-mainBlockDlgPayload = gbBody . mbDlgPayload
+blockDlgPayload :: Block -> Delegation.Payload
+blockDlgPayload = _mbDlgPayload . blockBody
 
--- | Lens from 'MainBlock' to 'BlockBodyAttributes'
-mainBlockAttributes :: Lens' MainBlock BlockBodyAttributes
-mainBlockAttributes = gbExtra . mebAttributes
+blockAttributes :: Block -> BlockBodyAttributes
+blockAttributes = _mebAttributes . blockExtraData
 
-instance B.Buildable MainBlock where
-  build mainBlock = bprint
-    ( "MainBlock:\n"
+instance B.Buildable Block where
+  build block = bprint
+    ( "Block:\n"
     % "  " % build % "  transactions (" % int % " items): " % listJson % "\n"
     % "  " % build % "\n"
     % "  " % shown % "\n"
     % "  update payload: " % build % "\n"
     % "  " % build
     )
-    (mainBlock ^. gbHeader)
+    (blockHeader block)
     (length txs)
     txs
-    (mainBlock ^. mainBlockDlgPayload)
-    (mainBlock ^. mainBlockSscPayload)
-    (mainBlock ^. mainBlockUpdatePayload)
-    (mainBlock ^. gbExtra)
-    where txs = mainBlock ^. gbBody . mbTxs
+    (blockDlgPayload block)
+    (blockSscPayload block)
+    (blockUpdatePayload block)
+    (blockExtraData block)
+    where txs = blockBody block ^. mbTxs

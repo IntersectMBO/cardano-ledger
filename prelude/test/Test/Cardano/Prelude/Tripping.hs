@@ -53,7 +53,13 @@ runTests tests' = do
 --   'Buildable' instance
 trippingBuildable
   :: forall f a b m
-   . (Buildable (f a), Eq (f a), Show b, Applicative f, MonadTest m)
+   . ( HasCallStack
+     , Buildable (f a)
+     , Eq (f a)
+     , Show b
+     , Applicative f
+     , MonadTest m
+     )
   => a
   -> (a -> b)
   -> (b -> f a)
