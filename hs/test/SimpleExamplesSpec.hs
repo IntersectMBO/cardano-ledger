@@ -8,6 +8,7 @@ import           Test.Hspec
 
 import           LedgerState
 import           UTxO
+import           Keys
 
 alice :: KeyPair
 alice = keyPair (Owner 1)
