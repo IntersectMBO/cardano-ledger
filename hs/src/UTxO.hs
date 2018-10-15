@@ -23,10 +23,10 @@ module UTxO
   , txins
   , txouts
   , balance
-  , (◃)
-  , (⋪)
+  , (<|)
+  , (<<|)
   -- , verify
-  , (∪)
+  , union
   , makeWitness
   -- * Signing and Verifying
   -- , Owner(..)
@@ -150,21 +150,21 @@ makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 -- verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 -- |Domain restriction
-(◃) :: Set TxIn -> UTxO -> UTxO
-ins ◃ (UTxO utxo) =
+(<|) :: Set TxIn -> UTxO -> UTxO
+ins <| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
-(⋪) :: Set TxIn -> UTxO -> UTxO
-ins ⋪ (UTxO utxo) =
+(<<|) :: Set TxIn -> UTxO -> UTxO
+ins <<| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
 --
 --     * TODO - Should we return 'Maybe UTxO' so that we can return
 -- Nothing when the collections are not disjoint?
-(∪) :: UTxO -> UTxO -> UTxO
-(UTxO a) ∪ (UTxO b) = UTxO $ Map.union a b
+union :: UTxO -> UTxO -> UTxO
+union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO -> Coin

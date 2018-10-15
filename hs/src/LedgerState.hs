@@ -108,7 +108,7 @@ validInputs (TxWits tx _) l =
 -- in an acceptable way by a transaction.
 preserveBalance :: TxWits -> LedgerState -> Validity
 preserveBalance (TxWits tx _) l =
-  if balance (txouts tx) <= balance (txins tx ◃ getUtxo l)
+  if balance (txouts tx) <= balance (txins tx <| getUtxo l)
     then Valid
     else Invalid [IncreasedTotalBalance]
 
@@ -144,7 +144,7 @@ valid tx l =
 -- |Apply a raw transaction body as a state transition function on the ledger state.
 applyTx :: LedgerState -> Tx -> LedgerState
 applyTx ls tx =
-    LedgerState (txins tx ⋪ getUtxo ls ∪ txouts tx)
+    LedgerState (txins tx <<| getUtxo ls `union` txouts tx)
                 (getAccounts ls)
                 (getStKeys ls)
                 (getDelegations ls)
@@ -174,7 +174,7 @@ retirePools ls epoch = ls
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls { getUtxo = newUTxOs }
-  where newUTxOs = (txins tx ⋪ (getUtxo ls) ∪ txouts tx)
+  where newUTxOs = (txins tx <<| (getUtxo ls) `union` txouts tx)
 
 -- |Apply a certificate as a state transition function on the ledger state.
 applyCert :: Cert -> LedgerState -> LedgerState
