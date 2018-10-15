@@ -12,7 +12,6 @@ module UTxO
   (
   -- * Primitives
     TxId(..)
-  , Coin(..)
   , Addr(..)
   -- * Derived Types
   , TxIn(..)
@@ -49,7 +48,11 @@ import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
 import           Numeric.Natural       (Natural)
+
 import           Keys
+import           Coin                  (Coin(..))
+    
+import           Delegation.Certificates (Cert(..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -58,18 +61,14 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
--- |The amount of value held by a transaction output.
-newtype Coin = Coin Natural deriving (Show, Eq, Ord)
+-- -- |The address of a transaction output, used to identify the owner.
+-- newtype Addr = Addr Hash deriving (Show, Eq, Ord)
 
-instance Semigroup Coin where
-  (Coin a) <> (Coin b) = Coin (a + b)
-
-instance Monoid Coin where
-  mempty = Coin 0
-  mappend = (<>)
-
--- |The address of a transaction output, used to identify the owner.
-newtype Addr = Addr Hash deriving (Show, Eq, Ord)
+-- |An address for UTxO.  It can be either an account based
+-- address for rewards sharing or a UTxO address.
+data Addr = AddrTxin (Digest SHA256) (Digest SHA256)
+          | AddrAccount (Digest SHA256) (Digest SHA256)
+          deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
 --
@@ -85,6 +84,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 -- |A raw transaction
 data Tx = Tx { inputs  :: Set TxIn
              , outputs :: [TxOut]
+             , certs   :: Set Cert
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.

@@ -5,8 +5,8 @@ module Delegation.StakePool
 
 import           Data.Map        (Map)
 
+import           Coin            (Coin)
 import           Keys
-import           UTxO
 
 -- |A stake pool.
 data StakePool = StakePool
