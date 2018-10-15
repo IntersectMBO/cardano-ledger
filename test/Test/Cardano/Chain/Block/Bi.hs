@@ -3,9 +3,9 @@
 
 module Test.Cardano.Chain.Block.Bi
        ( tests
-       , exampleMainBody
-       , exampleMainConsensusData
-       , exampleMainToSign
+       , exampleBody
+       , exampleConsensusData
+       , exampleToSign
        , exampleBlockSignature
        , exampleBlockPSignatureLight
        , exampleBlockPSignatureHeavy
@@ -23,12 +23,11 @@ import qualified Hedgehog as H
 
 import           Cardano.Binary.Class (decodeFullDecoder, dropBytes,
                      serializeEncoding)
-import           Cardano.Chain.Block (BlockHeaderAttributes,
-                     BlockSignature (..), Header, HeaderHash, MainBody (..),
-                     MainConsensusData (..), MainExtraBodyData (..),
-                     MainExtraHeaderData (..), MainProof (..), MainToSign (..),
-                     SlogUndo (..), Undo (..), decodeBlock, decodeHeader,
-                     dropBoundaryBody, dropBoundaryConsensusData,
+import           Cardano.Chain.Block (BlockSignature (..), Body (..),
+                     ConsensusData (..), ExtraBodyData (..),
+                     ExtraHeaderData (..), Header, HeaderHash, Proof (..),
+                     SlogUndo (..), ToSign (..), Undo (..), decodeBlock,
+                     decodeHeader, dropBoundaryBody, dropBoundaryConsensusData,
                      dropBoundaryHeader, encodeBlock, encodeHeader,
                      mkHeaderExplicit)
 import           Cardano.Chain.Common (mkAttributes)
@@ -56,25 +55,12 @@ import           Test.Cardano.Crypto.Gen (feedPM)
 
 
 --------------------------------------------------------------------------------
--- BlockBodyAttributes
---------------------------------------------------------------------------------
-
-golden_BlockBodyAttributes :: Property
-golden_BlockBodyAttributes = goldenTestBi bba "test/golden/BlockBodyAttributes"
-  where bba = mkAttributes ()
-
-roundTripBlockBodyAttributesBi :: Property
-roundTripBlockBodyAttributesBi =
-  eachOf 1000 genBlockBodyAttributes roundTripsBiBuildable
-
-
---------------------------------------------------------------------------------
 -- Header
 --------------------------------------------------------------------------------
 
 golden_Header :: Property
 golden_Header =
-  goldenTestBi exampleHeader "test/golden/MainBlockHeader"
+  goldenTestBi exampleHeader "test/golden/block/Header"
 
 roundTripHeaderBi :: Property
 roundTripHeaderBi =
@@ -111,20 +97,6 @@ roundTripBlockCompat = eachOf
     a
     (serializeEncoding . encodeBlock)
     (fmap fromJust . decodeFullDecoder "Block" decodeBlock)
-
-
---------------------------------------------------------------------------------
--- BlockHeaderAttributes
---------------------------------------------------------------------------------
-
-golden_BlockHeaderAttributes :: Property
-golden_BlockHeaderAttributes = goldenTestBi
-  (mkAttributes () :: BlockHeaderAttributes)
-  "test/golden/BlockHeaderAttributes"
-
-roundTripBlockHeaderAttributesBi :: Property
-roundTripBlockHeaderAttributesBi =
-  eachOf 1000 genBlockHeaderAttributes roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -204,86 +176,81 @@ golden_legacy_BoundaryProof = legacyGoldenDecode
 
 
 --------------------------------------------------------------------------------
--- Header
+-- Body
 --------------------------------------------------------------------------------
 
+golden_Body :: Property
+golden_Body = goldenTestBi exampleBody "test/golden/block/Body"
 
---------------------------------------------------------------------------------
--- MainBody
---------------------------------------------------------------------------------
-
-golden_MainBody :: Property
-golden_MainBody = goldenTestBi exampleMainBody "test/golden/MainBody"
-
-roundTripMainBodyBi :: Property
-roundTripMainBodyBi = eachOf 20 (feedPM genMainBody) roundTripsBiShow
+roundTripBodyBi :: Property
+roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
--- MainConsensusData
+-- ConsensusData
 --------------------------------------------------------------------------------
 
-golden_MainConsensusData :: Property
-golden_MainConsensusData = goldenTestBi mcd "test/golden/MainConsensusData"
+golden_ConsensusData :: Property
+golden_ConsensusData = goldenTestBi mcd "test/golden/block/ConsensusData"
  where
-  mcd = MainConsensusData
+  mcd = ConsensusData
     exampleSlotId
     examplePublicKey
     exampleChainDifficulty
     exampleBlockSignature
 
-roundTripMainConsensusData :: Property
-roundTripMainConsensusData =
-  eachOf 20 (feedPMEpochSlots genMainConsensusData) roundTripsBiShow
+roundTripConsensusData :: Property
+roundTripConsensusData =
+  eachOf 20 (feedPMEpochSlots genConsensusData) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
--- MainExtraBodyData
+-- ExtraBodyData
 --------------------------------------------------------------------------------
 
-golden_MainExtraBodyData :: Property
-golden_MainExtraBodyData = goldenTestBi mebd "test/golden/MainExtraBodyData"
-  where mebd = MainExtraBodyData (mkAttributes ())
+golden_ExtraBodyData :: Property
+golden_ExtraBodyData = goldenTestBi mebd "test/golden/block/ExtraBodyData"
+  where mebd = ExtraBodyData (mkAttributes ())
 
-roundTripMainExtraBodyDataBi :: Property
-roundTripMainExtraBodyDataBi =
-  eachOf 1000 genMainExtraBodyData roundTripsBiBuildable
-
-
---------------------------------------------------------------------------------
--- MainExtraHeaderData
---------------------------------------------------------------------------------
-
-golden_MainExtraHeaderData :: Property
-golden_MainExtraHeaderData =
-  goldenTestBi exampleMainExtraHeaderData "test/golden/MainExtraHeaderData"
-
-roundTripMainExtraHeaderDataBi :: Property
-roundTripMainExtraHeaderDataBi =
-  eachOf 1000 genMainExtraHeaderData roundTripsBiBuildable
+roundTripExtraBodyDataBi :: Property
+roundTripExtraBodyDataBi =
+  eachOf 1000 genExtraBodyData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
--- MainProof
+-- ExtraHeaderData
 --------------------------------------------------------------------------------
 
-golden_MainProof :: Property
-golden_MainProof = goldenTestBi exampleMainProof "test/golden/MainProof"
+golden_ExtraHeaderData :: Property
+golden_ExtraHeaderData =
+  goldenTestBi exampleExtraHeaderData "test/golden/block/ExtraHeaderData"
 
-roundTripMainProofBi :: Property
-roundTripMainProofBi = eachOf 20 (feedPM genMainProof) roundTripsBiBuildable
+roundTripExtraHeaderDataBi :: Property
+roundTripExtraHeaderDataBi =
+  eachOf 1000 genExtraHeaderData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
--- MainToSign
+-- Proof
 --------------------------------------------------------------------------------
 
-golden_MainToSign :: Property
-golden_MainToSign = goldenTestBi exampleMainToSign "test/golden/MainToSign"
+golden_Proof :: Property
+golden_Proof = goldenTestBi exampleProof "test/golden/block/Proof"
 
-roundTripMainToSignBi :: Property
-roundTripMainToSignBi =
-  eachOf 20 (feedPMEpochSlots genMainToSign) roundTripsBiShow
+roundTripProofBi :: Property
+roundTripProofBi = eachOf 20 (feedPM genProof) roundTripsBiBuildable
+
+
+--------------------------------------------------------------------------------
+-- ToSign
+--------------------------------------------------------------------------------
+
+golden_ToSign :: Property
+golden_ToSign = goldenTestBi exampleToSign "test/golden/block/ToSign"
+
+roundTripToSignBi :: Property
+roundTripToSignBi =
+  eachOf 20 (feedPMEpochSlots genToSign) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -291,7 +258,7 @@ roundTripMainToSignBi =
 --------------------------------------------------------------------------------
 
 golden_Undo :: Property
-golden_Undo = goldenTestBi exampleUndo "test/golden/Undo"
+golden_Undo = goldenTestBi exampleUndo "test/golden/block/Undo"
 
 roundTripUndo :: Property
 roundTripUndo = eachOf 20 (feedPMEpochSlots genUndo) roundTripsBiShow
@@ -309,17 +276,17 @@ exampleHeader = mkHeaderExplicit
   exampleSlotId
   exampleSecretKey
   Nothing
-  exampleMainBody
-  exampleMainExtraHeaderData
+  exampleBody
+  exampleExtraHeaderData
 
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = BlockSignature
-  (sign (ProtocolMagic 7) SignMainBlock exampleSecretKey exampleMainToSign)
+  (sign (ProtocolMagic 7) SignMainBlock exampleSecretKey exampleToSign)
 
 exampleBlockPSignatureLight :: BlockSignature
 exampleBlockPSignatureLight = BlockPSignatureLight sig
  where
-  sig = proxySign pm SignProxySK delegateSk psk exampleMainToSign
+  sig = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
   psk = createPsk pm issuerSk (toPublic delegateSk) exampleLightDlgIndices
   pm = ProtocolMagic 2
@@ -327,28 +294,28 @@ exampleBlockPSignatureLight = BlockPSignatureLight sig
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
  where
-  sig = proxySign pm SignProxySK delegateSk psk exampleMainToSign
+  sig = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
   psk =
     createPsk pm issuerSk (toPublic delegateSk) (staticHeavyDlgIndexes !! 0)
   pm = ProtocolMagic 2
 
-exampleMainConsensusData :: MainConsensusData
-exampleMainConsensusData = MainConsensusData
+exampleConsensusData :: ConsensusData
+exampleConsensusData = ConsensusData
   exampleSlotId
   examplePublicKey
   exampleChainDifficulty
   exampleBlockSignature
 
-exampleMainExtraHeaderData :: MainExtraHeaderData
-exampleMainExtraHeaderData = MainExtraHeaderData
+exampleExtraHeaderData :: ExtraHeaderData
+exampleExtraHeaderData = ExtraHeaderData
   Update.exampleBlockVersion
   Update.exampleSoftwareVersion
   (mkAttributes ())
-  (abstractHash (MainExtraBodyData (mkAttributes ())))
+  (abstractHash (ExtraBodyData (mkAttributes ())))
 
-exampleMainProof :: MainProof
-exampleMainProof = MainProof
+exampleProof :: Proof
+exampleProof = Proof
   exampleTxProof
   SscProof
   (abstractHash dp)
@@ -358,17 +325,17 @@ exampleMainProof = MainProof
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
-exampleMainBody :: MainBody
-exampleMainBody = MainBody exampleTxPayload SscPayload dp Update.examplePayload
+exampleBody :: Body
+exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
   where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
 
-exampleMainToSign :: MainToSign
-exampleMainToSign = MainToSign
+exampleToSign :: ToSign
+exampleToSign = ToSign
   exampleHeaderHash
-  exampleMainProof
+  exampleProof
   exampleSlotId
   exampleChainDifficulty
-  exampleMainExtraHeaderData
+  exampleExtraHeaderData
 
 exampleSlogUndo :: SlogUndo
 exampleSlogUndo = SlogUndo $ Just 999

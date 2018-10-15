@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -33,24 +32,14 @@ module Cardano.Chain.Block.Header
 
        , dropBoundaryHeader
 
-       , MainToSign (..)
-       , msHeaderHash
-       , msBodyProof
-       , msSlot
-       , msChainDiff
-       , msExtraHeader
+       , ToSign (..)
 
-       , MainConsensusData (..)
-       , mcdSlot
-       , mcdLeaderKey
-       , mcdDifficulty
-       , mcdSignature
-       , verifyMainConsensusData
+       , ConsensusData (..)
+       , verifyConsensusData
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (Format, bprint, build, int, (%))
 import qualified Formatting.Buildable as B
@@ -58,12 +47,13 @@ import qualified Formatting.Buildable as B
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, dropBytes, dropInt32, encodeListLen,
                      enforceSize, serializeEncoding)
+import           Cardano.Chain.Block.Body (Body)
 import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
                      dropBoundaryExtraHeaderData)
-import           Cardano.Chain.Block.Main (BlockHeaderAttributes, MainBody,
-                     MainExtraBodyData, MainExtraHeaderData (..),
-                     MainProof (..), mkMainProof)
-import           Cardano.Chain.Common (ChainDifficulty)
+import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
+import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
+import           Cardano.Chain.Block.Proof (Proof (..), mkProof)
+import           Cardano.Chain.Common (Attributes, ChainDifficulty)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo,
                      ProxySigHeavy)
 import           Cardano.Chain.Delegation.LightDlgIndices (LightDlgIndices (..),
@@ -86,11 +76,11 @@ data Header = Header
   { headerProtocolMagic :: !ProtocolMagic
   , headerPrevHash      :: !HeaderHash
   -- ^ Pointer to the header of the previous block
-  , headerProof         :: !MainProof
+  , headerProof         :: !Proof
   -- ^ Proof of body
-  , headerConsensusData :: !MainConsensusData
+  , headerConsensusData :: !ConsensusData
   -- ^ Consensus data to verify consensus algorithm
-  , headerExtraData     :: !MainExtraHeaderData
+  , headerExtraData     :: !ExtraHeaderData
   -- ^ Any extra data
   } deriving (Eq, Show, Generic, NFData)
 
@@ -107,10 +97,10 @@ instance B.Buildable Header where
     )
     headerHash
     (headerPrevHash header)
-    (_mcdSlot consensus)
-    (_mcdDifficulty consensus)
-    (_mcdLeaderKey consensus)
-    (_mcdSignature consensus)
+    (consensusSlot consensus)
+    (consensusDifficulty consensus)
+    (consensusLeaderKey consensus)
+    (consensusSignature consensus)
     (headerExtraData header)
    where
     headerHash :: HeaderHash
@@ -142,14 +132,16 @@ mkHeader
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
-  -> MainBody
-  -> MainExtraHeaderData
+  -> Body
+  -> ExtraHeaderData
   -> Header
 mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
  where
-  prevHash = either getGenesisHash hashHeader prevHeader
-  difficulty =
-    either (const 0) (succ . _mcdDifficulty . headerConsensusData) prevHeader
+  prevHash   = either getGenesisHash hashHeader prevHeader
+  difficulty = either
+    (const 0)
+    (succ . consensusDifficulty . headerConsensusData)
+    prevHeader
 
 -- | Make a 'Header' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.
@@ -161,53 +153,53 @@ mkHeaderExplicit
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
-  -> MainBody
-  -> MainExtraHeaderData
+  -> Body
+  -> ExtraHeaderData
   -> Header
 mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
   Header pm prevHash proof consensus extra
  where
-  proof = mkMainProof body
+  proof = mkProof body
   makeSignature toSign (psk, _) =
     BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk psk toSign
   signature =
-    let toSign = MainToSign prevHash proof slotId difficulty extra
+    let toSign = ToSign prevHash proof slotId difficulty extra
     in
       maybe
         (BlockSignature $ sign pm SignMainBlock sk toSign)
         (makeSignature toSign)
         pske
   leaderPk  = maybe (toPublic sk) snd pske
-  consensus = MainConsensusData
-    { _mcdSlot       = slotId
-    , _mcdLeaderKey  = leaderPk
-    , _mcdDifficulty = difficulty
-    , _mcdSignature  = signature
+  consensus = ConsensusData
+    { consensusSlot       = slotId
+    , consensusLeaderKey  = leaderPk
+    , consensusDifficulty = difficulty
+    , consensusSignature  = signature
     }
 
 headerSlot :: Header -> SlotId
-headerSlot = _mcdSlot . headerConsensusData
+headerSlot = consensusSlot . headerConsensusData
 
 headerLeaderKey :: Header -> PublicKey
-headerLeaderKey = _mcdLeaderKey . headerConsensusData
+headerLeaderKey = consensusLeaderKey . headerConsensusData
 
 headerDifficulty :: Header -> ChainDifficulty
-headerDifficulty = _mcdDifficulty . headerConsensusData
+headerDifficulty = consensusDifficulty . headerConsensusData
 
 headerSignature :: Header -> BlockSignature
-headerSignature = _mcdSignature . headerConsensusData
+headerSignature = consensusSignature . headerConsensusData
 
 headerBlockVersion :: Header -> BlockVersion
-headerBlockVersion = _mehBlockVersion . headerExtraData
+headerBlockVersion = ehdBlockVersion . headerExtraData
 
 headerSoftwareVersion :: Header -> SoftwareVersion
-headerSoftwareVersion = _mehSoftwareVersion . headerExtraData
+headerSoftwareVersion = ehdSoftwareVersion . headerExtraData
 
-headerAttributes :: Header -> BlockHeaderAttributes
-headerAttributes = _mehAttributes . headerExtraData
+headerAttributes :: Header -> Attributes ()
+headerAttributes = ehdAttributes . headerExtraData
 
-headerEBDataProof :: Header -> Hash MainExtraBodyData
-headerEBDataProof = _mehEBDataProof . headerExtraData
+headerEBDataProof :: Header -> Hash ExtraBodyData
+headerEBDataProof = ehdEBDataProof . headerExtraData
 
 -- | Verify a main block header in isolation
 verifyHeader
@@ -215,17 +207,17 @@ verifyHeader
 verifyHeader pm header = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although
-  -- must be checked against the actual body, in verifyMainBlock.
+  -- must be checked against the actual body, in verifyBlock.
   -- Consensus data and extra header data require validation.
-  verifyMainConsensusData consensus
-  -- verifyMainExtraHeaderData (_gbhExtra gbh)
+  verifyConsensusData consensus
+  -- verifyExtraHeaderData (_gbhExtra gbh)
   -- Internal consistency: is the signature in the consensus data really for
   -- this block?
-  unless (verifyBlockSignature $ _mcdSignature consensus)
+  unless (verifyBlockSignature $ consensusSignature consensus)
     $ throwError "can't verify signature"
  where
   verifyBlockSignature (BlockSignature sig) =
-    checkSig pm SignMainBlock (_mcdLeaderKey consensus) signature sig
+    checkSig pm SignMainBlock (consensusLeaderKey consensus) signature sig
   verifyBlockSignature (BlockPSignatureLight proxySig) = proxyVerify
     pm
     SignMainBlockLight
@@ -237,14 +229,14 @@ verifyHeader pm header = do
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
     proxyVerify pm SignMainBlockHeavy proxySig (const True) signature
 
-  signature = MainToSign
+  signature = ToSign
     (headerPrevHash header)
     (headerProof header)
-    (_mcdSlot consensus)
-    (_mcdDifficulty consensus)
+    (consensusSlot consensus)
+    (consensusDifficulty consensus)
     (headerExtraData header)
 
-  epochId   = siEpoch $ _mcdSlot consensus
+  epochId   = siEpoch $ consensusSlot consensus
 
   consensus = headerConsensusData header
 
@@ -305,9 +297,9 @@ dropBoundaryHeader = do
 --   signature is valid only if block's slot id has epoch inside the constrained
 --   interval).
 data BlockSignature
-  = BlockSignature (Signature MainToSign)
-  | BlockPSignatureLight (ProxySigLight MainToSign)
-  | BlockPSignatureHeavy (ProxySigHeavy MainToSign)
+  = BlockSignature (Signature ToSign)
+  | BlockPSignatureLight (ProxySigLight ToSign)
+  | BlockPSignatureHeavy (ProxySigHeavy ToSign)
   deriving (Show, Eq, Generic)
 
 instance NFData BlockSignature
@@ -333,17 +325,22 @@ instance Bi BlockSignature where
       2 -> BlockPSignatureHeavy <$> decode
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
--- | Data to be signed in 'MainBlock'
-data MainToSign = MainToSign
+
+--------------------------------------------------------------------------------
+-- ToSign
+--------------------------------------------------------------------------------
+
+-- | Data to be signed in 'Block'
+data ToSign = ToSign
   { _msHeaderHash  :: !HeaderHash
   -- ^ Hash of previous header in the chain
-  , _msBodyProof   :: !MainProof
+  , _msBodyProof   :: !Proof
   , _msSlot        :: !SlotId
   , _msChainDiff   :: !ChainDifficulty
-  , _msExtraHeader :: !MainExtraHeaderData
+  , _msExtraHeader :: !ExtraHeaderData
   } deriving (Eq, Show, Generic)
 
-instance Bi MainToSign where
+instance Bi ToSign where
   encode mts =
     encodeListLen 5
       <> encode (_msHeaderHash mts)
@@ -353,58 +350,44 @@ instance Bi MainToSign where
       <> encode (_msExtraHeader mts)
 
   decode = do
-    enforceSize "MainToSign" 5
-    MainToSign <$> decode <*> decode <*> decode <*> decode <*> decode
+    enforceSize "ToSign" 5
+    ToSign <$> decode <*> decode <*> decode <*> decode <*> decode
 
 
 --------------------------------------------------------------------------------
--- MainConsensusData
+-- ConsensusData
 --------------------------------------------------------------------------------
 
-data MainConsensusData = MainConsensusData
-  { _mcdSlot       :: !SlotId
+data ConsensusData = ConsensusData
+  { consensusSlot       :: !SlotId
   -- ^ Id of the slot for which this block was generated
-  , _mcdLeaderKey  :: !PublicKey
-  -- ^ Public key of the slot leader. It's essential to have it here, because FTS
-  --   gives us only hash of public key (aka 'StakeholderId').
-  , _mcdDifficulty :: !ChainDifficulty
+  , consensusLeaderKey  :: !PublicKey
+  -- ^ Public key of the slot leader. It's essential to have it here, because
+  --   FTS gives us only hash of public key (aka 'StakeholderId').
+  , consensusDifficulty :: !ChainDifficulty
   -- ^ Difficulty of chain ending in this block
-  , _mcdSignature  :: !BlockSignature
+  , consensusSignature  :: !BlockSignature
   -- ^ Signature given by slot leader
   } deriving (Generic, Show, Eq)
     deriving anyclass NFData
 
-instance Bi MainConsensusData where
+instance Bi ConsensusData where
   encode cd =
     encodeListLen 4
-      <> encode (_mcdSlot cd)
-      <> encode (_mcdLeaderKey cd)
-      <> encode (_mcdDifficulty cd)
-      <> encode (_mcdSignature cd)
+      <> encode (consensusSlot cd)
+      <> encode (consensusLeaderKey cd)
+      <> encode (consensusDifficulty cd)
+      <> encode (consensusSignature cd)
 
   decode = do
-    enforceSize "MainConsensusData" 4
-    MainConsensusData <$> decode <*> decode <*> decode <*> decode
+    enforceSize "ConsensusData" 4
+    ConsensusData <$> decode <*> decode <*> decode <*> decode
 
 -- | Verify the consensus data in isolation
-verifyMainConsensusData :: MonadError Text m => MainConsensusData -> m ()
-verifyMainConsensusData mcd = when (selfSignedProxy $ _mcdSignature mcd)
+verifyConsensusData :: MonadError Text m => ConsensusData -> m ()
+verifyConsensusData mcd = when (selfSignedProxy $ consensusSignature mcd)
   $ throwError "can't use self-signed psk to issue the block"
  where
   selfSignedProxy (BlockSignature       _  ) = False
   selfSignedProxy (BlockPSignatureLight sig) = isSelfSignedPsk $ psigPsk sig
   selfSignedProxy (BlockPSignatureHeavy sig) = isSelfSignedPsk $ psigPsk sig
-
-
---------------------------------------------------------------------------------
--- MainConsensusData lenses
---------------------------------------------------------------------------------
-
-makeLenses 'MainConsensusData
-
-
-----------------------------------------------------------------------------
--- MainToSign lenses
-----------------------------------------------------------------------------
-
-makeLenses ''MainToSign

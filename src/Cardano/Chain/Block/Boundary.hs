@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Types used in epoch boundary blocks
+-- | Boundary blocks have been deprecated, but we keep functions to decode them
 
 module Cardano.Chain.Block.Boundary
        ( dropBoundaryConsensusData

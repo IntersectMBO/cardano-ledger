@@ -29,9 +29,12 @@ library
 
   other-modules:
                        Cardano.Chain.Block.Block
+                       Cardano.Chain.Block.Body
                        Cardano.Chain.Block.Boundary
+                       Cardano.Chain.Block.ExtraBodyData
+                       Cardano.Chain.Block.ExtraHeaderData
                        Cardano.Chain.Block.Header
-                       Cardano.Chain.Block.Main
+                       Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.SlogUndo
                        Cardano.Chain.Block.Undo
 

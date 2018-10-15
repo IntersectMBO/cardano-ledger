@@ -44,19 +44,20 @@ import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, encodeListLen, enforceSize)
+import           Cardano.Chain.Block.Body (Body (..), bodyTxs, verifyBody)
 import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
                      dropBoundaryExtraBodyData)
+import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData (..))
+import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
 import           Cardano.Chain.Block.Header (BlockSignature (..), Header (..),
                      HeaderHash, dropBoundaryHeader, hashHeader,
                      headerAttributes, headerBlockVersion, headerDifficulty,
                      headerEBDataProof, headerLeaderKey, headerSignature,
                      headerSlot, headerSoftwareVersion, mkHeaderExplicit,
                      verifyHeader)
-import           Cardano.Chain.Block.Main (BlockBodyAttributes,
-                     BlockHeaderAttributes, MainBody (..),
-                     MainExtraBodyData (..), MainExtraHeaderData (..),
-                     MainProof (..), checkMainProof, mbTxs, verifyMainBody)
-import           Cardano.Chain.Common (ChainDifficulty, mkAttributes)
+import           Cardano.Chain.Block.Proof (Proof (..), checkProof)
+import           Cardano.Chain.Common (Attributes, ChainDifficulty,
+                     mkAttributes)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
 import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
@@ -76,9 +77,27 @@ import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey,
 
 data Block = Block
   { blockHeader    :: Header
-  , blockBody      :: MainBody
-  , blockExtraData :: MainExtraBodyData
+  , blockBody      :: Body
+  , blockExtraData :: ExtraBodyData
   } deriving (Eq, Show, Generic, NFData)
+
+instance B.Buildable Block where
+  build block = bprint
+    ( "Block:\n"
+    % "  " % build % "  transactions (" % int % " items): " % listJson % "\n"
+    % "  " % build % "\n"
+    % "  " % shown % "\n"
+    % "  update payload: " % build % "\n"
+    % "  " % build
+    )
+    (blockHeader block)
+    (length txs)
+    txs
+    (blockDlgPayload block)
+    (blockSscPayload block)
+    (blockUpdatePayload block)
+    (blockExtraData block)
+    where txs = bodyTxs $ blockBody block
 
 instance Bi Block where
   encode block =
@@ -138,7 +157,7 @@ mkBlock
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
-  -> MainBody
+  -> Body
   -> Block
 mkBlock pm bv sv prevHeader = mkBlockExplicit
   pm
@@ -164,7 +183,7 @@ mkBlockExplicit
   -> SlotId
   -> SecretKey
   -> ProxySKBlockInfo
-  -> MainBody
+  -> Body
   -> Block
 mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
   Block
@@ -172,20 +191,20 @@ mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
     body
     extraB
  where
-  extraB :: MainExtraBodyData
-  extraB = MainExtraBodyData (mkAttributes ())
-  extraH :: MainExtraHeaderData
-  extraH = MainExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
+  extraB :: ExtraBodyData
+  extraB = ExtraBodyData (mkAttributes ())
+  extraH :: ExtraHeaderData
+  extraH = ExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
 
 verifyBlock :: MonadError Text m => ProtocolMagic -> Block -> m ()
 verifyBlock pm block = do
   verifyHeader pm (blockHeader block)
-  verifyMainBody pm (blockBody block)
+  verifyBody pm (blockBody block)
   -- No need to verify the main extra body data. It's an 'Attributes ()'
   -- which is valid whenever it's well-formed.
   --
   -- Check internal consistency: the body proofs are all correct.
-  checkMainProof (blockBody block) (blockProof block)
+  checkProof (blockBody block) (blockProof block)
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
   unless (hash (blockExtraData block) == blockExtraDataProof block)
@@ -200,7 +219,7 @@ verifyBlock pm block = do
 blockPrevHash :: Block -> HeaderHash
 blockPrevHash = headerPrevHash . blockHeader
 
-blockProof :: Block -> MainProof
+blockProof :: Block -> Proof
 blockProof = headerProof . blockHeader
 
 blockSlot :: Block -> SlotId
@@ -221,41 +240,23 @@ blockBlockVersion = headerBlockVersion . blockHeader
 blockSoftwareVersion :: Block -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockHeaderAttributes :: Block -> BlockHeaderAttributes
+blockHeaderAttributes :: Block -> Attributes ()
 blockHeaderAttributes = headerAttributes . blockHeader
 
-blockExtraDataProof :: Block -> Hash MainExtraBodyData
+blockExtraDataProof :: Block -> Hash ExtraBodyData
 blockExtraDataProof = headerEBDataProof . blockHeader
 
 blockTxPayload :: Block -> TxPayload
-blockTxPayload = _mbTxPayload . blockBody
+blockTxPayload = bodyTxPayload . blockBody
 
 blockSscPayload :: Block -> SscPayload
-blockSscPayload = _mbSscPayload . blockBody
+blockSscPayload = bodySscPayload . blockBody
 
 blockUpdatePayload :: Block -> Update.Payload
-blockUpdatePayload = _mbUpdatePayload . blockBody
+blockUpdatePayload = bodyUpdatePayload . blockBody
 
 blockDlgPayload :: Block -> Delegation.Payload
-blockDlgPayload = _mbDlgPayload . blockBody
+blockDlgPayload = bodyDlgPayload . blockBody
 
-blockAttributes :: Block -> BlockBodyAttributes
-blockAttributes = _mebAttributes . blockExtraData
-
-instance B.Buildable Block where
-  build block = bprint
-    ( "Block:\n"
-    % "  " % build % "  transactions (" % int % " items): " % listJson % "\n"
-    % "  " % build % "\n"
-    % "  " % shown % "\n"
-    % "  update payload: " % build % "\n"
-    % "  " % build
-    )
-    (blockHeader block)
-    (length txs)
-    txs
-    (blockDlgPayload block)
-    (blockSscPayload block)
-    (blockUpdatePayload block)
-    (blockExtraData block)
-    where txs = blockBody block ^. mbTxs
+blockAttributes :: Block -> Attributes ()
+blockAttributes = ebdAttributes . blockExtraData
