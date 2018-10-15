@@ -26,16 +26,16 @@ module UTxO
   , balance
   , (◃)
   , (⋪)
-  , verify
+  -- , verify
   , (∪)
   , makeWitness
   -- * Signing and Verifying
-  , Owner(..)
-  , SKey(..)
-  , VKey(..)
-  , KeyPair(..)
-  , keyPair
-  , Sig(..)
+  -- , Owner(..)
+  -- , SKey(..)
+  -- , VKey(..)
+  -- , KeyPair(..)
+  -- , keyPair
+  -- , Sig(..)
   , Wit(..)
   , TxWits(..)
   , Ledger
@@ -49,6 +49,7 @@ import qualified Data.Map              as Map
 import           Data.Set              (Set)
 import qualified Data.Set              as Set
 import           Numeric.Natural       (Natural)
+import           Keys
 
 -- |A hash
 type Hash = Digest SHA256
@@ -102,24 +103,24 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+-- newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
 -- |Signing Key.
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
+-- newtype SKey = SKey Owner deriving (Show, Eq, Ord)
 
 -- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+-- newtype VKey = VKey Owner deriving (Show, Eq, Ord)
 
 -- |Key Pair.
-data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
+-- data KeyPair = KeyPair
+--   {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
 
 -- |Return a key pair for a given owner.
-keyPair :: Owner -> KeyPair
-keyPair owner = KeyPair (SKey owner) (VKey owner)
+-- keyPair :: Owner -> KeyPair
+-- keyPair owner = KeyPair (SKey owner) (VKey owner)
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+-- data Sig a = Sig a Owner deriving (Show, Eq, Ord)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord)
@@ -137,16 +138,16 @@ data TxWits = TxWits
 type Ledger = [TxWits]
 
 -- |Produce a digital signature
-sign :: SKey -> a -> Sig a
-sign (SKey k) d = Sig d k
+-- sign :: SKey -> a -> Sig a
+-- sign (SKey k) d = Sig d k
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 
 -- |Verify a digital signature
-verify :: Eq a => VKey -> a -> Sig a -> Bool
-verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
+-- verify :: Eq a => VKey -> a -> Sig a -> Bool
+-- verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 -- |Domain restriction
 (◃) :: Set TxIn -> UTxO -> UTxO
@@ -170,9 +171,9 @@ balance :: UTxO -> Coin
 balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
-instance BA.ByteArrayAccess VKey where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
+-- instance BA.ByteArrayAccess VKey where
+--   length        = BA.length . BS.pack . show
+--   withByteArray = BA.withByteArray . BS.pack . show
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show

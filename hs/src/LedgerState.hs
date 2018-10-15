@@ -24,6 +24,7 @@ import qualified Data.Map    as Map
 import           Data.Maybe  (isJust)
 import qualified Data.Set    as Set
 
+import           Keys
 import           UTxO
 
 -- |Validation errors represent the failures of a transaction to be valid
