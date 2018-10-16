@@ -52,4 +52,3 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 instance BA.ByteArrayAccess VKey where
   length        = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack . show
-
