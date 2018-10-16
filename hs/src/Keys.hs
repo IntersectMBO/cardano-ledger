@@ -14,9 +14,10 @@ module Keys
 import           Crypto.Hash           (Digest, SHA256, hash)
 import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
+import           Numeric.Natural       (Natural)
 
 -- |Representation of the owner of keypair.
-newtype Owner = Owner Int deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
 -- |Private/Secret Key
 newtype SKey = SKey Owner deriving (Show, Eq, Ord)
