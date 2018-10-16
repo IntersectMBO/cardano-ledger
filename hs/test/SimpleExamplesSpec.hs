@@ -11,17 +11,23 @@ import           UTxO
 import           Keys
 import           Coin
 
-alice :: KeyPair
-alice = keyPair (Owner 1)
+alicePay :: KeyPair
+alicePay = keyPair (Owner 1)
+
+aliceStake :: KeyPair
+aliceStake = keyPair (Owner 2)
 
 aliceAddr :: Addr
-aliceAddr = AddrTxin (hash (vKey  alice)) (hash (vKey alice))
+aliceAddr = AddrTxin (hash (vKey alicePay)) (hash (vKey aliceStake))
 
-bob :: KeyPair
-bob = keyPair (Owner 3)
+bobPay :: KeyPair
+bobPay = keyPair (Owner 3)
+
+bobStake :: KeyPair
+bobStake = keyPair (Owner 4)
 
 bobAddr :: Addr
-bobAddr = AddrTxin (hash (vKey bob)) (hash (vKey bob))
+bobAddr = AddrTxin (hash (vKey bobPay)) (hash (vKey bobStake))
 
 genesis :: LedgerState
 genesis = genesisState
@@ -40,7 +46,7 @@ spec = do
               [ TxOut aliceAddr (Coin 7)
               , TxOut bobAddr (Coin 3) ]
               Set.empty
-      aliceTx1Wit = makeWitness alice tx1Body
+      aliceTx1Wit = makeWitness alicePay tx1Body
       tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
       tx1id = txid tx1Body
       utxo = Map.fromList
@@ -58,7 +64,7 @@ spec = do
               (Set.fromList [TxIn genesisId 42])
               [ TxOut aliceAddr (Coin 0) ]
               Set.empty
-      aliceTx1Wit = makeWitness alice tx1Body
+      aliceTx1Wit = makeWitness alicePay tx1Body
       tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [BadInputs, InsuffientWitnesses]
     -- Note that BadInputs implies InsuffientWitnesses
@@ -68,7 +74,7 @@ spec = do
       tx1Body = Tx
               (Set.fromList [TxIn genesisId 0]) [ TxOut bobAddr (Coin 11) ]
               Set.empty
-      aliceTx1Wit = makeWitness alice tx1Body
+      aliceTx1Wit = makeWitness alicePay tx1Body
       tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [IncreasedTotalBalance]
 
@@ -88,7 +94,7 @@ spec = do
         (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 1)]
         Set.empty
-      aliceTx1Wit = makeWitness alice tx1Body
+      aliceTx1Wit = makeWitness alicePay tx1Body
       tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
 
@@ -102,6 +108,6 @@ spec = do
         (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 10)]
         Set.empty
-      aliceTx1Wit = makeWitness alice tx2Body
+      aliceTx1Wit = makeWitness alicePay tx2Body
       tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
