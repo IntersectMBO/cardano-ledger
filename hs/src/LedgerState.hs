@@ -74,7 +74,7 @@ data DelegationState =
     -- |The active stake pools.
     , getStPools     :: Set.Set HashKey
     -- |A map of retiring stake pools to the epoch when they retire.
-    , getRetiring    :: Map.Map HashKey Int
+    , getRetiring    :: Map.Map HashKey Natural
     } deriving (Show, Eq)
 
 emptyDelegation :: DelegationState
@@ -171,7 +171,7 @@ asStateTransition ls tx =
 -- Functions for stake delegation model
 
 -- |Retire the appropriate stake pools when the epoch changes.
-retirePools :: LedgerState -> Int -> LedgerState
+retirePools :: LedgerState -> Natural -> LedgerState
 retirePools ls@(LedgerState _ ds _) epoch = ls
     { getDelegationState = ds
       { getStPools = Set.difference (getStPools ds) (Map.keysSet retiring)
