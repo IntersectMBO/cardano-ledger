@@ -12,7 +12,6 @@ module UTxO
   (
   -- * Primitives
     TxId(..)
-  , Coin(..)
   , Addr(..)
   -- * Derived Types
   , TxIn(..)
@@ -24,18 +23,18 @@ module UTxO
   , txins
   , txouts
   , balance
-  , (◃)
-  , (⋪)
-  , verify
-  , (∪)
+  , (<|)
+  , (<<|)
+  -- , verify
+  , union
   , makeWitness
   -- * Signing and Verifying
-  , Owner(..)
-  , SKey(..)
-  , VKey(..)
-  , KeyPair(..)
-  , keyPair
-  , Sig(..)
+  -- , Owner(..)
+  -- , SKey(..)
+  -- , VKey(..)
+  -- , KeyPair(..)
+  -- , keyPair
+  -- , Sig(..)
   , Wit(..)
   , TxWits(..)
   , Ledger
@@ -50,6 +49,11 @@ import           Data.Set              (Set)
 import qualified Data.Set              as Set
 import           Numeric.Natural       (Natural)
 
+import           Keys
+import           Coin                  (Coin(..))
+    
+import           Delegation.Certificates (Cert(..))
+
 -- |A hash
 type Hash = Digest SHA256
 
@@ -57,18 +61,14 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
--- |The amount of value held by a transaction output.
-newtype Coin = Coin Natural deriving (Show, Eq, Ord)
+-- -- |The address of a transaction output, used to identify the owner.
+-- newtype Addr = Addr Hash deriving (Show, Eq, Ord)
 
-instance Semigroup Coin where
-  (Coin a) <> (Coin b) = Coin (a + b)
-
-instance Monoid Coin where
-  mempty = Coin 0
-  mappend = (<>)
-
--- |The address of a transaction output, used to identify the owner.
-newtype Addr = Addr Hash deriving (Show, Eq, Ord)
+-- |An address for UTxO.  It can be either an account based
+-- address for rewards sharing or a UTxO address.
+data Addr = AddrTxin (Digest SHA256) (Digest SHA256)
+          | AddrAccount (Digest SHA256) (Digest SHA256)
+          deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
 --
@@ -84,6 +84,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 -- |A raw transaction
 data Tx = Tx { inputs  :: Set TxIn
              , outputs :: [TxOut]
+             , certs   :: Set Cert
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
@@ -102,24 +103,24 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+-- newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
 -- |Signing Key.
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
+-- newtype SKey = SKey Owner deriving (Show, Eq, Ord)
 
 -- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+-- newtype VKey = VKey Owner deriving (Show, Eq, Ord)
 
 -- |Key Pair.
-data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
+-- data KeyPair = KeyPair
+--   {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
 
 -- |Return a key pair for a given owner.
-keyPair :: Owner -> KeyPair
-keyPair owner = KeyPair (SKey owner) (VKey owner)
+-- keyPair :: Owner -> KeyPair
+-- keyPair owner = KeyPair (SKey owner) (VKey owner)
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+-- data Sig a = Sig a Owner deriving (Show, Eq, Ord)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord)
@@ -137,42 +138,42 @@ data TxWits = TxWits
 type Ledger = [TxWits]
 
 -- |Produce a digital signature
-sign :: SKey -> a -> Sig a
-sign (SKey k) d = Sig d k
+-- sign :: SKey -> a -> Sig a
+-- sign (SKey k) d = Sig d k
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 
 -- |Verify a digital signature
-verify :: Eq a => VKey -> a -> Sig a -> Bool
-verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
+-- verify :: Eq a => VKey -> a -> Sig a -> Bool
+-- verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 -- |Domain restriction
-(◃) :: Set TxIn -> UTxO -> UTxO
-ins ◃ (UTxO utxo) =
+(<|) :: Set TxIn -> UTxO -> UTxO
+ins <| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
-(⋪) :: Set TxIn -> UTxO -> UTxO
-ins ⋪ (UTxO utxo) =
+(<<|) :: Set TxIn -> UTxO -> UTxO
+ins <<| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
 --
 --     * TODO - Should we return 'Maybe UTxO' so that we can return
 -- Nothing when the collections are not disjoint?
-(∪) :: UTxO -> UTxO -> UTxO
-(UTxO a) ∪ (UTxO b) = UTxO $ Map.union a b
+union :: UTxO -> UTxO -> UTxO
+union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO -> Coin
 balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
-instance BA.ByteArrayAccess VKey where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
+-- instance BA.ByteArrayAccess VKey where
+--   length        = BA.length . BS.pack . show
+--   withByteArray = BA.withByteArray . BS.pack . show
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
