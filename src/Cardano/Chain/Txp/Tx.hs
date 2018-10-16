@@ -6,7 +6,6 @@
 
 module Cardano.Chain.Txp.Tx
        ( Tx (..)
-       , checkTx
        , txInputs
        , txOutputs
        , txAttributes
@@ -25,7 +24,6 @@ module Cardano.Chain.Txp.Tx
 import           Cardano.Prelude
 
 import           Control.Lens (makeLenses, makePrisms)
-import           Control.Monad.Except (MonadError (throwError))
 import           Data.Aeson (FromJSON (..), FromJSONKey (..),
                      FromJSONKeyFunction (..), ToJSON (toJSON), ToJSONKey (..),
                      object, withObject, (.:), (.=))
@@ -41,8 +39,8 @@ import           Cardano.Binary.Class (Bi (..), Case (..),
                      encodeKnownCborDataItem, encodeListLen,
                      encodeUnknownCborDataItem, enforceSize,
                      knownCborDataItemSizeExpr, szCases)
-import           Cardano.Chain.Common (Address (..), Coin (..), checkCoin,
-                     coinF, coinToInteger, decodeTextAddress, integerToCoin)
+import           Cardano.Chain.Common (Address (..), Coin, coinF, coinToInteger,
+                     decodeTextAddress, integerToCoin)
 import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import           Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF,
@@ -103,19 +101,6 @@ instance NFData Tx
 -- | Specialized formatter for 'Tx'
 txF :: Format r (Tx -> r)
 txF = build
-
--- | Verify inputs and outputs are non empty; have enough coins
-checkTx :: MonadError Text m => Tx -> m ()
-checkTx tx = zipWithM_ checkOutput [0 :: Word ..] $ toList (_txOutputs tx)
- where
-  checkOutput i txOut = do
-    unless (txOutValue txOut > Coin 0) $ throwError $ sformat
-      ("output #" % int % " has non-positive value: " % coinF)
-      i
-      (txOutValue txOut)
-    unless (isRight . checkCoin $ txOutValue txOut) $ throwError $ sformat
-      ("output #" % int % " has invalid coin")
-      i
 
 
 --------------------------------------------------------------------------------

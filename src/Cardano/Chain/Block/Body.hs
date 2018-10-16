@@ -19,7 +19,8 @@ import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload,
                      checkPayload)
 import           Cardano.Chain.Ssc (SscPayload (..))
 import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Chain.Txp.TxPayload (TxPayload (..), checkTxPayload)
+import           Cardano.Chain.Txp.TxPayload (TxPayload (..), txpTxs,
+                     txpWitnesses)
 import           Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 import           Cardano.Crypto (ProtocolMagic)
@@ -51,12 +52,11 @@ instance Bi Body where
 
 verifyBody :: MonadError Text m => ProtocolMagic -> Body -> m ()
 verifyBody pm mb = do
-  checkTxPayload (bodyTxPayload mb)
   Delegation.checkPayload pm (bodyDlgPayload mb)
   Update.checkPayload pm (bodyUpdatePayload mb)
 
 bodyTxs :: Body -> [Tx]
-bodyTxs = _txpTxs . bodyTxPayload
+bodyTxs = txpTxs . bodyTxPayload
 
 bodyWitnesses :: Body -> [TxWitness]
-bodyWitnesses = _txpWitnesses . bodyTxPayload
+bodyWitnesses = txpWitnesses . bodyTxPayload

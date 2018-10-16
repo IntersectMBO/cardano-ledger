@@ -39,7 +39,7 @@ import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier, checkBlockVersionModifier)
+                     (BlockVersionModifier)
 import           Cardano.Chain.Update.Data (UpdateData)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion,
                      checkSoftwareVersion)
@@ -158,7 +158,6 @@ signProposal pm body ss = Proposal
 checkProposal :: MonadError Text m => ProtocolMagic -> Proposal -> m ()
 checkProposal pm proposal = do
   let body = proposalBody proposal
-  checkBlockVersionModifier (pbBlockVersionModifier body)
   checkSoftwareVersion (pbSoftwareVersion body)
   forM_ (Map.keys (pbData body)) checkSystemTag
   let

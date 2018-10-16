@@ -39,8 +39,8 @@ import qualified Hedgehog.Range as Range
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Txp (Tx (..), TxAttributes, TxAux (..), TxId,
                      TxIn (..), TxInWitness (..), TxOut (..), TxOutAux (..),
-                     TxPayload, TxProof (..), TxSig, TxSigData (..), TxUndo,
-                     TxWitness, TxpUndo, mkTxPayload)
+                     TxPayload (..), TxProof (..), TxSig, TxSigData (..),
+                     TxUndo, TxWitness, TxpUndo)
 import           Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
 
 import           Test.Cardano.Chain.Common.Gen (genAddress, genCoin,
@@ -105,7 +105,7 @@ genTxpUndo :: Gen TxpUndo
 genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
 genTxPayload :: ProtocolMagic -> Gen TxPayload
-genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
+genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagic -> Gen TxProof
 genTxProof pm =

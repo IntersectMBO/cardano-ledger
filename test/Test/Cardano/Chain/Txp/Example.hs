@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Test.Cardano.Chain.Txp.Example
        ( exampleTxId
@@ -24,12 +26,13 @@ import           Data.List.NonEmpty (fromList)
 import           Data.Maybe (fromJust)
 import qualified Data.Vector as V
 
-import           Cardano.Chain.Common (Coin (..), IsBootstrapEraAddr (..),
-                     makePubKeyAddress, mkAttributes, mkMerkleTree, mtRoot)
+import           Cardano.Chain.Common (IsBootstrapEraAddr (..),
+                     makePubKeyAddress, mkAttributes, mkKnownCoin,
+                     mkMerkleTree, mtRoot)
 import           Cardano.Chain.Txp (Tx (..), TxAux (..), TxId, TxIn (..),
                      TxInWitness (..), TxOut (..), TxOutAux (..),
                      TxPayload (..), TxProof (..), TxSig, TxSigData (..),
-                     TxWitness, TxpUndo, mkTxPayload)
+                     TxWitness, TxpUndo)
 import           Cardano.Crypto (AbstractHash (..), Hash, ProtocolMagic (..),
                      PublicKey (..), RedeemSignature, SignTag (..), hash,
                      redeemDeterministicKeyGen, redeemSign, sign)
@@ -39,10 +42,10 @@ import           Test.Cardano.Crypto.Bi (getBytes)
 import           Test.Cardano.Crypto.Example (examplePublicKey,
                      exampleSecretKey)
 
+
 exampleTxAux :: TxAux
 exampleTxAux = TxAux tx exampleTxWitness
-  where
-    tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
+  where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
 exampleTxId :: TxId
 exampleTxId = exampleHashTx
@@ -57,24 +60,27 @@ exampleTxInUtxo :: TxIn
 exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
 
 exampleTxOut :: TxOut
-exampleTxOut = TxOut (makePubKeyAddress (IsBootstrapEraAddr True) pkey) (Coin 47)
-    where
-        Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
+exampleTxOut = TxOut
+  (makePubKeyAddress (IsBootstrapEraAddr True) pkey)
+  (mkKnownCoin @47)
+  where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)
 exampleTxOutList = fromList [exampleTxOut]
 
 exampleTxPayload :: TxPayload
-exampleTxPayload = mkTxPayload [exampleTxAux]
+exampleTxPayload = TxPayload [exampleTxAux]
 
 exampleTxProof :: TxProof
 exampleTxProof = TxProof 32 mroot hashWit
-  where
-    mroot = mtRoot $ mkMerkleTree [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
-    hashWit = hash $ [(V.fromList [(PkWitness examplePublicKey exampleTxSig)])]
+ where
+  mroot = mtRoot $ mkMerkleTree
+    [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
+  hashWit = hash $ [(V.fromList [(PkWitness examplePublicKey exampleTxSig)])]
 
 exampleTxSig :: TxSig
-exampleTxSig = sign (ProtocolMagic 0) SignForTestingOnly exampleSecretKey exampleTxSigData
+exampleTxSig =
+  sign (ProtocolMagic 0) SignForTestingOnly exampleSecretKey exampleTxSigData
 
 exampleTxSigData :: TxSigData
 exampleTxSigData = TxSigData exampleHashTx
@@ -86,9 +92,12 @@ exampleTxWitness :: TxWitness
 exampleTxWitness = V.fromList [(PkWitness examplePublicKey exampleTxSig)]
 
 exampleRedeemSignature :: RedeemSignature TxSigData
-exampleRedeemSignature = redeemSign (ProtocolMagic 0) SignForTestingOnly rsk exampleTxSigData
-    where
-        rsk = fromJust (snd <$> redeemDeterministicKeyGen (getBytes 0 32))
+exampleRedeemSignature = redeemSign
+  (ProtocolMagic 0)
+  SignForTestingOnly
+  rsk
+  exampleTxSigData
+  where rsk = fromJust (snd <$> redeemDeterministicKeyGen (getBytes 0 32))
 
 exampleHashTx :: Hash Tx
 exampleHashTx = coerce (hash "golden" :: Hash Text)

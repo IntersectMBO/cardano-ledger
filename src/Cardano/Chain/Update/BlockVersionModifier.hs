@@ -7,13 +7,11 @@
 
 module Cardano.Chain.Update.BlockVersionModifier
        ( BlockVersionModifier (..)
-       , checkBlockVersionModifier
        , applyBVM
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
 import           Data.Text.Lazy.Builder (Builder)
 import           Data.Time (NominalDiffTime)
 import           Formatting (Format, bprint, build, bytes, int, later, shortest,
@@ -21,12 +19,10 @@ import           Formatting (Format, bprint, build, bytes, int, later, shortest,
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy,
-                     checkCoinPortion)
+import           Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy)
 import           Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 import           Cardano.Chain.Update.BlockVersionData (BlockVersionData (..))
-import           Cardano.Chain.Update.SoftforkRule (SoftforkRule,
-                     checkSoftforkRule)
+import           Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
 
 -- | Data which represents modifications of block (aka protocol) version
@@ -121,14 +117,6 @@ instance Bi BlockVersionModifier where
       <*> decode
       <*> decode
       <*> decode
-
-checkBlockVersionModifier :: MonadError Text m => BlockVersionModifier -> m ()
-checkBlockVersionModifier bvm = do
-  whenJust (bvmMpcThd bvm)            checkCoinPortion
-  whenJust (bvmHeavyDelThd bvm)       checkCoinPortion
-  whenJust (bvmUpdateVoteThd bvm)     checkCoinPortion
-  whenJust (bvmUpdateProposalThd bvm) checkCoinPortion
-  whenJust (bvmSoftforkRule bvm)      checkSoftforkRule
 
 -- | Apply 'BlockVersionModifier' to 'BlockVersionData'
 applyBVM :: BlockVersionModifier -> BlockVersionData -> BlockVersionData
