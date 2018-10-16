@@ -24,7 +24,7 @@ module UTxO
   , txouts
   , balance
   , (<|)
-  , (<<|)
+  , (</|)
   -- , verify
   , union
   , makeWitness
@@ -124,8 +124,8 @@ ins <| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
-(<<|) :: Set TxIn -> UTxO -> UTxO
-ins <<| (UTxO utxo) =
+(</|) :: Set TxIn -> UTxO -> UTxO
+ins </| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
