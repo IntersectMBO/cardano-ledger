@@ -47,14 +47,10 @@ spec = do
         [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
         , (TxIn tx1id 0, TxOut aliceAddr (Coin 7))
         , (TxIn tx1id 1, TxOut bobAddr (Coin 3)) ]
-    ledgerState [tx1] `shouldBe` Right  (LedgerState
-                                          (UTxO utxo)
-                                          Map.empty
-                                          Set.empty
-                                          Map.empty
-                                          Set.empty
-                                          Map.empty
-                                          0)
+    ledgerState [tx1] `shouldBe` Right (LedgerState
+                                        (UTxO utxo)
+                                        LedgerState.emptyDelegation
+                                        0)
 
   it "Invalid Ledger - Alice tries to spend a nonexistent input" $ do
     let
