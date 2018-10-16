@@ -65,12 +65,16 @@
 \newcommand{\BHash}{\type{BHash}}  % block hashes
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\GBlock}{\type{GBlock}}
+\newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\HCert}{\type{C}}
 
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\SKeyGen}{\type{SKey_G}}
 \newcommand{\VKey}{\type{VKey}}
+\newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 
@@ -85,17 +89,29 @@
 \newcommand{\delegatename}{delegate}
 \newcommand{\validname}{valid}
 \newcommand{\keypairname}{pair}
+\newcommand{\predbname}{pred} % block predecessor
+\newcommand{\toseqname}{toSeq} % option type to a sequence
+\newcommand{\predbseqname}{bs} % block predecessor to a sequence
+
 %% 
 %% Functions and relations
 %%
-\newcommand{\sign}[4]{\fun{\signname}\ \var{#1} ~ \var{#2} ~ \var{#3} ~ \var{#4}}
-\newcommand{\signed}[2]{\fun{\signedname}\ \var{#1} ~ \var{#2}}
-\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ \var{#1} ~ \var{#2}}
+\newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
+\newcommand{\signed}[2]{\fun{\signedname}\ #1 ~ #2}
+\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ #1 ~ #2}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
-\newcommand{\hash}[1]{\fun{\hashname}\ \var{#1}}
-\newcommand{\delegate}[1]{\fun{\delegatename}\ \var{#1}}
-\newcommand{\valid}[3]{\fun{\validname} ~ #1 ~ #2 ~ #3}
+\newcommand{\hash}[1]{\fun{\hashname}\ #1}
+\newcommand{\delegate}[2]{\fun{\delegatename}\ #1 ~ #2}
+\newcommand{\valid}[2]{\fun{\validname} ~ #1 ~ #2}
 \newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
+\newcommand{\predb}[1]{\fun{\predbname} ~ #1}
+\newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
+\newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
+
+\newcommand{\delmap}{\delta}
+
+% comments
+\newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
 \begin{document}
 
@@ -104,7 +120,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 5, 2018}
+\date{October 16, 2018}
 
 \maketitle
 
@@ -121,6 +137,23 @@ This documents defines a semantics for operations on a blockchain.
 \section{Preliminaries}
 \label{sec:preliminaries}
 
+\begin{description}
+\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
+  the subsets of $X$.
+\item[Sequence] Given a set $\type{X}$, $\seqof{\type{X}}$ is a sequence
+  having elements taken from $\type{X}$.
+  %
+  The empty sequence is denoted by $\epsilon$, and given a sequence $\Lambda$,
+  $\Lambda; x$ is the sequence that results from appending
+  $x \in \type{X}$ to $\Lambda$.
+  %
+  Furthermore, $\epsilon$ is an identity element for sequence joining:
+  $\epsilon; x = x; \epsilon = x$.
+\item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
+  $A$ case corresponds to a case when there is a value of type $A$ and the $1$
+  case corresponds to a case when there is no value.
+\end{description}
+
 \section{Basic definitions}
 \label{sec:basic-definitions}
 
@@ -130,8 +163,83 @@ TODO: Put this note on serialisation somewhere more appropriate.
 
 If $s(\cdot)$ is a function for serialising data and $d(\cdot)$ a function for
 deserialising data, their composition $s \circ d$ is not an identity function:
+%
 this is hard to enforce and it is considered a bad practice in cryptography
 design.
+
+\section{Delegation}
+\label{sec:delegation}
+
+The genesis block contains verification keys of $n$ servers.
+%
+As of mid-October 2018, $n = 7$.
+%
+Each of $n$ servers keeps its own corresponding signing key locally and does
+not share the signing key with anyone else.
+%
+Only signing keys with their verification counterparts in the genesis block
+have the right to sign blocks.
+%
+However, by the means of delegation certificates, keys from the genesis block
+can delegate signing rights to other keys.
+%
+Delegation is not transitive, i.e., there is no chaining of delegation:
+%
+only genesis block keys can delegate.
+
+
+\subsection{Delegation Design}
+\label{sec:delegation-design}
+
+To keep track of active certificates and when they become valid, a map from
+genesis block verification keys to a list of certificates is used.
+%
+A certificate contains an epoch in which it becomes valid.
+%
+Each list is sorted by epochs from certificates in the decreasing order (i.e.,
+a certificate with an earlier epoch comes latter in the list).
+%
+The map is initialised by each genesis block key delegating to itself.
+
+
+If a new certificate is to be posted and added to the map, first it is
+checked.
+%
+The epoch when a certificate becomes valid has to be greater than the epoch of
+the head certificate of the corresponding list.
+%
+The certificate has to have a valid signature.
+%
+If the certificate is valid, it is prepended to the list of the map key that
+is delegating.
+%
+This also takes care of the property that no key can delegate
+twice in an epoch.
+
+
+Each list in the map is trimmed at the beginning of each epoch by keeping only
+the head of the list, i.e., by keeping only one certificate.
+%
+This head certificate is either a new certificate that becomes valid in this
+epoch or it is an old certificate that is still valid and it was not replaced
+by any new delegation certificate.
+%
+Due to trimming, each list in the map has at most two certificates at any
+point in time.
+%
+At the beginning of an epoch, a list has only one element and at any other
+point it can have at most two elements (i.e., two certificates) if there was a
+new delegation certificate for the next epoch posted.
+
+
+Because one key's delegation can be changed only for the next epoch, but
+not for the current epoch or any epoch after the next, checking whom the key
+currently delegates to is a constant-time operation: only the head and
+possibly the second item in the list have to be examined.
+
+This approach also supports certificate revocation: it is done by posting a
+certificate in which a key delegates to itself.
+
 
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
@@ -139,27 +247,36 @@ design.
 \subsection{Properties}
 \label{sec:chain-properties}
 
+\marko{Change the certificate type to make it abstract (analogous to a type
+  class). Define functions that project needed pieces out of it, including
+  verification keys, its signature, and an epoch. Possibly add a function for
+  verifying its signature.}
+
 \begin{figure}[h]
   \emph{Primitive types}
   %
   \begin{align*}
-    & sl \in \Slot & \text{slot time-stamp}\\
-    & \Addr = \Hash,\quad hk \in \Addr & \text{address as a key hash}\\
-    & sk \in \SKey & \text{signing key}\\
-    & vk \in \VKey & \text{verification key}
+    sl & \in \Slot  & \text{slot time-stamp}\\
+     e & \in \Epoch & \text{epoch}\\
+    sk & \in \SKey  & \text{signing key}\\
+    vk & \in \VKey  & \text{verification key}\\
+     h & \in \BHash & \text{block hash}\\
+   sig & \in \Sig   & \text{signature}\\
+  data & \in \Data  & \text{data}
   \end{align*}
   %
   \emph{Derived types}
   %
   \begin{align*}
-    & sk_G \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-    & \BHash & \text{block hash}\\
-    & c \in \HCert & \text{heavyweight delegation certificate}\\
-    & sig \in \Sig  & \text{signature}\\
-    & data \in \Data  & \text{data}\\
-    & \Block = \BHash \times \Slot \times \Data \times \Sig & \\
-    & (h, sl, d, \sigma) \in \Block
-      & \text{block}
+    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
+    c & \in \HCert = \VKeyGen \times \VKey \times \Epoch \times \Sig & \text{delegation certificate}\\
+    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
+    (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
+      & \text{non-genesis block} \\
+    b & \in \Block = \GBlock + \RBlock & \text{block} \\
+    \delmap & \in \VKeyGen \to \seqof{\HCert}
+      & \text{key to certificate list mapping}
   \end{align*}
   %
   \emph{Functions and relations}
@@ -168,70 +285,192 @@ design.
     \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
     \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
       & \text{signature function}\\
-    \text{\signedname} & \in \SKey \times \Block & \text{signature relation}\\
-    \text{\signedseqname} & \in \SKey \times \seqof{\Block} \mapsto \powerset{\Block}
+    \text{\signedname} & \in \SKey \times \RBlock & \text{signature relation}\\
+    \text{\signedseqname} & \in \SKeyGen \times \seqof{\Block} \mapsto \powerset{\RBlock}
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\hashname} & \in \VKey \mapsto \Hash
-      & \text{verification key hash function}\\
-    \text{\delegatename} & \in \SKey \mapsto \HCert
+    \text{\hashname} & \in \Block \to \BHash
+      & \text{block hash function}\\
+    \text{\delegatename} & \in \SKeyGen \times \VKey \to \HCert
       & \text{delegation function}\\
-    \text{\validname} & \in \Block \times \VKey \times \HCert
-      & \text{block validity relation}
+    \text{\validname} & \in \RBlock \times \VKey
+      & \text{block validity relation}\\
+    \text{\predbname} & \in \Block \to \Block^?
+      & \text{block predecessor function} \\
+    \text{\toseqname} & \in \type{A}^? \to \seqof{\type{A}}
+      & \text{option to sequence function} \\
+    \text{\predbseqname} & \in \Block \to \seqof{\Block}
+      & \text{block to sequence function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
   \label{fig:state-trans-abstract}
 \end{figure}
+
+\subsubsection{Delegation}
+\label{sec:delegation-properties}
+
+In the first epoch, every key from the genesis block delegates to itself, as given by \eqref{eq:init-delpmap}.
+
+\begin{equation}
+  \label{eq:init-delpmap}
+  \inference[Initial-delegation-map]
+  {}
+  { \delmap_0 = \Set{(vk_s \mapsto c; \epsilon)}{vk_s \in \VKeyGen \wedge c = (vk_s, vk_s, e_0, \sigma)}}
+\end{equation}
+
+
+When an epoch clock ticks and the current epoch with an index $k$ changes to
+an epoch with an index $k+1$, each list in the delegation map is shrunk to its
+head element, as given by \eqref{eq:next-epoch-delmap}.
+
+\begin{equation}
+  \label{eq:next-epoch-delmap}
+  \inference[Epoch-change]
+  {\delmap_k & \text{epoch clock tick}}
+  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_s \mapsto c; \epsilon)}{(vk_s \mapsto c; \Lambda) \in \delmap_k}}}
+\end{equation}
+
+
+If a new valid delegation certificate $c = (vk_s, vk_d, e_j, \sigma)$ that is
+a proof that $vk_s$ delegates to $vk_d$ starting in epoch $e_j$ is to be
+added, the delegation map is updated at $vk_s$, as given by
+\eqref{eq:new-del-cert}.
+
+\begin{equation}
+  \label{eq:new-del-cert}
+  \inference[New-certificate]
+  {
+    {
+      \begin{array}{c}
+        (vk_s \mapsto c_h; \lambda) \in \delmap_k \\
+        c_h = (vk_s, vk_{d_1}, e_h, \sigma_h)
+      \end{array}
+    }
+    &
+    {
+      \begin{array}{c}
+        c = (vk_s, vk_d, e_j, \sigma) \\
+        e_j > e_h
+      \end{array}
+    }
+  }
+  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\}}
+\end{equation}
 
 \subsubsection{Block Validity}
 \label{sec:block-valid}
 % This definition is adopted from legacy-free-plan.md, which is written by
 % Duncan Coutts
 
-A block $\var{b}$ is valid if:
+A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
 \item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_g, vk_d, \sigma)$ exists,
-\item the corresponding certificate $c$ is signed by a key $sk_g$ from the
+  certificate $c = (vk_s, vk_d, e, \sigma')$ exists,
+\item the corresponding certificate $c$ is signed by a key $sk_s$ from the
   genesis block, and
 \item in the rolling window of the last $K$ blocks the number of blocks signed
-  by keys that $sk_g$ delegated to is no more than a threshold $K \cdot t$,
+  by keys that $sk_s$ delegated to is no more than a threshold $K \cdot t$,
   where $t$ is a constant that we will pick in the range
   $1/5 \leq t \leq 1/4$.
 \end{enumerate}
+
 
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
 \begin{equation}
   \label{eq:sign-verify}
-  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\\
+  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
-\begin{equation}
+
+\marko{Add a rule for the \delegatename\ function with a precondition of at most one delegation per key per epoch.}
+
+The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
+
+\begin{align}
   \label{eq:signed-window}
-  \signedwindow{sk}{s} = \Set{b}{b \in s \wedge \signed{sk}{b}}
+  \signedwindow{sk_s}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
+  & \wedge \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \signed{sk_d}{b}}
+\end{align}
+
+
+A block has a block preceding it if it is not the genesis block:
+
+\begin{equation}
+  \label{eq:predb}
+  \predb{b} =
+  \begin{cases}
+    1 & \quad \text{if } b \in \GBlock \\
+    b' & \quad \text{if } b = (h, sl, d, \sigma) \in \RBlock \wedge \hash{b'} = h
+  \end{cases}
 \end{equation}
+
+Next, a polymorphic function that takes an option type into a corresponding
+sequence is defined, which can be applied to the $\Block$ type as well:
+
+\begin{equation}
+  \label{eq:toseq}
+  \toseq{a} =
+  \begin{cases}
+    \epsilon & \quad \text{if } a = 1 \\
+    \epsilon; a & \quad \text{otherwise}
+  \end{cases}
+\end{equation}
+
+The function \predbname\ can be monadically applied $m$ times in a row, which
+is written as $\predb^m{b}$.
+
+A helper function that composes the \predbname\ and the \toseqname\
+functions is defined as:
+
+\begin{equation}
+  \label{eq:predbseq}
+  \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
+\end{equation}
+
+Analogously to the \predbname\ function, $\predbseq^m{b}$ is defined as:
+
+\begin{equation}
+  \label{eq:predbseqton}
+  \predbseq^m{b} = (\text{\toseqname} \circ \text{\predbname}^m)(b)
+\end{equation}
+
+Finally, the block validity relation is defined as:
 
 \begin{align}
   \label{eq:valid-block}
-    \valid{b}{vk}{c} \implies &
-      \exists sk. (sk, vk) \in \SKeyGen \times \VKey \wedge
-      \delegate{sk} = c \wedge \\
+    \valid{b}{vk_d} \implies &
+      \exists sk_s \exists vk_s. (sk_s, vk_s) \in \SKeyGen \times \VKey \wedge \\
+      & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
+      \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \\
       & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
-        \sign{sk}{h}{sl}{d} = \sigma \wedge \\
-      & | \signedwindow{sk}{\var{B_{sl-K+1}} \cdots \var{B_{sl}}} | \leq K \cdot t.
+        \sign{sk_d}{h}{sl}{d} = \sigma \wedge \\
+      & | \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
 \end{align}
+
+The chain extension rule is:
 
 \begin{equation}
   \label{eq:chain-extension}
   \inference[Chain-extension]
-  {\var{B_0}\var{B_1}\cdots\var{B_{\ell}} & \valid{\var{B_{\ell+1}}}{vk}{c}
+  {
+    {\begin{array}{c}
+       \beta \\
+       b = (h, sl, d, \sigma)
+    \end{array}}
+    &
+    {\begin{array}{c}
+       \sign{sk_d}{h}{sl}{d} = \sigma \\
+       \valid{b}{vk_d} \\
+       \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \\
+       \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t
+    \end{array}}
   }
-  {{\var{B_0}\var{B_1}\cdots\var{B_{\ell}}} \trans{}{\var{B_{\ell+1}}} {\var{B_0}\var{B_1}\cdots\var{B_{\ell}}\var{B_{\ell+1}}}}
+  {\beta \trans{}{\var{b}} {\beta; b}}
 \end{equation}
 
 \end{document}
