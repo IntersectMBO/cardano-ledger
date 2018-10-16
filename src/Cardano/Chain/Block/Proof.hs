@@ -1,18 +1,21 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Proof
        ( Proof (..)
        , mkProof
+
+       , ProofError (..)
        , checkProof
        ) where
 
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, sformat, shown, (%))
+import           Formatting (bprint, build, shown, (%))
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -60,17 +63,21 @@ mkProof body = Proof
   , proofUpdate     = Update.mkProof $ bodyUpdatePayload body
   }
 
-checkProof :: MonadError Text m => Body -> Proof -> m ()
-checkProof body proof = do
-  let calculatedProof = mkProof body
-  let
-    errMsg = sformat
-      ( "Incorrect proof of body. "
-      % "Proof in header: "
-      % build
-      % ", calculated proof: "
-      % build
+data ProofError = ProofIncorrect Proof Proof
+
+instance B.Buildable ProofError where
+  build = \case
+    ProofIncorrect p p' -> bprint
+      ( "Incorrect proof of Body.\n"
+      % "Proof in header:\n"
+      % build % "\n"
+      % "Calculated proof:\n"
+      % build % "\n"
       )
-      proof
-      calculatedProof
-  unless (calculatedProof == proof) $ throwError errMsg
+      p
+      p'
+
+checkProof :: MonadError ProofError m => Body -> Proof -> m ()
+checkProof body proof = unless (calculatedProof == proof)
+  $ throwError (ProofIncorrect proof calculatedProof)
+  where calculatedProof = mkProof body

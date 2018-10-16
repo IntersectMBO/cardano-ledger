@@ -2,11 +2,13 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
 module Cardano.Chain.Update.SoftwareVersion
        ( SoftwareVersion (..)
+       , SoftwareVersionError (..)
        , NumSoftwareVersion
        , checkSoftwareVersion
        ) where
@@ -14,7 +16,7 @@ module Cardano.Chain.Update.SoftwareVersion
 import           Cardano.Prelude
 import qualified Prelude
 
-import           Control.Monad.Except (MonadError)
+import           Control.Monad.Except (MonadError (..))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting (bprint, build, formatToString, int, stext, (%))
 import qualified Formatting.Buildable as B (Buildable (..))
@@ -47,8 +49,22 @@ instance Bi SoftwareVersion where
     enforceSize "SoftwareVersion" 2
     SoftwareVersion <$> decode <*> decode
 
+data SoftwareVersionError =
+  SoftwareVersionApplicationNameError ApplicationNameError
+
+instance B.Buildable SoftwareVersionError where
+  build = \case
+    SoftwareVersionApplicationNameError err -> bprint
+      ( "ApplicationName was invalid when checking SoftwareVersion\n Error:"
+      % build
+      )
+      err
+
 -- | A software version is valid iff its application name is valid
-checkSoftwareVersion :: MonadError Text m => SoftwareVersion -> m ()
-checkSoftwareVersion sv = checkApplicationName (svAppName sv)
+checkSoftwareVersion
+  :: MonadError SoftwareVersionError m => SoftwareVersion -> m ()
+checkSoftwareVersion sv =
+  either (throwError . SoftwareVersionApplicationNameError) pure
+    $ checkApplicationName (svAppName sv)
 
 deriveJSON defaultOptions ''SoftwareVersion

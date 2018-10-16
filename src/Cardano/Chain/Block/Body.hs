@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Body
        ( Body (..)
+       , BodyError (..)
        , bodyTxs
        , bodyWitnesses
        , verifyBody
@@ -13,10 +15,12 @@ module Cardano.Chain.Block.Body
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
+import           Formatting (bprint, build, (%))
+import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload,
-                     checkPayload)
+                     PayloadError (..), checkPayload)
 import           Cardano.Chain.Ssc (SscPayload (..))
 import           Cardano.Chain.Txp.Tx (Tx)
 import           Cardano.Chain.Txp.TxPayload (TxPayload (..), txpTxs,
@@ -50,10 +54,25 @@ instance Bi Body where
     enforceSize "Body" 4
     Body <$> decode <*> decode <*> decode <*> decode
 
-verifyBody :: MonadError Text m => ProtocolMagic -> Body -> m ()
+data BodyError
+  = BodyDelegationPayloadError Delegation.PayloadError
+  | BodyUpdatePayloadError Update.PayloadError
+
+instance B.Buildable BodyError where
+  build = \case
+    BodyDelegationPayloadError err -> bprint
+      ("Delegation.Payload was invalid while checking Body.\n Error: " % build)
+      err
+    BodyUpdatePayloadError err -> bprint
+      ("Update.Payload was invalid while checking Body.\n Error: " % build)
+      err
+
+verifyBody :: MonadError BodyError m => ProtocolMagic -> Body -> m ()
 verifyBody pm mb = do
-  Delegation.checkPayload pm (bodyDlgPayload mb)
-  Update.checkPayload pm (bodyUpdatePayload mb)
+  either (throwError . BodyDelegationPayloadError) pure
+    $ Delegation.checkPayload pm (bodyDlgPayload mb)
+  either (throwError . BodyUpdatePayloadError) pure
+    $ Update.checkPayload pm (bodyUpdatePayload mb)
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload
