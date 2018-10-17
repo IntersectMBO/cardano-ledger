@@ -1,23 +1,25 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=2.5cm]{geometry}
-%\usepackage[a-1b]{pdfx}
 \usepackage{microtype}
 \usepackage{mathpazo} % nice fonts
-\usepackage{amsmath, amssymb, stmaryrd, latexsym, mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage{todonotes}
 \usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \hypersetup{
-  pdftitle={Delegation Ledger Rules},
-  pdfauthor={},
+  pdftitle={A Simplified Formal Specification of a UTxO Ledger},
   breaklinks=true,
   bookmarks=true,
   colorlinks=false,
-  linkcolor={black},
-  citecolor={black},
+  linkcolor={blue},
+  citecolor={blue},
   urlcolor={blue},
   linkbordercolor={white},
   citebordercolor={white},
@@ -27,11 +29,29 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 
+% For notes containing warnings, questions, etc.
+\usepackage[tikz]{bclogo}
+\newenvironment{question}
+  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
+  {\end{bclogo}}
+\newenvironment{todo}
+  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
+    {\end{bclogo}}
+\newenvironment{note}
+  {\begin{bclogo}[logo=\bcattention, couleur=orange!10, arrondi=0.2]{ NOTE}}
+  {\end{bclogo}}
+
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
 
 \newcommand{\powerset}[1]{\mathbb{P}~#1}
-\newcommand{\sequencetype}[1]{#1^\star}
 \newcommand{\restrictdom}{\lhd}
 \newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
 \newcommand{\restrictrange}{\rhd}
@@ -42,11 +62,40 @@
 \newcommand{\var}[1]{\mathit{#1}}
 \newcommand{\fun}[1]{\mathsf{#1}}
 \newcommand{\type}[1]{\mathsf{#1}}
-\newcommand{\serialised}[1]{\llbracket #1 \rrbracket}
-\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
-\newcommand{\verified}[3]{\fun{verify} ~ #1 ~ \llbracket #2 \rrbracket ~ #3}
-\newcommand{\size}[1]{\left| #1 \right|}
-\newcommand{\transitionarrow}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+
+%%
+%% Types
+%%
+\newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\Coin}{\type{Coin}}
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\PState}{\type{PState}}
+
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
+\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
+\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
+\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
+\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+
+%%
+%% Functions
+%%
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
+\newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
+\newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
+\newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
+\newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
+\newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
+\newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
+\newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
+\newcommand{\addr}[1]{\fun{addr_{rwd}}~ \var{#1}}
+
 
 \begin{document}
 
@@ -84,49 +133,42 @@ We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
 For stake to be active in the blockchain protocol,
-the associated verification stake key must be registered,
+(i.e. eligible for participation in the leader election)
+the associated verification stake key must be registered
 and its staking rights must be delegated to an active stake pool.
 \footnote{Individuals who wish to participate in the protocol can
 register themselves as a stake pool.}
 
-Stake keys are registered/deregistered through the use of
-registration/deregistration certificates.
-Stake is delegated through the use of delegation certificates.
-Finally, stake pools are registered/retired through the use of
-registration/retirement certificates.
+Stake keys are registered (deregistered) through the use of
+registration (deregistration) certificates.
+Registered stake keys are delegated through the use of delegation certificates.
+Finally, stake pools are registered (retired) through the use of
+registration (retirement) certificates.
 
 Stake pool retirement is handled a bit differently than stake key deregistration.
 Stake keys are considered inactive as soon as a deregistration certificate
 is applied to the ledger state.
-Stake pool retirement certificates, however, include a epoch in which it will retire,
-and is therefore not actually retired until the corresponding epoch begins.
+Stake pool retirement certificates, however, specify the epoch in
+which it will retire.
 
 \section{Notation}
+
+\begin{note}
+There is a lot of common notation between our specifications.
+We will probably put the common notation in a standalone document
+and reference this document here in this section.
+\end{note}
 
 We use set theory and predicate logic as our specification language.
 Sometimes we define a sets that correspond to types that we intentionally
 leave abstract. The interpretation is that any choice will do provided that
 the required operations on these sets all work out.
 
-A few points on notation:
-\begin{itemize}
-\item We use the notation $\powerset{\type{T}}$ to mean the set of sets of
-      $\type{T}$. The corresponding Haskell type would be
-      $\type{Set} ~ \type{T}$.
-\item We use the notation $\sequencetype{\type{T}}$ to mean the set of
-      sequences of $\type{T}$. The corresponding Haskell type would
-      be $[\type{T}]$.
-\item We use $(x,y) \in \type{X} \times \type{Y}$ for tuples as elements of a
-      relation.
-\item We use $x \mapsto y \in \type{X} \mapsto \type{Y}$ for elements of a
-      function.
-\end{itemize}
-%
 It is worth noting that we use set theoretic functions in two ways: one
 that corresponds to the types of computations, and one that corresponds to
 finite map data structures.
 
-In \cref{fig:notation} we define some extra operators on relations (including
+In \cref{fig:nonstandard-notation} we define some extra operators on relations (including
 finite mappings) that are not standard set theory notation.
 
 \begin{figure}
@@ -148,262 +190,270 @@ finite mappings) that are not standard set theory notation.
 & \text{range exclusion}
 \end{align*}
 \caption{Extra non-standard notation on finite mappings}
-\label{fig:notation}
+\label{fig:nonstandard-notation}
 \end{figure}
-
-\subsection{State Transition Notation}
-
-In this specification we consider transactions and certificates to be
-state transformations of the ledger state.
-The state transition system will be described in terms of a collection of
-rules of the following form:
-
-%
-\begin{equation*}
-\frac{
-  \text{local definitions} \qquad  \text{side conditions}
-}{
-  \var{s}
-  \transitionarrow{}{\var{x}}
-  \var{s}^\prime
-}
-\textsc{rule name}
-\end{equation*}
-%
-
-The way to read this is as follows. The system can transition using this rule
-(``rule name'') from a starting state $s$ to a new state $s^\prime$ provided
-that the side conditions hold. All variables introduced in the transition
-itself -- $x$ in the example -- and in local definitions are in scope for
-other side conditions or the final state.
 
 \section{Delegation in Isolation}
 
 Delegation requires the following to be tracked by the ledger state:
-the active stake keys, the delegation map from active stake keys to stake pools,
-the active stake pools, and upcoming stake pools retirements.
-Additionally, the blockchain protocol rewards active stake, and so we must
+the registered stake keys, the delegation map from registered stake keys to stake
+pools, the registered stake pools, and upcoming stake pool retirements.
+Additionally, the blockchain protocol rewards eligible stake, and so we must
 also include a mapping from active stake keys to rewards.
 
-In \cref{fig:basic_delegation} we give the delegation primitives, and in
-\cref{fig:delegation_ledger_state} we give the ledger state needed to handle
-delegation in isolation.
+In \cref{fig:delegation-definitons} we give the delegation primitives.
 
-The rules for registering and delegating stake keys are given in \cref{fig:delegation_transitions}.
-The rules for registering stake pools are given in \cref{fig:stake_pool_rules}.
+The rules for registering and delegating stake keys are given in \cref{fig:delegation-rules}.
+The rules for registering stake pools are given in \cref{fig:pool-rules}.
 
+%%
+%% Figure - Delegation Definitions
+%%
 \begin{figure}
-
-\emph{Primitive types}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}lr}
-  vk & \type{VKey} & \text{verification key}
-\\
-  hk & \type{Hash} & \text{hash of a key}
-\\
-  coin & \type{Coin} & \text{currency value}
-\\
-epoch & \type{Epoch} & \text{epoch}
-\end{array}
-\end{equation*}
-%
-\emph{Hash function}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}lr}
-  \fun{hash} & \type{VKey} \to \type{Hash}
-& \text{hashing a key}
-\end{array}
-\end{equation*}
-%
-\emph{Certificate types}
-%
-\begin{equation*}
-\begin{array}{r@{}c@{}l}
-  \type{Cert} &=& \type{Cert_{regkey}} \uniondistinct
-                \type{Cert_{deregkey}} \uniondistinct
-                \type{Cert_{delegate}} \\
-              &\hfill\uniondistinct\;&
-                \type{Cert_{regpool}} \uniondistinct
-                \type{Cert_{retirepool}} \\
-  \textsc{RegKey}(c) \in \type{Cert} &\iff& c \in \type{Cert_{regkey}} \\
-  \textsc{DeregKey}(c) \in \type{Cert} &\iff& c \in \type{Cert_{deregkey}} \\
-  \textsc{Delegate}(c) \in \type{Cert} &\iff& c \in \type{Cert_{delegate}} \\
-  \textsc{RegPool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{regpool}} \\
-  \textsc{RetirePool}(c) \in \type{Cert} &\iff& c \in \type{Cert_{retirepool}} \\
-\end{array}
-\end{equation*}
-
-\caption{Basic Delegation Definitions}
-\label{fig:basic_delegation}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      a & \AddrRWD & \text{reward address} \\
+      vk & \VKey & \text{verification key} \\
+      hk & \HashKey & \text{hash of a key} \\
+      coin & \Coin & \text{currency value} \\
+      epoch & \Epoch & \text{epoch}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Delegation Certificate types}
+  %
+  \begin{equation*}
+  \begin{array}{r@{}c@{}l}
+    \DCert &=& \DCertRegKey \uniondistinct \DCertDeRegKey \uniondistinct \DCertDeleg \\
+                &\hfill\uniondistinct\;& \DCertRegPool \uniondistinct \DCertRetirePool \\
+    \RegKey{c} \in \DCert &\iff& c \in \DCertRegKey \\
+    \DeregKey{c} \in \DCert &\iff& c \in \DCertDeRegKey \\
+    \Delegate{c} \in \DCert &\iff& c \in \DCertDeleg \\
+    \RegPool{c} \in \DCert &\iff& c \in \DCertRegPool\\
+    \RetirePool{c} \in \DCert &\iff& c \in \DCertRetirePool \\
+  \end{array}
+  \end{equation*}
+  %
+  \emph{Delegation States}
+  %
+  \begin{equation*}
+    \begin{array}{l}
+    \DState =
+    \left(\begin{array}{r@{~\in~}lr}
+      \var{stkeys} & \powerset \HashKey & \text{registered stake keys}\\
+      \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+      \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
+    \end{array}\right)
+    \\
+    \\
+    \PState =
+    \left(\begin{array}{r@{~\in~}lr}
+      \var{stpools} & \HashKey \mapsto \DCertRegPool & \text{registered stake pools}\\
+      \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
+    \end{array}\right)
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Delegation Transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+      \powerset (\DState \times \DCert \times \DState)
+  \end{equation*}
+  %
+  \begin{equation*}
+    \_ \vdash \_ \trans{pool}{\_} \_ \in
+      \powerset (\Epoch \times \DState \times \DCert \times \DState)
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+  \fun{hash} & \VKey \to \HashKey
+  & \text{hashing a key}
+  \\
+  \fun{addr_{rwd}} & \HashKey \to \AddrRWD
+  & \text{address of a hashkey}
+  \\
+  \fun{author} & \DCert \to \HashKey
+  & \text{certificate author}
+  \\
+  \fun{pool} & \DCertDeleg \to \HashKey
+  & \text{pool being delegated to}
+  \\
+  \fun{retire} & \DCertRetirePool \to \Epoch
+  & \text{epoch of pool retirement}
+  \end{array}
+  \end{equation*}
+  %
+  
+  \caption{Delegation Definitions}
+  \label{fig:delegation-definitons}
 \end{figure}
 
+%%
+%% Figure - Delegation Rules
+%%
 \begin{figure}
+  \centering
+  \begin{equation}\label{eq:deleg-reg}
+    \inference[Deleg-Reg]
+    {
+      \RegKey{c} & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations}
+      \end{array}
+      \right)
+      \trans{deleg}{\var{c}}
+      \left(
+      \begin{array}{rcl}
+        \var{stkeys} & \union & \{\var{hk}\}\\
+        \var{rewards} & \unionoverride & \{\addr \var{hk} \mapsto 0\}\\
+        \var{delegations}
+      \end{array}
+      \right)
+    }
+  \end{equation}
 
-\emph{Ledger State}
-%
-\begin{equation*}
-\begin{array}{r@{~\in~}lr}
-stkeys & \powerset{\type{VKey}} & \text{registered stake keys}
-\\
-accounts & \type{VKey} \mapsto Coin & \text{reward balances}
-\\
-delegations & \type{VKey} \mapsto \type{VKey} & \text{delegations}
-\\
-stpools & \type{VKey} \mapsto \type{Cert_{regpool}} & \text{registered stake pools}
-\\
-retiring & \type{VKey} \mapsto \type{Epoch} & \text{retiring stake pools}
-\\
-epoch & \type{Epoch} & \text{current epoch}
+  \begin{equation}\label{eq:deleg-dereg}
+    \inference[Deleg-Dereg]
+    {
+      \DeregKey{c} & \cauthor{c} = hk & hk \in \dom \var{stkeys}
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations}
+      \end{array}
+      \right)
+      \trans{deleg}{\var{c}}
+      \left(
+      \begin{array}{rcl}
+        \var{stkeys} & \setminus & \{\var{hk}\}\\
+        \{\addr \var{hk}\} & \subtractdom & \var{rewards} \\
+        \{\var{hk}\} & \subtractdom & \var{delegations}
+      \end{array}
+      \right)
+    }
+  \end{equation}
 
-\end{array}
-\end{equation*}
-%
-\emph{Initial Ledger State}
-%
-\begin{equation*}
-\begin{array}{llllll}
-stkeys = \emptyset
-  & accounts = \emptyset
-  & delegations = \emptyset
-  & stpools = \emptyset
-  & retiring = \emptyset
-  & epoch = 0
-\end{array}
-\end{equation*}
-
-\caption{Ledger State (Delegation in Isolation)}
-\label{fig:delegation_ledger_state}
+  \begin{equation}\label{eq:deleg-deleg}
+    \inference[Deleg-Deleg]
+    {
+      \Delegate{c} & \cauthor{c} = hk & hk \in \dom \var{stkeys}
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations} & \unionoverride & \{\var{hk} \mapsto \pool c\}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Delegation Inference Rules}
+  \label{fig:delegation-rules}
 \end{figure}
 
-\todo[inline]{We do not actually need stKeys since it is equal to the
-domain of the accounts mapping.  Does including it aid in clarity?}
-
+%%
+%% Figure - Pool Rules
+%%
 \begin{figure}
-\begin{equation*}
-\frac{
-  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{regkey}} \qquad
-  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
-  \var{hk_{sk}} \notin \var{stkeys} \qquad
-}{
-  \begin{array}{r}
-    \var{stkeys} \\
-    \var{accounts}
-  \end{array}
-  \transitionarrow{register stake key}{\var{hk_{sk}}}
-  \begin{array}{l}
-    \var{stkeys} \union \{\var{hk_{sk}}\} \\
-    \var{accounts} \union \{\var{hk_{sk}} \mapsto 0\}
-  \end{array}
-}
-\end{equation*}
-%
-\\[1em]
-%
-\begin{equation*}
-\frac{
-  \var{cert} = (\var{vk_{sk}}, \_)\in \type{Cert_{deregkey}} \qquad
-  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
-  \var{hk_{sk}} \in \var{stkeys} \qquad
-}{
-  \begin{array}{r}
-    \var{stkeys} \\ \var{accounts} \\ \var{delegations}
-  \end{array}
-  \transitionarrow{deregister stake key}{\var{hk_{sk}}}
-  \begin{array}{l}
-  \var{stkeys} \setminus \{\var{hk_{sk}}\} \\
-  \{\fun{skAcc}~\var{hk_{sk}}\} \subtractdom \var{accounts} \\
-  \{\var{hk_{sk}}\} \subtractdom \var{delegations}
-  \end{array}
-}
-\end{equation*}
-%
-\\[1em]
-%
-\begin{equation*}
-\frac{
-  \var{cert} = (\var{vk_{sk}}, \var{hk_{sp}}) \in \type{Cert_{delegate}} \qquad
-  \var{hk_{sk}} = \fun{hash} ~ \var{vk_{sk}} \qquad
-  \var{hk_{sk}} \in \var{stkeys} \qquad
-}{
-  \var{delegations}
-  \transitionarrow{delegate}{\var{hk_{sk}}}
-  \var{delegations} \unionoverride \{\var{hk_{sk}} \mapsto \var{hk_{sp}}\}
-}
-\end{equation*}
+  \begin{equation}\label{eq:pool-reg}
+    \inference[Pool-Reg]
+    {
+      \RegPool{c} & \cauthor{c} = hk
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{stpools} \\
+        \var{retiring}
+      \end{array}
+      \right)
+      \trans{pool}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{stpools} & \unionoverride & \{\var{hk} \mapsto c\} \\
+        \{\var{hk}\} & \subtractdom & \var{retiring} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
 
-\caption{State transitions for stake keys and delegation}
-\label{fig:delegation_transitions}
+
+  \begin{equation}\label{eq:pool-ret}
+    \inference[Pool-Retire]
+    {
+    \RetirePool{c} & \cauthor{c} = hk
+  }
+  {
+    \left(
+      \begin{array}{r}
+        \var{stpools} \\
+        \var{retiring}
+      \end{array}
+    \right)
+    \trans{pool}{c}
+    \left(
+      \begin{array}{rcl}
+        \var{stpools} \\
+        \var{retiring} & \unionoverride & \{\var{hk} \mapsto \retire c\} \\
+      \end{array}
+    \right)
+  }
+  \end{equation}
+
+  \begin{equation}\label{eq:pool-reap}
+    \inference[Pool-Reap]
+    {
+    }
+    {
+      \var{cepoch} \vdash
+      \left(
+      \begin{array}{r}
+        \var{stpools} \\
+        \var{retiring}
+      \end{array}
+      \right)
+      \trans{pool}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{retiring}^{-1} ~ \var{cepoch} & \subtractdom & \var{stpools} \\
+        \{\var{cepoch}\} & \subtractrange & \var{retiring} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Pool Inference Rule}
+  \label{fig:pool-rules}
 \end{figure}
 
-\begin{figure}
-
-\begin{equation*}
-\frac{
-  \begin{array}{c}
-    \var{cert} = (\var{vk_{sp}}, \_) \in \type{Cert_{regpool}} \qquad
-    \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
-  \end{array}
-}{
-  \begin{array}{r}
-    \var{stpools} \\
-    \var{retiring}
-  \end{array}
-  \transitionarrow{register stake pool}{\var{hk_{sk}}}
-  \begin{array}{l}
-    \var{stpools} \unionoverride \{\var{hk_{sp}} \mapsto cert\} \\
-    \{\var{hk_{sp}}\} \subtractdom \var{retiring}
-  \end{array}
-}
-\end{equation*}
-%
-\\[1em]
-%
-\begin{equation*}
-\frac{
-  \begin{array}{c}
-    \var{cert} = (\var{vk_{sp}}, e, \_) \in \type{Cert_{retirepool}} \qquad
-    \var{hk_{sp}} = \fun{hash} ~ \var{vk_{sp}}
-    \\[0.3em]
-    \var{hk_{sp}} \in \dom \var{stpools} \qquad
-    \var{epoch} < e < \var{epoch} + E_\var{max} \qquad
-  \end{array}
-}{
-  \var{retiring}
-  \transitionarrow{retire stake pool}{\var{hk_{sk}}, ~ e}
-  \var{retiring} \unionoverride \{ \var{hk_{sp}} \mapsto e \}
-}
-\end{equation*}
-%
-\\[1em]
-%
-\begin{equation*}
-\frac{
-  \var{retiring_{now}} = \{ \var{hk_{sp}} \mid
-                            \var{hk_{sp}} \mapsto e \in \var{retiring}, ~
-                            e = \var{epoch}
-                         \}
-}{
-  \begin{array}{r}
-    \var{stpools} \\
-    \var{retiring}
-  \end{array}
-  \transitionarrow{reap stake pools}{}
-  \begin{array}{l}
-    \var{retiring_{now}} \subtractdom \var{stpools} \\
-    \var{retiring_{now}} \subtractdom \var{retiring}
-  \end{array}
-}
-\end{equation*}
-
-\caption{State transitions for stake pools}
-\label{fig:stake_pool_rules}
-\end{figure}
 
 \section{Delegation with a UTxO Ledger}
 
-\todo[inline]{How should the certificates inside a transaction be ordered?}
+\begin{question}
+How should the certificates inside a transaction be ordered?
+The order in which they appear in the transaction?
+\end{question}
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
