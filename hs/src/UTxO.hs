@@ -24,7 +24,7 @@ module UTxO
   , txouts
   , balance
   , (<|)
-  , (<<|)
+  , (</|)
   -- , verify
   , union
   , makeWitness
@@ -51,7 +51,7 @@ import           Numeric.Natural       (Natural)
 
 import           Keys
 import           Coin                  (Coin(..))
-    
+
 import           Delegation.Certificates (Cert(..))
 
 -- |A hash
@@ -60,9 +60,6 @@ type Hash = Digest SHA256
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
-
--- -- |The address of a transaction output, used to identify the owner.
--- newtype Addr = Addr Hash deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.  It can be either an account based
 -- address for rewards sharing or a UTxO address.
@@ -102,26 +99,6 @@ txouts tx = UTxO $
   where
     transId = txid tx
 
--- |Representation of the owner of key pair.
--- newtype Owner = Owner Natural deriving (Show, Eq, Ord)
-
--- |Signing Key.
--- newtype SKey = SKey Owner deriving (Show, Eq, Ord)
-
--- |Verification Key.
--- newtype VKey = VKey Owner deriving (Show, Eq, Ord)
-
--- |Key Pair.
--- data KeyPair = KeyPair
---   {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
-
--- |Return a key pair for a given owner.
--- keyPair :: Owner -> KeyPair
--- keyPair owner = KeyPair (SKey owner) (VKey owner)
-
--- |A digital signature.
--- data Sig a = Sig a Owner deriving (Show, Eq, Ord)
-
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord)
 
@@ -129,25 +106,17 @@ data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord)
 --
 --     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
 data TxWits = TxWits
-              { body     :: Tx
-              , witneses :: Set Wit
+              { body       :: Tx
+              , witnessSet :: Set Wit
               } deriving (Show, Eq, Ord)
 
 
 -- |A ledger
 type Ledger = [TxWits]
 
--- |Produce a digital signature
--- sign :: SKey -> a -> Sig a
--- sign (SKey k) d = Sig d k
-
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
-
--- |Verify a digital signature
--- verify :: Eq a => VKey -> a -> Sig a -> Bool
--- verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 -- |Domain restriction
 (<|) :: Set TxIn -> UTxO -> UTxO
@@ -155,8 +124,8 @@ ins <| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
-(<<|) :: Set TxIn -> UTxO -> UTxO
-ins <<| (UTxO utxo) =
+(</|) :: Set TxIn -> UTxO -> UTxO
+ins </| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
 
 -- |Combine two collections of UTxO.
@@ -170,10 +139,6 @@ union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 balance :: UTxO -> Coin
 balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
-
--- instance BA.ByteArrayAccess VKey where
---   length        = BA.length . BS.pack . show
---   withByteArray = BA.withByteArray . BS.pack . show
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
