@@ -15,6 +15,7 @@ module LedgerState
   , asStateTransition
   , delegatedStake
   , retirePools
+  , emptyDelegation
   -- * Genesis State
   , genesisId
   , genesisState
@@ -27,6 +28,7 @@ import           Data.List   (find)
 import qualified Data.Map    as Map
 import           Data.Maybe  (isJust, mapMaybe)
 import qualified Data.Set    as Set
+import           Numeric.Natural       (Natural)
 
 import           Coin        (Coin(..))
 import           Keys
@@ -34,7 +36,7 @@ import           UTxO
 
 import           Delegation.Certificates (Cert(..))
 import           Delegation.StakePool (Delegation(..), StakePool(..))
-    
+
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
 data ValidationError =
@@ -59,23 +61,35 @@ instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
 
+-- |The state associated with the current stake delegation.
+data DelegationState =
+    DelegationState
+    {
+    -- |The active accounts.
+      getAccounts    :: Map.Map HashKey Coin
+    -- |The active stake keys.
+    , getStKeys      :: Set.Set HashKey
+    -- |The current delegations.
+    , getDelegations :: Map.Map HashKey HashKey
+    -- |The active stake pools.
+    , getStPools     :: Set.Set HashKey -- TODO in doc its a map to Cert
+    -- |A map of retiring stake pools to the epoch when they retire.
+    , getRetiring    :: Map.Map HashKey Natural
+    } deriving (Show, Eq)
+
+emptyDelegation :: DelegationState
+emptyDelegation =
+    DelegationState Map.empty Set.empty Map.empty Set.empty Map.empty
+
 -- |The state associated with a 'Ledger'.
 data LedgerState =
   LedgerState
   { -- |The current unspent transaction outputs.
-    getUtxo        :: UTxO
-    -- |The active accounts.
-  , getAccounts    :: Map.Map HashKey Coin
-    -- |The active stake keys.
-  , getStKeys      :: Set.Set HashKey
-    -- |The current delegations.
-  , getDelegations :: Map.Map HashKey HashKey
-    -- |The active stake pools.
-  , getStPools     :: Set.Set HashKey
-    -- |A map of retiring stake pools to the epoch when they retire.
-  , getRetiring    :: Map.Map HashKey Int
+    getUtxo            :: UTxO
+    -- |The current delegation state
+  , getDelegationState :: DelegationState
     -- |The current epoch.
-  , getEpoch       :: Int
+  , getEpoch           :: Natural
   } deriving (Show, Eq)
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
@@ -89,11 +103,7 @@ genesisState outs = LedgerState
   (UTxO (Map.fromList
     [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
   ))
-  Map.empty
-  Set.empty
-  Map.empty
-  Set.empty
-  Map.empty
+  emptyDelegation
   0
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
@@ -144,12 +154,8 @@ valid tx l =
 -- |Apply a raw transaction body as a state transition function on the ledger state.
 applyTx :: LedgerState -> Tx -> LedgerState
 applyTx ls tx =
-    LedgerState (txins tx <<| getUtxo ls `union` txouts tx)
-                (getAccounts ls)
-                (getStKeys ls)
-                (getDelegations ls)
-                (getStPools ls)
-                (getRetiring ls)
+    LedgerState (txins tx </| getUtxo ls `union` txouts tx)
+                (getDelegationState ls)
                 (getEpoch ls)
 
 -- |In the case where a transaction is valid for a given ledger state,
@@ -165,36 +171,67 @@ asStateTransition ls tx =
 -- Functions for stake delegation model
 
 -- |Retire the appropriate stake pools when the epoch changes.
-retirePools :: LedgerState -> Int -> LedgerState
-retirePools ls epoch = ls
-  { getStPools = Set.difference (getStPools ls) (Map.keysSet retiring)
-  , getRetiring = active }
-  where (active, retiring) = Map.partition ((/=) epoch) (getRetiring ls)
+retirePools :: LedgerState -> Natural -> LedgerState
+retirePools ls@(LedgerState _ ds _) epoch = ls
+    { getDelegationState = ds
+      { getStPools = Set.difference (getStPools ds) (Map.keysSet retiring)
+      , getRetiring = active }
+    }
+  where (active, retiring) = Map.partition ((/=) epoch) (getRetiring ds)
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls { getUtxo = newUTxOs }
-  where newUTxOs = (txins tx <<| (getUtxo ls) `union` txouts tx)
+  where newUTxOs = (txins tx </| (getUtxo ls) `union` txouts tx)
 
 -- |Apply a certificate as a state transition function on the ledger state.
 applyCert :: Cert -> LedgerState -> LedgerState
-applyCert (RegKey key) ls = ls
-  { getStKeys = (Set.insert (hashKey key) (getStKeys ls))
-  , getAccounts = (Map.insert (hashKey key) (Coin 0) (getAccounts ls))}
-applyCert (DeRegKey key) ls = ls
-  { getStKeys = (Set.delete (hashKey key) (getStKeys ls))
-  , getAccounts = Map.delete (hashKey key) (getAccounts ls)
-  , getDelegations = Map.delete (hashKey key) (getDelegations ls)
-    }
-applyCert (Delegate (Delegation source target)) ls =
-  ls {getDelegations =
-    Map.insert (hashKey source) (hashKey target) (getDelegations ls)}
-applyCert (RegPool sp) ls = ls
-  { getStPools = (Set.insert hsk (getStPools ls))
-  , getRetiring = Map.delete hsk (getRetiring ls)}
+applyCert (RegKey key) ls@(LedgerState _ ds _) =
+  if not $ Set.member hk_sk (getStKeys ds)
+  then ls
+  { getDelegationState = ds
+    { getStKeys = (Set.insert hk_sk (getStKeys ds))
+    , getAccounts = (Map.insert hk_sk (Coin 0) (getAccounts ds))}
+  }
+  else ls
+    where hk_sk = hashKey key
+
+applyCert (DeRegKey key) ls@(LedgerState _ ds _) =
+  if Set.member hk_sk (getStKeys ds) then ls
+  { getDelegationState = ds
+    { getStKeys = Set.delete hk_sk (getStKeys ds)
+    , getAccounts = Map.delete hk_sk (getAccounts ds)
+    , getDelegations = Map.delete hk_sk (getDelegations ds) }
+  }
+  else ls
+    where hk_sk = hashKey key
+
+-- TODO do we also have to check hashKey target?
+applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
+  if Set.member hk_src (getStKeys ds)
+  then ls
+  {getDelegationState = ds
+    { getDelegations =
+        Map.insert hk_src (hashKey target) (getDelegations ds)}
+  }
+  else ls
+    where hk_src = hashKey source
+
+applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
+  { getDelegationState = ds
+    { getStPools = Set.insert hsk (getStPools ds)
+    , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
-applyCert (RetirePool key epoch) ls = ls {getRetiring = retiring}
-  where retiring = Map.insert (hashKey key) epoch (getRetiring ls)
+
+-- TODO check epoch
+applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) =
+  if hk_sp `Set.member` (getStPools ds)
+  then ls
+  { getDelegationState = ds
+    { getRetiring = retiring}}
+  else ls
+  where retiring = Map.insert hk_sp epoch (getRetiring ds)
+        hk_sp = hashKey key
 
 -- |Apply a collection of certificates as a state transition function on
 -- the ledger state.
@@ -208,7 +245,7 @@ applyTransaction ls tx = applyTxBody (applyCerts ls cs) (body tx)
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls = Map.fromListWith mappend delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutputs
   where
     getOutputs (UTxO utxo) = Map.elems utxo
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do
@@ -216,4 +253,4 @@ delegatedStake ls = Map.fromListWith mappend delegatedOutputs
       return (pool, c)
     addStake _ _ = Nothing
     outs = getOutputs . getUtxo $ ls
-    delegatedOutputs = mapMaybe (addStake (getDelegations ls)) outs
+    delegatedOutputs = mapMaybe (addStake (getDelegations ds)) outs
