@@ -72,7 +72,7 @@ data DelegationState =
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
-    , getStPools     :: Set.Set HashKey
+    , getStPools     :: Set.Set HashKey -- TODO in doc its a map to Cert
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Natural
     } deriving (Show, Eq)
@@ -186,35 +186,52 @@ applyTxBody ls tx = ls { getUtxo = newUTxOs }
 
 -- |Apply a certificate as a state transition function on the ledger state.
 applyCert :: Cert -> LedgerState -> LedgerState
-applyCert (RegKey key) ls@(LedgerState _ ds _) = ls
-    { getDelegationState = ds
-      { getStKeys = (Set.insert (hashKey key) (getStKeys ds))
-      , getAccounts = (Map.insert (hashKey key) (Coin 0) (getAccounts ds))}
-    }
-
-applyCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
+applyCert (RegKey key) ls@(LedgerState _ ds _) =
+  if not $ Set.member hk_sk (getStKeys ds)
+  then ls
   { getDelegationState = ds
-    { getStKeys = (Set.delete (hashKey key) (getStKeys ds))
-    , getAccounts = Map.delete (hashKey key) (getAccounts ds)
-    , getDelegations = Map.delete (hashKey key) (getDelegations ds)
-    }
+    { getStKeys = (Set.insert hk_sk (getStKeys ds))
+    , getAccounts = (Map.insert hk_sk (Coin 0) (getAccounts ds))}
   }
+  else ls
+    where hk_sk = hashKey key
 
-applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
+applyCert (DeRegKey key) ls@(LedgerState _ ds _) =
+  if Set.member hk_sk (getStKeys ds) then ls
+  { getDelegationState = ds
+    { getStKeys = Set.delete hk_sk (getStKeys ds)
+    , getAccounts = Map.delete hk_sk (getAccounts ds)
+    , getDelegations = Map.delete hk_sk (getDelegations ds) }
+  }
+  else ls
+    where hk_sk = hashKey key
+
+-- TODO do we also have to check hashKey target?
+applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
+  if Set.member hk_src (getStKeys ds)
+  then ls
   {getDelegationState = ds
-   { getDelegations =
-         Map.insert (hashKey source) (hashKey target) (getDelegations ds)}}
+    { getDelegations =
+        Map.insert hk_src (hashKey target) (getDelegations ds)}
+  }
+  else ls
+    where hk_src = hashKey source
 
 applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
-    { getStPools = (Set.insert hsk (getStPools ds))
+    { getStPools = Set.insert hsk (getStPools ds)
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
 
-applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
+-- TODO check epoch
+applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) =
+  if hk_sp `Set.member` (getStPools ds)
+  then ls
   { getDelegationState = ds
     { getRetiring = retiring}}
-  where retiring = Map.insert (hashKey key) epoch (getRetiring ds)
+  else ls
+  where retiring = Map.insert hk_sp epoch (getRetiring ds)
+        hk_sp = hashKey key
 
 -- |Apply a collection of certificates as a state transition function on
 -- the ledger state.
