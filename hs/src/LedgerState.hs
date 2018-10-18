@@ -40,13 +40,21 @@ import           Delegation.StakePool (Delegation(..), StakePool(..))
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
 data ValidationError =
-                     -- | The transaction inputs are not valid.
-                       BadInputs
-                     -- | The transaction results in an increased total balance of the ledger.
-                     | IncreasedTotalBalance
-                     -- | The transaction does not have the required witnesses.
-                     | InsuffientWitnesses
-                     deriving (Show, Eq)
+  -- | The transaction inputs are not valid.
+    BadInputs
+  -- | The transaction results in an increased total balance of the ledger.
+  | IncreasedTotalBalance
+  -- | The transaction does not have the required witnesses.
+  | InsuffientWitnesses
+  -- | A stake key cannot be registered again.
+  | StakeKeyAlreadyRegistered
+  -- | A stake key must be registered to be used or deregistered.
+  | StakeKeyNotRegistered
+  -- | The stake key to which is delegated is not known.
+  | StakeTargetUnknown
+  -- | Stake pool not registered for key, cannot be retired.
+  | StakePoolNotRegisteredOnKey
+    deriving (Show, Eq)
 
 -- |The validity of a transaction, where an invalid transaction
 -- is represented by list of errors.
