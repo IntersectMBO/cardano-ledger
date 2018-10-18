@@ -208,22 +208,25 @@ applyCert (DeRegKey key) ls@(LedgerState _ ds _) =
 
 -- TODO do we also have to check hashKey target?
 applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
-  if Set.member hk_src (getStKeys ds)
+  if Set.member hk_src (getStKeys ds) &&
+     Set.member hk_target (getStPools ds)
   then ls
   {getDelegationState = ds
     { getDelegations =
-        Map.insert hk_src (hashKey target) (getDelegations ds)}
+        Map.insert hk_src hk_target (getDelegations ds)}
   }
   else ls
-    where hk_src = hashKey source
+    where hk_src    = hashKey source
+          hk_target = hashKey target
 
+-- TODO what happens if there's already a pool registered with that key?
 applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStPools = Set.insert hsk (getStPools ds)
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
 
--- TODO check epoch
+-- TODO check epoch (not in new doc atm.)
 applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) =
   if hk_sp `Set.member` (getStPools ds)
   then ls
