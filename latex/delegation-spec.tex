@@ -448,6 +448,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation}\label{eq:pool-reap}
     \inference[Pool-Reap]
     {
+      \var{retired} = \var{retiring}^{-1}~\var{cepoch}
+      & \var{retired} \neq \emptyset
     }
     {
       \var{cepoch} \vdash
@@ -460,8 +462,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \trans{pool}{c}
       \left(
       \begin{array}{rcl}
-        \var{retiring}^{-1} ~ \var{cepoch} & \subtractdom & \var{stpools} \\
-        \var{retiring} & \subtractrange & \{\var{cepoch}\} \\
+        \var{retired} & \subtractdom & \var{stpools} \\
+        \var{retired} & \subtractdom & \{\var{cepoch}\} \\
       \end{array}
       \right)
     }
