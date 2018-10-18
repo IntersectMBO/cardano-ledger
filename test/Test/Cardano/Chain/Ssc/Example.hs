@@ -8,10 +8,7 @@ module Test.Cardano.Chain.Ssc.Example
        , exampleOpening
        , exampleOpeningsMap
        , exampleSignedCommitment
-       , exampleSscPayload
-       , exampleSscProof
        , exampleVssCertificate
-       , exampleVssCertificatesHash
        , exampleVssCertificatesMap
        , randCommitmentAndOpening
        ) where
@@ -31,14 +28,13 @@ import           Cardano.Chain.Common (mkStakeholderId)
 import           Cardano.Chain.Slotting (EpochIndex (..))
 import           Cardano.Chain.Ssc (Commitment (..), CommitmentSignature,
                      CommitmentsMap, InnerSharesMap, Opening (..), OpeningsMap,
-                     SignedCommitment, SscPayload (..), SscProof (..),
-                     VssCertificate (..), VssCertificatesHash,
+                     SignedCommitment, VssCertificate (..),
                      VssCertificatesMap (..), mkCommitmentsMap,
                      mkVssCertificate, mkVssCertificatesMap)
 import           Cardano.Crypto (EncShare (..), ProtocolMagic (..), Secret (..),
                      SecretProof (..), SignTag (..), Threshold, VssKeyPair,
                      VssPublicKey (..), decryptShare, deterministic,
-                     deterministicVssKeyGen, genSharedSecret, hash, sign,
+                     deterministicVssKeyGen, genSharedSecret, sign,
                      toVssPublicKey)
 
 import           Test.Cardano.Chain.Common.Example (exampleStakeholderId)
@@ -169,24 +165,6 @@ exampleVssCertificates offset num = map vssCert [0 .. num - 1]
 exampleVssCertificatesMap :: Int -> Int -> VssCertificatesMap
 exampleVssCertificatesMap offset num =
     mkVssCertificatesMap $ exampleVssCertificates offset num
-
-
-exampleVssCertificatesHash :: Int -> Int -> VssCertificatesHash
-exampleVssCertificatesHash offset len =
-    hash . getVssCertificatesMap $ exampleVssCertificatesMap offset len
-
-exampleSscProof :: SscProof
-exampleSscProof = CommitmentsProof
-    (hash exampleCommitmentsMap)
-    (exampleVssCertificatesHash 10 4)
-
-exampleSscPayload :: SscPayload
-exampleSscPayload = SharesPayload
-    exampleSharesMap
-    (exampleVssCertificatesMap 10 4)
-  where
-    exampleSharesMap =
-        Map.fromList $ [(exampleStakeholderId, exampleInnerSharesMap 3 1)]
 
 -- | Generate random SharedSeed
 randCommitmentAndOpening

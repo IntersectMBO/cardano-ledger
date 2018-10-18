@@ -65,7 +65,7 @@ import           Cardano.Prelude
 
 import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, int, sformat, stext, (%))
+import           Formatting (bprint, build, int, sformat, shown, stext, (%))
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -98,7 +98,7 @@ import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
 -- import           Cardano.Chain.Genesis.Config as Genesis (Config (..))
 import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
 import           Cardano.Chain.Slotting (EpochIndex, SlotId (..))
-import           Cardano.Chain.Ssc.Payload (SscPayload)
+import           Cardano.Chain.Ssc (SscPayload)
 import           Cardano.Chain.Txp.TxPayload (TxPayload)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import qualified Cardano.Chain.Update.Payload as Update (Payload)
@@ -399,7 +399,7 @@ instance B.Buildable MainBlock where
     ( "MainBlock:\n"
     % "  " % build % "  transactions (" % int % " items): " % listJson % "\n"
     % "  " % build % "\n"
-    % "  " % build % "\n"
+    % "  " % shown % "\n"
     % "  update payload: " % build % "\n"
     % "  " % build
     )
@@ -408,6 +408,6 @@ instance B.Buildable MainBlock where
     txs
     (mainBlock ^. mainBlockDlgPayload)
     (mainBlock ^. mainBlockSscPayload)
-    (mainBlock ^. mainBlockSscPayload)
+    (mainBlock ^. mainBlockUpdatePayload)
     (mainBlock ^. gbExtra)
     where txs = mainBlock ^. gbBody . mbTxs

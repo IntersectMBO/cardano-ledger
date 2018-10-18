@@ -38,6 +38,13 @@ module Cardano.Crypto.SecretSharing
        , verifyDecShare
        , verifySecret
 
+         -- * Decoding deprecated types
+       , dropDecShare
+       , dropEncShare
+       , dropSecret
+       , dropSecretProof
+       , dropVssPublicKey
+
        , testScrape
        ) where
 
@@ -56,8 +63,8 @@ import           Formatting (bprint, build, int, sformat, stext, (%))
 import qualified Formatting.Buildable as B (Buildable (..))
 
 import           Cardano.Binary.Class (AsBinary (..), AsBinaryClass (..),
-                     Bi (..), decodeFull', encodeListLen, enforceSize,
-                     matchSize, serialize')
+                     Bi (..), Dropper, decodeFull', dropBytes, dropList,
+                     encodeListLen, enforceSize, matchSize, serialize')
 import           Cardano.Crypto.Hashing (hash, shortHashF)
 import           Cardano.Crypto.Orphans ()
 import           Cardano.Crypto.Random (deterministic)
@@ -76,6 +83,9 @@ newtype VssPublicKey = VssPublicKey
 -- order of participants when generating a commitment.
 instance Ord VssPublicKey where
   compare = comparing Binary.encode
+
+dropVssPublicKey :: Dropper s
+dropVssPublicKey = dropBytes
 
 deriving instance Bi VssPublicKey
 
@@ -116,6 +126,9 @@ newtype Secret = Secret
 
 deriving instance Bi Secret
 
+dropSecret :: Dropper s
+dropSecret = dropBytes
+
 -- | Shares can be used to reconstruct 'Secret'.
 newtype DecShare = DecShare
   { getDecShare :: Scrape.DecryptedShare
@@ -123,12 +136,18 @@ newtype DecShare = DecShare
 
 deriving instance Bi DecShare
 
+dropDecShare :: Dropper s
+dropDecShare = dropBytes
+
 -- | Encrypted share which needs to be decrypted using 'VssKeyPair' first.
 newtype EncShare = EncShare
   { getEncShareVal :: Scrape.EncryptedSi
   } deriving (Show, Eq)
 
 deriving instance Bi EncShare
+
+dropEncShare :: Dropper s
+dropEncShare = dropBytes
 
 -- | This extra data may be used to verify various stuff.
 data SecretProof = SecretProof
@@ -139,6 +158,18 @@ data SecretProof = SecretProof
   } deriving (Show, Eq, Generic)
 
 instance NFData SecretProof
+
+dropSecretProof :: Dropper s
+dropSecretProof = do
+  enforceSize "SecretProof" 4
+  -- Scrape.ExtraGen
+  dropBytes
+  -- Scrape.Proof
+  dropBytes
+  -- Scrape.ParallelProofs
+  dropBytes
+  -- [Scrape.Commitment]
+  dropList dropBytes
 
 instance Bi SecretProof where
   encode sp =

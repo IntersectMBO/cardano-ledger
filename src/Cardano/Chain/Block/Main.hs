@@ -40,7 +40,7 @@ import           Cardano.Prelude
 
 import           Control.Lens (makeLenses)
 import           Control.Monad.Except (MonadError)
-import           Formatting (bprint, build, builder, (%))
+import           Formatting (bprint, build, builder, shown, (%))
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -49,8 +49,7 @@ import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload,
                      checkPayload)
-import           Cardano.Chain.Ssc.Payload (SscPayload, checkSscPayload)
-import           Cardano.Chain.Ssc.Proof (SscProof, mkSscProof)
+import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
 import           Cardano.Chain.Txp.Tx (Tx)
 import           Cardano.Chain.Txp.TxPayload (TxPayload, checkTxPayload, txpTxs,
                      txpWitnesses)
@@ -74,7 +73,7 @@ data MainProof = MainProof
 
 instance B.Buildable MainProof where
   build proof = bprint
-    ("<MainProof: " % build % ", " % build % ", " % build % ", " % build % ">")
+    ("<MainProof: " % build % ", " % shown % ", " % build % ", " % build % ">")
     (mpTxProof proof)
     (mpMpcProof proof)
     (mpProxySKsProof proof)
@@ -95,7 +94,7 @@ instance Bi MainProof where
 mkMainProof :: MainBody -> MainProof
 mkMainProof body = MainProof
   { mpTxProof       = mkTxProof $ _mbTxPayload body
-  , mpMpcProof      = mkSscProof $ _mbSscPayload body
+  , mpMpcProof      = SscProof
   , mpProxySKsProof = hash $ _mbDlgPayload body
   , mpUpdateProof   = Update.mkProof $ _mbUpdatePayload body
   }
@@ -199,7 +198,6 @@ instance Bi MainExtraBodyData where
 verifyMainBody :: MonadError Text m => ProtocolMagic -> MainBody -> m ()
 verifyMainBody pm mb = do
   checkTxPayload (_mbTxPayload mb)
-  checkSscPayload pm (_mbSscPayload mb)
   Delegation.checkPayload pm (_mbDlgPayload mb)
   Update.checkPayload pm (_mbUpdatePayload mb)
 

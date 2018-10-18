@@ -35,10 +35,7 @@ module Cardano.Binary.Class.Primitive
        -- * Backward-compatible functions
        , decodeFull
        , decodeFull'
-
-       -- * Low-level, fine-grained functions
-       , deserializeOrFail
-       , deserializeOrFail'
+       , decodeFullDecoder
 
        -- * CBOR in CBOR
        , encodeKnownCborDataItem
@@ -58,7 +55,7 @@ import           Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import qualified Codec.CBOR.Read as CBOR.Read
+import qualified Codec.CBOR.Read as Read
 import qualified Codec.CBOR.Write as CBOR.Write
 import           Control.Exception.Safe (impureThrow)
 import           Control.Monad.Except (MonadError)
@@ -112,12 +109,12 @@ serializeWith firstChunk nextChunk =
 -- | Deserialize a Haskell value from the external binary representation
 --   (which must have been made using 'serialize' or related function).
 --
---   /Throws/: @'CBOR.Read.DeserialiseFailure'@ if the given external
+--   /Throws/: @'Read.DeserialiseFailure'@ if the given external
 --   representation is invalid or does not correspond to a value of the
 --   expected type.
 unsafeDeserialize :: Bi a => BSL.ByteString -> a
 unsafeDeserialize =
-  either impureThrow identity . bimap fst fst . deserializeOrFail
+  either impureThrow identity . bimap fst fst . deserialiseDecoder decode
 
 -- | Strict variant of 'deserialize'.
 unsafeDeserialize' :: Bi a => BS.ByteString -> a
@@ -140,56 +137,42 @@ deserialize' = deserialize . BSL.fromStrict
 --   the contract of this function is that what you feed as input needs to
 --   be consumed entirely.
 decodeFull :: forall a . Bi a => BSL.ByteString -> Either DecoderError a
-decodeFull bs0 = case deserializeOrFail bs0 of
-  Right (x, leftover) -> if BS.null leftover
-    then pure x
-    else Left $ DecoderErrorLeftover (label $ Proxy @a) leftover
-  Left (e, _) -> Left $ DecoderErrorDeserialiseFailure (label $ Proxy @a) e
+decodeFull = decodeFullDecoder (label $ Proxy @a) decode
 
 decodeFull' :: forall a . Bi a => BS.ByteString -> Either DecoderError a
 decodeFull' = decodeFull . BSL.fromStrict
 
--- | Deserialize a Haskell value from the external binary representation,
---   returning either (value, leftover) or a (@DeserialiseFailure@, leftover).
-deserializeOrFail
-  :: Bi a
-  => BSL.ByteString
-  -> Either (CBOR.Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString)
-deserializeOrFail bs0 = runST (supplyAllInput bs0 =<< deserializeIncremental)
- where
-  supplyAllInput
-    :: BSL.ByteString
-    -> CBOR.Read.IDecode s a
-    -> ST
-         s
-         ( Either
-             (CBOR.Read.DeserialiseFailure, BS.ByteString)
-             (a, BS.ByteString)
-         )
-  supplyAllInput bs' (CBOR.Read.Done bs _ x) =
-    return (Right (x, bs <> BSL.toStrict bs'))
-  supplyAllInput bs (CBOR.Read.Partial k) = case bs of
-    BSL.Chunk chunk bs' -> k (Just chunk) >>= supplyAllInput bs'
-    BSL.Empty           -> k Nothing >>= supplyAllInput BSL.Empty
-  supplyAllInput _ (CBOR.Read.Fail bs _ exn) = return (Left (exn, bs))
+decodeFullDecoder
+  :: Text
+  -> (forall s . D.Decoder s a)
+  -> BSL.ByteString
+  -> Either DecoderError a
+decodeFullDecoder lbl decoder bs0 = case deserialiseDecoder decoder bs0 of
+  Right (x, leftover) -> if BS.null leftover
+    then pure x
+    else Left $ DecoderErrorLeftover lbl leftover
+  Left (e, _) -> Left $ DecoderErrorDeserialiseFailure lbl e
 
--- | Strict variant of 'deserializeOrFail'.
-deserializeOrFail'
-  :: Bi a
-  => BS.ByteString
-  -> Either (CBOR.Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString)
-deserializeOrFail' = deserializeOrFail . BSL.fromStrict
+-- | Deserialise a 'BSL.ByteString' incrementally using the provided 'Decoder'
+deserialiseDecoder
+  :: (forall s . D.Decoder s a)
+  -> BSL.ByteString
+  -> Either (Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString)
+deserialiseDecoder decoder bs0 =
+  runST (supplyAllInput bs0 =<< Read.deserialiseIncremental decoder)
 
--- | Deserialize a Haskell value from the external binary representation.
---
---   This allows /input/ data to be provided incrementally, rather than all in one
---   go. It also gives an explicit representation of deserialisation errors.
---
---   Note that the incremental behaviour is only for the input data, not the
---   output value: the final deserialized value is constructed and returned as a
---   whole, not incrementally.
-deserializeIncremental :: Bi a => ST s (CBOR.Read.IDecode s a)
-deserializeIncremental = CBOR.Read.deserialiseIncremental decode
+supplyAllInput
+  :: BSL.ByteString
+  -> Read.IDecode s a
+  -> ST
+       s
+       (Either (Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString))
+supplyAllInput bs' (Read.Done bs _ x) =
+  return (Right (x, bs <> BSL.toStrict bs'))
+supplyAllInput bs (Read.Partial k) = case bs of
+  BSL.Chunk chunk bs' -> k (Just chunk) >>= supplyAllInput bs'
+  BSL.Empty           -> k Nothing >>= supplyAllInput BSL.Empty
+supplyAllInput _ (Read.Fail bs _ exn) = return (Left (exn, bs))
 
 
 --------------------------------------------------------------------------------

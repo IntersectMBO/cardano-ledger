@@ -8,6 +8,9 @@ module Cardano.Chain.Ssc.Commitment
        , CommitmentSignature
        , SignedCommitment
        , getCommShares
+
+       , dropCommitment
+       , dropSignedCommitment
        ) where
 
 import           Cardano.Prelude
@@ -16,10 +19,11 @@ import           Control.Lens (each, traverseOf)
 import qualified Data.Map.Strict as Map
 
 import           Cardano.Binary.Class (AsBinary, Bi (..), DecoderError (..),
+                     Dropper, dropBytes, dropList, dropMap, dropTriple,
                      encodeListLen, enforceSize, fromBinary, serialize')
 import           Cardano.Chain.Slotting (EpochIndex)
 import           Cardano.Crypto (EncShare, PublicKey, SecretProof, Signature,
-                     VssPublicKey)
+                     VssPublicKey, dropSecretProof)
 
 
 -- | Commitment is a message generated during the first stage of SSC.
@@ -35,6 +39,13 @@ data Commitment = Commitment
 instance Ord Commitment where
     compare = comparing (serialize' . commProof) <>
               comparing (sort . Map.toList . commShares)
+
+dropCommitment :: Dropper s
+dropCommitment = do
+  enforceSize "Commitment" 2
+  -- Map (AsBinary VssPublicKey) (NonEmpty (AsBinary EncShare))
+  dropMap dropBytes (dropList dropBytes)
+  dropSecretProof
 
 instance Bi Commitment where
   encode comm =
@@ -52,6 +63,9 @@ instance Bi Commitment where
 type CommitmentSignature = Signature (EpochIndex, Commitment)
 
 type SignedCommitment = (PublicKey, Commitment, CommitmentSignature)
+
+dropSignedCommitment :: Dropper s
+dropSignedCommitment = dropTriple dropBytes dropCommitment dropBytes
 
 -- | Get commitment shares.
 getCommShares :: Commitment -> Maybe [(VssPublicKey, NonEmpty EncShare)]

@@ -36,6 +36,7 @@ import           Cardano.Chain.Block (BlockBodyAttributes, BlockHeader (..),
                      mkMainHeaderExplicit)
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Slotting (SlotCount)
+import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
 import           Cardano.Crypto (ProtocolMagic)
 
 import           Test.Cardano.Chain.Common.Gen (genChainDifficulty,
@@ -43,7 +44,6 @@ import           Test.Cardano.Chain.Common.Gen (genChainDifficulty,
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import           Test.Cardano.Chain.Slotting.Gen (genEpochIndex, genFlatSlotId,
                      genSlotId)
-import           Test.Cardano.Chain.Ssc.Gen (genSscPayload, genSscProof)
 import           Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof,
                      genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
@@ -97,7 +97,7 @@ genMainBody :: ProtocolMagic -> Gen MainBody
 genMainBody pm =
   MainBody
     <$> genTxPayload pm
-    <*> genSscPayload pm
+    <*> pure SscPayload
     <*> Delegation.genPayload pm
     <*> Update.genPayload pm
 
@@ -138,7 +138,7 @@ genMainProof :: ProtocolMagic -> Gen MainProof
 genMainProof pm =
   MainProof
     <$> genTxProof pm
-    <*> genSscProof pm
+    <*> pure SscProof
     <*> genAbstractHash (Delegation.genPayload pm)
     <*> Update.genProof pm
 

@@ -3,6 +3,7 @@
 
 module Test.Cardano.Chain.Block.Bi
        ( tests
+       , exampleMainBody
        ) where
 
 import           Cardano.Prelude
@@ -25,6 +26,7 @@ import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Delegation as Delegation (Payload (..))
 import           Cardano.Chain.Genesis (GenesisHash (..))
 import           Cardano.Chain.Slotting (EpochIndex (..))
+import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
 import           Cardano.Crypto (Hash, ProtocolMagic (..), SignTag (..),
                      abstractHash, createPsk, hash, proxySign, sign, toPublic)
 
@@ -39,8 +41,6 @@ import qualified Test.Cardano.Chain.Delegation.Example as Delegation
 import           Test.Cardano.Chain.Slotting.Example (exampleEpochIndex,
                      exampleSlotId)
 import           Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
-import           Test.Cardano.Chain.Ssc.Example (exampleSscPayload,
-                     exampleSscProof)
 import           Test.Cardano.Chain.Txp.Example (exampleTxPayload,
                      exampleTxProof, exampleTxpUndo)
 import qualified Test.Cardano.Chain.Update.Example as Update
@@ -363,7 +363,7 @@ exampleMainBlockHeader = mkMainHeaderExplicit
 exampleMainProof :: MainProof
 exampleMainProof = MainProof
     exampleTxProof
-    exampleSscProof
+    SscProof
     (abstractHash dp)
     Update.exampleProof
     where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
@@ -377,7 +377,7 @@ exampleBoundaryBody = BoundaryBody exampleSlotLeaders
 exampleMainBody :: MainBody
 exampleMainBody = MainBody
     exampleTxPayload
-    exampleSscPayload
+    SscPayload
     dp
     Update.examplePayload
     where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
