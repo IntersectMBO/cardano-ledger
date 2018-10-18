@@ -34,5 +34,8 @@
 # Editors
 TAGS
 
+# Vim swap files
+*.sw[a-p]
+
 # Emacs auto-generated Emacs-lisp code
 auto/
