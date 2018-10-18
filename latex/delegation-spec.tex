@@ -242,7 +242,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \powerset \HashKey & \text{registered stake keys}\\
+      \var{stkeys} & \powerset (\HashKey) & \text{registered stake keys}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
     \end{array}\right)
