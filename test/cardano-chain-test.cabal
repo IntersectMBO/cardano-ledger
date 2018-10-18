@@ -31,6 +31,7 @@ library
 
   build-depends:       base
                      , base16-bytestring
+                     , binary
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-chain
@@ -44,6 +45,7 @@ library
                      , formatting
                      , hedgehog
                      , pvss
+                     , streaming
                      , time
                      , vector
 
