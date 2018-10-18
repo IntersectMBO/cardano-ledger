@@ -96,6 +96,10 @@
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addr}[1]{\fun{addr_{rwd}}~ \var{#1}}
 
+%%
+%% Constants
+%%
+\newcommand{\emax}{\mathsf{E_{max}}}
 
 \begin{document}
 
@@ -223,6 +227,13 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \end{array}
   \end{equation*}
   %
+  \emph{Constants}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \emax & \Epoch & \text{epoch bound on pool retirement}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Delegation Certificate types}
   %
   \begin{equation*}
@@ -289,7 +300,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \emph{Delegation Transitions}
   \begin{equation*}
-    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+    \_ \trans{deleg}{\_} \_ \in
       \powerset (\DState \times \DCert \times \DState)
   \end{equation*}
   %
@@ -392,6 +403,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \RegPool{c} & \cauthor{c} = hk
     }
     {
+      \var{cepoch} \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -412,9 +424,11 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation}\label{eq:pool-ret}
     \inference[Pool-Retire]
     {
-    \RetirePool{c} & \cauthor{c} = hk
+    \RetirePool{c} & \cauthor{c} = hk & \var{hk} \in \dom \var{stpools} \\
+    \var{e} = \retire{c} & \var{cepoch} < \var{e} < \var{cepoch} + \emax
   }
   {
+    \var{cepoch} \vdash
     \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -425,7 +439,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \var{retiring} & \unionoverride & \{\var{hk} \mapsto \retire c\} \\
+        \var{retiring} & \unionoverride & \{\var{hk} \mapsto \var{e}\} \\
       \end{array}
     \right)
   }
