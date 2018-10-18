@@ -1,0 +1,449 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage{xcolor}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+% For notes containing warnings, questions, etc.
+\usepackage[tikz]{bclogo}
+\newenvironment{question}
+  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
+  {\end{bclogo}}
+\newenvironment{todo}
+  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
+    {\end{bclogo}}
+\newenvironment{note}
+  {\begin{bclogo}[logo=\bcattention, couleur=orange!10, arrondi=0.2]{ NOTE}}
+  {\end{bclogo}}
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+%%
+%% TODO: we should package this
+%%
+\newcommand{\powerset}[1]{\mathbb{P}~#1}
+\newcommand{\restrictdom}{\lhd}
+\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
+\newcommand{\restrictrange}{\rhd}
+\newcommand{\subtractrange}{\mathbin{\slashed{\restrictrange}}}
+\newcommand{\union}{\cup}
+\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
+\newcommand{\uniondistinct}{\uplus}
+\newcommand{\var}[1]{\mathit{#1}}
+\newcommand{\fun}[1]{\mathsf{#1}}
+\newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
+\newcommand{\size}[1]{\left| #1 \right|}
+\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\seqof}[1]{#1^{*}}
+\newcommand{\nextdef}{\\[1em]}
+\newcommand{\where}{~ ~ \mathbf{where}~ ~ }
+
+%%
+%% Types
+%%
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Value}{\type{Value}}
+\newcommand{\Coin}{\type{Coin}}
+%% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\Hash}{\type{Hash}}
+\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+%% Adding delegation
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\VKeyGen}{\type{VKeyGen}}
+%% Blockchain
+\newcommand{\Gkeys}{\var{G_{keys}}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+\newcommand{\BDEnv}{\type{BDEnv}}
+\newcommand{\BDState}{\type{BDState}}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}~ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
+\newcommand{\values}[1]{\fun{values}~ #1}
+\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+%% UTxO witnesses
+\newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+% wildcard parameter
+\newcommand{\wcard}[0]{\underline{\phantom{a}}}
+%% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}~ #1}
+%% Delegation
+\newcommand{\delegatesName}{\fun{delegates}}
+\newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+\newcommand{\dwho}[1]{\fun{dwho}~\var{#1}}
+\newcommand{\depoch}[1]{\fun{depoch}~\var{#1}}
+%% Delegation witnesses
+\newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
+\newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
+%% Blockchain
+\newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
+\newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
+
+\begin{document}
+
+\input{frontmatter.tex}
+
+\tableofcontents
+\listoffigures
+
+\section{Introduction}
+\label{sec:introduction}
+\input{intro.tex}
+
+\section{Notation}\label{sec:notation}
+
+\begin{description}
+\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
+  the subsets of $X$.
+\item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
+  sequences having elements taken from $\type{X}$. The empty sequence is
+  denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
+  the sequence that results from appending $\type{x} \in \type{X}$ to
+  $\Lambda$.
+\item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
+  Given a function $f$ we write $f~a$ for the application of $f$ to argument
+  $a$.
+\item[Fibre] Given a function $f: A \to B$ and $b\in B$, we write
+  $f^{-1}~b$ for the \textbf{fibre} of $f$ at $b$, which is defined by
+  $\{a \mid\ f a =  b\}$.
+\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
+    function} from $A$ to $B$, which can be seen as a map (dictionary) with
+  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
+  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
+\end{description}
+
+\section{Cryptographic primitives}
+\label{sec:crypto-primitives}
+
+Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
+this document.
+
+\begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{vk} & \SKey & \text{signing key}\\
+      \var{vk} & \VKey & \text{verifying key}\\
+      \var{hk} & \Hash & \text{hash of a key}\\
+      \sigma & \Sig  & \text{signature}\\
+      \var{d} & \Data  & \text{data}\\
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \hash{} & \VKey \to \Hash
+      & \text{hash function} \\
+      %
+      \fun{verify} & \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+      \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+  \end{align*}
+  \emph{Notation for serialized and verified data}
+  \begin{align*}
+    & \serialised{x} & \text{serialised representation of } x\\
+    & \mathcal{V}_{\var{vk}}{\serialised{m}}_{\sigma} = \verify{vk}{m}{\sigma}
+      & \text{shorthand notation for } \fun{verify}
+  \end{align*}
+  \caption{Cryptographic definitions}
+  \label{fig:crypto-defs}
+\end{figure}
+
+\section{Serialization}
+\label{sec:serialization}
+
+\begin{todo}
+  Discuss here serialization and
+  \href{https://iohk.myjetbrains.com/youtrack/issue/CDEC-628}{composable
+    serialization}
+\end{todo}
+
+\section{UTxO}
+\label{sec:state-trans-utxo-1}
+
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:state-trans-utxo}. The states of the UTxO transition system,
+along with their types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
+Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
+
+\begin{figure*}
+  \emph{Primitive types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{txid} & \TxId & \text{transaction id}\\
+      %
+      ix & \Ix & \text{index}\\
+      %
+      \var{addr} & \Addr & \text{address}\\
+      %
+      c & \Coin & \text{currency value}
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{txin}
+      & \TxIn
+      & (\var{txid}, \var{ix})
+      & \TxId \times \Ix
+      & \text{transaction input}
+      \\
+      \var{txout}
+      & \type{TxOut}
+      & (\var{addr}, c)
+      & \Addr \times \Coin
+      & \text{transaction output}
+      \\
+      \var{utxo}
+      & \UTxO
+      & \var{txin} \mapsto \var{txout}
+      & \TxIn \mapsto \TxOut
+      & \text{unspent tx outputs}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+      %
+      \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+                                  & \text{transaction body}
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system}
+  \label{fig:state-trans-utxo-defs}
+\end{figure*}
+
+\begin{figure}
+  \begin{align*}
+    & \fun{txins} \in \Tx \to \powerset{\TxIn}
+    & \text{transaction inputs} \\
+    & \txins{tx} = \var{inputs} \where \txbody{tx} = (\var{inputs}, ~\wcard)
+    \nextdef
+    & \fun{txouts} \in \Tx \to \UTxO
+    & \text{transaction outputs as UTxO} \\
+    & \fun{txouts} ~ \var{tx} =
+      \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
+      \middle| \begin{array}{l@{~}c@{~}l}
+                 (\_, \var{outputs}) & = & \txbody{tx} \\
+                 \var{ix} \mapsto \var{txout} & \in & \var{outputs}
+               \end{array}
+      \right\}
+    \nextdef
+    & \fun{balance} \in \UTxO \to \Coin
+    & \text{UTxO balance} \\
+    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+  \end{align*}
+
+  \begin{align*}
+    \var{ins} \restrictdom \var{utxo}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \in \var{ins} \}
+    & \text{domain restriction}
+    \\
+    \var{ins} \subtractdom \var{utxo}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ i \notin \var{ins} \}
+    & \text{domain exclusion}
+    \\
+    \var{utxo} \restrictrange \var{outs}
+    & = \{ i \mapsto o \mid i \mapsto o \in \var{utxo}, ~ o \in \var{outs} \}
+    & \text{range restriction}
+  \end{align*}
+  \caption{Functions used in UTxO rules}
+  \label{fig:utxo-auxiliary-ops}
+\end{figure}
+
+\begin{figure}
+  \emph{UTxO transitions}
+  \begin{equation*}
+    \var{\_} \trans{utxo}{\_} \var{\_}
+    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO transition-system types}
+  \label{fig:utxo-ts-types}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference[UTxO-inductive]
+    { \txins{tx} \subseteq \var{utxo}
+      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
+    }
+    {\var{utxo} \trans{utxo}{tx}
+      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:state-trans-utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output
+changes with a transaction:
+\begin{itemize}
+\item Each input spent in the transaction must be in the set of unspent
+  outputs.
+\item The balance of the unspent outputs in a transaction (i.e. the total
+  amount paid in a transaction) must be equal or less than the amount of spent
+  inputs.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
+
+\subsection{Properties}
+\label{sec:utxo-properties}
+
+\begin{todo}
+  Can we prove properties of the transition system of this section? For
+  instance we might like to formalize ``double spending'' and prove that these
+  rules prevent it. Do we want it?
+\end{todo}
+
+\subsection{Witnesses}
+\label{sec:witnesses}
+
+The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
+The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
+Figure~\ref{fig:state-trans-utxo-witnesses-defs}. Note that
+Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
+Figure~\ref{fig:state-trans-utxo}. The main reason for doing this is to define
+the rules incrementally, modeling different aspects in isolation to keep the
+rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
+have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
+different order). The choice here is arbitrary.
+
+\begin{figure}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
+      & \text{witnesses of a transaction}\\
+      \fun{hash_{spend}} & \Addr \mapsto \Hash
+      & \text{hash of a spending key in an address}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system with witnesses}
+  \label{fig:state-trans-utxo-witnesses-defs}
+\end{figure}
+
+\begin{figure}
+  \begin{align*}
+    & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
+    & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
+    \nextdef
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \Hash & \text{hash of an input address}\\
+    & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+      \wedge a \mapsto h \in \fun{hash_{spend}} \}
+  \end{align*}
+  \caption{Functions used in rules witnesses}
+  \label{fig:witnesses-ops}
+\end{figure}
+
+\begin{figure}
+  \emph{UTxO with witness transitions}
+  \begin{equation*}
+    \var{\_} \trans{utxow}{\_} \var{\_}
+    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO with witness transition-system types}
+  \label{fig:utxo-witnesses-ts-types}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive}
+    \inference[UTxO-wit]
+    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+      & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \cdot
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
+      \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
+    }
+    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
+  \end{equation}
+  \caption{UTxO with witnesses inference rules}
+  \label{fig:rules-utxo-witnesses}
+\end{figure}
+
+\section{Delegation}
+\label{sec:delegation}
+\input{delegation.tex}
+
+\section{Blockchain layer}
+\label{sec:blockchain-layer}
+\input{blockchain.tex}
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
