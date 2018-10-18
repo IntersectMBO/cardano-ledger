@@ -10,6 +10,8 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 module LedgerState
   ( LedgerState(..)
+  , Ledger
+  , LedgerEntry(..)
   -- * state transitions
   , applyTransaction
   , asStateTransition
@@ -36,6 +38,15 @@ import           UTxO
 
 import           Delegation.Certificates (Cert(..))
 import           Delegation.StakePool (Delegation(..), StakePool(..))
+
+-- | A ledger consists of a list of entries where each such entry is either a
+-- stake delegation step or a transaction.
+data LedgerEntry =
+    Transaction TxWits
+  | StakeTransition (Set.Set Cert)
+    deriving (Show, Eq)
+
+type Ledger = [LedgerEntry]
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
@@ -169,12 +180,14 @@ applyTx ls tx =
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
-asStateTransition :: LedgerState -> TxWits -> Either [ValidationError] LedgerState
-asStateTransition ls tx =
+asStateTransition
+  :: LedgerState -> LedgerEntry -> Either [ValidationError] LedgerState
+asStateTransition ls (Transaction tx) =
   case valid tx ls of
     Invalid errors -> Left errors
     Valid          -> Right $ applyTx ls (body tx)
 
+asStateTransition ls (StakeTransition stake) = undefined
 
 -- Functions for stake delegation model
 
