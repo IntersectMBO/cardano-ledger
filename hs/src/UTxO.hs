@@ -37,7 +37,6 @@ module UTxO
   -- , Sig(..)
   , Wit(..)
   , TxWits(..)
-  , Ledger
   ) where
 
 import           Crypto.Hash           (Digest, SHA256, hash)
@@ -109,10 +108,6 @@ data TxWits = TxWits
               { body       :: Tx
               , witnessSet :: Set Wit
               } deriving (Show, Eq, Ord)
-
-
--- |A ledger
-type Ledger = [TxWits]
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
