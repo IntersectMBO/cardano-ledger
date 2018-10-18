@@ -49,15 +49,15 @@ import           Cardano.Prelude hiding (show)
 import qualified Cardano.Crypto.Wallet as CC
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import           Control.Lens (_Left)
 import           Control.Monad.Except (MonadError)
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
 import           Data.Text.Lazy.Builder (Builder)
+import qualified Data.Text.Lazy.Builder as Builder
 import           Formatting (Format, bprint, build, fitLeft, formatToString,
-                     later, sformat, (%), (%.))
+                     later, sformat, (%.))
 import qualified Formatting.Buildable as B
 import           Prelude (show)
 import           Text.JSON.Canonical (JSValue (..))
@@ -72,9 +72,8 @@ import           Cardano.Crypto.Orphans ()
 -- Utilities for From/ToJSON instances
 --------------------------------------------------------------------------------
 
-fmsg :: ToText s => Text -> Either s a -> Either Text a
-fmsg msg =
-  over _Left $ \e -> ("Unable to parse json " <> msg <> " reason: ") <> toText e
+fmsg :: Text -> Either Text a -> Either Text a
+fmsg msg = first (("Unable to parse json " <> msg <> " reason: ") <>)
 
 --------------------------------------------------------------------------------
 -- Keys, key generation & printing & decoding
@@ -126,10 +125,10 @@ instance Show SecretKey where
   show sk = "<secret of " ++ show (toPublic sk) ++ ">"
 
 instance B.Buildable PublicKey where
-  build = bprint ("pub:"%shortPublicKeyHexF)
+  build = bprint ("pub:" . shortPublicKeyHexF)
 
 instance B.Buildable SecretKey where
-  build = bprint ("sec:"%shortPublicKeyHexF) . toPublic
+  build = bprint ("sec:" . shortPublicKeyHexF) . toPublic
 
 encodeXPrv :: CC.XPrv -> E.Encoding
 encodeXPrv a = encode $ CC.unXPrv a
@@ -144,7 +143,7 @@ instance Bi SecretKey where
 -- | 'Builder' for 'PublicKey' to show it in base64 encoded form.
 formatFullPublicKey :: PublicKey -> Builder
 formatFullPublicKey (PublicKey pk) =
-  fromString . BS.unpack . B64.encode . CC.unXPub $ pk
+  Builder.fromString . BS.unpack . B64.encode . CC.unXPub $ pk
 
 -- | Formatter for 'PublicKey' to show it in base64.
 fullPublicKeyF :: Format r (PublicKey -> r)
@@ -161,8 +160,8 @@ shortPublicKeyHexF = fitLeft 8 %. fullPublicKeyHexF
 -- | Parse 'PublicKey' from base64 encoded string.
 parseFullPublicKey :: Text -> Either Text PublicKey
 parseFullPublicKey s = do
-  b <- first fromString . B64.decode . fromString $ toString s
-  PublicKey <$> first fromString (CC.xpub b)
+  b <- first toS . B64.decode $ toS s
+  PublicKey <$> first toS (CC.xpub b)
 
 --------------------------------------------------------------------------------
 -- Signatures
@@ -198,7 +197,7 @@ fullSignatureHexF =
 parseFullSignature :: Text -> Either Text (Signature a)
 parseFullSignature s = do
   b <- first (sformat build) $ parseBase16 s
-  Signature <$> first fromString (CC.xsignature b)
+  Signature <$> first toS (CC.xsignature b)
 
 encodeXSignature :: CC.XSignature -> E.Encoding
 encodeXSignature a = encode $ CC.unXSignature a
@@ -261,7 +260,7 @@ fullProxyCertHexF =
 parseFullProxyCert :: Text -> Either Text (ProxyCert a)
 parseFullProxyCert s = do
   b <- first (sformat build) $ parseBase16 s
-  ProxyCert <$> first fromString (CC.xsignature b)
+  ProxyCert <$> first toS (CC.xsignature b)
 
 -- | Convenient wrapper for secret key, that's basically ω plus
 -- certificate.
@@ -276,7 +275,7 @@ instance NFData w => NFData (ProxySecretKey w)
 
 instance B.Buildable w => B.Buildable (ProxySecretKey w) where
   build (UnsafeProxySecretKey w iPk dPk _) = bprint
-    ("ProxySk { w = " % build % ", iPk = " % build % ", dPk = " % build % " }")
+    ("ProxySk { w = " . build . ", iPk = " . build . ", dPk = " . build . " }")
     w
     iPk
     dPk
@@ -308,7 +307,7 @@ data ProxySignature w a = ProxySignature
 instance NFData w => NFData (ProxySignature w a)
 
 instance B.Buildable w => B.Buildable (ProxySignature w a) where
-  build psig = bprint ("Proxy signature { psk = " % build % " }") (psigPsk psig)
+  build psig = bprint ("Proxy signature { psk = " . build . " }") (psigPsk psig)
 
 instance (Typeable a, Bi w) => Bi (ProxySignature w a) where
   encode psig =

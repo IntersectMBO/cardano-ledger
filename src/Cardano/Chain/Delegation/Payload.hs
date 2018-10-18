@@ -13,7 +13,7 @@ module Cardano.Chain.Delegation.Payload
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (throwError))
-import           Formatting (bprint, int, stext, (%))
+import           Formatting (bprint, int, stext)
 import           Formatting.Buildable (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..))
@@ -29,7 +29,7 @@ newtype Payload = UnsafePayload
 
 instance Buildable Payload where
   build (UnsafePayload psks) = bprint
-    ("proxy signing keys (" % int % " items): " % listJson % "\n")
+    ("proxy signing keys (" . int . " items): " . listJson . "\n")
     (length psks)
     psks
 
@@ -43,7 +43,7 @@ instance Buildable PayloadError where
   build = \case
     PayloadPSKError err -> bprint
       ( "ProxySecretKey invalid when checing Delegation.Payload.\n Error: "
-      % stext
+      . stext
       )
       err
 

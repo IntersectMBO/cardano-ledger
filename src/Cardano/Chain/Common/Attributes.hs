@@ -30,7 +30,7 @@ import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
-import           Formatting (bprint, build, int, (%))
+import           Formatting (bprint, build, int)
 import           Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
 
@@ -84,7 +84,7 @@ instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
   build attr = if areAttributesKnown attr
     then Buildable.build (attrData attr)
     else bprint
-      ("Attributes { data: " % build % ", remain: <" % int % " bytes> }")
+      ("Attributes { data: " . build . ", remain: <" . int . " bytes> }")
       (attrData attr)
       (unknownAttributesLength attr)
 
@@ -92,7 +92,7 @@ instance Buildable (Attributes ()) where
   build attr
     | areAttributesKnown attr = "<no attributes>"
     | otherwise = bprint
-      ("Attributes { data: (), remain: <" % int % " bytes> }")
+      ("Attributes { data: (), remain: <" . int . " bytes> }")
       (unknownAttributesLength attr)
 
 instance Bi (Attributes ()) where
@@ -171,7 +171,7 @@ encodeAttributes encs attr = encode
    where
     insertCheck v Nothing = Just v
     insertCheck _ (Just v') =
-      error
+      panic
         $  "encodeAttributes: impossible: field no. "
         <> show k
         <> " is already encoded as unparsed field: "

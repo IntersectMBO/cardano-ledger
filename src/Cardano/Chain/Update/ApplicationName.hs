@@ -19,7 +19,7 @@ import           Data.Aeson (FromJSON (..))
 import           Data.Aeson.TH (defaultOptions, deriveToJSON)
 import           Data.Char (isAscii)
 import qualified Data.Text as T
-import           Formatting (bprint, int, stext, (%))
+import           Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..))
@@ -27,7 +27,7 @@ import           Cardano.Binary.Class (Bi (..))
 
 newtype ApplicationName = ApplicationName
   { getApplicationName :: Text
-  } deriving (Eq, Ord, Show, Generic, ToString, B.Buildable, NFData)
+  } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData)
 
 instance Bi ApplicationName where
   encode appName = encode (getApplicationName appName)
@@ -45,18 +45,18 @@ data ApplicationNameError
 instance B.Buildable ApplicationNameError where
   build = \case
     ApplicationNameTooLong name -> bprint
-      ("ApplicationName, " % stext % ", exceeds limit of " % int)
+      ("ApplicationName, " . stext . ", exceeds limit of " . int)
       name
       (applicationNameMaxLength :: Int)
     ApplicationNameNotAscii name -> bprint
-      ("ApplicationName, " % stext % ", contains non-ascii characters")
+      ("ApplicationName, " . stext . ", contains non-ascii characters")
       name
 
 -- | Smart constructor of 'ApplicationName'
 checkApplicationName
   :: MonadError ApplicationNameError m => ApplicationName -> m ()
 checkApplicationName (ApplicationName appName)
-  | length appName > applicationNameMaxLength = throwError
+  | T.length appName > applicationNameMaxLength = throwError
   $ ApplicationNameTooLong appName
   | T.any (not . isAscii) appName = throwError $ ApplicationNameNotAscii appName
   | otherwise = pure ()

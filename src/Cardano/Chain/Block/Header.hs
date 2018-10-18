@@ -43,7 +43,7 @@ module Cardano.Chain.Block.Header
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (Format, bprint, build, int, (%))
+import           Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
@@ -90,13 +90,13 @@ data Header = Header
 instance B.Buildable Header where
   build header = bprint
     ( "Header:\n"
-    % "    hash: " % hashHexF % "\n"
-    % "    previous block: " % hashHexF % "\n"
-    % "    slot: " % slotIdF % "\n"
-    % "    difficulty: " % int % "\n"
-    % "    leader: " % build % "\n"
-    % "    signature: " % build % "\n"
-    % build
+    . "    hash: " . hashHexF . "\n"
+    . "    previous block: " . hashHexF . "\n"
+    . "    slot: " . slotIdF . "\n"
+    . "    difficulty: " . int . "\n"
+    . "    leader: " . build . "\n"
+    . "    signature: " . build . "\n"
+    . build
     )
     headerHash
     (headerPrevHash header)
@@ -212,13 +212,13 @@ data HeaderError
 instance B.Buildable HeaderError where
   build = \case
     HeaderConsensusError err -> bprint
-      ("ConsensusData was invalid while checking Header.\n Error: " % build)
+      ("ConsensusData was invalid while checking Header.\n Error: " . build)
       err
     HeaderExtraDataError err -> bprint
-      ("ExtraHeaderData was invalid while checking Header.\n Error: " % build)
+      ("ExtraHeaderData was invalid while checking Header.\n Error: " . build)
       err
     HeaderInvalidSignature sig ->
-      bprint ("Invalid signature while checking Header.\n" % build) sig
+      bprint ("Invalid signature while checking Header.\n" . build) sig
 
 -- | Verify a main block header in isolation
 verifyHeader :: MonadError HeaderError m => ProtocolMagic -> Header -> m ()
@@ -325,9 +325,9 @@ data BlockSignature
 instance NFData BlockSignature
 
 instance B.Buildable BlockSignature where
-  build (BlockSignature s)       = bprint ("BlockSignature: "%build) s
-  build (BlockPSignatureLight s) = bprint ("BlockPSignatureLight: "%build) s
-  build (BlockPSignatureHeavy s) = bprint ("BlockPSignatureHeavy: "%build) s
+  build (BlockSignature s)       = bprint ("BlockSignature: ".build) s
+  build (BlockPSignatureLight s) = bprint ("BlockPSignatureLight: ".build) s
+  build (BlockPSignatureHeavy s) = bprint ("BlockPSignatureHeavy: ".build) s
 
 instance Bi BlockSignature where
   encode input = case input of

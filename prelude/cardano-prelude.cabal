@@ -42,10 +42,10 @@ library
                      , formatting
                      , hashable
                      , mtl
+                     , protolude
                      , tagged
                      , text
                      , time
-                     , universum
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

@@ -387,6 +387,6 @@ passphraseChangeLeavesAddressUnmodified
 passphraseChangeLeavesAddressUnmodified oldPass newPass = ioProperty $ do
   (_, oldKey) <- Crypto.safeKeyGen oldPass
   newKey      <-
-    fromMaybe (error "Passphrase didn't match")
+    fromMaybe (panic "Passphrase didn't match")
       <$> Crypto.changeEncPassphrase oldPass newPass oldKey
   return $ Crypto.encToPublic oldKey === Crypto.encToPublic newKey

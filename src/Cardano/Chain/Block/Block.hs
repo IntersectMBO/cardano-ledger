@@ -39,7 +39,7 @@ module Cardano.Chain.Block.Block
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, int, shown, (%))
+import           Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
@@ -85,11 +85,11 @@ data Block = Block
 instance B.Buildable Block where
   build block = bprint
     ( "Block:\n"
-    % "  " % build % "  transactions (" % int % " items): " % listJson % "\n"
-    % "  " % build % "\n"
-    % "  " % shown % "\n"
-    % "  update payload: " % build % "\n"
-    % "  " % build
+    . "  " . build . "  transactions (" . int . " items): " . listJson . "\n"
+    . "  " . build . "\n"
+    . "  " . shown . "\n"
+    . "  update payload: " . build . "\n"
+    . "  " . build
     )
     (blockHeader block)
     (length txs)
@@ -206,20 +206,20 @@ data BlockError
 instance B.Buildable BlockError where
   build = \case
     BlockBodyError err ->
-      bprint ("Body was invalid while checking Block.\n Error: " % build) err
+      bprint ("Body was invalid while checking Block.\n Error: " . build) err
     BlockHeaderError err ->
-      bprint ("Header was invalid while checking Block.\n Error: " % build) err
+      bprint ("Header was invalid while checking Block.\n Error: " . build) err
     BlockInvalidExtraDataProof p p' -> bprint
       ( "Incorrect proof of ExtraBodyData.\n"
-      % "Proof in Block:\n"
-      % build % "\n"
-      % "Calculated proof:\n"
-      % build % "\n"
+      . "Proof in Block:\n"
+      . build . "\n"
+      . "Calculated proof:\n"
+      . build . "\n"
       )
       p
       p'
     BlockProofError err ->
-      bprint ("Proof was invalid while checking Block.\n Error: " % build) err
+      bprint ("Proof was invalid while checking Block.\n Error: " . build) err
 
 verifyBlock :: MonadError BlockError m => ProtocolMagic -> Block -> m ()
 verifyBlock pm block = do

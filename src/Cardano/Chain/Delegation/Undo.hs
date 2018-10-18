@@ -12,7 +12,7 @@ module Cardano.Chain.Delegation.Undo
 
 import           Cardano.Prelude
 
-import           Formatting (bprint, (%))
+import           Formatting (bprint)
 import           Formatting.Buildable (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -36,8 +36,8 @@ data Undo = Undo
 instance Buildable Undo where
   build undo = bprint
     ( "DlgUndo:\n"
-    % "  duPsks: " % listJson % "\n"
-    % "  duPrevEpochPosted: " % listJson
+    . "  duPsks: " . listJson . "\n"
+    . "  duPrevEpochPosted: " . listJson
     )
     (duPsks undo)
     (duPrevEpochPosted undo)

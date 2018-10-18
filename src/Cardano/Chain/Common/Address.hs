@@ -77,7 +77,7 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Base58 (Alphabet (..), bitcoinAlphabet,
                      decodeBase58, encodeBase58)
 import           Formatting (Format, bprint, build, builder, formatToString,
-                     later, sformat, (%))
+                     later, sformat)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), FromObjectKey (..),
                      JSValue (..), ToJSON (..), ToObjectKey (..))
@@ -180,7 +180,7 @@ instance Aeson.ToJSON Address where
 -- | A formatter showing guts of an 'Address'.
 addressDetailedF :: Format r (Address -> r)
 addressDetailedF = later $ \addr -> bprint
-    (builder % " address with root " % hashHexF % ", attributes: " % build)
+    (builder . " address with root " . hashHexF . ", attributes: " . build)
     (formattedType $ addrType addr)
     (addrRoot addr)
     (addrAttributes addr)
@@ -200,7 +200,7 @@ addrToBase58 :: Address -> ByteString
 addrToBase58 = encodeBase58 addrAlphabet . Bi.serialize'
 
 instance B.Buildable Address where
-    build = B.build . decodeUtf8 @Text . addrToBase58
+    build = B.build . decodeUtf8 . addrToBase58
 
 -- | Specialized formatter for 'Address'.
 addressF :: Format r (Address -> r)
@@ -462,7 +462,7 @@ maxPubKeyAddressSizeSingleKey = biSize largestPubKeyAddressSingleKey
 -- is serialized using var-length encoding.
 largestHDAddressBoot :: Address
 largestHDAddressBoot = case lvl2KeyPair of
-    Nothing        -> error "largestHDAddressBoot failed"
+    Nothing        -> panic "largestHDAddressBoot failed"
     Just (addr, _) -> addr
   where
     lvl2KeyPair = deriveLvl2KeyPair

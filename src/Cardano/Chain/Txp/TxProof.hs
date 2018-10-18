@@ -8,7 +8,7 @@ module Cardano.Chain.Txp.TxProof
 
 import           Cardano.Prelude
 
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -27,7 +27,7 @@ data TxProof = TxProof
 
 instance B.Buildable TxProof where
   build proof = bprint
-    ("<TxProof: " % build % ", " % build % ", " % build % ">")
+    ("<TxProof: " . build . ", " . build . ", " . build . ">")
     (txpNumber proof)
     (txpRoot proof)
     (txpWitnessesHash proof)

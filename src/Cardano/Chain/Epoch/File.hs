@@ -43,7 +43,7 @@ epochHeader = "Epoch data v1\n"
 data ParseError
   = ParseErrorDecoder !DecoderError
   -- ^ The CBOR is invalid
-  | ParseErrorBinary !FilePath !B.ByteOffset !String
+  | ParseErrorBinary !FilePath !B.ByteOffset !Text
   | ParseErrorMissingHeader !FilePath
   deriving (Eq, Show)
 
@@ -77,7 +77,7 @@ parseEpochFile file = do
   liftBinaryError = \case
     (_, _, Right ()) -> pure ()
     (_, offset, Left message) ->
-      throwError (ParseErrorBinary file offset message)
+      throwError (ParseErrorBinary file offset (toS message))
 
 parseEpochFiles :: [FilePath] -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
 parseEpochFiles fs = foldr (<>) mempty (parseEpochFile <$> fs)

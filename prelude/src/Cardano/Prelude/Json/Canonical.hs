@@ -18,7 +18,6 @@ import           Cardano.Prelude.Base
 
 import           Control.Monad.Except (MonadError (throwError))
 import           Data.Fixed (E12, resolution)
-import qualified Data.Ratio as R
 import qualified Data.Text.Lazy.Builder as Builder (fromText)
 import           Data.Time (NominalDiffTime)
 import           Formatting.Buildable (Buildable (build))
@@ -47,8 +46,8 @@ instance
     => ReportSchemaErrors m
   where
   expected expec actual = throwError SchemaError
-    { seExpected = fromString expec
-    , seActual   = fmap fromString actual
+    { seExpected = toS expec
+    , seActual   = fmap toS actual
     }
 
 instance Monad m => ToJSON m Int32 where
@@ -90,13 +89,13 @@ instance ReportSchemaErrors m => FromJSON m Word32 where
   fromJSON val       = expectedButGotValue "Word32" val
 
 instance ReportSchemaErrors m => FromJSON m Word64 where
-  fromJSON = parseJSString readEither
+  fromJSON = parseJSString (readEither . toS)
 
 instance ReportSchemaErrors m => FromJSON m Integer where
-  fromJSON = parseJSString readEither
+  fromJSON = parseJSString (readEither . toS)
 
 instance MonadError SchemaError m => FromJSON m Natural where
-  fromJSON = parseJSString readEither
+  fromJSON = parseJSString (readEither . toS)
 
 instance MonadError SchemaError m => FromJSON m NominalDiffTime where
-  fromJSON = fmap (fromRational . (R.% 1e6)) . fromJSON
+  fromJSON = fmap (fromRational . (% 1e6)) . fromJSON

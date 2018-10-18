@@ -39,14 +39,9 @@ instance Ord Ed25519.SecretKey where
 instance Ord Ed25519.Signature where
   compare x1 x2 = compare (toByteString x1) (toByteString x2)
 
-fromCryptoFailable :: MonadFail m => T.Text -> CryptoFailable a -> m a
+fromCryptoFailable :: T.Text -> CryptoFailable a -> Either T.Text a
 fromCryptoFailable item (CryptoFailed e) =
-  fail
-    $  T.unpack
-    $  "Cardano.Crypto.Orphan."
-    <> item
-    <> " failed because "
-    <> show e
+  Left $ "Cardano.Crypto.Orphan." <> item <> " failed because " <> show e
 fromCryptoFailable _ (CryptoPassed r) = return r
 
 instance FromJSON Ed25519.PublicKey where
@@ -56,7 +51,7 @@ instance FromJSON Ed25519.PublicKey where
       .   fromByteStringToBytes
       .   getByteString64
       <$> parseJSON v
-    fromCryptoFailable "parseJSON Ed25519.PublicKey" res
+    toAesonError $ fromCryptoFailable "parseJSON Ed25519.PublicKey" res
 
 instance ToJSON Ed25519.PublicKey where
   toJSON = toJSON . makeByteString64 . toByteString
@@ -68,7 +63,7 @@ instance FromJSON Ed25519.Signature where
       .   fromByteStringToBytes
       .   getByteString64
       <$> parseJSON v
-    fromCryptoFailable "parseJSON Ed25519.Signature" res
+    toAesonError $ fromCryptoFailable "parseJSON Ed25519.Signature" res
 
 instance ToJSON Ed25519.Signature where
   toJSON = toJSON . makeByteString64 . toByteString
@@ -78,7 +73,7 @@ instance Bi Ed25519.PublicKey where
   encode = E.encodeBytes . toByteString
   decode = do
     res <- Ed25519.publicKey . fromByteStringToBytes <$> decode
-    fromCryptoFailable "decode Ed25519.PublicKey" res
+    toCborError $ fromCryptoFailable "decode Ed25519.PublicKey" res
 
 instance Bi Ed25519.SecretKey where
   encodedSizeExpr _ _ = bsSize 64
@@ -90,14 +85,14 @@ instance Bi Ed25519.SecretKey where
       .   fromByteStringToScrubbedBytes
       .   BS.take Ed25519.secretKeySize
       <$> decode
-    fromCryptoFailable "decode Ed25519.SecretKey" res
+    toCborError $ fromCryptoFailable "decode Ed25519.SecretKey" res
 
 instance Bi Ed25519.Signature where
   encodedSizeExpr _ _ = bsSize 64
   encode = E.encodeBytes . toByteString
   decode = do
     res <- Ed25519.signature . fromByteStringToBytes <$> decode
-    fromCryptoFailable "decode Ed25519.Signature" res
+    toCborError $ fromCryptoFailable "decode Ed25519.Signature" res
 
 -- Helper for encodedSizeExpr in Bi instances
 bsSize :: Int -> Size

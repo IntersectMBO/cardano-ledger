@@ -19,7 +19,7 @@ import           Control.Monad.Except (MonadError)
 import           Data.Aeson (object, (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, shown, (%))
+import           Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
                      mkObject)
@@ -54,9 +54,9 @@ data TxFeePolicy
 
 instance B.Buildable TxFeePolicy where
     build (TxFeePolicyTxSizeLinear tsp) =
-        bprint ("policy(tx-size-linear): "%build) tsp
+        bprint ("policy(tx-size-linear): ".build) tsp
     build (TxFeePolicyUnknown v bs) =
-        bprint ("policy(unknown:"%build%"): "%shown) v bs
+        bprint ("policy(unknown:".build."): ".shown) v bs
 
 instance Bi TxFeePolicy where
     encode policy = case policy of
@@ -80,7 +80,7 @@ instance Monad m => ToJSON m TxFeePolicy where
         mkObject
             [("summand", toJSON summand), ("multiplier", toJSON multiplier)]
     toJSON (TxFeePolicyUnknown {}) =
-        error "Having TxFeePolicyUnknown in genesis is likely a bug"
+        panic "Having TxFeePolicyUnknown in genesis is likely a bug"
 
 instance MonadError SchemaError m => FromJSON m TxFeePolicy where
     fromJSON obj = do
@@ -92,7 +92,7 @@ instance Aeson.ToJSON TxFeePolicy where
     toJSON = object . \case
         TxFeePolicyTxSizeLinear linear -> ["txSizeLinear" .= linear]
         TxFeePolicyUnknown policyTag policyPayload ->
-            ["unknown" .= (policyTag, decodeUtf8 @Text policyPayload)]
+            ["unknown" .= (policyTag, decodeUtf8 policyPayload)]
 
 instance Aeson.FromJSON TxFeePolicy where
     parseJSON = Aeson.withObject "TxFeePolicy" $ \o -> do
@@ -103,5 +103,5 @@ instance Aeson.FromJSON TxFeePolicy where
             (Just linear, Nothing) -> Right $ TxFeePolicyTxSizeLinear linear
             (Nothing, Just (tag, payload)) -> Right $ TxFeePolicyUnknown
                 tag
-                (encodeUtf8 @Text @ByteString payload)
+                (encodeUtf8 payload)
             _ -> Left "TxFeePolicy: ambiguous choice"

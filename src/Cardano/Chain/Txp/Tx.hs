@@ -31,7 +31,7 @@ import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import           Formatting (Format, bprint, build, builder, int, sformat, (%))
+import           Formatting (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Case (..),
@@ -66,12 +66,12 @@ data Tx = UnsafeTx
 instance B.Buildable Tx where
   build tx = bprint
     ( "Tx "
-    % build
-    % " with inputs "
-    % listJson
-    % ", outputs: "
-    % listJson
-    % builder
+    . build
+    . " with inputs "
+    . listJson
+    . ", outputs: "
+    . listJson
+    . builder
     )
     (hash tx)
     (_txInputs tx)
@@ -81,7 +81,7 @@ instance B.Buildable Tx where
     attrs = _txAttributes tx
     attrsBuilder
       | areAttributesKnown attrs = mempty
-      | otherwise                = bprint (", attributes: " % build) attrs
+      | otherwise                = bprint (", attributes: " . build) attrs
 
 instance Bi Tx where
   encode tx =
@@ -147,9 +147,9 @@ instance ToJSONKey TxIn where
 
 instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
-    bprint ("TxInUtxo " % shortHashF % " #" % int) txInHash txInIndex
+    bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
   build (TxInUnknown tag bs) =
-    bprint ("TxInUnknown " % int % " " % base16F) tag bs
+    bprint ("TxInUnknown " . int . " " . base16F) tag bs
 
 instance Bi TxIn where
   encode (TxInUtxo txInHash txInIndex) =
@@ -168,7 +168,7 @@ instance Bi TxIn where
   encodedSizeExpr size _ =
     2
       + (knownCborDataItemSizeExpr $ szCases
-          [ let TxInUtxo txInHash txInIndex = error "unused"
+          [ let TxInUtxo txInHash txInIndex = panic "unused"
             in Case "TxInUtxo" (size ((,) <$> pure txInHash <*> pure txInIndex))
           ]
         )
@@ -181,16 +181,19 @@ isTxInUnknown _                 = False
 
 txInFromText :: Text -> Either Text TxIn
 txInFromText t = case T.splitOn "_" t of
-  ["TxInUtxo", h, idx] -> TxInUtxo <$> decodeAbstractHash h <*> readEither idx
+  ["TxInUtxo", h, idx] ->
+    TxInUtxo <$> decodeAbstractHash h <*> first toS (readEither (toS idx))
   ["TxInUnknown", tag, bs] ->
-    TxInUnknown <$> readEither tag <*> first show (parseBase16 bs)
+    TxInUnknown <$> first toS (readEither (toS tag)) <*> first
+      show
+      (parseBase16 bs)
   _ -> Left $ "Invalid TxIn " <> t
 
 txInToText :: TxIn -> Text
 txInToText (TxInUtxo txInHash txInIndex) =
-  sformat ("TxInUtxo_" % hashHexF % "_" % int) txInHash txInIndex
+  sformat ("TxInUtxo_" . hashHexF . "_" . int) txInHash txInIndex
 txInToText (TxInUnknown tag bs) =
-  sformat ("TxInUnknown_" % int % "_" % base16F) tag bs
+  sformat ("TxInUnknown_" . int . "_" . base16F) tag bs
 
 
 --------------------------------------------------------------------------------
@@ -217,7 +220,7 @@ instance ToJSON TxOut where
 
 instance B.Buildable TxOut where
   build txOut = bprint
-    ("TxOut " % coinF % " -> " % build)
+    ("TxOut " . coinF . " -> " . build)
     (txOutValue txOut)
     (txOutAddress txOut)
 

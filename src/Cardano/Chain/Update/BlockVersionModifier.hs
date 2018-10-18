@@ -14,8 +14,7 @@ import           Cardano.Prelude
 
 import           Data.Text.Lazy.Builder (Builder)
 import           Data.Time (NominalDiffTime)
-import           Formatting (Format, bprint, build, bytes, int, later, shortest,
-                     (%))
+import           Formatting (Format, bprint, build, bytes, int, later, shortest)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -46,21 +45,21 @@ data BlockVersionModifier = BlockVersionModifier
 
 instance B.Buildable BlockVersionModifier where
   build bvm = bprint
-    ( "{ script version: " % bmodifier build
-    % ", slot duration: " % bmodifier build
-    % ", block size limit: " % bmodifier bytes'
-    % ", header size limit: " % bmodifier bytes'
-    % ", tx size limit: " % bmodifier bytes'
-    % ", proposal size limit: " % bmodifier bytes'
-    % ", mpc threshold: " % bmodifier build
-    % ", heavyweight delegation threshold: " % bmodifier build
-    % ", update vote threshold: " % bmodifier build
-    % ", update proposal threshold: " % bmodifier build
-    % ", update implicit period (slots): " % bmodifier int
-    % ", softfork rule: " % bmodifier build
-    % ", tx fee policy: " % bmodifier build
-    % ", unlock stake epoch: " % bmodifier build
-    % " }"
+    ( "{ script version: " . bmodifier build
+    . ", slot duration: " . bmodifier build
+    . ", block size limit: " . bmodifier bytes'
+    . ", header size limit: " . bmodifier bytes'
+    . ", tx size limit: " . bmodifier bytes'
+    . ", proposal size limit: " . bmodifier bytes'
+    . ", mpc threshold: " . bmodifier build
+    . ", heavyweight delegation threshold: " . bmodifier build
+    . ", update vote threshold: " . bmodifier build
+    . ", update proposal threshold: " . bmodifier build
+    . ", update implicit period (slots): " . bmodifier int
+    . ", softfork rule: " . bmodifier build
+    . ", tx fee policy: " . bmodifier build
+    . ", unlock stake epoch: " . bmodifier build
+    . " }"
     )
     (bvmScriptVersion bvm)
     (bvmSlotDuration bvm)

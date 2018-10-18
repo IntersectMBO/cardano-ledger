@@ -22,11 +22,14 @@ import           Cardano.Prelude
 import           Data.Bits (shiftL)
 import qualified Data.ByteString as BS
 import           Data.Fixed (Nano)
+import           Data.String (String)
+
 import           Test.Hspec (Spec, describe)
 import           Test.Hspec.QuickCheck (modifyMaxSize, modifyMaxSuccess, prop)
 import           Test.QuickCheck (Arbitrary (..), choose, sized, (===))
 
 import           Cardano.Binary.Class
+
 import           Test.Cardano.Binary.Helpers (U, binaryTest, extensionProperty)
 import qualified Test.Cardano.Cbor.RefImpl as R
 

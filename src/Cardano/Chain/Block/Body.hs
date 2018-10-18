@@ -15,7 +15,7 @@ module Cardano.Chain.Block.Body
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -61,10 +61,10 @@ data BodyError
 instance B.Buildable BodyError where
   build = \case
     BodyDelegationPayloadError err -> bprint
-      ("Delegation.Payload was invalid while checking Body.\n Error: " % build)
+      ("Delegation.Payload was invalid while checking Body.\n Error: " . build)
       err
     BodyUpdatePayloadError err -> bprint
-      ("Update.Payload was invalid while checking Body.\n Error: " % build)
+      ("Update.Payload was invalid while checking Body.\n Error: " . build)
       err
 
 verifyBody :: MonadError BodyError m => ProtocolMagic -> Body -> m ()

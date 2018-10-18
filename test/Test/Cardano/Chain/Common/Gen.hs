@@ -26,7 +26,7 @@ import           Test.Cardano.Prelude
 
 import           Data.Fixed (Fixed (..))
 import qualified Data.Map.Strict as Map
-import           Formatting (build, sformat, (%))
+import           Formatting (build, sformat)
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -128,15 +128,15 @@ genCoeff = do
     -- A `Coeff` wraps a Nano-precision integral value, which corresponds to a
     -- number of "Lovelace" (10^6 Lovelace == 1 ADA). The `Coeff` values used
     -- in Cardano correspond to less than 1 ADA.
-    let exponent = 9 + 6 :: Integer
-    integer <- Gen.integral (Range.constant 0 (10^exponent))
+    let e = 9 + 6 :: Integer
+    integer <- Gen.integral (Range.constant 0 (10^e))
     pure $ Coeff (MkFixed integer)
 
 genCoin :: Gen Coin
 genCoin = mkCoin <$> Gen.word64 (Range.constant 0 maxCoinVal) >>= \case
   Right coin -> pure coin
   Left err ->
-    error $ sformat ("The impossible happened in genCoin: " % build) err
+    panic $ sformat ("The impossible happened in genCoin: " . build) err
 
 genCoinPortion :: Gen CoinPortion
 genCoinPortion =

@@ -29,7 +29,7 @@ import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
 import           Data.Default (Default (..))
 import           Data.Semigroup (Semigroup)
-import           Formatting (int, sformat, (%))
+import           Formatting (int, sformat)
 import           Formatting.Buildable (Buildable (..))
 import qualified Prelude
 
@@ -99,7 +99,7 @@ instance Bi PassPhrase where
     toCborError $ if bl == 0 || bl == passphraseLength
       then Right $ ByteArray.convert bs
       else Left $ sformat
-        ("put@PassPhrase: expected length 0 or " % int % ", not " % int)
+        ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
         passphraseLength
         bl
 
@@ -115,7 +115,7 @@ data SafeSigner
 
 -- | Parameters used to evaluate hash of passphrase.
 passScryptParam :: S.ScryptParams
-passScryptParam = fromMaybe (error "Bad passphrase scrypt parameters")
+passScryptParam = fromMaybe (panic "Bad passphrase scrypt parameters")
   $ S.mkScryptParams def { S.spHashLen = 32 }  -- maximal passphrase length
 
 -- | Wrap raw secret key, attaching hash to it

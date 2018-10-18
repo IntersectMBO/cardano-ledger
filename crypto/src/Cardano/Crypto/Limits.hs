@@ -20,7 +20,7 @@ import           Cardano.Crypto (AbstractHash, PublicKey, Signature (..))
 mlAbstractHash
   :: forall algo a . HashAlgorithm algo => Limit (AbstractHash algo a)
 mlAbstractHash =
-  fromIntegral (hashDigestSize (error "AbstractHash limit" :: algo) + 4)
+  fromIntegral (hashDigestSize (panic "AbstractHash limit" :: algo) + 4)
 
 mlPublicKey :: Limit PublicKey
 mlPublicKey = 66

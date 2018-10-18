@@ -26,7 +26,7 @@ import           Data.Char (isAscii)
 import qualified Data.Text as T
 import           Distribution.System (Arch (..), OS (..))
 import           Distribution.Text (display)
-import           Formatting (bprint, int, stext, (%))
+import           Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..))
@@ -58,9 +58,9 @@ data SystemTagError
 instance B.Buildable SystemTagError where
   build = \case
     SystemTagNotAscii tag ->
-      bprint ("SystemTag, " % stext % ", contains non-ascii characters") tag
+      bprint ("SystemTag, " . stext . ", contains non-ascii characters") tag
     SystemTagTooLong tag -> bprint
-      ("SystemTag, " % stext % ", exceeds limit of " % int)
+      ("SystemTag, " . stext . ", exceeds limit of " . int)
       tag
       (systemTagMaxLength :: Int)
 
@@ -70,19 +70,19 @@ checkSystemTag (SystemTag tag)
   | T.any (not . isAscii) tag         = throwError $ SystemTagNotAscii tag
   | otherwise                         = pure ()
 
--- | Helper to turn an @OS@ into a @String@ compatible with the @systemTag@
+-- | Helper to turn an @OS@ into a @Text@ compatible with the @systemTag@
 --   previously used in 'configuration.yaml'
-osHelper :: OS -> String
+osHelper :: OS -> Text
 osHelper sys = case sys of
   Windows -> "win"
   OSX     -> "macos"
   Linux   -> "linux"
-  _       -> display sys
+  _       -> toS $ display sys
 
--- | Helper to turn an @Arch@ into a @String@ compatible with the @systemTag@
+-- | Helper to turn an @Arch@ into a @Text@ compatible with the @systemTag@
 --   previously used in 'configuration.yaml'
-archHelper :: Arch -> String
+archHelper :: Arch -> Text
 archHelper archt = case archt of
   I386   -> "32"
   X86_64 -> "64"
-  _      -> display archt
+  _      -> toS $ display archt

@@ -8,17 +8,19 @@ module Cardano.Crypto.Signing.Redeem
 
 import           Cardano.Prelude
 
-import           Cardano.Binary.Class (Bi, Raw)
-import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
-import           Cardano.Crypto.Signing.Tag (SignTag, signTag)
-import           Cardano.Crypto.Signing.Types.Redeem
+import           Control.Monad (fail)
 import           Crypto.Error (maybeCryptoError)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import           Crypto.Random (MonadRandom)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
 import           Data.Coerce (coerce)
+
+import           Cardano.Binary.Class (Bi, Raw)
+import qualified Cardano.Binary.Class as Bi
+import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import           Cardano.Crypto.Signing.Tag (SignTag, signTag)
+import           Cardano.Crypto.Signing.Types.Redeem
 
 
 --------------------------------------------------------------------------------

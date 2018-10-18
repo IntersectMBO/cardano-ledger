@@ -29,7 +29,7 @@ import           Cardano.Prelude
 
 import           Data.Bits (Bits (..))
 import           Data.ByteArray (ByteArrayAccess, convert)
-import           Data.ByteString.Builder (Builder, byteString)
+import           Data.ByteString.Builder (Builder, byteString, word8)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Coerce (coerce)
@@ -99,7 +99,7 @@ mkLeaf :: Bi a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
     where
       mRoot = MerkleRoot $ coerce $
-          hashRaw (toLazyByteString ((byteString (one 0)) <> serializeBuilder a))
+          hashRaw (toLazyByteString (word8 0 <> serializeBuilder a))
 
 mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
 mkBranch nodeA nodeB =
@@ -120,9 +120,9 @@ merkleRootToBuilder (MerkleRoot (AbstractHash d)) = byteString (convert d)
 
 mkRoot :: MerkleRoot a -> MerkleRoot a -> MerkleRoot a
 mkRoot a b = MerkleRoot $ coerce $ hashRaw $ toLazyByteString $ mconcat
-    [ byteString (one 1)
-    , merkleRootToBuilder (a)
-    , merkleRootToBuilder (b) ]
+    [ word8 1
+    , merkleRootToBuilder a
+    , merkleRootToBuilder b ]
 
 -- | Smart constructor for 'MerkleTree'.
 mkMerkleTree :: Bi a => [a] -> MerkleTree a

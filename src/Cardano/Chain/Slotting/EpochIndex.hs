@@ -17,7 +17,7 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Data.Ix (Ix)
-import           Formatting (bprint, int, (%))
+import           Formatting (bprint, int)
 import           Formatting.Buildable (Buildable (..))
 import           Servant.API (FromHttpApiData)
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
@@ -43,7 +43,7 @@ newtype EpochIndex = EpochIndex
              )
 
 instance Buildable EpochIndex where
-  build = bprint ("#"%int)
+  build = bprint ("#" . int)
 
 instance Bi EpochIndex where
   encode (EpochIndex epoch) = encode epoch

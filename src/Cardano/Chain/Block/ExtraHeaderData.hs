@@ -14,7 +14,7 @@ module Cardano.Chain.Block.ExtraHeaderData
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, builder, (%))
+import           Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -41,7 +41,7 @@ data ExtraHeaderData = ExtraHeaderData
 
 instance B.Buildable ExtraHeaderData where
   build mehd = bprint
-    ("    block: v" % build % "\n" % "    software: " % build % "\n" % builder)
+    ("    block: v" . build . "\n" . "    software: " . build . "\n" . builder)
     (ehdBlockVersion mehd)
     (ehdSoftwareVersion mehd)
     formattedExtra
@@ -49,7 +49,7 @@ instance B.Buildable ExtraHeaderData where
     formattedExtra
       | areAttributesKnown (ehdAttributes mehd) = mempty
       | otherwise = bprint
-        ("    attributes: " % build % "\n")
+        ("    attributes: " . build . "\n")
         (ehdAttributes mehd)
 
 instance Bi ExtraHeaderData where
@@ -71,7 +71,7 @@ instance B.Buildable ExtraHeaderDataError where
   build = \case
     ExtraHeaderDataSoftwareVersionError err -> bprint
       ( "SoftwareVersion was invalid while checking ExtraHeaderData.\n Error: "
-      % build
+      . build
       )
       err
 

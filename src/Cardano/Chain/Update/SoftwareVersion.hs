@@ -18,7 +18,7 @@ import qualified Prelude
 
 import           Control.Monad.Except (MonadError (..))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (bprint, build, formatToString, int, stext, (%))
+import           Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -37,7 +37,7 @@ data SoftwareVersion = SoftwareVersion
 
 instance B.Buildable SoftwareVersion where
   build sv =
-    bprint (stext % ":" % int) (getApplicationName $ svAppName sv) (svNumber sv)
+    bprint (stext . ":" . int) (getApplicationName $ svAppName sv) (svNumber sv)
 
 instance Show SoftwareVersion where
   show = formatToString build
@@ -56,7 +56,7 @@ instance B.Buildable SoftwareVersionError where
   build = \case
     SoftwareVersionApplicationNameError err -> bprint
       ( "ApplicationName was invalid when checking SoftwareVersion\n Error:"
-      % build
+      . build
       )
       err
 
