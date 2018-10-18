@@ -17,8 +17,7 @@ data StakePool = StakePool
                    , poolAltAcnt :: Maybe HashKey
                    } deriving (Show, Eq, Ord)
 
--- |The delagtation of one stake key to another.
+-- |The delegation of one stake key to another.
 data Delegation = Delegation { delegator :: VKey
                              , delegatee :: VKey }
                              deriving (Show, Eq, Ord)
-
