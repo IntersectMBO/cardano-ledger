@@ -1,4 +1,4 @@
-# Formal Models for Shelley Ledger Rules
+# Formal Models for Ledger Rules
 
 Formal and executable specifications for the new features to be introduced by Shelley.
 
