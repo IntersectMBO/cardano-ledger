@@ -41,9 +41,10 @@ import           Delegation.StakePool (Delegation(..), StakePool(..))
 
 -- | A ledger consists of a list of entries where each such entry is either a
 -- stake delegation step or a transaction.
+
 data LedgerEntry =
-    Transaction TxWits
-  | StakeTransition (Set.Set Cert)
+    TransactionData TxWits
+  | DelegationData Cert
     deriving (Show, Eq)
 
 type Ledger = [LedgerEntry]
@@ -62,7 +63,7 @@ data ValidationError =
   -- | A stake key must be registered to be used or deregistered.
   | StakeKeyNotRegistered
   -- | The stake key to which is delegated is not known.
-  | StakeTargetUnknown
+  | StakeDelegationImpossible
   -- | Stake pool not registered for key, cannot be retired.
   | StakePoolNotRegisteredOnKey
     deriving (Show, Eq)
@@ -170,6 +171,54 @@ valid tx l =
     <> preserveBalance tx l
     <> witnessed tx l
 
+-- The rules for checking validiy of stake delegation transitions return
+-- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
+-- certificate is of a different type, it's considered to be valid due to the
+-- falsified hypothesis.
+
+-- | Checks whether a key registration certificat is valid.
+validKeyRegistration :: Cert -> LedgerState -> Validity
+validKeyRegistration cert (LedgerState _ ds _) =
+  case cert of
+    RegKey key -> if not $ Set.member (hashKey key) (getStKeys ds)
+                  then Valid else Invalid [StakeKeyAlreadyRegistered]
+    _          -> Valid
+
+validKeyDeregistration :: Cert -> LedgerState -> Validity
+validKeyDeregistration cert (LedgerState _ ds _) =
+  case cert of
+    DeRegKey key -> if Set.member (hashKey key) (getStKeys ds)
+                    then Valid else Invalid [StakeKeyNotRegistered]
+    _            -> Valid
+
+validStakeDelegation :: Cert -> LedgerState -> Validity
+validStakeDelegation cert (LedgerState _ ds _) =
+  case cert of
+    Delegate (Delegation source target)
+      -> if Set.member (hashKey source) (getStKeys ds) &&
+            Set.member (hashKey target) (getStPools ds)
+         then Valid else Invalid [StakeDelegationImpossible]
+    _ -> Valid
+
+-- there is currently no requirement that could make this invalid
+validStakePoolRegister :: Cert -> LedgerState -> Validity
+validStakePoolRegister _ _ = Valid
+
+validStakePoolRetire :: Cert -> LedgerState -> Validity
+validStakePoolRetire cert (LedgerState _ ds _) =
+  case cert of
+    RetirePool key _ -> if Set.member (hashKey key) (getStPools ds)
+                        then Valid else Invalid [StakePoolNotRegisteredOnKey]
+    _                -> Valid
+
+validDelegation :: Cert -> LedgerState -> Validity
+validDelegation cert l =
+     validKeyRegistration cert l
+  <> validKeyDeregistration cert l
+  <> validStakeDelegation cert l
+  <> validStakePoolRegister cert l
+  <> validStakePoolRetire cert l
+
 -- |Apply a raw transaction body as a state transition function on the ledger state.
 applyTx :: LedgerState -> Tx -> LedgerState
 applyTx ls tx =
@@ -182,12 +231,15 @@ applyTx ls tx =
 -- Otherwise, return a list of validation errors.
 asStateTransition
   :: LedgerState -> LedgerEntry -> Either [ValidationError] LedgerState
-asStateTransition ls (Transaction tx) =
+asStateTransition ls (TransactionData tx) =
   case valid tx ls of
     Invalid errors -> Left errors
     Valid          -> Right $ applyTx ls (body tx)
 
-asStateTransition ls (StakeTransition stake) = undefined
+asStateTransition ls (DelegationData cert) =
+  case validDelegation cert ls of
+    Invalid errors -> Left errors
+    Valid          -> Right $ applyCert cert ls
 
 -- Functions for stake delegation model
 
@@ -207,38 +259,27 @@ applyTxBody ls tx = ls { getUtxo = newUTxOs }
 
 -- |Apply a certificate as a state transition function on the ledger state.
 applyCert :: Cert -> LedgerState -> LedgerState
-applyCert (RegKey key) ls@(LedgerState _ ds _) =
-  if not $ Set.member hk_sk (getStKeys ds)
-  then ls
+applyCert (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = (Set.insert hk_sk (getStKeys ds))
     , getAccounts = (Map.insert hk_sk (Coin 0) (getAccounts ds))}
   }
-  else ls
-    where hk_sk = hashKey key
+  where hk_sk = hashKey key
 
-applyCert (DeRegKey key) ls@(LedgerState _ ds _) =
-  if Set.member hk_sk (getStKeys ds) then ls
+applyCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Set.delete hk_sk (getStKeys ds)
     , getAccounts = Map.delete hk_sk (getAccounts ds)
     , getDelegations = Map.delete hk_sk (getDelegations ds) }
   }
-  else ls
-    where hk_sk = hashKey key
+  where hk_sk = hashKey key
 
 -- TODO do we also have to check hashKey target?
-applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
-  if Set.member hk_src (getStKeys ds) &&
-     Set.member hk_target (getStPools ds)
-  then ls
+applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
   {getDelegationState = ds
     { getDelegations =
-        Map.insert hk_src hk_target (getDelegations ds)}
+        Map.insert (hashKey source) (hashKey target) (getDelegations ds)}
   }
-  else ls
-    where hk_src    = hashKey source
-          hk_target = hashKey target
 
 -- TODO what happens if there's already a pool registered with that key?
 applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
@@ -248,17 +289,14 @@ applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
   where hsk = hashKey $ poolPubKey sp
 
 -- TODO check epoch (not in new doc atm.)
-applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) =
-  if hk_sp `Set.member` (getStPools ds)
-  then ls
+applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getRetiring = retiring}}
-  else ls
   where retiring = Map.insert hk_sp epoch (getRetiring ds)
         hk_sp = hashKey key
 
--- |Apply a collection of certificates as a state transition function on
--- the ledger state.
+-- |Apply an ordered collection of certificates as a state transition function
+-- on the ledger state.
 applyCerts :: LedgerState -> Set.Set Cert -> LedgerState
 applyCerts = Set.fold applyCert
 
