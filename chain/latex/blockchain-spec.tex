@@ -110,6 +110,10 @@
 
 \newcommand{\delmap}{\delta}
 
+% Partial and total function aliases
+\newcommand{\totalf}{\to}
+\newcommand{\partialf}{\mapsto}
+
 % comments
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
@@ -270,7 +274,7 @@ certificate in which a key delegates to itself.
     (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
       & \text{non-genesis block} \\
     b & \in \Block = \GBlock + \RBlock & \text{block} \\
-    \delmap & \in \VKeyGen \to \seqof{\HCert}
+    \delmap & \in \VKeyGen \totalf \seqof{\HCert}
       & \text{key to certificate list mapping}
   \end{align*}
   %
@@ -278,24 +282,24 @@ certificate in which a key delegates to itself.
   %
   \begin{align*}
     \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
-    \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \mapsto \Sig
+    \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
     \text{\signedname} & \in \SKey \times \RBlock & \text{signature relation}\\
-    \text{\signedseqname} & \in \SKeyGen \times \seqof{\Block} \mapsto \powerset{\RBlock}
+    \text{\signedseqname} & \in \SKeyGen \times \seqof{\Block} \partialf \powerset{\RBlock}
       & \text{block count function}\\
     \text{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
-    \text{\hashname} & \in \Block \to \BHash
+    \text{\hashname} & \in \Block \totalf \BHash
       & \text{block hash function}\\
-    \text{\delegatename} & \in \SKeyGen \times \VKey \to \HCert
+    \text{\delegatename} & \in \SKeyGen \times \VKey \totalf \HCert
       & \text{delegation function}\\
     \text{\validname} & \in \RBlock \times \VKey
       & \text{block validity relation}\\
-    \text{\predbname} & \in \Block \to \Block^?
+    \text{\predbname} & \in \Block \totalf \Block^?
       & \text{block predecessor function} \\
-    \text{\toseqname} & \in \type{A}^? \to \seqof{\type{A}}
+    \text{\toseqname} & \in \type{A}^? \totalf \seqof{\type{A}}
       & \text{option to sequence function} \\
-    \text{\predbseqname} & \in \Block \to \seqof{\Block}
+    \text{\predbseqname} & \in \Block \totalf \seqof{\Block}
       & \text{block to sequence function}
   \end{align*}
   \caption{Definitions associated with the blockchain transition system}
@@ -311,7 +315,7 @@ In the first epoch, every key from the genesis block delegates to itself, as giv
   \label{eq:init-delpmap}
   \inference[Initial-delegation-map]
   {}
-  { \delmap_0 = \Set{(vk_s \mapsto c; \epsilon)}{vk_s \in \VKeyGen \wedge c = (vk_s, vk_s, e_0, \sigma)}}
+  { \delmap_0 = \Set{(vk_s \partialf c; \epsilon)}{vk_s \in \VKeyGen \wedge c = (vk_s, vk_s, e_0, \sigma)}}
 \end{equation}
 
 
@@ -323,7 +327,7 @@ head element, as given by \eqref{eq:next-epoch-delmap}.
   \label{eq:next-epoch-delmap}
   \inference[Epoch-change]
   {\delmap_k & \text{epoch clock tick}}
-  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_s \mapsto c; \epsilon)}{(vk_s \mapsto c; \Lambda) \in \delmap_k}}}
+  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_s \partialf c; \epsilon)}{(vk_s \partialf c; \Lambda) \in \delmap_k}}}
 \end{equation}
 
 
@@ -339,7 +343,7 @@ added, the delegation map is updated at $vk_s$, as given by
     {
       \begin{array}{c}
         (sk_s, vk_s) \in \SKeyGen \times \VKeyGen \\
-        (vk_s \mapsto c_h; \lambda) \in \delmap_k \\
+        (vk_s \partialf c_h; \lambda) \in \delmap_k \\
         c_h = (vk_s, vk_{d_1}, e_h, \sigma_h)
       \end{array}
     }
@@ -355,7 +359,7 @@ added, the delegation map is updated at $vk_s$, as given by
     \left(
     {
       \begin{array}{c}
-        \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\} \\
+        \delmap_{k'} = \Set{(vk \partialf \Lambda)}{(vk \partialf \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \partialf c; c_h; \epsilon\} \\
         \delegate{sk_s}{vk_d} = (vk_s, vk_d, e_j, \sigma)
       \end{array}
     }
