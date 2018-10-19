@@ -25,12 +25,12 @@ library
 
   other-modules:
                        Cardano.Prelude.Base
+                       Cardano.Prelude.Base16
                        Cardano.Prelude.Error
                        Cardano.Prelude.Formatting
                        Cardano.Prelude.Json.Canonical
                        Cardano.Prelude.Json.Parse
                        Cardano.Prelude.Orphans
-                       Cardano.Prelude.Parse
 
   build-depends:       base
                      , aeson

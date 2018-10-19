@@ -2,7 +2,7 @@
 
 -- | Helper functions for parsing
 
-module Cardano.Prelude.Parse
+module Cardano.Prelude.Base16
        ( parseBase16
        ) where
 
