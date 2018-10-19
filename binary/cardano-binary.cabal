@@ -30,12 +30,7 @@ library
                        Cardano.Binary.Class.Primitive
 
   build-depends:       base
-                     , aeson
-                     , base64-bytestring
-                     , base64-bytestring-type
-                     , binary
                      , bytestring
-                     , canonical-json
                      , cardano-prelude
                      , cborg
                      , containers

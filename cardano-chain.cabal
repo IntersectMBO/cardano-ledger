@@ -67,14 +67,6 @@ library
                        Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
 
-                       Cardano.Chain.Ssc.Commitment
-                       Cardano.Chain.Ssc.CommitmentsMap
-                       Cardano.Chain.Ssc.Opening
-                       Cardano.Chain.Ssc.OpeningsMap
-                       Cardano.Chain.Ssc.SharesMap
-                       Cardano.Chain.Ssc.VssCertificate
-                       Cardano.Chain.Ssc.VssCertificatesMap
-
                        Cardano.Chain.Txp.Tx
                        Cardano.Chain.Txp.TxAux
                        Cardano.Chain.Txp.TxOutAux
@@ -147,8 +139,6 @@ test-suite test
                        Test.Cardano.Chain.Delegation.Gen
                        Test.Cardano.Chain.Epoch.File
                        Test.Cardano.Chain.Ssc.Bi
-                       Test.Cardano.Chain.Ssc.Example
-                       Test.Cardano.Chain.Ssc.Gen
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Txp.Bi
@@ -174,7 +164,6 @@ test-suite test
                      , cryptonite
                      , formatting
                      , hedgehog
-                     , pvss
                      , resourcet
                      , streaming
                      , time

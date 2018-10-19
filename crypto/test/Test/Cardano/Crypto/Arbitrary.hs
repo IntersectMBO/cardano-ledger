@@ -1,19 +1,15 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | `Arbitrary` instances for using in tests and benchmarks
 
 module Test.Cardano.Crypto.Arbitrary
-       ( SharedSecrets (..)
-       , genSignature
+       ( genSignature
        , genSignatureEncoded
        , genRedeemSignature
        ) where
@@ -21,21 +17,16 @@ module Test.Cardano.Crypto.Arbitrary
 import           Cardano.Prelude hiding (keys)
 import           Test.Cardano.Prelude
 
-import           Control.Monad (zipWithM)
 import qualified Data.ByteArray as ByteArray
-import           Data.List.NonEmpty (fromList)
 import           Test.QuickCheck (Arbitrary (..), Gen, elements, oneof, vector)
 import           Test.QuickCheck.Arbitrary.Generic (genericArbitrary,
                      genericShrink)
 
-import           Cardano.Binary.Class (AsBinary (..), AsBinaryClass (..), Bi)
+import           Cardano.Binary.Class (Bi)
 import           Cardano.Crypto.Hashing (AbstractHash (..), HashAlgorithm)
 import           Cardano.Crypto.HD (HDAddressPayload, HDPassphrase (..))
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
-import           Cardano.Crypto.Random (deterministic, randomNumberInRange)
-import           Cardano.Crypto.SecretSharing (DecShare, EncShare, Secret,
-                     SecretProof, Threshold, VssKeyPair, VssPublicKey,
-                     decryptShare, genSharedSecret, toVssPublicKey, vssKeyGen)
+import           Cardano.Crypto.Random (deterministic)
 import           Cardano.Crypto.Signing (EncryptedSecretKey (..), PassPhrase,
                      ProxyCert, ProxySecretKey, ProxySignature, PublicKey,
                      SecretKey, SignTag (..), Signature, Signed,
@@ -109,29 +100,6 @@ instance Nonrepeating RedeemSecretKey where
 
 
 --------------------------------------------------------------------------------
--- Arbitrary VSS keys
---------------------------------------------------------------------------------
-
-vssKeys :: [VssKeyPair]
-vssKeys = deterministic "vssKeys" $ replicateM keysToGenerate vssKeyGen
-
-instance Arbitrary VssKeyPair where
-    arbitrary = elements vssKeys
-
-instance Arbitrary VssPublicKey where
-    arbitrary = toVssPublicKey <$> arbitrary
-
-instance Arbitrary (AsBinary VssPublicKey) where
-    arbitrary = asBinary @VssPublicKey <$> arbitrary
-
-instance Nonrepeating VssKeyPair where
-    nonrepeating n = sublistN n vssKeys
-
-instance Nonrepeating VssPublicKey where
-    nonrepeating n = map toVssPublicKey <$> nonrepeating n
-
-
---------------------------------------------------------------------------------
 -- Arbitrary signatures
 --------------------------------------------------------------------------------
 
@@ -173,58 +141,6 @@ instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
         let psk = createPsk dummyProtocolMagic issuerSk (toPublic delegateSk) w
         proxySign dummyProtocolMagic SignProxySK delegateSk psk <$> arbitrary
 
-
---------------------------------------------------------------------------------
--- Arbitrary secrets
---------------------------------------------------------------------------------
-
-data SharedSecrets = SharedSecrets
-    { ssSecret    :: !Secret
-    , ssSecProof  :: !SecretProof
-    , ssEncShares :: ![EncShare]
-    , ssDecShares :: ![DecShare]
-    , ssThreshold :: !Threshold
-    , ssVssKeys   :: ![VssPublicKey]
-    , ssPos       :: !Int            -- This field is a valid, zero-based index in the
-                                     -- shares/keys lists.
-    } deriving (Show, Eq)
-
-sharedSecrets :: [SharedSecrets]
-sharedSecrets = runGen $ replicateM keysToGenerate $ do
-    parties <- randomNumberInRange 4 (toInteger (length vssKeys))
-    ssThreshold <- randomNumberInRange 2 (parties - 2)
-    vssKs <- sortWith toVssPublicKey <$> sublistN (fromInteger parties) vssKeys
-    let ssVssKeys = map toVssPublicKey vssKs
-    (ssSecret, ssSecProof, map snd -> ssEncShares) <- genSharedSecret
-        ssThreshold
-        (fromList ssVssKeys)
-    ssDecShares <- zipWithM decryptShare vssKs ssEncShares
-    let ssPos = fromInteger parties - 1 :: Int
-    return SharedSecrets {..}
-
-instance Arbitrary Secret where
-    arbitrary = elements . fmap ssSecret $ sharedSecrets
-
-instance Arbitrary (AsBinary Secret) where
-    arbitrary = asBinary @Secret <$> arbitrary
-
-instance Arbitrary SecretProof where
-    arbitrary = elements . fmap ssSecProof $ sharedSecrets
-
-instance Arbitrary EncShare where
-    arbitrary = elements . concatMap ssEncShares $ sharedSecrets
-
-instance Arbitrary (AsBinary EncShare) where
-    arbitrary = asBinary @EncShare <$> arbitrary
-
-instance Arbitrary DecShare where
-    arbitrary = elements . concatMap ssDecShares $ sharedSecrets
-
-instance Arbitrary (AsBinary DecShare) where
-    arbitrary = asBinary @DecShare <$> arbitrary
-
-instance Arbitrary SharedSecrets where
-    arbitrary = elements sharedSecrets
 
 --------------------------------------------------------------------------------
 -- Arbitrary hashes

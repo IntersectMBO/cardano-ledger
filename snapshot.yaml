@@ -36,5 +36,4 @@ packages:
   - base58-bytestring-0.1.0
   - half-0.2.2.3
   - micro-recursion-schemes-5.0.2.2
-  - pvss-0.2.0
   - streaming-binary-0.3.0.1

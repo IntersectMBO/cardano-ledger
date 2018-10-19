@@ -28,7 +28,6 @@ library
                        Cardano.Crypto.Orphans
                        Cardano.Crypto.ProtocolMagic
                        Cardano.Crypto.Random
-                       Cardano.Crypto.SecretSharing
                        Cardano.Crypto.Signing
                        Cardano.Crypto.Signing.Redeem
                        Cardano.Crypto.Signing.Safe
@@ -63,7 +62,6 @@ library
                      , lens
                      , memory
                      , mtl
-                     , pvss
                      , scrypt
                      , text
 

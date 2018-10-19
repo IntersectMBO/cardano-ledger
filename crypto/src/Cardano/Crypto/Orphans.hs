@@ -11,7 +11,6 @@ import           Cardano.Prelude
 import qualified Codec.CBOR.Encoding as E
 import           Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import qualified Crypto.SCRAPE as Scrape
 import           Crypto.Scrypt (EncryptedPass (..))
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteArray as BA
@@ -19,8 +18,7 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.Text as T
 
-import           Cardano.Binary.Class (Bi (..), Size, decodeBinary,
-                     encodeBinary, withWordSize)
+import           Cardano.Binary.Class (Bi (..), Size, withWordSize)
 
 
 fromByteStringToBytes :: BS.ByteString -> BA.Bytes
@@ -104,47 +102,6 @@ instance Bi Ed25519.Signature where
 -- Helper for encodedSizeExpr in Bi instances
 bsSize :: Int -> Size
 bsSize x = fromIntegral (x + withWordSize x)
-
-
---------------------------------------------------------------------------------
--- Bi instances for Scrape
---------------------------------------------------------------------------------
-
-instance Bi Scrape.PublicKey where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.KeyPair where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.Secret where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.DecryptedShare where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.EncryptedSi where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.ExtraGen where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.Commitment where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.Proof where
-  encode = encodeBinary
-  decode = decodeBinary
-
-instance Bi Scrape.ParallelProofs where
-  encode = encodeBinary
-  decode = decodeBinary
 
 instance Bi EncryptedPass where
   encode (EncryptedPass ep) = encode ep

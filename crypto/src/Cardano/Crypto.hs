@@ -7,5 +7,4 @@ import           Cardano.Crypto.HD as X
 import           Cardano.Crypto.ProtocolMagic as X
 import           Cardano.Crypto.Random as X
 import           Cardano.Crypto.Scrypt as X
-import           Cardano.Crypto.SecretSharing as X
 import           Cardano.Crypto.Signing as X

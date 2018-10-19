@@ -21,8 +21,6 @@ library
                        Test.Cardano.Chain.Delegation.Gen
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
-                       Test.Cardano.Chain.Ssc.Example
-                       Test.Cardano.Chain.Ssc.Gen
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
@@ -44,7 +42,6 @@ library
                      , cryptonite
                      , formatting
                      , hedgehog
-                     , pvss
                      , streaming
                      , time
                      , vector

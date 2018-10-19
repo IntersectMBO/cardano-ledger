@@ -16,7 +16,6 @@ import           Cardano.Prelude
 import           Crypto.Hash (Blake2b_224, Blake2b_256)
 import           Test.Hspec (Spec, describe)
 
-import           Cardano.Binary.Class
 import qualified Cardano.Crypto as Crypto
 
 import           Test.Cardano.Binary.Helpers (U, binaryTest)
@@ -42,18 +41,7 @@ spec = describe "Cbor.Bi instances" $ describe "Crypto" $ do
     binaryTest @Crypto.RedeemPublicKey
     binaryTest @(Crypto.RedeemSignature Bool)
     binaryTest @(Crypto.RedeemSignature U)
-    binaryTest @Crypto.Threshold
-    binaryTest @Crypto.VssPublicKey
     binaryTest @Crypto.PassPhrase
-    binaryTest @Crypto.VssKeyPair
-    binaryTest @Crypto.Secret
-    binaryTest @Crypto.DecShare
-    binaryTest @Crypto.EncShare
-    binaryTest @Crypto.SecretProof
     binaryTest @Crypto.HDAddressPayload
     binaryTest @(Crypto.AbstractHash Blake2b_224 U)
     binaryTest @(Crypto.AbstractHash Blake2b_256 U)
-    binaryTest @(AsBinary Crypto.VssPublicKey)
-    binaryTest @(AsBinary Crypto.Secret)
-    binaryTest @(AsBinary Crypto.DecShare)
-    binaryTest @(AsBinary Crypto.EncShare)

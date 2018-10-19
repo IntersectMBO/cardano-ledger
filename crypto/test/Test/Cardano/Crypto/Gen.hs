@@ -19,10 +19,6 @@ module Test.Cardano.Crypto.Gen
         , genRedeemPublicKey
         , genRedeemSecretKey
 
-        -- VSS Key Generators
-        , genVssKeyPair
-        , genVssPublicKey
-
         -- Proxy Cert and Key Generators
         , genProxyCert
         , genProxySecretKey
@@ -33,13 +29,6 @@ module Test.Cardano.Crypto.Gen
         , genSignatureEncoded
         , genSigned
         , genRedeemSignature
-
-        -- Secret Generators
-        , genDecShare
-        , genEncShare
-        , genSharedSecretData
-        , genSecret
-        , genSecretProof
 
         -- Hash Generators
         , genAbstractHash
@@ -63,7 +52,6 @@ import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray
-import           Data.List.NonEmpty (fromList)
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -74,10 +62,6 @@ import           Cardano.Crypto.Hashing (AbstractHash (..), Hash, HashAlgorithm,
                      abstractHash, hash)
 import           Cardano.Crypto.HD (HDAddressPayload (..), HDPassphrase (..))
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
-import           Cardano.Crypto.Random (deterministic)
-import           Cardano.Crypto.SecretSharing (DecShare, EncShare, Secret,
-                     SecretProof, VssKeyPair, VssPublicKey, decryptShare,
-                     deterministicVssKeyGen, genSharedSecret, toVssPublicKey)
 import           Cardano.Crypto.Signing (EncryptedSecretKey, ProxyCert,
                      ProxySecretKey, ProxySignature, PublicKey,
                      SafeSigner (..), SecretKey, SignTag (..), Signature,
@@ -95,6 +79,7 @@ import           Cardano.Crypto.Signing.Redeem (RedeemPublicKey,
 
 genProtocolMagic :: Gen ProtocolMagic
 genProtocolMagic = ProtocolMagic <$> Gen.int32 Range.constantBounded
+
 
 --------------------------------------------------------------------------------
 -- Sign Tag Generator
@@ -115,6 +100,7 @@ genSignTag = Gen.element
         , SignProxySK
         ]
 
+
 --------------------------------------------------------------------------------
 -- Key Generators
 --------------------------------------------------------------------------------
@@ -130,6 +116,7 @@ genSecretKey = snd <$> genKeypair
 
 genEncryptedSecretKey :: Gen EncryptedSecretKey
 genEncryptedSecretKey = noPassEncrypt <$> genSecretKey
+
 
 --------------------------------------------------------------------------------
 -- Redeem Key Generators
@@ -152,15 +139,6 @@ genRedeemSecretKey = do
         Nothing      -> error "Error generating a RedeemSecretKey."
         Just (_, sk) -> return sk
 
---------------------------------------------------------------------------------
--- VSS Key Generators
---------------------------------------------------------------------------------
-
-genVssKeyPair :: Gen VssKeyPair
-genVssKeyPair =  deterministicVssKeyGen <$> gen32Bytes
-
-genVssPublicKey :: Gen VssPublicKey
-genVssPublicKey = toVssPublicKey <$> genVssKeyPair
 
 --------------------------------------------------------------------------------
 -- Proxy Cert and Key Generators
@@ -187,6 +165,7 @@ genProxySignature pm genA genW = do
     a           <- genA
     let psk = createPsk pm issuerSk (toPublic delegateSk) w
     return $ proxySign pm SignProxySK delegateSk psk a
+
 
 --------------------------------------------------------------------------------
 -- Signature Generators
@@ -215,44 +194,6 @@ genRedeemSignature pm genA =
     gst  = genSignTag
     grsk = genRedeemSecretKey
 
---------------------------------------------------------------------------------
--- Secret Generators
---------------------------------------------------------------------------------
-
-genDecShare :: Gen DecShare
-genDecShare = do
-    (_, _, xs) <- genSharedSecretData
-    case fmap fst (uncons xs) of
-        Just (vkp, es) -> return $ deterministic "ds" $ decryptShare vkp es
-        Nothing        -> error "Error generating a DecShare."
-
-genEncShare :: Gen EncShare
-genEncShare = do
-    (_, _, xs) <- genSharedSecretData
-    case fmap fst (uncons xs) of
-        Just (_, es) -> return es
-        Nothing      -> error "Error generating an EncShare."
-
-genSharedSecretData :: Gen (Secret, SecretProof, [(VssKeyPair, EncShare)])
-genSharedSecretData = do
-    let numKeys = 128 :: Int
-    parties     <- Gen.integral (Range.constant 4 (fromIntegral numKeys)) :: Gen Integer
-    threshold   <- Gen.integral (Range.constant 2 (parties - 2)) :: Gen Integer
-    vssKeyPairs <- replicateM numKeys genVssKeyPair
-    let vssPublicKeys = map toVssPublicKey vssKeyPairs
-        (s, sp, xs)   = deterministic "ss" $ genSharedSecret threshold (fromList vssPublicKeys)
-        ys            = zipWith (\(_, y) x -> (x, y)) xs vssKeyPairs
-    return (s, sp, ys)
-
-genSecret :: Gen Secret
-genSecret = do
-    (s, _, _) <- genSharedSecretData
-    return s
-
-genSecretProof :: Gen SecretProof
-genSecretProof = do
-    (_, sp, _) <- genSharedSecretData
-    return sp
 
 --------------------------------------------------------------------------------
 -- Hash Generators
@@ -276,6 +217,7 @@ genPassPhrase = ByteArray.pack <$> genWord8List
     genWord8List =
         Gen.list (Range.singleton 32) (Gen.word8 Range.constantBounded)
 
+
 --------------------------------------------------------------------------------
 -- SafeSigner Generators
 --------------------------------------------------------------------------------
@@ -287,6 +229,7 @@ genSafeSigner = Gen.choice gens
            , FakeSigner <$> genSecretKey
            ]
 
+
 --------------------------------------------------------------------------------
 -- HD Generators
 --------------------------------------------------------------------------------
@@ -296,6 +239,7 @@ genHDPassphrase = HDPassphrase <$> gen32Bytes
 
 genHDAddressPayload :: Gen HDAddressPayload
 genHDAddressPayload = HDAddressPayload <$> gen32Bytes
+
 
 --------------------------------------------------------------------------------
 -- Helper Generators

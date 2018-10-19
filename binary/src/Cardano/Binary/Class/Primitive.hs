@@ -25,10 +25,6 @@ module Cardano.Binary.Class.Primitive
        , CBOR.Write.toStrictByteString
        , Raw(..)
 
-       -- * Binary serialization
-       , AsBinary (..)
-       , AsBinaryClass (..)
-
        -- * Temporary functions
        , biSize
 
@@ -58,21 +54,15 @@ import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as Read
 import qualified Codec.CBOR.Write as CBOR.Write
 import           Control.Exception.Safe (impureThrow)
-import           Control.Monad.Except (MonadError)
 import           Control.Monad.ST (ST, runST)
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base64 as B64
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import           Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder.Extra as Builder
-import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
 import           Data.Digest.CRC32 (CRC32 (..))
 import           Data.Typeable (typeOf)
 import           Formatting (Format, sformat, shown, (%))
-import           Text.JSON.Canonical (FromJSON (..), JSValue (..), ToJSON (..))
 
 import           Cardano.Binary.Class.Core (Bi (..), DecoderError (..), Size,
                      apMono, enforceSize, withWordSize)
@@ -188,33 +178,8 @@ newtype Raw =
 
 
 --------------------------------------------------------------------------------
--- Helper functions, types, classes
+-- Helper functions
 --------------------------------------------------------------------------------
-
--- | A wrapper over 'ByteString' representing a serialized value of
---   type 'a'. This wrapper is used to delay decoding of some data. Note
---   that by default nothing guarantees that the stored 'ByteString' is
---   a valid representation of some value of type 'a'.
-newtype AsBinary a = AsBinary
-  { getAsBinary :: ByteString
-  } deriving (Show, Eq, Ord, NFData)
-
-instance Monad m => ToJSON m (AsBinary smth) where
-  toJSON = pure . JSString . Char8.unpack . B64.encode . getAsBinary
-
-instance MonadError SchemaError m => FromJSON m (AsBinary smth) where
-  fromJSON = fmap AsBinary . parseJSString (B64.decode . fromString . toString)
-
-instance Aeson.ToJSON (AsBinary w) where
-  toJSON = Aeson.toJSON . makeByteString64 . getAsBinary
-
-instance Aeson.FromJSON (AsBinary w) where
-  parseJSON v = AsBinary . getByteString64 <$> Aeson.parseJSON v
-
--- | A simple helper class simplifying work with 'AsBinary'.
-class AsBinaryClass a where
-  asBinary :: a -> AsBinary a
-  fromBinary :: AsBinary a -> Either Text a
 
 -- | Compute size of something serializable in bytes.
 biSize :: Bi a => a -> Natural
