@@ -16,17 +16,17 @@ only care about establishing, whether $\var{vk}_s$ delegated its rights to
 $\var{vk}_d$. To keep track of this, we use a map from keys to keys.
 
 The rule for delegation is presented in
-Figure~\ref{fig:state-trans-delegation}. It states that if $\var{c}$ is a valid
+Figure~\ref{fig:rules:delegation}. It states that if $\var{c}$ is a valid
 delegation certificate from key $\var{vk}_s$ to key $\var{vk}_d$, then the
 delegation map $d$ is updated to contain the key mapping
 $\var{vk}_s \mapsto \var{vk}_d$. The symbol $\unionoverride$ denotes
-union-override, and is defined in Figure~\ref{fig:delegation-defs}. Another
+union-override, and is defined in Figure~\ref{fig:funcs:delegation}. Another
 condition that is checked in the delegation rule is that each genesis key can
 issue at most one delegation certificate per epoch. To check this, the states
 of the transitions system maintain a map from epochs to set of keys that were
-delegated on a given epoch. Finally, the delegation epoch cannot be older than
-the current epoch. This is what allow us to clean up the maps of keys delegated
-per epoch. Variables to the left of the $\vdash$ (turnstile) symbol are the
+delegated on a given epoch. Finally, we only allow delegations for the next
+epoch. This is what allow us to clean up the maps of keys delegated per epoch.
+Variables to the left of the $\vdash$ (turnstile) symbol are the
 \textit{environment} of a rule, which remains constant. This environment (the
 current epoch in this case) would be set by the (chain) rules that use
 Rule~\ref{eq:delegation}.
@@ -51,7 +51,7 @@ Rule~\ref{eq:delegation}.
     & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
   \end{align*}
   \caption{Delegation definitions}
-  \label{fig:delegation-defs}
+  \label{fig:defs:delegation}
 \end{figure}
 
 \begin{figure}
@@ -61,7 +61,7 @@ Rule~\ref{eq:delegation}.
     & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
   \end{align*}
   \caption{Functions used in delegation rules}
-  \label{fig:delegation-funcs}
+  \label{fig:funcs:delegation}
 \end{figure}
 
 \begin{figure}
@@ -80,13 +80,13 @@ Rule~\ref{eq:delegation}.
       \powerset (\Epoch \times \DState \times \DCert \times \DState)
     \end{equation*}
   \caption{Delegation transition-system types}
-  \label{fig:delegation-ts-types}
+  \label{fig:ts-types:delegation}
 \end{figure}
 
 \begin{figure}
   \begin{equation}\label{eq:delegation}
     \inference[Delegation]
-    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} \leq e_c\\
+    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} + 1 = e_c\\
       \var{ekeys'} = \{ (e, \var{vks})  \mid (e, \var{vks}) \in \var{ekeys},~  \var{cepoch} \leq e \}
     }
     {
@@ -107,15 +107,15 @@ Rule~\ref{eq:delegation}.
     }
   \end{equation}
   \caption{Delegation inference rules}
-  \label{fig:state-trans-delegation}
+  \label{fig:rules:delegation}
 \end{figure}
 
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
 
 The rule for certificate witnesses is given in
-Figure~\ref{fig:deleg-witnesses}. The new definitions introduced in this rule
-are given in Figure~\ref{fig:delegation-witnesses-defs}.
+Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
+are given in Figure~\ref{fig:defs:delegationw}.
 
 \begin{figure}
   \emph{Primitive types}
@@ -127,14 +127,14 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \VKey \times \Epoch
+      \fun{dbody} & \DCert \to (\VKey \times \Epoch)
       & \text{body of the delegation certificate}\\
-      \fun{dwit} & \DCert \mapsto (\VKeyGen \times \Sig)
+      \fun{dwit} & \DCert \to (\VKeyGen \times \Sig)
       & \text{witness for the delegation certificate}
     \end{array}
   \end{equation*}
   \caption{Delegation witnesses definitions}
-  \label{fig:delegation-witnesses-defs}
+  \label{fig:defs:delegationw}
 \end{figure}
 
 \begin{figure}
@@ -176,5 +176,5 @@ are given in Figure~\ref{fig:delegation-witnesses-defs}.
       \right)}}
   \end{equation}
   \caption{Delegation witnesses inference rules}
-  \label{fig:deleg-witnesses}
+  \label{fig:rules:delegationw}
 \end{figure}

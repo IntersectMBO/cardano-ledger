@@ -187,9 +187,9 @@ this document.
 \label{sec:state-trans-utxo-1}
 
 The transition rules for unspent outputs are presented in
-Figure~\ref{fig:state-trans-utxo}. The states of the UTxO transition system,
-along with their types are defined in Figure~\ref{fig:state-trans-utxo-defs}.
-Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
+Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
+along with their types are defined in Figure~\ref{fig:defs:utxo}.
+Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 
 \begin{figure*}
   \emph{Primitive types}
@@ -246,7 +246,7 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
-  \label{fig:state-trans-utxo-defs}
+  \label{fig:defs:utxo}
 \end{figure*}
 
 \begin{figure}
@@ -284,7 +284,7 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
     & \text{range restriction}
   \end{align*}
   \caption{Functions used in UTxO rules}
-  \label{fig:utxo-auxiliary-ops}
+  \label{fig:derived-defs:utxo}
 \end{figure}
 
 \begin{figure}
@@ -294,13 +294,13 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
-  \label{fig:utxo-ts-types}
+  \label{fig:ts-types:utxo}
 \end{figure}
 
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \var{utxo}
+    { \txins{tx} \subseteq \dom \var{utxo}
       & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
     {\var{utxo} \trans{utxo}{tx}
@@ -308,7 +308,7 @@ Functions on these types are defined in Figure~\ref{fig:utxo-auxiliary-ops}.
     }
   \end{equation}
   \caption{UTxO inference rules}
-  \label{fig:state-trans-utxo}
+  \label{fig:rules:utxo}
 \end{figure}
 
 Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
@@ -337,11 +337,11 @@ changes with a transaction:
 \subsection{Witnesses}
 \label{sec:witnesses}
 
-The rules for witnesses are presented in Figure~\ref{fig:rules-utxo-witnesses}.
+The rules for witnesses are presented in Figure~\ref{fig:rules:utxow}.
 The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
-Figure~\ref{fig:state-trans-utxo-witnesses-defs}. Note that
+Figure~\ref{fig:defs:utxow}. Note that
 Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
-Figure~\ref{fig:state-trans-utxo}. The main reason for doing this is to define
+Figure~\ref{fig:rules:utxo}. The main reason for doing this is to define
 the rules incrementally, modeling different aspects in isolation to keep the
 rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
 have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
@@ -359,7 +359,7 @@ different order). The choice here is arbitrary.
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
-  \label{fig:state-trans-utxo-witnesses-defs}
+  \label{fig:defs:utxow}
 \end{figure}
 
 \begin{figure}
@@ -372,7 +372,7 @@ different order). The choice here is arbitrary.
       \wedge a \mapsto h \in \fun{hash_{spend}} \}
   \end{align*}
   \caption{Functions used in rules witnesses}
-  \label{fig:witnesses-ops}
+  \label{fig:derived-defs:utxow}
 \end{figure}
 
 \begin{figure}
@@ -382,7 +382,7 @@ different order). The choice here is arbitrary.
     \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
-  \label{fig:utxo-witnesses-ts-types}
+  \label{fig:ts-types:utxow}
 \end{figure}
 
 \begin{figure}
@@ -398,7 +398,7 @@ different order). The choice here is arbitrary.
     {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
   \end{equation}
   \caption{UTxO with witnesses inference rules}
-  \label{fig:rules-utxo-witnesses}
+  \label{fig:rules:utxow}
 \end{figure}
 
 \section{Delegation}
