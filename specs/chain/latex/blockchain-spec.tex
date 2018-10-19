@@ -120,7 +120,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 16, 2018}
+\date{October 17, 2018}
 
 \maketitle
 
@@ -247,11 +247,6 @@ certificate in which a key delegates to itself.
 \subsection{Properties}
 \label{sec:chain-properties}
 
-\marko{Change the certificate type to make it abstract (analogous to a type
-  class). Define functions that project needed pieces out of it, including
-  verification keys, its signature, and an epoch. Possibly add a function for
-  verifying its signature.}
-
 \begin{figure}[h]
   \emph{Primitive types}
   %
@@ -343,6 +338,7 @@ added, the delegation map is updated at $vk_s$, as given by
   {
     {
       \begin{array}{c}
+        (sk_s, vk_s) \in \SKeyGen \times \VKeyGen \\
         (vk_s \mapsto c_h; \lambda) \in \delmap_k \\
         c_h = (vk_s, vk_{d_1}, e_h, \sigma_h)
       \end{array}
@@ -355,7 +351,16 @@ added, the delegation map is updated at $vk_s$, as given by
       \end{array}
     }
   }
-  {\delmap_k \trans{}{} \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\}}
+  {\delmap_k \trans{}{}
+    \left(
+    {
+      \begin{array}{c}
+        \delmap_{k'} = \Set{(vk \mapsto \Lambda)}{(vk \mapsto \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \mapsto c; c_h; \epsilon\} \\
+        \delegate{sk_s}{vk_d} = (vk_s, vk_d, e_j, \sigma)
+      \end{array}
+    }
+    \right)
+  }
 \end{equation}
 
 \subsubsection{Block Validity}
@@ -386,8 +391,6 @@ $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
-
-\marko{Add a rule for the \delegatename\ function with a precondition of at most one delegation per key per epoch.}
 
 The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
 
