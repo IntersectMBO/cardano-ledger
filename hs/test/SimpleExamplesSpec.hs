@@ -54,7 +54,7 @@ spec = do
               , TxOut bobAddr (Coin 3) ]
               Set.empty
       aliceTx1Wit = makeWitness alicePay tx1Body
-      tx1 = Transaction $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+      tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
       tx1id = txid tx1Body
       utxo = Map.fromList
         [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
@@ -72,7 +72,7 @@ spec = do
               [ TxOut aliceAddr (Coin 0) ]
               Set.empty
       aliceTx1Wit = makeWitness alicePay tx1Body
-      tx1 = Transaction $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+      tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [BadInputs, InsuffientWitnesses]
     -- Note that BadInputs implies InsuffientWitnesses
 
@@ -82,7 +82,7 @@ spec = do
               (Set.fromList [TxIn genesisId 0]) [ TxOut bobAddr (Coin 11) ]
               Set.empty
       aliceTx1Wit = makeWitness alicePay tx1Body
-      tx1 = Transaction $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+      tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [IncreasedTotalBalance]
 
   it "Invalid Ledger - Alice does not include a witness" $ do
@@ -92,7 +92,7 @@ spec = do
               [ TxOut aliceAddr (Coin 7)
               , TxOut bobAddr (Coin 3) ]
        Set.empty
-      tx1 = Transaction $ TxWits tx1Body Set.empty
+      tx1 = TransactionData $ TxWits tx1Body Set.empty
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
 
   it "Invalid Ledger - Alice tries to spend Bob's UTxO" $ do
@@ -102,7 +102,7 @@ spec = do
               [ TxOut aliceAddr (Coin 1)]
         Set.empty
       aliceTx1Wit = makeWitness alicePay tx1Body
-      tx1 = Transaction $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+      tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
 
   it "Invalid Ledger - Alice provides witness of wrong UTxO" $ do
@@ -116,5 +116,5 @@ spec = do
               [ TxOut aliceAddr (Coin 10)]
         Set.empty
       aliceTx1Wit = makeWitness alicePay tx2Body
-      tx1 = Transaction $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+      tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
     ledgerState [tx1] `shouldBe` Left [InsuffientWitnesses]
