@@ -12,7 +12,7 @@ module Cardano.Chain.Update.Payload
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -36,7 +36,7 @@ instance B.Buildable Payload where
     = formatMaybeProposal (payloadProposal payload) <> ", no votes"
     | otherwise
     = formatMaybeProposal (payloadProposal payload) <> bprint
-      ("\n    votes: " % listJson)
+      ("\n    votes: " . listJson)
       (map formatVoteShort (payloadVotes payload))
 
 instance Bi Payload where
@@ -54,17 +54,18 @@ data PayloadError
 instance B.Buildable PayloadError where
   build = \case
     PayloadProposalError err -> bprint
-      ("Proposal was invalid while checking Update.Payload.\n Error: " % build)
+      ("Proposal was invalid while checking Update.Payload.\n Error: " . build)
       err
     PayloadVoteError err -> bprint
-      ("Vote was invalid while checking Update.Payload.\n Error: " % build)
+      ("Vote was invalid while checking Update.Payload.\n Error: " . build)
       err
 
 checkPayload :: MonadError PayloadError m => ProtocolMagic -> Payload -> m ()
 checkPayload pm payload = do
-  whenJust
-    (payloadProposal payload)
+  maybe
+    (pure ())
     (either (throwError . PayloadProposalError) pure . checkProposal pm)
+    (payloadProposal payload)
   forM_
     (payloadVotes payload)
     (either (throwError . PayloadVoteError) pure . checkVote pm)

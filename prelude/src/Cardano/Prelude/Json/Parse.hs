@@ -12,7 +12,7 @@ module Cardano.Prelude.Json.Parse
 import           Cardano.Prelude.Base
 
 import           Data.Typeable (typeRep)
-import           Formatting (Format, build, formatToString, shown, (%))
+import           Formatting (Format, build, formatToString, shown)
 import           Formatting.Buildable (Buildable)
 import           Text.JSON.Canonical (JSValue (JSString),
                      ReportSchemaErrors (expected), expectedButGotValue)
@@ -27,17 +27,17 @@ parseJSString
     -> JSValue
     -> m a
 parseJSString parser = \case
-  JSString str -> either (report str) pure . parser $ toText str
+  JSString str -> either (report $ toS str) pure . parser $ toS str
   val          -> expectedButGotValue typeName val
  where
-  typeName :: String
+  typeName :: [Char]
   typeName = show $ typeRep (Proxy @a)
 
-  report :: String -> e -> m a
+  report :: Text -> e -> m a
   report str err =
     expected typeName (Just $ formatToString errFormat str err)
 
-  errFormat :: Format r (String -> e -> r)
+  errFormat :: Format r (Text -> e -> r)
   errFormat =
-    "Failed to parse value from JSString " % shown % "\n"
-      % "Parser failed with error: " % build
+    "Failed to parse value from JSString " . shown . "\n"
+      . "Parser failed with error: " . build

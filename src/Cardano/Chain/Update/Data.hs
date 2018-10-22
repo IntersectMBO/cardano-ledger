@@ -9,7 +9,7 @@ module Cardano.Chain.Update.Data
 
 import           Cardano.Prelude
 
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Raw, encodeListLen, enforceSize)
@@ -38,14 +38,14 @@ data UpdateData = UpdateData
 instance B.Buildable UpdateData where
   build ud = bprint
     ( "{ appDiff: "
-    % build
-    % ", pkg: "
-    % build
-    % ", updater: "
-    % build
-    % ", metadata: "
-    % build
-    % " }"
+    . build
+    . ", pkg: "
+    . build
+    . ", updater: "
+    . build
+    . ", metadata: "
+    . build
+    . " }"
     )
     (udAppDiffHash ud)
     (udPkgHash ud)

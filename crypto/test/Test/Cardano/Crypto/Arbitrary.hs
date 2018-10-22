@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeApplications           #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -14,7 +15,7 @@ module Test.Cardano.Crypto.Arbitrary
        , genRedeemSignature
        ) where
 
-import           Cardano.Prelude hiding (keys)
+import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray
@@ -166,7 +167,7 @@ instance Arbitrary PassPhrase where
 --------------------------------------------------------------------------------
 
 instance Arbitrary HDPassphrase where
-    arbitrary = HDPassphrase . fromString <$> vector 32
+    arbitrary = HDPassphrase . toS @[Char] <$> vector 32
 
 instance Arbitrary HDAddressPayload where
     arbitrary = genericArbitrary

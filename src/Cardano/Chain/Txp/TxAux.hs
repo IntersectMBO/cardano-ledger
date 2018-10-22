@@ -11,7 +11,7 @@ module Cardano.Chain.Txp.TxAux
 import           Cardano.Prelude
 
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (Format, bprint, build, later, (%))
+import           Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -30,7 +30,7 @@ instance NFData TxAux
 -- | Specialized formatter for 'TxAux'
 txaF :: Format r (TxAux -> r)
 txaF = later $ \(TxAux tx w) ->
-  bprint (build % "\n" % "witnesses: " % listJsonIndent 4) tx w
+  bprint (build . "\n" . "witnesses: " . listJsonIndent 4) tx w
 
 instance B.Buildable TxAux where
   build = bprint txaF

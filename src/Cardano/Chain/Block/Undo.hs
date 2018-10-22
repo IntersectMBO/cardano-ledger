@@ -11,7 +11,7 @@ module Cardano.Chain.Block.Undo
 
 import           Cardano.Prelude
 
-import           Formatting (Format, bprint, build, later, (%))
+import           Formatting (Format, bprint, build, later)
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 import           Cardano.Chain.Block.Block (Block)
@@ -37,10 +37,10 @@ type Blund = (Block, Undo)
 buildUndo :: SlotCount -> Format r (Undo -> r)
 buildUndo epochSlots = later $ \undo -> bprint
   ( "Undo:\n"
-  % "  undoTx: " % listJson % "\n"
-  % "  undoDlg: " % build % "\n"
-  % "  undoUS: " % build % "\n"
-  % "  undoSlog: " % buildSlogUndo epochSlots
+  . "  undoTx: " . listJson . "\n"
+  . "  undoDlg: " . build . "\n"
+  . "  undoUS: " . build . "\n"
+  . "  undoSlog: " . buildSlogUndo epochSlots
   )
   (map (bprint listJson) (undoTx undo))
   (undoDlg undo)

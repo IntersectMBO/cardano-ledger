@@ -15,7 +15,7 @@ import           Cardano.Prelude
 import           Test.Cardano.Prelude
 
 import qualified Data.Map.Strict as Map
-import           Formatting (build, sformat, (%))
+import           Formatting (build, sformat)
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -48,8 +48,8 @@ genLocalSlotIndex epochSlots = mkLocalSlotIndex'
   lb = getSlotIndex localSlotIndexMinBound
   ub = getSlotIndex (localSlotIndexMaxBound epochSlots)
   mkLocalSlotIndex' slot = case mkLocalSlotIndex epochSlots slot of
-    Left err -> error $ sformat
-      ("The impossible happened in genLocalSlotIndex: " % build)
+    Left err -> panic $ sformat
+      ("The impossible happened in genLocalSlotIndex: " . build)
       err
     Right lsi -> lsi
 

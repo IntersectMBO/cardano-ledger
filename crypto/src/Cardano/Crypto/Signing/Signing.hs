@@ -35,7 +35,7 @@ import           Crypto.Random (MonadRandom, getRandomBytes)
 import           Data.ByteArray (ScrubbedBytes)
 import qualified Data.ByteString as BS
 import           Data.Coerce (coerce)
-import           Formatting (build, sformat, (%))
+import           Formatting (build, sformat)
 
 import           Cardano.Binary.Class (Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
@@ -128,13 +128,13 @@ proxySign
   -> a
   -> ProxySignature w a
 proxySign pm t sk@(SecretKey delegateSk) psk m
-  | toPublic sk /= pskDelegatePk psk = error $ sformat
+  | toPublic sk /= pskDelegatePk psk = panic $ sformat
     ( "proxySign called with irrelevant certificate "
-    % "(psk delegatePk: "
-    % build
-    % ", real delegate pk: "
-    % build
-    % ")"
+    . "(psk delegatePk: "
+    . build
+    . ", real delegate pk: "
+    . build
+    . ")"
     )
     (pskDelegatePk psk)
     (toPublic sk)

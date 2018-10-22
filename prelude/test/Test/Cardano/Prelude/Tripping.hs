@@ -75,28 +75,22 @@ trippingBuildable x enc dec =
     else case valueDiff <$> buildValue mx <*> buildValue my of
       Nothing -> withFrozenCallStack $ failWith Nothing $ Prelude.unlines
         [ "━━━ Original ━━━"
-        , buildPretty mx
+        , show $ buildValue mx
         , "━━━ Intermediate ━━━"
         , show i
         , "━━━ Roundtrip ━━━"
-        , buildPretty my
+        , show $ buildValue my
         ]
 
-      Just diff ->
+      Just dif ->
         withFrozenCallStack
           $ failWith
-              (Just $ Diff "━━━ " "- Original" "/" "+ Roundtrip" " ━━━" diff)
+              (Just $ Diff "━━━ " "- Original" "/" "+ Roundtrip" " ━━━" dif)
           $ Prelude.unlines ["━━━ Intermediate ━━━", show i]
 
 instance (Buildable e, Buildable a) => Buildable (Either e a) where
     build (Left e)  = build e
     build (Right a) = build a
 
-buildPretty :: Buildable a => a -> String
-buildPretty = show . buildValue
-
 buildValue :: Buildable a => a -> Maybe Value
-buildValue = parseValue . stringBuild
-
-stringBuild :: Buildable a => a -> String
-stringBuild = toString . toLazyText . build
+buildValue = parseValue . toS . toLazyText . build

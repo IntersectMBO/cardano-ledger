@@ -33,16 +33,19 @@ type HexDump = LByteString
 
 type HexDumpDiff = [LineDiff]
 
-renderHexDumpDiff :: HexDumpDiff -> String
+renderHexDumpDiff :: HexDumpDiff -> [Char]
 renderHexDumpDiff = Prelude.unlines . fmap renderLineDiff
 
 -- | Diff two 'HexDump's by comparing lines pairwise
 hexDumpDiff :: HexDump -> HexDump -> Maybe HexDumpDiff
-hexDumpDiff x y =
-  concatMap (uncurry lineDiff)
-    ... zipWithPadding (String "") (String "")
-    <$> sequence (mkValue <$> BS.lines x)
-    <*> sequence (mkValue <$> BS.lines y)
+hexDumpDiff x y = do
+  xs <- sequence (mkValue <$> BS.lines x)
+  ys <- sequence (mkValue <$> BS.lines y)
+  pure $ concatMap (uncurry lineDiff) $ zipWithPadding
+    (String "")
+    (String "")
+    xs
+    ys
 
 zipWithPadding :: a -> b -> [a] -> [b] -> [(a, b)]
 zipWithPadding a b (x : xs) (y : ys) = (x, y) : zipWithPadding a b xs ys
@@ -60,7 +63,7 @@ failHexDumpDiff :: (MonadTest m, HasCallStack) => HexDump -> HexDump -> m ()
 failHexDumpDiff x y = case hexDumpDiff x y of
   Nothing -> withFrozenCallStack $ failWith Nothing $ Prelude.unlines
     ["━━━ Not Equal ━━━", showPretty x, showPretty y]
-  Just diff -> withFrozenCallStack $ failWith Nothing $ renderHexDumpDiff diff
+  Just dif -> withFrozenCallStack $ failWith Nothing $ renderHexDumpDiff dif
 
 goldenTestBi :: (Bi a, Eq a, Show a, HasCallStack) => a -> FilePath -> Property
 goldenTestBi x path = withFrozenCallStack $ do

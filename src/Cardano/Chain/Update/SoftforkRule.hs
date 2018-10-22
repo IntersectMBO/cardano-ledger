@@ -17,7 +17,7 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
                      mkObject)
@@ -47,7 +47,7 @@ data SoftforkRule = SoftforkRule
 
 instance B.Buildable SoftforkRule where
   build sr = bprint
-    ("(init = " % build % ", min = " % build % ", decrement = " % build % ")")
+    ("(init = " . build . ", min = " . build . ", decrement = " . build . ")")
     (srInitThd sr)
     (srMinThd sr)
     (srThdDecrement sr)

@@ -129,14 +129,14 @@ genRedeemPublicKey :: Gen RedeemPublicKey
 genRedeemPublicKey = do
     rkp <- genRedeemKeypair
     case rkp of
-        Nothing      -> error "Error generating a RedeemPublicKey."
+        Nothing      -> panic "Error generating a RedeemPublicKey."
         Just (pk, _) -> return pk
 
 genRedeemSecretKey :: Gen RedeemSecretKey
 genRedeemSecretKey = do
     rkp <- genRedeemKeypair
     case rkp of
-        Nothing      -> error "Error generating a RedeemSecretKey."
+        Nothing      -> panic "Error generating a RedeemSecretKey."
         Just (_, sk) -> return sk
 
 

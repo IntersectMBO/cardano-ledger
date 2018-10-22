@@ -41,7 +41,7 @@ import           Cardano.Prelude
 
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Data.Data (Data)
-import           Formatting (Format, bprint, build, int, (%))
+import           Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 import           GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical (FromJSON (..),
@@ -56,7 +56,7 @@ newtype Coin = Coin
   } deriving (Show, Ord, Eq, Generic, Data, NFData)
 
 instance B.Buildable Coin where
-  build (Coin n) = bprint (int % " coin(s)") n
+  build (Coin n) = bprint (int . " coin(s)") n
 
 instance Bounded Coin where
   minBound = Coin 0
@@ -90,18 +90,18 @@ data CoinError
 instance B.Buildable CoinError where
   build = \case
     CoinOverflow c -> bprint
-      ("Coin value, " % build % ", overflowed")
+      ("Coin value, " . build . ", overflowed")
       c
     CoinTooLarge c -> bprint
-      ("Coin value, " % build % ", exceeds maximum, " % build)
+      ("Coin value, " . build . ", exceeds maximum, " . build)
       c
       maxCoinVal
     CoinTooSmall c -> bprint
-      ("Coin value, " % build % ", is less than minimum, " % build)
+      ("Coin value, " . build . ", is less than minimum, " . build)
       c
       (minBound :: Coin)
     CoinUnderflow c c' -> bprint
-      ("Coin underflow when subtracting " % build % " from " % build)
+      ("Coin underflow when subtracting " . build . " from " . build)
       c'
       c
 
@@ -130,11 +130,10 @@ unsafeGetCoin :: Coin -> Word64
 unsafeGetCoin = getCoin
 {-# INLINE unsafeGetCoin #-}
 
--- | Compute sum of all coins in container. Result is 'Integer' as a
--- protection against possible overflow. If you are sure overflow is
--- impossible, you can use 'unsafeIntegerToCoin'.
-sumCoins :: (Container coins, Element coins ~ Coin) => coins -> Integer
-sumCoins = sum . map coinToInteger . toList
+-- | Compute sum of all coins in container. Result is 'Integer' as a protection
+--   against possible overflow.
+sumCoins :: (Foldable t, Functor t) => t Coin -> Integer
+sumCoins = sum . map coinToInteger
 
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unsafeGetCoin

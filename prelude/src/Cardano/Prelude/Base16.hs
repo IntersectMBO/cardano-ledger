@@ -10,7 +10,7 @@ import           Cardano.Prelude.Base
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS
-import           Formatting (bprint, shown, (%))
+import           Formatting (bprint, shown)
 import           Formatting.Buildable (Buildable (build))
 
 
@@ -20,10 +20,10 @@ newtype Base16ParseError =
 
 instance Buildable Base16ParseError where
   build (Base16IncorrectSuffix suffix) =
-    bprint ("Base16 parsing failed with incorrect suffix " % shown) suffix
+    bprint ("Base16 parsing failed with incorrect suffix " . shown) suffix
 
 parseBase16 :: Text -> Either Base16ParseError ByteString
 parseBase16 s = do
-  let (bs, suffix) = B16.decode . fromString $ toString s
+  let (bs, suffix) = B16.decode $ toS s
   unless (BS.null suffix) . Left $ Base16IncorrectSuffix suffix
   pure bs

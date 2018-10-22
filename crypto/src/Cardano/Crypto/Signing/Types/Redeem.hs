@@ -37,7 +37,7 @@ import qualified Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Text as T
 import           Formatting (Format, bprint, build, fitLeft, formatToString,
-                     later, sformat, stext, (%), (%.))
+                     later, sformat, stext, (%.))
 import qualified Formatting.Buildable as B (Buildable (..))
 import           Text.JSON.Canonical (FromObjectKey (..), JSValue (..),
                      ToObjectKey (..))
@@ -87,7 +87,7 @@ fromPublicKeyToByteString = BA.convert
 
 redeemPkB64F :: Format r (RedeemPublicKey -> r)
 redeemPkB64F = later $ \(RedeemPublicKey pk) ->
-  fromString . Char8.unpack . B64.encode $ fromPublicKeyToByteString pk
+  B.build . Char8.unpack . B64.encode $ fromPublicKeyToByteString pk
 
 -- | Base64url Format for 'RedeemPublicKey'.
 redeemPkB64UrlF :: Format r (RedeemPublicKey -> r)
@@ -102,10 +102,10 @@ redeemToPublic :: RedeemSecretKey -> RedeemPublicKey
 redeemToPublic (RedeemSecretKey k) = RedeemPublicKey (Ed25519.toPublic k)
 
 instance B.Buildable RedeemPublicKey where
-  build = bprint ("redeem_pk:" % redeemPkB64F)
+  build = bprint ("redeem_pk:" . redeemPkB64F)
 
 instance B.Buildable RedeemSecretKey where
-  build = bprint ("redeem_sec_of_pk:" % redeemPkB64F) . redeemToPublic
+  build = bprint ("redeem_sec_of_pk:" . redeemPkB64F) . redeemToPublic
 
 deriving instance Bi RedeemPublicKey
 
@@ -130,9 +130,9 @@ data AvvmPkError
 instance B.Buildable AvvmPkError where
   build = \case
     ApeAddressFormat addrText ->
-      bprint ("Address " % stext % " is not base64(url) format") addrText
+      bprint ("Address " . stext . " is not base64(url) format") addrText
     ApeAddressLength len -> bprint
-      ("Address length is " % build % ", expected 32, can't be redeeming pk")
+      ("Address length is " . build . ", expected 32, can't be redeeming pk")
       len
 
 -- | Read the text into a redeeming public key. The key should be in
@@ -141,7 +141,7 @@ instance B.Buildable AvvmPkError where
 fromAvvmPk :: Text -> Either AvvmPkError RedeemPublicKey
 fromAvvmPk addrText = do
   let base64rify = T.replace "-" "+" . T.replace "_" "/"
-  let parsedM    = B64.decode . fromString . T.unpack $ base64rify addrText
+  let parsedM    = B64.decode . toS $ base64rify addrText
   addrParsed <- case parsedM of
     Left  _ -> Left (ApeAddressFormat addrText)
     Right a -> Right a
@@ -153,14 +153,14 @@ fromAvvmPk addrText = do
 redeemPkBuild :: ByteString -> RedeemPublicKey
 redeemPkBuild bs
   | BS.length bs /= 32
-  = error
+  = panic
     $  "consRedeemPk: failed to form pk, wrong bs length: "
     <> show (BS.length bs)
     <> ", when should be 32"
   | otherwise
   = case Ed25519.publicKey (BA.convert bs :: BA.Bytes) of
     CryptoPassed r -> RedeemPublicKey r
-    CryptoFailed e -> error $ mappend
+    CryptoFailed e -> panic $ mappend
       "Cardano.Crypto.Signing.Types.Redeem.hs consRedeemPk failed because "
       (T.pack $ show e)
 

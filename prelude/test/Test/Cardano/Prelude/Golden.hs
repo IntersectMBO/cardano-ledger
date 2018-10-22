@@ -43,7 +43,7 @@ goldenTestJSON
   => a
   -> FilePath
   -> Property
-goldenTestJSON x path = withFrozenCallStack . withTests 1 . property $ do
+goldenTestJSON x path = withFrozenCallStack $ withTests 1 . property $ do
   bs <- liftIO (LB.readFile path)
   encode x === bs
   case eitherDecode bs of

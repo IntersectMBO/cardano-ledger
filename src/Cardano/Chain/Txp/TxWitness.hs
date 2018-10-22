@@ -19,7 +19,8 @@ import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, (%))
+import           Data.Vector (Vector)
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Case (..),
@@ -86,29 +87,29 @@ instance FromJSON TxInWitness where
 instance B.Buildable TxInWitness where
   build (PkWitness key sig) = bprint
     ( "PkWitness: key = "
-    % build
-    % ", key hash = "
-    % shortHashF
-    % ", sig = "
-    % build
+    . build
+    . ", key hash = "
+    . shortHashF
+    . ", sig = "
+    . build
     )
     key
     (addressHash key)
     sig
   build (ScriptWitness val red) = bprint
     ( "ScriptWitness: "
-    % "validator hash = "
-    % shortHashF
-    % ", "
-    % "redeemer hash = "
-    % shortHashF
+    . "validator hash = "
+    . shortHashF
+    . ", "
+    . "redeemer hash = "
+    . shortHashF
     )
     (hash val)
     (hash red)
   build (RedeemWitness key sig) =
-    bprint ("PkWitness: key = " % build % ", sig = " % build) key sig
+    bprint ("PkWitness: key = " . build . ", sig = " . build) key sig
   build (UnknownWitnessType t bs) =
-    bprint ("UnknownWitnessType " % build % " " % base16F) t bs
+    bprint ("UnknownWitnessType " . build . " " . base16F) t bs
 
 instance Bi TxInWitness where
   encode input = case input of
@@ -148,11 +149,11 @@ instance Bi TxInWitness where
   encodedSizeExpr size _ = 2 + szCases
     (map
       (fmap knownCborDataItemSizeExpr)
-      [ let PkWitness key sig = error "unused"
+      [ let PkWitness key sig = panic "unused"
         in Case "PkWitness" $ size ((,) <$> pure key <*> pure sig)
-      , let ScriptWitness key sig = error "unused"
+      , let ScriptWitness key sig = panic "unused"
         in Case "ScriptWitness" $ size ((,) <$> pure key <*> pure sig)
-      , let RedeemWitness key sig = error "unused"
+      , let RedeemWitness key sig = panic "unused"
         in Case "RedeemWitness" $ size ((,) <$> pure key <*> pure sig)
       ]
     )

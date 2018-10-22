@@ -16,6 +16,7 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
 import           Data.Fixed (Fixed (..), Nano, resolution, showFixed)
+import qualified Data.Text.Lazy.Builder as Builder
 import           Formatting.Buildable (Buildable (..))
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
@@ -27,7 +28,7 @@ newtype Coeff = Coeff Nano
     deriving (Eq, Ord, Show, Generic, NFData, Num)
 
 instance Buildable Coeff where
-    build (Coeff x) = fromString (showFixed True x)
+    build (Coeff x) = Builder.fromString (showFixed True x)
 
 instance Bi Coeff where
     encode (Coeff n) = encode n

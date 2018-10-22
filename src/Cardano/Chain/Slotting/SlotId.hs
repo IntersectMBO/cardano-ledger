@@ -28,7 +28,7 @@ import           Cardano.Prelude
 
 import           Control.Lens (Iso', iso, makeLensesFor)
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (Format, bprint, build, ords, sformat, (%))
+import           Formatting (Format, bprint, build, ords, sformat)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -51,7 +51,7 @@ data SlotId = SlotId
 
 instance B.Buildable SlotId where
   build si = bprint
-    (ords % " slot of " % ords % " epoch")
+    (ords . " slot of " . ords . " epoch")
     (getSlotIndex $ siSlot si)
     (getEpochIndex $ siEpoch si)
 
@@ -111,8 +111,8 @@ unflattenSlotId es n = SlotId {siEpoch = fromIntegral epoch, siSlot = lsi}
  where
   (epoch, slot) = n `divMod` fromIntegral es
   lsi           = case mkLocalSlotIndex es (fromIntegral slot) of
-    Left err -> error
-      $ sformat ("The impossible happened in unflattenSlotId: " % build) err
+    Left err -> panic
+      $ sformat ("The impossible happened in unflattenSlotId: " . build) err
     Right lsi' -> lsi'
 
 flatSlotId :: SlotCount -> Iso' SlotId FlatSlotId
@@ -129,5 +129,5 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
   idx = fromIntegral $ fromIntegral epochSlots - kSlotSecurityParam k - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->
-      error $ sformat ("The impossible happened in crucialSlot: " % build) err
+      panic $ sformat ("The impossible happened in crucialSlot: " . build) err
     Right lsi -> lsi

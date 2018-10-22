@@ -13,10 +13,8 @@ module Cardano.Chain.Common.AddrStakeDistribution
 
 import           Cardano.Prelude hiding (id)
 
--- import           Control.Exception.Safe (Exception (displayException))
-import           Control.Lens (_Left)
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, sformat, (%))
+import           Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..), szCases)
@@ -49,9 +47,9 @@ instance B.Buildable AddrStakeDistribution where
     build = \case
         BootstrapEraDistr -> "Bootstrap era distribution"
         SingleKeyDistr id ->
-            bprint ("Single key distribution (" % shortStakeholderF % ")") id
+            bprint ("Single key distribution (" . shortStakeholderF . ")") id
         UnsafeMultiKeyDistr distr ->
-            bprint ("Multi key distribution: " % mapJson) distr
+            bprint ("Multi key distribution: " . mapJson) distr
 
 instance NFData AddrStakeDistribution
 
@@ -67,7 +65,7 @@ instance Bi AddrStakeDistribution where
             0 -> SingleKeyDistr <$> decode
             1 ->
                 toCborError
-                    .   (_Left %~ sformat build)
+                    .   first (sformat build)
                     .   mkMultiKeyDistr
                     =<< decode
             tag ->
@@ -81,9 +79,9 @@ instance Bi AddrStakeDistribution where
 
     encodedSizeExpr size _ = szCases
         [ Bi.Case "BoostrapEraDistr" 1
-        , let SingleKeyDistr id = error "unused"
+        , let SingleKeyDistr id = panic "unused"
           in Bi.Case "SingleKeyDistr" $ size ((,) <$> pure (0 :: Word8) <*> pure id)
-        , let UnsafeMultiKeyDistr distr = error "unused"
+        , let UnsafeMultiKeyDistr distr = panic "unused"
           in
             Bi.Case "UnsafeMultiKeyDistr"
                 $ size ((,) <$> pure (1 :: Word8) <*> pure distr)
@@ -109,9 +107,9 @@ mkMultiKeyDistr
     :: MonadError MultiKeyDistrError m
     => Map StakeholderId CoinPortion
     -> m AddrStakeDistribution
-mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ check
+mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
   where
-    check = do
+    checkDistrMap = do
         when (null distrMap) $ throwError MkdMapIsEmpty
         when (length distrMap == 1) $ throwError MkdMapIsSingleton
         unless (all ((> 0) . getCoinPortion) distrMap)

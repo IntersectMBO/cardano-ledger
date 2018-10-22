@@ -28,7 +28,7 @@ import           Cardano.Prelude
 import           Control.Monad.Except (MonadError (throwError))
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Data.Ix (Ix)
-import           Formatting (bprint, build, int, (%))
+import           Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..))
@@ -67,20 +67,20 @@ instance B.Buildable LocalSlotIndexError where
   build = \case
     LocalSlotIndexEnumOverflow epochSlots i -> bprint
       ( "localSlotIndexToEnum: "
-      % int
-      % " is greater than the maxBound, "
-      % build
+      . int
+      . " is greater than the maxBound, "
+      . build
       )
       i
       (epochSlots - 1)
     LocalSlotIndexEnumUnderflow i -> bprint
-      ("localSlotIndexToEnum: " % build % " is less than the minBound, 0")
+      ("localSlotIndexToEnum: " . build . " is less than the minBound, 0")
       i
     LocalSlotIndexOverflow epochSlots i -> bprint
       ( "Cannot construct LocalSlotIndex: "
-      % build
-      % "is greater than or equal to epochSlots, "
-      % build
+      . build
+      . "is greater than or equal to epochSlots, "
+      . build
       )
       i
       epochSlots

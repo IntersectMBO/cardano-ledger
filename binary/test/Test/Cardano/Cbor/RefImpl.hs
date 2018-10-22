@@ -35,7 +35,6 @@ module Test.Cardano.Cbor.RefImpl
 
 import           Cardano.Prelude
 
-import           Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.List (span)
@@ -50,6 +49,7 @@ import           Test.QuickCheck.Arbitrary (Arbitrary (..),
                      arbitraryBoundedIntegral)
 import           Test.QuickCheck.Gen (Gen, choose, elements, frequency, oneof,
                      resize, sized, suchThat, vectorOf)
+import           Test.QuickCheck.Instances ()
 import           Test.QuickCheck.Property (Property, conjoin, property, (.&&.),
                      (===))
 
@@ -60,8 +60,8 @@ serialise = LBS.pack . encodeTerm
 deserialise :: LBS.ByteString -> Term
 deserialise bytes = case runDecoder decodeTerm (LBS.unpack bytes) of
   Just (term, []) -> term
-  Just _          -> error "ReferenceImpl.deserialise: trailing data"
-  Nothing         -> error "ReferenceImpl.deserialise: decoding failed"
+  Just _          -> panic "ReferenceImpl.deserialise: trailing data"
+  Nothing         -> panic "ReferenceImpl.deserialise: decoding failed"
 
 ------------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ encodeInitialByte :: MajorType -> Word -> Word8
 encodeInitialByte mt ai
   | ai < 2 ^ (5 :: Int) = fromIntegral
     (fromIntegral (fromEnum mt) `shiftL` 5 .|. ai)
-  | otherwise = error "encodeInitialByte: invalid additional info value"
+  | otherwise = panic "encodeInitialByte: invalid additional info value"
 
 decodeInitialByte :: Word8 -> (MajorType, Word)
 decodeInitialByte ib =
@@ -206,7 +206,7 @@ encodeAdditionalInfo = enc
  where
   enc (AiValue (UIntSmall n))
     | n < 24    = (n, [])
-    | otherwise = error "invalid UIntSmall value"
+    | otherwise = panic "invalid UIntSmall value"
   enc (AiValue (UInt8  w)) = (24, [w])
   enc (AiValue (UInt16 w)) = (25, [w1, w0]) where (w1, w0) = word16ToNet w
   enc (AiValue (UInt32 w)) = (26, [w3, w2, w1, w0])
@@ -216,7 +216,7 @@ encodeAdditionalInfo = enc
   enc AiIndefLen = (31, [])
   enc (AiReserved n)
     | n >= 28 && n < 31 = (n, [])
-    | otherwise         = error "invalid AiReserved value"
+    | otherwise         = panic "invalid AiReserved value"
 
 prop_AdditionalInfo :: AdditionalInformation -> Property
 prop_AdditionalInfo ai =
@@ -331,7 +331,7 @@ tokenExtraLen (TokenHeader MajorType2 (AiValue n)) = fromUInt n  -- bytestrings
 tokenExtraLen (TokenHeader MajorType3 (AiValue n)) = fromUInt n  -- unicode strings
 tokenExtraLen _                                    = 0
 
-packToken :: TokenHeader -> [Word8] -> Either String Token
+packToken :: TokenHeader -> [Word8] -> Either Text Token
 packToken (TokenHeader mt ai) extra = case (mt, ai) of
     -- Major type 0:  an unsigned integer.  The 5-bit additional information
     -- is either the integer itself (for additional information values 0
@@ -441,11 +441,11 @@ toUInt n
 lengthUInt :: [a] -> UInt
 lengthUInt = toUInt . fromIntegral . length
 
-decodeUTF8 :: [Word8] -> Either String [Char]
-decodeUTF8 = either (Left . show) (return . toString) . T.decodeUtf8' . BS.pack
+decodeUTF8 :: [Word8] -> Either Text Text
+decodeUTF8 = either (Left . show) return . T.decodeUtf8' . BS.pack
 
-encodeUTF8 :: [Char] -> [Word8]
-encodeUTF8 = BS.unpack . T.encodeUtf8 . toText
+encodeUTF8 :: Text -> [Word8]
+encodeUTF8 = BS.unpack . T.encodeUtf8
 
 reservedSimple :: Word8 -> Bool
 reservedSimple w = w >= 20 && w <= 31
@@ -477,8 +477,8 @@ data Term = TUInt   UInt
                     Integer
           | TBytes  UInt {- representation of length -} [Word8]
           | TBytess  [[Word8]]
-          | TString UInt {- representation of length -} [Char]
-          | TStrings [[Char]]
+          | TString UInt {- representation of length -} Text
+          | TStrings [Text]
           | TArray  UInt {- representation of length -} [Term]
           | TArrayI [Term]
           | TMap    UInt {- representation of length -} [(Term, Term)]
@@ -663,7 +663,7 @@ decodeBytess acc = decodeToken >>= \case
   MT2_ByteString _ bs -> decodeBytess (bs : acc)
   _                   -> decodeErr
 
-decodeStrings :: [String] -> Decoder Term
+decodeStrings :: [Text] -> Decoder Term
 decodeStrings acc = decodeToken >>= \case
   MT7_Break       -> return $! TStrings (reverse acc)
   MT3_String _ ws -> do
@@ -722,7 +722,7 @@ decodeTagged tag = case fromUInt tag of
 -- the representation of 0), we don't count the last one.
 leadingZeroes :: [Word8] -> Word8
 leadingZeroes bs = fromIntegral $ case span (== 0) bs of
-  ([], []) -> error "leadingZeroes: unexpected empty list"
+  ([], []) -> panic "leadingZeroes: unexpected empty list"
   (zs, []) -> length zs - 1
   (zs, _ ) -> length zs
 

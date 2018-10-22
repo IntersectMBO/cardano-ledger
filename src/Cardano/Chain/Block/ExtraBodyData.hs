@@ -9,7 +9,7 @@ module Cardano.Chain.Block.ExtraBodyData
 
 import           Cardano.Prelude
 
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -25,7 +25,7 @@ newtype ExtraBodyData = ExtraBodyData
 instance B.Buildable ExtraBodyData where
   build (ExtraBodyData attrs)
     | areAttributesKnown attrs = "no extra data"
-    | otherwise = bprint ("extra data has attributes: " % build) attrs
+    | otherwise = bprint ("extra data has attributes: " . build) attrs
 
 instance Bi ExtraBodyData where
   encode ebd = encodeListLen 1 <> encode (ebdAttributes ebd)

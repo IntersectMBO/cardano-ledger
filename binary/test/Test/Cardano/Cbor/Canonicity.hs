@@ -63,7 +63,7 @@ traverseCanonicalBits tuint tnint tzeroes tlength ttag tmapset tnan16 = go
           <*> (tlength . toUInt . fromIntegral $ length bs)
           <*> pure n
       k ->
-        error
+        panic
           $  "Unexpected TBigInt with "
           <> show k
           <> " leading zeroes: "
@@ -84,20 +84,20 @@ traverseCanonicalBits tuint tnint tzeroes tlength ttag tmapset tnan16 = go
     TFloat16 f
       | not $ isNaN f -> pure $ TFloat16 f
       | getHalf f == getHalf canonicalNaN -> TFloat16 <$> tnan16 f
-      | otherwise -> error "Unexpected 16bit representation of NaN"
+      | otherwise -> panic "Unexpected 16bit representation of NaN"
     -- Tag representation can be widened.
     TTagged tag t -> if tag == UInt8 24 -- cbor-in-cbor
       then TTagged <$> ttag tag <*> pure t
-      else error "Unexpected TTagged"
+      else panic "Unexpected TTagged"
 
     -- Terms that are unexpected.
     TFloat32 f -> if not $ isNaN f
       then pure $ TFloat32 f
-      else error "Unexpected 32bit representation of NaN"
+      else panic "Unexpected 32bit representation of NaN"
     TFloat64 f -> if not $ isNaN f
       then pure $ TFloat64 f
-      else error "Unexpected 64bit representation of NaN"
-    TMapI _          -> error "Unexpected TMapI"
+      else panic "Unexpected 64bit representation of NaN"
+    TMapI _          -> panic "Unexpected TMapI"
 
     -- Representation of length can be widened.
     TArray len terms -> TArray <$> tlength len <*> mapM go terms
@@ -236,7 +236,7 @@ perturbCanonicity term = sized $ \sz -> do
           -- We use traverseCanonicalBits for both counting canonical bits and
           -- changing them, hence the list will have just the right amount of
           -- elements.
-        error "shouldBeChanged: impossible - not enough elements"
+        panic "shouldBeChanged: impossible - not enough elements"
     S.put xs
     return x
 

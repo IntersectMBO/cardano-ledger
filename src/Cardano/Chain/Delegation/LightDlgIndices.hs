@@ -11,7 +11,7 @@ module Cardano.Chain.Delegation.LightDlgIndices
 
 import           Cardano.Prelude
 
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..))
@@ -30,7 +30,7 @@ newtype LightDlgIndices = LightDlgIndices
     deriving anyclass NFData
 
 instance B.Buildable LightDlgIndices where
-  build (LightDlgIndices (a, b)) = bprint ("(" % build % ", " % build % ")") a b
+  build (LightDlgIndices (a, b)) = bprint ("(" . build . ", " . build . ")") a b
 
 instance Bi LightDlgIndices where
   encode = encode . getLightDlgIndices

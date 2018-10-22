@@ -23,7 +23,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Formatting (bprint, build, float, int, sformat, (%))
+import           Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
@@ -47,7 +47,7 @@ newtype CoinPortion = CoinPortion
 
 instance B.Buildable CoinPortion where
   build cp@(getCoinPortion -> x) = bprint
-    (int % "/" % int % " (approx. " % float % ")")
+    (int . "/" . int . " (approx. " . float . ")")
     x
     coinPortionDenominator
     (coinPortionToDouble cp)
@@ -88,12 +88,12 @@ instance B.Buildable CoinPortionError where
   build = \case
     CoinPortionDoubleOutOfRange d -> bprint
       ( "Double, "
-      % build
-      % " , out of range [0, 1] when constructing CoinPortion"
+      . build
+      . " , out of range [0, 1] when constructing CoinPortion"
       )
       d
     CoinPortionTooLarge c -> bprint
-      ("CoinPortion, " % build % ", exceeds maximum, " % build)
+      ("CoinPortion, " . build . ", exceeds maximum, " . build)
       c
       coinPortionDenominator
 
@@ -126,8 +126,8 @@ coinPortionToDouble (getCoinPortion -> x) =
 applyCoinPortionDown :: CoinPortion -> Coin -> Coin
 applyCoinPortionDown (getCoinPortion -> p) (unsafeGetCoin -> c) = case c' of
   Right coin -> coin
-  Left  err  -> error $ sformat
-    ("The impossible happened in applyCoinPortionDown: " % build)
+  Left  err  -> panic $ sformat
+    ("The impossible happened in applyCoinPortionDown: " . build)
     err
  where
   c' =
@@ -144,8 +144,8 @@ applyCoinPortionUp :: CoinPortion -> Coin -> Coin
 applyCoinPortionUp (getCoinPortion -> p) (unsafeGetCoin -> c) =
   case mkCoin c' of
     Right coin -> coin
-    Left  err  -> error $ sformat
-      ("The impossible happened in applyCoinPortionUp: " % build)
+    Left  err  -> panic $ sformat
+      ("The impossible happened in applyCoinPortionUp: " . build)
       err
  where
   (d, m) =

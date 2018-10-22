@@ -24,7 +24,7 @@ module Cardano.Chain.Slotting.Data
        , computeSlotStart
        ) where
 
-import           Cardano.Prelude hiding (keys)
+import           Cardano.Prelude
 
 import           Data.Map.Strict as M
 import           Data.Semigroup (Semigroup)
@@ -101,7 +101,7 @@ createSlottingDataUnsafe epochSlottingDataMap =
     else criticalError
  where
   criticalError =
-    error
+    panic
       "It's impossible to create slotting data without at least\
     \ two epochs. Epochs need to be sequential."
 

@@ -1,5 +1,9 @@
 module Cardano.Prelude.Base
-       ( module Universum
+       ( module X
        ) where
 
-import           Universum
+import           Protolude as X hiding (Hashable, hash, hashUsing, hashWithSalt,
+                     (.))
+
+import           Control.Category as X
+import           Numeric.Natural as X

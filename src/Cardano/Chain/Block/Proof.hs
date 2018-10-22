@@ -15,7 +15,7 @@ module Cardano.Chain.Block.Proof
 import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, shown, (%))
+import           Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -37,7 +37,7 @@ data Proof = Proof
 
 instance B.Buildable Proof where
   build proof = bprint
-    ("<Proof: " % build % ", " % shown % ", " % build % ", " % build % ">")
+    ("<Proof: " . build . ", " . shown . ", " . build . ", " . build . ">")
     (proofTxp proof)
     (proofSsc proof)
     (proofDelegation proof)
@@ -69,10 +69,10 @@ instance B.Buildable ProofError where
   build = \case
     ProofIncorrect p p' -> bprint
       ( "Incorrect proof of Body.\n"
-      % "Proof in header:\n"
-      % build % "\n"
-      % "Calculated proof:\n"
-      % build % "\n"
+      . "Proof in header:\n"
+      . build . "\n"
+      . "Calculated proof:\n"
+      . build . "\n"
       )
       p
       p'

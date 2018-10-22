@@ -73,9 +73,9 @@ genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash
 
 genTxId :: Gen TxId
-genTxId = genBase16Text >>= pure . decodeHash >>= either error pure
+genTxId = genBase16Text >>= pure . decodeHash >>= either panic pure
     where
-        genBase16Text = decodeUtf8 @Text @ByteString <$> genBase16Bs
+        genBase16Text = decodeUtf8 <$> genBase16Bs
 
 genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32

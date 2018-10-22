@@ -14,7 +14,7 @@ import           Cardano.Prelude
 import           Data.Aeson (object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Fixed (Nano)
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -29,7 +29,7 @@ data TxSizeLinear = TxSizeLinear !Coeff !Coeff
 instance NFData TxSizeLinear
 
 instance B.Buildable TxSizeLinear where
-    build (TxSizeLinear a b) = bprint (build%" + "%build%"*s") a b
+  build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b
 
 instance Bi TxSizeLinear where
     encode (TxSizeLinear a b) = encodeListLen 2 <> encode a <> encode b

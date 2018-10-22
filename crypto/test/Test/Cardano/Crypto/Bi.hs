@@ -377,34 +377,34 @@ constantByteString
 sizeEstimates :: H.Group
 sizeEstimates
   = let
-      check :: forall a . (Show a, Bi a) => Gen a -> Property
-      check g = sizeTest $ scfg { gen = g, precise = True }
+      testPrecise :: forall a . (Show a, Bi a) => Gen a -> Property
+      testPrecise g = sizeTest $ scfg { gen = g, precise = True }
     in H.Group
       "Encoded size bounds for crypto types."
-      [ ("PublicKey", check genPublicKey)
+      [ ("PublicKey", testPrecise genPublicKey)
       , ( "AbstractHash Blake2b_224 PublicKey"
-        , check @(AbstractHash Blake2b_224 PublicKey)
+        , testPrecise @(AbstractHash Blake2b_224 PublicKey)
           $ genAbstractHash genPublicKey
         )
       , ( "AbstractHash Blake2b_256 PublicKey"
-        , check @(AbstractHash Blake2b_256 PublicKey)
+        , testPrecise @(AbstractHash Blake2b_256 PublicKey)
           $ genAbstractHash genPublicKey
         )
       , ( "AbstractHash Blake2b_384 PublicKey"
-        , check @(AbstractHash Blake2b_384 PublicKey)
+        , testPrecise @(AbstractHash Blake2b_384 PublicKey)
           $ genAbstractHash genPublicKey
         )
       , ( "AbstractHash Blake2b_512 PublicKey"
-        , check @(AbstractHash Blake2b_512 PublicKey)
+        , testPrecise @(AbstractHash Blake2b_512 PublicKey)
           $ genAbstractHash genPublicKey
         )
       , ( "AbstractHash SHA1 PublicKey"
-        , check @(AbstractHash SHA1 PublicKey) $ genAbstractHash genPublicKey
+        , testPrecise @(AbstractHash SHA1 PublicKey) $ genAbstractHash genPublicKey
         )
-      , ("RedeemPublicKey", check genRedeemPublicKey)
-      , ("RedeemSecretKey", check genRedeemSecretKey)
+      , ("RedeemPublicKey", testPrecise genRedeemPublicKey)
+      , ("RedeemSecretKey", testPrecise genRedeemSecretKey)
       , ( "RedeemSignature PublicKey"
-        , check (genRedeemSignature (ProtocolMagic 0) genPublicKey)
+        , testPrecise (genRedeemSignature (ProtocolMagic 0) genPublicKey)
         )
       ]
 

@@ -45,8 +45,9 @@ module Test.Cardano.Prelude.QuickCheck.Property
 
 import           Cardano.Prelude
 
+import           Control.Monad (fail)
 import qualified Data.Semigroup as Semigroup
-import           Test.Hspec (Expectation, Selector, shouldThrow)
+import qualified Test.Hspec as Hspec
 import           Test.QuickCheck (Property, counterexample, property, (.&&.),
                      (===))
 import           Test.QuickCheck.Gen (Gen, choose)
@@ -73,28 +74,19 @@ qcIsRight :: Show a => Either a b -> Property
 qcIsRight (Right _) = property True
 qcIsRight (Left x)  = qcFail ("expected Right, got Left (" <> show x <> ")")
 
--- TBD would it not be sufficient to just use 'Traversable'? Does the
--- 'Container' class from 'universum' add any value?
---
---   qcElem :: (Eq a, Show a, Show (t a), Traversable t) => a -> t a -> Property
---
-qcElem
-    :: (Show a, Eq a, Show t, Container t, Element t ~ a, ElementConstraint t a)
-    => a -> t -> Property
+qcElem :: (Show a, Eq a, Show (t a), Foldable t) => a -> t a -> Property
 qcElem x xs =
     counterexample ("expected " <> show x <> " to be in " <> show xs) $
     x `elem` xs
 
-qcNotElem
-    :: (Show a, Eq a, Show t, Container t, Element t ~ a, ElementConstraint t a)
-    => a -> t -> Property
+qcNotElem :: (Show a, Eq a, Show (t a), Foldable t) => a -> t a -> Property
 qcNotElem x xs =
     counterexample ("expected " <> show x <> " not to be in " <> show xs) $
-    not (x `elem` xs)
+    x `notElem` xs
 
 -- | A property that is always false
 qcFail :: Text -> Property
-qcFail s = counterexample (toString s) False
+qcFail s = counterexample (toS s) False
 
 --------------------------------------------------------------------------------
 -- Monadic testing
@@ -110,7 +102,7 @@ assertProperty st text = unless st $ stopProperty text
 -- • I am not a fan of 'fail'.
 -- | Stop 'PropertyM' execution with given reason. The property will fail.
 stopProperty :: Monad m => Text -> PropertyM m a
-stopProperty msg = stop failed {reason = toString msg}
+stopProperty msg = stop failed {reason = toS msg}
 
 -- | Use 'stopProperty' if the value is 'Nothing' or return something
 -- it the value is 'Just'.
@@ -123,7 +115,7 @@ maybeStopProperty msg =
 -- | Split given list into chunks with size up to given value.
 -- TODO: consider using `sumEquals maxSize (length items)`
 splitIntoChunks :: Monad m => Word -> [a] -> PropertyM m [NonEmpty a]
-splitIntoChunks 0 _ = error "splitIntoChunks: maxSize is 0"
+splitIntoChunks 0 _ = panic "splitIntoChunks: maxSize is 0"
 splitIntoChunks maxSize items = do
     sizeMinus1 <- pick $ choose (0, maxSize - 1)
     let (chunk, rest) = splitAt (fromIntegral sizeMinus1 + 1) items
@@ -147,7 +139,7 @@ expectedOne desc = \case
 -- TODO: improve naming!
 splitWord :: Word64 -> Word64 -> Gen [Word64]
 splitWord total parts | total < parts =
-    error $ "splitWord: can't split " <> show total <> " into " <> show parts <> " parts."
+    panic $ "splitWord: can't split " <> show total <> " into " <> show parts <> " parts."
                       | otherwise = map succ . take iParts <$> ((<> replicate iParts 0) <$> (sumEquals (total `div` parts + 1) $ total - parts))
   where
     iParts = fromIntegral parts
@@ -161,8 +153,8 @@ sumEquals maxEl restSum = do
     el <- choose (1, min maxEl restSum)
     (el:) <$> sumEquals maxEl (restSum - el)
 
-expectationError :: Text -> Expectation
-expectationError = fail . toString
+expectationError :: Text -> Hspec.Expectation
+expectationError = fail . toS
 
 --------------------------------------------------------------------------------
 -- Monoid/Semigroup laws
@@ -222,8 +214,8 @@ infixr 5 >=.
 shouldThrowException
     :: (Exception e)
     => (a -> b)
-    -> Selector e
+    -> Hspec.Selector e
     -> a
-    -> Expectation
+    -> Hspec.Expectation
 shouldThrowException action exception arg =
-    (return $! action arg) `shouldThrow` exception
+    (return $! action arg) `Hspec.shouldThrow` exception

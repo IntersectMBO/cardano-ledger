@@ -5,19 +5,23 @@ module Test.Cardano.Binary.BiSizeBounds
     ( tests
     ) where
 
-import           Cardano.Binary.Class
 import           Cardano.Prelude
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
+import           Data.String (String)
 import           Data.Tagged (Tagged (..))
+import qualified Data.Text as T
+
 import           Data.Typeable (typeRep)
 import           Hedgehog (Gen, Group (..), checkParallel, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import           Test.Cardano.Binary.Helpers
 
+import           Cardano.Binary.Class
+
+import           Test.Cardano.Binary.Helpers
 
 tests :: IO Bool
 tests
@@ -158,7 +162,7 @@ tests
           { gen         = Gen.text (Range.linear 0 1000) Gen.latin1
           , computedCtx = \bs -> M.fromList
             [ ( typeRep (Proxy @(LengthOf String))
-              , SizeConstant $ fromIntegral $ length bs
+              , SizeConstant $ fromIntegral $ T.length bs
               )
             ]
           }
@@ -168,7 +172,7 @@ tests
           { gen         = Gen.text (Range.linear 0 1000) Gen.unicode
           , computedCtx = \bs -> M.fromList
             [ ( typeRep (Proxy @(LengthOf String))
-              , SizeConstant $ fromIntegral $ length bs
+              , SizeConstant $ fromIntegral $ T.length bs
               )
             ]
           }

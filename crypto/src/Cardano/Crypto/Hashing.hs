@@ -66,7 +66,7 @@ newtype AbstractHash algo a =
   deriving (Show, Eq, Ord, ByteArray.ByteArrayAccess, Generic, NFData)
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
-  readsPrec _ s = case parseBase16 $ fromString s of
+  readsPrec _ s = case parseBase16 $ toS s of
     Left  _  -> []
     Right bs -> case Hash.digestFromByteString bs of
       Nothing -> []
@@ -79,7 +79,7 @@ instance ToJSON (AbstractHash algo a) where
   toJSON = toJSON . sformat hashHexF
 
 instance HashAlgorithm algo => FromJSON (AbstractHash algo a) where
-  parseJSON = toAesonError . readEither @String <=< parseJSON
+  parseJSON = toAesonError . readEither <=< parseJSON
 
 instance (HashAlgorithm algo, FromJSON (AbstractHash algo a))
          => FromJSONKey (AbstractHash algo a) where
@@ -106,12 +106,12 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => Bi (AbstractHash alg
       (Hash.digestFromByteString bs)
 
   encodedSizeExpr _ _ =
-    let realSz = hashDigestSize (error "unused, I hope!" :: algo)
+    let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
     in fromInteger (toInteger (withWordSize realSz + realSz))
 
 hashDigestSize' :: forall algo . HashAlgorithm algo => Int
 hashDigestSize' = hashDigestSize @algo
-  (error
+  (panic
     "Cardano.Crypto.Hashing.hashDigestSize': HashAlgorithm value is evaluated!"
   )
 
@@ -125,7 +125,7 @@ decodeAbstractHash prettyHash = do
       (  "decodeAbstractHash: "
       <> "can't convert bytes to hash,"
       <> " the value was "
-      <> fromString (toString prettyHash)
+      <> toS prettyHash
       )
     Just digest -> return (AbstractHash digest)
 

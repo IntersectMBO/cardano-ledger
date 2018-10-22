@@ -9,7 +9,7 @@ module Cardano.Chain.Txp.TxOutAux
 import           Cardano.Prelude
 
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (bprint, build, (%))
+import           Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
@@ -23,7 +23,7 @@ data TxOutAux = TxOutAux
   } deriving (Generic, Show, Eq, Ord)
 
 instance B.Buildable TxOutAux where
-  build (TxOutAux out) = bprint ("{txout = "%build%"}") out
+  build (TxOutAux out) = bprint ("{txout = " . build . "}") out
 
 instance NFData TxOutAux
 

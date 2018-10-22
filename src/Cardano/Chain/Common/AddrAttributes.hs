@@ -9,7 +9,7 @@ module Cardano.Chain.Common.AddrAttributes
 import           Cardano.Prelude
 
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, builder, (%))
+import           Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi, decode, encode)
@@ -30,8 +30,8 @@ data AddrAttributes = AddrAttributes
 
 instance B.Buildable AddrAttributes where
     build aa = bprint
-        ("AddrAttributes { stake distribution: "%build%
-         ", derivation path: "%builder%
+        ("AddrAttributes { stake distribution: ".build.
+         ", derivation path: ".builder.
          " }")
         (aaStakeDistribution aa)
         derivationPathBuilder
@@ -79,7 +79,7 @@ instance Bi (Attributes AddrAttributes) where
                     [(1, Bi.serialize . unsafeFromJust . aaPkDerivationPath)]
         unsafeFromJust =
             fromMaybe
-                (error "Maybe was Nothing in Bi (Attributes AddrAttributes)")
+                (panic "Maybe was Nothing in Bi (Attributes AddrAttributes)")
 
     decode = decodeAttributes initValue go
       where

@@ -103,9 +103,9 @@ isHardened = (>= firstHardened)
 deriveHDPublicKey :: PublicKey -> Word32 -> PublicKey
 deriveHDPublicKey (PublicKey xpub) childIndex
   | isHardened childIndex
-  = error "Wrong index for non-hardened derivation"
+  = panic "Wrong index for non-hardened derivation"
   | otherwise
-  = maybe (error "deriveHDPublicKey: deriveXPub failed") PublicKey
+  = maybe (panic "deriveHDPublicKey: deriveXPub failed") PublicKey
     $ deriveXPub DerivationScheme1 xpub childIndex
 
 -- | Whether to call 'checkPassMatches'
@@ -134,7 +134,7 @@ packHDAddressAttr (HDPassphrase passphrase) path = do
   let !pathSer = serialize' path
   let !packCF = encryptChaChaPoly addrAttrNonce passphrase "" pathSer
   case packCF of
-    CryptoFailed er -> error $ "Error in packHDAddressAttr: " <> show er
+    CryptoFailed er -> panic $ "Error in packHDAddressAttr: " <> show er
     CryptoPassed p  -> HDAddressPayload p
 
 -- | Try to decrypt 'HDAddressPayload' using 'HDPassphrase'

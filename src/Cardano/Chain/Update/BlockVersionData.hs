@@ -18,7 +18,7 @@ import           Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Time (NominalDiffTime)
-import           Formatting (bprint, build, bytes, int, shortest, (%))
+import           Formatting (bprint, build, bytes, int, shortest)
 import qualified Formatting.Buildable as B
 import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
                      mkObject)
@@ -51,21 +51,21 @@ instance NFData BlockVersionData where
 
 instance B.Buildable BlockVersionData where
   build bvd = bprint
-    ( "{ script version: " % build
-    % ", slot duration: " % build
-    % ", block size limit: " % bytes'
-    % ", header size limit: " % bytes'
-    % ", tx size limit: " % bytes'
-    % ", proposal size limit: " % bytes'
-    % ", mpc threshold: " % build
-    % ", heavyweight delegation threshold: " % build
-    % ", update vote threshold: " % build
-    % ", update proposal threshold: " % build
-    % ", update implicit period: " % int % " slots"
-    % ", softfork rule: " % build
-    % ", tx fee policy: " % build
-    % ", unlock stake epoch: " % build
-    % " }"
+    ( "{ script version: " . build
+    . ", slot duration: " . build
+    . ", block size limit: " . bytes'
+    . ", header size limit: " . bytes'
+    . ", tx size limit: " . bytes'
+    . ", proposal size limit: " . bytes'
+    . ", mpc threshold: " . build
+    . ", heavyweight delegation threshold: " . build
+    . ", update vote threshold: " . build
+    . ", update proposal threshold: " . build
+    . ", update implicit period: " . int . " slots"
+    . ", softfork rule: " . build
+    . ", tx fee policy: " . build
+    . ", unlock stake epoch: " . build
+    . " }"
     )
     (bvdScriptVersion bvd)
     (bvdSlotDuration bvd)

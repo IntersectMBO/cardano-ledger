@@ -11,6 +11,8 @@ import           Test.Cardano.Prelude
 
 import qualified Data.Map as M
 import           Data.Typeable (typeRep)
+import           Data.Vector (Vector)
+
 import           Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
@@ -220,8 +222,8 @@ roundTripTxWitness = eachOf 20 (feedPM genTxWitness) roundTripsBiShow
 
 sizeEstimates :: H.Group
 sizeEstimates =
-  let check :: (Show a, Bi a) => Gen a -> Property
-      check g = sizeTest $ scfg { gen = g }
+  let sizeTestGen :: (Show a, Bi a) => Gen a -> Property
+      sizeTestGen g = sizeTest $ scfg { gen = g }
       pm = ProtocolMagic 0
       knownTxIn (TxInUnknown _ _) = False
       knownTxIn _                 = True
@@ -238,7 +240,7 @@ sizeEstimates =
                                              , Case "hiScript" 255 ])
 
   in H.Group "Encoded size bounds for core types."
-        [ ("TxId"                 , check genTxId)
+        [ ("TxId"                 , sizeTestGen genTxId)
         , ("Tx"                   , sizeTest $ scfg
               { gen = genTx
               , addlCtx = M.fromList [ attrUnitSize, attrAddrSize ]
@@ -249,7 +251,7 @@ sizeEstimates =
                      SizeConstant (fromIntegral $ length $ _txOutputs tx))
                   ]
               })
-        , ("TxIn"                 , check (Gen.filter knownTxIn genTxIn))
+        , ("TxIn"                 , sizeTestGen (Gen.filter knownTxIn genTxIn))
         , ("TxOut"                , sizeTest $ scfg
               { gen = genTxOut
               , addlCtx = M.fromList [ attrAddrSize ]
@@ -260,11 +262,11 @@ sizeEstimates =
                                      , attrAddrSize
                                      , scriptSize
                                      , txSigSize ]
-              , computedCtx = \(TxAux tx witness) -> M.fromList
+              , computedCtx = \(TxAux tx wit) -> M.fromList
                   [ (typeRep (Proxy @(LengthOf [TxIn])),
                      SizeConstant (fromIntegral $ length $ _txInputs tx))
                   , (typeRep (Proxy @(LengthOf (Vector TxInWitness))),
-                     SizeConstant (fromIntegral $ length witness))
+                     SizeConstant (fromIntegral $ length wit))
                   , (typeRep (Proxy @(LengthOf [TxOut])),
                      SizeConstant (fromIntegral $ length $ _txOutputs tx))
                   ]
@@ -273,7 +275,7 @@ sizeEstimates =
               { gen = genTxInWitness pm
               , addlCtx = M.fromList [ txSigSize, scriptSize ]
               })
-        , ("TxSigData"            , check genTxSigData)
+        , ("TxSigData"            , sizeTestGen genTxSigData)
         , ("Signature TxSigData"  , sizeTest $ scfg
               { gen = genTxSig pm
               , addlCtx = M.fromList [ txSigSize ]

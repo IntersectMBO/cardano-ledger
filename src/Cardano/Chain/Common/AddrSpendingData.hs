@@ -12,7 +12,7 @@ module Cardano.Chain.Common.AddrSpendingData
 import           Cardano.Prelude
 
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, int, (%))
+import           Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Case (..), szCases)
@@ -40,10 +40,10 @@ data AddrSpendingData
 
 instance B.Buildable AddrSpendingData where
     build = \case
-        PubKeyASD pk     -> bprint ("PubKeyASD " % build) pk
-        ScriptASD script -> bprint ("ScriptASD " % build) script
-        RedeemASD rpk    -> bprint ("RedeemASD " % build) rpk
-        UnknownASD tag _ -> bprint ("UnknownASD with tag " % int) tag
+        PubKeyASD pk     -> bprint ("PubKeyASD " . build) pk
+        ScriptASD script -> bprint ("ScriptASD " . build) script
+        RedeemASD rpk    -> bprint ("RedeemASD " . build) rpk
+        UnknownASD tag _ -> bprint ("UnknownASD with tag " . int) tag
 
 instance NFData AddrSpendingData
 
@@ -93,11 +93,11 @@ instance Bi AddrSpendingData where
             tag -> UnknownASD tag <$> Bi.decodeUnknownCborDataItem
 
     encodedSizeExpr size _ = szCases
-        [ let PubKeyASD pk = error "unused"
+        [ let PubKeyASD pk = panic "unused"
           in  Case "PubKeyASD" $ size ((,) <$> pure (w8 0) <*> pure pk)
-        , let ScriptASD script = error "unused"
+        , let ScriptASD script = panic "unused"
           in  Case "ScriptASD" $ size ((,) <$> pure (w8 1) <*> pure script)
-        , let RedeemASD redeemPK = error "unused"
+        , let RedeemASD redeemPK = panic "unused"
           in  Case "RedeemASD" $ size ((,) <$> pure (w8 2) <*> pure redeemPK)
         ]
 
