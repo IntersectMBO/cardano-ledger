@@ -1,77 +1,7 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage{microtype}
-\usepackage{mathpazo} % nice fonts
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{latexsym}
-\usepackage{mathtools}
-\usepackage{stmaryrd}
-\usepackage{extarrows}
-\usepackage{slashed}
-\usepackage[colon]{natbib}
-\usepackage[unicode=true,pdftex,pdfa]{hyperref}
-\usepackage{xcolor}
-\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
-\hypersetup{
-  pdftitle={A Simplified Formal Specification of a UTxO Ledger},
-  breaklinks=true,
-  bookmarks=true,
-  colorlinks=false,
-  linkcolor={blue},
-  citecolor={blue},
-  urlcolor={blue},
-  linkbordercolor={white},
-  citebordercolor={white},
-  urlbordercolor={white}
-}
-\usepackage{float}
-\floatstyle{boxed}
-\restylefloat{figure}
-
-% For notes containing warnings, questions, etc.
-\usepackage[tikz]{bclogo}
-\newenvironment{question}
-  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
-  {\end{bclogo}}
-\newenvironment{todo}
-  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
-    {\end{bclogo}}
-\newenvironment{note}
-  {\begin{bclogo}[logo=\bcattention, couleur=orange!10, arrondi=0.2]{ NOTE}}
-  {\end{bclogo}}
-
-%%
-%% Package `semantic` can be used for writing inference rules.
-%%
-\usepackage{semantic}
-%% Setup for the semantic package
-\setpremisesspace{20pt}
-
-\DeclareMathOperator{\dom}{dom}
-\DeclareMathOperator{\range}{range}
-
-\newcommand{\powerset}[1]{\mathbb{P}~#1}
-\newcommand{\restrictdom}{\lhd}
-\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
-\newcommand{\restrictrange}{\rhd}
-\newcommand{\subtractrange}{\mathbin{\slashed{\restrictrange}}}
-\newcommand{\union}{\cup}
-\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
-\newcommand{\uniondistinct}{\uplus}
-\newcommand{\var}[1]{\mathit{#1}}
-\newcommand{\fun}[1]{\mathsf{#1}}
-\newcommand{\type}[1]{\mathsf{#1}}
-\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
-
 %%
 %% Types
 %%
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
-\newcommand{\VKey}{\type{VKey}}
-\newcommand{\HashKey}{\type{HashKey}}
-\newcommand{\Coin}{\type{Coin}}
-\newcommand{\Epoch}{\type{Epoch}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\PState}{\type{PState}}
 
@@ -85,7 +15,6 @@
 %%
 %% Functions
 %%
-\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
 \newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
 \newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
 \newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
@@ -94,44 +23,12 @@
 \newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
 \newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
-\newcommand{\addr}[1]{\fun{addr_{rwd}}~ \var{#1}}
+\newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 
 %%
 %% Constants
 %%
 \newcommand{\emax}{\mathsf{E_{max}}}
-
-\begin{document}
-
-\title{Delegation Ledger Rules \\
-       {\small (Version 0.1)}}
-\author{}
-%\date{}
-
-\maketitle
-
-\begin{abstract}
-This document is a formal specification of the ledger rules for delegation,
-as described in \cite{delegation_design}.
-Delegation is first specified in isolation.
-Afterwards a simple UTxO ledger is added to delegation rules.
-
-This specification describes ledger rules in isolation of the
-underlying blockchain protocol, Ouroboros, to the extent possible.
-In particular, there is no notion of concurrency or blocks.
-
-\end{abstract}
-
-\tableofcontents
-\listoffigures
-
-\subsection*{Version history}
-
-\begin{description}
-\item[Version 0.1, October ?, 2018] Initial draft.
-\end{description}
-
-\section{Introduction}
 
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
@@ -155,50 +52,6 @@ is applied to the ledger state.
 Stake pool retirement certificates, however, specify the epoch in
 which it will retire.
 
-\section{Notation}
-
-\begin{note}
-There is a lot of common notation between our specifications.
-We will probably put the common notation in a standalone document
-and reference this document here in this section.
-\end{note}
-
-We use set theory and predicate logic as our specification language.
-Sometimes we define a sets that correspond to types that we intentionally
-leave abstract. The interpretation is that any choice will do provided that
-the required operations on these sets all work out.
-
-It is worth noting that we use set theoretic functions in two ways: one
-that corresponds to the types of computations, and one that corresponds to
-finite map data structures.
-
-In \cref{fig:nonstandard-notation} we define some extra operators on relations (including
-finite mappings) that are not standard set theory notation.
-
-\begin{figure}
-\begin{align*}
-  \var{xs} \restrictdom \var{m}
-& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ x \in \var{xs} \}
-& \text{domain restriction}
-\\
-  \var{xs} \subtractdom \var{m}
-& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ x \notin \var{xs} \}
-& \text{domain exclusion}
-\\
-  \var{m} \restrictrange \var{ys}
-& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ y \in \var{ys} \}
-& \text{range restriction}
-\\
-  \var{m} \subtractrange \var{ys}
-& = \{ x \mapsto y \mid x \mapsto y \in \var{m}, ~ y \notin \var{ys} \}
-& \text{range exclusion}
-\end{align*}
-\caption{Extra non-standard notation on finite mappings}
-\label{fig:nonstandard-notation}
-\end{figure}
-
-\section{Delegation in Isolation}
-
 Delegation requires the following to be tracked by the ledger state:
 the registered stake keys, the delegation map from registered stake keys to stake
 pools, the registered stake pools, and upcoming stake pool retirements.
@@ -220,9 +73,6 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       a & \AddrRWD & \text{reward address} \\
-      vk & \VKey & \text{verification key} \\
-      hk & \HashKey & \text{hash of a key} \\
-      coin & \Coin & \text{currency value} \\
       epoch & \Epoch & \text{epoch}
     \end{array}
   \end{equation*}
@@ -252,16 +102,16 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-  \fun{hash} & \VKey \to \HashKey
+  \fun{hash} & \VKey \to \Hash
   & \text{hashing a key}
   \\
-  \fun{addr_{rwd}} & \HashKey \to \AddrRWD
+  \fun{addr_{rwd}} & \Hash \to \AddrRWD
   & \text{address of a hashkey}
   \\
-  \fun{author} & \DCert \to \HashKey
+  \fun{author} & \DCert \to \Hash
   & \text{certificate author}
   \\
-  \fun{pool} & \DCertDeleg \to \HashKey
+  \fun{pool} & \DCertDeleg \to \Hash
   & \text{pool being delegated to}
   \\
   \fun{retire} & \DCertRetirePool \to \Epoch
@@ -284,16 +134,16 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \powerset (\HashKey) & \text{registered stake keys}\\
+      \var{stkeys} & \powerset (\Hash) & \text{registered stake keys}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
+      \var{delegations} & \Hash \mapsto \Hash & \text{delegations}\\
     \end{array}\right)
     \\
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \HashKey \mapsto \DCertRegPool & \text{registered stake pools}\\
-      \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
+      \var{stpools} & \Hash \mapsto \DCertRegPool & \text{registered stake pools}\\
+      \var{retiring} & \Hash \mapsto \Epoch & \text{retiring stake pools}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
@@ -335,7 +185,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \left(
       \begin{array}{rcl}
         \var{stkeys} & \union & \{\var{hk}\}\\
-        \var{rewards} & \unionoverride & \{\addr \var{hk} \mapsto 0\}\\
+        \var{rewards} & \unionoverride & \{\addrRw \var{hk} \mapsto 0\}\\
         \var{delegations}
       \end{array}
       \right)
@@ -359,7 +209,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \left(
       \begin{array}{rcl}
         \var{stkeys} & \setminus & \{\var{hk}\}\\
-        \{\addr \var{hk}\} & \subtractdom & \var{rewards} \\
+        \{\addrRw \var{hk}\} & \subtractdom & \var{rewards} \\
         \{\var{hk}\} & \subtractdom & \var{delegations}
       \end{array}
       \right)
@@ -470,18 +320,66 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \end{equation}
   \caption{Pool Inference Rule}
   \label{fig:pool-rules}
+
 \end{figure}
 
+\subsection{Witnesses}
+\label{sec:delegation-witnesses}
 
-\section{Delegation with a UTxO Ledger}
+The rule for certificate witnesses is given in
+Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
+are given in Figure~\ref{fig:defs:delegationw}.
 
-\begin{question}
-How should the certificates inside a transaction be ordered?
-The order in which they appear in the transaction?
-\end{question}
+\begin{figure}
+  \emph{Abstract functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{dbody} & \DCert \mapsto \VKey
+      & \text{body of the delegation certificate}\\
+      \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
+      & \text{witness for the delegation certificate}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Delegation Witnesses Transition}
+  \begin{equation*}
+    \_ \vdash \_ \trans{delegw}{\_} \_ \in
+      \powerset (
+        \Epoch \times \DState \times (\Tx \times \DCert) \times \DState)
+  \end{equation*}
+  \caption{Delegation witnesses definitions}
+  \label{fig:defs:delegationw}
+\end{figure}
 
-\addcontentsline{toc}{section}{References}
-\bibliographystyle{plainnat}
-\bibliography{references}
+\begin{figure}
+  \emph{Delegation with witness rule}
+  \begin{equation}
+    \label{eq:deleg-witnesses}
+    \inference[Deleg-wit]
+    { \dwit{c} = (\var{vk_s}, \sigma)
+      & \var{dstate} \trans{deleg}{c} \var{dstate'}
+      & \var{cepoch} \vdash \var{pstate}
+      \trans{pool}{c} \var{pstate'}
+      \\ ~ \\
+      \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
+    }
+    {\var{cepoch} \vdash
+      \left(
+      \begin{array}{r}
+        \var{dstate} \\
+        \var{pstate}
+      \end{array}
+      \right)
+      \trans{delegw}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{dstate'} \\
+        \var{pstate'}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Delegation witnesses inference rules}
+  \label{fig:rules:delegationw}
+\end{figure}
 
-\end{document}
