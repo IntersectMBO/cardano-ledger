@@ -4,6 +4,8 @@ import           Control.Monad (foldM)
 import           Crypto.Hash   (hash)
 import qualified Data.Map      as Map
 import qualified Data.Set      as Set
+import           Data.Ratio
+
 import           Test.Hspec
 
 import           LedgerState   (Ledger
@@ -20,7 +22,7 @@ import           Keys
 import           Coin
 
 import           Delegation.Certificates (Cert(..))
-import           Delegation.StakePool    (Delegation(..))
+import           Delegation.StakePool    (Delegation(..), StakePool(..))
 
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
@@ -75,16 +77,25 @@ testValidStakeKeyRegistration sd1 utxo stakeKeyRegistration =
                         stakeKeyRegistration
                         0)
 
-testDelegation ::
-  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> SpecWith ()
-testDelegation sd1 utxo stakeKeyRegistration =
+testValidDelegation ::
+  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> StakePool -> SpecWith ()
+testValidDelegation sd1 utxo stakeKeyRegistration sp =
   it "Valid stake delegation from Alice to stake pool." $ do
   let
     stakeDelegation = Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
-    ls2 = ledgerState $ sd1 ++ [DelegationData stakeDelegation]
+    ls2 = ledgerState $ sd1 ++ [ DelegationData poolRegistration
+                               , DelegationData stakeDelegation]
+    poolRegistration = RegPool sp
+
   ls2 `shouldBe` Right (LedgerState
                         (UTxO utxo)
                         stakeKeyRegistration
+                        {
+                          getDelegations =
+                            Map.fromList [(hashKey $ vKey aliceStake,
+                                           hashKey $ vKey stakePoolKey1)]
+                        , getStPools = Set.fromList [sp]
+                        }
                         0)
 
 testsValidLedger :: SpecWith ()
@@ -127,7 +138,16 @@ testsValidLedger = describe "Tests with valid transactions in ledger." $ do
                     }
 
       testValidStakeKeyRegistration (tx1:sd1) utxo stakeKeyRegistration
-      testDelegation (tx1:sd1) utxo stakeKeyRegistration
+      let
+        stakePool = StakePool
+                    {
+                      poolPubKey = vKey stakePoolKey1
+                    , poolPledges = Map.empty
+                    , poolCost = Coin 0      -- TODO: what is a sensible value?
+                    , poolMargin = 0 % 1     --          or here?
+                    , poolAltAcnt = Nothing  --          or here?
+                    }
+      testValidDelegation (tx1:sd1) utxo stakeKeyRegistration stakePool
 
 testSpendNonexistentInput :: SpecWith ()
 testSpendNonexistentInput =
