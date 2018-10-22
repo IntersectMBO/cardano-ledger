@@ -10,6 +10,7 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 module LedgerState
   ( LedgerState(..)
+  , DelegationState(..)
   , Ledger
   , LedgerEntry(..)
   -- * state transitions
