@@ -8,6 +8,7 @@ import           Test.Hspec
 
 import           LedgerState   (Ledger
                                , LedgerState(..)
+                               , DelegationState(..)
                                , LedgerEntry(..)
                                , ValidationError(..)
                                , asStateTransition
