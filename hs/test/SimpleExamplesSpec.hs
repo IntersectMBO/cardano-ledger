@@ -20,6 +20,7 @@ import           Keys
 import           Coin
 
 import           Delegation.Certificates (Cert(..))
+import           Delegation.StakePool    (Delegation(..))
 
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
@@ -64,24 +65,27 @@ testLedgerValidTransactions ls1 utxo =
                          LedgerState.emptyDelegation 0)
 
 testValidStakeKeyRegistration ::
-  LedgerEntry -> [LedgerEntry] -> Map.Map TxIn TxOut -> SpecWith ()
-testValidStakeKeyRegistration tx1 sd1 utxo =
+  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> SpecWith ()
+testValidStakeKeyRegistration sd1 utxo stakeKeyRegistration =
   it "Valid stake key registration." $ do
   let
-    ls2 = ledgerState $ tx1:sd1
+    ls2 = ledgerState $ sd1
   ls2 `shouldBe` Right (LedgerState
                         (UTxO utxo)
-                        LedgerState.emptyDelegation
-                        {
-                          getAccounts =
-                            Map.fromList [ (hashKey $ vKey aliceStake, Coin 0)
-                                         , (hashKey $ vKey bobStake, Coin 0)
-                                         , (hashKey $ vKey stakePoolKey1, Coin 0)]
-                        , getStKeys =
-                            Set.fromList [ hashKey $ vKey aliceStake
-                                         , hashKey $ vKey bobStake
-                                         , hashKey $ vKey stakePoolKey1]
-                        } 0)
+                        stakeKeyRegistration
+                        0)
+
+testDelegation ::
+  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> SpecWith ()
+testDelegation sd1 utxo stakeKeyRegistration =
+  it "Valid stake delegation from Alice to stake pool." $ do
+  let
+    stakeDelegation = Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
+    ls2 = ledgerState $ sd1 ++ [DelegationData stakeDelegation]
+  ls2 `shouldBe` Right (LedgerState
+                        (UTxO utxo)
+                        stakeKeyRegistration
+                        0)
 
 testsValidLedger :: SpecWith ()
 testsValidLedger = describe "Tests with valid transactions in ledger." $ do
@@ -110,7 +114,20 @@ testsValidLedger = describe "Tests with valid transactions in ledger." $ do
         sd1 = [ DelegationData certAlice
               , DelegationData certBob
               , DelegationData certPool1]
-      testValidStakeKeyRegistration tx1 sd1 utxo
+        stakeKeyRegistration = LedgerState.emptyDelegation
+                    {
+                      getAccounts =
+                        Map.fromList [ (hashKey $ vKey aliceStake, Coin 0)
+                                     , (hashKey $ vKey bobStake, Coin 0)
+                                     , (hashKey $ vKey stakePoolKey1, Coin 0)]
+                    , getStKeys =
+                        Set.fromList [ hashKey $ vKey aliceStake
+                                     , hashKey $ vKey bobStake
+                                     , hashKey $ vKey stakePoolKey1]
+                    }
+
+      testValidStakeKeyRegistration (tx1:sd1) utxo stakeKeyRegistration
+      testDelegation (tx1:sd1) utxo stakeKeyRegistration
 
 testSpendNonexistentInput :: SpecWith ()
 testSpendNonexistentInput =
