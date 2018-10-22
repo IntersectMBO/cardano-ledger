@@ -29,12 +29,14 @@ library
 
   other-modules:
                        Cardano.Chain.Block.Block
+                       Cardano.Chain.Block.Body
                        Cardano.Chain.Block.Boundary
+                       Cardano.Chain.Block.ExtraBodyData
+                       Cardano.Chain.Block.ExtraHeaderData
                        Cardano.Chain.Block.Header
-                       Cardano.Chain.Block.Main
+                       Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.SlogUndo
                        Cardano.Chain.Block.Undo
-                       Cardano.Chain.Block.Util
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
@@ -49,7 +51,6 @@ library
                        Cardano.Chain.Common.CoinPortion
                        Cardano.Chain.Common.Merkle
                        Cardano.Chain.Common.Script
-                       Cardano.Chain.Common.SlotLeaders
                        Cardano.Chain.Common.StakeholderId
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear

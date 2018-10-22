@@ -13,7 +13,6 @@ module Test.Cardano.Chain.Common.Gen
        , genMerkleTree
        , genScript
        , genScriptVersion
-       , genSlotLeaders
        , genStakeholderId
        , genTxFeePolicy
        , genTxSizeLinear
@@ -24,7 +23,6 @@ import           Test.Cardano.Prelude
 
 import           Data.Fixed (Fixed (..))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust)
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -36,7 +34,7 @@ import           Cardano.Chain.Common (AddrAttributes (..),
                      AddrType (..), Address (..), BlockCount (..),
                      ChainDifficulty (..), Coeff (..), Coin (..),
                      CoinPortion (..), MerkleRoot (..), MerkleTree,
-                     Script (..), ScriptVersion, SlotLeaders, StakeholderId,
+                     Script (..), ScriptVersion, StakeholderId,
                      TxFeePolicy (..), TxSizeLinear (..),
                      coinPortionDenominator, makeAddress, maxCoinVal,
                      mkMerkleTree, mkStakeholderId, mtRoot)
@@ -151,11 +149,6 @@ genScript = Script <$> genScriptVersion <*> gen32Bytes
 
 genScriptVersion :: Gen ScriptVersion
 genScriptVersion = Gen.word16 Range.constantBounded
-
-genSlotLeaders :: Gen SlotLeaders
-genSlotLeaders = do
-    stakeHolderList <- Gen.list (Range.linear 1 10) genStakeholderId
-    pure $ fromJust $ nonEmpty stakeHolderList
 
 genStakeholderId :: Gen StakeholderId
 genStakeholderId = mkStakeholderId <$> genPublicKey

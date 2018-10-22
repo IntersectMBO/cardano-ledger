@@ -1,20 +1,14 @@
 module Test.Cardano.Chain.Block.Gen
-       ( genBlockBodyAttributes
-       , genBlockHeader
-       , genBlockHeaderAttributes
-       , genBlockSignature
-       , genBoundaryBlockHeader
-       , genBoundaryBody
-       , genBoundaryConsensusData
-       , genBoundaryProof
+       ( genBlockSignature
        , genHeaderHash
-       , genMainBlockHeader
-       , genMainBody
-       , genMainConsensusData
-       , genMainExtraBodyData
-       , genMainExtraHeaderData
-       , genMainProof
-       , genMainToSign
+       , genHeader
+       , genBody
+       , genConsensusData
+       , genExtraBodyData
+       , genExtraHeaderData
+       , genProof
+       , genToSign
+       , genBlock
        , genSlogUndo
        , genUndo
        ) where
@@ -25,43 +19,25 @@ import           Data.Coerce (coerce)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 
-import           Cardano.Chain.Block (BlockBodyAttributes, BlockHeader (..),
-                     BlockHeaderAttributes, BlockSignature (..),
-                     BoundaryBlockHeader, BoundaryBody (..),
-                     BoundaryConsensusData (..), BoundaryProof (..),
-                     HeaderHash, MainBlockHeader, MainBody (..),
-                     MainConsensusData (..), MainExtraBodyData (..),
-                     MainExtraHeaderData (..), MainProof (..), MainToSign (..),
-                     SlogUndo (..), Undo (..), mkBoundaryHeader,
-                     mkMainHeaderExplicit)
+import           Cardano.Chain.Block (Block, BlockSignature (..), Body (..),
+                     ConsensusData (..), ExtraBodyData (..),
+                     ExtraHeaderData (..), Header, HeaderHash, Proof (..),
+                     SlogUndo (..), ToSign (..), Undo (..), mkBlockExplicit,
+                     mkHeaderExplicit)
 import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Slotting (SlotCount)
 import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
 import           Cardano.Crypto (ProtocolMagic)
 
-import           Test.Cardano.Chain.Common.Gen (genChainDifficulty,
-                     genSlotLeaders)
+import           Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import           Test.Cardano.Chain.Slotting.Gen (genEpochIndex, genFlatSlotId,
-                     genSlotId)
+import           Test.Cardano.Chain.Slotting.Gen (genFlatSlotId, genSlotId)
 import           Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof,
                      genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import           Test.Cardano.Crypto.Gen (genAbstractHash, genProxySignature,
                      genPublicKey, genSecretKey, genSignature, genTextHash)
 
-
-genBlockBodyAttributes :: Gen BlockBodyAttributes
-genBlockBodyAttributes = pure $ mkAttributes ()
-
-genBlockHeader :: ProtocolMagic -> SlotCount -> Gen BlockHeader
-genBlockHeader pm epochSlots = Gen.choice
-  [ BlockHeaderBoundary <$> genBoundaryBlockHeader pm epochSlots
-  , BlockHeaderMain <$> genMainBlockHeader pm epochSlots
-  ]
-
-genBlockHeaderAttributes :: Gen BlockHeaderAttributes
-genBlockHeaderAttributes = pure $ mkAttributes ()
 
 genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
@@ -71,31 +47,14 @@ genBlockSignature pm epochSlots = Gen.choice
   , BlockPSignatureHeavy
     <$> genProxySignature pm mts Delegation.genHeavyDlgIndex
   ]
-  where mts = genMainToSign pm epochSlots
-
-genBoundaryBlockHeader :: ProtocolMagic -> SlotCount -> Gen BoundaryBlockHeader
-genBoundaryBlockHeader pm epochSlots = do
-  epoch      <- genEpochIndex
-  body       <- genBoundaryBody
-  prevHeader <- BlockHeaderMain <$> genMainBlockHeader pm epochSlots
-  pure $ mkBoundaryHeader pm (Right prevHeader) epoch body
-
-genBoundaryBody :: Gen BoundaryBody
-genBoundaryBody = BoundaryBody <$> genSlotLeaders
-
-genBoundaryConsensusData :: Gen BoundaryConsensusData
-genBoundaryConsensusData =
-  BoundaryConsensusData <$> genEpochIndex <*> genChainDifficulty
+  where mts = genToSign pm epochSlots
 
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
 
-genBoundaryProof :: Gen BoundaryProof
-genBoundaryProof = BoundaryProof <$> genAbstractHash genSlotLeaders
-
-genMainBody :: ProtocolMagic -> Gen MainBody
-genMainBody pm =
-  MainBody
+genBody :: ProtocolMagic -> Gen Body
+genBody pm =
+  Body
     <$> genTxPayload pm
     <*> pure SscPayload
     <*> Delegation.genPayload pm
@@ -103,53 +62,64 @@ genMainBody pm =
 
 -- We use `Nothing` as the ProxySKBlockInfo to avoid clashing key errors
 -- (since we use example keys which aren't related to each other)
-genMainBlockHeader :: ProtocolMagic -> SlotCount -> Gen MainBlockHeader
-genMainBlockHeader pm epochSlots =
-  mkMainHeaderExplicit pm
+genHeader :: ProtocolMagic -> SlotCount -> Gen Header
+genHeader pm epochSlots =
+  mkHeaderExplicit pm
     <$> genHeaderHash
     <*> genChainDifficulty
     <*> genSlotId epochSlots
     <*> genSecretKey
     <*> pure Nothing
-    <*> genMainBody pm
-    <*> genMainExtraHeaderData
+    <*> genBody pm
+    <*> genExtraHeaderData
 
-genMainConsensusData :: ProtocolMagic -> SlotCount -> Gen MainConsensusData
-genMainConsensusData pm epochSlots =
-  MainConsensusData
+genConsensusData :: ProtocolMagic -> SlotCount -> Gen ConsensusData
+genConsensusData pm epochSlots =
+  ConsensusData
     <$> genSlotId epochSlots
     <*> genPublicKey
     <*> genChainDifficulty
     <*> genBlockSignature pm epochSlots
 
+genExtraBodyData :: Gen ExtraBodyData
+genExtraBodyData = pure . ExtraBodyData $ mkAttributes ()
 
-genMainExtraBodyData :: Gen MainExtraBodyData
-genMainExtraBodyData = MainExtraBodyData <$> genBlockBodyAttributes
-
-genMainExtraHeaderData :: Gen MainExtraHeaderData
-genMainExtraHeaderData =
-  MainExtraHeaderData
+genExtraHeaderData :: Gen ExtraHeaderData
+genExtraHeaderData =
+  ExtraHeaderData
     <$> Update.genBlockVersion
     <*> Update.genSoftwareVersion
-    <*> genBlockHeaderAttributes
-    <*> genAbstractHash genMainExtraBodyData
+    <*> pure (mkAttributes ())
+    <*> genAbstractHash genExtraBodyData
 
-genMainProof :: ProtocolMagic -> Gen MainProof
-genMainProof pm =
-  MainProof
+genProof :: ProtocolMagic -> Gen Proof
+genProof pm =
+  Proof
     <$> genTxProof pm
     <*> pure SscProof
     <*> genAbstractHash (Delegation.genPayload pm)
     <*> Update.genProof pm
 
-genMainToSign :: ProtocolMagic -> SlotCount -> Gen MainToSign
-genMainToSign pm epochSlots =
-  MainToSign
-    <$> genAbstractHash (genBlockHeader pm epochSlots)
-    <*> genMainProof pm
+genToSign :: ProtocolMagic -> SlotCount -> Gen ToSign
+genToSign pm epochSlots =
+  ToSign
+    <$> genAbstractHash (genHeader pm epochSlots)
+    <*> genProof pm
     <*> genSlotId epochSlots
     <*> genChainDifficulty
-    <*> genMainExtraHeaderData
+    <*> genExtraHeaderData
+
+genBlock :: ProtocolMagic -> SlotCount -> Gen Block
+genBlock pm epochSlots =
+  mkBlockExplicit pm
+    <$> Update.genBlockVersion
+    <*> Update.genSoftwareVersion
+    <*> genHeaderHash
+    <*> genChainDifficulty
+    <*> genSlotId epochSlots
+    <*> genSecretKey
+    <*> pure Nothing
+    <*> genBody pm
 
 genSlogUndo :: Gen SlogUndo
 genSlogUndo = SlogUndo <$> Gen.maybe genFlatSlotId

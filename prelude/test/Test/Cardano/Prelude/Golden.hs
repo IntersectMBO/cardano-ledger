@@ -25,9 +25,18 @@ discoverGolden :: TExpQ Group
 discoverGolden = discoverPrefix "golden_"
 
 -- | Check that @eachOf@ @testLimit@ generated @things@ @hasProperty@
-eachOf :: (Show a) => TestLimit -> Gen a -> (a -> PropertyT IO ()) -> Property
+eachOf
+  :: (Show a, HasCallStack)
+  => TestLimit
+  -> Gen a
+  -> (a -> PropertyT IO ())
+  -> Property
 eachOf testLimit things hasProperty =
-  withTests testLimit . property $ forAll things >>= hasProperty
+  withFrozenCallStack
+    $   withTests testLimit
+    .   property
+    $   forAll things
+    >>= hasProperty
 
 goldenTestJSON
   :: (Eq a, FromJSON a, HasCallStack, Show a, ToJSON a)
