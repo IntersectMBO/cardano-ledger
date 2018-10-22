@@ -93,7 +93,7 @@ data DelegationState =
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
-    , getStPools     :: Set.Set HashKey -- TODO in doc its a map to Cert
+    , getStPools     :: Set.Set StakePool -- TODO in doc its a map to Cert
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Natural
     } deriving (Show, Eq)
@@ -197,7 +197,7 @@ validStakeDelegation cert (LedgerState _ ds _) =
   case cert of
     Delegate (Delegation source target)
       -> if Set.member (hashKey source) (getStKeys ds) &&
-            Set.member (hashKey target) (getStPools ds)
+            any (\pool -> target == poolPubKey pool) (getStPools ds)
          then Valid else Invalid [StakeDelegationImpossible]
     _ -> Valid
 
@@ -208,7 +208,7 @@ validStakePoolRegister _ _ = Valid
 validStakePoolRetire :: Cert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
   case cert of
-    RetirePool key _ -> if Set.member (hashKey key) (getStPools ds)
+    RetirePool key _ -> if any (\pool -> key == poolPubKey pool) (getStPools ds)
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
     _                -> Valid
 
@@ -248,7 +248,10 @@ asStateTransition ls (DelegationData cert) =
 retirePools :: LedgerState -> Natural -> LedgerState
 retirePools ls@(LedgerState _ ds _) epoch = ls
     { getDelegationState = ds
-      { getStPools = Set.difference (getStPools ds) (Map.keysSet retiring)
+      { getStPools =
+          Set.filter
+           (\pool -> not $ Set.member (hashKey $ poolPubKey pool)
+             (Map.keysSet retiring)) $ getStPools ds
       , getRetiring = active }
     }
   where (active, retiring) = Map.partition ((/=) epoch) (getRetiring ds)
@@ -285,7 +288,7 @@ applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
 -- TODO what happens if there's already a pool registered with that key?
 applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
-    { getStPools = Set.insert hsk (getStPools ds)
+    { getStPools = Set.insert sp (getStPools ds)
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
 
