@@ -1,9 +1,11 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Update.Undo
        ( -- * Proposal state
@@ -59,7 +61,7 @@ import           Cardano.Binary.Class (Bi (..), DecoderError (..),
                      decodeListLenCanonical, encodeListLen, enforceSize)
 import           Cardano.Chain.Block.Header (HeaderHash)
 import           Cardano.Chain.Common (ChainDifficulty, Coin, ScriptVersion,
-                     StakeholderId, mkCoin)
+                     StakeholderId, mkKnownCoin)
 import           Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
 import           Cardano.Chain.Update.ApplicationName (ApplicationName)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
@@ -327,8 +329,8 @@ mkUProposalState slot proposal = UndecidedProposalState
   { upsVotes         = mempty
   , upsProposal      = proposal
   , upsSlot          = slot
-  , upsPositiveStake = mkCoin 0
-  , upsNegativeStake = mkCoin 0
+  , upsPositiveStake = mkKnownCoin @0
+  , upsNegativeStake = mkKnownCoin @0
   , upsExtra         = Nothing
   }
 

@@ -22,6 +22,8 @@ module Cardano.Chain.Block.Header
        , headerEBDataProof
        , encodeHeader
        , decodeHeader
+
+       , HeaderError (..)
        , verifyHeader
 
        , HeaderHash
@@ -51,7 +53,8 @@ import           Cardano.Chain.Block.Body (Body)
 import           Cardano.Chain.Block.Boundary (dropBoundaryConsensusData,
                      dropBoundaryExtraHeaderData)
 import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
-import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
+import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..),
+                     ExtraHeaderDataError, verifyExtraHeaderData)
 import           Cardano.Chain.Block.Proof (Proof (..), mkProof)
 import           Cardano.Chain.Common (Attributes, ChainDifficulty)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo,
@@ -201,20 +204,37 @@ headerAttributes = ehdAttributes . headerExtraData
 headerEBDataProof :: Header -> Hash ExtraBodyData
 headerEBDataProof = ehdEBDataProof . headerExtraData
 
+data HeaderError
+  = HeaderConsensusError ConsensusError
+  | HeaderExtraDataError ExtraHeaderDataError
+  | HeaderInvalidSignature BlockSignature
+
+instance B.Buildable HeaderError where
+  build = \case
+    HeaderConsensusError err -> bprint
+      ("ConsensusData was invalid while checking Header.\n Error: " % build)
+      err
+    HeaderExtraDataError err -> bprint
+      ("ExtraHeaderData was invalid while checking Header.\n Error: " % build)
+      err
+    HeaderInvalidSignature sig ->
+      bprint ("Invalid signature while checking Header.\n" % build) sig
+
 -- | Verify a main block header in isolation
-verifyHeader
-  :: MonadError Text m => ProtocolMagic -> Header -> m ()
+verifyHeader :: MonadError HeaderError m => ProtocolMagic -> Header -> m ()
 verifyHeader pm header = do
   -- Previous header hash is always valid.
-  -- Body proof is just a bunch of hashes, which is always valid (although
-  -- must be checked against the actual body, in verifyBlock.
-  -- Consensus data and extra header data require validation.
-  verifyConsensusData consensus
-  -- verifyExtraHeaderData (_gbhExtra gbh)
+  -- Body proof is just a bunch of hashes, which is always valid (although must
+  -- be checked against the actual body, in verifyBlock. Consensus data and
+  -- extra header data require validation.
+  either (throwError . HeaderConsensusError) pure
+    $ verifyConsensusData consensus
+  either (throwError . HeaderExtraDataError) pure
+    $ verifyExtraHeaderData (headerExtraData header)
   -- Internal consistency: is the signature in the consensus data really for
   -- this block?
   unless (verifyBlockSignature $ consensusSignature consensus)
-    $ throwError "can't verify signature"
+    $ throwError (HeaderInvalidSignature $ consensusSignature consensus)
  where
   verifyBlockSignature (BlockSignature sig) =
     checkSig pm SignMainBlock (consensusLeaderKey consensus) signature sig
@@ -383,10 +403,17 @@ instance Bi ConsensusData where
     enforceSize "ConsensusData" 4
     ConsensusData <$> decode <*> decode <*> decode <*> decode
 
+data ConsensusError = ConsensusSelfSignedPSK
+
+instance B.Buildable ConsensusError where
+  build = \case
+    ConsensusSelfSignedPSK ->
+      bprint "Self-signed ProxySecretKey in ConsensusData"
+
 -- | Verify the consensus data in isolation
-verifyConsensusData :: MonadError Text m => ConsensusData -> m ()
+verifyConsensusData :: MonadError ConsensusError m => ConsensusData -> m ()
 verifyConsensusData mcd = when (selfSignedProxy $ consensusSignature mcd)
-  $ throwError "can't use self-signed psk to issue the block"
+  $ throwError ConsensusSelfSignedPSK
  where
   selfSignedProxy (BlockSignature       _  ) = False
   selfSignedProxy (BlockPSignatureLight sig) = isSelfSignedPsk $ psigPsk sig

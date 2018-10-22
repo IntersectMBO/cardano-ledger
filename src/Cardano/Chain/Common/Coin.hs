@@ -1,19 +1,25 @@
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 module Cardano.Chain.Common.Coin
-       ( Coin (..)
+       ( Coin
        , mkCoin
-       , checkCoin
+       , mkKnownCoin
        , coinF
 
        , maxCoinVal
@@ -23,76 +29,96 @@ module Cardano.Chain.Common.Coin
        , unsafeGetCoin
        , coinToInteger
        , integerToCoin
-       , unsafeIntegerToCoin
 
        -- * Arithmetic operations
-       , unsafeAddCoin
-       , unsafeSubCoin
-       , unsafeMulCoin
        , addCoin
        , subCoin
-       , mulCoin
+       , scaleCoin
        , divCoin
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (throwError))
 import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
 import           Data.Data (Data)
 import           Formatting (Format, bprint, build, int, (%))
 import qualified Formatting.Buildable as B
+import           GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical (FromJSON (..),
                      ReportSchemaErrors, ToJSON (..))
 
 import           Cardano.Binary.Class (Bi (..))
 
 
--- | Coin is the least possible unit of currency.
+-- | Coin is the least possible unit of currency
 newtype Coin = Coin
-    { getCoin :: Word64
-    } deriving (Show, Ord, Eq, Generic, Data, NFData)
+  { getCoin :: Word64
+  } deriving (Show, Ord, Eq, Generic, Data, NFData)
 
 instance B.Buildable Coin where
-    build (Coin n) = bprint (int%" coin(s)") n
+  build (Coin n) = bprint (int % " coin(s)") n
 
 instance Bounded Coin where
-    minBound = Coin 0
-    maxBound = Coin maxCoinVal
+  minBound = Coin 0
+  maxBound = Coin maxCoinVal
 
 instance Bi Coin where
-    encode = encode . unsafeGetCoin
-    decode = Coin <$> decode
-    encodedSizeExpr size pxy = size (unsafeGetCoin <$> pxy)
+  encode = encode . unsafeGetCoin
+  decode = Coin <$> decode
+  encodedSizeExpr size pxy = size (unsafeGetCoin <$> pxy)
 
 instance Monad m => Canonical.ToJSON m Coin where
-    toJSON = Canonical.toJSON @_ @Word64 . unsafeGetCoin  -- i. e. String
+  toJSON = Canonical.toJSON . unsafeGetCoin
 
 instance Canonical.ReportSchemaErrors m => Canonical.FromJSON m Coin where
-    fromJSON = fmap Coin . Canonical.fromJSON
+  fromJSON = fmap Coin . Canonical.fromJSON
 
 instance Aeson.FromJSON Coin where
-    parseJSON v = mkCoin <$> Aeson.parseJSON v
+  parseJSON v = do
+    c <- Aeson.parseJSON v
+    toAesonError $ mkCoin c
 
 instance Aeson.ToJSON Coin where
-    toJSON = Aeson.toJSON . unsafeGetCoin
+  toJSON = Aeson.toJSON . unsafeGetCoin
 
--- | Maximal possible value of 'Coin'.
+data CoinError
+  = CoinOverflow Word64
+  | CoinTooLarge Integer
+  | CoinTooSmall Integer
+  | CoinUnderflow Word64 Word64
+
+instance B.Buildable CoinError where
+  build = \case
+    CoinOverflow c -> bprint
+      ("Coin value, " % build % ", overflowed")
+      c
+    CoinTooLarge c -> bprint
+      ("Coin value, " % build % ", exceeds maximum, " % build)
+      c
+      maxCoinVal
+    CoinTooSmall c -> bprint
+      ("Coin value, " % build % ", is less than minimum, " % build)
+      c
+      (minBound :: Coin)
+    CoinUnderflow c c' -> bprint
+      ("Coin underflow when subtracting " % build % " from " % build)
+      c'
+      c
+
+-- | Maximal possible value of 'Coin'
 maxCoinVal :: Word64
-maxCoinVal = 45000000000000000
+maxCoinVal = 45e15
 
--- | Makes a 'Coin' but is _|_ if that coin exceeds 'maxCoinVal'.
--- You can also use 'checkCoin' to do that check.
-mkCoin :: Word64 -> Coin
-mkCoin c = either error (const coin) (checkCoin coin)
-  where
-    coin = (Coin c)
+-- | Constructor for 'Coin' returning 'CoinError' when @c@ exceeds 'maxCoinVal'
+mkCoin :: Word64 -> Either CoinError Coin
+mkCoin c
+  | c <= maxCoinVal = Right (Coin c)
+  | otherwise       = Left (CoinTooLarge (toInteger c))
 {-# INLINE mkCoin #-}
 
-checkCoin :: MonadError Text m => Coin -> m ()
-checkCoin (Coin c)
-    | c <= maxCoinVal = pure ()
-    | otherwise       = throwError $ "Coin: " <> show c <> " is too large"
+-- | Construct a 'Coin' from a 'KnownNat', known to be less than 'maxCoinVal'
+mkKnownCoin :: forall n. (KnownNat n, n <= 45000000000000000) => Coin
+mkKnownCoin = Coin . fromIntegral . natVal $ Proxy @n
 
 -- | Coin formatter which restricts type.
 coinF :: Format r (Coin -> r)
@@ -107,72 +133,43 @@ unsafeGetCoin = getCoin
 -- | Compute sum of all coins in container. Result is 'Integer' as a
 -- protection against possible overflow. If you are sure overflow is
 -- impossible, you can use 'unsafeIntegerToCoin'.
-sumCoins
-    :: (Container coins, Element coins ~ Coin)
-    => coins -> Integer
+sumCoins :: (Container coins, Element coins ~ Coin) => coins -> Integer
 sumCoins = sum . map coinToInteger . toList
 
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unsafeGetCoin
 {-# INLINE coinToInteger #-}
 
--- Addition of coins. Returns 'Nothing' in case of overflow.
-addCoin :: Coin -> Coin -> Maybe Coin
+-- | Addition of coins, returning 'CoinError' in case of overflow
+addCoin :: Coin -> Coin -> Either CoinError Coin
 addCoin (unsafeGetCoin -> a) (unsafeGetCoin -> b)
-    | res >= a && res >= b && res <= unsafeGetCoin (maxBound @Coin) = Just (Coin res)
-    | otherwise = Nothing
-  where
-    res = a+b
+  | res >= a && res >= b && res <= maxCoinVal = Right (Coin res)
+  | otherwise = Left (CoinOverflow res)
+  where res = a + b
 {-# INLINE addCoin #-}
 
--- | Only use if you're sure there'll be no overflow.
-unsafeAddCoin :: Coin -> Coin -> Coin
-unsafeAddCoin a b =
-    case addCoin a b of
-        Just r -> r
-        Nothing ->
-            error $ "unsafeAddCoin: overflow when summing " <> show a <> " + " <> show b
-{-# INLINE unsafeAddCoin #-}
-
--- | Subtraction of coins. Returns 'Nothing' when the subtrahend is bigger
--- than the minuend, and 'Just' otherwise.
-subCoin :: Coin -> Coin -> Maybe Coin
+-- | Subtraction of coins, returning 'CoinError' on underflow
+subCoin :: Coin -> Coin -> Either CoinError Coin
 subCoin (unsafeGetCoin -> a) (unsafeGetCoin -> b)
-    | a >= b = Just (Coin (a-b))
-    | otherwise = Nothing
+  | a >= b    = Right (Coin (a - b))
+  | otherwise = Left (CoinUnderflow a b)
 
--- | Only use if you're sure there'll be no underflow.
-unsafeSubCoin :: Coin -> Coin -> Coin
-unsafeSubCoin a b = fromMaybe (error "unsafeSubCoin: underflow") (subCoin a b)
-{-# INLINE unsafeSubCoin #-}
+-- | Scale a 'Coin' by an 'Integral' factor, returning 'CoinError' when the
+--   result is too large
+scaleCoin :: Integral b => Coin -> b -> Either CoinError Coin
+scaleCoin (unsafeGetCoin -> a) b
+  | res <= coinToInteger (maxBound :: Coin) = Right $ Coin (fromInteger res)
+  | otherwise                             = Left $ CoinTooLarge res
+  where res = toInteger a * toInteger b
+{-# INLINE scaleCoin #-}
 
--- | Multiplication between 'Coin's. Returns 'Nothing' in case of overflow.
-mulCoin :: Integral a => Coin -> a -> Maybe Coin
-mulCoin (unsafeGetCoin -> a) b
-    | res <= coinToInteger (maxBound @Coin) = Just $ Coin (fromInteger res)
-    | otherwise = Nothing
-  where
-    res = toInteger a * toInteger b
-{-# INLINE mulCoin #-}
-
--- | Only use if you're sure there'll be no overflow.
-unsafeMulCoin :: Integral a => Coin -> a -> Coin
-unsafeMulCoin a b =
-    case mulCoin a b of
-         Just r  -> r
-         Nothing -> error "unsafeMulCoin: overflow"
-{-# INLINE unsafeMulCoin #-}
-
+-- | Integer division of a 'Coin' by an 'Integral' factor
 divCoin :: Integral b => Coin -> b -> Coin
 divCoin (unsafeGetCoin -> a) b = Coin (a `div` fromIntegral b)
 {-# INLINE divCoin #-}
 
-integerToCoin :: Integer -> Either Text Coin
+integerToCoin :: Integer -> Either CoinError Coin
 integerToCoin n
-    | n < 0 = Left $ "integerToCoin: value is negative (" <> show n <> ")"
-    | n <= coinToInteger (maxBound :: Coin) = pure $ Coin (fromInteger n)
-    | otherwise = Left $ "integerToCoin: value is too big (" <> show n <> ")"
-
-unsafeIntegerToCoin :: Integer -> Coin
-unsafeIntegerToCoin = Coin . fromInteger
-{-# INLINE unsafeIntegerToCoin #-}
+  | n < 0     = Left (CoinTooSmall n)
+  | n <= coinToInteger (maxBound :: Coin) = Right $ Coin (fromInteger n)
+  | otherwise = Left (CoinTooLarge n)

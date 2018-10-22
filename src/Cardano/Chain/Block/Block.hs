@@ -44,18 +44,19 @@ import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
                      Dropper, Encoding, encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Body (Body (..), bodyTxs, verifyBody)
+import           Cardano.Chain.Block.Body (Body (..), BodyError, bodyTxs,
+                     verifyBody)
 import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
                      dropBoundaryExtraBodyData)
 import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData (..))
 import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
 import           Cardano.Chain.Block.Header (BlockSignature (..), Header (..),
-                     HeaderHash, dropBoundaryHeader, hashHeader,
+                     HeaderError, HeaderHash, dropBoundaryHeader, hashHeader,
                      headerAttributes, headerBlockVersion, headerDifficulty,
                      headerEBDataProof, headerLeaderKey, headerSignature,
                      headerSlot, headerSoftwareVersion, mkHeaderExplicit,
                      verifyHeader)
-import           Cardano.Chain.Block.Proof (Proof (..), checkProof)
+import           Cardano.Chain.Block.Proof (Proof (..), ProofError, checkProof)
 import           Cardano.Chain.Common (Attributes, ChainDifficulty,
                      mkAttributes)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
@@ -196,20 +197,46 @@ mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
   extraH :: ExtraHeaderData
   extraH = ExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
 
-verifyBlock :: MonadError Text m => ProtocolMagic -> Block -> m ()
+data BlockError
+  = BlockBodyError BodyError
+  | BlockHeaderError HeaderError
+  | BlockInvalidExtraDataProof (Hash ExtraBodyData) (Hash ExtraBodyData)
+  | BlockProofError ProofError
+
+instance B.Buildable BlockError where
+  build = \case
+    BlockBodyError err ->
+      bprint ("Body was invalid while checking Block.\n Error: " % build) err
+    BlockHeaderError err ->
+      bprint ("Header was invalid while checking Block.\n Error: " % build) err
+    BlockInvalidExtraDataProof p p' -> bprint
+      ( "Incorrect proof of ExtraBodyData.\n"
+      % "Proof in Block:\n"
+      % build % "\n"
+      % "Calculated proof:\n"
+      % build % "\n"
+      )
+      p
+      p'
+    BlockProofError err ->
+      bprint ("Proof was invalid while checking Block.\n Error: " % build) err
+
+verifyBlock :: MonadError BlockError m => ProtocolMagic -> Block -> m ()
 verifyBlock pm block = do
-  verifyHeader pm (blockHeader block)
-  verifyBody pm (blockBody block)
+  either (throwError . BlockHeaderError) pure
+    $ verifyHeader pm (blockHeader block)
+  either (throwError . BlockBodyError) pure $ verifyBody pm (blockBody block)
   -- No need to verify the main extra body data. It's an 'Attributes ()'
   -- which is valid whenever it's well-formed.
   --
   -- Check internal consistency: the body proofs are all correct.
-  checkProof (blockBody block) (blockProof block)
+  either (throwError . BlockProofError) pure
+    $ checkProof (blockBody block) (blockProof block)
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
-  unless (hash (blockExtraData block) == blockExtraDataProof block)
-    $ throwError
-        "Hash of extra body data is not equal to its representation in the header."
+  let extraDataHash = hash $ blockExtraData block
+  unless (extraDataHash == blockExtraDataProof block) $ throwError
+    (BlockInvalidExtraDataProof (blockExtraDataProof block) extraDataHash)
 
 
 --------------------------------------------------------------------------------

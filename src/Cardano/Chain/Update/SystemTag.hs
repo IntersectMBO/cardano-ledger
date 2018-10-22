@@ -2,11 +2,13 @@
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Update.SystemTag
        ( SystemTag (..)
+       , SystemTagError (..)
        , checkSystemTag
        , systemTagMaxLength
 
@@ -24,7 +26,8 @@ import           Data.Char (isAscii)
 import qualified Data.Text as T
 import           Distribution.System (Arch (..), OS (..))
 import           Distribution.Text (display)
-import           Formatting.Buildable (Buildable)
+import           Formatting (bprint, int, stext, (%))
+import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..))
 
@@ -32,7 +35,7 @@ import           Cardano.Binary.Class (Bi (..))
 -- | Tag of system for which update data is purposed, e.g. win64, mac32
 newtype SystemTag = SystemTag
   { getSystemTag :: Text
-  } deriving (Eq, Ord, Show, Generic, Buildable, Typeable)
+  } deriving (Eq, Ord, Show, Generic, B.Buildable)
 
 instance NFData SystemTag
 
@@ -48,12 +51,24 @@ instance Bi SystemTag where
 systemTagMaxLength :: Integral i => i
 systemTagMaxLength = 10
 
-checkSystemTag :: MonadError Text m => SystemTag -> m ()
+data SystemTagError
+  = SystemTagNotAscii Text
+  | SystemTagTooLong Text
+
+instance B.Buildable SystemTagError where
+  build = \case
+    SystemTagNotAscii tag ->
+      bprint ("SystemTag, " % stext % ", contains non-ascii characters") tag
+    SystemTagTooLong tag -> bprint
+      ("SystemTag, " % stext % ", exceeds limit of " % int)
+      tag
+      (systemTagMaxLength :: Int)
+
+checkSystemTag :: MonadError SystemTagError m => SystemTag -> m ()
 checkSystemTag (SystemTag tag)
-  | T.length tag > systemTagMaxLength = throwError
-    "SystemTag: too long string passed"
-  | T.any (not . isAscii) tag = throwError "SystemTag: not ascii string passed"
-  | otherwise = pure ()
+  | T.length tag > systemTagMaxLength = throwError $ SystemTagTooLong tag
+  | T.any (not . isAscii) tag         = throwError $ SystemTagNotAscii tag
+  | otherwise                         = pure ()
 
 -- | Helper to turn an @OS@ into a @String@ compatible with the @systemTag@
 --   previously used in 'configuration.yaml'

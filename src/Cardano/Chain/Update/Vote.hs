@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Vote
        (
        -- Software update proposal
          Proposal (..)
+       , ProposalError (..)
        , Proposals
        , UpId
        , ProposalBody (..)
@@ -17,6 +19,7 @@ module Cardano.Chain.Update.Vote
        -- Software update vote
        , VoteId
        , Vote (..)
+       , VoteError (..)
        , mkVote
        , mkVoteSafe
        , formatVoteShort
@@ -39,11 +42,12 @@ import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
 import           Cardano.Chain.Update.BlockVersion (BlockVersion)
 import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier, checkBlockVersionModifier)
+                     (BlockVersionModifier)
 import           Cardano.Chain.Update.Data (UpdateData)
 import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion,
-                     checkSoftwareVersion)
-import           Cardano.Chain.Update.SystemTag (SystemTag, checkSystemTag)
+                     SoftwareVersionError, checkSoftwareVersion)
+import           Cardano.Chain.Update.SystemTag (SystemTag, SystemTagError,
+                     checkSystemTag)
 import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SafeSigner,
                      SecretKey, SignTag (SignUSProposal, SignUSVote),
                      Signature, checkSig, hash, safeSign, safeToPublic,
@@ -155,12 +159,30 @@ signProposal pm body ss = Proposal
   issuer    = safeToPublic ss
   signature = safeSign pm SignUSProposal ss body
 
-checkProposal :: MonadError Text m => ProtocolMagic -> Proposal -> m ()
+data ProposalError
+  = ProposalInvalidSignature (Signature ProposalBody)
+  | ProposalSoftwareVersionError SoftwareVersionError
+  | ProposalSystemTagError SystemTagError
+
+instance B.Buildable ProposalError where
+  build = \case
+    ProposalInvalidSignature sig ->
+      bprint ("Invalid signature, " % build % ", in Proposal") sig
+    ProposalSoftwareVersionError err -> bprint
+      ("SoftwareVersion was invalid while checking Proposal.\n Error: " % build)
+      err
+    ProposalSystemTagError err -> bprint
+      ("SystemTag was invalid while checking Proposal.\n Error: " % build)
+      err
+
+checkProposal :: MonadError ProposalError m => ProtocolMagic -> Proposal -> m ()
 checkProposal pm proposal = do
   let body = proposalBody proposal
-  checkBlockVersionModifier (pbBlockVersionModifier body)
-  checkSoftwareVersion (pbSoftwareVersion body)
-  forM_ (Map.keys (pbData body)) checkSystemTag
+  either (throwError . ProposalSoftwareVersionError) pure
+    $ checkSoftwareVersion (pbSoftwareVersion body)
+  forM_
+    (Map.keys (pbData body))
+    (either (throwError . ProposalSystemTagError) pure . checkSystemTag)
   let
     sigIsValid = checkSig
       pm
@@ -168,7 +190,8 @@ checkProposal pm proposal = do
       (proposalIssuer proposal)
       body
       (proposalSignature proposal)
-  unless sigIsValid $ throwError "Proposal: invalid signature"
+  unless sigIsValid $ throwError $ ProposalInvalidSignature
+    (proposalSignature proposal)
 
 
 --------------------------------------------------------------------------------
@@ -285,15 +308,25 @@ formatVoteShort uv = bprint
 shortVoteF :: Format r (Vote -> r)
 shortVoteF = later formatVoteShort
 
-checkVote :: (MonadError Text m) => ProtocolMagic -> Vote -> m ()
-checkVote pm it = unless sigValid (throwError "Vote: invalid signature")
+data VoteError =
+  VoteInvalidSignature (Signature (UpId, Bool))
+
+instance B.Buildable VoteError where
+  build = \case
+    VoteInvalidSignature sig ->
+      bprint ("Invalid signature, " % build % ", in Vote") sig
+
+checkVote :: MonadError VoteError m => ProtocolMagic -> Vote -> m ()
+checkVote pm uv = unless
+  sigValid
+  (throwError $ VoteInvalidSignature (uvSignature uv))
  where
   sigValid = checkSig
     pm
     SignUSVote
-    (uvKey it)
-    (uvProposalId it, uvDecision it)
-    (uvSignature it)
+    (uvKey uv)
+    (uvProposalId uv, uvDecision uv)
+    (uvSignature uv)
 
 mkVoteId :: Vote -> VoteId
 mkVoteId vote = (uvProposalId vote, uvKey vote, uvDecision vote)

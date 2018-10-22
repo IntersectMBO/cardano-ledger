@@ -1,3 +1,6 @@
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Test.Cardano.Chain.Common.Gen
        ( genAddrAttributes
        , genAddress
@@ -23,6 +26,7 @@ import           Test.Cardano.Prelude
 
 import           Data.Fixed (Fixed (..))
 import qualified Data.Map.Strict as Map
+import           Formatting (build, sformat, (%))
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -32,11 +36,10 @@ import           Cardano.Binary.Class (Bi)
 import           Cardano.Chain.Common (AddrAttributes (..),
                      AddrSpendingData (..), AddrStakeDistribution (..),
                      AddrType (..), Address (..), BlockCount (..),
-                     ChainDifficulty (..), Coeff (..), Coin (..),
-                     CoinPortion (..), MerkleRoot (..), MerkleTree,
-                     Script (..), ScriptVersion, StakeholderId,
-                     TxFeePolicy (..), TxSizeLinear (..),
-                     coinPortionDenominator, makeAddress, maxCoinVal,
+                     ChainDifficulty (..), Coeff (..), Coin, CoinPortion (..),
+                     MerkleRoot (..), MerkleTree, Script (..), ScriptVersion,
+                     StakeholderId, TxFeePolicy (..), TxSizeLinear (..),
+                     coinPortionDenominator, makeAddress, maxCoinVal, mkCoin,
                      mkMerkleTree, mkStakeholderId, mtRoot)
 
 import           Test.Cardano.Crypto.Gen (genHDAddressPayload, genPublicKey,
@@ -130,7 +133,10 @@ genCoeff = do
     pure $ Coeff (MkFixed integer)
 
 genCoin :: Gen Coin
-genCoin = Coin <$> Gen.word64 (Range.constant 0 maxCoinVal)
+genCoin = mkCoin <$> Gen.word64 (Range.constant 0 maxCoinVal) >>= \case
+  Right coin -> pure coin
+  Left err ->
+    error $ sformat ("The impossible happened in genCoin: " % build) err
 
 genCoinPortion :: Gen CoinPortion
 genCoinPortion =

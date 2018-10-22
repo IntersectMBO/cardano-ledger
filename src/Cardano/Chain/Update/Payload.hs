@@ -1,21 +1,24 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Payload
        ( Payload (..)
+       , PayloadError (..)
        , checkPayload
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import           Formatting (bprint, (%))
-import           Formatting.Buildable (Buildable (..))
+import           Control.Monad.Except (MonadError (..))
+import           Formatting (bprint, build, (%))
+import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Update.Vote (Proposal, Vote, checkProposal,
-                     checkVote, formatMaybeProposal, formatVoteShort)
+import           Cardano.Chain.Update.Vote (Proposal, ProposalError, Vote,
+                     VoteError, checkProposal, checkVote, formatMaybeProposal,
+                     formatVoteShort)
 import           Cardano.Crypto (ProtocolMagic)
 
 
@@ -23,11 +26,11 @@ import           Cardano.Crypto (ProtocolMagic)
 data Payload = Payload
   { payloadProposal :: !(Maybe Proposal)
   , payloadVotes    :: ![Vote]
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 instance NFData Payload
 
-instance Buildable Payload where
+instance B.Buildable Payload where
   build payload
     | null (payloadVotes payload)
     = formatMaybeProposal (payloadProposal payload) <> ", no votes"
@@ -44,7 +47,24 @@ instance Bi Payload where
     enforceSize "Update.Payload" 2
     Payload <$> decode <*> decode
 
-checkPayload :: MonadError Text m => ProtocolMagic -> Payload -> m ()
+data PayloadError
+  = PayloadProposalError ProposalError
+  | PayloadVoteError VoteError
+
+instance B.Buildable PayloadError where
+  build = \case
+    PayloadProposalError err -> bprint
+      ("Proposal was invalid while checking Update.Payload.\n Error: " % build)
+      err
+    PayloadVoteError err -> bprint
+      ("Vote was invalid while checking Update.Payload.\n Error: " % build)
+      err
+
+checkPayload :: MonadError PayloadError m => ProtocolMagic -> Payload -> m ()
 checkPayload pm payload = do
-  whenJust (payloadProposal payload) (checkProposal pm)
-  forM_ (payloadVotes payload) (checkVote pm)
+  whenJust
+    (payloadProposal payload)
+    (either (throwError . PayloadProposalError) pure . checkProposal pm)
+  forM_
+    (payloadVotes payload)
+    (either (throwError . PayloadVoteError) pure . checkVote pm)

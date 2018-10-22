@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Update.ApplicationName
        ( ApplicationName (..)
        , applicationNameMaxLength
+       , ApplicationNameError (..)
        , checkApplicationName
        ) where
 
@@ -17,14 +19,15 @@ import           Data.Aeson (FromJSON (..))
 import           Data.Aeson.TH (defaultOptions, deriveToJSON)
 import           Data.Char (isAscii)
 import qualified Data.Text as T
-import           Formatting.Buildable (Buildable)
+import           Formatting (bprint, int, stext, (%))
+import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..))
 
 
 newtype ApplicationName = ApplicationName
   { getApplicationName :: Text
-  } deriving (Eq, Ord, Show, Generic, Typeable, ToString, Buildable, NFData)
+  } deriving (Eq, Ord, Show, Generic, ToString, B.Buildable, NFData)
 
 instance Bi ApplicationName where
   encode appName = encode (getApplicationName appName)
@@ -35,13 +38,27 @@ instance FromJSON ApplicationName where
   -- as an object with a single key?
   parseJSON v = ApplicationName <$> parseJSON v
 
+data ApplicationNameError
+  = ApplicationNameTooLong Text
+  | ApplicationNameNotAscii Text
+
+instance B.Buildable ApplicationNameError where
+  build = \case
+    ApplicationNameTooLong name -> bprint
+      ("ApplicationName, " % stext % ", exceeds limit of " % int)
+      name
+      (applicationNameMaxLength :: Int)
+    ApplicationNameNotAscii name -> bprint
+      ("ApplicationName, " % stext % ", contains non-ascii characters")
+      name
+
 -- | Smart constructor of 'ApplicationName'
-checkApplicationName :: MonadError Text m => ApplicationName -> m ()
+checkApplicationName
+  :: MonadError ApplicationNameError m => ApplicationName -> m ()
 checkApplicationName (ApplicationName appName)
   | length appName > applicationNameMaxLength = throwError
-    "ApplicationName: too long string passed"
-  | T.any (not . isAscii) appName = throwError
-    "ApplicationName: not ascii string passed"
+  $ ApplicationNameTooLong appName
+  | T.any (not . isAscii) appName = throwError $ ApplicationNameNotAscii appName
   | otherwise = pure ()
 
 applicationNameMaxLength :: Integral i => i

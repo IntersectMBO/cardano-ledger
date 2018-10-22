@@ -1,17 +1,19 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Delegation.Payload
        ( Payload (..)
+       , PayloadError (..)
        , checkPayload
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import           Formatting (bprint, int, (%))
+import           Control.Monad.Except (MonadError (throwError))
+import           Formatting (bprint, int, stext, (%))
 import           Formatting.Buildable (Buildable (..))
 
 import           Cardano.Binary.Class (Bi (..))
@@ -35,8 +37,21 @@ instance Bi Payload where
   encode = encode . getPayload
   decode = UnsafePayload <$> decode
 
-checkPayload :: MonadError Text m => ProtocolMagic -> Payload -> m ()
-checkPayload protocolMagic (UnsafePayload proxySKs) =
+data PayloadError = PayloadPSKError Text
+
+instance Buildable PayloadError where
+  build = \case
+    PayloadPSKError err -> bprint
+      ( "ProxySecretKey invalid when checing Delegation.Payload.\n Error: "
+      % stext
+      )
+      err
+
+checkPayload :: MonadError PayloadError m => ProtocolMagic -> Payload -> m ()
+checkPayload protocolMagic (UnsafePayload proxySKs) = forM_
+  proxySKs
+  ( either (throwError . PayloadPSKError) pure
+  . validateProxySecretKey protocolMagic
+  )
   -- unless (allDistinct $ map pskIssuerPk proxySKs) $
   --     throwError "Some of block's PSKs have the same issuer, which is prohibited"
-  forM_ proxySKs (validateProxySecretKey protocolMagic)

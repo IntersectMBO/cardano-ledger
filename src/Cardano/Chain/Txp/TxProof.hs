@@ -14,7 +14,7 @@ import qualified Formatting.Buildable as B
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
 import           Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
 import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Chain.Txp.TxPayload (TxPayload (..))
+import           Cardano.Chain.Txp.TxPayload (TxPayload, txpTxs, txpWitnesses)
 import           Cardano.Chain.Txp.TxWitness (TxWitness)
 import           Cardano.Crypto (Hash, hash)
 
@@ -51,7 +51,7 @@ instance NFData TxProof
 --   care. Bi constraints arise because we need to hash these things.
 mkTxProof :: TxPayload -> TxProof
 mkTxProof payload = TxProof
-  { txpNumber        = fromIntegral (length $ _txpTxs payload)
-  , txpRoot          = mtRoot (mkMerkleTree $ _txpTxs payload)
-  , txpWitnessesHash = hash $ _txpWitnesses payload
+  { txpNumber        = fromIntegral (length $ txpTxs payload)
+  , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
+  , txpWitnessesHash = hash $ txpWitnesses payload
   }

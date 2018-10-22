@@ -6,18 +6,16 @@
 module Cardano.Chain.Txp.TxAux
        ( TxAux (..)
        , txaF
-       , checkTxAux
        ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
 import           Data.Aeson.TH (defaultOptions, deriveJSON)
 import           Formatting (Format, bprint, build, later, (%))
 import qualified Formatting.Buildable as B
 
 import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Txp.Tx (Tx, checkTx)
+import           Cardano.Chain.Txp.Tx (Tx)
 import           Cardano.Chain.Txp.TxWitness (TxWitness)
 
 
@@ -36,11 +34,6 @@ txaF = later $ \(TxAux tx w) ->
 
 instance B.Buildable TxAux where
   build = bprint txaF
-
--- | Check that a 'TxAux' is internally valid (checks that its 'Tx' is valid via
---   'checkTx'). Does not check the witness.
-checkTxAux :: MonadError Text m => TxAux -> m ()
-checkTxAux ta = checkTx (taTx ta)
 
 instance Bi TxAux where
   encode ta = encodeListLen 2 <> encode (taTx ta) <> encode (taWitness ta)
