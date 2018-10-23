@@ -37,22 +37,21 @@ module UTxO
   -- , Sig(..)
   , Wit(..)
   , TxWits(..)
-  , Ledger
   ) where
 
-import           Crypto.Hash           (Digest, SHA256, hash)
-import qualified Data.ByteArray        as BA
-import qualified Data.ByteString.Char8 as BS
-import           Data.Map              (Map)
-import qualified Data.Map              as Map
-import           Data.Set              (Set)
-import qualified Data.Set              as Set
-import           Numeric.Natural       (Natural)
+import           Crypto.Hash             (Digest, SHA256, hash)
+import qualified Data.ByteArray          as BA
+import qualified Data.ByteString.Char8   as BS
+import           Data.Map                (Map)
+import qualified Data.Map                as Map
+import           Data.Set                (Set)
+import qualified Data.Set                as Set
+import           Numeric.Natural         (Natural)
 
+import           Coin                    (Coin (..))
 import           Keys
-import           Coin                  (Coin(..))
 
-import           Delegation.Certificates (Cert(..))
+import           Delegation.Certificates (Cert (..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -109,10 +108,6 @@ data TxWits = TxWits
               { body       :: Tx
               , witnessSet :: Set Wit
               } deriving (Show, Eq, Ord)
-
-
--- |A ledger
-type Ledger = [TxWits]
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
