@@ -61,7 +61,7 @@ ledgerState = foldM asStateTransition genesis
 testLedgerValidTransactions ::
   Either [ValidationError] LedgerState -> Map.Map TxIn TxOut -> SpecWith ()
 testLedgerValidTransactions ls1 utxo =
-  it "Valid Ledger - Alice gives Bob 3 of her 10 coins" $ do
+  it "Valid Ledger - Alice gives Bob 3 of her 10 coins"
   ls1 `shouldBe` Right (LedgerState
                          (UTxO utxo)
                          LedgerState.emptyDelegation 0)
@@ -71,7 +71,7 @@ testValidStakeKeyRegistration ::
 testValidStakeKeyRegistration sd1 utxo stakeKeyRegistration =
   it "Valid stake key registration." $ do
   let
-    ls2 = ledgerState $ sd1
+    ls2 = ledgerState sd1
   ls2 `shouldBe` Right (LedgerState
                         (UTxO utxo)
                         stakeKeyRegistration

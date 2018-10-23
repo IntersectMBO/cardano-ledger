@@ -254,19 +254,19 @@ retirePools ls@(LedgerState _ ds _) epoch = ls
              (Map.keysSet retiring)) $ getStPools ds
       , getRetiring = active }
     }
-  where (active, retiring) = Map.partition ((/=) epoch) (getRetiring ds)
+  where (active, retiring) = Map.partition (epoch /=) (getRetiring ds)
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls { getUtxo = newUTxOs }
-  where newUTxOs = (txins tx </| (getUtxo ls) `union` txouts tx)
+  where newUTxOs = txins tx </| getUtxo ls `union` txouts tx
 
 -- |Apply a certificate as a state transition function on the ledger state.
 applyCert :: Cert -> LedgerState -> LedgerState
 applyCert (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
-    { getStKeys = (Set.insert hk_sk (getStKeys ds))
-    , getAccounts = (Map.insert hk_sk (Coin 0) (getAccounts ds))}
+    { getStKeys = Set.insert hk_sk (getStKeys ds)
+    , getAccounts = Map.insert hk_sk (Coin 0) (getAccounts ds)}
   }
   where hk_sk = hashKey key
 
