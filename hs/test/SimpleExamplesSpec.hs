@@ -1,28 +1,24 @@
 module SimpleExamplesSpec where
 
-import           Control.Monad (foldM)
-import           Crypto.Hash   (hash)
-import qualified Data.Map      as Map
-import qualified Data.Set      as Set
+import           Control.Monad           (foldM)
+import           Crypto.Hash             (hash)
+import qualified Data.Map                as Map
 import           Data.Ratio
+import qualified Data.Set                as Set
 
 import           Test.Hspec
 
-import           LedgerState   (Ledger
-                               , LedgerState(..)
-                               , DelegationState(..)
-                               , LedgerEntry(..)
-                               , ValidationError(..)
-                               , asStateTransition
-                               , emptyDelegation
-                               , genesisId
-                               , genesisState)
-import           UTxO
-import           Keys
 import           Coin
+import           Keys
+import           LedgerState             (DelegationState (..), Ledger,
+                                          LedgerEntry (..), LedgerState (..),
+                                          ValidationError (..),
+                                          asStateTransition, emptyDelegation,
+                                          genesisId, genesisState)
+import           UTxO
 
-import           Delegation.Certificates (Cert(..))
-import           Delegation.StakePool    (Delegation(..), StakePool(..))
+import           Delegation.Certificates (Cert (..))
+import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)

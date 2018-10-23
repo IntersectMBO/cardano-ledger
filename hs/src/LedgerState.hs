@@ -26,19 +26,19 @@ module LedgerState
   , ValidationError (..)
   ) where
 
-import           Crypto.Hash (hash)
-import           Data.List   (find)
-import qualified Data.Map    as Map
-import           Data.Maybe  (isJust, mapMaybe)
-import qualified Data.Set    as Set
-import           Numeric.Natural       (Natural)
+import           Crypto.Hash             (hash)
+import           Data.List               (find)
+import qualified Data.Map                as Map
+import           Data.Maybe              (isJust, mapMaybe)
+import qualified Data.Set                as Set
+import           Numeric.Natural         (Natural)
 
-import           Coin        (Coin(..))
+import           Coin                    (Coin (..))
 import           Keys
 import           UTxO
 
-import           Delegation.Certificates (Cert(..))
-import           Delegation.StakePool (Delegation(..), StakePool(..))
+import           Delegation.Certificates (Cert (..))
+import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 -- | A ledger consists of a list of entries where each such entry is either a
 -- stake delegation step or a transaction.
@@ -148,7 +148,7 @@ authTxin :: VKey -> TxIn -> UTxO -> Bool
 authTxin key txin (UTxO utxo) =
   case Map.lookup txin utxo of
     Just (TxOut (AddrTxin pay _) _) -> hash key == pay
-    _                         -> False
+    _                               -> False
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
