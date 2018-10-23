@@ -8,6 +8,7 @@
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \usepackage[utf8]{inputenc}
 \usepackage{latexsym}
+\usepackage{listings}
 \usepackage{mathpazo} % nice fonts
 \usepackage{mathtools}
 \usepackage{microtype}
@@ -174,6 +175,11 @@ design.
 \section{Delegation}
 \label{sec:delegation}
 
+\marko{This section might be out of date. There is a work in progress to come
+  up with an interface between the blockchain layer and the ledger layer.
+  %
+  See CDEC-638.}
+
 The genesis block contains verification keys of $n$ servers.
 %
 As of mid-October 2018, $n = 7$.
@@ -245,6 +251,92 @@ This approach also supports certificate revocation: it is done by posting a
 certificate in which a key delegates to itself.
 
 
+\section{Delegation Interface}
+\label{sec:del-interface}
+
+The blockchain layer and the ledger layer need to communicate delegation
+certificates for the purpose of signing new blocks.
+%
+To enable this communication, there is a delegation interface between the two
+layers.
+%
+The interface communicates the minimum of information needed to enable
+delegation.
+
+
+Given that delegation certificates are in the body of a block just like
+transactions are, the ledger layer keeps track of the state of certificates.
+%
+It does so by keeping a set of certificates that are currently valid.
+%
+Furthermore, the ledger layer also needs to maintain a set of delegation
+certificates that have been added to the blockchain, but that will become
+valid and possibly invalidate other certificates in the future.
+%
+As part of the delegation interface, the ledger layer exposes functionality
+for checking if a particular verification key has the delegation right to sign
+a block in the current slot.
+%
+In particular, if the verification key has the right to sign, the
+functionality should inform who is the delegator.
+%
+In Haskell, the signature of the corresponding function is:
+%
+\begin{lstlisting}
+delegator :: (VKey vk_d, VKeyGen vk_s) => vk_d -> Maybe vk_s
+\end{lstlisting}
+
+If the verification key does not have the delegation right, i.e., it has no
+right to sign the block, the function returns nothing.
+%
+If it does have the right, it returns the delegator's verification key.
+
+
+New delegation certificates are added to the blockchain in blocks, so the
+blockchain layer has to inform the ledger layer of new certificates when a new
+block is added to the blockchain.
+%
+Therefore, as part of the delegation interface, the blockchain layer exposes
+new delegation certificates functionality to the ledger layer.
+%
+This functionality should communicate at least the following information for
+each new delegation certificate:
+%
+\begin{enumerate}
+\item the delegator's verification key,
+%
+\item the delegatee's verification key, and
+%
+\item the slot when the delegation becomes valid (this is in K slots from the
+  current slot).
+\end{enumerate}
+%
+In Haskell, the signature of the corresponding function is:
+%
+\begin{lstlisting}
+postNewCerts :: ( VKey vk_d
+                , VKeyGen vk_s
+                , Slot s
+                , MonadError CertErr m )
+                => Set (vk_s, vk_d, s)
+                -> m ()
+\end{lstlisting}
+%
+The return type of the function signals the possibility of failure.
+%
+Given that the blockchain layer does not keep the state of delegation
+certificates, it has no way of checking if certificates are valid.
+%
+In particular, the blockchain layer cannot know if the delegator already
+posted another delegation certificate in the current epoch.
+%
+Furthermore, the slot in which the certificate is claimed to become valid
+might not be in K slots, which should disallow such a certificate.
+%
+In case of failure, the whole block to be added to the blockchain is
+discarded.
+
+
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
 
@@ -308,6 +400,10 @@ certificate in which a key delegates to itself.
 
 \subsubsection{Delegation}
 \label{sec:delegation-properties}
+
+\marko{This whole subsection on delegation rules is out of date.
+  %
+  See the ledger layer specification for delegation rules.}
 
 In the first epoch, every key from the genesis block delegates to itself, as given by \eqref{eq:init-delpmap}.
 
