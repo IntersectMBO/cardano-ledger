@@ -3,7 +3,7 @@ module Coin
      Coin(..)
     ) where
 
-import           Numeric.Natural       (Natural)
+import           Numeric.Natural (Natural)
 
 -- |The amount of value held by a transaction output.
 newtype Coin = Coin Natural deriving (Show, Eq, Ord)
