@@ -64,6 +64,16 @@ and in \cref{fig:delegation-transitions} we give the delegation transition rule.
 The rules for registering and delegating stake keys are given in \cref{fig:delegation-rules}.
 The rules for registering stake pools are given in \cref{fig:pool-rules}.
 
+\begin{note}
+  The current rules allow for delegation to a non-existent pool.
+  Such stake is not eligible for leader election.
+  This allows for a clean separation between the rules in
+  \cref{fig:delegation-rules} and \cref{fig:pool-rules}.
+  We may, however, later choose to enforce that delegation certificates
+  target a registered pool.  It would then makes sense to remove
+  mappings in $\var{delegations}$ when stake pools retire.
+\end{note}
+
 %%
 %% Figure - Delegation Definitions
 %%
@@ -345,7 +355,7 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \begin{equation*}
     \_ \vdash \_ \trans{delegw}{\_} \_ \in
       \powerset (
-        \Epoch \times \DState \times (\Tx \times \DCert) \times \DState)
+        (\Tx \times \Epoch) \times \DState \times \DCert \times \DState)
   \end{equation*}
   \caption{Delegation witnesses definitions}
   \label{fig:defs:delegationw}
@@ -363,7 +373,13 @@ are given in Figure~\ref{fig:defs:delegationw}.
       \\ ~ \\
       \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
     }
-    {\var{cepoch} \vdash
+    { \left(
+      \begin{array}{r}
+        \var{tx} \\
+        \var{cepoch}
+      \end{array}
+      \right)
+      \vdash
       \left(
       \begin{array}{r}
         \var{dstate} \\
