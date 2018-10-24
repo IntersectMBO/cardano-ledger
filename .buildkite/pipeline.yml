@@ -8,7 +8,7 @@ steps:
       # cache-s3 needs a build directory that is the same across all buildkite agents.
       # so copy the source into /build/cardano-sl
       - "rm -rf /build/cardano-sl"
-      - "git clone . /build/cardano-sl"
+      - "cp -R . /build/cardano-sl"
       - "cd /build/cardano-sl"
       - "nix-build scripts/buildkite -o stack-rebuild"
       - "./stack-rebuild"
