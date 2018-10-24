@@ -95,12 +95,12 @@ cacheUploadStep cacheConfig = do
 
 restoreCICache :: CICacheConfig -> IO ()
 restoreCICache cfg = do
-  cacheS3 cfg (Just "develop") "restore stack"
+  -- cacheS3 cfg (Just "develop") "restore stack"
   cacheS3 cfg (Just "develop") "restore stack work"
 
 saveCICache :: CICacheConfig -> IO ()
 saveCICache cfg = do
-  cacheS3 cfg Nothing "save stack"
+  -- cacheS3 cfg Nothing "save stack"
   cacheS3 cfg Nothing "save stack work"
 
 cacheS3 :: CICacheConfig -> Maybe Text -> Text -> IO ()
