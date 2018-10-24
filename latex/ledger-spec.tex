@@ -35,6 +35,7 @@
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Value}{\type{Value}}
 \newcommand{\Coin}{\type{Coin}}
+\newcommand{\PrtclConsts}{\type{PrtclConsts}}
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -74,7 +75,7 @@
 \newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
-\newcommand{\minfee}[1]{\fun{minfee}~ \var{#1}}
+\newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
 %% Adding ledgers...
@@ -137,8 +138,8 @@ this document.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{vk} & \SKey & \text{private signing key}\\
-      \var{vk} & \VKey & \text{public verifying key}\\
+      \var{vk} & \SKey & \text{signing key}\\
+      \var{vk} & \VKey & \text{verifying key}\\
       \var{hk} & \Hash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
@@ -204,7 +205,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       \var{addr} & \Addr & \text{address}\\
       %
-      c & \Coin & \text{currency value}
+      c & \Coin & \text{currency value}\\
+      %
+      pc & \PrtclConsts & \text{protocol constants}
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -248,7 +251,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
       %
-      \fun{minfee} & \Tx \to \Coin & \text{minimum fee}
+      \fun{minfee} & \PrtclConsts \to \Tx \to \Coin & \text{minimum fee}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -296,8 +299,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \emph{UTxO transitions}
   \begin{equation*}
+    \_ \vdash
     \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
@@ -306,10 +310,11 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{tx} \leq \txfee{tx}\\
-      \balance{(\txouts{tx})}  + \txfee{tx} = \balance{(\txins{tx} \restrictdom \var{utxo})}
+    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pc}{tx} \leq \txfee{tx}\\
+      \balance{(\txouts{tx})}  + \txfee{tx} =
+        \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
-    {\var{utxo} \trans{utxo}{tx}
+    {\var{pc} \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
     }
   \end{equation}
@@ -393,8 +398,9 @@ different order). The choice here is arbitrary.
 \begin{figure}
   \emph{UTxO with witness transitions}
   \begin{equation*}
+    \var{\_} \vdash
     \var{\_} \trans{utxow}{\_} \var{\_}
-    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}
@@ -404,13 +410,13 @@ different order). The choice here is arbitrary.
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit]
-    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+    { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
-    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
+    {\var{pc} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
   \end{equation}
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
