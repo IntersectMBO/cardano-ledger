@@ -1,0 +1,50 @@
+
+\subsection{Aspects that we need to model}
+\label{sec:aspects-to-model}
+
+\begin{description}
+\item[Authentication] Update proposals and votes are authenticated (properly
+  signed).
+\item[Authorization] Only genesis keys (via deleg certs) can post update
+  proposals.
+  \begin{itemize}
+  \item Only then they can vote on them.
+  \end{itemize}
+\item[Voting deadlines] voting end when a majority of the voters (4/7 if we
+assume no stake) agree on the proposal.
+\item[Block versions] (= protocol versions)
+\item[Soft-forks] a protocol version changes according to the fork-resolution
+  rule (75\% of stake create blocks with new-version).
+\item[{Hard-forks}] ??? Do we need to model anything here?.
+\end{description}
+
+\subsection{Information in the ledger state}
+\label{sec:information-in-ledger-state}
+
+The ledger state has to expose these parameters of the protocol version to its
+clients:
+
+\begin{description}
+\item[Slot duration] 
+\end{description}
+
+At the moment we don't know whether we need these:
+
+\begin{description}
+\item[Script Version] 
+\end{description}
+
+
+\lstset{ frame=tb,
+       , language=Haskell
+       , basicstyle=\footnotesize\ttfamily,
+       , keywordstyle=\color{blue},
+       , commentstyle=\itshape\color{purple!40!black},
+       , identifierstyle=\bfseries\color{green!40!black},
+       , stringstyle=\color{orange},       
+       }
+
+       
+\begin{lstlisting}
+  data BlockVersionData = BlockVersionData
+\end{lstlisting}
