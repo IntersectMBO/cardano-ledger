@@ -6,7 +6,7 @@ ghcid: ## Run ghcid
 
 ghcid-test: ## Have ghcid run the test suite
 	ghcid \
-          --command "stack ghci utxo:lib utxo:test:utxo-test --ghci-options=-fobject-code" \
+          --command "stack ghci delegation:lib delegation:test:delegation-test --ghci-options=-fobject-code" \
           --test "main"
 
 .PHONY: ghcid ghcid-test help
