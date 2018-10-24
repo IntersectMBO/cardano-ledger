@@ -1,11 +1,14 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-import Turtle
-import Control.Monad.Trans.Maybe
-import Control.Exception
+import           Control.Exception
+import           Control.Monad.Trans.Maybe
 import qualified Data.Text as T
-import Safe
-import System.Exit (exitWith)
+import           Safe
+import           System.Exit (exitWith)
+import           Turtle
 
 data BuildkiteEnv = BuildkiteEnv
   { bkBuildNum :: Int
