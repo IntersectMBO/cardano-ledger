@@ -1,8 +1,13 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/5943cb9701516a47de86fa7eb22eb790c613d70a/snapshot.yaml
+compiler: ghc-8.4.4
 
 packages:
   - .
   - test
+  - binary
+  - binary/test
+  - crypto
+  - crypto/test
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
@@ -10,11 +15,6 @@ extra-deps:
     subdirs:
       - .
       - test
-
-  - binary
-  - binary/test
-  - crypto
-  - crypto/test
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

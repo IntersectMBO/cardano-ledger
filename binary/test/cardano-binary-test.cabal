@@ -46,9 +46,10 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
                        -fno-warn-missing-import-lists
-                       -fno-warn-unsafe
                        -fno-warn-safe
+                       -fno-warn-unsafe
 
   if (!flag(development))
     ghc-options:         -Werror
