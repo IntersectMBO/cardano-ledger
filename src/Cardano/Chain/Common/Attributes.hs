@@ -43,7 +43,7 @@ import           Cardano.Binary.Class (Bi (..), Decoder, Dropper, Encoding,
 --   just a single ByteString) during transition from Store to CBOR.
 newtype UnparsedFields =
   UnparsedFields (Map Word8 LBS.ByteString)
-  deriving (Eq, Ord, Show, Generic, Typeable, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance FromJSON UnparsedFields where
   parseJSON v =
@@ -68,11 +68,12 @@ data Attributes h = Attributes
   -- ^ Data, containing known keys (deserialized)
   , attrRemain :: UnparsedFields
   -- ^ Remaining, unparsed fields
-  } deriving (Eq, Ord, Generic, Typeable)
+  } deriving (Eq, Ord, Generic)
 
 instance Show h => Show (Attributes h) where
   show attr =
     let
+      remain :: Prelude.String
       remain
         | areAttributesKnown attr
         = ""
@@ -169,6 +170,7 @@ encodeAttributes encs attr = encode
     -> Map Word8 LBS.ByteString
   go (k, f) = M.alter (insertCheck $ f (attrData attr)) k
    where
+    insertCheck :: a -> Maybe LByteString -> Maybe a
     insertCheck v Nothing = Just v
     insertCheck _ (Just v') =
       panic

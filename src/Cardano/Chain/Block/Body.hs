@@ -40,7 +40,7 @@ data Body = Body
   -- ^ Heavyweight delegation payload (no-ttl certificates)
   , bodyUpdatePayload :: !Update.Payload
   -- ^ Additional update information for the update system
-  } deriving (Eq, Show, Generic, NFData, Typeable)
+  } deriving (Eq, Show, Generic, NFData)
 
 instance Bi Body where
   encode bc =

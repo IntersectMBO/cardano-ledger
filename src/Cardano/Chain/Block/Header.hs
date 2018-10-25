@@ -58,7 +58,7 @@ import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..),
 import           Cardano.Chain.Block.Proof (Proof (..), mkProof)
 import           Cardano.Chain.Common (Attributes, ChainDifficulty)
 import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo,
-                     ProxySigHeavy)
+                     ProxySKHeavy, ProxySigHeavy)
 import           Cardano.Chain.Delegation.LightDlgIndices (LightDlgIndices (..),
                      ProxySigLight)
 import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
@@ -163,6 +163,7 @@ mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
   Header pm prevHash proof consensus extra
  where
   proof = mkProof body
+  makeSignature :: ToSign -> (ProxySKHeavy, PublicKey) -> BlockSignature
   makeSignature toSign (psk, _) =
     BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk psk toSign
   signature =

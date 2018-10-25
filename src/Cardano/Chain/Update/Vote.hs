@@ -36,7 +36,8 @@ import           Data.Text.Lazy.Builder (Builder)
 import           Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
+import           Cardano.Binary.Class (Bi (..), Decoder, encodeListLen,
+                     enforceSize)
 import           Cardano.Chain.Common (addressHash)
 import           Cardano.Chain.Common.Attributes (Attributes,
                      areAttributesKnown)
@@ -93,7 +94,7 @@ data Proposal = Proposal
   , proposalIssuer    :: !PublicKey
   -- ^ Who proposed this UP.
   , proposalSignature :: !(Signature ProposalBody)
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 type Proposals = Map UpId Proposal
 
@@ -143,6 +144,7 @@ instance Bi Proposal where
     enforceSize "Proposal" 7
     Proposal <$> decodeBody <*> decode <*> decode
    where
+    decodeBody :: Decoder s ProposalBody
     decodeBody =
       ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode
 
@@ -228,7 +230,7 @@ data Vote = UnsafeVote
   -- ^ Approval/rejection bit
   , uvSignature  :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit) by stakeholder
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 instance NFData Vote
 

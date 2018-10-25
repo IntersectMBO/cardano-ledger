@@ -32,7 +32,7 @@ data UpdateData = UpdateData
   -- ^ Hash of metadata relevant to this update. It is raw hash, because
   --   metadata can include image or something (maybe). Anyway, we can always
   --   use `unsafeHash`.
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
 instance B.Buildable UpdateData where

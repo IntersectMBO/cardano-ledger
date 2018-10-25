@@ -23,7 +23,7 @@ data BlockVersion = BlockVersion
   { bvMajor :: !Word16
   , bvMinor :: !Word16
   , bvAlt   :: !Word8
-  } deriving (Eq, Generic, Ord, Typeable)
+  } deriving (Eq, Generic, Ord)
     deriving anyclass NFData
 
 instance Show BlockVersion where

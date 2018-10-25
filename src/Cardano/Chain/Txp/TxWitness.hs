@@ -48,7 +48,7 @@ data TxInWitness
   | RedeemWitness !RedeemPublicKey !(RedeemSignature TxSigData)
   -- ^ RedeemWitness twRedeemKey twRedeemSig
   | UnknownWitnessType !Word8 !ByteString
-  deriving (Eq, Show, Generic, Typeable)
+  deriving (Eq, Show, Generic)
 
 instance ToJSON TxInWitness where
   toJSON = \case
@@ -149,12 +149,11 @@ instance Bi TxInWitness where
   encodedSizeExpr size _ = 2 + szCases
     (map
       (fmap knownCborDataItemSizeExpr)
-      [ let PkWitness key sig = panic "unused"
-        in Case "PkWitness" $ size ((,) <$> pure key <*> pure sig)
-      , let ScriptWitness key sig = panic "unused"
-        in Case "ScriptWitness" $ size ((,) <$> pure key <*> pure sig)
-      , let RedeemWitness key sig = panic "unused"
-        in Case "RedeemWitness" $ size ((,) <$> pure key <*> pure sig)
+      [ Case "PkWitness" $ size $ Proxy @(PublicKey, TxSig)
+      , Case "ScriptWitness" $ size $ Proxy @(Script, Script)
+      , Case "RedeemWitness"
+      $ size
+      $ Proxy @(RedeemPublicKey, RedeemSignature TxSigData)
       ]
     )
 
@@ -163,7 +162,7 @@ instance NFData TxInWitness
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData
   { txSigTxHash :: Hash Tx
-  } deriving (Eq, Show, Generic, Typeable)
+  } deriving (Eq, Show, Generic)
 
 instance Bi TxSigData where
   encode txSigData = encode (txSigTxHash txSigData)

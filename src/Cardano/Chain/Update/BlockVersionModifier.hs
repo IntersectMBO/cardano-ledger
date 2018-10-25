@@ -40,7 +40,7 @@ data BlockVersionModifier = BlockVersionModifier
   , bvmSoftforkRule      :: !(Maybe SoftforkRule)
   , bvmTxFeePolicy       :: !(Maybe TxFeePolicy)
   , bvmUnlockStakeEpoch  :: !(Maybe EpochIndex)
-  } deriving (Show, Eq, Ord, Generic, Typeable)
+  } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
 
 instance B.Buildable BlockVersionModifier where
@@ -79,6 +79,7 @@ instance B.Buildable BlockVersionModifier where
     bmodifier :: Format Builder (a -> Builder) -> Format r (Maybe a -> r)
     bmodifier b = later $ maybe "no change" (bprint b)
 
+    bytes' :: Format r (Natural -> r)
     bytes' = bytes (shortest @Double)
 
 instance Bi BlockVersionModifier where

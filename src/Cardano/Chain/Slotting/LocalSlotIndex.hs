@@ -44,7 +44,6 @@ newtype LocalSlotIndex = UnsafeLocalSlotIndex
              , Ix
              , Generic
              , B.Buildable
-             , Typeable
              , NFData
              , Num
              , Integral
@@ -117,7 +116,9 @@ localSlotIndexMaxBound epochSlots =
 --   order.
 localSlotIndices :: SlotCount -> [LocalSlotIndex]
 localSlotIndices slotsInEpoch = fmap UnsafeLocalSlotIndex [0 .. upperBound]
-  where upperBound = fromIntegral slotsInEpoch - 1
+ where
+  upperBound :: Word16
+  upperBound = fromIntegral slotsInEpoch - 1
 
 mkLocalSlotIndex_ :: SlotCount -> Word16 -> Maybe LocalSlotIndex
 mkLocalSlotIndex_ es idx

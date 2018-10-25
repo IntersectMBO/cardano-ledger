@@ -17,10 +17,10 @@ import           Data.Binary.Get (getWord32be)
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Streaming as SBS
+import           Data.String (String)
 import           Streaming.Binary (decodedWith)
 import           Streaming.Prelude (Of (..), Stream)
 import qualified Streaming.Prelude as S
-
 
 import           Cardano.Binary.Class (DecoderError, decodeFull,
                      decodeFullDecoder)
@@ -49,8 +49,12 @@ data ParseError
 
 loadFileWithHeader :: FilePath -> LBS.ByteString -> SBS.ByteString (ExceptT ParseError ResIO) ()
 loadFileWithHeader file header =
-  let bytes = SBS.readFile file
-      len = fromIntegral $ LBS.length header
+  let
+    bytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
+    bytes = SBS.readFile file
+
+    len :: Int64
+    len = LBS.length header
   in do
     (h :> rest) <- lift $ SBS.toLazy $ SBS.splitAt len bytes
     if h == header
@@ -66,14 +70,19 @@ parseEpochFile file = do
  where
   bytes         = loadFileWithHeader file epochHeader
 
+  sequenceMaybe :: (Maybe a, b) -> Maybe (a, b)
   sequenceMaybe = \case
     (Nothing, _) -> Nothing
     (Just b , u) -> Just (b, u)
 
+  liftDecoderError :: Either DecoderError a -> ExceptT ParseError ResIO a
   liftDecoderError = \case
     Right a   -> pure a
     Left  err -> throwError (ParseErrorDecoder err)
 
+  liftBinaryError
+    :: (a, B.ByteOffset, Either String ())
+    -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
   liftBinaryError = \case
     (_, _, Right ()) -> pure ()
     (_, offset, Left message) ->
