@@ -1,3 +1,13 @@
+\lstset{ frame=tb,
+       , language=Haskell
+       , basicstyle=\footnotesize\ttfamily,
+       , keywordstyle=\color{blue!80},
+       , commentstyle=\itshape\color{purple!40!black},
+       , identifierstyle=\bfseries\color{green!40!black},
+       , stringstyle=\color{orange},
+       }
+
+\lstMakeShortInline[columns=fixed]`
 
 \subsection{Aspects that we need to model}
 \label{sec:aspects-to-model}
@@ -21,30 +31,41 @@ assume no stake) agree on the proposal.
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
 
-The ledger state has to expose these parameters of the protocol version to its
-clients:
+The ledger state has to expose some parameters of the protocol version to its
+clients. In the current implementation these parameters are kept in the
+`BlockVersionData` structure.
 
-\begin{description}
-\item[Slot duration] 
-\end{description}
+\begin{lstlisting}
+  data BlockVersionData = BlockVersionData { ... }
+\end{lstlisting}
+
+The following parameters are likely to be needed by the consumers of the ledger
+layer:
+
+\begin{itemize}
+\item Slot duration (`bvdSlotDuration`)
+\item Maximum block size (`bvdMaxBlockSize`)
+\item Maximum header size (`bvdMaxHeaderSize`)
+\item Maximum transaction size (`bvdMaxTxSize`)
+\item Maximum proposal size (`bvdMaxProposalSize`)
+\item Transaction fee policy (`bvdTxFeePolicy`)
+\end{itemize}
+
+The following parameters will be assumed to be constant:
+\begin{itemize}
+\item MPC threshold (`bvdMpcThd`)
+\item Heavy delegation threshold (`bvdHeavyDelThd`)
+\item Update vote threshold (`bvdUpdateVoteThd`)
+\item Update proposal threshold (`bvdUpdateProposalThd`)
+\item Soft fork rule parameters (`bvdSoftforkRule`)
+\end{itemize}
 
 At the moment we don't know whether we need these:
 
-\begin{description}
-\item[Script Version] 
-\end{description}
+\begin{itemize}
+\item Script Version (`bvdScriptVersion`)
+\item Update implicit (`bvdUpdateImplicit`)
+\end{itemize}
 
-
-\lstset{ frame=tb,
-       , language=Haskell
-       , basicstyle=\footnotesize\ttfamily,
-       , keywordstyle=\color{blue},
-       , commentstyle=\itshape\color{purple!40!black},
-       , identifierstyle=\bfseries\color{green!40!black},
-       , stringstyle=\color{orange},       
-       }
-
-       
-\begin{lstlisting}
-  data BlockVersionData = BlockVersionData
-\end{lstlisting}
+Finally, the `bvdUnlockStakeEpoch` field of `BlockVersionData` does not need to
+be modeled.
