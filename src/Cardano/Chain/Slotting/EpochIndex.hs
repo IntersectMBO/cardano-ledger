@@ -38,7 +38,6 @@ newtype EpochIndex = EpochIndex
              , Real
              , Generic
              , Bounded
-             , Typeable
              , NFData
              )
 

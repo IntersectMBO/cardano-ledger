@@ -27,7 +27,7 @@ type ScriptVersion = Word16
 data Script = Script
     { scrVersion :: ScriptVersion -- ^ Version
     , scrScript  :: ByteString   -- ^ Serialized script
-    } deriving (Eq, Show, Generic, Typeable)
+    } deriving (Eq, Show, Generic)
       deriving anyclass NFData
 
 instance B.Buildable Script where

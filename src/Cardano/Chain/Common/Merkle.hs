@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 -- | Merkle tree implementation.
@@ -43,7 +44,7 @@ import           Cardano.Crypto (AbstractHash (..), Hash, hashRaw)
 -- | Data type for root of merkle tree.
 newtype MerkleRoot a = MerkleRoot
     { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
-    } deriving (Show, Eq, Ord, Generic, ByteArrayAccess, Typeable, NFData)
+    } deriving (Show, Eq, Ord, Generic, ByteArrayAccess, NFData)
 
 instance Buildable (MerkleRoot a) where
     build (MerkleRoot h) = "MerkleRoot|" <> build h
@@ -95,9 +96,10 @@ instance Foldable MerkleNode where
 toLazyByteString :: Builder -> LBS.ByteString
 toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
 
-mkLeaf :: Bi a => a -> MerkleNode a
+mkLeaf :: forall a . Bi a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
     where
+      mRoot :: MerkleRoot a
       mRoot = MerkleRoot $ coerce $
           hashRaw (toLazyByteString (word8 0 <> serializeBuilder a))
 
@@ -125,11 +127,12 @@ mkRoot a b = MerkleRoot $ coerce $ hashRaw $ toLazyByteString $ mconcat
     , merkleRootToBuilder b ]
 
 -- | Smart constructor for 'MerkleTree'.
-mkMerkleTree :: Bi a => [a] -> MerkleTree a
+mkMerkleTree :: forall a . Bi a => [a] -> MerkleTree a
 mkMerkleTree [] = MerkleEmpty
 mkMerkleTree ls = MerkleTree (fromIntegral lsLen) (go lsLen ls)
   where
     lsLen = length ls
+    go :: Int -> [a] -> MerkleNode a
     go _  [x] = mkLeaf x
     go len xs = mkBranch (go i l) (go (len - i) r)
       where
@@ -153,7 +156,7 @@ emptyHash = MerkleRoot (hashRaw mempty)
 -- 32
 -- >>> powerOfTwo 65
 -- 64
-powerOfTwo :: (Bits a, Num a) => a -> a
+powerOfTwo :: forall a . (Bits a, Num a) => a -> a
 powerOfTwo n
     | n .&. (n - 1) == 0 = n `shiftR` 1
     | otherwise = go n
@@ -168,4 +171,5 @@ powerOfTwo n
 
        I could've used something like “until (\x -> x*2 > w) (*2) 1”,
        but bit tricks are fun. -}
+    go :: a -> a
     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))

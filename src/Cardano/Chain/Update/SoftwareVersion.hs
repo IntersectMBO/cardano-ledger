@@ -32,7 +32,7 @@ type NumSoftwareVersion = Word32
 data SoftwareVersion = SoftwareVersion
   { svAppName :: !ApplicationName
   , svNumber  :: !NumSoftwareVersion
-  } deriving (Eq, Generic, Ord, Typeable)
+  } deriving (Eq, Generic, Ord)
     deriving anyclass NFData
 
 instance B.Buildable SoftwareVersion where

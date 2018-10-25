@@ -61,7 +61,7 @@ data Tx = UnsafeTx
   -- ^ Outputs of transaction.
   , _txAttributes :: !TxAttributes
   -- ^ Attributes of transaction
-  } deriving (Eq, Ord, Generic, Show, Typeable)
+  } deriving (Eq, Ord, Generic, Show)
 
 instance B.Buildable Tx where
   build tx = bprint
@@ -131,7 +131,7 @@ data TxIn
   -- | Word32 = Index of the output in transaction's outputs
   = TxInUtxo TxId Word32
   | TxInUnknown !Word8 !ByteString
-  deriving (Eq, Ord, Generic, Show, Typeable)
+  deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxIn where
   parseJSON v = toAesonError =<< txInFromText <$> parseJSON v
@@ -165,13 +165,8 @@ instance Bi TxIn where
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
       _ -> TxInUnknown tag <$> decodeUnknownCborDataItem
 
-  encodedSizeExpr size _ =
-    2
-      + (knownCborDataItemSizeExpr $ szCases
-          [ let TxInUtxo txInHash txInIndex = panic "unused"
-            in Case "TxInUtxo" (size ((,) <$> pure txInHash <*> pure txInIndex))
-          ]
-        )
+  encodedSizeExpr size _ = 2 + knownCborDataItemSizeExpr
+    (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
 
 instance NFData TxIn
 
@@ -204,7 +199,7 @@ txInToText (TxInUnknown tag bs) =
 data TxOut = TxOut
   { txOutAddress :: !Address
   , txOutValue   :: !Coin
-  } deriving (Eq, Ord, Generic, Show, Typeable)
+  } deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxOut where
   parseJSON = withObject "TxOut" $ \o ->

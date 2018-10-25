@@ -48,6 +48,7 @@ instance Aeson.FromJSON Coeff where
         -- Code below is resistant to changes in precision of 'Coeff'.
         let
             rat = toRational sc * toRational res
+            fxd :: Nano
             fxd = MkFixed (numerator rat)
             res = resolution fxd
             bad = denominator rat /= 1

@@ -30,7 +30,6 @@ newtype ChainDifficulty = ChainDifficulty
              , Integral
              , Generic
              , Buildable
-             , Typeable
              , NFData
              )
 

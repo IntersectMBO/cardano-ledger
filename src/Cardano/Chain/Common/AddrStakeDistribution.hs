@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Cardano.Chain.Common.AddrStakeDistribution
        ( AddrStakeDistribution (..)
@@ -41,7 +42,7 @@ data AddrStakeDistribution
     -- • all portions must be positive;
     -- • there must be at least 2 items, because if there is only one item,
     -- 'SingleKeyDistr' can be used instead (which is smaller).
-    deriving (Eq, Ord, Show, Generic, Typeable)
+    deriving (Eq, Ord, Show, Generic)
 
 instance B.Buildable AddrStakeDistribution where
     build = \case
@@ -54,38 +55,32 @@ instance B.Buildable AddrStakeDistribution where
 instance NFData AddrStakeDistribution
 
 instance Bi AddrStakeDistribution where
-    encode = \case
-        BootstrapEraDistr         -> Bi.encodeListLen 0
-        SingleKeyDistr      id    -> encode (0 :: Word8, id)
-        UnsafeMultiKeyDistr distr -> encode (1 :: Word8, distr)
+  encode = \case
+    BootstrapEraDistr         -> Bi.encodeListLen 0
+    SingleKeyDistr      id    -> encode (0 :: Word8, id)
+    UnsafeMultiKeyDistr distr -> encode (1 :: Word8, distr)
 
-    decode = Bi.decodeListLenCanonical >>= \case
-        0 -> pure BootstrapEraDistr
-        2 -> decode @Word8 >>= \case
-            0 -> SingleKeyDistr <$> decode
-            1 ->
-                toCborError
-                    .   first (sformat build)
-                    .   mkMultiKeyDistr
-                    =<< decode
-            tag ->
-                cborError
-                    $  "decode @AddrStakeDistribution: unexpected tag "
-                    <> sformat build tag
-        len ->
-            cborError
-                $  "decode @AddrStakeDistribution: unexpected length "
-                <> sformat build len
+  decode = Bi.decodeListLenCanonical >>= \case
+    0 -> pure BootstrapEraDistr
+    2 -> decode @Word8 >>= \case
+      0 -> SingleKeyDistr <$> decode
+      1 -> toCborError . first (sformat build) . mkMultiKeyDistr =<< decode
+      tag ->
+        cborError
+          $  "decode @AddrStakeDistribution: unexpected tag "
+          <> sformat build tag
+    len ->
+      cborError
+        $  "decode @AddrStakeDistribution: unexpected length "
+        <> sformat build len
 
-    encodedSizeExpr size _ = szCases
-        [ Bi.Case "BoostrapEraDistr" 1
-        , let SingleKeyDistr id = panic "unused"
-          in Bi.Case "SingleKeyDistr" $ size ((,) <$> pure (0 :: Word8) <*> pure id)
-        , let UnsafeMultiKeyDistr distr = panic "unused"
-          in
-            Bi.Case "UnsafeMultiKeyDistr"
-                $ size ((,) <$> pure (1 :: Word8) <*> pure distr)
-        ]
+  encodedSizeExpr size _ = szCases
+    [ Bi.Case "BoostrapEraDistr" 1
+    , Bi.Case "SingleKeyDistr" $ size $ Proxy @(Word8, StakeholderId)
+    , Bi.Case "UnsafeMultiKeyDistr"
+    $ size
+    $ Proxy @(Word8, Map StakeholderId CoinPortion)
+    ]
 
 data MultiKeyDistrError
     = MkdMapIsEmpty
@@ -104,11 +99,13 @@ instance B.Buildable MultiKeyDistrError where
 -- | Safe constructor of multi-key distribution. It checks invariants
 -- of this distribution and returns an error if something is violated.
 mkMultiKeyDistr
-    :: MonadError MultiKeyDistrError m
-    => Map StakeholderId CoinPortion
-    -> m AddrStakeDistribution
+  :: forall m
+   . MonadError MultiKeyDistrError m
+  => Map StakeholderId CoinPortion
+  -> m AddrStakeDistribution
 mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
   where
+    checkDistrMap :: m ()
     checkDistrMap = do
         when (null distrMap) $ throwError MkdMapIsEmpty
         when (length distrMap == 1) $ throwError MkdMapIsSingleton

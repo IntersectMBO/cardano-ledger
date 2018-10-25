@@ -47,7 +47,7 @@ import           Cardano.Chain.Slotting.SlotCount (SlotCount)
 data SlotId = SlotId
   { siEpoch :: !EpochIndex
   , siSlot  :: !LocalSlotIndex
-  } deriving (Show, Eq, Ord, Generic, Typeable)
+  } deriving (Show, Eq, Ord, Generic)
 
 instance B.Buildable SlotId where
   build si = bprint
@@ -126,7 +126,8 @@ crucialSlot _ 0        = SlotId {siEpoch = 0, siSlot = localSlotIndexMinBound}
 crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
  where
   epochSlots = kEpochSlots k
-  idx = fromIntegral $ fromIntegral epochSlots - kSlotSecurityParam k - 1
+  idx :: Word16
+  idx = fromIntegral $ epochSlots - kSlotSecurityParam k - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->
       panic $ sformat ("The impossible happened in crucialSlot: " . build) err

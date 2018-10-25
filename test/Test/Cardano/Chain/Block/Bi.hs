@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+
 module Test.Cardano.Chain.Block.Bi
        ( tests
        , exampleBody
@@ -23,7 +25,7 @@ import qualified Hedgehog as H
 
 import           Cardano.Binary.Class (decodeFullDecoder, dropBytes,
                      serializeEncoding)
-import           Cardano.Chain.Block (BlockSignature (..), Body (..),
+import           Cardano.Chain.Block (Block, BlockSignature (..), Body (..),
                      ConsensusData (..), ExtraBodyData (..),
                      ExtraHeaderData (..), Header, HeaderHash, Proof (..),
                      SlogUndo (..), ToSign (..), Undo (..), decodeBlock,
@@ -73,6 +75,7 @@ roundTripHeaderCompat = eachOf
   (feedPMEpochSlots genHeader)
   roundTripsHeaderCompat
  where
+  roundTripsHeaderCompat :: Header -> H.PropertyT IO ()
   roundTripsHeaderCompat a = trippingBuildable
     a
     (serializeEncoding . encodeHeader)
@@ -93,6 +96,7 @@ roundTripBlockCompat = eachOf
   (feedPMEpochSlots genBlock)
   roundTripsBlockCompat
  where
+  roundTripsBlockCompat :: Block -> H.PropertyT IO ()
   roundTripsBlockCompat a = trippingBuildable
     a
     (serializeEncoding . encodeBlock)

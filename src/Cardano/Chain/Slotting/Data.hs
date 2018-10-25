@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ViewPatterns               #-}
 
@@ -11,8 +12,8 @@ module Cardano.Chain.Slotting.Data
        ( EpochSlottingData (..)
        , SlottingData
        , getSlottingDataMap
-       , createSlottingDataUnsafe
-       , isValidSlottingDataMap
+       , mkSlottingData
+       , validateSlottingDataMap
        , createInitSlottingData
        , getAllEpochIndices
        , getCurrentEpochIndex
@@ -29,8 +30,10 @@ import           Cardano.Prelude
 import           Data.Map.Strict as M
 import           Data.Semigroup (Semigroup)
 import           Data.Time (NominalDiffTime, UTCTime, addUTCTime)
+import           Formatting (bprint, build, int, sformat)
+import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
+import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
                      encodeListLen, enforceSize)
 import           Cardano.Chain.Slotting.EpochIndex (EpochIndex (..))
 import           Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex)
@@ -79,45 +82,67 @@ instance Bi SlottingData where
    where
     -- We first check if the data we are trying to decode is valid.
     -- We don't want to throw a runtime error.
+    checkIfSlottindDataValid
+      :: Decoder s (Map EpochIndex EpochSlottingData) -> Decoder s SlottingData
     checkIfSlottindDataValid slottingDataM = do
-      slottingData <- slottingDataM
-      if isValidSlottingDataMap slottingData
-        then pure $ createSlottingDataUnsafe slottingData
-        else cborError
-          $ DecoderErrorCustom "SlottingData" "Invalid slotting data state!"
+      mkSlottingData <$> slottingDataM >>= \case
+        Left err -> cborError $ DecoderErrorCustom "SlottingData" $ sformat build err
+        Right sd -> pure sd
+
+data SlottingDataError
+  = SlottingDataTooFewIndices Int
+  | SlottingDataInvalidIndices [EpochIndex] [EpochIndex]
+
+instance B.Buildable SlottingDataError where
+  build = \case
+    SlottingDataInvalidIndices expected actual -> bprint
+      ( "Incorrect indices while constructing SlottingData.\n"
+      . "Expected: "
+      . listJson
+      . "\n"
+      . "Got: "
+      . listJson
+      )
+      expected
+      actual
+    SlottingDataTooFewIndices numIndices -> bprint
+      ( "Too few indices while constructing SlottingData.\n"
+      . "Expected more than 2, but only got "
+      . int
+      )
+      numIndices
 
 
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
 
--- | Unsafe constructor that can lead to unsafe crash!
+-- | Constructor that returns a `SlottingDataError` on invalid input
 --
 --   TODO: Refine the input type so this is no longer unsafe
-createSlottingDataUnsafe :: Map EpochIndex EpochSlottingData -> SlottingData
-createSlottingDataUnsafe epochSlottingDataMap =
-  if isValidSlottingDataMap epochSlottingDataMap
-    then SlottingData epochSlottingDataMap
-    else criticalError
- where
-  criticalError =
-    panic
-      "It's impossible to create slotting data without at least\
-    \ two epochs. Epochs need to be sequential."
+mkSlottingData
+  :: Map EpochIndex EpochSlottingData -> Either SlottingDataError SlottingData
+mkSlottingData epochSlottingDataMap = do
+  validateSlottingDataMap epochSlottingDataMap
+  pure $ SlottingData epochSlottingDataMap
 
 -- | The validation for the @SlottingData@. It's visible since it's needed
 --   externally.
-isValidSlottingDataMap :: Map EpochIndex EpochSlottingData -> Bool
-isValidSlottingDataMap epochSlottingDataMap =
-  M.size epochSlottingDataMap >= 2 && validEpochIndices
+validateSlottingDataMap
+  :: Map EpochIndex EpochSlottingData -> Either SlottingDataError ()
+validateSlottingDataMap epochSlottingDataMap
+  | numIndices < 2 = Left $ SlottingDataTooFewIndices numIndices
+  | not validEpochIndices = Left
+  $ SlottingDataInvalidIndices correctEpochIndices currentEpochIndices
+  | otherwise = Right ()
  where
+  numIndices          = M.size epochSlottingDataMap
   -- We validate if the epoch indices are sequential, it's invalid if they
   -- start having "holes" [..,6,7,9,...].
-  validEpochIndices = correctEpochIndices == currentEpochIndices
-   where
-    currentEpochIndices = keys epochSlottingDataMap
-    correctEpochIndices = EpochIndex . fromIntegral <$> [0 .. zIMapLenght]
-      where zIMapLenght = pred . length . keys $ epochSlottingDataMap
+  validEpochIndices   = correctEpochIndices == currentEpochIndices
+  currentEpochIndices = keys epochSlottingDataMap
+  correctEpochIndices = EpochIndex . fromIntegral <$> [0 .. zIMapLenght]
+    where zIMapLenght = pred . length . keys $ epochSlottingDataMap
 
 -- | Restricted constructor for the (initial) creation of 'SlottingData'
 createInitSlottingData

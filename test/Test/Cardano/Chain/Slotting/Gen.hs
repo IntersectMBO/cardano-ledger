@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Chain.Slotting.Gen
@@ -23,10 +24,9 @@ import qualified Hedgehog.Range as Range
 
 import           Cardano.Chain.Slotting (EpochIndex (..),
                      EpochSlottingData (..), FlatSlotId, LocalSlotIndex,
-                     SlotCount (..), SlotId (..), SlottingData,
-                     createSlottingDataUnsafe, getSlotIndex,
+                     SlotCount (..), SlotId (..), SlottingData, getSlotIndex,
                      localSlotIndexMaxBound, localSlotIndexMinBound,
-                     mkLocalSlotIndex)
+                     mkLocalSlotIndex, mkSlottingData)
 import           Cardano.Crypto (ProtocolMagic)
 
 import           Test.Cardano.Crypto.Gen (genProtocolMagic)
@@ -61,10 +61,20 @@ genSlotId epochSlots =
     SlotId <$> genEpochIndex <*> genLocalSlotIndex epochSlots
 
 genSlottingData :: Gen SlottingData
-genSlottingData = createSlottingDataUnsafe <$> do
-    mapSize <- Gen.int $ Range.linear 2 10
-    epochSlottingDatas <- Gen.list (Range.singleton mapSize) genEpochSlottingData
-    pure $ Map.fromList $ zip [0..fromIntegral mapSize - 1] epochSlottingDatas
+genSlottingData = mkSlottingData <$> genSlottingDataMap >>= \case
+  Left err ->
+    panic $ sformat ("The impossible happened in genSlottingData: " . build) err
+  Right slottingData -> pure slottingData
+ where
+  genSlottingDataMap :: Gen (Map EpochIndex EpochSlottingData)
+  genSlottingDataMap = do
+    mapSize            <- Gen.int $ Range.linear 2 10
+    epochSlottingDatas <- Gen.list
+      (Range.singleton mapSize)
+      genEpochSlottingData
+    pure $ Map.fromList $ zip
+      [0 .. fromIntegral mapSize - 1]
+      epochSlottingDatas
 
 feedPMEpochSlots :: (ProtocolMagic -> SlotCount -> Gen a) -> Gen a
 feedPMEpochSlots genA = do
