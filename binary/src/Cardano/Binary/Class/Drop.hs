@@ -34,7 +34,7 @@ dropInt32 = void D.decodeInt32Canonical
 dropList :: Dropper s -> Dropper s
 dropList dropElems = do
   D.decodeListLenIndef
-  D.decodeSequenceLenIndef const () id dropElems
+  D.decodeSequenceLenIndef const () identity dropElems
 
 dropMap :: Dropper s -> Dropper s -> Dropper s
 dropMap dropKey dropValue = do

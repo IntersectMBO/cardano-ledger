@@ -7,7 +7,7 @@ module Test.Cardano.Binary.Helpers.GoldenRoundTrip
        , roundTripsBiShow
        , roundTripsBiBuildable
        , compareHexDump
-       , legacyGoldenDecode
+       , deprecatedGoldenDecode
        ) where
 
 import           Cardano.Prelude
@@ -87,9 +87,9 @@ roundTripsBiShow x = tripping x serialize decodeFull
 roundTripsBiBuildable :: (Bi a, Eq a, MonadTest m, Buildable a) => a -> m ()
 roundTripsBiBuildable a = trippingBuildable a serialize decodeFull
 
-legacyGoldenDecode
+deprecatedGoldenDecode
   :: HasCallStack => Text -> (forall s . D.Decoder s ()) -> FilePath -> Property
-legacyGoldenDecode lbl decoder path =
+deprecatedGoldenDecode lbl decoder path =
   withFrozenCallStack $ withTests 1 . property $ do
     bs <- decodeBase16 <$> liftIO (BS.readFile path)
     fmap (decodeFullDecoder lbl decoder) bs === Just (Right ())

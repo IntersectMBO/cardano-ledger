@@ -38,7 +38,7 @@ import           Cardano.Crypto (AbstractHash, PassPhrase, ProtocolMagic (..),
 import           Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg,
                      sizeTest)
 import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
-                     legacyGoldenDecode, roundTripsBiBuildable,
+                     deprecatedGoldenDecode, roundTripsBiBuildable,
                      roundTripsBiShow)
 import           Test.Cardano.Crypto.Gen
 
@@ -55,8 +55,8 @@ roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
 -- PublicKey
 --------------------------------------------------------------------------------
 
-golden_PublicKey :: Property
-golden_PublicKey = goldenTestBi pkey "test/golden/PublicKey"
+goldenPublicKey :: Property
+goldenPublicKey = goldenTestBi pkey "test/golden/PublicKey"
   where Right pkey = PublicKey <$> xpub (getBytes 0 64)
 
 roundTripPublicKeyBi :: Property
@@ -70,8 +70,8 @@ roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
 -- SecretKey
 --------------------------------------------------------------------------------
 
-golden_SecretKey :: Property
-golden_SecretKey = goldenTestBi skey "test/golden/SecretKey"
+goldenSecretKey :: Property
+goldenSecretKey = goldenTestBi skey "test/golden/SecretKey"
   where Right skey = SecretKey <$> xprv (getBytes 10 128)
 
 roundTripSecretKeyBi :: Property
@@ -82,8 +82,8 @@ roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
 -- Signature
 --------------------------------------------------------------------------------
 
-golden_Signature :: Property
-golden_Signature = goldenTestBi sig "test/golden/Signature"
+goldenSignature :: Property
+goldenSignature = goldenTestBi sig "test/golden/Signature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   sig        = sign (ProtocolMagic 0) SignForTestingOnly skey ()
@@ -104,8 +104,8 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 -- Signed
 --------------------------------------------------------------------------------
 
-golden_Signed :: Property
-golden_Signed = goldenTestBi signed "test/golden/Signed"
+goldenSigned :: Property
+goldenSigned = goldenTestBi signed "test/golden/Signed"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   signed     = mkSigned (ProtocolMagic 0) SignForTestingOnly skey ()
@@ -124,8 +124,8 @@ roundTripSignedBi = eachOf 1000 genUnitSigned roundTripsBiShow
 instance Eq XPrv where
    (==) = (==) `on` unXPrv
 
-golden_EncryptedSecretKey :: Property
-golden_EncryptedSecretKey = goldenTestBi esk "test/golden/EncryptedSecretKey"
+goldenEncryptedSecretKey :: Property
+goldenEncryptedSecretKey = goldenTestBi esk "test/golden/EncryptedSecretKey"
   where Right esk = noPassEncrypt . SecretKey <$> xprv (getBytes 10 128)
 
 roundTripEncryptedSecretKeysBi :: Property
@@ -137,8 +137,8 @@ roundTripEncryptedSecretKeysBi =
 -- RedeemPublicKey
 --------------------------------------------------------------------------------
 
-golden_RedeemPublicKey :: Property
-golden_RedeemPublicKey = goldenTestBi rpk "test/golden/RedeemPublicKey"
+goldenRedeemPublicKey :: Property
+goldenRedeemPublicKey = goldenTestBi rpk "test/golden/RedeemPublicKey"
   where Just rpk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
 
 roundTripRedeemPublicKeyBi :: Property
@@ -154,8 +154,8 @@ roundTripRedeemPublicKeyAeson =
 -- RedeemSecretKey
 --------------------------------------------------------------------------------
 
-golden_RedeemSecretKey :: Property
-golden_RedeemSecretKey = goldenTestBi rsk "test/golden/RedeemSecretKey"
+goldenRedeemSecretKey :: Property
+goldenRedeemSecretKey = goldenTestBi rsk "test/golden/RedeemSecretKey"
   where Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
 
 roundTripRedeemSecretKeyBi :: Property
@@ -167,8 +167,8 @@ roundTripRedeemSecretKeyBi =
 -- RedeemSignature
 --------------------------------------------------------------------------------
 
-golden_RedeemSignature :: Property
-golden_RedeemSignature = goldenTestBi rsig "test/golden/RedeemSignature"
+goldenRedeemSignature :: Property
+goldenRedeemSignature = goldenTestBi rsig "test/golden/RedeemSignature"
  where
   Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
   rsig     = redeemSign (ProtocolMagic 0) SignForTestingOnly rsk ()
@@ -191,17 +191,17 @@ roundTripRedeemSignatureAeson =
 -- VssPublicKey
 --------------------------------------------------------------------------------
 
-golden_legacy_VssPublicKey :: Property
-golden_legacy_VssPublicKey =
-  legacyGoldenDecode "VssPublicKey" dropBytes "test/golden/VssPublicKey"
+goldenDeprecatedVssPublicKey :: Property
+goldenDeprecatedVssPublicKey =
+  deprecatedGoldenDecode "VssPublicKey" dropBytes "test/golden/VssPublicKey"
 
 
 --------------------------------------------------------------------------------
 -- ProxyCert
 --------------------------------------------------------------------------------
 
-golden_ProxyCert :: Property
-golden_ProxyCert = goldenTestBi pcert "test/golden/ProxyCert"
+goldenProxyCert :: Property
+goldenProxyCert = goldenTestBi pcert "test/golden/ProxyCert"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
@@ -223,8 +223,8 @@ roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
 -- ProxySecretKey
 --------------------------------------------------------------------------------
 
-golden_ProxySecretKey :: Property
-golden_ProxySecretKey = goldenTestBi psk "test/golden/ProxySecretKey"
+goldenProxySecretKey :: Property
+goldenProxySecretKey = goldenTestBi psk "test/golden/ProxySecretKey"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
@@ -248,8 +248,8 @@ roundTripProxySecretKeyAeson =
 -- ProxySignature
 --------------------------------------------------------------------------------
 
-golden_ProxySignature :: Property
-golden_ProxySignature = goldenTestBi psig "test/golden/ProxySignature"
+goldenProxySignature :: Property
+goldenProxySignature = goldenTestBi psig "test/golden/ProxySignature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   psk = safeCreatePsk (ProtocolMagic 0) (FakeSigner skey) (toPublic skey) ()
@@ -270,36 +270,36 @@ roundTripProxySignatureBi = eachOf
 -- DecShare
 --------------------------------------------------------------------------------
 
-golden_legacy_DecShare :: Property
-golden_legacy_DecShare =
-  legacyGoldenDecode "DecShare" dropBytes "test/golden/DecShare"
+goldenDeprecatedDecShare :: Property
+goldenDeprecatedDecShare =
+  deprecatedGoldenDecode "DecShare" dropBytes "test/golden/DecShare"
 
 
 --------------------------------------------------------------------------------
 -- EncShare
 --------------------------------------------------------------------------------
 
-golden_legacy_EncShare :: Property
-golden_legacy_EncShare =
-  legacyGoldenDecode "EncShare" dropBytes "test/golden/EncShare"
+goldenDeprecatedEncShare :: Property
+goldenDeprecatedEncShare =
+  deprecatedGoldenDecode "EncShare" dropBytes "test/golden/EncShare"
 
 
 --------------------------------------------------------------------------------
 -- Secret
 --------------------------------------------------------------------------------
 
-golden_legacy_Secret :: Property
-golden_legacy_Secret =
-  legacyGoldenDecode "Secret" dropBytes "test/golden/Secret"
+goldenDeprecatedSecret :: Property
+goldenDeprecatedSecret =
+  deprecatedGoldenDecode "Secret" dropBytes "test/golden/Secret"
 
 
 --------------------------------------------------------------------------------
 -- SecretProof
 --------------------------------------------------------------------------------
 
-golden_legacy_SecretProof :: Property
-golden_legacy_SecretProof =
-  legacyGoldenDecode "SecretProof" dropSecretProof "test/golden/SecretProof"
+goldenDeprecatedSecretProof :: Property
+goldenDeprecatedSecretProof =
+  deprecatedGoldenDecode "SecretProof" dropSecretProof "test/golden/SecretProof"
  where
    dropSecretProof :: Dropper s
    dropSecretProof = do
@@ -312,8 +312,8 @@ golden_legacy_SecretProof =
 -- AbstractHash
 --------------------------------------------------------------------------------
 
-golden_AbstractHash :: Property
-golden_AbstractHash = goldenTestBi (hash ()) "test/golden/AbstractHash"
+goldenAbstractHash :: Property
+goldenAbstractHash = goldenTestBi (hash ()) "test/golden/AbstractHash"
 
 genUnitAbstractHash :: Gen (AbstractHash Blake2b_256 ())
 genUnitAbstractHash = genAbstractHash $ pure ()
@@ -329,8 +329,8 @@ roundTripAbstractHashAeson =
 -- PassPhrase
 --------------------------------------------------------------------------------
 
-golden_PassPhrase :: Property
-golden_PassPhrase = goldenTestBi passphrase "test/golden/PassPhrase"
+goldenPassPhrase :: Property
+goldenPassPhrase = goldenTestBi passphrase "test/golden/PassPhrase"
   where
     -- PassPhrase has to be 32 bytes in length
         passphrase = ByteArray.pack (BS.unpack $ getBytes 3 32) :: PassPhrase
@@ -342,8 +342,8 @@ roundTripPassPhraseBi = eachOf 1000 genPassPhrase roundTripsBiBuildable
 -- HDAddressPayload
 --------------------------------------------------------------------------------
 
-golden_HDAddressPayload :: Property
-golden_HDAddressPayload = goldenTestBi hdap "test/golden/HDAddressPayload"
+goldenHDAddressPayload :: Property
+goldenHDAddressPayload = goldenTestBi hdap "test/golden/HDAddressPayload"
  where
   Right hdap =
     flip packHDAddressAttr [] . deriveHDPassphrase . PublicKey <$> xpub

@@ -23,18 +23,18 @@ import           Test.Cardano.Util.Tripping (discoverRoundTrip, roundTripsAesonS
 -- TxpConfiguration
 -------------------------------------------------------------------------------
 
-golden_TxpConfiguration0 :: Property
-golden_TxpConfiguration0 =
+goldenTxpConfiguration0 :: Property
+goldenTxpConfiguration0 =
     goldenTestJSON exampleTxpConfiguration0
         "test/golden/json/TxpConfiguration0"
 
-golden_TxpConfiguration1 :: Property
-golden_TxpConfiguration1 =
+goldenTxpConfiguration1 :: Property
+goldenTxpConfiguration1 =
     goldenTestJSON exampleTxpConfiguration1
         "test/golden/json/TxpConfiguration1"
 
-golden_TxpConfiguration2 :: Property
-golden_TxpConfiguration2 =
+goldenTxpConfiguration2 :: Property
+goldenTxpConfiguration2 =
     goldenTestJSON exampleTxpConfiguration2
         "test/golden/json/TxpConfiguration2"
 

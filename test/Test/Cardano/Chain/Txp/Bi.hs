@@ -48,8 +48,8 @@ import           Test.Cardano.Crypto.Gen (feedPM)
 -- Tx
 --------------------------------------------------------------------------------
 
-golden_Tx :: Property
-golden_Tx = goldenTestBi tx "test/golden/Tx"
+goldenTx :: Property
+goldenTx = goldenTestBi tx "test/golden/Tx"
     where
         tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
@@ -60,8 +60,8 @@ roundTripTx = eachOf 50 genTx roundTripsBiBuildable
 -- TxAttributes
 --------------------------------------------------------------------------------
 
-golden_TxAttributes :: Property
-golden_TxAttributes = goldenTestBi txA "test/golden/TxAttributes"
+goldenTxAttributes :: Property
+goldenTxAttributes = goldenTestBi txA "test/golden/TxAttributes"
     where
         txA = mkAttributes ()
 
@@ -80,8 +80,8 @@ roundTripTxAux = eachOf 100 (feedPM genTxAux) roundTripsBiBuildable
 -- Tx Hash
 --------------------------------------------------------------------------------
 
-golden_HashTx :: Property
-golden_HashTx = goldenTestBi exampleHashTx "test/golden/HashTx"
+goldenHashTx :: Property
+goldenHashTx = goldenTestBi exampleHashTx "test/golden/HashTx"
 
 roundTripHashTx :: Property
 roundTripHashTx = eachOf 50 genTxHash roundTripsBiBuildable
@@ -91,11 +91,11 @@ roundTripHashTx = eachOf 50 genTxHash roundTripsBiBuildable
 --------------------------------------------------------------------------------
 
 
-golden_TxInUtxo :: Property
-golden_TxInUtxo = goldenTestBi exampleTxInUtxo "test/golden/TxIn_Utxo"
+goldenTxInUtxo :: Property
+goldenTxInUtxo = goldenTestBi exampleTxInUtxo "test/golden/TxIn_Utxo"
 
-golden_TxInUnknown :: Property
-golden_TxInUnknown = goldenTestBi exampleTxInUnknown "test/golden/TxIn_Unknown"
+goldenTxInUnknown :: Property
+goldenTxInUnknown = goldenTestBi exampleTxInUnknown "test/golden/TxIn_Unknown"
 
 roundTripTxIn :: Property
 roundTripTxIn = eachOf 100 genTxIn roundTripsBiBuildable
@@ -105,8 +105,8 @@ roundTripTxIn = eachOf 100 genTxIn roundTripsBiBuildable
 -- TxId
 --------------------------------------------------------------------------------
 
-golden_TxId :: Property
-golden_TxId = goldenTestBi exampleTxId "test/golden/TxId"
+goldenTxId :: Property
+goldenTxId = goldenTestBi exampleTxId "test/golden/TxId"
 
 roundTripTxId :: Property
 roundTripTxId = eachOf 50 genTxId roundTripsBiBuildable
@@ -115,8 +115,8 @@ roundTripTxId = eachOf 50 genTxId roundTripsBiBuildable
 -- TxInList
 --------------------------------------------------------------------------------
 
-golden_TxInList :: Property
-golden_TxInList = goldenTestBi exampleTxInList "test/golden/TxInList"
+goldenTxInList :: Property
+goldenTxInList = goldenTestBi exampleTxInList "test/golden/TxInList"
 
 roundTripTxInList :: Property
 roundTripTxInList = eachOf 50 genTxInList roundTripsBiShow
@@ -125,25 +125,25 @@ roundTripTxInList = eachOf 50 genTxInList roundTripsBiShow
 -- TxInWitness
 --------------------------------------------------------------------------------
 
-golden_PkWitness :: Property
-golden_PkWitness = goldenTestBi pkWitness "test/golden/TxInWitness_PkWitness"
+goldenPkWitness :: Property
+goldenPkWitness = goldenTestBi pkWitness "test/golden/TxInWitness_PkWitness"
      where
         pkWitness = PkWitness examplePublicKey exampleTxSig
 
-golden_ScriptWitness :: Property
-golden_ScriptWitness = goldenTestBi scriptWitness "test/golden/TxInWitness_ScriptWitness"
+goldenScriptWitness :: Property
+goldenScriptWitness = goldenTestBi scriptWitness "test/golden/TxInWitness_ScriptWitness"
     where
         scriptWitness = ScriptWitness validatorScript redeemerScript
         validatorScript = Script 47 "serialized script"
         redeemerScript = Script 47 "serialized script"
 
-golden_RedeemWitness :: Property
-golden_RedeemWitness = goldenTestBi redeemWitness "test/golden/TxInWitness_RedeemWitness"
+goldenRedeemWitness :: Property
+goldenRedeemWitness = goldenTestBi redeemWitness "test/golden/TxInWitness_RedeemWitness"
     where
         redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
 
-golden_UnknownWitnessType :: Property
-golden_UnknownWitnessType = goldenTestBi unkWitType "test/golden/TxInWitness_UnknownWitnessType"
+goldenUnknownWitnessType :: Property
+goldenUnknownWitnessType = goldenTestBi unkWitType "test/golden/TxInWitness_UnknownWitnessType"
     where
         unkWitType = UnknownWitnessType 47 "forty seven"
 
@@ -154,8 +154,8 @@ roundTripTxInWitness = eachOf 50 (feedPM genTxInWitness) roundTripsBiBuildable
 -- TxOutList
 --------------------------------------------------------------------------------
 
-golden_TxOutList :: Property
-golden_TxOutList = goldenTestBi exampleTxOutList "test/golden/TxOutList"
+goldenTxOutList :: Property
+goldenTxOutList = goldenTestBi exampleTxOutList "test/golden/TxOutList"
 
 roundTripTxOutList :: Property
 roundTripTxOutList = eachOf 50 genTxOutList roundTripsBiShow
@@ -164,8 +164,8 @@ roundTripTxOutList = eachOf 50 genTxOutList roundTripsBiShow
 -- TxOut
 --------------------------------------------------------------------------------
 
-golden_TxOut :: Property
-golden_TxOut = goldenTestBi exampleTxOut "test/golden/TxOut"
+goldenTxOut :: Property
+goldenTxOut = goldenTestBi exampleTxOut "test/golden/TxOut"
 
 roundTripTxOut :: Property
 roundTripTxOut = eachOf 50 genTxOut roundTripsBiBuildable
@@ -181,8 +181,8 @@ roundTripTxPayload = eachOf 50 (feedPM genTxPayload) roundTripsBiShow
 -- TxProof
 --------------------------------------------------------------------------------
 
-golden_TxProof :: Property
-golden_TxProof =  goldenTestBi exampleTxProof "test/golden/TxProof"
+goldenTxProof :: Property
+goldenTxProof =  goldenTestBi exampleTxProof "test/golden/TxProof"
 
 roundTripTxProof :: Property
 roundTripTxProof = eachOf 50 (feedPM genTxProof) roundTripsBiBuildable
@@ -191,8 +191,8 @@ roundTripTxProof = eachOf 50 (feedPM genTxProof) roundTripsBiBuildable
 -- TxSig
 --------------------------------------------------------------------------------
 
-golden_TxSig :: Property
-golden_TxSig = goldenTestBi txSigGold "test/golden/TxSig"
+goldenTxSig :: Property
+goldenTxSig = goldenTestBi txSigGold "test/golden/TxSig"
     where
         txSigGold = sign (ProtocolMagic 0) SignForTestingOnly
                          exampleSecretKey exampleTxSigData
@@ -204,8 +204,8 @@ roundTripTxSig = eachOf 50 (feedPM genTxSig) roundTripsBiBuildable
 -- TxSigData
 --------------------------------------------------------------------------------
 
-golden_TxSigData :: Property
-golden_TxSigData = goldenTestBi exampleTxSigData "test/golden/TxSigData"
+goldenTxSigData :: Property
+goldenTxSigData = goldenTestBi exampleTxSigData "test/golden/TxSigData"
 
 roundTripTxSigData :: Property
 roundTripTxSigData = eachOf 50 genTxSigData roundTripsBiShow
@@ -214,8 +214,8 @@ roundTripTxSigData = eachOf 50 genTxSigData roundTripsBiShow
 -- TxWitness
 --------------------------------------------------------------------------------
 
-golden_TxWitness :: Property
-golden_TxWitness = goldenTestBi exampleTxWitness "test/golden/TxWitness"
+goldenTxWitness :: Property
+goldenTxWitness = goldenTestBi exampleTxWitness "test/golden/TxWitness"
 
 roundTripTxWitness :: Property
 roundTripTxWitness = eachOf 20 (feedPM genTxWitness) roundTripsBiShow
