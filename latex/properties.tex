@@ -66,6 +66,21 @@ Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
 from the genesis state via valid UTxO, stake delegation or stake pool
 transactions. This gives a constructive rule how to reach a valid ledger state.
 
+\subsection{Ledger Properties}
+\label{sec:ledger-properties}
+
+The following properties state the desired features of updating a valid ledger
+state.
+
+\begin{property}[\textbf{Preserve Balance Modulo Fee}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \fun{validLedgerstate}~\var{l}\\
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \fun{balance}(\fun{getUTxO}~\var{l}) =
+    \fun{balance}(\fun{getUTxO}~\var{l'}) - \fun{txfee}~\var{tx}
+  \end{multline*}
+  \label{prop:ledger-properties-1}
+\end{property}
 
 %%% Local Variables:
 %%% mode: latex
