@@ -131,14 +131,18 @@
 \label{sec:crypto-primitives}
 
 Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
-this document.
+this document. The cryptographic concepts required for the formal definition
+of delegation with with witnesses include public-private key pairs, hash
+maps and signatures. The constraint we introduce states that a signature of
+some data signed with a (private) key is only correct whenever we can verify
+it using the corresponding public key.
 
 \begin{figure}
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{vk} & \SKey & \text{private signing key}\\
+      \var{sk} & \SKey & \text{private signing key}\\
       \var{vk} & \VKey & \text{public verifying key}\\
       \var{hk} & \Hash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
@@ -158,13 +162,13 @@ this document.
       \hash{} & \VKey \to \Hash
       & \text{hash function} \\
       %
-      \fun{verify} & \VKey \times \Data \times \Sig
+      \fun{verify} & \powerset{\VKey \times \Data \times \Sig}
       & \text{verification relation}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig,
       \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
   \end{align*}
   \emph{Notation for serialized and verified data}
@@ -189,10 +193,24 @@ this document.
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
 
+The types involved in defining a UTxO and transitions thereof are defined in
+Figure~\ref{fig:defs:utxo}. The map $\var{txid}$, computes a hash of a given
+transaction to give the ID.
+The transaction fee $\fun{txfee}$ is the actual
+fee a transaction contributes to the system (this value depends only on
+the transaction itself), whereas $\fun{minfee}$ is the minimum
+fee required to apply a given transaction to the current UTxO. This minimum
+depends additionally on the context of this transaction (i.e. a collection of
+values the blockchain protocol keeps track of, $\PrtclConsts$).
+
+A set of functions on UTxOs and transactions which we will require here,
+along with their types are defined in Figure~\ref{fig:derived-defs:utxo}.
+The type of the transition on UTxO is presented in~\ref{fig:ts-types:utxo}.
+The $\PrtclConsts$ is needed as part of the context here in order to be
+able to determine and make use of the $\fun{minfee}$ value.
+
 The transition rules for unspent outputs are presented in
-Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
-along with their types are defined in Figure~\ref{fig:defs:utxo}.
-Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
+Figure~\ref{fig:rules:utxo}.
 
 \begin{figure*}
   \emph{Primitive types}
@@ -231,23 +249,30 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       & \var{txin} \mapsto \var{txout}
       & \TxIn \mapsto \TxOut
       & \text{unspent tx outputs}
+      \\
+      \var{tx}
+      & \Tx
+      & (\var{inputs}, \var{outputs})
+      & \powerset{(\TxIn)} \times (\Ix \mapsto \TxOut)
+      & \text{transaction}
+
     \end{array}
   \end{equation*}
   %
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{tx} & \Tx & \text{transaction}\\
-    \end{array}
-  \end{equation*}
+  %\emph{Abstract types}
+  %\begin{equation*}
+%    \begin{array}{r@{~\in~}lr}
+%      \var{tx} & \Tx & \text{transaction}\\
+%    \end{array}
+%  \end{equation*}
   %
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
       %
-      \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
-                                  & \text{transaction body}\\
+      %\fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+      %                            & \text{transaction body}\\
       %
       \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
       %
@@ -260,9 +285,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 
 \begin{figure}
   \begin{align*}
-    & \fun{txins} \in \Tx \to \powerset{\TxIn}
+    & \fun{txins} \in \Tx \to \powerset{(\TxIn)}
     & \text{transaction inputs} \\
-    & \txins{tx} = \var{inputs} \where \txbody{tx} = (\var{inputs}, ~\wcard)
+    & \txins{(inputs,~\wcard)} = \var{inputs}
     \nextdef
     & \fun{txouts} \in \Tx \to \UTxO
     & \text{transaction outputs as UTxO} \\
@@ -328,12 +353,24 @@ changes with a transaction:
 \begin{itemize}
 \item Each input spent in the transaction must be in the set of unspent
   outputs.
+\item The fee paid by the transaction has to be less than or equal to the
+minimum fee.
 \item The balance of the unspent outputs in a transaction (i.e. the total
   amount paid in a transaction) must be equal or less than the amount of spent
   inputs.
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
+\end{itemize}
+
+According to this rule, when the state of a UTxO is updated with a transaction
+$\var{tx}$, and the above conditions are met, the UTxO changes as follows:
+
+\begin{itemize}
+\item remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
+associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
+\item add all the $\var{outputs}$ of $\var{tx}$ to the
+UTxO, now associated with the $\var{txid}(\var{tx})$ instead.
 \end{itemize}
 
 \begin{note}
@@ -357,15 +394,45 @@ changes with a transaction:
 \subsection{Witnesses}
 \label{sec:witnesses}
 
-The rules for witnesses are presented in Figure~\ref{fig:rules:utxow}.
-The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
-Figure~\ref{fig:defs:utxow}. Note that
-Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
-Figure~\ref{fig:rules:utxo}. The main reason for doing this is to define
-the rules incrementally, modeling different aspects in isolation to keep the
-rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
-have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
-different order). The choice here is arbitrary.
+The definitions needed to add witnesses to the UTxO transitions described above
+are presented in Figure~\ref{fig:defs:utxow}. A transaction is witnessed by
+a signature and a verification key corresponding to this signature. The
+$\fun{hash_{spend}}$ map associates to an address the hash of the spending key
+at this address.
+
+%\begin{note}
+%  More details
+%\end{note}
+
+In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
+associated with a UTxO. The first, $\fun{addr}$, gives the finite map
+which associates to a given $\var{txin}$ in the UTxO the address of the
+corresponding $\var{txout}$. The map $\fun{addr_h}$, given a UTxO, returns the
+finite map which associates $\var{txin}$ with the hash of a spending key in
+the address in the corresponding $\var{txout}$ in the UTxO.
+
+Note that the UTxO transitions with and without witnesses have the same type
+(see Figure~\ref{fig:ts-types:utxo} and Figure~\ref{fig:ts-types:utxow}).
+The witnessed transition rule, in fact, defines the same UTxO update as the
+non-witnessed rule. It has, however, an additional precondition
+(stated in Rule~\ref{eq:utxo-witness-inductive} in
+Figure~\ref{fig:rules:utxow}):
+
+\begin{itemize}
+ \item For each of the inputs of the transaction $\var{tx}$ to be applied,
+ there exists a verifiable witness (there could be more than one valid
+ key-signature pair serving as a witness) such that the address of
+\end{itemize}
+
+%Note that
+%Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
+%Figure~\ref{fig:rules:utxo}. The main reason for doing this is to define
+%the rules incrementally, modeling different aspects in isolation to keep the
+%rules as simple as possible.
+
+%Also note that the $\trans{utxo}{}$ relation could
+%have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
+%different order). The choice here is arbitrary.
 
 \begin{figure}
   \emph{Abstract functions}

@@ -33,12 +33,13 @@
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
-For stake to be active in the blockchain protocol,
-(i.e. eligible for participation in the leader election)
+Stake is said to be \textit{active} in the blockchain protocol
+when it is eligible for participation in the leader election. In order for
+stake to become active,
 the associated verification stake key must be registered
 and its staking rights must be delegated to an active stake pool.
-\footnote{Individuals who wish to participate in the protocol can
-register themselves as a stake pool.}
+Individuals who wish to participate in the protocol can
+register themselves as a stake pool.
 
 Stake keys are registered (deregistered) through the use of
 registration (deregistration) certificates.
@@ -52,17 +53,14 @@ is applied to the ledger state.
 Stake pool retirement certificates, however, specify the epoch in
 which it will retire.
 
-Delegation requires the following to be tracked by the ledger state:
-the registered stake keys, the delegation map from registered stake keys to stake
-pools, the registered stake pools, and upcoming stake pool retirements.
-Additionally, the blockchain protocol rewards eligible stake, and so we must
-also include a mapping from active stake keys to rewards.
+\begin{note}
+  Pool registration certificate data is kept as long as the pool is registered.
+  Should this be part of the ledger state in some way?
+\end{note}
 
-In \cref{fig:delegation-definitons} we give the delegation primitives,
-and in \cref{fig:delegation-transitions} we give the delegation transition rule.
+%Additionally, the blockchain protocol rewards eligible stake, and so in the
+%future we will also include a mapping from active stake keys to rewards.
 
-The rules for registering and delegating stake keys are given in \cref{fig:delegation-rules}.
-The rules for registering stake pools are given in \cref{fig:pool-rules}.
 
 \begin{note}
   The current rules allow for delegation to a non-existent pool.
@@ -74,6 +72,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   mappings in $\var{delegations}$ when stake pools retire.
 \end{note}
 
+
+\subsection{Delegation Definitions}
 %%
 %% Figure - Delegation Definitions
 %%
@@ -134,6 +134,37 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \label{fig:delegation-definitons}
 \end{figure}
 
+
+In \cref{fig:delegation-definitons} we give the delegation primitives.
+The type $\DCert$ is a generic certificate type, which can be a registration,
+deregistration or delegation certificate for a key, or a registration/retirement
+ certificate for a stake pool. It is denoted as disjoint union in the figure,
+one should, however, think of a term of this type as a term of a specific
+one of these five subtypes.
+
+The terms $\RegKey$, $\DeregKey$, $\Delegate$, $\RegPool$, $\RetirePool$ are
+all predicates on the type $\DCert$. Each of these predicates is true
+when applied to a certificate $c \in \DCert$ of the corresponding type.
+Using these predicates in defining inference rules ensures $c$ is the correct
+type of certificate for the transition
+that a rule describes.
+
+The maps $\fun{hash}$, $\fun{addr_{rwd}}$, $\fun{author}$, $\fun{pool}$,
+and $\fun{retire}$ are all used to
+retrieve specific information about the origin type. The
+constant $\emax$ gives the number of epochs a stake pool will take to retire.
+
+Note that the reason for combining the different types of
+certificates into a common type is that we may now use that type to define
+a single type for all
+ledger state transitions having to do with delegation (i.e. $\DState$
+transitions),
+and, in a very similarly
+way, a type for transitions describing stake pool-related ledger updates
+(i.e. $\PState$ transitions).
+
+\subsection{Delegation Transitions}
+
 %%
 %% Figure - Delegation Transitions
 %%
@@ -166,12 +197,38 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \begin{equation*}
     \_ \vdash \_ \trans{pool}{\_} \_ \in
-      \powerset (\Epoch \times \DState \times \DCert \times \DState)
+      \powerset (\Epoch \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
   \caption{Delegation Transitions}
   \label{fig:delegation-transitions}
 \end{figure}
+
+
+In \cref{fig:delegation-transitions} we give the delegation and stake pool
+state transition types. These transitions can be thought of as collections
+ of maps between states indexed by certificates (as well the epoch
+context, in the case of stake pools).
+The one notable
+difference between the types of these transitions is the presence of
+$cepoch$ in the context of the stake pool transition.
+
+The part of the ledger state keeping track of current delegations, $\DState$,
+consists of a set of registered stake keys (the hash keys of those addresses
+which delegete to some stake pool), rewards, which are expressed as a finite
+map that matches addresses with the rewards belonging to them, and delegations.
+Delegations are also expressed by a finite map which associates the stake key
+with the hash key of the pool to which it delegates.
+
+The ledger additionally keeps track of the stake pools in a separate state variable
+$\PState$.
+This state contains a list of registered stake pools indexed by the hash key
+of the author they are registered to ($stpools$). It also keeps track of
+stake pools in the process of retiring via the variable $retiring$,
+which associates
+a stake pool hash key with the epoch in which it is supposed to retire.
+
+\subsection{Delegation Rules}
 
 %%
 %% Figure - Delegation Rules
@@ -253,6 +310,46 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \label{fig:delegation-rules}
 \end{figure}
 
+
+The rules for registering and delegating stake keys are given in
+\cref{fig:delegation-rules}. The preconditions for the registration of a stake
+key ensure that a given certificate $c$ is of the correct type
+(i.e. $\DCertRegKey$),
+and that the hash key associated with the author of the certificate is not
+already found in the current list of stake keys.
+
+In order to delegate to a stake pool, a stake key must first be registered.
+When registering a new stake key (the \cref{eq:deleg-reg} inference rule),
+the key must be
+added to the set of stake keys ($\var{stkeys}$), the rewards for the address
+corresponding to that key set to 0, and no new delegations added. Note that
+since the hash key corresponding to the address must not have been previously
+registered,
+it should not have any rewards in its associated address. Thus, it is safe
+to set the rewards to 0 using union override (i.e. replace any value previously
+associated with this address with 0).
+
+Here we would add the rules for managing rewards beyond assigning
+the initial 0 value upon registration.
+
+When deregistering a key (the \cref{eq:deleg-dereg} rule), we again
+require that the certificate is of the correct type. If so,
+the key must be removed from the $\var{stkeys}$ list,
+and all the rewards and delegations associated with this key must be removed
+from the $\var{rewards}$ and $\var{delegations}$ parameters also.
+
+Finally, for creating a delegation (the \cref{eq:deleg-deleg} rule),
+given that the certificate $c$ is of the correct type, we add to the
+$\var{delegations}$ finite map the pair of
+the author's hash key and hash key of the pool being delegated to.
+The $\var{stkeys}$ and $\var{rewards}$ parameters are kept constant by
+this rule. The use of union override here allows us to use the same rule
+to perform an update on an existing delegation while keeping the rewards
+associated with the key accounted for.
+
+\subsection{Stake Pool Rules}
+
+
 %%
 %% Figure - Pool Rules
 %%
@@ -333,19 +430,76 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
 
 \end{figure}
 
+
+The rules for updating the part of the ledger state defining the current stake
+pools are given in \cref{fig:pool-rules}. Note
+that in all three rules, the current epoch is part of the context. It is not
+necessary to include $cepoch$ in the context for \cref{eq:pool-reg}. However,
+we decided to include it for consistency and composability of stake pool rules.
+
+For each rule, again, we first check that a given certificate $c$ is of
+the correct type using the
+corresponding $\RegPool$ and $\RetirePool$ predicates.
+
+The first rule, \cref{eq:pool-reg}, can be used to register a new stake pool, register a
+stake pool under a different author ($\fun{author} c$), or stop the retirement
+process for that key (the hash key and associated planned retirement epoch
+ will be removed from the $retiring$ parameter).
+
+The second rule, \cref{eq:pool-ret}, starts the pool retirement process. Given an
+epoch $e$, the application of this rule requires that this epoch is in
+the future (after $cepoch$), as well as that it is
+and less than $\emax$ epochs after the current one, and also that
+the certificate author's key is in the list of registered pools.
+This rule simply adds the pair of the key of the
+certificate author and the planned retirement epoch $e$ to the $retiring$
+parameter.
+
+The third rule, \cref{eq:pool-reap}, is used when the planned retirement epoch $e$ for
+a given stake pool in the $\var{retiring}$ set is reached. In this case, all the
+pairs associated with hash keys of pools which are scheduled to retire in this
+epoch are removed
+from both $\var{stpools}$ and $\var{retiring}$.
+
+\begin{note}
+$\var{retired}$ and $\var{retiring}$ are both finite maps. For domain exclusion,
+we only need the hashes of $\var{retired}$?
+\end{note}
+
+
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
 
+The new definitions needed for updating the ledger state with a given
+certificate witnessed by some key-signature pair
+are given in Figure~\ref{fig:defs:delegationw}. The $\fun{dwit}$ returns
+the witness of a given certificate. The type of the delegation witness
+transition in this figure is meant to describe a complete ledger state
+transition, including an update of both the delegations and the stake pools
+(i.e. $\DState$ as well as the $\PState$).
+
+We include $\var{cepoch}$ in the context because it is needed to update
+$\PState$, as well as the transaction $\var{tx}$ which is being witnessed.
+Now, such a transition is
+composable with any other witnessed ledger state transition.
+
 The rule for certificate witnesses is given in
-Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
-are given in Figure~\ref{fig:defs:delegationw}.
+Figure~\ref{fig:rules:delegationw}. The actual update of the ledger state is
+consistent with the rules given in Figures~\ref{fig:delegation-rules}
+and~\ref{fig:pool-rules}. However, we now add the following precondition for the
+application of these rules:
+
+\begin{itemize}
+\item The signature of the transaction must be verified by the
+  verification key with which the certificate is associated (i.e. witnessed).
+\end{itemize}
 
 \begin{figure}
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \VKey
-      & \text{body of the delegation certificate}\\
+    %  \fun{dbody} & \DCert \mapsto \VKey
+    %  & \text{body of the delegation certificate}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
       & \text{witness for the delegation certificate}
     \end{array}
@@ -355,7 +509,8 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \begin{equation*}
     \_ \vdash \_ \trans{delegw}{\_} \_ \in
       \powerset (
-        (\Tx \times \Epoch) \times \DState \times \DCert \times \DState)
+        (\Tx \times \Epoch) \times \DState \times \PState
+          \times \DCert \times \DState \times \PState)
   \end{equation*}
   \caption{Delegation witnesses definitions}
   \label{fig:defs:delegationw}
@@ -371,7 +526,8 @@ are given in Figure~\ref{fig:defs:delegationw}.
       & \var{cepoch} \vdash \var{pstate}
       \trans{pool}{c} \var{pstate'}
       \\ ~ \\
-      \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
+      \mathcal{V}_{\var{vk_s}}{\serialised{tx}}_{\sigma}
+      %\verify{vk_s}{\serialised{(\dbody{c},~\var{tx})}}{\sigma}
     }
     { \left(
       \begin{array}{r}
@@ -398,4 +554,3 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \caption{Delegation witnesses inference rules}
   \label{fig:rules:delegationw}
 \end{figure}
-
