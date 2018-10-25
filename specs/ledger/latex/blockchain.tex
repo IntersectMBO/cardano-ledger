@@ -22,6 +22,24 @@ after applying the transitions in a block. Rules for delegation and unspent
 outputs in the context of a block are given in
 Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
 
+\begin{note}
+  The protocol constants are currently modeled as a part of the
+  chain extension environment. Once we adding voting
+  (the mechanism which controls the protocol constants)
+  to the model, it will probably make sense to move them to the
+  chain extension states. The protocol constants will also be
+  added to the ledger state, along with some kind of rule which
+  combines voting with the UTxO rule:
+  \begin{equation*}
+    \inference[Voting-combine]
+    {
+      \var{pc} \trans{voting}{} \var{pc'} &
+      \var{pc'} \vdash \var{utxo} \trans{utxo}{} \var{utxo'}\\ ~ \\
+    }
+    {\ldots}
+  \end{equation*}
+\end{note}
+
 \begin{figure}
   \emph{Abstract types}
   \begin{equation*}
@@ -53,6 +71,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
         \var{K} & \mathbb{N} & \text{number of nodes}\\
         \var{t} & \mathbb{Q} & \text{byzantine nodes ratio}\\
         \var{d} & \Epoch & \text{delegation liveness parameter}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
       \end{array}
     \right)
   \end{equation*}
@@ -138,6 +157,7 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
       }
       \\ ~ \\
       {
+        \var{pc} \vdash
         \left(
           \begin{array}{l}
             \var{utxo}\\
@@ -158,7 +178,8 @@ Sections~\ref{sec:block-delegation} and \ref{sec:block-utxo} respectively.
          \Gkeys\\
          K\\
          t\\
-         d
+         d\\
+         pc
       \end{array}}
       \vdash
       {
@@ -240,7 +261,7 @@ is shown in Figure~\ref{fig:rules:delegation-sequence}.
   \end{equation*}
   \emph{Block delegation transitions}
   \begin{equation*}
-    \_ \vdash \_ \trans{chain}{\_} \_ \in
+    \_ \vdash \_ \trans{bdeleg}{\_} \_ \in
       \powerset (\BDEnv \times \BDState \times \Block \times \CEState)
   \end{equation*}
   \caption{Block delegation transition-system types}

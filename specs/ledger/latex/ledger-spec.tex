@@ -35,6 +35,7 @@
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Value}{\type{Value}}
 \newcommand{\Coin}{\type{Coin}}
+\newcommand{\PrtclConsts}{\type{PrtclConsts}}
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -73,6 +74,8 @@
 \newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
 \newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
+\newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
 %% Adding ledgers...
@@ -202,7 +205,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       \var{addr} & \Addr & \text{address}\\
       %
-      c & \Coin & \text{currency value}
+      c & \Coin & \text{currency value}\\
+      %
+      pc & \PrtclConsts & \text{protocol constants}
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -242,7 +247,11 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
       %
       \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
-                                  & \text{transaction body}
+                                  & \text{transaction body}\\
+      %
+      \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
+      %
+      \fun{minfee} & \PrtclConsts \to \Tx \to \Coin & \text{minimum fee}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -290,8 +299,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \emph{UTxO transitions}
   \begin{equation*}
+    \_ \vdash
     \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
@@ -300,10 +310,11 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \dom \var{utxo}
-      & \balance{(\txouts{tx})} \leq \balance{(\txins{tx} \restrictdom \var{utxo})}
+    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pc}{tx} \leq \txfee{tx}\\
+      \balance{(\txouts{tx})}  + \txfee{tx} =
+        \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
-    {\var{utxo} \trans{utxo}{tx}
+    {\var{pc} \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
     }
   \end{equation}
@@ -324,6 +335,15 @@ changes with a transaction:
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
 \end{itemize}
+
+\begin{note}
+  $\Coin$ is defined as a primitive type, but there is a difference
+  between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
+  Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
+  If, however, $\mathbb{Z}$ is used, then extra validation is required
+  to ensure that all $\TxOut$ are non-negative.
+  This extra condition would be added to \cref{eq:utxo-inductive}.
+\end{note}
 
 \subsection{Properties}
 \label{sec:utxo-properties}
@@ -378,8 +398,9 @@ different order). The choice here is arbitrary.
 \begin{figure}
   \emph{UTxO with witness transitions}
   \begin{equation*}
+    \var{\_} \vdash
     \var{\_} \trans{utxow}{\_} \var{\_}
-    \subseteq \powerset (\UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}
@@ -389,13 +410,13 @@ different order). The choice here is arbitrary.
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit]
-    { \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+    { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
-    {\var{utxo} \trans{utxow}{tx} \var{utxo'}}
+    {\var{pc} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
   \end{equation}
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
