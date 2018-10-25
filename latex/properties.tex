@@ -1,0 +1,73 @@
+\newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
+\newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
+\newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
+\newcommand{\ledgerState}{\ensuremath{ledgerState}}
+
+In this section we discuss the properties which we want the ledger to have. One
+goal is to include these properties in the executable specification for doing
+property-based testing or formal verification.
+
+\subsection{Validity of a Ledger State}
+\label{sec:valid-ledg-state}
+
+Many properties only make sense when applied to a valid ledger state. In
+informal terms, a valid ledger state $l$ can only be reached when starting from
+an initial state $l_{0}$ (genesis state) and only executing state transition
+rules as specified in Section~\ref{sec:state-trans-utxo-1} for UTxO or
+Section~\ref{sec:delegation} for delegation.
+
+\begin{figure}[ht]
+  \centering
+  \begin{align*}
+    \genesisId & \in & \TxId \\
+    \genesisTxOut & \in & \TxOut \\
+    \genesisUTxO & \coloneqq & \{\genesisId, \emptyset\} \mapsto \genesisTxOut
+    \\
+    \ledgerState & \in & \left(
+                         \begin{array}{c}
+                           \UTxO \\
+                           \DState \\
+                           \PState
+                         \end{array}
+                         \right)
+  \end{align*}
+  \caption{Valid Ledger State}
+  \label{fig:valid-ledger}
+\end{figure}
+
+In Figure~\ref{fig:valid-ledger} \genesisId{} marks the transaction identifier
+of the initial coin distribution, where \genesisTxOut{} represents the initial
+UTxO. It should be noted that no corresponding inputs exists, i.e., the
+transaction inputs are the empty set for the initial transaction. An element of
+\ledgerState{} is a triplet of UTxO, stake delegation state (\DState) and
+delegation pool state (\PState).
+
+\begin{definition}[\textbf{Valid Ledger State}]
+  \begin{multline*}
+    \label{eq:2}
+    \forall l_{0},..,l_{n} \in \ledgerState, l_{0} =
+    \left(
+      \begin{array}{c}
+        \left\{
+        \genesisUTxO
+        \right\} \\
+        \emptyset\\
+        \emptyset\\
+      \end{array}
+    \right)  \\
+    \implies \forall 0 < i \leq n, ((\exists c \in \DCert, l_{i-1}
+    \trans{delegw}{c} l_{i}) \vee (\exists tx \in \Tx: l_{i-1} \trans{utxow}{tx}
+    l_{i}))\\ \implies \fun{validLedgerState}(l_{n})
+  \end{multline*}
+  \label{def:valid-ledger-state}
+\end{definition}
+
+Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
+from the genesis state via valid UTxO, stake delegation or stake pool
+transactions. This gives a constructive rule how to reach a valid ledger state.
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "ledger-spec"
+%%% End:
