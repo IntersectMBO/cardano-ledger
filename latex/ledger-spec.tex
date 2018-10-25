@@ -5,6 +5,7 @@
 \usepackage{mathpazo} % nice fonts
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{latexsym}
 \usepackage{mathtools}
 \usepackage{stmaryrd}
@@ -114,6 +115,9 @@
 \newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
 
 \begin{document}
 
@@ -671,6 +675,10 @@ different order). The choice here is arbitrary.
   \caption{Ledger inference rule}
   \label{fig:rules:ledger}
 \end{figure}
+
+\section{Properties}
+\label{sec:properties}
+\input{properties}
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
