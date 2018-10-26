@@ -39,3 +39,7 @@ or with tests included:
 ```shell
 make ghcid-test
 ```
+
+---
+
+[![Build Status](https://travis-ci.com/input-output-hk/fm-ledger-rules.svg?branch=master)](https://travis-ci.com/input-output-hk/fm-ledger-rules)
