@@ -42,4 +42,4 @@ make ghcid-test
 
 ---
 
-[![Build Status](https://travis-ci.com/input-output-hk/fm-ledger-rules.svg?branch=master)](https://travis-ci.com/input-output-hk/fm-ledger-rules)
+[![Build Status](https://travis-ci.org/input-output-hk/fm-ledger-rules.svg?branch=master)](https://travis-ci.org/input-output-hk/fm-ledger-rules)
