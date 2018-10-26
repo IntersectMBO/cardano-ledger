@@ -102,6 +102,35 @@ balance of the UTxOs of $l$ restricted to those whose domain is in the set of
 transaction inputs of $tx$ equals the balance of the transaction outputs of $tx$
 minus the transaction fees.
 
+\begin{property}[\textbf{Preserve Outputs of Transaction}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{out} \in \applyFun{txouts}{tx}, out \in
+    \applyFun{getUTxO}{l'}
+  \end{multline*}
+  \label{prop:ledger-properties-3}
+\end{property}
+
+Property~\ref{prop:ledger-properties-3} states that for every ledger states
+$l, l'$ and transaction $tx$ as above, all output UTxOs of $tx$ are in the UTxO
+set of $l'$, i.e., they are now available as unspent transaction output.
+
+\begin{property}[\textbf{Eliminate Inputs of Transaction}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{in} \in \applyFun{txins}{tx}, in \not\in
+    \fun{dom}(\applyFun{getUTxO}{l'})
+  \end{multline*}
+  \label{prop:ledger-properties-4}
+\end{property}
+
+Property~\ref{prop:ledger-properties-4} states that for every ledger states
+$l, l'$ and transaction $tx$ as above, all transaction inputs $in$ of $tx$ are
+not in the domain of the UTxO set of $l'$, i.e., these are no longer available
+to spend.
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ledger-spec"
