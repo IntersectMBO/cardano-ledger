@@ -1,3 +1,6 @@
+\newcommand{\UpdProp}{\type{UpdProp}}
+\newcommand{\UpdPropBody}{\type{UpdPropBody}}
+
 \lstset{ frame=tb,
        , language=Haskell
        , basicstyle=\footnotesize\ttfamily,
@@ -28,6 +31,17 @@ assume no stake) agree on the proposal.
 \item[Hard-forks] ??? Do we need to model anything here?.
 \end{description}
 
+In particular the rules need to capture:
+
+\begin{enumerate}
+\item Each genesis key can post (either directly or via its delegate), one update proposal per-epoch.
+\item When does an update proposal becomes \textbf{active}.
+\item We cannot add a proposal if there exists one with the same id\footnote{id
+    = hash of the update proposal} that is already active.
+\item If there are two proposals submitted for the same block version, then
+  these proposals need to agree on the values of the updated parameters.
+\end{enumerate}
+
 \subsection{Update proposals}
 \label{sec:update-proposals}
 
@@ -36,9 +50,15 @@ assume no stake) agree on the proposal.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \var{up} & \UpdProp & \text{update proposal}
     \end{array}
   \end{equation*}
-  
+  \emph{Abstract functions}
+  %
+  \begin{align*}
+    & \fun{pIssuer} \in \UpdProp \to \VKey & \text{issuer of the update proposal}\\
+    & \fun{pSig} \in \UpdProp \to \UpdPropBody & \text{body of the update proposal}
+  \end{align*}
   \caption{Update proposals definitions}
   \label{fig:defs:update-proposals}
 \end{figure}

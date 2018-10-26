@@ -26,6 +26,8 @@ import           Cardano.Crypto (ProtocolMagic)
 data Payload = Payload
   { payloadProposal :: !(Maybe Proposal)
   , payloadVotes    :: ![Vote]
+  -- ^ Votes received on the different update proposals posted so far, not only
+  -- on the current @payloadProposal@.
   } deriving (Eq, Show, Generic)
 
 instance NFData Payload

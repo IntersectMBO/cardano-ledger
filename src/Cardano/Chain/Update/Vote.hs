@@ -91,7 +91,7 @@ instance Bi ProposalBody where
 data Proposal = Proposal
   { proposalBody      :: ProposalBody
   , proposalIssuer    :: !PublicKey
-  -- ^ Who proposed this UP.
+  -- ^ Who proposed this update.
   , proposalSignature :: !(Signature ProposalBody)
   } deriving (Eq, Show, Generic, Typeable)
 
