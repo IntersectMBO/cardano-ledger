@@ -28,7 +28,7 @@ import           Test.Cardano.Crypto.Gen (feedPM)
 -- DlgPayload
 --------------------------------------------------------------------------------
 goldenDlgPayload :: Property
-goldenDlgPayload = goldenTestBi dp "test/golden/DlgPayload"
+goldenDlgPayload = goldenTestBi dp "test/golden/bi/delegation/DlgPayload"
   where dp = UnsafePayload (take 4 staticProxySKHeavys)
 
 roundTripDlgPayloadBi :: Property
@@ -38,7 +38,7 @@ roundTripDlgPayloadBi = eachOf 100 (feedPM genPayload) roundTripsBiBuildable
 -- HeavyDlgIndex
 --------------------------------------------------------------------------------
 goldenHeavyDlgIndex :: Property
-goldenHeavyDlgIndex = goldenTestBi hdi "test/golden/HeavyDlgIndex"
+goldenHeavyDlgIndex = goldenTestBi hdi "test/golden/bi/delegation/HeavyDlgIndex"
   where hdi = staticHeavyDlgIndexes !! 0
 
 roundTripHeavyDlgIndexBi :: Property
@@ -49,7 +49,7 @@ roundTripHeavyDlgIndexBi = eachOf 1000 genHeavyDlgIndex roundTripsBiBuildable
 --------------------------------------------------------------------------------
 goldenLightDlgIndices :: Property
 goldenLightDlgIndices = goldenTestBi exampleLightDlgIndices
-                                      "test/golden/LightDlgIndices"
+                                      "test/golden/bi/delegation/LightDlgIndices"
 
 roundTripLightDlgIndicesBi :: Property
 roundTripLightDlgIndicesBi = eachOf 1000 genLightDlgIndices roundTripsBiBuildable
@@ -58,12 +58,12 @@ roundTripLightDlgIndicesBi = eachOf 1000 genLightDlgIndices roundTripsBiBuildabl
 -- ProxySKBlockInfo
 --------------------------------------------------------------------------------
 goldenProxySKBlockInfo_Nothing :: Property
-goldenProxySKBlockInfo_Nothing = goldenTestBi pskbi "test/golden/ProxySKBlockInfo_Nothing"
+goldenProxySKBlockInfo_Nothing = goldenTestBi pskbi "test/golden/bi/delegation/ProxySKBlockInfo_Nothing"
   where pskbi = Nothing :: ProxySKBlockInfo
 
 goldenProxySKBlockInfo_Just :: Property
 goldenProxySKBlockInfo_Just = goldenTestBi exampleProxySKBlockInfo
-                                            "test/golden/ProxySKBlockInfo_Just"
+                                            "test/golden/bi/delegation/ProxySKBlockInfo_Just"
 
 roundTripProxySKBlockInfoBi :: Property
 roundTripProxySKBlockInfoBi = eachOf 200 (feedPM genProxySKBlockInfo) roundTripsBiShow
@@ -72,7 +72,7 @@ roundTripProxySKBlockInfoBi = eachOf 200 (feedPM genProxySKBlockInfo) roundTrips
 -- ProxySKHeavy
 --------------------------------------------------------------------------------
 goldenProxySKHeavy :: Property
-goldenProxySKHeavy = goldenTestBi skh "test/golden/ProxySKHeavy"
+goldenProxySKHeavy = goldenTestBi skh "test/golden/bi/delegation/ProxySKHeavy"
   where skh = staticProxySKHeavys !! 0
 
 roundTripProxySKHeavyBi :: Property
