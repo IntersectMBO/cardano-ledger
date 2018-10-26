@@ -132,7 +132,7 @@
 
 Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
 this document. The cryptographic concepts required for the formal definition
-of delegation with with witnesses include public-private key pairs, hash
+of delegation with witnesses include public-private key pairs, hash
 maps and signatures. The constraint we introduce states that a signature of
 some data signed with a (private) key is only correct whenever we can verify
 it using the corresponding public key.
@@ -255,7 +255,6 @@ Figure~\ref{fig:rules:utxo}.
       & (\var{inputs}, \var{outputs})
       & \powerset{(\TxIn)} \times (\Ix \mapsto \TxOut)
       & \text{transaction}
-
     \end{array}
   \end{equation*}
   %
@@ -353,7 +352,7 @@ changes with a transaction:
 \begin{itemize}
 \item Each input spent in the transaction must be in the set of unspent
   outputs.
-\item The fee paid by the transaction has to be less than or equal to the
+\item The fee paid by the transaction has to be greater than or equal to the
 minimum fee.
 \item The balance of the unspent outputs in a transaction (i.e. the total
   amount paid in a transaction) must be equal or less than the amount of spent
