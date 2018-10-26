@@ -24,7 +24,9 @@ Section~\ref{sec:delegation} for delegation.
                            \DState \\
                            \PState
                          \end{array}
-                         \right)
+    \right)\\
+    \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
+    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard) \to \var{utxo}
   \end{align*}
   \caption{Valid Ledger State}
   \label{fig:valid-ledger}
