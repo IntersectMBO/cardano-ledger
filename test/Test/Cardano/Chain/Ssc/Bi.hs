@@ -28,7 +28,7 @@ import           Test.Cardano.Binary.Helpers.GoldenRoundTrip
 
 goldenDeprecatedCommitment :: Property
 goldenDeprecatedCommitment =
-  deprecatedGoldenDecode "Commitment" dropCommitment "test/golden/Commitment"
+  deprecatedGoldenDecode "Commitment" dropCommitment "test/golden/bi/ssc/Commitment"
 
 
 --------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ goldenDeprecatedCommitmentsMap :: Property
 goldenDeprecatedCommitmentsMap = deprecatedGoldenDecode
   "CommitmentsMap"
   dropCommitmentsMap
-  "test/golden/CommitmentsMap"
+  "test/golden/bi/ssc/CommitmentsMap"
 
 
 --------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ goldenDeprecatedInnerSharesMap :: Property
 goldenDeprecatedInnerSharesMap = deprecatedGoldenDecode
   "InnerSharesMap"
   dropInnerSharesMap
-  "test/golden/InnerSharesMap"
+  "test/golden/bi/ssc/InnerSharesMap"
 
 
 --------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ goldenDeprecatedInnerSharesMap = deprecatedGoldenDecode
 
 goldenDeprecatedOpening :: Property
 goldenDeprecatedOpening =
-  deprecatedGoldenDecode "Opening" dropBytes "test/golden/Opening"
+  deprecatedGoldenDecode "Opening" dropBytes "test/golden/bi/ssc/Opening"
 
 
 --------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ goldenDeprecatedOpeningsMap :: Property
 goldenDeprecatedOpeningsMap = deprecatedGoldenDecode
   "OpeningsMap"
   dropOpeningsMap
-  "test/golden/OpeningsMap"
+  "test/golden/bi/ssc/OpeningsMap"
 
 
 --------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ goldenDeprecatedSignedCommitment :: Property
 goldenDeprecatedSignedCommitment = deprecatedGoldenDecode
   "SignedCommitment"
   dropSignedCommitment
-  "test/golden/SignedCommitment"
+  "test/golden/bi/ssc/SignedCommitment"
 
 
 --------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ goldenDeprecatedSharesMap :: Property
 goldenDeprecatedSharesMap = deprecatedGoldenDecode
   "SharesMap"
   dropSharesMap
-  "test/golden/SharesMap"
+  "test/golden/bi/ssc/SharesMap"
 
 
 --------------------------------------------------------------------------------
@@ -103,25 +103,25 @@ goldenDeprecatedSscPayload_CommitmentsPayload :: Property
 goldenDeprecatedSscPayload_CommitmentsPayload = deprecatedGoldenDecode
   "SscPayload_CommitmentsPayload"
   dropSscPayload
-  "test/golden/SscPayload_CommitmentsPayload"
+  "test/golden/bi/ssc/SscPayload_CommitmentsPayload"
 
 goldenDeprecatedSscPayload_OpeningsPayload :: Property
 goldenDeprecatedSscPayload_OpeningsPayload = deprecatedGoldenDecode
   "SscPayload_OpeningsPayload"
   dropSscPayload
-  "test/golden/SscPayload_OpeningsPayload"
+  "test/golden/bi/ssc/SscPayload_OpeningsPayload"
 
 goldenDeprecatedSscPayload_SharesPayload :: Property
 goldenDeprecatedSscPayload_SharesPayload = deprecatedGoldenDecode
   "SscPayload_SharesPayload"
   dropSscPayload
-  "test/golden/SscPayload_SharesPayload"
+  "test/golden/bi/ssc/SscPayload_SharesPayload"
 
 goldenDeprecatedSscPayload_CertificatesPayload :: Property
 goldenDeprecatedSscPayload_CertificatesPayload = deprecatedGoldenDecode
   "SscPayload_CertificatesPayload"
   dropSscPayload
-  "test/golden/SscPayload_CertificatesPayload"
+  "test/golden/bi/ssc/SscPayload_CertificatesPayload"
 
 roundTripSscPayload :: Property
 roundTripSscPayload = eachOf 1 (pure SscPayload) roundTripsBiShow
@@ -135,25 +135,25 @@ goldenDeprecatedSscProof_CommitmentsProof :: Property
 goldenDeprecatedSscProof_CommitmentsProof = deprecatedGoldenDecode
   "SscProof_CommitmentsProof"
   dropSscProof
-  "test/golden/SscProof_CommitmentsProof"
+  "test/golden/bi/ssc/SscProof_CommitmentsProof"
 
 goldenDeprecatedSscProof_OpeningsProof :: Property
 goldenDeprecatedSscProof_OpeningsProof = deprecatedGoldenDecode
   "SscProof_OpeningsProof"
   dropSscProof
-  "test/golden/SscProof_OpeningsProof"
+  "test/golden/bi/ssc/SscProof_OpeningsProof"
 
 goldenDeprecatedSscProof_SharesProof :: Property
 goldenDeprecatedSscProof_SharesProof = deprecatedGoldenDecode
   "SscProof_SharesProof"
   dropSscProof
-  "test/golden/SscProof_SharesProof"
+  "test/golden/bi/ssc/SscProof_SharesProof"
 
 goldenDeprecatedSscProof_CertificatesProof :: Property
 goldenDeprecatedSscProof_CertificatesProof = deprecatedGoldenDecode
   "SscProof_CertificatesProof"
   dropSscProof
-  "test/golden/SscProof_CertificatesProof"
+  "test/golden/bi/ssc/SscProof_CertificatesProof"
 
 roundTripSscProof :: Property
 roundTripSscProof = eachOf 1 (pure SscProof) roundTripsBiShow
@@ -167,7 +167,7 @@ goldenDeprecatedVssCertificate :: Property
 goldenDeprecatedVssCertificate = deprecatedGoldenDecode
   "VssCertificate"
   dropVssCertificate
-  "test/golden/VssCertificate"
+  "test/golden/bi/ssc/VssCertificate"
 
 
 --------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ goldenDeprecatedVssCertificatesHash :: Property
 goldenDeprecatedVssCertificatesHash = deprecatedGoldenDecode
   "VssCertiificatesHash"
   dropBytes
-  "test/golden/VssCertificatesHash"
+  "test/golden/bi/ssc/VssCertificatesHash"
 
 
 --------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ goldenDeprecatedVssCertificatesMap :: Property
 goldenDeprecatedVssCertificatesMap = deprecatedGoldenDecode
   "VssCertificatesMap"
   dropVssCertificatesMap
-  "test/golden/VssCertificatesMap"
+  "test/golden/bi/ssc/VssCertificatesMap"
 
 
 --------------------------------------------------------------------------------
