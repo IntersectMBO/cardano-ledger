@@ -52,7 +52,7 @@ delegation pool state (\PState).
     \right)  \\
     \implies \forall 0 < i \leq n, ((\exists c \in \DCert, l_{i-1}
     \trans{delegw}{c} l_{i}) \vee (\exists tx \in \Tx: l_{i-1} \trans{utxow}{tx}
-    l_{i}))\\ \implies \fun{validLedgerState}(l_{n})
+    l_{i}))\\ \implies \applyFun{validLedgerState}(l_{n})
   \end{multline*}
   \label{def:valid-ledger-state}
 \end{definition}
@@ -69,12 +69,23 @@ state.
 
 \begin{property}[\textbf{Preserve Balance Modulo Fee}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \fun{validLedgerstate}~\var{l}\\
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
     \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
-    \implies \fun{balance}(\fun{getUTxO}~\var{l}) =
-    \fun{balance}(\fun{getUTxO}~\var{l'}) - \fun{txfee}~\var{tx}
+    \implies \fun{balance}(\applyFun{getUTxO}{l}) =
+    \fun{balance}(\applyFun{getUTxO}{l'}) + \applyFun{txfee}{tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
+\end{property}
+
+\begin{property}
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \fun{balance}(\applyFun{txins}{tx} \restrictdom
+    \applyFun{getUTxO}{l}) = \fun{balance}(\applyFun{txouts}{tx}) +
+    \applyFun{txfee}{tx}
+  \end{multline*}
+  \label{prop:ledger-properties-2}
 \end{property}
 
 %%% Local Variables:
