@@ -25,7 +25,7 @@ library:
 
 tests:
   delegation-test:
-    main:                Spec.hs
+    main:                Tests.hs
     source-dirs:         test
     ghc-options:
     - -threaded
@@ -37,7 +37,8 @@ tests:
     - -Wincomplete-uni-patterns
     - -Wredundant-constraints
     dependencies:
+    - tasty
+    - tasty-hunit
     - delegation
-    - hspec
     - cryptonite
     - containers
