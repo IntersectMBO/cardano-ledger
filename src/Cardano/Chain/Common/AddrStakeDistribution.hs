@@ -12,7 +12,7 @@ module Cardano.Chain.Common.AddrStakeDistribution
        , MultiKeyDistrError (..)
        ) where
 
-import           Cardano.Prelude hiding (id)
+import           Cardano.Prelude
 
 import           Control.Monad.Except (MonadError (..))
 import           Formatting (bprint, build, sformat)
