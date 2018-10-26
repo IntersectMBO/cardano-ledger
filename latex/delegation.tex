@@ -215,7 +215,7 @@ $cepoch$ in the context of the stake pool transition.
 
 The part of the ledger state keeping track of current delegations, $\DState$,
 consists of a set of registered stake keys (the hash keys of those addresses
-which delegete to some stake pool), rewards, which are expressed as a finite
+which delegate to some stake pool), rewards, which are expressed as a finite
 map that matches addresses with the rewards belonging to them, and delegations.
 Delegations are also expressed by a finite map which associates the stake key
 with the hash key of the pool to which it delegates.
@@ -449,7 +449,7 @@ process for that key (the hash key and associated planned retirement epoch
 The second rule, \cref{eq:pool-ret}, starts the pool retirement process. Given an
 epoch $e$, the application of this rule requires that this epoch is in
 the future (after $cepoch$), as well as that it is
-and less than $\emax$ epochs after the current one, and also that
+less than $\emax$ epochs after the current one, and also that
 the certificate author's key is in the list of registered pools.
 This rule simply adds the pair of the key of the
 certificate author and the planned retirement epoch $e$ to the $retiring$
@@ -460,12 +460,6 @@ a given stake pool in the $\var{retiring}$ set is reached. In this case, all the
 pairs associated with hash keys of pools which are scheduled to retire in this
 epoch are removed
 from both $\var{stpools}$ and $\var{retiring}$.
-
-\begin{note}
-$\var{retired}$ and $\var{retiring}$ are both finite maps. For domain exclusion,
-we only need the hashes of $\var{retired}$?
-\end{note}
-
 
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
