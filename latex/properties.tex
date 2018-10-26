@@ -79,7 +79,13 @@ state.
   \label{prop:ledger-properties-1}
 \end{property}
 
-\begin{property}
+Property~\ref{prop:ledger-properties-1} states that for each valid ledger $l$,
+if a transaction $tx$ is added to the ledger via the state transition rule
+$utxow$ to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the
+balance of the UTxOs in $l'$ minus the transaction fees.
+
+\begin{property}[\textbf{Preserve Balance Restricted to TxIns in Balance of
+    TxOuts}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
     \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
@@ -89,6 +95,12 @@ state.
   \end{multline*}
   \label{prop:ledger-properties-2}
 \end{property}
+
+Property~\ref{prop:ledger-properties-2} states the more detailed relation of the
+balances change. For ledgers $l, l'$ and a transaction $tx$ as above, the
+balance of the UTxOs of $l$ restricted to those whose domain is in the set of
+transaction inputs of $tx$ equals the balance of the transaction outputs of $tx$
+minus the transaction fees.
 
 %%% Local Variables:
 %%% mode: latex
