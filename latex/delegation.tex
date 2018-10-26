@@ -3,14 +3,10 @@
 %%
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
 \newcommand{\DState}{\type{DState}}
+\newcommand{\DWState}{\type{DWState}}
+\newcommand{\DWEnv}{\type{DWEnv}}
 \newcommand{\PState}{\type{PState}}
-
-\newcommand{\DCert}{\type{DCert}}
-\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
-\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
-\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
-\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
-\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+\newcommand{\DCertBody}{\type{DCertBody}}
 
 %%
 %% Functions
@@ -341,21 +337,51 @@ Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
 are given in Figure~\ref{fig:defs:delegationw}.
 
 \begin{figure}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      tx & \Tx & \text{transaction}\\
+      cb & \DCertBody & \text{certificate body}\\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \VKey
+      \fun{dbody} & \DCert \mapsto \DCertBody
       & \text{body of the delegation certificate}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
       & \text{witness for the delegation certificate}
     \end{array}
   \end{equation*}
   %
+  \emph{Delegation Witnesses environment}
+  \begin{equation*}
+    \DWEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{tx} & \Tx & \text{transaction}\\
+        \var{epoch} & \Epoch & \text{epoch}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation Witnesses state}
+  \begin{equation*}
+    \DWState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Delegation Witnesses Transition}
   \begin{equation*}
     \_ \vdash \_ \trans{delegw}{\_} \_ \in
       \powerset (
-        (\Tx \times \Epoch) \times \DState \times \DCert \times \DState)
+        \DWEnv \times \DWState \times \DCert \times \DWState)
   \end{equation*}
   \caption{Delegation witnesses definitions}
   \label{fig:defs:delegationw}

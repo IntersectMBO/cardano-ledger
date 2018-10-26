@@ -36,6 +36,14 @@
 \newcommand{\Value}{\type{Value}}
 \newcommand{\Coin}{\type{Coin}}
 \newcommand{\PrtclConsts}{\type{PrtclConsts}}
+\newcommand{\Slot}{\type{Slot}}
+
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
+\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
+\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
+\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
+\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -52,6 +60,7 @@
 \newcommand{\Gkeys}{\var{G_{keys}}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\UTxOEnv}{\type{UTxOEnv}}
 \newcommand{\CEEnv}{\type{CEEnv}}
 \newcommand{\CEState}{\type{CEState}}
 \newcommand{\BDEnv}{\type{BDEnv}}
@@ -65,6 +74,11 @@
 \newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
 \newcommand{\values}[1]{\fun{values}~ #1}
 \newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+\newcommand{\ttl}[1]{\fun{ttl}~ \var{#1}}
+\newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
+\newcommand{\refunds}[2]{\fun{refunds}~ \var{#1}~ \var{#2}}
+\newcommand{\created}[4]{\fun{created}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\destroyed}[2]{\fun{destroyed}~ \var{#1}~ \var{#2}}
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
 \newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
@@ -76,6 +90,7 @@
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
 \newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
 % wildcard parameter
 \newcommand{\wcard}[0]{\underline{\phantom{a}}}
 %% Adding ledgers...
@@ -106,6 +121,8 @@
 \input{intro.tex}
 
 \section{Notation}\label{sec:notation}
+
+The transition system is explained in \cite{small_step_semantics}.
 
 \begin{description}
 \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
@@ -158,7 +175,7 @@ this document.
       \hash{} & \VKey \to \Hash
       & \text{hash function} \\
       %
-      \fun{verify} & \VKey \times \Data \times \Sig
+      \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
       & \text{verification relation}\\
     \end{array}
   \end{equation*}
@@ -186,16 +203,77 @@ this document.
     serialization}
 \end{todo}
 
+\section{Delegation}
+\label{sec:delegation}
+\input{delegation.tex}
+
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
+
+In order to define the \textit{preservation of value} conditon,
+we define the calculations for deposits and refunds in
+Figure~\ref{fig:defs:deposits}.
 
 The transition rules for unspent outputs are presented in
 Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
 along with their types are defined in Figure~\ref{fig:defs:utxo}.
 Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 
+
+
 \begin{figure*}
-  \emph{Primitive types}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      pc & \PrtclConsts & \text{protocol constants}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{d} & \PrtclConsts \to \DCert \to \Coin
+        & \text{deposit amount of a certificate}\\
+
+      \fun{decay} & \PrtclConsts \to \mathbb{N}\times\mathbb{Q}^{+}
+        & \text{decay constants}\\
+
+      \fun{certs} & \Tx \to \powerset{\DCert}
+        & \text{certificates}\\
+      %
+      \fun{ttl} & \Tx \to \Slot
+        & \text{time to live}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in Deposits}
+  \label{fig:defs:deposits}
+\end{figure*}
+
+\begin{figure}
+  \begin{align*}
+      & \fun{deposits} \in \PrtclConsts \to \Tx \to \Coin
+      & \text{total deposits for transaction} \\
+      & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{certs}~tx} (\fun{d}~pc~c)
+      \nextdef
+      & \fun{refund} \in \PrtclConsts \to \Slot \to \DCert \to \Coin
+      & \text{total refund for a certificate} \\
+      & \fun{refund}~{pc}~{slot}~{c} =
+      \floor*{
+        \left(\fun{d}~pc~c\right) \cdot
+      \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\var{slot}}\right)}\\
+      & \where \fun{decay}~pc = d_{\min},~\lambda
+      \nextdef
+      & \fun{refunds} \in \PrtclConsts \to \Tx \to \Coin
+      & \text{total refunds for transaction} \\
+      & \refunds{pc}{tx} = \sum\limits_{c \in \fun{certs}~tx} \fun{refund}~pc~(\ttl{tx})~c
+  \end{align*}
+  \caption{Functions used in Deposits}
+  \label{fig:derived-defs:utxo}
+\end{figure}
+
+
+\begin{figure*}
+  \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -207,7 +285,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       c & \Coin & \text{currency value}\\
       %
-      pc & \PrtclConsts & \text{protocol constants}
+      slot & \Slot & \text{slot}
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -231,13 +309,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       & \var{txin} \mapsto \var{txout}
       & \TxIn \mapsto \TxOut
       & \text{unspent tx outputs}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{tx} & \Tx & \text{transaction}\\
     \end{array}
   \end{equation*}
   %
@@ -277,6 +348,16 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     & \fun{balance} \in \UTxO \to \Coin
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+    \nextdef
+    & \fun{created} \in \PrtclConsts \to \UTxO \to \Tx \to \Coin
+    & \text{value created} \\
+    & \fun{created} ~ pc ~ utxo ~ tx =
+    \balance{(\txins{tx} \restrictdom \var{utxo})} + \refunds{pc}{slot}{tx}
+    \nextdef
+    & \fun{destroyed} \in \PrtclConsts \to \Tx \to \Coin
+    & \text{value destroyed} \\
+    & \fun{destroyed} ~ pc ~ tx =
+      \balance{(\txouts{tx})}  + \txfee{tx} + \deposits{pc}{tx}\\
   \end{align*}
 
   \begin{align*}
@@ -297,11 +378,22 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \end{figure}
 
 \begin{figure}
+  \emph{UTxO environment}
+  \begin{equation*}
+    \UTxOEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{UTxO transitions}
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\UTxOEnv \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
@@ -310,11 +402,19 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pc}{tx} \leq \txfee{tx}\\
-      \balance{(\txouts{tx})}  + \txfee{tx} =
-        \balance{(\txins{tx} \restrictdom \var{utxo})}
+    { \ttl tx \leq \var{slot}
+        & \minfee{pc}{tx} \leq \txfee{tx}
+      \\
+        \txins{tx} \subseteq \dom \var{utxo}
+        &
+        \created{pc}{utxo}{tx} = \destroyed{pc}{tx}
     }
-    {\var{pc} \vdash \var{utxo} \trans{utxo}{tx}
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+      \end{array}
+      \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
     }
   \end{equation}
@@ -400,7 +500,7 @@ different order). The choice here is arbitrary.
   \begin{equation*}
     \var{\_} \vdash
     \var{\_} \trans{utxow}{\_} \var{\_}
-    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\UTxOEnv \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}
@@ -410,21 +510,30 @@ different order). The choice here is arbitrary.
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference[UTxO-wit]
-    { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+    {
+      {
+        \begin{array}{l}
+        \var{slot}\\
+        \var{pc}
+        \end{array}
+      }
+      \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
-    {\var{pc} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+      \end{array}
+      \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}
+    }
   \end{equation}
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
-
-\section{Delegation}
-\label{sec:delegation}
-\input{delegation.tex}
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
