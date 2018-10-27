@@ -25,6 +25,7 @@ Section~\ref{sec:delegation} for delegation.
                            \PState
                          \end{array}
     \right)\\
+               && \\
     \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
     \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard) \to \var{utxo}
   \end{align*}
@@ -130,6 +131,24 @@ Property~\ref{prop:ledger-properties-4} states that for every ledger states
 $l, l'$ and transaction $tx$ as above, all transaction inputs $in$ of $tx$ are
 not in the domain of the UTxO set of $l'$, i.e., these are no longer available
 to spend.
+
+\begin{property}[\textbf{Completeness and Collision-Freeness of new Transaction
+    Ids}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall utxo' \in \applyFun{txouts}{tx}, \var{utxo'} \in
+    \applyFun{getUTxO}{l'} \wedge \\(\var{utxo'} = ((\var{txId'}, \wcard) \mapsto
+    \wcard) \implies \forall \var{utxo} \in \applyFun{getUTxO}{l}, \var{utxo} =
+    ((\var{txId}, \wcard) \mapsto \wcard) \implies \var{txId'} \neq \var{txId}
+  \end{multline*}
+  \label{prop:ledger-properties-5}
+\end{property}
+
+Property~\ref{prop:ledger-properties-5} states that for ledger states $l, l'$
+and a transaction $tx$ as above, the UTxOs of $l'$ contain all newly created
+UTxOs and the referred transaction id of each new UTxO is not used in the UTxO
+set of $l$.
 
 %%% Local Variables:
 %%% mode: latex
