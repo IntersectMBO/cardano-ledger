@@ -37,6 +37,8 @@
 \newcommand{\Coin}{\type{Coin}}
 \newcommand{\PrtclConsts}{\type{PrtclConsts}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\Duration}{\type{Duration}}
+\newcommand{\Allocs}{\type{Allocs}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -65,6 +67,8 @@
 \newcommand{\CEState}{\type{CEState}}
 \newcommand{\BDEnv}{\type{BDEnv}}
 \newcommand{\BDState}{\type{BDState}}
+\newcommand{\LEnv}{\type{LEnv}}
+\newcommand{\LState}{\type{LState}}
 
 %%
 %% Functions
@@ -76,8 +80,9 @@
 \newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
 \newcommand{\ttl}[1]{\fun{ttl}~ \var{#1}}
 \newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
-\newcommand{\refunds}[2]{\fun{refunds}~ \var{#1}~ \var{#2}}
-\newcommand{\created}[4]{\fun{created}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\refunds}[4]{\fun{refunds}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\created}[5]{\fun{created}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\destroyed}[2]{\fun{destroyed}~ \var{#1}~ \var{#2}}
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
@@ -214,6 +219,15 @@ In order to define the \textit{preservation of value} conditon,
 we define the calculations for deposits and refunds in
 Figure~\ref{fig:defs:deposits}.
 
+\begin{note}
+  We define $\fun{refund}$ by cases on whether or not
+  the refunding certificate has a corresponding
+  resource creating certificate.
+  If our rules are correct, then $\fun{refund}$
+  is only called in the case where such a matching
+  certificate exists.
+\end{note}
+
 The transition rules for unspent outputs are presented in
 Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
 along with their types are defined in Figure~\ref{fig:defs:utxo}.
@@ -229,6 +243,17 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     \end{array}
   \end{equation*}
   %
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{allocs}
+      & \Allocs
+      & hkeys \mapsto slot
+      & \Hash \to \Slot
+      & \text{resource allocations}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -238,9 +263,15 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \fun{decay} & \PrtclConsts \to \mathbb{N}\times\mathbb{Q}^{+}
         & \text{decay constants}\\
 
-      \fun{certs} & \Tx \to \powerset{\DCert}
-        & \text{certificates}\\
-      %
+      \fun{dresource} & \Tx \to \powerset{(\DCertRegKey \uniondistinct \DCertRegPool)}
+        & \text{resource allocating certificates}\\
+
+      \fun{dderegister} & \Tx \to \powerset{\DCertDeRegKey}
+        & \text{resource releasing certificates}\\
+
+      \fun{dretire} & \Tx \to \powerset{\DCertRetirePool}
+        & \text{resource releasing certificates}\\
+
       \fun{ttl} & \Tx \to \Slot
         & \text{time to live}\\
     \end{array}
@@ -253,22 +284,37 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \begin{align*}
       & \fun{deposits} \in \PrtclConsts \to \Tx \to \Coin
       & \text{total deposits for transaction} \\
-      & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{certs}~tx} (\fun{d}~pc~c)
+      & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{d}~pc~c)
       \nextdef
-      & \fun{refund} \in \PrtclConsts \to \Slot \to \DCert \to \Coin
+      & \fun{poolAllocs} \in (\Hash \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
+      & \text{pool allocations} \\
+      & \fun{poolAllocs}~\var{stpool} =
+          \{hash \mapsto slot \mid hash \mapsto (\_, slot) \in \var{stpool}\}
+      \nextdef
+      & \fun{refund} \in \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
       & \text{total refund for a certificate} \\
-      & \fun{refund}~{pc}~{slot}~{c} =
-      \floor*{
-        \left(\fun{d}~pc~c\right) \cdot
-      \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\var{slot}}\right)}\\
-      & \where \fun{decay}~pc = d_{\min},~\lambda
+      & \refund{allocs}{pc}{slot}{c} =\\
+      & \begin{cases}
+            0 & \text{if}~\cauthor c \notin allocs\\
+            \floor*{
+              \left(\fun{d}~pc~c\right) \cdot
+            \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
+            & \text{otherwise}
+        \end{cases}\\
+      & \where
+        \begin{array}{r@{~=~}l}
+          \fun{decay}~pc & d_{\min},~\lambda\\
+          \delta & slot - (allocs~(\cauthor c))
+        \end{array}\\
       \nextdef
-      & \fun{refunds} \in \PrtclConsts \to \Tx \to \Coin
+      & \fun{refunds} \in \PrtclConsts \to \Allocs \to \Allocs \to \Tx \to \Coin
       & \text{total refunds for transaction} \\
-      & \refunds{pc}{tx} = \sum\limits_{c \in \fun{certs}~tx} \fun{refund}~pc~(\ttl{tx})~c
+      & \refunds{pc}{dallocs}{pallocs}{tx} =\\
+      &   \sum\limits_{c \in \fun{dderegister}~tx} \refund{pc}{dallocs}{(\ttl{tx})}{c}\\
+      &   ~~~+ \sum\limits_{c \in \fun{dretire}~tx} \refund{pc}{pallocs}{(\retire{c})}{c}
   \end{align*}
   \caption{Functions used in Deposits}
-  \label{fig:derived-defs:utxo}
+  \label{fig:functions:deposits}
 \end{figure}
 
 
@@ -349,10 +395,10 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
     \nextdef
-    & \fun{created} \in \PrtclConsts \to \UTxO \to \Tx \to \Coin
+    & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Allocs \to \Tx \to \Coin
     & \text{value created} \\
-    & \fun{created} ~ pc ~ utxo ~ tx =
-    \balance{(\txins{tx} \restrictdom \var{utxo})} + \refunds{pc}{slot}{tx}
+    & \created{pc}{utxo}{dallocs}{pallocs}{tx} = \\
+    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} + \refunds{pc}{dallocs}{pallocs}{tx}
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \Tx \to \Coin
     & \text{value destroyed} \\
@@ -385,6 +431,8 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pc} & \PrtclConsts & \text{protocol constants}\\
+        \var{dallocs} & \Allocs & \text{stake key allocations}\\
+        \var{pallocs} & \Allocs & \text{stake pool allocations}\\
       \end{array}
     \right)
   \end{equation*}
@@ -404,15 +452,17 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     \inference[UTxO-inductive]
     { \ttl tx \leq \var{slot}
         & \minfee{pc}{tx} \leq \txfee{tx}
-      \\
-        \txins{tx} \subseteq \dom \var{utxo}
-        &
-        \created{pc}{utxo}{tx} = \destroyed{pc}{tx}
+        & \txins{tx} \subseteq \dom \var{utxo}
+        \\
+        \created{pc}{utxo}{dallocs}{pallocs}{tx}
+          = \destroyed{pc}{tx}
     }
     {
       \begin{array}{l}
         \var{slot}\\
         \var{pc}\\
+        \var{dallocs}\\
+        \var{pallocs}\\
       \end{array}
       \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
@@ -534,6 +584,104 @@ different order). The choice here is arbitrary.
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
+
+\begin{figure}
+  \emph{Ledger environment}
+  \begin{equation*}
+    \LEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Ledger state}
+  \begin{equation*}
+    \LState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxo} & \UTxO & \text{UTxO}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Ledger transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{ledger}{\_} \var{\_}
+    \subseteq \powerset (\LEnv \times \LState \times \Tx \times \LState)
+  \end{equation*}
+  \caption{UTxO transition-system types}
+  \label{fig:ts-types:ledger}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:ledger}
+    \inference[ledger]
+    {
+      pallocs = \fun{poolAllocs}~stpools\\~\\
+      {
+        \begin{array}{r}
+        slot\\
+        pc\\
+        stkeys\\
+        pallocs\\
+        \end{array}
+      }
+      \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}\\~\\~\\
+      %
+      {
+        \begin{array}{l}
+          tx \\
+          slot \\
+        \end{array}
+      }
+      \vdash
+      {\left( \begin{array}{ll}
+        dstate \\ pstate
+      \end{array} \right) }
+      \trans{delegs}{tx}
+      {\left( \begin{array}{ll}
+        dstate' \\ pstate'
+      \end{array} \right) }
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{ll}
+          utxo \\
+          dstate \\
+          pstate \\
+        \end{array}
+      \right)
+      \trans{ledger}{tx}
+      \left(
+        \begin{array}{ll}
+          utxo' \\
+          dstate' \\
+          pstate' \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Ledger inference rule}
+  \label{fig:rules:ledger}
+\end{figure}
+
+\begin{todo}
+  Implement $\mathsf{DELEGS}$ by applying $\mathsf{DELEGW}$
+  over the certs in a transaction.
+\end{todo}
+
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
