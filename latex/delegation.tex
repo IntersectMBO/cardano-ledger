@@ -1,33 +1,3 @@
-%%
-%% Types
-%%
-\newcommand{\AddrRWD}{\type{Addr_{rwd}}}
-\newcommand{\DState}{\type{DState}}
-\newcommand{\DWState}{\type{DWState}}
-\newcommand{\DWEnv}{\type{DWEnv}}
-\newcommand{\PState}{\type{PState}}
-\newcommand{\DCertBody}{\type{DCertBody}}
-
-%%
-%% Functions
-%%
-\newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
-\newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
-\newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
-\newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
-\newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
-\newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
-\newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
-\newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
-\newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
-\newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
-\newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
-
-%%
-%% Constants
-%%
-\newcommand{\emax}{\mathsf{E_{max}}}
-
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
@@ -495,4 +465,3 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
 \end{figure}
-
