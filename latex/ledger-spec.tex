@@ -49,6 +49,13 @@
 \newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
+\newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\DWState}{\type{DWState}}
+\newcommand{\DWEnv}{\type{DWEnv}}
+\newcommand{\PState}{\type{PState}}
+\newcommand{\DCertBody}{\type{DCertBody}}
+
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
@@ -89,6 +96,18 @@
 \newcommand{\destroyed}[2]{\fun{destroyed}~ \var{#1}~ \var{#2}}
 \newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}
 
+\newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
+\newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
+\newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
+\newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
+\newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
+\newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
+\newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
+\newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
+\newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
+\newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
+\newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
+
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
 \newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
@@ -123,6 +142,7 @@
 \newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
 \newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
 \newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
+\newcommand{\emax}{\mathsf{E_{max}}}
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
