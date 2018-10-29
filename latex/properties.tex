@@ -150,6 +150,90 @@ and a transaction $tx$ as above, the UTxOs of $l'$ contain all newly created
 UTxOs and the referred transaction id of each new UTxO is not used in the UTxO
 set of $l$.
 
+\subsection{Ledger State Properties for Delegation Transitions}
+\label{sec:ledg-prop-deleg}
+
+\begin{figure}[ht]
+  \centering
+  \begin{align*}
+    \fun{getStKeys} & \in & \ledgerState \to \powerset \Hash \\
+    \fun{getStKeys} & \coloneqq & (\wcard, (\var{stKeys}, \wcard, \wcard),
+                                  \wcard) \to \var{stkeys} \\
+                    &&\\
+    \fun{getRewards} & \in & \ledgerState \to \AddrRWD \mapsto \Coin \\
+    \fun{getRewards} & \coloneqq & (\wcard, (\wcard, \var{rewards}, \wcard),
+                                   \wcard) \to \var{rewards} \\
+                    &&\\
+    \fun{getDelegations} & \in & \ledgerState \to \Hash \mapsto \Hash \\
+    \fun{getDelegations} & \coloneqq & (\wcard, (\wcard, \wcard,
+                                       \var{delegations}), \wcard) \to
+                                       \var{delegations} \\
+                    &&\\
+    \fun{getStPools} & \in & \ledgerState \to \Hash \mapsto \DCertRegPool \\
+    \fun{getStPools} & \coloneqq & (\wcard, \wcard,
+                                   (\var{stpools}, \wcard)) \to \var{stpools} \\
+                    &&\\
+    \fun{getRetiring} & \in & \ledgerState \to \Hash \mapsto \Epoch \\
+    \fun{getRetiring} & \coloneqq & (\wcard, \wcard,
+                                    (\wcard, \var{retiring})) \to \var{retiring} \\
+  \end{align*}
+  \caption{Definitions and Functions for Stake Delegation in Ledger States}
+  \label{fig:valid-ledger}
+\end{figure}
+
+
+\begin{property}[\textbf{Registered Staking Key with Zero Rewards}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
+    \wedge \RegKey{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \var{hk} \in \applyFun{getStKeys}{l'} \wedge
+    (\applyFun{getRewards}var{rewards})[hk] = 0
+  \end{multline*}
+  \label{prop:ledger-properties-6}
+\end{property}
+
+Property~\ref{prop:ledger-properties-6} states that for each valid ledger state
+$l$, if a delegation transaction of type $\DCertRegKey$ is executed, then in the
+resulting ledger state $l'$, the set of staking keys of $l'$ includes the key
+$hk$ associated with the key registration certificate and the associated reward
+is set to 0 in $l'$.
+
+\begin{property}[\textbf{Deregistered Staking Key}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
+    \wedge \DeregKey{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \var{hk} \not\in \applyFun{getStKeys}{l'} \wedge
+    (\fun{dom}(\applyFun{getRewards}{l'}) \cup
+    \fun{dom}(\applyFun{getDelegations}{l'})) \cap \{hk\} = \emptyset
+  \end{multline*}
+  \label{prop:ledger-properties-7}
+\end{property}
+
+Property~\ref{prop:ledger-properties-7} states that for $l, l'$ as above but
+with a delegation transition of type $\DCertDeRegKey$, the staking key $hk$
+associated with the deregistration certificate is not in the set of staking keys
+of $l'$ and is not in the domain of neither the rewards nor the delegation map
+of $l'$.
+
+\begin{property}[\textbf{Delegated Stake}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
+    \wedge \Delegate{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \var{hk} \in \applyFun{getStKeys}{l} \wedge
+    (\applyFun{getDelegations}{l'})[hk] = \applyFun{pool}{c}
+  \end{multline*}
+  \label{prop:ledger-properties-8}
+\end{property}
+
+Property~\ref{prop:ledger-properties-7} states that for $l, l'$ as above but
+with a delegation transition of type $\DCertDeleg$, the staking key $hk$
+associated with the deregistration certificate is in the set of staking keys of
+$l$ and delegates to the staking pool associated with the delegation
+certificate in $l'$.
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ledger-spec"
