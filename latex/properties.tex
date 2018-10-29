@@ -29,7 +29,7 @@ Section~\ref{sec:delegation} for delegation.
     \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
     \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard) \to \var{utxo}
   \end{align*}
-  \caption{Valid Ledger State}
+  \caption{Definitions and Functions for Valid Ledger State}
   \label{fig:valid-ledger}
 \end{figure}
 
@@ -73,7 +73,7 @@ state.
 \begin{property}[\textbf{Preserve Balance Modulo Fee}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
     \implies \fun{balance}(\applyFun{getUTxO}{l}) =
     \fun{balance}(\applyFun{getUTxO}{l'}) + \applyFun{txfee}{tx}
   \end{multline*}
@@ -89,7 +89,7 @@ balance of the UTxOs in $l'$ minus the transaction fees.
     TxOuts}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
     \implies \fun{balance}(\applyFun{txins}{tx} \restrictdom
     \applyFun{getUTxO}{l}) = \fun{balance}(\applyFun{txouts}{tx}) +
     \applyFun{txfee}{tx}
@@ -106,7 +106,7 @@ minus the transaction fees.
 \begin{property}[\textbf{Preserve Outputs of Transaction}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
     \implies \forall \var{out} \in \applyFun{txouts}{tx}, out \in
     \applyFun{getUTxO}{l'}
   \end{multline*}
@@ -120,7 +120,7 @@ set of $l'$, i.e., they are now available as unspent transaction output.
 \begin{property}[\textbf{Eliminate Inputs of Transaction}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
     \implies \forall \var{in} \in \applyFun{txins}{tx}, in \not\in
     \fun{dom}(\applyFun{getUTxO}{l'})
   \end{multline*}
@@ -136,7 +136,7 @@ to spend.
     Ids}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxo}{tx} \var{l'}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
     \implies \forall utxo' \in \applyFun{txouts}{tx}, \var{utxo'} \in
     \applyFun{getUTxO}{l'} \wedge \\(\var{utxo'} = ((\var{txId'}, \wcard) \mapsto
     \wcard) \implies \forall \var{utxo} \in \applyFun{getUTxO}{l}, \var{utxo} =
