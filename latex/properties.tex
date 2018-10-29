@@ -234,6 +234,79 @@ associated with the deregistration certificate is in the set of staking keys of
 $l$ and delegates to the staking pool associated with the delegation
 certificate in $l'$.
 
+\subsection{Ledger State Properties for Staking Pool Transitions}
+\label{sec:ledg-state-prop}
+
+\begin{property}[\textbf{Registered Staking Pool}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
+    \wedge \RegPool{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    (\applyFun{getStPools}{l'})[\var{hk}] = c \wedge \var{hk} \not\in
+    \applyFun{getRetiring}{l'}
+  \end{multline*}
+  \label{prop:ledger-properties-8}
+\end{property}
+
+Property~\ref{prop:ledger-properties-8} states that for $l, l'$ as above but
+with a delegation transition of type $\DCertRegPool$, the key $hk$ is associated
+with the author of the pool registration certificate in $\var{stpools}$ of $l'$
+and that $hk$ is not in the set of retiring stake pools in $l'$.
+
+\begin{property}[\textbf{Start Staking Pool Retirement}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
+    \applyFun{validLedgerstate}{l} \\
+    \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
+    \wedge \RetirePool{c} \\ \implies e = \applyFun{retire}{c} \wedge
+    \var{cepoch} < e < \var{cepoch} + \emax \wedge \applyFun{author}{c} =
+    \var{hk}\\ \implies (\applyFun{getRetiring}{l'})[\var{hk}] = e \wedge
+    \var{hk} \in \fun{dom}(\applyFun{getStPools}{l})
+  \end{multline*}
+  \label{prop:ledger-properties-9}
+\end{property}
+
+Property~\ref{prop:ledger-properties-9} states that for $l, l'$ as above but
+with a delegation transition of type $\DCertRetirePool$, the key $hk$ is
+associated with the author of the pool registration certificate in
+$\var{stpools}$ of $l'$ and that $hk$ is not in the set of retiring stake pools
+in $l'$.
+
+\begin{property}[\textbf{Stake Pool Reaping}]
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
+    \applyFun{validLedgerstate}{l} \\
+    \implies \var{l} \trans{poolreap}{} \var{l'} \implies \forall \var{retire} =
+    retiring^{-1} cepoch, retired \neq \emptyset \\ \wedge \var{retire}
+    \subseteq \fun{dom}(\applyFun{getStPool}{l}) \wedge
+    \var{retire} \cap \fun{dom}(\applyFun{getStPool}{l'}) = \emptyset \\
+    \wedge \var{retire} \subseteq \fun{dom}(\applyFun{getRetiring}{l}) \wedge
+    \var{retire} \cap \fun{dom}(\applyFun{getRetiring}{l'}) = \emptyset
+  \end{multline*}
+  \label{prop:ledger-properties-10}
+\end{property}
+
+\begin{todo}
+  Merge Figure~\ref{fig:delegation-poolreap} into ``delegation.tex''.
+\end{todo}
+
+\begin{figure}
+  %
+  \begin{equation*}
+    \_ \vdash \_ \trans{poolreap}{\_} \_ \in
+      \powerset (\Epoch \times \DState \times \DState)
+  \end{equation*}
+  %
+  \caption{Delegation Transitions}
+  \label{fig:delegation-poolreap}
+\end{figure}
+
+Property~\ref{prop:ledger-properties-10} states that for $l, l'$ as above but
+with a delegation transition of type $\DPoolReap$, there exist registered stake
+pools in $l$ which are associated to stake pool registration certificates and
+which are to be retired at the current epoch $\var{cepoch}$. In $l'$ all those
+stake pools are removed from the maps $stpools$ and $retiring$.
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ledger-spec"
