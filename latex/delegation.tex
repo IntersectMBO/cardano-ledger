@@ -21,6 +21,7 @@
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 \newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
+\newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
 
 %%
 %% Constants
@@ -129,7 +130,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \fun{epoch} & \Slot \to \Epoch
   & \text{epoch of a slot}
   \\
-    \fun{(-)} & \Slot \to \Slot \to \Duration
+    () & \Slot \to \Slot \to \Duration
   & \text{slot duration}
   \end{array}
   \end{equation*}
@@ -171,7 +172,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \begin{equation*}
     \_ \vdash \_ \trans{pool}{\_} \_ \in
-      \powerset (\Slot \times \DState \times \DCert \times \DState)
+      \powerset (\Slot \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
   \caption{Delegation Transitions}
@@ -367,7 +368,9 @@ are given in Figure~\ref{fig:defs:delegationw}.
       \fun{dbody} & \DCert \mapsto \DCertBody
       & \text{body of the delegation certificate}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
-      & \text{witness for the delegation certificate}
+      & \text{witness for the delegation certificate}\\
+      \fun{dcerts} & \Tx \to \DCert
+      & \text{delegation certificate in a transaction}\\
     \end{array}
   \end{equation*}
   %
@@ -438,5 +441,96 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \end{equation}
   \caption{Delegation witnesses inference rules}
   \label{fig:rules:delegationw}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \inference[Seq-delg-base]
+    {}
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}
+      \end{array}
+      \vdash \left(
+        \begin{array}{r}
+          \var{dstate}\\
+          \var{pstate}
+        \end{array}
+      \right)
+        \trans{delegs}{\epsilon}
+      \left(
+        \begin{array}{r}
+          \var{dstate}\\
+          \var{pstate}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:sequence-delegation-base}
+  \end{equation}
+
+  \begin{equation}
+    \inference[Seq-delg-ind]
+    {
+      {
+        \begin{array}{r}
+          \var{tx}\\
+          \var{slot}\\
+        \end{array}
+      }
+      \vdash
+      {\left(
+        \begin{array}{r}
+          \var{dstate}\\
+          \var{pstate}
+        \end{array}
+      \right)}
+      \trans{delegs}{\Gamma}
+      {\left(
+        \begin{array}{r}
+          \var{dstate'}\\
+          \var{pstate'}
+        \end{array}
+      \right)}
+    \\ ~ \\
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}\\
+      \end{array}
+    }
+    \vdash
+    {\left(
+        \begin{array}{r}
+          \var{dstate'}\\
+          \var{pstate'}
+        \end{array}
+      \right)}
+      \trans{delegw}{c}
+      {\left(
+        \begin{array}{r}
+          \var{dstate''}\\
+          \var{pstate''}
+        \end{array}
+      \right)}
+    }
+    { \left(
+        \begin{array}{r}
+          \var{dstate}\\
+          \var{pstate}
+        \end{array}
+      \right)
+      \trans{delegs}{\Gamma; c}
+      \left(
+        \begin{array}{r}
+          \var{dstate''}\\
+          \var{pstate''}
+        \end{array}
+      \right)
+    }
+    \label{eq:rule:sequence-delegation-inductive}
+  \end{equation}
+  \caption{Delegation sequence rules}
+  \label{fig:rules:delegation-sequence}
 \end{figure}
 
