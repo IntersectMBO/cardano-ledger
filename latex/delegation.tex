@@ -452,19 +452,10 @@ are given in Figure~\ref{fig:defs:delegationw}.
         \var{tx}\\
         \var{slot}
       \end{array}
-      \vdash \left(
-        \begin{array}{r}
-          \var{dstate}\\
-          \var{pstate}
-        \end{array}
-      \right)
-        \trans{delegs}{\epsilon}
-      \left(
-        \begin{array}{r}
-          \var{dstate}\\
-          \var{pstate}
-        \end{array}
-      \right)
+      \vdash
+      \var{dwstate}
+      \trans{delegs}{\epsilon}
+      \var{dwstate'}
     }
     \label{eq:rule:sequence-delegation-base}
   \end{equation}
@@ -479,19 +470,9 @@ are given in Figure~\ref{fig:defs:delegationw}.
         \end{array}
       }
       \vdash
-      {\left(
-        \begin{array}{r}
-          \var{dstate}\\
-          \var{pstate}
-        \end{array}
-      \right)}
+      \var{dwstate}
       \trans{delegs}{\Gamma}
-      {\left(
-        \begin{array}{r}
-          \var{dstate'}\\
-          \var{pstate'}
-        \end{array}
-      \right)}
+      \var{dwstate'}
     \\ ~ \\
     {
       \begin{array}{r}
@@ -500,33 +481,14 @@ are given in Figure~\ref{fig:defs:delegationw}.
       \end{array}
     }
     \vdash
-    {\left(
-        \begin{array}{r}
-          \var{dstate'}\\
-          \var{pstate'}
-        \end{array}
-      \right)}
+      \var{dwstate'}
       \trans{delegw}{c}
-      {\left(
-        \begin{array}{r}
-          \var{dstate''}\\
-          \var{pstate''}
-        \end{array}
-      \right)}
+      \var{dwstate''}
     }
-    { \left(
-        \begin{array}{r}
-          \var{dstate}\\
-          \var{pstate}
-        \end{array}
-      \right)
+    {
+      \var{dwstate}
       \trans{delegs}{\Gamma; c}
-      \left(
-        \begin{array}{r}
-          \var{dstate''}\\
-          \var{pstate''}
-        \end{array}
-      \right)
+      \var{dwstate''}
     }
     \label{eq:rule:sequence-delegation-inductive}
   \end{equation}
