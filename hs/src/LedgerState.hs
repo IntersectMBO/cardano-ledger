@@ -147,7 +147,7 @@ preserveBalance (TxWits tx _) l =
 authTxin :: VKey -> TxIn -> UTxO -> Bool
 authTxin key txin (UTxO utxo) =
   case Map.lookup txin utxo of
-    Just (TxOut (AddrTxin pay _) _) -> hash key == pay
+    Just (TxOut (AddrTxin pay _) _) -> hashKey key == pay
     _                               -> False
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
@@ -315,7 +315,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
   where
     getOutputs (UTxO utxo) = Map.elems utxo
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do
-      pool <- Map.lookup (HashKey hsk) delegations
+      pool <- Map.lookup hsk delegations
       return (pool, c)
     addStake _ _ = Nothing
     outs = getOutputs . getUtxo $ ls

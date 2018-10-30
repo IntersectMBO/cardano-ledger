@@ -1,6 +1,4 @@
-
 import           Control.Monad           (foldM)
-import           Crypto.Hash             (hash)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
@@ -27,7 +25,7 @@ aliceStake :: KeyPair
 aliceStake = keyPair (Owner 2)
 
 aliceAddr :: Addr
-aliceAddr = AddrTxin (hash (vKey alicePay)) (hash (vKey aliceStake))
+aliceAddr = AddrTxin (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
 
 bobPay :: KeyPair
 bobPay = keyPair (Owner 3)
@@ -36,7 +34,7 @@ bobStake :: KeyPair
 bobStake = keyPair (Owner 4)
 
 bobAddr :: Addr
-bobAddr = AddrTxin (hash (vKey bobPay)) (hash (vKey bobStake))
+bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 genesis :: LedgerState
 genesis = genesisState
