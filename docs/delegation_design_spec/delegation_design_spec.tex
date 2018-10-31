@@ -1779,21 +1779,23 @@ resources on the nodes should require a deposit, as described in
 \item registering a staking key
 \item registering a new stake pool (but not updating the registration
   certificate of a stake pool that already exists)
-\item posting a delegation certificate
 \end{itemize}
 should all require making a deposit. This deposit should be released
 when
 \begin{itemize}
 \item a UTxO entry is removed by using it as an input to a transaction
-\item a staking key is de-registered -- this should release the
-  deposit for the key itself, as well as for the delegation
-  certificate for this key if there is one
+\item a staking key is de-registered
 \item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
   epoch, and we will probably want to delay paying out the refund
   until that epoch
 \end{itemize}
+Note that posting a delegation certificate does \emph{not} require a
+deposit; delegation certificates need a stake key registration
+certificate in order to be valid, so any deposit that we would require
+for a delegation certificate can instead be included in the deposit
+for the associated stake key registration certificate.
 
 \subsection{Stale Stake}
 \label{stale-stake}
