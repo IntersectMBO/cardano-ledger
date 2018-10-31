@@ -2105,16 +2105,15 @@ require them to post a new certificate, which will notify the
 stakeholders that delegated to the pool, possibly triggering a
 re-delegation.
 
-In addition to the above, we will also require pool operators to include
-a list of IP-addresses and/or domain names in the registration
-certificate, pointing to publicly reachable \emph{relay nodes} under
-their control (It is necessary to have a sufficient number of such
-publicly reachable nodes in order to establish a reliable peer-to-peer
-network.). We will use no technical mechanism to check the validity and
-availability of these relay nodes, but will rely on social pressure
-instead: People contemplating joining a pool will check the published
-data and will put little trust in operators who publish fake or
-unreliable addresses.
+The pool metadata should include a list of IP-addresses and/or domain
+names, pointing to publicly reachable \emph{relay nodes} under their
+control (It is necessary to have a sufficient number of such publicly
+reachable nodes in order to establish a reliable peer-to-peer
+network.). We will use no technical mechanism to check the validity
+and availability of these relay nodes, but will rely on social
+pressure instead: People contemplating joining a pool will check the
+published data and will put little trust in operators who publish fake
+or unreliable addresses.
 
 \emph{Remark}: Due to the nature of our incentives mechanism (see
 \cref{design-of-incentives}), very large stakeholders are
