@@ -3,14 +3,10 @@
 %%
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
 \newcommand{\DState}{\type{DState}}
+\newcommand{\DWState}{\type{DWState}}
+\newcommand{\DWEnv}{\type{DWEnv}}
 \newcommand{\PState}{\type{PState}}
-
-\newcommand{\DCert}{\type{DCert}}
-\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
-\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
-\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
-\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
-\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+\newcommand{\DCertBody}{\type{DCertBody}}
 
 %%
 %% Functions
@@ -24,6 +20,8 @@
 \newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
+\newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
+\newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
 
 %%
 %% Constants
@@ -83,6 +81,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       a & \AddrRWD & \text{reward address} \\
+      slot & \Slot & \text{slot}\\
+      dur & \Duration & \text{duration}\\
       epoch & \Epoch & \text{epoch}
     \end{array}
   \end{equation*}
@@ -126,6 +126,12 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \\
   \fun{retire} & \DCertRetirePool \to \Epoch
   & \text{epoch of pool retirement}
+  \\
+  \fun{epoch} & \Slot \to \Epoch
+  & \text{epoch of a slot}
+  \\
+    () & \Slot \to \Slot \to \Duration
+  & \text{slot duration}
   \end{array}
   \end{equation*}
   %
@@ -144,7 +150,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \powerset (\Hash) & \text{registered stake keys}\\
+      \var{stkeys} & \Hash \mapsto \Slot & \text{registered stake keys to creation time}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \Hash \mapsto \Hash & \text{delegations}\\
     \end{array}\right)
@@ -152,7 +158,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \Hash \mapsto \DCertRegPool & \text{registered stake pools}\\
+      \var{stpools} & \Hash \mapsto (\DCertRegPool \times \Slot) & \text{registered stake pools to creation time}\\
       \var{retiring} & \Hash \mapsto \Epoch & \text{retiring stake pools}\\
     \end{array}\right)
     \end{array}
@@ -160,13 +166,13 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \emph{Delegation Transitions}
   \begin{equation*}
-    \_ \trans{deleg}{\_} \_ \in
-      \powerset (\DState \times \DCert \times \DState)
+    \_ \vdash \_ \trans{deleg}{\_} \_ \in
+      \powerset (\Slot \times \DState \times \DCert \times \DState)
   \end{equation*}
   %
   \begin{equation*}
     \_ \vdash \_ \trans{pool}{\_} \_ \in
-      \powerset (\Epoch \times \DState \times \DCert \times \DState)
+      \powerset (\Slot \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
   \caption{Delegation Transitions}
@@ -184,6 +190,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \RegKey{c} & \cauthor{c} = hk & hk \notin \var{stkeys}
     }
     {
+      \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stkeys} \\
@@ -194,7 +201,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} & \union & \{\var{hk}\}\\
+        \var{stkeys} & \union & \{\var{hk} \mapsto slot\}\\
         \var{rewards} & \unionoverride & \{\addrRw \var{hk} \mapsto 0\}\\
         \var{delegations}
       \end{array}
@@ -208,6 +215,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \DeregKey{c} & \cauthor{c} = hk & hk \in \var{stkeys}
     }
     {
+      \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stkeys} \\
@@ -218,7 +226,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} & \setminus & \{\var{hk}\}\\
+        \{\var{hk}\} & \subtractdom & \var{stkeys}\\
         \{\addrRw \var{hk}\} & \subtractdom & \var{rewards} \\
         \{\var{hk}\} & \subtractdom & \var{delegations}
       \end{array}
@@ -232,6 +240,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \Delegate{c} & \cauthor{c} = hk & hk \in \var{stkeys}
     }
     {
+      \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stkeys} \\
@@ -263,7 +272,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \RegPool{c} & \cauthor{c} = hk
     }
     {
-      \var{cepoch} \vdash
+      \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -284,11 +293,15 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation}\label{eq:pool-ret}
     \inference[Pool-Retire]
     {
-    \RetirePool{c} & \cauthor{c} = hk & \var{hk} \in \dom \var{stpools} \\
-    \var{e} = \retire{c} & \var{cepoch} < \var{e} < \var{cepoch} + \emax
+    \RetirePool{c}
+    & \cauthor{c} = hk
+    & \var{hk} \in \dom \var{stpools} \\
+    \var{e} = \retire{c}
+    & \var{cepoch} = \epoch{slot}
+    & \var{cepoch} < \var{e} < \var{cepoch} + \emax
   }
   {
-    \var{cepoch} \vdash
+    \var{slot} \vdash
     \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -308,11 +321,11 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation}\label{eq:pool-reap}
     \inference[Pool-Reap]
     {
-      \var{retired} = \var{retiring}^{-1}~\var{cepoch}
+      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
       & \var{retired} \neq \emptyset
     }
     {
-      \var{cepoch} \vdash
+      \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -341,21 +354,53 @@ Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
 are given in Figure~\ref{fig:defs:delegationw}.
 
 \begin{figure}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      tx & \Tx & \text{transaction}\\
+      dcb & \DCertBody & \text{certificate body}\\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \VKey
+      \fun{dbody} & \DCert \mapsto \DCertBody
       & \text{body of the delegation certificate}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
-      & \text{witness for the delegation certificate}
+      & \text{witness for the delegation certificate}\\
+      \fun{dcerts} & \Tx \to \DCert
+      & \text{delegation certificate in a transaction}\\
     \end{array}
+  \end{equation*}
+  %
+  \emph{Delegation Witnesses environment}
+  \begin{equation*}
+    \DWEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{tx} & \Tx & \text{transaction}\\
+        \var{slot} & \Slot & \text{slot}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation Witnesses state}
+  \begin{equation*}
+    \DWState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
   \end{equation*}
   %
   \emph{Delegation Witnesses Transition}
   \begin{equation*}
     \_ \vdash \_ \trans{delegw}{\_} \_ \in
       \powerset (
-        (\Tx \times \Epoch) \times \DState \times \DCert \times \DState)
+        \DWEnv \times \DWState \times \DCert \times \DWState)
   \end{equation*}
   \caption{Delegation witnesses definitions}
   \label{fig:defs:delegationw}
@@ -367,16 +412,15 @@ are given in Figure~\ref{fig:defs:delegationw}.
     \label{eq:deleg-witnesses}
     \inference[Deleg-wit]
     { \dwit{c} = (\var{vk_s}, \sigma)
-      & \var{dstate} \trans{deleg}{c} \var{dstate'}
-      & \var{cepoch} \vdash \var{pstate}
-      \trans{pool}{c} \var{pstate'}
+      & \var{slot} \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
+      & \var{slot} \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
       \\ ~ \\
       \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
     }
     { \left(
       \begin{array}{r}
         \var{tx} \\
-        \var{cepoch}
+        \var{slot}
       \end{array}
       \right)
       \vdash
@@ -397,5 +441,58 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \end{equation}
   \caption{Delegation witnesses inference rules}
   \label{fig:rules:delegationw}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \inference[Seq-delg-base]
+    {}
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}
+      \end{array}
+      \vdash
+      \var{dwstate}
+      \trans{delegs}{\epsilon}
+      \var{dwstate'}
+    }
+    \label{eq:rule:sequence-delegation-base}
+  \end{equation}
+
+  \begin{equation}
+    \inference[Seq-delg-ind]
+    {
+      {
+        \begin{array}{r}
+          \var{tx}\\
+          \var{slot}\\
+        \end{array}
+      }
+      \vdash
+      \var{dwstate}
+      \trans{delegs}{\Gamma}
+      \var{dwstate'}
+    \\ ~ \\
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}\\
+      \end{array}
+    }
+    \vdash
+      \var{dwstate'}
+      \trans{delegw}{c}
+      \var{dwstate''}
+    }
+    {
+      \var{dwstate}
+      \trans{delegs}{\Gamma; c}
+      \var{dwstate''}
+    }
+    \label{eq:rule:sequence-delegation-inductive}
+  \end{equation}
+  \caption{Delegation sequence rules}
+  \label{fig:rules:delegation-sequence}
 \end{figure}
 
