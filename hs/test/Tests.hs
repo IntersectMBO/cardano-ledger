@@ -1,10 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import           Control.Monad           (foldM)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
+import           Numeric.Natural         (Natural)
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import           Test.Tasty.Hedgehog
+
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Coin
 import           Keys
@@ -214,12 +222,60 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   , testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testInvalidTransaction
   ]
 
-tests :: TestTree
-tests = testGroup "Ledger with Delegation" [unitTests]
-
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
   [ testsValidLedger, testsInvalidLedger ]
 
+-- | Generator for (Owner, Owner) pairs, fst even, snd is fst + 1
+genOwnerList :: Int -> Int -> Gen [(Owner, Owner)]
+genOwnerList lower upper = do
+  xs <- Gen.list (Range.linear lower upper)
+        $ Gen.integral (Range.linear (1 :: Natural) 1000)
+  return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
+
+genHashKeyPairs :: Int -> Int -> Gen [(HashKey, HashKey)]
+genHashKeyPairs lower upper =
+    fmap (\(a, b) ->
+          (hashKey (vKey $ keyPair a), hashKey (vKey $ keyPair b)))
+             <$> genOwnerList lower upper
+
+genAddrTxins :: Int -> Int -> Gen [Addr]
+genAddrTxins lower upper =
+    fmap (uncurry AddrTxin) <$> genHashKeyPairs lower upper
+
+genCoinList :: Int -> Int -> Gen [Coin]
+genCoinList lower upper = do
+  xs <- Gen.list (Range.linear lower upper)
+        $ Gen.integral (Range.exponential (0 :: Natural) 1000)
+  return (Coin <$> xs)
+
+genTxOut :: Int -> Int -> Gen [TxOut]
+genTxOut lower upper = do
+  xs <- genAddrTxins lower upper
+  ys <- genCoinList (length xs) (length xs)
+  return (uncurry TxOut <$> zip xs ys)
+
+genNonemptyGenesisState :: Gen LedgerState
+genNonemptyGenesisState = genesisState <$> genTxOut 1 100
+
+utxoSize :: UTxO -> Int
+utxoSize (UTxO m) = Map.size m
+
+propPositiveBalance :: Property
+propPositiveBalance = property $ do
+                        initialState <- forAll genNonemptyGenesisState
+                        utxoSize (getUtxo initialState) /== 0
+                        Coin 0 /== balance (getUtxo initialState)
+
+propertyTests :: TestTree
+propertyTests = testGroup "Ledger Genesis State"
+                [ testProperty
+                    "non-empty genesis ledger state"
+                    propPositiveBalance ]
+
+tests :: TestTree
+tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
+
+-- main entry point
 main :: IO ()
 main = defaultMain tests
