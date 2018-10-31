@@ -22,6 +22,10 @@ library:
   - containers
   - cryptonite
   - memory
+  - tasty
+  - tasty-hunit
+  - hedgehog
+  - tasty-hedgehog
 
 tests:
   delegation-test:
@@ -39,6 +43,8 @@ tests:
     dependencies:
     - tasty
     - tasty-hunit
+    - tasty-hedgehog
+    - hedgehog
     - delegation
     - cryptonite
     - containers
