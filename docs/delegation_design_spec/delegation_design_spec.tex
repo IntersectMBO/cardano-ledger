@@ -109,9 +109,6 @@ order to support and incentivise delegation.
 We will use a Hierarchical Deterministic wallet (HD wallet) structure,
 as described in BIP-32 \citep{bip32}.
 
-\section{Assumptions}
-\label{assumptions}
-
 \section{Requirements}
 \label{requirements}
 
@@ -364,7 +361,7 @@ The current Cardano design allows, in principle, an implementation of a
 node that discards blocks after a period of time so that it only needs
 to keep a limited number of recent blocks. This is true in part because
 nothing in the existing validation rules requires looking up arbitrary
-old blocks. All information neessary for validation can be accumulated
+old blocks. All information necessary for validation can be accumulated
 in a running state, in a \texttt{foldl} style. This is a useful design
 property to retain.
 
@@ -375,9 +372,9 @@ property to retain.
 \label{no-special-wallet-for-stake-pool-operators}
 
 If possible, we would like to avoid a situation where stake pool
-operators were required from using a special kind of wallet. Apart from
+operators are required to use a special kind of wallet. Apart from
 registering their pool and running their own nodes, they should be able
-to just use the same wallet as anyone else, without any additional or
+to use the same wallet as anyone else, without any additional or
 restricted features.
 
 We expect that following this design goal will lead to less engineering
@@ -491,18 +488,19 @@ Figure~\ref{fig:er-relationship-delegation} shows the entity-relationship
 diagram of the system level entities involved in the implementation of
 delegation:
 \begin{itemize}
-\item Each address contains a single payment key. However the same payment key
+\item Each normal pubkey address\footnote{As opposed to script addresses}
+  contains a single payment key. However the same payment key
   can be used by multiple addresses (where addresses differ among each other in
   the delegation information).
 \item Many addresses can refer to the same stake key. For instance, different
   outputs of a transaction can specify the that the stake associated with those
   output should be transferred to the same stake key.
-\item Each stake key have a unique reward account associated with it, and a
-  reward account can be associated to only one stake key.
+\item Each stake key has a unique reward account associated with it, and a
+  reward account is only associated with the one stake key.
 \item There can be many UTxO entries (funds) for a single address. However a
   UTxO entry refers an available input address to use.
-\item A stake key is associated to exactly zero or one stake pool at any point
-  in time. A stake pool can contain multiple stake keys.
+\item A stake key is associated with exactly zero or one stake pools at any point
+  in time. A stake pool can contain multiple stake keys.\todo{this statement is unclear}
 \end{itemize}
 
 \begin{figure*}[ht]
@@ -643,7 +641,7 @@ comparatively short, which is one of our requirements (recall
 the hash used in base addresses.
 
 \paragraph{Pointer Addresses and Rollback}
-There is a sublety with pointer addresses: it might happen that a
+There is a subtlety with pointer addresses: it might happen that a
 stake key registration certificate that is referenced by a pointer
 address might be lost due to a rollback. The system should not lead to
 a loss of funds in such a case. To prevent that, the system should
@@ -676,10 +674,10 @@ leadership schedule.
 Note that using addresses with no stake rights effectively decreases
 the total amount of stake, which plays into the hands of the adversary.
 
-\subsubsection{Reward Address}
+\subsubsection{Reward Account Address}
 \label{reward-address}
 
-Reward addresses are used to distribute rewards for participating in
+Reward account addresses are used to distribute rewards for participating in
 the PoS protocol (either directly or via delegation), as described in
 \ref{distributing-rewards}. They have a number of interesting
 properties:
@@ -687,11 +685,11 @@ properties:
 \begin{itemize}
 \item They use account-style accounting, not UTxO-style.
 \item They can not receive funds via transactions. Instead, their
-  balance is updated whenever rewards are distributed.
+  balance is only increased when rewards are distributed.
 \item They are not associated with a spending key. Instead, there is a
   one-to-one correspondence between registered staking keys and reward
-  addresses (see \cref{fig:er-relationship-delegation}). Whenever funds
-  are withdrawn from a reward address, its staking key is used as a
+  account addresses (see \cref{fig:er-relationship-delegation}). Whenever funds
+  are withdrawn from a reward account address, its staking key is used in the
   witness.
 \end{itemize}
 
@@ -713,6 +711,7 @@ nullary constant (though of course a different one):
 
 The terms \emph{reward address} and \emph{reward account} will be used
 interchangeably throughout this document.
+% And so from here on we don't need to keep saying "reward account address"!
 
 \subsubsection{Bootstrap Address}
 \label{bootstrap-address}
@@ -744,8 +743,8 @@ rights whatsoever.
 \subsubsection{HD Wallet Structure in Shelley}
 \label{hd-wallet-structure-in-shelley}
 
-All the Shelley address formats support hierarchical deterministic
-wallets, as per BIP-32 \citep{bip32}.
+All the Shelley address formats (other than script addresses) support
+hierarchical deterministic wallets, as per BIP-32 \citep{bip32}.
 
 In particular this kind of wallet scheme allows implementations that can
 do wallet restoration from seed in time that is better than linear in
@@ -763,10 +762,14 @@ After a wallet recognises an address for which it controls the payment
 key, it will check whether the staking object \(\beta\) is set according
 to the current delegation preference of the wallet. If there is a
 discrepancy, it will alert the user, and ask them whether they want to
-re-delegate according to the current delegation preferences.
+re-delegate according to their current delegation preferences.
 
 This check protects against the malleability attack in
-\cref{address-nonmalleability}.
+\cref{address-nonmalleability}. It does so not by making it impossible but
+by ensuring that the users are aware of it. This design also covers the case
+of users simply changing their delegation choice but subsequently receiving
+payments to addresses they handed out previously that use the previous
+delegation choice.
 
 \subsection{Certificates and Registrations}
 \label{certificates-and-registrations}
@@ -919,7 +922,7 @@ This certificate contains:
   the public staking key \(vks\)
 \end{itemize}
 
-The certificate must be signed by \(sks\).
+The certificate witness must be signed by \(sks\).
 \item[Stake key de-registration certificate]
 This certificate contains:
 
@@ -928,7 +931,7 @@ This certificate contains:
   the public staking key hash \(\mathcal{H}(vks)\)
 \end{itemize}
 
-The certificate must be signed by \(sks\).
+The certificate witness must be signed by \(sks\).
 \end{description}
 
 Registering a stake key introduces a corresponding stake reward account.
@@ -1111,8 +1114,8 @@ the 10 corresponding block bodies.
 
 In this situation, the validity of the pools-staking keys cannot be verified.
 If the network layer sees one of the 10 new blocks signed by a key it doesn't
-recognise, it might be because there is a delegation certificate in the blocks
-bodies (which the network layer has not seen yet), that shows tha tht key is
+recognise, it might be because there is a delegation certificate in the block
+bodies (which the network layer has not seen yet), that shows that the key is
 valid because some other key delegated its staking rights to it. Similarly, if
 the network layer sees a known staking key, how can it know that it is still
 valid? There could be a new certificate in the block body that delegates the
@@ -1572,7 +1575,7 @@ which belong to a registered staking key that is delegating to a stake
 pool). The lower this ratio, the less stake is required to launch a 51\%
 attack on the system. This can be offset by increasing \(d\). For
 example, if \(d \geq 0.5\), it is impossible to launch a 51\% attack. We
-can specify an amuont of stake controlled by an adversary that we want
+can specify an amount of stake controlled by an adversary that we want
 the system to be resilient against, and delay reducing \(d\) in order to
 meet this level of resistance.
 
@@ -1635,13 +1638,13 @@ growth of the UTxO, which is clearly not sustainable. Furthermore,
 individual rewards will be small, so most of the UTxO entries created
 for reward distribution will be dust.
 
-We have explored several aproaches to circumvent this problem
+We have explored several approaches to circumvent this problem
 (see \cref{assessment-of-rewards-sharing-mechanisms} for a summary),
 and ended up with using \emph{reward accounts}
 (\cref{reward-address}). Here, UTxO growth is prevented by using
 addresses that do not use UTxO style accounting at all. Instead, every
 registered staking key has an associated address that uses
-account-style book-keping. That way, the rewards from multiple epochs
+account-style book-keeping. That way, the rewards from multiple epochs
 can be pooled, and stakeholders can withdraw them manually. Note that
 this has two advantages over the superficially simpler approach of
 having stakeholders claim their rewards directly:
@@ -1708,7 +1711,7 @@ phase are still eligible to sign some of the blocks.
 \label{fees}
 
 To prevent economic attacks, fees or refundable deposits should be
-charged where operators incur costs. In partcular we will have
+charged where operators incur costs. In particular we will have
 refundable deposits corresponding to the state that has to be tracked
 for UTxOs, and the various mechanisms involved in delegation.
 
@@ -1757,7 +1760,7 @@ when
 \item a staking key is de-registered -- this should release the
   deposit for the key itself, as well as for the heavyweight
   delegation certificate for this key if there is one
-\item a stake pool is retired -- there is a sublety here, however,
+\item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
   epoch, and we will probably want to delay paying out the refund
@@ -1770,7 +1773,7 @@ when
 Over time, we expect that an increasing amount of stake will become
 inactive. Individual stakeholders might lose their keys or interest in
 the system, and stake pool operators might stop operating in an
-unorderly fashion without posting a retirement certificate. This poses
+disorderly fashion without posting a retirement certificate. This poses
 two problems for the system: the chain growth will decrease, limiting
 the rate at which transactions can be processed, and increasing the
 latency. It will also play in the hands of an adversary, since stake
@@ -1814,7 +1817,7 @@ the wallet should advise them to re-delegate.
 Owners of a stale staking key -- both individual stakeholders and
 operators of a stake pool -- should also be notified when their staking
 key becomes stale. If they still have the key after it became stale (for
-isntance, if their node went down temporarily), they should have the
+instance, if their node went down temporarily), they should have the
 possibility to announce to the blockchain that their key should be
 considered to be active again. They can do that by posting a
 \emph{heartbeat} message, a message that contains the current slot
@@ -1950,7 +1953,7 @@ of its addresses.
 \begin{description}
 \item[If the wallet consists of base and/or addresses using the same
   staking key] the wallet should look whether there is a staking key
-  registration and heavyweight delegation certificate fot this key. If
+  registration and heavyweight delegation certificate for this key. If
   there are, and the delegation certificate points to an active
   staking pool, the wallet should set its delegation preference to use
   pointer addresses to the same staking key, and inform the user of
@@ -2045,7 +2048,7 @@ stakeholders that delegated to the pool, possibly triggering a
 re-delegation.
 
 In addition to the above, we will also require pool operators to include
-a list of IP-adresses and/or domain names in the registration
+a list of IP-addresses and/or domain names in the registration
 certificate, pointing to publicly reachable \emph{relay nodes} under
 their control. (It is necessary to have a sufficient number of such
 publicly reachable nodes in order to establish a reliable peer-to-peer
@@ -2055,10 +2058,10 @@ instead: People contemplating joining a pool will check the published
 data and will put little trust in operators who publish fake or
 unreliable addresses.
 
-\emph{Remark}: Due to the nature of our Incentives Mechanism (see
-\hyperref[design-of-incentives]{below}), very large stakeholders are
-incentivized to split their stake and create several pools. For a future
-version of Cardano, we plan to facilitate this by allowing such
+\emph{Remark}: Due to the nature of our incentives mechanism (see
+\cref{design-of-incentives}), very large stakeholders are
+incentivised to split their stake and create several pools. For a future
+version of Cardano, we may facilitate this by allowing such
 stakeholders to set up all their pools with a single certificate. For
 the present version, however, these pools will have to be created
 manually. This seems justified, given that there is only a handful of
@@ -2068,15 +2071,15 @@ unnecessarily complicate engineering.
 \subsection{Display of Stake Pools in the Wallet}
 \label{display-of-stake-pools-in-the-wallet}
 
-The wallet software will keep a list of all the stakepool registration
-certificates it finds. For each, it will perform a lookup of the
+The wallet software will maintain a set of all the active stakepools.
+For each, it will perform a lookup of the
 contained \(sks\) to retrieve the corresponding metadata to display to
 the user.
 
 In order to prevent relying on a central party to host this key value
 store, it will be possible to register multiple servers in the wallet,
 and each of those will be queried. Anybody will have the opportunity to
-run a stakepool registration server, and announce its existence off
+run a stakepool registration server, and announce its existence out of
 band.
 
 In order for stakeholders to be able to delegate their stake to a pool,
@@ -2097,7 +2100,7 @@ provides protection against a Sybil attack on the stake pool level
 For estimating the rewards shared by a pool, the wallet needs to predict
 the performance of the pool, i.e.~the ratio of blocks that the pool
 added to the chain and the number of slots it was elected as leader.
-This is done by assuming the performance to be consant, and using the
+This is done by assuming the performance to be constant, and using the
 performance during the last epoch, which is visible from the blockchain.
 
 In order to prevent a slight difference in the expected returns to
@@ -2140,7 +2143,7 @@ is registered, and the registration certificate is in the immutable
 part of the chain (\(k\) blocks deep), newly created addresses can be
 pointer addresses to the stake key registration certificate.
 
-\paragraph{Addtitional Accounts}
+\paragraph{Additional Accounts}
 The user might want to create an additional account in their wallet
 later on, using a different staking key, to prevent linkability of all
 their addresses. In principle, they could use the funds that are
@@ -2184,7 +2187,7 @@ two scenarios to be considered:
   Wallet] In this case, the user will use Daedalus to create a cold
   wallet, which will use a base address. Daedalus will provide the
   staking key to the user, so that they can post a registration
-  certificate, and delegation certifiactes, whenever they have funds
+  certificate, and delegation certificates, whenever they have funds
   in a non-cold wallet.
 \end{description}
 \todo{This should be discussed with the Daedalus team to figure out
@@ -2201,7 +2204,7 @@ using their own stake.
 Technically, such stakeholders will create a \emph{private pool},
 which is just a stake pool with margin \(m=1\). Such pools will
 pay all rewards to the pool operator (which is not a special rule, but
-just the effect of havin a margin of 1), and they should not be shown
+just the effect of having a margin of 1), and they should not be shown
 in the stake pool directory in Daedalus (although even if they were,
 they would always be listed at the very bottom, since they would not
 yield any rewards to their members).
@@ -2222,13 +2225,13 @@ feature for the initial release.
 \subsection{Overview of Incentives}
 \label{overview-of-incentives}
 
-On a high level, goal of the Incentives mechanism is to incentivize
+On a high level, goal of the incentives mechanism is to incentivise
 stakeholders to follow the protocol and thereby guaranteeing secure and
 efficient operation of Cardano.
 
 More specifically, we want a majority of stake (at least 80\%) to
 delegate to a number of \(k\) \emph{stake pools} (where \(k\) is a
-parameter of the system -- see \hyperref[parameters]{below}). The
+parameter of the system -- see \cref{parameters}). The
 \emph{pool leaders} of those stake pools are supposed to
 
 \begin{itemize}
@@ -2260,9 +2263,9 @@ Incentives are provided in the form of \emph{social pressure} (by making
 pool leader performance and adherence to the protocol public), but
 mostly by \emph{monetary incentives} in the form of ADA.
 
-Design goal of the mechanism is to align monetary incentives as
+A design goal of the mechanism is to align monetary incentives as
 perfectly as possible with protocol adherence: If every stakeholder
-follows his own financial interests, the system should settle into a
+follows their own financial interests, the system should settle into a
 desirable state. If possible, there should never be a conflict of
 interest between maximizing rewards and ``doing the right thing''.
 
@@ -2284,8 +2287,8 @@ However, there will be several refinements to this general principle:
   (otherwise, the system would converge towards a state with all stake
   being delegated to one giant stake pool).
 \item
-  Rewards will decrease if a pool leader does not create the blocks he
-  is supposed to create.
+  Rewards will decrease if a pool leader does not create the blocks they
+  are supposed to create.
 \item
   Pool leaders will be compensated for their trouble and risk by
 \item
@@ -2296,7 +2299,7 @@ However, there will be several refinements to this general principle:
   publicly declare their margin, which they can freely choose.)
 \item
   Pool rewards will slightly increase with the stake of their leader.
-  There is no minimal stake required to create a pool - anybody can do
+  There is no minimal stake required to create a pool -- anybody can do
   this. However, pools led by leaders with high stake will get higher
   rewards. (This will discourage pool leaders from splitting their stake
   to operate several pools. It will also help preventing Sybil attacks,
@@ -2308,7 +2311,7 @@ Our game theoretic analysis has shown that if stakeholders try to
 maximize their rewards in a ``short-sighted'' (\emph{myopic}) way (pool
 members joining the pool with the highest rewards \emph{at this moment},
 pool leaders raising their margins to get higher rewards \emph{at this
-moment}), chaotic behavior will ensue.
+moment}), chaotic behaviour will ensue.
 
 Therefore we will calculate \emph{non-myopic} rewards and make them
 public, thus guiding stakeholders to behave in a way that will benefit
@@ -2343,16 +2346,16 @@ advance:
 \end{itemize}
 
 We will discuss
-\hyperref[deciding-on-good-values-for-the-parameters]{later} how one
+in \cref{deciding-on-good-values-for-the-parameters} how one
 could approach choosing reasonable values for these.
 
 \subsection{Reminder: Stakepool Registration}
 \label{reminder-stakepool-registration}
 
-Recall from \hyperref[stakepool-registration]{above} that stakeholders
+Recall from \cref{stakepool-registration} that stakeholders
 who wish to operate and lead a stake pool have to \emph{register} their
 pool on the blockchain. From the point of view of reward-calculation
-(see \hyperref[epoch-rewards]{below}), the following information has to
+(see \cref{epoch-rewards}), the following information has to
 be included in the registration:
 
 \begin{itemize}
@@ -2362,14 +2365,14 @@ be included in the registration:
   The pool leader \emph{margin} (in \([0,1]\)), indicating the
   additional share the pool leader will take from pool rewards before
   splitting rewards amongst members (see
-  \hyperref[pool-leader-reward]{below}).
+  \cref{pool-leader-reward}).
 \item
   Proof of \emph{ADA pledged to the pool}. This could be provided as a
   list of addresses, signed by the corresponding secret spending keys.
 \end{itemize}
 
 There will be no lower bound on the amount of ADA that has to be
-pledged, but we will see \hyperref[pool-rewards]{below} that pool
+pledged, but we will see in \cref{pool-rewards} that pool
 rewards will increase with this amount. This is necessary to prevent
 people with low stake from registering many pools, gaining control over
 a lot of stake and attacking the system (see requirement
@@ -2411,7 +2414,7 @@ decrease over time. This has to be compensated by
 \subsubsection{Rewards from the Previous Epoch}
 \label{rewards-from-the-previous-epoch}
 
-As we will see \hyperref[pool-rewards]{below}, not all available rewards
+As we will see in \cref{pool-rewards}, not all available rewards
 from an epoch will actually be distributed during that epoch. The rest
 will be added to the rewards of the following epoch.
 
@@ -2454,14 +2457,14 @@ For a given epoch, the \emph{maximal} rewards for a pool are \[
   of the pool.
 \item
   \(s':=\min(s, z_0)\), where \(s\) is the relative stake of the pool
-  leader (the amount of ADA pledged during
-  \hyperref[stakepool-registration]{pool registration}.
+  leader (the amount of ADA pledged during pool registration,
+  see \cref{stakepool-registration}).
 \end{itemize}
 
 \emph{Note that \(\sigma\) includes the stake \(s\) pledged by the pool
 leader.} For example, let us assume that the total existing supply of
 ADA is \(T=31,000,000,000\), and consider a pool whose pool leader
-pledged ADA 15,500,000 and who attracted another ADA 15,500,000 from his
+pledged ADA 15,500,000 and who attracted another ADA 15,500,000 from their
 pool members. Then \[
 \begin{array}{rcccl}
     s                  & = & \displaystyle\frac{15,500,000}{31,000,000,000}              & = & 0.0005\;\text{and} \\[5mm]
@@ -2487,7 +2490,7 @@ What happens in between these two extremes is controlled by parameter
 \(\gamma\in(0,\infty)\): For \(\gamma=1\), the penalty will be
 proportional to the number of missed blocks. For \(0<\gamma<1\),
 penalties for missing the first few blocks will be relatively light,
-whereas for \(\gamma>1\), penalties will be over-propertionally harsh in
+whereas for \(\gamma>1\), penalties will be over-proportionally harsh in
 the beginning.
 
 The difference \(f(s_j,\sigma_j)-\hat{f}_j\) will be sent to the
@@ -2501,8 +2504,8 @@ difference will be added to the following epoch's rewards.
 \subsubsection{Reward Splitting inside a pool}
 \label{reward-splitting-inside-a-pool}
 
-After the rewards for a pool have been determined according to the
-\hyperref[pool-rewards]{previous section}, those rewards are then split
+After the rewards for a pool have been determined according to
+\cref{pool-rewards}, those rewards are then split
 amongst the \emph{pool leader} and the \emph{pool members}.
 
 Consider
@@ -2519,7 +2522,7 @@ Consider
 \end{itemize}
 
 Note that the values \(c\) and \(m\) for registered pools are available
-from the \hyperref[stakepool-registration]{pool registration}.
+from the pool registration, see \cref{stakepool-registration}.
 Stakeholders who have \emph{not} registered a pool and participate in
 the protocol on their own are treated like \emph{pool leaders of one-man
 pools with margin 1} (costs are irrelevant in this case, because all
@@ -2563,7 +2566,7 @@ member): \[
 \label{non-myopic-utility}
 
 It would be short-sighted (``myopic'') for stakeholders to directly use
-the formulas from section \hyperref[reward-splitting]{Reward Splitting}.
+the reward splitting formulas from \cref{reward-splitting}.
 They should instead take the long-term (``non-myopic'') view. To this
 end, the system will calculate and display the ``non-myopic'' rewards
 that pool leaders and pool members can expect, thus supporting
@@ -2666,8 +2669,8 @@ We are considering two solutions to this problem:
 
 Disadvantage of this idea is the potentially high \emph{variance}, but
 on the other hand, the element of randomness could also add some
-additional ``thrill'' to the process. - Only pay to UTXO's which haven't
-changed over the duration of the epoch and then modify those UTXO's
+additional ``thrill'' to the process. - Only pay to UTxO's which haven't
+changed over the duration of the epoch and then modify those UTxO's
 instead of creating new ones.
 
 This would imply that people holding on to their ADA instead of spending
@@ -2713,7 +2716,7 @@ readily available.
 \label{deciding-on-good-values-for-the-parameters}
 
 We need to decide on reasonable values for the parameters \(k\),
-\(a_0\), \(\rho\) and \(\tau\) (see \hyperref[parameters]{above}).
+\(a_0\), \(\rho\) and \(\tau\) (see \cref{parameters}).
 
 \subsubsection{\texorpdfstring{\(k\)}{k}}
 
@@ -2730,18 +2733,18 @@ pool leader's stake has on pool rewards.
 Our game theoretic analysis predicts that the \(k\) pools with the
 highest \emph{potential}, the highest value of \[
     P(\lambda,c):=\left(z_0+a_0\cdot\lambda\right)\cdot\frac{R}{1+a_0}-c
-\] (where \(\lambda\) is the stake commited by the pool leader and \(c\)
+\] (where \(\lambda\) is the stake committed by the pool leader and \(c\)
 are the pool costs) will create the saturated pools.
 
 Let us consider an attacker with stake \(S < \frac{1}{2}\), who wants to
-gain control over a majority of stake. This means he has to lead
+gain control over a majority of stake. This means they have to lead
 \(\frac{k}{2}\) pools, committing \(\lambda=\frac{2S}{k}\) stake to
 each.
 
-In order for his \(\frac{k}{2}\) pools to be successful, each of these
+In order for their \(\frac{k}{2}\) pools to be successful, each of these
 needs to have higher potential than the honest stakeholder with the
 \(\frac{k}{2}\)-highest potential has. If that honest player has
-commited stake \(\tilde{\lambda}\leq\frac{1}{k}\) and has costs
+committed stake \(\tilde{\lambda}\leq\frac{1}{k}\) and has costs
 \(\tilde{c}\) and if our malicious attacker is willing to lie and claim
 lower ``dumping'' costs \(c=r\cdot\tilde{c}\) (for \(r\in[0,1)\)), this
 means \[
