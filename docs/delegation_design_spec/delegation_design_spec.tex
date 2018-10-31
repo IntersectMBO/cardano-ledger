@@ -499,8 +499,12 @@ delegation:
   reward account is only associated with the one stake key.
 \item There can be many UTxO entries (funds) for a single address. However a
   UTxO entry refers an available input address to use.
-\item A stake key is associated with exactly zero or one stake pools at any point
-  in time. A stake pool can contain multiple stake keys.\todo{this statement is unclear}
+\item A stake key is associated with exactly zero or one stake pools
+  at any point in time. A stake pool has exactly one staking key that
+  controls the pool (though it can use further operational keys to
+  mitigate key theft as described in
+  \cref{operational-key-certificates}, and there can be multiple
+  staking keys delegating or pledging to the pool).
 \end{itemize}
 
 \begin{figure*}[ht]
@@ -520,7 +524,7 @@ delegation:
   %%
   %% Nodes
   %%
-  \node (addr) [] {Pubkey address};
+  \node (addr) [] {Address};
   \node (utxo) [left = of addr] {UTxO};
   \node (pkey) [right = of addr] {Payment key};
   \node (skey) [below = of addr] {Stake key};
@@ -539,7 +543,7 @@ delegation:
   \draw[-] (addr) edge node[pos=0.1]  {$n$}
                        node[pos=0.85] {$1$}
            (pkey);
-  \draw[-] (skey) edge node[pos=0.1]  {$n$}
+  \draw[-] (skey) edge node[pos=0.1]  {$1$}
                        node[pos=0.85] {$0 \ldots 1$}
            (spool);
   \draw[-] (skey) edge node[pos=0.1] {$1$}
@@ -614,7 +618,8 @@ Concretely, pointer address have as their staking object
 where \(N_\text{block}\) is the index of a block in the chain,
 \(N_\text{tx}\) is the index of a transaction within that block and
 \(N_\text{reg}\) is the index of the registration certificate within
-the list of  key registration certificates in the transaction. This
+the list of key registration certificates in the transaction\todo{Or
+  rather in the list of \emph{all} certifications in the transaction?}. This
 identified transaction should have a certificate at index-\(N_\text{reg}\)
 in its list of stake key registration certificates. The certificate
 specifies a verification key \(vks\). The staking rights associated
