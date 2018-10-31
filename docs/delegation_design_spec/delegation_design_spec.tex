@@ -960,7 +960,7 @@ Registering a stake key attracts a special fee that must be included
 into the transaction that posts the certificate. This fee is in fact a
 deposit that is refundable when the stake key is de-registered (i.e.~a
 corresponding negative fee in the transaction that posts the
-re-registration certificate). The deposit is to account for the costs of
+de-registration certificate). The deposit is to account for the costs of
 tracking the stake key and maintaining the corresponding stake reward
 account. It is also to incentivise de-registering stake keys that are no
 longer required, so that the corresponding resources can be released.
@@ -984,9 +984,7 @@ The certificate contains the following:
   or a list of such public stake key hashes. If any of the
   \(vks_\text{owner}\)
   delegate to this pool, the stake that they delegate will be
-  considered to be a deposit\todo{I dislike calling this deposit,
-    since it might lead to confusion with the same term being used in
-    the context of fees. Is there a better word?''}~by the owner, see
+  counted towards the stake pledged to the pool by the owner(s), see
   \cref{stakepool-registration,overview-of-incentives,reward-splitting}. Note
   that adding a key as \(vks_\text{owner}\)
   in itself does not actually delegate the stake controlled by that
@@ -1049,9 +1047,9 @@ operator and stake pool owners:
 \item[Stake Pool Operator] This is the person who operates the pool --
   owns or rents a server, holds the staking key of the pool, runs and
   monitors the node.
-\item[Stake Pool Owner] This is a person providing the stake deposit
-  for the pool, increasing its rewards and desirability. The ability
-  for the owner to pledge funds is providing protection against the
+\item[Stake Pool Owner] This is a person pledging stake
+  to the pool, increasing its rewards and desirability. The ability
+  for the owner to pledge stake is providing protection against the
   pool-level Sybil attack
   (requirement~\ref{sybil-attack-protection-at-stake-pool-level}, see
   also \cref{stakepool-registration}).
@@ -1060,7 +1058,7 @@ operator and stake pool owners:
 Usually, the stake pool operator and owner will be the same person,
 but a stake pool can also have multiple owners. This is to allow
 people to coordinate and form a stake pool even if none of them had
-enough stake on their own to make a deposit that would make the stake
+enough stake on their own to make a pledge that would make the stake
 pool competitive.
 
 Still, there will only be one operator, the person holding the key of
@@ -1071,7 +1069,7 @@ case some of the owners are kicked off the stake pool). That is a
 conscious design decision: collaborating to form a stake pool should
 require some trust between the participants. Otherwise, everyone could
 choose to become a co-owner of a stake pool instead of delegation,
-which would render the mechanism of deposits ineffective. Allowing the
+which would render the mechanism pledging stake ineffective. Allowing the
 operator to shut down the pool, or to kick owners off, raises the
 threshold of necessary trust that owners of the pool must have in the
 operator.
@@ -2020,7 +2018,7 @@ requires two steps: posting a stakepool registration certificate to the
 blockchain, and providing additional verifiable personal information.
 
 The second step is essential to establish trust in a stake pool.
-However, storing personal information directly on the blockchain would
+However, storing personal information directly on the blockchain could
 lead to violation of legislation like the GDPR, so instead of including
 it in the certificate, it will be stored on an external key-value store,
 using \(\mathcal{H}(vks_\text{pool})\) as key. The integrity of the data
@@ -2034,34 +2032,40 @@ delegating funds to this stake pool should notify the user of such a
 change whenever it detects it, and ask whether the delegation should
 be reconsidered.
 
-The rewards that a stake pool gets depend on a deposit of funds that the
-stake pool operator themself provides. This adds a cost to creating a
-competitive stake pool, and protects against Sybil attacks on the stake
-pool level (\cref{sybil-attack-protection-at-stake-pool-level}). In order
-to differentiate between delegated and deposited stake, the stake pool
+The rewards that a stake pool gets depend on a pledge of funds that
+the stake pool owner(s) provide. This adds a cost to creating a
+competitive stake pool, and protects against Sybil attacks on the
+stake pool level
+(\cref{sybil-attack-protection-at-stake-pool-level}). In order to
+differentiate between delegated and pledged stake, the stake pool
 operator will include a list\footnote{Allowing a list of owner keys
   allows for stake pool operators to use multiple accounts/wallets for
-  their deposits. It also allows a group of people combining their stake
-  to form a competitive pool, without losing any control over their
-  funds.} of stake key hashes \(\mathcal{H}(vks_\text{owner})\) in the
-certificate. Stake delegated from any of those keys will be counted
-towards the stake deposited by the operator. Note that the operator
-still needs to post delegation certificates in order to actually make a
-deposit\footnote{We also contemplated \emph{automatically} counting the
-  stake controlled by any \(vks_\text{owner}\) towards the deposit, but
-  that complicates the design, since we had to forbid any of those keys
-  from posting valid delegation certificates to prevent double
-  delegation. Imposing a special treatment of those keys would also be a
-  violation of the design goal from
-  \cref{no-special-wallet-for-stake-pool-operators}.}.
+  delegating the stake they pledged. It also allows a group of people
+  combining their stake to form a competitive pool, without losing any
+  control over their funds.} of stake key hashes
+\(\mathcal{H}(vks_\text{owner})\)
+in the certificate. Stake delegated from any of those keys will be
+counted towards the stake pledged by the owner(s). Note that this
+still requires delegation certificates to be posted\footnote{We also
+  contemplated \emph{automatically} counting the stake controlled by
+  any \(vks_\text{owner}\)
+  towards the pledge, but that complicates the design, since we had
+  to forbid any of those keys from posting valid delegation
+  certificates to prevent double delegation. Imposing a special
+  treatment of those keys would also be a violation of the design goal
+  from \cref{no-special-wallet-for-stake-pool-operators}.}.
 
-A stake pool operator will pledge to deposit a certain amount of Ada to
-the pool when registering a pool. This pledge is important: otherwise,
+A stake pool operator will indicate, in the stake pool registration
+certificate,  the amount of stake that the owners pledge to
+the pool, when registering a pool. It is important that the amount
+pledged is registered in the certificate: otherwise,
 an adversarial stake pool operator could circumvent the Sybil protection
-of the deposit, by placing a deposit in a pool until it attracted stake,
-and then simply moving the stake to the next pool. The pledge will be
-enforced at the point of leader election; stake pools that have a
-deposit less than what they pledged will be excluded from the election,
+of the pledge mechanism, by pledging stake to a pool until it attracted stake,
+and then simply pledging the stake to the next pool. The pledge will be
+enforced at the point of leader election; stake pools that do not
+honour their pledge (i.e., pools where the amount of stake delegated
+to the pool from the set of owner keys is less than the pledge listed
+in its stake pool registration certificate) will be excluded from the election,
 and as a consequence forfeit their rewards for that epoch\footnote{We
   could also just deny the rewards for this pool, but still let it take
   part in the protocol.}.
@@ -2075,9 +2079,9 @@ re-delegation.
 In addition to the above, we will also require pool operators to include
 a list of IP-addresses and/or domain names in the registration
 certificate, pointing to publicly reachable \emph{relay nodes} under
-their control. (It is necessary to have a sufficient number of such
+their control (It is necessary to have a sufficient number of such
 publicly reachable nodes in order to establish a reliable peer-to-peer
-network.) We will use no technical mechanism to check the validity and
+network.). We will use no technical mechanism to check the validity and
 availability of these relay nodes, but will rely on social pressure
 instead: People contemplating joining a pool will check the published
 data and will put little trust in operators who publish fake or
@@ -2118,7 +2122,7 @@ that are reliable, and have not yet reached saturation. In other words,
 the users selfish interest to pick a stake pool that is promising large
 rewards is aligned with the goal of placing the system in the hands of a
 number of reliable stake pool operators, and of avoiding centralisation.
-The influence of the stake pool operator's deposit on the rewards
+The influence of the stake pool operator's pledge on the rewards
 provides protection against a Sybil attack on the stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}).
 
@@ -2137,13 +2141,13 @@ uniformly from the interval \([0.95, 1.05]\), but this choice is
 arbitrary and should be re-evaluated during the operation of the
 testnet.
 
-Since the actual amount of stake that the leader themself uses for the
-pool might change at any point in time, the ordering of pools will use
-the amount of stake that the leader \emph{pledged} when registering the
-pool, not the amount of stake that the leader currently put into the
-pool. However, pools where the current deposit is smaller than the
-amount pledged are expected to give zero rewards, and will end up at the
-end of the list.
+Since the actual amount of stake that the stake pool owners contribute
+to the pool might change at any point in time, the ordering of pools
+will use the amount of stake that the operator \emph{pledged} when
+registering the pool, not the amount of stake that is currently
+delegated to the pool from registered owner keys. However, pools where
+this amlount is smaller than the amount pledged are expected to give
+zero rewards, and will end up at the end of the list.
 
 \subsection{Basic Delegation}
 \label{basic-delegation}
@@ -3267,9 +3271,9 @@ In the following, we describe how the requirements listed in
 
 \item[\cref{sybil-attack-protection-at-stake-pool-level} Sybil Attack
   Protection at Stake Pool Level] Stake pool operators are expected to
-  pledge a deposit to their pools that has an influence on the rewards
-  that stake pool members will receive, and on the position of the
-  stakepool in the listing displayed to stakeholders
+  pledge an amount of stake to their pools that has an influence on
+  the rewards that stake pool members will receive, and on the
+  position of the stakepool in the listing displayed to stakeholders
   (\cref{stakepool-registration},
   \cref{display-of-stake-pools-in-the-wallet},
   \cref{reminder-stakepool-registration}).
