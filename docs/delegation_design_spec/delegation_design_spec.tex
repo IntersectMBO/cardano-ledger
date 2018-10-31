@@ -618,10 +618,9 @@ Concretely, pointer address have as their staking object
 where \(N_\text{block}\) is the index of a block in the chain,
 \(N_\text{tx}\) is the index of a transaction within that block and
 \(N_\text{reg}\) is the index of the registration certificate within
-the list of key registration certificates in the transaction\todo{Or
-  rather in the list of \emph{all} certifications in the transaction?}. This
-identified transaction should have a certificate at index-\(N_\text{reg}\)
-in its list of stake key registration certificates. The certificate
+the list of certificates in the transaction. This identified
+transaction should have a stake key registration certificate at
+index-\(N_\text{reg}\) in its list of certificates. The certificate
 specifies a verification key \(vks\). The staking rights associated
 with funds held in this address may be exercised by the owner of the
 corresponding signing key \(sks\).
