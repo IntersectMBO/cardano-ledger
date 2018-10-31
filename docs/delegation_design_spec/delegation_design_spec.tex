@@ -1796,8 +1796,21 @@ certificate in order to be valid, so any deposit that we would require
 for a delegation certificate can instead be included in the deposit
 for the associated stake key registration certificate.
 
-\subsection{Stale Stake}
+\subsection{Design Option: Stale Stake}
 \label{stale-stake}
+
+This section sketches an optional mechanism for tracking \emph{stale
+  stake}, i.e., stake that is no longer being actively
+controlled. Stale stake can limit the chain growth (since elected
+leaders might fail to show up and sign blocks), and decrease the
+amount of honest stake, making the system easier to attack. The
+mechanism described below is aimed at mitigating the first effect.
+
+In the current design, stale stake is much less likely to become a
+problem than in earlier iterations (since we automatically discard
+stake that is not delegated to a valid stake pool), so we propose to
+not implement this design option, at least not in the initial Shelley
+release. We keep it in this document for further reference.
 
 Over time, we expect that an increasing amount of stake will become
 inactive. Individual stakeholders might lose their keys or interest in
