@@ -2063,11 +2063,7 @@ competitive stake pool, and protects against Sybil attacks on the
 stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}). In order to
 differentiate between delegated and pledged stake, the stake pool
-operator will include a list\footnote{Allowing a list of owner keys
-  allows for stake pool operators to use multiple accounts/wallets for
-  delegating the stake they pledged. It also allows a group of people
-  combining their stake to form a competitive pool, without losing any
-  control over their funds.} of stake key hashes
+operator will include a list of stake key hashes
 \(\mathcal{H}(vks_\text{owner})\)
 in the certificate. Stake delegated from any of those keys will be
 counted towards the stake pledged by the owner(s). Note that this
@@ -2079,6 +2075,14 @@ still requires delegation certificates to be posted\footnote{We also
   certificates to prevent double delegation. Imposing a special
   treatment of those keys would also be a violation of the design goal
   from \cref{no-special-wallet-for-stake-pool-operators}.}.
+Allowing a \emph{list} of owner keys allows for stake pool operators
+to use multiple accounts/wallets for delegating the stake they
+pledged. It also allows a group of people combining their stake to
+form a competitive pool, without losing any control over their funds
+(see also the discussion at the end of
+\cref{stake-pool-registration-certificates}).
+
+
 
 A stake pool operator will indicate, in the stake pool registration
 certificate,  the amount of stake that the owners pledge to
