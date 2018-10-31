@@ -1876,7 +1876,7 @@ Wallet recovery is the process of reconstructing a wallet from the root
 key. In order to reconstruct a wallet, all addresses belonging to that
 wallet which appear on the blockchain need to be identified.
 
-In the current implementation, this is done by traversing the
+In the Byron implementation, this is done by traversing the
 blockchain, and for each address, checking whether it belongs to the
 wallet. Unfortunately, this is linear in the size of the blockchain,
 leading to a very poor user experience.
@@ -1906,7 +1906,8 @@ Of course, we cannot search for \emph{all} possible addresses of the
 wallet. Instead, we utilise the tree structure of the HD wallet. We will
 require that the wallet software populates this tree in a specified way
 that will allow us to do a kind of exponential search for the addresses
-of the wallet.
+of the wallet\footnote{This is similar to the account discovery
+  in \href{https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki}{BIP44}.}.
 
 \subsubsection{Trees of Depth 1}
 \label{trees-of-depth-1}
@@ -2025,6 +2026,11 @@ owner to create several addresses at once which do not have to be
 processed in order. The wallet software needs to be aware of this
 constant so that it will not create undiscoverable addresses and so that
 it can warn the owner when it reaches the limit.
+
+By default, the maximal address gap will be \(i=20\). Wallets can
+allow using a custom value (which should be convenient for exchanges
+or merchants), but when they do, the custom value will have to be
+known during wallet restoration.
 
 \section{Delegation Scenarios}
 \label{delegation-scenarios}
