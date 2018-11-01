@@ -808,14 +808,12 @@ relation.
 Figure~\ref{fig:relationship-keys-certificates} shows the relationships between
 the different types of certificates and keys.
 %
-Dashed arrows represent the kind of delegation that takes place between
-(the owners of) the different keys, whereas the direction of the arrow represent
-the source and destination of the delegation information in the certificate:
-the owner of a staking key delegates his staking rights to the owner of a stake
-pool cold key, using a heavyweight (HW) delegation certificate.
+Dashed arrows represent relationships between the different keys: the owner of
+a staking key delegates his staking rights to the owner of a stake pool cold
+key, using a delegation certificate.
 %
-The owner of a stake pool hot key delegates his staking rights to a cold key,
-via a lightweight (LW) delegation certificate.
+The owner of an operational cold key grants staking rights to the owner of a
+hot key, using an operational key certificate.
 %
 Incoming solid arrows represent the components of the delegation certificates.
 So, for instance, a heavyweight delegation certificate contains the (verifying
@@ -851,20 +849,20 @@ Subsequent sections provide more details.
   \node (shot) [key, right = of scold] {Stake pool keys (hot)};
   \node (skeyr) [cert, above = of skeys] {Stake key registration};
   \node (skeyd) [cert, below = of skeys] {Stake key retirement};
-  \node (pr) [cert, above = of scold] {Pool registration};
-  \node (pd) [cert, below = of scold] {Pool retirement};
-  \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation cert (HW)};
+  \node (pr) [cert, above = of scold] {Pool\\ registration};
+  \node (pd) [cert, below = of scold] {Pool\\ retirement};
+  \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation certificate};
   \node (dummy) [dummy, above = of shot] {};
-  \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Delegation cert (LW)};  
+  \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Operational key\\certificate};  
 
   \tikzset{every node/.style={align=center, text width=7em, text=brown}}
   %%
   %% Relationship between nodes (arrows)
   %%
   % Horizontal lines.
-  \draw[dashed, ->] (skeys) edge node[above] {HW delegation}
+  \draw[dashed, ->] (skeys) edge node[above] {Delegates staking rights}
   (scold);
-  \draw[dashed, <-] (scold) edge node[above] {LW delegation}
+  \draw[dashed, ->] (scold) edge node[above] {Grants\\ staking rights}
             (shot);
   % Vertical lines.
   \draw[->] (skeys) edge 
