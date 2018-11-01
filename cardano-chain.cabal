@@ -175,6 +175,8 @@ test-suite test
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , directory
+                     , filepath
                      , formatting
                      , hedgehog
                      , resourcet
