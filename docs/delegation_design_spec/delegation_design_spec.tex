@@ -450,7 +450,7 @@ system entities.
     %% Nodes
     %%
     \node (owner)   [concept]                    {Owner};
-    \node (addr)    [entity, left = of owner]    {Address (base or pointer)};
+    \node (addr)    [entity, left = of owner]    {Pubkey address};
     \node (skey)    [entity, below = of owner]   {Staking key};
     \node (pkey)    [entity, left = of skey]     {Payment key};
     \node (racc)    [entity, right = of skey]    {Reward account /
@@ -488,7 +488,7 @@ Figure~\ref{fig:er-relationship-delegation} shows the entity-relationship
 diagram of the system level entities involved in the implementation of
 delegation:
 \begin{itemize}
-\item Each normal pubkey address\footnote{As opposed to script addresses}
+\item Each normal pubkey address\footnote{as opposed to script addresses}
   contains a single payment key. However the same payment key
   can be used by multiple addresses (where addresses differ among each other in
   the delegation information).
@@ -520,7 +520,7 @@ delegation:
   %%
   %% Nodes
   %%
-  \node (addr) [] {Address (base or pointer)};
+  \node (addr) [] {Pubkey address};
   \node (utxo) [left = of addr] {UTxO};
   \node (pkey) [right = of addr] {Payment key};
   \node (skey) [below = of addr] {Stake key};
@@ -537,7 +537,7 @@ delegation:
                        node[pos=0.85] {$1$}
            (addr);
   \draw[-] (addr) edge node[pos=0.1]  {$n$}
-                       node[pos=0.85] {$0 \ldots 1$}
+                       node[pos=0.85] {$1$}
            (pkey);
   \draw[-] (skey) edge node[pos=0.1]  {$n$}
                        node[pos=0.85] {$0 \ldots 1$}
@@ -806,8 +806,23 @@ different from the others which are used to define the delegation
 relation.
 
 Figure~\ref{fig:relationship-keys-certificates} shows the relationships between
-the different types of certificates and keys. Subsequent sections provide more
-details.
+the different types of certificates and keys.
+%
+Dashed arrows represent the kind of delegation that takes place between
+(the owners of) the different keys, whereas the direction of the arrow represent
+the source and destination of the delegation information in the certificate:
+the owner of a staking key delegates his staking rights to the owner of a stake
+pool cold key, using a heavyweight (HW) delegation certificate.
+%
+The owner of a stake pool hot key delegates his staking rights to a cold key,
+via a lightweight (LW) delegation certificate.
+%
+Incoming solid arrows represent the components of the delegation certificates.
+So, for instance, a heavyweight delegation certificate contains the (verifying
+part of) staking key of the delegator, and the (verifying part of) the stake
+pool key.
+%
+Subsequent sections provide more details.
 
 \begin{figure}[ht]
   \centering
