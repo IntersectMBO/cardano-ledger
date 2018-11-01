@@ -850,9 +850,9 @@ Subsequent sections provide more details.
   \node (scold) [key, right = of skeys] {Stake pool keys (cold)};
   \node (shot) [key, right = of scold] {Stake pool keys (hot)};
   \node (skeyr) [cert, above = of skeys] {Stake key registration};
-  \node (skeyd) [cert, below = of skeys] {Stake key deregistration};
+  \node (skeyd) [cert, below = of skeys] {Stake key retirement};
   \node (pr) [cert, above = of scold] {Pool registration};
-  \node (pd) [cert, below = of scold] {Pool deregistration};
+  \node (pd) [cert, below = of scold] {Pool retirement};
   \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation cert (HW)};
   \node (dummy) [dummy, above = of shot] {};
   \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Delegation cert (LW)};  
