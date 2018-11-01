@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/0a32ec92c461e144f981864c97546db11b52e46a/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/4b4457e75303ce352223b9723f7771fac6fe0600/snapshot.yaml
 
 packages:
   - ./
