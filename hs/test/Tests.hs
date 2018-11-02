@@ -233,15 +233,19 @@ genOwnerList lower upper = do
         $ Gen.integral (Range.linear (1 :: Natural) 1000)
   return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
 
-genHashKeyPairs :: Int -> Int -> Gen [(HashKey, HashKey)]
-genHashKeyPairs lower upper =
-    fmap (\(a, b) ->
-          (hashKey (vKey $ keyPair a), hashKey (vKey $ keyPair b)))
+-- | Generates a list of (pay, stake) keys, each being one keypair.
+genKeyPairs :: Int -> Int -> Gen [(KeyPair, KeyPair)]
+genKeyPairs lower upper =
+    fmap (\(a, b) -> (keyPair a, keyPair b))
              <$> genOwnerList lower upper
 
-genAddrTxins :: Int -> Int -> Gen [Addr]
-genAddrTxins lower upper =
-    fmap (uncurry AddrTxin) <$> genHashKeyPairs lower upper
+genHashKeyPairs :: [(KeyPair, KeyPair)] -> [(HashKey, HashKey)]
+genHashKeyPairs keyPairs =
+    (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
+
+genAddrTxins :: [(KeyPair, KeyPair)] -> [Addr]
+genAddrTxins keyPairs =
+    (uncurry AddrTxin) <$> genHashKeyPairs keyPairs
 
 genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin lower upper = do
@@ -249,14 +253,22 @@ genCoinList minCoin maxCoin lower upper = do
         $ Gen.integral (Range.exponential minCoin maxCoin)
   return (Coin <$> xs)
 
-genTxOut :: Int -> Int -> Gen [TxOut]
-genTxOut lower upper = do
-  xs <- genAddrTxins lower upper
-  ys <- genCoinList 1 100 (length xs) (length xs)
-  return (uncurry TxOut <$> zip xs ys)
+genTxOut :: [Addr] -> Gen [TxOut]
+genTxOut addrTxins = do
+  ys <- genCoinList 1 100 (length addrTxins) (length addrTxins)
+  return (uncurry TxOut <$> zip addrTxins ys)
 
-genNonemptyGenesisState :: Gen LedgerState
-genNonemptyGenesisState = genesisState <$> genTxOut 1 100
+genNonemptyGenesisState :: [(KeyPair, KeyPair)] -> Gen LedgerState
+genNonemptyGenesisState keyPairs =
+  genesisState <$> genTxOut (genAddrTxins keyPairs)
+
+-- | Take a UTxO and generate possible transactions.
+-- Idea: take inputs from UTxO set as list, shuffle list, take rand elements.
+-- genTx :: UTxO -> Gen Tx
+genTx keyList (UTxO m) = do
+  selected_inputs <- Gen.subsequence utxo_inputs
+  return selected_inputs
+            where utxo_inputs = Map.keys m
 
 utxoSize :: UTxO -> Int
 utxoSize (UTxO m) = Map.size m
@@ -264,10 +276,12 @@ utxoSize (UTxO m) = Map.size m
 -- | This property states that a non-empty UTxO set in the genesis state has a
 -- non-zero balance.
 propPositiveBalance:: Property
-propPositiveBalance = property $ do
-                        initialState <- forAll genNonemptyGenesisState
-                        utxoSize (getUtxo initialState) /== 0
-                        Coin 0 /== balance (getUtxo initialState)
+propPositiveBalance =
+    property $ do
+      keyPairs <- genKeyPairs 1 100
+      initialState <- forAll $ genNonemptyGenesisState keyPairs
+      utxoSize (getUtxo initialState) /== 0
+      Coin 0 /== balance (getUtxo initialState)
 
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
