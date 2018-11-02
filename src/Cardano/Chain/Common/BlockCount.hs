@@ -25,7 +25,6 @@ newtype BlockCount = BlockCount
               , Show
               , Buildable
               , Generic
-              , Typeable
               , NFData
               )
 

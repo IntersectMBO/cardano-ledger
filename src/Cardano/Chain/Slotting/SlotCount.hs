@@ -26,7 +26,6 @@ newtype SlotCount = SlotCount
               , Show
               , Buildable
               , Generic
-              , Typeable
               , NFData
               )
 

@@ -111,7 +111,7 @@ import           Cardano.Crypto.Signing (EncryptedSecretKey, PassPhrase,
 -- for internal usage.
 newtype Address' = Address'
     { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
-    } deriving (Eq, Show, Generic, Typeable)
+    } deriving (Eq, Show, Generic)
       deriving newtype Bi
 
 -- | 'Address' is where you can send coins.
@@ -124,7 +124,7 @@ data Address = Address
     -- ^ The type of this address. Should correspond to
     -- 'AddrSpendingData', but it can't be checked statically, because
     -- spending data is hashed.
-    } deriving (Eq, Ord, Generic, Typeable, Show)
+    } deriving (Eq, Ord, Generic, Show)
       deriving anyclass NFData
 
 instance Bi Address where

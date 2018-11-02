@@ -43,7 +43,7 @@ import           Cardano.Chain.Common.Coin
 --   threshold).
 newtype CoinPortion = CoinPortion
   { getCoinPortion :: Word64
-  } deriving (Show, Ord, Eq, Generic, Typeable, NFData)
+  } deriving (Show, Ord, Eq, Generic, NFData)
 
 instance B.Buildable CoinPortion where
   build cp@(getCoinPortion -> x) = bprint
@@ -112,7 +112,9 @@ coinPortionFromDouble :: Double -> Either CoinPortionError CoinPortion
 coinPortionFromDouble x
   | 0 <= x && x <= 1 = Right (CoinPortion v)
   | otherwise        = Left (CoinPortionDoubleOutOfRange x)
-  where v = round $ realToFrac coinPortionDenominator * x
+ where
+  v :: Word64
+  v = round $ realToFrac coinPortionDenominator * x
 {-# INLINE coinPortionFromDouble #-}
 
 coinPortionToDouble :: CoinPortion -> Double
@@ -150,4 +152,5 @@ applyCoinPortionUp (getCoinPortion -> p) (unsafeGetCoin -> c) =
  where
   (d, m) =
     divMod (toInteger p * toInteger c) (toInteger coinPortionDenominator)
+  c' :: Word64
   c' = if m > 0 then fromInteger (d + 1) else fromInteger d

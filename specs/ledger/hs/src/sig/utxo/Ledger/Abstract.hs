@@ -52,6 +52,9 @@ txouts tx = UTxO $
   where
     transId = txid tx
 
+txfee :: Tx -> Value
+txfee = undefined
+
 -- |Domain restriction
 --
 --     * __TODO__ - better symbol?

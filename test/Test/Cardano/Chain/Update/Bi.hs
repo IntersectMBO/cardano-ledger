@@ -39,8 +39,8 @@ import           Test.Cardano.Crypto.Gen (feedPM, genHashRaw)
 -- ApplicationName
 --------------------------------------------------------------------------------
 
-golden_ApplicationName :: Property
-golden_ApplicationName = goldenTestBi aN "test/golden/ApplicationName"
+goldenApplicationName :: Property
+goldenApplicationName = goldenTestBi aN "test/golden/bi/update/ApplicationName"
     where aN = ApplicationName "Golden"
 
 roundTripApplicationName :: Property
@@ -50,9 +50,9 @@ roundTripApplicationName = eachOf 50 genApplicationName roundTripsBiBuildable
 -- BlockVersion
 --------------------------------------------------------------------------------
 
-golden_BlockVersion :: Property
-golden_BlockVersion =
-    goldenTestBi exampleBlockVersion "test/golden/BlockVersion"
+goldenBlockVersion :: Property
+goldenBlockVersion =
+    goldenTestBi exampleBlockVersion "test/golden/bi/update/BlockVersion"
 
 roundTripBlockVersion :: Property
 roundTripBlockVersion = eachOf 50 genBlockVersion roundTripsBiBuildable
@@ -61,8 +61,8 @@ roundTripBlockVersion = eachOf 50 genBlockVersion roundTripsBiBuildable
 -- BlockVersionData
 --------------------------------------------------------------------------------
 
-golden_BlockVersionData :: Property
-golden_BlockVersionData = goldenTestBi bVerDat "test/golden/BlockVersionData"
+goldenBlockVersionData :: Property
+goldenBlockVersionData = goldenTestBi bVerDat "test/golden/bi/update/BlockVersionData"
     where bVerDat = exampleBlockVersionData
 
 roundTripBlockVersionData :: Property
@@ -72,10 +72,10 @@ roundTripBlockVersionData = eachOf 50 genBlockVersionData roundTripsBiBuildable
 -- BlockVersionModifier
 --------------------------------------------------------------------------------
 
-golden_BlockVersionModifier :: Property
-golden_BlockVersionModifier = goldenTestBi
+goldenBlockVersionModifier :: Property
+goldenBlockVersionModifier = goldenTestBi
     bVerMod
-    "test/golden/BlockVersionModifier"
+    "test/golden/bi/update/BlockVersionModifier"
     where bVerMod = exampleBlockVersionModifier
 
 roundTripBlockVersionModifier :: Property
@@ -86,8 +86,8 @@ roundTripBlockVersionModifier =
 -- HashRaw
 --------------------------------------------------------------------------------
 
-golden_BlockHashRaw :: Property
-golden_BlockHashRaw = goldenTestBi hRaw "test/golden/HashRaw"
+goldenBlockHashRaw :: Property
+goldenBlockHashRaw = goldenTestBi hRaw "test/golden/bi/update/HashRaw"
     where hRaw = (abstractHash $ Raw ("9") :: Hash Raw)
 
 roundTripHashRaw :: Property
@@ -97,8 +97,8 @@ roundTripHashRaw = eachOf 50 genHashRaw roundTripsBiBuildable
 -- SoftforkRule
 --------------------------------------------------------------------------------
 
-golden_SoftforkRule :: Property
-golden_SoftforkRule = goldenTestBi sfR "test/golden/SoftforkRule"
+goldenSoftforkRule :: Property
+goldenSoftforkRule = goldenTestBi sfR "test/golden/bi/update/SoftforkRule"
     where sfR = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
 
 roundTripSoftforkRule :: Property
@@ -108,9 +108,9 @@ roundTripSoftforkRule = eachOf 10 genSoftforkRule roundTripsBiBuildable
 -- SoftwareVersion
 --------------------------------------------------------------------------------
 
-golden_SoftwareVersion :: Property
-golden_SoftwareVersion =
-    goldenTestBi exampleSoftwareVersion "test/golden/SoftwareVersion"
+goldenSoftwareVersion :: Property
+goldenSoftwareVersion =
+    goldenTestBi exampleSoftwareVersion "test/golden/bi/update/SoftwareVersion"
 
 roundTripSoftwareVersion :: Property
 roundTripSoftwareVersion = eachOf 10 genSoftwareVersion roundTripsBiBuildable
@@ -119,8 +119,8 @@ roundTripSoftwareVersion = eachOf 10 genSoftwareVersion roundTripsBiBuildable
 -- SystemTag
 --------------------------------------------------------------------------------
 
-golden_SystemTag :: Property
-golden_SystemTag = goldenTestBi exampleSystemTag "test/golden/SystemTag"
+goldenSystemTag :: Property
+goldenSystemTag = goldenTestBi exampleSystemTag "test/golden/bi/update/SystemTag"
 
 roundTripSystemTag :: Property
 roundTripSystemTag = eachOf 10 genSystemTag roundTripsBiBuildable
@@ -129,8 +129,8 @@ roundTripSystemTag = eachOf 10 genSystemTag roundTripsBiBuildable
 -- UpdateData
 --------------------------------------------------------------------------------
 
-golden_UpdateData :: Property
-golden_UpdateData = goldenTestBi exampleUpdateData "test/golden/update/UpdateData"
+goldenUpdateData :: Property
+goldenUpdateData = goldenTestBi exampleUpdateData "test/golden/bi/update/UpdateData"
 
 roundTripUpdateData :: Property
 roundTripUpdateData = eachOf 20 genUpdateData roundTripsBiBuildable
@@ -139,9 +139,9 @@ roundTripUpdateData = eachOf 20 genUpdateData roundTripsBiBuildable
 -- UpdatePayload
 --------------------------------------------------------------------------------
 
-golden_UpdatePayload :: Property
-golden_UpdatePayload =
-    goldenTestBi examplePayload "test/golden/update/Payload"
+goldenUpdatePayload :: Property
+goldenUpdatePayload =
+    goldenTestBi examplePayload "test/golden/bi/update/Payload"
 
 roundTripUpdatePayload :: Property
 roundTripUpdatePayload =
@@ -151,8 +151,8 @@ roundTripUpdatePayload =
 -- UpdateProof
 --------------------------------------------------------------------------------
 
-golden_UpdateProof :: Property
-golden_UpdateProof = goldenTestBi exampleProof "test/golden/update/Proof"
+goldenUpdateProof :: Property
+goldenUpdateProof = goldenTestBi exampleProof "test/golden/bi/update/Proof"
 
 roundTripUpdateProof :: Property
 roundTripUpdateProof = eachOf 20 (feedPM genProof) roundTripsBiBuildable
@@ -161,9 +161,9 @@ roundTripUpdateProof = eachOf 20 (feedPM genProof) roundTripsBiBuildable
 -- UpdateProposal
 --------------------------------------------------------------------------------
 
-golden_UpdateProposal :: Property
-golden_UpdateProposal =
-    goldenTestBi exampleProposal "test/golden/update/Proposal"
+goldenUpdateProposal :: Property
+goldenUpdateProposal =
+    goldenTestBi exampleProposal "test/golden/bi/update/Proposal"
 
 roundTripUpdateProposal :: Property
 roundTripUpdateProposal =
@@ -173,8 +173,8 @@ roundTripUpdateProposal =
 -- UpdateProposals
 --------------------------------------------------------------------------------
 
-golden_UpdateProposals :: Property
-golden_UpdateProposals = goldenTestBi ups "test/golden/update/Proposals"
+goldenUpdateProposals :: Property
+goldenUpdateProposals = goldenTestBi ups "test/golden/bi/update/Proposals"
     where
     -- Need to revisit this.
           ups = Map.fromList [(exampleUpId, exampleProposal)]
@@ -187,9 +187,9 @@ roundTripUpdateProposals =
 -- ProposalBody
 --------------------------------------------------------------------------------
 
-golden_ProposalBody :: Property
-golden_ProposalBody =
-    goldenTestBi exampleProposalBody "test/golden/update/ProposalBody"
+goldenProposalBody :: Property
+goldenProposalBody =
+    goldenTestBi exampleProposalBody "test/golden/bi/update/ProposalBody"
 
 roundTripProposalBody :: Property
 roundTripProposalBody =
@@ -199,8 +199,8 @@ roundTripProposalBody =
 -- UpdateVote
 --------------------------------------------------------------------------------
 
-golden_UpdateVote :: Property
-golden_UpdateVote = goldenTestBi exampleVote "test/golden/update/Vote"
+goldenUpdateVote :: Property
+goldenUpdateVote = goldenTestBi exampleVote "test/golden/bi/update/Vote"
 
 roundTripUpdateVote :: Property
 roundTripUpdateVote = eachOf 20 (feedPM genVote) roundTripsBiBuildable
@@ -209,8 +209,8 @@ roundTripUpdateVote = eachOf 20 (feedPM genVote) roundTripsBiBuildable
 -- UpId
 --------------------------------------------------------------------------------
 
-golden_UpId :: Property
-golden_UpId = goldenTestBi exampleUpId "test/golden/update/UpId"
+goldenUpId :: Property
+goldenUpId = goldenTestBi exampleUpId "test/golden/bi/update/UpId"
 
 roundTripUpId :: Property
 roundTripUpId = eachOf 20 (feedPM genUpId) roundTripsBiBuildable
@@ -226,8 +226,8 @@ roundTripUpsData = eachOf 20 genUpsData roundTripsBiShow
 -- VoteId
 --------------------------------------------------------------------------------
 
-golden_VoteId :: Property
-golden_VoteId = goldenTestBi exampleVoteId "test/golden/VoteId"
+goldenVoteId :: Property
+goldenVoteId = goldenTestBi exampleVoteId "test/golden/bi/update/VoteId"
 
 roundTripVoteId :: Property
 roundTripVoteId = eachOf 20 (feedPM genVoteId) roundTripsBiBuildable

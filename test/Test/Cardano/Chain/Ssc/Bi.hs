@@ -19,109 +19,109 @@ import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..),
                      dropVssCertificatesMap)
 
 import           Test.Cardano.Binary.Helpers.GoldenRoundTrip
-                     (legacyGoldenDecode, roundTripsBiShow)
+                     (deprecatedGoldenDecode, roundTripsBiShow)
 
 
 --------------------------------------------------------------------------------
 -- Commitment
 --------------------------------------------------------------------------------
 
-golden_legacy_Commitment :: Property
-golden_legacy_Commitment =
-  legacyGoldenDecode "Commitment" dropCommitment "test/golden/Commitment"
+goldenDeprecatedCommitment :: Property
+goldenDeprecatedCommitment =
+  deprecatedGoldenDecode "Commitment" dropCommitment "test/golden/bi/ssc/Commitment"
 
 
 --------------------------------------------------------------------------------
 -- CommitmentsMap
 --------------------------------------------------------------------------------
 
-golden_legacy_CommitmentsMap :: Property
-golden_legacy_CommitmentsMap = legacyGoldenDecode
+goldenDeprecatedCommitmentsMap :: Property
+goldenDeprecatedCommitmentsMap = deprecatedGoldenDecode
   "CommitmentsMap"
   dropCommitmentsMap
-  "test/golden/CommitmentsMap"
+  "test/golden/bi/ssc/CommitmentsMap"
 
 
 --------------------------------------------------------------------------------
 -- InnerSharesMap
 --------------------------------------------------------------------------------
 
-golden_legacy_InnerSharesMap :: Property
-golden_legacy_InnerSharesMap = legacyGoldenDecode
+goldenDeprecatedInnerSharesMap :: Property
+goldenDeprecatedInnerSharesMap = deprecatedGoldenDecode
   "InnerSharesMap"
   dropInnerSharesMap
-  "test/golden/InnerSharesMap"
+  "test/golden/bi/ssc/InnerSharesMap"
 
 
 --------------------------------------------------------------------------------
 -- Opening
 --------------------------------------------------------------------------------
 
-golden_legacy_Opening :: Property
-golden_legacy_Opening =
-  legacyGoldenDecode "Opening" dropBytes "test/golden/Opening"
+goldenDeprecatedOpening :: Property
+goldenDeprecatedOpening =
+  deprecatedGoldenDecode "Opening" dropBytes "test/golden/bi/ssc/Opening"
 
 
 --------------------------------------------------------------------------------
 -- OpeningsMap
 --------------------------------------------------------------------------------
 
-golden_legacy_OpeningsMap :: Property
-golden_legacy_OpeningsMap = legacyGoldenDecode
+goldenDeprecatedOpeningsMap :: Property
+goldenDeprecatedOpeningsMap = deprecatedGoldenDecode
   "OpeningsMap"
   dropOpeningsMap
-  "test/golden/OpeningsMap"
+  "test/golden/bi/ssc/OpeningsMap"
 
 
 --------------------------------------------------------------------------------
 -- SignedCommitment
 --------------------------------------------------------------------------------
 
-golden_legacy_SignedCommitment :: Property
-golden_legacy_SignedCommitment = legacyGoldenDecode
+goldenDeprecatedSignedCommitment :: Property
+goldenDeprecatedSignedCommitment = deprecatedGoldenDecode
   "SignedCommitment"
   dropSignedCommitment
-  "test/golden/SignedCommitment"
+  "test/golden/bi/ssc/SignedCommitment"
 
 
 --------------------------------------------------------------------------------
 -- SharesMap
 --------------------------------------------------------------------------------
 
-golden_legacy_SharesMap :: Property
-golden_legacy_SharesMap = legacyGoldenDecode
+goldenDeprecatedSharesMap :: Property
+goldenDeprecatedSharesMap = deprecatedGoldenDecode
   "SharesMap"
   dropSharesMap
-  "test/golden/SharesMap"
+  "test/golden/bi/ssc/SharesMap"
 
 
 --------------------------------------------------------------------------------
 -- SscPayload
 --------------------------------------------------------------------------------
 
-golden_legacy_SscPayload_CommitmentsPayload :: Property
-golden_legacy_SscPayload_CommitmentsPayload = legacyGoldenDecode
+goldenDeprecatedSscPayload_CommitmentsPayload :: Property
+goldenDeprecatedSscPayload_CommitmentsPayload = deprecatedGoldenDecode
   "SscPayload_CommitmentsPayload"
   dropSscPayload
-  "test/golden/SscPayload_CommitmentsPayload"
+  "test/golden/bi/ssc/SscPayload_CommitmentsPayload"
 
-golden_legacy_SscPayload_OpeningsPayload :: Property
-golden_legacy_SscPayload_OpeningsPayload = legacyGoldenDecode
+goldenDeprecatedSscPayload_OpeningsPayload :: Property
+goldenDeprecatedSscPayload_OpeningsPayload = deprecatedGoldenDecode
   "SscPayload_OpeningsPayload"
   dropSscPayload
-  "test/golden/SscPayload_OpeningsPayload"
+  "test/golden/bi/ssc/SscPayload_OpeningsPayload"
 
-golden_legacy_SscPayload_SharesPayload :: Property
-golden_legacy_SscPayload_SharesPayload = legacyGoldenDecode
+goldenDeprecatedSscPayload_SharesPayload :: Property
+goldenDeprecatedSscPayload_SharesPayload = deprecatedGoldenDecode
   "SscPayload_SharesPayload"
   dropSscPayload
-  "test/golden/SscPayload_SharesPayload"
+  "test/golden/bi/ssc/SscPayload_SharesPayload"
 
-golden_legacy_SscPayload_CertificatesPayload :: Property
-golden_legacy_SscPayload_CertificatesPayload = legacyGoldenDecode
+goldenDeprecatedSscPayload_CertificatesPayload :: Property
+goldenDeprecatedSscPayload_CertificatesPayload = deprecatedGoldenDecode
   "SscPayload_CertificatesPayload"
   dropSscPayload
-  "test/golden/SscPayload_CertificatesPayload"
+  "test/golden/bi/ssc/SscPayload_CertificatesPayload"
 
 roundTripSscPayload :: Property
 roundTripSscPayload = eachOf 1 (pure SscPayload) roundTripsBiShow
@@ -131,29 +131,29 @@ roundTripSscPayload = eachOf 1 (pure SscPayload) roundTripsBiShow
 -- SscProof
 --------------------------------------------------------------------------------
 
-golden_legacy_SscProof_CommitmentsProof :: Property
-golden_legacy_SscProof_CommitmentsProof = legacyGoldenDecode
+goldenDeprecatedSscProof_CommitmentsProof :: Property
+goldenDeprecatedSscProof_CommitmentsProof = deprecatedGoldenDecode
   "SscProof_CommitmentsProof"
   dropSscProof
-  "test/golden/SscProof_CommitmentsProof"
+  "test/golden/bi/ssc/SscProof_CommitmentsProof"
 
-golden_legacy_SscProof_OpeningsProof :: Property
-golden_legacy_SscProof_OpeningsProof = legacyGoldenDecode
+goldenDeprecatedSscProof_OpeningsProof :: Property
+goldenDeprecatedSscProof_OpeningsProof = deprecatedGoldenDecode
   "SscProof_OpeningsProof"
   dropSscProof
-  "test/golden/SscProof_OpeningsProof"
+  "test/golden/bi/ssc/SscProof_OpeningsProof"
 
-golden_legacy_SscProof_SharesProof :: Property
-golden_legacy_SscProof_SharesProof = legacyGoldenDecode
+goldenDeprecatedSscProof_SharesProof :: Property
+goldenDeprecatedSscProof_SharesProof = deprecatedGoldenDecode
   "SscProof_SharesProof"
   dropSscProof
-  "test/golden/SscProof_SharesProof"
+  "test/golden/bi/ssc/SscProof_SharesProof"
 
-golden_legacy_SscProof_CertificatesProof :: Property
-golden_legacy_SscProof_CertificatesProof = legacyGoldenDecode
+goldenDeprecatedSscProof_CertificatesProof :: Property
+goldenDeprecatedSscProof_CertificatesProof = deprecatedGoldenDecode
   "SscProof_CertificatesProof"
   dropSscProof
-  "test/golden/SscProof_CertificatesProof"
+  "test/golden/bi/ssc/SscProof_CertificatesProof"
 
 roundTripSscProof :: Property
 roundTripSscProof = eachOf 1 (pure SscProof) roundTripsBiShow
@@ -163,33 +163,33 @@ roundTripSscProof = eachOf 1 (pure SscProof) roundTripsBiShow
 -- VssCertificate
 --------------------------------------------------------------------------------
 
-golden_legacy_VssCertificate :: Property
-golden_legacy_VssCertificate = legacyGoldenDecode
+goldenDeprecatedVssCertificate :: Property
+goldenDeprecatedVssCertificate = deprecatedGoldenDecode
   "VssCertificate"
   dropVssCertificate
-  "test/golden/VssCertificate"
+  "test/golden/bi/ssc/VssCertificate"
 
 
 --------------------------------------------------------------------------------
 -- VssCertificatesHash
 --------------------------------------------------------------------------------
 
-golden_legacy_VssCertificatesHash :: Property
-golden_legacy_VssCertificatesHash = legacyGoldenDecode
+goldenDeprecatedVssCertificatesHash :: Property
+goldenDeprecatedVssCertificatesHash = deprecatedGoldenDecode
   "VssCertiificatesHash"
   dropBytes
-  "test/golden/VssCertificatesHash"
+  "test/golden/bi/ssc/VssCertificatesHash"
 
 
 --------------------------------------------------------------------------------
 -- VssCertificatesMap
 --------------------------------------------------------------------------------
 
-golden_legacy_VssCertificatesMap :: Property
-golden_legacy_VssCertificatesMap = legacyGoldenDecode
+goldenDeprecatedVssCertificatesMap :: Property
+goldenDeprecatedVssCertificatesMap = deprecatedGoldenDecode
   "VssCertificatesMap"
   dropVssCertificatesMap
-  "test/golden/VssCertificatesMap"
+  "test/golden/bi/ssc/VssCertificatesMap"
 
 
 --------------------------------------------------------------------------------

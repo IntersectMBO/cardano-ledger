@@ -28,15 +28,6 @@ library utxo-sig
   hs-source-dirs:      src/sig/utxo
   default-language:    Haskell2010
 
-library extension-sig
-  signatures:          Extension
-  exposed-modules:     Ledger.Transition
-  build-depends:       base >=4.11 && <5
-                     , bytestring
-                     , text
-  hs-source-dirs:      src/sig/extension
-  default-language:    Haskell2010
-
 library utxo-impl-simple
   hs-source-dirs:      src/simple/utxo
   exposed-modules:     UTxO
@@ -44,16 +35,6 @@ library utxo-impl-simple
   build-depends:       base >=4.12 && <5
                      , cryptonite
                      , memory
-
-library extension-impl-simple
-  hs-source-dirs:      src/simple/extension
-  exposed-modules:     Extension
-  default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
-                     , containers
-                     , cryptonite
-                     , memory
-                     , utxo-sig
 
 library ledger-simple
   hs-source-dirs:      src/simple/ledger
@@ -65,22 +46,9 @@ library ledger-simple
                      , containers
                      , cryptonite
                      , memory
+                     , small-steps
                      , utxo-sig
                      , utxo-impl-simple
-                     , extension-sig
-                     , extension-impl-simple
-
-library extension-impl-witnessed
-  hs-source-dirs:      src/witnessed/extension
-  exposed-modules:     Extension
-  default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
-                     , containers
-                     , cryptonite
-                     , memory
-                     , utxo-sig
-                     , extension-impl-simple
-  mixins:              extension-impl-simple (Extension as Extension.Simple)
 
 library ledger-witnessed
   hs-source-dirs:      src/witnessed/ledger
@@ -89,9 +57,9 @@ library ledger-witnessed
   default-language:    Haskell2010
   build-depends:       base >=4.12 && <5
                      , containers
+                     , lens
+                     , small-steps
                      , utxo-sig
                      , utxo-impl-simple
-                     , extension-sig
-                     , extension-impl-witnessed
                      , ledger-simple
   mixins:              ledger-simple (Ledger as Ledger.Simple)

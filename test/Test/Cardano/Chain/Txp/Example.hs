@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+
 module Test.Cardano.Chain.Txp.Example
        ( exampleTxId
        , exampleTxInList

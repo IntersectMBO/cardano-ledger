@@ -1,60 +1,158 @@
+\section{Delegation}
+\label{sec:delegation}
+
+\newcommand{\DSEnv}{\type{DSEnv}}
+\newcommand{\DSState}{\type{DSState}}
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DState}{\type{DState}}
+\newcommand{\DEState}{\type{DEState}}
 
 An agent owning a key that can sign new blocks can delegate its signing rights
 to another key by means of \textit{delegation certificates}. These certificates
 are included in the ledger, and therefore also included in the body of the
 blocks in the blockchain.
 
-In the blockchain protocol only a certain number of keys can sign blocks, and
-the verifying part of these keys\footnote{Also known as public keys.} are
-maintained in the genesis block. One important restriction on delegation is
-that only the keys in the genesis block can delegate to other keys. However, at
-the ledger level we do not know which are these keys, and thus this is a
-restriction to be enforced at the blockchain level. In this formalization we
-only care about establishing, whether $\var{vk}_s$ delegated its rights to
-$\var{vk}_d$. To keep track of this, we use a map from keys to keys.
+There are several restrictions on a certificate posted on the blockchain:
+\begin{enumerate}
+\item Only genesis keys can delegate.
+\item Certificates must be properly signed by the delegator.
+\item Any given key can delegate at most once per-epoch.
+\item The epochs in certificates cannot refer to past epochs. This mechanism
+  prevents replay attacks.
+\item Two certificates for the same key issued in the same (current) slot
+  cannot contain different epochs.
+\item Certificates do not become active immediately, but they require a certain
+  number of slots till they become stable in all the nodes.
+\end{enumerate}
+These conditions are formalized in \cref{fig:rules:delegation-scheduling}.
+Rule~\ref{eq:rule:delegation-scheduling} determines when a certificate can
+become ``scheduled''. The definitions used in this rules are presented in
+\cref{fig:defs:delegation-scheduling}, and the types of the system induced by
+$\trans{sdeleg}{\wcard}$ are presented in
+\cref{fig:ts-types:delegation-scheduling}.
 
-The rule for delegation is presented in
-Figure~\ref{fig:rules:delegation}. It states that if $\var{c}$ is a valid
-delegation certificate from key $\var{vk}_s$ to key $\var{vk}_d$, then the
-delegation map $d$ is updated to contain the key mapping
-$\var{vk}_s \mapsto \var{vk}_d$. The symbol $\unionoverride$ denotes
-union-override, and is defined in Figure~\ref{fig:funcs:delegation}. Another
-condition that is checked in the delegation rule is that each genesis key can
-issue at most one delegation certificate per epoch. To check this, the states
-of the transitions system maintain a map from epochs to set of keys that were
-delegated on a given epoch. Finally, we only allow delegations for the next
-epoch. This is what allow us to clean up the maps of keys delegated per epoch.
-Variables to the left of the $\vdash$ (turnstile) symbol are the
-\textit{environment} of a rule, which remains constant. This environment (the
-current epoch in this case) would be set by the (chain) rules that use
-Rule~\ref{eq:delegation}.
-
-\begin{figure}
+\begin{figure}[htb]
   \emph{Abstract types}
-  %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       c & \DCert & \text{delegation certificate}\\
       \var{vk_g} & \VKeyGen & \text{genesis verification key}\\
-      e & \Epoch & \text{epoch}\\
     \end{array}
   \end{equation*}
+
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{e} & \Epoch & n & \mathbb{N} & \text{epoch}\\
+      \var{s} & \Slot & s & \mathbb{N} & \text{slot}\\
+      \var{d} & \SlotCount & s & \mathbb{N} & \text{slot}                                         
+    \end{array}
+  \end{equation*}
+
   \emph{Constraints}
   \begin{align*}
     \VKeyGen \subseteq \VKey
   \end{align*}
+
   \emph{Abstract functions}
-  \begin{align*}
-    & \fun{dwho} \in \DCert \mapsto (\VKeyGen \times \VKey) & \text{who delegates to who in the certificate}\\
-    & \fun{depoch} \in \DCert \mapsto \Epoch & \text{certificate epoch}
-  \end{align*}
-  \caption{Delegation definitions}
-  \label{fig:defs:delegation}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{dbody} & \DCert \to (\VKey \times \Epoch)
+      & \text{body of the delegation certificate}\\
+      \fun{dwit} & \DCert \to (\VKeyGen \times \Sig)
+      & \text{witness for the delegation certificate}\\
+      \fun{dwho} & \DCert \mapsto (\VKeyGen \times \VKey)
+      & \text{who delegates to whom in the certificate}\\
+      \fun{depoch} & \DCert \mapsto \Epoch
+      & \text{certificate epoch}
+    \end{array}
+  \end{equation*}
+  \caption{Delegation scheduling definitions}
+  \label{fig:defs:delegation-scheduling}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
+  \emph{Delegation scheduling environments}
+  \begin{equation*}
+    \DSEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
+        \var{e} & \Epoch & \text{epoch}\\
+        \var{s} & \Slot & \text{slot}\\
+        \var{d} & \SlotCount & \text{certificate liveness parameter}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Delegation scheduling states}
+  \begin{equation*}
+    \DSState
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{sds} & \seqof{(\Slot \times (\VKeyGen \times \VKey))} & \text{scheduled delegations}\\
+        \var{eks} & \powerset{(\Epoch \times \VKeyGen)} & \text{key-epoch delegations}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Delegation scheduling transitions}
+  \begin{equation*}
+    \var{\_} \vdash
+    \var{\_} \trans{sdeleg}{\_} \var{\_}
+    \subseteq \powerset (\DSEnv \times \DSState \times \DCert \times \DSState)
+  \end{equation*}
+  \caption{Delegation scheduling transition-system types}
+  \label{fig:ts-types:delegation-scheduling}  
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:delegation-scheduling}
+    \inference
+    {
+      (\var{vk_s},~ \sigma) = \dwit{c}
+      & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
+      (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
+      & (e_d,~ \var{vk_s}) \notin \var{eks} & e < e_d \\ ~ \\
+      (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
+    }
+    {
+      {\begin{array}{l}
+       \mathcal{K}\\
+        e\\
+        s\\
+        d
+      \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}\\
+            \var{eks}
+          \end{array}
+        \right)
+      }
+      \trans{sdeleg}{c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}; (s + d,~ (\var{vk_s},~ \var{vk_d}))\\
+            \var{eks} \cup \{(e_d,~ \var{vk_s})\}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Delegation scheduling rules}
+  \label{fig:rules:delegation-scheduling}
+\end{figure}
+
+Once a scheduled certificate becomes active
+(see~\cref{sec:delegation-interface-rules}), the delegation map is changed by
+it. \cref{fig:rules:delegation} models such change.
+
+\begin{figure}[htb]
   \begin{align*}
     & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
     & \text{union override}\\
@@ -64,44 +162,63 @@ Rule~\ref{eq:delegation}.
   \label{fig:funcs:delegation}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Delegation states}
   \begin{align*}
     & \DState
       = \left(
         \begin{array}{r@{~\in~}lr}
-          \var{dmap} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-          \var{ekeys} & \Epoch \mapsto \powerset{\VKeyGen} & \text{keys delegated per epoch}
+          \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+          \var{dws} & \VKeyGen \mapsto \Slot & \text{when last delegation occurred}\\
         \end{array}\right)
   \end{align*}
   \emph{Delegation transitions}
   \begin{equation*}
-    \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      \powerset (\Epoch \times \DState \times \DCert \times \DState)
+    \_ \vdash \_ \trans{adeleg}{\_} \_ \in
+    \powerset (\DState \times (\Slot \times (\VKeyGen \times \VKey)) \times \DState)
     \end{equation*}
   \caption{Delegation transition-system types}
   \label{fig:ts-types:delegation}
 \end{figure}
 
-\begin{figure}
-  \begin{equation}\label{eq:delegation}
-    \inference[Delegation]
-    {\dwho{c} = (vk_s, vk_d) & \depoch{c} = e_c & \var{vk_s} \notin \var{ekeys}~e_c & \var{cepoch} + 1 = e_c\\
-      \var{ekeys'} = \{ (e, \var{vks})  \mid (e, \var{vks}) \in \var{ekeys},~  \var{cepoch} \leq e \}
+\begin{figure}[htb]
+  \begin{equation}\label{eq:rule:delegation-change}
+    \inference
+    {\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s
     }
     {
-      \var{cepoch} \vdash
       \left(
       \begin{array}{r}
-        \var{dmap}\\
-        \var{ekeys}
+        \var{dms}\\
+        \var{dws}
       \end{array}
       \right)
-      \trans{deleg}{c}
+      \trans{adeleg}{(s,~ (vk_s,~ vk_d))}
       \left(
       \begin{array}{lcl}
-        \var{dmap} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
-        \var{ekeys'} & \unionoverride & \{e_c \mapsto (\var{ekeys'}~e_c \cup \{\var{vk_s}\})\}
+        \var{dms} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
+        \var{dws} & \unionoverride & \{\var{vk_s} \mapsto s \}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}\label{eq:rule:delegation-nop}
+    \inference
+    {\var{vk_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p
+    }
+    {
+      \left(
+      \begin{array}{r}
+        \var{dms}\\
+        \var{dws}
+      \end{array}
+      \right)
+      \trans{adeleg}{(s,~ (vk_s,~ \wcard))}
+      \left(
+      \begin{array}{lcl}
+        \var{dms}\\
+        \var{dws}
       \end{array}
       \right)
     }
@@ -110,71 +227,220 @@ Rule~\ref{eq:delegation}.
   \label{fig:rules:delegation}
 \end{figure}
 
-\subsection{Witnesses}
-\label{sec:delegation-witnesses}
+\clearpage
 
-The rule for certificate witnesses is given in
-Figure~\ref{fig:rules:delegationw}. The new definitions introduced in this rule
-are given in Figure~\ref{fig:defs:delegationw}.
+\subsection{Delegation sequences}
+\label{sec:delegation-sequences}
 
-\begin{figure}
-  \emph{Primitive types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{epoch} & \Epoch & \text{epoch}
-    \end{array}
-  \end{equation*}
-  \emph{Abstract functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \to (\VKey \times \Epoch)
-      & \text{body of the delegation certificate}\\
-      \fun{dwit} & \DCert \to (\VKeyGen \times \Sig)
-      & \text{witness for the delegation certificate}
-    \end{array}
-  \end{equation*}
-  \caption{Delegation witnesses definitions}
-  \label{fig:defs:delegationw}
+This section presents the rules that model the effect that sequences of
+delegations have on the ledger.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:delegation-scheduling-seq-base}
+    \inference
+    {
+    }
+    {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}\\
+            \var{eks}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\epsilon}
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}\\
+            \var{eks}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:delegation-scheduling-seq-ind}
+    \inference
+    {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}\\
+            \var{eks}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\Gamma}
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds'}\\
+            \var{eks'}
+          \end{array}
+        \right)
+      }
+      &
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds'}\\
+            \var{eks'}
+          \end{array}
+        \right)
+      }
+      \trans{sdeleg}{c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds''}\\
+            \var{eks''}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s\\
+         d
+       \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds}\\
+            \var{eks}
+          \end{array}
+        \right)
+      }
+      \trans{sdelegs}{\Gamma; c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{sds''}\\
+            \var{eks''}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Delegation scheduling sequence rules}
+  \label{fig:rules:delegation-scheduling-seq}
 \end{figure}
 
 \begin{figure}
-  \emph{Delegation with witness rule}
   \begin{equation}
-    \label{eq:deleg-witnesses}
-    \inference[Deleg-wit]
-    { \dwit{c} = (\var{vk_s}, \sigma)
-      & \var{cepoch} \vdash
-      {\left(
-        \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
-        \end{array}
-      \right)}
-      \trans{deleg}{c}
-      {\left(
-      \begin{array}{l}
-          \var{dmap}\\
-          \var{ekeys}
-      \end{array}
-      \right)}
-      \\ ~ \\
-      \verify{vk_s}{\serialised{\dbody{c}}}{\sigma}
+    \label{eq:rule:delegation-seq-base}
+    \inference
+    {
     }
-    {\var{cepoch} \vdash
-      {\left(
-        \begin{array}{r}
-          \var{dmap}\\
-          \var{ekeys}
-        \end{array}
-      \right)}
-      \trans{delegw}{c}
-      {\left(
-      \begin{array}{l}
-          \var{dmap}\\
-          \var{ekeys}
-      \end{array}
-      \right)}}
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms}\\
+            \var{dws}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\epsilon}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms}\\
+            \var{dws}
+          \end{array}
+        \right)
+      }
+    }
   \end{equation}
-  \caption{Delegation witnesses inference rules}
-  \label{fig:rules:delegationw}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:delegation-seq-ind}
+    \inference
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms}\\
+            \var{dws}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\Gamma}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms'}\\
+            \var{dws'}
+          \end{array}
+        \right)
+      }
+      &
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms'}\\
+            \var{dws'}
+          \end{array}
+        \right)
+      }
+      \trans{adeleg}{c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms''}\\
+            \var{dws''}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms}\\
+            \var{dws}
+          \end{array}
+        \right)
+      }
+      \trans{adelegs}{\Gamma; c}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms''}\\
+            \var{dws''}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Delegations sequence rules }
+  \label{fig:rules:delegation-seq}
 \end{figure}

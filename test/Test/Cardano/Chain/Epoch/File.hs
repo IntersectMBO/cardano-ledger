@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Epoch.File
        ( tests
@@ -5,25 +6,42 @@ module Test.Cardano.Chain.Epoch.File
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Resource (runResourceT)
-import           Hedgehog (Property, (===))
+import           Control.Monad.Trans.Resource
+    (ResIO, runResourceT)
+import           Hedgehog
+    (Property, (===))
 import qualified Hedgehog as H
-import           Streaming (Of ((:>)))
+import           Streaming
+    (Of ((:>)))
 import qualified Streaming as S
+import           System.Directory
+    (getDirectoryContents)
+import           System.FilePath
+    (isExtensionOf, (</>))
 
-import           Cardano.Chain.Epoch.File (parseEpochFiles)
+import           Cardano.Chain.Epoch.File
+    (ParseError, parseEpochFiles)
 
 
 tests :: IO Bool
-tests = H.check testDeserializeEpochs
+tests = H.checkSequential $$(H.discoverPrefix "prop")
 
-testDeserializeEpochs :: Property
-testDeserializeEpochs =
-  let files = [ "test/resources/epochs/00000.epoch"
-              , "test/resources/epochs/00001.epoch"
-              ]
-      stream = parseEpochFiles files
-      discard (_ :> rest) = pure rest
-  in H.withTests 1 $ H.property $ do
-     result <- (liftIO . runResourceT . runExceptT . S.run) (S.maps discard stream)
-     result === Right ()
+propDeserializeEpochs :: Property
+propDeserializeEpochs = H.withTests 1 $ H.property $ do
+  files <- liftIO getEpochFiles
+  H.assert $ not (null files)
+  let stream = parseEpochFiles files
+  result <- (liftIO . runResourceT . runExceptT . S.run) (S.maps discard stream)
+  result === Right ()
+ where
+  epochDir = "cardano-mainnet-mirror/epochs"
+
+  getEpochFiles :: IO [FilePath]
+  getEpochFiles =
+    take 10
+      .   fmap (epochDir </>)
+      .   filter ("epoch" `isExtensionOf`)
+      <$> getDirectoryContents epochDir
+
+  discard :: Of a m -> ExceptT ParseError ResIO m
+  discard (_ :> rest) = pure rest

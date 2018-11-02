@@ -22,14 +22,14 @@ import           Test.Cardano.Util.Tripping (discoverRoundTrip, roundTripsAesonS
 -- StaticConfig
 --------------------------------------------------------------------------------
 
-golden_StaticConfig_GCSpec :: Property
-golden_StaticConfig_GCSpec =
+goldenStaticConfig_GCSpec :: Property
+goldenStaticConfig_GCSpec =
     goldenTestJSON
         exampleStaticConfig_GCSpec
             "test/golden/StaticConfig_GCSpec"
 
-golden_StaticConfig_GCSrc :: Property
-golden_StaticConfig_GCSrc =
+goldenStaticConfig_GCSrc :: Property
+goldenStaticConfig_GCSrc =
     goldenTestJSON
         exampleStaticConfig_GCSrc
             "test/golden/StaticConfig_GCSrc"

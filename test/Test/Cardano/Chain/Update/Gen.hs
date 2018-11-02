@@ -183,7 +183,9 @@ genUndo pm epochSlots =
           )
     <*> Gen.maybe (Gen.set (Range.linear 0 10) genStakeholderId)
     <*> Gen.maybe genSlottingData
-  where hmRange = Range.linear 0 10
+  where
+    hmRange :: Range Int
+    hmRange = Range.linear 0 10
 
 genUpdateData :: Gen UpdateData
 genUpdateData =

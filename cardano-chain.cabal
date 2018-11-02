@@ -12,6 +12,11 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
+flag development
+    description: Disable `-Werror`
+    default: False
+    manual: True
+
 library
   hs-source-dirs:      src
   exposed-modules:
@@ -123,8 +128,14 @@ library
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
 
-  ghc-options:         -Wall
-                       -Werror
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+
+  if (!flag(development))
+    ghc-options:         -Werror
 
 test-suite test
   hs-source-dirs:      test
@@ -164,6 +175,8 @@ test-suite test
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , directory
+                     , filepath
                      , formatting
                      , hedgehog
                      , resourcet
@@ -174,5 +187,11 @@ test-suite test
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
 
-  ghc-options:         -Wall
-                       -Werror
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+
+  if (!flag(development))
+    ghc-options:         -Werror
