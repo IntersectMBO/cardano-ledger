@@ -145,6 +145,11 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \powerset (\Slot \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
+  \begin{equation*}
+    \_ \vdash \_ \trans{poolreap}{} \_ \in
+    \powerset (\Slot \times \PState \times \PState)
+  \end{equation*}
+  %
   \caption{Delegation Transitions}
   \label{fig:delegation-transitions}
 \end{figure}
@@ -465,3 +470,9 @@ are given in Figure~\ref{fig:defs:delegationw}.
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
 \end{figure}
+
+\begin{todo}
+  How should we integrate the \textsc{poolreap} transition? It is conceptually
+  different from the others, as it does not require a certificate, but is only
+  slot / epoch dependent.
+\end{todo}

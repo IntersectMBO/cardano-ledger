@@ -288,21 +288,6 @@ in $l'$.
   \label{prop:ledger-properties-11}
 \end{property}
 
-\begin{todo}
-  Merge Figure~\ref{fig:delegation-poolreap} into ``delegation.tex''.
-\end{todo}
-
-\begin{figure}
-  %
-  \begin{equation*}
-    \_ \vdash \_ \trans{poolreap}{\_} \_ \in
-      \powerset (\Epoch \times \DState \times \DState)
-  \end{equation*}
-  %
-  \caption{Delegation Transitions}
-  \label{fig:delegation-poolreap}
-\end{figure}
-
 Property~\ref{prop:ledger-properties-11} states that for $l, l'$ as above but
 with a delegation transition of type $\DPoolReap$, there exist registered stake
 pools in $l$ which are associated to stake pool registration certificates and
