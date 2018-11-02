@@ -21,13 +21,12 @@ Section~\ref{sec:delegation} for delegation.
     \ledgerState & \in & \left(
                          \begin{array}{c}
                            \UTxO \\
-                           \DState \\
-                           \PState
+                           \DWState
                          \end{array}
     \right)\\
                && \\
     \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
-    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard) \to \var{utxo}
+    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard) \to \var{utxo}
   \end{align*}
   \caption{Definitions and Functions for Valid Ledger State}
   \label{fig:valid-ledger}
@@ -49,13 +48,16 @@ delegation pool state (\PState).
         \left\{
         \genesisUTxO
         \right\} \\
-        \emptyset\\
-        \emptyset\\
+        \left(
+        \begin{array}{c}
+          \emptyset\\
+          \emptyset
+        \end{array}
+        \right)
       \end{array}
     \right)  \\
-    \implies \forall 0 < i \leq n, ((\exists c \in \DCert, l_{i-1}
-    \trans{delegw}{c} l_{i}) \vee (\exists tx \in \Tx: l_{i-1} \trans{utxow}{tx}
-    l_{i}))\\ \implies \applyFun{validLedgerState}(l_{n})
+    \implies \forall 0 < i \leq n, (\exists certs \in \Tx, l_{i-1}
+    \trans{ledger}{c} l_{i}) \implies \applyFun{validLedgerState}(l_{n})
   \end{multline*}
   \label{def:valid-ledger-state}
 \end{definition}
