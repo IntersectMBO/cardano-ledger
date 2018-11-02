@@ -1,5 +1,9 @@
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.AvvmBalances
        ( GenesisAvvmBalances (..)
@@ -7,7 +11,8 @@ module Cardano.Chain.Genesis.AvvmBalances
 
 import           Cardano.Prelude
 
-import           Data.Aeson
+import qualified Data.Aeson as Aeson
+import           Text.JSON.Canonical
     (FromJSON (..), ToJSON (..))
 
 import           Cardano.Chain.Common
@@ -15,10 +20,17 @@ import           Cardano.Chain.Common
 import           Cardano.Crypto.Signing.Redeem
     (RedeemPublicKey)
 
+
 -- | Predefined balances of avvm entries.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { getGenesisAvvmBalances :: Map RedeemPublicKey Coin
   } deriving (Show, Eq)
 
-deriving instance ToJSON GenesisAvvmBalances
-deriving instance FromJSON GenesisAvvmBalances
+instance Monad m => ToJSON m GenesisAvvmBalances where
+    toJSON = toJSON . getGenesisAvvmBalances
+
+instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
+    fromJSON = fmap GenesisAvvmBalances . fromJSON
+
+deriving instance Aeson.ToJSON GenesisAvvmBalances
+deriving instance Aeson.FromJSON GenesisAvvmBalances

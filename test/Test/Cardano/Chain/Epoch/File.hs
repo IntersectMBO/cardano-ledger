@@ -2,6 +2,7 @@
 
 module Test.Cardano.Chain.Epoch.File
        ( tests
+       , getEpochFiles
        ) where
 
 import           Cardano.Prelude
@@ -28,20 +29,19 @@ tests = H.checkSequential $$(H.discoverPrefix "prop")
 
 propDeserializeEpochs :: Property
 propDeserializeEpochs = H.withTests 1 $ H.property $ do
-  files <- liftIO getEpochFiles
+  files <- take 10 <$> liftIO getEpochFiles
   H.assert $ not (null files)
   let stream = parseEpochFiles files
   result <- (liftIO . runResourceT . runExceptT . S.run) (S.maps discard stream)
   result === Right ()
  where
-  epochDir = "cardano-mainnet-mirror/epochs"
-
-  getEpochFiles :: IO [FilePath]
-  getEpochFiles =
-    take 10
-      .   fmap (epochDir </>)
-      .   filter ("epoch" `isExtensionOf`)
-      <$> getDirectoryContents epochDir
-
   discard :: Of a m -> ExceptT ParseError ResIO m
   discard (_ :> rest) = pure rest
+
+getEpochFiles :: IO [FilePath]
+getEpochFiles =
+  sort
+    .   fmap (epochDir </>)
+    .   filter ("epoch" `isExtensionOf`)
+    <$> getDirectoryContents epochDir
+  where epochDir = "cardano-mainnet-mirror/epochs"

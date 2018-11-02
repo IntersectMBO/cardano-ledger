@@ -28,7 +28,7 @@
 **/dist-newstyle
 
 # Cabal & Stack
-.stack-work/
+.stack-work*/
 */dist
 
 # Editors

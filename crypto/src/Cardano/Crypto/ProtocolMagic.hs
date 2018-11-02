@@ -7,7 +7,8 @@ module Cardano.Crypto.ProtocolMagic
 
 import           Cardano.Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Aeson
+    (FromJSON (..), ToJSON (..))
 
 -- | Magic number which should differ for different clusters. It's
 --   defined here, because it's used for signing. It also used for other

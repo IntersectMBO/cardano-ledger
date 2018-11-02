@@ -1,7 +1,10 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Genesis.Delegation
        ( GenesisDelegation (..)
@@ -14,13 +17,14 @@ import           Control.Lens
     (at, (^.))
 import           Control.Monad.Except
     (MonadError)
-import           Data.Aeson
-    (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
 import           Data.List
     (nub)
 import qualified Data.Map.Strict as M
 import           Formatting
     (build, sformat)
+import           Text.JSON.Canonical
+    (FromJSON (..), ReportSchemaErrors (..), ToJSON (..))
 
 import           Cardano.Chain.Common
     (StakeholderId (..), addressHash)
@@ -28,27 +32,38 @@ import           Cardano.Chain.Delegation.HeavyDlgIndex
     (ProxySKHeavy)
 import           Cardano.Crypto
     (ProxySecretKey (..), isSelfSignedPsk)
-import           Cardano.Crypto.Hashing
-    ()
 
--- | This type contains genesis state of heavyweight delegation. It
--- wraps a map where keys are issuers (i. e. stakeholders who
--- delegated) and values are proxy signing keys. There are some invariants:
--- 1. In each pair delegate must differ from issuer, i. e. no revocations.
--- 2. PSKs must be consistent with keys in the map, i. e. issuer's ID must be
---    equal to the key in the map.
--- 3. Delegates can't be issuers, i. e. transitive delegation is not supported.
---    It's not needed in genesis, it can always be reduced.
+
+-- | This type contains genesis state of heavyweight delegation. It wraps a map
+--   where keys are issuers (i. e. stakeholders who delegated) and values are
+--   proxy signing keys. There are some invariants:
+--
+--   1. In each pair delegate must differ from issuer, i. e. no revocations.
+--   2. PSKs must be consistent with keys in the map, i. e. issuer's ID must be
+--      equal to the key in the map.
+--   3. Delegates can't be issuers, i. e. transitive delegation is not
+--      supported. It's not needed in genesis, it can always be reduced.
+--
 newtype GenesisDelegation = UnsafeGenesisDelegation
   { unGenesisDelegation :: Map StakeholderId ProxySKHeavy
   } deriving (Show, Eq)
 
-instance ToJSON GenesisDelegation where
+instance Monad m => ToJSON m GenesisDelegation where
   toJSON = toJSON . unGenesisDelegation
 
-instance FromJSON GenesisDelegation where
-  parseJSON = parseJSON >=> \v -> do
-    (elems' :: Map StakeholderId ProxySKHeavy) <- mapM parseJSON v
+instance MonadError SchemaError m => FromJSON m GenesisDelegation where
+  fromJSON val = do
+    psks <- fromJSON val
+    case recreateGenesisDelegation psks of
+      Left err -> expected "GenesisDelegation" (Just $ "Error: " <> toS err)
+      Right delegation -> pure delegation
+
+instance Aeson.ToJSON GenesisDelegation where
+  toJSON = Aeson.toJSON . unGenesisDelegation
+
+instance Aeson.FromJSON GenesisDelegation where
+  parseJSON = Aeson.parseJSON >=> \v -> do
+    (elems' :: Map StakeholderId ProxySKHeavy) <- mapM Aeson.parseJSON v
     toAesonError $ recreateGenesisDelegation elems'
 
 -- | Safe constructor of 'GenesisDelegation' from a list of PSKs.
