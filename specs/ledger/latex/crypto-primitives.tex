@@ -1,0 +1,49 @@
+\section{Cryptographic primitives}
+\label{sec:crypto-primitives}
+
+Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
+this document.
+
+\begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{vk} & \SKey & \text{signing key}\\
+      \var{vk} & \VKey & \text{verifying key}\\
+      \var{hk} & \Hash & \text{hash of a key}\\
+      \sigma & \Sig  & \text{signature}\\
+      \var{d} & \Data  & \text{data}\\
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \hash{} & \VKey \to \Hash
+      & \text{hash function} \\
+      %
+      \fun{verify} & \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+      \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+  \end{align*}
+  \emph{Notation for serialized and verified data}
+  \begin{align*}
+    & \serialised{x} & \text{serialised representation of } x\\
+    & \mathcal{V}_{\var{vk}}{\serialised{m}}_{\sigma} = \verify{vk}{m}{\sigma}
+      & \text{shorthand notation for } \fun{verify}
+  \end{align*}
+  \caption{Cryptographic definitions}
+  \label{fig:crypto-defs}
+\end{figure}
