@@ -56,6 +56,7 @@ library
                        Cardano.Chain.Common.CoinPortion
                        Cardano.Chain.Common.Merkle
                        Cardano.Chain.Common.Script
+                       Cardano.Chain.Common.SharedSeed
                        Cardano.Chain.Common.StakeholderId
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear
@@ -65,7 +66,13 @@ library
                        Cardano.Chain.Delegation.Payload
                        Cardano.Chain.Delegation.Undo
 
+                       Cardano.Chain.Genesis.AvvmBalances
+                       Cardano.Chain.Genesis.Config
+                       Cardano.Chain.Genesis.Delegation
                        Cardano.Chain.Genesis.Hash
+                       Cardano.Chain.Genesis.Initializer
+                       Cardano.Chain.Genesis.ProtocolConstants
+                       Cardano.Chain.Genesis.Spec
 
                        Cardano.Chain.Slotting.Data
                        Cardano.Chain.Slotting.EpochIndex
@@ -77,6 +84,7 @@ library
                        Cardano.Chain.Txp.TxAux
                        Cardano.Chain.Txp.TxOutAux
                        Cardano.Chain.Txp.TxPayload
+                       Cardano.Chain.Txp.TxpConfiguration
                        Cardano.Chain.Txp.TxProof
                        Cardano.Chain.Txp.TxWitness
                        Cardano.Chain.Txp.Undo
@@ -111,7 +119,6 @@ library
                      , cryptonite
                      , Cabal
                      , formatting
-                     , hashable
                      , lens
                      , memory
                      , mtl
@@ -151,12 +158,17 @@ test-suite test
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
                        Test.Cardano.Chain.Epoch.File
+                       Test.Cardano.Chain.Genesis.Example
+                       Test.Cardano.Chain.Genesis.Gen
+                       Test.Cardano.Chain.Genesis.Json
+                       Test.Cardano.Chain.ProtocolConstants.Gen
                        Test.Cardano.Chain.Ssc.Bi
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
+                       Test.Cardano.Chain.Txp.Json
                        Test.Cardano.Chain.Update.Bi
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
@@ -181,6 +193,7 @@ test-suite test
                      , hedgehog
                      , resourcet
                      , streaming
+                     , text
                      , time
                      , vector
 

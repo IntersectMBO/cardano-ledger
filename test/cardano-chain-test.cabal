@@ -24,11 +24,16 @@ library
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Genesis.Example
+                       Test.Cardano.Chain.Genesis.Gen
+                       Test.Cardano.Chain.Genesis.Json
+                       Test.Cardano.Chain.ProtocolConstants.Gen
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
+                       Test.Cardano.Chain.Txp.Json
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
 
@@ -48,6 +53,7 @@ library
                      , formatting
                      , hedgehog
                      , streaming
+                     , text
                      , time
                      , vector
 

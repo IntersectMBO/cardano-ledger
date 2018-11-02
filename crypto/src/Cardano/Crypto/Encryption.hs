@@ -26,7 +26,7 @@ import           Crypto.Error (CryptoError, eitherCryptoError)
 -- | Key to encrypt data
 newtype AesKey = AesKey
     { fromAESKey :: ByteString
-    } deriving (Show, Eq, Generic, Hashable)
+    } deriving (Show, Eq, Generic)
 
 aesEncrypt :: ByteString -> AesKey -> Either CryptoError ByteString
 aesEncrypt input (fromAESKey -> sk) = ctrCombine
