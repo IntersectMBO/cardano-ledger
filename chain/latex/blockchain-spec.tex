@@ -66,11 +66,12 @@
 \newcommand{\BHash}{\type{BHash}}  % block hashes
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
-\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\BlockIx}{\type{BlockIx}}
 \newcommand{\GBlock}{\type{GBlock}}
 \newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\HCert}{\type{C}}
+\newcommand{\Queue}{\type{Q}}
 
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\SKeyGen}{\type{SKey_G}}
@@ -78,43 +79,60 @@
 \newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
+\newcommand{\DelegState}{\type{DState}}
 
 %%
 %% Function and relation names
 %%
-\newcommand{\hashname}{hash}
+\newcommand{\hashname}{bHash}
 \newcommand{\signname}{sign}
-\newcommand{\signedname}{signed}
-\newcommand{\signedseqname}{signedc}
 \newcommand{\verifyname}{verify}
-\newcommand{\delegatename}{delegate}
-\newcommand{\validname}{valid}
-\newcommand{\keypairname}{pair}
-\newcommand{\predbname}{pred} % block predecessor
-\newcommand{\toseqname}{toSeq} % option type to a sequence
-\newcommand{\predbseqname}{bs} % block predecessor to a sequence
+\newcommand{\delegationname}{delegates} % the delegation relation
+\newcommand{\signmapname}{\mathcal{M}}
+\newcommand{\trimixname}{trimIx}
+\newcommand{\incixmapname}{incIxMap}
+
+\newcommand{\hashofblockname}{hash}
+\newcommand{\bdataname}{bData}
+\newcommand{\bcertsname}{bCerts}
+\newcommand{\bsigname}{bSig}
+\newcommand{\bixname}{bIx}
+\newcommand{\bslname}{bSl}
+
+\newcommand{\qrestrname}{qRestrict}
+\newcommand{\qpopname}{qPop}
+\newcommand{\qheadname}{qHead}
+\newcommand{\qpushname}{qPush}
 
 %% 
 %% Functions and relations
 %%
 \newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
-\newcommand{\signed}[2]{\fun{\signedname}\ #1 ~ #2}
-\newcommand{\signedwindow}[2]{\fun{\signedseqname}\ #1 ~ #2}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
-\newcommand{\delegate}[2]{\fun{\delegatename}\ #1 ~ #2}
-\newcommand{\valid}[2]{\fun{\validname} ~ #1 ~ #2}
-\newcommand{\pair}[2]{\fun{\keypairname} ~ #1 ~ #2}
-\newcommand{\predb}[1]{\fun{\predbname} ~ #1}
-\newcommand{\toseq}[1]{\fun{\toseqname} ~ #1}
-\newcommand{\predbseq}[1]{\fun{\predbseqname} ~ #1}
+\newcommand{\delegation}[3]{\fun{\delegationname} ~ #1 ~ #2 ~#3}
+\newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
+\newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
+\newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
+\newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
 
-\newcommand{\delmap}{\delta}
+\newcommand{\hashofblock}[1]{\fun{\hashofblockname} ~ #1}
+\newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
+\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
+\newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
+\newcommand{\bix}[1]{\fun{\bixname} ~ #1}
+\newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
+
+\newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
+\newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
+\newcommand{\qpush}[1]{\fun{\qpushname} ~ #1}
 
 % Partial and total function aliases
 \newcommand{\totalf}{\to}
 \newcommand{\partialf}{\mapsto}
 
+% A type alias for a map from a genesis block verification key to a queue of indices
+\newcommand{\mapqueue}{\mathcal{Q}}
 % comments
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
@@ -125,12 +143,16 @@
 
 \author{Marko Dimjašević}
 
-\date{October 17, 2018}
+\date{October 31, 2018}
 
 \maketitle
 
 \begin{abstract}
-This documents defines a semantics for operations on a blockchain.
+  This documents defines inference rules for operations on a blockchain as a
+  specification of the blockchain layer.
+%
+In particular, a block validity definition is given, which is accompanied by
+small-step operational semantics inference rules.
 \end{abstract}
 
 \tableofcontents
@@ -138,6 +160,19 @@ This documents defines a semantics for operations on a blockchain.
 
 \section{Introduction}
 \label{sec:introduction}
+
+The idea behind this document is to formalise what it means for a new block to
+be added to the blockchain to be valid.
+%
+Unless a new block is valid, it cannot be added to the blockchain and thereby
+extend it.
+%
+This is needed for a system that is subscribed to the blockchain and keeps a
+copy of it locally.
+%
+In particular, this document gives a formalisation that should be
+straightforward to implement in a programming language, e.g., in Haskell.
+
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -157,98 +192,192 @@ This documents defines a semantics for operations on a blockchain.
 \item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
   $A$ case corresponds to a case when there is a value of type $A$ and the $1$
   case corresponds to a case when there is no value.
+\item[Union override] The union override operation is defined in
+  Figure~\ref{fig:unionoverride}.
+  %
+  \begin{figure}
+    \begin{align*}
+      \var{K} \restrictdom \var{M}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ i \in \var{K} \}
+      & \text{domain restriction}
+      \\
+      \var{K} \subtractdom \var{M}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ i \notin \var{K} \}
+      & \text{domain exclusion}
+      \\
+      \var{M} \restrictrange \var{V}
+      & = \{ i \mapsto o \mid i \mapsto o \in \var{M}, ~ o \in \var{V} \}
+      & \text{range restriction}
+      \\
+      & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
+      & \text{union override}\\
+      & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
+    \end{align*}
+    \caption{Definition of the Union Override Operation}
+    \label{fig:unionoverride}
+  \end{figure}
 \end{description}
 
 \section{Basic definitions}
 \label{sec:basic-definitions}
 
-\section{Auxiliary definitions}
-\label{sec:auxil-defin}
-TODO: Put this note on serialisation somewhere more appropriate.
+This section gives definitions of basic types and functions that operate on
+and with blocks and heavyweight delegation certificates.
 
-If $s(\cdot)$ is a function for serialising data and $d(\cdot)$ a function for
-deserialising data, their composition $s \circ d$ is not an identity function:
+
+\subsection{Heavyweight Delegation Certificates}
+\label{sec:certificates}
+
+A heavyweight delegation certificate is a proof that a genesis block
+verification key $vk_s$ is delegating its right to sign a block to a signing
+key $sk_d$, which has a corresponding verification key $vk_d$, starting with a
+slot $sl$, which is confirmed by a cryptographic signature $\sigma$.
 %
-this is hard to enforce and it is considered a bad practice in cryptography
-design.
+The type for a heavyweight delegation certificate is kept abstract in this
+document, but it is a product type with projection functions for the
+following:
+%
+\begin{itemize}
+\item a delegator key,
+\item a delegatee key,
+\item a slot, and
+\item a cryptographic signature.
+\end{itemize}
 
-\section{Delegation}
-\label{sec:delegation}
+Basic types and functions pertaining to heavyweight delegation certificates
+are given in Figure~\ref{fig:cert-defs}.
 
-\marko{This section might be out of date. There is a work in progress to come
-  up with an interface between the blockchain layer and the ledger layer.
+\begin{figure}
+  \emph{Primitive types}
   %
-  See CDEC-638.}
-
-The genesis block contains verification keys of $n$ servers.
-%
-As of mid-October 2018, $n = 7$.
-%
-Each of $n$ servers keeps its own corresponding signing key locally and does
-not share the signing key with anyone else.
-%
-Only signing keys with their verification counterparts in the genesis block
-have the right to sign blocks.
-%
-However, by the means of delegation certificates, keys from the genesis block
-can delegate signing rights to other keys.
-%
-Delegation is not transitive, i.e., there is no chaining of delegation:
-%
-only genesis block keys can delegate.
-
-
-\subsection{Delegation Design}
-\label{sec:delegation-design}
-
-To keep track of active certificates and when they become valid, a map from
-genesis block verification keys to a list of certificates is used.
-%
-A certificate contains an epoch in which it becomes valid.
-%
-Each list is sorted by epochs from certificates in the decreasing order (i.e.,
-a certificate with an earlier epoch comes latter in the list).
-%
-The map is initialised by each genesis block key delegating to itself.
-
-
-If a new certificate is to be posted and added to the map, first it is
-checked.
-%
-The epoch when a certificate becomes valid has to be greater than the epoch of
-the head certificate of the corresponding list.
-%
-The certificate has to have a valid signature.
-%
-If the certificate is valid, it is prepended to the list of the map key that
-is delegating.
-%
-This also takes care of the property that no key can delegate
-twice in an epoch.
+  \begin{align*}
+    sl & \in \Slot    & \text{slot time-stamp}\\
+   sig & \in \Sig     & \text{cryptographic signature}\\
+    sk & \in \SKey    & \text{signing key}\\
+    vk & \in \VKey    & \text{verification key}
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}
+  \end{align*}
+  %
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    c & \in \HCert  & \text{heavyweight delegation certificate}
+  \end{align*}
+  %
+  \emph{Functions}
+  %
+  \begin{align*}
+    \fun{cFrom} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
+    \fun{cTo} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
+    \fun{cSl} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
+    \fun{cSig} & \in \HCert \totalf \Sig & \text{certificate signature projection}
+  \end{align*}
+  %
+  \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
+  \label{fig:cert-defs}
+\end{figure}
 
 
-Each list in the map is trimmed at the beginning of each epoch by keeping only
-the head of the list, i.e., by keeping only one certificate.
+\subsection{Blocks}
+\label{sec:blocks}
+
+A block is an element of a blockchain.
 %
-This head certificate is either a new certificate that becomes valid in this
-epoch or it is an old certificate that is still valid and it was not replaced
-by any new delegation certificate.
+A blockchain is extended by appending a block.
 %
-Due to trimming, each list in the map has at most two certificates at any
-point in time.
+There are two types of blocks.
 %
-At the beginning of an epoch, a list has only one element and at any other
-point it can have at most two elements (i.e., two certificates) if there was a
-new delegation certificate for the next epoch posted.
+The first type is the genesis block, denoted by $\GBlock$ in this document.
+%
+Every blockchain starts with a genesis block.
+%
+A genesis block contains a set of $n$ verification keys.
+%
+These keys are often referred to as the genesis block verification keys.
+%
+A genesis block also contains a hash.
+%
+In this document $\GBlock$ is kept abstract, but it is a product type with
+projection functions for the two just mentioned values:
+%
+\begin{itemize}
+\item a set of $n$ verification keys, and
+\item a block hash.
+\end{itemize}
+
+The second type is for a non-genesis block, denoted by $\RBlock$.
+%
+In this document $\RBlock$ is kept abstract, but it is a product type with
+projection functions for the following:
+%
+\begin{itemize}
+\item a block index,
+\item a block hash pointing to the block's predecessor,
+\item a slot it is in,
+\item a set of heavyweight delegation certificates in the body, and
+\item a cryptographic signature.
+\end{itemize}
 
 
-Because one key's delegation can be changed only for the next epoch, but
-not for the current epoch or any epoch after the next, checking whom the key
-currently delegates to is a constant-time operation: only the head and
-possibly the second item in the list have to be examined.
+%
+For every block, it is possible to compute its hash with the
+$\fun{\hashofblockname}$ function.
+%
+In the case of the genesis block, this simply returns the hash field in the
+block.
+%
+Basic types and functions pertaining to blocks are given in
+Figure~\ref{fig:block-defs}.
 
-This approach also supports certificate revocation: it is done by posting a
-certificate in which a key delegates to itself.
+\begin{figure}
+  \emph{Primitive types}
+  %
+  \begin{align*}
+    ix & \in \BlockIx & \text{block index}\\
+     h & \in \BHash   & \text{block hash}
+  \end{align*}
+  %
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    g & \in \GBlock & \text{genesis block} \\
+    r & \in \RBlock & \text{non-genesis block}
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    b & \in \Block = \GBlock + \RBlock & \text{block}
+  \end{align*}
+  %
+  \emph{Projection functions}
+  %
+  \begin{align*}
+    \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
+    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
+    \fun{\hashname} & \in \Block \totalf \BHash
+      & \text{previous block's hash} \\
+    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
+    \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
+      & \text{block certificates} \\
+    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
+    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data}
+  \end{align*}
+  %
+  \emph{Functions}
+  %
+  \begin{align*}
+    \fun{\hashofblockname} & \in \Block \totalf \BHash & \text{hash of block}
+  \end{align*}
+  %
+  \caption{Basic Block-related Types and Functions}
+  \label{fig:block-defs}
+\end{figure}
 
 
 \section{Delegation Interface}
@@ -267,203 +396,57 @@ delegation.
 Given that delegation certificates are in the body of a block just like
 transactions are, the ledger layer keeps track of the state of certificates.
 %
-It does so by keeping a set of certificates that are currently valid.
+It does so by keeping a set of certificates that are currently active.
 %
 Furthermore, the ledger layer also needs to maintain a set of delegation
 certificates that have been added to the blockchain, but that will become
-valid and possibly invalidate other certificates in the future.
+active and that possibly inactivate other certificates in the future.
 %
 As part of the delegation interface, the ledger layer exposes functionality
-for checking if a particular verification key has the delegation right to sign
-a block in the current slot.
+for checking if a particular verification key $vk_d$ has the delegation right
+to sign a block in a given slot $sl$.
 %
 In particular, if the verification key has the right to sign, the
-functionality should inform who is the delegator.
+functionality should inform who is the delegator $vk_s$.
 %
-In Haskell, the signature of the corresponding function is:
+The functionality can be modeled as a relation
+$\fun{\delegationname} \subseteq \VKeyGen \times \VKey \times \Slot$.
 %
-\begin{lstlisting}
-delegator :: (VKey vk_d, VKeyGen vk_s) => vk_d -> Maybe vk_s
-\end{lstlisting}
-
-If the verification key does not have the delegation right, i.e., it has no
-right to sign the block, the function returns nothing.
-%
-If it does have the right, it returns the delegator's verification key.
+Note that in the case when $vk_d \in \VKeyGen$, i.e., when the verification
+key is a genesis block verification key, and it has not delegated its signing
+right to any other key, the element from the relation is $(vk_d, vk_d, sl)$.
 
 
 New delegation certificates are added to the blockchain in blocks, so the
 blockchain layer has to inform the ledger layer of new certificates when a new
-block is added to the blockchain.
+block is to be added to the blockchain.
 %
 Therefore, as part of the delegation interface, the blockchain layer exposes
-new delegation certificates functionality to the ledger layer.
+the new delegation certificates functionality to the ledger layer.
 %
-This functionality should communicate at least the following information for
-each new delegation certificate:
-%
-\begin{enumerate}
-\item the delegator's verification key,
-%
-\item the delegatee's verification key, and
-%
-\item the slot when the delegation becomes valid (this is in K slots from the
-  current slot).
-\end{enumerate}
-%
-In Haskell, the signature of the corresponding function is:
-%
-\begin{lstlisting}
-postNewCerts :: ( VKey vk_d
-                , VKeyGen vk_s
-                , Slot s
-                , MonadError CertErr m )
-                => Set (vk_s, vk_d, s)
-                -> m ()
-\end{lstlisting}
-%
-The return type of the function signals the possibility of failure.
+This is modeled as an abstract state transition updating the state of type
+$\DelegState$.
 %
 Given that the blockchain layer does not keep the state of delegation
 certificates, it has no way of checking if certificates are valid.
 %
-In particular, the blockchain layer cannot know if the delegator already
-posted another delegation certificate in the current epoch.
+That is why new certificates can be added to the state only if there are no
+conflicts with existing certificates.
 %
-Furthermore, the slot in which the certificate is claimed to become valid
-might not be in K slots, which should disallow such a certificate.
+For example, the blockchain layer cannot know if the delegator already posted
+another delegation certificate in the current epoch.
 %
-In case of failure, the whole block to be added to the blockchain is
-discarded.
+Furthermore, the slot in which a certificate is claimed to become active might
+not be in K slots, which should disallow such a certificate.
+%
+In case a certificate is such that the state cannot be updated, the block to
+be added to the blockchain is discarded.
 
 
 \section{State transitions for Blockchain}
 \label{sec:state-trans-chain}
 
-\subsection{Properties}
-\label{sec:chain-properties}
-
-\begin{figure}[h]
-  \emph{Primitive types}
-  %
-  \begin{align*}
-    sl & \in \Slot  & \text{slot time-stamp}\\
-     e & \in \Epoch & \text{epoch}\\
-    sk & \in \SKey  & \text{signing key}\\
-    vk & \in \VKey  & \text{verification key}\\
-     h & \in \BHash & \text{block hash}\\
-   sig & \in \Sig   & \text{signature}\\
-  data & \in \Data  & \text{data}
-  \end{align*}
-  %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}\\
-    c & \in \HCert = \VKeyGen \times \VKey \times \Epoch \times \Sig & \text{delegation certificate}\\
-    (vk_1, \dotsc, vk_n) & \in \GBlock = \VKeyGen^n & \text{genesis block} \\
-    (h, sl, d, \sigma) & \in \RBlock = \BHash \times \Slot \times \Data \times \Sig
-      & \text{non-genesis block} \\
-    b & \in \Block = \GBlock + \RBlock & \text{block} \\
-    \delmap & \in \VKeyGen \totalf \seqof{\HCert}
-      & \text{key to certificate list mapping}
-  \end{align*}
-  %
-  \emph{Functions and relations}
-  %
-  \begin{align*}
-    \text{\keypairname} & \in \SKey \times \VKey & \text{key pair relation}\\
-    \text{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
-      & \text{signature function}\\
-    \text{\signedname} & \in \SKey \times \RBlock & \text{signature relation}\\
-    \text{\signedseqname} & \in \SKeyGen \times \seqof{\Block} \partialf \powerset{\RBlock}
-      & \text{block count function}\\
-    \text{\verifyname} & \in \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
-    \text{\hashname} & \in \Block \totalf \BHash
-      & \text{block hash function}\\
-    \text{\delegatename} & \in \SKeyGen \times \VKey \totalf \HCert
-      & \text{delegation function}\\
-    \text{\validname} & \in \RBlock \times \VKey
-      & \text{block validity relation}\\
-    \text{\predbname} & \in \Block \totalf \Block^?
-      & \text{block predecessor function} \\
-    \text{\toseqname} & \in \type{A}^? \totalf \seqof{\type{A}}
-      & \text{option to sequence function} \\
-    \text{\predbseqname} & \in \Block \totalf \seqof{\Block}
-      & \text{block to sequence function}
-  \end{align*}
-  \caption{Definitions associated with the blockchain transition system}
-  \label{fig:state-trans-abstract}
-\end{figure}
-
-\subsubsection{Delegation}
-\label{sec:delegation-properties}
-
-\marko{This whole subsection on delegation rules is out of date.
-  %
-  See the ledger layer specification for delegation rules.}
-
-In the first epoch, every key from the genesis block delegates to itself, as given by \eqref{eq:init-delpmap}.
-
-\begin{equation}
-  \label{eq:init-delpmap}
-  \inference[Initial-delegation-map]
-  {}
-  { \delmap_0 = \Set{(vk_s \partialf c; \epsilon)}{vk_s \in \VKeyGen \wedge c = (vk_s, vk_s, e_0, \sigma)}}
-\end{equation}
-
-
-When an epoch clock ticks and the current epoch with an index $k$ changes to
-an epoch with an index $k+1$, each list in the delegation map is shrunk to its
-head element, as given by \eqref{eq:next-epoch-delmap}.
-
-\begin{equation}
-  \label{eq:next-epoch-delmap}
-  \inference[Epoch-change]
-  {\delmap_k & \text{epoch clock tick}}
-  {\delmap_k \trans{}{} {\delmap_{k+1} = \Set{(vk_s \partialf c; \epsilon)}{(vk_s \partialf c; \Lambda) \in \delmap_k}}}
-\end{equation}
-
-
-If a new valid delegation certificate $c = (vk_s, vk_d, e_j, \sigma)$ that is
-a proof that $vk_s$ delegates to $vk_d$ starting in epoch $e_j$ is to be
-added, the delegation map is updated at $vk_s$, as given by
-\eqref{eq:new-del-cert}.
-
-\begin{equation}
-  \label{eq:new-del-cert}
-  \inference[New-certificate]
-  {
-    {
-      \begin{array}{c}
-        (sk_s, vk_s) \in \SKeyGen \times \VKeyGen \\
-        (vk_s \partialf c_h; \lambda) \in \delmap_k \\
-        c_h = (vk_s, vk_{d_1}, e_h, \sigma_h)
-      \end{array}
-    }
-    &
-    {
-      \begin{array}{c}
-        c = (vk_s, vk_d, e_j, \sigma) \\
-        e_j > e_h
-      \end{array}
-    }
-  }
-  {\delmap_k \trans{}{}
-    \left(
-    {
-      \begin{array}{c}
-        \delmap_{k'} = \Set{(vk \partialf \Lambda)}{(vk \partialf \Lambda) \in \delmap_k \wedge vk \neq vk_s} \cup \{vk_s \partialf c; c_h; \epsilon\} \\
-        \delegate{sk_s}{vk_d} = (vk_s, vk_d, e_j, \sigma)
-      \end{array}
-    }
-    \right)
-  }
-\end{equation}
-
-\subsubsection{Block Validity}
+\subsection{Block Validity}
 \label{sec:block-valid}
 % This definition is adopted from shelley-plan.md, which is written by
 % Duncan Coutts
@@ -471,112 +454,214 @@ added, the delegation map is updated at $vk_s$, as given by
 A non-genesis block $\var{b}$ is valid if:
 %
 \begin{enumerate}
-\item it is signed by a key $\var{sk_d}$ for which a current valid heavyweight delegation
-  certificate $c = (vk_s, vk_d, e, \sigma')$ exists,
-\item the corresponding certificate $c$ is signed by a key $sk_s$ from the
-  genesis block, and
-\item in the rolling window of the last $K$ blocks the number of blocks signed
-  by keys that $sk_s$ delegated to is no more than a threshold $K \cdot t$,
-  where $t$ is a constant that we will pick in the range
-  $1/5 \leq t \leq 1/4$.
+\item it is signed by a signing key $sk_d$ for which a valid heavyweight
+  delegation certificate $c$ that is active at the time of signing exists.
+  %
+  The certificate $c$ carries information that signing rights from a genesis
+  block verification key $vk_s$ are transferred to a verification key $vk_d$
+  starting in a slot $sl$,
+\item the corresponding certificate $c$ is signed by a key $sk_s$ that has a
+  corresponding verification key in the genesis block.
+  %
+  The certificate therefore carries a a cryptographic signature $\sigma'$,
+  and
+\item in the rolling window of the last $K$ blocks, the number of blocks
+  signed by keys that $sk_s$ delegated to is no more than a threshold
+  $K \cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from
+    the Ouroboros BFT paper draft where it denotes the number of Byzantine
+    servers, though it should be somehow related to it.}  that will be picked
+  in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
-
 
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
 
 \begin{equation}
   \label{eq:sign-verify}
-  \forall (sk, vk) \in \text{\keypairname}, b = (h, sl, d, \sigma) \in \Block.\
+  \forall (sk, vk) \in (\SKey \times \VKey), b = (h, sl, d, \sigma) \in \Block.\
   \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
 \end{equation}
 
 
-The \signedseqname\ function computes for a given genesis block singing key $sk_s$ and a sequence of blocks $\beta$ a set of blocks that are signed by keys $sk_d$ that $sk_s$ delegates to in $\beta$:
+\subsection{Counting Signed Blocks}
+\label{sec:counting-signed-blocks}
+
+To make sure no signing key with a corresponding genesis block verification
+key gets to sign too many blocks, a state is maintained by keeping a mapping
+of keys to a queue of signed blocks in a sliding window of at most K last
+blocks in the blockchain.
+%
+Initially, when the blockchain is made of the genesis block $g_0 \in \GBlock$
+only, the initial state is such that no key from the genesis block signed a
+block (neither directly or indirectly via delegation), the last added block is
+the genesis block $p = g_0$ and no delegation happened, as given in
+Figure~\ref{fig:init-bc-state}.
+
+\begin{figure}
+  \begin{equation*}
+    \inference[Initial-state]
+    {}
+    {\left(
+        {\begin{array}{c}
+           \signmapname = \emptyset \\
+           p = g_0 \\
+           ds = \emptyset % TODO: Make this value abstract and explain it in prose
+         \end{array}}
+     \right)
+   }
+ \end{equation*}
+ \caption{The Initial State Rule}
+ \label{fig:init-bc-state}
+\end{figure}
+
+The types of components in the initial state, namely of $\fun{\signmapname}$
+and $ds$ are given in Figure~\ref{fig:block-ext-types-funs}.
+
+Once a new block arrives, the state has to be updated.
+%
+In particular, if a block with an index $ix$ signed by a signing key
+corresponding to a verification key $vk_d$ is to be added to the blockchain,
+the sliding window of the last $K$ blocks moves by one block and the map
+$\fun{\signmapname}$ has to be updated for the key that signed the
+$K^{\text{th}}$ previous block;
+%
+this is done with $\trimix{\signmapname}{ix}$, as given by
+\eqref{eq:trimix}.
+%
+To finish updating the map, the updated version of $\signmapname$ denoted by
+$\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
+with $\incixmap{vk_s}{\signmapname'}{ix}$, as given by
+\eqref{eq:incixmap}.
+%
+Finally, the state $ds$ that is maintained by the ledger layer, is updated;
+the details of how the state is updated via a transition is given in a
+separate ledger layer specification.
+%
+Types of both of these functions are given in
+Figure~\ref{fig:block-ext-types-funs}.
+
 
 \begin{align}
-  \label{eq:signed-window}
-  \signedwindow{sk_s}{\beta} = & \Set{b}{b \in \beta \wedge b \in \RBlock \wedge \exists sk_d \exists vk_d. (sk_d, vk_d) \in \SKey \times \VKey \\
-  & \wedge \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \signed{sk_d}{b}}
+  \label{eq:trimix}
+  \trimix{\signmapname}{ix} = \Set{(vk_s \partialf q)}{vk_s \in \dom \signmapname.~
+  q = \qrestr{ix}{(\signmap{vk_s}})} \\
+  \qrestr{ix}{q} = \
+  \begin{cases}
+    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < ix \\
+    q & \text{otherwise}
+  \end{cases}
 \end{align}
 
-
-A block has a block preceding it if it is not the genesis block:
-
 \begin{equation}
-  \label{eq:predb}
-  \predb{b} =
-  \begin{cases}
-    1 & \quad \text{if } b \in \GBlock \\
-    b' & \quad \text{if } b = (h, sl, d, \sigma) \in \RBlock \wedge \hash{b'} = h
-  \end{cases}
+  \label{eq:incixmap}
+  \incixmap{vk_s}{\signmapname}{ix} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
 \end{equation}
 
-Next, a polymorphic function that takes an option type into a corresponding
-sequence is defined, which can be applied to the $\Block$ type as well:
 
-\begin{equation}
-  \label{eq:toseq}
-  \toseq{a} =
-  \begin{cases}
-    \epsilon & \quad \text{if } a = 1 \\
-    \epsilon; a & \quad \text{otherwise}
-  \end{cases}
-\end{equation}
+\begin{figure}
+  \emph{Abstract types}
+  %
+  \begin{align*}
+    q  & \in \Queue_\BlockIx  & \text{block index queue}\\
+  data & \in \Data    & \text{data}\\
+    ds & \in \DelegState & \text{ledger layer delegation state}
+  \end{align*}
+  %
+  \emph{Derived types}
+  %
+  \begin{align*}
+    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
+    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+  \end{align*}
+  %
+  \emph{Type aliases}
+  %
+  \begin{align*}
+    \mapqueue = \VKeyGen \totalf \Queue_\BlockIx
+  \end{align*}
+  \emph{Functions}
+  %
+  \begin{align*}
+    \fun{\qheadname} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
+    \fun{\qpushname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
+      & \text{queue push function} \\
+    \fun{\qpopname} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
+      & \text{queue pop function} \\
+    \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
+      & \text{restricted queue pop function} \\
+    \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
+      & \text{old block removal function} \\
+    \fun{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+      & \text{block count increment function}\\
+    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+      & \text{signature function}\\
+    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
+      & \text{verification relation}\\
+    \fun{\delegationname} & \in \DelegState \times \VKeyGen \times \VKey
+      & \text{delegation relation}
+  \end{align*}
+  %
+  \caption{Blockchain Extension Types and Functions}
+  \label{fig:block-ext-types-funs}
+\end{figure}
 
-The function \predbname\ can be monadically applied $m$ times in a row, which
-is written as $\predb^m{b}$.
 
-A helper function that composes the \predbname\ and the \toseqname\
-functions is defined as:
+\subsection{Blockchain Extension}
+\label{sec:chain-extension}
 
-\begin{equation}
-  \label{eq:predbseq}
-  \predbseq{b} = (\text{\toseqname} \circ \text{\predbname})(b)
-\end{equation}
+A new block $b \in \RBlock$ with an index $ix \in BlockIx$, signed by a
+signing key $sk_d$ in a slot $sl$ can extend a blockchain if the following
+conditions are met:
+%
+\begin{enumerate}
+\item $sk_d$ has a corresponding verification key $vk_d$ that has delegation
+  rights for the slot $sl$, and
+\item new delegation certificates that are in the body of $b$ are not in
+  conflict with earlier delegation certificates.
+\end{enumerate}
 
-Analogously to the \predbname\ function, $\predbseq^m{b}$ is defined as:
+A rule capturing the blockchain extension is given in
+Figure~\ref{fig:blockchain-extension}.
 
-\begin{equation}
-  \label{eq:predbseqton}
-  \predbseq^m{b} = (\text{\toseqname} \circ \text{\predbname}^m)(b)
-\end{equation}
-
-Finally, the block validity relation is defined as:
-
-\begin{align}
-  \label{eq:valid-block}
-    \valid{b}{vk_d} \implies &
-      \exists sk_s \exists vk_s. (sk_s, vk_s) \in \SKeyGen \times \VKey \wedge \\
-      & \exists sk_d. (sk_d, vk_d) \in \SKey \times \VKey \wedge
-      \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \wedge \\
-      & \exists h, sl, d, \sigma. (h, sl, d, \sigma) = b \wedge
-        \sign{sk_d}{h}{sl}{d} = \sigma \wedge \\
-      & | \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t.
-\end{align}
-
-The chain extension rule is:
-
-\begin{equation}
-  \label{eq:chain-extension}
-  \inference[Chain-extension]
+\begin{figure}
+  \begin{equation*}
+  \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-       \beta \\
-       b = (h, sl, d, \sigma)
-    \end{array}}
-    &
-    {\begin{array}{c}
-       \sign{sk_d}{h}{sl}{d} = \sigma \\
-       \valid{b}{vk_d} \\
-       \delegate{sk_s}{vk_d} = (vk_s, vk_d, e, \sigma') \\
-       \signedwindow{sk_s}{[\predbseq^K\var{b}; \predbseq^{(K-1)}\var{b}; \cdots; \predbseq^1{b}]} | \leq K \cdot t
-    \end{array}}
+      ix = \bix{b} \wedge sl = \bsl{b} \\
+      \hash{b} = \hashofblock{p} \\
+      \delegation{ds}{vk_s}{vk_d} \\
+      \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
+      \size{\signmap{vk_s}} \leq K \cdot t \\
+      \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
+      p' = b 
+     \end{array}}
+   & (\bsl{b}) \vdash ds \trans{\text{DELEG}}{\bcerts{b}} ds'
   }
-  {\beta \trans{}{\var{b}} {\beta; b}}
-\end{equation}
+  {
+    \left(
+      {\begin{array}{c}
+         \signmapname \\
+         p \\
+         ds
+       \end{array}}
+    \right)
+    \trans{}{b}
+    \left(
+      {\begin{array}{c}
+         \signmapname' \\
+         p' \\
+         ds'
+       \end{array}}
+    \right)
+ }
+  \end{equation*}
+  \caption{The Blockchain Extension Rule}
+  \label{fig:blockchain-extension}
+\end{figure}
 
 \end{document}
+
 
 %%% Local Variables:
 %%% mode: latex
