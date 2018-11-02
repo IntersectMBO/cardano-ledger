@@ -243,16 +243,16 @@ genAddrTxins :: Int -> Int -> Gen [Addr]
 genAddrTxins lower upper =
     fmap (uncurry AddrTxin) <$> genHashKeyPairs lower upper
 
-genCoinList :: Int -> Int -> Gen [Coin]
-genCoinList lower upper = do
+genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
+genCoinList minCoin maxCoin lower upper = do
   xs <- Gen.list (Range.linear lower upper)
-        $ Gen.integral (Range.exponential (0 :: Natural) 1000)
+        $ Gen.integral (Range.exponential minCoin maxCoin)
   return (Coin <$> xs)
 
 genTxOut :: Int -> Int -> Gen [TxOut]
 genTxOut lower upper = do
   xs <- genAddrTxins lower upper
-  ys <- genCoinList (length xs) (length xs)
+  ys <- genCoinList 1 100 (length xs) (length xs)
   return (uncurry TxOut <$> zip xs ys)
 
 genNonemptyGenesisState :: Gen LedgerState
@@ -261,17 +261,21 @@ genNonemptyGenesisState = genesisState <$> genTxOut 1 100
 utxoSize :: UTxO -> Int
 utxoSize (UTxO m) = Map.size m
 
-propPositiveBalance :: Property
+-- | This property states that a non-empty UTxO set in the genesis state has a
+-- non-zero balance.
+propPositiveBalance:: Property
 propPositiveBalance = property $ do
                         initialState <- forAll genNonemptyGenesisState
                         utxoSize (getUtxo initialState) /== 0
                         Coin 0 /== balance (getUtxo initialState)
 
 propertyTests :: TestTree
-propertyTests = testGroup "Ledger Genesis State"
-                [ testProperty
-                    "non-empty genesis ledger state"
+propertyTests = testGroup "Property-Based Testing"
+                [ testGroup "Ledger Genesis State"
+                  [testProperty
+                    "non-empty genesis ledger state has non-zero balance"
                     propPositiveBalance ]
+                  ]
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
