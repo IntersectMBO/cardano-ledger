@@ -152,10 +152,12 @@ authTxin key txin (UTxO utxo) =
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
--- TODO - should we only check for one witness for each unique input address?
+-- We check that there are not more signatures than inputs, but if several
+-- inputs from the same address are used, it is not strictyl necessary to
+-- include more than one witness.
 witnessed :: TxWits -> LedgerState -> Validity
 witnessed (TxWits tx wits) l =
-  if Set.size wits == Set.size ins && all (hasWitness wits) ins
+  if Set.size wits <= Set.size ins && all (hasWitness wits) ins
     then Valid
     else Invalid [InsuffientWitnesses]
   where
