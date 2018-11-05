@@ -19,18 +19,23 @@ module Test.Cardano.Binary.Cbor.CborSpec
 
 import           Cardano.Prelude
 
-import           Data.Bits (shiftL)
+import           Data.Bits
+    (shiftL)
 import qualified Data.ByteString as BS
-import           Data.Fixed (Nano)
-import           Data.String (String)
+import           Data.String
+    (String)
 
-import           Test.Hspec (Spec, describe)
-import           Test.Hspec.QuickCheck (modifyMaxSize, modifyMaxSuccess, prop)
-import           Test.QuickCheck (Arbitrary (..), choose, sized, (===))
+import           Test.Hspec
+    (Spec, describe)
+import           Test.Hspec.QuickCheck
+    (modifyMaxSize, modifyMaxSuccess, prop)
+import           Test.QuickCheck
+    (Arbitrary (..), choose, sized, (===))
 
 import           Cardano.Binary.Class
 
-import           Test.Cardano.Binary.Helpers (U, binaryTest, extensionProperty)
+import           Test.Cardano.Binary.Helpers
+    (U, extensionProperty)
 import qualified Test.Cardano.Cbor.RefImpl as R
 
 
@@ -132,25 +137,3 @@ spec = do
         -- Using once inside the property would be lovely (as it tests
         -- all the Halfs) but it doesn't work for some reason.
         prop "Numeric.Half to/from Float" R.prop_halfToFromFloat
-
-  describe "Cbor.Bi instances" $
-    modifyMaxSuccess (const 1000) $ do
-        binaryTest @()
-        binaryTest @Bool
-        binaryTest @Char
-        binaryTest @Integer
-        binaryTest @LargeInteger
-        binaryTest @Word
-        binaryTest @Word8
-        binaryTest @Word16
-        binaryTest @Word32
-        binaryTest @Word64
-        binaryTest @Int
-        binaryTest @Float
-        binaryTest @Int32
-        binaryTest @Int64
-        binaryTest @Nano
-        binaryTest @(Map Int Int)
-        binaryTest @(Set Int)
-        binaryTest @ByteString
-        binaryTest @Text
