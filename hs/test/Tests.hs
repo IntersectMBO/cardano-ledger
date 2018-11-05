@@ -258,17 +258,37 @@ genTxOut addrTxins = do
   ys <- genCoinList 1 100 (length addrTxins) (length addrTxins)
   return (uncurry TxOut <$> zip addrTxins ys)
 
-genNonemptyGenesisState :: [(KeyPair, KeyPair)] -> Gen LedgerState
-genNonemptyGenesisState keyPairs =
+genNonemptyGenesisState :: Gen LedgerState
+genNonemptyGenesisState = do
+  keyPairs <- genKeyPairs 1 100
   genesisState <$> genTxOut (genAddrTxins keyPairs)
 
 -- | Take a UTxO and generate possible transactions.
--- Idea: take inputs from UTxO set as list, shuffle list, take rand elements.
--- genTx :: UTxO -> Gen Tx
+-- Idea: take inputs from UTxO set as list, take first and create new outputs
+-- from all unspent outputs of this key
+genTx :: [(KeyPair, KeyPair)] -> UTxO -> Gen LedgerEntry
 genTx keyList (UTxO m) = do
-  selected_inputs <- Gen.subsequence utxo_inputs
-  return selected_inputs
+  selected_inputs <- Gen.shuffle utxo_inputs
+  let selectedAddr    = addr $ head selected_inputs
+  let selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
+  let selectedKeyPair = findAddrKeyPair selectedAddr keyList
+  receipient <- (addr . head) <$> Gen.shuffle utxo_inputs
+  let txbody = Tx
+           (Set.fromList selected_inputs)
+           [TxOut receipient $ balance (UTxO selectedUTxO)]
+           Set.empty
+  let txwit = makeWitness selectedKeyPair txbody
+  pure $ TransactionData (TxWits txbody $ Set.fromList [txwit])
             where utxo_inputs = Map.keys m
+                  addr inp = getTxOutAddr $ m Map.! inp
+
+-- | find first matching key pair for address
+findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
+findAddrKeyPair (AddrTxin addr _) keyList =
+     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+
+getTxOutAddr :: TxOut -> Addr
+getTxOutAddr (TxOut addr _) = addr
 
 utxoSize :: UTxO -> Int
 utxoSize (UTxO m) = Map.size m
@@ -278,8 +298,7 @@ utxoSize (UTxO m) = Map.size m
 propPositiveBalance:: Property
 propPositiveBalance =
     property $ do
-      keyPairs <- genKeyPairs 1 100
-      initialState <- forAll $ genNonemptyGenesisState keyPairs
+      initialState <- forAll genNonemptyGenesisState
       utxoSize (getUtxo initialState) /== 0
       Coin 0 /== balance (getUtxo initialState)
 
