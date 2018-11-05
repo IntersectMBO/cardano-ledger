@@ -284,26 +284,33 @@ genTxLedgerEntry keyList (UTxO m) = do
             where utxoInputs = Map.keys m
                   addr inp = getTxOutAddr $ m Map.! inp
 
-genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (LedgerEntry, (Either [ValidationError] LedgerState))
+genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   ledgerEntry <- genTxLedgerEntry keyList utxo
-  let nextState = asStateTransition sourceState ledgerEntry
-  pure (ledgerEntry, nextState)
+  pure $ asStateTransition sourceState ledgerEntry
 
-genNonEmptyAndAdvanceTx :: Gen (LedgerState, LedgerEntry, Either [ValidationError] LedgerState)
+genNonEmptyAndAdvanceTx :: Gen (LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs <- genKeyPairs 1 100
-  ls  <- genesisState <$> genTxOut (genAddrTxins keyPairs)
-  retVal <- genLedgerStateTx keyPairs ls
-  pure (ls, fst retVal, snd retVal)
+  steps    <- Gen.integral $ Range.linear 1 100
+  ls       <- genesisState <$> genTxOut (genAddrTxins keyPairs)
+  ls'      <- repeatTx steps keyPairs ls
+  pure (ls, ls')
+
+repeatTx :: Natural -> [(KeyPair, KeyPair)] -> LedgerState -> Gen (Either [ValidationError] LedgerState)
+repeatTx 0 _ ls = pure $ Right ls
+repeatTx n keyPairs ls = do
+  next <- genLedgerStateTx keyPairs ls
+  case next of
+    Left  _   -> pure next
+    Right ls' -> repeatTx (n - 1) keyPairs ls'
 
 -- | find first matching key pair for address
 findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findAddrKeyPair (AddrAccount _ _) _ = undefined
-
 
 getTxOutAddr :: TxOut -> Addr
 getTxOutAddr (TxOut addr _) = addr
@@ -320,12 +327,11 @@ propPositiveBalance =
       utxoSize (getUtxo initialState) /== 0
       Coin 0 /== balance (getUtxo initialState)
 
-
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
     property $ do
-      (ls, tx, t) <- forAll genNonEmptyAndAdvanceTx
-      case t of
+      (ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      case next of
         Left _    -> failure
         Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls')
 
