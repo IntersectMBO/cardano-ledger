@@ -75,9 +75,11 @@ state.
 \begin{property}[\textbf{Preserve Balance Modulo Fee}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \fun{balance}(\applyFun{getUTxO}{l}) =
-    \fun{balance}(\applyFun{getUTxO}{l'}) + \applyFun{txfee}{tx}
+    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'} \\
+    \implies \fun{balance}(\applyFun{getUTxO}{l}) +
+    \fun{refunds}~\var{pc}~\var{dallocs}~\var{pallocs}~\var{tx} =
+    \fun{balance}(\applyFun{getUTxO}{l'}) + \applyFun{txfee}{tx} +
+    \fun{refunds}~\var{pc}~\var{tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
 \end{property}
