@@ -263,29 +263,47 @@ genNonemptyGenesisState = do
   keyPairs <- genKeyPairs 1 100
   genesisState <$> genTxOut (genAddrTxins keyPairs)
 
--- | Take a UTxO and generate possible transactions.
--- Idea: take inputs from UTxO set as list, take first and create new outputs
--- from all unspent outputs of this key
-genTx :: [(KeyPair, KeyPair)] -> UTxO -> Gen LedgerEntry
-genTx keyList (UTxO m) = do
-  selected_inputs <- Gen.shuffle utxo_inputs
-  let selectedAddr    = addr $ head selected_inputs
+-- | Take a UTxO and generate a possible transaction.
+
+-- It shuffles the list of inputs from the UTxO set, selects one possible
+-- address from the inputs (the first actually) and creates a new output,
+-- spending all funds from that address.
+genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen LedgerEntry
+genTxLedgerEntry keyList (UTxO m) = do
+  selectedInputs <- Gen.shuffle utxoInputs
+  let selectedAddr    = addr $ head selectedInputs
   let selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
   let selectedKeyPair = findAddrKeyPair selectedAddr keyList
-  receipient <- (addr . head) <$> Gen.shuffle utxo_inputs
+  receipient <- (addr . head) <$> Gen.shuffle utxoInputs
   let txbody = Tx
-           (Set.fromList selected_inputs)
+           (Map.keysSet selectedUTxO)
            [TxOut receipient $ balance (UTxO selectedUTxO)]
            Set.empty
   let txwit = makeWitness selectedKeyPair txbody
   pure $ TransactionData (TxWits txbody $ Set.fromList [txwit])
-            where utxo_inputs = Map.keys m
+            where utxoInputs = Map.keys m
                   addr inp = getTxOutAddr $ m Map.! inp
+
+genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (LedgerEntry, (Either [ValidationError] LedgerState))
+genLedgerStateTx keyList sourceState = do
+  let utxo = getUtxo sourceState
+  ledgerEntry <- genTxLedgerEntry keyList utxo
+  let nextState = asStateTransition sourceState ledgerEntry
+  pure (ledgerEntry, nextState)
+
+genNonEmptyAndAdvanceTx :: Gen (LedgerState, LedgerEntry, Either [ValidationError] LedgerState)
+genNonEmptyAndAdvanceTx = do
+  keyPairs <- genKeyPairs 1 100
+  ls  <- genesisState <$> genTxOut (genAddrTxins keyPairs)
+  retVal <- genLedgerStateTx keyPairs ls
+  pure (ls, fst retVal, snd retVal)
 
 -- | find first matching key pair for address
 findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+findAddrKeyPair (AddrAccount _ _) _ = undefined
+
 
 getTxOutAddr :: TxOut -> Addr
 getTxOutAddr (TxOut addr _) = addr
@@ -302,12 +320,24 @@ propPositiveBalance =
       utxoSize (getUtxo initialState) /== 0
       Coin 0 /== balance (getUtxo initialState)
 
+
+propPreserveBalanceInitTx :: Property
+propPreserveBalanceInitTx =
+    property $ do
+      (ls, tx, t) <- forAll genNonEmptyAndAdvanceTx
+      case t of
+        Left _    -> failure
+        Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls')
+
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
                 [ testGroup "Ledger Genesis State"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"
-                    propPositiveBalance ]
+                    propPositiveBalance
+                  , testProperty
+                    "several transaction added to genesis ledger state"
+                    propPreserveBalanceInitTx]
                   ]
 
 tests :: TestTree
