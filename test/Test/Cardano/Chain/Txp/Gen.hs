@@ -17,6 +17,7 @@ module Test.Cardano.Chain.Txp.Gen
        , genTxOutList
        , genTxpUndo
        , genTxPayload
+       , genTxpConfiguration
        , genTxProof
        , genTxSig
        , genTxSigData
@@ -30,6 +31,7 @@ import           Test.Cardano.Prelude
 
 import           Data.ByteString.Base16 as B16
 import           Data.Coerce (coerce)
+import qualified Data.Set as S
 import qualified Data.Vector as V
 
 import           Hedgehog
@@ -40,7 +42,7 @@ import           Cardano.Chain.Common (mkAttributes)
 import           Cardano.Chain.Txp (Tx (..), TxAttributes, TxAux (..), TxId,
                      TxIn (..), TxInWitness (..), TxOut (..), TxOutAux (..),
                      TxPayload (..), TxProof (..), TxSig, TxSigData (..),
-                     TxUndo, TxWitness, TxpUndo)
+                     TxUndo, TxWitness, TxpConfiguration (..), TxpUndo)
 import           Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
 
 import           Test.Cardano.Chain.Common.Gen (genAddress, genCoin,
@@ -55,7 +57,7 @@ genPkWitness pm = PkWitness <$> genPublicKey <*> genTxSig pm
 
 genRedeemWitness :: ProtocolMagic -> Gen TxInWitness
 genRedeemWitness pm =
-    RedeemWitness <$> genRedeemPublicKey <*> genRedeemSignature pm genTxSigData
+  RedeemWitness <$> genRedeemPublicKey <*> genRedeemSignature pm genTxSigData
 
 genScriptWitness :: Gen TxInWitness
 genScriptWitness = ScriptWitness <$> genScript <*> genScript
@@ -74,8 +76,8 @@ genTxHash = coerce <$> genTextHash
 
 genTxId :: Gen TxId
 genTxId = genBase16Text >>= pure . decodeHash >>= either panic pure
-    where
-        genBase16Text = decodeUtf8 <$> genBase16Bs
+  where
+    genBase16Text = decodeUtf8 <$> genBase16Bs
 
 genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32
@@ -101,6 +103,12 @@ genTxOutAux = TxOutAux <$> genTxOut
 genTxOutList :: Gen (NonEmpty TxOut)
 genTxOutList = Gen.nonEmpty (Range.linear 1 100) genTxOut
 
+genTxpConfiguration :: Gen TxpConfiguration
+genTxpConfiguration = do
+  limit <- Gen.int (Range.constant 0 200)
+  addrs <- Gen.list (Range.linear 0 50) genAddress
+  return (TxpConfiguration limit (S.fromList addrs))
+
 genTxpUndo :: Gen TxpUndo
 genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
@@ -109,14 +117,14 @@ genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagic -> Gen TxProof
 genTxProof pm =
-    TxProof
-        <$> genWord32
-        <*> genMerkleRoot genTx
-        <*> genAbstractHash (Gen.list (Range.linear 1 5) (genTxWitness pm))
+  TxProof
+    <$> genWord32
+    <*> genMerkleRoot genTx
+    <*> genAbstractHash (Gen.list (Range.linear 1 5) (genTxWitness pm))
 
 genTxSig :: ProtocolMagic -> Gen TxSig
 genTxSig pm =
-    sign pm <$> genSignTag <*> genSecretKey <*> genTxSigData
+  sign pm <$> genSignTag <*> genSecretKey <*> genTxSigData
 
 genTxSigData :: Gen TxSigData
 genTxSigData = TxSigData <$> genTxHash
@@ -138,4 +146,4 @@ genTxWitness pm = V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm
 
 genUnknownWitnessType :: Gen TxInWitness
 genUnknownWitnessType =
-    UnknownWitnessType <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes
+  UnknownWitnessType <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes

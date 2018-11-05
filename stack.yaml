@@ -10,7 +10,7 @@ packages:
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 4365aeb5d5bec9c47083639cc06784e654fefe6d
+    commit: c219477a4313767d9786147008026d84afce2f12
     subdirs:
       - .
       - test

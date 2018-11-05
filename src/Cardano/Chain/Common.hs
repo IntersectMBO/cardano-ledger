@@ -15,6 +15,7 @@ import           Cardano.Chain.Common.Coin as X
 import           Cardano.Chain.Common.CoinPortion as X
 import           Cardano.Chain.Common.Merkle as X
 import           Cardano.Chain.Common.Script as X
+import           Cardano.Chain.Common.SharedSeed as X
 import           Cardano.Chain.Common.StakeholderId as X
 import           Cardano.Chain.Common.TxFeePolicy as X
 import           Cardano.Chain.Common.TxSizeLinear as X
