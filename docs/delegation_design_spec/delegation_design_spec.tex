@@ -499,8 +499,12 @@ delegation:
   reward account is only associated with the one stake key.
 \item There can be many UTxO entries (funds) for a single address. However a
   UTxO entry refers an available input address to use.
-\item A stake key is associated with exactly zero or one stake pools at any point
-  in time. A stake pool can contain multiple stake keys.\todo{this statement is unclear}
+\item A stake key is associated with exactly zero or one stake pools
+  at any point in time. A stake pool has exactly one staking key that
+  controls the pool (though it can use further operational keys to
+  mitigate key theft as described in
+  \cref{operational-key-certificates}, and there can be multiple
+  staking keys delegating or pledging to the pool).
 \end{itemize}
 
 \begin{figure*}[ht]
@@ -520,7 +524,7 @@ delegation:
   %%
   %% Nodes
   %%
-  \node (addr) [] {Pubkey address};
+  \node (addr) [] {Address};
   \node (utxo) [left = of addr] {UTxO};
   \node (pkey) [right = of addr] {Payment key};
   \node (skey) [below = of addr] {Stake key};
@@ -539,7 +543,7 @@ delegation:
   \draw[-] (addr) edge node[pos=0.1]  {$n$}
                        node[pos=0.85] {$1$}
            (pkey);
-  \draw[-] (skey) edge node[pos=0.1]  {$n$}
+  \draw[-] (skey) edge node[pos=0.1]  {$1$}
                        node[pos=0.85] {$0 \ldots 1$}
            (spool);
   \draw[-] (skey) edge node[pos=0.1] {$1$}
@@ -614,9 +618,9 @@ Concretely, pointer address have as their staking object
 where \(N_\text{block}\) is the index of a block in the chain,
 \(N_\text{tx}\) is the index of a transaction within that block and
 \(N_\text{reg}\) is the index of the registration certificate within
-the list of  key registration certificates in the transaction. This
-identified transaction should have a certificate at index-\(N_\text{reg}\)
-in its list of stake key registration certificates. The certificate
+the list of certificates in the transaction. This identified
+transaction should have a stake key registration certificate at
+index-\(N_\text{reg}\) in its list of certificates. The certificate
 specifies a verification key \(vks\). The staking rights associated
 with funds held in this address may be exercised by the owner of the
 corresponding signing key \(sks\).
@@ -645,13 +649,14 @@ There is a subtlety with pointer addresses: it might happen that a
 stake key registration certificate that is referenced by a pointer
 address might be lost due to a rollback. The system should not lead to
 a loss of funds in such a case. To prevent that, the system should
-\begin{itemize}
-\item consider pointer addresses with an invalid pointer to be valid
-  for the purpose of using funds stored therein as inputs for
-  transactions (but ignore them for the purpose of PoS participation)
-\item optionally, not accept transactions to pointer addresses before
-  the referenced certificate has become immutable
-\end{itemize}
+consider pointer addresses with an invalid pointer to be valid for the
+purpose of using funds stored therein as inputs for transactions (but
+ignore them for the purpose of PoS participation).
+
+Optionally, a wallet might refuse to create transactions to pointer
+addresses before the referenced certificate has become immutable, in
+order to prevent funds from being excluded from the PoS in case of
+rollbacks.
 
 \subsubsection{Enterprise Address}
 \label{enterprise-address}
@@ -791,7 +796,7 @@ certificates can be posted to the blockchain:
 \begin{itemize}
 \item Stake key registration certificates
 \item Stake key de-registration certificates
-\item Heavyweight delegation certificate
+\item Delegation certificate
 \item Stake pool registration certificate
 \item Stake pool retirement certificate
 \end{itemize}
@@ -799,11 +804,15 @@ There is one form of certificate which is not posted to the blockchain
 in advance, but is presented when it is used:
 \begin{itemize}
 \item
-  Lightweight delegation certificates
+  Operational Key Certificates
 \end{itemize}
-Although this last kind is a delegation certificate it is quite
-different from the others which are used to define the delegation
-relation.
+Although this last kind is similar to delegation certificates in that
+it uses one staking key to grant the right to sign blocks to another
+key, it is quite different from the other certificates which are used
+to define the delegation relation. Operational key certificates are
+used by stake pool operators as a safety measure to mitigate key
+theft (see \cref{operational-key-certificates}), not to delegate
+staking rights between different entities.
 
 Figure~\ref{fig:relationship-keys-certificates} shows the relationships between
 the different types of certificates and keys.
@@ -955,7 +964,7 @@ Registering a stake key attracts a special fee that must be included
 into the transaction that posts the certificate. This fee is in fact a
 deposit that is refundable when the stake key is de-registered (i.e.~a
 corresponding negative fee in the transaction that posts the
-re-registration certificate). The deposit is to account for the costs of
+de-registration certificate). The deposit is to account for the costs of
 tracking the stake key and maintaining the corresponding stake reward
 account. It is also to incentivise de-registering stake keys that are no
 longer required, so that the corresponding resources can be released.
@@ -979,9 +988,7 @@ The certificate contains the following:
   or a list of such public stake key hashes. If any of the
   \(vks_\text{owner}\)
   delegate to this pool, the stake that they delegate will be
-  considered to be a deposit\todo{I dislike calling this deposit,
-    since it might lead to confusion with the same term being used in
-    the context of fees. Is there a better word?''}~by the owner, see
+  counted towards the stake pledged to the pool by the owner(s), see
   \cref{stakepool-registration,overview-of-incentives,reward-splitting}. Note
   that adding a key as \(vks_\text{owner}\)
   in itself does not actually delegate the stake controlled by that
@@ -1044,9 +1051,9 @@ operator and stake pool owners:
 \item[Stake Pool Operator] This is the person who operates the pool --
   owns or rents a server, holds the staking key of the pool, runs and
   monitors the node.
-\item[Stake Pool Owner] This is a person providing the stake deposit
-  for the pool, increasing its rewards and desirability. The ability
-  for the owner to pledge funds is providing protection against the
+\item[Stake Pool Owner] This is a person pledging stake
+  to the pool, increasing its rewards and desirability. The ability
+  for the owner to pledge stake is providing protection against the
   pool-level Sybil attack
   (requirement~\ref{sybil-attack-protection-at-stake-pool-level}, see
   also \cref{stakepool-registration}).
@@ -1055,7 +1062,7 @@ operator and stake pool owners:
 Usually, the stake pool operator and owner will be the same person,
 but a stake pool can also have multiple owners. This is to allow
 people to coordinate and form a stake pool even if none of them had
-enough stake on their own to make a deposit that would make the stake
+enough stake on their own to make a pledge that would make the stake
 pool competitive.
 
 Still, there will only be one operator, the person holding the key of
@@ -1066,21 +1073,21 @@ case some of the owners are kicked off the stake pool). That is a
 conscious design decision: collaborating to form a stake pool should
 require some trust between the participants. Otherwise, everyone could
 choose to become a co-owner of a stake pool instead of delegation,
-which would render the mechanism of deposits ineffective. Allowing the
+which would render the mechanism pledging stake ineffective. Allowing the
 operator to shut down the pool, or to kick owners off, raises the
 threshold of necessary trust that owners of the pool must have in the
 operator.
 
-\subsubsection{Heavyweight Delegation Certificates}
-\label{heavyweight-delegation-certificates}
+\subsubsection{Delegation Certificates}
+\label{delegation-certificates}
 
 Users can transfer the rights of participation in the PoS protocol from
-one staking key to another, by posting a \emph{heavyweight delegation
+one staking key to another, by posting a \emph{delegation
 certificate} to the blockchain.
 
 \begin{description}
-\item[Heavyweight Delegation Certificates]
-A heavyweight delegation certificate is a tuple containing
+\item[Delegation Certificates]
+A delegation certificate is a tuple containing
 
 \begin{itemize}
 \item
@@ -1103,44 +1110,51 @@ pool or their own private stake pool then they can simply post a new
 delegation certificate. The delegation certificate is revoked when the
 source stake key is de-registered.
 
-\subsubsection{Lightweight Delegation Certificates}
-\label{lightweight-delegation-certificates}
+\subsubsection{Operational Key Certificates}
+\label{operational-key-certificates}
 
 % On the need for a hot/cold key arrangement.
-The stake pool operators can use a \emph{hot}/\emph{cold} key arrangement to
-mitigate key exposure (see~\cref{mitigate-key-exposure}). The \emph{hot} keys
-are kept online, while the \emph{cold} key is kept securely offline. This
-requires a \emph{delegation certificate} to transfer the rights to participate
-in the \emph{PoS} protocol from the \emph{hot} to the \emph{cold} key.
+The stake pool operators can use a \emph{hot}/\emph{cold} key
+arrangement to mitigate key exposure
+(see~\cref{mitigate-key-exposure}). A \emph{hot}, or operational, key
+is kept online and used to sign blocks, while the \emph{cold} key is
+kept securely offline. This requires an \emph{operational key
+  certificate} to create a (1-link) chain of trust from the cold key
+to the hot key, allowing this hot key to participate in the \emph{PoS}
+protocol. Should the hot key become compromised, the stake pool
+operator can immediately create a new operational key certificate, and
+switch to a new key.
 
 % The problems with using in-ledger certificates.
-If the above mentioned type of delegation certificates would be included in the
-ledger, as the other certificates are, this would present a problem for blocks
-validation. Consider the following example: suppose that the network layer
-wants to validate a batch of 10 block headers from the current epoch, before
-deciding if it wants to also download the block bodies. Can it tell if those
-block headers are signed by the right actors?
+If the operational key certificates would be included in the ledger,
+as the other certificates are, this would present a problem for block
+validation. Consider the following example: suppose that the network
+layer wants to validate a batch of 10 block headers from the current
+epoch, before deciding if it wants to also download the block
+bodies. Can it tell if those block headers are signed by the right
+actors?
 
-In this situation the network layer has the state of the ledger up to but not
-including these next 10 block headers. So it cannot rely on any information in
-the 10 corresponding block bodies.
+In this situation the network layer has the state of the ledger up to
+but not including these next 10 block headers. So it cannot rely on
+any information in the 10 corresponding block bodies.
 
-In this situation, the validity of the pools-staking keys cannot be verified.
-If the network layer sees one of the 10 new blocks signed by a key it doesn't
-recognise, it might be because there is a delegation certificate in the block
-bodies (which the network layer has not seen yet), that shows that the key is
-valid because some other key delegated its staking rights to it. Similarly, if
-the network layer sees a known staking key, how can it know that it is still
-valid? There could be a new certificate in the block body that delegates the
-rights of this key to a different one (which would invalidate the key the
-network layer saw).
+Without this information, the validity of the staking keys that signed
+the headers cannot be verified. If the network layer sees one of the
+10 new blocks signed by a key it doesn't recognise, it might be
+because there is a delegation certificate in the block bodies (which
+the network layer has not seen yet), that shows that the key is valid
+because some other key deferred its staking rights to it. Similarly,
+if the network layer sees a known staking key, how can it know that it
+is still valid? There could be a new certificate in the block bodies
+that deferres the rights of this key to a different one (which would
+invalidate the key the network layer saw).
 
 To address this problem, a new type of certificate is introduced:
-\emph{lightweight delegation} certificates. These certificates are provided in
-the block itself (and not in the block body), thus solving the problem of
-determining the validity of staking keys. In other words, \emph{lightweight
-  delegation} certificates are \textbf{not included in the ledger}, but instead
-they \textbf{included in blocks} by
+\emph{operational key certificates}. These certificates are provided
+in the block header itself, as part of the witness, thus solving the
+problem of determining the validity of staking keys. In other words,
+operational key certificates are \textbf{not included in
+  the ledger}, but instead they \textbf{included in a witness} by
 stake pools at the point of exercising stake rights including:
 
 \begin{itemize}
@@ -1150,20 +1164,20 @@ stake pools at the point of exercising stake rights including:
   voting system is in place)
 \end{itemize}
 
-A lightweight certificate, signed by the stake pool's cold key,
+An operational key certificate, signed by the stake pool's cold key,
 delegates to the hot key that is used to sign messages in the
-protocols (block header or vote). This lightweight certificate is
+protocols (block header or vote). This operational key certificate is
 included in the message so that all other nodes can verify that the
 message is signed by a legitimate delegate of the owner of the cold
 key\footnote{This is much the same setup as with TLS certificates:
-  there are known root certificates but the server's operational
+  there are known root certificates, but the server's operational
   certificate is presented inband.}.
 
-Specifically, a lightweight delegation certificate specifies that the
-staking rights are transferred from a source key \(vks_\text{source}\)
-to a delegate key \(vks_\text{delegate}\). They are included in the
-message (e.g.~block header) and the message itself is signed with
-\(sks_\text{source}\).
+Specifically, an operational key certificate specifies that the
+staking rights are transferred from a cold key \(vks_\text{cold}\)
+to a hot key \(vks_\text{hot}\).
+They are included in the message (e.g.~block header) and the message
+itself is signed with \(sks_\text{hot}\).
 
 In detail, the hot/cold key setup is as follows:
 
@@ -1172,9 +1186,9 @@ In detail, the hot/cold key setup is as follows:
   The stake pool operator registers their stake pool, using a key
   \(vks_\text{cold}\). This \emph{cold key} is kept securely and
   off-line.
-\item
-  The stake pool operator uses \(sks_\text{cold}\) to sign a lightweight
-  certificate \(C\), transferring the staking rights to a \emph{hot key}
+\item The stake pool operator uses \(sks_\text{cold}\)
+  to sign an operational key certificate \(C\),
+  transferring the staking rights to a \emph{hot key}
   \(vks_\text{hot}\).
 \item
   The stake pool operator keeps \(sks_\text{hot}\), as well as \(C\), on
@@ -1183,14 +1197,14 @@ In detail, the hot/cold key setup is as follows:
   included in its header.
 \item
   Should the node get hacked, and the hot key compromised, the stake
-  pool operator will create a new lightweight delegation certificate
+  pool operator will create a new operational key certificate
   \(C'\), delegating the staking rights to a new hot key
   \(vks_{\text{hot}'}\).
 \end{itemize}
 
 In order to render \(sks_\text{hot}\) useless, it must be established
 that \(C'\) takes precedence over \(C\). For this purpose, the
-lightweight delegation certificate will have an additional integer
+operational key certificate will have an additional integer
 field, and certificates with a larger value for this field will take
 precedence.
 
@@ -1222,31 +1236,31 @@ defined and are used below.
   registration certificate.
 \end{itemize}
 
-\paragraph{Heavyweight Delegation and Revocation Certificates}
-\label{heavyweight-delegation-and-revocation-certificates}
+\paragraph{Delegation and Revocation Certificates}
+\label{delegation-and-revocation-certificates}
 
 \begin{itemize}
 \item
-  Newer heavyweight certificates override older heavyweight
+  Newer delegation certificates override older delegation
   certificates. This allows delegators to move from one stake pool to
   another.
 \item
   Revocation certificates revoke the effect of older (but not newer)
-  heavyweight certificates. So users with base addresses can join a
+  delegation certificates. So users with base addresses can join a
   staking pool, leave it and control their stake directly, and still
   have the opportunity to join a staking pool at a later point in time.
 \end{itemize}
 
-\paragraph{Lightweight Delegation Certificates}
-\label{lightweight-delegation-certificates-1}
+\paragraph{Operational Key Certificates}
+\label{operational-key-certificates-1}
 
-For lightweight certificates, we cannot rely on the ordering induced by
+For operational key certificates, we cannot rely on the ordering induced by
 the blockchain. But we do have the counter field, which serves the
 purpose of establishing precedence:
 
 \begin{itemize}
 \item
-  A lightweight certificate with a higher counter overrides one with a
+  An operational key certificate with a higher counter overrides one with a
   lower counter.
 \end{itemize}
 
@@ -1261,7 +1275,7 @@ Equivalently, there are two relations: a relation between addresses and
 stake keys, and a relation between stake keys and stake pools. The base
 and pointer addresses form the entries of the first relation. The second
 relation consists of registered stake keys, registered stake pools and
-heavyweight delegation certificates as the entries relating the two.
+delegation certificates as the entries relating the two.
 
 \subsubsection{Address Delegation Relation}
 \label{address-delegation-relation}
@@ -1283,10 +1297,10 @@ The stake key delegation relation is a relation between stake keys and
 stake pools, or more specifically stake key hashes and stake pool key
 hashes.
 
-The relation is defined by the active set of heavyweight delegation
-certificates, filtered by the set of active stake pools. The active
-heavyweight delegation certificates already excludes those where the
-source stake key has been de-registered.
+The relation is defined by the active set of delegation certificates,
+filtered by the set of active stake pools. The active delegation
+certificates already excludes those where the source stake key has
+been de-registered.
 
 \subsubsection{Overall Stake Distribution}
 \label{overall-stake-distribution}
@@ -1328,9 +1342,9 @@ the following, in order:
 \item
   a base or pointer address;
 \item
-  a heavyweight delegation certificate; and
+  a delegation certificate; and
 \item
-  optionally, a lightweight certificate.
+  optionally, an operational key certificate.
 \end{enumerate}
 
 This restricted pattern of chain delegation allows us to satisfy all
@@ -1345,7 +1359,7 @@ Nodes need ready access to certain parts of previously posted
 information as part of the protocol execution or ledger validation. For
 example, since nodes need to validate signatures on new blocks in a
 timely manner, they need ready access to information about the registered
-stake pools (including lightweight certificate validity).
+stake pools (including operational key certificate validity).
 
 One of the design goals is to avoid having to look up old entries on the
 blockchain, since we want to allow implementations that forget old
@@ -1393,16 +1407,16 @@ The set of active stake pools must be tracked, uniquely indexed
 by the public key hash of the stake pool.
 
 In addition a small amount of state needs to be maintained to validate
-lightweight certificates. The state tracked for each stake pool includes
+operational key certificates. The state tracked for each stake pool includes
 an integer representing the highest counter field seen so far in a valid
-certificate. This is consulted to validate lightweight certificates and
+certificate. This is consulted to validate operational key certificates and
 updated when larger counter values are presented in a valid certificate.
 
-\subsubsection{Active Heavyweight Certificates}
-\label{active-heavyweight-certificates}
+\subsubsection{Active Delegation Certificates}
+\label{active-delegation-certificates}
 
-Active heavyweight delegation certificates are tracked, as a finite
-map from source to target staking key hash.
+Active delegation certificates are tracked, as a finite map from
+source to target staking key hash.
 
 \subsubsection{Stake per Staking Key}
 \label{stake-per-staking-key}
@@ -1452,10 +1466,10 @@ The nodes will use the state from slot \(s_\text{stakedist}\) to
     the factor that depends on the efficiency.}.
 \end{itemize}
 
-\subsection{Block Validity and Lightweight Certificates}
-\label{block-validity-and-lightweight-certificates}
+\subsection{Block Validity and Operational Key Certificates}
+\label{block-validity-and-operational-key-certificates}
 
-Most stake pool operators will use lightweight certificates in order to
+Most stake pool operators will use operational key certificates in order to
 protect the key to which their members delegated. A block for a slot
 where the key \(vks_\text{leader}\) has been elected as leader will be
 considered valid by all nodes if either
@@ -1465,15 +1479,15 @@ considered valid by all nodes if either
   The block is signed by \(vks_\text{leader}\)
 \item
   The block is signed by \(vks_\text{hot}\) and contains, in its header,
-  a lightweight certificate that transfers the staking rights from
+  an operational key certificate that transfers the staking rights from
   \(vks_\text{leader}\) to \(vks_\text{hot}\)
 \end{itemize}
 
 In case there are more than one block for the current slot, each of
-which are signed using a lightweight certificate, the newest certificate
+which are signed using an operational key certificate, the newest certificate
 (as per the included counter) takes precedence.
 
-Note that nodes take the precedence amongst lightweight certificates
+Note that nodes take the precedence amongst operational key certificates
 into account only for the \emph{newest} block. In particular, it is
 not possible to force a node to do a rollback by sending it a block
 from a past slot signed using a newer certificate than the block that
@@ -1764,24 +1778,39 @@ resources on the nodes should require a deposit, as described in
 \item registering a staking key
 \item registering a new stake pool (but not updating the registration
   certificate of a stake pool that already exists)
-\item posting a heavyweight delegation certificate
 \end{itemize}
 should all require making a deposit. This deposit should be released
 when
 \begin{itemize}
 \item a UTxO entry is removed by using it as an input to a transaction
-\item a staking key is de-registered -- this should release the
-  deposit for the key itself, as well as for the heavyweight
-  delegation certificate for this key if there is one
+\item a staking key is de-registered
 \item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
   epoch, and we will probably want to delay paying out the refund
   until that epoch
 \end{itemize}
+Note that posting a delegation certificate does \emph{not} require a
+deposit; delegation certificates need a stake key registration
+certificate in order to be valid, so any deposit that we would require
+for a delegation certificate can instead be included in the deposit
+for the associated stake key registration certificate.
 
-\subsection{Stale Stake}
+\subsection{Design Option: Stale Stake}
 \label{stale-stake}
+
+This section sketches an optional mechanism for tracking \emph{stale
+  stake}, i.e., stake that is no longer being actively
+controlled. Stale stake can limit the chain growth (since elected
+leaders might fail to show up and sign blocks), and decrease the
+amount of honest stake, making the system easier to attack. The
+mechanism described below is aimed at mitigating the first effect.
+
+In the current design, stale stake is much less likely to become a
+problem than in earlier iterations (since we automatically discard
+stake that is not delegated to a valid stake pool), so we propose to
+not implement this design option, at least not in the initial Shelley
+release. We keep it in this document for further reference.
 
 Over time, we expect that an increasing amount of stake will become
 inactive. Individual stakeholders might lose their keys or interest in
@@ -1847,7 +1876,7 @@ Wallet recovery is the process of reconstructing a wallet from the root
 key. In order to reconstruct a wallet, all addresses belonging to that
 wallet which appear on the blockchain need to be identified.
 
-In the current implementation, this is done by traversing the
+In the Byron implementation, this is done by traversing the
 blockchain, and for each address, checking whether it belongs to the
 wallet. Unfortunately, this is linear in the size of the blockchain,
 leading to a very poor user experience.
@@ -1877,7 +1906,8 @@ Of course, we cannot search for \emph{all} possible addresses of the
 wallet. Instead, we utilise the tree structure of the HD wallet. We will
 require that the wallet software populates this tree in a specified way
 that will allow us to do a kind of exponential search for the addresses
-of the wallet.
+of the wallet\footnote{This is similar to the account discovery
+  in \href{https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki}{BIP44}.}.
 
 \subsubsection{Trees of Depth 1}
 \label{trees-of-depth-1}
@@ -1966,15 +1996,15 @@ of its addresses.
 \begin{description}
 \item[If the wallet consists of base and/or addresses using the same
   staking key] the wallet should look whether there is a staking key
-  registration and heavyweight delegation certificate for this key. If
-  there are, and the delegation certificate points to an active
-  staking pool, the wallet should set its delegation preference to use
-  pointer addresses to the same staking key, and inform the user of
-  this choice. Otherwise -- if the staking key is unregistered, or
-  there is either no delegation certificate or one that does not point
-  to an active pool -- it should inform the user that the stake is
-  currently undelegated, and that they should consider delegating to
-  receive rewards and add to the stability of the system.
+  registration and delegation certificate for this key. If there are,
+  and the delegation certificate points to an active staking pool, the
+  wallet should set its delegation preference to use pointer addresses
+  to the same staking key, and inform the user of this
+  choice. Otherwise -- if the staking key is unregistered, or there is
+  either no delegation certificate or one that does not point to an
+  active pool -- it should inform the user that the stake is currently
+  undelegated, and that they should consider delegating to receive
+  rewards and add to the stability of the system.
 
 \item[If the wallet consists of addresses with different staking keys]
   the wallet should repeat the process above for all the staking keys,
@@ -1997,6 +2027,11 @@ processed in order. The wallet software needs to be aware of this
 constant so that it will not create undiscoverable addresses and so that
 it can warn the owner when it reaches the limit.
 
+By default, the maximal address gap will be \(i=20\). Wallets can
+allow using a custom value (which should be convenient for exchanges
+or merchants), but when they do, the custom value will have to be
+known during wallet restoration.
+
 \section{Delegation Scenarios}
 \label{delegation-scenarios}
 
@@ -2008,7 +2043,7 @@ requires two steps: posting a stakepool registration certificate to the
 blockchain, and providing additional verifiable personal information.
 
 The second step is essential to establish trust in a stake pool.
-However, storing personal information directly on the blockchain would
+However, storing personal information directly on the blockchain could
 lead to violation of legislation like the GDPR, so instead of including
 it in the certificate, it will be stored on an external key-value store,
 using \(\mathcal{H}(vks_\text{pool})\) as key. The integrity of the data
@@ -2022,34 +2057,44 @@ delegating funds to this stake pool should notify the user of such a
 change whenever it detects it, and ask whether the delegation should
 be reconsidered.
 
-The rewards that a stake pool gets depend on a deposit of funds that the
-stake pool operator themself provides. This adds a cost to creating a
-competitive stake pool, and protects against Sybil attacks on the stake
-pool level (\cref{sybil-attack-protection-at-stake-pool-level}). In order
-to differentiate between delegated and deposited stake, the stake pool
-operator will include a list\footnote{Allowing a list of owner keys
-  allows for stake pool operators to use multiple accounts/wallets for
-  their deposits. It also allows a group of people combining their stake
-  to form a competitive pool, without losing any control over their
-  funds.} of stake key hashes \(\mathcal{H}(vks_\text{owner})\) in the
-certificate. Stake delegated from any of those keys will be counted
-towards the stake deposited by the operator. Note that the operator
-still needs to post delegation certificates in order to actually make a
-deposit\footnote{We also contemplated \emph{automatically} counting the
-  stake controlled by any \(vks_\text{owner}\) towards the deposit, but
-  that complicates the design, since we had to forbid any of those keys
-  from posting valid delegation certificates to prevent double
-  delegation. Imposing a special treatment of those keys would also be a
-  violation of the design goal from
-  \cref{no-special-wallet-for-stake-pool-operators}.}.
+The rewards that a stake pool gets depend on a pledge of funds that
+the stake pool owner(s) provide. This adds a cost to creating a
+competitive stake pool, and protects against Sybil attacks on the
+stake pool level
+(\cref{sybil-attack-protection-at-stake-pool-level}). In order to
+differentiate between delegated and pledged stake, the stake pool
+operator will include a list of stake key hashes
+\(\mathcal{H}(vks_\text{owner})\)
+in the certificate. Stake delegated from any of those keys will be
+counted towards the stake pledged by the owner(s). Note that this
+still requires delegation certificates to be posted\footnote{We also
+  contemplated \emph{automatically} counting the stake controlled by
+  any \(vks_\text{owner}\)
+  towards the pledge, but that complicates the design, since we had
+  to forbid any of those keys from posting valid delegation
+  certificates to prevent double delegation. Imposing a special
+  treatment of those keys would also be a violation of the design goal
+  from \cref{no-special-wallet-for-stake-pool-operators}.}.
+Allowing a \emph{list} of owner keys allows for stake pool operators
+to use multiple accounts/wallets for delegating the stake they
+pledged. It also allows a group of people combining their stake to
+form a competitive pool, without losing any control over their funds
+(see also the discussion at the end of
+\cref{stake-pool-registration-certificates}).
 
-A stake pool operator will pledge to deposit a certain amount of Ada to
-the pool when registering a pool. This pledge is important: otherwise,
+
+
+A stake pool operator will indicate, in the stake pool registration
+certificate,  the amount of stake that the owners pledge to
+the pool, when registering a pool. It is important that the amount
+pledged is registered in the certificate: otherwise,
 an adversarial stake pool operator could circumvent the Sybil protection
-of the deposit, by placing a deposit in a pool until it attracted stake,
-and then simply moving the stake to the next pool. The pledge will be
-enforced at the point of leader election; stake pools that have a
-deposit less than what they pledged will be excluded from the election,
+of the pledge mechanism, by pledging stake to a pool until it attracted stake,
+and then simply pledging the stake to the next pool. The pledge will be
+enforced at the point of leader election; stake pools that do not
+honour their pledge (i.e., pools where the amount of stake delegated
+to the pool from the set of owner keys is less than the pledge listed
+in its stake pool registration certificate) will be excluded from the election,
 and as a consequence forfeit their rewards for that epoch\footnote{We
   could also just deny the rewards for this pool, but still let it take
   part in the protocol.}.
@@ -2060,16 +2105,15 @@ require them to post a new certificate, which will notify the
 stakeholders that delegated to the pool, possibly triggering a
 re-delegation.
 
-In addition to the above, we will also require pool operators to include
-a list of IP-addresses and/or domain names in the registration
-certificate, pointing to publicly reachable \emph{relay nodes} under
-their control. (It is necessary to have a sufficient number of such
-publicly reachable nodes in order to establish a reliable peer-to-peer
-network.) We will use no technical mechanism to check the validity and
-availability of these relay nodes, but will rely on social pressure
-instead: People contemplating joining a pool will check the published
-data and will put little trust in operators who publish fake or
-unreliable addresses.
+The pool metadata should include a list of IP-addresses and/or domain
+names, pointing to publicly reachable \emph{relay nodes} under their
+control (It is necessary to have a sufficient number of such publicly
+reachable nodes in order to establish a reliable peer-to-peer
+network.). We will use no technical mechanism to check the validity
+and availability of these relay nodes, but will rely on social
+pressure instead: People contemplating joining a pool will check the
+published data and will put little trust in operators who publish fake
+or unreliable addresses.
 
 \emph{Remark}: Due to the nature of our incentives mechanism (see
 \cref{design-of-incentives}), very large stakeholders are
@@ -2106,7 +2150,7 @@ that are reliable, and have not yet reached saturation. In other words,
 the users selfish interest to pick a stake pool that is promising large
 rewards is aligned with the goal of placing the system in the hands of a
 number of reliable stake pool operators, and of avoiding centralisation.
-The influence of the stake pool operator's deposit on the rewards
+The influence of the stake pool operator's pledge on the rewards
 provides protection against a Sybil attack on the stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}).
 
@@ -2125,23 +2169,23 @@ uniformly from the interval \([0.95, 1.05]\), but this choice is
 arbitrary and should be re-evaluated during the operation of the
 testnet.
 
-Since the actual amount of stake that the leader themself uses for the
-pool might change at any point in time, the ordering of pools will use
-the amount of stake that the leader \emph{pledged} when registering the
-pool, not the amount of stake that the leader currently put into the
-pool. However, pools where the current deposit is smaller than the
-amount pledged are expected to give zero rewards, and will end up at the
-end of the list.
+Since the actual amount of stake that the stake pool owners contribute
+to the pool might change at any point in time, the ordering of pools
+will use the amount of stake that the operator \emph{pledged} when
+registering the pool, not the amount of stake that is currently
+delegated to the pool from registered owner keys. However, pools where
+this amlount is smaller than the amount pledged are expected to give
+zero rewards, and will end up at the end of the list.
 
 \subsection{Basic Delegation}
 \label{basic-delegation}
 
 Delegating stake requires posting two certificates to the chain: a
-staking key registration, and a heavyweight delegation
-certificate. Posting those certificates requires funds, so a user
-setting up their first wallet will need a bootstrapping
-mechanism. This mechanism relies on the possibility of base addresses
-using a staking key before posting the registration certificate for that key.
+staking key registration, and a delegation certificate. Posting those
+certificates requires funds, so a user setting up their first wallet
+will need a bootstrapping mechanism. This mechanism relies on the
+possibility of base addresses using a staking key before posting the
+registration certificate for that key.
 
 \paragraph{Bootstrapping a New Wallet}
 A user about to receive their first Ada (whether through redemption,
@@ -2149,12 +2193,14 @@ from a trade on an exchange, or some other source), will set up a new
 wallet, and create an address to receive those funds. This address
 will be a base address, using a staking key that is generated by the
 wallet, but not yet registered on the chain.
+
 After receiving the initial funds, the user can then participate in
 staking, by posting a stake key registration certificate, as well as a
-heavyweight delegation certificate for their staking key. Once the key
-is registered, and the registration certificate is in the immutable
-part of the chain (\(k\) blocks deep), newly created addresses can be
-pointer addresses to the stake key registration certificate.
+delegation certificate for their staking key. Once the key is
+registered, and the registration certificate is in the immutable part
+of the chain (\(k\)
+blocks deep), newly created addresses can be pointer addresses to the
+stake key registration certificate.
 
 \paragraph{Additional Accounts}
 The user might want to create an additional account in their wallet
@@ -2169,10 +2215,10 @@ described above.
 
 \paragraph{Re-Delegating}
 Re-delegating the funds belonging to one staking key of the wallet
-requires posting a single transaction, containing a heavyweight
-delegation certificate. This will only incur the usual transaction
-fees. In particular, the deposit paid for the first delegation
-certificate (which is thus overridden) will be good for the new
+requires posting a single transaction, containing a delegation
+certificate. This will only incur the usual transaction fees. In
+particular, the deposit paid for the first delegation certificate
+(which is thus overridden) will be good for the new
 certificate. Consequently, re-delegation does not carry a heavy cost,
 as required by \cref{cheap-re-delegation}.
 
@@ -3229,16 +3275,16 @@ In the following, we describe how the requirements listed in
 \item[\cref{proof-of-eligibility} Proof of Eligibility] The leader
   election process takes delegation into account
   (\cref{slot-leader-schedule}), so the leader schedule will contain
-  the key hash of the pool that is expected to sign the block. If a
-  lightweight certificate is used, it will be posted to the block
+  the key hash of the pool that is expected to sign the block. If an
+  operational key certificate is used, it will be included in the block
   header, which will also prove eligibility.
 
 \item[\cref{visibility-of-delegation-on-the-blockchain} Visibility of
-  Delegation on the Blockchain] Delegation via heavyweight
-  certificates is visible on the blockchain. Delegation via
-  lightweight certificates should only be used for hot/cold key
-  management. Thus, it is not relevant for the rewards sharing
-  process, and does not need to be visible on the chain.
+  Delegation on the Blockchain] Delegation via delegation certificates
+  is visible on the blockchain. Operational key certificates are only
+  intended to be used for hot/cold key management between keys owned
+  by the same person. Thus, they are not relevant for the rewards
+  sharing process, and do not need to be visible on the chain.
 
 \item[\cref{restricting-chain-delegation} Restricting Chain
   Delegation] Chain delegation is properly restricted, as described in
@@ -3253,9 +3299,9 @@ In the following, we describe how the requirements listed in
 
 \item[\cref{sybil-attack-protection-at-stake-pool-level} Sybil Attack
   Protection at Stake Pool Level] Stake pool operators are expected to
-  pledge a deposit to their pools that has an influence on the rewards
-  that stake pool members will receive, and on the position of the
-  stakepool in the listing displayed to stakeholders
+  pledge an amount of stake to their pools that has an influence on
+  the rewards that stake pool members will receive, and on the
+  position of the stakepool in the listing displayed to stakeholders
   (\cref{stakepool-registration},
   \cref{display-of-stake-pools-in-the-wallet},
   \cref{reminder-stakepool-registration}).
@@ -3273,9 +3319,9 @@ In the following, we describe how the requirements listed in
   avoids the need to use the payment key for delegation purposes.
 
 \item[\cref{mitigate-key-exposure} Mitigate Key Exposure] Stake pool
-  operators can and should use lightweight certificates for hot/cold
+  operators can and should use operational key certificates for hot/cold
   key management, as described in
-  \cref{lightweight-delegation-certificates}.
+  \cref{operational-key-certificates}.
 
 \item[\cref{handle-inactive-stake-pools} Handle Inactive Stake Pools]
   We have two mechanisms for dealing with inactive stake pools. Stake
