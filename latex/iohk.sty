@@ -10,23 +10,23 @@
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
 
-\newcommand{\powerset}[1]{\mathbb{P}~#1}
-\newcommand{\restrictdom}{\lhd}
-\newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
-\newcommand{\restrictrange}{\rhd}
-\newcommand{\subtractrange}{\mathbin{\slashed{\restrictrange}}}
-\newcommand{\union}{\cup}
-\newcommand{\unionoverride}{\mathbin{\underrightarrow\cup}}
-\newcommand{\uniondistinct}{\uplus}
-\newcommand{\var}[1]{\mathit{#1}}
-\newcommand{\fun}[1]{\mathsf{#1}}
-\newcommand{\type}[1]{\mathsf{#1}}
-\newcommand{\signed}[2]{\llbracket #1 \rrbracket_{#2}}
-\newcommand{\size}[1]{\left| #1 \right|}
-\newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
-\newcommand{\seqof}[1]{#1^{*}}
-\newcommand{\nextdef}{\\[1em]}
-\newcommand{\where}{~ ~ \mathbf{where}~ ~ }
+\newcommand{\powerset}[1]{\ensuremath{\mathbb{P}~#1}}
+\newcommand{\restrictdom}{\ensuremath{\lhd}}
+\newcommand{\subtractdom}{\ensuremath{\mathbin{\slashed{\restrictdom}}}}
+\newcommand{\restrictrange}{\ensuremath{\rhd}}
+\newcommand{\subtractrange}{\ensuremath{\mathbin{\slashed{\restrictrange}}}}
+\newcommand{\union}{\ensuremath{\cup}}
+\newcommand{\unionoverride}{\ensuremath{\mathbin{\underrightarrow\cup}}}
+\newcommand{\uniondistinct}{\ensuremath{\uplus}}
+\newcommand{\var}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\fun}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\type}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\signed}[2]{\ensuremath{\llbracket #1 \rrbracket_{#2}}}
+\newcommand{\size}[1]{\ensuremath{\left| #1 \right|}}
+\newcommand{\trans}[2]{\ensuremath{\xlongrightarrow[\textsc{#1}]{#2}}}
+\newcommand{\seqof}[1]{\ensuremath{#1^{*}}}
+\newcommand{\nextdef}{\ensuremath{\\[1em]}}
+\newcommand{\where}{\ensuremath{~ ~ \mathbf{where}~ ~ }}
 
 \newenvironment{question}
   {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
