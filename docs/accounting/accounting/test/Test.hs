@@ -74,7 +74,7 @@ gledgerstate = do
   reward <- gcoin (Coin 0) (fortyFiveBillionAda - (deps + fee + rpool + treas))
   reserv <- gcoin (Coin 0) (fortyFiveBillionAda - (deps + fee + rpool + treas + reward))
 
-  -- set the circulation to the remainder of the fort five billion
+  -- set the circulation to the remainder of the fort five billion ada
   let circ = fortyFiveBillionAda - (deps + fee + rpool + treas + reward + reserv)
 
 

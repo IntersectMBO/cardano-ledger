@@ -2,6 +2,7 @@
 %include polycode.fmt
 
 \newcommand{\lovelace}{\ensuremath{\mathsf{lovelace~}}}
+\newcommand{\ada}{\ensuremath{\mathsf{ada~}}}
 
 \begin{document}
 
@@ -10,7 +11,8 @@
 
 \begin{abstract}
 A description of the accounting model for Cardano, whereby every
-one of the 45 billion \lovelace is accounted for at all times.
+one of the 45 billion \ada, or 45 quadrillion \lovelace,
+is accounted for at all times.
 \end{abstract}
 
 \tableofcontents
@@ -193,7 +195,7 @@ And to set multiple elements we write
 
 The total amount of \lovelace in a given ledger state is
 given by the following calculation. It should always be
-equal to forty-five billion \lovelace.
+equal to forty-five quadrillion \lovelace.
 \begin{code}
 total :: LedgerState -> Coin
 total ls = ls^.circulation + ls^.deposits + ls^.treasury
