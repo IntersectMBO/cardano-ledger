@@ -62,7 +62,8 @@
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\SKey}{\type{SKey}}
-\newcommand{\Hash}{\type{Hash}}
+\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\Hash}{\type{Foo}}
 \newcommand{\SkVk}{\type{SkVk}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
@@ -199,7 +200,7 @@ this document.
     \begin{array}{r@{~\in~}lr}
       \var{vk} & \SKey & \text{private signing key}\\
       \var{vk} & \VKey & \text{public verifying key}\\
-      \var{hk} & \Hash & \text{hash of a key}\\
+      \var{hk} & \HashKey & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
     \end{array}
@@ -214,7 +215,7 @@ this document.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hash{} & \VKey \to \Hash
+      \hash{} & \VKey \to \HashKey
       & \text{hash function} \\
       %
       \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
@@ -286,7 +287,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \var{allocs}
       & \Allocs
       & hkeys \mapsto slot
-      & \Hash \to \Slot
+      & \HashKey \to \Slot
       & \text{resource allocations}
     \end{array}
   \end{equation*}
@@ -323,7 +324,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       & \text{total deposits for transaction} \\
       & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{d}~pc~c)
       \nextdef
-      & \fun{poolAllocs} \in (\Hash \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
+      & \fun{poolAllocs} \in (\HashKey \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
       & \text{pool allocations} \\
       & \fun{poolAllocs}~\var{stpool} =
           \{hash \mapsto slot \mid hash \mapsto (\_, slot) \in \var{stpool}\}
@@ -564,7 +565,7 @@ different order). The choice here is arbitrary.
     \begin{array}{r@{~\in~}lr}
       \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
-      \fun{hash_{spend}} & \Addr \mapsto \Hash
+      \fun{hash_{spend}} & \Addr \mapsto \HashKey
       & \text{hash of a spending key in an address}\\
     \end{array}
   \end{equation*}
@@ -577,7 +578,7 @@ different order). The choice here is arbitrary.
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \Hash & \text{hash of an input address}\\
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hash of an input address}\\
     & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
       \wedge a \mapsto h \in \fun{hash_{spend}} \}
   \end{align*}
