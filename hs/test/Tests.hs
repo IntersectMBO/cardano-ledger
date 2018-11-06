@@ -263,7 +263,7 @@ genTxOut addrTxins = do
 
 genNonemptyGenesisState :: Gen LedgerState
 genNonemptyGenesisState = do
-  keyPairs <- genKeyPairs 1 100
+  keyPairs <- genKeyPairs 1 20
   genesisState <$> genTxOut (genAddrTxins keyPairs)
 
 -- | Take a UTxO and generate a possible transaction.
@@ -280,7 +280,7 @@ genTxLedgerEntry keyList (UTxO m) = do
   let selectedBalance         = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
-  n <- genNatural 1 5 -- TODO make this variable, but used too much RAM atm
+  n <- genNatural 1 5 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
   let realN                   = length receipients
   let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral $ realN)
