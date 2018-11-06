@@ -24,7 +24,7 @@ import           LedgerState             (DelegationState (..), Ledger,
                                           genesisId, genesisState)
 import           UTxO
 
-import           Delegation.Certificates (Cert (..))
+import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -121,11 +121,11 @@ utxo1 = Map.fromList
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
 
-certAlice :: Cert
+certAlice :: DCert
 certAlice = RegKey $ vKey aliceStake
-certBob :: Cert
+certBob :: DCert
 certBob = RegKey $ vKey bobStake
-certPool1 :: Cert
+certPool1 :: DCert
 certPool1 = RegKey $ vKey stakePoolKey1
 
 sd1 :: [LedgerEntry]

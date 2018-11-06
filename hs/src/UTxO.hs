@@ -52,7 +52,7 @@ import           Numeric.Natural         (Natural)
 import           Coin                    (Coin (..))
 import           Keys
 
-import           Delegation.Certificates (Cert (..))
+import           Delegation.Certificates (DCert (..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -81,7 +81,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 -- |A raw transaction
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
-             , certs   :: !(Set Cert)
+             , certs   :: !(Set DCert)
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
