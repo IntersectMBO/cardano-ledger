@@ -39,7 +39,7 @@ import           Coin                    (Coin (..))
 import           Keys
 import           UTxO
 
-import           Delegation.Certificates (Cert (..))
+import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 -- | A ledger consists of a list of entries where each such entry is either a
@@ -47,7 +47,7 @@ import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 data LedgerEntry =
     TransactionData !TxWits
-  | DelegationData !Cert
+  | DelegationData !DCert
     deriving (Show, Eq)
 
 type Ledger = [LedgerEntry]
@@ -95,7 +95,7 @@ data DelegationState =
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
-    , getStPools     :: Set.Set StakePool -- TODO in doc its a map to Cert
+    , getStPools     :: Set.Set StakePool -- TODO in doc its a map to DCert
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Natural
     } deriving (Show, Eq)
@@ -182,21 +182,21 @@ valid tx l =
 -- falsified hypothesis.
 
 -- | Checks whether a key registration certificat is valid.
-validKeyRegistration :: Cert -> LedgerState -> Validity
+validKeyRegistration :: DCert -> LedgerState -> Validity
 validKeyRegistration cert (LedgerState _ ds _) =
   case cert of
     RegKey key -> if not $ Set.member (hashKey key) (getStKeys ds)
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
     _          -> Valid
 
-validKeyDeregistration :: Cert -> LedgerState -> Validity
+validKeyDeregistration :: DCert -> LedgerState -> Validity
 validKeyDeregistration cert (LedgerState _ ds _) =
   case cert of
     DeRegKey key -> if Set.member (hashKey key) (getStKeys ds)
                     then Valid else Invalid [StakeKeyNotRegistered]
     _            -> Valid
 
-validStakeDelegation :: Cert -> LedgerState -> Validity
+validStakeDelegation :: DCert -> LedgerState -> Validity
 validStakeDelegation cert (LedgerState _ ds _) =
   case cert of
     Delegate (Delegation source target)
@@ -206,17 +206,17 @@ validStakeDelegation cert (LedgerState _ ds _) =
     _ -> Valid
 
 -- there is currently no requirement that could make this invalid
-validStakePoolRegister :: Cert -> LedgerState -> Validity
+validStakePoolRegister :: DCert -> LedgerState -> Validity
 validStakePoolRegister _ _ = Valid
 
-validStakePoolRetire :: Cert -> LedgerState -> Validity
+validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
   case cert of
     RetirePool key _ -> if any (\pool -> key == poolPubKey pool) (getStPools ds)
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
     _                -> Valid
 
-validDelegation :: Cert -> LedgerState -> Validity
+validDelegation :: DCert -> LedgerState -> Validity
 validDelegation cert l =
      validKeyRegistration cert l
   <> validKeyDeregistration cert l
@@ -244,7 +244,7 @@ asStateTransition ls (TransactionData tx) =
 asStateTransition ls (DelegationData cert) =
   case validDelegation cert ls of
     Invalid errors -> Left errors
-    Valid          -> Right $ applyCert cert ls
+    Valid          -> Right $ applyDCert cert ls
 
 -- Functions for stake delegation model
 
@@ -265,16 +265,16 @@ applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls { getUtxo = newUTxOs }
   where newUTxOs = txins tx </| getUtxo ls `union` txouts tx
 
--- |Apply a certificate as a state transition function on the ledger state.
-applyCert :: Cert -> LedgerState -> LedgerState
-applyCert (RegKey key) ls@(LedgerState _ ds _) = ls
+-- |Apply a delegation certificate as a state transition function on the ledger state.
+applyDCert :: DCert -> LedgerState -> LedgerState
+applyDCert (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Set.insert hk_sk (getStKeys ds)
     , getAccounts = Map.insert hk_sk (Coin 0) (getAccounts ds)}
   }
   where hk_sk = hashKey key
 
-applyCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
+applyDCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Set.delete hk_sk (getStKeys ds)
     , getAccounts = Map.delete hk_sk (getAccounts ds)
@@ -283,21 +283,21 @@ applyCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
   where hk_sk = hashKey key
 
 -- TODO do we also have to check hashKey target?
-applyCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
+applyDCert (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
   {getDelegationState = ds
     { getDelegations =
         Map.insert (hashKey source) (hashKey target) (getDelegations ds)}
   }
 
 -- TODO what happens if there's already a pool registered with that key?
-applyCert (RegPool sp) ls@(LedgerState _ ds _) = ls
+applyDCert (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStPools = Set.insert sp (getStPools ds)
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
 
 -- TODO check epoch (not in new doc atm.)
-applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
+applyDCert (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getRetiring = retiring}}
   where retiring = Map.insert hk_sp epoch (getRetiring ds)
@@ -305,12 +305,12 @@ applyCert (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
 
 -- |Apply an ordered collection of certificates as a state transition function
 -- on the ledger state.
-applyCerts :: LedgerState -> Set.Set Cert -> LedgerState
-applyCerts = Set.fold applyCert
+applyDCerts :: LedgerState -> Set.Set DCert -> LedgerState
+applyDCerts = Set.fold applyDCert
 
 -- |Apply a transaction as a state transition function on the ledger state.
 applyTransaction :: LedgerState -> TxWits -> LedgerState
-applyTransaction ls tx = applyTxBody (applyCerts ls cs) (body tx)
+applyTransaction ls tx = applyTxBody (applyDCerts ls cs) (body tx)
   where cs = (certs . body) tx
 
 -- |Compute how much stake each active stake pool controls.
