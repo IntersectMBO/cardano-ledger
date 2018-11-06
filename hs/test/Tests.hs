@@ -248,8 +248,7 @@ hashKeyPairs keyPairs =
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: [(KeyPair, KeyPair)] -> [Addr]
-addrTxins keyPairs =
-    (uncurry AddrTxin) <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
 
 -- | Generator for a natural number between 'lower' and 'upper'.
 genNatural :: Natural -> Natural -> Gen Natural
@@ -290,23 +289,23 @@ genTxLedgerEntry keyList (UTxO m) = do
   let selectedAddr    = addr $ head selectedInputs
   let selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
   let selectedKeyPair = findAddrKeyPair selectedAddr keyList
-  let selectedBalance         = balance $ UTxO selectedUTxO
+  let selectedBalance = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
-  let realN                   = length receipients
-  let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral $ realN)
-  let receipientAddrs         = fmap
+  let realN                = length receipients
+  let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral realN)
+  let receipientAddrs      = fmap
           (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   let txbody = Tx
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            Set.empty
   let txwit = makeWitness selectedKeyPair txbody
-  pure $ (fee, TransactionData (TxWits txbody $ Set.fromList [txwit]))
+  pure (fee, TransactionData (TxWits txbody $ Set.fromList [txwit]))
             where utxoInputs = Map.keys m
-                  addr inp = getTxOutAddr $ m Map.! inp
+                  addr inp   = getTxOutAddr $ m Map.! inp
 
 -- | Generator for new transaction state transition, starting from a
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
@@ -317,7 +316,7 @@ genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState ->
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
-  pure $ (fee, asStateTransition sourceState ledgerEntry)
+  pure (fee, asStateTransition sourceState ledgerEntry)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -336,8 +335,8 @@ genNonEmptyAndAdvanceTx = do
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
-repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState -> Gen (Coin, (Either [ValidationError] LedgerState))
-repeatTx 0 _ fees ls = pure $ (fees, Right ls)
+repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState -> Gen (Coin, Either [ValidationError] LedgerState)
+repeatTx 0 _ fees ls = pure (fees, Right ls)
 repeatTx n keyPairs fees ls = do
   (fee, next) <- genLedgerStateTx keyPairs ls
   case next of
