@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 {-|
 Module      : LedgerState
 Description : Operational Rules
@@ -44,8 +46,8 @@ import           Delegation.StakePool    (Delegation (..), StakePool (..))
 -- stake delegation step or a transaction.
 
 data LedgerEntry =
-    TransactionData TxWits
-  | DelegationData Cert
+    TransactionData !TxWits
+  | DelegationData !Cert
     deriving (Show, Eq)
 
 type Ledger = [LedgerEntry]
@@ -106,9 +108,9 @@ emptyDelegation =
 data LedgerState =
   LedgerState
   { -- |The current unspent transaction outputs.
-    getUtxo            :: UTxO
+    getUtxo            :: !UTxO
     -- |The current delegation state
-  , getDelegationState :: DelegationState
+  , getDelegationState :: !DelegationState
     -- |The current epoch.
   , getEpoch           :: Natural
   } deriving (Show, Eq)

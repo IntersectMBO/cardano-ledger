@@ -1,3 +1,6 @@
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 {-|
 Module      : UTxO
 Description : Simple UTxO Ledger
@@ -5,8 +8,6 @@ Description : Simple UTxO Ledger
 This module defines the types and functions for a simple UTxO Ledger
 as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 -}
-
-{-# LANGUAGE FlexibleInstances #-}
 
 module UTxO
   (
@@ -78,9 +79,9 @@ data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 
 -- |A raw transaction
-data Tx = Tx { inputs  :: Set TxIn
+data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
-             , certs   :: Set Cert
+             , certs   :: !(Set Cert)
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
@@ -99,14 +100,14 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord)
+data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
 
 -- |A fully formed transaction.
 --
 --     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
 data TxWits = TxWits
-              { body       :: Tx
-              , witnessSet :: Set Wit
+              { body       :: !Tx
+              , witnessSet :: !(Set Wit)
               } deriving (Show, Eq, Ord)
 
 -- |Create a witness for transaction
