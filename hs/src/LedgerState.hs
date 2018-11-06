@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 {-|
 Module      : LedgerState
 Description : Operational Rules
@@ -44,8 +46,8 @@ import           Delegation.StakePool    (Delegation (..), StakePool (..))
 -- stake delegation step or a transaction.
 
 data LedgerEntry =
-    TransactionData TxWits
-  | DelegationData Cert
+    TransactionData !TxWits
+  | DelegationData !Cert
     deriving (Show, Eq)
 
 type Ledger = [LedgerEntry]
@@ -106,9 +108,9 @@ emptyDelegation =
 data LedgerState =
   LedgerState
   { -- |The current unspent transaction outputs.
-    getUtxo            :: UTxO
+    getUtxo            :: !UTxO
     -- |The current delegation state
-  , getDelegationState :: DelegationState
+  , getDelegationState :: !DelegationState
     -- |The current epoch.
   , getEpoch           :: Natural
   } deriving (Show, Eq)
@@ -147,15 +149,17 @@ preserveBalance (TxWits tx _) l =
 authTxin :: VKey -> TxIn -> UTxO -> Bool
 authTxin key txin (UTxO utxo) =
   case Map.lookup txin utxo of
-    Just (TxOut (AddrTxin pay _) _) -> hash key == pay
+    Just (TxOut (AddrTxin pay _) _) -> hashKey key == pay
     _                               -> False
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
--- TODO - should we only check for one witness for each unique input address?
+-- We check that there are not more witnesses than inputs, if several inputs
+-- from the same address are used, it is not strictly necessary to include more
+-- than one witness.
 witnessed :: TxWits -> LedgerState -> Validity
 witnessed (TxWits tx wits) l =
-  if Set.size wits == Set.size ins && all (hasWitness wits) ins
+  if Set.size wits <= Set.size ins && all (hasWitness wits) ins
     then Valid
     else Invalid [InsuffientWitnesses]
   where
@@ -315,7 +319,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
   where
     getOutputs (UTxO utxo) = Map.elems utxo
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do
-      pool <- Map.lookup (HashKey hsk) delegations
+      pool <- Map.lookup hsk delegations
       return (pool, c)
     addStake _ _ = Nothing
     outs = getOutputs . getUtxo $ ls

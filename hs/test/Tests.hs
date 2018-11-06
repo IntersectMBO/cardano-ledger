@@ -1,12 +1,19 @@
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad           (foldM)
-import           Crypto.Hash             (hash)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
+import           Numeric.Natural         (Natural)
 
 import           Test.Tasty
+import           Test.Tasty.Hedgehog
 import           Test.Tasty.HUnit
+
+import           Hedgehog
+import qualified Hedgehog.Gen            as Gen
+import qualified Hedgehog.Range          as Range
 
 import           Coin
 import           Keys
@@ -27,7 +34,7 @@ aliceStake :: KeyPair
 aliceStake = keyPair (Owner 2)
 
 aliceAddr :: Addr
-aliceAddr = AddrTxin (hash (vKey alicePay)) (hash (vKey aliceStake))
+aliceAddr = AddrTxin (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
 
 bobPay :: KeyPair
 bobPay = keyPair (Owner 3)
@@ -36,7 +43,7 @@ bobStake :: KeyPair
 bobStake = keyPair (Owner 4)
 
 bobAddr :: Addr
-bobAddr = AddrTxin (hash (vKey bobPay)) (hash (vKey bobStake))
+bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 genesis :: LedgerState
 genesis = genesisState
@@ -216,12 +223,177 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   , testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testInvalidTransaction
   ]
 
-tests :: TestTree
-tests = testGroup "Ledger with Delegation" [unitTests]
-
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
   [ testsValidLedger, testsInvalidLedger ]
 
+-- | Generator for '(Owner, Owner)' pairs, 'fst even', 'snd' is 'fst + 1'
+genOwnerList :: Int -> Int -> Gen [(Owner, Owner)]
+genOwnerList lower upper = do
+  xs <- Gen.list (Range.linear lower upper)
+        $ Gen.integral (Range.linear (1 :: Natural) 1000)
+  return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
+
+-- | Generates a list of '(pay, stake)' key pairs.
+genKeyPairs :: Int -> Int -> Gen [(KeyPair, KeyPair)]
+genKeyPairs lower upper =
+    fmap (\(a, b) -> (keyPair a, keyPair b))
+             <$> genOwnerList lower upper
+
+-- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
+-- hashed keys
+hashKeyPairs :: [(KeyPair, KeyPair)] -> [(HashKey, HashKey)]
+hashKeyPairs keyPairs =
+    (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
+
+-- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
+-- stake'
+addrTxins :: [(KeyPair, KeyPair)] -> [Addr]
+addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
+
+-- | Generator for a natural number between 'lower' and 'upper'.
+genNatural :: Natural -> Natural -> Gen Natural
+genNatural lower upper = Gen.integral $ Range.linear lower upper
+
+-- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
+-- coins, with values between 'minCoin' and 'maxCoin'.
+genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
+genCoinList minCoin maxCoin lower upper = do
+  xs <- Gen.list (Range.linear lower upper)
+        $ Gen.integral (Range.exponential minCoin maxCoin)
+  return (Coin <$> xs)
+
+-- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
+-- value is generated.
+genTxOut :: [Addr] -> Gen [TxOut]
+genTxOut addrs = do
+  ys <- genCoinList 1 100 (length addrs) (length addrs)
+  return (uncurry TxOut <$> zip addrs ys)
+
+-- | Generator of a non-empty genesis ledger state, i.e., at least one valid
+-- address and non-zero UTxO.
+genNonemptyGenesisState :: Gen LedgerState
+genNonemptyGenesisState = do
+  keyPairs <- genKeyPairs 1 10
+  genesisState <$> genTxOut (addrTxins keyPairs)
+
+-- | Generator for a new 'LedgerEntry' and fee value for executing the
+-- transaction. Selects one valid input from the UTxO, sums up all funds of the
+-- address associated to that input, selects a random subsequence of other valid
+-- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
+-- coins, the amount spent to each address is 'div b n' and the fees are set to
+-- 'rem b n'.
+genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen (Coin, LedgerEntry)
+genTxLedgerEntry keyList (UTxO m) = do
+  -- select payer
+  selectedInputs <- Gen.shuffle utxoInputs
+  let !selectedAddr    = addr $ head selectedInputs
+  let !selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
+  let !selectedKeyPair = findAddrKeyPair selectedAddr keyList
+  let !selectedBalance = balance $ UTxO selectedUTxO
+
+  -- select receipients, distribute balance of selected UTxO set
+  n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
+  receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
+  let realN                = length receipients
+  let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral realN)
+  let !receipientAddrs      = fmap
+          (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
+  let !txbody = Tx
+           (Map.keysSet selectedUTxO)
+           ((\r -> TxOut r perReceipient) <$> receipientAddrs)
+           Set.empty
+  let !txwit = makeWitness selectedKeyPair txbody
+  pure (fee, TransactionData (TxWits txbody $ Set.fromList [txwit]))
+            where utxoInputs = Map.keys m
+                  addr inp   = getTxOutAddr $ m Map.! inp
+
+-- | Generator for new transaction state transition, starting from a
+-- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
+-- accumulated fees and a resulting ledger state or the 'ValidationError'
+-- information in case of an invalid transaction.
+genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState ->
+                    Gen (Coin, Either [ValidationError] LedgerState)
+genLedgerStateTx keyList sourceState = do
+  let utxo = getUtxo sourceState
+  (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
+  pure (fee, asStateTransition sourceState ledgerEntry)
+
+-- | Generator of a non-emtpy ledger genesis state and a random number of
+-- transactions applied to it. Returns the amount of accumulated fees, the
+-- initial ledger state and the final ledger state or the validation error if an
+-- invalid transaction has been generated.
+genNonEmptyAndAdvanceTx
+  :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
+genNonEmptyAndAdvanceTx = do
+  keyPairs    <- genKeyPairs 1 10
+  steps       <- Gen.integral $ Range.linear 1 10
+  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
+  pure (fees, ls, ls')
+
+-- | Generator for a fixed number of 'n' transaction step executions, using the
+-- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
+-- 'ls' and returns the result of the repeated generation and application of
+-- transactions.
+repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState ->
+            Gen (Coin, Either [ValidationError] LedgerState)
+repeatTx 0 _ fees ls = pure (fees, Right ls)
+repeatTx n !keyPairs !fees !ls = do
+  (fee, next) <- genLedgerStateTx keyPairs ls
+  case next of
+    Left  _   -> pure (fees, next)
+    Right ls' -> repeatTx (n - 1) keyPairs (fee <> fees) ls'
+
+-- | Find first matching key pair for address. Returns the matching key pair
+-- where the first element of the pair matched the hash in 'addr'.
+findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
+findAddrKeyPair (AddrTxin addr _) keyList =
+     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+findAddrKeyPair (AddrAccount _ _) _ = undefined
+
+-- | Returns the hashed 'addr' part of a 'TxOut'.
+getTxOutAddr :: TxOut -> Addr
+getTxOutAddr (TxOut addr _) = addr
+
+-- | Returns the number of entries of the UTxO set.
+utxoSize :: UTxO -> Int
+utxoSize (UTxO m) = Map.size m
+
+-- | This property states that a non-empty UTxO set in the genesis state has a
+-- non-zero balance.
+propPositiveBalance:: Property
+propPositiveBalance =
+    property $ do
+      initialState <- forAll genNonemptyGenesisState
+      utxoSize (getUtxo initialState) /== 0
+      Coin 0 /== balance (getUtxo initialState)
+
+-- | This property states that the balance of the initial genesis state equals
+-- the balance of the end ledger state plus the collected fees.
+propPreserveBalanceInitTx :: Property
+propPreserveBalanceInitTx =
+    property $ do
+      (fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      case next of
+        Left _    -> failure
+        Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
+
+-- | 'TestTree' of property-based testing properties.
+propertyTests :: TestTree
+propertyTests = testGroup "Property-Based Testing"
+                [ testGroup "Ledger Genesis State"
+                  [testProperty
+                    "non-empty genesis ledger state has non-zero balance"
+                    propPositiveBalance
+                  , testProperty
+                    "several transaction added to genesis ledger state"
+                    propPreserveBalanceInitTx]
+                  ]
+
+tests :: TestTree
+tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
+
+-- main entry point
 main :: IO ()
 main = defaultMain tests
