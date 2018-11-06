@@ -321,6 +321,5 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do
       pool <- Map.lookup hsk delegations
       return (pool, c)
-    addStake _ _ = Nothing
     outs = getOutputs . getUtxo $ ls
     delegatedOutputs = mapMaybe (addStake (getDelegations ds)) outs

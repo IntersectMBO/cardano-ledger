@@ -352,7 +352,6 @@ repeatTx n !keyPairs !fees !ls = do
 findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
-findAddrKeyPair (AddrAccount _ _) _ = undefined
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr

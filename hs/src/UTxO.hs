@@ -61,10 +61,8 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
--- |An address for UTxO.  It can be either an account based
--- address for rewards sharing or a UTxO address.
+-- |An address for UTxO.
 data Addr = AddrTxin HashKey HashKey
-          | AddrAccount Hash Hash
           deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
