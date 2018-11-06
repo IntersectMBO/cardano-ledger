@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad           (foldM)
@@ -286,23 +287,23 @@ genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen (Coin, LedgerEntry)
 genTxLedgerEntry keyList (UTxO m) = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
-  let selectedAddr    = addr $ head selectedInputs
-  let selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
-  let selectedKeyPair = findAddrKeyPair selectedAddr keyList
-  let selectedBalance = balance $ UTxO selectedUTxO
+  let !selectedAddr    = addr $ head selectedInputs
+  let !selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
+  let !selectedKeyPair = findAddrKeyPair selectedAddr keyList
+  let !selectedBalance = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
   let realN                = length receipients
   let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral realN)
-  let receipientAddrs      = fmap
+  let !receipientAddrs      = fmap
           (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
-  let txbody = Tx
+  let !txbody = Tx
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            Set.empty
-  let txwit = makeWitness selectedKeyPair txbody
+  let !txwit = makeWitness selectedKeyPair txbody
   pure (fee, TransactionData (TxWits txbody $ Set.fromList [txwit]))
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
@@ -335,9 +336,10 @@ genNonEmptyAndAdvanceTx = do
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
-repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState -> Gen (Coin, Either [ValidationError] LedgerState)
+repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState ->
+            Gen (Coin, Either [ValidationError] LedgerState)
 repeatTx 0 _ fees ls = pure (fees, Right ls)
-repeatTx n keyPairs fees ls = do
+repeatTx n !keyPairs !fees !ls = do
   (fee, next) <- genLedgerStateTx keyPairs ls
   case next of
     Left  _   -> pure (fees, next)
