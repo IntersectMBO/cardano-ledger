@@ -247,6 +247,9 @@ genAddrTxins :: [(KeyPair, KeyPair)] -> [Addr]
 genAddrTxins keyPairs =
     (uncurry AddrTxin) <$> genHashKeyPairs keyPairs
 
+genNatural :: Natural -> Natural -> Gen Natural
+genNatural lower upper = Gen.integral $ Range.linear lower upper
+
 genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin lower upper = do
   xs <- Gen.list (Range.linear lower upper)
@@ -264,47 +267,56 @@ genNonemptyGenesisState = do
   genesisState <$> genTxOut (genAddrTxins keyPairs)
 
 -- | Take a UTxO and generate a possible transaction.
-
 -- It shuffles the list of inputs from the UTxO set, selects one possible
 -- address from the inputs (the first actually) and creates a new output,
 -- spending all funds from that address.
-genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen LedgerEntry
+genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen (Coin, LedgerEntry)
 genTxLedgerEntry keyList (UTxO m) = do
+  -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
   let selectedAddr    = addr $ head selectedInputs
   let selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
   let selectedKeyPair = findAddrKeyPair selectedAddr keyList
-  receipient <- (addr . head) <$> Gen.shuffle utxoInputs
+  let selectedBalance         = balance $ UTxO selectedUTxO
+
+  -- select receipients, distribute balance of selected UTxO set
+  n <- genNatural 1 5 -- TODO make this variable, but used too much RAM atm
+  receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
+  let realN                   = length receipients
+  let (perReceipient, fee) = splitCoin selectedBalance (fromIntegral $ realN)
+  let receipientAddrs         = fmap
+          (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   let txbody = Tx
            (Map.keysSet selectedUTxO)
-           [TxOut receipient $ balance (UTxO selectedUTxO)]
+           ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            Set.empty
   let txwit = makeWitness selectedKeyPair txbody
-  pure $ TransactionData (TxWits txbody $ Set.fromList [txwit])
+  pure $ (fee, TransactionData (TxWits txbody $ Set.fromList [txwit]))
             where utxoInputs = Map.keys m
                   addr inp = getTxOutAddr $ m Map.! inp
 
-genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (Either [ValidationError] LedgerState)
+
+genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (Coin, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
-  ledgerEntry <- genTxLedgerEntry keyList utxo
-  pure $ asStateTransition sourceState ledgerEntry
+  (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
+  pure $ (fee, asStateTransition sourceState ledgerEntry)
 
-genNonEmptyAndAdvanceTx :: Gen (LedgerState, Either [ValidationError] LedgerState)
+genNonEmptyAndAdvanceTx :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
-  keyPairs <- genKeyPairs 1 100
-  steps    <- Gen.integral $ Range.linear 1 100
-  ls       <- genesisState <$> genTxOut (genAddrTxins keyPairs)
-  ls'      <- repeatTx steps keyPairs ls
-  pure (ls, ls')
+  keyPairs    <- genKeyPairs 1 100
+  steps       <- Gen.integral $ Range.linear 1 1000
+  ls          <- genesisState <$> genTxOut (genAddrTxins keyPairs)
+  (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
+  pure (fees, ls, ls')
 
-repeatTx :: Natural -> [(KeyPair, KeyPair)] -> LedgerState -> Gen (Either [ValidationError] LedgerState)
-repeatTx 0 _ ls = pure $ Right ls
-repeatTx n keyPairs ls = do
-  next <- genLedgerStateTx keyPairs ls
+repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState -> Gen (Coin, (Either [ValidationError] LedgerState))
+repeatTx 0 _ fees ls = pure $ (fees, Right ls)
+repeatTx n keyPairs fees ls = do
+  (fee, next) <- genLedgerStateTx keyPairs ls
   case next of
-    Left  _   -> pure next
-    Right ls' -> repeatTx (n - 1) keyPairs ls'
+    Left  _   -> pure (fees, next)
+    Right ls' -> repeatTx (n - 1) keyPairs (fee <> fees) ls'
 
 -- | find first matching key pair for address
 findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
@@ -330,10 +342,10 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
     property $ do
-      (ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      (fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
       case next of
         Left _    -> failure
-        Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls')
+        Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
 
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
