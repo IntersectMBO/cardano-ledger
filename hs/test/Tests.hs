@@ -273,7 +273,7 @@ genTxOut addrs = do
 -- address and non-zero UTxO.
 genNonemptyGenesisState :: Gen LedgerState
 genNonemptyGenesisState = do
-  keyPairs <- genKeyPairs 1 20
+  keyPairs <- genKeyPairs 1 10
   genesisState <$> genTxOut (addrTxins keyPairs)
 
 -- | Generator for a new 'LedgerEntry' and fee value for executing the
@@ -325,8 +325,8 @@ genLedgerStateTx keyList sourceState = do
 genNonEmptyAndAdvanceTx
   :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
-  keyPairs    <- genKeyPairs 1 100
-  steps       <- Gen.integral $ Range.linear 1 1000
+  keyPairs    <- genKeyPairs 1 10
+  steps       <- Gen.integral $ Range.linear 1 100
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
   pure (fees, ls, ls')
