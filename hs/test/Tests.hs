@@ -327,7 +327,7 @@ genNonEmptyAndAdvanceTx
   :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
-  steps       <- Gen.integral $ Range.linear 1 100
+  steps       <- Gen.integral $ Range.linear 1 10
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
   pure (fees, ls, ls')
