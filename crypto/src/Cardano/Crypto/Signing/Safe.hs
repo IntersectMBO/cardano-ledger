@@ -27,14 +27,15 @@ import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 
-import Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Annotated(..), Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
 import Cardano.Crypto.Hashing (hash)
 import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import qualified Cardano.Crypto.Scrypt as S
 import Cardano.Crypto.Signing.Signing
-  ( ProxyCert(..)
-  , ProxySecretKey(..)
+  ( AProxySecretKey(..)
+  , ProxyCert(..)
+  , ProxySecretKey
   , PublicKey(..)
   , SecretKey(..)
   , Signature(..)
@@ -171,8 +172,8 @@ safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce $ ProxyCert sig
 -- | Creates proxy secret key
 safeCreatePsk
   :: (Bi w) => ProtocolMagic -> SafeSigner -> PublicKey -> w -> ProxySecretKey w
-safeCreatePsk pm ss delegatePk w = UnsafeProxySecretKey
-  { pskOmega      = w
+safeCreatePsk pm ss delegatePk w = UnsafeAProxySecretKey
+  { aPskOmega     = Annotated w ()
   , pskIssuerPk   = safeToPublic ss
   , pskDelegatePk = delegatePk
   , pskCert       = safeCreateProxyCert pm ss delegatePk w

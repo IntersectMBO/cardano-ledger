@@ -13,7 +13,7 @@ import Data.List ((!!))
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Chain.Delegation (Payload(..), ProxySKBlockInfo)
+import Cardano.Chain.Delegation (ProxySKBlockInfo, unsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
@@ -28,7 +28,7 @@ import Test.Cardano.Crypto.Gen (feedPM)
 --------------------------------------------------------------------------------
 goldenDlgPayload :: Property
 goldenDlgPayload = goldenTestBi dp "test/golden/bi/delegation/DlgPayload"
-  where dp = UnsafePayload (take 4 staticProxySKHeavys)
+  where dp = unsafePayload (take 4 staticProxySKHeavys)
 
 roundTripDlgPayloadBi :: Property
 roundTripDlgPayloadBi = eachOf 100 (feedPM genPayload) roundTripsBiBuildable

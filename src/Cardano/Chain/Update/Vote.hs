@@ -1,30 +1,39 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Cardano.Chain.Update.Vote
   (
        -- Software update proposal
-    Proposal(..)
+    AProposal(..)
+  , Proposal
   , ProposalError(..)
   , Proposals
   , UpId
   , ProposalBody(..)
-  , formatMaybeProposal
-  , signProposal
   , checkProposal
+  , decodeAProposal
+  , formatMaybeProposal
+  , mkProposal
+  , proposalBody
+  , recoverUpId
+  , signProposal
 
        -- Software update vote
+  , AVote(..)
   , VoteId
-  , Vote(..)
+  , Vote
   , VoteError(..)
   , mkVote
   , mkVoteSafe
   , formatVoteShort
   , shortVoteF
   , checkVote
+  , decodeAVote
   , mkVoteId
   )
 where
@@ -37,7 +46,17 @@ import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), Decoder, encodeListLen, enforceSize)
+import Cardano.Binary.Class
+  ( Annotated(..)
+  , Bi(..)
+  , ByteSpan
+  , Decoded(..)
+  , Decoder
+  , annotatedDecoder
+  , decodeAnnotated
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
 import Cardano.Chain.Update.BlockVersion (BlockVersion)
@@ -55,8 +74,9 @@ import Cardano.Crypto
   , SecretKey
   , SignTag(SignUSProposal, SignUSVote)
   , Signature
-  , checkSig
+  , checkSigDecoded
   , hash
+  , hashDecoded
   , safeSign
   , safeToPublic
   , shortHashF
@@ -99,16 +119,38 @@ instance Bi ProposalBody where
     ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode
 
 -- | Proposal for software update
-data Proposal = Proposal
-  { proposalBody      :: ProposalBody
-  , proposalIssuer    :: !PublicKey
+data AProposal a = AProposal
+  { aProposalBody      :: (Annotated ProposalBody a)
+  , proposalIssuer     :: !PublicKey
   -- ^ Who proposed this UP.
-  , proposalSignature :: !(Signature ProposalBody)
-  } deriving (Eq, Show, Generic)
+  , proposalSignature  :: !(Signature ProposalBody)
+  , proposalAnnotation :: !a
+  } deriving (Eq, Show, Generic, Functor)
+
+instance NFData a => NFData (AProposal a)
+
+type Proposal = AProposal ()
+
+mkProposal :: ProposalBody -> PublicKey -> (Signature ProposalBody) -> Proposal
+mkProposal b k s = AProposal (Annotated b ()) k s ()
+
+proposalBody :: AProposal a -> ProposalBody
+proposalBody = unAnnotated . aProposalBody
+
+upId :: Proposal -> UpId
+upId = hash
+
+recoverUpId :: AProposal ByteString -> UpId
+recoverUpId = hashDecoded
+
+instance Decoded AProposal where
+  type BaseType AProposal = Proposal
+  recoverBytes = proposalAnnotation
 
 type Proposals = Map UpId Proposal
 
-instance B.Buildable Proposal where
+
+instance B.Buildable (AProposal ()) where
   build proposal = bprint
     ( build
     . " { block v"
@@ -125,7 +167,7 @@ instance B.Buildable Proposal where
     )
     (pbSoftwareVersion body)
     (pbBlockVersion body)
-    (hash proposal)
+    (upId proposal)
     (pbBlockVersionModifier body)
     (Map.keys $ pbData body)
     attrsBuilder
@@ -136,7 +178,6 @@ instance B.Buildable Proposal where
       | areAttributesKnown attrs = "no attributes"
       | otherwise                = bprint ("attributes: " . build) attrs
 
-instance NFData Proposal
 
 instance Bi Proposal where
   encode proposal =
@@ -150,23 +191,24 @@ instance Bi Proposal where
       <> encode (proposalSignature proposal)
     where body = proposalBody proposal
 
-  decode = do
+  decode = void <$> decodeAProposal
+
+decodeAProposal :: Decoder s (AProposal ByteSpan)
+decodeAProposal = do
+  Annotated (body, pk, signature) byteSpan <- annotatedDecoder $ do
     enforceSize "Proposal" 7
-    Proposal <$> decodeBody <*> decode <*> decode
-   where
-    decodeBody :: Decoder s ProposalBody
-    decodeBody =
-      ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode
+    body <- annotatedDecoder
+      (ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode)
+    pk        <- decode
+    signature <- decode
+    pure (body, pk, signature)
+  pure $ AProposal body pk signature byteSpan
 
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
 
 signProposal :: ProtocolMagic -> ProposalBody -> SafeSigner -> Proposal
-signProposal pm body ss = Proposal
-  { proposalBody      = body
-  , proposalIssuer    = issuer
-  , proposalSignature = signature
-  }
+signProposal pm body ss = mkProposal body issuer signature
  where
   issuer    = safeToPublic ss
   signature = safeSign pm SignUSProposal ss body
@@ -187,20 +229,24 @@ instance B.Buildable ProposalError where
       ("SystemTag was invalid while checking Proposal.\n Error: " . build)
       err
 
-checkProposal :: MonadError ProposalError m => ProtocolMagic -> Proposal -> m ()
+checkProposal
+  :: MonadError ProposalError m => ProtocolMagic -> AProposal ByteString -> m ()
 checkProposal pm proposal = do
-  let body = proposalBody proposal
+  let
+    aBody = aProposalBody proposal
+    body  = unAnnotated aBody
   liftEither . first ProposalSoftwareVersionError $ checkSoftwareVersion
     (pbSoftwareVersion body)
   forM_
     (Map.keys (pbData body))
     (liftEither . first ProposalSystemTagError . checkSystemTag)
   let
-    sigIsValid = checkSig
+    bodyPrefix = "\133" :: ByteString -- toLazyByteString $ encodeListLen 5
+    sigIsValid = checkSigDecoded
       pm
       SignUSProposal
       (proposalIssuer proposal)
-      body
+      (mappend bodyPrefix <$> aBody)
       (proposalSignature proposal)
   unless sigIsValid $ throwError $ ProposalInvalidSignature
     (proposalSignature proposal)
@@ -215,7 +261,7 @@ checkProposal pm proposal = do
 type VoteId = (UpId, PublicKey, Bool)
 
 instance B.Buildable VoteId where
-  build (upId, pk, dec) = bprint
+  build (id, pk, dec) = bprint
     ( "Vote Id { voter: "
     . build
     . ", proposal id: "
@@ -225,26 +271,46 @@ instance B.Buildable VoteId where
     . " }"
     )
     pk
-    upId
+    id
     dec
 
+
+type Vote = AVote ()
 -- | Vote for update proposal
 --
 --   Invariant: The signature is valid.
-data Vote = UnsafeVote
-  { uvKey        :: !PublicKey
+data AVote a = UnsafeVote
+  { uvKey         :: !PublicKey
   -- ^ Public key of stakeholder, who votes
-  , uvProposalId :: !UpId
+  , aUvProposalId :: !(Annotated UpId a)
   -- ^ Proposal to which this vote applies
-  , uvDecision   :: !Bool
+  , aUvDecision   :: !(Annotated Bool a)
   -- ^ Approval/rejection bit
-  , uvSignature  :: !(Signature (UpId, Bool))
+  , uvSignature   :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit) by stakeholder
-  } deriving (Eq, Show, Generic)
+  } deriving (Eq, Show, Generic, Functor)
 
-instance NFData Vote
+uvProposalId :: AVote a -> UpId
+uvProposalId = unAnnotated . aUvProposalId
 
-instance B.Buildable Vote where
+uvDecision :: AVote a -> Bool
+uvDecision = unAnnotated . aUvDecision
+
+recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
+recoverSignedBytes v =
+  let
+    bytes = mconcat
+      [ "\130"
+      -- ^ This byte is part of the signed payload, but is not part of the transmitted payload.
+      -- This is an implementation artifact of the previous
+      , annotation $ aUvProposalId v
+      , annotation $ aUvDecision v
+      ]
+  in Annotated (uvProposalId v, uvDecision v) bytes
+
+instance NFData a => NFData (AVote a)
+
+instance B.Buildable (AVote a) where
   build uv = bprint
     ( "Update Vote { voter: "
     . build
@@ -270,9 +336,13 @@ instance Bi Vote where
       <> encode (uvDecision uv)
       <> encode (uvSignature uv)
 
-  decode = do
-    enforceSize "Vote" 4
-    UnsafeVote <$> decode <*> decode <*> decode <*> decode
+  decode = void <$> decodeAVote
+
+decodeAVote :: Decoder s (AVote ByteSpan)
+decodeAVote = do
+  enforceSize "Vote" 4
+  UnsafeVote <$> decode <*> decodeAnnotated <*> decodeAnnotated <*> decode
+
 
 -- | A safe constructor for 'UnsafeVote'
 mkVote
@@ -285,11 +355,10 @@ mkVote
   -- ^ Approval/rejection bit
   -> Vote
 mkVote pm sk proposalId decision = UnsafeVote
-  { uvKey        = toPublic sk
-  , uvProposalId = proposalId
-  , uvDecision   = decision
-  , uvSignature  = sign pm SignUSVote sk (proposalId, decision)
-  }
+  (toPublic sk)
+  (Annotated proposalId ())
+  (Annotated decision ())
+  (sign pm SignUSVote sk (proposalId, decision))
 
 -- | Same as 'mkVote', but uses 'SafeSigner'
 mkVoteSafe
@@ -302,11 +371,10 @@ mkVoteSafe
   -- ^ Approval/rejection bit
   -> Vote
 mkVoteSafe pm sk proposalId decision = UnsafeVote
-  { uvKey        = safeToPublic sk
-  , uvProposalId = proposalId
-  , uvDecision   = decision
-  , uvSignature  = safeSign pm SignUSVote sk (proposalId, decision)
-  }
+  (safeToPublic sk)
+  (Annotated proposalId ())
+  (Annotated decision ())
+  (safeSign pm SignUSVote sk (proposalId, decision))
 
 -- | Format 'Vote' compactly
 formatVoteShort :: Vote -> Builder
@@ -328,16 +396,16 @@ instance B.Buildable VoteError where
     VoteInvalidSignature sig ->
       bprint ("Invalid signature, " . build . ", in Vote") sig
 
-checkVote :: MonadError VoteError m => ProtocolMagic -> Vote -> m ()
+checkVote :: MonadError VoteError m => ProtocolMagic -> AVote ByteString -> m ()
 checkVote pm uv = unless
   sigValid
   (throwError $ VoteInvalidSignature (uvSignature uv))
  where
-  sigValid = checkSig
+  sigValid = checkSigDecoded
     pm
     SignUSVote
     (uvKey uv)
-    (uvProposalId uv, uvDecision uv)
+    (recoverSignedBytes uv)
     (uvSignature uv)
 
 mkVoteId :: Vote -> VoteId

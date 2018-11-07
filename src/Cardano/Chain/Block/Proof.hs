@@ -19,12 +19,13 @@ import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Block.Body (Body(..))
+import Cardano.Chain.Block.Body
+  (ABody(..), Body, bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof(..))
-import Cardano.Chain.Txp.TxProof (TxProof, mkTxProof)
+import Cardano.Chain.Txp.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
-import Cardano.Crypto (Hash, hash)
+import Cardano.Crypto (Hash, hash, hashDecoded)
 
 
 -- | Proof of everything contained in the payload
@@ -63,6 +64,14 @@ mkProof body = Proof
   , proofUpdate     = Update.mkProof $ bodyUpdatePayload body
   }
 
+recoverProof :: ABody ByteString -> Proof
+recoverProof body = Proof
+  { proofTxp        = recoverTxProof $ bodyTxPayload body
+  , proofSsc        = SscProof
+  , proofDelegation = hashDecoded $ bodyDlgPayload body
+  , proofUpdate     = Update.recoverProof $ bodyUpdatePayload body
+  }
+
 data ProofError = ProofIncorrect Proof Proof
 
 instance B.Buildable ProofError where
@@ -77,7 +86,7 @@ instance B.Buildable ProofError where
       p
       p'
 
-checkProof :: MonadError ProofError m => Body -> Proof -> m ()
+checkProof :: MonadError ProofError m => ABody ByteString -> Proof -> m ()
 checkProof body proof = unless (calculatedProof == proof)
   $ throwError (ProofIncorrect proof calculatedProof)
-  where calculatedProof = mkProof body
+  where calculatedProof = recoverProof body

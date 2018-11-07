@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -34,8 +35,13 @@ module Cardano.Crypto.Signing.Types.Signing
   , ProxyCert(..)
   , fullProxyCertHexF
   , parseFullProxyCert
-  , ProxySecretKey(..)
-  , ProxySignature(..)
+  , AProxySecretKey(..)
+  , ProxySecretKey
+  , AProxySignature(..)
+  , ProxySignature
+  , pskOmega
+  , unsafeProxySecretKey
+  , decodeAProxySecretKey
   , isSelfSignedPsk
   )
 where
@@ -46,8 +52,7 @@ import qualified Cardano.Crypto.Wallet as CC
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import Control.Monad.Except (MonadError)
-import Data.Aeson (FromJSON(..), ToJSON(..))
-import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.=))
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
 import Data.Text.Lazy.Builder (Builder)
@@ -59,7 +64,8 @@ import Prelude (show)
 import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary.Class
+  (Annotated(..), Bi(..), ByteSpan, decodeAnnotated, encodeListLen, enforceSize)
 import Cardano.Crypto.Hashing (hash)
 import Cardano.Crypto.Orphans ()
 
@@ -260,19 +266,28 @@ parseFullProxyCert s = do
 
 -- | Convenient wrapper for secret key, that's basically ω plus
 -- certificate.
-data ProxySecretKey w = UnsafeProxySecretKey
-  { pskOmega      :: w
+data AProxySecretKey w a = UnsafeAProxySecretKey
+  { aPskOmega     :: Annotated w a
   , pskIssuerPk   :: PublicKey
   , pskDelegatePk :: PublicKey
   , pskCert       :: ProxyCert w
-  } deriving (Eq, Ord, Show, Generic)
+  } deriving (Eq, Ord, Show, Generic, Functor)
 
-instance NFData w => NFData (ProxySecretKey w)
+type ProxySecretKey w = AProxySecretKey w ()
 
-instance B.Buildable w => B.Buildable (ProxySecretKey w) where
-  build (UnsafeProxySecretKey w iPk dPk _) = bprint
+unsafeProxySecretKey
+  :: w -> PublicKey -> PublicKey -> ProxyCert w -> ProxySecretKey w
+unsafeProxySecretKey w = UnsafeAProxySecretKey (Annotated w ())
+
+pskOmega :: AProxySecretKey w a -> w
+pskOmega = unAnnotated . aPskOmega
+
+instance (NFData w, NFData a) => NFData (AProxySecretKey w a)
+
+instance B.Buildable w => B.Buildable (AProxySecretKey w a) where
+  build (UnsafeAProxySecretKey w iPk dPk _) = bprint
     ("ProxySk { w = " . build . ", iPk = " . build . ", dPk = " . build . " }")
-    w
+    (unAnnotated w)
     iPk
     dPk
 
@@ -284,36 +299,47 @@ instance Bi w => Bi (ProxySecretKey w) where
       <> encode (pskDelegatePk psk)
       <> encode (pskCert psk)
 
-  decode = do
-    enforceSize "ProxySecretKey" 4
-    UnsafeProxySecretKey <$> decode <*> decode <*> decode <*> decode
+  decode =  void <$> decodeAProxySecretKey
+
+decodeAProxySecretKey :: Bi w => D.Decoder s (AProxySecretKey w ByteSpan)
+decodeAProxySecretKey = do
+  enforceSize "ProxySecretKey" 4
+  UnsafeAProxySecretKey <$> decodeAnnotated <*> decode <*> decode <*> decode
 
 -- | Delegate signature made with certificate-based permission. @w@
 -- stays for message type used in proxy (ω in the implementation
--- notes), @a@ for type of message signed.
+-- notes), @s@ for type of message signed.
 --
 -- We add whole psk as a field because otherwise we can't verify sig
 -- in heavyweight psk transitive delegation: i → x → d, we have psk
 -- from x to d, slot leader is i.
-data ProxySignature w a = ProxySignature
-  { psigPsk :: ProxySecretKey w
+type ProxySignature w s = AProxySignature w s ()
+
+data AProxySignature w s a = AProxySignature
+  { psigPsk :: AProxySecretKey w a
   , psigSig :: CC.XSignature
-  } deriving (Eq, Ord, Show, Generic)
+  } deriving (Eq, Ord, Show, Generic, Functor)
 
-instance NFData w => NFData (ProxySignature w a)
 
-instance B.Buildable w => B.Buildable (ProxySignature w a) where
+instance (NFData w, NFData a) => NFData (AProxySignature w s a)
+
+instance B.Buildable w => B.Buildable (AProxySignature w s a) where
   build psig = bprint ("Proxy signature { psk = " . build . " }") (psigPsk psig)
 
-instance (Typeable a, Bi w) => Bi (ProxySignature w a) where
+instance (Typeable s, Bi w) => Bi (ProxySignature w s) where
   encode psig =
     encodeListLen 2 <> encode (psigPsk psig) <> encodeXSignature (psigSig psig)
 
-  decode =
-    ProxySignature
-      <$  enforceSize "ProxySignature" 2
-      <*> decode
-      <*> decodeXSignature
+  decode = void <$> decodeAProxySignature
+
+
+decodeAProxySignature :: Bi w => D.Decoder s (AProxySignature w a ByteSpan)
+decodeAProxySignature =
+  AProxySignature
+    <$  enforceSize "ProxySignature" 2
+    <*> decodeAProxySecretKey
+    <*> decodeXSignature
+
 
 -- | Checks if delegate and issuer fields of proxy secret key are
 -- equal.
@@ -324,4 +350,17 @@ isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 -- However these need to be defined here to avoid TemplateHaskell compile
 -- phase errors.
 
-deriveJSON defaultOptions ''ProxySecretKey
+instance ToJSON w => ToJSON (AProxySecretKey w ()) where
+  toJSON psk = object
+    [ "pskOmega" .= toJSON (pskOmega psk)
+    , "pskIssuerPk" .= toJSON (pskIssuerPk psk)
+    , "pskDelegatePk" .= toJSON (pskDelegatePk psk)
+    , "pskCert" .= toJSON (pskCert psk)
+    ]
+
+instance FromJSON w => FromJSON (AProxySecretKey w ()) where
+    parseJSON = withObject "ProxySecretKey" $ \v -> unsafeProxySecretKey
+        <$> v .: "pskOmega"
+        <*> v .: "pskIssuerPk"
+        <*> v .: "pskDelegatePk"
+        <*> v .: "pskCert"

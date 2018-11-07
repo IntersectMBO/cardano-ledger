@@ -42,7 +42,7 @@ import Cardano.Chain.Update
   , BlockVersion(..)
   , BlockVersionData(..)
   , BlockVersionModifier(..)
-  , Payload(..)
+  , Payload
   , PrevValue(..)
   , Proof
   , Proposal
@@ -53,10 +53,11 @@ import Cardano.Chain.Update
   , USUndo(..)
   , UpId
   , UpdateData(..)
-  , Vote(..)
+  , Vote
   , VoteId
   , mkProof
   , mkVoteSafe
+  , payload
   , signProposal
   )
 import Cardano.Crypto (ProtocolMagic(..), hash)
@@ -158,7 +159,7 @@ exampleUpId :: UpId
 exampleUpId = hash exampleProposal
 
 examplePayload :: Payload
-examplePayload = Payload up uv
+examplePayload = payload up uv
  where
   up = Just exampleProposal
   uv = [exampleVote]

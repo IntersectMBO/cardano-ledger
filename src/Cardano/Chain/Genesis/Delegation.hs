@@ -24,7 +24,7 @@ import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
 import Cardano.Chain.Common (StakeholderId(..), addressHash)
 import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
-import Cardano.Crypto (ProxySecretKey(..), isSelfSignedPsk)
+import Cardano.Crypto (isSelfSignedPsk, pskDelegatePk, pskIssuerPk)
 
 
 -- | This type contains genesis state of heavyweight delegation. It wraps a map

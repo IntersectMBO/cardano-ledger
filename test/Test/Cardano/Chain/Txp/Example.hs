@@ -39,18 +39,20 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.Txp
   ( Tx(..)
-  , TxAux(..)
+  , TxAux
   , TxId
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
   , TxOutAux(..)
-  , TxPayload(..)
+  , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
   , TxWitness
   , TxpUndo
+  , mkTxAux
+  , mkTxPayload
   )
 import Cardano.Crypto
   ( AbstractHash(..)
@@ -71,7 +73,7 @@ import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKey)
 
 
 exampleTxAux :: TxAux
-exampleTxAux = TxAux tx exampleTxWitness
+exampleTxAux = mkTxAux tx exampleTxWitness
   where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
 exampleTxId :: TxId
@@ -96,7 +98,7 @@ exampleTxOutList :: (NonEmpty TxOut)
 exampleTxOutList = fromList [exampleTxOut]
 
 exampleTxPayload :: TxPayload
-exampleTxPayload = TxPayload [exampleTxAux]
+exampleTxPayload = mkTxPayload [exampleTxAux]
 
 exampleTxProof :: TxProof
 exampleTxProof = TxProof 32 mroot hashWit

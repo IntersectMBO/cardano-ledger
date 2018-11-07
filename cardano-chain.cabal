@@ -21,6 +21,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
                        Cardano.Chain.Block
+                       Cardano.Chain.Block.Header
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
@@ -38,7 +39,6 @@ library
                        Cardano.Chain.Block.Boundary
                        Cardano.Chain.Block.ExtraBodyData
                        Cardano.Chain.Block.ExtraHeaderData
-                       Cardano.Chain.Block.Header
                        Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.SlogUndo
                        Cardano.Chain.Block.Undo
@@ -154,6 +154,7 @@ test-suite cardano-chain-test
   other-modules:
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Block.Header
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Delegation.Bi

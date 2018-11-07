@@ -36,10 +36,10 @@ import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProxyCert(..)
-  , ProxySecretKey(..)
   , RedeemPublicKey
   , abstractHash
   , redeemDeterministicKeyGen
+  , unsafeProxySecretKey
   )
 import Cardano.Crypto.Signing (PublicKey(..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -76,17 +76,17 @@ exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( StakeholderId $ addressHash issuePubKey
-      , UnsafeProxySecretKey
-        { pskOmega      = HeavyDlgIndex $ EpochIndex 68300481033
-        , pskIssuerPk   = issuePubKey
-        , pskDelegatePk = PublicKey
+      , unsafeProxySecretKey
+        (HeavyDlgIndex $ EpochIndex 68300481033)
+        issuePubKey
+        (PublicKey
           (CC.XPub
             { CC.xpubPublicKey = pskDelPubKey
             , CC.xpubChaincode = pskDelChainCode
             }
           )
-        , pskCert = ProxyCert (fromRight (panic "Something went wrong") $ sig)
-        }
+        )
+        (ProxyCert (fromRight (panic "Something went wrong") $ sig))
       )
     ]
   )

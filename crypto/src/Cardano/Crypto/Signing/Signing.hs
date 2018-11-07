@@ -12,7 +12,7 @@ module Cardano.Crypto.Signing.Signing
        -- * Signing and verification
   , sign
   , signEncoded
-  , checkSig                      -- reexport
+  , checkSigDecoded               -- reexport
   , mkSigned
 
        -- * Versions for raw bytestrings
@@ -20,10 +20,10 @@ module Cardano.Crypto.Signing.Signing
   , checkSigRaw                   -- reexport
 
        -- * Proxy signature scheme
-  , verifyProxyCert               -- reexport
   , validateProxySecretKey        -- reexport
   , proxySign
   , proxyVerify
+  , proxyVerifyDecoded
   , module Cardano.Crypto.Signing.Types.Signing
   )
 where
@@ -33,15 +33,14 @@ import Cardano.Prelude
 import qualified Cardano.Crypto.Wallet as CC
 import Crypto.Random (MonadRandom, getRandomBytes)
 import Data.ByteArray (ScrubbedBytes)
-import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Formatting (build, sformat)
 
-import Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Decoded(..), Raw)
 import qualified Cardano.Binary.Class as Bi
 import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import Cardano.Crypto.Signing.Check
-  (checkSig, checkSigRaw, validateProxySecretKey, verifyProxyCert)
+  (checkSigDecoded, checkSigRaw, validateProxySecretKey)
 import Cardano.Crypto.Signing.Tag (signTag)
 import Cardano.Crypto.Signing.Types.Signing
 import Cardano.Crypto.Signing.Types.Tag (SignTag)
@@ -56,7 +55,7 @@ emptyPass = mempty
 
 -- TODO: this is just a placeholder for actual (not ready yet) derivation
 -- of keypair from seed in cardano-crypto API
-createKeypairFromSeed :: BS.ByteString -> (CC.XPub, CC.XPrv)
+createKeypairFromSeed :: ByteString -> (CC.XPub, CC.XPrv)
 createKeypairFromSeed seed =
   let prv = CC.generate seed emptyPass in (CC.toXPub prv, prv)
 
@@ -70,7 +69,7 @@ keyGen = do
   return (PublicKey pk, SecretKey sk)
 
 -- | Create key pair deterministically from 32 bytes.
-deterministicKeyGen :: BS.ByteString -> (PublicKey, SecretKey)
+deterministicKeyGen :: ByteString -> (PublicKey, SecretKey)
 deterministicKeyGen seed =
   bimap PublicKey SecretKey (createKeypairFromSeed seed)
 
@@ -138,7 +137,7 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
     )
     (pskDelegatePk psk)
     (toPublic sk)
-  | otherwise = ProxySignature {psigPsk = psk, psigSig = sigma}
+  | otherwise = AProxySignature {psigPsk = psk, psigSig = sigma}
  where
   PublicKey issuerPk = pskIssuerPk psk
   sigma              = CC.sign emptyPass delegateSk
@@ -146,6 +145,28 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
           -- it's safe to put the tag after issuerPk because `CC.unXPub
           -- issuerPk` always takes 64 bytes
               ["01", CC.unXPub issuerPk, signTag pm t, Bi.serialize' m]
+
+
+-- | Verify delegated signature given issuer's pk, signature, message
+--   space predicate and message itself.
+proxyVerifyDecoded
+  :: (Decoded t)
+  => ProtocolMagic
+  -> SignTag
+  -> ProxySignature w (BaseType t)
+  -> (w -> Bool)
+  -> t ByteString
+  -> Bool
+proxyVerifyDecoded pm t psig omegaPred m = predCorrect && sigValid
+ where
+  psk                       = psigPsk psig
+  PublicKey issuerPk        = pskIssuerPk psk
+  PublicKey pdDelegatePkRaw = pskDelegatePk psk
+  predCorrect               = omegaPred (pskOmega psk)
+  sigValid                  = CC.verify
+    pdDelegatePkRaw
+    (mconcat ["01", CC.unXPub issuerPk, signTag pm t, recoverBytes m])
+    (psigSig psig)
 
 -- CHECK: @proxyVerify
 -- | Verify delegated signature given issuer's pk, signature, message
