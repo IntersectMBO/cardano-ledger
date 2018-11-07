@@ -438,6 +438,21 @@ propEliminateInputs = property $ do
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
   Map.empty === Map.restrictKeys (utxoMap $ getUtxo l') (txins tx)
 
+-- | Property 7.5 (Completeness and Collision-Freeness of new TxIds)
+propUniqueTxIds :: Property
+propUniqueTxIds = property $ do
+  (l, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  let origTxIds      = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
+  let newTxIds       = collectIds <$> (Map.keys $ utxoMap (txouts tx))
+  let txId           = txid tx
+  if (all (== txId) newTxIds) &&
+     (not $ any (== txId) origTxIds) &&
+     Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
+    then success
+    else failure
+         where collectIds (TxIn txId _) = txId
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -458,6 +473,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "Eliminate Inputs of Transaction"
                     propEliminateInputs
+                  , testProperty
+                    "Completeness and Collision-Freeness of new TxIds"
+                    propUniqueTxIds
                   ]
                 ]
 
