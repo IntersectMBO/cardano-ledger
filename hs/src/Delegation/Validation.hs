@@ -1,6 +1,5 @@
 module Delegation.Validation
   ( ValidationError(..)
-  , Validity(..)
   ) where
 
 -- Specific validation errors for transactions.
@@ -24,16 +23,3 @@ data ValidationError =
                      -- | The transaction contains an invalid pool retirement certificate.
                      | BadPoolRetirement
                      deriving (Show, Eq)
-
--- |The validity of a transaction, where an invalid transaction
--- is represented by list of errors.
-data Validity = Valid | Invalid [ValidationError] deriving (Show, Eq)
-
-instance Semigroup Validity where
-  Valid <> b                 = b
-  a <> Valid                 = a
-  (Invalid a) <> (Invalid b) = Invalid (a ++ b)
-
-instance Monoid Validity where
-  mempty = Valid
-  mappend = (<>)
