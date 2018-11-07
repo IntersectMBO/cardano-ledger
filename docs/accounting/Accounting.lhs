@@ -1,8 +1,10 @@
 \documentclass[11pt,a4paper]{article}
 %include polycode.fmt
 
-\newcommand{\lovelace}{\ensuremath{\mathsf{lovelace~}}}
-\newcommand{\ada}{\ensuremath{\mathsf{ada~}}}
+\usepackage{xspace}
+
+\newcommand{\lovelace}{\ensuremath{\mathsf{lovelace}}\xspace}
+\newcommand{\ada}{\ensuremath{\mathsf{ada}}\xspace}
 
 \begin{document}
 
@@ -44,7 +46,7 @@ module Accounting where
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Monoid (Sum(..))
-import Lens.Micro ((^.), (&), (.~))
+import Lens.Micro ((^.), (&), (.~), (+~), (-~))
 import Lens.Micro.TH (makeLenses)
 import Numeric.Natural (Natural)
 
@@ -114,7 +116,7 @@ The two certificate deposit amounts are given by
 $\mathsf{\_keyRegDep}$ and $\mathsf{\_poolRegDep}$.
 The minimum portion of the deposit that will always
 be returned is given by $\mathsf{\_minDep}$.
-The decay constant is given by $\mathsf{\_minDep}$.
+The decay constant is given by $\mathsf{\_decayRate}$.
 The portion of rewards that go to the treasury is $\mathsf{\_tau}$,
 and the expansion proportion is given by $\mathsf{\_rho}$.
 
@@ -166,7 +168,7 @@ The $\mathsf{\_lastEpoch}$ variable is used only
 to track when decayed portions of a deposit
 are moved from the deposit pool to the reward pool,
 but for the purposes of this model we do not need to
-assuming a certain number of slots per epoch, etc.
+assume a certain number of slots per epoch, etc.
 
 \subsection{Note on lens notation}
 
@@ -190,6 +192,11 @@ And to set multiple elements we write
 
 < ls & deposits .~ Coin 7
 <    & slot .~ Slot 42
+
+Finally, to increment or decrement a field, we write
+
+< ls & deposits +~ Coin 7
+<    & slot -~ Slot 42
 
 \subsection{Methods}
 
@@ -263,16 +270,14 @@ applyAction :: LedgerState -> Action -> LedgerState
 
 The first actions is a UTxO transaction, which
 moves \lovelace out of circulation into the fee pool.
-In a real implementation, the validation rules would prevent
-a fee from beeing too high, but here we just skip it.
 \begin{code}
 applyAction ls (ActTxBody fee) =
   if fee > ls^.circulation
   then
     ls -- invalid transition, fee too high
   else
-    ls & circulation .~ ls^.circulation - fee
-       & fees .~ ls^.fees + fee
+    ls & circulation -~ fee
+       & fees +~ fee
 
 \end{code}
 
@@ -285,8 +290,8 @@ applyAction ls (ActAddCert cert) =
   case Map.lookup cert (ls^.obligations) of
     (Just _) -> ls -- invalid transition, cert already registered
     Nothing ->
-      ls & deposits .~ ls^.deposits + d
-         & circulation .~ ls^.circulation - d
+      ls & deposits +~ d
+         & circulation -~ d
          & obligations .~ Map.insert cert (ls^.slot) (ls^.obligations)
       where d = deposit cert (ls^.pconsts)
 
@@ -304,15 +309,15 @@ applyAction ls (ActDelCert cert) =
   case Map.lookup cert (ls^.obligations) of
     Nothing -> ls -- invalid transition, unknown cert
     (Just s) ->
-      ls & deposits .~ ls^.deposits - rewardAtSettlement
-         & circulation .~ ls^.circulation + rewardNow
-         & fees .~ ls^.fees + decayed
+      ls & deposits -~ refundAtSettlement
+         & circulation +~ refundNow
+         & fees +~ decayed
          & obligations .~ Map.delete cert (ls^.obligations)
       where
         lastSettlement = max (ls^.lastEpoch) s
-        rewardNow = refund cert (ls^.pconsts) ((ls^.slot) -* s)
-        rewardAtSettlement = refund cert (ls^.pconsts) (lastSettlement -* s)
-        decayed = rewardAtSettlement - rewardNow
+        refundNow = refund cert (ls^.pconsts) ((ls^.slot) -* s)
+        refundAtSettlement = refund cert (ls^.pconsts) (lastSettlement -* s)
+        decayed = refundAtSettlement - refundNow
 
 \end{code}
 
@@ -324,8 +329,8 @@ applyAction ls (ActWithdrawal amt) =
   then
     ls -- invalid transition, not enough rewards
   else
-    ls & circulation .~ ls^.circulation + amt
-       & rewards .~ ls^.rewards - amt
+    ls & circulation +~ amt
+       & rewards -~ amt
 
 \end{code}
 
@@ -353,10 +358,10 @@ in preserving ada and our rules are more general.
 \begin{code}
 applyAction ls (ActEpoch realized) =
   ls & deposits .~ oblg
-     & treasury .~ ls^.treasury + newTreasury
-     & reserves .~ ls^.reserves - expansion
-     & rewards .~ ls^.rewards + actualPool
-     & rewardPool .~ availablePool - actualPool
+     & treasury +~ newTreasury
+     & reserves -~ expansion
+     & rewards +~ paidRewards
+     & rewardPool .~ availablePool - paidRewards
      & fees .~ Coin 0
      & lastEpoch .~ ls^.slot
   where
@@ -366,7 +371,7 @@ applyAction ls (ActEpoch realized) =
     totalPool = ls^.fees + decayed + ls^.rewardPool + expansion
     newTreasury = floor $ ls^.pconsts.tau * fromIntegral totalPool
     availablePool = totalPool - newTreasury
-    actualPool = floor $ realized * fromIntegral availablePool
+    paidRewards = floor $ realized * fromIntegral availablePool
 
 \end{code}
 
@@ -380,14 +385,14 @@ applyAction ls (ActVote pc)
   -- lower obligation, increase reserves
   | newOblg < ls ^. deposits =
     lsWithNewPC & deposits .~ newOblg
-                & reserves .~ (ls ^. reserves + (ls ^. deposits - newOblg))
+                & reserves +~ (ls ^. deposits - newOblg)
 
   -- invalid transition, not enough reserves
   | ls ^. reserves < (newOblg - ls ^. deposits) = ls
 
   -- higher obligation, decrease reserves
   | otherwise = lsWithNewPC & deposits .~ newOblg
-                            & reserves .~ (ls ^. reserves - (newOblg - ls ^. deposits))
+                            & reserves -~ (newOblg - ls ^. deposits)
   where
     lsWithNewPC = ls & pconsts .~ pc
     newOblg = obligation lsWithNewPC
@@ -398,7 +403,7 @@ Lastly, there is an action which increases the slot number.
 
 \begin{code}
 applyAction ls ActNextSlot =
-  ls & slot .~ ls^.slot + 1
+  ls & slot +~ 1
 
 \end{code}
 
