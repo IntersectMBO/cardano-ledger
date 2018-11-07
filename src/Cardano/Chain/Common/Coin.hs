@@ -22,6 +22,7 @@
 
 module Cardano.Chain.Common.Coin
        ( Coin
+       , CoinError
        , mkCoin
        , mkKnownCoin
        , coinF
@@ -43,15 +44,20 @@ module Cardano.Chain.Common.Coin
 
 import           Cardano.Prelude
 
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Data.Data (Data)
-import           Formatting (Format, bprint, build, int)
+import qualified Data.Aeson as Aeson
+    (FromJSON (..), ToJSON (..))
+import           Data.Data
+    (Data)
+import           Formatting
+    (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
-import           GHC.TypeLits (type (<=))
-import qualified Text.JSON.Canonical as Canonical (FromJSON (..),
-                     ReportSchemaErrors, ToJSON (..))
+import           GHC.TypeLits
+    (type (<=))
+import qualified Text.JSON.Canonical as Canonical
+    (FromJSON (..), ReportSchemaErrors, ToJSON (..))
 
-import           Cardano.Binary.Class (Bi (..))
+import           Cardano.Binary.Class
+    (Bi (..))
 
 
 -- | Coin is the least possible unit of currency
@@ -90,6 +96,7 @@ data CoinError
   | CoinTooLarge Integer
   | CoinTooSmall Integer
   | CoinUnderflow Word64 Word64
+  deriving (Eq, Show)
 
 instance B.Buildable CoinError where
   build = \case
@@ -136,8 +143,8 @@ unsafeGetCoin = getCoin
 
 -- | Compute sum of all coins in container. Result is 'Integer' as a protection
 --   against possible overflow.
-sumCoins :: (Foldable t, Functor t) => t Coin -> Integer
-sumCoins = sum . map coinToInteger
+sumCoins :: (Foldable t, Functor t) => t Coin -> Either CoinError Coin
+sumCoins = integerToCoin . sum . map coinToInteger
 
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unsafeGetCoin
