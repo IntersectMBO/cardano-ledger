@@ -35,16 +35,16 @@ import Cardano.Crypto.Signing
   , ProxySecretKey
   , ProxySignature
   , PublicKey
+  , SafeSigner(..)
   , SecretKey
   , SignTag(..)
   , Signature
-  , Signed
-  , createProxyCert
   , createPsk
+  , emptyPassphrase
   , keyGen
-  , mkSigned
   , noPassEncrypt
   , proxySign
+  , safeCreateProxyCert
   , sign
   , signEncoded
   , toPublic
@@ -139,23 +139,22 @@ instance (Bi a, Arbitrary a) => Arbitrary (Signature a) where
 instance (Bi a, Arbitrary a) => Arbitrary (RedeemSignature a) where
     arbitrary = genRedeemSignature dummyProtocolMagic arbitrary
 
-instance (Bi a, Arbitrary a) => Arbitrary (Signed a) where
-    arbitrary = mkSigned dummyProtocolMagic <$> arbitrary <*> arbitrary <*> arbitrary
-
 instance (Bi w, Arbitrary w) => Arbitrary (ProxyCert w) where
-    arbitrary = liftA3 (createProxyCert dummyProtocolMagic) arbitrary arbitrary arbitrary
+    arbitrary = liftA3 (safeCreateProxyCert dummyProtocolMagic) arbitrary arbitrary arbitrary
 
 instance (Bi w, Arbitrary w) => Arbitrary (ProxySecretKey w) where
     arbitrary = liftA3 (createPsk dummyProtocolMagic) arbitrary arbitrary arbitrary
 
 instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
          Arbitrary (ProxySignature w a) where
-    arbitrary = do
-        delegateSk <- arbitrary
-        issuerSk <- arbitrary
-        w <- arbitrary
-        let psk = createPsk dummyProtocolMagic issuerSk (toPublic delegateSk) w
-        proxySign dummyProtocolMagic SignProxySK delegateSk psk <$> arbitrary
+  arbitrary = do
+    delegateSk <- arbitrary
+    psk        <-
+      createPsk dummyProtocolMagic
+      <$> arbitrary
+      <*> pure (toPublic delegateSk)
+      <*> arbitrary
+    proxySign dummyProtocolMagic SignProxySK delegateSk psk <$> arbitrary
 
 
 --------------------------------------------------------------------------------
@@ -194,3 +193,6 @@ instance Arbitrary HDAddressPayload where
 
 instance Arbitrary EncryptedSecretKey where
     arbitrary = noPassEncrypt <$> arbitrary
+
+instance Arbitrary SafeSigner where
+  arbitrary = SafeSigner <$> arbitrary <*> pure emptyPassphrase

@@ -15,15 +15,12 @@ import Test.Cardano.Prelude
 
 import Data.Coerce (coerce)
 
-import Test.QuickCheck (Arbitrary(..), choose)
+import Test.QuickCheck (choose)
 import Test.QuickCheck.Instances ()
 
-import Cardano.Binary.Class (Bi)
 import qualified Cardano.Binary.Class as Bi
 import Cardano.Crypto.Hashing (AbstractHash, HashAlgorithm, abstractHash)
-import Cardano.Crypto.Signing (PublicKey, SecretKey, SignTag, Signed, mkSigned)
-
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Cardano.Crypto.Signing (PublicKey, SecretKey)
 
 
 instance ArbitraryUnsafe PublicKey where
@@ -31,15 +28,6 @@ instance ArbitraryUnsafe PublicKey where
 
 instance ArbitraryUnsafe SecretKey where
     arbitraryUnsafe = Bi.unsafeDeserialize' . Bi.serialize' <$> arbitrarySizedS 128
-
--- Generating invalid `Signed` objects doesn't make sense even in
--- benchmarks
-instance (Bi a, ArbitraryUnsafe a, Arbitrary SignTag) =>
-         ArbitraryUnsafe (Signed a) where
-    arbitraryUnsafe = mkSigned <$> pure dummyProtocolMagic
-                               <*> arbitrary
-                               <*> arbitraryUnsafe
-                               <*> arbitraryUnsafe
 
 instance HashAlgorithm algo =>
          ArbitraryUnsafe (AbstractHash algo a) where

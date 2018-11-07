@@ -41,9 +41,9 @@ import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import Data.ByteString.Char8 as B
 
 import Cardano.Binary.Class (Bi(..), decodeFull', serialize')
-import Cardano.Crypto.Signing.Types.Safe
+import Cardano.Crypto.Signing.Safe
   (EncryptedSecretKey(..), PassPhrase, checkPassMatches)
-import Cardano.Crypto.Signing.Types.Signing (PublicKey(..))
+import Cardano.Crypto.Signing (PublicKey(..))
 
 
 -- | Passphrase is a hash of root public key.

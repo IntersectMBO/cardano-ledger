@@ -84,7 +84,6 @@ import Cardano.Crypto
   , SecretKey
   , SignTag(..)
   , Signature
-  , checkSigDecoded
   , hashHexF
   , isSelfSignedPsk
   , proxySign
@@ -93,6 +92,7 @@ import Cardano.Crypto
   , sign
   , toPublic
   , unsafeAbstractHash
+  , verifySignatureDecoded
   )
 
 
@@ -278,8 +278,12 @@ verifyHeader pm header = do
   unless (verifyBlockSignature $ consensusSignature consensus)
     $ throwError (HeaderInvalidSignature $ consensusSignature consensus)
  where
-  verifyBlockSignature (BlockSignature sig) =
-    checkSigDecoded pm SignMainBlock (consensusLeaderKey consensus) signed sig
+  verifyBlockSignature (BlockSignature sig) = verifySignatureDecoded
+    pm
+    SignMainBlock
+    (consensusLeaderKey consensus)
+    signed
+    sig
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
     proxyVerifyDecoded pm SignMainBlockHeavy proxySig (const True) signed
   signed    = recoverSignedBytes header

@@ -47,7 +47,7 @@ import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Crypto
-  (ProtocolMagic, SignTag(..), checkSigDecoded, redeemCheckSigDecoded)
+  (ProtocolMagic, SignTag(..), verifySignatureDecoded, verifyRedeemSigDecoded)
 
 
 -- | A representation of all the ways a transaction might be invalid
@@ -140,11 +140,13 @@ validateWitness
 validateWitness pm sigData addr witness = case witness of
 
   PkWitness pk sig -> unless
-    (checkSigDecoded pm SignTx pk sigData sig && checkPubKeyAddress pk addr)
+    (  verifySignatureDecoded pm SignTx pk sigData sig
+    && checkPubKeyAddress pk addr
+    )
     (throwError $ TxValidationInvalidWitness witness)
 
   RedeemWitness pk sig -> unless
-    (  redeemCheckSigDecoded pm SignRedeemTx pk sigData sig
+    (  verifyRedeemSigDecoded pm SignRedeemTx pk sigData sig
     && checkRedeemAddress pk addr
     )
     (throwError $ TxValidationInvalidWitness witness)

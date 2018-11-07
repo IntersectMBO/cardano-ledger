@@ -14,7 +14,7 @@ import qualified Data.Set as Set
 import Cardano.Chain.Delegation
   (HeavyDlgIndex(..), ProxySKBlockInfo, ProxySKHeavy, Undo(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
-import Cardano.Crypto (ProtocolMagic(..), safeCreatePsk)
+import Cardano.Crypto (ProtocolMagic(..), createPsk)
 
 import Test.Cardano.Chain.Common.Example (exampleStakeholderId)
 import Test.Cardano.Crypto.Example
@@ -28,7 +28,7 @@ staticProtocolMagics = map ProtocolMagic [0 .. 5]
 
 staticProxySKHeavys :: [ProxySKHeavy]
 staticProxySKHeavys = zipWith4
-  safeCreatePsk
+  createPsk
   staticProtocolMagics
   staticSafeSigners
   (examplePublicKeys 1 6)

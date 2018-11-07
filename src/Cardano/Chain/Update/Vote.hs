@@ -74,7 +74,7 @@ import Cardano.Crypto
   , SecretKey
   , SignTag(SignUSProposal, SignUSVote)
   , Signature
-  , checkSigDecoded
+  , verifySignatureDecoded
   , hash
   , hashDecoded
   , safeSign
@@ -242,7 +242,7 @@ checkProposal pm proposal = do
     (liftEither . first ProposalSystemTagError . checkSystemTag)
   let
     bodyPrefix = "\133" :: ByteString -- toLazyByteString $ encodeListLen 5
-    sigIsValid = checkSigDecoded
+    sigIsValid = verifySignatureDecoded
       pm
       SignUSProposal
       (proposalIssuer proposal)
@@ -401,7 +401,7 @@ checkVote pm uv = unless
   sigValid
   (throwError $ VoteInvalidSignature (uvSignature uv))
  where
-  sigValid = checkSigDecoded
+  sigValid = verifySignatureDecoded
     pm
     SignUSVote
     (uvKey uv)
