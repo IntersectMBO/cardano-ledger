@@ -85,15 +85,15 @@ testValidDelegation sd utxo stakeKeyRegistration sp =
     ls2 = ledgerState $ sd ++ [ DelegationData poolRegistration
                                , DelegationData stakeDelegation]
     poolRegistration = RegPool sp
+    poolhk = hashKey $ vKey stakePoolKey1
 
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
                      {
                        getDelegations =
-                         Map.fromList [(hashKey $ vKey aliceStake,
-                                        hashKey $ vKey stakePoolKey1)]
-                     , getStPools = Set.fromList [sp]
+                         Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+                     , getStPools = Map.fromList [(poolhk, (sp, Slot 0))]
                      }
                      (Epoch 0))
 

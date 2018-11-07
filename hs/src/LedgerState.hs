@@ -104,14 +104,14 @@ data DelegationState =
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
-    , getStPools     :: Set.Set StakePool -- TODO in doc its a map to DCert
+    , getStPools     :: Map.Map HashKey (StakePool, Slot)
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Epoch
     } deriving (Show, Eq)
 
 emptyDelegation :: DelegationState
 emptyDelegation =
-    DelegationState Map.empty Map.empty Map.empty Set.empty Map.empty
+    DelegationState Map.empty Map.empty Map.empty Map.empty Map.empty
 
 -- |The state associated with a 'Ledger'.
 data LedgerState =
@@ -210,7 +210,7 @@ validStakeDelegation cert (LedgerState _ ds _) =
   case cert of
     Delegate (Delegation source target)
       -> if Map.member (hashKey source) (getStKeys ds) &&
-            any (\pool -> target == poolPubKey pool) (getStPools ds)
+            Map.member (hashKey target) (getStPools ds)
          then Valid else Invalid [StakeDelegationImpossible]
     _ -> Valid
 
@@ -221,7 +221,7 @@ validStakePoolRegister _ _ = Valid
 validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
   case cert of
-    RetirePool key _ -> if any (\pool -> key == poolPubKey pool) (getStPools ds)
+    RetirePool key _ -> if Map.member (hashKey key) (getStPools ds)
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
     _                -> Valid
 
@@ -262,9 +262,9 @@ retirePools :: LedgerState -> Epoch -> LedgerState
 retirePools ls@(LedgerState _ ds _) epoch = ls
     { getDelegationState = ds
       { getStPools =
-          Set.filter
-           (\pool -> not $ Set.member (hashKey $ poolPubKey pool)
-             (Map.keysSet retiring)) $ getStPools ds
+          Map.filterWithKey
+           (\hk _ -> Map.notMember hk retiring)
+           (getStPools ds)
       , getRetiring = active }
     }
   where (active, retiring) = Map.partition (epoch /=) (getRetiring ds)
@@ -299,11 +299,15 @@ applyDCert _ (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
   }
 
 -- TODO what happens if there's already a pool registered with that key?
-applyDCert _ (RegPool sp) ls@(LedgerState _ ds _) = ls
+applyDCert slot (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
-    { getStPools = Set.insert sp (getStPools ds)
+    { getStPools = Map.insert hsk (sp, slot') pools
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
+        pools = getStPools ds
+        slot' = case Map.lookup hsk pools of
+                  Just (_, s) -> s
+                  Nothing -> slot
 
 -- TODO check epoch (not in new doc atm.)
 applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
