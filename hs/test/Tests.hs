@@ -379,6 +379,42 @@ propPreserveBalanceInitTx =
         Left _    -> failure
         Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
 
+-- | Generator for arbitrary valid ledger state, discarding any generated
+-- invalid one.
+genValidLedgerState :: Gen ([(KeyPair, KeyPair)], LedgerState)
+genValidLedgerState = do
+  (keyPairs, _, _, newState) <- genNonEmptyAndAdvanceTx
+  case newState of
+    Left _   -> Gen.discard
+    Right ls -> pure (keyPairs, ls)
+
+genValidSuccessorState :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (Coin, LedgerEntry, LedgerState)
+genValidSuccessorState keyPairs sourceState = do
+  (fee, entry, next) <- genLedgerStateTx keyPairs sourceState
+  case next of
+    Left _   -> Gen.discard
+    Right ls -> pure (fee, entry, ls)
+
+genValidStateTx :: Gen (LedgerState, Coin, LedgerEntry, LedgerState)
+genValidStateTx = do
+  (keyPairs, ls)    <- genValidLedgerState
+  (fee, entry, ls') <- genValidSuccessorState keyPairs ls
+  pure (ls, fee, entry, ls')
+
+getTxOfEntry :: LedgerEntry -> Tx
+getTxOfEntry entry =
+  case entry of
+    TransactionData wits -> body wits
+    _                    -> undefined
+
+-- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
+propBalanceTxInTxOut :: Property
+propBalanceTxInTxOut = property $ do
+  (l, fee, entry, _)  <- forAll genValidStateTx
+  let tx               = getTxOfEntry entry
+  let inps             = txins tx
+  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -389,7 +425,12 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "several transaction added to genesis ledger state"
                     propPreserveBalanceInitTx]
+                , testGroup "Property tests starting from valid ledger state"
+                  [testProperty
+                    "preserve balance restricted to TxIns in Balance of outputs"
+                    propBalanceTxInTxOut
                   ]
+                ]
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
