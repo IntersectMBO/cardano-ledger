@@ -9,17 +9,28 @@ module Cardano.Chain.Update.Payload
        , checkPayload
        ) where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build)
+import Control.Monad.Except
+  (MonadError, liftEither)
+import Formatting
+  (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Update.Vote (Proposal, ProposalError, Vote,
-                     VoteError, checkProposal, checkVote, formatMaybeProposal,
-                     formatVoteShort)
-import           Cardano.Crypto (ProtocolMagic)
+import Cardano.Binary.Class
+  (Bi (..), encodeListLen, enforceSize)
+import Cardano.Chain.Update.Vote
+  ( Proposal
+  , ProposalError
+  , Vote
+  , VoteError
+  , checkProposal
+  , checkVote
+  , formatMaybeProposal
+  , formatVoteShort
+  )
+import Cardano.Crypto
+  (ProtocolMagic)
 
 
 -- | Update System payload
@@ -64,8 +75,8 @@ checkPayload :: MonadError PayloadError m => ProtocolMagic -> Payload -> m ()
 checkPayload pm payload = do
   maybe
     (pure ())
-    (either (throwError . PayloadProposalError) pure . checkProposal pm)
+    (liftEither . first PayloadProposalError . checkProposal pm)
     (payloadProposal payload)
   forM_
     (payloadVotes payload)
-    (either (throwError . PayloadVoteError) pure . checkVote pm)
+    (liftEither . first PayloadVoteError . checkVote pm)
