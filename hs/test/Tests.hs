@@ -426,9 +426,7 @@ propPreserveOutputs :: Property
 propPreserveOutputs = property $ do
   (_, _, entry, l') <- forAll genValidStateTx
   let tx             = getTxOfEntry entry
-  if Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
-    then success
-    else failure
+  True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
 
 -- | Property 7.4 (Eliminate Inputs of Transaction)
 propEliminateInputs :: Property
@@ -446,11 +444,9 @@ propUniqueTxIds = property $ do
   let origTxIds      = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
   let newTxIds       = collectIds <$> (Map.keys $ utxoMap (txouts tx))
   let txId           = txid tx
-  if (all (== txId) newTxIds) &&
-     (not $ any (== txId) origTxIds) &&
-     Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
-    then success
-    else failure
+  True === ((all (== txId) newTxIds) &&
+            (not $ any (== txId) origTxIds) &&
+            Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l'))
          where collectIds (TxIn txId _) = txId
 
 -- | 'TestTree' of property-based testing properties.
