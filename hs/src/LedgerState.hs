@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DerivingVia #-}
 
 {-|
 Module      : LedgerState
@@ -15,7 +14,6 @@ module LedgerState
   ( LedgerState(..)
   , RewardAcnt(..)
   , getRwdAcnt
-  , Slot(..)
   , DelegationState(..)
   , Ledger
   , LedgerEntry(..)
@@ -36,11 +34,10 @@ import           Crypto.Hash             (hash)
 import           Data.List               (find)
 import qualified Data.Map                as Map
 import           Data.Maybe              (isJust, mapMaybe)
-import           Data.Monoid             (Sum(..))
 import qualified Data.Set                as Set
-import           Numeric.Natural         (Natural)
 
 import           Coin                    (Coin (..))
+import           Slot                    (Slot (..), Epoch (..))
 import           Keys
 import           UTxO
 
@@ -96,11 +93,6 @@ newtype RewardAcnt = RewardAcnt HashKey
 getRwdAcnt :: KeyPair -> RewardAcnt
 getRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
 
--- |A Slot
-newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord)
-  deriving (Semigroup, Monoid) via (Sum Natural)
-
 -- |The state associated with the current stake delegation.
 data DelegationState =
     DelegationState
@@ -114,7 +106,7 @@ data DelegationState =
     -- |The active stake pools.
     , getStPools     :: Set.Set StakePool -- TODO in doc its a map to DCert
     -- |A map of retiring stake pools to the epoch when they retire.
-    , getRetiring    :: Map.Map HashKey Natural
+    , getRetiring    :: Map.Map HashKey Epoch
     } deriving (Show, Eq)
 
 emptyDelegation :: DelegationState
@@ -129,7 +121,7 @@ data LedgerState =
     -- |The current delegation state
   , getDelegationState :: !DelegationState
     -- |The current epoch.
-  , getEpoch           :: Natural
+  , getEpoch           :: Epoch
   } deriving (Show, Eq)
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
@@ -144,7 +136,7 @@ genesisState outs = LedgerState
     [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
   ))
   emptyDelegation
-  0
+  (Epoch 0)
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs :: TxWits -> LedgerState -> Validity
@@ -266,7 +258,7 @@ asStateTransition slot ls (DelegationData cert) =
 -- Functions for stake delegation model
 
 -- |Retire the appropriate stake pools when the epoch changes.
-retirePools :: LedgerState -> Natural -> LedgerState
+retirePools :: LedgerState -> Epoch -> LedgerState
 retirePools ls@(LedgerState _ ds _) epoch = ls
     { getDelegationState = ds
       { getStPools =

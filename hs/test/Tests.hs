@@ -16,10 +16,11 @@ import qualified Hedgehog.Gen            as Gen
 import qualified Hedgehog.Range          as Range
 
 import           Coin
+import           Slot
 import           Keys
 import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
-                                          Slot (..), ValidationError (..),
+                                          ValidationError (..),
                                           asStateTransition, emptyDelegation,
                                           getRwdAcnt, genesisId, genesisState)
 import           UTxO
@@ -64,7 +65,7 @@ testLedgerValidTransactions ::
 testLedgerValidTransactions ls utxo =
     ls @?= Right (LedgerState
                      (UTxO utxo)
-                     LedgerState.emptyDelegation 0)
+                     LedgerState.emptyDelegation (Epoch 0))
 
 testValidStakeKeyRegistration ::
   [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> Assertion
@@ -74,7 +75,7 @@ testValidStakeKeyRegistration sd utxo stakeKeyRegistration =
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
-                     0)
+                     (Epoch 0))
 
 testValidDelegation ::
   [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> StakePool -> Assertion
@@ -94,7 +95,7 @@ testValidDelegation sd utxo stakeKeyRegistration sp =
                                         hashKey $ vKey stakePoolKey1)]
                      , getStPools = Set.fromList [sp]
                      }
-                     0)
+                     (Epoch 0))
 
 tx1Body :: Tx
 tx1Body = Tx
