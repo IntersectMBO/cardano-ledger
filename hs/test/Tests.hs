@@ -19,7 +19,7 @@ import           Coin
 import           Keys
 import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
-                                          ValidationError (..),
+                                          Slot (..), ValidationError (..),
                                           asStateTransition, emptyDelegation,
                                           getRwdAcnt, genesisId, genesisState)
 import           UTxO
@@ -56,7 +56,7 @@ stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
 
 ledgerState :: Ledger -> Either [ValidationError] LedgerState
-ledgerState = foldM asStateTransition genesis
+ledgerState = foldM (asStateTransition (Slot 0)) genesis
 
 
 testLedgerValidTransactions ::
@@ -141,9 +141,9 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
                    , (getRwdAcnt bobStake, Coin 0)
                    , (getRwdAcnt stakePoolKey1, Coin 0)]
   , getStKeys =
-      Set.fromList [ hashKey $ vKey aliceStake
-                   , hashKey $ vKey bobStake
-                   , hashKey $ vKey stakePoolKey1]
+      Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
+                   , (hashKey $ vKey bobStake, Slot 0)
+                   , (hashKey $ vKey stakePoolKey1, Slot 0)]
   }
 
 stakePool :: StakePool
@@ -257,6 +257,10 @@ addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
 genNatural :: Natural -> Natural -> Gen Natural
 genNatural lower upper = Gen.integral $ Range.linear lower upper
 
+-- | Generator for a Slot between 'lower' and 'upper'.
+genSlot :: Natural -> Natural -> Gen Slot
+genSlot lower upper = Slot <$> Gen.integral (Range.linear lower upper)
+
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
 genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
@@ -319,7 +323,8 @@ genLedgerStateTx :: KeyPairs -> LedgerState ->
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
-  pure (fee, ledgerEntry, asStateTransition sourceState ledgerEntry)
+  slot <- genSlot 0 1000
+  pure (fee, ledgerEntry, asStateTransition slot sourceState ledgerEntry)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
