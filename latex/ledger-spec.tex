@@ -65,7 +65,7 @@
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\HashKey}{\type{HashKey}}
 \newcommand{\Hash}{\type{Foo}}
-\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\KeyPair}{\type{KeyPair}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 %% Adding delegation
@@ -210,7 +210,7 @@ this document.
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
+      (sk, vk) & \KeyPair & \text{signing-verifying key pairs}
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
@@ -226,7 +226,7 @@ this document.
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+    & \forall (sk, vk) \in \KeyPair,~ m \in \Data,~ \sigma \in \Sig \cdot
       \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
   \end{align*}
   \emph{Notation for serialized and verified data}
