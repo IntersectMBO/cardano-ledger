@@ -490,11 +490,12 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
     { \ttl tx \leq \var{slot}
-        & \minfee{pc}{tx} \leq \txfee{tx}
-        & \txins{tx} \subseteq \dom \var{utxo}
-        \\
-        \created{pc}{utxo}{dallocs}{pallocs}{tx}
-          = \destroyed{pc}{tx}
+      & \txins{tx} \neq \emptyset
+      \\
+      \txins{tx} \subseteq \dom \var{utxo}
+      & \minfee{pc}{tx} \leq \txfee{tx}
+      \\
+      \created{pc}{utxo}{dallocs}{pallocs}{tx} = \destroyed{pc}{tx}
     }
     {
       \begin{array}{l}
