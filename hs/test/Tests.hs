@@ -418,6 +418,16 @@ propBalanceTxInTxOut = property $ do
   let inps             = txins tx
   (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
 
+-- | Property 7.3 (Preserve Outputs of Transaction)
+propPreserveOutputs :: Property
+propPreserveOutputs = property $ do
+  (_, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  if Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
+    then success
+    else failure
+         where utxoMap (UTxO m) = m
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -432,6 +442,9 @@ propertyTests = testGroup "Property-Based Testing"
                   [testProperty
                     "preserve balance restricted to TxIns in Balance of outputs"
                     propBalanceTxInTxOut
+                  , testProperty
+                    "Preserve outputs of transaction"
+                    propPreserveOutputs
                   ]
                 ]
 
