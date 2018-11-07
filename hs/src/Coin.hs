@@ -1,20 +1,18 @@
+{-# LANGUAGE DerivingVia #-}
+
 module Coin
     (
      Coin(..)
     , splitCoin
     ) where
 
+import           Data.Monoid (Sum(..))
 import           Numeric.Natural (Natural)
 
 -- |The amount of value held by a transaction output.
-newtype Coin = Coin Natural deriving (Show, Eq, Ord)
-
-instance Semigroup Coin where
-  (Coin a) <> (Coin b) = Coin (a + b)
-
-instance Monoid Coin where
-  mempty = Coin 0
-  mappend = (<>)
+newtype Coin = Coin Natural
+  deriving (Show, Eq, Ord)
+  deriving (Semigroup, Monoid) via (Sum Natural)
 
 splitCoin :: Coin -> Natural -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)
