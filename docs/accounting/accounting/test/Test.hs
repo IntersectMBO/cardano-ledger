@@ -21,7 +21,7 @@ fortyFiveBillionAda = Coin (45 * oneBillion * oneMillion)
 conservationOfLovelace :: Property
 conservationOfLovelace =
   property $ do
-    actions <- forAll $ Gen.list (Range.linear 1 100) gaction
+    actions <- forAll $ Gen.list (Range.linear 100 10000) gaction
     ls <- forAll gledgerstate
     total (foldl applyAction ls actions) === fortyFiveBillionAda
 
@@ -86,8 +86,8 @@ gaction = Gen.choice
   , ActAddCert <$> gcert
   , ActDelCert <$> gcert
   , ActWithdrawal <$> gcoin (Coin 0) (Coin 1000000)
-  , ActEpoch <$> Gen.realFloat (Range.exponentialFloat 0 1)
-  , ActVote <$> gpconsts
+  , ActEpochNoVote <$> Gen.realFloat (Range.exponentialFloat 0 1)
+  , ActEpochWithVote <$> gpconsts <*> Gen.realFloat (Range.exponentialFloat 0 1)
   , return ActNextSlot
   ]
 
@@ -173,32 +173,72 @@ testWithdrawalCalc = applyAction exampleLS (ActWithdrawal $ Coin 5) @?=
              & rewards .~ Coin 95)
 
 testEpochPres :: Assertion
-testEpochPres = testPreservation $ applyAction exampleLS (ActEpoch 0.75)
+testEpochPres = testPreservation $ applyAction exampleLS (ActEpochNoVote 0.75)
 
 testEpochCalc :: Assertion
-testEpochCalc = applyAction exampleLS (ActEpoch 0.75) @?= epochLS
+testEpochCalc = applyAction exampleLS (ActEpochNoVote 0.75) @?= epochLS
 
 testFasterDecayPres :: Assertion
-testFasterDecayPres = testPreservation $ applyAction epochLS (ActVote pc)
+testFasterDecayPres = testPreservation $ applyAction exampleLS (ActEpochWithVote pc 0.75)
   where pc = examplePc & decayRate .~ 0.0002
 
 testFasterDecayCalc :: Assertion
-testFasterDecayCalc = applyAction epochLS (ActVote pc) @?=
+testFasterDecayCalc = applyAction exampleLS (ActEpochWithVote pc 0.75) @?=
   (epochLS & deposits .~ Coin 197
            & reserves .~ Coin 14998499999973277
            & pconsts .~ pc)
   where pc = examplePc {_decayRate = 0.0002}
 
 testSlowerDecayPres :: Assertion
-testSlowerDecayPres = testPreservation $ applyAction epochLS(ActVote pc)
+testSlowerDecayPres = testPreservation $ applyAction exampleLS (ActEpochWithVote pc 0.75)
   where pc = examplePc {_decayRate = 0.00005}
 
 testSlowerDecayCalc :: Assertion
-testSlowerDecayCalc = applyAction epochLS (ActVote pc) @?=
+testSlowerDecayCalc = applyAction exampleLS (ActEpochWithVote pc 0.75) @?=
   (epochLS & deposits .~ Coin 199
            & reserves .~ Coin 14998499999973275
            & pconsts .~ pc)
   where pc = examplePc {_decayRate = 0.00005}
+
+testDelCertAfterVote :: Assertion
+testDelCertAfterVote = total (foldl applyAction ls actions) @?= fortyFiveBillionAda
+  where
+    actions = [ ActAddCert (KeyReg 147)
+              , ActNextSlot
+              , ActEpochWithVote
+                  PrtclConsts
+                    { _keyRegDep = Coin 1
+                    , _poolRegDep = Coin 0
+                    , _minDep = 0.0
+                    , _decayRate = 2.9802326e-8
+                    , _tau = 0.0
+                    , _rho = 0.0
+                    }
+                  0.0
+              , ActDelCert (KeyReg 147)
+              , ActTxBody (Coin 0)
+              ]
+    ls = LedgerState
+           { _circulation = Coin 45000000000000000
+           , _deposits = Coin 0
+           , _treasury = Coin 0
+           , _reserves = Coin 0
+           , _rewards = Coin 0
+           , _rewardPool = Coin 0
+           , _fees = Coin 0
+           , _obligations = Map.empty
+           , _pconsts =
+               PrtclConsts
+                 { _keyRegDep = Coin 0
+                 , _poolRegDep = Coin 0
+                 , _minDep = 0.0
+                 , _decayRate = 0.0
+                 , _tau = 0.0
+                 , _rho = 0.0
+                 }
+           , _slot = Slot 0
+           , _lastEpoch = Slot 0
+           }
 
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
@@ -224,6 +264,8 @@ unitTests = testGroup "Unit Tests"
 
   , testCase "slower decay preservation" testSlowerDecayPres
   , testCase "slower decay calculation" testSlowerDecayCalc
+
+  , testCase "delete a certificate afte a vote" testDelCertAfterVote
   ]
 
 propTests :: TestTree

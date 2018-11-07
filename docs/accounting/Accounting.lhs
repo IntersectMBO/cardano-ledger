@@ -249,8 +249,8 @@ data Action = ActTxBody Coin
             | ActAddCert Cert
             | ActDelCert Cert
             | ActWithdrawal Coin
-            | ActEpoch Float
-            | ActVote PrtclConsts
+            | ActEpochNoVote Float
+            | ActEpochWithVote PrtclConsts Float
             | ActNextSlot
 \end{code}
 %if style == code
@@ -335,6 +335,7 @@ applyAction ls (ActWithdrawal amt) =
 \end{code}
 
 At epoch boundaries a lot happens.
+First we consider the case where no vote happens.
 The deposit pool is set to the current refund obligations.
 This number always results in a smaller deposit pool, and the
 difference is given to the total pool from which rewards
@@ -356,7 +357,7 @@ at regular intervals, but here we are only interested
 in preserving ada and our rules are more general.
 
 \begin{code}
-applyAction ls (ActEpoch realized) =
+applyAction ls (ActEpochNoVote realized) =
   ls & deposits .~ oblg
      & treasury +~ newTreasury
      & reserves -~ expansion
@@ -375,26 +376,28 @@ applyAction ls (ActEpoch realized) =
 
 \end{code}
 
-When the protocol consts change, we set the deposit pool to the
+Now we consider an epoch boundary change where the protocol
+constants have changed due to a vote.
+The ledger state is first updated according to the `ActEpochNoVote` action.
+Next, when the protocol consts change, we set the deposit pool to the
 current refund obligations, and make up the difference with the reserves.
-This action should only be allowed to happen on an epoch boundary,
-but even if it occurs on an arbitrary slot, \lovelace is still preserved.
 
 \begin{code}
-applyAction ls (ActVote pc)
+applyAction ls (ActEpochWithVote pc realized)
   -- lower obligation, increase reserves
-  | newOblg < ls ^. deposits =
+  | newOblg < epochLs ^. deposits =
     lsWithNewPC & deposits .~ newOblg
-                & reserves +~ (ls ^. deposits - newOblg)
+                & reserves +~ (epochLs ^. deposits - newOblg)
 
   -- invalid transition, not enough reserves
-  | ls ^. reserves < (newOblg - ls ^. deposits) = ls
+  | epochLs ^. reserves < (newOblg - epochLs ^. deposits) = epochLs
 
   -- higher obligation, decrease reserves
   | otherwise = lsWithNewPC & deposits .~ newOblg
-                            & reserves -~ (newOblg - ls ^. deposits)
+                            & reserves -~ (newOblg - epochLs ^. deposits)
   where
-    lsWithNewPC = ls & pconsts .~ pc
+    epochLs = applyAction ls (ActEpochNoVote realized)
+    lsWithNewPC = epochLs & pconsts .~ pc
     newOblg = obligation lsWithNewPC
 
 \end{code}
