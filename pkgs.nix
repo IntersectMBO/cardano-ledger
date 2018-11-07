@@ -10,6 +10,7 @@ import nixpkgs {
             overrides = self: super: {
               basement = self.callHackage "basement" "0.0.8" {};
               memory = pkgs.haskell.lib.doJailbreak (self.callHackage "memory" "0.14.18" {});
+              small-steps = self.callCabal2nix "small-steps" ./specs/semantics/hs {};
               cs-ledger = pkgs.haskell.lib.overrideCabal (self.callCabal2nix "cs-ledger" ./specs/ledger/hs {}) (old: {
                 enableParallelBuilding = false;
               });
