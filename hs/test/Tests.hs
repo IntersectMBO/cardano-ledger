@@ -324,13 +324,13 @@ genLedgerStateTx keyList sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
+  :: Gen ([(KeyPair, KeyPair)], Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- Gen.integral $ Range.linear 1 10
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
-  pure (fees, ls, ls')
+  pure (keyPairs, fees, ls, ls')
 
 -- | Generator for a fixed number of 'n' transaction step executions, using the
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
@@ -374,7 +374,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
     property $ do
-      (fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
       case next of
         Left _    -> failure
         Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
