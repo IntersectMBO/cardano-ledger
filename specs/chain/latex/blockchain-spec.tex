@@ -98,6 +98,7 @@
 \newcommand{\bsigname}{bSig}
 \newcommand{\bixname}{bIx}
 \newcommand{\bslname}{bSl}
+\newcommand{\bsignername}{bSigner}
 
 \newcommand{\qrestrname}{qRestrict}
 \newcommand{\qpopname}{qPop}
@@ -122,6 +123,7 @@
 \newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
 \newcommand{\bix}[1]{\fun{\bixname} ~ #1}
 \newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
+\newcommand{\bsigner}[1]{\fun{\bsignername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
@@ -143,7 +145,7 @@
 
 \author{Marko Dimjašević}
 
-\date{November 5, 2018}
+\date{November 7, 2018}
 
 \maketitle
 
@@ -319,6 +321,7 @@ projection functions for the following:
 \item a block index,
 \item a block hash pointing to the block's predecessor,
 \item a slot it is in,
+\item a verification key of the block signer,
 \item a set of heavyweight delegation certificates in the body, and
 \item a cryptographic signature.
 \end{itemize}
@@ -363,6 +366,7 @@ Figure~\ref{fig:block-defs}.
     \fun{\hashname} & \in \Block \totalf \BHash
       & \text{previous block's hash} \\
     \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
+    \fun{\bsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
     \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates} \\
     \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
@@ -634,7 +638,8 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      ix = \bix{b} \wedge \hash{b} = \hashofblock{p} \\
+      ix = \bix{b} \wedge vk_d = \bsigner{b} \\
+      \hash{b} = \hashofblock{p} \\
       \delegation{ds}{vk_s}{vk_d} \\
       \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
