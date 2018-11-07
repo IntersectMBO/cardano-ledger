@@ -313,11 +313,11 @@ genTxLedgerEntry keyList (UTxO m) = do
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
 genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState ->
-                    Gen (Coin, Either [ValidationError] LedgerState)
+                    Gen (Coin, LedgerEntry, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
-  pure (fee, asStateTransition sourceState ledgerEntry)
+  pure (fee, ledgerEntry, asStateTransition sourceState ledgerEntry)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -340,7 +340,7 @@ repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState ->
             Gen (Coin, Either [ValidationError] LedgerState)
 repeatTx 0 _ fees ls = pure (fees, Right ls)
 repeatTx n !keyPairs !fees !ls = do
-  (fee, next) <- genLedgerStateTx keyPairs ls
+  (fee, _, next) <- genLedgerStateTx keyPairs ls
   case next of
     Left  _   -> pure (fees, next)
     Right ls' -> repeatTx (n - 1) keyPairs (fee <> fees) ls'
