@@ -27,6 +27,8 @@ import           UTxO
 import           Delegation.Certificates (Cert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
+type KeyPairs = [(KeyPair, KeyPair)]
+
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
 
@@ -235,20 +237,20 @@ genOwnerList lower upper = do
   return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
 
 -- | Generates a list of '(pay, stake)' key pairs.
-genKeyPairs :: Int -> Int -> Gen [(KeyPair, KeyPair)]
+genKeyPairs :: Int -> Int -> Gen KeyPairs
 genKeyPairs lower upper =
     fmap (\(a, b) -> (keyPair a, keyPair b))
              <$> genOwnerList lower upper
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: [(KeyPair, KeyPair)] -> [(HashKey, HashKey)]
+hashKeyPairs :: KeyPairs -> [(HashKey, HashKey)]
 hashKeyPairs keyPairs =
     (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
-addrTxins :: [(KeyPair, KeyPair)] -> [Addr]
+addrTxins :: KeyPairs -> [Addr]
 addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
 
 -- | Generator for a natural number between 'lower' and 'upper'.
@@ -283,7 +285,7 @@ genNonemptyGenesisState = do
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen (Coin, LedgerEntry)
+genTxLedgerEntry :: KeyPairs -> UTxO -> Gen (Coin, LedgerEntry)
 genTxLedgerEntry keyList (UTxO m) = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
@@ -312,42 +314,42 @@ genTxLedgerEntry keyList (UTxO m) = do
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
-genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState ->
-                    Gen (Coin, Either [ValidationError] LedgerState)
+genLedgerStateTx :: KeyPairs -> LedgerState ->
+                    Gen (Coin, LedgerEntry, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
-  pure (fee, asStateTransition sourceState ledgerEntry)
+  pure (fee, ledgerEntry, asStateTransition sourceState ledgerEntry)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (Coin, LedgerState, Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- Gen.integral $ Range.linear 1 10
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
-  pure (fees, ls, ls')
+  pure (keyPairs, fees, ls, ls')
 
 -- | Generator for a fixed number of 'n' transaction step executions, using the
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
-repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState ->
+repeatTx :: Natural -> KeyPairs -> Coin -> LedgerState ->
             Gen (Coin, Either [ValidationError] LedgerState)
 repeatTx 0 _ fees ls = pure (fees, Right ls)
 repeatTx n !keyPairs !fees !ls = do
-  (fee, next) <- genLedgerStateTx keyPairs ls
+  (fee, _, next) <- genLedgerStateTx keyPairs ls
   case next of
     Left  _   -> pure (fees, next)
     Right ls' -> repeatTx (n - 1) keyPairs (fee <> fees) ls'
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
+findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findAddrKeyPair (AddrAccount _ _) _ = undefined
@@ -374,10 +376,78 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
     property $ do
-      (fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
       case next of
         Left _    -> failure
         Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
+
+-- | Generator for arbitrary valid ledger state, discarding any generated
+-- invalid one.
+genValidLedgerState :: Gen (KeyPairs, LedgerState)
+genValidLedgerState = do
+  (keyPairs, _, _, newState) <- genNonEmptyAndAdvanceTx
+  case newState of
+    Left _   -> Gen.discard
+    Right ls -> pure (keyPairs, ls)
+
+genValidSuccessorState :: KeyPairs -> LedgerState ->
+  Gen (Coin, LedgerEntry, LedgerState)
+genValidSuccessorState keyPairs sourceState = do
+  (fee, entry, next) <- genLedgerStateTx keyPairs sourceState
+  case next of
+    Left _   -> Gen.discard
+    Right ls -> pure (fee, entry, ls)
+
+genValidStateTx :: Gen (LedgerState, Coin, LedgerEntry, LedgerState)
+genValidStateTx = do
+  (keyPairs, ls)    <- genValidLedgerState
+  (fee, entry, ls') <- genValidSuccessorState keyPairs ls
+  pure (ls, fee, entry, ls')
+
+getTxOfEntry :: LedgerEntry -> Tx
+getTxOfEntry entry =
+  case entry of
+    TransactionData wits -> body wits
+    _                    -> undefined
+
+-- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
+propBalanceTxInTxOut :: Property
+propBalanceTxInTxOut = property $ do
+  (l, fee, entry, _)  <- forAll genValidStateTx
+  let tx               = getTxOfEntry entry
+  let inps             = txins tx
+  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
+
+utxoMap :: UTxO -> Map.Map TxIn TxOut
+utxoMap (UTxO m) = m
+
+-- | Property 7.3 (Preserve Outputs of Transaction)
+propPreserveOutputs :: Property
+propPreserveOutputs = property $ do
+  (_, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
+
+-- | Property 7.4 (Eliminate Inputs of Transaction)
+propEliminateInputs :: Property
+propEliminateInputs = property $ do
+  (_, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  -- no element of 'txins tx' is a key in the 'UTxO' of l'
+  Map.empty === Map.restrictKeys (utxoMap $ getUtxo l') (txins tx)
+
+-- | Property 7.5 (Completeness and Collision-Freeness of new TxIds)
+propUniqueTxIds :: Property
+propUniqueTxIds = property $ do
+  (l, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  let origTxIds      = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
+  let newTxIds       = collectIds <$> (Map.keys $ utxoMap (txouts tx))
+  let txId           = txid tx
+  True === ((all (== txId) newTxIds) &&
+            (not $ any (== txId) origTxIds) &&
+            Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l'))
+         where collectIds (TxIn txId _) = txId
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
@@ -389,7 +459,21 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "several transaction added to genesis ledger state"
                     propPreserveBalanceInitTx]
+                , testGroup "Property tests starting from valid ledger state"
+                  [testProperty
+                    "preserve balance restricted to TxIns in Balance of outputs"
+                    propBalanceTxInTxOut
+                  , testProperty
+                    "Preserve outputs of transaction"
+                    propPreserveOutputs
+                  , testProperty
+                    "Eliminate Inputs of Transaction"
+                    propEliminateInputs
+                  , testProperty
+                    "Completeness and Collision-Freeness of new TxIds"
+                    propUniqueTxIds
                   ]
+                ]
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
