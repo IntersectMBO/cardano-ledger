@@ -25,4 +25,32 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch"
 ```
 
-## Building the executable specs
+## Building the executable specification
+
+The executable specifications can be built and tested using
+[Nix](https://nixos.org/nix/).
+
+To build to go to the directory in which the executable specifications are
+(e.g. [`ledger/hs`](ledger/hs)) and then run:
+
+```sh
+nix-build
+```
+
+To start a REPL first make sure to run the configure script:
+
+```sh
+nix-shell --pure --run "runhaskell Setup.hs configure"
+```
+
+then run:
+
+```sh
+nix-shell --pure --run "runhaskell Setup.hs repl"
+```
+
+To test run:
+
+```sh
+nix-shell --pure --run "runhaskell Setup.hs test"
+```
