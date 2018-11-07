@@ -12,6 +12,8 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 module LedgerState
   ( LedgerState(..)
+  , RewardAcnt(..)
+  , getRwdAcnt
   , DelegationState(..)
   , Ledger
   , LedgerEntry(..)
@@ -84,14 +86,21 @@ instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
 
+-- |An account based address for a rewards
+newtype RewardAcnt = RewardAcnt HashKey
+  deriving (Show, Eq, Ord)
+
+getRwdAcnt :: KeyPair -> RewardAcnt
+getRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
+
 -- |The state associated with the current stake delegation.
 data DelegationState =
     DelegationState
     {
     -- |The active accounts.
-      getAccounts    :: Map.Map HashKey Coin
+      getAccounts    :: Map.Map RewardAcnt Coin
     -- |The active stake keys.
-    , getStKeys      :: Set.Set HashKey
+    , getStKeys      :: Set.Set HashKey --TODO map to slot
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
@@ -270,14 +279,14 @@ applyDCert :: DCert -> LedgerState -> LedgerState
 applyDCert (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Set.insert hk_sk (getStKeys ds)
-    , getAccounts = Map.insert hk_sk (Coin 0) (getAccounts ds)}
+    , getAccounts = Map.insert (RewardAcnt hk_sk) (Coin 0) (getAccounts ds)}
   }
   where hk_sk = hashKey key
 
 applyDCert (DeRegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Set.delete hk_sk (getStKeys ds)
-    , getAccounts = Map.delete hk_sk (getAccounts ds)
+    , getAccounts = Map.delete (RewardAcnt hk_sk) (getAccounts ds)
     , getDelegations = Map.delete hk_sk (getDelegations ds) }
   }
   where hk_sk = hashKey key

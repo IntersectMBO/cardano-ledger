@@ -21,7 +21,7 @@ import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
                                           ValidationError (..),
                                           asStateTransition, emptyDelegation,
-                                          genesisId, genesisState)
+                                          getRwdAcnt, genesisId, genesisState)
 import           UTxO
 
 import           Delegation.Certificates (DCert (..))
@@ -137,9 +137,9 @@ stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   {
     getAccounts =
-      Map.fromList [ (hashKey $ vKey aliceStake, Coin 0)
-                   , (hashKey $ vKey bobStake, Coin 0)
-                   , (hashKey $ vKey stakePoolKey1, Coin 0)]
+      Map.fromList [ (getRwdAcnt aliceStake, Coin 0)
+                   , (getRwdAcnt bobStake, Coin 0)
+                   , (getRwdAcnt stakePoolKey1, Coin 0)]
   , getStKeys =
       Set.fromList [ hashKey $ vKey aliceStake
                    , hashKey $ vKey bobStake
