@@ -4,9 +4,8 @@ module Delegation.Certificates
   , authDCert
   ) where
 
-import           Numeric.Natural      (Natural)
-
 import           Keys
+import           Slot (Epoch(..))
 
 import           Delegation.StakePool
 
@@ -18,7 +17,7 @@ data DCert = -- | A stake key registration certificate.
             -- | A stake pool registration certificate.
           | RegPool StakePool
             -- | A stake pool retirement certificate.
-          | RetirePool VKey Natural
+          | RetirePool VKey Epoch
             -- | A stake delegation certificate.
           | Delegate Delegation
   deriving (Show, Eq, Ord)
