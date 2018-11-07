@@ -418,6 +418,9 @@ propBalanceTxInTxOut = property $ do
   let inps             = txins tx
   (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
 
+utxoMap :: UTxO -> Map.Map TxIn TxOut
+utxoMap (UTxO m) = m
+
 -- | Property 7.3 (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
 propPreserveOutputs = property $ do
@@ -426,7 +429,14 @@ propPreserveOutputs = property $ do
   if Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
     then success
     else failure
-         where utxoMap (UTxO m) = m
+
+-- | Property 7.4 (Eliminate Inputs of Transaction)
+propEliminateInputs :: Property
+propEliminateInputs = property $ do
+  (_, _, entry, l') <- forAll genValidStateTx
+  let tx             = getTxOfEntry entry
+  -- no element of 'txins tx' is a key in the 'UTxO' of l'
+  Map.empty === Map.restrictKeys (utxoMap $ getUtxo l') (txins tx)
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
@@ -445,6 +455,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "Preserve outputs of transaction"
                     propPreserveOutputs
+                  , testProperty
+                    "Eliminate Inputs of Transaction"
+                    propEliminateInputs
                   ]
                 ]
 
