@@ -27,6 +27,8 @@ import           UTxO
 import           Delegation.Certificates (Cert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
+type KeyPairs = [(KeyPair, KeyPair)]
+
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
 
@@ -235,20 +237,20 @@ genOwnerList lower upper = do
   return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
 
 -- | Generates a list of '(pay, stake)' key pairs.
-genKeyPairs :: Int -> Int -> Gen [(KeyPair, KeyPair)]
+genKeyPairs :: Int -> Int -> Gen KeyPairs
 genKeyPairs lower upper =
     fmap (\(a, b) -> (keyPair a, keyPair b))
              <$> genOwnerList lower upper
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: [(KeyPair, KeyPair)] -> [(HashKey, HashKey)]
+hashKeyPairs :: KeyPairs -> [(HashKey, HashKey)]
 hashKeyPairs keyPairs =
     (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
-addrTxins :: [(KeyPair, KeyPair)] -> [Addr]
+addrTxins :: KeyPairs -> [Addr]
 addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
 
 -- | Generator for a natural number between 'lower' and 'upper'.
@@ -283,7 +285,7 @@ genNonemptyGenesisState = do
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTxLedgerEntry :: [(KeyPair, KeyPair)] -> UTxO -> Gen (Coin, LedgerEntry)
+genTxLedgerEntry :: KeyPairs -> UTxO -> Gen (Coin, LedgerEntry)
 genTxLedgerEntry keyList (UTxO m) = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
@@ -312,7 +314,7 @@ genTxLedgerEntry keyList (UTxO m) = do
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
-genLedgerStateTx :: [(KeyPair, KeyPair)] -> LedgerState ->
+genLedgerStateTx :: KeyPairs -> LedgerState ->
                     Gen (Coin, LedgerEntry, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
@@ -324,7 +326,7 @@ genLedgerStateTx keyList sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen ([(KeyPair, KeyPair)], Coin, LedgerState, Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- Gen.integral $ Range.linear 1 10
@@ -336,7 +338,7 @@ genNonEmptyAndAdvanceTx = do
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
-repeatTx :: Natural -> [(KeyPair, KeyPair)] -> Coin -> LedgerState ->
+repeatTx :: Natural -> KeyPairs -> Coin -> LedgerState ->
             Gen (Coin, Either [ValidationError] LedgerState)
 repeatTx 0 _ fees ls = pure (fees, Right ls)
 repeatTx n !keyPairs !fees !ls = do
@@ -347,7 +349,7 @@ repeatTx n !keyPairs !fees !ls = do
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findAddrKeyPair :: Addr -> [(KeyPair, KeyPair)] -> KeyPair
+findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findAddrKeyPair (AddrAccount _ _) _ = undefined
@@ -381,14 +383,15 @@ propPreserveBalanceInitTx =
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Gen ([(KeyPair, KeyPair)], LedgerState)
+genValidLedgerState :: Gen (KeyPairs, LedgerState)
 genValidLedgerState = do
   (keyPairs, _, _, newState) <- genNonEmptyAndAdvanceTx
   case newState of
     Left _   -> Gen.discard
     Right ls -> pure (keyPairs, ls)
 
-genValidSuccessorState :: [(KeyPair, KeyPair)] -> LedgerState -> Gen (Coin, LedgerEntry, LedgerState)
+genValidSuccessorState :: KeyPairs -> LedgerState ->
+  Gen (Coin, LedgerEntry, LedgerState)
 genValidSuccessorState keyPairs sourceState = do
   (fee, entry, next) <- genLedgerStateTx keyPairs sourceState
   case next of
