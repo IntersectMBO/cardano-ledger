@@ -145,16 +145,17 @@
 
 \author{Marko Dimjašević}
 
-\date{November 7, 2018}
+\date{November 8, 2018}
 
 \maketitle
 
 \begin{abstract}
   This documents defines inference rules for operations on a blockchain as a
-  specification of the blockchain layer.
-%
-In particular, a block validity definition is given, which is accompanied by
-small-step operational semantics inference rules.
+  specification of the blockchain layer of Cardano in the Byron release and in
+  a transition to the Shelley release.
+  %
+  In particular, a block validity definition is given, which is accompanied by
+  small-step operational semantics inference rules.
 \end{abstract}
 
 \tableofcontents
@@ -166,6 +167,10 @@ small-step operational semantics inference rules.
 The idea behind this document is to formalise what it means for a new block to
 be added to the blockchain to be valid.
 %
+The scope of the document is the Byron release and a transition phase to the
+Shelley release of the Cardano blockchain platform.
+
+
 Unless a new block is valid, it cannot be added to the blockchain and thereby
 extend it.
 %
