@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -21,30 +20,49 @@ module Cardano.Chain.Txp.Tx
        , _TxOut
        ) where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Lens (makeLenses, makePrisms)
-import           Data.Aeson (FromJSON (..), FromJSONKey (..),
-                     FromJSONKeyFunction (..), ToJSON (toJSON), ToJSONKey (..),
-                     object, withObject, (.:), (.=))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Data.Aeson.Types (toJSONKeyText)
+import Control.Lens
+  (makeLenses, makePrisms)
+import Data.Aeson
+  ( FromJSON (..)
+  , FromJSONKey (..)
+  , FromJSONKeyFunction (..)
+  , ToJSON (toJSON)
+  , ToJSONKey (..)
+  , object
+  , withObject
+  , (.:)
+  , (.=)
+  )
+import Data.Aeson.TH
+  (defaultOptions, deriveJSON)
+import Data.Aeson.Types
+  (toJSONKeyText)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import           Formatting (Format, bprint, build, builder, int, sformat)
+import Formatting
+  (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Case (..),
-                     decodeKnownCborDataItem, decodeUnknownCborDataItem,
-                     encodeKnownCborDataItem, encodeListLen,
-                     encodeUnknownCborDataItem, enforceSize,
-                     knownCborDataItemSizeExpr, szCases)
-import           Cardano.Chain.Common (Address (..), Coin, coinF, coinToInteger,
-                     decodeTextAddress, integerToCoin)
-import           Cardano.Chain.Common.Attributes (Attributes,
-                     areAttributesKnown)
-import           Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF,
-                     shortHashF)
+import Cardano.Binary.Class
+  ( Bi (..)
+  , Case (..)
+  , decodeKnownCborDataItem
+  , decodeUnknownCborDataItem
+  , encodeKnownCborDataItem
+  , encodeListLen
+  , encodeUnknownCborDataItem
+  , enforceSize
+  , knownCborDataItemSizeExpr
+  , szCases
+  )
+import Cardano.Chain.Common
+  (Address (..), Coin, coinF, coinToInteger, decodeTextAddress, integerToCoin)
+import Cardano.Chain.Common.Attributes
+  (Attributes, areAttributesKnown)
+import Cardano.Crypto
+  (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 
 
 --------------------------------------------------------------------------------

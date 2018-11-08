@@ -68,11 +68,14 @@ library
 
                        Cardano.Chain.Genesis.AvvmBalances
                        Cardano.Chain.Genesis.Config
+                       Cardano.Chain.Genesis.Data
                        Cardano.Chain.Genesis.Delegation
                        Cardano.Chain.Genesis.Hash
                        Cardano.Chain.Genesis.Initializer
+                       Cardano.Chain.Genesis.NonAvvmBalances
                        Cardano.Chain.Genesis.ProtocolConstants
                        Cardano.Chain.Genesis.Spec
+                       Cardano.Chain.Genesis.WStakeholders
 
                        Cardano.Chain.Slotting.Data
                        Cardano.Chain.Slotting.EpochIndex
@@ -80,6 +83,7 @@ library
                        Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
 
+                       Cardano.Chain.Txp.GenesisUTxO
                        Cardano.Chain.Txp.Tx
                        Cardano.Chain.Txp.TxAux
                        Cardano.Chain.Txp.TxOutAux
@@ -88,6 +92,8 @@ library
                        Cardano.Chain.Txp.TxProof
                        Cardano.Chain.Txp.TxWitness
                        Cardano.Chain.Txp.Undo
+                       Cardano.Chain.Txp.UTxO
+                       Cardano.Chain.Txp.Validation
 
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.BlockVersion
@@ -144,7 +150,7 @@ library
   if (!flag(development))
     ghc-options:         -Werror
 
-test-suite test
+test-suite cardano-chain-test
   hs-source-dirs:      test
   main-is:             test.hs
   type:                exitcode-stdio-1.0
@@ -169,6 +175,7 @@ test-suite test
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json
+                       Test.Cardano.Chain.Txp.Validation
                        Test.Cardano.Chain.Update.Bi
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen

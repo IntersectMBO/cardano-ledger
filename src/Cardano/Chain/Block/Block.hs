@@ -36,40 +36,73 @@ module Cardano.Chain.Block.Block
        , dropBoundaryBlock
        ) where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, int, shown)
+import Control.Monad.Except
+  (MonadError (..), liftEither)
+import Formatting
+  (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
-                     Dropper, Encoding, encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Body (Body (..), BodyError, bodyTxs,
-                     verifyBody)
-import           Cardano.Chain.Block.Boundary (dropBoundaryBody,
-                     dropBoundaryExtraBodyData)
-import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData (..))
-import           Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData (..))
-import           Cardano.Chain.Block.Header (BlockSignature (..), Header (..),
-                     HeaderError, HeaderHash, dropBoundaryHeader, hashHeader,
-                     headerAttributes, headerBlockVersion, headerDifficulty,
-                     headerEBDataProof, headerLeaderKey, headerSignature,
-                     headerSlot, headerSoftwareVersion, mkHeaderExplicit,
-                     verifyHeader)
-import           Cardano.Chain.Block.Proof (Proof (..), ProofError, checkProof)
-import           Cardano.Chain.Common (Attributes, ChainDifficulty,
-                     mkAttributes)
-import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
-import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
-import           Cardano.Chain.Genesis.Hash (GenesisHash (..))
-import           Cardano.Chain.Slotting (SlotId (..))
-import           Cardano.Chain.Ssc (SscPayload)
-import           Cardano.Chain.Txp.TxPayload (TxPayload)
-import           Cardano.Chain.Update.BlockVersion (BlockVersion)
-import qualified Cardano.Chain.Update.Payload as Update (Payload)
-import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey,
-                     hash)
+import Cardano.Binary.Class
+  ( Bi (..)
+  , Decoder
+  , DecoderError (..)
+  , Dropper
+  , Encoding
+  , encodeListLen
+  , enforceSize
+  )
+import Cardano.Chain.Block.Body
+  (Body (..), BodyError, bodyTxs, verifyBody)
+import Cardano.Chain.Block.Boundary
+  (dropBoundaryBody, dropBoundaryExtraBodyData)
+import Cardano.Chain.Block.ExtraBodyData
+  (ExtraBodyData (..))
+import Cardano.Chain.Block.ExtraHeaderData
+  (ExtraHeaderData (..))
+import Cardano.Chain.Block.Header
+  ( BlockSignature (..)
+  , Header (..)
+  , HeaderError
+  , HeaderHash
+  , dropBoundaryHeader
+  , hashHeader
+  , headerAttributes
+  , headerBlockVersion
+  , headerDifficulty
+  , headerEBDataProof
+  , headerLeaderKey
+  , headerSignature
+  , headerSlot
+  , headerSoftwareVersion
+  , mkHeaderExplicit
+  , verifyHeader
+  )
+import Cardano.Chain.Block.Proof
+  (Proof (..), ProofError, checkProof)
+import Cardano.Chain.Common
+  (Attributes, ChainDifficulty, mkAttributes)
+import Cardano.Chain.Delegation.HeavyDlgIndex
+  (ProxySKBlockInfo)
+import qualified Cardano.Chain.Delegation.Payload as Delegation
+  (Payload)
+import Cardano.Chain.Genesis.Hash
+  (GenesisHash (..))
+import Cardano.Chain.Slotting
+  (SlotId (..))
+import Cardano.Chain.Ssc
+  (SscPayload)
+import Cardano.Chain.Txp.TxPayload
+  (TxPayload)
+import Cardano.Chain.Update.BlockVersion
+  (BlockVersion)
+import qualified Cardano.Chain.Update.Payload as Update
+  (Payload)
+import Cardano.Chain.Update.SoftwareVersion
+  (SoftwareVersion)
+import Cardano.Crypto
+  (Hash, ProtocolMagic, PublicKey, SecretKey, hash)
 
 
 --------------------------------------------------------------------------------
@@ -223,15 +256,15 @@ instance B.Buildable BlockError where
 
 verifyBlock :: MonadError BlockError m => ProtocolMagic -> Block -> m ()
 verifyBlock pm block = do
-  either (throwError . BlockHeaderError) pure
-    $ verifyHeader pm (blockHeader block)
-  either (throwError . BlockBodyError) pure $ verifyBody pm (blockBody block)
+  liftEither . first BlockHeaderError $ verifyHeader pm (blockHeader block)
+  liftEither . first BlockBodyError $ verifyBody pm (blockBody block)
   -- No need to verify the main extra body data. It's an 'Attributes ()'
   -- which is valid whenever it's well-formed.
   --
   -- Check internal consistency: the body proofs are all correct.
-  either (throwError . BlockProofError) pure
-    $ checkProof (blockBody block) (blockProof block)
+  liftEither . first BlockProofError $ checkProof
+    (blockBody block)
+    (blockProof block)
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
   let extraDataHash = hash $ blockExtraData block

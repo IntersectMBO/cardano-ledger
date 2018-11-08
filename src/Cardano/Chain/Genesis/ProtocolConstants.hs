@@ -1,5 +1,10 @@
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Genesis.ProtocolConstants
        ( GenesisProtocolConstants (..)
@@ -11,11 +16,15 @@ import           Data.Aeson.Options
     (defaultOptions)
 import           Data.Aeson.TH
     (deriveJSON)
+import           Text.JSON.Canonical
+    (FromJSON (..), Int54, JSValue (..), ToJSON (..), fromJSField, mkObject)
+
 
 import           Cardano.Chain.ProtocolConstants
     (VssMaxTTL (..), VssMinTTL (..))
 import           Cardano.Crypto
     (ProtocolMagic (..))
+
 
 -- | 'GensisProtocolConstants' are not really part of genesis global state,
 -- but they affect consensus, so they are part of 'GenesisSpec' and
@@ -30,5 +39,22 @@ data GenesisProtocolConstants = GenesisProtocolConstants
     -- | VSS certificates min timeout to live (number of epochs).
   , gpcVssMinTTL     :: !VssMinTTL
   } deriving (Show, Eq, Generic)
+
+instance Monad m => ToJSON m GenesisProtocolConstants where
+  toJSON gpc = mkObject
+  -- 'k' definitely won't exceed the limit
+    [ ("k"            , pure . JSNum . fromIntegral $ gpcK gpc)
+    , ("protocolMagic", toJSON . getProtocolMagic $ gpcProtocolMagic gpc)
+    , ("vssMaxTTL"    , toJSON $ gpcVssMaxTTL gpc)
+    , ("vssMinTTL"    , toJSON $ gpcVssMinTTL gpc)
+    ]
+
+instance MonadError SchemaError m => FromJSON m GenesisProtocolConstants where
+  fromJSON obj =
+    GenesisProtocolConstants
+      <$> (fromIntegral @Int54 <$> fromJSField obj "k")
+      <*> (ProtocolMagic <$> fromJSField obj "protocolMagic")
+      <*> fromJSField obj "vssMaxTTL"
+      <*> fromJSField obj "vssMinTTL"
 
 deriveJSON defaultOptions ''GenesisProtocolConstants
