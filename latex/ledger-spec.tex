@@ -186,7 +186,40 @@ The transition system is explained in \cite{small_step_semantics}.
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
   keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
   $a \mapsto b \in m$ is equivalent to $m~ a = b$.
+\item[Map Operations] Figure \ref{fig:notation:nonstandard}
+  describes some non-standard map operations.
+
 \end{description}
+
+\begin{figure}
+  \begin{align*}
+    \var{set} \restrictdom \var{map}
+    & = \{ k \mapsto v \mid k \mapsto v \in \var{map}, ~ k \in \var{set} \}
+    & \text{domain foo restriction}
+    \\
+    \var{set} \subtractdom \var{map}
+    & = \{ k \mapsto v \mid k \mapsto v \in \var{map}, ~ k \notin \var{set} \}
+    & \text{domain exclusion}
+    \\
+    \var{map} \restrictrange \var{set}
+    & = \{ k \mapsto v \mid k \mapsto v \in \var{map}, ~ v \in \var{set} \}
+    & \text{range restriction}
+    \\
+    \var{map} \subtractrange \var{set}
+    & = \{ k \mapsto v \mid k \mapsto v \in \var{map}, ~ v \notin \var{set} \}
+    & \text{range exclusion}
+    \\
+    A \unionoverrideRight B
+    & = (\dom B \subtractdom A)\cup B
+    & \text{union override right}
+    \\
+    A \unionoverrideLeft B
+    & = A \cup (\dom A \subtractdom B)
+    & \text{union override left}
+  \end{align*}
+  \caption{Non-standard map operators}
+  \label{fig:notation:nonstandard}
+\end{figure}
 
 \section{Cryptographic primitives}
 \label{sec:crypto-primitives}
@@ -282,17 +315,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     \end{array}
   \end{equation*}
   %
-  \emph{Derived types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-      \var{allocs}
-      & \Allocs
-      & hkeys \mapsto slot
-      & \HashKey \to \Slot
-      & \text{resource allocations}
-    \end{array}
-  \end{equation*}
-  %
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -325,11 +347,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       & \text{total deposits for transaction} \\
       & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{d}~pc~c)
       \nextdef
-      & \fun{poolAllocs} \in (\HashKey \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
-      & \text{pool allocations} \\
-      & \fun{poolAllocs}~\var{stpool} =
-          \{hashKey \mapsto slot \mid hashKey \mapsto (\_, slot) \in \var{stpool}\}
-      \nextdef
       & \fun{refund} \in \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
       & \text{total refund for a certificate} \\
       & \refund{allocs}{pc}{slot}{c} =\\
@@ -350,9 +367,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \nextdef
       & \fun{refunds} \in \PrtclConsts \to \Allocs \to \Allocs \to \Tx \to \Coin
       & \text{total refunds for transaction} \\
-      & \refunds{pc}{dallocs}{pallocs}{tx} =\\
-      &   \sum\limits_{c \in \fun{dderegister}~tx} \refund{pc}{dallocs}{(\ttl{tx})}{c}\\
-      &   ~~~+ \sum\limits_{c \in \fun{dretire}~tx} \refund{pc}{pallocs}{(\retire{c})}{c}
+      & \refunds{pc}{stkeys}{stpools}{tx} =\\
+      &   \sum\limits_{c \in \fun{dderegister}~tx} \refund{pc}{stkeys}{(\ttl{tx})}{c}\\
+      &   ~~~+ \sum\limits_{c \in \fun{dretire}~tx} \refund{pc}{stpools}{(\retire{c})}{c}
   \end{align*}
   \caption{Functions used in Deposits}
   \label{fig:functions:deposits}
@@ -438,8 +455,8 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     \nextdef
     & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Allocs \to \Tx \to \Coin
     & \text{value created} \\
-    & \created{pc}{utxo}{dallocs}{pallocs}{tx} = \\
-    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} + \refunds{pc}{dallocs}{pallocs}{tx}
+    & \created{pc}{utxo}{stkeys}{stpools}{tx} = \\
+    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} + \refunds{pc}{stkeys}{stpools}{tx}
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \Tx \to \Coin
     & \text{value destroyed} \\
@@ -472,8 +489,8 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pc} & \PrtclConsts & \text{protocol constants}\\
-        \var{dallocs} & \Allocs & \text{stake key allocations}\\
-        \var{pallocs} & \Allocs & \text{stake pool allocations}\\
+        \var{stkeys} & \Allocs & \text{stake key allocations}\\
+        \var{stpools} & \Allocs & \text{stake pool allocations}\\
       \end{array}
     \right)
   \end{equation*}
@@ -497,14 +514,14 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \txins{tx} \subseteq \dom \var{utxo}
       & \minfee{pc}{tx} \leq \txfee{tx}
       \\
-      \created{pc}{utxo}{dallocs}{pallocs}{tx} = \destroyed{pc}{tx}
+      \created{pc}{utxo}{stkeys}{stpools}{tx} = \destroyed{pc}{tx}
     }
     {
       \begin{array}{l}
         \var{slot}\\
         \var{pc}\\
-        \var{dallocs}\\
-        \var{pallocs}\\
+        \var{stkeys}\\
+        \var{stpools}\\
       \end{array}
       \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
@@ -665,14 +682,13 @@ different order). The choice here is arbitrary.
     \label{eq:ledger}
     \inference[ledger]
     {
-      \Gamma = \dcerts{tx}
-      & pallocs = \fun{poolAllocs}~stpools\\~\\
+      \Gamma = \dcerts{tx} \\ ~ \\
       {
         \begin{array}{r}
         slot\\
         pc\\
         stkeys\\
-        pallocs\\
+        stpools\\
         \end{array}
       }
       \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}\\~\\~\\
@@ -698,7 +714,7 @@ different order). The choice here is arbitrary.
           dwstate \\
         \end{array}
       \right)
-      \trans{ledger}{certs}
+      \trans{ledger}{tx}
       \left(
         \begin{array}{ll}
           utxo' \\
