@@ -26,6 +26,7 @@ library:
   - tasty-hunit
   - hedgehog
   - tasty-hedgehog
+  - tasty-hedgehog-coverage
 
 tests:
   delegation-test:
@@ -44,6 +45,7 @@ tests:
     - tasty
     - tasty-hunit
     - tasty-hedgehog
+    - tasty-hedgehog-coverage
     - hedgehog
     - delegation
     - cryptonite
