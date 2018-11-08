@@ -53,7 +53,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       a & \AddrRWD & \text{reward address} \\
       slot & \Slot & \text{slot}\\
       dur & \Duration & \text{duration}\\
-      epoch & \Epoch & \text{epoch}
+      epoch & \Epoch & \text{epoch} \\
+      stakepool & \StakePool & \text{stake pool constants}
     \end{array}
   \end{equation*}
   %
@@ -82,17 +83,20 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-  \fun{hash} & \VKey \to \Hash
-  & \text{hashing a key}
+  \fun{hashKey} & \VKey \to \HashKey
+  & \text{hashKeying a key}
   \\
-  \fun{addr_{rwd}} & \Hash \to \AddrRWD
-  & \text{address of a hashkey}
+  \fun{addr_{rwd}} & \HashKey \to \AddrRWD
+  & \text{address of a hashKeykey}
   \\
-  \fun{author} & \DCert \to \Hash
+  \fun{author} & \DCert \to \HashKey
   & \text{certificate author}
   \\
-  \fun{pool} & \DCertDeleg \to \Hash
+  \fun{dpool} & \DCertDeleg \to \HashKey
   & \text{pool being delegated to}
+  \\
+  \fun{stakepool} & \DCertRegPool \to \StakePool
+  & \text{stake pool constants}
   \\
   \fun{retire} & \DCertRetirePool \to \Epoch
   & \text{epoch of pool retirement}
@@ -100,7 +104,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \fun{epoch} & \Slot \to \Epoch
   & \text{epoch of a slot}
   \\
-    () & \Slot \to \Slot \to \Duration
+    (\slotminus{}{}) & \Slot \to \Slot \to \Duration
   & \text{slot duration}
   \end{array}
   \end{equation*}
@@ -120,16 +124,16 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \Hash \mapsto \Slot & \text{registered stake keys to creation time}\\
+      \var{stkeys} & \HashKey \mapsto \Slot & \text{registered stake keys to creation time}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \Hash \mapsto \Hash & \text{delegations}\\
+      \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
     \end{array}\right)
     \\
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \Hash \mapsto (\DCertRegPool \times \Slot) & \text{registered stake pools to creation time}\\
-      \var{retiring} & \Hash \mapsto \Epoch & \text{retiring stake pools}\\
+      \var{stpools} & \HashKey \mapsto (\StakePool \times \Slot) & \text{registered pools to creation time}\\
+      \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
@@ -228,7 +232,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \begin{array}{rcl}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations} & \unionoverride & \{\var{hk} \mapsto \pool c\}
+        \var{delegations} & \unionoverride & \{\var{hk} \mapsto \dpool c\}
       \end{array}
       \right)
     }
@@ -244,7 +248,13 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \begin{equation}\label{eq:pool-reg}
     \inference[Pool-Reg]
     {
-      \RegPool{c} & \cauthor{c} = hk
+      \RegPool{c}
+      & \cauthor{c} = \var{hk}
+      & \stakepool{c} = \var{stakepool}
+      \\
+      \var{slot'} = \mathsf{if}~(hk \mapsto (\_, s))\in\var{stpools}
+                    ~\mathsf{then}~ s
+                    ~\mathsf{else}~ slot
     }
     {
       \var{slot} \vdash
@@ -257,7 +267,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \trans{pool}{c}
       \left(
       \begin{array}{rcl}
-        \var{stpools} & \unionoverride & \{\var{hk} \mapsto c\} \\
+        \var{stpools} & \unionoverride
+                      & \{\var{hk} \mapsto \var{(stakepool, slot')}\} \\
         \{\var{hk}\} & \subtractdom & \var{retiring} \\
       \end{array}
       \right)

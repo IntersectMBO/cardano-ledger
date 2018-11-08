@@ -52,7 +52,7 @@ import           Numeric.Natural         (Natural)
 import           Coin                    (Coin (..))
 import           Keys
 
-import           Delegation.Certificates (Cert (..))
+import           Delegation.Certificates (DCert (..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -61,10 +61,8 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
--- |An address for UTxO.  It can be either an account based
--- address for rewards sharing or a UTxO address.
+-- |An address for UTxO.
 data Addr = AddrTxin HashKey HashKey
-          | AddrAccount Hash Hash
           deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
@@ -81,7 +79,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 -- |A raw transaction
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
-             , certs   :: !(Set Cert)
+             , certs   :: !(Set DCert)
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
