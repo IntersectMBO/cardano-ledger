@@ -1,7 +1,9 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Chain.Blockchain where
 
+import           Control.Lens
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import           Data.Queue
@@ -80,6 +82,9 @@ verify = undefined
 -- the given key (indirectly) signed in the block sliding window of size K
 type KeyToQMap = Map.Map VKey (Queue BlockIx)
 
+-- | Delegation interface transition system
+data DelTS
+
 -- | Blockchain extension transition system
 data BC
 
@@ -104,6 +109,7 @@ instance STS BC where
         , hasRight
         , validSignature
         , lessThanLimitSigned
+        , legalCerts
         ]
         ( Extension . Transition $ \_ st _ -> st ) -- TODO(md): implement this
       -- [ SubTrans _1 (_3 . to body) utxoInductive
@@ -149,3 +155,13 @@ instance STS BC where
             if fromIntegral (sizeQueue (m Map.! vk_s)) <= (fromIntegral k) * t
               then Passed
               else Failed SignedMaximumNumberBlocks
+      -- checks that delegation certificates in the signal block are legal
+      -- with regard to delegation certificates in the delegation state
+      legalCerts :: Antecedent BC
+      legalCerts = SubTrans env signal rule where
+        env = undefined :: Getter (JudgmentContext BC) (Environment DelTS)
+        signal = undefined :: Getter (JudgmentContext BC) (Signal DelTS)
+        rule = undefined :: Rule DelTS
+
+instance Embed DelTS BC where
+  stateLens = id
