@@ -16,15 +16,16 @@ import qualified Hedgehog.Gen            as Gen
 import qualified Hedgehog.Range          as Range
 
 import           Coin
+import           Slot
 import           Keys
 import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
                                           ValidationError (..),
                                           asStateTransition, emptyDelegation,
-                                          genesisId, genesisState)
+                                          mkRwdAcnt, genesisId, genesisState)
 import           UTxO
 
-import           Delegation.Certificates (Cert (..))
+import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -56,7 +57,7 @@ stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
 
 ledgerState :: Ledger -> Either [ValidationError] LedgerState
-ledgerState = foldM asStateTransition genesis
+ledgerState = foldM (asStateTransition (Slot 0)) genesis
 
 
 testLedgerValidTransactions ::
@@ -64,7 +65,7 @@ testLedgerValidTransactions ::
 testLedgerValidTransactions ls utxo =
     ls @?= Right (LedgerState
                      (UTxO utxo)
-                     LedgerState.emptyDelegation 0)
+                     LedgerState.emptyDelegation (Epoch 0))
 
 testValidStakeKeyRegistration ::
   [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> Assertion
@@ -74,7 +75,7 @@ testValidStakeKeyRegistration sd utxo stakeKeyRegistration =
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
-                     0)
+                     (Epoch 0))
 
 testValidDelegation ::
   [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> StakePool -> Assertion
@@ -84,17 +85,17 @@ testValidDelegation sd utxo stakeKeyRegistration sp =
     ls2 = ledgerState $ sd ++ [ DelegationData poolRegistration
                                , DelegationData stakeDelegation]
     poolRegistration = RegPool sp
+    poolhk = hashKey $ vKey stakePoolKey1
 
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
                      {
                        getDelegations =
-                         Map.fromList [(hashKey $ vKey aliceStake,
-                                        hashKey $ vKey stakePoolKey1)]
-                     , getStPools = Set.fromList [sp]
+                         Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+                     , getStPools = Map.fromList [(poolhk, (sp, Slot 0))]
                      }
-                     0)
+                     (Epoch 0))
 
 tx1Body :: Tx
 tx1Body = Tx
@@ -121,11 +122,11 @@ utxo1 = Map.fromList
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
 
-certAlice :: Cert
+certAlice :: DCert
 certAlice = RegKey $ vKey aliceStake
-certBob :: Cert
+certBob :: DCert
 certBob = RegKey $ vKey bobStake
-certPool1 :: Cert
+certPool1 :: DCert
 certPool1 = RegKey $ vKey stakePoolKey1
 
 sd1 :: [LedgerEntry]
@@ -137,13 +138,13 @@ stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   {
     getAccounts =
-      Map.fromList [ (hashKey $ vKey aliceStake, Coin 0)
-                   , (hashKey $ vKey bobStake, Coin 0)
-                   , (hashKey $ vKey stakePoolKey1, Coin 0)]
+      Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
+                   , (mkRwdAcnt bobStake, Coin 0)
+                   , (mkRwdAcnt stakePoolKey1, Coin 0)]
   , getStKeys =
-      Set.fromList [ hashKey $ vKey aliceStake
-                   , hashKey $ vKey bobStake
-                   , hashKey $ vKey stakePoolKey1]
+      Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
+                   , (hashKey $ vKey bobStake, Slot 0)
+                   , (hashKey $ vKey stakePoolKey1, Slot 0)]
   }
 
 stakePool :: StakePool
@@ -319,7 +320,8 @@ genLedgerStateTx :: KeyPairs -> LedgerState ->
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
-  pure (fee, ledgerEntry, asStateTransition sourceState ledgerEntry)
+  slot <- genNatural 0 1000
+  pure (fee, ledgerEntry, asStateTransition (Slot slot) sourceState ledgerEntry)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -352,7 +354,6 @@ repeatTx n !keyPairs !fees !ls = do
 findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
 findAddrKeyPair (AddrTxin addr _) keyList =
      fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
-findAddrKeyPair (AddrAccount _ _) _ = undefined
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr

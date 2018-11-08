@@ -160,7 +160,7 @@ set of $l$.
 \begin{figure}[ht]
   \centering
   \begin{align*}
-    \fun{getStKeys} & \in & \ledgerState \to \powerset \Hash \\
+    \fun{getStKeys} & \in & \ledgerState \to \powerset \HashKey \\
     \fun{getStKeys} & \coloneqq & (\wcard, (\var{stKeys}, \wcard, \wcard),
                                   \wcard) \to \var{stkeys} \\
                     &&\\
@@ -168,16 +168,16 @@ set of $l$.
     \fun{getRewards} & \coloneqq & (\wcard, (\wcard, \var{rewards}, \wcard),
                                    \wcard) \to \var{rewards} \\
                     &&\\
-    \fun{getDelegations} & \in & \ledgerState \to \Hash \mapsto \Hash \\
+    \fun{getDelegations} & \in & \ledgerState \to \HashKey \mapsto \HashKey \\
     \fun{getDelegations} & \coloneqq & (\wcard, (\wcard, \wcard,
                                        \var{delegations}), \wcard) \to
                                        \var{delegations} \\
                     &&\\
-    \fun{getStPools} & \in & \ledgerState \to \Hash \mapsto \DCertRegPool \\
+    \fun{getStPools} & \in & \ledgerState \to \HashKey \mapsto \DCertRegPool \\
     \fun{getStPools} & \coloneqq & (\wcard, \wcard,
                                    (\var{stpools}, \wcard)) \to \var{stpools} \\
                     &&\\
-    \fun{getRetiring} & \in & \ledgerState \to \Hash \mapsto \Epoch \\
+    \fun{getRetiring} & \in & \ledgerState \to \HashKey \mapsto \Epoch \\
     \fun{getRetiring} & \coloneqq & (\wcard, \wcard,
                                     (\wcard, \var{retiring})) \to \var{retiring} \\
   \end{align*}

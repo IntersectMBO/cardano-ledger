@@ -47,6 +47,7 @@
 \newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
 \newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
 \newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+\newcommand{\StakePool}{\type{StakePool}}
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
@@ -62,8 +63,8 @@
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\SKey}{\type{SKey}}
-\newcommand{\Hash}{\type{Hash}}
-\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\KeyPair}{\type{KeyPair}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 %% Adding delegation
@@ -103,7 +104,8 @@
 \newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
 \newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
 \newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
-\newcommand{\pool}[1]{\fun{pool}~ \var{#1}}
+\newcommand{\dpool}[1]{\fun{dpool}~ \var{#1}}
+\newcommand{\stakepool}[1]{\fun{stakepool}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 \newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
@@ -116,7 +118,7 @@
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
-\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
 \newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
@@ -199,7 +201,7 @@ this document.
     \begin{array}{r@{~\in~}lr}
       \var{vk} & \SKey & \text{private signing key}\\
       \var{vk} & \VKey & \text{public verifying key}\\
-      \var{hk} & \Hash & \text{hash of a key}\\
+      \var{hk} & \HashKey & \text{hashKey of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
     \end{array}
@@ -207,15 +209,15 @@ this document.
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      (sk, vk) & \SkVk & \text{signing-verifying key pairs}
+      (sk, vk) & \KeyPair & \text{signing-verifying key pairs}
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hash{} & \VKey \to \Hash
-      & \text{hash function} \\
+      \hashKey{} & \VKey \to \HashKey
+      & \text{hashKey function} \\
       %
       \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
       & \text{verification relation}\\
@@ -223,7 +225,7 @@ this document.
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
+    & \forall (sk, vk) \in \KeyPair,~ m \in \Data,~ \sigma \in \Sig \cdot
       \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
   \end{align*}
   \emph{Notation for serialized and verified data}
@@ -286,7 +288,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \var{allocs}
       & \Allocs
       & hkeys \mapsto slot
-      & \Hash \to \Slot
+      & \HashKey \to \Slot
       & \text{resource allocations}
     \end{array}
   \end{equation*}
@@ -323,10 +325,10 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       & \text{total deposits for transaction} \\
       & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{d}~pc~c)
       \nextdef
-      & \fun{poolAllocs} \in (\Hash \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
+      & \fun{poolAllocs} \in (\HashKey \mapsto (\DCertRegPool \times \Slot)) \to \Allocs
       & \text{pool allocations} \\
       & \fun{poolAllocs}~\var{stpool} =
-          \{hash \mapsto slot \mid hash \mapsto (\_, slot) \in \var{stpool}\}
+          \{hashKey \mapsto slot \mid hashKey \mapsto (\_, slot) \in \var{stpool}\}
       \nextdef
       & \fun{refund} \in \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
       & \text{total refund for a certificate} \\
@@ -564,8 +566,8 @@ different order). The choice here is arbitrary.
     \begin{array}{r@{~\in~}lr}
       \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
-      \fun{hash_{spend}} & \Addr \mapsto \Hash
-      & \text{hash of a spending key in an address}\\
+      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
+      & \text{hashKey of a spending key in an address}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
@@ -577,9 +579,9 @@ different order). The choice here is arbitrary.
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \Hash & \text{hash of an input address}\\
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hashKey of an input address}\\
     & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
-      \wedge a \mapsto h \in \fun{hash_{spend}} \}
+      \wedge a \mapsto h \in \fun{hashKey_{spend}} \}
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
@@ -611,7 +613,7 @@ different order). The choice here is arbitrary.
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
-      \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
+      \wedge  \fun{addr_h}~{utxo}~i = \hashKey{vk}\\
     }
     {
       \begin{array}{l}
