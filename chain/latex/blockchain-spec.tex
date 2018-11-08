@@ -93,12 +93,12 @@
 \newcommand{\incixmapname}{incIxMap}
 
 \newcommand{\hashofblockname}{hash}
-\newcommand{\bdataname}{bData}
-\newcommand{\bcertsname}{bCerts}
-\newcommand{\bsigname}{bSig}
-\newcommand{\bixname}{bIx}
-\newcommand{\bslname}{bSl}
-\newcommand{\bsignername}{bSigner}
+\newcommand{\rbdataname}{rbData}
+\newcommand{\rbcertsname}{rbCerts}
+\newcommand{\rbsigname}{rbSig}
+\newcommand{\rbixname}{rbIx}
+\newcommand{\rbslname}{rbSl}
+\newcommand{\rbsignername}{rbSigner}
 
 \newcommand{\qrestrname}{qRestrict}
 \newcommand{\qpopname}{qPop}
@@ -118,12 +118,12 @@
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
 
 \newcommand{\hashofblock}[1]{\fun{\hashofblockname} ~ #1}
-\newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
-\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
-\newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
-\newcommand{\bix}[1]{\fun{\bixname} ~ #1}
-\newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
-\newcommand{\bsigner}[1]{\fun{\bsignername} ~ #1}
+\newcommand{\rbdata}[1]{\fun{\rbdataname} ~ #1}
+\newcommand{\rbcerts}[1]{\fun{\rbcertsname} ~ #1}
+\newcommand{\rbsig}[1]{\fun{\rbsigname} ~ #1}
+\newcommand{\rbix}[1]{\fun{\rbixname} ~ #1}
+\newcommand{\rbsl}[1]{\fun{\rbslname} ~ #1}
+\newcommand{\rbsigner}[1]{\fun{\rbsignername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
@@ -367,15 +367,15 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
-    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
+    \fun{\rbixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
     \fun{\hashname} & \in \Block \totalf \BHash
       & \text{previous block's hash} \\
-    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
-    \fun{\bsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
-    \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
+    \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
+    \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
+    \fun{\rbcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates} \\
-    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
-    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data}
+    \fun{\rbsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
+    \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data}
   \end{align*}
   %
   \emph{Functions}
@@ -643,17 +643,25 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      ix = \bix{b} \wedge vk_d = \bsigner{b} \\
-      \hash{b} = \hashofblock{p} \\
+      ix = \rbix{b} \wedge vk_d = \rbsigner{b} \wedge sl = \rbsl{b} \\
+      \hash{b} \equiv \hashofblock{p} \\
       \delegation{ds}{vk_s}{vk_d} \\
-      \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
+      \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
       \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
       p' = b 
      \end{array}}
-   & (\bsl{b}) \vdash ds \trans{\text{DELEG}}{\bcerts{b}} ds'
+   & (sl) \vdash ds \trans{\text{DELEG}}{\rbcerts{b}} ds'
   }
   {
+    \left(
+      {\begin{array}{c}
+         sl \\
+         K \\
+         t
+       \end{array}}
+    \right)
+    \vdash
     \left(
       {\begin{array}{c}
          \signmapname \\
