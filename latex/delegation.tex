@@ -79,6 +79,17 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
   \end{array}
   \end{equation*}
   %
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{allocs}
+      & \Allocs
+      & hkeys \mapsto slot
+      & \HashKey \to \Slot
+      & \text{resource allocations}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Abstract functions}
   %
   \begin{equation*}
@@ -124,7 +135,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \HashKey \mapsto \Slot & \text{registered stake keys to creation time}\\
+      \var{stkeys} & \Allocs & \text{registered stake keys to creation time}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
     \end{array}\right)
@@ -132,7 +143,9 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \HashKey \mapsto (\StakePool \times \Slot) & \text{registered pools to creation time}\\
+      \var{stpools} & \Allocs & \text{registered pools to creation time}\\
+      \var{pparams} & \HashKey \mapsto \StakePool
+        & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
     \end{array}\right)
     \end{array}
@@ -181,7 +194,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \left(
       \begin{array}{rcl}
         \var{stkeys} & \union & \{\var{hk} \mapsto slot\}\\
-        \var{rewards} & \unionoverride & \{\addrRw \var{hk} \mapsto 0\}\\
+        \var{rewards} & \unionoverrideRight & \{\addrRw \var{hk} \mapsto 0\}\\
         \var{delegations}
       \end{array}
       \right)
@@ -232,7 +245,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \begin{array}{rcl}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations} & \unionoverride & \{\var{hk} \mapsto \dpool c\}
+        \var{delegations} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\}
       \end{array}
       \right)
     }
@@ -251,24 +264,23 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \RegPool{c}
       & \cauthor{c} = \var{hk}
       & \stakepool{c} = \var{stakepool}
-      \\
-      \var{slot'} = \mathsf{if}~(hk \mapsto (\_, s))\in\var{stpools}
-                    ~\mathsf{then}~ s
-                    ~\mathsf{else}~ slot
     }
     {
       \var{slot} \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
+        \var{pparams} \\
         \var{retiring}
       \end{array}
       \right)
       \trans{pool}{c}
       \left(
       \begin{array}{rcl}
-        \var{stpools} & \unionoverride
-                      & \{\var{hk} \mapsto \var{(stakepool, slot')}\} \\
+        \var{stpools} & \unionoverrideLeft
+                      & \{\var{hk} \mapsto \var{slot}\} \\
+        \var{pparams} & \unionoverrideRight
+                      & \{\var{hk} \mapsto \var{stakepool}\} \\
         \{\var{hk}\} & \subtractdom & \var{retiring} \\
       \end{array}
       \right)
@@ -291,6 +303,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \left(
       \begin{array}{r}
         \var{stpools} \\
+        \var{pparams} \\
         \var{retiring}
       \end{array}
     \right)
@@ -298,7 +311,8 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
     \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \var{retiring} & \unionoverride & \{\var{hk} \mapsto \var{e}\} \\
+        \var{pparams} \\
+        \var{retiring} & \unionoverrideRight & \{\var{hk} \mapsto \var{e}\} \\
       \end{array}
     \right)
   }
@@ -315,6 +329,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \left(
       \begin{array}{r}
         \var{stpools} \\
+        \var{pparams} \\
         \var{retiring}
       \end{array}
       \right)
@@ -322,6 +337,7 @@ The rules for registering stake pools are given in \cref{fig:pool-rules}.
       \left(
       \begin{array}{rcl}
         \var{retired} & \subtractdom & \var{stpools} \\
+        \var{retired} & \subtractdom & \var{pparams} \\
         \var{retired} & \subtractdom & \var{retiring} \\
       \end{array}
       \right)
