@@ -13,7 +13,7 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module LedgerState
   ( LedgerState(..)
   , RewardAcnt(..)
-  , getRwdAcnt
+  , mkRwdAcnt
   , DelegationState(..)
   , Ledger
   , LedgerEntry(..)
@@ -90,8 +90,8 @@ instance Monoid Validity where
 newtype RewardAcnt = RewardAcnt HashKey
   deriving (Show, Eq, Ord)
 
-getRwdAcnt :: KeyPair -> RewardAcnt
-getRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
+mkRwdAcnt :: KeyPair -> RewardAcnt
+mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
 
 -- |The state associated with the current stake delegation.
 data DelegationState =
