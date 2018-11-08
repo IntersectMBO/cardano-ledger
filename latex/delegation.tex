@@ -411,10 +411,40 @@ are given in Figure~\ref{fig:defs:delegationw}.
 \begin{figure}
   \emph{Delegation with witness rule}
   \begin{equation}
-    \label{eq:deleg-witnesses}
-    \inference[Deleg-wit]
+    \label{eq:deleg-witnesses-keys}
+    \inference[Deleg-wit-keys]
     { \dwit{c} = (\var{vk_s}, \sigma)
       & \var{slot} \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
+      \\ ~ \\
+      \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
+    }
+    { \left(
+      \begin{array}{r}
+        \var{tx} \\
+        \var{slot}
+      \end{array}
+      \right)
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{dstate} \\
+        \var{pstate}
+      \end{array}
+      \right)
+      \trans{delegw}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{dstate'} \\
+        \var{pstate'}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \begin{equation}
+    \label{eq:deleg-witnesses-pools}
+    \inference[Deleg-wit-pools]
+    { \dwit{c} = (\var{vk_s}, \sigma)
       & \var{slot} \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
       \\ ~ \\
       \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
