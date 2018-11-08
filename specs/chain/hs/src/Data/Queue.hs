@@ -7,6 +7,7 @@ module Data.Queue
   , popQueue
   , headQueue
   , isQueueEmpty
+  , sizeQueue
   )
   where
 
@@ -36,3 +37,6 @@ headQueue q@(MkQueue _ (o:_)) = Just (o, q)
 isQueueEmpty :: Queue a -> Bool
 isQueueEmpty (MkQueue [] []) = True
 isQueueEmpty _               = False
+
+sizeQueue :: Queue a -> Word
+sizeQueue (MkQueue inb oub) = fromIntegral $ length inb + length oub
