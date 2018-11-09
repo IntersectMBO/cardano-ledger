@@ -9,6 +9,7 @@ import           Numeric.Natural         (Natural)
 
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
+import           Test.Tasty.Hedgehog.Coverage
 import           Test.Tasty.HUnit
 
 import           Hedgehog
@@ -328,13 +329,13 @@ genLedgerStateTx keyList sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (KeyPairs, Coin, LedgerState, Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Natural, Coin, LedgerState, Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
-  steps       <- Gen.integral $ Range.linear 1 10
+  steps       <- genNatural 1 10
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
-  pure (keyPairs, fees, ls, ls')
+  pure (keyPairs, steps, fees, ls, ls')
 
 -- | Generator for a fixed number of 'n' transaction step executions, using the
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
@@ -363,6 +364,22 @@ getTxOutAddr (TxOut addr _) = addr
 utxoSize :: UTxO -> Int
 utxoSize (UTxO m) = Map.size m
 
+-- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value
+-- already present. Used to fold over 'UTxO' to accumulate funds per address.
+insertOrUpdate :: TxOut -> Map.Map Addr Coin -> Map.Map Addr Coin
+insertOrUpdate (TxOut a c) m =
+    Map.insert a (if Map.member a m
+                  then c <> (m Map.! a)
+                  else c) m
+
+-- | Return True if at least half of the keys have non-trivial coin values to
+-- spent, i.e., at least 2 coins per 50% of addresses.
+isNotDustDist :: UTxO -> UTxO -> Bool
+isNotDustDist initUtxo utxo =
+    utxoSize initUtxo <=
+           2 * (Map.size $ Map.filter (> Coin 1) coinMap)
+        where coinMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo)
+
 -- | This property states that a non-empty UTxO set in the genesis state has a
 -- non-zero balance.
 propPositiveBalance:: Property
@@ -374,22 +391,26 @@ propPositiveBalance =
 
 -- | This property states that the balance of the initial genesis state equals
 -- the balance of the end ledger state plus the collected fees.
-propPreserveBalanceInitTx :: Property
+propPreserveBalanceInitTx :: Cover
 propPreserveBalanceInitTx =
-    property $ do
-      (_, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+    withCoverage $ do
+      (_, steps, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      classify (steps > 1) "non-trivial number of steps"
       case next of
         Left _    -> failure
-        Right ls' -> balance (getUtxo ls) === balance (getUtxo  ls') <> fees
+        Right ls' -> do
+              classify (isNotDustDist (getUtxo ls) (getUtxo ls'))
+                           "non-trivial wealth dist"
+              balance (getUtxo ls) === balance (getUtxo ls') <> fees
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Gen (KeyPairs, LedgerState)
+genValidLedgerState :: Gen (KeyPairs, Natural, LedgerState)
 genValidLedgerState = do
-  (keyPairs, _, _, newState) <- genNonEmptyAndAdvanceTx
+  (keyPairs, steps, _, _, newState) <- genNonEmptyAndAdvanceTx
   case newState of
     Left _   -> Gen.discard
-    Right ls -> pure (keyPairs, ls)
+    Right ls -> pure (keyPairs, steps, ls)
 
 genValidSuccessorState :: KeyPairs -> LedgerState ->
   Gen (Coin, LedgerEntry, LedgerState)
@@ -399,11 +420,11 @@ genValidSuccessorState keyPairs sourceState = do
     Left _   -> Gen.discard
     Right ls -> pure (fee, entry, ls)
 
-genValidStateTx :: Gen (LedgerState, Coin, LedgerEntry, LedgerState)
+genValidStateTx :: Gen (LedgerState, Natural, Coin, LedgerEntry, LedgerState)
 genValidStateTx = do
-  (keyPairs, ls)    <- genValidLedgerState
-  (fee, entry, ls') <- genValidSuccessorState keyPairs ls
-  pure (ls, fee, entry, ls')
+  (keyPairs, steps, ls) <- genValidLedgerState
+  (fee, entry, ls')     <- genValidSuccessorState keyPairs ls
+  pure (ls, steps, fee, entry, ls')
 
 getTxOfEntry :: LedgerEntry -> Tx
 getTxOfEntry entry =
@@ -412,39 +433,47 @@ getTxOfEntry entry =
     _                    -> undefined
 
 -- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
-propBalanceTxInTxOut :: Property
-propBalanceTxInTxOut = property $ do
-  (l, fee, entry, _)  <- forAll genValidStateTx
-  let tx               = getTxOfEntry entry
-  let inps             = txins tx
+propBalanceTxInTxOut :: Cover
+propBalanceTxInTxOut = withCoverage $ do
+  (l, steps, fee, entry, l')  <- forAll genValidStateTx
+  let tx                       = getTxOfEntry entry
+  let inps                     = txins tx
+  classify (steps > 1) "non-trivial valid ledger state"
+  classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
 
 utxoMap :: UTxO -> Map.Map TxIn TxOut
 utxoMap (UTxO m) = m
 
 -- | Property 7.3 (Preserve Outputs of Transaction)
-propPreserveOutputs :: Property
-propPreserveOutputs = property $ do
-  (_, _, entry, l') <- forAll genValidStateTx
-  let tx             = getTxOfEntry entry
+propPreserveOutputs :: Cover
+propPreserveOutputs = withCoverage $ do
+  (l, steps, _, entry, l') <- forAll genValidStateTx
+  let tx                    = getTxOfEntry entry
+  classify (steps > 1) "non-trivial valid ledger state"
+  classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
 
 -- | Property 7.4 (Eliminate Inputs of Transaction)
-propEliminateInputs :: Property
-propEliminateInputs = property $ do
-  (_, _, entry, l') <- forAll genValidStateTx
-  let tx             = getTxOfEntry entry
+propEliminateInputs :: Cover
+propEliminateInputs = withCoverage $ do
+  (l, steps, _, entry, l') <- forAll genValidStateTx
+  let tx                    = getTxOfEntry entry
+  classify (steps > 1) "non-trivial valid ledger state"
+  classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
   Map.empty === Map.restrictKeys (utxoMap $ getUtxo l') (txins tx)
 
 -- | Property 7.5 (Completeness and Collision-Freeness of new TxIds)
-propUniqueTxIds :: Property
-propUniqueTxIds = property $ do
-  (l, _, entry, l') <- forAll genValidStateTx
-  let tx             = getTxOfEntry entry
-  let origTxIds      = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
-  let newTxIds       = collectIds <$> (Map.keys $ utxoMap (txouts tx))
-  let txId           = txid tx
+propUniqueTxIds :: Cover
+propUniqueTxIds = withCoverage $ do
+  (l, steps, _, entry, l') <- forAll genValidStateTx
+  let tx                    = getTxOfEntry entry
+  let origTxIds             = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
+  let newTxIds              = collectIds <$> (Map.keys $ utxoMap (txouts tx))
+  let txId                  = txid tx
+  classify (steps > 1) "non-trivial valid ledger state"
+  classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   True === ((all (== txId) newTxIds) &&
             (not $ any (== txId) origTxIds) &&
             Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l'))
@@ -457,20 +486,20 @@ propertyTests = testGroup "Property-Based Testing"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"
                     propPositiveBalance
-                  , testProperty
+                  , testPropertyCoverage
                     "several transaction added to genesis ledger state"
                     propPreserveBalanceInitTx]
                 , testGroup "Property tests starting from valid ledger state"
-                  [testProperty
+                  [testPropertyCoverage
                     "preserve balance restricted to TxIns in Balance of outputs"
                     propBalanceTxInTxOut
-                  , testProperty
+                  , testPropertyCoverage
                     "Preserve outputs of transaction"
                     propPreserveOutputs
-                  , testProperty
+                  , testPropertyCoverage
                     "Eliminate Inputs of Transaction"
                     propEliminateInputs
-                  , testProperty
+                  , testPropertyCoverage
                     "Completeness and Collision-Freeness of new TxIds"
                     propUniqueTxIds
                   ]
