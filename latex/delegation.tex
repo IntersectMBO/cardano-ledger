@@ -117,12 +117,7 @@ $\Duration$ here by $\var{dur}$).
   \begin{equation*}
   \begin{array}{r@{}c@{}l}
     \DCert &=& \DCertRegKey \uniondistinct \DCertDeRegKey \uniondistinct \DCertDeleg \\
-                &\hfill\uniondistinct\;& \DCertRegPool \uniondistinct \DCertRetirePool \\
-    \RegKey{c} \in \DCert &\iff& c \in \DCertRegKey \\
-    \DeregKey{c} \in \DCert &\iff& c \in \DCertDeRegKey \\
-    \Delegate{c} \in \DCert &\iff& c \in \DCertDeleg \\
-    \RegPool{c} \in \DCert &\iff& c \in \DCertRegPool\\
-    \RetirePool{c} \in \DCert &\iff& c \in \DCertRetirePool \\
+                &\hfill\uniondistinct\;& \DCertRegPool \uniondistinct \DCertRetirePool
   \end{array}
   \end{equation*}
   %
@@ -335,7 +330,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \RegKey{c} & \cauthor{c} = hk & hk \notin \var{stkeys}
+      \var{c}\in\DCertRegPool & \cauthor{c} = hk & hk \notin \var{stkeys}
     }
     {
       \var{slot} \vdash
