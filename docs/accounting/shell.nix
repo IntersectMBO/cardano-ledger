@@ -1,6 +1,10 @@
-with (import <nixpkgs> {});
+{ system ? builtins.currentSystem
+, config ? {}
+, pkgs ? import ../../pkgs.nix
+}:
 
-let pkgs = import ../../pkgs.nix; in
+with pkgs;
+
 stdenv.mkDerivation {
   name = "docsEnv";
   buildInputs = [ (texlive.combine {
