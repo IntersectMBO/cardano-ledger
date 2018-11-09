@@ -10,14 +10,20 @@ Insinde the directory with this README, run make:
 make
 ```
 
-If you're using [Nix](https://nixos.org/nix/), the `make` command can be run as
-follows:
+This makes both the `Accounting.pdf` and `accounting/src/Accounting.hs`.
+
+If you prefer using [Nix](https://nixos.org/nix/), the `make` command can be
+run as via `nix-build`:
 
 ```shell
-nix-shell --pure --run "make"
+nix-build
 ```
 
-This makes both the `Accounting.pdf` and `accounting/src/Accounting.hs`.
+For a continuous compilation of the `LaTeX` document run:
+
+```shell
+nix-shell --pure --run "make watch"
+```
 
 ## Testing the Haskell model
 

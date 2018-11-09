@@ -31,4 +31,13 @@ stdenv.mkDerivation {
                    pkgs.haskellPackages.lhs2tex
 
                 ];
+  src = ./.;
+  buildPhase = "make";
+  installPhase = "mkdir $out; cp *.pdf $out/";
+
+  meta = with lib; {
+    description = "A Model of Accounting in Cardano";
+    license = licenses.bsd3;
+    platforms = platforms.linux;
+  };
 }
