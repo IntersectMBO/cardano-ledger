@@ -511,7 +511,8 @@ body must also contain inputs onto which this refund can be added.
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
-        \where &\fun{releasing}~\var{c} & \DeregKey{c} \lor \RetirePool{c}\\
+        \where &\fun{releasing}~\var{c}
+          & c \in \DCertDeRegKey \cup \DCertRetirePool\\
         & d_{\min},~\lambda & \fun{decay}~pc\\
         &\delta & \slotminus{slot}{(allocs~(\cauthor c))}\\
       \end{array}\\
