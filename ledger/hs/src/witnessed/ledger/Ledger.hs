@@ -3,19 +3,16 @@
 {-# LANGUAGE TypeFamilies          #-}
 module Ledger where
 
-import           Control.Lens
-import           Control.State.Transition
-import           Data.List
-    (find)
+import Control.Lens
+import Control.State.Transition
+import Data.List (find)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe
-    (isJust)
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
-import           Ledger.Abstract
-import           Ledger.Simple
-    (UTXO, utxoInductive)
+import Ledger.Abstract
+import Ledger.Simple (UTXO, utxoInductive)
 import qualified Ledger.Simple
-import           UTxO
+import UTxO
 
 -- | UTXO transition system
 data UTXOW
@@ -45,10 +42,9 @@ instance Embed UTXO UTXOW where
 
 -- |Determine if a UTxO input is authorized by a given key.
 authTxin :: VKey -> TxIn -> UTxO -> Bool
-authTxin key txin (UTxO utxo) =
-  case Map.lookup txin utxo of
-    Just (TxOut (Addr pay) _) -> hash key == pay
-    _                         -> False
+authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
+  Just (TxOut (Addr pay) _) -> hash key == pay
+  _                         -> False
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
@@ -58,9 +54,9 @@ witnessed (TxWits tx wits) utxo =
   if Set.size wits == Set.size ins && all (hasWitness wits) ins
     then Passed
     else Failed InsufficientWitnesses
-  where
-    ins = inputs tx
-    hasWitness witnesses input =
-      isJust $ find (isWitness tx input utxo) witnesses
-    isWitness tx' input unspent (Wit key sig) =
-      verify key tx' sig && authTxin key input unspent
+ where
+  ins = inputs tx
+  hasWitness witnesses input =
+    isJust $ find (isWitness tx input utxo) witnesses
+  isWitness tx' input unspent (Wit key sig) =
+    verify key tx' sig && authTxin key input unspent

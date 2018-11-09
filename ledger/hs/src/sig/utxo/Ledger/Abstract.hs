@@ -5,13 +5,13 @@ Core implementation of the ledger logic.
 module Ledger.Abstract where
 
 import qualified Data.ByteString.Char8 as BS
-import           Data.Foldable         (foldl')
-import           Data.Map              (Map)
-import qualified Data.Map              as Map
-import           Data.Set              (Set)
-import qualified Data.Set              as Set
-import           Numeric.Natural       (Natural)
-import           UTxO
+import Data.Foldable (foldl')
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Numeric.Natural (Natural)
+import UTxO
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -47,10 +47,9 @@ txins = inputs
 
 -- |Compute the UTxO outputs of a transaction.
 txouts :: HasHash Tx => Tx -> UTxO
-txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0..]]
-  where
-    transId = txid tx
+txouts tx = UTxO $ Map.fromList
+  [ (TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0 ..] ]
+  where transId = txid tx
 
 txfee :: Tx -> Value
 txfee = undefined
@@ -59,8 +58,7 @@ txfee = undefined
 --
 --     * __TODO__ - better symbol?
 (◁) :: Set TxIn -> UTxO -> UTxO
-ins ◁ (UTxO utxo) =
-  UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
+ins ◁ (UTxO utxo) = UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
 
 -- |Domain exclusion
 --
