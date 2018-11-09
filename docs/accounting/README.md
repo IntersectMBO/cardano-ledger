@@ -10,6 +10,13 @@ Insinde the directory with this README, run make:
 make
 ```
 
+If you're using [Nix](https://nixos.org/nix/), the `make` command can be run as
+follows:
+
+```shell
+nix-shell --pure --run "make"
+```
+
 This makes both the `Accounting.pdf` and `accounting/src/Accounting.hs`.
 
 ## Testing the Haskell model
