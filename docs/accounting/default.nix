@@ -36,7 +36,7 @@ stdenv.mkDerivation {
   installPhase = "mkdir $out; cp *.pdf $out/";
 
   meta = with lib; {
-    description = "A Model of Accounting in Cardano";
+    description = "An Accounting Model for Cardano";
     license = licenses.bsd3;
     platforms = platforms.linux;
   };
