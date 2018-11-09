@@ -5,6 +5,7 @@ module Cardano.Chain.Txp.UTxO
        , UTxOError
        , fromList
        , member
+       , lookupAddress
        , union
        , balance
        , (<|)
@@ -19,7 +20,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 
 import Cardano.Chain.Common
-  (Coin, CoinError, isRedeemAddress, sumCoins)
+  (Address, Coin, CoinError, isRedeemAddress, sumCoins)
 import Cardano.Chain.Txp.Tx
   (Tx (..), TxId, TxIn (..), TxOut (..))
 import Cardano.Crypto
@@ -30,8 +31,9 @@ newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
   }
 
-data UTxOError =
-  UTxOOverlappingUnion
+data UTxOError
+  = UTxOMissingInput TxIn
+  | UTxOOverlappingUnion
   deriving (Eq, Show)
 
 fromList :: [(TxIn, TxOut)] -> UTxO
@@ -39,6 +41,12 @@ fromList = UTxO . M.fromList
 
 member :: TxIn -> UTxO -> Bool
 member txIn = M.member txIn . unUTxO
+
+lookupAddress :: TxIn -> UTxO -> Either UTxOError Address
+lookupAddress txIn =
+  maybe (Left $ UTxOMissingInput txIn) (Right . txOutAddress)
+    . M.lookup txIn
+    . unUTxO
 
 union :: MonadError UTxOError m => UTxO -> UTxO -> m UTxO
 union (UTxO m) (UTxO m') = do
