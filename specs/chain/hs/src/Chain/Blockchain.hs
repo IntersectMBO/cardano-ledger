@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
 
@@ -170,11 +171,12 @@ instance STS BC where
               else Failed SignedMaximumNumberBlocks
       -- checks that delegation certificates in the signal block are legal
       -- with regard to delegation certificates in the delegation state
-      -- legalCerts :: Antecedent BC
+      legalCerts :: Embed Interf BC => Antecedent BC
       -- legalCerts = SubTrans env signal rule where
-      --   env = undefined :: Getter (JudgmentContext BC) (Environment Interf)
-      --   signal = undefined :: Getter (JudgmentContext BC) (Signal Interf)
-      --   rule = undefined :: Rule Interf
+      legalCerts = SubTrans env undefined rule where
+        env = undefined :: Getter (JudgmentContext BC) (Environment Interf)
+        -- signal = undefined :: Getter (JudgmentContext BC) (Signal Interf)
+        rule = undefined :: Rule Interf
 
 instance Embed Interf BC where
   -- stateLens :: Lens' (State BC) (State Interf)
@@ -182,4 +184,4 @@ instance Embed Interf BC where
     getter :: State BC -> State Interf
     getter (_, _, ds) = ds
     setter :: State BC -> State Interf -> State BC
-    setter (m, p, ds) ds' = (m, p, ds')
+    setter (m, p, _) ds' = (m, p, ds')
