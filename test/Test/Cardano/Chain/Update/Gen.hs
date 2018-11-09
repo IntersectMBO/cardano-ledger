@@ -66,8 +66,8 @@ import Cardano.Crypto (ProtocolMagic)
 
 import Test.Cardano.Chain.Common.Gen
   ( genChainDifficulty
-  , genCoin
-  , genCoinPortion
+  , genLovelace
+  , genLovelacePortion
   , genScriptVersion
   , genStakeholderId
   , genTxFeePolicy
@@ -104,10 +104,10 @@ genBlockVersionData =
     <*> genNatural
     <*> genNatural
     <*> genNatural
-    <*> genCoinPortion
-    <*> genCoinPortion
-    <*> genCoinPortion
-    <*> genCoinPortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
     <*> genFlatSlotId
     <*> genSoftforkRule
     <*> genTxFeePolicy
@@ -122,10 +122,10 @@ genBlockVersionModifier =
     <*> Gen.maybe genNatural
     <*> Gen.maybe genNatural
     <*> Gen.maybe genNatural
-    <*> Gen.maybe genCoinPortion
-    <*> Gen.maybe genCoinPortion
-    <*> Gen.maybe genCoinPortion
-    <*> Gen.maybe genCoinPortion
+    <*> Gen.maybe genLovelacePortion
+    <*> Gen.maybe genLovelacePortion
+    <*> Gen.maybe genLovelacePortion
+    <*> Gen.maybe genLovelacePortion
     <*> Gen.maybe genFlatSlotId
     <*> Gen.maybe genSoftforkRule
     <*> Gen.maybe genTxFeePolicy
@@ -151,8 +151,8 @@ genConfirmedProposalState pm =
     <*> genHeaderHash
     <*> Gen.maybe genHeaderHash
     <*> Gen.map (Range.linear 1 10) ((,) <$> genPublicKey <*> genVoteState)
-    <*> genCoin
-    <*> genCoin
+    <*> genLovelace
+    <*> genLovelace
 
 genDecidedProposalState
   :: ProtocolMagic -> SlotCount -> Gen DecidedProposalState
@@ -177,7 +177,10 @@ genProposalState pm epochSlots = Gen.choice
 
 genSoftforkRule :: Gen SoftforkRule
 genSoftforkRule =
-  SoftforkRule <$> genCoinPortion <*> genCoinPortion <*> genCoinPortion
+  SoftforkRule
+    <$> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
 
 genSoftwareVersion :: Gen SoftwareVersion
 genSoftwareVersion =
@@ -193,8 +196,8 @@ genUndecidedProposalState pm epochSlots =
     <$> Gen.map (Range.linear 0 10) ((,) <$> genPublicKey <*> genVoteState)
     <*> genProposal pm
     <*> genSlotId epochSlots
-    <*> genCoin
-    <*> genCoin
+    <*> genLovelace
+    <*> genLovelace
     <*> Gen.maybe genUpsExtra
 
 genUndo :: ProtocolMagic -> SlotCount -> Gen USUndo

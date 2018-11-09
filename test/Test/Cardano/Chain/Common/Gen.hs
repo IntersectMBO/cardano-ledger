@@ -10,8 +10,8 @@ module Test.Cardano.Chain.Common.Gen
   , genBlockCount
   , genChainDifficulty
   , genCoeff
-  , genCoin
-  , genCoinPortion
+  , genLovelace
+  , genLovelacePortion
   , genMerkleRoot
   , genMerkleTree
   , genScript
@@ -43,8 +43,8 @@ import Cardano.Chain.Common
   , BlockCount(..)
   , ChainDifficulty(..)
   , Coeff(..)
-  , Coin
-  , CoinPortion(..)
+  , Lovelace
+  , LovelacePortion(..)
   , MerkleRoot(..)
   , MerkleTree
   , Script(..)
@@ -52,10 +52,10 @@ import Cardano.Chain.Common
   , StakeholderId
   , TxFeePolicy(..)
   , TxSizeLinear(..)
-  , coinPortionDenominator
+  , lovelacePortionDenominator
   , makeAddress
-  , maxCoinVal
-  , mkCoin
+  , maxLovelaceVal
+  , mkLovelace
   , mkMerkleTree
   , mkStakeholderId
   , mtRoot
@@ -105,7 +105,7 @@ genAddrStakeDistribution = Gen.choice
  where
     -- Lifted from `Pos.Arbitrary.Core`. There are very particular constraints
     -- on the AddrStakeDistribution, which are mixed into encoding/decoding.
-  genMultiKeyDistr :: Gen (Map StakeholderId CoinPortion)
+  genMultiKeyDistr :: Gen (Map StakeholderId LovelacePortion)
   -- We don't want to generate too much, hence 'scale'.
   genMultiKeyDistr = Gen.scale (`mod` 16) $ do
     holder0     <- genStakeholderId
@@ -115,21 +115,23 @@ genAddrStakeDistribution = Gen.choice
     let holders = ordNub (holder0 : holder1 : moreHolders)
     portions <- genPortions (length holders) []
     return $ Map.fromList $ holders `zip` portions
-  genPortions :: Int -> [CoinPortion] -> Gen [CoinPortion]
+  genPortions :: Int -> [LovelacePortion] -> Gen [LovelacePortion]
   genPortions 0 res = pure res
   genPortions n res = do
-    let limit = foldl' (-) coinPortionDenominator $ map getCoinPortion res
+    let
+      limit =
+        foldl' (-) lovelacePortionDenominator $ map getLovelacePortion res
     case (n, limit) of
         -- Limit is exhausted, can't create more.
       (_, 0) -> return res
       -- The last portion, we must ensure the sum is correct.
-      (1, _) -> return (CoinPortion limit : res)
+      (1, _) -> return (LovelacePortion limit : res)
       -- We intentionally don't generate 'limit', because we
       -- want to generate at least 2 portions.  However, if
       -- 'limit' is 1, we will generate 1, because we must
       -- have already generated one portion.
       _      -> do
-        portion <- CoinPortion
+        portion <- LovelacePortion
           <$> Gen.word64 (Range.linear 1 (max 1 (limit - 1)))
         genPortions (n - 1) (portion : res)
 
@@ -148,15 +150,16 @@ genCoeff = do
   integer <- Gen.integral (Range.constant 0 (10 ^ e))
   pure $ Coeff (MkFixed integer)
 
-genCoin :: Gen Coin
-genCoin = mkCoin <$> Gen.word64 (Range.constant 0 maxCoinVal) >>= \case
-  Right coin -> pure coin
-  Left err ->
-    panic $ sformat ("The impossible happened in genCoin: " . build) err
+genLovelace :: Gen Lovelace
+genLovelace =
+  mkLovelace <$> Gen.word64 (Range.constant 0 maxLovelaceVal) >>= \case
+    Right lovelace -> pure lovelace
+    Left err ->
+      panic $ sformat ("The impossible happened in genLovelace: " . build) err
 
-genCoinPortion :: Gen CoinPortion
-genCoinPortion =
-  CoinPortion <$> Gen.word64 (Range.constant 0 coinPortionDenominator)
+genLovelacePortion :: Gen LovelacePortion
+genLovelacePortion =
+  LovelacePortion <$> Gen.word64 (Range.constant 0 lovelacePortionDenominator)
 
 -- slow
 genMerkleTree :: Bi a => Gen a -> Gen (MerkleTree a)

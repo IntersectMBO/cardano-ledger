@@ -8,7 +8,7 @@ import Cardano.Prelude
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common (Address, Coin, makeRedeemAddress)
+import Cardano.Chain.Common (Address, Lovelace, makeRedeemAddress)
 import Cardano.Chain.Genesis
   (GenesisData(..), getGenesisAvvmBalances, getGenesisNonAvvmBalances)
 import Cardano.Chain.Txp.Tx (TxIn(..), TxOut(..))
@@ -20,16 +20,17 @@ import Cardano.Crypto (hash)
 genesisUtxo :: GenesisData -> UTxO
 genesisUtxo genesisData = UTxO.fromList $ utxoEntry <$> preUtxo
  where
-  preUtxo :: [(Address, Coin)]
+  preUtxo :: [(Address, Lovelace)]
   preUtxo = avvmBalances <> nonAvvmBalances
 
-  avvmBalances :: [(Address, Coin)]
+  avvmBalances :: [(Address, Lovelace)]
   avvmBalances = first makeRedeemAddress
     <$> M.toList (getGenesisAvvmBalances $ gdAvvmDistr genesisData)
 
-  nonAvvmBalances :: [(Address, Coin)]
+  nonAvvmBalances :: [(Address, Lovelace)]
   nonAvvmBalances =
     M.toList $ getGenesisNonAvvmBalances $ gdNonAvvmBalances genesisData
 
-  utxoEntry :: (Address, Coin) -> (TxIn, TxOut)
-  utxoEntry (addr, coin) = (TxInUtxo (coerce $ hash addr) 0, TxOut addr coin)
+  utxoEntry :: (Address, Lovelace) -> (TxIn, TxOut)
+  utxoEntry (addr, lovelace) =
+    (TxInUtxo (coerce $ hash addr) 0, TxOut addr lovelace)

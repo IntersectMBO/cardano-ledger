@@ -24,7 +24,7 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy)
+import Cardano.Chain.Common (LovelacePortion, ScriptVersion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId, isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
@@ -37,10 +37,10 @@ data BlockVersionData = BlockVersionData
   , bvdMaxHeaderSize     :: !Natural
   , bvdMaxTxSize         :: !Natural
   , bvdMaxProposalSize   :: !Natural
-  , bvdMpcThd            :: !CoinPortion
-  , bvdHeavyDelThd       :: !CoinPortion
-  , bvdUpdateVoteThd     :: !CoinPortion
-  , bvdUpdateProposalThd :: !CoinPortion
+  , bvdMpcThd            :: !LovelacePortion
+  , bvdHeavyDelThd       :: !LovelacePortion
+  , bvdUpdateVoteThd     :: !LovelacePortion
+  , bvdUpdateProposalThd :: !LovelacePortion
   , bvdUpdateImplicit    :: !FlatSlotId
   , bvdSoftforkRule      :: !SoftforkRule
   , bvdTxFeePolicy       :: !TxFeePolicy

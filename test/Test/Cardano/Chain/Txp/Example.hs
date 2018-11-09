@@ -33,7 +33,7 @@ import Cardano.Chain.Common
   ( IsBootstrapEraAddr(..)
   , makePubKeyAddress
   , mkAttributes
-  , mkKnownCoin
+  , mkKnownLovelace
   , mkMerkleTree
   , mtRoot
   )
@@ -89,7 +89,7 @@ exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
 exampleTxOut :: TxOut
 exampleTxOut = TxOut
   (makePubKeyAddress (IsBootstrapEraAddr True) pkey)
-  (mkKnownCoin @47)
+  (mkKnownLovelace @47)
   where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)

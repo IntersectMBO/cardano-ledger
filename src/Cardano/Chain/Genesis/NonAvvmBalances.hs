@@ -26,18 +26,18 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 import Cardano.Binary.Class (DecoderError)
 import Cardano.Chain.Common
   ( Address
-  , Coin
-  , CoinError
-  , addCoin
+  , Lovelace
+  , LovelaceError
+  , addLovelace
   , decodeTextAddress
-  , integerToCoin
-  , unsafeGetCoin
+  , integerToLovelace
+  , unsafeGetLovelace
   )
 
 
 -- | Predefined balances of non avvm entries.
 newtype GenesisNonAvvmBalances = GenesisNonAvvmBalances
-  { getGenesisNonAvvmBalances :: Map Address Coin
+  { getGenesisNonAvvmBalances :: Map Address Lovelace
   } deriving (Show, Eq)
 
 instance B.Buildable GenesisNonAvvmBalances where
@@ -56,22 +56,22 @@ instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
 instance Aeson.ToJSON GenesisNonAvvmBalances where
   toJSON = Aeson.toJSON . convert . getGenesisNonAvvmBalances
    where
-    convert :: Map Address Coin -> Map Text Integer
+    convert :: Map Address Lovelace -> Map Text Integer
     convert = M.fromList . map f . M.toList
-    f :: (Address, Coin) -> (Text, Integer)
-    f = bimap (sformat build) (toInteger . unsafeGetCoin)
+    f :: (Address, Lovelace) -> (Text, Integer)
+    f = bimap (sformat build) (toInteger . unsafeGetLovelace)
 
 instance Aeson.FromJSON GenesisNonAvvmBalances where
   parseJSON = toAesonError . convertNonAvvmDataToBalances <=< Aeson.parseJSON
 
 data NonAvvmBalancesError
-  = NonAvvmBalancesCoinError CoinError
+  = NonAvvmBalancesLovelaceError LovelaceError
   | NonAvvmBalancesDecoderError DecoderError
 
 instance B.Buildable NonAvvmBalancesError where
   build = \case
-    NonAvvmBalancesCoinError err -> bprint
-      ("Failed to construct a coin in NonAvvmBalances.\n Error: " . build)
+    NonAvvmBalancesLovelaceError err -> bprint
+      ("Failed to construct a lovelace in NonAvvmBalances.\n Error: " . build)
       err
     NonAvvmBalancesDecoderError err -> bprint
       ("Failed to decode NonAvvmBalances.\n Error: " . build)
@@ -88,23 +88,24 @@ convertNonAvvmDataToBalances balances = fmap GenesisNonAvvmBalances $ do
   converted <- traverse convert (M.toList balances)
   mkBalances converted
  where
-  mkBalances :: [(Address, Coin)] -> m (Map Address Coin)
+  mkBalances :: [(Address, Lovelace)] -> m (Map Address Lovelace)
   mkBalances =
     liftEither
-      -- Pull 'CoinError's out of the 'Map' and lift them to
+      -- Pull 'LovelaceError's out of the 'Map' and lift them to
       -- 'NonAvvmBalancesError's
-      . first NonAvvmBalancesCoinError
+      . first NonAvvmBalancesLovelaceError
       . sequence
-      -- Make map joining duplicate keys with 'addCoin' lifted from 'Coin ->
-      -- Coin -> Either CoinError Coin' to 'Either CoinError Coin -> Either
-      -- CoinError Coin -> Either CoinError Coin'
-      . M.fromListWith (\c -> join . liftM2 addCoin c)
-      -- Lift the 'Coin's to 'Either CoinError Coin's
+      -- Make map joining duplicate keys with 'addLovelace' lifted from 'Lovelace ->
+      -- Lovelace -> Either LovelaceError Lovelace' to 'Either LovelaceError Lovelace -> Either
+      -- LovelaceError Lovelace -> Either LovelaceError Lovelace'
+      . M.fromListWith (\c -> join . liftM2 addLovelace c)
+      -- Lift the 'Lovelace's to 'Either LovelaceError Lovelace's
       . fmap (second Right)
 
-  convert :: (Text, Integer) -> m (Address, Coin)
+  convert :: (Text, Integer) -> m (Address, Lovelace)
   convert (txt, i) = do
     addr <- liftEither . first NonAvvmBalancesDecoderError $ decodeTextAddress
       txt
-    coin <- liftEither . first NonAvvmBalancesCoinError $ integerToCoin i
-    return (addr, coin)
+    lovelace <-
+      liftEither . first NonAvvmBalancesLovelaceError $ integerToLovelace i
+    return (addr, lovelace)

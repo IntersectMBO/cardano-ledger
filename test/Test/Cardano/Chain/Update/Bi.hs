@@ -15,7 +15,7 @@ import Hedgehog (Property)
 import qualified Hedgehog as H
 
 import Cardano.Binary.Class (Raw(..))
-import Cardano.Chain.Common (CoinPortion(..))
+import Cardano.Chain.Common (LovelacePortion(..))
 import Cardano.Chain.Update (ApplicationName(..), SoftforkRule(..))
 import Cardano.Crypto (Hash, abstractHash)
 
@@ -124,7 +124,11 @@ roundTripHashRaw = eachOf 50 genHashRaw roundTripsBiBuildable
 
 goldenSoftforkRule :: Property
 goldenSoftforkRule = goldenTestBi sfR "test/golden/bi/update/SoftforkRule"
-  where sfR = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
+ where
+  sfR = SoftforkRule
+    (LovelacePortion 99)
+    (LovelacePortion 99)
+    (LovelacePortion 99)
 
 roundTripSoftforkRule :: Property
 roundTripSoftforkRule = eachOf 10 genSoftforkRule roundTripsBiBuildable

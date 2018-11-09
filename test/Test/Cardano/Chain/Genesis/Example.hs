@@ -22,7 +22,12 @@ import Data.Maybe (fromJust)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  (CoinPortion(..), SharedSeed(..), StakeholderId(..), addressHash, mkKnownCoin)
+  ( LovelacePortion(..)
+  , SharedSeed(..)
+  , StakeholderId(..)
+  , addressHash
+  , mkKnownLovelace
+  )
 import Cardano.Chain.Delegation (HeavyDlgIndex(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
@@ -69,8 +74,8 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances = GenesisAvvmBalances
   { getGenesisAvvmBalances = M.fromList
-    [ (exampleRedeemPublicKey' (0, 32) , mkKnownCoin @36524597913081152)
-    , (exampleRedeemPublicKey' (32, 32), mkKnownCoin @37343863242999412)
+    [ (exampleRedeemPublicKey' (0, 32) , mkKnownLovelace @36524597913081152)
+    , (exampleRedeemPublicKey' (32, 32), mkKnownLovelace @37343863242999412)
     ]
   }
  where
@@ -145,7 +150,7 @@ exampleGenesisInitializer = GenesisInitializer
     { faoCount      = 17853231730478779264
     , faoOneBalance = 15087947214890024355
     }
-  , giAvvmBalanceFactor = CoinPortion {getCoinPortion = 366832547637728}
+  , giAvvmBalanceFactor = LovelacePortion {getLovelacePortion = 366832547637728}
   , giUseHeavyDlg       = False
   , giSeed              = 0
   }
