@@ -4,31 +4,38 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Ssc
-       ( SscPayload (..)
-       , dropSscPayload
+  ( SscPayload(..)
+  , dropSscPayload
+  , SscProof(..)
+  , dropSscProof
+  , dropCommitmentsMap
+  , dropSignedCommitment
+  , dropCommitment
+  , dropOpeningsMap
+  , dropSharesMap
+  , dropInnerSharesMap
+  , dropVssCertificatesMap
+  , dropVssCertificate
+  )
+where
 
-       , SscProof (..)
-       , dropSscProof
+import Cardano.Prelude
 
-       , dropCommitmentsMap
-       , dropSignedCommitment
-       , dropCommitment
-
-       , dropOpeningsMap
-
-       , dropSharesMap
-       , dropInnerSharesMap
-
-       , dropVssCertificatesMap
-       , dropVssCertificate
-       ) where
-
-import           Cardano.Prelude
-
-import           Cardano.Binary.Class (Bi (..), DecoderError (..), Dropper,
-                     decodeListLenCanonical, dropBytes, dropList, dropMap,
-                     dropSet, dropTriple, dropWord64, encodeListLen,
-                     enforceSize, matchSize)
+import Cardano.Binary.Class
+  ( Bi(..)
+  , DecoderError(..)
+  , Dropper
+  , decodeListLenCanonical
+  , dropBytes
+  , dropList
+  , dropMap
+  , dropSet
+  , dropTriple
+  , dropWord64
+  , encodeListLen
+  , enforceSize
+  , matchSize
+  )
 
 
 --------------------------------------------------------------------------------

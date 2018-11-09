@@ -7,29 +7,29 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Update.SystemTag
-       ( SystemTag (..)
-       , SystemTagError (..)
-       , checkSystemTag
-       , systemTagMaxLength
+  ( SystemTag(..)
+  , SystemTagError(..)
+  , checkSystemTag
+  , systemTagMaxLength
+  , osHelper
+  , archHelper
+  )
+where
 
-       , osHelper
-       , archHelper
-       ) where
+import Cardano.Prelude
 
-import           Cardano.Prelude
-
-import           Control.Monad.Except (MonadError (throwError))
-import           Data.Aeson (FromJSON (..))
-import           Data.Aeson.Options (defaultOptions)
-import           Data.Aeson.TH (deriveToJSON)
-import           Data.Char (isAscii)
+import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson (FromJSON(..))
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveToJSON)
+import Data.Char (isAscii)
 import qualified Data.Text as T
-import           Distribution.System (Arch (..), OS (..))
-import           Distribution.Text (display)
-import           Formatting (bprint, int, stext)
+import Distribution.System (Arch(..), OS(..))
+import Distribution.Text (display)
+import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..))
+import Cardano.Binary.Class (Bi(..))
 
 
 -- | Tag of system for which update data is purposed, e.g. win64, mac32

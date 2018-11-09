@@ -6,19 +6,17 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.AvvmBalances
-       ( GenesisAvvmBalances (..)
-       ) where
+  ( GenesisAvvmBalances(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Data.Aeson as Aeson
-import           Text.JSON.Canonical
-    (FromJSON (..), ToJSON (..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Chain.Common
-    (Coin)
-import           Cardano.Crypto.Signing.Redeem
-    (RedeemPublicKey)
+import Cardano.Chain.Common (Coin)
+import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
 
 
 -- | Predefined balances of avvm entries.

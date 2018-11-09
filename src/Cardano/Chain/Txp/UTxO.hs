@@ -1,18 +1,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Cardano.Chain.Txp.UTxO
-       ( UTxO
-       , UTxOError
-       , fromList
-       , member
-       , lookupAddress
-       , union
-       , balance
-       , (<|)
-       , (</|)
-       , txOutputUTxO
-       , isRedeemUTxO
-       ) where
+  ( UTxO
+  , UTxOError
+  , fromList
+  , member
+  , lookupAddress
+  , union
+  , balance
+  , (<|)
+  , (</|)
+  , txOutputUTxO
+  , isRedeemUTxO
+  )
+where
 
 import Cardano.Prelude
 
@@ -21,10 +22,8 @@ import qualified Data.Map.Strict as M
 
 import Cardano.Chain.Common
   (Address, Coin, CoinError, isRedeemAddress, sumCoins)
-import Cardano.Chain.Txp.Tx
-  (Tx (..), TxId, TxIn (..), TxOut (..))
-import Cardano.Crypto
-  (hash)
+import Cardano.Chain.Txp.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
+import Cardano.Crypto (hash)
 
 
 newtype UTxO = UTxO
@@ -51,8 +50,7 @@ lookupAddress txIn =
 union :: MonadError UTxOError m => UTxO -> UTxO -> m UTxO
 union (UTxO m) (UTxO m') = do
   let m'' = M.union m m'
-  unless (M.size m'' == M.size m + M.size m')
-    $ throwError UTxOOverlappingUnion
+  unless (M.size m'' == M.size m + M.size m') $ throwError UTxOOverlappingUnion
   pure $ UTxO m''
 
 balance :: UTxO -> Either CoinError Coin

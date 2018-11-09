@@ -6,23 +6,24 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Update.ApplicationName
-       ( ApplicationName (..)
-       , applicationNameMaxLength
-       , ApplicationNameError (..)
-       , checkApplicationName
-       ) where
+  ( ApplicationName(..)
+  , applicationNameMaxLength
+  , ApplicationNameError(..)
+  , checkApplicationName
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (throwError))
-import           Data.Aeson (FromJSON (..))
-import           Data.Aeson.TH (defaultOptions, deriveToJSON)
-import           Data.Char (isAscii)
+import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson (FromJSON(..))
+import Data.Aeson.TH (defaultOptions, deriveToJSON)
+import Data.Char (isAscii)
 import qualified Data.Text as T
-import           Formatting (bprint, int, stext)
+import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..))
+import Cardano.Binary.Class (Bi(..))
 
 
 newtype ApplicationName = ApplicationName

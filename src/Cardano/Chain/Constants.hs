@@ -2,14 +2,15 @@
 --   For configurable constants, see Cardano.Genesis.Configuration.
 
 module Cardano.Chain.Constants
-       ( sharedSeedLength
-       , accountGenesisIndex
-       , wAddressGenesisIndex
-       ) where
+  ( sharedSeedLength
+  , accountGenesisIndex
+  , wAddressGenesisIndex
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Cardano.Crypto.HD (firstHardened)
+import Cardano.Crypto.HD (firstHardened)
 
 -- | First index in derivation path for HD account, which is put to genesis utxo
 accountGenesisIndex :: Word32

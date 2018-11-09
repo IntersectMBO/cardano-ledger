@@ -4,21 +4,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Payload
-       ( Payload (..)
-       , PayloadError (..)
-       , checkPayload
-       ) where
+  ( Payload(..)
+  , PayloadError(..)
+  , checkPayload
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
-import Formatting
-  (bprint, build)
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  (Bi (..), encodeListLen, enforceSize)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Update.Vote
   ( Proposal
   , ProposalError
@@ -29,8 +27,7 @@ import Cardano.Chain.Update.Vote
   , formatMaybeProposal
   , formatVoteShort
   )
-import Cardano.Crypto
-  (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagic)
 
 
 -- | Update System payload

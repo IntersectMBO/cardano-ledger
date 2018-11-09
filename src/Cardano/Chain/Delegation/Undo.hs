@@ -6,19 +6,20 @@
 -- | Data required to rollback a 'Delegation.Payload'
 
 module Cardano.Chain.Delegation.Undo
-       ( Undo (..)
-       , isRevokePsk
-       ) where
+  ( Undo(..)
+  , isRevokePsk
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (bprint)
-import           Formatting.Buildable (Buildable (..))
+import Formatting (bprint)
+import Formatting.Buildable (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (StakeholderId)
-import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
-import           Cardano.Crypto (ProxySecretKey, isSelfSignedPsk)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (StakeholderId)
+import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
+import Cardano.Crypto (ProxySecretKey, isSelfSignedPsk)
 
 
 -- | Undo for the delegation component

@@ -9,21 +9,21 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Update.SoftforkRule
-       ( SoftforkRule (..)
-       ) where
+  ( SoftforkRule(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
+import Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
-import           Data.Aeson.TH (deriveJSON)
-import           Formatting (bprint, build)
+import Data.Aeson.TH (deriveJSON)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
-                     mkObject)
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (CoinPortion)
 
 
 -- | Values defining softfork resolution rule

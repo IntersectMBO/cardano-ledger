@@ -4,21 +4,22 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Common.TxSizeLinear
-       ( TxSizeLinear (..)
-       , txSizeLinearMinValue
-       , calculateTxSizeLinear
-       ) where
+  ( TxSizeLinear(..)
+  , txSizeLinearMinValue
+  , calculateTxSizeLinear
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson (object, (.=))
+import Data.Aeson (object, (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Fixed (Nano)
-import           Formatting (bprint, build)
+import Data.Fixed (Nano)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common.Coeff
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common.Coeff
 
 -- | A linear equation on the transaction size. Represents the @\s -> a + b*s@
 -- function where @s@ is the transaction size in bytes, @a@ and @b@ are
@@ -51,7 +52,7 @@ instance Aeson.FromJSON TxSizeLinear where
 
 calculateTxSizeLinear :: TxSizeLinear -> Natural -> Nano
 calculateTxSizeLinear (TxSizeLinear (Coeff a) (Coeff b)) txSize =
-    a + b * fromIntegral txSize
+  a + b * fromIntegral txSize
 
 txSizeLinearMinValue :: TxSizeLinear -> Nano
 txSizeLinearMinValue (TxSizeLinear (Coeff minVal) _) = minVal

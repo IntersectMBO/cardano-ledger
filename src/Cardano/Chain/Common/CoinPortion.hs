@@ -10,25 +10,26 @@
 {-# LANGUAGE ViewPatterns               #-}
 
 module Cardano.Chain.Common.CoinPortion
-       ( CoinPortion (..)
-       , mkCoinPortion
-       , coinPortionDenominator
-       , coinPortionFromDouble
-       , coinPortionToDouble
-       , applyCoinPortionDown
-       , applyCoinPortionUp
-       ) where
+  ( CoinPortion(..)
+  , mkCoinPortion
+  , coinPortionDenominator
+  , coinPortionFromDouble
+  , coinPortionToDouble
+  , applyCoinPortionDown
+  , applyCoinPortionUp
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (..))
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Formatting (bprint, build, float, int, sformat)
+import Control.Monad.Except (MonadError(..))
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Binary.Class (Bi (..))
-import           Cardano.Chain.Common.Coin
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Common.Coin
 
 
 -- | CoinPortion is some portion of Coin; it is interpreted as a fraction with

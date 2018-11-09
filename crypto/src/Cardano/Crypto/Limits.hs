@@ -2,19 +2,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Crypto.Limits
-       ( mlAbstractHash
-       , mlPublicKey
-       , mlXSignature
-       , mlSignature
-       ) where
+  ( mlAbstractHash
+  , mlPublicKey
+  , mlXSignature
+  , mlSignature
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
+import Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
 
-import           Cardano.Binary.Limit (Limit)
-import           Cardano.Crypto (AbstractHash, PublicKey, Signature (..))
+import Cardano.Binary.Limit (Limit)
+import Cardano.Crypto (AbstractHash, PublicKey, Signature(..))
 
 
 mlAbstractHash

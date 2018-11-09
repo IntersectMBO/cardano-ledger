@@ -4,19 +4,20 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Cardano.Chain.Txp.TxAux
-       ( TxAux (..)
-       , txaF
-       ) where
+  ( TxAux(..)
+  , txaF
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (Format, bprint, build, later)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Chain.Txp.TxWitness (TxWitness)
 
 
 -- | Transaction + auxiliary data

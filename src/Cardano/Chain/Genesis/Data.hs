@@ -6,36 +6,28 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Genesis.Data
-       ( GenesisData (..)
-       , readGenesisData
-       ) where
+  ( GenesisData(..)
+  , readGenesisData
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except
-    (MonadError, liftEither)
+import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Time
-    (UTCTime)
-import           Formatting
-    (bprint, build, stext)
+import Data.Time (UTCTime)
+import Formatting (bprint, build, stext)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical
-    (FromJSON (..), ToJSON (..), fromJSField, mkObject, parseCanonicalJSON)
+import Text.JSON.Canonical
+  (FromJSON(..), ToJSON(..), fromJSField, mkObject, parseCanonicalJSON)
 
-import           Cardano.Chain.Genesis.AvvmBalances
-    (GenesisAvvmBalances)
-import           Cardano.Chain.Genesis.Delegation
-    (GenesisDelegation)
-import           Cardano.Chain.Genesis.NonAvvmBalances
-    (GenesisNonAvvmBalances)
-import           Cardano.Chain.Genesis.ProtocolConstants
-    (GenesisProtocolConstants)
-import           Cardano.Chain.Genesis.WStakeholders
-    (GenesisWStakeholders)
-import           Cardano.Chain.Update.BlockVersionData
-    (BlockVersionData)
+import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
+import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
+import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
+import Cardano.Chain.Genesis.ProtocolConstants (GenesisProtocolConstants)
+import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
+import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be

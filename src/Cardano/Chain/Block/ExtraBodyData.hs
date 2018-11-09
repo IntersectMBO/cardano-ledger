@@ -4,16 +4,17 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Block.ExtraBodyData
-       ( ExtraBodyData (..)
-       ) where
+  ( ExtraBodyData(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (bprint, build)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (Attributes, areAttributesKnown)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (Attributes, areAttributesKnown)
 
 
 -- | Represents main block extra data

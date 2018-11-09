@@ -4,41 +4,37 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Cardano.Chain.Slotting.SlotId
-       ( SlotId (..)
-       , siEpochL
-       , siSlotL
-       , slotIdF
+  ( SlotId(..)
+  , siEpochL
+  , siSlotL
+  , slotIdF
+  , slotIdToEnum
+  , slotIdFromEnum
+  , slotIdSucc
+  , slotIdPred
+  , FlatSlotId
+  , flatSlotId
+  , flattenSlotId
+  , flattenEpochIndex
+  , unflattenSlotId
+  , crucialSlot
+  )
+where
 
-       , slotIdToEnum
-       , slotIdFromEnum
-       , slotIdSucc
-       , slotIdPred
+import Cardano.Prelude
 
-       , FlatSlotId
-       , flatSlotId
-
-       , flattenSlotId
-       , flattenEpochIndex
-       , unflattenSlotId
-
-       , crucialSlot
-       ) where
-
-import           Cardano.Prelude
-
-import           Control.Lens (Iso', iso, makeLensesFor)
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (Format, bprint, build, ords, sformat)
+import Control.Lens (Iso', iso, makeLensesFor)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Formatting (Format, bprint, build, ords, sformat)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common.BlockCount (BlockCount)
-import           Cardano.Chain.ProtocolConstants (kEpochSlots,
-                     kSlotSecurityParam)
-import           Cardano.Chain.Slotting.EpochIndex (EpochIndex (..))
-import           Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex,
-                     getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
-import           Cardano.Chain.Slotting.SlotCount (SlotCount)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common.BlockCount (BlockCount)
+import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
+import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
+import Cardano.Chain.Slotting.LocalSlotIndex
+  (LocalSlotIndex, getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
+import Cardano.Chain.Slotting.SlotCount (SlotCount)
 
 
 -- | Slot is identified by index of epoch and index of slot in
@@ -127,7 +123,7 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
  where
   epochSlots = kEpochSlots k
   idx :: Word16
-  idx = fromIntegral $ epochSlots - kSlotSecurityParam k - 1
+  idx  = fromIntegral $ epochSlots - kSlotSecurityParam k - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->
       panic $ sformat ("The impossible happened in crucialSlot: " . build) err

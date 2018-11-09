@@ -6,22 +6,23 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Update.BlockVersionModifier
-       ( BlockVersionModifier (..)
-       , applyBVM
-       ) where
+  ( BlockVersionModifier(..)
+  , applyBVM
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Text.Lazy.Builder (Builder)
-import           Data.Time (NominalDiffTime)
-import           Formatting (Format, bprint, build, bytes, int, later, shortest)
+import Data.Text.Lazy.Builder (Builder)
+import Data.Time (NominalDiffTime)
+import Formatting (Format, bprint, build, bytes, int, later, shortest)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy)
-import           Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
-import           Cardano.Chain.Update.BlockVersionData (BlockVersionData (..))
-import           Cardano.Chain.Update.SoftforkRule (SoftforkRule)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (CoinPortion, ScriptVersion, TxFeePolicy)
+import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
+import Cardano.Chain.Update.BlockVersionData (BlockVersionData(..))
+import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
 
 -- | Data which represents modifications of block (aka protocol) version

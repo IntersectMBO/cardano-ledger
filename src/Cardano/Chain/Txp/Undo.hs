@@ -1,11 +1,12 @@
 module Cardano.Chain.Txp.Undo
-       ( TxpUndo
-       , TxUndo
-       ) where
+  ( TxpUndo
+  , TxUndo
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Cardano.Chain.Txp.TxOutAux
+import Cardano.Chain.Txp.TxOutAux
 
 
 type TxpUndo = [TxUndo]

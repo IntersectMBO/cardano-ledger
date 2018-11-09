@@ -13,44 +13,47 @@
 -- | Hashing capabilities.
 
 module Cardano.Crypto.Hashing
-       ( -- * AbstractHash
-         AbstractHash (..)
-       , decodeAbstractHash
-       , decodeHash
-       , abstractHash
-       , unsafeAbstractHash
+  ( -- * AbstractHash
+    AbstractHash(..)
+  , decodeAbstractHash
+  , decodeHash
+  , abstractHash
+  , unsafeAbstractHash
 
          -- * Common Hash
-       , Hash
-       , hashHexF
-       , mediumHashF
-       , shortHashF
-       , hash
-       , hashRaw
+  , Hash
+  , hashHexF
+  , mediumHashF
+  , shortHashF
+  , hash
+  , hashRaw
 
          -- * Utility
-       , HashAlgorithm
-       , hashDigestSize'
-       ) where
+  , HashAlgorithm
+  , hashDigestSize'
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 import qualified Prelude
 
-import           Crypto.Hash (Blake2b_256, Digest, HashAlgorithm,
-                     hashDigestSize)
+import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
 import qualified Crypto.Hash as Hash
-import           Data.Aeson (FromJSON (..), FromJSONKey (..),
-                     FromJSONKeyFunction (..), ToJSON (..), ToJSONKey (..))
-import           Data.Aeson.Types (toJSONKeyText)
+import Data.Aeson
+  ( FromJSON(..)
+  , FromJSONKey(..)
+  , FromJSONKeyFunction(..)
+  , ToJSON(..)
+  , ToJSONKey(..)
+  )
+import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (Format, bprint, build, fitLeft, later, sformat,
-                     (%.))
-import qualified Formatting.Buildable as B (Buildable (..))
+import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
+import qualified Formatting.Buildable as B (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..), Raw,
-                     withWordSize)
+import Cardano.Binary.Class (Bi(..), DecoderError(..), Raw, withWordSize)
 import qualified Cardano.Binary.Class as Bi
 
 

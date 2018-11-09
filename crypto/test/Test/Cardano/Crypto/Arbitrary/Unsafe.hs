@@ -6,24 +6,24 @@
 
 -- | Unsafe arbitrary instances for crypto primitives.
 
-module Test.Cardano.Crypto.Arbitrary.Unsafe () where
+module Test.Cardano.Crypto.Arbitrary.Unsafe
+  ()
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Data.Coerce (coerce)
+import Data.Coerce (coerce)
 
-import           Test.QuickCheck (Arbitrary (..), choose)
-import           Test.QuickCheck.Instances ()
+import Test.QuickCheck (Arbitrary(..), choose)
+import Test.QuickCheck.Instances ()
 
-import           Cardano.Binary.Class (Bi)
+import Cardano.Binary.Class (Bi)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.Hashing (AbstractHash, HashAlgorithm,
-                     abstractHash)
-import           Cardano.Crypto.Signing (PublicKey, SecretKey, SignTag, Signed,
-                     mkSigned)
+import Cardano.Crypto.Hashing (AbstractHash, HashAlgorithm, abstractHash)
+import Cardano.Crypto.Signing (PublicKey, SecretKey, SignTag, Signed, mkSigned)
 
-import           Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
 
 instance ArbitraryUnsafe PublicKey where

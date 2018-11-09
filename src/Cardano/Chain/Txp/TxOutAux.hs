@@ -3,17 +3,18 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Cardano.Chain.Txp.TxOutAux
-       ( TxOutAux (..)
-       ) where
+  ( TxOutAux(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting (bprint, build)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Txp.Tx (TxOut)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Txp.Tx (TxOut)
 
 
 -- | Transaction output and auxilary data corresponding to it

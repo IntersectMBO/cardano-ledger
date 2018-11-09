@@ -4,50 +4,44 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Txp.Tx
-       ( Tx (..)
-       , txInputs
-       , txOutputs
-       , txAttributes
-       , txF
-
-       , TxId
-       , TxAttributes
-
-       , TxIn (..)
-       , isTxInUnknown
-
-       , TxOut (..)
-       , _TxOut
-       ) where
+  ( Tx(..)
+  , txInputs
+  , txOutputs
+  , txAttributes
+  , txF
+  , TxId
+  , TxAttributes
+  , TxIn(..)
+  , isTxInUnknown
+  , TxOut(..)
+  , _TxOut
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Lens
-  (makeLenses, makePrisms)
+import Control.Lens (makeLenses, makePrisms)
 import Data.Aeson
-  ( FromJSON (..)
-  , FromJSONKey (..)
-  , FromJSONKeyFunction (..)
-  , ToJSON (toJSON)
-  , ToJSONKey (..)
+  ( FromJSON(..)
+  , FromJSONKey(..)
+  , FromJSONKeyFunction(..)
+  , ToJSON(toJSON)
+  , ToJSONKey(..)
   , object
   , withObject
   , (.:)
   , (.=)
   )
-import Data.Aeson.TH
-  (defaultOptions, deriveJSON)
-import Data.Aeson.Types
-  (toJSONKeyText)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import Formatting
-  (Format, bprint, build, builder, int, sformat)
+import Formatting (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi (..)
-  , Case (..)
+  ( Bi(..)
+  , Case(..)
   , decodeKnownCborDataItem
   , decodeUnknownCborDataItem
   , encodeKnownCborDataItem
@@ -58,11 +52,9 @@ import Cardano.Binary.Class
   , szCases
   )
 import Cardano.Chain.Common
-  (Address (..), Coin, coinF, coinToInteger, decodeTextAddress, integerToCoin)
-import Cardano.Chain.Common.Attributes
-  (Attributes, areAttributesKnown)
-import Cardano.Crypto
-  (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
+  (Address(..), Coin, coinF, coinToInteger, decodeTextAddress, integerToCoin)
+import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
+import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 
 
 --------------------------------------------------------------------------------

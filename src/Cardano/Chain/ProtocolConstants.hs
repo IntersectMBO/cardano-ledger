@@ -8,33 +8,29 @@
 -- | Protocol constants and some derived terms.
 
 module Cardano.Chain.ProtocolConstants
-       ( ProtocolConstants (..)
-       , VssMinTTL (..)
-       , VssMaxTTL (..)
+  ( ProtocolConstants(..)
+  , VssMinTTL(..)
+  , VssMaxTTL(..)
+  , vssMaxTTL
+  , vssMinTTL
+  , pcBlkSecurityParam
+  , pcSlotSecurityParam
+  , kSlotSecurityParam
+  , pcChainQualityThreshold
+  , kChainQualityThreshold
+  , pcEpochSlots
+  , kEpochSlots
+  )
+where
 
-       , vssMaxTTL
-       , vssMinTTL
+import Cardano.Prelude
 
-       , pcBlkSecurityParam
+import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-       , pcSlotSecurityParam
-       , kSlotSecurityParam
-
-       , pcChainQualityThreshold
-       , kChainQualityThreshold
-
-       , pcEpochSlots
-       , kEpochSlots
-       ) where
-
-import           Cardano.Prelude
-
-import           Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
-
-import           Cardano.Chain.Common.BlockCount (BlockCount (..))
-import           Cardano.Chain.Slotting.SlotCount (SlotCount)
+import Cardano.Chain.Common.BlockCount (BlockCount(..))
+import Cardano.Chain.Slotting.SlotCount (SlotCount)
 
 
 -- | The 'k' parameter and TTLs for VSS certificates.

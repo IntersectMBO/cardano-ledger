@@ -8,70 +8,69 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Update.Undo
-       ( -- * Proposal state
-         UndecidedProposalState (..)
-       , DecidedProposalState (..)
-       , ProposalState (..)
-       , UpsExtra (..)
-       , DpsExtra (..)
-       , ConfirmedProposalState (..)
-       , cpsBlockVersion
-       , cpsSoftwareVersion
-       , propStateToEither
-       , psProposal
-       , psVotes
-       , mkUProposalState
+  ( -- * Proposal state
+    UndecidedProposalState(..)
+  , DecidedProposalState(..)
+  , ProposalState(..)
+  , UpsExtra(..)
+  , DpsExtra(..)
+  , ConfirmedProposalState(..)
+  , cpsBlockVersion
+  , cpsSoftwareVersion
+  , propStateToEither
+  , psProposal
+  , psVotes
+  , mkUProposalState
 
          -- * BlockVersion state
-       , BlockVersionState (..)
-       , bvsIsConfirmed
-       , bvsScriptVersion
-       , bvsSlotDuration
-       , bvsMaxBlockSize
+  , BlockVersionState(..)
+  , bvsIsConfirmed
+  , bvsScriptVersion
+  , bvsSlotDuration
+  , bvsMaxBlockSize
 
          -- * Rollback
-       , PrevValue (..)
-       , maybeToPrev
-       , USUndo (..)
-       , unChangedSVL
-       , unChangedPropsL
-       , unChangedBVL
-       , unLastAdoptedBVL
-       , unChangedConfPropsL
-       , unPrevProposersL
-       , unSlottingDataL
+  , PrevValue(..)
+  , maybeToPrev
+  , USUndo(..)
+  , unChangedSVL
+  , unChangedPropsL
+  , unChangedBVL
+  , unLastAdoptedBVL
+  , unChangedConfPropsL
+  , unPrevProposersL
+  , unSlottingDataL
 
        -- * VoteState
-       , StakeholderVotes
-       , LocalVotes
-       , VoteState (..)
-       , canCombineVotes
-       , combineVotes
-       , isPositiveVote
-       , newVoteState
-       ) where
+  , StakeholderVotes
+  , LocalVotes
+  , VoteState(..)
+  , canCombineVotes
+  , combineVotes
+  , isPositiveVote
+  , newVoteState
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Lens (makeLensesFor)
-import           Data.Time (NominalDiffTime)
-import           Formatting.Buildable (Buildable (..))
+import Control.Lens (makeLensesFor)
+import Data.Time (NominalDiffTime)
+import Formatting.Buildable (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
-                     decodeListLenCanonical, encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Header (HeaderHash)
-import           Cardano.Chain.Common (ChainDifficulty, Coin, ScriptVersion,
-                     StakeholderId, mkKnownCoin)
-import           Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
-import           Cardano.Chain.Update.ApplicationName (ApplicationName)
-import           Cardano.Chain.Update.BlockVersion (BlockVersion)
-import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier (..))
-import           Cardano.Chain.Update.SoftwareVersion (NumSoftwareVersion,
-                     SoftwareVersion)
-import           Cardano.Chain.Update.Vote (Proposal (..), ProposalBody (..),
-                     UpId, Vote)
-import           Cardano.Crypto (PublicKey)
+import Cardano.Binary.Class
+  (Bi(..), DecoderError(..), decodeListLenCanonical, encodeListLen, enforceSize)
+import Cardano.Chain.Block.Header (HeaderHash)
+import Cardano.Chain.Common
+  (ChainDifficulty, Coin, ScriptVersion, StakeholderId, mkKnownCoin)
+import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
+import Cardano.Chain.Update.ApplicationName (ApplicationName)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier(..))
+import Cardano.Chain.Update.SoftwareVersion
+  (NumSoftwareVersion, SoftwareVersion)
+import Cardano.Chain.Update.Vote (Proposal(..), ProposalBody(..), UpId, Vote)
+import Cardano.Crypto (PublicKey)
 
 
 --------------------------------------------------------------------------------

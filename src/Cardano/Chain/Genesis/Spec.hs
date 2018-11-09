@@ -2,36 +2,26 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Genesis.Spec
-       ( GenesisSpec (..)
-       , mkGenesisSpec
-       ) where
+  ( GenesisSpec(..)
+  , mkGenesisSpec
+  )
+where
 
-import           Cardano.Prelude
-import           Prelude
-    (String)
+import Cardano.Prelude
+import Prelude (String)
 
-import           Control.Monad.Except
-    (MonadError (throwError))
-import           Data.Aeson.Options
-    (defaultOptions)
-import           Data.Aeson.TH
-    (deriveJSON)
-import           Data.List
-    (nub)
+import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
+import Data.List (nub)
 import qualified Data.Map.Strict as M
 
-import           Cardano.Chain.Common.SharedSeed
-    (SharedSeed)
-import           Cardano.Chain.Genesis.AvvmBalances
-    (GenesisAvvmBalances (..))
-import           Cardano.Chain.Genesis.Delegation
-    (GenesisDelegation (..))
-import           Cardano.Chain.Genesis.Initializer
-    (GenesisInitializer (..))
-import           Cardano.Chain.Genesis.ProtocolConstants
-    (GenesisProtocolConstants (..))
-import           Cardano.Chain.Update.BlockVersionData
-    (BlockVersionData)
+import Cardano.Chain.Common.SharedSeed (SharedSeed)
+import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
+import Cardano.Chain.Genesis.Delegation (GenesisDelegation(..))
+import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
+import Cardano.Chain.Genesis.ProtocolConstants (GenesisProtocolConstants(..))
+import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
 
 
 -- | Specification how to generate full genesis data.
@@ -66,7 +56,7 @@ mkGenesisSpec
   -> Either String GenesisSpec
 mkGenesisSpec avvmDistr seed delega bvd pc specType = do
   let avvmKeys = M.keys $ getGenesisAvvmBalances avvmDistr
-  unless (length (nub avvmKeys) == length avvmKeys) $
-    throwError "mkGenesisSpec: there are duplicates in avvm balances"
+  unless (length (nub avvmKeys) == length avvmKeys)
+    $ throwError "mkGenesisSpec: there are duplicates in avvm balances"
   -- All checks passed
   pure $ UnsafeGenesisSpec avvmDistr seed delega bvd pc specType

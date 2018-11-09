@@ -6,24 +6,23 @@
 {-# LANGUAGE TypeApplications    #-}
 
 module Cardano.Chain.Common.AddrStakeDistribution
-       ( AddrStakeDistribution (..)
+  ( AddrStakeDistribution(..)
+  , mkMultiKeyDistr
+  , MultiKeyDistrError(..)
+  )
+where
 
-       , mkMultiKeyDistr
-       , MultiKeyDistrError (..)
-       ) where
+import Cardano.Prelude
 
-import           Cardano.Prelude
+import Control.Monad.Except (MonadError(..))
+import Formatting (bprint, build, sformat)
+import qualified Formatting.Buildable as B (Buildable(..))
 
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, sformat)
-import qualified Formatting.Buildable as B (Buildable (..))
-
-import           Cardano.Binary.Class (Bi (..), szCases)
+import Cardano.Binary.Class (Bi(..), szCases)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Chain.Common.CoinPortion (CoinPortion (..),
-                     coinPortionDenominator)
-import           Cardano.Chain.Common.StakeholderId (StakeholderId,
-                     shortStakeholderF)
+import Cardano.Chain.Common.CoinPortion
+  (CoinPortion(..), coinPortionDenominator)
+import Cardano.Chain.Common.StakeholderId (StakeholderId, shortStakeholderF)
 
 
 -- | Stake distribution associated with an address.
@@ -104,12 +103,12 @@ mkMultiKeyDistr
   => Map StakeholderId CoinPortion
   -> m AddrStakeDistribution
 mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
-  where
-    checkDistrMap :: m ()
-    checkDistrMap = do
-        when (null distrMap) $ throwError MkdMapIsEmpty
-        when (length distrMap == 1) $ throwError MkdMapIsSingleton
-        unless (all ((> 0) . getCoinPortion) distrMap)
-            $ throwError MkdNegativePortion
-        let distrSum = sum $ map getCoinPortion distrMap
-        unless (distrSum == coinPortionDenominator) $ throwError MkdSumNot1
+ where
+  checkDistrMap :: m ()
+  checkDistrMap = do
+    when (null distrMap) $ throwError MkdMapIsEmpty
+    when (length distrMap == 1) $ throwError MkdMapIsSingleton
+    unless (all ((> 0) . getCoinPortion) distrMap)
+      $ throwError MkdNegativePortion
+    let distrSum = sum $ map getCoinPortion distrMap
+    unless (distrSum == coinPortionDenominator) $ throwError MkdSumNot1

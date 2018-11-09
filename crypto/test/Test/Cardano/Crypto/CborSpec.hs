@@ -8,18 +8,19 @@
 -- | Test.Cardano.Cbor.CborSpec specification
 
 module Test.Cardano.Crypto.CborSpec
-       ( spec
-       ) where
+  ( spec
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Crypto.Hash (Blake2b_224, Blake2b_256)
-import           Test.Hspec (Spec, describe)
+import Crypto.Hash (Blake2b_224, Blake2b_256)
+import Test.Hspec (Spec, describe)
 
 import qualified Cardano.Crypto as Crypto
 
-import           Test.Cardano.Binary.Helpers (U, binaryTest)
-import           Test.Cardano.Crypto.Arbitrary ()
+import Test.Cardano.Binary.Helpers (U, binaryTest)
+import Test.Cardano.Crypto.Arbitrary ()
 
 
 spec :: Spec

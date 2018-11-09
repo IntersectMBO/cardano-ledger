@@ -7,24 +7,25 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 
 module Cardano.Chain.Delegation.HeavyDlgIndex
-       ( HeavyDlgIndex (..)
-       , ProxySigHeavy
-       , ProxySKHeavy
-       , ProxySKBlockInfo
-       ) where
+  ( HeavyDlgIndex(..)
+  , ProxySigHeavy
+  , ProxySKHeavy
+  , ProxySKBlockInfo
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Formatting (bprint, build)
-import           Formatting.Buildable (Buildable (..))
-import           Text.JSON.Canonical (FromJSON (..), Int54, JSValue (..),
-                     ToJSON (..), fromJSField, mkObject)
+import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Formatting (bprint, build)
+import Formatting.Buildable (Buildable(..))
+import Text.JSON.Canonical
+  (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
-import           Cardano.Binary.Class (Bi (..))
-import           Cardano.Chain.Slotting (EpochIndex)
-import           Cardano.Crypto (ProxySecretKey (..), ProxySignature, PublicKey)
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Crypto (ProxySecretKey(..), ProxySignature, PublicKey)
 
 
 -- | Witness for heavy delegation signature -- epoch in which certificate starts

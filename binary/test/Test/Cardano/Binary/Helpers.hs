@@ -11,63 +11,88 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Binary.Helpers
-       ( IdTestingRequiredClassesAlmost
+  ( IdTestingRequiredClassesAlmost
 
        -- * From/to
-       , binaryEncodeDecode
-       , binaryTest
-       , showReadId
-       , showReadTest
-       , identityTest
+  , binaryEncodeDecode
+  , binaryTest
+  , showReadId
+  , showReadTest
+  , identityTest
 
        -- * Binary test helpers
-       , U
-       , U24
-       , extensionProperty
+  , U
+  , U24
+  , extensionProperty
 
        -- * Message length
-       , msgLenLimitedTest
+  , msgLenLimitedTest
 
        -- * Static size estimates
-       , SizeTestConfig(..)
-       , cfg
-       , scfg
-       , sizeTest
-       ) where
+  , SizeTestConfig(..)
+  , cfg
+  , scfg
+  , sizeTest
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Codec.CBOR.FlatTerm (toFlatTerm, validFlatTerm)
+import Codec.CBOR.FlatTerm (toFlatTerm, validFlatTerm)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Map (Map)
+import Data.Map (Map)
 import qualified Data.Map as M
-import           Data.String (String)
-import           Data.Text.Lazy (unpack)
-import           Data.Text.Lazy.Builder (toLazyText)
-import           Data.Typeable (TypeRep, typeRep)
-import           Formatting (Buildable, bprint, build, formatToString, int)
-import           Hedgehog (annotate, failure, forAllWith, success)
+import Data.String (String)
+import Data.Text.Lazy (unpack)
+import Data.Text.Lazy.Builder (toLazyText)
+import Data.Typeable (TypeRep, typeRep)
+import Formatting (Buildable, bprint, build, formatToString, int)
+import Hedgehog (annotate, failure, forAllWith, success)
 import qualified Hedgehog as HH
 import qualified Hedgehog.Gen as HH.Gen
-import           Prelude (read)
-import           Test.Hspec (Spec, describe)
-import           Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
-import           Test.QuickCheck (Arbitrary (arbitrary), Gen, Property, choose,
-                     conjoin, counterexample, forAll, property, resize,
-                     suchThat, vectorOf, (.&&.), (===))
-import           Test.QuickCheck.Instances ()
+import Prelude (read)
+import Test.Hspec (Spec, describe)
+import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
+import Test.QuickCheck
+  ( Arbitrary(arbitrary)
+  , Gen
+  , Property
+  , choose
+  , conjoin
+  , counterexample
+  , forAll
+  , property
+  , resize
+  , suchThat
+  , vectorOf
+  , (.&&.)
+  , (===)
+  )
+import Test.QuickCheck.Instances ()
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..), Range (..),
-                     Size, SizeOverride (..), decodeFull,
-                     decodeListLenCanonicalOf, decodeUnknownCborDataItem,
-                     encodeListLen, encodeUnknownCborDataItem, serialize,
-                     serialize', szSimplify, szWithCtx, toLazyByteString,
-                     unsafeDeserialize)
-import           Cardano.Binary.Limit (Limit (..))
+import Cardano.Binary.Class
+  ( Bi(..)
+  , DecoderError(..)
+  , Range(..)
+  , Size
+  , SizeOverride(..)
+  , decodeFull
+  , decodeListLenCanonicalOf
+  , decodeUnknownCborDataItem
+  , encodeListLen
+  , encodeUnknownCborDataItem
+  , serialize
+  , serialize'
+  , szSimplify
+  , szWithCtx
+  , toLazyByteString
+  , unsafeDeserialize
+  )
+import Cardano.Binary.Limit (Limit(..))
 
-import           Test.Cardano.Cbor.Canonicity (perturbCanonicity)
+import Test.Cardano.Cbor.Canonicity (perturbCanonicity)
 import qualified Test.Cardano.Cbor.RefImpl as R
 
 
@@ -270,8 +295,9 @@ msgLenLimitedTest' limit desc whetherTest =
         counterexample desc
           $ counterexample "Potentially unlimited size!"
           $ msgLenLimitedCheck limit a
-      -- Increase lists length gradually to avoid hanging.
-    in conjoin $ doCheck <$> [1 .. 13 :: Int]
+    in 
+       -- Increase lists length gradually to avoid hanging.
+       conjoin $ doCheck <$> [1 .. 13 :: Int]
 
 msgLenLimitedTest
   :: forall a . (IdTestingRequiredClasses Bi a) => Limit a -> Spec
@@ -365,6 +391,6 @@ szVerify ctx x = case szSimplify (szWithCtx ctx (pure x)) of
   Right range | lo range <= sz && sz <= hi range ->
     if lo range == hi range then Exact else WithinBounds sz range
   Right range -> OutOfBounds sz range
-  where
-    sz :: Natural
-    sz = fromIntegral $ LBS.length $ toLazyByteString $ encode x
+ where
+  sz :: Natural
+  sz = fromIntegral $ LBS.length $ toLazyByteString $ encode x

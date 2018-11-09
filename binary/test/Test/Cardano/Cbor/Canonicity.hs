@@ -4,19 +4,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Cbor.Canonicity
-    ( perturbCanonicity
-    ) where
+  ( perturbCanonicity
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Control.Monad.State as S
-import           GHC.Float (RealFloat (..))
-import           Numeric.Half (Half (..))
-import           Test.QuickCheck.Gen (Gen, choose, elements, oneof, shuffle,
-                     sized)
+import GHC.Float (RealFloat(..))
+import Numeric.Half (Half(..))
+import Test.QuickCheck.Gen (Gen, choose, elements, oneof, shuffle, sized)
 
-import           Test.Cardano.Cbor.RefImpl (Term (..), UInt (..), canonicalNaN,
-                     integerToBinaryRep, leadingZeroes, toUInt)
+import Test.Cardano.Cbor.RefImpl
+  (Term(..), UInt(..), canonicalNaN, integerToBinaryRep, leadingZeroes, toUInt)
 
 
 -- | Traverse elements of a Term which can be represented in multiple ways and

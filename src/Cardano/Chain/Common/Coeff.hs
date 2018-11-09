@@ -8,19 +8,20 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Common.Coeff
-       ( Coeff (..)
-       ) where
+  ( Coeff(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
+import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
-import           Data.Fixed (Fixed (..), Nano, resolution, showFixed)
+import Data.Fixed (Fixed(..), Nano, resolution, showFixed)
 import qualified Data.Text.Lazy.Builder as Builder
-import           Formatting.Buildable (Buildable (..))
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
+import Formatting.Buildable (Buildable(..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Binary.Class (Bi (..))
+import Cardano.Binary.Class (Bi(..))
 
 
 -- | A fractional coefficient of fixed precision.

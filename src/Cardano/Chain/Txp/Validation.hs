@@ -6,34 +6,33 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Txp.Validation
-       ( validateTx
-       , updateUTxO
-       , updateUTxOWitness
-       , TxValidationError
-       , UTxOValidationError
-       ) where
+  ( validateTx
+  , updateUTxO
+  , updateUTxOWitness
+  , TxValidationError
+  , UTxOValidationError
+  )
+where
 
 
 import Cardano.Prelude
 
 
-import Control.Monad.Except
-  (MonadError, liftEither)
+import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
 
-import Cardano.Binary.Class
-  (biSize)
+import Cardano.Binary.Class (biSize)
 import Cardano.Chain.Common
   ( Address
-  , Coeff (..)
+  , Coeff(..)
   , Coin
   , CoinError
-  , Script (..)
-  , TxFeePolicy (..)
-  , TxSizeLinear (..)
+  , Script(..)
+  , TxFeePolicy(..)
+  , TxSizeLinear(..)
   , calculateTxSizeLinear
   , checkPubKeyAddress
   , checkRedeemAddress
@@ -42,17 +41,14 @@ import Cardano.Chain.Common
   , mkKnownCoin
   , subCoin
   )
-import Cardano.Chain.Txp.Tx
-  (Tx (..), TxIn)
-import Cardano.Chain.Txp.TxAux
-  (TxAux (..))
-import Cardano.Chain.Txp.TxWitness
-  (TxInWitness (..), TxSigData (..))
+import Cardano.Chain.Txp.Tx (Tx(..), TxIn)
+import Cardano.Chain.Txp.TxAux (TxAux(..))
+import Cardano.Chain.Txp.TxWitness (TxInWitness(..), TxSigData(..))
 import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Crypto
-  (ProtocolMagic, SignTag (..), checkSig, hash, redeemCheckSig)
+  (ProtocolMagic, SignTag(..), checkSig, hash, redeemCheckSig)
 
 
 -- | A representation of all the ways a transaction might be invalid
@@ -185,7 +181,6 @@ updateUTxO utxo tx = do
 
   UTxO.union (S.fromList (NE.toList (_txInputs tx)) </| utxo) (txOutputUTxO tx)
     `wrapError` UTxOValidationUTxOError
-
  where
 
   hardcodedTxFeePolicy =

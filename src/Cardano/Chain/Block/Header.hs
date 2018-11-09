@@ -9,49 +9,42 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
-       ( Header (..)
-       , mkHeader
-       , mkHeaderExplicit
-       , headerSlot
-       , headerLeaderKey
-       , headerDifficulty
-       , headerSignature
-       , headerBlockVersion
-       , headerSoftwareVersion
-       , headerAttributes
-       , headerEBDataProof
-       , encodeHeader
-       , decodeHeader
-
-       , HeaderError (..)
-       , verifyHeader
-
-       , HeaderHash
-       , headerHashF
-       , hashHeader
-
-       , BlockSignature (..)
-
-       , dropBoundaryHeader
-
-       , ToSign (..)
-
-       , ConsensusData (..)
-       , verifyConsensusData
-       ) where
+  ( Header(..)
+  , mkHeader
+  , mkHeaderExplicit
+  , headerSlot
+  , headerLeaderKey
+  , headerDifficulty
+  , headerSignature
+  , headerBlockVersion
+  , headerSoftwareVersion
+  , headerAttributes
+  , headerEBDataProof
+  , encodeHeader
+  , decodeHeader
+  , HeaderError(..)
+  , verifyHeader
+  , HeaderHash
+  , headerHashF
+  , hashHeader
+  , BlockSignature(..)
+  , dropBoundaryHeader
+  , ToSign(..)
+  , ConsensusData(..)
+  , verifyConsensusData
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
-import Formatting
-  (Format, bprint, build, int)
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi (..)
+  ( Bi(..)
   , Decoder
-  , DecoderError (..)
+  , DecoderError(..)
   , Dropper
   , Encoding
   , dropBytes
@@ -60,36 +53,28 @@ import Cardano.Binary.Class
   , enforceSize
   , serializeEncoding
   )
-import Cardano.Chain.Block.Body
-  (Body)
+import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
   (dropBoundaryConsensusData, dropBoundaryExtraHeaderData)
-import Cardano.Chain.Block.ExtraBodyData
-  (ExtraBodyData)
+import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Block.ExtraHeaderData
-  (ExtraHeaderData (..), ExtraHeaderDataError, verifyExtraHeaderData)
-import Cardano.Chain.Block.Proof
-  (Proof (..), mkProof)
-import Cardano.Chain.Common
-  (Attributes, ChainDifficulty)
+  (ExtraHeaderData(..), ExtraHeaderDataError, verifyExtraHeaderData)
+import Cardano.Chain.Block.Proof (Proof(..), mkProof)
+import Cardano.Chain.Common (Attributes, ChainDifficulty)
 import Cardano.Chain.Delegation.HeavyDlgIndex
   (ProxySKBlockInfo, ProxySKHeavy, ProxySigHeavy)
 import Cardano.Chain.Delegation.LightDlgIndices
-  (LightDlgIndices (..), ProxySigLight)
-import Cardano.Chain.Genesis.Hash
-  (GenesisHash (..))
-import Cardano.Chain.Slotting
-  (SlotId (..), slotIdF)
-import Cardano.Chain.Update.BlockVersion
-  (BlockVersion)
-import Cardano.Chain.Update.SoftwareVersion
-  (SoftwareVersion)
+  (LightDlgIndices(..), ProxySigLight)
+import Cardano.Chain.Genesis.Hash (GenesisHash(..))
+import Cardano.Chain.Slotting (SlotId(..), slotIdF)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
   ( Hash
-  , ProtocolMagic (..)
+  , ProtocolMagic(..)
   , PublicKey
   , SecretKey
-  , SignTag (..)
+  , SignTag(..)
   , Signature
   , checkSig
   , hashHexF
@@ -191,8 +176,12 @@ mkHeaderExplicit
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra =
-  Header pm prevHash proof consensus extra
+mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra = Header
+  pm
+  prevHash
+  proof
+  consensus
+  extra
  where
   proof = mkProof body
   makeSignature :: ToSign -> (ProxySKHeavy, PublicKey) -> BlockSignature

@@ -9,34 +9,30 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.NonAvvmBalances
-       ( GenesisNonAvvmBalances (..)
-       , convertNonAvvmDataToBalances
-       ) where
+  ( GenesisNonAvvmBalances(..)
+  , convertNonAvvmDataToBalances
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except
-    (MonadError (..), liftEither)
-import qualified Data.Aeson as Aeson
-    (FromJSON (..), ToJSON (..))
+import Control.Monad.Except (MonadError(..), liftEither)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.Map.Strict as M
-import           Formatting
-    (bprint, build, sformat)
+import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical
-    (FromJSON (..), ToJSON (..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Binary.Class
-    (DecoderError)
-import           Cardano.Chain.Common
-    ( Address
-    , Coin
-    , CoinError
-    , addCoin
-    , decodeTextAddress
-    , integerToCoin
-    , unsafeGetCoin
-    )
+import Cardano.Binary.Class (DecoderError)
+import Cardano.Chain.Common
+  ( Address
+  , Coin
+  , CoinError
+  , addCoin
+  , decodeTextAddress
+  , integerToCoin
+  , unsafeGetCoin
+  )
 
 
 -- | Predefined balances of non avvm entries.

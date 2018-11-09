@@ -10,40 +10,44 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Crypto.Signing.Types.Redeem
-       ( RedeemSecretKey (..)
-       , RedeemPublicKey (..)
-       , RedeemSignature (..)
-       , redeemPkB64F
-       , redeemPkB64UrlF
-       , redeemPkB64ShortF
-       , fromAvvmPk
-       , redeemPkBuild
-       , redeemToPublic
-       ) where
+  ( RedeemSecretKey(..)
+  , RedeemPublicKey(..)
+  , RedeemSignature(..)
+  , redeemPkB64F
+  , redeemPkB64UrlF
+  , redeemPkB64ShortF
+  , fromAvvmPk
+  , redeemPkBuild
+  , redeemToPublic
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import           Crypto.Error (CryptoFailable (..))
+import Control.Monad.Except (MonadError)
+import Crypto.Error (CryptoFailable(..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import           Data.Aeson (FromJSONKey (..), FromJSONKeyFunction (..),
-                     ToJSONKey (..), ToJSONKeyFunction (..))
+import Data.Aeson
+  ( FromJSONKey(..)
+  , FromJSONKeyFunction(..)
+  , ToJSONKey(..)
+  , ToJSONKeyFunction(..)
+  )
 import qualified Data.Aeson.Encoding as A (text)
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Text as T
-import           Formatting (Format, bprint, build, fitLeft, formatToString,
-                     later, sformat, stext, (%.))
-import qualified Formatting.Buildable as B (Buildable (..))
-import           Text.JSON.Canonical (FromObjectKey (..), JSValue (..),
-                     ToObjectKey (..))
+import Formatting
+  (Format, bprint, build, fitLeft, formatToString, later, sformat, stext, (%.))
+import qualified Formatting.Buildable as B (Buildable(..))
+import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 
-import           Cardano.Binary.Class (Bi)
-import           Cardano.Crypto.Orphans ()
+import Cardano.Binary.Class (Bi)
+import Cardano.Crypto.Orphans ()
 
 
 --------------------------------------------------------------------------------

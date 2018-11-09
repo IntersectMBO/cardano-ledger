@@ -5,26 +5,21 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Delegation.Payload
-       ( Payload (..)
-       , PayloadError (..)
-       , checkPayload
-       ) where
+  ( Payload(..)
+  , PayloadError(..)
+  , checkPayload
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
-import Formatting
-  (bprint, int, stext)
-import Formatting.Buildable
-  (Buildable (..))
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, int, stext)
+import Formatting.Buildable (Buildable(..))
 
-import Cardano.Binary.Class
-  (Bi (..))
-import Cardano.Chain.Delegation.HeavyDlgIndex
-  (ProxySKHeavy)
-import Cardano.Crypto
-  (ProtocolMagic, validateProxySecretKey)
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
+import Cardano.Crypto (ProtocolMagic, validateProxySecretKey)
 
 
 -- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing

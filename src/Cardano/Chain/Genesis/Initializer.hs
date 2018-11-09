@@ -2,19 +2,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Genesis.Initializer
-       ( GenesisInitializer (..)
-       , TestnetBalanceOptions (..)
-       , FakeAvvmOptions (..)
-       ) where
+  ( GenesisInitializer(..)
+  , TestnetBalanceOptions(..)
+  , FakeAvvmOptions(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Cardano.Chain.Common
-    (CoinPortion)
-import           Data.Aeson.Options
-    (defaultOptions)
-import           Data.Aeson.TH
-    (deriveJSON)
+import Cardano.Chain.Common (CoinPortion)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 
 -- | This data type contains various options which determine genesis
 -- stakes, balanaces, heavy delegation, etc.
