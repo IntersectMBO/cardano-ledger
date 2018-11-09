@@ -15,13 +15,13 @@ import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Chain.Common (Coin)
+import Cardano.Chain.Common (Lovelace)
 import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
 
 
 -- | Predefined balances of avvm entries.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
-  { getGenesisAvvmBalances :: Map RedeemPublicKey Coin
+  { getGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
   } deriving (Show, Eq)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where

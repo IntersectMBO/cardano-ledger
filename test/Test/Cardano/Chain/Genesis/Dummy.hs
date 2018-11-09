@@ -63,7 +63,7 @@ import Cardano.Core
   , kEpochSlots
   , kSlotSecurityParam
   , pcBlkSecurityParam
-  , unsafeCoinPortionFromDouble
+  , unsafeLovelacePortionFromDouble
   )
 import Cardano.Crypto (SecretKey)
 
@@ -142,15 +142,15 @@ dummyBlockVersionData = BlockVersionData
   2000000
   4096
   700
-  (unsafeCoinPortionFromDouble 0.01)
-  (unsafeCoinPortionFromDouble 0.005)
-  (unsafeCoinPortionFromDouble 0.001)
-  (unsafeCoinPortionFromDouble 0.1)
+  (unsafeLovelacePortionFromDouble 0.01)
+  (unsafeLovelacePortionFromDouble 0.005)
+  (unsafeLovelacePortionFromDouble 0.001)
+  (unsafeLovelacePortionFromDouble 0.1)
   10
   (SoftforkRule
-    (unsafeCoinPortionFromDouble 0.9)
-    (unsafeCoinPortionFromDouble 0.6)
-    (unsafeCoinPortionFromDouble 0.05)
+    (unsafeLovelacePortionFromDouble 0.9)
+    (unsafeLovelacePortionFromDouble 0.6)
+    (unsafeLovelacePortionFromDouble 0.05)
   )
   (TxFeePolicyTxSizeLinear $ TxSizeLinear (Coeff 155381) (Coeff 43.946))
   (EpochIndex maxBound)
@@ -159,7 +159,7 @@ dummyGenesisInitializer :: GenesisInitializer
 dummyGenesisInitializer = GenesisInitializer
   (TestnetBalanceOptions 12 4 6e17 0.99 True)
   (FakeAvvmOptions 10 100000)
-  (unsafeCoinPortionFromDouble 1)
+  (unsafeLovelacePortionFromDouble 1)
   True
   0
 

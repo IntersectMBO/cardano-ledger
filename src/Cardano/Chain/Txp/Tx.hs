@@ -52,7 +52,13 @@ import Cardano.Binary.Class
   , szCases
   )
 import Cardano.Chain.Common
-  (Address(..), Coin, coinF, coinToInteger, decodeTextAddress, integerToCoin)
+  ( Address(..)
+  , Lovelace
+  , lovelaceF
+  , lovelaceToInteger
+  , decodeTextAddress
+  , integerToLovelace
+  )
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
 import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 
@@ -208,24 +214,24 @@ txInToText (TxInUnknown tag bs) =
 -- | Transaction output
 data TxOut = TxOut
   { txOutAddress :: !Address
-  , txOutValue   :: !Coin
+  , txOutValue   :: !Lovelace
   } deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxOut where
   parseJSON = withObject "TxOut" $ \o ->
     TxOut
       <$> (toAesonError . decodeTextAddress =<< o .: "address")
-      <*> (toAesonError . integerToCoin =<< o .: "coin")
+      <*> (toAesonError . integerToLovelace =<< o .: "lovelace")
 
 instance ToJSON TxOut where
   toJSON txOut = object
-    [ "coin" .= coinToInteger (txOutValue txOut)
+    [ "lovelace" .= lovelaceToInteger (txOutValue txOut)
     , "address" .= sformat build (txOutAddress txOut)
     ]
 
 instance B.Buildable TxOut where
   build txOut = bprint
-    ("TxOut " . coinF . " -> " . build)
+    ("TxOut " . lovelaceF . " -> " . build)
     (txOutValue txOut)
     (txOutAddress txOut)
 

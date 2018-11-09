@@ -12,8 +12,8 @@ import Cardano.Chain.Common.Attributes as X
 import Cardano.Chain.Common.BlockCount as X
 import Cardano.Chain.Common.ChainDifficulty as X
 import Cardano.Chain.Common.Coeff as X
-import Cardano.Chain.Common.Coin as X
-import Cardano.Chain.Common.CoinPortion as X
+import Cardano.Chain.Common.Lovelace as X
+import Cardano.Chain.Common.LovelacePortion as X
 import Cardano.Chain.Common.Merkle as X
 import Cardano.Chain.Common.Script as X
 import Cardano.Chain.Common.SharedSeed as X

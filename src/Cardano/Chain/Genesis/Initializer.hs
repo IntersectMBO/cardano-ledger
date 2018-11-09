@@ -10,7 +10,7 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Chain.Common (CoinPortion)
+import Cardano.Chain.Common (LovelacePortion)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
@@ -19,7 +19,7 @@ import Data.Aeson.TH (deriveJSON)
 data GenesisInitializer = GenesisInitializer
   { giTestBalance       :: !TestnetBalanceOptions
   , giFakeAvvmBalance   :: !FakeAvvmOptions
-  , giAvvmBalanceFactor :: !CoinPortion
+  , giAvvmBalanceFactor :: !LovelacePortion
   -- ^ Avvm balances will be multiplied by this factor.
   , giUseHeavyDlg       :: !Bool
   -- ^ Whether to use heavyweight delegation for bootstrap era

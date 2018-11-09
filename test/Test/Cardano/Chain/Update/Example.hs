@@ -29,7 +29,12 @@ import Data.Time (NominalDiffTime)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  (Coeff(..), CoinPortion(..), ScriptVersion, TxFeePolicy(..), TxSizeLinear(..))
+  ( Coeff(..)
+  , LovelacePortion(..)
+  , ScriptVersion
+  , TxFeePolicy(..)
+  , TxSizeLinear(..)
+  )
 import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId)
 import Cardano.Chain.Update
   ( ApplicationName(..)
@@ -75,10 +80,10 @@ exampleBlockVersionData = BlockVersionData
   (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
-  (CoinPortion 99)
-  (CoinPortion 99)
-  (CoinPortion 99)
-  (CoinPortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
   (99 :: FlatSlotId)
   sfrule
   (TxFeePolicyTxSizeLinear tslin)
@@ -87,7 +92,10 @@ exampleBlockVersionData = BlockVersionData
   tslin  = TxSizeLinear c1' c2'
   c1'    = Coeff (MkFixed 999)
   c2'    = Coeff (MkFixed 77)
-  sfrule = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
+  sfrule = SoftforkRule
+    (LovelacePortion 99)
+    (LovelacePortion 99)
+    (LovelacePortion 99)
 
 exampleBlockVersionModifier :: BlockVersionModifier
 exampleBlockVersionModifier = BlockVersionModifier
@@ -97,10 +105,10 @@ exampleBlockVersionModifier = BlockVersionModifier
   (Just (999 :: Natural))
   (Just (999 :: Natural))
   (Just (999 :: Natural))
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
   (Just (99 :: FlatSlotId))
   (Just sfrule')
   (Just $ TxFeePolicyTxSizeLinear tslin')
@@ -109,7 +117,10 @@ exampleBlockVersionModifier = BlockVersionModifier
   tslin'  = TxSizeLinear co1 co2
   co1     = Coeff (MkFixed 999)
   co2     = Coeff (MkFixed 77)
-  sfrule' = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
+  sfrule' = SoftforkRule
+    (LovelacePortion 99)
+    (LovelacePortion 99)
+    (LovelacePortion 99)
 
 exampleSystemTag :: SystemTag
 exampleSystemTag = exampleSystemTags 0 1 !! 0

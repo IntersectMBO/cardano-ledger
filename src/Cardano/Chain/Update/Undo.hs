@@ -62,7 +62,7 @@ import Cardano.Binary.Class
   (Bi(..), DecoderError(..), decodeListLenCanonical, encodeListLen, enforceSize)
 import Cardano.Chain.Block.Header (HeaderHash)
 import Cardano.Chain.Common
-  (ChainDifficulty, Coin, ScriptVersion, StakeholderId, mkKnownCoin)
+  (ChainDifficulty, Lovelace, ScriptVersion, StakeholderId, mkKnownLovelace)
 import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.BlockVersion (BlockVersion)
@@ -169,9 +169,9 @@ data UndecidedProposalState = UndecidedProposalState
   -- ^ Proposal itself.
   , upsSlot          :: !SlotId
   -- ^ SlotId from block in which update was proposed.
-  , upsPositiveStake :: !Coin
+  , upsPositiveStake :: !Lovelace
   -- ^ Total stake of all positive votes.
-  , upsNegativeStake :: !Coin
+  , upsNegativeStake :: !Lovelace
   -- ^ Total stake of all negative votes.
   , upsExtra         :: !(Maybe UpsExtra)
   -- ^ Extra data
@@ -251,8 +251,8 @@ data ConfirmedProposalState = ConfirmedProposalState
   , cpsConfirmed      :: !HeaderHash
   , cpsAdopted        :: !(Maybe HeaderHash)
   , cpsVotes          :: !StakeholderVotes
-  , cpsPositiveStake  :: !Coin
-  , cpsNegativeStake  :: !Coin
+  , cpsPositiveStake  :: !Lovelace
+  , cpsNegativeStake  :: !Lovelace
   } deriving (Show, Generic, Eq)
     deriving anyclass NFData
 
@@ -328,8 +328,8 @@ mkUProposalState slot proposal = UndecidedProposalState
   { upsVotes         = mempty
   , upsProposal      = proposal
   , upsSlot          = slot
-  , upsPositiveStake = mkKnownCoin @0
-  , upsNegativeStake = mkKnownCoin @0
+  , upsPositiveStake = mkKnownLovelace @0
+  , upsNegativeStake = mkKnownLovelace @0
   , upsExtra         = Nothing
   }
 

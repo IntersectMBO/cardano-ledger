@@ -61,7 +61,7 @@ import Cardano.Chain.Txp
 import Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
 
 import Test.Cardano.Chain.Common.Gen
-  (genAddress, genCoin, genMerkleRoot, genScript)
+  (genAddress, genLovelace, genMerkleRoot, genScript)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genPublicKey
@@ -117,7 +117,7 @@ genTxInList :: Gen (NonEmpty TxIn)
 genTxInList = Gen.nonEmpty (Range.linear 1 20) genTxIn
 
 genTxOut :: Gen TxOut
-genTxOut = TxOut <$> genAddress <*> genCoin
+genTxOut = TxOut <$> genAddress <*> genLovelace
 
 genTxOutAux :: Gen TxOutAux
 genTxOutAux = TxOutAux <$> genTxOut

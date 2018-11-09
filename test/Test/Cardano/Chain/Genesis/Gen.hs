@@ -37,7 +37,7 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Crypto (ProtocolMagic)
 
-import Test.Cardano.Chain.Common.Gen (genCoin, genCoinPortion)
+import Test.Cardano.Chain.Common.Gen (genLovelace, genLovelacePortion)
 import Test.Cardano.Chain.Delegation.Gen (genProxySKHeavyDistinctList)
 import Test.Cardano.Chain.ProtocolConstants.Gen (genVssMaxTTL, genVssMinTTL)
 import Test.Cardano.Chain.Update.Gen (genBlockVersionData)
@@ -76,7 +76,7 @@ genGenesisInitializer =
   GenesisInitializer
     <$> genTestnetBalanceOptions
     <*> genFakeAvvmOptions
-    <*> genCoinPortion
+    <*> genLovelacePortion
     <*> Gen.bool
     <*> Gen.integral (Range.constant 0 10)
 
@@ -111,7 +111,7 @@ genTestnetBalanceOptions =
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =
-  GenesisAvvmBalances <$> customMapGen genRedeemPublicKey genCoin
+  GenesisAvvmBalances <$> customMapGen genRedeemPublicKey genLovelace
 
 --------------------------------------------------------------------------------
 -- Helper Generators

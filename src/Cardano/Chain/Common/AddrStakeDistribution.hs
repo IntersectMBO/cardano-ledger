@@ -20,8 +20,8 @@ import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary.Class (Bi(..), szCases)
 import qualified Cardano.Binary.Class as Bi
-import Cardano.Chain.Common.CoinPortion
-  (CoinPortion(..), coinPortionDenominator)
+import Cardano.Chain.Common.LovelacePortion
+  (LovelacePortion(..), lovelacePortionDenominator)
 import Cardano.Chain.Common.StakeholderId (StakeholderId, shortStakeholderF)
 
 
@@ -31,9 +31,9 @@ data AddrStakeDistribution
     -- ^ Stake distribution for bootstrap era.
     | SingleKeyDistr !StakeholderId
     -- ^ Stake distribution stating that all stake should go to the given stakeholder.
-    | UnsafeMultiKeyDistr !(Map StakeholderId CoinPortion)
+    | UnsafeMultiKeyDistr !(Map StakeholderId LovelacePortion)
     -- ^ Stake distribution which gives stake to multiple
-    -- stakeholders. 'CoinPortion' is a portion of an output (output
+    -- stakeholders. 'LovelacePortion' is a portion of an output (output
     -- has a value, portion of this value is stake). The constructor
     -- is unsafe because there are some predicates which must hold:
     --
@@ -78,7 +78,7 @@ instance Bi AddrStakeDistribution where
     , Bi.Case "SingleKeyDistr" $ size $ Proxy @(Word8, StakeholderId)
     , Bi.Case "UnsafeMultiKeyDistr"
     $ size
-    $ Proxy @(Word8, Map StakeholderId CoinPortion)
+    $ Proxy @(Word8, Map StakeholderId LovelacePortion)
     ]
 
 data MultiKeyDistrError
@@ -100,7 +100,7 @@ instance B.Buildable MultiKeyDistrError where
 mkMultiKeyDistr
   :: forall m
    . MonadError MultiKeyDistrError m
-  => Map StakeholderId CoinPortion
+  => Map StakeholderId LovelacePortion
   -> m AddrStakeDistribution
 mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
  where
@@ -108,7 +108,7 @@ mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
   checkDistrMap = do
     when (null distrMap) $ throwError MkdMapIsEmpty
     when (length distrMap == 1) $ throwError MkdMapIsSingleton
-    unless (all ((> 0) . getCoinPortion) distrMap)
+    unless (all ((> 0) . getLovelacePortion) distrMap)
       $ throwError MkdNegativePortion
-    let distrSum = sum $ map getCoinPortion distrMap
-    unless (distrSum == coinPortionDenominator) $ throwError MkdSumNot1
+    let distrSum = sum $ map getLovelacePortion distrMap
+    unless (distrSum == lovelacePortionDenominator) $ throwError MkdSumNot1

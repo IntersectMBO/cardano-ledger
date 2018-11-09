@@ -28,8 +28,8 @@ import Cardano.Binary.Class (biSize)
 import Cardano.Chain.Common
   ( Address
   , Coeff(..)
-  , Coin
-  , CoinError
+  , Lovelace
+  , LovelaceError
   , Script(..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
@@ -37,9 +37,9 @@ import Cardano.Chain.Common
   , checkPubKeyAddress
   , checkRedeemAddress
   , checkScriptAddress
-  , integerToCoin
-  , mkKnownCoin
-  , subCoin
+  , integerToLovelace
+  , mkKnownLovelace
+  , subLovelace
   )
 import Cardano.Chain.Txp.Tx (Tx(..), TxIn)
 import Cardano.Chain.Txp.TxAux (TxAux(..))
@@ -53,8 +53,8 @@ import Cardano.Crypto
 
 -- | A representation of all the ways a transaction might be invalid
 data TxValidationError
-  = TxValidationCoinError Text CoinError
-  | TxValidationFeeTooSmall Tx Coin Coin
+  = TxValidationLovelaceError Text LovelaceError
+  | TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationInvalidWitness TxInWitness
   | TxValidationMissingInput TxIn
   | TxValidationScriptWitness
@@ -89,19 +89,20 @@ validateTx feePolicy utxo tx = do
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
   minFee <- if isRedeemUTxO inputUTxO
-    then pure $ mkKnownCoin @0
+    then pure $ mkKnownLovelace @0
     else calculateMinimumFee feePolicy
 
   -- Calculate the balance of the output 'UTxO'
   balanceOut <- balance (txOutputUTxO tx)
-    `wrapError` TxValidationCoinError "Output Balance"
+    `wrapError` TxValidationLovelaceError "Output Balance"
 
   -- Calculate the balance of the restricted input 'UTxO'
   balanceIn <- balance inputUTxO
-    `wrapError` TxValidationCoinError "Input Balance"
+    `wrapError` TxValidationLovelaceError "Input Balance"
 
   -- Calculate the 'fee' as the difference of the balances
-  fee <- subCoin balanceIn balanceOut `wrapError` TxValidationCoinError "Fee"
+  fee <- subLovelace balanceIn balanceOut
+    `wrapError` TxValidationLovelaceError "Fee"
 
   -- Check that the fee is greater than the minimum
   unless (minFee <= fee) (throwError $ TxValidationFeeTooSmall tx minFee fee)
@@ -112,12 +113,12 @@ validateTx feePolicy utxo tx = do
   inputUTxO = S.fromList (NE.toList (_txInputs tx)) <| utxo
 
   calculateMinimumFee
-    :: MonadError TxValidationError m => TxFeePolicy -> m Coin
+    :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
   calculateMinimumFee = \case
 
     TxFeePolicyTxSizeLinear txSizeLinear ->
-      integerToCoin (ceiling $ calculateTxSizeLinear txSizeLinear txSize)
-        `wrapError` TxValidationCoinError "Minimum Fee"
+      integerToLovelace (ceiling $ calculateTxSizeLinear txSizeLinear txSize)
+        `wrapError` TxValidationLovelaceError "Minimum Fee"
 
     policy -> throwError $ TxValidationUnknownFeePolicy policy
 

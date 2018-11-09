@@ -22,7 +22,7 @@ import Cardano.Chain.Common.Script (Script)
 import Cardano.Crypto.Signing (PublicKey, RedeemPublicKey)
 
 -- | Data which is bound to an address and must be revealed in order
--- to spend coins belonging to this address.
+-- to spend lovelace belonging to this address.
 data AddrSpendingData
     = PubKeyASD !PublicKey
     -- ^ Funds can be spent by revealing a 'PublicKey' and providing a

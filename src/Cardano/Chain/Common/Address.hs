@@ -134,7 +134,7 @@ newtype Address' = Address'
     } deriving (Eq, Show, Generic)
       deriving newtype Bi
 
--- | 'Address' is where you can send coins.
+-- | 'Address' is where you can send lovelace.
 data Address = Address
     { addrRoot       :: !(AddressHash Address')
     -- ^ Root of imaginary pseudo Merkle tree stored in this address.

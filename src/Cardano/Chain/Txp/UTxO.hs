@@ -21,7 +21,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 
 import Cardano.Chain.Common
-  (Address, Coin, CoinError, isRedeemAddress, sumCoins)
+  (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelaces)
 import Cardano.Chain.Txp.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
 import Cardano.Crypto (hash)
 
@@ -53,8 +53,8 @@ union (UTxO m) (UTxO m') = do
   unless (M.size m'' == M.size m + M.size m') $ throwError UTxOOverlappingUnion
   pure $ UTxO m''
 
-balance :: UTxO -> Either CoinError Coin
-balance = sumCoins . fmap txOutValue . M.elems . unUTxO
+balance :: UTxO -> Either LovelaceError Lovelace
+balance = sumLovelaces . fmap txOutValue . M.elems . unUTxO
 
 (<|) :: Set TxIn -> UTxO -> UTxO
 (<|) inputs = UTxO . flip M.restrictKeys inputs . unUTxO

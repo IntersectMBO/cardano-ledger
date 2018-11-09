@@ -24,10 +24,10 @@ import Cardano.Chain.Common
   , Attributes
   , BlockCount(..)
   , ChainDifficulty(..)
-  , CoinPortion(..)
+  , LovelacePortion(..)
   , Script(..)
   , StakeholderId(..)
-  , coinPortionDenominator
+  , lovelacePortionDenominator
   , makeAddress
   , mkAttributes
   , mkMultiKeyDistr
@@ -95,16 +95,16 @@ exampleMultiKeyDistr = case mkMultiKeyDistr (M.fromList pairs) of
       <> show err
   Right asd -> asd
  where
-  pairs :: [(StakeholderId, CoinPortion)]
-  pairs = zip stakeIds (map CoinPortion (remainderCP : coinPortions))
+  pairs :: [(StakeholderId, LovelacePortion)]
+  pairs = zip stakeIds (map LovelacePortion (remainderCP : lovelacePortions))
   stakeIds :: [StakeholderId]
   stakeIds = map (StakeholderId . abstractHash) (examplePublicKeys 7 4)
-  coinPortions =
+  lovelacePortions =
     [ (10 :: Word64) ^ (12 :: Word64)
     , (7 :: Word64) ^ (11 :: Word64)
     , (6 :: Word64) ^ (14 :: Word64)
     ]
-  remainderCP = coinPortionDenominator - sum coinPortions
+  remainderCP = lovelacePortionDenominator - sum lovelacePortions
 
 exampleScript :: Script
 exampleScript = Script 601 (getBytes 4 32)
