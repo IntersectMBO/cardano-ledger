@@ -6,24 +6,24 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Common.StakeholderId
-       ( StakeholderId (..)
-       , mkStakeholderId
-       , shortStakeholderF
-       ) where
+  ( StakeholderId(..)
+  , mkStakeholderId
+  , shortStakeholderF
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import           Data.Aeson (FromJSONKey, ToJSONKey)
-import           Formatting (Format, formatToString, mapf)
-import           Formatting.Buildable (Buildable)
-import           Text.JSON.Canonical (FromObjectKey (..), JSValue (..),
-                     ToObjectKey (..))
+import Control.Monad.Except (MonadError)
+import Data.Aeson (FromJSONKey, ToJSONKey)
+import Formatting (Format, formatToString, mapf)
+import Formatting.Buildable (Buildable)
+import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 
-import           Cardano.Binary.Class (Bi)
-import           Cardano.Chain.Common.AddressHash
-import           Cardano.Crypto (decodeAbstractHash, hashHexF, shortHashF)
-import           Cardano.Crypto.Signing (PublicKey)
+import Cardano.Binary.Class (Bi)
+import Cardano.Chain.Common.AddressHash
+import Cardano.Crypto (decodeAbstractHash, hashHexF, shortHashF)
+import Cardano.Crypto.Signing (PublicKey)
 
 
 -- | Stakeholder identifier (stakeholders are identified by their public keys)

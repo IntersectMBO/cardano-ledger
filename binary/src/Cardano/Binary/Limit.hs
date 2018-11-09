@@ -1,18 +1,19 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Binary.Limit
-       ( Limit (..)
-       , (<+>)
-       , mlBool
-       , mlMaybe
-       , mlEither
-       , mlTuple
-       , mlTriple
-       , vectorOf
-       , vectorOfNE
-       ) where
+  ( Limit(..)
+  , (<+>)
+  , mlBool
+  , mlMaybe
+  , mlEither
+  , mlTuple
+  , mlTriple
+  , vectorOf
+  , vectorOfNE
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 
 -- | A limit on the length of something (in bytes).

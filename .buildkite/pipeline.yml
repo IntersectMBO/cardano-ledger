@@ -18,3 +18,10 @@ steps:
       - "./stack-rebuild"
     agents:
       system: x86_64-linux
+
+  - label: 'brittany'
+    command:
+      - "nix-build scripts/brittany -o check-brittany"
+      - "./check-brittany"
+    agents:
+      system: x86_64-linux

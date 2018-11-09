@@ -9,41 +9,41 @@
 --   You can read HD wallets overall description in docs/hd.md.
 
 module Cardano.Crypto.HD
-       ( HDPassphrase (..)
-       , HDAddressPayload (..)
-       , ShouldCheckPassphrase (..)
-       , packHDAddressAttr
-       , unpackHDAddressAttr
-       , deriveHDPublicKey
-       , deriveHDSecretKey
-       , deriveHDPassphrase
-       , decryptChaChaPoly
-       , encryptChaChaPoly
-       , toEither
+  ( HDPassphrase(..)
+  , HDAddressPayload(..)
+  , ShouldCheckPassphrase(..)
+  , packHDAddressAttr
+  , unpackHDAddressAttr
+  , deriveHDPublicKey
+  , deriveHDSecretKey
+  , deriveHDPassphrase
+  , decryptChaChaPoly
+  , encryptChaChaPoly
+  , toEither
+  , firstHardened
+  , firstNonHardened
+  , isHardened
+  )
+where
 
-       , firstHardened
-       , firstNonHardened
-       , isHardened
-       ) where
+import Cardano.Prelude
 
-import           Cardano.Prelude
-
-import           Cardano.Crypto.Wallet (DerivationScheme (..), deriveXPrv,
-                     deriveXPub, unXPub)
+import Cardano.Crypto.Wallet
+  (DerivationScheme(..), deriveXPrv, deriveXPub, unXPub)
 import qualified Crypto.Cipher.ChaChaPoly1305 as C
-import           Crypto.Error
-import           Crypto.Hash (SHA512 (..))
+import Crypto.Error
+import Crypto.Hash (SHA512(..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
 import qualified Crypto.MAC.Poly1305 as Poly
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import           Data.ByteArray as BA (convert)
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
-import           Data.ByteString.Char8 as B
+import Data.Aeson (FromJSON(..), ToJSON(..))
+import Data.ByteArray as BA (convert)
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
+import Data.ByteString.Char8 as B
 
-import           Cardano.Binary.Class (Bi (..), decodeFull', serialize')
-import           Cardano.Crypto.Signing.Types.Safe (EncryptedSecretKey (..),
-                     PassPhrase, checkPassMatches)
-import           Cardano.Crypto.Signing.Types.Signing (PublicKey (..))
+import Cardano.Binary.Class (Bi(..), decodeFull', serialize')
+import Cardano.Crypto.Signing.Types.Safe
+  (EncryptedSecretKey(..), PassPhrase, checkPassMatches)
+import Cardano.Crypto.Signing.Types.Signing (PublicKey(..))
 
 
 -- | Passphrase is a hash of root public key.
@@ -82,10 +82,10 @@ deriveHDPassphrase (PublicKey pk) = HDPassphrase $ PBKDF2.generate
   (PBKDF2.Parameters 500 passLen)
   (unXPub pk)
   ("address-hashing" :: ByteString)
-  where
+ where
     -- Password length in bytes
-    passLen :: Int
-    passLen = 32
+  passLen :: Int
+  passLen = 32
 
 -- | Direct children of node are numbered from 0 to 2^32-1.
 --   Indices less than @firstHardened@ are non-hardened indices.

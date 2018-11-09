@@ -3,22 +3,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Common.AddrAttributes
-       ( AddrAttributes (..)
-       ) where
+  ( AddrAttributes(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Text.Lazy.Builder (Builder)
-import           Formatting (bprint, build, builder)
+import Data.Text.Lazy.Builder (Builder)
+import Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi, decode, encode)
+import Cardano.Binary.Class (Bi, decode, encode)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Chain.Common.AddrStakeDistribution
-                     (AddrStakeDistribution (..))
-import           Cardano.Chain.Common.Attributes (Attributes (..),
-                     decodeAttributes, encodeAttributes)
-import           Cardano.Crypto.HD (HDAddressPayload)
+import Cardano.Chain.Common.AddrStakeDistribution (AddrStakeDistribution(..))
+import Cardano.Chain.Common.Attributes
+  (Attributes(..), decodeAttributes, encodeAttributes)
+import Cardano.Crypto.HD (HDAddressPayload)
 
 -- | Additional information stored along with address. It's intended
 -- to be put into 'Attributes' data type to make it extensible with

@@ -1,6 +1,7 @@
 module Cardano.Chain.Txp
-       ( module X
-       ) where
+  ( module X
+  )
+where
 
 import Cardano.Chain.Txp.GenesisUTxO as X
 import Cardano.Chain.Txp.Tx as X

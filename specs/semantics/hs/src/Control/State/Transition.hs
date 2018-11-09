@@ -9,7 +9,7 @@
 -- | Small step state transition systems.
 module Control.State.Transition where
 
-import           Control.Lens
+import Control.Lens
 
 -- | State transition system.
 class (Show (PredicateFailure a))
@@ -29,13 +29,11 @@ class (Show (PredicateFailure a))
   rules :: [Rule a]
 
 -- | Rules generating initial states
-initialRules
-  :: STS a
-  => [Rule a]
+initialRules :: STS a => [Rule a]
 initialRules = filter isInitial rules
-  where
-    isInitial (Rule _ (Base _)) = True
-    isInitial _                 = False
+ where
+  isInitial (Rule _ (Base _)) = True
+  isInitial _                 = False
 
 -- | The union of the components of the system available for making judgments.
 type JudgmentContext sts = (Environment sts, State sts, Signal sts)
@@ -52,11 +50,7 @@ data Transition sts where
 
 -- | Apply a transition
 transition
-  :: Transition sts
-  -> Environment sts
-  -> State sts
-  -> Signal sts
-  -> State sts
+  :: Transition sts -> Environment sts -> State sts -> Signal sts -> State sts
 transition (Transition f) = f
 
 -- | Embed one STS within another.

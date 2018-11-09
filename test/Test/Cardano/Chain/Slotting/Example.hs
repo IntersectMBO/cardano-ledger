@@ -1,28 +1,32 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.Slotting.Example
-       ( exampleEpochIndex
-       , exampleSlotId
-       , exampleSlottingData
-       ) where
+  ( exampleEpochIndex
+  , exampleSlotId
+  , exampleSlottingData
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Data.Map.Strict as M
 
-import           Cardano.Chain.Slotting (EpochIndex (..),
-                     EpochSlottingData (..), SlotId (..), SlottingData,
-                     mkLocalSlotIndex, mkSlottingData)
+import Cardano.Chain.Slotting
+  ( EpochIndex(..)
+  , EpochSlottingData(..)
+  , SlotId(..)
+  , SlottingData
+  , mkLocalSlotIndex
+  , mkSlottingData
+  )
 
 
 exampleEpochIndex :: EpochIndex
 exampleEpochIndex = EpochIndex 14
 
 exampleEpochSlottingData :: EpochSlottingData
-exampleEpochSlottingData = EpochSlottingData
-    { esdSlotDuration = 100e-6
-    , esdStartDiff = 100e-6
-    }
+exampleEpochSlottingData =
+  EpochSlottingData {esdSlotDuration = 100e-6, esdStartDiff = 100e-6}
 
 exampleSlotId :: SlotId
 exampleSlotId = SlotId (EpochIndex 11) lsi

@@ -5,36 +5,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Body
-       ( Body (..)
-       , BodyError (..)
-       , bodyTxs
-       , bodyWitnesses
-       , verifyBody
-       ) where
+  ( Body(..)
+  , BodyError(..)
+  , bodyTxs
+  , bodyWitnesses
+  , verifyBody
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
-import Formatting
-  (bprint, build)
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  (Bi (..), encodeListLen, enforceSize)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
-  (Payload, PayloadError (..), checkPayload)
-import Cardano.Chain.Ssc
-  (SscPayload (..))
-import Cardano.Chain.Txp.Tx
-  (Tx)
-import Cardano.Chain.Txp.TxPayload
-  (TxPayload (..), txpTxs, txpWitnesses)
-import Cardano.Chain.Txp.TxWitness
-  (TxWitness)
+  (Payload, PayloadError(..), checkPayload)
+import Cardano.Chain.Ssc (SscPayload(..))
+import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Chain.Txp.TxPayload (TxPayload(..), txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import Cardano.Crypto
-  (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagic)
 
 
 -- | 'Body' consists of payloads of all block components

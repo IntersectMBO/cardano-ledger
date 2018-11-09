@@ -1,39 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Genesis.Config
-       ( StaticConfig (..)
-       ) where
+  ( StaticConfig(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson
-    ( FromJSON
-    , ToJSON
-    , object
-    , pairs
-    , parseJSON
-    , toEncoding
-    , toJSON
-    , withObject
-    , (.:)
-    , (.:?)
-    , (.=)
-    )
-import           Data.Aeson.Encoding
-    (pairStr)
-import           Data.Aeson.Encoding.Internal
-    (pair)
+import Data.Aeson
+  ( FromJSON
+  , ToJSON
+  , object
+  , pairs
+  , parseJSON
+  , toEncoding
+  , toJSON
+  , withObject
+  , (.:)
+  , (.:?)
+  , (.=)
+  )
+import Data.Aeson.Encoding (pairStr)
+import Data.Aeson.Encoding.Internal (pair)
 
-import           Cardano.Binary.Class
-    (Raw)
-import           Cardano.Chain.Genesis.AvvmBalances
-    (GenesisAvvmBalances (..))
-import           Cardano.Chain.Genesis.Initializer
-    (GenesisInitializer (..))
-import           Cardano.Chain.Genesis.Spec
-    (GenesisSpec (..))
-import           Cardano.Crypto.Hashing
-    (Hash)
+import Cardano.Binary.Class (Raw)
+import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
+import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
+import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
+import Cardano.Crypto.Hashing (Hash)
 
 --------------------------------------------------------------------------------
 -- StaticConfig

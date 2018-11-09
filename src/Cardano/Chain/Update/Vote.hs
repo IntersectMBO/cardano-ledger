@@ -5,52 +5,44 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Vote
-       (
+  (
        -- Software update proposal
-         Proposal (..)
-       , ProposalError (..)
-       , Proposals
-       , UpId
-       , ProposalBody (..)
-       , formatMaybeProposal
-       , signProposal
-       , checkProposal
+    Proposal(..)
+  , ProposalError(..)
+  , Proposals
+  , UpId
+  , ProposalBody(..)
+  , formatMaybeProposal
+  , signProposal
+  , checkProposal
 
        -- Software update vote
-       , VoteId
-       , Vote (..)
-       , VoteError (..)
-       , mkVote
-       , mkVoteSafe
-       , formatVoteShort
-       , shortVoteF
-       , checkVote
-       , mkVoteId
-       ) where
+  , VoteId
+  , Vote(..)
+  , VoteError(..)
+  , mkVote
+  , mkVoteSafe
+  , formatVoteShort
+  , shortVoteF
+  , checkVote
+  , mkVoteId
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
+import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.Map.Strict as Map
-import Data.Text.Lazy.Builder
-  (Builder)
-import Formatting
-  (Format, bprint, build, builder, later)
+import Data.Text.Lazy.Builder (Builder)
+import Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  (Bi (..), Decoder, encodeListLen, enforceSize)
-import Cardano.Chain.Common
-  (addressHash)
-import Cardano.Chain.Common.Attributes
-  (Attributes, areAttributesKnown)
-import Cardano.Chain.Update.BlockVersion
-  (BlockVersion)
-import Cardano.Chain.Update.BlockVersionModifier
-  (BlockVersionModifier)
-import Cardano.Chain.Update.Data
-  (UpdateData)
+import Cardano.Binary.Class (Bi(..), Decoder, encodeListLen, enforceSize)
+import Cardano.Chain.Common (addressHash)
+import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier)
+import Cardano.Chain.Update.Data (UpdateData)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
 import Cardano.Chain.Update.SystemTag
@@ -61,7 +53,7 @@ import Cardano.Crypto
   , PublicKey
   , SafeSigner
   , SecretKey
-  , SignTag (SignUSProposal, SignUSVote)
+  , SignTag(SignUSProposal, SignUSVote)
   , Signature
   , checkSig
   , hash

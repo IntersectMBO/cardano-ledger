@@ -25,45 +25,46 @@
 --   known-length lists with an extra @tag :: Word8@ as the first element.
 
 module Cardano.Binary.Class.Core
-    ( Bi(..)
-    , enforceSize
-    , matchSize
-    , DecoderError (..)
+  ( Bi(..)
+  , enforceSize
+  , matchSize
+  , DecoderError(..)
 
     -- * CBOR re-exports
-    , E.encodeListLen
-    , D.decodeListLenCanonical
-    , D.decodeListLenCanonicalOf
-    , E.Encoding
-    , D.Decoder
-    , CBOR.Read.deserialiseIncremental
-    , CBOR.Write.toLazyByteString
-    , CBOR.Write.toBuilder
-    , CBOR.Read.IDecode(..)
+  , E.encodeListLen
+  , D.decodeListLenCanonical
+  , D.decodeListLenCanonicalOf
+  , E.Encoding
+  , D.Decoder
+  , CBOR.Read.deserialiseIncremental
+  , CBOR.Write.toLazyByteString
+  , CBOR.Write.toBuilder
+  , CBOR.Read.IDecode(..)
 
     -- * Utils
-    , withWordSize
+  , withWordSize
 
     -- * Size of expressions
-    , Range(..)
-    , szEval
-    , Size
-    , Case(..)
-    , caseValue
-    , LengthOf(..)
-    , SizeOverride(..)
-    , isTodo
-    , szCases
-    , szLazy
-    , szGreedy
-    , szForce
-    , szWithCtx
-    , szSimplify
-    , apMono
-    , szBounds
-    ) where
+  , Range(..)
+  , szEval
+  , Size
+  , Case(..)
+  , caseValue
+  , LengthOf(..)
+  , SizeOverride(..)
+  , isTodo
+  , szCases
+  , szLazy
+  , szGreedy
+  , szForce
+  , szWithCtx
+  , szSimplify
+  , apMono
+  , szBounds
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
@@ -72,20 +73,20 @@ import qualified Codec.CBOR.Write as CBOR.Write
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BS.Lazy
 import qualified Data.Char as Char
-import           Data.Fixed (E12, Fixed (..), Nano, Pico, resolution)
-import           Data.Functor.Foldable
+import Data.Fixed (E12, Fixed(..), Nano, Pico, resolution)
+import Data.Functor.Foldable
 import qualified Data.Map as M
 import qualified Data.Set as S
-import           Data.Tagged (Tagged (..))
+import Data.Tagged (Tagged(..))
 import qualified Data.Text as Text
-import           Data.Text.Lazy.Builder (Builder)
-import           Data.Time.Clock (NominalDiffTime)
-import           Data.Typeable (TypeRep, typeRep)
+import Data.Text.Lazy.Builder (Builder)
+import Data.Time.Clock (NominalDiffTime)
+import Data.Typeable (TypeRep, typeRep)
 import qualified Data.Vector as Vector
 import qualified Data.Vector.Generic as Vector.Generic
-import           Foreign.Storable (sizeOf)
-import           Formatting (bprint, build, int, shown, stext)
-import qualified Formatting.Buildable as B (Buildable (..))
+import Foreign.Storable (sizeOf)
+import Formatting (bprint, build, int, shown, stext)
+import qualified Formatting.Buildable as B (Buildable(..))
 
 
 --------------------------------------------------------------------------------
@@ -826,7 +827,8 @@ isTodo (Fix (TodoF _ _)) = True
 isTodo _                 = False
 
 -- | Create a "thunk" that will apply @f@ to @pxy@ when forced.
-todo :: forall a. Bi a => (forall t. Bi t => Proxy t -> Size) -> Proxy a -> Size
+todo
+  :: forall a . Bi a => (forall t . Bi t => Proxy t -> Size) -> Proxy a -> Size
 todo f pxy = Fix (TodoF f pxy)
 
 -- | Apply a monotonically increasing function to the expression.

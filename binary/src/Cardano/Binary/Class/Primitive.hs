@@ -10,63 +10,64 @@
 -- | (De)serialisation primitives built on top of the @Bi@ typeclass
 
 module Cardano.Binary.Class.Primitive
-       ( serialize
-       , serializeWith
-       , serialize'
-       , serializeBuilder
-       , serializeEncoding
+  ( serialize
+  , serializeWith
+  , serialize'
+  , serializeBuilder
+  , serializeEncoding
 
        -- * Deserialize inside the Decoder monad
-       , deserialize
-       , deserialize'
+  , deserialize
+  , deserialize'
 
        -- * Unsafe deserialization
-       , unsafeDeserialize
-       , unsafeDeserialize'
-       , CBOR.Write.toStrictByteString
-       , Raw(..)
+  , unsafeDeserialize
+  , unsafeDeserialize'
+  , CBOR.Write.toStrictByteString
+  , Raw(..)
 
        -- * Temporary functions
-       , biSize
+  , biSize
 
        -- * Backward-compatible functions
-       , decodeFull
-       , decodeFull'
-       , decodeFullDecoder
+  , decodeFull
+  , decodeFull'
+  , decodeFullDecoder
 
        -- * CBOR in CBOR
-       , encodeKnownCborDataItem
-       , encodeUnknownCborDataItem
-       , knownCborDataItemSizeExpr
-       , unknownCborDataItemSizeExpr
-       , decodeKnownCborDataItem
-       , decodeUnknownCborDataItem
+  , encodeKnownCborDataItem
+  , encodeUnknownCborDataItem
+  , knownCborDataItemSizeExpr
+  , unknownCborDataItemSizeExpr
+  , decodeKnownCborDataItem
+  , decodeUnknownCborDataItem
 
        -- * Cyclic redundancy check
-       , encodeCrcProtected
-       , encodedCrcProtectedSizeExpr
-       , decodeCrcProtected
-       ) where
+  , encodeCrcProtected
+  , encodedCrcProtectedSizeExpr
+  , decodeCrcProtected
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import qualified Codec.CBOR.Read as Read
 import qualified Codec.CBOR.Write as CBOR.Write
-import           Control.Exception.Safe (impureThrow)
-import           Control.Monad.ST (ST, runST)
+import Control.Exception.Safe (impureThrow)
+import Control.Monad.ST (ST, runST)
 import qualified Data.ByteString as BS
-import           Data.ByteString.Builder (Builder)
+import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
-import           Data.Digest.CRC32 (CRC32 (..))
-import           Data.Typeable (typeOf)
-import           Formatting (Format, sformat, shown)
+import Data.Digest.CRC32 (CRC32(..))
+import Data.Typeable (typeOf)
+import Formatting (Format, sformat, shown)
 
-import           Cardano.Binary.Class.Core (Bi (..), DecoderError (..), Size,
-                     apMono, enforceSize, withWordSize)
+import Cardano.Binary.Class.Core
+  (Bi(..), DecoderError(..), Size, apMono, enforceSize, withWordSize)
 
 
 -- | Serialize a Haskell value to an external binary representation.

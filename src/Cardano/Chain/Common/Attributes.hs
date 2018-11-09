@@ -13,29 +13,30 @@
 --   some constructor or left as unparsed.
 
 module Cardano.Chain.Common.Attributes
-       ( UnparsedFields(..)
-       , Attributes (..)
-       , areAttributesKnown
-       , encodeAttributes
-       , decodeAttributes
-       , mkAttributes
-       , dropAttributes
-       ) where
+  ( UnparsedFields(..)
+  , Attributes(..)
+  , areAttributesKnown
+  , encodeAttributes
+  , decodeAttributes
+  , mkAttributes
+  , dropAttributes
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 import qualified Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
+import Data.Aeson (FromJSON(..), ToJSON(..))
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
-import           Formatting (bprint, build, int)
-import           Formatting.Buildable (Buildable)
+import Formatting (bprint, build, int)
+import Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
 
-import           Cardano.Binary.Class (Bi (..), Decoder, Dropper, Encoding,
-                     dropBytes, dropMap, dropWord8)
+import Cardano.Binary.Class
+  (Bi(..), Decoder, Dropper, Encoding, dropBytes, dropMap, dropWord8)
 
 
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used

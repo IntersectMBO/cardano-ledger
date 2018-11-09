@@ -3,30 +3,35 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Test.Cardano.Chain.Txp.Json
-       ( tests
-       ) where
-import           Cardano.Prelude
+  ( tests
+  )
+where
+import Cardano.Prelude
 
 import qualified Data.Set as S
-import           Hedgehog (Property)
+import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Cardano.Chain.Txp (TxpConfiguration (..))
+import Cardano.Chain.Txp (TxpConfiguration(..))
 
-import           Test.Cardano.Chain.Common.Example (exampleAddress,
-                     exampleAddress4)
-import           Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
-import           Test.Cardano.Prelude (discoverGolden, discoverRoundTrip,
-                     eachOf, goldenTestJSONPretty, roundTripsAesonShow)
+import Test.Cardano.Chain.Common.Example (exampleAddress, exampleAddress4)
+import Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
+import Test.Cardano.Prelude
+  ( discoverGolden
+  , discoverRoundTrip
+  , eachOf
+  , goldenTestJSONPretty
+  , roundTripsAesonShow
+  )
 
 -------------------------------------------------------------------------------
 -- TxpConfiguration
 -------------------------------------------------------------------------------
 
 goldenTxpConfiguration0 :: Property
-goldenTxpConfiguration0 =
-  goldenTestJSONPretty exampleTxpConfiguration0
-    "test/golden/json/txp/TxpConfiguration0"
+goldenTxpConfiguration0 = goldenTestJSONPretty
+  exampleTxpConfiguration0
+  "test/golden/json/txp/TxpConfiguration0"
 
 -- TODO: This test likely fails due to the `NetworkMagic` field that exists
 -- in `AddrAttributes` in the Byron release. As a result there are
@@ -40,13 +45,12 @@ goldenTxpConfiguration1 =
         "test/golden/json/txp/TxpConfiguration1"
 -}
 goldenTxpConfiguration2 :: Property
-goldenTxpConfiguration2 =
-  goldenTestJSONPretty exampleTxpConfiguration2
-    "test/golden/json/txp/TxpConfiguration2"
+goldenTxpConfiguration2 = goldenTestJSONPretty
+  exampleTxpConfiguration2
+  "test/golden/json/txp/TxpConfiguration2"
 
 roundTripTxpConfiguration :: Property
-roundTripTxpConfiguration =
-  eachOf 200 genTxpConfiguration roundTripsAesonShow
+roundTripTxpConfiguration = eachOf 200 genTxpConfiguration roundTripsAesonShow
 
 -------------------------------------------------------------------------------
 -- Main test export
@@ -54,8 +58,7 @@ roundTripTxpConfiguration =
 
 exampleTxpConfiguration0 :: TxpConfiguration
 exampleTxpConfiguration0 = TxpConfiguration 99 talsa
-  where
-    talsa = S.fromList [exampleAddress]
+  where talsa = S.fromList [exampleAddress]
 
 {-
 exampleTxpConfiguration1 :: TxpConfiguration
@@ -65,13 +68,12 @@ exampleTxpConfiguration1 = TxpConfiguration 9 talsa
 -}
 exampleTxpConfiguration2 :: TxpConfiguration
 exampleTxpConfiguration2 = TxpConfiguration 700 talsa
-  where
-    talsa = S.fromList [exampleAddress4, exampleAddress]
+  where talsa = S.fromList [exampleAddress4, exampleAddress]
 
 -------------------------------------------------------------------------------
 -- Main test export
 -------------------------------------------------------------------------------
 
 tests :: IO Bool
-tests = (&&) <$> H.checkSequential $$discoverGolden
-             <*> H.checkParallel $$discoverRoundTrip
+tests = (&&) <$> H.checkSequential $$discoverGolden <*> H.checkParallel
+  $$discoverRoundTrip

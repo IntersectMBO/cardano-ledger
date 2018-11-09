@@ -6,30 +6,26 @@
 {-# LANGUAGE TypeApplications    #-}
 
 module Cardano.Chain.Txp.TxWitness
-       ( TxWitness
-       , TxInWitness (..)
-       , TxSigData (..)
-       , TxSig
-       ) where
+  ( TxWitness
+  , TxInWitness(..)
+  , TxSigData(..)
+  , TxSig
+  )
+where
 
 import Cardano.Prelude
 
-import Data.Aeson
-  (FromJSON (..), ToJSON (toJSON), object, withObject, (.:), (.=))
-import Data.Aeson.TH
-  (defaultOptions, deriveJSON)
-import Data.ByteString.Base64.Type
-  (getByteString64, makeByteString64)
+import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Vector
-  (Vector)
-import Formatting
-  (bprint, build)
+import Data.Vector (Vector)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi (..)
-  , Case (..)
+  ( Bi(..)
+  , Case(..)
   , decodeKnownCborDataItem
   , decodeListLenCanonical
   , decodeUnknownCborDataItem
@@ -40,10 +36,8 @@ import Cardano.Binary.Class
   , matchSize
   , szCases
   )
-import Cardano.Chain.Common
-  (Script, addressHash)
-import Cardano.Chain.Txp.Tx
-  (Tx)
+import Cardano.Chain.Common (Script, addressHash)
+import Cardano.Chain.Txp.Tx (Tx)
 import Cardano.Crypto
   ( Hash
   , PublicKey

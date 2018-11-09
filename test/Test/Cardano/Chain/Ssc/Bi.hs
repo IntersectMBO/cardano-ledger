@@ -2,24 +2,34 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Test.Cardano.Chain.Ssc.Bi
-       ( tests
-       ) where
+  ( tests
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Hedgehog (Property)
+import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (dropBytes)
-import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..),
-                     dropCommitment, dropCommitmentsMap, dropInnerSharesMap,
-                     dropOpeningsMap, dropSharesMap, dropSignedCommitment,
-                     dropSscPayload, dropSscProof, dropVssCertificate,
-                     dropVssCertificatesMap)
+import Cardano.Binary.Class (dropBytes)
+import Cardano.Chain.Ssc
+  ( SscPayload(..)
+  , SscProof(..)
+  , dropCommitment
+  , dropCommitmentsMap
+  , dropInnerSharesMap
+  , dropOpeningsMap
+  , dropSharesMap
+  , dropSignedCommitment
+  , dropSscPayload
+  , dropSscProof
+  , dropVssCertificate
+  , dropVssCertificatesMap
+  )
 
-import           Test.Cardano.Binary.Helpers.GoldenRoundTrip
-                     (deprecatedGoldenDecode, roundTripsBiShow)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+  (deprecatedGoldenDecode, roundTripsBiShow)
 
 
 --------------------------------------------------------------------------------
@@ -27,8 +37,10 @@ import           Test.Cardano.Binary.Helpers.GoldenRoundTrip
 --------------------------------------------------------------------------------
 
 goldenDeprecatedCommitment :: Property
-goldenDeprecatedCommitment =
-  deprecatedGoldenDecode "Commitment" dropCommitment "test/golden/bi/ssc/Commitment"
+goldenDeprecatedCommitment = deprecatedGoldenDecode
+  "Commitment"
+  dropCommitment
+  "test/golden/bi/ssc/Commitment"
 
 
 --------------------------------------------------------------------------------
