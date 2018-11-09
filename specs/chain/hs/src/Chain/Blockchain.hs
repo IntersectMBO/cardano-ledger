@@ -46,6 +46,8 @@ genesisBlock = undefined
 
 newtype Slot = MkSlot Word deriving (Eq, Ord)
 
+data HCert
+
 --------------------------------------------------------------------------------
 --  Delegation interface
 --------------------------------------------------------------------------------
@@ -83,7 +85,18 @@ verify = undefined
 type KeyToQMap = Map.Map VKey (Queue BlockIx)
 
 -- | Delegation interface transition system
-data DelTS
+data Interf
+
+instance STS Interf where
+  type State Interf = DSIState
+  type Signal Interf = [HCert]
+  type Environment Interf = Slot
+  data PredicateFailure Interf
+    = ConflictWithExistingCerts
+    | InvalidNewCertificates
+    deriving Show
+
+  rules = undefined -- TODO(md): this is yet to be implemented
 
 -- | Blockchain extension transition system
 data BC
@@ -109,7 +122,7 @@ instance STS BC where
         , hasRight
         , validSignature
         , lessThanLimitSigned
-        , legalCerts
+        -- , legalCerts
         ]
         ( Extension . Transition $ \_ st _ -> st ) -- TODO(md): implement this
       -- [ SubTrans _1 (_3 . to body) utxoInductive
@@ -157,11 +170,16 @@ instance STS BC where
               else Failed SignedMaximumNumberBlocks
       -- checks that delegation certificates in the signal block are legal
       -- with regard to delegation certificates in the delegation state
-      legalCerts :: Antecedent BC
-      legalCerts = SubTrans env signal rule where
-        env = undefined :: Getter (JudgmentContext BC) (Environment DelTS)
-        signal = undefined :: Getter (JudgmentContext BC) (Signal DelTS)
-        rule = undefined :: Rule DelTS
+      -- legalCerts :: Antecedent BC
+      -- legalCerts = SubTrans env signal rule where
+      --   env = undefined :: Getter (JudgmentContext BC) (Environment Interf)
+      --   signal = undefined :: Getter (JudgmentContext BC) (Signal Interf)
+      --   rule = undefined :: Rule Interf
 
-instance Embed DelTS BC where
-  stateLens = id
+instance Embed Interf BC where
+  -- stateLens :: Lens' (State BC) (State Interf)
+  stateLens = lens getter setter where
+    getter :: State BC -> State Interf
+    getter (_, _, ds) = ds
+    setter :: State BC -> State Interf -> State BC
+    setter (m, p, ds) ds' = (m, p, ds')
