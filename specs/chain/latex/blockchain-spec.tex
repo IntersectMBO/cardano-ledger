@@ -545,7 +545,7 @@ this is done with $\trimix{\signmapname}{ix}$, as given by
 %
 To finish updating the map, the updated version of $\signmapname$ denoted by
 $\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
-with $\incixmap{vk_s}{\signmapname'}{ix}$, as given by
+with $\incixmap{ix}{vk_s}{\signmapname'}$, as given by
 \eqref{eq:incixmap}.
 %
 Finally, the state $ds$ that is maintained by the ledger layer, is updated;
@@ -569,7 +569,7 @@ Figure~\ref{fig:block-ext-types-funs}.
 
 \begin{equation}
   \label{eq:incixmap}
-  \incixmap{vk_s}{\signmapname}{ix} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
+  \incixmap{ix}{vk_s}{\signmapname} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
 \end{equation}
 
 
@@ -606,7 +606,7 @@ Figure~\ref{fig:block-ext-types-funs}.
       & \text{restricted queue pop function} \\
     \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
-    \fun{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+    \fun{\incixmapname} & \in \BlockIx \times \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
     \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
@@ -648,7 +648,7 @@ Figure~\ref{fig:blockchain-extension}.
       \delegation{ds}{vk_s}{vk_d} \\
       \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
-      \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
+      \signmapname' = \incixmap{ix}{vk_s}{(\trimix{\signmapname}{ix})} \\
       p' = b 
      \end{array}}
    & (sl) \vdash ds \trans{\text{DELEG}}{\rbcerts{b}} ds'
