@@ -30,6 +30,7 @@ data Block
   -- a non-genesis block
   | RBlock {
       rbHash   :: BHash -- ^ Hash of the predecessor block
+    , rbIx     :: BlockIx -- ^ Index of the block
     , rbSigner :: VKey -- ^ Block signer
     , rbCerts  :: Set HCert -- ^ New certificates posted to the blockchain
     , rbData   :: Data -- ^ Body of the block
@@ -108,6 +109,34 @@ instance STS Interf where
 -- | Blockchain extension transition system
 data BC
 
+-- | Remove the oldest entry in the queues in the range of the map if it is
+--   more than *K* blocks away from the given block index
+trimIx :: KeyToQMap -> K -> BlockIx -> KeyToQMap
+trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m) where
+  f :: VKey -> KeyToQMap -> KeyToQMap
+  f = Map.adjust (qRestrict ix)
+  qRestrict :: BlockIx -> Queue BlockIx -> Queue BlockIx
+  qRestrict (MkBlockIx ix') q =
+    case headQueue q of
+      Nothing     -> q
+      Just (MkBlockIx h, r) -> if h + k < ix' then r else q
+
+incIxMap :: VKey -> KeyToQMap -> BlockIx -> KeyToQMap
+incIxMap = undefined
+
+-- | Extends a chain by a block
+extendChain :: Environment BC -> State BC -> Signal BC -> State BC
+extendChain env st b@(RBlock {}) =
+  let p' = b
+      (sl, k, t) = env
+      (m, p, ds) = st
+      vk_d = rbSigner b
+      ix = rbIx b
+      vk_s = delegates ds Map.! vk_d
+      m' = incIxMap vk_s (trimIx m k ix) ix
+      ds' = undefined
+  in (m', p', ds')
+
 instance STS BC where
   type State BC = (KeyToQMap, Block, DSIState)
   type Signal BC = Block
@@ -131,8 +160,7 @@ instance STS BC where
         , lessThanLimitSigned
         , legalCerts
         ]
-        ( Extension . Transition $ \_ st _ -> st ) -- TODO(md): implement this
-      -- , Predicate $ \pc utxo tw -> witnessed tw utxo
+        (Extension . Transition $ extendChain)
     ]
     where
       initStateRule :: Rule BC
