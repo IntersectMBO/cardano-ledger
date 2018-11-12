@@ -43,10 +43,12 @@ hash :: Block -> BHash
 hash RBlock {} = undefined
 hash g@GBlock {} = gbHash g
 
--- TODO(md): This is to be constructed with GBlock
--- it should be that gbHash genesisBlock == hash genesisBlock
+-- | Verification keys located in the genesis block
+initVKeys :: [VKey]
+initVKeys = undefined -- TODO(md): this is to be imported or implemented
+
 genesisBlock :: Block
-genesisBlock = undefined
+genesisBlock = GBlock { gbKeys = initVKeys, gbHash = MkBHash 0 }
 
 newtype Slot = MkSlot Word deriving (Eq, Ord)
 
@@ -70,6 +72,15 @@ delegates = undefined
 initDSIState :: DSIState
 initDSIState = undefined -- TODO: This is to be imported from somewhere
 
+-- TODO(md): This rule is to be implemented on the ledger layer's side
+newCertsRule :: Rule Interf
+newCertsRule = undefined
+
+-- TODO(md): The ledger spec should implement this as part of the delegation
+-- interface. This function is closely related to *newCertsRule*
+updateCerts :: Slot -> Set HCert -> DSIState -> DSIState
+updateCerts = undefined
+
 --------------------------------------------------------------------------------
 
 -- | Size of the block sliding window
@@ -91,10 +102,6 @@ type KeyToQMap = Map.Map VKey (Queue BlockIx)
 -- | Delegation interface transition system
 data Interf
 
--- TODO(md): This rule is to be implemented on the ledger layer's side
-newCertsRule :: Rule Interf
-newCertsRule = undefined
-
 instance STS Interf where
   type State Interf = DSIState
   type Signal Interf = Set HCert
@@ -104,7 +111,7 @@ instance STS Interf where
     | InvalidNewCertificates
     deriving Show
 
-  rules = undefined -- TODO(md): this is yet to be implemented
+  rules = [newCertsRule]
 
 -- | Blockchain extension transition system
 data BC
@@ -121,6 +128,8 @@ trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m) where
       Nothing     -> q
       Just (MkBlockIx h, r) -> if h + k < ix' then r else q
 
+-- | Updates a map of genesis verification keys to their signed blocks in
+-- a sliding window by adding a block index to a specified key's list
 incIxMap :: BlockIx -> VKey -> KeyToQMap -> KeyToQMap
 incIxMap ix = Map.adjust (pushQueue ix)
 
@@ -134,12 +143,19 @@ extendChain env st b@(RBlock {}) =
       ix = rbIx b
       vk_s = delegates ds Map.! vk_d
       m' = incIxMap ix vk_s (trimIx m k ix)
-      ds' = undefined
+      ds' = updateCerts sl (rbCerts b) ds
   in (m', p', ds')
 
 instance STS BC where
+  -- | The state comprises a map of genesis block verification keys to a queue
+  -- of at most K blocks each key signed in a sliding window of size K,
+  -- the previous block and the delegation interface state
   type State BC = (KeyToQMap, Block, DSIState)
+  -- | Transitions in the system are triggered by a new block
   type Signal BC = Block
+  -- | The environment consists of K and t parameters. To support a state
+  -- transition subsystem, the environment also includes the slot of the
+  -- block to be added.
   type Environment BC = (Slot, K, T)
   data PredicateFailure BC
     = InvalidPredecessor
@@ -149,6 +165,8 @@ instance STS BC where
     | InvalidCertificates
     deriving Show
 
+  -- There are only two inference rules: 1) for the initial state and 2) for
+  -- extending the blockchain by a new block
   rules =
     [
       initStateRule
