@@ -98,7 +98,7 @@ $\Duration$ here by $\var{dur}$).
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       a & \AddrRWD & \text{reward address} \\
-      slot & \Slot & \text{slot}\\
+      slot & \Slot & \text{absolute slot}\\
       dur & \Duration & \text{duration}\\
       epoch & \Epoch & \text{epoch} \\
       stakepool & \StakePool & \text{stake pool constants}
@@ -108,7 +108,8 @@ $\Duration$ here by $\var{dur}$).
   \emph{Constants}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \emax & \Epoch & \text{epoch bound on pool retirement}
+      \slotsPer & \mathbb{N} & \text{slots per epoch} \\
+      \emax & \Epoch & \text{epoch bound on pool retirement} \\
     \end{array}
   \end{equation*}
   %
@@ -253,11 +254,6 @@ of the change of the context variable $\Slot$.
       \powerset (\Slot \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
-  \begin{equation*}
-    \_ \vdash \_ \trans{poolreap}{} \_ \in
-    \powerset (\Slot \times \PState \times \PState)
-  \end{equation*}
-  %
   \caption{Delegation Transitions}
   \label{fig:delegation-transitions}
 \end{figure}
@@ -330,7 +326,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegPool & \cauthor{c} = hk & hk \notin \var{stkeys}
+      \var{c}\in\DCertRegPool & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
     }
     {
       \var{slot} \vdash
@@ -528,31 +524,6 @@ of the current slot number signifies an epoch boundary.
   }
   \end{equation}
 
-  \begin{equation}\label{eq:pool-reap}
-    \inference[Pool-Reap]
-    {
-      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
-      & \var{retired} \neq \emptyset
-    }
-    {
-      \var{slot} \vdash
-      \left(
-      \begin{array}{r}
-        \var{stpools} \\
-        \var{pparams} \\
-        \var{retiring}
-      \end{array}
-      \right)
-      \trans{poolreap}{}
-      \left(
-      \begin{array}{rcl}
-        \var{retired} & \subtractdom & \var{stpools} \\
-        \var{retired} & \subtractdom & \var{pparams} \\
-        \var{retired} & \subtractdom & \var{retiring} \\
-      \end{array}
-      \right)
-    }
-  \end{equation}
   \caption{Pool Inference Rule}
   \label{fig:pool-rules}
 
