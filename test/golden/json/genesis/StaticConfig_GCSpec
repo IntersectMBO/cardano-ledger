@@ -9,8 +9,8 @@
         "blockVersionData": {
             "txFeePolicy": {
                 "txSizeLinear": {
-                    "a": 9.99e-7,
-                    "b": 7.7e-8
+                    "a": 999,
+                    "b": 77
                 }
             },
             "maxTxSize": 999,

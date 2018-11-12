@@ -27,7 +27,6 @@ import qualified Data.Vector as V
 import Cardano.Binary.Class (biSize)
 import Cardano.Chain.Common
   ( Address
-  , Coeff(..)
   , Lovelace
   , LovelaceError
   , Script(..)
@@ -37,7 +36,6 @@ import Cardano.Chain.Common
   , checkPubKeyAddress
   , checkRedeemAddress
   , checkScriptAddress
-  , integerToLovelace
   , mkKnownLovelace
   , subLovelace
   )
@@ -117,7 +115,7 @@ validateTx feePolicy utxo tx = do
   calculateMinimumFee = \case
 
     TxFeePolicyTxSizeLinear txSizeLinear ->
-      integerToLovelace (ceiling $ calculateTxSizeLinear txSizeLinear txSize)
+      calculateTxSizeLinear txSizeLinear txSize
         `wrapError` TxValidationLovelaceError "Minimum Fee"
 
     policy -> throwError $ TxValidationUnknownFeePolicy policy
@@ -184,8 +182,8 @@ updateUTxO utxo tx = do
     `wrapError` UTxOValidationUTxOError
  where
 
-  hardcodedTxFeePolicy =
-    TxFeePolicyTxSizeLinear $ TxSizeLinear (Coeff 155381) (Coeff 43.946)
+  hardcodedTxFeePolicy = TxFeePolicyTxSizeLinear
+    $ TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44)
 
 
 -- | Validate a transaction with a witness and use it to update the 'UTxO'

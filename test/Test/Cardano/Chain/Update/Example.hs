@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
@@ -22,18 +24,17 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Data.Fixed (Fixed(..))
 import Data.List ((!!))
 import qualified Data.Map.Strict as Map
 import Data.Time (NominalDiffTime)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  ( Coeff(..)
-  , LovelacePortion(..)
+  ( LovelacePortion(..)
   , ScriptVersion
   , TxFeePolicy(..)
   , TxSizeLinear(..)
+  , mkKnownLovelace
   )
 import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId)
 import Cardano.Chain.Update
@@ -90,8 +91,8 @@ exampleBlockVersionData = BlockVersionData
   (EpochIndex 99)
  where
   tslin  = TxSizeLinear c1' c2'
-  c1'    = Coeff (MkFixed 999)
-  c2'    = Coeff (MkFixed 77)
+  c1'    = mkKnownLovelace @999
+  c2'    = mkKnownLovelace @77
   sfrule = SoftforkRule
     (LovelacePortion 99)
     (LovelacePortion 99)
@@ -115,8 +116,8 @@ exampleBlockVersionModifier = BlockVersionModifier
   (Just $ EpochIndex 99)
  where
   tslin'  = TxSizeLinear co1 co2
-  co1     = Coeff (MkFixed 999)
-  co2     = Coeff (MkFixed 77)
+  co1     = mkKnownLovelace @999
+  co2     = mkKnownLovelace @77
   sfrule' = SoftforkRule
     (LovelacePortion 99)
     (LovelacePortion 99)
