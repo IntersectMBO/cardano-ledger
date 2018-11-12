@@ -2,26 +2,24 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Chain.Genesis.Initializer
-       ( GenesisInitializer (..)
-       , TestnetBalanceOptions (..)
-       , FakeAvvmOptions (..)
-       ) where
+  ( GenesisInitializer(..)
+  , TestnetBalanceOptions(..)
+  , FakeAvvmOptions(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Cardano.Chain.Common
-    (CoinPortion)
-import           Data.Aeson.Options
-    (defaultOptions)
-import           Data.Aeson.TH
-    (deriveJSON)
+import Cardano.Chain.Common (LovelacePortion)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 
 -- | This data type contains various options which determine genesis
 -- stakes, balanaces, heavy delegation, etc.
 data GenesisInitializer = GenesisInitializer
   { giTestBalance       :: !TestnetBalanceOptions
   , giFakeAvvmBalance   :: !FakeAvvmOptions
-  , giAvvmBalanceFactor :: !CoinPortion
+  , giAvvmBalanceFactor :: !LovelacePortion
   -- ^ Avvm balances will be multiplied by this factor.
   , giUseHeavyDlg       :: !Bool
   -- ^ Whether to use heavyweight delegation for bootstrap era

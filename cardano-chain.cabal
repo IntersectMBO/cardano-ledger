@@ -52,8 +52,8 @@ library
                        Cardano.Chain.Common.BlockCount
                        Cardano.Chain.Common.ChainDifficulty
                        Cardano.Chain.Common.Coeff
-                       Cardano.Chain.Common.Coin
-                       Cardano.Chain.Common.CoinPortion
+                       Cardano.Chain.Common.Lovelace
+                       Cardano.Chain.Common.LovelacePortion
                        Cardano.Chain.Common.Merkle
                        Cardano.Chain.Common.Script
                        Cardano.Chain.Common.SharedSeed

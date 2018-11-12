@@ -6,33 +6,31 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Slotting.LocalSlotIndex
-       ( LocalSlotIndex
-       , getSlotIndex
-       , LocalSlotIndexError (..)
+  ( LocalSlotIndex
+  , getSlotIndex
+  , LocalSlotIndexError(..)
+  , mkLocalSlotIndex
+  , addLocalSlotIndex
+  , localSlotIndexToEnum
+  , localSlotIndexFromEnum
+  , localSlotIndexSucc
+  , localSlotIndexPred
+  , localSlotIndexMinBound
+  , localSlotIndexMaxBound
+  , localSlotIndices
+  )
+where
 
-       , mkLocalSlotIndex
-       , addLocalSlotIndex
+import Cardano.Prelude
 
-       , localSlotIndexToEnum
-       , localSlotIndexFromEnum
-       , localSlotIndexSucc
-       , localSlotIndexPred
+import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Ix (Ix)
+import Formatting (bprint, build, int)
+import qualified Formatting.Buildable as B (Buildable(..))
 
-       , localSlotIndexMinBound
-       , localSlotIndexMaxBound
-       , localSlotIndices
-       ) where
-
-import           Cardano.Prelude
-
-import           Control.Monad.Except (MonadError (throwError))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Data.Ix (Ix)
-import           Formatting (bprint, build, int)
-import qualified Formatting.Buildable as B (Buildable (..))
-
-import           Cardano.Binary.Class (Bi (..))
-import           Cardano.Chain.Slotting.SlotCount (SlotCount)
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Slotting.SlotCount (SlotCount)
 
 
 -- | Index of slot inside a concrete epoch.

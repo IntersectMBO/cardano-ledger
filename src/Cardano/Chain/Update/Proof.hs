@@ -1,11 +1,12 @@
 module Cardano.Chain.Update.Proof
-       ( Proof
-       , mkProof
-       ) where
+  ( Proof
+  , mkProof
+  )
+where
 
-import           Cardano.Crypto (Hash, hash)
+import Cardano.Crypto (Hash, hash)
 
-import           Cardano.Chain.Update.Payload (Payload)
+import Cardano.Chain.Update.Payload (Payload)
 
 
 -- | Proof that body of update message contains 'Update.Payload'

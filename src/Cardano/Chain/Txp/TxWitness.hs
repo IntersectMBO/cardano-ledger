@@ -6,32 +6,47 @@
 {-# LANGUAGE TypeApplications    #-}
 
 module Cardano.Chain.Txp.TxWitness
-       ( TxWitness
-       , TxInWitness (..)
-       , TxSigData (..)
-       , TxSig
-       ) where
+  ( TxWitness
+  , TxInWitness(..)
+  , TxSigData(..)
+  , TxSig
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
-                     (.:), (.=))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
+import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Vector (Vector)
-import           Formatting (bprint, build)
+import Data.Vector (Vector)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Case (..),
-                     decodeKnownCborDataItem, decodeListLenCanonical,
-                     decodeUnknownCborDataItem, encodeKnownCborDataItem,
-                     encodeListLen, encodeUnknownCborDataItem,
-                     knownCborDataItemSizeExpr, matchSize, szCases)
-import           Cardano.Chain.Common (Script, addressHash)
-import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Crypto (Hash, PublicKey, RedeemPublicKey,
-                     RedeemSignature, Signature, hash, shortHashF)
+import Cardano.Binary.Class
+  ( Bi(..)
+  , Case(..)
+  , decodeKnownCborDataItem
+  , decodeListLenCanonical
+  , decodeUnknownCborDataItem
+  , encodeKnownCborDataItem
+  , encodeListLen
+  , encodeUnknownCborDataItem
+  , knownCborDataItemSizeExpr
+  , matchSize
+  , szCases
+  )
+import Cardano.Chain.Common (Script, addressHash)
+import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Crypto
+  ( Hash
+  , PublicKey
+  , RedeemPublicKey
+  , RedeemSignature
+  , Signature
+  , hash
+  , shortHashF
+  )
 
 
 -- | A witness is a proof that a transaction is allowed to spend the funds it

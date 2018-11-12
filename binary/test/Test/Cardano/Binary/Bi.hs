@@ -3,21 +3,20 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Binary.Bi
-       ( tests
-       ) where
+  ( tests
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Data.Fixed
-    (E9, Fixed (..))
-import           Hedgehog
-    (Property, Range, checkParallel)
+import Data.Fixed (E9, Fixed(..))
+import Hedgehog (Property, Range, checkParallel)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Test.Cardano.Binary.Helpers.GoldenRoundTrip
-    (roundTripsBiBuildable, roundTripsBiShow)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+  (roundTripsBiBuildable, roundTripsBiShow)
 
 
 tests :: IO Bool
@@ -36,7 +35,7 @@ roundTripCharBi = eachOf 1000 Gen.unicode roundTripsBiBuildable
 roundTripIntegerBi :: Property
 roundTripIntegerBi = eachOf
   1000
-  (Gen.integral (Range.linearFrom 0 (- 1e40) 1e40 :: Range Integer))
+  (Gen.integral (Range.linearFrom 0 (-1e40) 1e40 :: Range Integer))
   roundTripsBiBuildable
 
 roundTripWordBi :: Property
@@ -65,7 +64,7 @@ roundTripIntBi =
 
 roundTripFloatBi :: Property
 roundTripFloatBi =
-  eachOf 1000 (Gen.float (Range.constant (- 1e12) 1e12)) roundTripsBiBuildable
+  eachOf 1000 (Gen.float (Range.constant (-1e12) 1e12)) roundTripsBiBuildable
 
 roundTripInt32Bi :: Property
 roundTripInt32Bi =

@@ -17,7 +17,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       \var{addr} & \Addr & \text{address}\\
       %
-      c & \Coin & \text{currency value}\\
+      c & \Lovelace & \text{currency value}\\
       %
       pc & \PrtclConsts & \text{protocol constants}
     \end{array}
@@ -35,7 +35,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \var{txout}
       & \type{TxOut}
       & (\var{addr}, c)
-      & \Addr \times \Coin
+      & \Addr \times \Lovelace
       & \text{transaction output}
       \\
       \var{utxo}
@@ -61,9 +61,9 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
                                   & \text{transaction body}\\
       %
-      \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
+      \fun{txfee} & \Tx \to \Lovelace & \text{transaction fee}\\
       %
-      \fun{minfee} & \PrtclConsts \to \Tx \to \Coin & \text{minimum fee}
+      \fun{minfee} & \PrtclConsts \to \Tx \to \Lovelace & \text{minimum fee}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -86,7 +86,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
                \end{array}
       \right\}
     \nextdef
-    & \fun{balance} \in \UTxO \to \Coin
+    & \fun{balance} \in \UTxO \to \Lovelace
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
   \end{align*}
@@ -135,7 +135,7 @@ changes with a transaction:
 \end{itemize}
 
 \begin{note}
-  $\Coin$ is defined as a primitive type, but there is a difference
+  $\Lovelace$ is defined as a primitive type, but there is a difference
   between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
   Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
   If, however, $\mathbb{Z}$ is used, then extra validation is required

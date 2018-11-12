@@ -4,19 +4,20 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Delegation.LightDlgIndices
-       ( LightDlgIndices (..)
-       , ProxySigLight
-       , ProxySKLight
-       ) where
+  ( LightDlgIndices(..)
+  , ProxySigLight
+  , ProxySKLight
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (bprint, build)
-import qualified Formatting.Buildable as B (Buildable (..))
+import Formatting (bprint, build)
+import qualified Formatting.Buildable as B (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..))
-import           Cardano.Chain.Slotting (EpochIndex)
-import           Cardano.Crypto (ProxySecretKey (..), ProxySignature)
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Crypto (ProxySecretKey(..), ProxySignature)
 
 -- Notice: light delegation was removed as part of CSL-1856 and should be
 -- reworked later. Though some parts of it are left to support backward

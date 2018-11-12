@@ -4,18 +4,19 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Common.ChainDifficulty
-       ( ChainDifficulty (..)
-       , dropChainDifficulty
-       ) where
+  ( ChainDifficulty(..)
+  , dropChainDifficulty
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Formatting.Buildable (Buildable)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Formatting.Buildable (Buildable)
 
-import           Cardano.Binary.Class (Bi (..), Dropper, dropWord64,
-                     encodeListLen, enforceSize)
-import           Cardano.Chain.Common.BlockCount (BlockCount)
+import Cardano.Binary.Class
+  (Bi(..), Dropper, dropWord64, encodeListLen, enforceSize)
+import Cardano.Chain.Common.BlockCount (BlockCount)
 
 -- | Chain difficulty represents necessary effort to generate a
 -- chain. In the simplest case it can be number of blocks in chain.

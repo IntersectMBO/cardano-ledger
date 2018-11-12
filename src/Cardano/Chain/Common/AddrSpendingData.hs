@@ -4,24 +4,25 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Common.AddrSpendingData
-       ( AddrSpendingData (..)
-       , AddrType (..)
-       , addrSpendingDataToType
-       ) where
+  ( AddrSpendingData(..)
+  , AddrType(..)
+  , addrSpendingDataToType
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, int)
+import Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Case (..), szCases)
+import Cardano.Binary.Class (Bi(..), Case(..), szCases)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Chain.Common.Script (Script)
-import           Cardano.Crypto.Signing (PublicKey, RedeemPublicKey)
+import Cardano.Chain.Common.Script (Script)
+import Cardano.Crypto.Signing (PublicKey, RedeemPublicKey)
 
 -- | Data which is bound to an address and must be revealed in order
--- to spend coins belonging to this address.
+-- to spend lovelace belonging to this address.
 data AddrSpendingData
     = PubKeyASD !PublicKey
     -- ^ Funds can be spent by revealing a 'PublicKey' and providing a
@@ -127,9 +128,8 @@ instance Bi AddrType where
 
 -- | Convert 'AddrSpendingData' to the corresponding 'AddrType'.
 addrSpendingDataToType :: AddrSpendingData -> AddrType
-addrSpendingDataToType =
-    \case
-        PubKeyASD {} -> ATPubKey
-        ScriptASD {} -> ATScript
-        RedeemASD {} -> ATRedeem
-        UnknownASD tag _ -> ATUnknown tag
+addrSpendingDataToType = \case
+  PubKeyASD{}      -> ATPubKey
+  ScriptASD{}      -> ATScript
+  RedeemASD{}      -> ATRedeem
+  UnknownASD tag _ -> ATUnknown tag

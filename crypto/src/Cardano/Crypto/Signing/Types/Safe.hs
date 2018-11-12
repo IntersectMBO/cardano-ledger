@@ -8,35 +8,36 @@
 -- | Module for safe (zero-memory) signing
 
 module Cardano.Crypto.Signing.Types.Safe
-       ( EncryptedSecretKey (..)
-       , PassPhrase (..)
-       , SafeSigner (..)
-       , passphraseLength
-       , emptyPassphrase
-       , mkEncSecretWithSaltUnsafe
-       , mkEncSecretUnsafe
-       , encToSecret
-       , encToPublic
-       , noPassEncrypt
-       , checkPassMatches
-       ) where
+  ( EncryptedSecretKey(..)
+  , PassPhrase(..)
+  , SafeSigner(..)
+  , passphraseLength
+  , emptyPassphrase
+  , mkEncSecretWithSaltUnsafe
+  , mkEncSecretUnsafe
+  , encToSecret
+  , encToPublic
+  , noPassEncrypt
+  , checkPassMatches
+  )
+where
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Cardano.Prelude
-import           Crypto.Random (MonadRandom)
-import           Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
+import Cardano.Prelude
+import Crypto.Random (MonadRandom)
+import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
-import           Data.Default (Default (..))
-import           Data.Semigroup (Semigroup)
-import           Formatting (int, sformat)
-import           Formatting.Buildable (Buildable (..))
+import Data.Default (Default(..))
+import Data.Semigroup (Semigroup)
+import Formatting (int, sformat)
+import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.Scrypt as S
-import           Cardano.Crypto.Signing.Types.Signing (PublicKey (..),
-                     SecretKey (..), decodeXPrv, encodeXPrv, toPublic)
+import Cardano.Crypto.Signing.Types.Signing
+  (PublicKey(..), SecretKey(..), decodeXPrv, encodeXPrv, toPublic)
 
 
 -- | Encrypted HD secret key

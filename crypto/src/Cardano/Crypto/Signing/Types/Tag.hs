@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Cardano.Crypto.Signing.Types.Tag
-       ( SignTag(..)
-       ) where
+  ( SignTag(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (bprint, shown)
-import           Formatting.Buildable (Buildable (..))
+import Formatting (bprint, shown)
+import Formatting.Buildable (Buildable(..))
 
 
 -- | To protect agains replay attacks (i.e. when an attacker intercepts a

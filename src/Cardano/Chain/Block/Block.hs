@@ -10,60 +10,56 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Block
-       ( Block
-       , encodeBlock
-       , decodeBlock
-       , mkBlock
-       , mkBlockExplicit
-       , blockPrevHash
-       , blockProof
-       , blockSlot
-       , blockLeaderKey
-       , blockDifficulty
-       , blockSignature
-       , blockBlockVersion
-       , blockSoftwareVersion
-       , blockHeaderAttributes
-       , blockExtraDataProof
-       , blockTxPayload
-       , blockSscPayload
-       , blockDlgPayload
-       , blockUpdatePayload
-       , blockAttributes
-       , verifyBlock
+  ( Block
+  , encodeBlock
+  , decodeBlock
+  , mkBlock
+  , mkBlockExplicit
+  , blockPrevHash
+  , blockProof
+  , blockSlot
+  , blockLeaderKey
+  , blockDifficulty
+  , blockSignature
+  , blockBlockVersion
+  , blockSoftwareVersion
+  , blockHeaderAttributes
+  , blockExtraDataProof
+  , blockTxPayload
+  , blockSscPayload
+  , blockDlgPayload
+  , blockUpdatePayload
+  , blockAttributes
+  , verifyBlock
 
        -- * BoundaryBlock
-       , dropBoundaryBlock
-       ) where
+  , dropBoundaryBlock
+  )
+where
 
 import Cardano.Prelude
 
-import Control.Monad.Except
-  (MonadError (..), liftEither)
-import Formatting
-  (bprint, build, int, shown)
+import Control.Monad.Except (MonadError(..), liftEither)
+import Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi (..)
+  ( Bi(..)
   , Decoder
-  , DecoderError (..)
+  , DecoderError(..)
   , Dropper
   , Encoding
   , encodeListLen
   , enforceSize
   )
-import Cardano.Chain.Block.Body
-  (Body (..), BodyError, bodyTxs, verifyBody)
+import Cardano.Chain.Block.Body (Body(..), BodyError, bodyTxs, verifyBody)
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
-import Cardano.Chain.Block.ExtraBodyData
-  (ExtraBodyData (..))
-import Cardano.Chain.Block.ExtraHeaderData
-  (ExtraHeaderData (..))
+import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData(..))
+import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Header
-  ( BlockSignature (..)
-  , Header (..)
+  ( BlockSignature(..)
+  , Header(..)
   , HeaderError
   , HeaderHash
   , dropBoundaryHeader
@@ -79,30 +75,18 @@ import Cardano.Chain.Block.Header
   , mkHeaderExplicit
   , verifyHeader
   )
-import Cardano.Chain.Block.Proof
-  (Proof (..), ProofError, checkProof)
-import Cardano.Chain.Common
-  (Attributes, ChainDifficulty, mkAttributes)
-import Cardano.Chain.Delegation.HeavyDlgIndex
-  (ProxySKBlockInfo)
-import qualified Cardano.Chain.Delegation.Payload as Delegation
-  (Payload)
-import Cardano.Chain.Genesis.Hash
-  (GenesisHash (..))
-import Cardano.Chain.Slotting
-  (SlotId (..))
-import Cardano.Chain.Ssc
-  (SscPayload)
-import Cardano.Chain.Txp.TxPayload
-  (TxPayload)
-import Cardano.Chain.Update.BlockVersion
-  (BlockVersion)
-import qualified Cardano.Chain.Update.Payload as Update
-  (Payload)
-import Cardano.Chain.Update.SoftwareVersion
-  (SoftwareVersion)
-import Cardano.Crypto
-  (Hash, ProtocolMagic, PublicKey, SecretKey, hash)
+import Cardano.Chain.Block.Proof (Proof(..), ProofError, checkProof)
+import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
+import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
+import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
+import Cardano.Chain.Genesis.Hash (GenesisHash(..))
+import Cardano.Chain.Slotting (SlotId(..))
+import Cardano.Chain.Ssc (SscPayload)
+import Cardano.Chain.Txp.TxPayload (TxPayload)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import qualified Cardano.Chain.Update.Payload as Update (Payload)
+import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
+import Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey, hash)
 
 
 --------------------------------------------------------------------------------
@@ -193,16 +177,10 @@ mkBlock
   -> ProxySKBlockInfo
   -> Body
   -> Block
-mkBlock pm bv sv prevHeader = mkBlockExplicit
-  pm
-  bv
-  sv
-  prevHash
-  difficulty
+mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
  where
-  prevHash = either getGenesisHash hashHeader prevHeader
-  difficulty =
-    either (const 0) (succ . headerDifficulty) prevHeader
+  prevHash   = either getGenesisHash hashHeader prevHeader
+  difficulty = either (const 0) (succ . headerDifficulty) prevHeader
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
@@ -219,11 +197,10 @@ mkBlockExplicit
   -> ProxySKBlockInfo
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body =
-  Block
-    (mkHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
-    body
-    extraB
+mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body = Block
+  (mkHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
+  body
+  extraB
  where
   extraB :: ExtraBodyData
   extraB = ExtraBodyData (mkAttributes ())

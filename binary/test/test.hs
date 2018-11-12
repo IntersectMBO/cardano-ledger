@@ -1,11 +1,9 @@
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Test.Hspec
-    (hspec)
+import Test.Hspec (hspec)
 
-import           Spec
-    (spec)
+import Spec (spec)
 
 import qualified Test.Cardano.Binary.Bi
 import qualified Test.Cardano.Binary.BiSizeBounds

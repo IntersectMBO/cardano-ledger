@@ -3,15 +3,16 @@
 -- | Boundary blocks have been deprecated, but we keep functions to decode them
 
 module Cardano.Chain.Block.Boundary
-       ( dropBoundaryConsensusData
-       , dropBoundaryExtraHeaderData
-       , dropBoundaryBody
-       , dropBoundaryExtraBodyData
-       ) where
+  ( dropBoundaryConsensusData
+  , dropBoundaryExtraHeaderData
+  , dropBoundaryBody
+  , dropBoundaryExtraBodyData
+  )
+where
 
-import           Cardano.Binary.Class (Dropper, dropBytes, dropList, dropWord64,
-                     enforceSize)
-import           Cardano.Chain.Common (dropAttributes, dropChainDifficulty)
+import Cardano.Binary.Class
+  (Dropper, dropBytes, dropList, dropWord64, enforceSize)
+import Cardano.Chain.Common (dropAttributes, dropChainDifficulty)
 
 
 --------------------------------------------------------------------------------

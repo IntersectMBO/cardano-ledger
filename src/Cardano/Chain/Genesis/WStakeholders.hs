@@ -7,24 +7,19 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.WStakeholders
-       ( GenesisWStakeholders (..)
-       ) where
+  ( GenesisWStakeholders(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except
-    (MonadError)
-import qualified Data.Aeson as Aeson
-    (FromJSON, ToJSON)
-import           Formatting
-    (bprint)
-import           Formatting.Buildable
-    (Buildable (..))
-import           Text.JSON.Canonical
-    (FromJSON (..), ToJSON (..))
+import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson (FromJSON, ToJSON)
+import Formatting (bprint)
+import Formatting.Buildable (Buildable(..))
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Chain.Common
-    (StakeholderId)
+import Cardano.Chain.Common (StakeholderId)
 
 
 -- | Wrapper around weighted stakeholders map to be used in genesis core data

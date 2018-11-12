@@ -1,15 +1,15 @@
 module Test.Cardano.Chain.ProtocolConstants.Gen
-       ( genVssMaxTTL
-       , genVssMinTTL
-       ) where
+  ( genVssMaxTTL
+  , genVssMinTTL
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Hedgehog (Gen)
+import Hedgehog (Gen)
 
-import           Cardano.Chain.ProtocolConstants (VssMaxTTL (..),
-                     VssMinTTL (..))
+import Cardano.Chain.ProtocolConstants (VssMaxTTL(..), VssMinTTL(..))
 
 genVssMaxTTL :: Gen VssMaxTTL
 genVssMaxTTL = VssMaxTTL <$> genWord32

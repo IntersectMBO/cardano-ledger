@@ -7,40 +7,58 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Crypto.Bi
-    ( constantByteString
-    , getBytes
-    , tests
-    ) where
+  ( constantByteString
+  , getBytes
+  , tests
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Cardano.Crypto.Wallet (XPrv, unXPrv, xprv, xpub)
-import           Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384,
-                     Blake2b_512, SHA1)
+import Cardano.Crypto.Wallet (XPrv, unXPrv, xprv, xpub)
+import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
 
-import           Hedgehog (Gen, Property)
+import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (Bi, Dropper, dropBytes, dropList,
-                     enforceSize)
-import           Cardano.Crypto (AbstractHash, PassPhrase, ProtocolMagic (..),
-                     ProxyCert, ProxySecretKey, PublicKey (..),
-                     RedeemSignature, SafeSigner (FakeSigner), SecretKey (..),
-                     SignTag (SignForTestingOnly), Signature,
-                     deriveHDPassphrase, hash, mkSigned, noPassEncrypt,
-                     packHDAddressAttr, proxySign, redeemDeterministicKeyGen,
-                     redeemSign, safeCreateProxyCert, safeCreatePsk, sign,
-                     toPublic)
+import Cardano.Binary.Class (Bi, Dropper, dropBytes, dropList, enforceSize)
+import Cardano.Crypto
+  ( AbstractHash
+  , PassPhrase
+  , ProtocolMagic(..)
+  , ProxyCert
+  , ProxySecretKey
+  , PublicKey(..)
+  , RedeemSignature
+  , SafeSigner(FakeSigner)
+  , SecretKey(..)
+  , SignTag(SignForTestingOnly)
+  , Signature
+  , deriveHDPassphrase
+  , hash
+  , mkSigned
+  , noPassEncrypt
+  , packHDAddressAttr
+  , proxySign
+  , redeemDeterministicKeyGen
+  , redeemSign
+  , safeCreateProxyCert
+  , safeCreatePsk
+  , sign
+  , toPublic
+  )
 
-import           Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg,
-                     sizeTest)
-import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
-                     deprecatedGoldenDecode, roundTripsBiBuildable,
-                     roundTripsBiShow)
-import           Test.Cardano.Crypto.Gen
+import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+  ( goldenTestBi
+  , deprecatedGoldenDecode
+  , roundTripsBiBuildable
+  , roundTripsBiShow
+  )
+import Test.Cardano.Crypto.Gen
 
 
 --------------------------------------------------------------------------------
@@ -298,14 +316,16 @@ goldenDeprecatedSecret =
 --------------------------------------------------------------------------------
 
 goldenDeprecatedSecretProof :: Property
-goldenDeprecatedSecretProof =
-  deprecatedGoldenDecode "SecretProof" dropSecretProof "test/golden/SecretProof"
+goldenDeprecatedSecretProof = deprecatedGoldenDecode
+  "SecretProof"
+  dropSecretProof
+  "test/golden/SecretProof"
  where
-   dropSecretProof :: Dropper s
-   dropSecretProof = do
-     enforceSize "SecretProof" 4
-     replicateM_ 3 dropBytes
-     dropList dropBytes
+  dropSecretProof :: Dropper s
+  dropSecretProof = do
+    enforceSize "SecretProof" 4
+    replicateM_ 3 dropBytes
+    dropList dropBytes
 
 
 --------------------------------------------------------------------------------
@@ -375,38 +395,39 @@ constantByteString
 --------------------------------------------------------------------------------
 
 sizeEstimates :: H.Group
-sizeEstimates
-  = let
-      testPrecise :: forall a . (Show a, Bi a) => Gen a -> Property
-      testPrecise g = sizeTest $ scfg { gen = g, precise = True }
-    in H.Group
-      "Encoded size bounds for crypto types."
-      [ ("PublicKey", testPrecise genPublicKey)
-      , ( "AbstractHash Blake2b_224 PublicKey"
-        , testPrecise @(AbstractHash Blake2b_224 PublicKey)
-          $ genAbstractHash genPublicKey
-        )
-      , ( "AbstractHash Blake2b_256 PublicKey"
-        , testPrecise @(AbstractHash Blake2b_256 PublicKey)
-          $ genAbstractHash genPublicKey
-        )
-      , ( "AbstractHash Blake2b_384 PublicKey"
-        , testPrecise @(AbstractHash Blake2b_384 PublicKey)
-          $ genAbstractHash genPublicKey
-        )
-      , ( "AbstractHash Blake2b_512 PublicKey"
-        , testPrecise @(AbstractHash Blake2b_512 PublicKey)
-          $ genAbstractHash genPublicKey
-        )
-      , ( "AbstractHash SHA1 PublicKey"
-        , testPrecise @(AbstractHash SHA1 PublicKey) $ genAbstractHash genPublicKey
-        )
-      , ("RedeemPublicKey", testPrecise genRedeemPublicKey)
-      , ("RedeemSecretKey", testPrecise genRedeemSecretKey)
-      , ( "RedeemSignature PublicKey"
-        , testPrecise (genRedeemSignature (ProtocolMagic 0) genPublicKey)
-        )
-      ]
+sizeEstimates =
+  let
+    testPrecise :: forall a . (Show a, Bi a) => Gen a -> Property
+    testPrecise g = sizeTest $ scfg { gen = g, precise = True }
+  in H.Group
+    "Encoded size bounds for crypto types."
+    [ ("PublicKey", testPrecise genPublicKey)
+    , ( "AbstractHash Blake2b_224 PublicKey"
+      , testPrecise @(AbstractHash Blake2b_224 PublicKey)
+        $ genAbstractHash genPublicKey
+      )
+    , ( "AbstractHash Blake2b_256 PublicKey"
+      , testPrecise @(AbstractHash Blake2b_256 PublicKey)
+        $ genAbstractHash genPublicKey
+      )
+    , ( "AbstractHash Blake2b_384 PublicKey"
+      , testPrecise @(AbstractHash Blake2b_384 PublicKey)
+        $ genAbstractHash genPublicKey
+      )
+    , ( "AbstractHash Blake2b_512 PublicKey"
+      , testPrecise @(AbstractHash Blake2b_512 PublicKey)
+        $ genAbstractHash genPublicKey
+      )
+    , ( "AbstractHash SHA1 PublicKey"
+      , testPrecise @(AbstractHash SHA1 PublicKey)
+        $ genAbstractHash genPublicKey
+      )
+    , ("RedeemPublicKey", testPrecise genRedeemPublicKey)
+    , ("RedeemSecretKey", testPrecise genRedeemSecretKey)
+    , ( "RedeemSignature PublicKey"
+      , testPrecise (genRedeemSignature (ProtocolMagic 0) genPublicKey)
+      )
+    ]
 
 --------------------------------------------------------------------------------
 

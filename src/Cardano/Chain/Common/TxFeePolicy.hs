@@ -10,24 +10,30 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Common.TxFeePolicy
-       ( TxFeePolicy (..)
-       ) where
+  ( TxFeePolicy(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import           Data.Aeson (object, (.:?), (.=))
+import Control.Monad.Except (MonadError)
+import Data.Aeson (object, (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import           Formatting (bprint, build, shown)
+import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
-                     mkObject)
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
-import           Cardano.Binary.Class (Bi (..), decodeKnownCborDataItem,
-                     decodeUnknownCborDataItem, encodeKnownCborDataItem,
-                     encodeListLen, encodeUnknownCborDataItem, enforceSize)
-import           Cardano.Chain.Common.TxSizeLinear (TxSizeLinear (..))
+import Cardano.Binary.Class
+  ( Bi(..)
+  , decodeKnownCborDataItem
+  , decodeUnknownCborDataItem
+  , encodeKnownCborDataItem
+  , encodeListLen
+  , encodeUnknownCborDataItem
+  , enforceSize
+  )
+import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear(..))
 
 
 -- | Transaction fee policy represents a formula to compute the minimal allowed

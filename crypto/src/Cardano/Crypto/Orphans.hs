@@ -3,22 +3,22 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Crypto.Orphans
-       (
-       ) where
+  ()
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Codec.CBOR.Encoding as E
-import           Crypto.Error (CryptoFailable (..))
+import Crypto.Error (CryptoFailable(..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import           Crypto.Scrypt (EncryptedPass (..))
-import           Data.Aeson (FromJSON (..), ToJSON (..))
+import Crypto.Scrypt (EncryptedPass(..))
+import Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.Text as T
 
-import           Cardano.Binary.Class (Bi (..), Size, withWordSize)
+import Cardano.Binary.Class (Bi(..), Size, withWordSize)
 
 
 fromByteStringToBytes :: BS.ByteString -> BA.Bytes

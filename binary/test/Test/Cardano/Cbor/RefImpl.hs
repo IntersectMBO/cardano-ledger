@@ -10,48 +10,47 @@
 -- | Reference implementation of CBOR (de)serialization.
 
 module Test.Cardano.Cbor.RefImpl
-    ( serialise
-    , deserialise
-    , UInt(..)
-    , Term(..)
-    , toUInt
-    , leadingZeroes
-    , integerToBinaryRep
-    , canonicalNaN
+  ( serialise
+  , deserialise
+  , UInt(..)
+  , Term(..)
+  , toUInt
+  , leadingZeroes
+  , integerToBinaryRep
+  , canonicalNaN
     -- * Properties
-    , prop_InitialByte
-    , prop_AdditionalInfo
-    , prop_TokenHeader
-    , prop_TokenHeader2
-    , prop_Token
-    , prop_Term
+  , prop_InitialByte
+  , prop_AdditionalInfo
+  , prop_TokenHeader
+  , prop_TokenHeader2
+  , prop_Token
+  , prop_Term
     -- * Properties of internal helpers
-    , prop_integerToFromBytes
-    , prop_word16ToFromNet
-    , prop_word32ToFromNet
-    , prop_word64ToFromNet
-    , prop_halfToFromFloat
-    ) where
+  , prop_integerToFromBytes
+  , prop_word16ToFromNet
+  , prop_word32ToFromNet
+  , prop_word64ToFromNet
+  , prop_halfToFromFloat
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.List (span)
+import Data.List (span)
 import qualified Data.Text.Encoding as T
-import           Foreign (Storable (..), alloca, castPtr)
-import           GHC.Float (RealFloat (..))
-import           Numeric.Half (Half (..))
+import Foreign (Storable(..), alloca, castPtr)
+import GHC.Float (RealFloat(..))
+import Numeric.Half (Half(..))
 import qualified Numeric.Half as Half
-import           System.IO.Unsafe (unsafeDupablePerformIO)
+import System.IO.Unsafe (unsafeDupablePerformIO)
 
-import           Test.QuickCheck.Arbitrary (Arbitrary (..),
-                     arbitraryBoundedIntegral)
-import           Test.QuickCheck.Gen (Gen, choose, elements, frequency, oneof,
-                     resize, sized, suchThat, vectorOf)
-import           Test.QuickCheck.Instances ()
-import           Test.QuickCheck.Property (Property, conjoin, property, (.&&.),
-                     (===))
+import Test.QuickCheck.Arbitrary (Arbitrary(..), arbitraryBoundedIntegral)
+import Test.QuickCheck.Gen
+  (Gen, choose, elements, frequency, oneof, resize, sized, suchThat, vectorOf)
+import Test.QuickCheck.Instances ()
+import Test.QuickCheck.Property (Property, conjoin, property, (.&&.), (===))
 
 
 serialise :: Term -> LBS.ByteString
@@ -329,7 +328,7 @@ decodeToken = do
 tokenExtraLen :: TokenHeader -> Word64
 tokenExtraLen (TokenHeader MajorType2 (AiValue n)) = fromUInt n  -- bytestrings
 tokenExtraLen (TokenHeader MajorType3 (AiValue n)) = fromUInt n  -- unicode strings
-tokenExtraLen _                                    = 0
+tokenExtraLen _ = 0
 
 packToken :: TokenHeader -> [Word8] -> Either Text Token
 packToken (TokenHeader mt ai) extra = case (mt, ai) of

@@ -1,27 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Epoch.File
-       ( tests
-       , getEpochFiles
-       ) where
+  ( tests
+  , getEpochFiles
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Trans.Resource
-    (ResIO, runResourceT)
-import           Hedgehog
-    (Property, (===))
+import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Hedgehog (Property, (===))
 import qualified Hedgehog as H
-import           Streaming
-    (Of ((:>)))
+import Streaming (Of((:>)))
 import qualified Streaming as S
-import           System.Directory
-    (getDirectoryContents)
-import           System.FilePath
-    (isExtensionOf, (</>))
+import System.Directory (getDirectoryContents)
+import System.FilePath (isExtensionOf, (</>))
 
-import           Cardano.Chain.Epoch.File
-    (ParseError, parseEpochFiles)
+import Cardano.Chain.Epoch.File (ParseError, parseEpochFiles)
 
 
 tests :: IO Bool

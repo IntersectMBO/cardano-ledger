@@ -10,35 +10,50 @@
 -- | `Arbitrary` instances for using in tests and benchmarks
 
 module Test.Cardano.Crypto.Arbitrary
-       ( genSignature
-       , genSignatureEncoded
-       , genRedeemSignature
-       ) where
+  ( genSignature
+  , genSignatureEncoded
+  , genRedeemSignature
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray
-import           Test.QuickCheck (Arbitrary (..), Gen, elements, oneof, vector)
-import           Test.QuickCheck.Arbitrary.Generic (genericArbitrary,
-                     genericShrink)
+import Test.QuickCheck (Arbitrary(..), Gen, elements, oneof, vector)
+import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 
-import           Cardano.Binary.Class (Bi)
-import           Cardano.Crypto.Hashing (AbstractHash (..), HashAlgorithm)
-import           Cardano.Crypto.HD (HDAddressPayload, HDPassphrase (..))
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
-import           Cardano.Crypto.Random (deterministic)
-import           Cardano.Crypto.Signing (EncryptedSecretKey (..), PassPhrase,
-                     ProxyCert, ProxySecretKey, ProxySignature, PublicKey,
-                     SecretKey, SignTag (..), Signature, Signed,
-                     createProxyCert, createPsk, keyGen, mkSigned,
-                     noPassEncrypt, proxySign, sign, signEncoded, toPublic)
-import           Cardano.Crypto.Signing.Redeem (RedeemPublicKey,
-                     RedeemSecretKey, RedeemSignature, redeemKeyGen,
-                     redeemSign)
+import Cardano.Binary.Class (Bi)
+import Cardano.Crypto.Hashing (AbstractHash(..), HashAlgorithm)
+import Cardano.Crypto.HD (HDAddressPayload, HDPassphrase(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.Random (deterministic)
+import Cardano.Crypto.Signing
+  ( EncryptedSecretKey(..)
+  , PassPhrase
+  , ProxyCert
+  , ProxySecretKey
+  , ProxySignature
+  , PublicKey
+  , SecretKey
+  , SignTag(..)
+  , Signature
+  , Signed
+  , createProxyCert
+  , createPsk
+  , keyGen
+  , mkSigned
+  , noPassEncrypt
+  , proxySign
+  , sign
+  , signEncoded
+  , toPublic
+  )
+import Cardano.Crypto.Signing.Redeem
+  (RedeemPublicKey, RedeemSecretKey, RedeemSignature, redeemKeyGen, redeemSign)
 
-import           Test.Cardano.Crypto.Arbitrary.Unsafe ()
-import           Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Crypto.Arbitrary.Unsafe ()
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
 
 deriving instance Arbitrary ProtocolMagic
@@ -87,7 +102,7 @@ instance Nonrepeating SecretKey where
 -- Repeat the same for ADA redemption keys
 redemptionKeys :: [(RedeemPublicKey, RedeemSecretKey)]
 redemptionKeys =
-    deterministic "redemptionKeys" $ replicateM keysToGenerate redeemKeyGen
+  deterministic "redemptionKeys" $ replicateM keysToGenerate redeemKeyGen
 
 instance Arbitrary RedeemPublicKey where
     arbitrary = fst <$> elements redemptionKeys
@@ -109,7 +124,7 @@ instance Nonrepeating RedeemSecretKey where
 -- 'Arbitrary' instances.
 genSignatureEncoded :: ProtocolMagic -> Gen ByteString -> Gen (Signature a)
 genSignatureEncoded pm genBytestring =
-    signEncoded pm <$> arbitrary <*> arbitrary <*> genBytestring
+  signEncoded pm <$> arbitrary <*> arbitrary <*> genBytestring
 
 -- | Like 'genSignatureEncoded' but use an 'a' that can be serialized.
 genSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (Signature a)

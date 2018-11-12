@@ -6,21 +6,28 @@
 -- | Secure generation of random numbers and 'ByteString's
 
 module Cardano.Crypto.Random
-       ( SecureRandom(..)
-       , secureRandomBS
+  ( SecureRandom(..)
+  , secureRandomBS
+  , deterministic
+  , randomNumber
+  , randomNumberInRange
+  )
+where
 
-       , deterministic
-       , randomNumber
-       , randomNumberInRange
-       ) where
+import Cardano.Prelude
 
-import           Cardano.Prelude
-
-import           Crypto.Number.Basic (numBytes)
-import           Crypto.Number.Serialize (os2ip)
-import           Crypto.OpenSSL.Random (randBytes)
-import           Crypto.Random (ChaChaDRG, MonadPseudoRandom, MonadRandom,
-                     drgNewSeed, getRandomBytes, seedFromInteger, withDRG)
+import Crypto.Number.Basic (numBytes)
+import Crypto.Number.Serialize (os2ip)
+import Crypto.OpenSSL.Random (randBytes)
+import Crypto.Random
+  ( ChaChaDRG
+  , MonadPseudoRandom
+  , MonadRandom
+  , drgNewSeed
+  , getRandomBytes
+  , seedFromInteger
+  , withDRG
+  )
 import qualified Data.ByteArray as ByteArray (convert)
 
 
@@ -61,7 +68,7 @@ randomNumber n
   rangeMod = 2 ^ (size * 8) `rem` n     -- 2^x mod n
 
   gen :: m Integer
-  gen      = do
+  gen = do
     x <- os2ip @ByteString <$> getRandomBytes size
     if x < rangeMod then gen else return (x `rem` n)
 

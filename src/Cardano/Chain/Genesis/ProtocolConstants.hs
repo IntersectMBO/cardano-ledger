@@ -7,23 +7,20 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Genesis.ProtocolConstants
-       ( GenesisProtocolConstants (..)
-       ) where
+  ( GenesisProtocolConstants(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson.Options
-    (defaultOptions)
-import           Data.Aeson.TH
-    (deriveJSON)
-import           Text.JSON.Canonical
-    (FromJSON (..), Int54, JSValue (..), ToJSON (..), fromJSField, mkObject)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
+import Text.JSON.Canonical
+  (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
 
-import           Cardano.Chain.ProtocolConstants
-    (VssMaxTTL (..), VssMinTTL (..))
-import           Cardano.Crypto
-    (ProtocolMagic (..))
+import Cardano.Chain.ProtocolConstants (VssMaxTTL(..), VssMinTTL(..))
+import Cardano.Crypto (ProtocolMagic(..))
 
 
 -- | 'GensisProtocolConstants' are not really part of genesis global state,

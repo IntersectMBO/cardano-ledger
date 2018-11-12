@@ -2,32 +2,33 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Test.Cardano.Binary.BiSizeBounds
-    ( tests
-    ) where
+  ( tests
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as M
-import           Data.String (String)
-import           Data.Tagged (Tagged (..))
+import Data.String (String)
+import Data.Tagged (Tagged(..))
 import qualified Data.Text as T
 
-import           Data.Typeable (typeRep)
-import           Hedgehog (Gen, Group (..), checkParallel, withTests)
+import Data.Typeable (typeRep)
+import Hedgehog (Gen, Group(..), checkParallel, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Cardano.Binary.Class
+import Cardano.Binary.Class
 
-import           Test.Cardano.Binary.Helpers
+import Test.Cardano.Binary.Helpers
 
 tests :: IO Bool
 tests
   = let
       listOf :: Gen a -> Gen [a]
-      listOf     = Gen.list (Range.linear 0 300)
+      listOf = Gen.list (Range.linear 0 300)
       longListOf :: Gen a -> Gen [a]
       longListOf = Gen.list (Range.linear 0 100000)
     in checkParallel $ Group
@@ -129,7 +130,7 @@ tests
         )
       , ( "(Bool, Bool, Bool, Bool)"
         , sizeTest $ scfg
-          { gen = (,,,) <$> Gen.bool <*> Gen.bool <*> Gen.bool <*> Gen.bool
+          { gen     = (,,,) <$> Gen.bool <*> Gen.bool <*> Gen.bool <*> Gen.bool
           , precise = True
           }
         )

@@ -11,61 +11,57 @@
 -- | Signing done with public/private keys.
 
 module Cardano.Crypto.Signing.Types.Signing
-       (
+  (
        -- * Keys
-         PublicKey (..)
-       , SecretKey (..)
-
-       , toPublic
-       , encodeXPrv
-       , decodeXPrv
-
-       , formatFullPublicKey
-       , fullPublicKeyF
-       , fullPublicKeyHexF
-       , shortPublicKeyHexF
-       , parseFullPublicKey
+    PublicKey(..)
+  , SecretKey(..)
+  , toPublic
+  , encodeXPrv
+  , decodeXPrv
+  , formatFullPublicKey
+  , fullPublicKeyF
+  , fullPublicKeyHexF
+  , shortPublicKeyHexF
+  , parseFullPublicKey
 
        -- * Signing and verification
-       , Signature (..)
-       , fullSignatureHexF
-       , parseFullSignature
-
-       , Signed (..)
+  , Signature(..)
+  , fullSignatureHexF
+  , parseFullSignature
+  , Signed(..)
 
        -- * Proxy signature scheme
-       , ProxyCert (..)
-       , fullProxyCertHexF
-       , parseFullProxyCert
+  , ProxyCert(..)
+  , fullProxyCertHexF
+  , parseFullProxyCert
+  , ProxySecretKey(..)
+  , ProxySignature(..)
+  , isSelfSignedPsk
+  )
+where
 
-       , ProxySecretKey (..)
-       , ProxySignature (..)
-
-       , isSelfSignedPsk
-       ) where
-
-import           Cardano.Prelude hiding (show)
+import Cardano.Prelude hiding (show)
 
 import qualified Cardano.Crypto.Wallet as CC
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import           Control.Monad.Except (MonadError)
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
+import Control.Monad.Except (MonadError)
+import Data.Aeson (FromJSON(..), ToJSON(..))
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
-import           Data.Text.Lazy.Builder (Builder)
+import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as Builder
-import           Formatting (Format, bprint, build, fitLeft, formatToString,
-                     later, sformat, (%.))
+import Formatting
+  (Format, bprint, build, fitLeft, formatToString, later, sformat, (%.))
 import qualified Formatting.Buildable as B
-import           Prelude (show)
-import           Text.JSON.Canonical (JSValue (..))
-import qualified Text.JSON.Canonical as TJC (FromJSON (..), ToJSON (..))
+import Prelude (show)
+import Text.JSON.Canonical (JSValue(..))
+import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Crypto.Hashing (hash)
-import           Cardano.Crypto.Orphans ()
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Crypto.Hashing (hash)
+import Cardano.Crypto.Orphans ()
 
 
 --------------------------------------------------------------------------------

@@ -7,26 +7,22 @@
 {-# LANGUAGE TemplateHaskell    #-}
 
 module Cardano.Chain.Update.SoftwareVersion
-       ( SoftwareVersion (..)
-       , SoftwareVersionError (..)
-       , NumSoftwareVersion
-       , checkSoftwareVersion
-       ) where
+  ( SoftwareVersion(..)
+  , SoftwareVersionError(..)
+  , NumSoftwareVersion
+  , checkSoftwareVersion
+  )
+where
 
 import Cardano.Prelude
 import qualified Prelude
 
-import Control.Monad.Except
-  (MonadError, liftEither)
-import Data.Aeson.TH
-  (defaultOptions, deriveJSON)
-import Formatting
-  (bprint, build, formatToString, int, stext)
-import qualified Formatting.Buildable as B
-  (Buildable (..))
+import Control.Monad.Except (MonadError, liftEither)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Formatting (bprint, build, formatToString, int, stext)
+import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class
-  (Bi (..), encodeListLen, enforceSize)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Update.ApplicationName
 
 

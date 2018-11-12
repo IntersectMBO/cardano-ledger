@@ -4,17 +4,17 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Block.SlogUndo
-       ( SlogUndo (..)
-       , buildSlogUndo
-       ) where
+  ( SlogUndo(..)
+  , buildSlogUndo
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (Format, bprint, later)
+import Formatting (Format, bprint, later)
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Slotting (FlatSlotId, SlotCount, slotIdF,
-                     unflattenSlotId)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Slotting (FlatSlotId, SlotCount, slotIdF, unflattenSlotId)
 
 
 -- | Undo data from Slog, i. e. data which is necessary do rollback a block
