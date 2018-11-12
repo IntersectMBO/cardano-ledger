@@ -8,6 +8,7 @@ import           Control.Lens
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import           Data.Queue
+import           Data.Set (Set)
 
 newtype VKey = MkVKey Word deriving (Eq, Ord)
 -- data VKeyGen -- not sure how to encode VKeyGen such that it is a subset
@@ -28,10 +29,11 @@ data Block
     }
   -- a non-genesis block
   | RBlock {
-      rbHash :: BHash -- ^ Hash of the predecessor block
+      rbHash   :: BHash -- ^ Hash of the predecessor block
     , rbSigner :: VKey -- ^ Block signer
-    , rbData :: Data -- ^ Body of the block
-    , rbSig :: Sig -- ^ Cryptographic signature of the block
+    , rbCerts  :: Set HCert -- ^ New certificates posted to the blockchain
+    , rbData   :: Data -- ^ Body of the block
+    , rbSig    :: Sig -- ^ Cryptographic signature of the block
     }
 
 -- TODO(md): implement this function
@@ -88,9 +90,13 @@ type KeyToQMap = Map.Map VKey (Queue BlockIx)
 -- | Delegation interface transition system
 data Interf
 
+-- TODO(md): This rule is to be implemented on the ledger layer's side
+newCertsRule :: Rule Interf
+newCertsRule = undefined
+
 instance STS Interf where
   type State Interf = DSIState
-  type Signal Interf = [HCert]
+  type Signal Interf = Set HCert
   type Environment Interf = Slot
   data PredicateFailure Interf
     = ConflictWithExistingCerts
@@ -123,10 +129,9 @@ instance STS BC where
         , hasRight
         , validSignature
         , lessThanLimitSigned
-        -- , legalCerts
+        , legalCerts
         ]
         ( Extension . Transition $ \_ st _ -> st ) -- TODO(md): implement this
-      -- [ SubTrans _1 (_3 . to body) utxoInductive
       -- , Predicate $ \pc utxo tw -> witnessed tw utxo
     ]
     where
@@ -173,10 +178,7 @@ instance STS BC where
       -- with regard to delegation certificates in the delegation state
       legalCerts :: Embed Interf BC => Antecedent BC
       -- legalCerts = SubTrans env signal rule where
-      legalCerts = SubTrans env undefined rule where
-        env = undefined :: Getter (JudgmentContext BC) (Environment Interf)
-        -- signal = undefined :: Getter (JudgmentContext BC) (Signal Interf)
-        rule = undefined :: Rule Interf
+      legalCerts = SubTrans (_1 . _1) (_3 . to rbCerts) newCertsRule
 
 instance Embed Interf BC where
   -- stateLens :: Lens' (State BC) (State Interf)
