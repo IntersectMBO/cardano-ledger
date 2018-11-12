@@ -121,8 +121,8 @@ trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m) where
       Nothing     -> q
       Just (MkBlockIx h, r) -> if h + k < ix' then r else q
 
-incIxMap :: VKey -> KeyToQMap -> BlockIx -> KeyToQMap
-incIxMap = undefined
+incIxMap :: BlockIx -> VKey -> KeyToQMap -> KeyToQMap
+incIxMap ix = Map.adjust (pushQueue ix)
 
 -- | Extends a chain by a block
 extendChain :: Environment BC -> State BC -> Signal BC -> State BC
@@ -133,7 +133,7 @@ extendChain env st b@(RBlock {}) =
       vk_d = rbSigner b
       ix = rbIx b
       vk_s = delegates ds Map.! vk_d
-      m' = incIxMap vk_s (trimIx m k ix) ix
+      m' = incIxMap ix vk_s (trimIx m k ix)
       ds' = undefined
   in (m', p', ds')
 
