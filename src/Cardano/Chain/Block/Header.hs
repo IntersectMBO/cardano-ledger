@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
@@ -16,6 +17,9 @@ module Cardano.Chain.Block.Header
   , headerProof
   , mkHeader
   , mkHeaderExplicit
+  , wrapHeaderBytes
+
+  -- * Accessors
   , headerSlot
   , headerLeaderKey
   , headerDifficulty
@@ -24,6 +28,12 @@ module Cardano.Chain.Block.Header
   , headerSoftwareVersion
   , headerAttributes
   , headerEBDataProof
+  , headerToSign
+  , recoverSignedBytes
+
+  -- * Boundary Header
+  , dropBoundaryHeader
+  , wrapBoundaryBytes
   , encodeHeader
   , decodeHeader
   , decodeAHeader
@@ -33,7 +43,6 @@ module Cardano.Chain.Block.Header
   , headerHashF
   , hashHeader
   , BlockSignature(..)
-  , dropBoundaryHeader
   , ToSign(..)
   , ConsensusData
   , consensusData
@@ -52,10 +61,11 @@ import Cardano.Binary.Class
   ( Annotated(..)
   , Bi(..)
   , ByteSpan
+  , Decoded(..)
   , Decoder
   , DecoderError(..)
-  , Dropper
   , Encoding
+  , annotatedDecoder
   , decodeAnnotated
   , dropBytes
   , dropInt32
@@ -112,6 +122,7 @@ data AHeader a = AHeader
   -- ^ Consensus data to verify consensus algorithm
   , aHeaderExtraData    :: !(Annotated ExtraHeaderData a)
   -- ^ Any extra data
+  , headerAnnotation    :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
 
 headerPrevHash :: AHeader a -> HeaderHash
@@ -159,13 +170,20 @@ instance Bi Header where
 
 decodeAHeader :: Decoder s (AHeader ByteSpan)
 decodeAHeader = do
-  enforceSize "Header" 5
-  AHeader
-    <$> (ProtocolMagic <$> decode)
-    <*> decodeAnnotated
-    <*> decodeAnnotated
-    <*> decodeAConsensus
-    <*> decodeAnnotated
+  Annotated (pm, prevHash, proof, cd, extraData) byteSpan <-
+    annotatedDecoder $ do
+      enforceSize "Header" 5
+      (,,,,)
+        <$> (ProtocolMagic <$> decode)
+        <*> decodeAnnotated
+        <*> decodeAnnotated
+        <*> decodeAConsensus
+        <*> decodeAnnotated
+  pure $ AHeader pm prevHash proof cd extraData byteSpan
+
+instance Decoded (AHeader ByteString) where
+  type BaseType (AHeader ByteString) = Header
+  recoverBytes = headerAnnotation
 
 
 -- | Smart constructor for 'Header'
@@ -205,6 +223,7 @@ mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra = AHeader
   (Annotated proof ())
   consensus
   (Annotated extra ())
+  ()
  where
   proof = mkProof body
   makeSignature :: ToSign -> (ProxySKHeavy, PublicKey) -> BlockSignature
@@ -243,6 +262,14 @@ headerAttributes = ehdAttributes . headerExtraData
 
 headerEBDataProof :: AHeader a -> Hash ExtraBodyData
 headerEBDataProof = ehdEBDataProof . headerExtraData
+
+headerToSign :: AHeader a -> ToSign
+headerToSign h = ToSign
+  (headerPrevHash h)
+  (headerProof h)
+  (headerSlot h)
+  (headerDifficulty h)
+  (headerExtraData h)
 
 data HeaderError
   = HeaderConsensusError ConsensusError
@@ -297,7 +324,7 @@ decodeHeader = do
   enforceSize "Header" 2
   decode @Word >>= \case
     0 -> do
-      dropBoundaryHeader
+      void dropBoundaryHeader
       pure Nothing
     1 -> Just <$!> decode
     t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
@@ -313,6 +340,16 @@ type HeaderHash = Hash Header
 headerHashF :: Format r (HeaderHash -> r)
 headerHashF = build
 
+-- | These bytes must be prepended when hashing raw boundary header data
+--
+--   In the Byron release, hashes were taken over a data type that was never
+--   directly serialized to the blockchain, so these magic bytes cannot be
+--   determined from the raw header data.
+--
+--   These bytes are from `encodeListLen 2 <> encode (1 :: Word8)`
+wrapHeaderBytes :: ByteString -> ByteString
+wrapHeaderBytes = mappend "\130\SOH"
+
 -- | Hash the serialised representation of a `Header`
 --
 --   For backwards compatibility we have to take the hash of the header
@@ -325,16 +362,25 @@ hashHeader = unsafeAbstractHash . serializeEncoding . encodeHeader
 -- BoundaryHeader
 --------------------------------------------------------------------------------
 
-dropBoundaryHeader :: Dropper s
+dropBoundaryHeader :: Decoder s HeaderHash
 dropBoundaryHeader = do
   enforceSize "BoundaryHeader" 5
   dropInt32
   -- HeaderHash
-  dropBytes
+  hh <- decode
   -- BoundaryBodyProof
   dropBytes
   dropBoundaryConsensusData
   dropBoundaryExtraHeaderData
+  pure hh
+
+-- | These bytes must be prepended when hashing raw boundary header data
+--
+--   In the Byron release, hashes were taken over a data type that was never
+--   directly serialized to the blockchain, so these magic bytes cannot be
+--   determined from the raw header data.
+wrapBoundaryBytes :: ByteString -> ByteString
+wrapBoundaryBytes = mappend "\130\NUL"
 
 
 --------------------------------------------------------------------------------

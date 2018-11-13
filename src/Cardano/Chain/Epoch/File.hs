@@ -24,10 +24,12 @@ import Data.String (String)
 import Streaming.Binary (decodedWith)
 import Streaming.Prelude (Of(..), Stream)
 import qualified Streaming.Prelude as S
+import System.Directory (doesFileExist)
+import System.FilePath ((-<.>))
 
 import Cardano.Binary.Class (DecoderError, decodeFull, decodeFullDecoder, slice)
-import Cardano.Chain.Block.Block (ABlock, decodeABlockOrBoundary)
-import Cardano.Chain.Block.Undo (Undo, ABlund)
+import Cardano.Chain.Block.Block (ABlockOrBoundary(..), decodeABlockOrBoundary)
+import Cardano.Chain.Block.Undo (ABlund, Undo)
 import Cardano.Prelude
 
 -- Epoch file format:
@@ -69,22 +71,28 @@ parseEpochFile
 parseEpochFile = S.mapMaybe eitherToMaybe . parseEpochFileWithBoundary
  where
   eitherToMaybe
-    :: (Either ByteString (ABlock ByteString), Undo)
-    -> Maybe (ABlund ByteString)
+    :: (ABlockOrBoundary ByteString, Undo) -> Maybe (ABlund ByteString)
   eitherToMaybe = \case
-    (Left  _     , _   ) -> Nothing
-    (Right aBlock, undo) -> Just (aBlock, undo)
+    (ABOBBoundary _     , _   ) -> Nothing
+    (ABOBBlock    aBlock, undo) -> Just (aBlock, undo)
 
 parseEpochFileWithBoundary
   :: FilePath
   -> Stream
-       (Of (Either ByteString (ABlock ByteString), Undo))
+       (Of (ABlockOrBoundary ByteString, Undo))
        (ExceptT ParseError ResIO)
        ()
 parseEpochFileWithBoundary file = do
-  s <- S.mapM liftDecoderError $ decodedWith getSlotData bytes
+  s <- S.mapM liftDecoderError
+    $ decodedWith getSlotData (boundaryBytes <> bytes)
   liftBinaryError s
  where
+  boundaryBytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
+  boundaryBytes = do
+    let boundaryFile = file -<.> "boundary"
+    boundaryExists <- liftIO $ doesFileExist boundaryFile
+    when boundaryExists $ SBS.readFile boundaryFile
+
   bytes = loadFileWithHeader file epochHeader
 
   liftDecoderError :: Either DecoderError a -> ExceptT ParseError ResIO a
@@ -95,7 +103,7 @@ parseEpochFileWithBoundary file = do
   liftBinaryError
     :: (a, B.ByteOffset, Either String ())
     -> Stream
-         (Of (Either ByteString (ABlock ByteString), Undo))
+         (Of (ABlockOrBoundary ByteString, Undo))
          (ExceptT ParseError ResIO)
          ()
   liftBinaryError = \case
@@ -106,7 +114,7 @@ parseEpochFileWithBoundary file = do
 parseEpochFilesWithBoundary
   :: [FilePath]
   -> Stream
-       (Of (Either ByteString (ABlock ByteString), Undo))
+       (Of (ABlockOrBoundary ByteString, Undo))
        (ExceptT ParseError ResIO)
        ()
 parseEpochFilesWithBoundary fs =
@@ -119,8 +127,7 @@ parseEpochFiles fs = foldr (<>) mempty (parseEpochFile <$> fs)
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
 
-getSlotData
-  :: B.Get (Either DecoderError (Either ByteString (ABlock ByteString), Undo))
+getSlotData :: B.Get (Either DecoderError (ABlockOrBoundary ByteString, Undo))
 getSlotData = runExceptT $ do
   header <- lift $ B.getLazyByteString (LBS.length slotDataHeader)
   lift $ guard (header == slotDataHeader)
@@ -129,10 +136,9 @@ getSlotData = runExceptT $ do
   block     <- do
     blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
     bb         <- ExceptT . pure $ decodeFullDecoder
-      "Block"
+      "ABlockOrBoundary"
       decodeABlockOrBoundary
       blockBytes
-    let sliceBytes = LBS.toStrict . slice blockBytes
-    pure $ bimap sliceBytes (fmap sliceBytes) bb
+    pure $ map (LBS.toStrict . slice blockBytes) bb
   undo <- ExceptT $ decodeFull <$> B.getLazyByteString (fromIntegral undoSize)
   pure (block, undo)

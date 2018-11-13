@@ -11,6 +11,7 @@ module Cardano.Chain.Genesis.Config
   , configSlotSecurityParam
   , configChainQualityThreshold
   , configEpochSlots
+  , configProtocolMagic
   , configGeneratedSecretsThrow
   , configBootStakeholders
   , configHeavyDelegation
@@ -19,6 +20,7 @@ module Cardano.Chain.Genesis.Config
   , configBlockVersionData
   , configAvvmDistr
   , mkConfig
+  , mkConfigFromFile
   , mkConfigFromStaticConfig
   )
 where
@@ -58,7 +60,7 @@ import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Crypto (Hash, hash)
+import Cardano.Crypto (Hash, ProtocolMagic, hash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Update (BlockVersionData)
@@ -166,6 +168,9 @@ configChainQualityThreshold = kChainQualityThreshold . configK
 configEpochSlots :: Config -> SlotCount
 configEpochSlots = kEpochSlots . configK
 
+configProtocolMagic :: Config -> ProtocolMagic
+configProtocolMagic = gdProtocolMagic . configGenesisData
+
 configGeneratedSecretsThrow :: MonadIO m => Config -> m GeneratedSecrets
 configGeneratedSecretsThrow =
   maybe
@@ -221,19 +226,8 @@ mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
 
     when (isJust mSeed) $ throwError MeaninglessSeed
 
-    (genesisData, genesisHash) <-
-      liftEither . first ConfigurationGenesisDataError =<< runExceptT
-        (readGenesisData (confDir </> fp))
+    mkConfigFromFile (confDir </> fp) (Just expectedHash)
 
-    unless
-      (getGenesisHash genesisHash == expectedHash)
-      (throwError $ GenesisHashMismatch genesisHash expectedHash)
-
-    pure $ Config
-      { configGenesisData      = genesisData
-      , configGenesisHash      = genesisHash
-      , configGeneratedSecrets = Nothing
-      }
 
   -- If a 'GenesisSpec' is given, we ensure we have a start time (needed if it's
   -- a testnet initializer) and then make a 'GenesisData' from it.
@@ -253,6 +247,28 @@ mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
           spec { gsInitializer = overrideSeed newSeed (gsInitializer spec) }
 
     mkConfig systemStart spec'
+
+mkConfigFromFile
+  :: (MonadError ConfigurationError m, MonadIO m)
+  => FilePath
+  -> Maybe (Hash Raw)
+  -> m Config
+mkConfigFromFile fp mGenesisHash = do
+  (genesisData, genesisHash) <-
+    liftEither . first ConfigurationGenesisDataError =<< runExceptT
+      (readGenesisData fp)
+
+  case mGenesisHash of
+    Nothing           -> pure ()
+    Just expectedHash -> unless
+      (getGenesisHash genesisHash == expectedHash)
+      (throwError $ GenesisHashMismatch genesisHash expectedHash)
+
+  pure $ Config
+    { configGenesisData      = genesisData
+    , configGenesisHash      = genesisHash
+    , configGeneratedSecrets = Nothing
+    }
 
 mkConfig
   :: MonadError ConfigurationError m => UTCTime -> GenesisSpec -> m Config

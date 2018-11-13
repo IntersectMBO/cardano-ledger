@@ -158,7 +158,7 @@ roundTripBlockSignatureBi =
 goldenDeprecatedBoundaryBlockHeader :: Property
 goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   "BoundaryBlockHeader"
-  dropBoundaryHeader
+  (void dropBoundaryHeader)
   "test/golden/bi/block/BoundaryBlockHeader"
 
 
