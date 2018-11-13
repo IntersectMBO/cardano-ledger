@@ -36,11 +36,11 @@ all: $(DOCNAME).pdf $(SRCDIR)/$(DOCNAME).hs
 # missing file reference and interactively asking you for an alternative.
 
 $(DOCNAME).pdf: $(DOCNAME).lhs
-	lhs2TeX -o $(DOCNAME).tex  $(DOCNAME).lhs
+	lhs2TeX --tt -o $(DOCNAME).tex  $(DOCNAME).lhs
 	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 watch: $(DOCNAME).lhs
-	lhs2TeX -o $(DOCNAME).tex  $(DOCNAME).lhs
+	lhs2TeX --tt -o $(DOCNAME).tex  $(DOCNAME).lhs
 	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 $(SRCDIR)/$(DOCNAME).hs: $(DOCNAME).lhs
