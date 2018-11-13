@@ -91,7 +91,7 @@ newtype Coin = Coin Natural
 A duration is the difference between two slots:
 \begin{code}
 (-*) :: Slot -> Slot -> Duration
-(Slot s) -* (Slot t) = Duration (s - t)
+(Slot s) -* (Slot t) = Duration (if s > t then s - t else t - s)
 
 (+*) :: Slot -> Duration -> Slot
 (Slot s) +* (Duration d) = Slot (s + d)
@@ -255,8 +255,8 @@ obligation ls = sum
 
 \subsection{Actions}
 
-There are seven types of actions that cause \lovelace
-to move between the seven categories.
+There are six types of actions that cause \lovelace
+to move between the six categories.
 
 \begin{code}
 data Action = ActTxBody Coin
@@ -274,6 +274,8 @@ data Action = ActTxBody Coin
 %endif
 
 We will describe how each of these actions changes the ledger state.
+Note that in this model, our only form of validation is to
+skip actions which correspond to invalid transitions.
 First we define a few methods which will be used by the actions.
 
 Both key registration and pool registration certificates will be
@@ -309,8 +311,8 @@ refundPartition cert s ls = (refundNow, decayed)
 
 Pools are only retired at epoch boundaries.
 When a retirement certificate is posted to the ledger,
-the state records the upcomming retiriment in $\mathsf{\_retiring}$.
-During the epoch boundary, the pools in this map which
+the state records the upcoming retiriment in $\mathsf{\_retiring}$.
+At the epoch boundary, the pools in this map which
 are ready to retire are refunded and removed with:
 
 \begin{code}
