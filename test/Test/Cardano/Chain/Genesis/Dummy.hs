@@ -1,4 +1,6 @@
-{-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE NumDecimals      #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Chain.Genesis.Dummy
   ( dummyConfig
@@ -50,7 +52,6 @@ import Cardano.Chain.Genesis
 import Cardano.Chain.Update (BlockVersionData(..), SoftforkRule(..))
 import Cardano.Core
   ( BlockCount
-  , Coeff(..)
   , EpochIndex(..)
   , ProtocolConstants(..)
   , SharedSeed(..)
@@ -152,7 +153,9 @@ dummyBlockVersionData = BlockVersionData
     (unsafeLovelacePortionFromDouble 0.6)
     (unsafeLovelacePortionFromDouble 0.05)
   )
-  (TxFeePolicyTxSizeLinear $ TxSizeLinear (Coeff 155381) (Coeff 43.946))
+  ( TxFeePolicyTxSizeLinear
+  $ TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44)
+  )
   (EpochIndex maxBound)
 
 dummyGenesisInitializer :: GenesisInitializer

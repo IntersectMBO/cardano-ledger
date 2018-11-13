@@ -21,43 +21,38 @@
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.Lovelace
-       ( Lovelace
-       , LovelaceError
-       , mkLovelace
-       , mkKnownLovelace
-       , lovelaceF
-
-       , maxLovelaceVal
-       , sumLovelaces
+  ( Lovelace
+  , LovelaceError
+  , mkLovelace
+  , mkKnownLovelace
+  , lovelaceF
+  , maxLovelaceVal
+  , sumLovelaces
 
        -- * Conversions
-       , unsafeGetLovelace
-       , lovelaceToInteger
-       , integerToLovelace
+  , unsafeGetLovelace
+  , lovelaceToInteger
+  , integerToLovelace
 
        -- * Arithmetic operations
-       , addLovelace
-       , subLovelace
-       , scaleLovelace
-       , divLovelace
-       ) where
+  , addLovelace
+  , subLovelace
+  , scaleLovelace
+  , divLovelace
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import qualified Data.Aeson as Aeson
-    (FromJSON (..), ToJSON (..))
-import           Data.Data
-    (Data)
-import           Formatting
-    (Format, bprint, build, int)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Data.Data (Data)
+import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
-import           GHC.TypeLits
-    (type (<=))
+import GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical
-    (FromJSON (..), ReportSchemaErrors, ToJSON (..))
+  (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
-import           Cardano.Binary.Class
-    (Bi (..))
+import Cardano.Binary.Class (Bi(..), DecoderError (..))
 
 
 -- | Lovelace is the least possible unit of currency
@@ -74,7 +69,11 @@ instance Bounded Lovelace where
 
 instance Bi Lovelace where
   encode = encode . unsafeGetLovelace
-  decode = Lovelace <$> decode
+  decode = do
+    l <- decode
+    toCborError
+      . first (DecoderErrorCustom "Lovelace" . sformat build)
+      $ mkLovelace l
   encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance Monad m => Canonical.ToJSON m Lovelace where
@@ -120,15 +119,17 @@ instance B.Buildable LovelaceError where
 maxLovelaceVal :: Word64
 maxLovelaceVal = 45e15
 
--- | Constructor for 'Lovelace' returning 'LovelaceError' when @c@ exceeds 'maxLovelaceVal'
+-- | Constructor for 'Lovelace' returning 'LovelaceError' when @c@ exceeds
+--   'maxLovelaceVal'
 mkLovelace :: Word64 -> Either LovelaceError Lovelace
 mkLovelace c
   | c <= maxLovelaceVal = Right (Lovelace c)
-  | otherwise       = Left (LovelaceTooLarge (toInteger c))
+  | otherwise           = Left (LovelaceTooLarge (toInteger c))
 {-# INLINE mkLovelace #-}
 
--- | Construct a 'Lovelace' from a 'KnownNat', known to be less than 'maxLovelaceVal'
-mkKnownLovelace :: forall n. (KnownNat n, n <= 45000000000000000) => Lovelace
+-- | Construct a 'Lovelace' from a 'KnownNat', known to be less than
+--   'maxLovelaceVal'
+mkKnownLovelace :: forall n . (KnownNat n, n <= 45000000000000000) => Lovelace
 mkKnownLovelace = Lovelace . fromIntegral . natVal $ Proxy @n
 
 -- | Lovelace formatter which restricts type.
@@ -136,14 +137,15 @@ lovelaceF :: Format r (Lovelace -> r)
 lovelaceF = build
 
 -- | Unwraps 'Lovelace'. It's called “unsafe” so that people wouldn't use it
--- willy-nilly if they want to sum lovelace or something. It's actually safe.
+--   willy-nilly if they want to sum lovelace or something. It's actually safe.
 unsafeGetLovelace :: Lovelace -> Word64
 unsafeGetLovelace = getLovelace
 {-# INLINE unsafeGetLovelace #-}
 
--- | Compute sum of all lovelace in container. Result is 'Integer' as a protection
---   against possible overflow.
-sumLovelaces :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
+-- | Compute sum of all lovelace in container. Result is 'Integer' as a
+--   protection against possible overflow.
+sumLovelaces
+  :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
 sumLovelaces = integerToLovelace . sum . map lovelaceToInteger
 
 lovelaceToInteger :: Lovelace -> Integer
@@ -164,12 +166,13 @@ subLovelace (unsafeGetLovelace -> a) (unsafeGetLovelace -> b)
   | a >= b    = Right (Lovelace (a - b))
   | otherwise = Left (LovelaceUnderflow a b)
 
--- | Scale a 'Lovelace' by an 'Integral' factor, returning 'LovelaceError' when the
---   result is too large
+-- | Scale a 'Lovelace' by an 'Integral' factor, returning 'LovelaceError' when
+--   the result is too large
 scaleLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
 scaleLovelace (unsafeGetLovelace -> a) b
-  | res <= lovelaceToInteger (maxBound :: Lovelace) = Right $ Lovelace (fromInteger res)
-  | otherwise                             = Left $ LovelaceTooLarge res
+  | res <= lovelaceToInteger (maxBound :: Lovelace) = Right
+  $ Lovelace (fromInteger res)
+  | otherwise = Left $ LovelaceTooLarge res
   where res = toInteger a * toInteger b
 {-# INLINE scaleLovelace #-}
 
@@ -180,6 +183,7 @@ divLovelace (unsafeGetLovelace -> a) b = Lovelace (a `div` fromIntegral b)
 
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n
-  | n < 0     = Left (LovelaceTooSmall n)
-  | n <= lovelaceToInteger (maxBound :: Lovelace) = Right $ Lovelace (fromInteger n)
+  | n < 0 = Left (LovelaceTooSmall n)
+  | n <= lovelaceToInteger (maxBound :: Lovelace) = Right
+  $ Lovelace (fromInteger n)
   | otherwise = Left (LovelaceTooLarge n)

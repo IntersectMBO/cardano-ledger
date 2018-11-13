@@ -9,7 +9,6 @@ module Test.Cardano.Chain.Common.Gen
   , genAddrStakeDistribution
   , genBlockCount
   , genChainDifficulty
-  , genCoeff
   , genLovelace
   , genLovelacePortion
   , genMerkleRoot
@@ -25,7 +24,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Data.Fixed (Fixed(..))
 import qualified Data.Map.Strict as Map
 import Formatting (build, sformat)
 
@@ -42,7 +40,6 @@ import Cardano.Chain.Common
   , Address(..)
   , BlockCount(..)
   , ChainDifficulty(..)
-  , Coeff(..)
   , Lovelace
   , LovelacePortion(..)
   , MerkleRoot(..)
@@ -141,15 +138,6 @@ genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
 genChainDifficulty :: Gen ChainDifficulty
 genChainDifficulty = ChainDifficulty <$> genBlockCount
 
-genCoeff :: Gen Coeff
-genCoeff = do
-    -- A `Coeff` wraps a Nano-precision integral value, which corresponds to a
-    -- number of "Lovelace" (10^6 Lovelace == 1 ADA). The `Coeff` values used
-    -- in Cardano correspond to less than 1 ADA.
-  let e = 9 + 6 :: Integer
-  integer <- Gen.integral (Range.constant 0 (10 ^ e))
-  pure $ Coeff (MkFixed integer)
-
 genLovelace :: Gen Lovelace
 genLovelace =
   mkLovelace <$> Gen.word64 (Range.constant 0 maxLovelaceVal) >>= \case
@@ -192,4 +180,4 @@ genTxFeePolicy = Gen.choice
   genUnknownPolicy = Gen.word8 (Range.constant 1 maxBound)
 
 genTxSizeLinear :: Gen TxSizeLinear
-genTxSizeLinear = TxSizeLinear <$> genCoeff <*> genCoeff
+genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genLovelace

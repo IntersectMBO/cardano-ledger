@@ -5,12 +5,15 @@
 
 module Test.Cardano.Chain.Block.Bi
   ( tests
-  , exampleBody
-  , exampleConsensusData
-  , exampleToSign
   , exampleBlockSignature
   , exampleBlockPSignatureLight
   , exampleBlockPSignatureHeavy
+  , exampleBody
+  , exampleConsensusData
+  , exampleHeader
+  , exampleProof
+  , exampleToSign
+  , exampleUndo
   )
 where
 
