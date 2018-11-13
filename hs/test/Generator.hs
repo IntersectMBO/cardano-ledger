@@ -5,6 +5,8 @@ module Generator
       utxoSize
     , utxoMap
     , getTxOfEntry
+    , genBool
+    , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonemptyGenesisState
     , genValidStateTx
@@ -67,6 +69,9 @@ hashKeyPairs keyPairs =
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
 addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
+
+genBool :: Gen Bool
+genBool = Gen.enumBounded
 
 -- | Generator for a natural number between 'lower' and 'upper'.
 genNatural :: Natural -> Natural -> Gen Natural
