@@ -54,6 +54,8 @@ data LedgerEntry =
 
 type Ledger = [LedgerEntry]
 
+data LedgerValidation = LedgerValidation [ValidationError] LedgerState
+
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
 data ValidationError =
@@ -254,6 +256,22 @@ asStateTransition slot ls (DelegationData cert) =
   case validDelegation cert ls of
     Invalid errors -> Left errors
     Valid          -> Right $ applyDCert slot cert ls
+
+-- | Apply transition independent of validity, collect validation errors on the
+-- way.
+asStateTransition'
+  :: Slot -> LedgerValidation -> LedgerEntry -> LedgerValidation
+asStateTransition' _ (LedgerValidation valErrors ls) (TransactionData tx) =
+    let ls' = applyTx ls (body tx) in
+    case valid tx ls of
+      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
+      Valid          -> LedgerValidation valErrors ls'
+
+asStateTransition' slot (LedgerValidation valErrors ls) (DelegationData cert) =
+    let ls' = applyDCert slot cert ls in
+    case validDelegation cert ls of
+      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
+      Valid          -> LedgerValidation valErrors ls'
 
 -- Functions for stake delegation model
 
