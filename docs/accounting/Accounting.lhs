@@ -91,19 +91,30 @@ newtype Coin = Coin Natural
 A duration is the difference between two slots:
 \begin{code}
 (-*) :: Slot -> Slot -> Duration
-(Slot s) -* (Slot t) = Duration (s - t)
+(Slot s) -* (Slot t) = Duration (if s > t then s - t else t - s)
+
+(+*) :: Slot -> Duration -> Slot
+(Slot s) +* (Duration d) = Slot (s + d)
 
 \end{code}
 
 There are two types of certificates which create
 resources on the ledger, key registration certificates
 and pool registration certificates.
-We give them an ID in order to distinguish them.
+Each of these has a corresponding certificate
+to remove the resource.
+Key deregistration happens as soon as the ledger
+proccesses the certificate, but pool retirement
+happens after a specified duration.
+We give the certificates an ID in order to distinguish them.
 
 \begin{code}
 type CertID = Natural
 
-data Cert = KeyReg CertID | PoolReg CertID
+data Cert = KeyReg CertID
+          | KeyDeReg CertID
+          | PoolReg CertID
+          | PoolRetire CertID Duration
 \end{code}
 %if style == code
 \begin{code}
@@ -150,6 +161,7 @@ data LedgerState =
   , _rewardPool :: Coin
   , _fees :: Coin
   , _obligations :: Map Cert Slot
+  , _retiring :: Map CertID Slot
   , _pconsts :: PrtclConsts
   , _slot :: Slot
   , _lastEpoch :: Slot }
@@ -215,6 +227,8 @@ The deposit amounts are determined by the protocol constants.
 deposit :: Cert -> PrtclConsts -> Coin
 deposit (KeyReg _) = _keyRegDep
 deposit (PoolReg _) = _poolRegDep
+deposit (KeyDeReg _) = const $ Coin 0
+deposit (PoolRetire _ _) = const $ Coin 0
 
 \end{code}
 
@@ -241,13 +255,12 @@ obligation ls = sum
 
 \subsection{Actions}
 
-There are seven types of actions that cause \lovelace
-to move between the seven categories.
+There are six types of actions that cause \lovelace
+to move between the six categories.
 
 \begin{code}
 data Action = ActTxBody Coin
-            | ActAddCert Cert
-            | ActDelCert Cert
+            | ActCert Cert
             | ActWithdrawal Coin
             | ActEpochNoVote Float
             | ActEpochWithVote PrtclConsts Float
@@ -260,9 +273,66 @@ data Action = ActTxBody Coin
 \end{code}
 %endif
 
-We now describe how each of these actions changes the
-ledger state.
+We will describe how each of these actions changes the ledger state.
+Note that in this model, our only form of validation is to
+skip actions which correspond to invalid transitions.
+First we define a few methods which will be used by the actions.
 
+Both key registration and pool registration certificates will be
+added to the ledger state with the following method:
+
+\begin{code}
+addCert :: LedgerState -> Cert -> LedgerState
+addCert ls cert =
+  case Map.lookup cert (ls^.obligations) of
+    (Just _) -> ls -- invalid transition, cert already registered
+    Nothing ->
+      ls & deposits +~ d
+         & circulation -~ d
+         & obligations .~ Map.insert cert (ls^.slot) (ls^.obligations)
+      where d = deposit cert (ls^.pconsts)
+
+\end{code}
+
+We can split the amount of a deposit still remaning in the deposit
+pool into the amount that is left for a refund and the amount
+that has decayed.
+
+\begin{code}
+refundPartition :: Cert -> Slot -> LedgerState -> (Coin, Coin)
+refundPartition cert s ls = (refundNow, decayed)
+  where
+    lastSettlement = max (ls^.lastEpoch) s
+    refundNow = refund cert (ls^.pconsts) ((ls^.slot) -* s)
+    refundAtSettlement = refund cert (ls^.pconsts) (lastSettlement -* s)
+    decayed = refundAtSettlement - refundNow
+
+\end{code}
+
+Pools are only retired at epoch boundaries.
+When a retirement certificate is posted to the ledger,
+the state records the upcoming retiriment in $\mathsf{\_retiring}$.
+At the epoch boundary, the pools in this map which
+are ready to retire are refunded and removed with:
+
+\begin{code}
+retirePool :: LedgerState -> CertID -> LedgerState
+retirePool ls p =
+  case Map.lookup (PoolReg p) (ls^.obligations) of
+    Nothing -> ls -- invalid transition, unknown cert
+    (Just s) ->
+      ls & deposits -~ (refundNow + decayed)
+         & rewards +~ refundNow
+         & fees +~ decayed
+         & obligations .~ Map.delete cert (ls^.obligations)
+         & retiring .~ Map.delete p (ls^.retiring)
+      where
+        cert = PoolReg p
+        (refundNow, decayed) = refundPartition cert s ls
+
+\end{code}
+
+We now define the ledger actions.
 \begin{code}
 applyAction :: LedgerState -> Action -> LedgerState
 
@@ -283,17 +353,11 @@ applyAction ls (ActTxBody fee) =
 
 New certificates can be registered, which removes \lovelace
 from circulation to the deposit pool.
-Again, we skip invalid transitions.
 
 \begin{code}
-applyAction ls (ActAddCert cert) =
-  case Map.lookup cert (ls^.obligations) of
-    (Just _) -> ls -- invalid transition, cert already registered
-    Nothing ->
-      ls & deposits +~ d
-         & circulation -~ d
-         & obligations .~ Map.insert cert (ls^.slot) (ls^.obligations)
-      where d = deposit cert (ls^.pconsts)
+applyAction ls (ActCert cert@(KeyReg _)) = addCert ls cert
+
+applyAction ls (ActCert cert@(PoolReg _)) = addCert ls cert
 
 \end{code}
 
@@ -305,19 +369,22 @@ has since decayed this epoch is given to the fee pool,
 and all else is moved to cirtulation.
 
 \begin{code}
-applyAction ls (ActDelCert cert) =
-  case Map.lookup cert (ls^.obligations) of
+applyAction ls (ActCert (KeyDeReg i)) =
+  case Map.lookup (KeyReg i) (ls^.obligations) of
     Nothing -> ls -- invalid transition, unknown cert
     (Just s) ->
-      ls & deposits -~ refundAtSettlement
+      ls & deposits -~ (refundNow + decayed)
          & circulation +~ refundNow
          & fees +~ decayed
          & obligations .~ Map.delete cert (ls^.obligations)
       where
-        lastSettlement = max (ls^.lastEpoch) s
-        refundNow = refund cert (ls^.pconsts) ((ls^.slot) -* s)
-        refundAtSettlement = refund cert (ls^.pconsts) (lastSettlement -* s)
-        decayed = refundAtSettlement - refundNow
+        cert = KeyReg i
+        (refundNow, decayed) = refundPartition cert s ls
+
+applyAction ls (ActCert (PoolRetire i d)) =
+  case Map.lookup (PoolReg i) (ls^.obligations) of
+    Nothing -> ls -- invalid transition, unknown pool
+    (Just _) -> ls & retiring .~ Map.insert i ((ls^.slot) +* d) (ls ^. retiring)
 
 \end{code}
 
@@ -358,14 +425,15 @@ in preserving ada and our rules are more general.
 
 \begin{code}
 applyAction ls (ActEpochNoVote realized) =
-  ls & deposits .~ oblg
-     & treasury +~ newTreasury
-     & reserves -~ expansion
-     & rewards +~ paidRewards
-     & rewardPool .~ availablePool - paidRewards
-     & fees .~ Coin 0
-     & lastEpoch .~ ls^.slot
+  foldl retirePool ls' retiringIds
   where
+    ls' = ls & deposits .~ oblg
+              & treasury +~ newTreasury
+              & reserves -~ expansion
+              & rewards +~ paidRewards
+              & rewardPool .~ availablePool - paidRewards
+              & fees .~ Coin 0
+              & lastEpoch .~ ls^.slot
     oblg = obligation ls
     decayed = ls^.deposits - oblg
     expansion = floor $ ls^.pconsts.rho * fromIntegral (ls^.reserves)
@@ -373,6 +441,7 @@ applyAction ls (ActEpochNoVote realized) =
     newTreasury = floor $ ls^.pconsts.tau * fromIntegral totalPool
     availablePool = totalPool - newTreasury
     paidRewards = floor $ realized * fromIntegral availablePool
+    retiringIds = Map.keys $ Map.filter (>= ls^.slot) (ls^.retiring)
 
 \end{code}
 
