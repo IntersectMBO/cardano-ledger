@@ -11,7 +11,6 @@ module Mutator
 
 import Data.Set                  as Set
 import Numeric.Natural
-import Control.Monad             (liftM)
 
 import Hedgehog
 import qualified Hedgehog.Gen    as Gen
@@ -33,7 +32,7 @@ mutateNatSmall n = do
   pure $ if b then n + 1 else (if n > 0 then n - 1 else 0)
 
 mutateNat' :: Natural -> Natural -> Natural -> Gen Natural
-mutateNat' n lower upper = do
+mutateNat' lower upper n = do
   n' <- Gen.choice [mutateNatRange lower upper n, mutateNatSmall n]
   if n == n' then Gen.discard else pure n'
 

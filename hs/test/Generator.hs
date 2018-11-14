@@ -220,5 +220,5 @@ genLedgerStateTx' keyList sourceState = do
   ledgerEntry'       <- mutateLedgerEntry ledgerEntry
   slot <- genNatural 0 1000
   pure (fee
-       , ledgerEntry
+       , ledgerEntry'
        , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) ledgerEntry')
