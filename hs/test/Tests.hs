@@ -5,6 +5,7 @@ import           Control.Monad           (foldM)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
+import           Data.Text               (pack, append)
 import           Numeric.Natural         (Natural)
 
 import           Test.Tasty
