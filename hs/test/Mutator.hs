@@ -3,6 +3,7 @@ module Mutator
       mutateId
     , mutateNat
     , mutateNat'
+    , mutateCerts
     , mutateCoin
     , mutateCoin'
     , mutateLedgerEntry
@@ -67,9 +68,10 @@ mutateInputs = minp
 minp :: [TxIn] -> Gen [TxIn]
 minp [] = pure []
 minp (txin:txins) = do
-  mtxin  <- mutateInput txin
-  mtxins <- minp txins
-  pure $ mtxin:mtxins
+  mtxin      <- mutateInput txin
+  mtxins     <- minp txins
+  dropTxin   <- Gen.enumBounded
+  pure $ if dropTxin then mtxins else mtxin:mtxins
 
 mutateInput :: TxIn -> Gen TxIn
 mutateInput (TxIn idx index) = do
@@ -82,9 +84,10 @@ mutateOutputs = mout
 mout :: [TxOut] -> Gen [TxOut]
 mout [] = pure []
 mout (txout:txouts) = do
-  mtxout  <- mutateOutput txout
-  mtxouts <- mout txouts
-  pure $ mtxout:mtxouts
+  mtxout    <- mutateOutput txout
+  mtxouts   <- mout txouts
+  dropTxOut <- Gen.enumBounded
+  pure $ if dropTxOut then mtxouts else mtxout:mtxouts
 
 mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
