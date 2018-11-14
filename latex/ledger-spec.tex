@@ -902,7 +902,10 @@ Figure~\ref{fig:rules:utxow}):
  is the same as the hash of the verification key of the witness.
 \end{itemize}
 
-The purpose of witnessing is to provide replay protection. Due to the nature
+The purpose of witnessing is make sure that the intended action is authorized by
+the holder of the signing key, providing replay protection as a
+consequence. 
+Due to the nature
 of UTxO stype accounting, this replay protection is needed only to prevent
 the re-application of old certificates. The way this is
 achieved by the above precondition is by requiring a valid signature on
