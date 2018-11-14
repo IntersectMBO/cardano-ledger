@@ -10,6 +10,10 @@ import qualified Data.Map.Strict as Map
 import           Data.Queue
 import           Data.Set (Set)
 
+import           Crypto.Hash (hashlazy)
+import           Data.ByteString.Lazy.Char8 (pack)
+import           UTxO (Hash)
+
 newtype VKey = MkVKey Word deriving (Eq, Ord)
 -- data VKeyGen -- not sure how to encode VKeyGen such that it is a subset
 -- of the VKey type. Therefore, find some other way of ensuring this invariant.
@@ -17,19 +21,17 @@ newtype VKey = MkVKey Word deriving (Eq, Ord)
 data Sig
 data Data
 
-data BHash = MkBHash Word deriving Eq -- TODO(md): put something meaningful here
-
 newtype BlockIx = MkBlockIx Word deriving (Eq, Ord)
 
 data Block
   -- a genesis block
   = GBlock {
       gbKeys :: [VKey]
-    , gbHash :: BHash -- ^ Hash of itself
+    , gbHash :: Hash -- ^ Hash of itself
     }
   -- a non-genesis block
   | RBlock {
-      rbHash   :: BHash -- ^ Hash of the predecessor block
+      rbHash   :: Hash -- ^ Hash of the predecessor block
     , rbIx     :: BlockIx -- ^ Index of the block
     , rbSigner :: VKey -- ^ Block signer
     , rbCerts  :: Set HCert -- ^ New certificates posted to the blockchain
@@ -38,17 +40,17 @@ data Block
     }
 
 -- | Computes the hash of a block
-hash :: Block -> BHash
-hash b@(RBlock {}) = MkBHash i where
+hashBlock :: Block -> Hash
+hashBlock b@(RBlock {}) = hashlazy (pack . show $ i) where
   MkBlockIx i = rbIx b
-hash b@(GBlock {}) = gbHash b
+hashBlock b@(GBlock {}) = gbHash b
 
 -- | Verification keys located in the genesis block
 initVKeys :: [VKey]
 initVKeys = undefined -- TODO(md): this is to be imported or implemented
 
 genesisBlock :: Block
-genesisBlock = GBlock { gbKeys = initVKeys, gbHash = MkBHash 0 }
+genesisBlock = GBlock { gbKeys = initVKeys, gbHash = hashlazy (pack . show $ 0) }
 
 newtype Slot = MkSlot Word deriving (Eq, Ord)
 
@@ -189,7 +191,7 @@ instance STS BC where
       validPredecessor :: Antecedent BC
       validPredecessor = Predicate $ \_ st b@(RBlock {}) ->
         let (_, p, _) = st
-         in if hash p == rbHash b
+         in if hashBlock p == rbHash b
               then Passed
               else Failed InvalidPredecessor
       -- has a delegation right
