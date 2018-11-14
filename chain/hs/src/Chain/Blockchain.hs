@@ -37,11 +37,11 @@ data Block
     , rbSig    :: Sig -- ^ Cryptographic signature of the block
     }
 
--- TODO(md): implement this function
--- Computes the hash of a block
+-- | Computes the hash of a block
 hash :: Block -> BHash
-hash RBlock {} = undefined
-hash g@GBlock {} = gbHash g
+hash b@(RBlock {}) = MkBHash i where
+  MkBlockIx i = rbIx b
+hash b@(GBlock {}) = gbHash b
 
 -- | Verification keys located in the genesis block
 initVKeys :: [VKey]
@@ -52,6 +52,7 @@ genesisBlock = GBlock { gbKeys = initVKeys, gbHash = MkBHash 0 }
 
 newtype Slot = MkSlot Word deriving (Eq, Ord)
 
+-- | A heavyweight delegation certificate
 data HCert
 
 --------------------------------------------------------------------------------
