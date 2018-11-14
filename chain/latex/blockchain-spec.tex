@@ -62,8 +62,7 @@
 %%
 %% Types
 %%
-\newcommand{\Hash}{\type{Hash}}    % addresses as verification key hashes
-\newcommand{\BHash}{\type{BHash}}  % block hashes
+\newcommand{\Hash}{\type{Hash}}  % hashes of various things, including blocks
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\BlockIx}{\type{BlockIx}}
@@ -92,7 +91,7 @@
 \newcommand{\trimixname}{trimIx}
 \newcommand{\incixmapname}{incIxMap}
 
-\newcommand{\hashofblockname}{hash}
+\newcommand{\hashofblockname}{hashBlock}
 \newcommand{\rbdataname}{rbData}
 \newcommand{\rbcertsname}{rbCerts}
 \newcommand{\rbsigname}{rbSig}
@@ -145,7 +144,7 @@
 
 \author{Marko Dimjašević}
 
-\date{November 12, 2018}
+\date{November 14, 2018}
 
 \maketitle
 
@@ -347,7 +346,7 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     ix & \in \BlockIx & \text{block index}\\
-     h & \in \BHash   & \text{block hash}
+     h & \in \Hash   & \text{hash}
   \end{align*}
   %
   \emph{Abstract types}
@@ -368,7 +367,7 @@ Figure~\ref{fig:block-defs}.
   \begin{align*}
     \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
     \fun{\rbixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
-    \fun{\hashname} & \in \Block \totalf \BHash
+    \fun{\hashname} & \in \Block \totalf \Hash
       & \text{previous block's hash} \\
     \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
     \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
@@ -381,7 +380,7 @@ Figure~\ref{fig:block-defs}.
   \emph{Functions}
   %
   \begin{align*}
-    \fun{\hashofblockname} & \in \Block \totalf \BHash & \text{hash of block}
+    \fun{\hashofblockname} & \in \Block \totalf \Hash & \text{hash of block}
   \end{align*}
   %
   \caption{Basic Block-related Types and Functions}
@@ -608,7 +607,7 @@ Figure~\ref{fig:block-ext-types-funs}.
       & \text{old block removal function} \\
     \fun{\incixmapname} & \in \BlockIx \times \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
-    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+    \fun{\signname} & \in \SKey \times \Hash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
