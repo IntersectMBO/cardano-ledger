@@ -5,8 +5,7 @@ import           Control.Monad           (foldM)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
-import           Data.Text               (pack, append)
-import           Numeric.Natural         (Natural)
+import           Data.Text               (pack)
 
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
@@ -347,8 +346,9 @@ propertyTests = testGroup "Property-Based Testing"
 
 -- | Mutations for Property 7.2
 propBalanceTxInTxOut' :: Cover
-propBalanceTxInTxOut' = withCoverage $ do
-  (l, steps, fee, entry, lv)  <- forAll genStateTx
+propBalanceTxInTxOut' =
+  Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+  (l, _, fee, entry, lv)  <- forAll genStateTx
   let tx                       = getTxOfEntry entry
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
@@ -356,18 +356,21 @@ propBalanceTxInTxOut' = withCoverage $ do
   let balanceTarget            = (balance $ txouts tx)
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
-                               && balanceTarget /= Coin 0
   let balanceOk                = balanceSource == balanceTarget <> fee
-  classify (valErrors == []) "no validation error"
   classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
-  if valErrors /= [] && balanceSource == balanceTarget <> fee && balanceSource /= Coin 0
+  if valErrors /= [] && balanceOk && nonTrivial
   then label (pack (  "inputs: "       ++ (show $ Set.size (inputs tx))
                      ++ " outputs: "   ++ (show $ length (outputs tx))
                      ++ " balance l "  ++ (show balanceSource)
                      ++ " balance l' " ++ (show balanceTarget)
                      ++ " fee " ++ show fee
                      ++ "\n  validationErrors: " ++ show valErrors))
-  else label "valid"
+  else (if valErrors /= [] && balanceOk
+        then label ("non-validated, OK, trivial")
+        else (if valErrors /= []
+              then label ("non-validated, KO")
+              else label ("validated")
+        ))
   success
 
 
