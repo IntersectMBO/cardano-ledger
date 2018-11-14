@@ -733,7 +733,8 @@ In this case, we need to represent the delegation state change resulting
 from the processing of a full transaction containing a list of certificates.
 
 We may do so by defining a new type of transition, where the signal type is a
-list of certificates. The transition itself is defined recursively, so that
+list of certificates, as illustrated in Figure~\ref{fig:type:delegations}.
+The transition itself is defined recursively, so that
 an empty list results in a state transition to itself, and given
 a list $\Gamma$ of certificates signaling a valid DELEGS transition, as well
 as a DELEG transition signaled by certificate $c$, the transition
@@ -741,28 +742,16 @@ composed of these two transitions in sequence, signaled by the list $c; \Gamma$
 is also valid.
 
 
-\begin{note}
-  The type of DELEGS, should it be:
-\end{note}
-
 \begin{figure}
-\emph{Delegation Witnesses Transition}
 \begin{equation*}
   \_ \vdash \_ \trans{delegs}{\_} \_ \in
     \powerset (
-      \DWEnv \times \DWState \times (list \DCert) \times \DWState)
+      \DWEnv \times \DWState \times (\text{list~} \DCert) \times \DWState)
 \end{equation*}
-\caption{Apply several delegation certificates transition type}
+\caption{Delegation with a certificate list transition type}
 \label{fig:type:delegations}
 \end{figure}
 
-\begin{note}
-  Having an empty signal trigger a state transition (even one that does not
-  actually result in a state change) - does that make sense?
-
-  Should DELEGS be triggered by only a transaction that contains at
-  least one certificate (i.e. base case is $c;\Gamma$)
-\end{note}
 
 \begin{figure}
   \begin{equation}
