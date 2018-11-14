@@ -191,6 +191,9 @@ The transition system is explained in \cite{small_step_semantics}.
 
 \end{description}
 
+In Figure~\ref{fig:notation:nonstandard}, we specify the notation we use in
+the rest of the document.
+
 \begin{figure}
   \begin{align*}
     \var{set} \restrictdom \var{map}
@@ -224,15 +227,30 @@ The transition system is explained in \cite{small_step_semantics}.
 \section{Cryptographic primitives}
 \label{sec:crypto-primitives}
 
+
 Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
-this document.
+this document. We begin by listing the abstract types, which are meant to
+represent the corresponding concepts in cryptography. Only the funcitonality
+explicitly stated in the figures below is assumed within the scope of this paper.
+That is, their exact
+implementation remains open to interpretation, and we do not rely on
+any additional properties derived from the study or implementation of public key
+cryptography outside this work. The types and rules we give here are needed in
+order to guarantee certain security properties of the delegation process, which
+we discuss later.
+
+The cryptographic concepts required for the formal definition
+of delegation with witnesses include public-private key pairs, hash
+maps and signatures. The constraint we introduce states that a signature of
+some data signed with a (private) key is only correct whenever we can verify
+it using the corresponding public key.
 
 \begin{figure}
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{vk} & \SKey & \text{private signing key}\\
+      \var{sk} & \SKey & \text{private signing key}\\
       \var{vk} & \VKey & \text{public verifying key}\\
       \var{hk} & \HashKey & \text{hashKey of a key}\\
       \sigma & \Sig  & \text{signature}\\
@@ -274,6 +292,24 @@ this document.
 \section{Serialization}
 \label{sec:serialization}
 
+
+Besides basic cryptographic abstractions, we also make use of some abstract
+data storage properties in this document in order to build necessary definitions
+and make judgement calls about them.
+
+Abstract data types in this paper are essentially placeholders with names
+indicating the data types they are meant to represent in an implementation.
+Derived types are made up of data structures (i.e. products, lists, finite
+maps, etc.) built from abstract types. The underlying structure of a data type
+is implementation-dependent, and furthermore, the way the data is stored on
+physical storage can vary as well.
+
+Serialization is a physical manipulation of data on a given storage device.
+In this document, the properties and rules we state involving serialization are
+assumed to hold true independently of the storage medium and style of data
+organization chosen for an implementation.
+
+
 \begin{todo}
   Discuss here serialization and
   \href{https://iohk.myjetbrains.com/youtrack/issue/CDEC-628}{composable
@@ -284,12 +320,133 @@ this document.
 \label{sec:delegation}
 \input{delegation.tex}
 
-\section{UTxO}
-\label{sec:state-trans-utxo-1}
 
-In order to define the \textit{preservation of value} conditon,
-we define the calculations for deposits and refunds in
-Figure~\ref{fig:defs:deposits}.
+\section{UTxO}
+\label{sec:utxo}
+
+\subsection{Deposits and Refunds}
+\label{sec:deps-refunds}
+
+A key constraint that must be satisfied by any software that is a part of
+the implementation of the
+Cardano cryptocurrency is called the \textit{general accounting
+property}, or the \textit{preservation of value} condition. If
+condition is not satisfied, this is an indicator of
+incorrect accounting, potentially due to
+malicious disruption.
+
+The preservation of value is expressed as an equality that uses values in
+the ledger state and the environment, as well as the values in the body of
+the signal transaction.
+We have defined the rules of the delegation protocol in a way that should
+consistently satisfy the presevation of value. In the future, we hope to
+give a formally-verified proof that every \textit{valid} ledger state satisfies
+this property.
+
+We present the types and maps needed for deposit and
+refund calculations in Figure~\ref{fig:defs:deposits}. The $\PrtclConsts$ is
+an abstract type that will represent an environment variable that contains
+values on which the functionality of the blockchain protocol depends, such
+as the fees transactions are obligated to pay to be processed. In particular,
+we define two maps here that return values stored in the set of protocol
+constants. The map $\fun{dvalue}$ returns the amount a certificate must
+deposit to claim a specific resource (i.e. for the declaration of a new staking
+key or the registration of a stake pool).
+
+The map $\fun{decay}$
+represents the rate of decrease of the value of a unit of $\Coin$.
+The constant returned by $\fun{decay}$ consists of two values. The first is
+a natural number which determines the minimal proportion of a deposit that will
+be refunded on resource release. The second is a positive rational number
+used to determine the rate of (exponential) decrease of the value.
+Recall that the $\Allocs$ type pairs a hash key with a slot number and is a generic datatype
+which we use below to represent both individual and pool allocation
+parameters passed to refund calculations.
+
+For a given transaction and protocol constants, the map $\fun{dresource}$
+returns all the certificates of that transaction which allocate resources
+(i.e. the stake key and stake pool registration certificates). The map
+$\fun{dderegister}$ returns the resource release certificates for the
+deregistration of a stake key. The map which returns only
+the retirement type certificates is $\fun{dretire}$. The function $\fun{ttl}$ gives the
+time slot in which the validity of a given transaction will expire.
+
+The functions used to perform the calculations needed to describe the
+preservation of value
+are presented in Figure~\ref{fig:functions:deposits}.
+The function
+$\fun{deposits}$ returns the total deposits made by a transaction. Specifically,
+it sums up the values of all the deposits made by the resource-allocating
+certificates of a given transaction.
+
+The map $\fun{refund}$, given the protocol constants, current resource allocations, and
+the current slot number, calculates the refund that will be issued
+for a given certificate.
+
+Whenever the certificate is for the deregistration of
+an individual key or a stake pool retirement, and there are resources allocated
+to the author's hash key in the $\var{allocs}$ set, a refund is issued for a
+fraction of the amount deposited by the certificate. This fraction is calculated
+based on the difference between the current slot number and the slot number in
+which a given resource was allocated, as well as the
+decay and minimum refund values indicated in the protocol constants.
+Otherwise, no refund is issued.
+
+\begin{todo}
+Should we do a a check that $\delta \geq 0$ here? Or some other check?
+\end{todo}
+
+\begin{todo}
+Explain delta and why we need the resource allocations at all as inputs
+\end{todo}
+
+Unlike transaction fees, which can be greater than the minimum fee, and are
+indicated in the transactions themselves, the deposit amount for the registration
+of an individual or stake pool is stored directly in the protocol constants,
+and must be paid as an amount exactly matching the protocol's requirement.
+For this reason, the refund calculation does not need to look up the deposit
+amout in the data of the transaction
+that paid the original registration deposit, but instead looks in the protocol
+constants for this information.
+
+The total refund for a transaction is calculated by the function $\fun{refunds}$
+given a set of protocol constants and the current slot number, as well as
+two sets of resource allocation parameters,
+$\var{dallocs}$ and $\var{pallocs}$ of type $\Allocs$, representing
+individual and pool allocations, respectively. For a signal transaction $\var{tx}$,
+the $\fun{refunds}$ map
+sums up the total refunds for all the stake key deregistration certificates
+$\var{tx}$ is carrying, as well as the
+total refunds for all the pool retirement certificates in
+$\var{tx}$, and adds these two values together.
+
+The resource allocations which the $\fun{refunds}$ calculation takes
+as a parameter are sourced from the current ledger state. That is,
+when we define any ledger state transition rule making use of this calculation,
+$\var{dallocs}$ (the individual key allocations) will be exactly the
+$\var{stkeys}$ state variable in $\DState$,
+and $\var{pallocs}$ (the stake pool allocations) will be the stake pool
+allocations in $\var{stpools}$ with
+the certificate data removed, i.e. $\fun{poolAllocs}~\var{stpools}$.
+We use here the $\fun{poolAllocs}$ map to remove them for
+datatype consistency (using $\Allocs$ for all refund calculations).
+
+For the specifics of the book-keeping of this resource allocation and
+de-allocation, see the
+discussion in Sections~\ref{sec:deleg-rules} and~\ref{sec:pool-rules}.
+
+Note that the the stake pool retirement refunds are issued not when a certificate
+scheduling the retirement is processed, but at the epoch boundary for which
+the retirement is scheduled. If the retirement is cancelled or rescheduled
+(a new registration or retirement
+certificate is issued for this stake pool), a deposit adjustment
+be made according rules presented in Figure~\cref{fig:pool-rules}.
+
+Note also that that a refund for a resource-releasing certificate in a
+transaction can only be issued if the refund is bigger than the minimum
+transaction fee. In order to receive a refund in this case, the transaction
+body must also contain inputs onto which this refund can be added.
+
 
 \begin{note}
   We define $\fun{refund}$ by cases on whether or not
@@ -299,12 +456,6 @@ Figure~\ref{fig:defs:deposits}.
   is only called in the case where such a matching
   certificate exists.
 \end{note}
-
-The transition rules for unspent outputs are presented in
-Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
-along with their types are defined in Figure~\ref{fig:defs:utxo}.
-Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
-
 
 
 \begin{figure*}
@@ -345,7 +496,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \begin{align*}
       & \fun{deposits} \in \PrtclConsts \to \Tx \to \Coin
       & \text{total deposits for transaction} \\
-      & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{d}~pc~c)
+      & \fun{deposits}~{pc}~{tx} = \sum\limits_{c \in \fun{dresource}~tx} (\fun{dvalue}~pc~c)
       \nextdef
       & \fun{refund} \in \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
       & \text{total refund for a certificate} \\
@@ -354,7 +505,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
         0 & \text{if not}~(\fun{releasing}~c)\\
             0 & \text{if}~\cauthor c \notin allocs\\
             \floor*{
-              \left(\fun{d}~pc~c\right) \cdot
+              \left(\fun{dvalue}~pc~c\right) \cdot
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
             & \text{otherwise}
         \end{cases}\\
@@ -374,6 +525,47 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \caption{Functions used in Deposits}
   \label{fig:functions:deposits}
 \end{figure}
+
+
+
+\subsection{UTxO Transitions}
+\label{sec:state-trans-utxo-1}
+
+
+The types involved in defining a UTxO and its transitions are defined in
+Figure~\ref{fig:defs:utxo}. A transaction $\var{tx}$ (a term of type $\Tx$)
+contains a list of inputs (a list of terms of type $\TxIn$), and outputs
+(a finite map $\Ix \mapsto \TxOut$). Each input in the list
+corresponds to those $\TxOut$ terms in the outputs list indexed by the same
+$\Ix$ as in the second coordinate of the input. This way, a transaction can have
+inputs from multiple prior transactions and outputs to multiple addresses
+from each of the input transactions.
+
+The map $\var{txid}$ is a one-way function which computes the $\var{txid}$
+of a given transaction. A transaction can be uniquely identified
+by its $\var{txid}$ in a given context.
+
+Now, the actual type $\Tx$ of a transaction is likely to necessitate additional data
+in an actual implementation. For example, transaction fees (discussed below)
+or certificates to be applied
+may need to be part of the transaction data. Much of the time, however, when defining
+properties in this document, we want to refer to only the core of the transaction.
+For this reason, we make use here
+of the $\fun{txbody}$ map. This map returns only the data in the given
+transaction pertinent to the transfer of coins (i.e. the lists of inputs and outputs)
+
+The transaction fee $\fun{txfee}$ is the
+fee a transaction contributes to the system (this value depends only on
+the transaction itself). The fee does not need to have an explicit output
+specified, and are currently implicitly included in the total input value of
+a transaction.
+
+The $\fun{minfee}$ is the minimum
+fee that must be paid by a transaction to be applied to the current UTxO.
+This minimum fee
+is calculated based on the context of the transaction (i.e. a collection of
+values the blockchain protocol keeps track of, $\PrtclConsts$), as well as
+the contents of the transaction itself.
 
 
 \begin{figure*}
@@ -433,6 +625,33 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \label{fig:defs:utxo}
 \end{figure*}
 
+
+A set of functions on UTxOs and transactions appearing in this document,
+along with their types are defined in Figure~\ref{fig:derived-defs:utxo}.
+The map $\fun{txins}$ returns the list of inputs of a given transactions, i.e.
+the pairs type $\TxIn$ within that transaction.
+
+The map $\fun{txouts}~ \var{tx}$ builds a UTxO (finite map) by taking the
+list of inputs of $\var{tx}$, replacing the original $\var{txid}$ in the pair
+with the $\var{txid}$ of $\var{tx}$, and mapping it to the output with the
+corresponding index in the list of outputs of $\var{tx}$ (thereby making a list
+of the unspent outputs of \textit{this} transaction).
+
+The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
+a given UTxO. The calculation $\fun{created}~ \var{tx}$ gives the value created
+by the transaction $\var{tx}$ in the context of the relevant protocol
+constants, the current UTxO on the ledger, and the resource allocation for
+$\DState$ and $\PState$. The calculation is a sum of all coin in the inputs of
+$\var{tx}$ plus the refunds of the $\var{tx}$ in this context.
+
+The $\fun{destroyed}~ \var{pc}~ \var{tx}$ calculation, on the other hand, sums up the
+coin in the outputs of $\var{tx}$, then adds it to the fee that the transaction
+has paid and the deposits made by the transaction for the certificates
+registering stake pools. This calculation gives the total coin value that
+the transaction removes from the current UTxO (given the necessary protocol
+constants).
+
+
 \begin{figure}
   \begin{align*}
     & \fun{txins} \in \Tx \to \powerset{\TxIn}
@@ -481,6 +700,21 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \label{fig:derived-defs:utxo}
 \end{figure}
 
+
+The type of the transition of a UTxO is presented in Figure
+~\ref{fig:ts-types:utxo}. A
+transition can valid in the context of a given environment, $\UTxOEnv$.
+This environment is made up of several variables.
+The $\PrtclConsts$ is needed as part of the environment here in order to
+keep track of the $\fun{minfee}$ value (as well as
+to perform other calculations). The stake key and stake pool resource allocations
+are needed in order to compute the $\fun{created}$ and
+$\fun{destroyed}$ values of a given $\var{tx}$. The current slot number
+is used in the inference rules defining valid transitions.
+The $\var{tx}$ here is the
+signal that triggers the transition.
+
+
 \begin{figure}
   \emph{UTxO environment}
   \begin{equation*}
@@ -504,6 +738,61 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
 \end{figure}
+
+
+The inference rule for unspent outputs are presented in
+Figure~\ref{fig:rules:utxo}.
+Rule~\ref{eq:utxo-inductive} specifies the conditions under which a transaction can
+be applied to a set of unspent outputs in a given environment, and how the set
+of unspent outputs changes as a resul:
+
+\begin{itemize}
+\item The trasaction is live (its time to live is less than the current slot)
+\item The transaction has at least one input
+\item Each input spent in the transaction must be in the set of unspent
+  outputs.
+\item The fee paid by the transaction has to be greater than or equal to the
+minimum fee.
+\item The amount of coin created by the transaction must be the same as
+the amount destroyed (i.e. the \textit{preservation of value} must hold)
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
+
+Here we again emphasize the importance of the \textit{preservation of value}
+condition. No valid UTxO state can be reached without this condition
+being satisfied at every step of the transitions leading to a given UTxO state.
+Since the total amout of Ada at genesis is known, this property can be
+checked for arbitrarily generated valid ledgers.
+
+Note that the fee paid by a transaction is required to be greater than or
+equal to the minim fee. The reason for allowing it to be greater is to have
+the option for the implementation to make processing decisions based on the
+size of the fee. Such as, a larger fee would result in faster processing of
+a transaction.
+
+The transaction is required to have at least one input to avoid a situation
+where the witnessing replay protection may fail. Specifically, when a transaction is
+spending only refunds from deregistration or retirement certificates it is
+carrying.
+
+\begin{todo}
+  Explain exactly how refunds get spent (how the ledger is updated to include
+  them as unspent outputs)
+\end{todo}
+
+According to this rule, when a UTxO state update is triggered by a
+transaction (signal) $\var{tx}$, and the above conditions are met, the UTxO
+changes as follows:
+
+\begin{itemize}
+\item remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
+associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
+\item add all the $\var{outputs}$ of $\var{tx}$ to the
+UTxO, now associated with the $\var{txid}(\var{tx})$ instead.
+\end{itemize}
+
 
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
@@ -531,19 +820,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \label{fig:rules:utxo}
 \end{figure}
 
-Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
-be applied to a set of unspent outputs, and how the set of unspent output
-changes with a transaction:
-\begin{itemize}
-\item Each input spent in the transaction must be in the set of unspent
-  outputs.
-\item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal or less than the amount of spent
-  inputs.
-\item If the above conditions hold, then the new state will not have the inputs
-  spent in transaction $\var{tx}$ and it will have the new outputs in
-  $\var{tx}$.
-\end{itemize}
 
 \begin{note}
   $\Coin$ is defined as a primitive type, but there is a difference
@@ -563,18 +839,15 @@ changes with a transaction:
   rules prevent it. Do we want it?
 \end{todo}
 
+
 \subsection{Witnesses}
 \label{sec:witnesses}
 
-The rules for witnesses are presented in Figure~\ref{fig:rules:utxow}.
-The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
-Figure~\ref{fig:defs:utxow}. Note that
-Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
-Figure~\ref{fig:rules:utxo}. The main reason for doing this is to define
-the rules incrementally, modeling different aspects in isolation to keep the
-rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
-have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
-different order). The choice here is arbitrary.
+The definitions needed to add witnessing to the UTxO transitions described above
+are presented in Figure~\ref{fig:defs:utxow}. A transaction is witnessed by
+a signature and a verification key corresponding to this signature. The
+$\fun{hashKey_{spend}}$ map associates to an address the hash of the spending key
+at this address.
 
 \begin{figure}
   \emph{Abstract functions}
@@ -591,6 +864,13 @@ different order). The choice here is arbitrary.
   \label{fig:defs:utxow}
 \end{figure}
 
+In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
+associated with a UTxO. The first, $\fun{addr}$, gives the finite map
+which associates to a given $\var{txin}$ in the UTxO the address of the
+corresponding $\var{txout}$. The map $\fun{addr_h}$, given a UTxO, returns the
+finite map which associates $\var{txin}$ with the hash of a spending key in
+the address in the corresponding $\var{txout}$ in the UTxO.
+
 \begin{figure}
   \begin{align*}
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
@@ -604,6 +884,36 @@ different order). The choice here is arbitrary.
   \label{fig:derived-defs:utxow}
 \end{figure}
 
+
+Note that the UTxO transitions with and without witnesses have the same type
+(see Figure~\ref{fig:ts-types:utxo} and Figure~\ref{fig:ts-types:utxow}).
+The witnessed transition rule, in fact, defines the same UTxO update as the
+non-witnessed rule. Essentially, the witnessed rule says we may only apply the
+the non-witnessed rule whenever the following
+additional precondition is satisfied
+(stated in Rule~\ref{eq:utxo-witness-inductive} in
+Figure~\ref{fig:rules:utxow}):
+
+\begin{itemize}
+ \item For each input $\var{i}$ of the signal transaction $\var{tx}$,
+ there exists a verifiable witness (there could be more than one valid
+ key-signature pair serving as a witness) such the hash of the spending key
+ in the address corresponding to the output of $\var{i}$ in the current UTxO
+ is the same as the hash of the verification key of the witness.
+\end{itemize}
+
+The purpose of witnessing is to provide replay protection. Due to the nature
+of UTxO stype accounting, this replay protection is needed only to prevent
+the re-application of old certificates. The way this is
+achieved by the above precondition is by requiring a valid signature on
+the coin transfers made by the transaction (the body of the transaction).
+
+We enforce the condition here that the list of inputs of a transaction can never be empty.
+So, since all the inputs of an applied transaction have already been included
+in the current UTxO, it may not be replayed with the same inputs. Thus,
+it must also have a different signature. This would prevent it from
+being applied to the UTxO.
+
 \begin{figure}
   \emph{UTxO with witness transitions}
   \begin{equation*}
@@ -614,6 +924,7 @@ different order). The choice here is arbitrary.
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}
 \end{figure}
+
 
 \begin{figure}
   \begin{equation}
@@ -643,6 +954,19 @@ different order). The choice here is arbitrary.
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
+
+\subsection{Ledger State Transition}
+\label{sec:ledger}
+
+Having formalized transition types and rules of the state of the UTxO
+on the ledger, the stake pools, and the delegations on the ledger, we can
+now combine these into a single a ledger transition type (and inference rule).
+
+The full ledger state consists of the $\UTxO$, $\DState$, and $\PState$ (see Figure~\ref{fig:ts-types:ledger}). In order to describe every possible valid
+ledger state, we must also include necessary environment variables in our
+inference rules. Note that different environments (e.g. different transaction
+fees) result in distinct sets of valid states. The environment variables
+we must track are the current slot number and the protocol constants.
 
 \begin{figure}
   \emph{Ledger environment}
@@ -676,6 +1000,31 @@ different order). The choice here is arbitrary.
   \caption{Ledger transition-system types}
   \label{fig:ts-types:ledger}
 \end{figure}
+
+
+The inference rule describing the complete ledger state transition is given in
+Figure~\ref{fig:rules:ledger}. It states that we may combine the transitions
+of $\UTxO$ and $\DWState$ triggered by the a signal transaction
+in a particular context into a single transition that follows the transition
+rules of all three components.
+
+Note that in our complete ledger state transition, $\var{stkeys}$ and
+$\var{stpools}$ are part of the environment of the antecedent UTxO transition,
+but are in the set of state variables of the total ledger transition (as well
+as the DELEGS transition). This is because this information is needed in order
+to update the UTxO, but is not part of the UTxO state and is not affected by the
+update.
+
+Here, again, we have a case with two non-identical signals in antecedent
+transitions to define the consequent transition. However, in this case,
+this is presented in such a way for clarity and ease of reading. The $\DWState$
+transition could have been expressed as a transition signaled by a transaction
+$\var{tx}$, just like the UTxO transition. Instead, we stripped away the
+irrelevant content in the transaction for a delegation state transition,
+considering only the list of certificates in $\var{tx}$, which affect which the delegations
+and stake pools.
+
+
 
 \begin{figure}
   \begin{equation}
@@ -729,6 +1078,11 @@ different order). The choice here is arbitrary.
 
 \section{Properties}
 \label{sec:properties}
+
+\begin{todo}
+  discuss properties
+\end{todo}
+
 \input{properties}
 
 \addcontentsline{toc}{section}{References}
