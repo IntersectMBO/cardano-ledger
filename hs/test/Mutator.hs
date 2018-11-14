@@ -5,26 +5,31 @@ module Mutator
     , mutateNat'
     , mutateCoin
     , mutateCoin'
+    , mutateLedgerEntry
+    , mutateTx
     ) where
 
+import Data.Set                  as Set
 import Numeric.Natural
+import Control.Monad             (liftM)
 
 import Hedgehog
 import qualified Hedgehog.Gen    as Gen
-
-import Generator
+import qualified Hedgehog.Range  as Range
 
 import Coin
+import LedgerState (LedgerEntry(..))
+import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 
 mutateId :: a -> Gen a
 mutateId = pure
 
 mutateNatRange :: Natural -> Natural -> Natural -> Gen Natural
-mutateNatRange lower upper _ = genNatural lower upper
+mutateNatRange lower upper _ = Gen.integral $ Range.linear lower upper
 
 mutateNatSmall :: Natural -> Gen Natural
 mutateNatSmall n = do
-  b <- genBool
+  b <- Gen.enumBounded :: Gen Bool
   pure $ if b then n + 1 else (if n > 0 then n - 1 else 0)
 
 mutateNat' :: Natural -> Natural -> Natural -> Gen Natural
@@ -41,3 +46,37 @@ mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
 
 mutateCoin' :: Natural -> Natural -> Coin -> Gen Coin
 mutateCoin' lower upper (Coin val) = Coin <$> mutateNat' lower upper val
+
+mutateLedgerEntry :: LedgerEntry -> Gen LedgerEntry
+mutateLedgerEntry d@(DelegationData _) = mutateId d
+mutateLedgerEntry (TransactionData txwits) = do
+  body' <- mutateTx $ body txwits
+  pure $ TransactionData $ TxWits body' (witnessSet txwits)
+
+mutateTx :: Tx -> Gen Tx
+mutateTx tx = do
+  inputs'  <- mutateInputs $ Set.toList (inputs tx)
+  outputs' <- mutateOutputs $ outputs tx
+  certs'   <- mutateCerts   $ certs tx
+  pure $ Tx (Set.fromList inputs')
+            outputs'
+            certs'
+
+mutateInputs :: [TxIn] -> Gen [TxIn]
+mutateInputs = minp
+
+minp :: [TxIn] -> Gen [TxIn]
+minp [] = pure []
+minp (txin:txins) = do
+  mtxin  <- mutateInput txin
+  mtxins <- minp txins
+  pure $ mtxin:mtxins
+
+mutateInput :: TxIn -> Gen TxIn
+mutateInput (TxIn idx index) = do
+  index' <- mutateNat' 0 100 index
+  pure $ TxIn idx index'
+
+mutateOutputs = mutateId
+
+mutateCerts = mutateId

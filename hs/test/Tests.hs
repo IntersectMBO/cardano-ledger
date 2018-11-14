@@ -15,6 +15,7 @@ import           Test.Tasty.HUnit
 import           Hedgehog
 
 import           Generator
+import           Mutator
 
 import           Coin
 import           Slot
@@ -22,6 +23,7 @@ import           Keys
 import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
                                           ValidationError (..),
+                                          LedgerValidation(..),
                                           asStateTransition, emptyDelegation,
                                           mkRwdAcnt, genesisId, genesisState)
 import           UTxO
@@ -336,7 +338,23 @@ propertyTests = testGroup "Property-Based Testing"
                     "Completeness and Collision-Freeness of new TxIds"
                     propUniqueTxIds
                   ]
+                , testGroup "Property tests with mutated transactions"
+                  [testPropertyCoverage
+                   "preserve balance of change in UTxO"
+                   propBalanceTxInTxOut'
+                  ]
                 ]
+
+-- | Mutations for Property 7.2
+propBalanceTxInTxOut' :: Cover
+propBalanceTxInTxOut' = withCoverage $ do
+  (l, steps, fee, entry, lv)  <- forAll genStateTx
+  let tx                       = getTxOfEntry entry
+  let inps                     = txins tx
+  let getUtxoLv (LedgerValidation _ ls) = getUtxo ls
+  classify (steps > 1) "non-trivial valid ledger state"
+  classify (isNotDustDist (getUtxo l) (getUtxoLv lv)) "non-trivial wealth dist"
+  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]

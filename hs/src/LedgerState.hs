@@ -17,9 +17,11 @@ module LedgerState
   , DelegationState(..)
   , Ledger
   , LedgerEntry(..)
+  , LedgerValidation(..)
   -- * state transitions
   , applyTransaction
   , asStateTransition
+  , asStateTransition'
   , delegatedStake
   , retirePools
   , emptyDelegation
@@ -55,6 +57,7 @@ data LedgerEntry =
 type Ledger = [LedgerEntry]
 
 data LedgerValidation = LedgerValidation [ValidationError] LedgerState
+                        deriving (Show, Eq)
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.

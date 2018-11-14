@@ -9,6 +9,7 @@ module Generator
     , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonemptyGenesisState
+    , genStateTx
     , genValidStateTx
     ) where
 
@@ -24,10 +25,14 @@ import qualified Hedgehog.Range  as Range
 import           Coin
 import           Keys
 import           LedgerState     (LedgerEntry (..), LedgerState (..),
+                                  LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
+                                  asStateTransition',
                                   genesisState)
 import           Slot
 import           UTxO
+
+import           Mutator
 
 type KeyPairs = [(KeyPair, KeyPair)]
 
@@ -200,3 +205,20 @@ genValidStateTx = do
   (keyPairs, steps, ls) <- genValidLedgerState
   (fee, entry, ls')     <- genValidSuccessorState keyPairs ls
   pure (ls, steps, fee, entry, ls')
+
+genStateTx :: Gen (LedgerState, Natural, Coin, LedgerEntry, LedgerValidation)
+genStateTx = do
+  (keyPairs, steps, ls) <- genValidLedgerState
+  (fee, entry, lv)      <- genLedgerStateTx' keyPairs ls
+  pure (ls, steps, fee, entry, lv)
+
+genLedgerStateTx' :: KeyPairs -> LedgerState ->
+                    Gen (Coin, LedgerEntry, LedgerValidation)
+genLedgerStateTx' keyList sourceState = do
+  let utxo = getUtxo sourceState
+  (fee, ledgerEntry) <- genTxLedgerEntry keyList utxo
+  ledgerEntry'       <- mutateLedgerEntry ledgerEntry
+  slot <- genNatural 0 1000
+  pure (fee
+       , ledgerEntry
+       , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) ledgerEntry')
