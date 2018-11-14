@@ -1,6 +1,4 @@
-{ system ? builtins.currentSystem
-, config ? {}
-, pkgs ? import ../../pkgs.nix
+{ pkgs ? import ../../pkgs.nix
 }:
 
 with pkgs;
