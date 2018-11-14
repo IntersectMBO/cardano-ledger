@@ -76,6 +76,19 @@ mutateInput (TxIn idx index) = do
   index' <- mutateNat' 0 100 index
   pure $ TxIn idx index'
 
-mutateOutputs = mutateId
+mutateOutputs :: [TxOut] -> Gen [TxOut]
+mutateOutputs = mout
+
+mout :: [TxOut] -> Gen [TxOut]
+mout [] = pure []
+mout (txout:txouts) = do
+  mtxout  <- mutateOutput txout
+  mtxouts <- mout txouts
+  pure $ mtxout:mtxouts
+
+mutateOutput :: TxOut -> Gen TxOut
+mutateOutput (TxOut addr c) = do
+  c' <- mutateCoin' 0 100 c
+  pure $ TxOut addr c'
 
 mutateCerts = mutateId
