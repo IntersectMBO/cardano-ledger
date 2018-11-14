@@ -16,7 +16,6 @@ import           Test.Tasty.HUnit
 import           Hedgehog
 
 import           Generator
-import           Mutator
 
 import           Coin
 import           Slot
@@ -352,10 +351,27 @@ propBalanceTxInTxOut' = withCoverage $ do
   (l, steps, fee, entry, lv)  <- forAll genStateTx
   let tx                       = getTxOfEntry entry
   let inps                     = txins tx
-  let getUtxoLv (LedgerValidation _ ls) = getUtxo ls
-  classify (steps > 1) "non-trivial valid ledger state"
-  classify (isNotDustDist (getUtxo l) (getUtxoLv lv)) "non-trivial wealth dist"
-  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
+  let getErrors (LedgerValidation valErrors _) = valErrors
+  let balanceSource            = balance $ inps <| (getUtxo l)
+  let balanceTarget            = (balance $ txouts tx)
+  let valErrors                = getErrors lv
+  classify (valErrors == []) "no validation error"
+  classify (   valErrors /= []
+            && balanceSource == balanceTarget <> fee
+            && balanceSource /= Coin 0) "invalid, non-trivial balance OK"
+  classify (   valErrors /= []
+            && balanceSource /= balanceTarget <> fee
+            && balanceSource /= Coin 0) "invalid, non-trivial balance KO"
+  if valErrors /= [] && balanceSource == balanceTarget <> fee && balanceSource /= Coin 0
+    then label (pack (  "inputs: " ++ (show (Set.size $ inputs tx))
+                     ++ " outputs: " ++ (show $ length (outputs tx))
+                     ++ " balance l " ++ (show balanceSource)
+                     ++ " balance l' " ++ (show balanceTarget)
+                     ++ " fee " ++ show fee
+                     ++ "\n  validationErrors: " ++ show valErrors))
+    else label ""
+  success
+
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
