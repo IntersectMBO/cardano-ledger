@@ -75,7 +75,7 @@ minp (txin:txins) = do
 
 mutateInput :: TxIn -> Gen TxIn
 mutateInput (TxIn idx index) = do
-  index' <- mutateNat' 0 100 index
+  index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 mutateOutputs :: [TxOut] -> Gen [TxOut]
@@ -91,7 +91,7 @@ mout (txout:txouts) = do
 
 mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
-  c' <- mutateCoin' 0 100 c
+  c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
 
 mutateCerts = mutateId
