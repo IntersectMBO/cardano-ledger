@@ -1,8 +1,16 @@
 \section{Update mechanism}
 \label{sec:update}
 
-\newcommand{\UpdProp}{\type{UpdProp}}
-\newcommand{\UpdPropBody}{\type{UpdPropBody}}
+\newcommand{\UpdProp}{\ensuremath{\type{UpdProp}}}
+\newcommand{\UpdPropBody}{\ensuremath{\type{UpdPropBody}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+\newcommand{\ProtAtt}{\ensuremath{\type{ProtAtt}}}
+\newcommand{\ProtParams}{\ensuremath{\type{ProtParams}}}
+\newcommand{\UPVEnv}{\ensuremath{\type{UPVEnv}}}
+\newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
+
+\newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
+\newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
 
 \lstset{ frame=tb,
        , language=Haskell
@@ -26,7 +34,7 @@
   \begin{itemize}
   \item Only then they can vote on them.
   \end{itemize}
-\item[Voting deadlines] voting end when a majority of the voters (4/7 if we
+\item[Voting deadlines] voting ends when a majority of the voters (4/7 if we
 assume no stake) agree on the proposal.
 \item[Block versions] (= protocol versions)
 \item[Soft-forks] a protocol version changes according to the fork-resolution
@@ -59,18 +67,149 @@ Remarks:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{up} & \UpdProp & \text{update proposal}
+      \var{up} & \UpdProp & \text{(protocol) update proposal}\\
+      \var{pa} & \ProtAtt & \text{protocol attribute}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{pv} & \ProtVer & (\var{maj}, \var{min}, \var{alt})
+      & (\mathbb{N}, \mathbb{N}, \mathbb{N}) & \text{protocol version}\\
+      \var{pps} & \ProtParams & \var{pps} & \ProtAtt \mapsto \Value & \text{protocol parameters}
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
   %
   \begin{align*}
-    & \fun{pIssuer} \in \UpdProp \to \VKey & \text{issuer of the update proposal}\\
-    & \fun{pSig} \in \UpdProp \to \UpdPropBody & \text{body of the update proposal}
+    & \fun{upIssuer} \in \UpdProp \to \VKey & \text{issuer of the update proposal}\\
+    & \fun{upSize} \in \UpdProp \to \mathbb{N} & \text{update proposal size}\\
+    & \fun{upPV} \in \UpdProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}
   \end{align*}
   \caption{Update proposals definitions}
   \label{fig:defs:update-proposals}
 \end{figure}
+
+\subsection{Update proposals activation}
+\label{sec:update-proposals-activation}
+
+First we model the validity of a proposal.
+
+\begin{figure}[htb]
+  \emph{Update proposals validity environments}
+  \begin{equation*}
+    \UPVEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
+        \var{pps} & \ProtParams & \text{adopted protocol parameters}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Update proposals validity states}
+  \begin{equation*}
+    \UPVState
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{aps} & \powerset{\UpdProp} & \text{active proposals}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Update proposals validity transitions}
+    \begin{equation*}
+    \var{\_} \vdash
+    \var{\_} \trans{UPV}{\_} \var{\_}
+    \subseteq \powerset (\UPVEnv \times \UPVState \times \UpdProp \times \UPVState)
+  \end{equation*}
+  \caption{Update proposals validity transition-system types}
+  \label{fig:ts-types:up-validity}
+\end{figure}
+
+Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
+\begin{itemize}
+\item must not exceed the maximum side, as specified by the current
+  protocol parameters.
+\item must not exist in the set of active proposals.
+\item must have a unique version among the current active proposals. This
+  implies that a proposal is uniquely determined by its block version.
+\item must increase one of the components (major, minor, or alternative) of the
+  current version.
+\end{itemize}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:up-validity}
+    \inference
+    {
+      \var{maxUpSize} \mapsto \var{mus} \in \var{pps} & \upSize{up} \leq \var{mus}\\
+      \var{up} \notin \var{aps}\\
+      \langle \forall \var{up'} \in \var{aps} \cdot \upPV{up'} \neq \upPV{up} \rangle\\
+      \var{pv} = (\var{mj_a}, \var{mi_a}, \var{a_a})
+      & \upPV{up} = (\var{mj_p}, \var{mi_p}, \var{a_p})\\
+      & |\var{mj_a} - \var{mj_p}|
+      + |\var{mi_a} - \var{mi_p}|
+      + |\var{a_a} - \var{a_p}| \leq 1
+      & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_a}, \var{mi_a}, \var{a_a})\\
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}
+          \end{array}
+        \right)
+      }
+      \trans{UPV}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps \cup \{\var{up}\}}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update proposals validity rules}
+  \label{fig:rules:up-validity}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[htb]
+  \emph{Update proposals limits  environments}
+    \begin{equation*}
+    \UPVEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{e} & \Epoch & \text{current epoch}
+      \end{array}
+    \right)
+  \end{equation*}
+  \caption{Update proposals limits transition-system types}
+  \label{fig:ts-types:up-limits}
+\end{figure}
+
+\subsection{Voting on update proposals}
+\label{sec:voting-on-update-proposals}
+
+
+\subsection{Update proposals confirmation}
+\label{sec:update-proposals-confirmation}
+
+
+\subsection{Update proposals adoption}
+\label{sec:update-proposals-adoption}
+
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
