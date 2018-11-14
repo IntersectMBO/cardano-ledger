@@ -355,21 +355,19 @@ propBalanceTxInTxOut' = withCoverage $ do
   let balanceSource            = balance $ inps <| (getUtxo l)
   let balanceTarget            = (balance $ txouts tx)
   let valErrors                = getErrors lv
+  let nonTrivial               =  balanceSource /= Coin 0
+                               && balanceTarget /= Coin 0
+  let balanceOk                = balanceSource == balanceTarget <> fee
   classify (valErrors == []) "no validation error"
-  classify (   valErrors /= []
-            && balanceSource == balanceTarget <> fee
-            && balanceSource /= Coin 0) "invalid, non-trivial balance OK"
-  classify (   valErrors /= []
-            && balanceSource /= balanceTarget <> fee
-            && balanceSource /= Coin 0) "invalid, non-trivial balance KO"
+  classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
   if valErrors /= [] && balanceSource == balanceTarget <> fee && balanceSource /= Coin 0
-    then label (pack (  "inputs: " ++ (show (Set.size $ inputs tx))
-                     ++ " outputs: " ++ (show $ length (outputs tx))
-                     ++ " balance l " ++ (show balanceSource)
+  then label (pack (  "inputs: "       ++ (show $ Set.size (inputs tx))
+                     ++ " outputs: "   ++ (show $ length (outputs tx))
+                     ++ " balance l "  ++ (show balanceSource)
                      ++ " balance l' " ++ (show balanceTarget)
                      ++ " fee " ++ show fee
                      ++ "\n  validationErrors: " ++ show valErrors))
-    else label ""
+  else label "valid"
   success
 
 
