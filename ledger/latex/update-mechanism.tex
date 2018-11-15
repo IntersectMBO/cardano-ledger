@@ -462,9 +462,144 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
   \label{fig:rules:voting}
 \end{figure}
 
+\clearpage
+
 \subsection{Update proposals confirmation}
 \label{sec:update-proposals-confirmation}
 
+This section models when update proposals get confirmed.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:up-no-confirmation}
+    \inference
+    {
+      \vPropId{v} = \var{pid}
+      & \var{pcThr} \mapsto \var{n} \in \var{pps}
+      & \size{\var{vts'} \restrictrange \{\var{pid}\}} < n\\
+      {
+        \begin{array}{l}
+          \var{aps}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{vote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          e_c\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}\\
+            \var{cps}\\
+            \var{eps}\\
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{uplc}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}\\
+            \var{cps}\\
+            \var{eps}\\
+            \var{vts'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:up-confirmation}
+    \inference
+    {
+      \vPropId{v} = \var{pid}
+      & \var{pcThr} \mapsto \var{n} \in \var{pps}
+      & n \leq \size{\var{vts'} \restrictrange \{\var{pid}\}} \\
+      {
+        \begin{array}{l}
+          \var{aps}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{vote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          e_c\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}\\
+            \var{cps}\\
+            \var{eps}\\
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{uplc}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps} \setminus \{\var{pid}\} \\
+            \var{cps} \union  \{\var{pid}\} \\
+            \var{eps}\\
+            \var{vts'} \subtractrange \{\var{pid}\}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update-proposals confirmation rules}
+  \label{fig:rules:up-confirmation}
+\end{figure}
 
 \subsection{Update proposals adoption}
 \label{sec:update-proposals-adoption}
