@@ -94,7 +94,7 @@ Remarks:
   \emph{Abstract functions}
   %
   \begin{align*}
-    & \fun{upIssuer} \in \UProp \to (\VKeyGen \times \VKey) & \text{issuer of the update proposal}\\
+    & \fun{upIssuer} \in \UProp \to \VKeyGen & \text{issuer of the update proposal}\\
     & \fun{upSize} \in \UProp \to \mathbb{N} & \text{update proposal size}\\
     & \fun{upPV} \in \UProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}\\
     & \fun{upID} \in \UProp \to \mathbb{\UPropId} & \text{update proposal id}
@@ -204,7 +204,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{e} & \Epoch & \text{current epoch}\\
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
+        \mathcal{K} & \powerset{\VKeyGen} & \text{genesis keys}\\
       \end{array}
     \right)
   \end{equation*}
@@ -233,15 +233,15 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \begin{equation}
     \label{eq:rule:up-limits}
     \inference
-    {\upIssuer{up} = (\var{vk_s}, \var{vk_d})
-      & \var{vk_s} \mapsto \var{vk_d} \in \var{dms}
-      & (e_c, \var{vk_s}) \notin \var{eps}
+    {\upIssuer{up} = \var{vk}
+      & \var{vk} \in \mathcal{K}
+      & (e_c, \var{vk}) \notin \var{eps}
     }
     {
       {\begin{array}{l}
-          \var{e_c}\\
-          \var{dms}
-        \end{array}
+         \var{e_c}\\
+         \mathcal{K}
+       \end{array}
       }
       \vdash
       {
@@ -255,7 +255,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{eps \cup \{(e_c, \var{vk_s})\}}
+            \var{eps \cup \{(e_c, \var{vk})\}}
           \end{array}
         \right)
       }
