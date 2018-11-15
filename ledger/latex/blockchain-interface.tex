@@ -150,3 +150,23 @@
   \end{align*}
   \caption{Delegation interface functions}
 \end{figure}
+
+\clearpage
+
+\subsection{Update-proposals interface}
+\label{sec:update-proposals-interface}
+
+\begin{todo}
+  The blockchain will pass maybe one update proposal, and a list of votes. Make
+  sure we support this.
+\end{todo}
+
+\begin{lstlisting}
+ -- | Update System payload
+data Payload = Payload
+  { payloadProposal :: !(Maybe Proposal)
+  , payloadVotes    :: ![Vote]
+  -- ^ Votes received on the different update proposals posted so far, not only
+  -- on the current @payloadProposal@.
+  } deriving (Eq, Show, Generic)
+\end{lstlisting}
