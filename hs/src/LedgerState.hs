@@ -56,6 +56,8 @@ data LedgerEntry =
 
 type Ledger = [LedgerEntry]
 
+-- | A ledger validation state consists of a ledger state 't' and the list of
+-- validation errors that occurred from a valid 's' to reach 't'.
 data LedgerValidation = LedgerValidation [ValidationError] LedgerState
                         deriving (Show, Eq)
 
