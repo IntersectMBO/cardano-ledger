@@ -1,8 +1,9 @@
 \section{Update mechanism}
 \label{sec:update}
 
-\newcommand{\UpdProp}{\ensuremath{\type{UpdProp}}}
-\newcommand{\UpdPropBody}{\ensuremath{\type{UpdPropBody}}}
+\newcommand{\UProp}{\ensuremath{\type{UProp}}}
+\newcommand{\UPropId}{\ensuremath{\type{UPropId}}}
+\newcommand{\UPropBody}{\ensuremath{\type{UPropBody}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 \newcommand{\ProtAtt}{\ensuremath{\type{ProtAtt}}}
 \newcommand{\ProtParams}{\ensuremath{\type{ProtParams}}}
@@ -10,10 +11,17 @@
 \newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
 \newcommand{\UPLEnv}{\ensuremath{\type{UPLEnv}}}
 \newcommand{\UPLState}{\ensuremath{\type{UPLState}}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
+\newcommand{\VState}{\ensuremath{\type{VState}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
+\newcommand{\upId}[1]{\ensuremath{\fun{upId}~\var{#1}}}
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
+\newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
+\newcommand{\vPropId}[1]{\ensuremath{\fun{vPropId}~\var{#1}}}
+\newcommand{\vSig}[1]{\ensuremath{\fun{vSig}~\var{#1}}}
 
 \lstset{ frame=tb,
        , language=Haskell
@@ -70,7 +78,7 @@ Remarks:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{up} & \UpdProp & \text{(protocol) update proposal}\\
+      \var{up} & \UProp & \text{(protocol) update proposal}\\
       \var{pa} & \ProtAtt & \text{protocol attribute}\\
     \end{array}
   \end{equation*}
@@ -86,9 +94,10 @@ Remarks:
   \emph{Abstract functions}
   %
   \begin{align*}
-    & \fun{upIssuer} \in \UpdProp \to (\VKeyGen \times \VKey) & \text{issuer of the update proposal}\\
-    & \fun{upSize} \in \UpdProp \to \mathbb{N} & \text{update proposal size}\\
-    & \fun{upPV} \in \UpdProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}
+    & \fun{upIssuer} \in \UProp \to (\VKeyGen \times \VKey) & \text{issuer of the update proposal}\\
+    & \fun{upSize} \in \UProp \to \mathbb{N} & \text{update proposal size}\\
+    & \fun{upPV} \in \UProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}\\
+    & \fun{upID} \in \UProp \to \mathbb{\UPropId} & \text{update proposal id}
   \end{align*}
   \caption{Update proposals definitions}
   \label{fig:defs:update-proposals}
@@ -116,7 +125,7 @@ First we model the validity of a proposal.
     \UPVState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{aps} & \powerset{\UpdProp} & \text{active proposals}\\
+        \var{aps} & \powerset{\UProp} & \text{active proposals}\\
       \end{array}
     \right)
   \end{equation*}
@@ -124,8 +133,8 @@ First we model the validity of a proposal.
   \emph{Update proposals validity transitions}
     \begin{equation*}
     \var{\_} \vdash
-    \var{\_} \trans{UPV}{\_} \var{\_}
-    \subseteq \powerset (\UPVEnv \times \UPVState \times \UpdProp \times \UPVState)
+    \var{\_} \trans{upv}{\_} \var{\_}
+    \subseteq \powerset (\UPVEnv \times \UPVState \times \UProp \times \UPVState)
   \end{equation*}
   \caption{Update proposals validity transition-system types}
   \label{fig:ts-types:up-validity}
@@ -172,7 +181,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
           \end{array}
         \right)
       }
-      \trans{UPV}{\var{up}}
+      \trans{upv}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -213,8 +222,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \emph{Update proposals limits transitions}
   \begin{equation*}
     \var{\_} \vdash
-    \var{\_} \trans{UPL}{\_} \var{\_}
-    \subseteq \powerset (\UPLEnv \times \UPLState \times \UpdProp \times \UPLState)
+    \var{\_} \trans{upl}{\_} \var{\_}
+    \subseteq \powerset (\UPLEnv \times \UPLState \times \UProp \times \UPLState)
   \end{equation*}
   \caption{Update proposals limits transition-system types}
   \label{fig:ts-types:up-limits}
@@ -242,7 +251,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
           \end{array}
         \right)
       }
-      \trans{UPL}{\var{up}}
+      \trans{upl}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -256,7 +265,9 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \label{fig:rules:up-limits}
 \end{figure}
 
+\begin{todo}
 TODO: add witnesses as well.
+\end{todo}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -277,7 +288,7 @@ TODO: add witnesses as well.
           \end{array}
         \right)
       }
-      \trans{UPV}{\var{up}}
+      \trans{upv}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -299,7 +310,7 @@ TODO: add witnesses as well.
           \end{array}
         \right)
       }
-      \trans{UPL}{\var{up}}
+      \trans{upl}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -326,7 +337,7 @@ TODO: add witnesses as well.
           \end{array}
         \right)
       }
-      \trans{UPA}{\var{up}}
+      \trans{upa}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -341,9 +352,115 @@ TODO: add witnesses as well.
   \label{fig:rules:up-activation}
 \end{figure}
 
+\clearpage
+
 \subsection{Voting on update proposals}
 \label{sec:voting-on-update-proposals}
 
+\begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{v} & \Vote & \text{vote on an update proposal}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  \begin{align*}
+    & \fun{vCaster} \in \Vote \to \VKey & \text{caster of a vote}\\
+    & \fun{vPropId} \in \Vote \to \UPropId & \text{proposal id that is being voted}\\
+    & \fun{vSig} \in \Vote \to \Sig & \text{vote signature}
+  \end{align*}
+  \caption{Voting definitions}
+  \label{fig:defs:voting}
+\end{figure}
+
+\begin{figure}[htb]
+  \emph{Voting environments}
+  \begin{align*}
+    & \VEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{aps} & \powerset{\UProp} & \text{active proposals}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Voting states}
+  \begin{align*}
+    & \VState
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{vts} & \powerset{(\VKeyGen \times \UPropId)} & \text{votes}\\
+        \var{vcount} & \UPropId \mapsto \mathbb{N} & \text{vote count}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Voting transitions}
+    \begin{equation*}
+    \_ \vdash \_ \trans{vote}{\_} \_ \in
+    \powerset (\VEnv \times \VState \times \Vote \times \VState)
+    \end{equation*}
+  \caption{Voting transition-system types}
+  \label{fig:ts-types:voting}
+\end{figure}
+
+Terse explanation of Rule~\ref{eq:rule:voting}:
+\begin{itemize}
+\item Only genesis keys can vote on an update proposal, although votes can be
+  cast by delegates of these genesis keys.
+\item We count one vote per genesis key that delegated to the key that is
+  casting the vote.
+\item The vote must refer to an active update proposal.
+  \item The proposal id must be signed by the key that is casting the vote.
+\end{itemize}
+
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:voting}
+    \inference
+    {
+      \vPropId{v} = \var{pid} & \vCaster{v} = \var{vk}
+      & \var{pid} \mapsto n \in \{pid \mapsto 0\} \unionoverride \var{vcount} \\
+      \var{vts}_{\var{pid}} =
+      \{ (\var{vk_s}, \var{pid}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
+      & m = \size{\var{vts}_{\var{pid}}}\\
+      \var{vts}_{\var{pid}} \cap \var{vts} = \emptyset\\
+      \langle \exists \var{up} \in \var{aps} \cdot \upId{up} = \var{pid} \rangle\\
+      \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{aps}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts}\\
+            \var{vcount}
+          \end{array}
+        \right)
+      }
+      \trans{vote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{vts} \cup \var{vts}_{\var{pid}}\\
+            \var{vcount} \unionoverride \{ \var{pid} \mapsto n + m\}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update voting rules}
+  \label{fig:rules:voting}
+\end{figure}
 
 \subsection{Update proposals confirmation}
 \label{sec:update-proposals-confirmation}
