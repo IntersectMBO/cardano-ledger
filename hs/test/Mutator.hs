@@ -1,11 +1,14 @@
+{-|
+Module
+Description : Generators for mutating data.
+
+This module implements a mutation based approach for generating invalid
+data. Input values are mutated depending on their value.
+-}
+
 module Mutator
-    (
-      mutateId
-    , mutateNat
-    , mutateNat'
-    , mutateCerts
+    ( mutateNat
     , mutateCoin
-    , mutateCoin'
     , mutateLedgerEntry
     , mutateTx
     ) where
@@ -21,77 +24,78 @@ import Coin
 import LedgerState (LedgerEntry(..))
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 
+-- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
 mutateId = pure
 
+-- | Mutator that ignores the input value and returns any value in the range
+-- 'lower'..'upper'.
 mutateNatRange :: Natural -> Natural -> Natural -> Gen Natural
 mutateNatRange lower upper _ = Gen.integral $ Range.linear lower upper
 
+-- | Mutator that adds or subtracts 1 from a given input value. In the case of
+-- underflow it returns 0.
 mutateNatSmall :: Natural -> Gen Natural
 mutateNatSmall n = do
   b <- Gen.enumBounded :: Gen Bool
   pure $ if b then n + 1 else (if n > 0 then n - 1 else 0)
 
-mutateNat' :: Natural -> Natural -> Natural -> Gen Natural
-mutateNat' lower upper n = do
-  n' <- Gen.choice [mutateNatRange lower upper n, mutateNatSmall n]
-  if n == n' then Gen.discard else pure n'
-
+-- | Mutator that combines the identity, range selector and small change mutator
+-- in a random choice.
 mutateNat :: Natural -> Natural -> Natural -> Gen Natural
 mutateNat lower upper n =
   Gen.choice [mutateId n, mutateNatRange lower upper n, mutateNatSmall n]
 
+-- | Mutator for 'Coin' values, based on mutation of the contained value field.
 mutateCoin :: Natural -> Natural -> Coin -> Gen Coin
 mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
 
-mutateCoin' :: Natural -> Natural -> Coin -> Gen Coin
-mutateCoin' lower upper (Coin val) = Coin <$> mutateNat' lower upper val
-
+-- | Mutator of 'LedgerEntry' which mutates the contained transaction of a
+-- 'DelegationData' entry.
 mutateLedgerEntry :: LedgerEntry -> Gen LedgerEntry
 mutateLedgerEntry d@(DelegationData _) = mutateId d
 mutateLedgerEntry (TransactionData txwits) = do
   body' <- mutateTx $ body txwits
   pure $ TransactionData $ TxWits body' (witnessSet txwits)
 
+-- | Mutator for Transaction which mutates the set of inputs and the set of
+-- unspent outputs.
 mutateTx :: Tx -> Gen Tx
 mutateTx tx = do
-  inputs'  <- mutateInputs $ Set.toList (inputs tx)
+  inputs'  <- mutateInputs  $ Set.toList (inputs tx)
   outputs' <- mutateOutputs $ outputs tx
-  certs'   <- mutateCerts   $ certs tx
   pure $ Tx (Set.fromList inputs')
             outputs'
-            certs'
+            (certs tx)
 
+-- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]
-mutateInputs = minp
-
-minp :: [TxIn] -> Gen [TxIn]
-minp [] = pure []
-minp (txin:txins) = do
-  mtxin      <- mutateInput txin
-  mtxins     <- minp txins
-  dropTxin   <- Gen.enumBounded
+mutateInputs [] = pure []
+mutateInputs (txin:txins) = do
+  mtxin    <- mutateInput txin
+  mtxins   <- mutateInputs txins
+  dropTxin <- Gen.enumBounded
   pure $ if dropTxin then mtxins else mtxin:mtxins
 
+-- | Mutator for a single 'TxIn', which mutates the index of the output to
+-- spend.
 mutateInput :: TxIn -> Gen TxIn
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
+-- | Mutator for a list of 'TxOut'.
 mutateOutputs :: [TxOut] -> Gen [TxOut]
-mutateOutputs = mout
-
-mout :: [TxOut] -> Gen [TxOut]
-mout [] = pure []
-mout (txout:txouts) = do
+mutateOutputs [] = pure []
+mutateOutputs (txout:txouts) = do
   mtxout    <- mutateOutput txout
-  mtxouts   <- mout txouts
+  mtxouts   <- mutateOutputs txouts
   dropTxOut <- Gen.enumBounded
   pure $ if dropTxOut then mtxouts else mtxout:mtxouts
 
+-- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
+-- the output.
 mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
-
-mutateCerts = mutateId
