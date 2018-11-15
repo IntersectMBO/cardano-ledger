@@ -19,6 +19,7 @@
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
 \newcommand{\upId}[1]{\ensuremath{\fun{upId}~\var{#1}}}
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
+\newcommand{\upParams}[1]{\ensuremath{\fun{upParams}~\var{#1}}}
 \newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
 \newcommand{\vPropId}[1]{\ensuremath{\fun{vPropId}~\var{#1}}}
 \newcommand{\vSig}[1]{\ensuremath{\fun{vSig}~\var{#1}}}
@@ -157,14 +158,14 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \inference
     {
       \var{maxUpSize} \mapsto \var{mus} \in \var{pps} & \upSize{up} \leq \var{mus}\\
-      \var{up} \notin \var{aps}\\
-      \langle \forall \var{up'} \in \var{aps} \cdot \upPV{up'} \neq \upPV{up} \rangle\\
-      \var{pv} = (\var{mj_a}, \var{mi_a}, \var{a_a})
-      & \upPV{up} = (\var{mj_p}, \var{mi_p}, \var{a_p})\\
-      & |\var{mj_a} - \var{mj_p}|
-      + |\var{mi_a} - \var{mi_p}|
-      + |\var{a_a} - \var{a_p}| \leq 1
-      & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_a}, \var{mi_a}, \var{a_a})\\
+      \upId{up} = \var{pid} & \var{pid} \notin \var{aps} \\
+      \upPV{up} = \var{nv} & \var{nv} = (\var{mj_n}, \var{mi_n}, \var{a_n})
+      & \var{nv} \notin \dom \var{vis}\\
+      & \var{pv} = (\var{mj_p}, \var{mi_p}, \var{a_p})
+      & |\var{mj_p} - \var{mj_n}|
+      + |\var{mi_p} - \var{mi_n}|
+      + |\var{a_p} - \var{a_n}| \leq 1
+      & \var{pv} < \var{nv}\\
     }
     {
       {
@@ -177,7 +178,9 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{aps}
+            \var{aps}\\
+            \var{vis}\\
+            \var{ips}
           \end{array}
         \right)
       }
@@ -185,7 +188,9 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{aps \cup \{\var{up}\}}
+            \var{aps \cup \{\var{pid}\}}\\
+            \var{vis} \unionoverride \{ \var{nv} \mapsto \var{pid} \}\\
+            \var{ips} \unionoverride \{ \var{pid} \mapsto \var{up} \}
           \end{array}
         \right)
       }
@@ -284,7 +289,9 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps}
+            \var{aps}\\
+            \var{vis}\\
+            \var{ips}
           \end{array}
         \right)
       }
@@ -292,7 +299,9 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps'}
+            \var{aps'}\\
+            \var{vis'}\\
+            \var{ips'}
           \end{array}
         \right)
       }
@@ -333,6 +342,8 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps}\\
+            \var{vis}\\
+            \var{ips}\\
             \var{eps}
           \end{array}
         \right)
@@ -342,6 +353,8 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps'}\\
+            \var{vis'}\\
+            \var{ips'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -520,7 +533,7 @@ This section models when update proposals get confirmed.
           \end{array}
         \right)
       }
-      \trans{uplc}{\var{v}}
+      \trans{upc}{\var{v}}
       {
         \left(
           \begin{array}{l}
@@ -584,7 +597,7 @@ This section models when update proposals get confirmed.
           \end{array}
         \right)
       }
-      \trans{uplc}{\var{v}}
+      \trans{upc}{\var{v}}
       {
         \left(
           \begin{array}{l}
@@ -601,9 +614,153 @@ This section models when update proposals get confirmed.
   \label{fig:rules:up-confirmation}
 \end{figure}
 
+\clearpage
+
 \subsection{Update proposals adoption}
 \label{sec:update-proposals-adoption}
 
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:up-adopted}
+    \inference
+    {
+      \var{bv} = \var{pv}
+      & \var{bvs'} = \var{bvs};\var{bv}
+      & m = \size{bvs'} \\
+    }
+    {
+      {
+        \begin{array}{l}
+          ?
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upadopt}{\var{bv}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            {[m - w, ..]} \restrictdom \var{bvs'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  %
+  \nextdef
+  %
+\begin{equation}
+    \label{eq:rule:up-no-adoption}
+    \inference
+    {
+      \var{bv} \neq \var{pv}
+      & \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'} \\
+      \var{upAdptThr} \mapsto n \in pps  &
+      \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}} < n\\
+      & \var{bvsWindowSize} \mapsto w \in pps
+    }
+    {
+      {
+        \begin{array}{l}
+          ?
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upadopt}{\var{bv}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            {[m - w, ..]} \restrictdom \var{bvs'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  %
+  \nextdef
+  %
+  \begin{equation}
+    \label{eq:rule:up-adoption}
+    \inference
+    {
+      \var{bv} \neq \var{pv}
+      & \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'} \\
+      \var{upAdptThr} \mapsto n \in pps  &
+      n \leq \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}}\\
+      \var{bvsWindowSize} \mapsto w \in pps\\
+      \var{bv} \mapsto \var{pid} \in \var{vis} & \var{pid} \mapsto {up} \in \var{ips}
+      & \var{pid} \in \var{cps}
+    }
+    {
+      {
+        \begin{array}{l}
+          ?
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upadopt}{\var{bv}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{bv}\\
+            \upParams{up}\\
+            \var{cps} \setminus \{ \var{pid} \}\\
+            \{ \var{bv} \} \subtractdom \var{vis}\\
+            \{ \var{pid} \} \subtractdom \var{ips}\\
+            {[m - w, ..]} \restrictdom \var{bvs'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update-proposals adoption rules}
+  \label{fig:rules:up-adoption}
+\end{figure}
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
