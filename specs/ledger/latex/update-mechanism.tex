@@ -8,9 +8,12 @@
 \newcommand{\ProtParams}{\ensuremath{\type{ProtParams}}}
 \newcommand{\UPVEnv}{\ensuremath{\type{UPVEnv}}}
 \newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
+\newcommand{\UPLEnv}{\ensuremath{\type{UPLEnv}}}
+\newcommand{\UPLState}{\ensuremath{\type{UPLState}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
+\newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
 
 \lstset{ frame=tb,
        , language=Haskell
@@ -83,7 +86,7 @@ Remarks:
   \emph{Abstract functions}
   %
   \begin{align*}
-    & \fun{upIssuer} \in \UpdProp \to \VKey & \text{issuer of the update proposal}\\
+    & \fun{upIssuer} \in \UpdProp \to (\VKeyGen \times \VKey) & \text{issuer of the update proposal}\\
     & \fun{upSize} \in \UpdProp \to \mathbb{N} & \text{update proposal size}\\
     & \fun{upPV} \in \UpdProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}
   \end{align*}
@@ -188,15 +191,68 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
 \begin{figure}[htb]
   \emph{Update proposals limits  environments}
     \begin{equation*}
-    \UPVEnv =
+    \UPLEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{e} & \Epoch & \text{current epoch}
       \end{array}
     \right)
   \end{equation*}
+  %
+  \emph{Update proposals limits states}
+  \begin{equation*}
+    \UPLState
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-key per-epoch}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Update proposals limits transitions}
+  \begin{equation*}
+    \var{\_} \vdash
+    \var{\_} \trans{UPL}{\_} \var{\_}
+    \subseteq \powerset (\UPLEnv \times \UPLState \times \UpdProp \times \UPLState)
+  \end{equation*}
   \caption{Update proposals limits transition-system types}
   \label{fig:ts-types:up-limits}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:up-limits}
+    \inference
+    {\upIssuer{up} = (\var{vk_s}, \var{vk_d})
+      & \var{vk_s} \mapsto \var{vk_d} \in \var{dmap}
+      & (e_c, \var{vk_s}) \notin \var{eps}
+    }
+    {
+      {\begin{array}{l}
+          \var{e_c}\\
+          \var{dmap}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{eps}
+          \end{array}
+        \right)
+      }
+      \trans{UPL}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{eps \cup \{(e_c, \var{vk_s})\}}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update proposals limits rules}
+  \label{fig:rules:up-limits}
 \end{figure}
 
 \subsection{Voting on update proposals}
