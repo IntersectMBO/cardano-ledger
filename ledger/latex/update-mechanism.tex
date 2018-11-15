@@ -194,7 +194,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \UPLEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{e} & \Epoch & \text{current epoch}
+        \var{e} & \Epoch & \text{current epoch}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}
     \right)
   \end{equation*}
@@ -224,13 +225,13 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \label{eq:rule:up-limits}
     \inference
     {\upIssuer{up} = (\var{vk_s}, \var{vk_d})
-      & \var{vk_s} \mapsto \var{vk_d} \in \var{dmap}
+      & \var{vk_s} \mapsto \var{vk_d} \in \var{dms}
       & (e_c, \var{vk_s}) \notin \var{eps}
     }
     {
       {\begin{array}{l}
           \var{e_c}\\
-          \var{dmap}
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -253,6 +254,91 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \end{equation}
   \caption{Update proposals limits rules}
   \label{fig:rules:up-limits}
+\end{figure}
+
+TODO: add witnesses as well.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:up-activation}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}
+          \end{array}
+        \right)
+      }
+      \trans{UPV}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps'}
+          \end{array}
+        \right)
+      }
+      &
+      {\begin{array}{l}
+          \var{e_c}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{eps}
+          \end{array}
+        \right)
+      }
+      \trans{UPL}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{eps'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{e_c}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps}\\
+            \var{eps}
+          \end{array}
+        \right)
+      }
+      \trans{UPA}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{aps'}\\
+            \var{eps'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update activation rules}
+  \label{fig:rules:up-activation}
 \end{figure}
 
 \subsection{Voting on update proposals}
