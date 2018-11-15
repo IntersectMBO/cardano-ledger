@@ -41,7 +41,8 @@ initDSIState = initDSIStateFromKeys initVKeys
 newCertsRule :: Rule Interf
 newCertsRule = undefined
 
--- TODO(md): The ledger spec should implement this as part of the delegation
--- interface. This function is closely related to *newCertsRule*
+-- | Updates the delegation interface state with a set of heavyweight
+-- delegation certificates that arrived in a block issued in the given
+-- slot
 updateCerts :: Slot -> Set HCert -> DSIState -> DSIState
 updateCerts = undefined
