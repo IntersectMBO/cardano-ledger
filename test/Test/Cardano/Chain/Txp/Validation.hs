@@ -34,6 +34,7 @@ import Cardano.Chain.Txp
   (TxPayload(..), UTxO, UTxOValidationError, genesisUtxo, updateUTxOWitness)
 import Cardano.Crypto (ProtocolMagic)
 
+import Test.Options (TestScenario(..))
 import Test.Cardano.Chain.Epoch.File (getEpochFiles)
 
 
@@ -43,8 +44,8 @@ import Test.Cardano.Chain.Epoch.File (getEpochFiles)
 --   this leads to a clearer log of progress during testing. This requires an
 --   'IORef' to synchronise the 'UTxO' between epochs, as 'Property's do not
 --   return values.
-tests :: IO Bool
-tests = do
+tests :: TestScenario -> IO Bool
+tests scenario = do
 
   -- Get 'GenesisData' from the mainnet JSON configuration
   genesisData <- either (panic . sformat build) identity
@@ -56,8 +57,15 @@ tests = do
   -- Create an 'IORef' containing the genesis 'UTxO'
   utxoRef <- newIORef $ genesisUtxo genesisData
 
+  let
+    takeFiles :: [FilePath] -> [FilePath]
+    takeFiles = case scenario of
+      ContinuousIntegration -> identity
+      Development           -> take 15
+      QualityAssurance      -> identity
+
   -- Get a list of epoch files to perform validation on
-  files   <- take 15 <$> getEpochFiles
+  files <- takeFiles <$> getEpochFiles
 
   -- Validate the transactions of each epoch file in a single 'Property' and
   -- check them all sequentially

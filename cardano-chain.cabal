@@ -180,6 +180,8 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Json
 
+                       Test.Options
+
   build-depends:       base
                      , base16-bytestring
                      , bytestring
@@ -197,6 +199,7 @@ test-suite cardano-chain-test
                      , filepath
                      , formatting
                      , hedgehog
+                     , optparse-applicative
                      , resourcet
                      , streaming
                      , text

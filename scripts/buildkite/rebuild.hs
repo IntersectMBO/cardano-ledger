@@ -44,7 +44,8 @@ buildStep = do
   buildArgs    = ["--bench", "--no-run-benchmarks", "--no-haddock-deps"]
   buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
   build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
-  test         = stackBuild ["--test", "--jobs", "1"]
+  test         = stackBuild
+    ["--test", "--jobs", "1", "--ta", "--scenario=ContinuousIntegration"]
 
 -- buildkite agents have S3 creds installed, but under different names
 awsCreds :: IO ()
