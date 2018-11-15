@@ -18,6 +18,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Chain.Blockchain
+                       Chain.GenesisBlock
+                       Delegation.Interface
+                       Types
   other-modules:       Data.Queue
                        UTxO
   -- other-extensions:
