@@ -446,7 +446,6 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
   taking the union of the key-proposal-id pairs).
 \end{itemize}
 
-
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:voting}
@@ -775,6 +774,31 @@ This section models when update proposals get confirmed.
   \caption{Update-proposals adoption rules}
   \label{fig:rules:up-adoption}
 \end{figure}
+
+\subsection{Deviations from the actual implementation}
+\label{sec:deviation-actual-impl}
+
+The current specification of the voting mechanism deviates from the actual
+implementation, although it should be backwards compatible the latter. These
+deviations are required to simplify the voting and update mechanism removing
+unnecessary features and reducing accidental complexity. The following
+subsections highlight the differences between the this specification and the
+current implementation.
+
+\subsubsection{Votes are only positive}
+\label{sec:only-positive-votes}
+
+Genesis keys can only vote positively for an update proposal. In the current
+implementation stakeholders can vote for or against a proposal, which makes the
+voting logic more complex:
+\begin{itemize}
+\item there are more cases to consider
+\item the current voting validation rules allow voters to change their minds
+  (by flipping their vote) at most once, which requires to keep track how a
+  stake holder voted and how many times. Contrast this with
+  Rule~\ref{eq:rule:voting} where we only need to keep track of the set of
+  key-proposal-id's pairs.
+\end{itemize}
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
