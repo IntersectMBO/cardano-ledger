@@ -43,7 +43,7 @@ instance STS UTXO where
     = BadInputs
     | FeeTooLow
     | IncreasedTotalBalance
-    deriving Show
+    deriving (Eq, Show)
 
   rules =
     [ Rule [] $ Base (UTxO Map.empty)
@@ -52,17 +52,17 @@ instance STS UTXO where
 
 utxoInductive :: Rule UTXO
 utxoInductive = Rule
-  [ Predicate
-    $ \_ utxo tx -> if balance (txouts tx) <= balance (txins tx ◁ utxo)
-        then Passed
-        else Failed IncreasedTotalBalance
-  , Predicate $ \pc _ tx ->
+  [ Predicate $ \(_, utxo, tx) ->
+    if balance (txouts tx) <> txfee tx == balance (txins tx ◁ utxo)
+      then Passed
+      else Failed IncreasedTotalBalance
+  , Predicate $ \(pc, _, tx) ->
     if pcMinFee pc tx <= txfee tx then Passed else Failed FeeTooLow
-  , Predicate $ \_ utxo tx ->
+  , Predicate $ \(_, utxo, tx) ->
     let unspentInputs (UTxO utxo) = Map.keysSet utxo
     in
       if txins tx `Set.isSubsetOf` unspentInputs utxo
         then Passed
         else Failed BadInputs
   ]
-  (Extension . Transition $ \pc utxo tx -> (txins tx ⋪ utxo) ∪ txouts tx)
+  (Extension . Transition $ \(pc, utxo, tx) -> (txins tx ⋪ utxo) ∪ txouts tx)
