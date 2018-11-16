@@ -1,54 +1,614 @@
-The pool reaping in rules are discribed in
-Figure~\ref{fig:ts-types:pool-reap} and Figure~\ref{fig:rules:pool-reap}.
+\newcommand{\UTxOEpEnv}{\type{UTxOEpEnv}}
+\newcommand{\UTxOEpState}{\type{UTxOEpState}}
+\newcommand{\Accnt}{\type{Accnt}}
+\newcommand{\AccntEnv}{\type{AccntEnv}}
+\newcommand{\AccntState}{\type{AccntState}}
+\newcommand{\StPlCleanEnv}{\type{StPlCleanEnv}}
+\newcommand{\StPlCleanState}{\type{StPlCleanState}}
+\newcommand{\NewProtoConstsEnv}{\type{NewProtoConstsEnv}}
+\newcommand{\NewProtoConstsState}{\type{NewProtoConstsState}}
+\newcommand{\EpochEnv}{\type{EpochEnv}}
+\newcommand{\EpochState}{\type{EpochState}}
+\newcommand{\Production}{\type{Production}}
+
+\newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\reward}[5]{\fun{reward}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
+\newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 
 %%
-%% Figure - Pool Reap
+%% Figure - Epoch Abstract Types
 %%
-
-
 \begin{figure}
-  \emph{Pool Reap Transition}
-  \begin{equation*}
-    \_ \vdash \_ \trans{poolreap}{} \_ \in
-    \powerset (\Slot \times \PState \times \PState)
-  \end{equation*}
+  \emph{Abstract types}
   %
-  \caption{Pool Reap Transition}
-  \label{fig:ts-types:pool-reap}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{production} & \Production & \text{blocks produced in the epoch}\\
+    \end{array}
+  \end{equation*}
+  \caption{Epoch definitions}
+  \label{fig:epoch-defs}
+\end{figure}
+
+%%
+%% Figure - Functions for Epoch Rules
+%%
+\begin{figure}
+  \begin{align*}
+      & \fun{obligation} \in \PrtclConsts \to \Allocs \to \Allocs \to \Slot \to \Coin
+      & \text{total possible refunds} \\
+      & \obligation{pc}{stkeys}{stpools}{cslot} =\\
+      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
+        \refund{k_{\mathsf{val}}}{k_{\min}}{(\slotminus{cslot}{s})}{\lambda} \\
+      & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
+        \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda} \\
+      &
+        \where k_{\mathsf{val}}, k_{\min},p_{\mathsf{val}}, p_{\min}, \lambda \in pc
+      \nextdef
+      & \fun{reward} \in \Production \to \PrtclConsts \to \Coin \to DWState \to \\
+      & ~~~ (\AddrRWD \mapsto \Coin) \to (\AddrRWD \mapsto \Coin)
+      & \text{update rewards} \\
+      & \reward{prod}{pc}{availablePool}{dwstate}{rewards} = \mathsf{TBD}\\
+      \nextdef
+      & \fun{poolRefunds} \in \PrtclConsts \to \Allocs \to \Slot \to (\HashKey \mapsto \Coin)
+      & \text{pool refunds} \\
+      & \poolRefunds{pc}{retiring}{cslot} = \\
+      & \bigcup_{\var{hk}\mapsto s\in\var{retiring}}
+          \var{hk}\mapsto( \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda} ) \\
+      &
+        \where p_{\mathsf{val}}, p_{\min}, \lambda \in pc
+  \end{align*}
+  \caption{Functions used in Deposits}
+  \label{fig:functions:epoch}
 \end{figure}
 
 
 %%
-%% Figure - Pool Rules
+%% Figure - UTxO Epoch Defs
 %%
 \begin{figure}
+  \emph{UTxO Epoch environment}
+  \begin{equation*}
+    \UTxOEpEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+        \var{stkeys} & \Allocs & \text{stake key allocations}\\
+        \var{stpools} & \Allocs & \text{stake pool allocations}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{UTxOE transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{utxoep}{} \var{\_}
+    \subseteq \powerset (\UTxOEpEnv \times \UTxOState \times \UTxOState)
+  \end{equation*}
+  %
+  \caption{UTxO Epoch transition-system types}
+  \label{fig:ts-types:utxoe}
+\end{figure}
 
-  \begin{equation}\label{eq:pool-reap}
-    \inference[Pool-Reap]
+%%
+%% Figure - UTxO Epoch Rule
+%%
+\begin{figure}
+  \begin{equation}\label{eq:utxoep}
+    \inference[UTxO-epoch]
     {
-      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
-      & \var{retired} \neq \emptyset
     }
     {
-      \var{slot} \vdash
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+        \var{stkeys}\\
+        \var{stpools}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{utxo} \\
+          \var{deposits} \\
+          \var{fees} \\
+          \var{wdrls} \\
+        \end{array}
+      \right)
+      \trans{utxoep}{}
+      \left(
+        \begin{array}{r}
+          \var{utxo} \cup \var{wdrls} \\
+          \obligation{pc}{stkeys}{stpools}{slot} \\
+          0 \\
+          \emptyset \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{UTxO Epoch inference rules}
+  \label{fig:rules:utxoep}
+\end{figure}
+
+%%
+%% Figure - Accounting Defs
+%%
+\begin{figure}
+  \emph{Accounting Fields}
+  \begin{equation*}
+    \Accnt =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{treasury} & \Coin & \text{treasury pool}\\
+        \var{reserves} & \Coin & \text{reserve pool}\\
+        \var{rewardPool} & \Coin & \text{reward pool}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Accounting environment}
+  \begin{equation*}
+    \AccntEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+        \var{production} & \Production & \text{blocks produced in the epoch}\\
+        \var{utxoSt} & \UTxOState & \text{utxo state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Accounting States}
+  \begin{equation*}
+    \AccntState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{accnt} & \Accnt & \text{accounting}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Accounting transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{accnt}{} \var{\_}
+    \subseteq \powerset (\AccntEnv \times \AccntState \times \AccntState)
+  \end{equation*}
+  %
+  \caption{Accounting transition-system types}
+  \label{fig:ts-types:accnt}
+\end{figure}
+
+%%
+%% Figure - Accounting Rules
+%%
+\begin{figure}
+  \begin{equation}\label{eq:accnt}
+    \inference[Accounting]
+    {
+      \var{obl} = \obligation{pc}{stkeys}{stpools}{slot} \\
+      \var{decayed} = \var{deposits} - \var{obl} \\
+      \rho, \tau \in pc \\
+      \var{expansion} = \floor*{\rho \cdot \var{reserves}} \\
+      \var{totalPool} = \var{fees} + \var{decayed} + \var{rewardPool} + \var{expansion} \\
+      \var{newTreasury} = \floor*{\tau \cdot \var{totalPool}} \\
+      \var{availablePool} = \var{totalPool} - \var{newTreasury} \\
+      \var{rewards'} = \reward{production}{pc}{availablePool}{dwstate}{rewards}\\
+      \var{paidRewards} = \sum\limits_{\_\mapsto c\in\var{rewards'}}c
+    }
+    {
+      \begin{array}{l}
+        \var{production}\\
+        \var{slot}\\
+        \var{pc}\\
+        \var{utxoSt}\\
+        \var{pstate}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{treasury} \\
+          \var{reserves} \\
+          \var{rewardPool} \\
+          \var{stkeys} \\
+          \var{rewards} \\
+          \var{delegations}
+        \end{array}
+      \right)
+      \trans{accnt}{}
+      \left(
+        \begin{array}{rcl}
+          \var{treasury} & + & \var{newTreasury}\\
+          \var{reserves} & - & \var{expansion} \\
+          \var{availablePool} & - & \var{paidRewards} \\
+          \var{stkeys} \\
+          \var{rewards} & \unionoverridePlus & \var{rewards'} \\
+          \var{delegations}
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Accounting Epoch inference rules}
+  \label{fig:rules:accnt}
+\end{figure}
+
+%%
+%% Figure - Pool Clean Defs
+%%
+\begin{figure}
+  \emph{Stake Pool Clean environment}
+  \begin{equation*}
+    \StPlCleanEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Stake Pool Clean States}
+  \begin{equation*}
+    \StPlCleanState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxoSt} & \UTxOState & \text{utxo state}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Pool Clean Transition}
+  \begin{equation*}
+    \_ \vdash \_ \trans{poolclean}{} \_ \in
+    \powerset (\StPlCleanEnv \times \StPlCleanState \times \StPlCleanState)
+  \end{equation*}
+  %
+  \caption{Pool Clean Transition}
+  \label{fig:ts-types:pool-clean}
+\end{figure}
+
+%%
+%% Figure - Pool Clean Rule
+%%
+\begin{figure}
+  \begin{equation}\label{eq:pool-clean}
+    \inference[Pool-Clean]
+    {
+      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
+      & \var{retired} \neq \emptyset \\
+      \var{refunds} = \poolRefunds{pc}{(\var{retired} \restrictdom \var{stpools})}{slot} \\
+      \var{deposits'} = \var{deposits} - \left(\sum\limits_{\{\_\mapsto c\}\in\var{refunds}} c\right) \\
+      \var{rewards'} = \var{rewards} \unionoverridePlus \var{refunds} \\
+      \var{utxoSt'} =
+      \left(
+        {
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{deposits'} \\
+            \var{fees} \\
+            \var{wdrls} \\
+          \end{array}
+        }
+      \right)
+      &
+      \var{dstate'} =
+      \left(
+        {
+          \begin{array}{r}
+            \var{stkeys} \\
+            \var{rewards'} \\
+            \var{delegations}
+          \end{array}
+        }
+      \right)
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{utxoSt} \\
+          \var{dstate} \\
+          \var{stpools} \\
+          \var{pparams} \\
+          \var{retiring}
+        \end{array}
+      \right)
+      \trans{poolclean}{}
+      \left(
+        \begin{array}{rcl}
+          \var{utxoSt'} \\
+          \var{dstate'} \\
+          \var{retired} & \subtractdom & \var{stpools} \\
+          \var{retired} & \subtractdom & \var{pparams} \\
+          \var{retired} & \subtractdom & \var{retiring} \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Pool Clean Inference Rule}
+  \label{fig:rules:pool-clean}
+\end{figure}
+
+%%
+%% Figure - New Proto Consts Defs
+%%
+\begin{figure}
+  \emph{New Proto Consts environment}
+  \begin{equation*}
+    \NewProtoConstsEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
+        \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{New Proto Consts States}
+  \begin{equation*}
+    \NewProtoConstsState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxoSt} & \UTxOState & \text{utxo state}\\
+        \var{accnt} & \Accnt & \text{accounting}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{New Proto Consts transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{newpc}{} \var{\_}
+    \subseteq \powerset (\NewProtoConstsEnv \times
+    \NewProtoConstsState \times \NewProtoConstsState)
+  \end{equation*}
+  %
+  \caption{New Proto Consts transition-system types}
+  \label{fig:ts-types:new-proto-consts}
+\end{figure}
+
+%%
+%% Figure - New Proto Consts Rule
+%%
+\begin{figure}
+  \begin{equation}\label{eq:new-pc}
+    \inference[New-Proto-Consts]
+    {
+      \var{oblgOld} = \obligation{pcOld}{stkeys}{stpools}{slot} \\
+      \var{oblgNew} = \obligation{pcNew}{stkeys}{stpools}{slot} \\
+      ~\\
+      \var{reserves} + \var{oblgOld} \geq \var{oblgNew}\\
+      \var{diff} = \var{oblgOld} - \var{oblgNew} \\
+      ~\\
+      \var{utxoSt'} =
+      \left(
+        {
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{oblgNew} \\
+            \var{fees} \\
+            \var{wdrls} \\
+          \end{array}
+        }
+      \right)
+      &
+      \var{accnt'} =
+      \left(
+        {
+          \begin{array}{r}
+            \var{treasury} \\
+            \var{reserves} + \var{diff} \\
+            \var{rewardPool} \\
+            \var{rewards} \\
+          \end{array}
+        }
+      \right)
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pc}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{utxoSt} \\
+          \var{accnt}
+        \end{array}
+      \right)
+      \trans{newpc}{}
+      \left(
+        \begin{array}{rcl}
+          \var{utxoSt'}\\
+          \var{accnt'} \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{New Proto Consts Inference Rule}
+  \label{fig:rules:new-proto-consts}
+\end{figure}
+
+%%
+%% Figure - Epoch Defs
+%%
+\begin{figure}
+  \emph{Epoch environment}
+  \begin{equation*}
+    \EpochEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
+        \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
+        \var{production} & \Production & \text{blocks produced in the epoch}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Epoch States}
+  \begin{equation*}
+    \EpochEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxoSt} & \UTxOState & \text{utxo state}\\
+        \var{accnt} & \Accnt & \text{accounting}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Epoch transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{epoch}{} \var{\_}
+    \subseteq \powerset (\EpochEnv \times \EpochState \times \EpochState)
+  \end{equation*}
+  %
+  \caption{Epoch transition-system types}
+  \label{fig:ts-types:epoch}
+\end{figure}
+
+%%
+%% Figure - Epoch Rule
+%%
+\begin{figure}
+  \begin{equation}\label{eq:epoch}
+    \inference[Epoch]
+    {
+      {
+        \begin{array}{l}
+          \var{slot}\\
+          \var{pcOld}\\
+          \var{dstate}\\
+          \var{pstate}\\
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{utxoep}{} \var{utxoSt'}
+      \\~\\~\\
+      {
+        \begin{array}{l}
+          \var{production}\\
+          \var{slot}\\
+          \var{pcOld}\\
+          \var{utxoSt'}\\
+          \var{pstate}\\
+        \end{array}
+      }
+      \vdash
+      \left(
+        {
+          \begin{array}{r}
+            \var{accnt} \\
+            \var{dstate} \\
+          \end{array}
+        }
+      \right)
+      \trans{accnt}{}
+      \left(
+      {
+        \begin{array}{rcl}
+          \var{accnt'} \\
+          \var{dstate'} \\
+        \end{array}
+      }
+      \right)
+      \\~\\~\\
+      {
+        \begin{array}{l}
+          \var{slot}\\
+          \var{pcOld}\\
+        \end{array}
+      }
+      \vdash
+      \left(
+        {
+          \begin{array}{r}
+            \var{utxoSt'} \\
+            \var{dstate'} \\
+            \var{pstate} \\
+          \end{array}
+        }
+      \right)
+      \trans{poolclean}{}
+      \left(
+      {
+        \begin{array}{rcl}
+            \var{utxoSt''} \\
+            \var{dstate''} \\
+            \var{pstate'} \\
+        \end{array}
+      }
+      \right)
+      \\~\\~\\
+      {
+        \begin{array}{l}
+          \var{slot}\\
+          \var{pcOld}\\
+          \var{pcNew}\\
+          \var{dstate''}\\
+          \var{pstate'}\\
+        \end{array}
+      }
+      \vdash
+      \left(
+        {
+          \begin{array}{r}
+            \var{utxoSt''} \\
+            \var{accnt'} \\
+          \end{array}
+        }
+      \right)
+      \trans{newpc}{}
+      \left(
+      {
+        \begin{array}{rcl}
+            \var{utxoSt'''} \\
+            \var{accnt''} \\
+        \end{array}
+      }
+      \right)
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pcOld}\\
+        \var{pcNew}\\
+        \var{production}\\
+      \end{array}
+      \vdash
       \left(
       \begin{array}{r}
-        \var{stpools} \\
-        \var{pparams} \\
-        \var{retiring}
+        \var{utxoSt} \\
+        \var{accnt} \\
+        \var{dstate} \\
+        \var{pstate}
       \end{array}
       \right)
-      \trans{poolreap}{}
+      \trans{epoch}{}
       \left(
       \begin{array}{rcl}
-        \var{retired} & \subtractdom & \var{stpools} \\
-        \var{retired} & \subtractdom & \var{pparams} \\
-        \var{retired} & \subtractdom & \var{retiring} \\
+        \var{utxoSt'''} \\
+        \var{accnt''} \\
+        \var{dstate''} \\
+        \var{pstate'}
       \end{array}
       \right)
     }
   \end{equation}
-  \caption{Pool Reap Inference Rule}
-  \label{fig:rules:pool-reap}
-
+  \caption{Epoch Inference Rule}
+  \label{fig:rules:epoch}
 \end{figure}
