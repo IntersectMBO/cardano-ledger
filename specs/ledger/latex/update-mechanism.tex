@@ -178,7 +178,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
         \upId{up} = \var{pid}
         & \var{pid} \notin \var{aps} \\
         \upPV{up} = \var{nv}
-        & \var{nv} \notin \dom \var{vis}\\
+        & \var{nv} \notin \dom \var{vips}\\
        \end{array}}\\
      \fun{canFollow}~\var{nv}~\var{pv}
     }
@@ -194,8 +194,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
         \left(
           \begin{array}{l}
             \var{aps}\\
-            \var{vis}\\
-            \var{ips}
+            \var{vips}
           \end{array}
         \right)
       }
@@ -204,8 +203,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
         \left(
           \begin{array}{l}
             \var{aps \cup \{\var{pid}\}}\\
-            \var{vis} \unionoverride \{ \var{nv} \mapsto \var{pid} \}\\
-            \var{ips} \unionoverride \{ \var{pid} \mapsto \var{up} \}
+            \var{vips} \unionoverride \{ \var{nv} \mapsto (\var{pid}, \var{up}) \}
           \end{array}
         \right)
       }
@@ -305,8 +303,7 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps}\\
-            \var{vis}\\
-            \var{ips}
+            \var{vips}
           \end{array}
         \right)
       }
@@ -315,8 +312,7 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps'}\\
-            \var{vis'}\\
-            \var{ips'}
+            \var{vips'}\\
           \end{array}
         \right)
       }
@@ -357,8 +353,7 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{eps}
           \end{array}
         \right)
@@ -368,8 +363,7 @@ TODO: add witnesses as well.
         \left(
           \begin{array}{l}
             \var{aps'}\\
-            \var{vis'}\\
-            \var{ips'}\\
+            \var{vips'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -500,9 +494,6 @@ This section models when update proposals get confirmed.
     \label{eq:rule:up-no-confirmation}
     \inference
     {
-      \vPropId{v} = \var{pid}
-      & \var{pcThr} \mapsto \var{n} \in \var{pps}
-      & \size{\var{vts'} \restrictrange \{\var{pid}\}} < n\\
       {
         \begin{array}{l}
           \var{aps}\\
@@ -524,14 +515,16 @@ This section models when update proposals get confirmed.
             \var{vts'}
           \end{array}
         \right)
-      }
+      }\\
+      \vPropId{v} = \var{pid}
+      & \var{pcThr} \mapsto t \in \var{pps}
+      & \size{\var{vts'} \restrictrange \{\var{pid}\}} < t      
     }
     {
       {
         \begin{array}{l}
-          \var{pv}\\
+          b_n\\          
           \var{pps}\\
-          e_c\\
           \var{dms}
         \end{array}
       }
@@ -541,7 +534,6 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \var{aps}\\
             \var{cps}\\
-            \var{eps}\\
             \var{vts}
           \end{array}
         \right)
@@ -552,7 +544,6 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \var{aps}\\
             \var{cps}\\
-            \var{eps}\\
             \var{vts'}
           \end{array}
         \right)
@@ -564,9 +555,6 @@ This section models when update proposals get confirmed.
     \label{eq:rule:up-confirmation}
     \inference
     {
-      \vPropId{v} = \var{pid}
-      & \var{pcThr} \mapsto \var{n} \in \var{pps}
-      & n \leq \size{\var{vts'} \restrictrange \{\var{pid}\}} \\
       {
         \begin{array}{l}
           \var{aps}\\
@@ -588,14 +576,16 @@ This section models when update proposals get confirmed.
             \var{vts'}
           \end{array}
         \right)
-      }
+      }\\      
+      \vPropId{v} = \var{pid}
+      & \var{pcThr} \mapsto t \in \var{pps}
+      & t \leq \size{\var{vts'} \restrictrange \{\var{pid}\}}
     }
     {
       {
         \begin{array}{l}
-          \var{pv}\\
+          \var{b_n}\\
           \var{pps}\\
-          e_c\\
           \var{dms}
         \end{array}
       }
@@ -605,7 +595,6 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \var{aps}\\
             \var{cps}\\
-            \var{eps}\\
             \var{vts}
           \end{array}
         \right)
@@ -616,7 +605,6 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \var{aps} \setminus \{\var{pid}\} \\
             \var{cps} \union  \{(\var{b_n}, \var{pid})\} \\
-            \var{eps}\\
             \var{vts'} \subtractrange \{\var{pid}\}
           \end{array}
         \right)
@@ -719,8 +707,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{bvs}
           \end{array}
         \right)
@@ -732,8 +719,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{bvs'}
           \end{array}
         \right)
@@ -771,7 +757,7 @@ This section models when update proposals get confirmed.
         \right)
       }
       & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'})\\
-      \var{bv} \mapsto \var{pid} \in \var{vis}
+      \var{bv} \mapsto (\var{pid}, \wcard) \in \var{vips}
       & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})
     }
     {
@@ -787,8 +773,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{bvs}
           \end{array}
         \right)
@@ -800,8 +785,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{bvs'}
           \end{array}
         \right)
@@ -840,9 +824,8 @@ This section models when update proposals get confirmed.
       }
       &
       \fun{canAdopt}~\var{pps}~\var{bvs'}\\
-      \var{bv} \mapsto \var{pid} \in \var{vis}
+      \var{bv} \mapsto (\var{pid}, \var{up}) \in \var{vips}
       & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})\\
-      \var{pid} \mapsto {up} \in \var{ips}
     }
     {
       {
@@ -857,8 +840,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
+            \var{vips}\\
             \var{bvs}
           \end{array}
         \right)
@@ -870,9 +852,8 @@ This section models when update proposals get confirmed.
             \var{bv}\\
             \upParams{up}\\
             \var{cps} \subtractrange \{ \var{pid} \}\\
-            \{ \var{bv} \} \subtractdom \var{vis}\\
-            \{ \var{pid} \} \subtractdom \var{ips}\\
-            {[m - w, ..]} \restrictdom \var{bvs'}
+            \{ \var{bv} \} \subtractdom \var{vips}\\
+            \var{bvs'}
           \end{array}
         \right)
       }
