@@ -6,17 +6,17 @@
 --   Decryption functions are used in wallet. Encryption is not used anywhere.
 
 module Cardano.Crypto.Encryption
-       ( AesKey(..)
-       , aesEncrypt
-       , aesDecrypt
-       ) where
+  ( AesKey(..)
+  , aesEncrypt
+  , aesDecrypt
+  )
+where
 
-import           Cardano.Prelude hiding (init)
+import Cardano.Prelude hiding (init)
 
-import           Crypto.Cipher.AES (AES256)
-import           Crypto.Cipher.Types (BlockCipher (..), cipherInit, ctrCombine,
-                     nullIV)
-import           Crypto.Error (CryptoError, eitherCryptoError)
+import Crypto.Cipher.AES (AES256)
+import Crypto.Cipher.Types (BlockCipher(..), cipherInit, ctrCombine, nullIV)
+import Crypto.Error (CryptoError, eitherCryptoError)
 
 
 --------------------------------------------------------------------------------
@@ -26,17 +26,15 @@ import           Crypto.Error (CryptoError, eitherCryptoError)
 -- | Key to encrypt data
 newtype AesKey = AesKey
     { fromAESKey :: ByteString
-    } deriving (Show, Eq, Generic, Hashable)
+    } deriving (Show, Eq, Generic)
 
 aesEncrypt :: ByteString -> AesKey -> Either CryptoError ByteString
-aesEncrypt input (fromAESKey -> sk) = ctrCombine
-    <$> init
-    <*> pure nullIV
-    <*> pure input
-  where
+aesEncrypt input (fromAESKey -> sk) =
+  ctrCombine <$> init <*> pure nullIV <*> pure input
+ where
     -- FIXME: return either here
-    init :: Either CryptoError AES256
-    init = eitherCryptoError $ cipherInit sk
+  init :: Either CryptoError AES256
+  init = eitherCryptoError $ cipherInit sk
 
 aesDecrypt :: ByteString -> AesKey -> Either CryptoError ByteString
 aesDecrypt = aesEncrypt -- encryption/decryption is symmetric

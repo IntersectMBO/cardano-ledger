@@ -1,76 +1,96 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Crypto.Gen
-        (
+  (
         -- Protocol Magic Generator
-          genProtocolMagic
+    genProtocolMagic
 
         -- Sign Tag Generator
-        , genSignTag
+  , genSignTag
 
         -- Key Generators
-        , genKeypair
-        , genPublicKey
-        , genSecretKey
-        , genEncryptedSecretKey
+  , genKeypair
+  , genPublicKey
+  , genSecretKey
+  , genEncryptedSecretKey
 
         -- Redeem Key Generators
-        , genRedeemKeypair
-        , genRedeemPublicKey
-        , genRedeemSecretKey
+  , genRedeemKeypair
+  , genRedeemPublicKey
+  , genRedeemSecretKey
 
         -- Proxy Cert and Key Generators
-        , genProxyCert
-        , genProxySecretKey
-        , genProxySignature
+  , genProxyCert
+  , genProxySecretKey
+  , genProxySignature
 
         -- Signature Generators
-        , genSignature
-        , genSignatureEncoded
-        , genSigned
-        , genRedeemSignature
+  , genSignature
+  , genSignatureEncoded
+  , genSigned
+  , genRedeemSignature
 
         -- Hash Generators
-        , genAbstractHash
+  , genAbstractHash
 
         -- SafeSigner Generators
-        , genSafeSigner
+  , genSafeSigner
 
         -- PassPhrase Generators
-        , genPassPhrase
+  , genPassPhrase
 
         -- HD Generators
-        , genHDPassphrase
-        , genHDAddressPayload
+  , genHDPassphrase
+  , genHDAddressPayload
+  , genHashRaw
+  , genTextHash
+  , feedPM
+  )
+where
 
-        , genHashRaw
-        , genTextHash
-        , feedPM
-        ) where
-
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray
-import           Hedgehog
+import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Cardano.Binary.Class (Bi, Raw (..))
-import           Cardano.Crypto (PassPhrase)
-import           Cardano.Crypto.Hashing (AbstractHash (..), Hash, HashAlgorithm,
-                     abstractHash, hash)
-import           Cardano.Crypto.HD (HDAddressPayload (..), HDPassphrase (..))
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
-import           Cardano.Crypto.Signing (EncryptedSecretKey, ProxyCert,
-                     ProxySecretKey, ProxySignature, PublicKey,
-                     SafeSigner (..), SecretKey, SignTag (..), Signature,
-                     Signed, createPsk, deterministicKeyGen, mkSigned,
-                     noPassEncrypt, proxySign, safeCreateProxyCert,
-                     safeCreatePsk, sign, signEncoded, toPublic)
-import           Cardano.Crypto.Signing.Redeem (RedeemPublicKey,
-                     RedeemSecretKey, RedeemSignature,
-                     redeemDeterministicKeyGen, redeemSign)
+import Cardano.Binary.Class (Bi, Raw(..))
+import Cardano.Crypto (PassPhrase)
+import Cardano.Crypto.Hashing
+  (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
+import Cardano.Crypto.HD (HDAddressPayload(..), HDPassphrase(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.Signing
+  ( EncryptedSecretKey
+  , ProxyCert
+  , ProxySecretKey
+  , ProxySignature
+  , PublicKey
+  , SafeSigner(..)
+  , SecretKey
+  , SignTag(..)
+  , Signature
+  , Signed
+  , createPsk
+  , deterministicKeyGen
+  , mkSigned
+  , noPassEncrypt
+  , proxySign
+  , safeCreateProxyCert
+  , safeCreatePsk
+  , sign
+  , signEncoded
+  , toPublic
+  )
+import Cardano.Crypto.Signing.Redeem
+  ( RedeemPublicKey
+  , RedeemSecretKey
+  , RedeemSignature
+  , redeemDeterministicKeyGen
+  , redeemSign
+  )
 
 
 --------------------------------------------------------------------------------
@@ -87,18 +107,18 @@ genProtocolMagic = ProtocolMagic <$> Gen.int32 Range.constantBounded
 
 genSignTag :: Gen SignTag
 genSignTag = Gen.element
-        [ SignForTestingOnly
-        , SignTx
-        , SignRedeemTx
-        , SignVssCert
-        , SignUSProposal
-        , SignCommitment
-        , SignUSVote
-        , SignMainBlock
-        , SignMainBlockLight
-        , SignMainBlockHeavy
-        , SignProxySK
-        ]
+  [ SignForTestingOnly
+  , SignTx
+  , SignRedeemTx
+  , SignVssCert
+  , SignUSProposal
+  , SignCommitment
+  , SignUSVote
+  , SignMainBlock
+  , SignMainBlockLight
+  , SignMainBlockHeavy
+  , SignProxySK
+  ]
 
 
 --------------------------------------------------------------------------------
@@ -109,7 +129,7 @@ genKeypair :: Gen (PublicKey, SecretKey)
 genKeypair = deterministicKeyGen <$> gen32Bytes
 
 genPublicKey :: Gen PublicKey
-genPublicKey =  fst <$> genKeypair
+genPublicKey = fst <$> genKeypair
 
 genSecretKey :: Gen SecretKey
 genSecretKey = snd <$> genKeypair
@@ -127,17 +147,17 @@ genRedeemKeypair = redeemDeterministicKeyGen <$> gen32Bytes
 
 genRedeemPublicKey :: Gen RedeemPublicKey
 genRedeemPublicKey = do
-    rkp <- genRedeemKeypair
-    case rkp of
-        Nothing      -> panic "Error generating a RedeemPublicKey."
-        Just (pk, _) -> return pk
+  rkp <- genRedeemKeypair
+  case rkp of
+    Nothing      -> panic "Error generating a RedeemPublicKey."
+    Just (pk, _) -> return pk
 
 genRedeemSecretKey :: Gen RedeemSecretKey
 genRedeemSecretKey = do
-    rkp <- genRedeemKeypair
-    case rkp of
-        Nothing      -> panic "Error generating a RedeemSecretKey."
-        Just (_, sk) -> return sk
+  rkp <- genRedeemKeypair
+  case rkp of
+    Nothing      -> panic "Error generating a RedeemSecretKey."
+    Just (_, sk) -> return sk
 
 
 --------------------------------------------------------------------------------
@@ -146,25 +166,21 @@ genRedeemSecretKey = do
 
 genProxyCert :: Bi w => ProtocolMagic -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
-    safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
+  safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySecretKey :: Bi w => ProtocolMagic -> Gen w -> Gen (ProxySecretKey w)
 genProxySecretKey pm genW =
-    safeCreatePsk pm <$> genSafeSigner <*> genPublicKey <*> genW
+  safeCreatePsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
-    :: (Bi w, Bi a)
-    => ProtocolMagic
-    -> Gen a
-    -> Gen w
-    -> Gen (ProxySignature w a)
+  :: (Bi w, Bi a) => ProtocolMagic -> Gen a -> Gen w -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
-    delegateSk  <- genSecretKey
-    issuerSk    <- genSecretKey
-    w           <- genW
-    a           <- genA
-    let psk = createPsk pm issuerSk (toPublic delegateSk) w
-    return $ proxySign pm SignProxySK delegateSk psk a
+  delegateSk <- genSecretKey
+  issuerSk   <- genSecretKey
+  w          <- genW
+  a          <- genA
+  let psk = createPsk pm issuerSk (toPublic delegateSk) w
+  return $ proxySign pm SignProxySK delegateSk psk a
 
 
 --------------------------------------------------------------------------------
@@ -172,27 +188,21 @@ genProxySignature pm genA genW = do
 --------------------------------------------------------------------------------
 
 genSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (Signature a)
-genSignature pm genA =
-    sign pm <$> genSignTag <*> genSecretKey <*> genA
+genSignature pm genA = sign pm <$> genSignTag <*> genSecretKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
-    signEncoded <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genB
+  signEncoded <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genB
 
 genSigned :: Bi a => Gen a -> Gen (Signed a)
 genSigned genA =
-    mkSigned <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genA
+  mkSigned <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genA
 
-genRedeemSignature
-    :: Bi a
-    => ProtocolMagic
-    -> Gen a
-    -> Gen (RedeemSignature a)
-genRedeemSignature pm genA =
-    redeemSign pm <$> gst <*> grsk <*> genA
-  where
-    gst  = genSignTag
-    grsk = genRedeemSecretKey
+genRedeemSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
+ where
+  gst  = genSignTag
+  grsk = genRedeemSecretKey
 
 
 --------------------------------------------------------------------------------
@@ -200,9 +210,7 @@ genRedeemSignature pm genA =
 --------------------------------------------------------------------------------
 
 genAbstractHash
-    :: (Bi a, HashAlgorithm algo)
-    => Gen a
-    -> Gen (AbstractHash algo a)
+  :: (Bi a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
 genAbstractHash genA = abstractHash <$> genA
 
 
@@ -212,10 +220,10 @@ genAbstractHash genA = abstractHash <$> genA
 
 genPassPhrase :: Gen PassPhrase
 genPassPhrase = ByteArray.pack <$> genWord8List
-  where
-    genWord8List :: Gen [Word8]
-    genWord8List =
-        Gen.list (Range.singleton 32) (Gen.word8 Range.constantBounded)
+ where
+  genWord8List :: Gen [Word8]
+  genWord8List =
+    Gen.list (Range.singleton 32) (Gen.word8 Range.constantBounded)
 
 
 --------------------------------------------------------------------------------
@@ -224,10 +232,11 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 
 genSafeSigner :: Gen SafeSigner
 genSafeSigner = Gen.choice gens
-  where
-    gens = [ SafeSigner <$> genEncryptedSecretKey <*> genPassPhrase
-           , FakeSigner <$> genSecretKey
-           ]
+ where
+  gens =
+    [ SafeSigner <$> genEncryptedSecretKey <*> genPassPhrase
+    , FakeSigner <$> genSecretKey
+    ]
 
 
 --------------------------------------------------------------------------------

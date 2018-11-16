@@ -6,24 +6,25 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Block.ExtraHeaderData
-       ( ExtraHeaderData (..)
-       , ExtraHeaderDataError (..)
-       , verifyExtraHeaderData
-       ) where
+  ( ExtraHeaderData(..)
+  , ExtraHeaderDataError(..)
+  , verifyExtraHeaderData
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, builder)
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
-import           Cardano.Chain.Common (Attributes, areAttributesKnown)
-import           Cardano.Chain.Update.BlockVersion (BlockVersion)
-import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion,
-                     SoftwareVersionError, checkSoftwareVersion)
-import           Cardano.Crypto (Hash)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
+import Cardano.Chain.Common (Attributes, areAttributesKnown)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.SoftwareVersion
+  (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
+import Cardano.Crypto (Hash)
 
 
 -- | Represents block header extra data
@@ -78,5 +79,5 @@ instance B.Buildable ExtraHeaderDataError where
 verifyExtraHeaderData
   :: MonadError ExtraHeaderDataError m => ExtraHeaderData -> m ()
 verifyExtraHeaderData ehd =
-  either (throwError . ExtraHeaderDataSoftwareVersionError) pure
-    $ checkSoftwareVersion (ehdSoftwareVersion ehd)
+  liftEither . first ExtraHeaderDataSoftwareVersionError $ checkSoftwareVersion
+    (ehdSoftwareVersion ehd)

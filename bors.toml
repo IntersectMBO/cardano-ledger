@@ -1,0 +1,12 @@
+status = [
+  # Hydra: build for Linux and macOS (TODO)
+  # "ci/hydra:serokell:cardano-chain:cardano-chain.x86_64-linux",
+  # "ci/hydra:serokell:cardano-chain:cardano-chain.x86_64-darwin",
+
+  # Buildkite: stack build
+  "buildkite/cardano-chain",
+]
+timeout_sec = 3600
+required_approvals = 1
+delete_merged_branches = true
+block_labels = [ "DO NOT MERGE", "wip" ]

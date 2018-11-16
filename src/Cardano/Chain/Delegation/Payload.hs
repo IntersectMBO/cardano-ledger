@@ -5,20 +5,21 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Delegation.Payload
-       ( Payload (..)
-       , PayloadError (..)
-       , checkPayload
-       ) where
+  ( Payload(..)
+  , PayloadError(..)
+  , checkPayload
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (throwError))
-import           Formatting (bprint, int, stext)
-import           Formatting.Buildable (Buildable (..))
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, int, stext)
+import Formatting.Buildable (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..))
-import           Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
-import           Cardano.Crypto (ProtocolMagic, validateProxySecretKey)
+import Cardano.Binary.Class (Bi(..))
+import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
+import Cardano.Crypto (ProtocolMagic, validateProxySecretKey)
 
 
 -- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing
@@ -50,8 +51,6 @@ instance Buildable PayloadError where
 checkPayload :: MonadError PayloadError m => ProtocolMagic -> Payload -> m ()
 checkPayload protocolMagic (UnsafePayload proxySKs) = forM_
   proxySKs
-  ( either (throwError . PayloadPSKError) pure
-  . validateProxySecretKey protocolMagic
-  )
+  (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagic)
   -- unless (allDistinct $ map pskIssuerPk proxySKs) $
   --     throwError "Some of block's PSKs have the same issuer, which is prohibited"

@@ -5,54 +5,64 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Vote
-       (
+  (
        -- Software update proposal
-         Proposal (..)
-       , ProposalError (..)
-       , Proposals
-       , UpId
-       , ProposalBody (..)
-       , formatMaybeProposal
-       , signProposal
-       , checkProposal
+    Proposal(..)
+  , ProposalError(..)
+  , Proposals
+  , UpId
+  , ProposalBody(..)
+  , formatMaybeProposal
+  , signProposal
+  , checkProposal
 
        -- Software update vote
-       , VoteId
-       , Vote (..)
-       , VoteError (..)
-       , mkVote
-       , mkVoteSafe
-       , formatVoteShort
-       , shortVoteF
-       , checkVote
-       , mkVoteId
-       ) where
+  , VoteId
+  , Vote(..)
+  , VoteError(..)
+  , mkVote
+  , mkVoteSafe
+  , formatVoteShort
+  , shortVoteF
+  , checkVote
+  , mkVoteId
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (throwError))
+import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.Map.Strict as Map
-import           Data.Text.Lazy.Builder (Builder)
-import           Formatting (Format, bprint, build, builder, later)
+import Data.Text.Lazy.Builder (Builder)
+import Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Decoder, encodeListLen,
-                     enforceSize)
-import           Cardano.Chain.Common (addressHash)
-import           Cardano.Chain.Common.Attributes (Attributes,
-                     areAttributesKnown)
-import           Cardano.Chain.Update.BlockVersion (BlockVersion)
-import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier)
-import           Cardano.Chain.Update.Data (UpdateData)
-import           Cardano.Chain.Update.SoftwareVersion (SoftwareVersion,
-                     SoftwareVersionError, checkSoftwareVersion)
-import           Cardano.Chain.Update.SystemTag (SystemTag, SystemTagError,
-                     checkSystemTag)
-import           Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SafeSigner,
-                     SecretKey, SignTag (SignUSProposal, SignUSVote),
-                     Signature, checkSig, hash, safeSign, safeToPublic,
-                     shortHashF, sign, toPublic)
+import Cardano.Binary.Class (Bi(..), Decoder, encodeListLen, enforceSize)
+import Cardano.Chain.Common (addressHash)
+import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier)
+import Cardano.Chain.Update.Data (UpdateData)
+import Cardano.Chain.Update.SoftwareVersion
+  (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
+import Cardano.Chain.Update.SystemTag
+  (SystemTag, SystemTagError, checkSystemTag)
+import Cardano.Crypto
+  ( Hash
+  , ProtocolMagic
+  , PublicKey
+  , SafeSigner
+  , SecretKey
+  , SignTag(SignUSProposal, SignUSVote)
+  , Signature
+  , checkSig
+  , hash
+  , safeSign
+  , safeToPublic
+  , shortHashF
+  , sign
+  , toPublic
+  )
 
 
 --------------------------------------------------------------------------------
@@ -180,11 +190,11 @@ instance B.Buildable ProposalError where
 checkProposal :: MonadError ProposalError m => ProtocolMagic -> Proposal -> m ()
 checkProposal pm proposal = do
   let body = proposalBody proposal
-  either (throwError . ProposalSoftwareVersionError) pure
-    $ checkSoftwareVersion (pbSoftwareVersion body)
+  liftEither . first ProposalSoftwareVersionError $ checkSoftwareVersion
+    (pbSoftwareVersion body)
   forM_
     (Map.keys (pbData body))
-    (either (throwError . ProposalSystemTagError) pure . checkSystemTag)
+    (liftEither . first ProposalSystemTagError . checkSystemTag)
   let
     sigIsValid = checkSig
       pm

@@ -8,70 +8,69 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Update.Undo
-       ( -- * Proposal state
-         UndecidedProposalState (..)
-       , DecidedProposalState (..)
-       , ProposalState (..)
-       , UpsExtra (..)
-       , DpsExtra (..)
-       , ConfirmedProposalState (..)
-       , cpsBlockVersion
-       , cpsSoftwareVersion
-       , propStateToEither
-       , psProposal
-       , psVotes
-       , mkUProposalState
+  ( -- * Proposal state
+    UndecidedProposalState(..)
+  , DecidedProposalState(..)
+  , ProposalState(..)
+  , UpsExtra(..)
+  , DpsExtra(..)
+  , ConfirmedProposalState(..)
+  , cpsBlockVersion
+  , cpsSoftwareVersion
+  , propStateToEither
+  , psProposal
+  , psVotes
+  , mkUProposalState
 
          -- * BlockVersion state
-       , BlockVersionState (..)
-       , bvsIsConfirmed
-       , bvsScriptVersion
-       , bvsSlotDuration
-       , bvsMaxBlockSize
+  , BlockVersionState(..)
+  , bvsIsConfirmed
+  , bvsScriptVersion
+  , bvsSlotDuration
+  , bvsMaxBlockSize
 
          -- * Rollback
-       , PrevValue (..)
-       , maybeToPrev
-       , USUndo (..)
-       , unChangedSVL
-       , unChangedPropsL
-       , unChangedBVL
-       , unLastAdoptedBVL
-       , unChangedConfPropsL
-       , unPrevProposersL
-       , unSlottingDataL
+  , PrevValue(..)
+  , maybeToPrev
+  , USUndo(..)
+  , unChangedSVL
+  , unChangedPropsL
+  , unChangedBVL
+  , unLastAdoptedBVL
+  , unChangedConfPropsL
+  , unPrevProposersL
+  , unSlottingDataL
 
        -- * VoteState
-       , StakeholderVotes
-       , LocalVotes
-       , VoteState (..)
-       , canCombineVotes
-       , combineVotes
-       , isPositiveVote
-       , newVoteState
-       ) where
+  , StakeholderVotes
+  , LocalVotes
+  , VoteState(..)
+  , canCombineVotes
+  , combineVotes
+  , isPositiveVote
+  , newVoteState
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Lens (makeLensesFor)
-import           Data.Time (NominalDiffTime)
-import           Formatting.Buildable (Buildable (..))
+import Control.Lens (makeLensesFor)
+import Data.Time (NominalDiffTime)
+import Formatting.Buildable (Buildable(..))
 
-import           Cardano.Binary.Class (Bi (..), DecoderError (..),
-                     decodeListLenCanonical, encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Header (HeaderHash)
-import           Cardano.Chain.Common (ChainDifficulty, Coin, ScriptVersion,
-                     StakeholderId, mkKnownCoin)
-import           Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
-import           Cardano.Chain.Update.ApplicationName (ApplicationName)
-import           Cardano.Chain.Update.BlockVersion (BlockVersion)
-import           Cardano.Chain.Update.BlockVersionModifier
-                     (BlockVersionModifier (..))
-import           Cardano.Chain.Update.SoftwareVersion (NumSoftwareVersion,
-                     SoftwareVersion)
-import           Cardano.Chain.Update.Vote (Proposal (..), ProposalBody (..),
-                     UpId, Vote)
-import           Cardano.Crypto (PublicKey)
+import Cardano.Binary.Class
+  (Bi(..), DecoderError(..), decodeListLenCanonical, encodeListLen, enforceSize)
+import Cardano.Chain.Block.Header (HeaderHash)
+import Cardano.Chain.Common
+  (ChainDifficulty, Lovelace, ScriptVersion, StakeholderId, mkKnownLovelace)
+import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
+import Cardano.Chain.Update.ApplicationName (ApplicationName)
+import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier(..))
+import Cardano.Chain.Update.SoftwareVersion
+  (NumSoftwareVersion, SoftwareVersion)
+import Cardano.Chain.Update.Vote (Proposal(..), ProposalBody(..), UpId, Vote)
+import Cardano.Crypto (PublicKey)
 
 
 --------------------------------------------------------------------------------
@@ -170,9 +169,9 @@ data UndecidedProposalState = UndecidedProposalState
   -- ^ Proposal itself.
   , upsSlot          :: !SlotId
   -- ^ SlotId from block in which update was proposed.
-  , upsPositiveStake :: !Coin
+  , upsPositiveStake :: !Lovelace
   -- ^ Total stake of all positive votes.
-  , upsNegativeStake :: !Coin
+  , upsNegativeStake :: !Lovelace
   -- ^ Total stake of all negative votes.
   , upsExtra         :: !(Maybe UpsExtra)
   -- ^ Extra data
@@ -252,8 +251,8 @@ data ConfirmedProposalState = ConfirmedProposalState
   , cpsConfirmed      :: !HeaderHash
   , cpsAdopted        :: !(Maybe HeaderHash)
   , cpsVotes          :: !StakeholderVotes
-  , cpsPositiveStake  :: !Coin
-  , cpsNegativeStake  :: !Coin
+  , cpsPositiveStake  :: !Lovelace
+  , cpsNegativeStake  :: !Lovelace
   } deriving (Show, Generic, Eq)
     deriving anyclass NFData
 
@@ -329,8 +328,8 @@ mkUProposalState slot proposal = UndecidedProposalState
   { upsVotes         = mempty
   , upsProposal      = proposal
   , upsSlot          = slot
-  , upsPositiveStake = mkKnownCoin @0
-  , upsNegativeStake = mkKnownCoin @0
+  , upsPositiveStake = mkKnownLovelace @0
+  , upsNegativeStake = mkKnownLovelace @0
   , upsExtra         = Nothing
   }
 

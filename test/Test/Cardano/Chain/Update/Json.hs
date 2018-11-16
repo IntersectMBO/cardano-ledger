@@ -1,17 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Update.Json
-       ( tests
-       ) where
+  ( tests
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Hedgehog (Property)
+import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.Cardano.Chain.Update.Gen (genBlockVersionData,
-                     genSoftforkRule)
+import Test.Cardano.Chain.Update.Gen (genBlockVersionData, genSoftforkRule)
 
 
 --------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ import           Test.Cardano.Chain.Update.Gen (genBlockVersionData,
 
 roundTripBlockVersionData :: Property
 roundTripBlockVersionData =
-    eachOf 1000 genBlockVersionData roundTripsAesonBuildable
+  eachOf 1000 genBlockVersionData roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- SoftforkRule

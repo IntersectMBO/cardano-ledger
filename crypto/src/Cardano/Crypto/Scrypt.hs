@@ -9,30 +9,29 @@
 --   Mostly used in 'Cardano.Crypto.Signing.Types.Safe'.
 
 module Cardano.Crypto.Scrypt
-       ( S.ScryptParams
-       , S.Salt (..)
-       , S.Pass (..)
-       , S.EncryptedPass (..)
+  ( S.ScryptParams
+  , S.Salt(..)
+  , S.Pass(..)
+  , S.EncryptedPass(..)
+  , ScryptParamsBuilder(..)
+  , mkScryptParams
+  , mkSalt
+  , emptySalt
+  , genSalt
+  , encryptPass
+  , encryptPassWithSalt
+  , verifyPass
+  )
+where
 
-       , ScryptParamsBuilder (..)
-       , mkScryptParams
+import Cardano.Prelude
 
-       , mkSalt
-       , emptySalt
-       , genSalt
-       , encryptPass
-       , encryptPassWithSalt
-       , verifyPass
-       ) where
-
-import           Cardano.Prelude
-
-import           Crypto.Random (MonadRandom, getRandomBytes)
+import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Crypto.Scrypt as S
-import           Data.Default (Default (..))
+import Data.Default (Default(..))
 
-import           Cardano.Binary.Class (Bi, serialize')
-import           Cardano.Crypto.Orphans ()
+import Cardano.Binary.Class (Bi, serialize')
+import Cardano.Crypto.Orphans ()
 
 
 -- | This corresponds to 'ScryptParams' datatype.

@@ -4,21 +4,21 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Common.Script
-       ( Script (..)
-       , ScriptVersion
-       , Script_v0
-       ) where
+  ( Script(..)
+  , ScriptVersion
+  , Script_v0
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (toJSON), object, withObject,
-                     (.:), (.=))
-import           Data.ByteString.Base64.Type (getByteString64, makeByteString64)
-import           Formatting (bprint, int)
+import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
+import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
+import Formatting (bprint, int)
 import qualified Formatting.Buildable as B
 import qualified PlutusCore.Program as PLCore
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 
 -- | Version of script
 type ScriptVersion = Word16

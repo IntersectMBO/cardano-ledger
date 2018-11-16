@@ -1,50 +1,66 @@
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Txp.Tx
-       ( Tx (..)
-       , txInputs
-       , txOutputs
-       , txAttributes
-       , txF
+  ( Tx(..)
+  , txInputs
+  , txOutputs
+  , txAttributes
+  , txF
+  , TxId
+  , TxAttributes
+  , TxIn(..)
+  , isTxInUnknown
+  , TxOut(..)
+  , _TxOut
+  )
+where
 
-       , TxId
-       , TxAttributes
+import Cardano.Prelude
 
-       , TxIn (..)
-       , isTxInUnknown
-
-       , TxOut (..)
-       , _TxOut
-       ) where
-
-import           Cardano.Prelude
-
-import           Control.Lens (makeLenses, makePrisms)
-import           Data.Aeson (FromJSON (..), FromJSONKey (..),
-                     FromJSONKeyFunction (..), ToJSON (toJSON), ToJSONKey (..),
-                     object, withObject, (.:), (.=))
-import           Data.Aeson.TH (defaultOptions, deriveJSON)
-import           Data.Aeson.Types (toJSONKeyText)
+import Control.Lens (makeLenses, makePrisms)
+import Data.Aeson
+  ( FromJSON(..)
+  , FromJSONKey(..)
+  , FromJSONKeyFunction(..)
+  , ToJSON(toJSON)
+  , ToJSONKey(..)
+  , object
+  , withObject
+  , (.:)
+  , (.=)
+  )
+import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import           Formatting (Format, bprint, build, builder, int, sformat)
+import Formatting (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Case (..),
-                     decodeKnownCborDataItem, decodeUnknownCborDataItem,
-                     encodeKnownCborDataItem, encodeListLen,
-                     encodeUnknownCborDataItem, enforceSize,
-                     knownCborDataItemSizeExpr, szCases)
-import           Cardano.Chain.Common (Address (..), Coin, coinF, coinToInteger,
-                     decodeTextAddress, integerToCoin)
-import           Cardano.Chain.Common.Attributes (Attributes,
-                     areAttributesKnown)
-import           Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF,
-                     shortHashF)
+import Cardano.Binary.Class
+  ( Bi(..)
+  , Case(..)
+  , decodeKnownCborDataItem
+  , decodeUnknownCborDataItem
+  , encodeKnownCborDataItem
+  , encodeListLen
+  , encodeUnknownCborDataItem
+  , enforceSize
+  , knownCborDataItemSizeExpr
+  , szCases
+  )
+import Cardano.Chain.Common
+  ( Address(..)
+  , Lovelace
+  , lovelaceF
+  , lovelaceToInteger
+  , decodeTextAddress
+  , integerToLovelace
+  )
+import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
+import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 
 
 --------------------------------------------------------------------------------
@@ -198,24 +214,24 @@ txInToText (TxInUnknown tag bs) =
 -- | Transaction output
 data TxOut = TxOut
   { txOutAddress :: !Address
-  , txOutValue   :: !Coin
+  , txOutValue   :: !Lovelace
   } deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON TxOut where
   parseJSON = withObject "TxOut" $ \o ->
     TxOut
       <$> (toAesonError . decodeTextAddress =<< o .: "address")
-      <*> (toAesonError . integerToCoin =<< o .: "coin")
+      <*> (toAesonError . integerToLovelace =<< o .: "lovelace")
 
 instance ToJSON TxOut where
   toJSON txOut = object
-    [ "coin" .= coinToInteger (txOutValue txOut)
+    [ "lovelace" .= lovelaceToInteger (txOutValue txOut)
     , "address" .= sformat build (txOutAddress txOut)
     ]
 
 instance B.Buildable TxOut where
   build txOut = bprint
-    ("TxOut " . coinF . " -> " . build)
+    ("TxOut " . lovelaceF . " -> " . build)
     (txOutValue txOut)
     (txOutAddress txOut)
 

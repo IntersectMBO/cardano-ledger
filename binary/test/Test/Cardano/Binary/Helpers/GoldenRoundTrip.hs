@@ -3,30 +3,30 @@
 -- | Golden and round-trip testing of 'Bi' instances
 
 module Test.Cardano.Binary.Helpers.GoldenRoundTrip
-       ( goldenTestBi
-       , roundTripsBiShow
-       , roundTripsBiBuildable
-       , compareHexDump
-       , deprecatedGoldenDecode
-       ) where
+  ( goldenTestBi
+  , roundTripsBiShow
+  , roundTripsBiBuildable
+  , compareHexDump
+  , deprecatedGoldenDecode
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
-import           Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy.Char8 as BS
-import           Formatting.Buildable (Buildable (..))
-import           Hedgehog (MonadTest, Property, eval, property, success,
-                     tripping, withTests, (===))
-import           Hedgehog.Internal.Property (failWith)
-import           Hedgehog.Internal.Show (LineDiff, lineDiff, mkValue,
-                     renderLineDiff, showPretty)
+import Formatting.Buildable (Buildable(..))
+import Hedgehog
+  (MonadTest, Property, eval, property, success, tripping, withTests, (===))
+import Hedgehog.Internal.Property (failWith)
+import Hedgehog.Internal.Show
+  (LineDiff, lineDiff, mkValue, renderLineDiff, showPretty)
 
-import           Cardano.Binary.Class (Bi (..), decodeFull, decodeFullDecoder,
-                     serialize)
+import Cardano.Binary.Class (Bi(..), decodeFull, decodeFullDecoder, serialize)
 import qualified Prelude
-import           Text.Show.Pretty (Value (..))
+import Text.Show.Pretty (Value(..))
 
 
 type HexDump = LByteString

@@ -5,19 +5,20 @@
 --   still need to decode old blocks.
 
 module Cardano.Binary.Class.Drop
-       ( Dropper
-       , dropBytes
-       , dropInt32
-       , dropList
-       , dropMap
-       , dropSet
-       , dropTuple
-       , dropTriple
-       , dropWord8
-       , dropWord64
-       ) where
+  ( Dropper
+  , dropBytes
+  , dropInt32
+  , dropList
+  , dropMap
+  , dropSet
+  , dropTuple
+  , dropTriple
+  , dropWord8
+  , dropWord64
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Codec.CBOR.Decoding as D
 

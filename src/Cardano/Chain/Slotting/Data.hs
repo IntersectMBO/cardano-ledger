@@ -9,34 +9,35 @@
 -- | Core types used in 'Slotting'
 
 module Cardano.Chain.Slotting.Data
-       ( EpochSlottingData (..)
-       , SlottingData
-       , getSlottingDataMap
-       , mkSlottingData
-       , validateSlottingDataMap
-       , createInitSlottingData
-       , getAllEpochIndices
-       , getCurrentEpochIndex
-       , getCurrentEpochSlottingData
-       , getNextEpochIndex
-       , getNextEpochSlottingData
-       , addEpochSlottingData
-       , lookupEpochSlottingData
-       , computeSlotStart
-       ) where
+  ( EpochSlottingData(..)
+  , SlottingData
+  , getSlottingDataMap
+  , mkSlottingData
+  , validateSlottingDataMap
+  , createInitSlottingData
+  , getAllEpochIndices
+  , getCurrentEpochIndex
+  , getCurrentEpochSlottingData
+  , getNextEpochIndex
+  , getNextEpochSlottingData
+  , addEpochSlottingData
+  , lookupEpochSlottingData
+  , computeSlotStart
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Map.Strict as M
-import           Data.Semigroup (Semigroup)
-import           Data.Time (NominalDiffTime, UTCTime, addUTCTime)
-import           Formatting (bprint, build, int, sformat)
+import Data.Map.Strict as M
+import Data.Semigroup (Semigroup)
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
+import Formatting (bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), Decoder, DecoderError (..),
-                     encodeListLen, enforceSize)
-import           Cardano.Chain.Slotting.EpochIndex (EpochIndex (..))
-import           Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex)
+import Cardano.Binary.Class
+  (Bi(..), Decoder, DecoderError(..), encodeListLen, enforceSize)
+import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
+import Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex)
 
 
 --------------------------------------------------------------------------------
@@ -187,9 +188,9 @@ lookupEpochSlottingData epochIndex = M.lookup epochIndex . getSlottingDataMap
 
 -- | Add `EpochSlottingData`.
 addEpochSlottingData :: SlottingData -> EpochSlottingData -> SlottingData
-addEpochSlottingData slottingData epochSlottingData = SlottingData
-  $ M.insert nextEpochIndex epochSlottingData
-  $ getSlottingDataMap slottingData
+addEpochSlottingData slottingData epochSlottingData =
+  SlottingData $ M.insert nextEpochIndex epochSlottingData $ getSlottingDataMap
+    slottingData
  where
     -- We can calculate the index ourselves, no need to pass it around
   nextEpochIndex :: EpochIndex

@@ -2,14 +2,14 @@
 
 module Ledger where
 
-import           Control.State.Transition
+import Control.State.Transition
 import qualified Crypto.Hash as Crypto
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Ledger.Abstract
-import           UTxO
+import Ledger.Abstract
+import UTxO
 
 instance Ledger.Abstract.HasHash Tx where
   hash = Crypto.hash
@@ -52,20 +52,17 @@ instance STS UTXO where
 
 utxoInductive :: Rule UTXO
 utxoInductive = Rule
-  [ Predicate $ \_ utxo tx ->
-      if balance (txouts tx) <= balance (txins tx ◁ utxo)
-      then Passed
-      else Failed IncreasedTotalBalance
+  [ Predicate
+    $ \_ utxo tx -> if balance (txouts tx) <= balance (txins tx ◁ utxo)
+        then Passed
+        else Failed IncreasedTotalBalance
   , Predicate $ \pc _ tx ->
-      if pcMinFee pc tx <= txfee tx
-      then Passed
-      else Failed FeeTooLow
+    if pcMinFee pc tx <= txfee tx then Passed else Failed FeeTooLow
   , Predicate $ \_ utxo tx ->
-      let unspentInputs (UTxO utxo) = Map.keysSet utxo
-      in if txins tx `Set.isSubsetOf` unspentInputs utxo
-          then Passed
-          else Failed BadInputs
+    let unspentInputs (UTxO utxo) = Map.keysSet utxo
+    in
+      if txins tx `Set.isSubsetOf` unspentInputs utxo
+        then Passed
+        else Failed BadInputs
   ]
-  ( Extension . Transition $
-    \pc utxo tx -> (txins tx ⋪ utxo) ∪ txouts tx
-  )
+  (Extension . Transition $ \pc utxo tx -> (txins tx ⋪ utxo) ∪ txouts tx)

@@ -64,6 +64,7 @@ test-suite test
 
   other-modules:
                        Spec
+                       Test.Cardano.Binary.Bi
                        Test.Cardano.Binary.BiSizeBounds
                        Test.Cardano.Binary.Cbor.CborSpec
                        Test.Cardano.Binary.Helpers

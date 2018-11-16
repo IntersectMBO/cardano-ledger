@@ -5,26 +5,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Proof
-       ( Proof (..)
-       , mkProof
+  ( Proof(..)
+  , mkProof
+  , ProofError(..)
+  , checkProof
+  )
+where
 
-       , ProofError (..)
-       , checkProof
-       ) where
+import Cardano.Prelude
 
-import           Cardano.Prelude
-
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build, shown)
+import Control.Monad.Except (MonadError(..))
+import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Body (Body (..))
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Block.Body (Body(..))
 import qualified Cardano.Chain.Delegation.Payload as Delegation
-import           Cardano.Chain.Ssc (SscProof (..))
-import           Cardano.Chain.Txp.TxProof (TxProof, mkTxProof)
+import Cardano.Chain.Ssc (SscProof(..))
+import Cardano.Chain.Txp.TxProof (TxProof, mkTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
-import           Cardano.Crypto (Hash, hash)
+import Cardano.Crypto (Hash, hash)
 
 
 -- | Proof of everything contained in the payload

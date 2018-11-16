@@ -1,26 +1,27 @@
 module Cardano.Crypto.Signing.Redeem
-       ( redeemKeyGen
-       , redeemDeterministicKeyGen
-       , redeemSign
-       , redeemCheckSig
-       , module Cardano.Crypto.Signing.Types.Redeem
-       ) where
+  ( redeemKeyGen
+  , redeemDeterministicKeyGen
+  , redeemSign
+  , redeemCheckSig
+  , module Cardano.Crypto.Signing.Types.Redeem
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad (fail)
-import           Crypto.Error (maybeCryptoError)
+import Control.Monad (fail)
+import Crypto.Error (maybeCryptoError)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import           Crypto.Random (MonadRandom)
+import Crypto.Random (MonadRandom)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
-import           Data.Coerce (coerce)
+import Data.Coerce (coerce)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
-import           Cardano.Crypto.Signing.Tag (SignTag, signTag)
-import           Cardano.Crypto.Signing.Types.Redeem
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.Signing.Tag (SignTag, signTag)
+import Cardano.Crypto.Signing.Types.Redeem
 
 
 --------------------------------------------------------------------------------

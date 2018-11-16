@@ -9,26 +9,31 @@
 --   circular dependencies. — @neongreen
 
 module Cardano.Crypto.Signing.Check
-       ( checkSig
-       , checkSigRaw
-       , verifyProxyCert
-       , validateProxySecretKey
-       , validateProxySignature
-       ) where
+  ( checkSig
+  , checkSigRaw
+  , verifyProxyCert
+  , validateProxySecretKey
+  , validateProxySignature
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Control.Monad.Except (MonadError, throwError)
-import           Data.Coerce (coerce)
+import Control.Monad.Except (MonadError, throwError)
+import Data.Coerce (coerce)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
-import           Cardano.Crypto.Signing.Tag (SignTag (..), signTag)
-import           Cardano.Crypto.Signing.Types.Signing (ProxyCert (..),
-                     ProxySecretKey (..), ProxySignature (..), PublicKey (..),
-                     Signature (..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.Signing.Tag (SignTag(..), signTag)
+import Cardano.Crypto.Signing.Types.Signing
+  ( ProxyCert(..)
+  , ProxySecretKey(..)
+  , ProxySignature(..)
+  , PublicKey(..)
+  , Signature(..)
+  )
 
 
 -- CHECK: @checkSig
@@ -52,13 +57,7 @@ checkSigRaw pm mbTag (PublicKey k) x (Signature s) = CC.verify k (tag <> x) s
 
 -- | Checks if certificate is valid, given issuer pk, delegate pk and ω
 verifyProxyCert
-  :: Bi w
-  => ProtocolMagic
-  -> PublicKey
-  -> PublicKey
-  -> w
-  -> ProxyCert w
-  -> Bool
+  :: Bi w => ProtocolMagic -> PublicKey -> PublicKey -> w -> ProxyCert w -> Bool
 verifyProxyCert pm issuerPk (PublicKey delegatePk) o (ProxyCert sig) = checkSig
   pm
   SignProxySK

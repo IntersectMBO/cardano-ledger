@@ -2,21 +2,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Txp.TxProof
-       ( TxProof (..)
-       , mkTxProof
-       ) where
+  ( TxProof(..)
+  , mkTxProof
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (bprint, build)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
-import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Chain.Txp.TxPayload (TxPayload, txpTxs, txpWitnesses)
-import           Cardano.Chain.Txp.TxWitness (TxWitness)
-import           Cardano.Crypto (Hash, hash)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
+import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Chain.Txp.TxPayload (TxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Crypto (Hash, hash)
 
 
 data TxProof = TxProof

@@ -9,21 +9,21 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Update.SoftforkRule
-       ( SoftforkRule (..)
-       ) where
+  ( SoftforkRule(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
+import Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
-import           Data.Aeson.TH (deriveJSON)
-import           Formatting (bprint, build)
+import Data.Aeson.TH (deriveJSON)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..), fromJSField,
-                     mkObject)
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Common (CoinPortion)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common (LovelacePortion)
 
 
 -- | Values defining softfork resolution rule
@@ -36,11 +36,11 @@ import           Cardano.Chain.Common (CoinPortion)
 --   total stake of issuers of blocks with some block version is greater than
 --   this portion, this block version becomes adopted.
 data SoftforkRule = SoftforkRule
-  { srInitThd      :: !CoinPortion
+  { srInitThd      :: !LovelacePortion
   -- ^ Initial threshold (right after proposal is confirmed).
-  , srMinThd       :: !CoinPortion
+  , srMinThd       :: !LovelacePortion
   -- ^ Minimal threshold (i. e. threshold can't become less than this one).
-  , srThdDecrement :: !CoinPortion
+  , srThdDecrement :: !LovelacePortion
   -- ^ Theshold will be decreased by this value after each epoch.
   } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData

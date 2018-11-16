@@ -1,49 +1,70 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Test.Cardano.Chain.Update.Example
-       ( exampleApplicationName
-       , exampleBlockVersion
-       , exampleBlockVersionData
-       , exampleBlockVersionModifier
-       , exampleSoftwareVersion
-       , exampleSystemTag
-       , exampleUpdateData
-       , examplePayload
-       , exampleProof
-       , exampleProposal
-       , exampleProposalBody
-       , exampleVote
-       , exampleUndo
-       , exampleUpId
-       , exampleVoteId
-       ) where
+  ( exampleApplicationName
+  , exampleBlockVersion
+  , exampleBlockVersionData
+  , exampleBlockVersionModifier
+  , exampleSoftwareVersion
+  , exampleSystemTag
+  , exampleUpdateData
+  , examplePayload
+  , exampleProof
+  , exampleProposal
+  , exampleProposalBody
+  , exampleVote
+  , exampleUndo
+  , exampleUpId
+  , exampleVoteId
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Data.Fixed (Fixed (..))
-import           Data.List ((!!))
+import Data.List ((!!))
 import qualified Data.Map.Strict as Map
-import           Data.Time (NominalDiffTime)
+import Data.Time (NominalDiffTime)
 
-import           Cardano.Binary.Class (Raw (..))
-import           Cardano.Chain.Common (Coeff (..), CoinPortion (..),
-                     ScriptVersion, TxFeePolicy (..), TxSizeLinear (..))
-import           Cardano.Chain.Slotting (EpochIndex (..), FlatSlotId)
-import           Cardano.Chain.Update (ApplicationName (..), BlockVersion (..),
-                     BlockVersionData (..), BlockVersionModifier (..),
-                     Payload (..), PrevValue (..), Proof, Proposal,
-                     ProposalBody (..), SoftforkRule (..),
-                     SoftwareVersion (..), SystemTag (..), USUndo (..), UpId,
-                     UpdateData (..), Vote (..), VoteId, mkProof, mkVoteSafe,
-                     signProposal)
-import           Cardano.Crypto (ProtocolMagic (..), hash)
+import Cardano.Binary.Class (Raw(..))
+import Cardano.Chain.Common
+  ( LovelacePortion(..)
+  , ScriptVersion
+  , TxFeePolicy(..)
+  , TxSizeLinear(..)
+  , mkKnownLovelace
+  )
+import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId)
+import Cardano.Chain.Update
+  ( ApplicationName(..)
+  , BlockVersion(..)
+  , BlockVersionData(..)
+  , BlockVersionModifier(..)
+  , Payload(..)
+  , PrevValue(..)
+  , Proof
+  , Proposal
+  , ProposalBody(..)
+  , SoftforkRule(..)
+  , SoftwareVersion(..)
+  , SystemTag(..)
+  , USUndo(..)
+  , UpId
+  , UpdateData(..)
+  , Vote(..)
+  , VoteId
+  , mkProof
+  , mkVoteSafe
+  , signProposal
+  )
+import Cardano.Crypto (ProtocolMagic(..), hash)
 
-import           Test.Cardano.Chain.Common.Example (exampleAttributes)
-import           Test.Cardano.Chain.Slotting.Example (exampleSlottingData)
-import           Test.Cardano.Crypto.Bi (getBytes)
-import           Test.Cardano.Crypto.Example (examplePublicKey,
-                     exampleSafeSigner)
+import Test.Cardano.Chain.Common.Example (exampleAttributes)
+import Test.Cardano.Chain.Slotting.Example (exampleSlottingData)
+import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.Example (examplePublicKey, exampleSafeSigner)
 
 
 exampleApplicationName :: ApplicationName
@@ -60,19 +81,22 @@ exampleBlockVersionData = BlockVersionData
   (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
-  (CoinPortion 99)
-  (CoinPortion 99)
-  (CoinPortion 99)
-  (CoinPortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
+  (LovelacePortion 99)
   (99 :: FlatSlotId)
   sfrule
   (TxFeePolicyTxSizeLinear tslin)
   (EpochIndex 99)
  where
   tslin  = TxSizeLinear c1' c2'
-  c1'    = Coeff (MkFixed 999)
-  c2'    = Coeff (MkFixed 77)
-  sfrule = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
+  c1'    = mkKnownLovelace @999
+  c2'    = mkKnownLovelace @77
+  sfrule = SoftforkRule
+    (LovelacePortion 99)
+    (LovelacePortion 99)
+    (LovelacePortion 99)
 
 exampleBlockVersionModifier :: BlockVersionModifier
 exampleBlockVersionModifier = BlockVersionModifier
@@ -82,19 +106,22 @@ exampleBlockVersionModifier = BlockVersionModifier
   (Just (999 :: Natural))
   (Just (999 :: Natural))
   (Just (999 :: Natural))
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
-  (Just $ CoinPortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
+  (Just $ LovelacePortion 99)
   (Just (99 :: FlatSlotId))
   (Just sfrule')
   (Just $ TxFeePolicyTxSizeLinear tslin')
   (Just $ EpochIndex 99)
  where
   tslin'  = TxSizeLinear co1 co2
-  co1     = Coeff (MkFixed 999)
-  co2     = Coeff (MkFixed 77)
-  sfrule' = SoftforkRule (CoinPortion 99) (CoinPortion 99) (CoinPortion 99)
+  co1     = mkKnownLovelace @999
+  co2     = mkKnownLovelace @77
+  sfrule' = SoftforkRule
+    (LovelacePortion 99)
+    (LovelacePortion 99)
+    (LovelacePortion 99)
 
 exampleSystemTag :: SystemTag
 exampleSystemTag = exampleSystemTags 0 1 !! 0

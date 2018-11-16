@@ -2,15 +2,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Crypto.Signing.Tag
-       ( signTag
-       , module Cardano.Crypto.Signing.Types.Tag
-       ) where
+  ( signTag
+  , module Cardano.Crypto.Signing.Types.Tag
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..))
-import           Cardano.Crypto.Signing.Types.Tag
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.Signing.Types.Tag
 
 
 -- | Get magic bytes corresponding to a 'SignTag'. Guaranteed to be different

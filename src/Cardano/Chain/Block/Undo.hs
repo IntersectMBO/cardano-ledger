@@ -4,22 +4,23 @@
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Block.Undo
-       ( Undo (..)
-       , buildUndo
-       , Blund
-       ) where
+  ( Undo(..)
+  , buildUndo
+  , Blund
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Formatting (Format, bprint, build, later)
+import Formatting (Format, bprint, build, later)
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import           Cardano.Chain.Block.Block (Block)
-import           Cardano.Chain.Block.SlogUndo (SlogUndo (..), buildSlogUndo)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Chain.Block.Block (Block)
+import Cardano.Chain.Block.SlogUndo (SlogUndo(..), buildSlogUndo)
 import qualified Cardano.Chain.Delegation as Delegation (Undo)
-import           Cardano.Chain.Slotting (SlotCount)
-import           Cardano.Chain.Txp (TxpUndo)
-import           Cardano.Chain.Update.Undo (USUndo)
+import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Txp (TxpUndo)
+import Cardano.Chain.Update.Undo (USUndo)
 
 
 -- | Structure for undo block during rollback
@@ -37,10 +38,17 @@ type Blund = (Block, Undo)
 buildUndo :: SlotCount -> Format r (Undo -> r)
 buildUndo epochSlots = later $ \undo -> bprint
   ( "Undo:\n"
-  . "  undoTx: " . listJson . "\n"
-  . "  undoDlg: " . build . "\n"
-  . "  undoUS: " . build . "\n"
-  . "  undoSlog: " . buildSlogUndo epochSlots
+  . "  undoTx: "
+  . listJson
+  . "\n"
+  . "  undoDlg: "
+  . build
+  . "\n"
+  . "  undoUS: "
+  . build
+  . "\n"
+  . "  undoSlog: "
+  . buildSlogUndo epochSlots
   )
   (map (bprint listJson) (undoTx undo))
   (undoDlg undo)

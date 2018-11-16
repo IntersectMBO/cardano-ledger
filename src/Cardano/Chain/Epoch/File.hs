@@ -5,28 +5,28 @@
 module Cardano.Chain.Epoch.File
   ( parseEpochFile
   , parseEpochFiles
-  , ParseError (..)
-  ) where
+  , ParseError(..)
+  )
+where
 
-import           Control.Monad (guard)
-import           Control.Monad.Except (MonadError (..), runExceptT)
-import           Control.Monad.Trans (MonadTrans (..))
-import           Control.Monad.Trans.Resource (ResIO)
+import Control.Monad (guard)
+import Control.Monad.Except (MonadError(..), runExceptT)
+import Control.Monad.Trans (MonadTrans(..))
+import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.Binary as B
-import           Data.Binary.Get (getWord32be)
+import Data.Binary.Get (getWord32be)
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Streaming as SBS
-import           Data.String (String)
-import           Streaming.Binary (decodedWith)
-import           Streaming.Prelude (Of (..), Stream)
+import Data.String (String)
+import Streaming.Binary (decodedWith)
+import Streaming.Prelude (Of(..), Stream)
 import qualified Streaming.Prelude as S
 
-import           Cardano.Binary.Class (DecoderError, decodeFull,
-                     decodeFullDecoder)
-import           Cardano.Chain.Block.Block (Block, decodeBlock)
-import           Cardano.Chain.Block.Undo (Undo)
-import           Cardano.Prelude
+import Cardano.Binary.Class (DecoderError, decodeFull, decodeFullDecoder)
+import Cardano.Chain.Block.Block (Block, decodeBlock)
+import Cardano.Chain.Block.Undo (Undo)
+import Cardano.Prelude
 
 -- Epoch file format:
 --
@@ -47,7 +47,8 @@ data ParseError
   | ParseErrorMissingHeader !FilePath
   deriving (Eq, Show)
 
-loadFileWithHeader :: FilePath -> LBS.ByteString -> SBS.ByteString (ExceptT ParseError ResIO) ()
+loadFileWithHeader
+  :: FilePath -> LBS.ByteString -> SBS.ByteString (ExceptT ParseError ResIO) ()
 loadFileWithHeader file header =
   let
     bytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
@@ -61,14 +62,15 @@ loadFileWithHeader file header =
       then rest
       else lift $ throwError (ParseErrorMissingHeader file)
 
-parseEpochFile :: FilePath -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
+parseEpochFile
+  :: FilePath -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
 parseEpochFile file = do
   s <- S.mapMaybe sequenceMaybe $ S.mapM liftDecoderError $ decodedWith
     getSlotData
     bytes
   liftBinaryError s
  where
-  bytes         = loadFileWithHeader file epochHeader
+  bytes = loadFileWithHeader file epochHeader
 
   sequenceMaybe :: (Maybe a, b) -> Maybe (a, b)
   sequenceMaybe = \case
@@ -88,7 +90,8 @@ parseEpochFile file = do
     (_, offset, Left message) ->
       throwError (ParseErrorBinary file offset (toS message))
 
-parseEpochFiles :: [FilePath] -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
+parseEpochFiles
+  :: [FilePath] -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
 parseEpochFiles fs = foldr (<>) mempty (parseEpochFile <$> fs)
 
 slotDataHeader :: LBS.ByteString

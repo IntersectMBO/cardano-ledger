@@ -1,42 +1,59 @@
 module Test.Cardano.Chain.Block.Gen
-       ( genBlockSignature
-       , genHeaderHash
-       , genHeader
-       , genBody
-       , genConsensusData
-       , genExtraBodyData
-       , genExtraHeaderData
-       , genProof
-       , genToSign
-       , genBlock
-       , genSlogUndo
-       , genUndo
-       ) where
+  ( genBlockSignature
+  , genHeaderHash
+  , genHeader
+  , genBody
+  , genConsensusData
+  , genExtraBodyData
+  , genExtraHeaderData
+  , genProof
+  , genToSign
+  , genBlock
+  , genSlogUndo
+  , genUndo
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Coerce (coerce)
-import           Hedgehog (Gen)
+import Data.Coerce (coerce)
+import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 
-import           Cardano.Chain.Block (Block, BlockSignature (..), Body (..),
-                     ConsensusData (..), ExtraBodyData (..),
-                     ExtraHeaderData (..), Header, HeaderHash, Proof (..),
-                     SlogUndo (..), ToSign (..), Undo (..), mkBlockExplicit,
-                     mkHeaderExplicit)
-import           Cardano.Chain.Common (mkAttributes)
-import           Cardano.Chain.Slotting (SlotCount)
-import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
-import           Cardano.Crypto (ProtocolMagic)
+import Cardano.Chain.Block
+  ( Block
+  , BlockSignature(..)
+  , Body(..)
+  , ConsensusData(..)
+  , ExtraBodyData(..)
+  , ExtraHeaderData(..)
+  , Header
+  , HeaderHash
+  , Proof(..)
+  , SlogUndo(..)
+  , ToSign(..)
+  , Undo(..)
+  , mkBlockExplicit
+  , mkHeaderExplicit
+  )
+import Cardano.Chain.Common (mkAttributes)
+import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
+import Cardano.Crypto (ProtocolMagic)
 
-import           Test.Cardano.Chain.Common.Gen (genChainDifficulty)
+import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import           Test.Cardano.Chain.Slotting.Gen (genFlatSlotId, genSlotId)
-import           Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof,
-                     genTxpUndo)
+import Test.Cardano.Chain.Slotting.Gen (genFlatSlotId, genSlotId)
+import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof, genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
-import           Test.Cardano.Crypto.Gen (genAbstractHash, genProxySignature,
-                     genPublicKey, genSecretKey, genSignature, genTextHash)
+import Test.Cardano.Crypto.Gen
+  ( genAbstractHash
+  , genProxySignature
+  , genPublicKey
+  , genSecretKey
+  , genSignature
+  , genTextHash
+  )
 
 
 genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature

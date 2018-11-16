@@ -3,48 +3,48 @@
 -- | Signing done with public/private keys
 
 module Cardano.Crypto.Signing.Signing
-       (
+  (
        -- * Keys
-         emptyPass
-       , keyGen
-       , deterministicKeyGen
+    emptyPass
+  , keyGen
+  , deterministicKeyGen
 
        -- * Signing and verification
-       , sign
-       , signEncoded
-       , checkSig                      -- reexport
-       , mkSigned
+  , sign
+  , signEncoded
+  , checkSig                      -- reexport
+  , mkSigned
 
        -- * Versions for raw bytestrings
-       , signRaw
-       , checkSigRaw                   -- reexport
+  , signRaw
+  , checkSigRaw                   -- reexport
 
        -- * Proxy signature scheme
-       , verifyProxyCert               -- reexport
-       , validateProxySecretKey        -- reexport
-       , proxySign
-       , proxyVerify
+  , verifyProxyCert               -- reexport
+  , validateProxySecretKey        -- reexport
+  , proxySign
+  , proxyVerify
+  , module Cardano.Crypto.Signing.Types.Signing
+  )
+where
 
-       , module Cardano.Crypto.Signing.Types.Signing
-       ) where
-
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Crypto.Random (MonadRandom, getRandomBytes)
-import           Data.ByteArray (ScrubbedBytes)
+import Crypto.Random (MonadRandom, getRandomBytes)
+import Data.ByteArray (ScrubbedBytes)
 import qualified Data.ByteString as BS
-import           Data.Coerce (coerce)
-import           Formatting (build, sformat)
+import Data.Coerce (coerce)
+import Formatting (build, sformat)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
-import           Cardano.Crypto.Signing.Check (checkSig, checkSigRaw,
-                     validateProxySecretKey, verifyProxyCert)
-import           Cardano.Crypto.Signing.Tag (signTag)
-import           Cardano.Crypto.Signing.Types.Signing
-import           Cardano.Crypto.Signing.Types.Tag (SignTag)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.Signing.Check
+  (checkSig, checkSigRaw, validateProxySecretKey, verifyProxyCert)
+import Cardano.Crypto.Signing.Tag (signTag)
+import Cardano.Crypto.Signing.Types.Signing
+import Cardano.Crypto.Signing.Types.Tag (SignTag)
 
 
 --------------------------------------------------------------------------------
@@ -160,7 +160,7 @@ proxyVerify
   -> Bool
 proxyVerify pm t psig omegaPred m = predCorrect && sigValid
  where
-  psk = psigPsk psig
+  psk                       = psigPsk psig
   PublicKey issuerPk        = pskIssuerPk psk
   PublicKey pdDelegatePkRaw = pskDelegatePk psk
   predCorrect               = omegaPred (pskOmega psk)

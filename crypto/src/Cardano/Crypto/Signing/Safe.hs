@@ -3,42 +3,56 @@
 -- | Module for safe (zero-memory) signing
 
 module Cardano.Crypto.Signing.Safe
-       ( changeEncPassphrase
-       , safeSign
-       , safeToPublic
-       , safeKeyGen
-       , safeDeterministicKeyGen
-       , withSafeSigner
-       , withSafeSignerUnsafe
-       , withSafeSigners
-       , fakeSigner
-       , safeCreateProxyCert
-       , safeCreatePsk
-       , createProxyCert
-       , createPsk
-       , module Cardano.Crypto.Signing.Types.Safe
-       ) where
+  ( changeEncPassphrase
+  , safeSign
+  , safeToPublic
+  , safeKeyGen
+  , safeDeterministicKeyGen
+  , withSafeSigner
+  , withSafeSignerUnsafe
+  , withSafeSigners
+  , fakeSigner
+  , safeCreateProxyCert
+  , safeCreatePsk
+  , createProxyCert
+  , createPsk
+  , module Cardano.Crypto.Signing.Types.Safe
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import           Crypto.Random (MonadRandom, getRandomBytes)
+import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.ByteString as BS
-import           Data.Coerce (coerce)
+import Data.Coerce (coerce)
 
-import           Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Raw)
 import qualified Cardano.Binary.Class as Bi
-import           Cardano.Crypto.Hashing (hash)
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.Hashing (hash)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import qualified Cardano.Crypto.Scrypt as S
-import           Cardano.Crypto.Signing.Signing (ProxyCert (..),
-                     ProxySecretKey (..), PublicKey (..), SecretKey (..),
-                     Signature (..), sign, toPublic)
-import           Cardano.Crypto.Signing.Tag (SignTag (SignProxySK), signTag)
-import           Cardano.Crypto.Signing.Types.Safe (EncryptedSecretKey (..),
-                     PassPhrase (..), SafeSigner (..), checkPassMatches,
-                     emptyPassphrase, encToPublic, mkEncSecretUnsafe,
-                     mkEncSecretWithSaltUnsafe, noPassEncrypt)
+import Cardano.Crypto.Signing.Signing
+  ( ProxyCert(..)
+  , ProxySecretKey(..)
+  , PublicKey(..)
+  , SecretKey(..)
+  , Signature(..)
+  , sign
+  , toPublic
+  )
+import Cardano.Crypto.Signing.Tag (SignTag(SignProxySK), signTag)
+import Cardano.Crypto.Signing.Types.Safe
+  ( EncryptedSecretKey(..)
+  , PassPhrase(..)
+  , SafeSigner(..)
+  , checkPassMatches
+  , emptyPassphrase
+  , encToPublic
+  , mkEncSecretUnsafe
+  , mkEncSecretWithSaltUnsafe
+  , noPassEncrypt
+  )
 
 
 -- | Regenerates secret key with new passphrase.

@@ -5,29 +5,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Body
-       ( Body (..)
-       , BodyError (..)
-       , bodyTxs
-       , bodyWitnesses
-       , verifyBody
-       ) where
+  ( Body(..)
+  , BodyError(..)
+  , bodyTxs
+  , bodyWitnesses
+  , verifyBody
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError (..))
-import           Formatting (bprint, build)
+import Control.Monad.Except (MonadError, liftEither)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import           Cardano.Binary.Class (Bi (..), encodeListLen, enforceSize)
-import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload,
-                     PayloadError (..), checkPayload)
-import           Cardano.Chain.Ssc (SscPayload (..))
-import           Cardano.Chain.Txp.Tx (Tx)
-import           Cardano.Chain.Txp.TxPayload (TxPayload (..), txpTxs,
-                     txpWitnesses)
-import           Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import qualified Cardano.Chain.Delegation.Payload as Delegation
+  (Payload, PayloadError(..), checkPayload)
+import Cardano.Chain.Ssc (SscPayload(..))
+import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Chain.Txp.TxPayload (TxPayload(..), txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import           Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagic)
 
 
 -- | 'Body' consists of payloads of all block components
@@ -69,10 +69,12 @@ instance B.Buildable BodyError where
 
 verifyBody :: MonadError BodyError m => ProtocolMagic -> Body -> m ()
 verifyBody pm mb = do
-  either (throwError . BodyDelegationPayloadError) pure
-    $ Delegation.checkPayload pm (bodyDlgPayload mb)
-  either (throwError . BodyUpdatePayloadError) pure
-    $ Update.checkPayload pm (bodyUpdatePayload mb)
+  liftEither . first BodyDelegationPayloadError $ Delegation.checkPayload
+    pm
+    (bodyDlgPayload mb)
+  liftEither . first BodyUpdatePayloadError $ Update.checkPayload
+    pm
+    (bodyUpdatePayload mb)
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

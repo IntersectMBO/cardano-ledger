@@ -3,15 +3,16 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 
 module Cardano.Chain.Slotting.SlotCount
-       ( SlotCount (..)
-       ) where
+  ( SlotCount(..)
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Aeson (ToJSON (..))
-import           Formatting.Buildable (Buildable)
+import Data.Aeson (ToJSON(..))
+import Formatting.Buildable (Buildable)
 
-import           Cardano.Binary.Class (Bi (..))
+import Cardano.Binary.Class (Bi(..))
 
 
 newtype SlotCount = SlotCount

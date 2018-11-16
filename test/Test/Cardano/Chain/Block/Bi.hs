@@ -4,56 +4,85 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.Block.Bi
-       ( tests
-       , exampleBody
-       , exampleConsensusData
-       , exampleToSign
-       , exampleBlockSignature
-       , exampleBlockPSignatureLight
-       , exampleBlockPSignatureHeavy
-       ) where
+  ( tests
+  , exampleBlockSignature
+  , exampleBlockPSignatureLight
+  , exampleBlockPSignatureHeavy
+  , exampleBody
+  , exampleConsensusData
+  , exampleHeader
+  , exampleProof
+  , exampleToSign
+  , exampleUndo
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Data.Coerce (coerce)
-import           Data.List ((!!))
-import           Data.Maybe (fromJust)
+import Data.Coerce (coerce)
+import Data.List ((!!))
+import Data.Maybe (fromJust)
 
-import           Hedgehog (Property)
+import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Cardano.Binary.Class (decodeFullDecoder, dropBytes,
-                     serializeEncoding)
-import           Cardano.Chain.Block (Block, BlockSignature (..), Body (..),
-                     ConsensusData (..), ExtraBodyData (..),
-                     ExtraHeaderData (..), Header, HeaderHash, Proof (..),
-                     SlogUndo (..), ToSign (..), Undo (..), decodeBlock,
-                     decodeHeader, dropBoundaryBody, dropBoundaryConsensusData,
-                     dropBoundaryHeader, encodeBlock, encodeHeader,
-                     mkHeaderExplicit)
-import           Cardano.Chain.Common (mkAttributes)
-import           Cardano.Chain.Delegation as Delegation (Payload (..))
-import           Cardano.Chain.Ssc (SscPayload (..), SscProof (..))
-import           Cardano.Crypto (ProtocolMagic (..), SignTag (..), abstractHash,
-                     createPsk, hash, proxySign, sign, toPublic)
+import Cardano.Binary.Class (decodeFullDecoder, dropBytes, serializeEncoding)
+import Cardano.Chain.Block
+  ( Block
+  , BlockSignature(..)
+  , Body(..)
+  , ConsensusData(..)
+  , ExtraBodyData(..)
+  , ExtraHeaderData(..)
+  , Header
+  , HeaderHash
+  , Proof(..)
+  , SlogUndo(..)
+  , ToSign(..)
+  , Undo(..)
+  , decodeBlock
+  , decodeHeader
+  , dropBoundaryBody
+  , dropBoundaryConsensusData
+  , dropBoundaryHeader
+  , encodeBlock
+  , encodeHeader
+  , mkHeaderExplicit
+  )
+import Cardano.Chain.Common (mkAttributes)
+import Cardano.Chain.Delegation as Delegation (Payload(..))
+import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
+import Cardano.Crypto
+  ( ProtocolMagic(..)
+  , SignTag(..)
+  , abstractHash
+  , createPsk
+  , hash
+  , proxySign
+  , sign
+  , toPublic
+  )
 
-import           Test.Cardano.Binary.Helpers.GoldenRoundTrip (goldenTestBi,
-                     deprecatedGoldenDecode, roundTripsBiBuildable,
-                     roundTripsBiShow)
-import           Test.Cardano.Chain.Block.Gen
-import           Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
-import           Test.Cardano.Chain.Delegation.Example (exampleLightDlgIndices,
-                     staticHeavyDlgIndexes, staticProxySKHeavys)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+  ( goldenTestBi
+  , deprecatedGoldenDecode
+  , roundTripsBiBuildable
+  , roundTripsBiShow
+  )
+import Test.Cardano.Chain.Block.Gen
+import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
+import Test.Cardano.Chain.Delegation.Example
+  (exampleLightDlgIndices, staticHeavyDlgIndexes, staticProxySKHeavys)
 import qualified Test.Cardano.Chain.Delegation.Example as Delegation
-import           Test.Cardano.Chain.Slotting.Example (exampleSlotId)
-import           Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
-import           Test.Cardano.Chain.Txp.Example (exampleTxPayload,
-                     exampleTxProof, exampleTxpUndo)
+import Test.Cardano.Chain.Slotting.Example (exampleSlotId)
+import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
+import Test.Cardano.Chain.Txp.Example
+  (exampleTxPayload, exampleTxProof, exampleTxpUndo)
 import qualified Test.Cardano.Chain.Update.Example as Update
-import           Test.Cardano.Crypto.Example (examplePublicKey,
-                     exampleSecretKey, exampleSecretKeys)
-import           Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Crypto.Example
+  (examplePublicKey, exampleSecretKey, exampleSecretKeys)
+import Test.Cardano.Crypto.Gen (feedPM)
 
 
 --------------------------------------------------------------------------------
@@ -61,8 +90,7 @@ import           Test.Cardano.Crypto.Gen (feedPM)
 --------------------------------------------------------------------------------
 
 goldenHeader :: Property
-goldenHeader =
-  goldenTestBi exampleHeader "test/golden/bi/block/Header"
+goldenHeader = goldenTestBi exampleHeader "test/golden/bi/block/Header"
 
 roundTripHeaderBi :: Property
 roundTripHeaderBi =
@@ -112,12 +140,14 @@ goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
 
 goldenBlockSignature_Light :: Property
-goldenBlockSignature_Light =
-  goldenTestBi exampleBlockPSignatureLight "test/golden/bi/block/BlockSignature_Light"
+goldenBlockSignature_Light = goldenTestBi
+  exampleBlockPSignatureLight
+  "test/golden/bi/block/BlockSignature_Light"
 
 goldenBlockSignature_Heavy :: Property
-goldenBlockSignature_Heavy =
-  goldenTestBi exampleBlockPSignatureHeavy "test/golden/bi/block/BlockSignature_Heavy"
+goldenBlockSignature_Heavy = goldenTestBi
+  exampleBlockPSignatureHeavy
+  "test/golden/bi/block/BlockSignature_Heavy"
 
 roundTripBlockSignatureBi :: Property
 roundTripBlockSignatureBi =
@@ -162,7 +192,8 @@ goldenDeprecatedBoundaryConsensusData = deprecatedGoldenDecode
 --------------------------------------------------------------------------------
 
 goldenHeaderHash :: Property
-goldenHeaderHash = goldenTestBi exampleHeaderHash "test/golden/bi/block/HeaderHash"
+goldenHeaderHash =
+  goldenTestBi exampleHeaderHash "test/golden/bi/block/HeaderHash"
 
 roundTripHeaderHashBi :: Property
 roundTripHeaderHashBi = eachOf 1000 genHeaderHash roundTripsBiBuildable
@@ -217,8 +248,7 @@ goldenExtraBodyData = goldenTestBi mebd "test/golden/bi/block/ExtraBodyData"
   where mebd = ExtraBodyData (mkAttributes ())
 
 roundTripExtraBodyDataBi :: Property
-roundTripExtraBodyDataBi =
-  eachOf 1000 genExtraBodyData roundTripsBiBuildable
+roundTripExtraBodyDataBi = eachOf 1000 genExtraBodyData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -253,8 +283,7 @@ goldenToSign :: Property
 goldenToSign = goldenTestBi exampleToSign "test/golden/bi/block/ToSign"
 
 roundTripToSignBi :: Property
-roundTripToSignBi =
-  eachOf 20 (feedPMEpochSlots genToSign) roundTripsBiShow
+roundTripToSignBi = eachOf 20 (feedPMEpochSlots genToSign) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -290,15 +319,15 @@ exampleBlockSignature = BlockSignature
 exampleBlockPSignatureLight :: BlockSignature
 exampleBlockPSignatureLight = BlockPSignatureLight sig
  where
-  sig = proxySign pm SignProxySK delegateSk psk exampleToSign
+  sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
   psk = createPsk pm issuerSk (toPublic delegateSk) exampleLightDlgIndices
-  pm = ProtocolMagic 2
+  pm                     = ProtocolMagic 2
 
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
  where
-  sig = proxySign pm SignProxySK delegateSk psk exampleToSign
+  sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
   psk =
     createPsk pm issuerSk (toPublic delegateSk) (staticHeavyDlgIndexes !! 0)

@@ -5,44 +5,69 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.Txp.Example
-       ( exampleTxId
-       , exampleTxInList
-       , exampleTxInUnknown
-       , exampleTxInUtxo
-       , exampleTxPayload
-       , exampleTxProof
-       , exampleTxOut
-       , exampleTxOutList
-       , exampleTxSig
-       , exampleTxSigData
-       , exampleTxpUndo
-       , exampleTxWitness
-       , exampleRedeemSignature
-       , exampleHashTx
-       ) where
+  ( exampleTxId
+  , exampleTxInList
+  , exampleTxInUnknown
+  , exampleTxInUtxo
+  , exampleTxPayload
+  , exampleTxProof
+  , exampleTxOut
+  , exampleTxOutList
+  , exampleTxSig
+  , exampleTxSigData
+  , exampleTxpUndo
+  , exampleTxWitness
+  , exampleRedeemSignature
+  , exampleHashTx
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Coerce (coerce)
-import           Data.List.NonEmpty (fromList)
-import           Data.Maybe (fromJust)
+import Data.Coerce (coerce)
+import Data.List.NonEmpty (fromList)
+import Data.Maybe (fromJust)
 import qualified Data.Vector as V
 
-import           Cardano.Chain.Common (IsBootstrapEraAddr (..),
-                     makePubKeyAddress, mkAttributes, mkKnownCoin,
-                     mkMerkleTree, mtRoot)
-import           Cardano.Chain.Txp (Tx (..), TxAux (..), TxId, TxIn (..),
-                     TxInWitness (..), TxOut (..), TxOutAux (..),
-                     TxPayload (..), TxProof (..), TxSig, TxSigData (..),
-                     TxWitness, TxpUndo)
-import           Cardano.Crypto (AbstractHash (..), Hash, ProtocolMagic (..),
-                     PublicKey (..), RedeemSignature, SignTag (..), hash,
-                     redeemDeterministicKeyGen, redeemSign, sign)
+import Cardano.Chain.Common
+  ( IsBootstrapEraAddr(..)
+  , makePubKeyAddress
+  , mkAttributes
+  , mkKnownLovelace
+  , mkMerkleTree
+  , mtRoot
+  )
+import Cardano.Chain.Txp
+  ( Tx(..)
+  , TxAux(..)
+  , TxId
+  , TxIn(..)
+  , TxInWitness(..)
+  , TxOut(..)
+  , TxOutAux(..)
+  , TxPayload(..)
+  , TxProof(..)
+  , TxSig
+  , TxSigData(..)
+  , TxWitness
+  , TxpUndo
+  )
+import Cardano.Crypto
+  ( AbstractHash(..)
+  , Hash
+  , ProtocolMagic(..)
+  , PublicKey(..)
+  , RedeemSignature
+  , SignTag(..)
+  , hash
+  , redeemDeterministicKeyGen
+  , redeemSign
+  , sign
+  )
 import qualified Cardano.Crypto.Wallet as CC
 
-import           Test.Cardano.Crypto.Bi (getBytes)
-import           Test.Cardano.Crypto.Example (examplePublicKey,
-                     exampleSecretKey)
+import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKey)
 
 
 exampleTxAux :: TxAux
@@ -64,7 +89,7 @@ exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
 exampleTxOut :: TxOut
 exampleTxOut = TxOut
   (makePubKeyAddress (IsBootstrapEraAddr True) pkey)
-  (mkKnownCoin @47)
+  (mkKnownLovelace @47)
   where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)

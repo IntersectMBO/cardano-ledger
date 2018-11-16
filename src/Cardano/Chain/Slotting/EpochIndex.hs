@@ -8,21 +8,22 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Slotting.EpochIndex
-       ( EpochIndex (..)
-       , isBootstrapEra
-       ) where
+  ( EpochIndex(..)
+  , isBootstrapEra
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson (FromJSON (..), ToJSON (..))
-import           Data.Ix (Ix)
-import           Formatting (bprint, int)
-import           Formatting.Buildable (Buildable (..))
-import           Servant.API (FromHttpApiData)
-import           Text.JSON.Canonical (FromJSON (..), ToJSON (..))
+import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Data.Ix (Ix)
+import Formatting (bprint, int)
+import Formatting.Buildable (Buildable(..))
+import Servant.API (FromHttpApiData)
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import           Cardano.Binary.Class (Bi (..))
+import Cardano.Binary.Class (Bi(..))
 
 
 -- | Index of epoch.

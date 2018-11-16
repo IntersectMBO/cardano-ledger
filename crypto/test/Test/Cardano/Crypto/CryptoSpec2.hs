@@ -6,28 +6,28 @@
 -- | Cardano.Crypto specification
 
 module Test.Cardano.Crypto.CryptoSpec2
-       ( spec
-       ) where
+  ( spec
+  )
+where
 
-import           Cardano.Prelude
-import           Test.Cardano.Prelude
+import Cardano.Prelude
+import Test.Cardano.Prelude
 
-import           Crypto.Hash (Blake2b_224, Blake2b_256)
+import Crypto.Hash (Blake2b_224, Blake2b_256)
 import qualified Data.ByteString as BS
-import           Formatting (sformat)
-import           Test.Hspec (Expectation, Spec, describe, it, shouldBe)
-import           Test.Hspec.QuickCheck (prop)
-import           Test.QuickCheck (Arbitrary (..), Property, ioProperty,
-                     property, vector, (===), (==>))
+import Formatting (sformat)
+import Test.Hspec (Expectation, Spec, describe, it, shouldBe)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck
+  (Arbitrary(..), Property, ioProperty, property, vector, (===), (==>))
 
-import           Cardano.Binary.Class (Bi)
+import Cardano.Binary.Class (Bi)
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey,
-                     mlSignature)
+import Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey, mlSignature)
 
-import           Test.Cardano.Binary.Helpers (msgLenLimitedTest)
-import           Test.Cardano.Crypto.Arbitrary ()
-import           Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Binary.Helpers (msgLenLimitedTest)
+import Test.Cardano.Crypto.Arbitrary ()
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
 
 spec :: Spec
@@ -43,15 +43,13 @@ spec =
             "passphrase change doesn't modify key address"
             passphraseChangeLeavesAddressUnmodified
 
-        describe "Identity testing"
-          $ describe "msgLenLimitedTest"
-          $ do
-              msgLenLimitedTest mlPublicKey
-              msgLenLimitedTest @(Crypto.Signature ()) mlSignature
-              msgLenLimitedTest @(Crypto.AbstractHash Blake2b_224 Void)
-                mlAbstractHash
-              msgLenLimitedTest @(Crypto.AbstractHash Blake2b_256 Void)
-                mlAbstractHash
+        describe "Identity testing" $ describe "msgLenLimitedTest" $ do
+          msgLenLimitedTest mlPublicKey
+          msgLenLimitedTest @(Crypto.Signature ()) mlSignature
+          msgLenLimitedTest @(Crypto.AbstractHash Blake2b_224 Void)
+            mlAbstractHash
+          msgLenLimitedTest @(Crypto.AbstractHash Blake2b_256 Void)
+            mlAbstractHash
 
         describe "keys" $ do
           it "derived pubkey equals to generated pubkey" keyDerivation
