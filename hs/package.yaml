@@ -27,6 +27,7 @@ library:
   - hedgehog
   - tasty-hedgehog
   - tasty-hedgehog-coverage
+  - text
 
 tests:
   delegation-test:
@@ -50,3 +51,4 @@ tests:
     - delegation
     - cryptonite
     - containers
+    - text
