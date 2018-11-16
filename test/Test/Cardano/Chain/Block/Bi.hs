@@ -6,7 +6,6 @@
 module Test.Cardano.Chain.Block.Bi
   ( tests
   , exampleBlockSignature
-  , exampleBlockPSignatureLight
   , exampleBlockPSignatureHeavy
   , exampleBody
   , exampleConsensusData
@@ -73,7 +72,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example
-  (exampleLightDlgIndices, staticHeavyDlgIndexes, staticProxySKHeavys)
+  (staticHeavyDlgIndexes, staticProxySKHeavys)
 import qualified Test.Cardano.Chain.Delegation.Example as Delegation
 import Test.Cardano.Chain.Slotting.Example (exampleSlotId)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
@@ -138,11 +137,6 @@ roundTripBlockCompat = eachOf
 goldenBlockSignature :: Property
 goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
-
-goldenBlockSignature_Light :: Property
-goldenBlockSignature_Light = goldenTestBi
-  exampleBlockPSignatureLight
-  "test/golden/bi/block/BlockSignature_Light"
 
 goldenBlockSignature_Heavy :: Property
 goldenBlockSignature_Heavy = goldenTestBi
@@ -315,14 +309,6 @@ exampleHeader = mkHeaderExplicit
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = BlockSignature
   (sign (ProtocolMagic 7) SignMainBlock exampleSecretKey exampleToSign)
-
-exampleBlockPSignatureLight :: BlockSignature
-exampleBlockPSignatureLight = BlockPSignatureLight sig
- where
-  sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
-  [delegateSk, issuerSk] = exampleSecretKeys 5 2
-  psk = createPsk pm issuerSk (toPublic delegateSk) exampleLightDlgIndices
-  pm                     = ProtocolMagic 2
 
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig

@@ -1,6 +1,5 @@
 module Test.Cardano.Chain.Delegation.Example
-  ( exampleLightDlgIndices
-  , exampleProxySKBlockInfo
+  ( exampleProxySKBlockInfo
   , exampleUndo
   , staticHeavyDlgIndexes
   , staticProxySKHeavys
@@ -13,12 +12,7 @@ import Data.List (zipWith4, (!!))
 import qualified Data.Set as Set
 
 import Cardano.Chain.Delegation
-  ( HeavyDlgIndex(..)
-  , LightDlgIndices(..)
-  , ProxySKBlockInfo
-  , ProxySKHeavy
-  , Undo(..)
-  )
+  (HeavyDlgIndex(..), ProxySKBlockInfo, ProxySKHeavy, Undo(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto (ProtocolMagic(..), safeCreatePsk)
 
@@ -42,9 +36,6 @@ staticProxySKHeavys = zipWith4
 
 exampleProxySKBlockInfo :: ProxySKBlockInfo
 exampleProxySKBlockInfo = Just (staticProxySKHeavys !! 0, examplePublicKey)
-
-exampleLightDlgIndices :: LightDlgIndices
-exampleLightDlgIndices = LightDlgIndices (EpochIndex 7, EpochIndex 88)
 
 exampleUndo :: Undo
 exampleUndo = Undo

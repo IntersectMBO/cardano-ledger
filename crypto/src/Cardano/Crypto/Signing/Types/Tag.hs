@@ -37,7 +37,6 @@ data SignTag
   -- ^ US proposal vote: @(UpId, Bool)@
   | SignMainBlock
   -- ^ Main block:       @MainToSign@
-  | SignMainBlockLight
   | SignMainBlockHeavy
   | SignProxySK
   -- ^ Proxy key:        @ProxySecretKey@

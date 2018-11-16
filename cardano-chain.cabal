@@ -61,7 +61,6 @@ library
                        Cardano.Chain.Common.TxSizeLinear
 
                        Cardano.Chain.Delegation.HeavyDlgIndex
-                       Cardano.Chain.Delegation.LightDlgIndices
                        Cardano.Chain.Delegation.Payload
                        Cardano.Chain.Delegation.Undo
 

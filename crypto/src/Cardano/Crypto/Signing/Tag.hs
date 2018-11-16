@@ -26,7 +26,7 @@ signTag protocolMagic = \case
   SignCommitment     -> "\x05" <> network
   SignUSVote         -> "\x06" <> network
   SignMainBlock      -> "\x07" <> network
-  SignMainBlockLight -> "\x08" <> network
+  -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
   SignProxySK        -> "\x0a" <> network
   where network = Bi.serialize' (getProtocolMagic protocolMagic)
