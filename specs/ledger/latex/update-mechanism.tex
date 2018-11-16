@@ -615,7 +615,7 @@ This section models when update proposals get confirmed.
         \left(
           \begin{array}{l}
             \var{aps} \setminus \{\var{pid}\} \\
-            \var{cps} \union  \{\var{pid}\} \\
+            \var{cps} \union  \{(\var{b_n}, \var{pid})\} \\
             \var{eps}\\
             \var{vts'} \subtractrange \{\var{pid}\}
           \end{array}
@@ -632,43 +632,43 @@ This section models when update proposals get confirmed.
 \subsection{Update proposals adoption}
 \label{sec:update-proposals-adoption}
 
+\begin{equation}
+  \label{eq:predicate:adopt}
+  \begin{array}{r c l}
+    \fun{canAdopt}~\var{pps}~\var{bbs}
+    & =
+    & \var{upAdptThr} \mapsto t \in pps\\
+    & \wedge
+    & t \leq \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}}\\
+  \end{array}
+\end{equation}
+
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:up-adopted}
+    \label{eq:rule:snocbv}
     \inference
     {
-      \var{bv} = \var{pv}
-      & \var{bvs'} = \var{bvs};\var{bv}
-      & m = \size{bvs'} \\
+      \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'}
+      & \var{bvsWinSize} \mapsto w \in \var{pps}
     }
     {
       {
         \begin{array}{l}
-          ?
+          \var{pps}
         \end{array}
       }
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
-            \var{bvs}
+            bvs
           \end{array}
         \right)
       }
-      \trans{upadopt}{\var{bv}}
+      \trans{snocbv}{bv}
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{vis}\\
-            \var{ips}\\
             {[m - w, ..]} \restrictdom \var{bvs'}
           \end{array}
         \right)
@@ -678,15 +678,33 @@ This section models when update proposals get confirmed.
   %
   \nextdef
   %
-\begin{equation}
-    \label{eq:rule:up-no-adoption}
+  \begin{equation}
+    \label{eq:rule:up-adopted}
     \inference
     {
-      \var{bv} \neq \var{pv}
-      & \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'} \\
-      \var{upAdptThr} \mapsto n \in pps  &
-      \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}} < n\\
-      & \var{bvsWindowSize} \mapsto w \in pps
+      \var{bv} = \var{pv}
+      &
+      {
+        \begin{array}{l}
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            bvs
+          \end{array}
+        \right)
+      }
+      \trans{snocbv}{bv}
+      {
+        \left(
+          \begin{array}{l}
+            bvs'
+          \end{array}
+        \right)
+      }      
     }
     {
       {
@@ -716,7 +734,75 @@ This section models when update proposals get confirmed.
             \var{cps}\\
             \var{vis}\\
             \var{ips}\\
-            {[m - w, ..]} \restrictdom \var{bvs'}
+            \var{bvs'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  %
+  \nextdef
+  %
+  \begin{equation}
+    \label{eq:rule:up-no-adoption}
+    \inference
+    {
+      \var{bv} \neq \var{pv}
+      & 
+      {
+        \begin{array}{l}
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            bvs
+          \end{array}
+        \right)
+      }
+      \trans{snocbv}{bv}
+      {
+        \left(
+          \begin{array}{l}
+            bvs'
+          \end{array}
+        \right)
+      }
+      & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'})\\
+      \var{bv} \mapsto \var{pid} \in \var{vis}
+      & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})
+    }
+    {
+      {
+        \begin{array}{l}
+          ?
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upadopt}{\var{bv}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{vis}\\
+            \var{ips}\\
+            \var{bvs'}
           \end{array}
         \right)
       }
@@ -730,17 +816,38 @@ This section models when update proposals get confirmed.
     \inference
     {
       \var{bv} \neq \var{pv}
-      & \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'} \\
-      \var{upAdptThr} \mapsto n \in pps  &
-      n \leq \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}}\\
-      \var{bvsWindowSize} \mapsto w \in pps\\
-      \var{bv} \mapsto \var{pid} \in \var{vis} & \var{pid} \mapsto {up} \in \var{ips}
-      & \var{pid} \in \var{cps}
+      &
+            {
+        \begin{array}{l}
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            bvs
+          \end{array}
+        \right)
+      }
+      \trans{snocbv}{bv}
+      {
+        \left(
+          \begin{array}{l}
+            bvs'
+          \end{array}
+        \right)
+      }
+      &
+      \fun{canAdopt}~\var{pps}~\var{bvs'}\\
+      \var{bv} \mapsto \var{pid} \in \var{vis}
+      & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})\\
+      \var{pid} \mapsto {up} \in \var{ips}
     }
     {
       {
         \begin{array}{l}
-          ?
+          k
         \end{array}
       }
       \vdash
@@ -762,7 +869,7 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \var{bv}\\
             \upParams{up}\\
-            \var{cps} \setminus \{ \var{pid} \}\\
+            \var{cps} \subtractrange \{ \var{pid} \}\\
             \{ \var{bv} \} \subtractdom \var{vis}\\
             \{ \var{pid} \} \subtractdom \var{ips}\\
             {[m - w, ..]} \restrictdom \var{bvs'}
