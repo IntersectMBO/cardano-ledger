@@ -1,0 +1,54 @@
+The pool reaping in rules are discribed in
+Figure~\ref{fig:ts-types:pool-reap} and Figure~\ref{fig:rules:pool-reap}.
+
+%%
+%% Figure - Pool Reap
+%%
+
+
+\begin{figure}
+  \emph{Pool Reap Transition}
+  \begin{equation*}
+    \_ \vdash \_ \trans{poolreap}{} \_ \in
+    \powerset (\Slot \times \PState \times \PState)
+  \end{equation*}
+  %
+  \caption{Pool Reap Transition}
+  \label{fig:ts-types:pool-reap}
+\end{figure}
+
+
+%%
+%% Figure - Pool Rules
+%%
+\begin{figure}
+
+  \begin{equation}\label{eq:pool-reap}
+    \inference[Pool-Reap]
+    {
+      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
+      & \var{retired} \neq \emptyset
+    }
+    {
+      \var{slot} \vdash
+      \left(
+      \begin{array}{r}
+        \var{stpools} \\
+        \var{pparams} \\
+        \var{retiring}
+      \end{array}
+      \right)
+      \trans{poolreap}{}
+      \left(
+      \begin{array}{rcl}
+        \var{retired} & \subtractdom & \var{stpools} \\
+        \var{retired} & \subtractdom & \var{pparams} \\
+        \var{retired} & \subtractdom & \var{retiring} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Pool Reap Inference Rule}
+  \label{fig:rules:pool-reap}
+
+\end{figure}
