@@ -79,7 +79,7 @@
 \newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\DelegState}{\type{DState}}
+\newcommand{\DelegState}{\type{DSIState}}
 
 %%
 %% Function and relation names
@@ -143,7 +143,7 @@
 
 \author{Marko Dimjašević}
 
-\date{October 31, 2018}
+\date{November 5, 2018}
 
 \maketitle
 
@@ -493,9 +493,15 @@ blocks in the blockchain.
 %
 Initially, when the blockchain is made of the genesis block $g_0 \in \GBlock$
 only, the initial state is such that no key from the genesis block signed a
-block (neither directly or indirectly via delegation), the last added block is
-the genesis block $p = g_0$ and no delegation happened, as given in
-Figure~\ref{fig:init-bc-state}.
+block (neither directly or indirectly via delegation) and the last added block
+is the genesis block $p = g_0$.
+%
+The delegation state $ds$ of type $\DelegState$ is kept abstract in this
+document;
+%
+it is defined in the ledger layer specification.
+%
+The initial state is given in Figure~\ref{fig:init-bc-state}.
 
 \begin{figure}
   \begin{equation*}
@@ -505,7 +511,7 @@ Figure~\ref{fig:init-bc-state}.
         {\begin{array}{c}
            \signmapname = \emptyset \\
            p = g_0 \\
-           ds = \emptyset % TODO: Make this value abstract and explain it in prose
+           ds
          \end{array}}
      \right)
    }
@@ -628,8 +634,7 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      ix = \bix{b} \wedge sl = \bsl{b} \\
-      \hash{b} = \hashofblock{p} \\
+      ix = \bix{b} \wedge \hash{b} = \hashofblock{p} \\
       \delegation{ds}{vk_s}{vk_d} \\
       \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
