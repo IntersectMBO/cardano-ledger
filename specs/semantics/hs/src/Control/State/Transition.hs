@@ -13,9 +13,9 @@
 -- | Small step state transition systems.
 module Control.State.Transition where
 
-import           Control.Lens
-import           Data.Bifunctor (first)
-import           Data.Maybe     (catMaybes)
+import Control.Lens
+import Data.Bifunctor (first)
+import Data.Maybe (catMaybes)
 
 -- | State transition system.
 class ( Eq (PredicateFailure a)
@@ -43,22 +43,18 @@ initialRules = filter isInitial rules
   isInitial (Rule _ (Base _)) = True
   isInitial _                 = False
 
-initialStates
-  :: forall s. STS s
-  => [State s]
+initialStates :: forall s . STS s => [State s]
 initialStates = catMaybes $ applyBase <$> rules @s
-  where
-    applyBase (Rule _ (Base b)) = Just b
-    applyBase _                 = Nothing
+ where
+  applyBase (Rule _ (Base b)) = Just b
+  applyBase _                 = Nothing
 
 -- | Rules applying transitions
-transitionRules
-  :: STS a
-  => [Rule a]
+transitionRules :: STS a => [Rule a]
 transitionRules = filter (not . isInitial) rules
-  where
-    isInitial (Rule _ (Base _)) = True
-    isInitial _                 = False
+ where
+  isInitial (Rule _ (Base _)) = True
+  isInitial _                 = False
 
 -- | The union of the components of the system available for making judgments.
 type JudgmentContext sts = (Environment sts, State sts, Signal sts)
@@ -72,10 +68,7 @@ data Transition sts where
     -> Transition sts
 
 -- | Apply a transition
-transition
-  :: Transition sts
-  -> JudgmentContext sts
-  -> State sts
+transition :: Transition sts -> JudgmentContext sts -> State sts
 transition (Transition f) = f
 
 -- | Embed one STS within another.
@@ -89,13 +82,11 @@ data PredicateResult sts
 
 deriving instance (Eq (PredicateFailure sts)) => Eq (PredicateResult sts)
 
-gatherFailures
-  :: [PredicateResult sts]
-  -> [PredicateFailure sts]
+gatherFailures :: [PredicateResult sts] -> [PredicateFailure sts]
 gatherFailures xs = catMaybes $ prToMaybe <$> xs
-  where
-    prToMaybe Passed     = Nothing
-    prToMaybe (Failed x) = Just x
+ where
+  prToMaybe Passed     = Nothing
+  prToMaybe (Failed x) = Just x
 
 data EmbeddedTransition sub sts where
   EmbeddedTransition
@@ -120,14 +111,11 @@ data Antecedent sts where
     -> Antecedent sts
 
 -- | Check the antecedent
-checkAntecedent
-  :: JudgmentContext sts
-  -> Antecedent sts
-  -> PredicateResult sts
+checkAntecedent :: JudgmentContext sts -> Antecedent sts -> PredicateResult sts
 checkAntecedent jc ant = case ant of
   SubTrans (EmbeddedTransition gjc rule) -> case applyRule (jc ^. gjc) rule of
-    Right _  -> Passed
-    Left pfs -> Failed $ wrapFailed pfs
+    Right _   -> Passed
+    Left  pfs -> Failed $ wrapFailed pfs
 
 -- | Get the result from a transition under a subsystem, regardless of whether
 -- validation passed.
@@ -136,7 +124,8 @@ subTransResult
   => JudgmentContext super
   -> EmbeddedTransition sub super
   -> State sub
-subTransResult jc (EmbeddedTransition jcg rule) = fst $ applyRuleIndifferently (jc ^. jcg) rule
+subTransResult jc (EmbeddedTransition jcg rule) =
+  fst $ applyRuleIndifferently (jc ^. jcg) rule
 
 
 -- | The consequent to a transition rule.
@@ -146,13 +135,9 @@ data Consequent sts where
   -- | The consequent describes a valid transition between two states.
   Extension :: Transition sts -> Consequent sts
 
-applyConsequent
-  :: STS s
-  => JudgmentContext s
-  -> Consequent s
-  -> State s
+applyConsequent :: STS s => JudgmentContext s -> Consequent s -> State s
 applyConsequent jc con = case con of
-  Base st'                 -> st'
+  Base      st'            -> st'
   Extension (Transition f) -> f jc
 
 -- | A rule within a transition system.
@@ -176,11 +161,8 @@ applyRule jc (Rule ants con) = case checkAntecedent jc <$> ants of
 --   If the rule successfully applied, the list of predicate failures will be
 --   empty.
 applyRuleIndifferently
-  :: STS s
-  => JudgmentContext s
-  -> Rule s
-  -> (State s, [PredicateFailure s])
+  :: STS s => JudgmentContext s -> Rule s -> (State s, [PredicateFailure s])
 applyRuleIndifferently jc (Rule ants con) = (res, prs)
-  where
-    prs = gatherFailures $ checkAntecedent jc <$> ants
-    res = applyConsequent jc con
+ where
+  prs = gatherFailures $ checkAntecedent jc <$> ants
+  res = applyConsequent jc con
