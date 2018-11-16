@@ -189,8 +189,8 @@ set of $l$.
 \begin{property}[\textbf{Registered Staking Key with Zero Rewards}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
-    \wedge \RegKey{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \implies \forall \var{c} \in \DCertRegKey, \var{l} \trans{delegw}{c} \var{l'}
+    \implies \applyFun{author}{c} = \var{hk}\\ \implies
     \var{hk} \in \applyFun{getStKeys}{l'} \wedge
     (\applyFun{getRewards}var{rewards})[hk] = 0
   \end{multline*}
@@ -206,8 +206,8 @@ is set to 0 in $l'$.
 \begin{property}[\textbf{Deregistered Staking Key}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
-    \wedge \DeregKey{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \implies \forall \var{c} \in \DCertDeRegKey, \var{l} \trans{delegw}{c} \var{l'}
+    \implies \applyFun{author}{c} = \var{hk}\\ \implies
     \var{hk} \not\in \applyFun{getStKeys}{l'} \wedge
     (\fun{dom}(\applyFun{getRewards}{l'}) \cup
     \fun{dom}(\applyFun{getDelegations}{l'})) \cap \{hk\} = \emptyset
@@ -224,8 +224,8 @@ of $l'$.
 \begin{property}[\textbf{Delegated Stake}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCert, \var{l} \trans{delegw}{c} \var{l'}
-    \wedge \Delegate{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \implies \forall \var{c} \in \DCertDeleg, \var{l} \trans{delegw}{c} \var{l'}
+    \implies \applyFun{author}{c} = \var{hk}\\ \implies
     \var{hk} \in \applyFun{getStKeys}{l} \wedge
     (\applyFun{getDelegations}{l'})[hk] = \applyFun{pool}{c}
   \end{multline*}
@@ -245,7 +245,7 @@ certificate in $l'$.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
     \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
-    \wedge \RegPool{c} \implies \applyFun{author}{c} = \var{hk}\\ \implies
+    \implies \applyFun{author}{c} = \var{hk}\\ \implies
     (\applyFun{getStPools}{l'})[\var{hk}] = c \wedge \var{hk} \not\in
     \applyFun{getRetiring}{l'}
   \end{multline*}
@@ -261,8 +261,8 @@ and that $hk$ is not in the set of retiring stake pools in $l'$.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
     \applyFun{validLedgerstate}{l} \\
-    \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
-    \wedge \RetirePool{c} \\ \implies e = \applyFun{retire}{c} \wedge
+    \implies \forall \var{c} \in \DCertRetirePool, \var{l} \trans{pool}{c} \var{l'}
+    \\ \implies e = \applyFun{retire}{c} \wedge
     \var{cepoch} < e < \var{cepoch} + \emax \wedge \applyFun{author}{c} =
     \var{hk}\\ \implies (\applyFun{getRetiring}{l'})[\var{hk}] = e \wedge
     \var{hk} \in \fun{dom}(\applyFun{getStPools}{l})
