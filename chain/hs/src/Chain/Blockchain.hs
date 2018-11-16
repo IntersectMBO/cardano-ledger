@@ -56,7 +56,7 @@ instance STS Interf where
   data PredicateFailure Interf
     = ConflictWithExistingCerts
     | InvalidNewCertificates
-    deriving Show
+    deriving (Eq, Show)
 
   rules = [newCertsRule]
 
@@ -78,9 +78,10 @@ incIxMap :: BlockIx -> VKey -> KeyToQMap -> KeyToQMap
 incIxMap ix = Map.adjust (pushQueue ix)
 
 -- | Extends a chain by a block
-extendChain :: Environment BC -> State BC -> Signal BC -> State BC
-extendChain env st b@(RBlock {}) =
-  let p' = b
+extendChain :: JudgmentContext BC -> State BC
+extendChain jc =
+  let (env, st, b@(RBlock {})) = jc
+      p' = b
       (sl, k, t) = env
       (m, p, ds) = st
       vk_d = rbSigner b
@@ -106,8 +107,8 @@ instance STS BC where
     | NoDelegationRight
     | InvalidBlockSignature
     | SignedMaximumNumberBlocks
-    | InvalidCertificates
-    deriving Show
+    | LedgerFailure [PredicateFailure Interf]
+    deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
   -- extending the blockchain by a new block
@@ -130,31 +131,33 @@ instance STS BC where
         Rule [] $ Base (Map.empty, genesisBlock, initDSIState)
       -- valid predecessor
       validPredecessor :: Antecedent BC
-      validPredecessor = Predicate $ \_ st b@(RBlock {}) ->
-        let (_, p, _) = st
+      validPredecessor = Predicate $ \jc ->
+        let (_, (_, p, _), b@(RBlock {})) = jc
          in if hashBlock p == rbHash b
               then Passed
               else Failed InvalidPredecessor
       -- has a delegation right
       hasRight :: Antecedent BC
-      hasRight = Predicate $ \_ st b@(RBlock {}) ->
-        let (_, _, ds) = st
+      hasRight = Predicate $ \jc ->
+        let (_, (_, _, ds), b@(RBlock {})) = jc
             vk_d = rbSigner b
          in case Map.lookup vk_d (delegates ds) of
               Nothing -> Failed NoDelegationRight
               _       -> Passed
       -- valid signature
       validSignature :: Antecedent BC
-      validSignature = Predicate $ \_ _ b@(RBlock {}) ->
-        let vk_d = rbSigner b
+      validSignature = Predicate $ \jc ->
+        let (_, _, b@(RBlock {})) = jc
+            vk_d = rbSigner b
          in if verify vk_d (rbData b) (rbSig b)
               then Passed
               else Failed InvalidBlockSignature
       -- the delegator has not signed more than an allowed number of blocks
       -- in a sliding window of the last k blocks
       lessThanLimitSigned :: Antecedent BC
-      lessThanLimitSigned = Predicate $ \env st b@(RBlock {}) ->
-        let (m, _, ds) = st
+      lessThanLimitSigned = Predicate $ \jc ->
+        let (env, st, b@(RBlock {})) = jc
+            (m, _, ds) = st
             (_, (MkK k), (MkT t)) = env
             vk_d = rbSigner b
             dsm = delegates ds
@@ -167,13 +170,9 @@ instance STS BC where
       -- checks that delegation certificates in the signal block are legal
       -- with regard to delegation certificates in the delegation state
       legalCerts :: Embed Interf BC => Antecedent BC
-      -- legalCerts = SubTrans env signal rule where
-      legalCerts = SubTrans (_1 . _1) (_3 . to rbCerts) newCertsRule
+      legalCerts = SubTrans (EmbeddedTransition (to proj) newCertsRule) where
+        proj :: JudgmentContext BC -> JudgmentContext Interf
+        proj ((sl, k, t), (m, p, d), b@(RBlock {})) = (sl, d, rbCerts b)
 
 instance Embed Interf BC where
-  -- stateLens :: Lens' (State BC) (State Interf)
-  stateLens = lens getter setter where
-    getter :: State BC -> State Interf
-    getter (_, _, ds) = ds
-    setter :: State BC -> State Interf -> State BC
-    setter (m, p, _) ds' = (m, p, ds')
+  wrapFailed = LedgerFailure
