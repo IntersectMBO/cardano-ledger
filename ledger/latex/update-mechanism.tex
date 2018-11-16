@@ -420,8 +420,7 @@ TODO: add witnesses as well.
     & \VState
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{vts} & \powerset{(\VKeyGen \times \UPropId)} & \text{votes}\\
-        \var{vcount} & \UPropId \mapsto \mathbb{N} & \text{vote count}
+        \var{vts} & \powerset{(\VKeyGen \times \UPropId)} & \text{votes}
       \end{array}\right)
   \end{align*}
   %
@@ -441,7 +440,10 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
 \item We count one vote per genesis key that delegated to the key that is
   casting the vote.
 \item The vote must refer to an active update proposal.
-  \item The proposal id must be signed by the key that is casting the vote.
+\item The proposal id must be signed by the key that is casting the vote.
+\item It might be possible for the same genesis key to vote multiple times for
+  the same proposal, however this vote will be counted once (note that we're
+  taking the union of the key-proposal-id pairs).
 \end{itemize}
 
 
@@ -450,14 +452,13 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
     \label{eq:rule:voting}
     \inference
     {
-      \vPropId{v} = \var{pid} & \vCaster{v} = \var{vk}
-      & \var{pid} \mapsto n \in \{pid \mapsto 0\} \unionoverride \var{vcount} \\
+      \vPropId{v} = \var{pid} &  \vCaster{v} = \var{vk} &
       \var{vts}_{\var{pid}} =
-      \{ (\var{vk_s}, \var{pid}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
-      & m = \size{\var{vts}_{\var{pid}}}\\
-      \var{vts}_{\var{pid}} \cap \var{vts} = \emptyset\\
-      \langle \exists \var{up} \in \var{aps} \cdot \upId{up} = \var{pid} \rangle\\
-      \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}
+      \{ (\var{vk_s}, \var{pid}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
+      & m = \size{\var{vts}_{\var{pid}}}
+      & \var{vts}_{\var{pid}} \cap \var{vts} = \emptyset
+      & \var{pid} \in \var{aps} &
+      \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}\\
     }
     {
       {
@@ -470,8 +471,7 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
       {
         \left(
           \begin{array}{l}
-            \var{vts}\\
-            \var{vcount}
+            \var{vts}
           \end{array}
         \right)
       }
@@ -480,7 +480,6 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
         \left(
           \begin{array}{l}
             \var{vts} \cup \var{vts}_{\var{pid}}\\
-            \var{vcount} \unionoverride \{ \var{pid} \mapsto n + m\}
           \end{array}
         \right)
       }
