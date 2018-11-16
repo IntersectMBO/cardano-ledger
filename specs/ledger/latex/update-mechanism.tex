@@ -152,19 +152,23 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   current version.
 \end{itemize}
 
+\setpremisesspace{7pt}
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:up-validity}
     \inference
     {
-      \var{maxUpSize} \mapsto \var{mus} \in \var{pps} & \upSize{up} \leq \var{mus}\\
-      \upId{up} = \var{pid} & \var{pid} \notin \var{aps} \\
-      \upPV{up} = \var{nv} & \var{nv} = (\var{mj_n}, \var{mi_n}, \var{a_n})
-      & \var{nv} \notin \dom \var{vis}\\
-      & \var{pv} = (\var{mj_p}, \var{mi_p}, \var{a_p})
-      & |\var{mj_p} - \var{mj_n}|
-      + |\var{mi_p} - \var{mi_n}|
-      + |\var{a_p} - \var{a_n}| \leq 1
+      \var{maxUpSize} \mapsto \var{mus} \in \var{pps}
+      & \upSize{up} \leq \var{mus}
+      & \upId{up} = \var{pid}
+      & \var{pid} \notin \var{aps} \\
+      \upPV{up} = \var{nv}
+      & \var{nv} \notin \dom \var{vis}
+      & \var{nv} = (\var{mj_n}, \var{mi_n}, \var{a_n})
+      & \var{pv} = (\var{mj_p}, \var{mi_p}, \var{a_p})\\
+      (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)
+      & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n})
+      & (|\var{mj_n} - \var{mj_p}| \leq 1)
       & \var{pv} < \var{nv}\\
     }
     {
