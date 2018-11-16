@@ -12,6 +12,19 @@ make
 
 This makes both the `Accounting.pdf` and `accounting/src/Accounting.hs`.
 
+If you prefer using [Nix](https://nixos.org/nix/), the `make` command can be
+run as via `nix-build`:
+
+```shell
+nix-build
+```
+
+For a continuous compilation of the `LaTeX` document run:
+
+```shell
+nix-shell --pure --run "make watch"
+```
+
 ## Testing the Haskell model
 
 Change to the haskell directory `accounting`.
