@@ -14,7 +14,6 @@
 module Control.State.Transition where
 
 import Control.Lens
-import Data.Bifunctor (first)
 import Data.Maybe (catMaybes)
 
 -- | State transition system.
@@ -36,25 +35,16 @@ class ( Eq (PredicateFailure a)
   -- | Rules governing transition under this system.
   rules :: [Rule a]
 
--- | Rules generating initial states
-initialRules :: STS a => [Rule a]
-initialRules = filter isInitial rules
- where
-  isInitial (Rule _ (Base _)) = True
-  isInitial _                 = False
+-- | Does a rule generate an initial state?
+isInitial :: STS a => Rule a -> Bool
+isInitial (Rule _ (Base _)) = True
+isInitial _                 = False
 
 initialStates :: forall s . STS s => [State s]
 initialStates = catMaybes $ applyBase <$> rules @s
  where
   applyBase (Rule _ (Base b)) = Just b
   applyBase _                 = Nothing
-
--- | Rules applying transitions
-transitionRules :: STS a => [Rule a]
-transitionRules = filter (not . isInitial) rules
- where
-  isInitial (Rule _ (Base _)) = True
-  isInitial _                 = False
 
 -- | The union of the components of the system available for making judgments.
 type JudgmentContext sts = (Environment sts, State sts, Signal sts)
@@ -88,6 +78,7 @@ gatherFailures xs = catMaybes $ prToMaybe <$> xs
   prToMaybe Passed     = Nothing
   prToMaybe (Failed x) = Just x
 
+-- | Embed a transition under a sub-system within a super-system.
 data EmbeddedTransition sub sts where
   EmbeddedTransition
     :: Embed sub sts
@@ -116,6 +107,7 @@ checkAntecedent jc ant = case ant of
   SubTrans (EmbeddedTransition gjc rule) -> case applyRule (jc ^. gjc) rule of
     Right _   -> Passed
     Left  pfs -> Failed $ wrapFailed pfs
+  Predicate p -> p jc
 
 -- | Get the result from a transition under a subsystem, regardless of whether
 -- validation passed.
