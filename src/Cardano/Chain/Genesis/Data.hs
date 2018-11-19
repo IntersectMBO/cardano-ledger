@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Cardano.Chain.Genesis.Data
@@ -16,18 +17,29 @@ import Cardano.Prelude
 import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.List (lookup)
 import Data.Time (UTCTime)
 import Formatting (bprint, build, stext)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
-  (FromJSON(..), ToJSON(..), fromJSField, mkObject, parseCanonicalJSON)
+  ( FromJSON(..)
+  , Int54
+  , JSValue(..)
+  , ToJSON(..)
+  , expected
+  , fromJSField
+  , fromJSObject
+  , mkObject
+  , parseCanonicalJSON
+  )
 
+import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Chain.Genesis.ProtocolConstants (GenesisProtocolConstants)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
+import Cardano.Crypto (ProtocolMagic(..))
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be
@@ -38,7 +50,8 @@ data GenesisData = GenesisData
     , gdStartTime        :: !UTCTime
     , gdNonAvvmBalances  :: !GenesisNonAvvmBalances
     , gdBlockVersionData :: !BlockVersionData
-    , gdProtocolConsts   :: !GenesisProtocolConstants
+    , gdK                :: !BlockCount
+    , gdProtocolMagic    :: !ProtocolMagic
     , gdAvvmDistr        :: !GenesisAvvmBalances
     } deriving (Show, Eq)
 
@@ -49,19 +62,30 @@ instance Monad m => ToJSON m GenesisData where
     , ("startTime"       , toJSON $ gdStartTime gd)
     , ("nonAvvmBalances" , toJSON $ gdNonAvvmBalances gd)
     , ("blockVersionData", toJSON $ gdBlockVersionData gd)
-    , ("protocolConsts"  , toJSON $ gdProtocolConsts gd)
-    , ("avvmDistr"       , toJSON $ gdAvvmDistr gd)
+    , ( "protocolConsts"
+      , mkObject
+        [ ("k"            , pure . JSNum . fromIntegral $ gdK gd)
+        , ("protocolMagic", toJSON . getProtocolMagic $ gdProtocolMagic gd)
+        ]
+      )
+    , ("avvmDistr", toJSON $ gdAvvmDistr gd)
     ]
 
 instance MonadError SchemaError m => FromJSON m GenesisData where
-  fromJSON obj =
+  fromJSON obj = do
+    objAssoc       <- fromJSObject obj
+    protocolConsts <- case lookup "protocolConsts" objAssoc of
+      Just fld -> pure fld
+      Nothing  -> expected "field protocolConsts" Nothing
+
     GenesisData
       <$> fromJSField obj "bootStakeholders"
       <*> fromJSField obj "heavyDelegation"
       <*> fromJSField obj "startTime"
       <*> fromJSField obj "nonAvvmBalances"
       <*> fromJSField obj "blockVersionData"
-      <*> fromJSField obj "protocolConsts"
+      <*> (fromIntegral @Int54 <$> fromJSField protocolConsts "k")
+      <*> (ProtocolMagic <$> fromJSField protocolConsts "protocolMagic")
       <*> fromJSField obj "avvmDistr"
 
 data GenesisDataError

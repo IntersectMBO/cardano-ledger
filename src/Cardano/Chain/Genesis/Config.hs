@@ -77,9 +77,12 @@ instance FromJSON StaticConfig where
         -- BlockVersionData
         blockVersionDataV <- specO .: "blockVersionData"
         blockVersionData <- parseJSON blockVersionDataV
-        -- GenesisProtocolConstants
-        protocolConstantsV <- specO .: "protocolConstants"
-        protocolConstants <- parseJSON protocolConstantsV
+        -- K
+        kV <- specO .: "k"
+        k <- parseJSON kV
+        -- ProtocolMagic
+        protocolMagicV <- specO .: "protocolMagic"
+        protocolMagic <- parseJSON protocolMagicV
         -- GenesisInitializer
         initializerO <- specO .: "initializer"
         testBalanceV <- initializerO .: "testBalance"
@@ -95,7 +98,8 @@ instance FromJSON StaticConfig where
             (GenesisAvvmBalances avvmDistr)
             heavyDelegation
             blockVersionData
-            protocolConstants
+            k
+            protocolMagic
             (GenesisInitializer
               testBalance
               fakeAvvmBalance
