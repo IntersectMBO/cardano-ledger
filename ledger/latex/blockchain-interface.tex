@@ -156,17 +156,246 @@
 \subsection{Update-proposals interface}
 \label{sec:update-proposals-interface}
 
-\begin{todo}
-  The blockchain will pass maybe one update proposal, and a list of votes. Make
-  sure we support this.
-\end{todo}
 
-\begin{lstlisting}
- -- | Update System payload
-data Payload = Payload
-  { payloadProposal :: !(Maybe Proposal)
-  , payloadVotes    :: ![Vote]
-  -- ^ Votes received on the different update proposals posted so far, not only
-  -- on the current @payloadProposal@.
-  } deriving (Eq, Show, Generic)
-\end{lstlisting}
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-reg-interface}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{e_c}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}\\
+            \var{eps}
+          \end{array}
+        \right)
+      }
+      \trans{upa}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups'}\\
+            \var{eps'}
+          \end{array}
+        \right)
+      }
+      \\
+      \var{pids_{old}} = \dom~(pwds' \restrictrange \{[.., b_n - u]\}) &
+      pws' = pws \unionoverride \{ \upId{up} \mapsto b_n\}
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          e_c\\
+          b_n\\
+          \var{dms}\\
+          u
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upireg}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{pids_{old}} \subtractdom \var{rups'}\\
+            {[e_c, ..]} \restrictdom \var{eps'}\\
+            \var{pids_{old}} \subtractdom \var{cps}\\
+            \var{pids_{old}} \subtractdom \var{vts}\\
+            \var{bvs}\\
+            \var{pids_{old}} \subtractdom \var{pws'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update-proposals registration rules}
+  \label{fig:rules:upi-reg-interface}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-vote}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          b_n\\
+          \var{pps}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}\\
+            \var{cps}\\
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{upc}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}\\
+            \var{cps}\\
+            \var{vts'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          e_c\\
+          b_n\\
+          \var{dms}\\
+          u
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upivote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Voting on update-proposals rules}
+  \label{fig:rules:upi-vote}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-bv-reg}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          k\\
+          b_n
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{cps}\\
+            \var{rups}\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upadopt}{\var{bv}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv'}\\
+            \var{pps'}\\
+            \var{cps'}\\
+            \var{rups'}\\
+            \var{bvs'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          e_c\\
+          b_n\\
+          \var{dms}\\
+          u
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv}\\
+            \var{pps}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upivbreg}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{pv'}\\
+            \var{pps'}\\
+            \var{rups'}\\
+            \var{eps}\\
+            \var{cps'}\\
+            \var{vts}\\
+            \var{bvs'}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block version registration rules}
+  \label{fig:rules:upi-bv-reg}
+\end{figure}
+
