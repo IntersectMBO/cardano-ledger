@@ -123,7 +123,7 @@ genTxLedgerEntry keyList (UTxO m) = do
   selectedInputs <- Gen.shuffle utxoInputs
   let !selectedAddr    = addr $ head selectedInputs
   let !selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
-  let !selectedKeyPair = findAddrKeyPair selectedAddr keyList
+  let !selectedKeyPair = findPayKeyPair selectedAddr keyList
   let !selectedBalance = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
@@ -182,9 +182,14 @@ repeatTx n !keyPairs !fees !ls = do
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
-findAddrKeyPair (AddrTxin addr _) keyList =
-     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+findPayKeyPair :: Addr -> KeyPairs -> KeyPair
+findPayKeyPair (AddrTxin addr _) keyList =
+    fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+
+-- | Find first matching key pair for stake key in 'AddrTxin'.
+findStakeKeyPair :: HashKey -> KeyPairs -> KeyPair
+findStakeKeyPair addr keyList =
+    snd $ head $ filter (\(_, stake) -> addr == (hashKey $ vKey stake)) keyList
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr
