@@ -126,7 +126,8 @@ First we model the validity of a proposal.
     \UPVState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{aps} & \powerset{\UProp} & \text{active proposals}\\
+        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        & \text{registered update proposals}\\
       \end{array}
     \right)
   \end{equation*}
@@ -147,9 +148,20 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   protocol parameters.
 \item must not exist in the set of active proposals.
 \item must have a unique version among the current active proposals. This
-  implies that a proposal is uniquely determined by its block version.
-\item must increase one of the components (major, minor, or alternative) of the
-  current version.
+  implies that a proposal is uniquely determined by the protocol version it
+  proposes.
+\item must increase one of the (major, minor, or alternative) of the
+  current version in a consistent manner:
+  \begin{itemize}
+  \item The proposed version must be lexicographically bigger than the current
+    version.
+  \item The major versions of the proposed and current version must differ in
+    at most one.
+  \item If the proposed major version is equal to the current major
+    version, then the proposed minor version must be incremented by one.
+  \item If the proposed major version is larger than the current major, then
+    the proposed minor version must be zero.
+  \end{itemize}
 \end{itemize}
 
 \begin{figure}[htb]
@@ -159,8 +171,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       \fun{canFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
       & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_n}, \var{mi_n}, \var{a_n})\\
       & \wedge & (|\var{mj_n} - \var{mj_p}| \leq 1\\
-      & \wedge & (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)\\
-      & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))
+      & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))\\
+      & \wedge & (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)
     \end{array}
   \end{equation}
   \caption{Update validity functions}
@@ -176,9 +188,9 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
         \var{maxUpSize} \mapsto \var{mus} \in \var{pps}
         & \upSize{up} \leq \var{mus}\\
         \upId{up} = \var{pid}
-        & \var{pid} \notin \var{aps} \\
+        & \var{pid} \notin \dom \var{rups} \\
         \upPV{up} = \var{nv}
-        & \var{nv} \notin \dom \var{vips}\\
+        & \var{nv} \notin \dom (\range \var{rups})\\
        \end{array}}\\
      \fun{canFollow}~\var{nv}~\var{pv}
     }
@@ -193,8 +205,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
-            \var{vips}
+            \var{rups}
           \end{array}
         \right)
       }
@@ -202,8 +213,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{aps \cup \{\var{pid}\}}\\
-            \var{vips} \unionoverride \{ \var{nv} \mapsto (\var{pid}, \var{up}) \}
+            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \upPV{up}) \}
           \end{array}
         \right)
       }
@@ -302,8 +312,7 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
-            \var{vips}
+            \var{rups}\\
           \end{array}
         \right)
       }
@@ -311,8 +320,7 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps'}\\
-            \var{vips'}\\
+            \var{rups'}\\
           \end{array}
         \right)
       }
@@ -352,8 +360,7 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{eps}
           \end{array}
         \right)
@@ -362,8 +369,7 @@ TODO: add witnesses as well.
       {
         \left(
           \begin{array}{l}
-            \var{aps'}\\
-            \var{vips'}\\
+            \var{rups'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -404,7 +410,8 @@ TODO: add witnesses as well.
     & \VEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{aps} & \powerset{\UProp} & \text{active proposals}\\
+        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
   \end{align*}
@@ -414,7 +421,7 @@ TODO: add witnesses as well.
     & \VState
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{vts} & \powerset{(\VKeyGen \times \UPropId)} & \text{votes}
+        \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{votes}
       \end{array}\right)
   \end{align*}
   %
@@ -447,16 +454,14 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
     {
       \vPropId{v} = \var{pid} &  \vCaster{v} = \var{vk} &
       \var{vts}_{\var{pid}} =
-      \{ (\var{vk_s}, \var{pid}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
-      & m = \size{\var{vts}_{\var{pid}}}
-      & \var{vts}_{\var{pid}} \cap \var{vts} = \emptyset
-      & \var{pid} \in \var{aps} &
+      \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
+      & \var{pid} \in \dom \var{rups} &
       \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}\\
     }
     {
       {
         \begin{array}{l}
-          \var{aps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -496,7 +501,7 @@ This section models when update proposals get confirmed.
     {
       {
         \begin{array}{l}
-          \var{aps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -518,12 +523,12 @@ This section models when update proposals get confirmed.
       }\\
       \vPropId{v} = \var{pid}
       & \var{pcThr} \mapsto t \in \var{pps}
-      & \size{\var{vts'} \restrictrange \{\var{pid}\}} < t      
+      & \size{\{\var{pid}\} \restrictdom \var{vts'}} < t
     }
     {
       {
         \begin{array}{l}
-          b_n\\          
+          b_n\\
           \var{pps}\\
           \var{dms}
         \end{array}
@@ -532,7 +537,7 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
+            \var{rups}\\
             \var{cps}\\
             \var{vts}
           \end{array}
@@ -542,7 +547,7 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
+            \var{rups}\\
             \var{cps}\\
             \var{vts'}
           \end{array}
@@ -557,7 +562,7 @@ This section models when update proposals get confirmed.
     {
       {
         \begin{array}{l}
-          \var{aps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -576,10 +581,10 @@ This section models when update proposals get confirmed.
             \var{vts'}
           \end{array}
         \right)
-      }\\      
+      }\\
       \vPropId{v} = \var{pid}
       & \var{pcThr} \mapsto t \in \var{pps}
-      & t \leq \size{\var{vts'} \restrictrange \{\var{pid}\}}
+      & t \leq \size{\{\var{pid}\} \restrictdom \var{vts'}}
     }
     {
       {
@@ -593,7 +598,7 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{aps}\\
+            \var{rups}\\
             \var{cps}\\
             \var{vts}
           \end{array}
@@ -603,9 +608,9 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{aps} \setminus \{\var{pid}\} \\
-            \var{cps} \union  \{(\var{b_n}, \var{pid})\} \\
-            \var{vts'} \subtractrange \{\var{pid}\}
+            \{\var{pid}\} \subtractdom \var{rups} \\
+            \var{cps} \unionoverride  \{\var{pid} \mapsto b_n\} \\
+            \{\var{pid}\} \subtractdom \var{vts'} 
           \end{array}
         \right)
       }
@@ -623,11 +628,11 @@ This section models when update proposals get confirmed.
 \begin{equation}
   \label{eq:predicate:adopt}
   \begin{array}{r c l}
-    \fun{canAdopt}~\var{pps}~\var{bbs}
+    \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
     & =
     & \var{upAdptThr} \mapsto t \in pps\\
     & \wedge
-    & t \leq \dfrac{\size{\var{bvs'} \restrictrange \{\var{bv}\}}}{\size{\var{bvs'}}}\\
+    & t \leq \dfrac{\size{\var{bvs} \restrictrange \{\var{bv}\}}}{\size{\var{bvs}}}\\
   \end{array}
 \end{equation}
 
@@ -692,12 +697,13 @@ This section models when update proposals get confirmed.
             bvs'
           \end{array}
         \right)
-      }      
+      }
     }
     {
       {
         \begin{array}{l}
-          k
+          k\\
+          b_n
         \end{array}
       }
       \vdash
@@ -707,7 +713,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{bvs}
           \end{array}
         \right)
@@ -719,7 +725,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{bvs'}
           \end{array}
         \right)
@@ -734,7 +740,7 @@ This section models when update proposals get confirmed.
     \inference
     {
       \var{bv} \neq \var{pv}
-      & 
+      &
       {
         \begin{array}{l}
           \var{pps}
@@ -756,14 +762,15 @@ This section models when update proposals get confirmed.
           \end{array}
         \right)
       }
-      & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'})\\
-      \var{bv} \mapsto (\var{pid}, \wcard) \in \var{vips}
-      & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})
+      & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv})\\
+      \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rups}
+      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., b_n - k])
     }
     {
       {
         \begin{array}{l}
-          k
+          k\\
+          b_n
         \end{array}
       }
       \vdash
@@ -773,7 +780,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{bvs}
           \end{array}
         \right)
@@ -785,7 +792,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{bvs'}
           \end{array}
         \right)
@@ -823,14 +830,15 @@ This section models when update proposals get confirmed.
         \right)
       }
       &
-      \fun{canAdopt}~\var{pps}~\var{bvs'}\\
-      \var{bv} \mapsto (\var{pid}, \var{up}) \in \var{vips}
-      & \var{pid} \in \range~([.., b_n - k] \restrictdom \var{cps})\\
+      \fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv}\\
+      \var{pid} \mapsto (\var{bv}, \var{pps'}) \in \var{rups}
+      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., b_n - k])\\
     }
     {
       {
         \begin{array}{l}
-          k
+          k\\
+          b_n
         \end{array}
       }
       \vdash
@@ -840,7 +848,7 @@ This section models when update proposals get confirmed.
             \var{pv}\\
             \var{pps}\\
             \var{cps}\\
-            \var{vips}\\
+            \var{rups}\\
             \var{bvs}
           \end{array}
         \right)
@@ -850,9 +858,9 @@ This section models when update proposals get confirmed.
         \left(
           \begin{array}{l}
             \var{bv}\\
-            \upParams{up}\\
-            \var{cps} \subtractrange \{ \var{pid} \}\\
-            \{ \var{bv} \} \subtractdom \var{vips}\\
+            \var{pps'}\\
+            \{ \var{pid} \} \subtractdom \var{cps} \\
+            \{ \var{pid} \} \subtractdom \var{rups}\\
             \var{bvs'}
           \end{array}
         \right)
@@ -873,12 +881,12 @@ unnecessary features and reducing accidental complexity. The following
 subsections highlight the differences between the this specification and the
 current implementation.
 
-\subsubsection{Votes are only positive}
+\subsubsection{Positive votes}
 \label{sec:only-positive-votes}
 
-Genesis keys can only vote positively for an update proposal. In the current
-implementation stakeholders can vote for or against a proposal, which makes the
-voting logic more complex:
+Votes are only positive. Genesis keys can only vote positively for an update
+proposal. In the current implementation stakeholders can vote for or against a
+proposal, which makes the voting logic more complex:
 \begin{itemize}
 \item there are more cases to consider
 \item the current voting validation rules allow voters to change their minds
@@ -887,6 +895,11 @@ voting logic more complex:
   Rule~\ref{eq:rule:voting} where we only need to keep track of the set of
   key-proposal-id's pairs.
 \end{itemize}
+
+\subsubsection{Alternative version numbers}
+\label{sec:alt-version-numbers-constraints}
+
+Alternative version numbers are only lexicographically constrained
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
