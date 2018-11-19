@@ -22,12 +22,7 @@ import Data.Maybe (fromJust)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  ( LovelacePortion(..)
-  , SharedSeed(..)
-  , StakeholderId(..)
-  , addressHash
-  , mkKnownLovelace
-  )
+  (LovelacePortion(..), StakeholderId(..), addressHash, mkKnownLovelace)
 import Cardano.Chain.Delegation (HeavyDlgIndex(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
@@ -55,9 +50,6 @@ import qualified Cardano.Crypto.Wallet as CC
 import Test.Cardano.Chain.Update.Example (exampleBlockVersionData)
 import Test.Cardano.Crypto.Bi (getBytes)
 
-exampleSharedSeed :: SharedSeed
-exampleSharedSeed = SharedSeed (getBytes 8 32)
-
 exampleStaticConfig_GCSrc :: StaticConfig
 exampleStaticConfig_GCSrc =
   GCSrc "dRaMwdYsH3QA3dChe" (abstractHash (Raw "Test"))
@@ -65,7 +57,6 @@ exampleStaticConfig_GCSrc =
 exampleStaticConfig_GCSpec :: StaticConfig
 exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisAvvmBalances
-  exampleSharedSeed
   exampleGenesisDelegation
   exampleBlockVersionData
   exampleProtocolConstants
@@ -164,4 +155,3 @@ hexToBS ts = case B16.decode ts of
       <> show partiallyDecoded
       <> " decode failed: "
       <> show invalid
-

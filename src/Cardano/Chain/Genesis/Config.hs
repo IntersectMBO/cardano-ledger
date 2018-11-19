@@ -71,8 +71,6 @@ instance FromJSON StaticConfig where
         -- GenesisAvvmBalances
         avvmDistrV <- specO .: "avvmDistr"
         avvmDistr <- parseJSON avvmDistrV
-        -- SharedSeed
-        ftsSeed <- specO .: "ftsSeed"
         -- GenesisDelegation
         heavyDelegationV <- specO .: "heavyDelegation"
         heavyDelegation <- parseJSON heavyDelegationV
@@ -95,7 +93,6 @@ instance FromJSON StaticConfig where
         return . GCSpec $
           UnsafeGenesisSpec
             (GenesisAvvmBalances avvmDistr)
-            ftsSeed
             heavyDelegation
             blockVersionData
             protocolConstants
