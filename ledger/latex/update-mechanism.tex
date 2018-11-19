@@ -899,7 +899,20 @@ proposal, which makes the voting logic more complex:
 \subsubsection{Alternative version numbers}
 \label{sec:alt-version-numbers-constraints}
 
-Alternative version numbers are only lexicographically constrained
+Alternative version numbers are only lexicographically constrained. The current
+implementation seems to be dependent on the order in which the update proposals
+arrive: given a new update proposal $\var{up}$, if a set $X$ of update
+proposals with the same minor and major versions than $\var{up}$ exist, then
+the alternative version of $\var{up}$ has to be one more than the maximum
+alternative number of $X$. Not only this logic seems to be brittle since it
+depends on the order of arrival of the update proposals, but it requires a more
+complex check (which depends on state) to determine if a proposed version is
+consistent. By being more lenient on the alternative versions of update
+proposals we can simplify the version checking logic considerably.
+
+\subsubsection{Update proposal adoption}
+\label{sec:up-adoption}
+
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
