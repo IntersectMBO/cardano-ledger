@@ -115,7 +115,6 @@ genSignTag = Gen.element
   , SignCommitment
   , SignUSVote
   , SignMainBlock
-  , SignMainBlockLight
   , SignMainBlockHeavy
   , SignProxySK
   ]

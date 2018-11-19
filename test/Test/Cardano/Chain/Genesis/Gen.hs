@@ -6,14 +6,12 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisInitializer
   , genGenesisProtocolConstants
   , genGenesisSpec
-  , genSharedSeed
   , genTestnetBalanceOptions
   , genStaticConfig
   )
 where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
 
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
@@ -21,7 +19,6 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Common (SharedSeed(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisAvvmBalances(..)
@@ -48,9 +45,6 @@ genGenesisHash :: Gen GenesisHash
 genGenesisHash = do
   th <- genTextHash
   pure (GenesisHash (coerce th))
-
-genSharedSeed :: Gen SharedSeed
-genSharedSeed = SharedSeed <$> gen32Bytes
 
 genStaticConfig :: ProtocolMagic -> Gen StaticConfig
 genStaticConfig pm = Gen.choice
@@ -94,7 +88,6 @@ genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
   mkGenSpec =
     mkGenesisSpec
       <$> genGenesisAvvmBalances
-      <*> genSharedSeed
       <*> genGenesisDelegation pm
       <*> genBlockVersionData
       <*> genGenesisProtocolConstants

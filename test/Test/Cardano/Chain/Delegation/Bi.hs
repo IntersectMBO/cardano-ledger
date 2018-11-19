@@ -18,18 +18,9 @@ import Cardano.Chain.Delegation (Payload(..), ProxySKBlockInfo)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
 import Test.Cardano.Chain.Delegation.Example
-  ( exampleLightDlgIndices
-  , exampleProxySKBlockInfo
-  , staticHeavyDlgIndexes
-  , staticProxySKHeavys
-  )
+  (exampleProxySKBlockInfo, staticHeavyDlgIndexes, staticProxySKHeavys)
 import Test.Cardano.Chain.Delegation.Gen
-  ( genHeavyDlgIndex
-  , genLightDlgIndices
-  , genPayload
-  , genProxySKBlockInfo
-  , genProxySKHeavy
-  )
+  (genHeavyDlgIndex, genPayload, genProxySKBlockInfo, genProxySKHeavy)
 import Test.Cardano.Crypto.Gen (feedPM)
 
 --------------------------------------------------------------------------------
@@ -53,18 +44,6 @@ goldenHeavyDlgIndex = goldenTestBi
 
 roundTripHeavyDlgIndexBi :: Property
 roundTripHeavyDlgIndexBi = eachOf 1000 genHeavyDlgIndex roundTripsBiBuildable
-
---------------------------------------------------------------------------------
--- LightDlgIndices
---------------------------------------------------------------------------------
-goldenLightDlgIndices :: Property
-goldenLightDlgIndices = goldenTestBi
-  exampleLightDlgIndices
-  "test/golden/bi/delegation/LightDlgIndices"
-
-roundTripLightDlgIndicesBi :: Property
-roundTripLightDlgIndicesBi =
-  eachOf 1000 genLightDlgIndices roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- ProxySKBlockInfo

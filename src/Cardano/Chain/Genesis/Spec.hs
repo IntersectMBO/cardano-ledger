@@ -16,7 +16,6 @@ import Data.Aeson.TH (deriveJSON)
 import Data.List (nub)
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common.SharedSeed (SharedSeed)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation(..))
 import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
@@ -28,8 +27,6 @@ import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
 data GenesisSpec = UnsafeGenesisSpec
   { gsAvvmDistr         :: !GenesisAvvmBalances
   -- ^ Genesis data describes avvm utxo.
-  , gsFtsSeed           :: !SharedSeed
-  -- ^ Seed for FTS for 0-th epoch.
   , gsHeavyDelegation   :: !GenesisDelegation
   -- ^ Genesis state of heavyweight delegation. Will be concatenated
   -- with genesis delegation for bootstrap stakeholders if
@@ -48,15 +45,14 @@ deriveJSON defaultOptions ''GenesisSpec
 -- goes wrong.
 mkGenesisSpec
   :: GenesisAvvmBalances
-  -> SharedSeed
   -> GenesisDelegation
   -> BlockVersionData
   -> GenesisProtocolConstants
   -> GenesisInitializer
   -> Either String GenesisSpec
-mkGenesisSpec avvmDistr seed delega bvd pc specType = do
+mkGenesisSpec avvmDistr delega bvd pc specType = do
   let avvmKeys = M.keys $ getGenesisAvvmBalances avvmDistr
   unless (length (nub avvmKeys) == length avvmKeys)
     $ throwError "mkGenesisSpec: there are duplicates in avvm balances"
   -- All checks passed
-  pure $ UnsafeGenesisSpec avvmDistr seed delega bvd pc specType
+  pure $ UnsafeGenesisSpec avvmDistr delega bvd pc specType

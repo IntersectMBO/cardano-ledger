@@ -1,7 +1,6 @@
 module Test.Cardano.Chain.Delegation.Gen
   ( genPayload
   , genHeavyDlgIndex
-  , genLightDlgIndices
   , genProxySKBlockInfo
   , genProxySKHeavy
   , genProxySKHeavyDistinctList
@@ -16,13 +15,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation
-  ( HeavyDlgIndex(..)
-  , LightDlgIndices(..)
-  , Payload(..)
-  , ProxySKBlockInfo
-  , ProxySKHeavy
-  , Undo(..)
-  )
+  (HeavyDlgIndex(..), Payload(..), ProxySKBlockInfo, ProxySKHeavy, Undo(..))
 import Cardano.Crypto (ProtocolMagic, safeCreatePsk)
 import Data.List (nub)
 
@@ -37,10 +30,6 @@ genPayload pm =
 
 genHeavyDlgIndex :: Gen HeavyDlgIndex
 genHeavyDlgIndex = HeavyDlgIndex <$> genEpochIndex
-
-genLightDlgIndices :: Gen LightDlgIndices
-genLightDlgIndices =
-  LightDlgIndices <$> ((,) <$> genEpochIndex <*> genEpochIndex)
 
 genProxySKBlockInfo :: ProtocolMagic -> Gen ProxySKBlockInfo
 genProxySKBlockInfo pm = Gen.maybe $ do
