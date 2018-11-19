@@ -15,6 +15,8 @@ module Generator
     , genDelegationData
     , genDelegation
     , genStakePool
+    , genDCertRegPool
+    , genDCertDelegate
     ) where
 
 import qualified Data.Map        as Map
@@ -271,9 +273,14 @@ genStakePool keys = do
   marginPercent <- genNatural 0 100
   pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
 
-
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
 genDelegation keys dstate = do
   poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
   delegatorKey <- (vKey . snd) <$> Gen.element keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
+
+genDCertRegPool :: KeyPairs -> Gen DCert
+genDCertRegPool keys = RegPool <$> genStakePool keys
+
+genDCertDelegate :: KeyPairs -> DelegationState -> Gen DCert
+genDCertDelegate keys dstate = Delegate <$> genDelegation keys dstate
