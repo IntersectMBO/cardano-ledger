@@ -94,9 +94,9 @@
 \newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
 \newcommand{\ttl}[1]{\fun{ttl}~ \var{#1}}
 \newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
-\newcommand{\decayed}[4]{\fun{decayed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\decayedKey}[4]{\fun{decayedKey}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\certRefund}[4]{\fun{certRefund}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\certRefund}[6]{\fun{certRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
 \newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\created}[4]{\fun{created}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
@@ -179,6 +179,10 @@ The transition system is explained in \cite{small_step_semantics}.
 \begin{description}
 \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
   the subsets of $X$.
+\item[Symmetric Difference] Given two sets $\type{X}$ and $\type{Y}$,
+  the symmetric difference of $\type{X}$ and $\type{Y}$,
+  denoted $\type{X}\triangle\type{Y}$, is the union of $\type{X}$ and $\type{Y}$
+  witout the intersection.
 \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
   sequences having elements taken from $\type{X}$. The empty sequence is
   denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
@@ -486,8 +490,12 @@ body must also contain inputs onto which this refund can be added.
       \fun{dvalue} & \PrtclConsts \to \DCert \to \Coin
         & \text{deposit amount of a certificate}\\
 
-      \fun{decay} & \PrtclConsts \to \lbrack 0, 1\rbrack\times\mathbb{Q}^{+}
-        & \text{decay constants}\\
+      \fun{decayKey} & \PrtclConsts \to
+        \Coin\times\lbrack 0, 1\rbrack\times\mathbb{Q}^{+}
+        & \text{decay constants for key certificates}\\
+      \fun{decayPool} & \PrtclConsts \to
+        \Coin\times\lbrack 0, 1\rbrack\times\mathbb{Q}^{+}
+        & \text{decay constants for pool certificates}\\
 
       \fun{dresource} & \Tx \to \powerset{(\DCertRegKey \uniondistinct \DCertRegPool)}
         & \text{resource allocating certificates}\\
@@ -516,16 +524,17 @@ body must also contain inputs onto which this refund can be added.
       & \text{allocates resources} \\
       & \fun{releasing}~c = c \in \DCertDeRegKey \cup \DCertRetirePool\\
       \nextdef
-      & \fun{refund} \in \Coin \to [0, 1] \to \Duration \to \mathbb{Q}^{+} \to \Coin
+      & \fun{refund} \in \Coin \to [0, 1] \to \mathbb{Q}^{+} \to \Duration \to \Coin
       & \text{refund calculation} \\
-      & \refund{\dval}{d_{\min}}{\delta}{\lambda} =
+      & \refund{\dval}{d_{\min}}{\lambda}{\delta} =
             \floor*{
               \dval \cdot
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
       \nextdef
-      & \fun{certRefund} \in \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
+      & \fun{certRefund} \in \Coin \to [0, 1] \to \mathbb{Q}^{+} \to \\
+      & ~~~\Allocs \to \Slot \to \DCert \to \Coin
       & \text{refund for a certificate} \\
-      & \certRefund{allocs}{pc}{slot}{c} =\\
+      & \certRefund{\dval}{d_{\min}}{\lambda}{allocs}{slot}{c} =\\
       & \begin{cases}
         0 & \text{if not}~(\fun{releasing}~c)\\
             0 & \text{if}~\cauthor c \notin \dom allocs\\
@@ -535,15 +544,18 @@ body must also contain inputs onto which this refund can be added.
       &
       \begin{array}{lr@{~=~}l}
         \where
-        & \dval & \fun{dvalue}~pc~c\\
-        & d_{\min},~\lambda & \fun{decay}~pc\\
         &\delta & \slotminus{slot}{(allocs~(\cauthor c))}\\
       \end{array}\\
       \nextdef
       & \fun{keyRefunds} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
       & \text{key refunds for transaction} \\
       & \keyRefunds{pc}{stkeys}{tx} =\\
-      &   \sum\limits_{c \in \fun{dderegister}~tx} \certRefund{pc}{stkeys}{(\ttl{tx})}{c}\\
+      &   \sum\limits_{c \in \fun{dderegister}~tx} \certRefund{pc}{stkeys}{(\ttl{tx})}{c}{}{}\\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+        & (\dval,~d_{\min},~\lambda) & \fun{decayKey}~\var{pc}\\
+      \end{array}\\
   \end{align*}
   \caption{Functions used in Deposits - Refunds}
   \label{fig:functions:deposits-refunds}
@@ -555,10 +567,10 @@ body must also contain inputs onto which this refund can be added.
       & \text{(abs.) slot of last epoch} \\
       & \fun{lastEpoch}~{s} =  s - (s~\mathsf{div}~\slotsPer)
       \nextdef
-      & \fun{decayed} \in
+      & \fun{decayedKey} \in
       \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
       & \text{amount decayed since epoch} \\
-      & \decayed{allocs}{pc}{cslot}{c} =\\
+      & \decayedKey{pc}{allocs}{cslot}{c} =\\
       & \begin{cases}
         0 & \text{if not}~(\fun{releasing}~c)\\
             0 & \text{if}~\cauthor c \notin \dom allocs\\
@@ -568,16 +580,17 @@ body must also contain inputs onto which this refund can be added.
       &
       \begin{array}{lr@{~=~}l}
         \where
-          & \var{created} & \var{allocs}~\var{c} \\
-          & \var{start} & \mathsf{max}~(lastEpoch~created)~created \\
-          & \var{epochRefund} & \certRefund{c}{pc}{allocs}{start} \\
-          & \var{currentRefund} & \certRefund{c}{pc}{allocs}{cslot} \\
+          & \var{created} & \var{allocs}~(\cauthor \var{c}) \\
+          & \var{start} & \mathsf{max}~(lastEpoch~cslot)~created \\
+          & \var{epochRefund} & \certRefund{\dval}{d_{\min}}{\lambda}{allocs}{start}{c} \\
+          & \var{currentRefund} & \certRefund{\dval}{d_{\min}}{\lambda}{allocs}{cslot}{c} \\
+          & (\dval,~d_{\min},~\lambda) & \fun{decayKey}~\var{pc}\\
       \end{array}\\
       \nextdef
       & \fun{decayedTx} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
-      & \text{decayed deposits portions} \\
+      & \text{decayed key deposit portions} \\
       & \decayedTx{pc}{stkeys}{tx} =\\
-      &   \sum\limits_{c \in \fun{dderegister}~tx} \decayed{pc}{stkeys}{(\ttl{tx})}{c}\\
+      &   \sum\limits_{c \in \fun{dderegister}~tx} \decayedKey{pc}{stkeys}{(\ttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
   \label{fig:functions:deposits-decay}
@@ -1191,9 +1204,13 @@ and stake pools.
   \label{fig:rules:ledger}
 \end{figure}
 
+\clearpage
+
 \section{Epoch Boundary}
 \label{sec:epoch}
 \input{epoch.tex}
+
+\clearpage
 
 \section{Properties}
 \label{sec:properties}
