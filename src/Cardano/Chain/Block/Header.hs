@@ -63,8 +63,6 @@ import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty)
 import Cardano.Chain.Delegation.HeavyDlgIndex
   (ProxySKBlockInfo, ProxySKHeavy, ProxySigHeavy)
-import Cardano.Chain.Delegation.LightDlgIndices
-  (LightDlgIndices(..), ProxySigLight)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (SlotId(..), slotIdF)
 import Cardano.Chain.Update.BlockVersion (BlockVersion)
@@ -259,14 +257,6 @@ verifyHeader pm header = do
  where
   verifyBlockSignature (BlockSignature sig) =
     checkSig pm SignMainBlock (consensusLeaderKey consensus) signature sig
-  verifyBlockSignature (BlockPSignatureLight proxySig) = proxyVerify
-    pm
-    SignMainBlockLight
-    proxySig
-    (\(LightDlgIndices (epochLow, epochHigh)) ->
-      epochLow <= epochId && epochId <= epochHigh
-    )
-    signature
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
     proxyVerify pm SignMainBlockHeavy proxySig (const True) signature
 
@@ -276,8 +266,6 @@ verifyHeader pm header = do
     (consensusSlot consensus)
     (consensusDifficulty consensus)
     (headerExtraData header)
-
-  epochId   = siEpoch $ consensusSlot consensus
 
   consensus = headerConsensusData header
 
@@ -339,7 +327,6 @@ dropBoundaryHeader = do
 --   interval).
 data BlockSignature
   = BlockSignature (Signature ToSign)
-  | BlockPSignatureLight (ProxySigLight ToSign)
   | BlockPSignatureHeavy (ProxySigHeavy ToSign)
   deriving (Show, Eq, Generic)
 
@@ -347,14 +334,12 @@ instance NFData BlockSignature
 
 instance B.Buildable BlockSignature where
   build (BlockSignature s)       = bprint ("BlockSignature: ".build) s
-  build (BlockPSignatureLight s) = bprint ("BlockPSignatureLight: ".build) s
   build (BlockPSignatureHeavy s) = bprint ("BlockPSignatureHeavy: ".build) s
 
 instance Bi BlockSignature where
   encode input = case input of
     BlockSignature sig -> encodeListLen 2 <> encode (0 :: Word8) <> encode sig
-    BlockPSignatureLight pxy ->
-      encodeListLen 2 <> encode (1 :: Word8) <> encode pxy
+    -- Tag 1 was previously used for BlockPSignatureLight
     BlockPSignatureHeavy pxy ->
       encodeListLen 2 <> encode (2 :: Word8) <> encode pxy
 
@@ -362,7 +347,6 @@ instance Bi BlockSignature where
     enforceSize "BlockSignature" 2
     decode >>= \case
       0 -> BlockSignature <$> decode
-      1 -> BlockPSignatureLight <$> decode
       2 -> BlockPSignatureHeavy <$> decode
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
@@ -437,5 +421,4 @@ verifyConsensusData mcd = when (selfSignedProxy $ consensusSignature mcd)
   $ throwError ConsensusSelfSignedPSK
  where
   selfSignedProxy (BlockSignature       _  ) = False
-  selfSignedProxy (BlockPSignatureLight sig) = isSelfSignedPsk $ psigPsk sig
   selfSignedProxy (BlockPSignatureHeavy sig) = isSelfSignedPsk $ psigPsk sig

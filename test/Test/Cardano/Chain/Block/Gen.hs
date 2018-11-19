@@ -59,8 +59,6 @@ import Test.Cardano.Crypto.Gen
 genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
   [ BlockSignature <$> genSignature pm mts
-  , BlockPSignatureLight
-    <$> genProxySignature pm mts Delegation.genLightDlgIndices
   , BlockPSignatureHeavy
     <$> genProxySignature pm mts Delegation.genHeavyDlgIndex
   ]
