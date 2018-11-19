@@ -44,6 +44,13 @@ utxoSize (UTxO m) = Map.size m
 utxoMap :: UTxO -> Map.Map TxIn TxOut
 utxoMap (UTxO m) = m
 
+-- | Extract the delegation certificate from a 'DelegationData' 'LedgerEntry'.
+getDCertOfEntry :: LedgerEntry -> DCert
+getDCertOfEntry entry =
+  case entry of
+    DelegationData dcert -> dcert
+    _                    -> undefined
+
 -- | Extract the transaction from a 'TransactionData' 'LedgerEntry'.
 getTxOfEntry :: LedgerEntry -> Tx
 getTxOfEntry entry =
