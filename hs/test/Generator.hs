@@ -5,16 +5,21 @@ module Generator
       utxoSize
     , utxoMap
     , getTxOfEntry
+    , getDCertOfEntry
     , genBool
     , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonemptyGenesisState
     , genStateTx
     , genValidStateTx
+    , genDelegationData
+    , genDelegation
+    , genStakePool
     ) where
 
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set
+import Data.Ratio
 
 import           Numeric.Natural
 
@@ -28,9 +33,12 @@ import           LedgerState     (LedgerEntry (..), LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState)
+                                  genesisState, DelegationState(..)
+                                 )
 import           Slot
 import           UTxO
+import           Delegation.Certificates  (DCert(..))
+import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
 
@@ -234,3 +242,38 @@ genLedgerStateTx' keyList sourceState = do
   pure (fee
        , ledgerEntry'
        , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) ledgerEntry')
+
+-- Generators for 'DelegationData'
+
+genDelegationData :: KeyPairs -> Epoch -> Gen DCert
+genDelegationData keys epoch =
+    Gen.choice [ genDCertRegKey keys
+               , genDCertDeRegKey keys
+               , genDCertRetirePool keys epoch]
+
+genDCertRegKey :: KeyPairs -> Gen DCert
+genDCertRegKey keys =
+  RegKey <$> vKey . snd <$> Gen.element keys
+
+genDCertDeRegKey :: KeyPairs -> Gen DCert
+genDCertDeRegKey keys =
+    DeRegKey <$> vKey . snd <$> Gen.element keys
+
+genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
+genDCertRetirePool keys epoch = do
+  key <- vKey . snd <$> Gen.element keys
+  pure $ RetirePool key epoch
+
+genStakePool :: KeyPairs -> Gen StakePool
+genStakePool keys = do
+  poolKey       <- vKey . snd <$> Gen.element keys
+  cost          <- Coin <$> genNatural 1 100
+  marginPercent <- genNatural 0 100
+  pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
+
+
+genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
+genDelegation keys dstate = do
+  poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
+  delegatorKey <- (vKey . snd) <$> Gen.element keys
+  pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
