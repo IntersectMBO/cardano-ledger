@@ -913,6 +913,20 @@ proposals we can simplify the version checking logic considerably.
 \subsubsection{Update proposal adoption}
 \label{sec:up-adoption}
 
+An update proposal can become immediately adopted if the number of blocks
+signed with the version of the proposal exceeds a certain threshold. In the
+current implementation this Keck occurs only at the epoch boundary block.
+
+\subsubsection{Cleanup}
+\label{sec:up-cleanup}
+
+Update proposals that are older than $u$ blocks w.r.t. the current block are
+discarded from the state, along with its information. The current
+implementation makes use of the implicit agreement rule, and the epoch boundary
+checks: this leads to plenty of different states for a proposal: active,
+adopted, confirmed, competing, never-to-become-adopted, rejected, discarded. If
+the cleanup of proposals can be done in the way specified here we will avoid a
+great deal of cognitive complexity when reasoning about the update system.
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
