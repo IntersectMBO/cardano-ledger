@@ -1,20 +1,19 @@
 -- | Provides types and functions for the delegation interface
 -- between the ledger layer and the blockchain layer
 module Delegation.Interface
-  (
-    DSIState
+  ( DSIState
   , delegates
   , initDSIState
   , newCertsRule
   , updateCerts
   )
-  where
+where
 
-import           Chain.GenesisBlock (initVKeys)
-import           Control.State.Transition
+import Chain.GenesisBlock (initVKeys)
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-import           Types
+import Data.Set (Set)
+import Types
 
 
 -- TODO: to be implemented

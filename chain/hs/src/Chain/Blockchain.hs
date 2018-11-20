@@ -4,33 +4,26 @@
 
 module Chain.Blockchain where
 
-import           Control.Lens
-import           Control.State.Transition
+import Control.Lens
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import           Data.Queue
-import           Data.Set (Set)
+import Data.Queue
+import Data.Set (Set)
 
-import           Crypto.Hash (hashlazy)
-import           Data.ByteString.Lazy.Char8 (pack)
-import           UTxO (Hash)
+import Crypto.Hash (hashlazy)
+import Data.ByteString.Lazy.Char8 (pack)
+import UTxO (Hash)
 
-import           Chain.GenesisBlock (genesisBlock)
-import           Delegation.Interface
-                   (
-                     DSIState
-                   , delegates
-                   , initDSIState
-                   , newCertsRule
-                   , updateCerts
-                   )
-import           Types (VKey, Sig, Data, HCert, Interf, BC, Slot, Block(..), BlockIx(..))
+import Chain.GenesisBlock (genesisBlock)
+import Delegation.Interface
+  (DSIState, delegates, initDSIState, newCertsRule, updateCerts)
+import Types (VKey, Sig, Data, HCert, Interf, BC, Slot, Block(..), BlockIx(..))
 
 
 -- | Computes the hash of a block
 hashBlock :: Block -> Hash
-hashBlock b@(RBlock {}) = hashlazy (pack . show $ i) where
-  MkBlockIx i = rbIx b
-hashBlock b@(GBlock {}) = gbHash b
+hashBlock b@(RBlock{}) = hashlazy (pack . show $ i) where MkBlockIx i = rbIx b
+hashBlock b@(GBlock{}) = gbHash b
 
 -- | Size of the block sliding window
 newtype K = MkK Word deriving (Eq, Ord)
@@ -63,14 +56,14 @@ instance STS Interf where
 -- | Remove the oldest entry in the queues in the range of the map if it is
 --   more than *K* blocks away from the given block index
 trimIx :: KeyToQMap -> K -> BlockIx -> KeyToQMap
-trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m) where
+trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m)
+ where
   f :: VKey -> KeyToQMap -> KeyToQMap
   f = Map.adjust (qRestrict ix)
   qRestrict :: BlockIx -> Queue BlockIx -> Queue BlockIx
-  qRestrict (MkBlockIx ix') q =
-    case headQueue q of
-      Nothing     -> q
-      Just (MkBlockIx h, r) -> if h + k < ix' then r else q
+  qRestrict (MkBlockIx ix') q = case headQueue q of
+    Nothing               -> q
+    Just (MkBlockIx h, r) -> if h + k < ix' then r else q
 
 -- | Updates a map of genesis verification keys to their signed blocks in
 -- a sliding window by adding a block index to a specified key's list
@@ -80,15 +73,16 @@ incIxMap ix = Map.adjust (pushQueue ix)
 -- | Extends a chain by a block
 extendChain :: JudgmentContext BC -> State BC
 extendChain jc =
-  let (env, st, b@(RBlock {})) = jc
-      p' = b
-      (sl, k, t) = env
-      (m, p, ds) = st
-      vk_d = rbSigner b
-      ix = rbIx b
-      vk_s = delegates ds Map.! vk_d
-      m' = incIxMap ix vk_s (trimIx m k ix)
-      ds' = updateCerts sl (rbCerts b) ds
+  let
+    (env, st, b@(RBlock{})) = jc
+    p'                      = b
+    (sl, k, t )             = env
+    (m , p, ds)             = st
+    vk_d                    = rbSigner b
+    ix                      = rbIx b
+    vk_s                    = delegates ds Map.! vk_d
+    m'                      = incIxMap ix vk_s (trimIx m k ix)
+    ds'                     = updateCerts sl (rbCerts b) ds
   in (m', p', ds')
 
 instance STS BC where
