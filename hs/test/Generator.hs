@@ -5,16 +5,23 @@ module Generator
       utxoSize
     , utxoMap
     , getTxOfEntry
+    , getDCertOfEntry
     , genBool
     , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonemptyGenesisState
     , genStateTx
     , genValidStateTx
+    , genDelegationData
+    , genDelegation
+    , genStakePool
+    , genDCertRegPool
+    , genDCertDelegate
     ) where
 
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set
+import Data.Ratio
 
 import           Numeric.Natural
 
@@ -28,9 +35,12 @@ import           LedgerState     (LedgerEntry (..), LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState)
+                                  genesisState, DelegationState(..)
+                                 )
 import           Slot
 import           UTxO
+import           Delegation.Certificates  (DCert(..))
+import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
 
@@ -43,6 +53,13 @@ utxoSize (UTxO m) = Map.size m
 -- | Extract the map in an 'UTxO'.
 utxoMap :: UTxO -> Map.Map TxIn TxOut
 utxoMap (UTxO m) = m
+
+-- | Extract the delegation certificate from a 'DelegationData' 'LedgerEntry'.
+getDCertOfEntry :: LedgerEntry -> DCert
+getDCertOfEntry entry =
+  case entry of
+    DelegationData dcert -> dcert
+    _                    -> undefined
 
 -- | Extract the transaction from a 'TransactionData' 'LedgerEntry'.
 getTxOfEntry :: LedgerEntry -> Tx
@@ -116,7 +133,7 @@ genTxLedgerEntry keyList (UTxO m) = do
   selectedInputs <- Gen.shuffle utxoInputs
   let !selectedAddr    = addr $ head selectedInputs
   let !selectedUTxO    = Map.filter (\(TxOut a _) -> a == selectedAddr) m
-  let !selectedKeyPair = findAddrKeyPair selectedAddr keyList
+  let !selectedKeyPair = findPayKeyPair selectedAddr keyList
   let !selectedBalance = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
@@ -175,9 +192,14 @@ repeatTx n !keyPairs !fees !ls = do
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findAddrKeyPair :: Addr -> KeyPairs -> KeyPair
-findAddrKeyPair (AddrTxin addr _) keyList =
-     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+findPayKeyPair :: Addr -> KeyPairs -> KeyPair
+findPayKeyPair (AddrTxin addr _) keyList =
+    fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+
+-- | Find first matching key pair for stake key in 'AddrTxin'.
+findStakeKeyPair :: HashKey -> KeyPairs -> KeyPair
+findStakeKeyPair addr keyList =
+    snd $ head $ filter (\(_, stake) -> addr == (hashKey $ vKey stake)) keyList
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr
@@ -222,3 +244,43 @@ genLedgerStateTx' keyList sourceState = do
   pure (fee
        , ledgerEntry'
        , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) ledgerEntry')
+
+-- Generators for 'DelegationData'
+
+genDelegationData :: KeyPairs -> Epoch -> Gen DCert
+genDelegationData keys epoch =
+    Gen.choice [ genDCertRegKey keys
+               , genDCertDeRegKey keys
+               , genDCertRetirePool keys epoch]
+
+genDCertRegKey :: KeyPairs -> Gen DCert
+genDCertRegKey keys =
+  RegKey <$> vKey . snd <$> Gen.element keys
+
+genDCertDeRegKey :: KeyPairs -> Gen DCert
+genDCertDeRegKey keys =
+    DeRegKey <$> vKey . snd <$> Gen.element keys
+
+genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
+genDCertRetirePool keys epoch = do
+  key <- vKey . snd <$> Gen.element keys
+  pure $ RetirePool key epoch
+
+genStakePool :: KeyPairs -> Gen StakePool
+genStakePool keys = do
+  poolKey       <- vKey . snd <$> Gen.element keys
+  cost          <- Coin <$> genNatural 1 100
+  marginPercent <- genNatural 0 100
+  pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
+
+genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
+genDelegation keys dstate = do
+  poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
+  delegatorKey <- (vKey . snd) <$> Gen.element keys
+  pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
+
+genDCertRegPool :: KeyPairs -> Gen DCert
+genDCertRegPool keys = RegPool <$> genStakePool keys
+
+genDCertDelegate :: KeyPairs -> DelegationState -> Gen DCert
+genDCertDelegate keys dstate = Delegate <$> genDelegation keys dstate

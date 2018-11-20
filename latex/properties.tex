@@ -36,8 +36,7 @@ In Figure~\ref{fig:valid-ledger} \genesisId{} marks the transaction identifier
 of the initial coin distribution, where \genesisTxOut{} represents the initial
 UTxO. It should be noted that no corresponding inputs exists, i.e., the
 transaction inputs are the empty set for the initial transaction. An element of
-\ledgerState{} is a triplet of UTxO, stake delegation state (\DState) and
-delegation pool state (\PState).
+\ledgerState{} is a tuple of UTxO and delegation witness state (\DWState).
 
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
