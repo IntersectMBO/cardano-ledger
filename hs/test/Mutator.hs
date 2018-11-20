@@ -112,12 +112,21 @@ mutateOutput (TxOut addr c) = do
 -- Mutators that change the type of certificate must be implemented in
 -- 'Generator.hs' in order to prevent cyclic imports.
 
+-- | Select one random verification staking key from list of pairs of KeyPair.
 getStakeKey :: KeyPairs -> Gen VKey
 getStakeKey keys = vKey . snd <$> Gen.element keys
 
+-- | Mutate 'Epoch' analogously to 'Coin' data.
 mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
 mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 
+-- | Mutator for delegation certificates.
+-- A 'RegKey' and 'DeRegKey' select randomly a key fomr the supplied list of
+-- keypairs.
+-- A 'RetirePool' certificate mutates the epoch and the key of the certificate.
+-- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
+-- A 'Delegate' certificates selects randomly keys for delegator and delegatee
+-- from the supplied list of keypairs.
 mutateDCert :: KeyPairs -> DelegationState -> DCert -> Gen DCert
 mutateDCert keys _ (RegKey _) = RegKey <$> vKey . snd <$> Gen.element keys
 
