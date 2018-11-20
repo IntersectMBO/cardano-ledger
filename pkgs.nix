@@ -14,6 +14,7 @@ import nixpkgs {
               cs-ledger = pkgs.haskell.lib.overrideCabal (self.callCabal2nix "cs-ledger" ./specs/ledger/hs {}) (old: {
                 enableParallelBuilding = false;
               });
+              cs-blockchain = self.callCabal2nix "cs-blockchain" ./specs/chain/hs {};
             };
           };
         };
