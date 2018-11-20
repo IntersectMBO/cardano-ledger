@@ -35,7 +35,8 @@ import           LedgerState     (LedgerEntry (..), LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState, DelegationState(..)
+                                  genesisState, DelegationState(..),
+                                  KeyPairs
                                  )
 import           Slot
 import           UTxO
@@ -43,8 +44,6 @@ import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
-
-type KeyPairs = [(KeyPair, KeyPair)]
 
 -- | Returns the number of entries of the UTxO set.
 utxoSize :: UTxO -> Int
