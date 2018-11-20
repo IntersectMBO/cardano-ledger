@@ -12,6 +12,7 @@ module Mutator
     , mutateLedgerEntry
     , mutateTx
     , mutateDCert
+    , getAnyStakeKey
     ) where
 
 import Data.Ratio
@@ -113,8 +114,8 @@ mutateOutput (TxOut addr c) = do
 -- 'Generator.hs' in order to prevent cyclic imports.
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-getStakeKey :: KeyPairs -> Gen VKey
-getStakeKey keys = vKey . snd <$> Gen.element keys
+getAnyStakeKey :: KeyPairs -> Gen VKey
+getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
 mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
@@ -134,16 +135,16 @@ mutateDCert keys _ (DeRegKey _) = DeRegKey <$> vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     epoch' <- mutateEpoch 0 e epoch
-    key'   <- getStakeKey keys
+    key'   <- getAnyStakeKey keys
     pure $ RetirePool key' epoch'
 
 mutateDCert keys _ (RegPool (StakePool _ pledges cost margin altacnt)) = do
-  key'    <- getStakeKey keys
+  key'    <- getAnyStakeKey keys
   cost'   <- mutateCoin 0 100 cost
   p' <- mutateNat 0 100 (numerator margin)
   pure $ RegPool (StakePool key' pledges cost' (p' % 100) altacnt)
 
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
-  delegator' <- getStakeKey keys
-  delegatee' <- getStakeKey keys
+  delegator' <- getAnyStakeKey keys
+  delegatee' <- getAnyStakeKey keys
   pure $ Delegate $ Delegation delegator' delegatee'
