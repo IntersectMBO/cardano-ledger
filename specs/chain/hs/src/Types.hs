@@ -1,7 +1,6 @@
 -- | Defines basic types for working with the ledger and the blockchain
 module Types
-  (
-    VKey(..)
+  ( VKey(..)
   , Sig
   , Data
   , HCert
@@ -11,10 +10,10 @@ module Types
   , Slot(..)
   , Block(..)
   )
- where
+where
 
-import           Data.Set (Set)
-import           UTxO (Hash)
+import Data.Set (Set)
+import UTxO (Hash)
 
 
 -- TODO: to be implemented
