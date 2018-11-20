@@ -22,7 +22,7 @@ import Cardano.Binary.Class (Bi, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common
   (AddrAttributes(..), Attributes(..), Script(..), mkAttributes)
 import Cardano.Chain.Txp
-  (Tx(..), TxAux(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..))
+  (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
 import Cardano.Crypto (ProtocolMagic(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
@@ -295,15 +295,15 @@ sizeEstimates
           { gen         = genTxAux pm
           , addlCtx     = M.fromList
             [attrUnitSize, attrAddrSize, scriptSize, txSigSize]
-          , computedCtx = \(TxAux tx wit) -> M.fromList
+          , computedCtx = \ta -> M.fromList
             [ ( typeRep (Proxy @(LengthOf [TxIn]))
-              , SizeConstant (fromIntegral $ length $ _txInputs tx)
+              , SizeConstant (fromIntegral $ length $ _txInputs $ taTx ta)
               )
             , ( typeRep (Proxy @(LengthOf (Vector TxInWitness)))
-              , SizeConstant (fromIntegral $ length wit)
+              , SizeConstant (fromIntegral $ length $ taWitness ta)
               )
             , ( typeRep (Proxy @(LengthOf [TxOut]))
-              , SizeConstant (fromIntegral $ length $ _txOutputs tx)
+              , SizeConstant (fromIntegral $ length $ _txOutputs $ taTx ta)
               )
             ]
           }

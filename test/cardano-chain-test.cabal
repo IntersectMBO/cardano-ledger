@@ -39,6 +39,7 @@ library
   build-depends:       base
                      , base16-bytestring
                      , binary
+                     , bytestring
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-chain

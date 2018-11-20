@@ -3,6 +3,7 @@ module Cardano.Crypto.Signing.Redeem
   , redeemDeterministicKeyGen
   , redeemSign
   , redeemCheckSig
+  , redeemCheckSigDecoded
   , module Cardano.Crypto.Signing.Types.Redeem
   )
 where
@@ -17,7 +18,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 
-import Cardano.Binary.Class (Bi, Raw)
+import Cardano.Binary.Class (Bi, Decoded(..), Raw)
 import qualified Cardano.Binary.Class as Bi
 import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import Cardano.Crypto.Signing.Tag (SignTag, signTag)
@@ -86,6 +87,19 @@ redeemCheckSig
   -> Bool
 redeemCheckSig pm tag k x s =
   redeemVerifyRaw pm (Just tag) k (Bi.serialize' x) (coerce s)
+
+-- CHECK: @redeemCheckSig
+-- | Verify a signature
+redeemCheckSigDecoded
+  :: (Decoded t)
+  => ProtocolMagic
+  -> SignTag
+  -> RedeemPublicKey
+  -> t ByteString
+  -> RedeemSignature (BaseType t)
+  -> Bool
+redeemCheckSigDecoded pm tag k x s =
+  redeemVerifyRaw pm (Just tag) k (recoverBytes x) (coerce s)
 
 -- CHECK: @redeemVerifyRaw
 -- | Verify raw 'ByteString'

@@ -69,7 +69,8 @@ import Cardano.Chain.Update.BlockVersion (BlockVersion)
 import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier(..))
 import Cardano.Chain.Update.SoftwareVersion
   (NumSoftwareVersion, SoftwareVersion)
-import Cardano.Chain.Update.Vote (Proposal(..), ProposalBody(..), UpId, Vote)
+import Cardano.Chain.Update.Vote
+  (Proposal, ProposalBody(..), UpId, Vote, proposalBody)
 import Cardano.Crypto (PublicKey)
 
 

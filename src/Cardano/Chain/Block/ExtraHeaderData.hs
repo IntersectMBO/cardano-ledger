@@ -67,6 +67,7 @@ instance Bi ExtraHeaderData where
 
 data ExtraHeaderDataError =
   ExtraHeaderDataSoftwareVersionError SoftwareVersionError
+  deriving (Eq, Show)
 
 instance B.Buildable ExtraHeaderDataError where
   build = \case

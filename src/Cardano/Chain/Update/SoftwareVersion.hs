@@ -52,6 +52,7 @@ instance Bi SoftwareVersion where
 
 data SoftwareVersionError =
   SoftwareVersionApplicationNameError ApplicationNameError
+  deriving (Eq, Show)
 
 instance B.Buildable SoftwareVersionError where
   build = \case

@@ -1,16 +1,17 @@
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE NumDecimals         #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE BangPatterns              #-}
+{-# LANGUAGE DeriveFunctor             #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE MultiWayIf                #-}
+{-# LANGUAGE NumDecimals               #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TypeApplications          #-}
+{-# LANGUAGE TypeFamilies              #-}
 
 -- | The 'Bi' typeclass, instances, and primitive functions
 --
@@ -43,6 +44,8 @@ module Cardano.Binary.Class.Core
 
     -- * Utils
   , withWordSize
+  , decodeListWith
+  , decodeMaybe
 
     -- * Size of expressions
   , Range(..)
@@ -214,9 +217,13 @@ defaultEncodeList xs =
 
 -- | Default @'D.Decoder'@ for list types.
 defaultDecodeList :: Bi a => D.Decoder s [a]
-defaultDecodeList = do
+defaultDecodeList = decodeListWith decode
+
+-- | @'D.Decoder'@ for list.
+decodeListWith :: D.Decoder s a -> D.Decoder s [a]
+decodeListWith d = do
   D.decodeListLenIndef
-  D.decodeSequenceLenIndef (flip (:)) [] reverse decode
+  D.decodeSequenceLenIndef (flip (:)) [] reverse d
 
 -- | A type used to represent the length of a value in 'Size' computations.
 newtype LengthOf xs = LengthOf xs
@@ -460,17 +467,22 @@ instance Bi a => Bi (Maybe a) where
   encode Nothing  = E.encodeListLen 0
   encode (Just x) = E.encodeListLen 1 <> encode x
 
-  decode = do
-    n <- D.decodeListLenCanonical
-    case n of
-      0 -> return Nothing
-      1 -> do
-        !x <- decode
-        return (Just x)
-      _ -> cborError $ DecoderErrorUnknownTag "Maybe" (fromIntegral n)
+  decode = decodeMaybe decode
 
   encodedSizeExpr size _ =
     szCases [Case "Nothing" 1, Case "Just" (1 + size (Proxy @a))]
+
+
+decodeMaybe :: D.Decoder s a -> D.Decoder s (Maybe a)
+decodeMaybe decoder = do
+  n <- D.decodeListLenCanonical
+  case n of
+    0 -> return Nothing
+    1 -> do
+      !x <- decoder
+      return (Just x)
+    _ -> cborError $ DecoderErrorUnknownTag "Maybe" (fromIntegral n)
+
 
 encodeContainerSkel
   :: (Word -> E.Encoding)

@@ -65,7 +65,7 @@ genLocalSlotIndex epochSlots = mkLocalSlotIndex'
     Right lsi -> lsi
 
 genSlotCount :: Gen SlotCount
-genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
+genSlotCount = SlotCount <$> Gen.word64 (Range.constantFrom 1 1 maxBound)
 
 genSlotId :: SlotCount -> Gen SlotId
 genSlotId epochSlots =

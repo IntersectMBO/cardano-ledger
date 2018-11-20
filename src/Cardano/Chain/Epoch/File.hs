@@ -23,8 +23,8 @@ import Streaming.Binary (decodedWith)
 import Streaming.Prelude (Of(..), Stream)
 import qualified Streaming.Prelude as S
 
-import Cardano.Binary.Class (DecoderError, decodeFull, decodeFullDecoder)
-import Cardano.Chain.Block.Block (Block, decodeBlock)
+import Cardano.Binary.Class (DecoderError, decodeFull, decodeFullDecoder, slice)
+import Cardano.Chain.Block.Block (ABlock, decodeABlockOrBoundary)
 import Cardano.Chain.Block.Undo (Undo)
 import Cardano.Prelude
 
@@ -63,7 +63,8 @@ loadFileWithHeader file header =
       else lift $ throwError (ParseErrorMissingHeader file)
 
 parseEpochFile
-  :: FilePath -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
+  :: FilePath
+  -> Stream (Of (ABlock ByteString, Undo)) (ExceptT ParseError ResIO) ()
 parseEpochFile file = do
   s <- S.mapMaybe sequenceMaybe $ S.mapM liftDecoderError $ decodedWith
     getSlotData
@@ -84,27 +85,32 @@ parseEpochFile file = do
 
   liftBinaryError
     :: (a, B.ByteOffset, Either String ())
-    -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
+    -> Stream (Of (ABlock ByteString, Undo)) (ExceptT ParseError ResIO) ()
   liftBinaryError = \case
     (_, _, Right ()) -> pure ()
     (_, offset, Left message) ->
       throwError (ParseErrorBinary file offset (toS message))
 
 parseEpochFiles
-  :: [FilePath] -> Stream (Of (Block, Undo)) (ExceptT ParseError ResIO) ()
+  :: [FilePath]
+  -> Stream (Of (ABlock ByteString, Undo)) (ExceptT ParseError ResIO) ()
 parseEpochFiles fs = foldr (<>) mempty (parseEpochFile <$> fs)
 
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
 
-getSlotData :: B.Get (Either DecoderError (Maybe Block, Undo))
+getSlotData :: B.Get (Either DecoderError (Maybe (ABlock ByteString), Undo))
 getSlotData = runExceptT $ do
   header <- lift $ B.getLazyByteString (LBS.length slotDataHeader)
   lift $ guard (header == slotDataHeader)
   blockSize <- lift getWord32be
   undoSize  <- lift getWord32be
-  block     <-
-    ExceptT $ decodeFullDecoder "Block" decodeBlock <$> B.getLazyByteString
-      (fromIntegral blockSize)
+  block     <- do
+    blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
+    bb         <- ExceptT . pure $ decodeFullDecoder
+      "Block"
+      decodeABlockOrBoundary
+      blockBytes
+    pure $ (fmap . fmap) (LBS.toStrict . slice blockBytes) bb
   undo <- ExceptT $ decodeFull <$> B.getLazyByteString (fromIntegral undoSize)
   pure (block, undo)

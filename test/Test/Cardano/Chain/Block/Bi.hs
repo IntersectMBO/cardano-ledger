@@ -30,8 +30,8 @@ import Cardano.Binary.Class (decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
-  , Body(..)
-  , ConsensusData(..)
+  , Body
+  , ConsensusData
   , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
@@ -40,7 +40,9 @@ import Cardano.Chain.Block
   , SlogUndo(..)
   , ToSign(..)
   , Undo(..)
-  , decodeBlock
+  , body
+  , consensusData
+  , decodeBlockOrBoundary
   , decodeHeader
   , dropBoundaryBody
   , dropBoundaryConsensusData
@@ -50,7 +52,7 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Delegation as Delegation (Payload(..))
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
@@ -64,8 +66,8 @@ import Cardano.Crypto
   )
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestBi
-  , deprecatedGoldenDecode
+  ( deprecatedGoldenDecode
+  , goldenTestBi
   , roundTripsBiBuildable
   , roundTripsBiShow
   )
@@ -127,7 +129,7 @@ roundTripBlockCompat = eachOf
   roundTripsBlockCompat a = trippingBuildable
     a
     (serializeEncoding . encodeBlock)
-    (fmap fromJust . decodeFullDecoder "Block" decodeBlock)
+    (fmap fromJust . decodeFullDecoder "Block" decodeBlockOrBoundary)
 
 
 --------------------------------------------------------------------------------
@@ -222,7 +224,7 @@ roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
 goldenConsensusData :: Property
 goldenConsensusData = goldenTestBi mcd "test/golden/bi/block/ConsensusData"
  where
-  mcd = ConsensusData
+  mcd = consensusData
     exampleSlotId
     examplePublicKey
     exampleChainDifficulty
@@ -320,7 +322,7 @@ exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
   pm = ProtocolMagic 2
 
 exampleConsensusData :: ConsensusData
-exampleConsensusData = ConsensusData
+exampleConsensusData = consensusData
   exampleSlotId
   examplePublicKey
   exampleChainDifficulty
@@ -339,14 +341,14 @@ exampleProof = Proof
   SscProof
   (abstractHash dp)
   Update.exampleProof
-  where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
+  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
 
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
-exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
-  where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
+exampleBody = body exampleTxPayload SscPayload dp Update.examplePayload
+  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
 
 exampleToSign :: ToSign
 exampleToSign = ToSign
