@@ -30,8 +30,8 @@ library
                        Cardano.Binary.Class.Primitive
                        Cardano.Binary.Class.Annotated
 
-  build-depends:       aeson
-                     , base
+  build-depends:     base
+                     , aeson
                      , bytestring
                      , cardano-prelude
                      , cborg

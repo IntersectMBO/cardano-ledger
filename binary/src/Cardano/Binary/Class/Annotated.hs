@@ -52,13 +52,13 @@ instance FromJSON b => FromJSON (Annotated b ()) where
   parseJSON j = flip Annotated () <$> parseJSON j
 
 -- | A decoder for a value paired with an annotation specifying the start and end
--- of the sconsumed bytes.
+-- of the consumed bytes.
 annotatedDecoder :: D.Decoder s a -> D.Decoder s (Annotated a ByteSpan)
 annotatedDecoder d = D.decodeWithByteSpan d
   <&> \(x, start, end) -> Annotated x (ByteSpan start end)
 
 -- | A decoder for a value paired with an annotation specifying the start and end
--- of the sconsumed bytes.
+-- of the consumed bytes.
 decodeAnnotated :: (Bi a) => D.Decoder s (Annotated a ByteSpan)
 decodeAnnotated = annotatedDecoder decode
 

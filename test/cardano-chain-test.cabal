@@ -20,7 +20,6 @@ library
   exposed-modules:
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
-                       Test.Cardano.Chain.Block.Header
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Delegation.Example

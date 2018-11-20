@@ -6,7 +6,6 @@ import Options.Applicative (execParser)
 import Test.Options (Opts(..), optsParser)
 
 import qualified Test.Cardano.Chain.Block.Bi
-import qualified Test.Cardano.Chain.Block.Header
 import qualified Test.Cardano.Chain.Delegation.Bi
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
@@ -22,7 +21,6 @@ main = do
   opts <- execParser optsParser
   runTests
     [ Test.Cardano.Chain.Block.Bi.tests
-    , Test.Cardano.Chain.Block.Header.tests
     , Test.Cardano.Chain.Delegation.Bi.tests
     , Test.Cardano.Chain.Epoch.File.tests
     , Test.Cardano.Chain.Genesis.Json.tests
