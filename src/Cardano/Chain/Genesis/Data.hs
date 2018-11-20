@@ -8,6 +8,7 @@
 
 module Cardano.Chain.Genesis.Data
   ( GenesisData(..)
+  , GenesisDataError
   , readGenesisData
   )
 where
@@ -17,6 +18,7 @@ import Cardano.Prelude
 import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coerce (coerce)
 import Data.List (lookup)
 import Data.Time (UTCTime)
 import Formatting (bprint, build, stext)
@@ -36,10 +38,11 @@ import Text.JSON.Canonical
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
+import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
-import Cardano.Crypto (ProtocolMagic(..))
+import Cardano.Crypto (ProtocolMagic(..), hashRaw)
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be
@@ -91,6 +94,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
 data GenesisDataError
   = GenesisDataParseError Text
   | GenesisDataSchemaError SchemaError
+  deriving (Show)
 
 instance B.Buildable GenesisDataError where
   build = \case
@@ -100,10 +104,19 @@ instance B.Buildable GenesisDataError where
       bprint ("Incorrect schema for GenesisData.\n Error: " . build) err
 
 readGenesisData
-  :: (MonadError GenesisDataError m, MonadIO m) => FilePath -> m GenesisData
+  :: (MonadError GenesisDataError m, MonadIO m)
+  => FilePath
+  -> m (GenesisData, GenesisHash)
 readGenesisData fp = do
-  bytes           <- liftIO $ BS.readFile fp
+  bytes <- liftIO $ BS.readFile fp
+  let bytes' = BSL.fromStrict bytes
+
   genesisDataJSON <-
-    liftEither . first (GenesisDataParseError . toS) $ parseCanonicalJSON
-      (BSL.fromStrict bytes)
-  liftEither . first GenesisDataSchemaError $ fromJSON genesisDataJSON
+    liftEither . first (GenesisDataParseError . toS) $ parseCanonicalJSON bytes'
+
+  genesisData <- liftEither . first GenesisDataSchemaError $ fromJSON
+    genesisDataJSON
+
+  let genesisHash = GenesisHash $ coerce $ hashRaw bytes'
+
+  pure (genesisData, genesisHash)

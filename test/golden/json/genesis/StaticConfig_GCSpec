@@ -38,14 +38,14 @@
             "avvmBalanceFactor": 0.366832547637728,
             "seed": 0,
             "testBalance": {
-                "totalBalance": 1.0953275486128625216e19,
-                "richmenShare": 4.2098713311249885,
+                "totalBalance": 10953275486128625,
+                "richmenShare": 0.366832547637728,
                 "useHDAddresses": true,
                 "richmen": 1.4071205313513960321e19,
                 "poors": 2448641325904532856
             },
             "fakeAvvmBalance": {
-                "oneBalance": 1.5087947214890024355e19,
+                "oneBalance": 15087947214890024,
                 "count": 1.7853231730478779264e19
             }
         },

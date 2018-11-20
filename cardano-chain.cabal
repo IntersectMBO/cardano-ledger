@@ -67,6 +67,7 @@ library
                        Cardano.Chain.Genesis.Config
                        Cardano.Chain.Genesis.Data
                        Cardano.Chain.Genesis.Delegation
+                       Cardano.Chain.Genesis.Generate
                        Cardano.Chain.Genesis.Hash
                        Cardano.Chain.Genesis.Initializer
                        Cardano.Chain.Genesis.NonAvvmBalances
@@ -120,6 +121,7 @@ library
                      , containers
                      , cryptonite
                      , Cabal
+                     , filepath
                      , formatting
                      , lens
                      , memory

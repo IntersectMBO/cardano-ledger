@@ -21,7 +21,11 @@ import Data.Maybe (fromJust)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  (LovelacePortion(..), StakeholderId(..), addressHash, mkKnownLovelace)
+  ( LovelacePortion(..)
+  , mkKnownLovelace
+  , mkKnownLovelacePortion
+  , mkStakeholderId
+  )
 import Cardano.Chain.Delegation (HeavyDlgIndex(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
@@ -75,7 +79,7 @@ exampleGenesisAvvmBalances = GenesisAvvmBalances
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
-    [ ( StakeholderId $ addressHash issuePubKey
+    [ ( mkStakeholderId issuePubKey
       , unsafeProxySecretKey
         (HeavyDlgIndex $ EpochIndex 68300481033)
         issuePubKey
@@ -123,13 +127,13 @@ exampleGenesisInitializer = GenesisInitializer
   { giTestBalance       = TestnetBalanceOptions
     { tboPoors          = 2448641325904532856
     , tboRichmen        = 14071205313513960321
-    , tboTotalBalance   = 10953275486128625216
-    , tboRichmenShare   = 4.2098713311249885
+    , tboTotalBalance   = mkKnownLovelace @10953275486128625
+    , tboRichmenShare   = mkKnownLovelacePortion @366832547637728
     , tboUseHDAddresses = True
     }
   , giFakeAvvmBalance   = FakeAvvmOptions
     { faoCount      = 17853231730478779264
-    , faoOneBalance = 15087947214890024355
+    , faoOneBalance = mkKnownLovelace @15087947214890024
     }
   , giAvvmBalanceFactor = LovelacePortion {getLovelacePortion = 366832547637728}
   , giUseHeavyDlg       = False

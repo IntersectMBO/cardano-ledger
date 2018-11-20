@@ -27,7 +27,7 @@ module Cardano.Chain.Common.Lovelace
   , mkKnownLovelace
   , lovelaceF
   , maxLovelaceVal
-  , sumLovelaces
+  , sumLovelace
 
        -- * Conversions
   , unsafeGetLovelace
@@ -39,6 +39,7 @@ module Cardano.Chain.Common.Lovelace
   , subLovelace
   , scaleLovelace
   , divLovelace
+  , modLovelace
   )
 where
 
@@ -144,9 +145,9 @@ unsafeGetLovelace = getLovelace
 
 -- | Compute sum of all lovelace in container. Result is 'Integer' as a
 --   protection against possible overflow.
-sumLovelaces
+sumLovelace
   :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
-sumLovelaces = integerToLovelace . sum . map lovelaceToInteger
+sumLovelace = integerToLovelace . sum . map lovelaceToInteger
 
 lovelaceToInteger :: Lovelace -> Integer
 lovelaceToInteger = toInteger . unsafeGetLovelace
@@ -180,6 +181,11 @@ scaleLovelace (unsafeGetLovelace -> a) b
 divLovelace :: Integral b => Lovelace -> b -> Lovelace
 divLovelace (unsafeGetLovelace -> a) b = Lovelace (a `div` fromIntegral b)
 {-# INLINE divLovelace #-}
+
+-- | Integer modulus of a 'Lovelace' by an 'Integral' factor
+modLovelace :: Integral b => Lovelace -> b -> Lovelace
+modLovelace (Lovelace a) b = Lovelace (a `mod` fromIntegral b)
+{-# INLINE modLovelace #-}
 
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n

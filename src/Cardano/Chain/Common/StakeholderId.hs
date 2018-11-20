@@ -6,7 +6,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Common.StakeholderId
-  ( StakeholderId(..)
+  ( StakeholderId
   , mkStakeholderId
   , shortStakeholderF
   )

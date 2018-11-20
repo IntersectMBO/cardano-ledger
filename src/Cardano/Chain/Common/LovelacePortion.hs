@@ -1,4 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ExplicitNamespaces         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -6,12 +9,21 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
+
+-- This is for 'mkKnownLovelacePortion''s @n <= 45000000000000000@ constraint,
+-- which is considered redundant. TODO: investigate this.
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.LovelacePortion
   ( LovelacePortion(..)
   , mkLovelacePortion
+  , mkKnownLovelacePortion
   , lovelacePortionDenominator
   , lovelacePortionFromDouble
   , lovelacePortionToDouble
@@ -26,6 +38,7 @@ import Control.Monad.Except (MonadError(..))
 import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
+import GHC.TypeLits (type (<=))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi(..))
@@ -104,6 +117,12 @@ mkLovelacePortion :: Word64 -> Either LovelacePortionError LovelacePortion
 mkLovelacePortion c
   | c <= lovelacePortionDenominator = Right (LovelacePortion c)
   | otherwise                       = Left (LovelacePortionTooLarge c)
+
+-- | Construct a 'LovelacePortion' from a 'KnownNat', known to be less than
+--   'lovelacePortionDenominator'
+mkKnownLovelacePortion
+  :: forall n . (KnownNat n, n <= 1000000000000000) => LovelacePortion
+mkKnownLovelacePortion = LovelacePortion . fromIntegral . natVal $ Proxy @n
 
 -- | Make LovelacePortion from Double. Caller must ensure that value is in [0..1].
 --   Internally 'LovelacePortion' stores 'Word64' which is divided by

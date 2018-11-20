@@ -22,7 +22,7 @@ import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
 -- | Predefined balances of avvm entries.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { getGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Semigroup)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where
     toJSON = toJSON . getGenesisAvvmBalances
