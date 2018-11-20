@@ -11,8 +11,10 @@ module Mutator
     , mutateCoin
     , mutateLedgerEntry
     , mutateTx
+    , mutateDCert
     ) where
 
+import Data.Ratio
 import Data.Set                  as Set
 import Numeric.Natural
 
@@ -22,6 +24,7 @@ import qualified Hedgehog.Range  as Range
 
 import Coin
 import           Delegation.Certificates  (DCert(..))
+import           Delegation.StakePool
 import Keys
 import LedgerState (LedgerEntry(..), DelegationState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
@@ -102,3 +105,36 @@ mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
+
+
+-- Mutators for 'DelegationData'
+
+-- Mutators that change the type of certificate must be implemented in
+-- 'Generator.hs' in order to prevent cyclic imports.
+
+getStakeKey :: KeyPairs -> Gen VKey
+getStakeKey keys = vKey . snd <$> Gen.element keys
+
+mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
+mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
+
+mutateDCert :: KeyPairs -> DelegationState -> DCert -> Gen DCert
+mutateDCert keys _ (RegKey _) = RegKey <$> vKey . snd <$> Gen.element keys
+
+mutateDCert keys _ (DeRegKey _) = DeRegKey <$> vKey . snd <$> Gen.element keys
+
+mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
+    epoch' <- mutateEpoch 0 e epoch
+    key'   <- getStakeKey keys
+    pure $ RetirePool key' epoch'
+
+mutateDCert keys _ (RegPool (StakePool _ pledges cost margin altacnt)) = do
+  key'    <- getStakeKey keys
+  cost'   <- mutateCoin 0 100 cost
+  p' <- mutateNat 0 100 (numerator margin)
+  pure $ RegPool (StakePool key' pledges cost' (p' % 100) altacnt)
+
+mutateDCert keys _ (Delegate (Delegation _ _)) = do
+  delegator' <- getStakeKey keys
+  delegatee' <- getStakeKey keys
+  pure $ Delegate $ Delegation delegator' delegatee'
