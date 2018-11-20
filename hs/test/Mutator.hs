@@ -21,8 +21,11 @@ import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
 import Coin
-import LedgerState (LedgerEntry(..))
+import           Delegation.Certificates  (DCert(..))
+import Keys
+import LedgerState (LedgerEntry(..), DelegationState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
+import           Slot
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
