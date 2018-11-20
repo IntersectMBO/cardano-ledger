@@ -70,7 +70,6 @@ library
                        Cardano.Chain.Genesis.Hash
                        Cardano.Chain.Genesis.Initializer
                        Cardano.Chain.Genesis.NonAvvmBalances
-                       Cardano.Chain.Genesis.ProtocolConstants
                        Cardano.Chain.Genesis.Spec
                        Cardano.Chain.Genesis.WStakeholders
 
@@ -164,7 +163,6 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
-                       Test.Cardano.Chain.ProtocolConstants.Gen
                        Test.Cardano.Chain.Ssc.Bi
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen

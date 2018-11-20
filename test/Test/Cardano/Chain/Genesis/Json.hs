@@ -17,7 +17,6 @@ import Test.Cardano.Chain.Genesis.Gen
   ( genGenesisAvvmBalances
   , genGenesisDelegation
   , genGenesisInitializer
-  , genGenesisProtocolConstants
   , genStaticConfig
   )
 import Test.Cardano.Crypto.Gen (feedPM)
@@ -55,14 +54,6 @@ roundTripGenesisAvvmBalances =
 roundTripGenesisDelegation :: Property
 roundTripGenesisDelegation =
   eachOf 100 (feedPM genGenesisDelegation) roundTripsAesonShow
-
---------------------------------------------------------------------------------
--- ProtocolConstants
---------------------------------------------------------------------------------
-
-roundTripProtocolConstants :: Property
-roundTripProtocolConstants =
-  eachOf 1000 genGenesisProtocolConstants roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- GenesisInitializer

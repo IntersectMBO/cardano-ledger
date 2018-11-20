@@ -27,8 +27,7 @@ import Hedgehog
 
 import Cardano.Chain.Block (Blund, blockSlot, blockTxPayload)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFile)
-import Cardano.Chain.Genesis
-  (GenesisData(..), GenesisProtocolConstants(..), readGenesisData)
+import Cardano.Chain.Genesis (GenesisData(..), readGenesisData)
 import Cardano.Chain.Slotting (SlotId)
 import Cardano.Chain.Txp
   (TxPayload(..), UTxO, UTxOValidationError, genesisUtxo, updateUTxOWitness)
@@ -52,7 +51,7 @@ tests scenario = do
     <$> runExceptT (readGenesisData "test/mainnet-genesis.json")
 
   -- Extract mainnet 'ProtocolMagic'
-  let pm = gpcProtocolMagic $ gdProtocolConsts genesisData
+  let pm = gdProtocolMagic genesisData
 
   -- Create an 'IORef' containing the genesis 'UTxO'
   utxoRef <- newIORef $ genesisUtxo genesisData

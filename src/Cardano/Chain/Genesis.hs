@@ -10,5 +10,4 @@ import Cardano.Chain.Genesis.Delegation as X
 import Cardano.Chain.Genesis.Hash as X
 import Cardano.Chain.Genesis.Initializer as X
 import Cardano.Chain.Genesis.NonAvvmBalances as X
-import Cardano.Chain.Genesis.ProtocolConstants as X
 import Cardano.Chain.Genesis.Spec as X

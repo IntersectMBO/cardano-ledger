@@ -4,7 +4,6 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisAvvmBalances
   , genGenesisDelegation
   , genGenesisInitializer
-  , genGenesisProtocolConstants
   , genGenesisSpec
   , genTestnetBalanceOptions
   , genStaticConfig
@@ -25,7 +24,6 @@ import Cardano.Chain.Genesis
   , GenesisDelegation(..)
   , GenesisHash(..)
   , GenesisInitializer(..)
-  , GenesisProtocolConstants(..)
   , GenesisSpec(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
@@ -34,9 +32,9 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Crypto (ProtocolMagic)
 
-import Test.Cardano.Chain.Common.Gen (genLovelace, genLovelacePortion)
+import Test.Cardano.Chain.Common.Gen
+  (genBlockCount, genLovelace, genLovelacePortion)
 import Test.Cardano.Chain.Delegation.Gen (genProxySKHeavyDistinctList)
-import Test.Cardano.Chain.ProtocolConstants.Gen (genVssMaxTTL, genVssMinTTL)
 import Test.Cardano.Chain.Update.Gen (genBlockVersionData)
 import Test.Cardano.Crypto.Gen
   (genHashRaw, genProtocolMagic, genRedeemPublicKey, genTextHash)
@@ -74,14 +72,6 @@ genGenesisInitializer =
     <*> Gen.bool
     <*> Gen.integral (Range.constant 0 10)
 
-genGenesisProtocolConstants :: Gen GenesisProtocolConstants
-genGenesisProtocolConstants =
-  GenesisProtocolConstants
-    <$> Gen.int (Range.constant 0 100)
-    <*> genProtocolMagic
-    <*> genVssMaxTTL
-    <*> genVssMinTTL
-
 genGenesisSpec :: ProtocolMagic -> Gen GenesisSpec
 genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
  where
@@ -90,7 +80,8 @@ genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
       <$> genGenesisAvvmBalances
       <*> genGenesisDelegation pm
       <*> genBlockVersionData
-      <*> genGenesisProtocolConstants
+      <*> genBlockCount
+      <*> genProtocolMagic
       <*> genGenesisInitializer
 
 genTestnetBalanceOptions :: Gen TestnetBalanceOptions

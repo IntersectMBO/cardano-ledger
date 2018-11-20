@@ -9,7 +9,6 @@ module Test.Cardano.Chain.Genesis.Example
   , exampleStaticConfig_GCSrc
   , exampleGenesisDelegation
   , exampleGenesisInitializer
-  , exampleProtocolConstants
   )
 where
 
@@ -29,12 +28,10 @@ import Cardano.Chain.Genesis
   , GenesisAvvmBalances(..)
   , GenesisDelegation(..)
   , GenesisInitializer(..)
-  , GenesisProtocolConstants(..)
   , GenesisSpec(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
-import Cardano.Chain.ProtocolConstants (VssMaxTTL(..), VssMinTTL(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
@@ -59,7 +56,8 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisAvvmBalances
   exampleGenesisDelegation
   exampleBlockVersionData
-  exampleProtocolConstants
+  37
+  (ProtocolMagic 1783847074)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
@@ -119,14 +117,6 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
       "55163b178e999b9fd50637b2edab8c85\
                                             \8a879ac3c4bd3e610095419a19696573"
     )
-
-exampleProtocolConstants :: GenesisProtocolConstants
-exampleProtocolConstants = GenesisProtocolConstants
-  { gpcK             = 37
-  , gpcProtocolMagic = ProtocolMagic {getProtocolMagic = 1783847074}
-  , gpcVssMaxTTL     = VssMaxTTL {getVssMaxTTL = 1477558317}
-  , gpcVssMinTTL     = VssMinTTL {getVssMinTTL = 744040476}
-  }
 
 exampleGenesisInitializer :: GenesisInitializer
 exampleGenesisInitializer = GenesisInitializer
