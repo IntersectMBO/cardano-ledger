@@ -915,7 +915,7 @@ proposals we can simplify the version checking logic considerably.
 
 An update proposal can become immediately adopted if the number of blocks
 signed with the version of the proposal exceeds a certain threshold. In the
-current implementation this Keck occurs only at the epoch boundary block.
+current implementation this occurs only at the epoch boundary block.
 
 \subsubsection{Cleanup}
 \label{sec:up-cleanup}
@@ -927,6 +927,28 @@ checks: this leads to plenty of different states for a proposal: active,
 adopted, confirmed, competing, never-to-become-adopted, rejected, discarded. If
 the cleanup of proposals can be done in the way specified here we will avoid a
 great deal of cognitive complexity when reasoning about the update system.
+
+\subsubsection{Adoption threshold}
+\label{sec:adoption-threshold}
+
+The current implementation adopts a proposal with version $\var{pv}$ if the
+portion of block issuers' stakes, which issued blocks with this version, is
+greater than the threshold given by:
+
+\begin{lstlisting}
+max spMinThd (spInitThd - (t - s) * spThdDecrement)  
+\end{lstlisting}
+
+where:
+\begin{itemize}
+\item \lstinline{spMinThd} is a minimum threshold required for adoption.
+\item \lstinline{spInitThd} is an initial threshold.
+\item \lstinline{spThdDecrement} is the decrement constant of the initial
+  threshold.
+\end{itemize}
+
+In this specification we consider a fixed threshold, called $\var{upAdptThr}$
+until it becomes clear why a dynamic alternative is needed.
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
