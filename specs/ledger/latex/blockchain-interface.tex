@@ -188,8 +188,7 @@
           \end{array}
         \right)
       }
-      \\
-      \var{pids_{old}} = \dom~(pws' \restrictrange [.., b_n - u]) &
+      &
       pws' = pws \unionoverride \{ \upId{up} \mapsto b_n\}
     }
     {
@@ -223,12 +222,12 @@
           \begin{array}{l}
             \var{pv}\\
             \var{pps}\\
-            \var{pids_{old}} \subtractdom \var{rups'}\\
-            {[e_c, ..]} \restrictdom \var{eps'}\\
-            \var{pids_{old}} \subtractdom \var{cps}\\
-            \var{pids_{old}} \subtractdom \var{vts}\\
+            \var{rups'}\\
+            \var{eps'}\\
+            \var{cps}\\
+            \var{vts}\\
             \var{bvs}\\
-            \var{pids_{old}} \subtractdom \var{pws'}
+            \var{pws'}
           \end{array}
         \right)
       }
@@ -321,6 +320,21 @@
 
 The interface rule for protocol-block-version registration makes use of the
 $\trans{upbvreg}{}$ transition, passing only the relevant portion of the state.
+In addition, the proposals that are older than $u$ blocks are removed from the
+parts of the state that holds:
+\begin{itemize}
+\item the registered proposals,
+\item the confirmed proposals,
+\item the votes associated with the proposals, and
+\item the block number in which proposals where added.
+\end{itemize}
+Note that a proposal that got adopted could be cleaned earlier in some other
+rule, however, by keeping all the cleanup logic associated to block number
+change in one place we make reasoning about state size bounds simpler. The
+epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
+update in which epoch, is cleaned up in the rules given in
+\cref{fig:rules:upi-ec}, which deals with epoch change. The sequence
+$\var{bvs}$ is a rolling window, so no cleanup is necessary.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -353,7 +367,8 @@ $\trans{upbvreg}{}$ transition, passing only the relevant portion of the state.
             \var{bvs'}
           \end{array}
         \right)
-      }
+      }\\
+      \var{pids_{old}} = \dom~(pws \restrictrange [.., b_n - u])
     }
     {
       {
@@ -386,12 +401,12 @@ $\trans{upbvreg}{}$ transition, passing only the relevant portion of the state.
           \begin{array}{l}
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
-            \var{rups}\\
+            \var{pids_{old}} \subtractdom \var{rups}\\
             \var{eps}\\
-            \var{cps}\\
-            \var{vts}\\
-            \var{bvs'}\\
-            \var{pws}
+            \var{pids_{old}} \subtractdom \var{cps}\\
+            \var{pids_{old}} \subtractdom \var{vts}\\
+            \var{bvs}\\
+            \var{pids_{old}} \subtractdom \var{pws}
           \end{array}
         \right)
       }
@@ -408,7 +423,8 @@ are changed depending on the epoch in the signal ($e_n$ in this case). A change
 only occurs if the new epoch is greater than the current one ($e_c$). In such
 case, the current epoch is also updated accordingly. The candidate versions and
 parameters $(\var{pv_c}, \var{pps_c})$ remain constant in this transition, even
-if they become adopted.
+if they become adopted. Finally, the set $\var{eps}$ is updated so that only
+keys that proposed in epochs no earlier than $e_n$ are kept.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -526,7 +542,7 @@ if they become adopted.
             \var{(\var{pv'}, \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
             \var{rups}\\
-            \var{eps}\\
+            {[e_n, ..]} \restrictdom \var{eps}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
