@@ -98,7 +98,9 @@ Remarks:
     & \fun{upIssuer} \in \UProp \to \VKeyGen & \text{issuer of the update proposal}\\
     & \fun{upSize} \in \UProp \to \mathbb{N} & \text{update proposal size}\\
     & \fun{upPV} \in \UProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}\\
-    & \fun{upID} \in \UProp \to \mathbb{\UPropId} & \text{update proposal id}
+    & \fun{upID} \in \UProp \to \mathbb{\UPropId} & \text{update proposal id}\\
+    & \fun{upParams} \in \UProp \to \mathbb{\ProtParams}
+                                             & \text{new parameters that are proposed }
   \end{align*}
   \caption{Update proposals definitions}
   \label{fig:defs:update-proposals}
@@ -144,12 +146,6 @@ First we model the validity of a proposal.
 
 Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
 \begin{itemize}
-\item must not exceed the maximum side, as specified by the current
-  protocol parameters.
-\item must not exist in the set of active proposals.
-\item must have a unique version among the current active proposals. This
-  implies that a proposal is uniquely determined by the protocol version it
-  proposes.
 \item must increase one of the (major, minor, or alternative) of the
   current version in a consistent manner:
   \begin{itemize}
@@ -162,6 +158,21 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \item If the proposed major version is larger than the current major, then
     the proposed minor version must be zero.
   \end{itemize}
+\item must be consistent with the current protocol parameters parameters:
+  \begin{itemize}
+  \item the proposal size must not exceed the maximum size specified by
+    the current protocol parameters,
+  \item the proposed new maximum block should be not greater than twice current
+    maximum block size, and
+  \item the proposed new script version can be incremented by at most 1.
+  \end{itemize}
+\item must be new:
+  \begin{itemize}
+  \item must not exist in the set of registered proposals, and
+  \item must have a unique version among the current active proposals. This
+    implies that a proposal is uniquely determined by the protocol version it
+    proposes.
+  \end{itemize}
 \end{itemize}
 
 \begin{figure}[htb]
@@ -170,9 +181,33 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \begin{array}{r c l}
       \fun{canFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
       & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_n}, \var{mi_n}, \var{a_n})\\
-      & \wedge & (|\var{mj_n} - \var{mj_p}| \leq 1\\
+      & \wedge & 0 \leq \var{mj_n} - \var{mj_p} \leq 1\\
       & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))\\
       & \wedge & (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)
+    \end{array}
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:func:can-update}
+    \begin{array}{r c l}
+      \fun{canUpdate}~\var{pps}~\var{up}
+      & = & \var{maxUpSize} \mapsto \var{mus} \in \var{pps}\\
+      & \wedge & \upSize{up} \leq \var{mus}\\
+      & \wedge & \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}\\
+      & \wedge & \var{maxBlockSize} \mapsto \var{bsm_{up}} \in (\upParams{up})\\
+      & \wedge & \var{bszm_{up}} \leq 2\var{bszm}\\
+      & \wedge & \var{scriptVer} \mapsto \var{sv} \in \var{pps} \\
+      & \wedge & \var{scriptVer} \mapsto \var{sv_{up}} \in (\upParams{up}) \\
+      & \wedge &  0 \leq \var{sv_{up}} - \var{sv} \leq 1
+    \end{array}
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:func:is-new}
+    \begin{array}{r c l}
+      \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})
+      & = &  \var{pid} \notin \dom \var{rups}
+            \wedge \var{nv} \notin \dom (\range \var{rups})\\
     \end{array}
   \end{equation}
   \caption{Update validity functions}
@@ -184,15 +219,11 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \label{eq:rule:up-validity}
     \inference
     {
-      {\begin{array}{l l}
-        \var{maxUpSize} \mapsto \var{mus} \in \var{pps}
-        & \upSize{up} \leq \var{mus}\\
-        \upId{up} = \var{pid}
-        & \var{pid} \notin \dom \var{rups} \\
-        \upPV{up} = \var{nv}
-        & \var{nv} \notin \dom (\range \var{rups})\\
-       \end{array}}\\
-     \fun{canFollow}~\var{nv}~\var{pv}
+      \upId{up} = \var{pid}
+      & \upPV{up} = \var{nv}\\
+      & \fun{canFollow}~\var{nv}~\var{pv}
+      & \fun{canUpdate}~\var{pps}~\var{up}
+      & \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})
     }
     {
       {
@@ -213,7 +244,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \upPV{up}) \}
+            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \upParams{up}) \}
           \end{array}
         \right)
       }
@@ -972,6 +1003,29 @@ until it becomes clear why a dynamic alternative is needed.
 
 \subsubsection{No voting deadlines}
 \label{sec:no-voting-deadlines}
+
+\subsubsection{No checks on unlock-stake-epoch parameter}
+\label{sec:no-unlock-stake-epoch-check}
+
+The rule of Figure~\ref{eq:rule:up-validity} does not check the
+\lstinline{bvdUnlockStakeEpoch} parameter, since it will have a different
+meaning in the handover phase: its use will be reserved for unlocking the
+Ouroboros-BFT logic in the software.
+
+\subsubsection{No grouping of proposals per-application name}
+\label{sec:no-app-up-grouping}
+
+It is unclear at this moment whether we need to model the applications names
+and versions, so this aspect is not modeled in the present rules.
+
+\subsubsection{No model of software-version}
+\label{sec:no-model-software-version}
+
+We do not model the
+\href{https://github.com/input-output-hk/cardano-sl/blob/develop/docs/block-processing/us.md#software-version}{application
+  name and the software version} of this application. It remains to be seen
+whether this is part of the scope of this specification.
+
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
