@@ -264,8 +264,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \UPLEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{e} & \Epoch & \text{current epoch}\\
-        \mathcal{K} & \powerset{\VKeyGen} & \text{genesis keys}\\
+        \var{e_c} & \Epoch & \text{current epoch}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}
     \right)
   \end{equation*}
@@ -275,7 +275,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     \UPLState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-key per-epoch}\\
+        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
       \end{array}
     \right)
   \end{equation*}
