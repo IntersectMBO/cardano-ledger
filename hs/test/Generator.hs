@@ -35,7 +35,8 @@ import           LedgerState     (LedgerEntry (..), LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState, DelegationState(..)
+                                  genesisState, DelegationState(..),
+                                  KeyPairs
                                  )
 import           Slot
 import           UTxO
@@ -43,8 +44,6 @@ import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
-
-type KeyPairs = [(KeyPair, KeyPair)]
 
 -- | Returns the number of entries of the UTxO set.
 utxoSize :: UTxO -> Int
@@ -255,20 +254,20 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> vKey . snd <$> Gen.element keys
+  RegKey <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> vKey . snd <$> Gen.element keys
+    DeRegKey <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do
-  key <- vKey . snd <$> Gen.element keys
+  key <- getAnyStakeKey keys
   pure $ RetirePool key epoch
 
 genStakePool :: KeyPairs -> Gen StakePool
 genStakePool keys = do
-  poolKey       <- vKey . snd <$> Gen.element keys
+  poolKey       <- getAnyStakeKey keys
   cost          <- Coin <$> genNatural 1 100
   marginPercent <- genNatural 0 100
   pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
@@ -276,7 +275,7 @@ genStakePool keys = do
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
 genDelegation keys dstate = do
   poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
-  delegatorKey <- (vKey . snd) <$> Gen.element keys
+  delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
 
 genDCertRegPool :: KeyPairs -> Gen DCert
