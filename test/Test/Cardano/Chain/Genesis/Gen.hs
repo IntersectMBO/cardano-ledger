@@ -14,6 +14,8 @@ import Cardano.Prelude
 
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
+import Formatting (build, sformat)
+
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -52,15 +54,13 @@ genStaticConfig pm = Gen.choice
 
 genFakeAvvmOptions :: Gen FakeAvvmOptions
 genFakeAvvmOptions =
-  FakeAvvmOptions
-    <$> Gen.word Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
+  FakeAvvmOptions <$> Gen.word Range.constantBounded <*> genLovelace
 
 genGenesisDelegation :: ProtocolMagic -> Gen GenesisDelegation
 genGenesisDelegation pm = do
   proxySKHeavyList <- genProxySKHeavyDistinctList pm
   case mkGenesisDelegation proxySKHeavyList of
-    Left  err    -> panic err
+    Left  err    -> panic $ sformat build err
     Right genDel -> pure genDel
 
 genGenesisInitializer :: Gen GenesisInitializer
@@ -89,8 +89,8 @@ genTestnetBalanceOptions =
   TestnetBalanceOptions
     <$> Gen.word Range.constantBounded
     <*> Gen.word Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.double (Range.constant 0 10)
+    <*> genLovelace
+    <*> genLovelacePortion
     <*> Gen.bool
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances

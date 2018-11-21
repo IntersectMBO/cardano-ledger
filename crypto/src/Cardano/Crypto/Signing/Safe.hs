@@ -50,6 +50,7 @@ import Cardano.Crypto.Signing.Types.Safe
   , checkPassMatches
   , emptyPassphrase
   , encToPublic
+  , encToSecret
   , mkEncSecretUnsafe
   , mkEncSecretWithSaltUnsafe
   , noPassEncrypt
