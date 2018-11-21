@@ -13,6 +13,7 @@
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
 \newcommand{\VState}{\ensuremath{\type{VState}}}
+\newcommand{\BkNr}{\ensuremath{\type{BkNr}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
@@ -473,6 +474,14 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
     \end{array}
   \end{equation*}
   %
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
+      \var{b_n} & \BkNr & n & \mathbb{N} & \text{block number}
+    \end{array}
+  \end{equation*}
+  %
   \emph{Abstract functions}
   \begin{align*}
     & \fun{vCaster} \in \Vote \to \VKey & \text{caster of a vote}\\
@@ -506,7 +515,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
   %
   \emph{Voting transitions}
     \begin{equation*}
-    \_ \vdash \_ \trans{vote}{\_} \_ \in
+    \_ \vdash \_ \trans{addvote}{\_} \_ \in
     \powerset (\VEnv \times \VState \times \Vote \times \VState)
     \end{equation*}
   \caption{Voting transition-system types}
@@ -568,13 +577,49 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
 
 \clearpage
 
-The rules in Figure~\ref{fig:rules:up-confirmation} model the registration of a vote:
+\begin{figure}[htb]
+  \emph{Vote registration environments}
+  \begin{align*}
+    & \VEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{pps} & \ProtParams & \text{current protocol parameters}\\
+        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        & \text{registered update proposals}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Vote registration states}
+  \begin{align*}
+    & \VState
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{votes}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Vote registration transitions}
+    \begin{equation*}
+    \_ \vdash \_ \trans{UPVOTE}{\_} \_ \in
+    \powerset (\VEnv \times \VState \times \Vote \times \VState)
+    \end{equation*}
+  \caption{Vote registration transition-system types}
+  \label{fig:ts-types:vote-reg}
+\end{figure}
+
+The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote:
 \begin{itemize}
 \item The vote gets added to the list set of votes per-proposal ($\var{vts}$),
   via transition $\trans{addvote}{}$.
 \item If the number of votes for the proposal $v$ refers to exceeds the
-  confirmation threshold then the proposal gets added to the set of confirmed
-  proposals ($\var{cps}$).
+  confirmation threshold and this proposal was not confirmed already, then the
+  proposal gets added to the set of confirmed proposals ($\var{cps}$). The
+  reason why we check that the proposal was not already confirmed, is that we
+  want to keep in $\var{cps}$ the earliest block number in which the proposal
+  was confirmed.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -606,7 +651,9 @@ The rules in Figure~\ref{fig:rules:up-confirmation} model the registration of a 
       }\\
       \vPropId{v} = \var{pid}
       & \var{pcThr} \mapsto t \in \var{pps}
-      & \size{\{\var{pid}\} \restrictdom \var{vts'}} < t
+      & (\size{\{\var{pid}\} \restrictdom \var{vts'}} < t
+      \vee \var{pid} \in \dom~\var{cps}
+      )
     }
     {
       {
@@ -639,7 +686,7 @@ The rules in Figure~\ref{fig:rules:up-confirmation} model the registration of a 
   \end{equation}
   \nextdef
   \begin{equation}
-    \label{eq:rule:up-confirmation}
+    \label{eq:rule:up-vote-reg}
     \inference
     {
       {
@@ -697,8 +744,8 @@ The rules in Figure~\ref{fig:rules:up-confirmation} model the registration of a 
       }
     }
   \end{equation}
-  \caption{Update-proposals confirmation rules}
-  \label{fig:rules:up-confirmation}
+  \caption{Vote registration rules}
+  \label{fig:rules:up-vote-reg}
 \end{figure}
 
 \clearpage
