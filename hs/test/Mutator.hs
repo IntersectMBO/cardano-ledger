@@ -11,8 +11,11 @@ module Mutator
     , mutateCoin
     , mutateLedgerEntry
     , mutateTx
+    , mutateDCert
+    , getAnyStakeKey
     ) where
 
+import Data.Ratio
 import Data.Set                  as Set
 import Numeric.Natural
 
@@ -21,8 +24,12 @@ import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
 import Coin
-import LedgerState (LedgerEntry(..))
+import           Delegation.Certificates  (DCert(..))
+import           Delegation.StakePool
+import Keys
+import LedgerState (LedgerEntry(..), DelegationState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
+import           Slot
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
@@ -99,3 +106,45 @@ mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
+
+
+-- Mutators for 'DelegationData'
+
+-- Mutators that change the type of certificate must be implemented in
+-- 'Generator.hs' in order to prevent cyclic imports.
+
+-- | Select one random verification staking key from list of pairs of KeyPair.
+getAnyStakeKey :: KeyPairs -> Gen VKey
+getAnyStakeKey keys = vKey . snd <$> Gen.element keys
+
+-- | Mutate 'Epoch' analogously to 'Coin' data.
+mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
+mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
+
+-- | Mutator for delegation certificates.
+-- A 'RegKey' and 'DeRegKey' select randomly a key fomr the supplied list of
+-- keypairs.
+-- A 'RetirePool' certificate mutates the epoch and the key of the certificate.
+-- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
+-- A 'Delegate' certificates selects randomly keys for delegator and delegatee
+-- from the supplied list of keypairs.
+mutateDCert :: KeyPairs -> DelegationState -> DCert -> Gen DCert
+mutateDCert keys _ (RegKey _) = RegKey <$> vKey . snd <$> Gen.element keys
+
+mutateDCert keys _ (DeRegKey _) = DeRegKey <$> vKey . snd <$> Gen.element keys
+
+mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
+    epoch' <- mutateEpoch 0 e epoch
+    key'   <- getAnyStakeKey keys
+    pure $ RetirePool key' epoch'
+
+mutateDCert keys _ (RegPool (StakePool _ pledges cost margin altacnt)) = do
+  key'    <- getAnyStakeKey keys
+  cost'   <- mutateCoin 0 100 cost
+  p' <- mutateNat 0 100 (numerator margin)
+  pure $ RegPool (StakePool key' pledges cost' (p' % 100) altacnt)
+
+mutateDCert keys _ (Delegate (Delegation _ _)) = do
+  delegator' <- getAnyStakeKey keys
+  delegatee' <- getAnyStakeKey keys
+  pure $ Delegate $ Delegation delegator' delegatee'

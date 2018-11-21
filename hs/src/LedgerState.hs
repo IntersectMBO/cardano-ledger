@@ -18,6 +18,7 @@ module LedgerState
   , Ledger
   , LedgerEntry(..)
   , LedgerValidation(..)
+  , KeyPairs
   -- * state transitions
   , applyTransaction
   , asStateTransition
@@ -55,6 +56,9 @@ data LedgerEntry =
     deriving (Show, Eq)
 
 type Ledger = [LedgerEntry]
+
+-- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
+type KeyPairs = [(KeyPair, KeyPair)]
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
