@@ -189,7 +189,7 @@
         \right)
       }
       \\
-      \var{pids_{old}} = \dom~(pwds' \restrictrange \{[.., b_n - u]\}) &
+      \var{pids_{old}} = \dom~(pws' \restrictrange [.., b_n - u]) &
       pws' = pws \unionoverride \{ \upId{up} \mapsto b_n\}
     }
     {
@@ -397,5 +397,144 @@
   \end{equation}
   \caption{Block version registration rules}
   \label{fig:rules:upi-bv-reg}
+\end{figure}
+
+\clearpage
+
+Rule~\ref{eq:rule:upi-ec} models how the protocol version and its parameters
+are changed depending on the epoch in the signal ($e_n$ in this case). A change
+only occurs if the new epoch is greater than the current one ($e_c$). In such
+case, the current epoch is also updated accordingly. The candidate versions and
+parameters $(\var{pv_c}, \var{pps_c})$ remain constant in this transition, even
+if they become adopted.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:pvbump-change-noop}
+    \inference
+    {
+      e_n \leq e_c
+    }
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_c}\\
+            \var{(\var{pv}, \var{pps})}\\
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_c}\\
+            \var{(\var{pv}, \var{pps})}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:pvbump-change}
+    \inference
+    {
+      e_c < e_n
+    }
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash      
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_c}\\
+            \var{(\var{pv}, \var{pps})}
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_n}\\
+            \var{(\var{pv_c}, \var{pps_c})}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:upi-ec}
+    \inference
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_c}\\
+            \var{(\var{pv}, \var{pps})}
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps'})}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          b_n\\
+          \var{dms}\\
+          u
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_c}\\
+            \var{(\var{pv}, \var{pps})}\\
+            \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upiec}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps'})}\\
+            \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block version adoption on epoch change rules}
+  \label{fig:rules:upi-ec}
 \end{figure}
 
