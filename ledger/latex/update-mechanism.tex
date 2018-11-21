@@ -473,7 +473,7 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
           \end{array}
         \right)
       }
-      \trans{vote}{\var{v}}
+      \trans{addvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
@@ -489,10 +489,14 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
 
 \clearpage
 
-\subsection{Update proposals confirmation}
-\label{sec:update-proposals-confirmation}
-
-This section models when update proposals get confirmed.
+The rules in Figure~\ref{fig:rules:up-confirmation} model the registration of a vote:
+\begin{itemize}
+\item The vote gets added to the list set of votes per-proposal ($\var{vts}$),
+  via transition $\trans{addvote}{}$.
+\item If the number of votes for the proposal $v$ refers to exceeds the
+  confirmation threshold then the proposal gets added to the set of confirmed
+  proposals ($\var{cps}$).
+\end{itemize}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -513,7 +517,7 @@ This section models when update proposals get confirmed.
           \end{array}
         \right)
       }
-      \trans{vote}{\var{v}}
+      \trans{addvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
@@ -530,6 +534,7 @@ This section models when update proposals get confirmed.
         \begin{array}{l}
           b_n\\
           \var{pps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -537,17 +542,15 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
             \var{cps}\\
             \var{vts}
           \end{array}
         \right)
       }
-      \trans{upc}{\var{v}}
+      \trans{upvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
             \var{cps}\\
             \var{vts'}
           \end{array}
@@ -574,7 +577,7 @@ This section models when update proposals get confirmed.
           \end{array}
         \right)
       }
-      \trans{vote}{\var{v}}
+      \trans{addvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
@@ -591,6 +594,7 @@ This section models when update proposals get confirmed.
         \begin{array}{l}
           \var{b_n}\\
           \var{pps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -598,19 +602,17 @@ This section models when update proposals get confirmed.
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
             \var{cps}\\
             \var{vts}
           \end{array}
         \right)
       }
-      \trans{upc}{\var{v}}
+      \trans{upvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
-            \{\var{pid}\} \subtractdom \var{rups} \\
             \var{cps} \unionoverride  \{\var{pid} \mapsto b_n\} \\
-            \{\var{pid}\} \subtractdom \var{vts'}
+            \var{vts'}
           \end{array}
         \right)
       }
@@ -955,6 +957,9 @@ where:
 
 In this specification we consider a fixed threshold, called $\var{upAdptThr}$
 until it becomes clear why a dynamic alternative is needed.
+
+\subsubsection{No voting deadlines}
+\label{sec:no-voting-deadlines}
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}

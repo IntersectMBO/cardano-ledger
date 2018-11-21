@@ -156,7 +156,6 @@
 \subsection{Update-proposals interface}
 \label{sec:update-proposals-interface}
 
-
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-reg-interface}
@@ -237,6 +236,10 @@
   \label{fig:rules:upi-reg-interface}
 \end{figure}
 
+\clearpage
+
+
+
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-vote}
@@ -246,6 +249,7 @@
         \begin{array}{l}
           b_n\\
           \var{pps}\\
+          \var{rups}\\
           \var{dms}
         \end{array}
       }
@@ -253,18 +257,16 @@
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
             \var{cps}\\
             \var{vts}
           \end{array}
         \right)
       }
-      \trans{upc}{\var{v}}
+      \trans{upvote}{\var{v}}
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
-            \var{cps}\\
+            \var{cps'}\\
             \var{vts'}
           \end{array}
         \right)
@@ -303,8 +305,8 @@
             \var{pps}\\
             \var{rups}\\
             \var{eps}\\
-            \var{cps}\\
-            \var{vts}\\
+            \var{cps'}\\
+            \var{vts'}\\
             \var{bvs}\\
             \var{pws}
           \end{array}
