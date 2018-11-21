@@ -257,18 +257,30 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \label{fig:ts-types:up-limits}
 \end{figure}
 
+Terse explanation of Rule~\ref{eq:rule:up-limits}:
+\begin{itemize}
+\item We consider the update proposal issuers to be the delegators of the key
+  ($\var{vk}$) that is associated with the proposal under consideration
+  ($\var{up}$).
+\item We check that no key that delegated to $\var{vk}$ has issued a proposal
+  in the current epoch $\var{e_c}$.
+\item If the above check succeeds, then all the delegators of $\var{vk}$ are
+  added to the set of keys that proposed in this epoch.
+\end{itemize}
+
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:up-limits}
     \inference
     {\upIssuer{up} = \var{vk}
-      & \var{vk} \in \mathcal{K}
-      & (e_c, \var{vk}) \notin \var{eps}
+      & \var{eps_{vk}} = \{ (e_c, \var{vk_s})
+                       \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
+      & \var{eps_{vk}} \cap \var{eps} = \emptyset
     }
     {
       {\begin{array}{l}
          \var{e_c}\\
-         \mathcal{K}
+         \var{dms}
        \end{array}
       }
       \vdash
@@ -283,7 +295,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{eps \cup \{(e_c, \var{vk})\}}
+            \var{eps} \cup \var{eps_{vk}}
           \end{array}
         \right)
       }
@@ -440,9 +452,9 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
   cast by delegates of these genesis keys.
 \item We count one vote per genesis key that delegated to the key that is
   casting the vote.
-\item The vote must refer to an active update proposal.
+\item The vote must refer to a registered update proposal.
 \item The proposal id must be signed by the key that is casting the vote.
-\item It might be possible for the same genesis key to vote multiple times for
+\item It is possible for the same genesis key to vote multiple times for
   the same proposal, however this vote will be counted once (note that we're
   taking the union of the key-proposal-id pairs).
 \end{itemize}
