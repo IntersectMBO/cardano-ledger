@@ -1,9 +1,6 @@
-\section{Update mechanism}
-\label{sec:update}
-
 \newcommand{\UProp}{\ensuremath{\type{UProp}}}
 \newcommand{\UPropId}{\ensuremath{\type{UPropId}}}
-\newcommand{\UPropBody}{\ensuremath{\type{UPropBody}}}
+\newcommand{\UPropSD}{\ensuremath{\type{UPropSD}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 \newcommand{\ProtAtt}{\ensuremath{\type{ProtAtt}}}
 \newcommand{\ProtParams}{\ensuremath{\type{ProtParams}}}
@@ -18,6 +15,8 @@
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
 \newcommand{\upId}[1]{\ensuremath{\fun{upId}~\var{#1}}}
+\newcommand{\upSig}[1]{\ensuremath{\fun{upSig}~\var{#1}}}
+\newcommand{\upSigData}[1]{\ensuremath{\fun{upSigData}~\var{#1}}}
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
 \newcommand{\upParams}[1]{\ensuremath{\fun{upParams}~\var{#1}}}
 \newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
@@ -35,41 +34,11 @@
 
 \lstMakeShortInline[columns=fixed]`
 
-\subsection{Aspects that we need to model}
-\label{sec:aspects-to-model}
+\section{Update mechanism}
+\label{sec:update}
 
-\begin{description}
-\item[Authentication] Update proposals and votes are authenticated (properly
-  signed).
-\item[Authorization] Only genesis keys (via deleg certs) can post update
-  proposals.
-  \begin{itemize}
-  \item Only then they can vote on them.
-  \end{itemize}
-\item[Voting deadlines] voting ends when a majority of the voters (4/7 if we
-assume no stake) agree on the proposal.
-\item[Block versions] (= protocol versions)
-\item[Soft-forks] a protocol version changes according to the fork-resolution
-  rule (75\% of stake create blocks with new-version).
-\item[Hard-forks] ??? Do we need to model anything here?.
-\end{description}
-
-In particular the rules need to capture:
-
-\begin{enumerate}
-\item Each genesis key can post (either directly or via its delegate), one update proposal per-epoch.
-\item When does an update proposal becomes \textbf{active}.
-\item We cannot add a proposal if there exists one with the same id\footnote{id
-    = hash of the update proposal} that is already active.
-\item If there are two proposals submitted for the same block version, then
-  these proposals need to agree on the values of the updated parameters.
-\end{enumerate}
-
-Remarks:
-\begin{itemize}
-\item We do not distinguish between protocol or software updates. The ledger
-  only cares about the mechanisms by which the protocol parameters are changed.
-\end{itemize}
+This section formalizes the update mechanism by which the protocol parameters get
+updated.
 
 \subsection{Update proposals}
 \label{sec:update-proposals}
@@ -80,28 +49,57 @@ Remarks:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{up} & \UProp & \text{(protocol) update proposal}\\
-      \var{pa} & \ProtAtt & \text{protocol attribute}\\
+      \var{pa} & \ProtAtt & \text{update attributes}\\
+      \var{swv} & \type{SWVer} & \text{update software version}\\
+      \var{upd} & \type{UpdData} & \text{update data}\\
+      \var{upa} & \type{UpdAttr} & \text{update attributes}\\
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
       \var{pv} & \ProtVer & (\var{maj}, \var{min}, \var{alt})
       & (\mathbb{N}, \mathbb{N}, \mathbb{N}) & \text{protocol version}\\
-      \var{pps} & \ProtParams & \var{pps} & \ProtAtt \mapsto \Value & \text{protocol parameters}
+      \var{pps} & \ProtParams & \var{pps} & \ProtAtt \mapsto \Value
+                                             & \text{protocol parameters}\\
+      \var{pb} & \UPropSD
+      &
+        {\left(\begin{array}{r l}
+                 \var{pv}\\
+                 \var{pps}\\
+                 \var{swv}\\
+                 \var{upd}\\
+                 \var{upa}\\
+               \end{array}\right)}
+      & {
+        \left(
+        \begin{array}{l}
+          \ProtVer\\
+          \ProtParams\\
+          \type{SWVer}\\
+          \type{UpdData}\\
+          \type{UpdAttr}\\
+        \end{array}
+                   \right)
+                   }
+                          & \text{protocol update signed data}
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
   %
-  \begin{align*}
-    & \fun{upIssuer} \in \UProp \to \VKeyGen & \text{issuer of the update proposal}\\
-    & \fun{upSize} \in \UProp \to \mathbb{N} & \text{update proposal size}\\
-    & \fun{upPV} \in \UProp \to \mathbb{\ProtVer} & \text{update proposal protocol version}\\
-    & \fun{upID} \in \UProp \to \mathbb{\UPropId} & \text{update proposal id}\\
-    & \fun{upParams} \in \UProp \to \mathbb{\ProtParams}
-                                             & \text{new parameters that are proposed }
-  \end{align*}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{upIssuer} & \UProp \to \VKeyGen & \text{issuer of the update proposal}\\
+      \fun{upSize} & \UProp \to \mathbb{N} & \text{update proposal size}\\
+      \fun{upPV} & \UProp \to \ProtVer & \text{update proposal protocol version}\\
+      \fun{upId} & \UProp \to \UPropId & \text{update proposal id}\\
+      \fun{upParams} & \UProp \to \mathbb{\ProtParams}
+                                           & \text{new parameters that are proposed }\\
+      \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
+      \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}
+    \end{array}
+  \end{equation*}
   \caption{Update proposals definitions}
   \label{fig:defs:update-proposals}
 \end{figure}
@@ -173,6 +171,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     implies that a proposal is uniquely determined by the protocol version it
     proposes.
   \end{itemize}
+\item the protocol version and parameters, along with some other data (see the
+  definition of $\fun{upSigdata}$), must be signed by the proposal issuer.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -213,17 +213,19 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \caption{Update validity functions}
 \end{figure}
 
-\setpremisesspace{15pt}
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:up-validity}
     \inference
     {
-      \upId{up} = \var{pid}
-      & \upPV{up} = \var{nv}\\
+      \upIssuer{up} = \var{vk}
+      & \upId{up} = \var{pid}
+      & \upPV{up} = \var{nv}
+      & \upParams{up} = \var{pps_n}\\
       & \fun{canFollow}~\var{nv}~\var{pv}
       & \fun{canUpdate}~\var{pps}~\var{up}
-      & \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})
+      & \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})\\
+      \mathcal{V}_{\var{vk}}\serialised{\upSigData{up}}_{(\upSig{up})}
     }
     {
       {
@@ -244,7 +246,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \upParams{up}) \}
+            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
           \end{array}
         \right)
       }
@@ -305,7 +307,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
     \inference
     {\upIssuer{up} = \var{vk}
       & \var{eps_{vk}} = \{ (e_c, \var{vk_s})
-                       \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
+      \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
       & \var{eps_{vk}} \cap \var{eps} = \emptyset
     }
     {
@@ -335,10 +337,6 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
   \caption{Update proposals limits rules}
   \label{fig:rules:up-limits}
 \end{figure}
-
-\begin{todo}
-TODO: add witnesses as well.
-\end{todo}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -1031,6 +1029,19 @@ We do not model the
   name and the software version} of this application. It remains to be seen
 whether this is part of the scope of this specification.
 
+
+\subsubsection{Protocol-only vs software updates}
+\label{sec:protocol-vs-software-updates}
+
+We do not distinguish between protocol or software updates. The ledger only
+cares about the mechanisms by which the protocol parameters are changed.
+
+\subsubsection{Ignored attributes of proposals}
+
+In Figure~\ref{fig:defs:update-proposals} the types $\type{SWVer}$,
+$\type{UpdData}$, and $\type{UpdAttr}$ are only needed to model the fact that
+an update proposal must sign such data, however, we do not use them for any
+other purpose in this formalization.
 
 \subsection{Information in the ledger state}
 \label{sec:information-in-ledger-state}
