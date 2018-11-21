@@ -153,6 +153,35 @@ and a transaction $tx$ as above, the UTxOs of $l'$ contain all newly created
 UTxOs and the referred transaction id of each new UTxO is not used in the UTxO
 set of $l$.
 
+\begin{property}[\textbf{Absence of Double-Spend}]
+  \begin{multline*}
+    \forall l_{0},..,l_{n} \in \ledgerState, l_{0} =
+    \left(
+      \begin{array}{c}
+        \left\{
+        \genesisUTxO
+        \right\} \\
+        \left(
+        \begin{array}{c}
+          \emptyset\\
+          \emptyset
+        \end{array}
+        \right)
+      \end{array}
+    \right) \wedge \applyFun{validLedgerState} l_{n} \\
+    \implies \forall 0 < i \leq n, tx_{i} \in \Tx, l_{i-1}
+    \trans{ledger}{tx_{i}} l_{i} \wedge \applyFun{validLedgerState} l_{i}
+    \\ \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
+    \applyFun{txins}{tx_{i}} = \emptyset
+  \end{multline*}
+  \label{prop:ledger-properties-no-double-spend}
+\end{property}
+
+Property~\ref{prop:ledger-properties-no-double-spend} states that for each valid
+ledger state $l_{n}$ reachable from the genesis state, each transaction $t_{i}$
+does not share any input with any previous transaction $t_{j}$. This means that
+each output of a transition is spend at most once.
+
 \subsection{Ledger State Properties for Delegation Transitions}
 \label{sec:ledg-prop-deleg}
 
