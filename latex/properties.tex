@@ -55,8 +55,8 @@ transaction inputs are the empty set for the initial transaction. An element of
         \right)
       \end{array}
     \right)  \\
-    \implies \forall 0 < i \leq n, (\exists certs \in \Tx, l_{i-1}
-    \trans{ledger}{c} l_{i}) \implies \applyFun{validLedgerState}(l_{n})
+    \implies \forall 0 < i \leq n, (\exists tx_{i} \in \Tx, l_{i-1}
+    \trans{ledger}{tx_{i}} l_{i}) \implies \applyFun{validLedgerState} l_{n}
   \end{multline*}
   \label{def:valid-ledger-state}
 \end{definition}
