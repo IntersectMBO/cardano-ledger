@@ -44,7 +44,7 @@ checkSigDecoded
   => ProtocolMagic
   -> SignTag
   -> PublicKey
-  -> t ByteString
+  -> t
   -> Signature (BaseType t)
   -> Bool
 checkSigDecoded pm t k x s =
@@ -65,12 +65,12 @@ checkSigRaw pm mbTag (PublicKey k) x (Signature s) = CC.verify k (tag <> x) s
 
 -- | Checks if certificate is valid, given issuer pk, delegate pk and ω
 verifyProxyCert
-  :: (Decoded t, Functor t)
+  :: (Decoded (f ByteString), Functor f)
   => ProtocolMagic
   -> PublicKey
   -> PublicKey
-  -> (t ByteString)
-  -> ProxyCert (BaseType t)
+  -> (f ByteString)
+  -> ProxyCert (BaseType (f ByteString))
   -> Bool
 verifyProxyCert pm issuerPk (PublicKey delegatePk) o (ProxyCert sig) =
   checkSigDecoded

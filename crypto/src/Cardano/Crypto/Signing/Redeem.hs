@@ -95,7 +95,7 @@ redeemCheckSigDecoded
   => ProtocolMagic
   -> SignTag
   -> RedeemPublicKey
-  -> t ByteString
+  -> t
   -> RedeemSignature (BaseType t)
   -> Bool
 redeemCheckSigDecoded pm tag k x s =

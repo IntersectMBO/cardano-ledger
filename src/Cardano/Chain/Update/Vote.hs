@@ -143,8 +143,8 @@ upId = hash
 recoverUpId :: AProposal ByteString -> UpId
 recoverUpId = hashDecoded
 
-instance Decoded AProposal where
-  type BaseType AProposal = Proposal
+instance Decoded (AProposal ByteString) where
+  type BaseType (AProposal ByteString) = Proposal
   recoverBytes = proposalAnnotation
 
 type Proposals = Map UpId Proposal

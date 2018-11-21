@@ -74,10 +74,10 @@ decodeFullAnnotatedBytes lbl decoder bytes =
   (fmap . fmap) (BSL.toStrict . slice bytes)
     $ decodeFullDecoder lbl decoder bytes
 
-class Decoded f where
-  type BaseType f :: *
-  recoverBytes :: f ByteString -> ByteString
+class Decoded t where
+  type BaseType t :: *
+  recoverBytes :: t -> ByteString
 
-instance Decoded (Annotated a) where
-  type BaseType (Annotated a) = a
+instance Decoded (Annotated b ByteString) where
+  type BaseType (Annotated b ByteString) = b
   recoverBytes = annotation
