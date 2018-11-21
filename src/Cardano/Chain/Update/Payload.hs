@@ -64,8 +64,8 @@ type Payload = APayload ()
 payload :: Maybe Proposal -> [Vote] -> Payload
 payload p v = APayload p v ()
 
-instance Decoded APayload where
-  type BaseType APayload = Payload
+instance Decoded (APayload ByteString) where
+  type BaseType (APayload ByteString) = Payload
   recoverBytes = payloadAnnotation
 
 instance B.Buildable (Payload) where

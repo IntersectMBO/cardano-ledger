@@ -155,7 +155,7 @@ proxyVerifyDecoded
   -> SignTag
   -> ProxySignature w (BaseType t)
   -> (w -> Bool)
-  -> t ByteString
+  -> t
   -> Bool
 proxyVerifyDecoded pm t psig omegaPred m = predCorrect && sigValid
  where

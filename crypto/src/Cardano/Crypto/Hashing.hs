@@ -166,7 +166,7 @@ hash :: Bi a => a -> Hash a
 hash = abstractHash
 
 -- | Hashes the annotation
-hashDecoded :: (Decoded f) => f ByteString -> Hash (BaseType f)
+hashDecoded :: (Decoded t) => t -> Hash (BaseType t)
 hashDecoded = unsafeAbstractHash . LBS.fromStrict . recoverBytes
 
 -- | Raw constructor application.

@@ -51,8 +51,8 @@ type Payload = APayload ()
 unsafePayload :: [ProxySKHeavy] -> Payload
 unsafePayload sks = UnsafeAPayload sks ()
 
-instance Decoded APayload where
-  type BaseType APayload = Payload
+instance Decoded (APayload ByteString) where
+  type BaseType (APayload ByteString)  = Payload
   recoverBytes = getAnnotation
 
 instance Buildable (APayload a) where
