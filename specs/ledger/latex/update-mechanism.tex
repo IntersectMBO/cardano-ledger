@@ -8,6 +8,8 @@
 \newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
 \newcommand{\UPLEnv}{\ensuremath{\type{UPLEnv}}}
 \newcommand{\UPLState}{\ensuremath{\type{UPLState}}}
+\newcommand{\UPAEnv}{\ensuremath{\type{UPAEnv}}}
+\newcommand{\UPRState}{\ensuremath{\type{UPRState}}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
 \newcommand{\VState}{\ensuremath{\type{VState}}}
@@ -104,8 +106,8 @@ updated.
   \label{fig:defs:update-proposals}
 \end{figure}
 
-\subsection{Update proposals activation}
-\label{sec:update-proposals-activation}
+\subsection{Update proposals registration}
+\label{sec:update-proposals-registration}
 
 First we model the validity of a proposal.
 
@@ -339,8 +341,44 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
 \end{figure}
 
 \begin{figure}[htb]
+  \emph{Update proposals registration  environments}
+    \begin{equation*}
+    \UPAEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
+        \var{pps} & \ProtParams & \text{adopted protocol parameters}\\
+        \var{e_c} & \Epoch & \text{current epoch}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Update proposals registration states}
+  \begin{equation*}
+    \UPRState
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        & \text{registered update proposals}\\
+        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Update proposals registration transitions}
+  \begin{equation*}
+    \var{\_} \vdash
+    \var{\_} \trans{upr}{\_} \var{\_}
+    \subseteq \powerset (\UPAEnv \times \UPRState \times \UProp \times \UPRState)
+  \end{equation*}
+  \caption{Update proposals registration transition-system types}
+  \label{fig:ts-types:up-registration}
+\end{figure}
+
+\begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:up-activation}
+    \label{eq:rule:up-registration}
     \inference
     {
       {
@@ -406,7 +444,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
           \end{array}
         \right)
       }
-      \trans{upa}{\var{up}}
+      \trans{upr}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -417,8 +455,8 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
       }
     }
   \end{equation}
-  \caption{Update activation rules}
-  \label{fig:rules:up-activation}
+  \caption{Update registration rules}
+  \label{fig:rules:up-registration}
 \end{figure}
 
 \clearpage
