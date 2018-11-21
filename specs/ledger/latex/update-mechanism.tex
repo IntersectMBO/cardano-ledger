@@ -690,7 +690,6 @@ rule by $\var{bv}$:
   have been confirmed $k$ blocks ago, to ensure stability of the confirmation.
 \end{itemize}
 
-
 \begin{equation}
   \label{eq:predicate:canadopt}
   \begin{array}{r c l}
@@ -707,11 +706,11 @@ rule by $\var{bv}$:
     \inference
     {
       \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'}
-      & \var{bvsWinSize} \mapsto w \in \var{pps}
     }
     {
       {
         \begin{array}{l}
+          w\\
           \var{pps}
         \end{array}
       }
@@ -744,6 +743,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
+          w\\
           \var{pps}
         \end{array}
       }
@@ -768,6 +768,7 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
+          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
@@ -805,6 +806,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
+          w\\
           \var{pps}
         \end{array}
       }
@@ -832,6 +834,7 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
+          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
@@ -869,6 +872,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
+          w\\
           \var{pps}
         \end{array}
       }
@@ -897,6 +901,7 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
+          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
