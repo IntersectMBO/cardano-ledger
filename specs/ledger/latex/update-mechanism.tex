@@ -610,7 +610,7 @@ This section models when update proposals get confirmed.
           \begin{array}{l}
             \{\var{pid}\} \subtractdom \var{rups} \\
             \var{cps} \unionoverride  \{\var{pid} \mapsto b_n\} \\
-            \{\var{pid}\} \subtractdom \var{vts'} 
+            \{\var{pid}\} \subtractdom \var{vts'}
           \end{array}
         \right)
       }
@@ -622,17 +622,37 @@ This section models when update proposals get confirmed.
 
 \clearpage
 
-\subsection{Update proposals adoption}
-\label{sec:update-proposals-adoption}
+\subsection{Block protocol version registration}
+\label{sec:block-protocol-version-reg}
+
+Rules in \cref{fig:rules:up-bv-reg} specify what happens when a block issuer
+signals that it is ready to upgrade to a new protocol version, given in the
+rule by $\var{bv}$:
+\begin{itemize}
+\item The list of the last $w$ blocks, $\var{bvs}$ is appended with $\var{bv}$.
+  Here $w$ is the window-size parameter determines how many candidate protocol
+  versions we keep in $\var{bvs}$.
+\item If the candidate protocol version $\var{bv}$ is greater than the current
+  candidate version $\var{pv_c}$, and there is a significant number of blocks
+  signed with that version (condition formalized in
+  \cref{eq:predicate:canadopt}), then the new candidate version becomes
+  $\var{bv}$. Note that we only compare candidates block versions, and not the
+  current protocol version $\var{pv}$. If this rule is used in an initial state
+  in which $\var{pv} \leq \var{pv_c}$, then this invariant is maintained by
+  these rules.
+\item The protocol version $\var{bv}$ must refer to a registered update
+  proposal (which are contained in $\var{rups}$), and this update proposal must
+  have been confirmed $k$ blocks ago, to ensure stability of the confirmation.
+\end{itemize}
+
 
 \begin{equation}
-  \label{eq:predicate:adopt}
+  \label{eq:predicate:canadopt}
   \begin{array}{r c l}
     \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
     & =
-    & \var{upAdptThr} \mapsto t \in pps\\
-    & \wedge
-    & t \leq \dfrac{\size{\var{bvs} \restrictrange \{\var{bv}\}}}{\size{\var{bvs}}}\\
+    & \var{upAdptThr} \mapsto t \in pps \wedge
+    t \leq \dfrac{\size{\var{bvs} \restrictrange \{\var{bv}\}}}{\size{\var{bvs}}}\\
   \end{array}
 \end{equation}
 
@@ -675,7 +695,7 @@ This section models when update proposals get confirmed.
     \label{eq:rule:up-adopted}
     \inference
     {
-      \var{bv} = \var{pv}
+      \var{bv} \leq \var{pv_c}
       &
       {
         \begin{array}{l}
@@ -703,29 +723,26 @@ This section models when update proposals get confirmed.
       {
         \begin{array}{l}
           k\\
-          b_n
+          b_n\\
+          (\var{pv}, \var{pps})\\
+          \var{cps}\\
+          \var{rups}
         \end{array}
       }
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs}
           \end{array}
         \right)
       }
-      \trans{upadopt}{\var{bv}}
+      \trans{upbvreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs'}
           \end{array}
         \right)
@@ -739,7 +756,7 @@ This section models when update proposals get confirmed.
     \label{eq:rule:up-no-adoption}
     \inference
     {
-      \var{bv} \neq \var{pv}
+      \var{pv_c} < \var{bv}
       &
       {
         \begin{array}{l}
@@ -770,29 +787,26 @@ This section models when update proposals get confirmed.
       {
         \begin{array}{l}
           k\\
-          b_n
+          b_n\\
+          (\var{pv}, \var{pps})\\
+          \var{cps}\\
+          \var{rups}
         \end{array}
       }
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs}
           \end{array}
         \right)
       }
-      \trans{upadopt}{\var{bv}}
+      \trans{upbvreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs'}
           \end{array}
         \right)
@@ -806,9 +820,9 @@ This section models when update proposals get confirmed.
     \label{eq:rule:up-adoption}
     \inference
     {
-      \var{bv} \neq \var{pv}
+      \var{pv_c} < \var{bv}
       &
-            {
+      {
         \begin{array}{l}
           \var{pps}
         \end{array}
@@ -831,36 +845,33 @@ This section models when update proposals get confirmed.
       }
       &
       \fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv}\\
-      \var{pid} \mapsto (\var{bv}, \var{pps'}) \in \var{rups}
+      \var{pid} \mapsto (\var{bv}, \var{pps_c'}) \in \var{rups}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., b_n - k])\\
     }
     {
       {
         \begin{array}{l}
           k\\
-          b_n
+          b_n\\
+          (\var{pv}, \var{pps})\\
+          \var{cps}\\
+          \var{rups}
         \end{array}
       }
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs}
           \end{array}
         \right)
       }
-      \trans{upadopt}{\var{bv}}
+      \trans{upbvreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
-            \var{bv}\\
-            \var{pps'}\\
-            \{ \var{pid} \} \subtractdom \var{cps} \\
-            \{ \var{pid} \} \subtractdom \var{rups}\\
+            (\var{bv}, \var{pps_c'})\\
             \var{bvs'}
           \end{array}
         \right)
@@ -868,8 +879,10 @@ This section models when update proposals get confirmed.
     }
   \end{equation}
   \caption{Update-proposals adoption rules}
-  \label{fig:rules:up-adoption}
+  \label{fig:rules:up-bv-reg}
 \end{figure}
+
+\clearpage
 
 \subsection{Deviations from the actual implementation}
 \label{sec:deviation-actual-impl}
@@ -910,13 +923,6 @@ complex check (which depends on state) to determine if a proposed version is
 consistent. By being more lenient on the alternative versions of update
 proposals we can simplify the version checking logic considerably.
 
-\subsubsection{Update proposal adoption}
-\label{sec:up-adoption}
-
-An update proposal can become immediately adopted if the number of blocks
-signed with the version of the proposal exceeds a certain threshold. In the
-current implementation this occurs only at the epoch boundary block.
-
 \subsubsection{Cleanup}
 \label{sec:up-cleanup}
 
@@ -936,7 +942,7 @@ portion of block issuers' stakes, which issued blocks with this version, is
 greater than the threshold given by:
 
 \begin{lstlisting}
-max spMinThd (spInitThd - (t - s) * spThdDecrement)  
+max spMinThd (spInitThd - (t - s) * spThdDecrement)
 \end{lstlisting}
 
 where:

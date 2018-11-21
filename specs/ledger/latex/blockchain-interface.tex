@@ -317,6 +317,11 @@
   \label{fig:rules:upi-vote}
 \end{figure}
 
+\clearpage
+
+The interface rule for protocol-block-version registration makes use of the
+$\trans{upbvreg}{}$ transition, passing only the relevant portion of the state.
+
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-bv-reg}
@@ -325,29 +330,26 @@
       {
         \begin{array}{l}
           k\\
-          b_n
+          b_n\\
+          (\var{pv}, \var{pps})\\
+          \var{cps}\\
+          \var{rups}
         \end{array}
       }
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
-            \var{cps}\\
-            \var{rups}\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{bvs}
           \end{array}
         \right)
       }
-      \trans{upadopt}{\var{bv}}
+      \trans{upbvreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
-            \var{pv'}\\
-            \var{pps'}\\
-            \var{cps'}\\
-            \var{rups'}\\
+            (\var{pv_c'}, \var{pps_c'})\\
             \var{bvs'}
           \end{array}
         \right)
@@ -367,8 +369,8 @@
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
             \var{eps}\\
             \var{cps}\\
@@ -378,15 +380,15 @@
           \end{array}
         \right)
       }
-      \trans{upivbreg}{\var{v}}
+      \trans{upivbreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
-            \var{pv'}\\
-            \var{pps'}\\
-            \var{rups'}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c'}, \var{pps_c'})\\
+            \var{rups}\\
             \var{eps}\\
-            \var{cps'}\\
+            \var{cps}\\
             \var{vts}\\
             \var{bvs'}\\
             \var{pws}
@@ -446,7 +448,7 @@ if they become adopted.
     }
     {
       (\var{pv_c}, \var{pps_c})
-      \vdash      
+      \vdash
       {
         \left(
           \begin{array}{l}
@@ -537,4 +539,3 @@ if they become adopted.
   \caption{Block version adoption on epoch change rules}
   \label{fig:rules:upi-ec}
 \end{figure}
-
