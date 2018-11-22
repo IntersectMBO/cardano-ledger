@@ -27,7 +27,6 @@ module Test.Cardano.Crypto.Gen
         -- Signature Generators
   , genSignature
   , genSignatureEncoded
-  , genSigned
   , genRedeemSignature
 
         -- Hash Generators
@@ -72,14 +71,12 @@ import Cardano.Crypto.Signing
   , SecretKey
   , SignTag(..)
   , Signature
-  , Signed
   , createPsk
   , deterministicKeyGen
-  , mkSigned
+  , emptyPassphrase
   , noPassEncrypt
   , proxySign
   , safeCreateProxyCert
-  , safeCreatePsk
   , sign
   , signEncoded
   , toPublic
@@ -169,16 +166,16 @@ genProxyCert pm genW =
 
 genProxySecretKey :: Bi w => ProtocolMagic -> Gen w -> Gen (ProxySecretKey w)
 genProxySecretKey pm genW =
-  safeCreatePsk pm <$> genSafeSigner <*> genPublicKey <*> genW
+  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
   :: (Bi w, Bi a) => ProtocolMagic -> Gen a -> Gen w -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
-  delegateSk <- genSecretKey
-  issuerSk   <- genSecretKey
-  w          <- genW
-  a          <- genA
-  let psk = createPsk pm issuerSk (toPublic delegateSk) w
+  delegateSk       <- genSecretKey
+  issuerSafeSigner <- genSafeSigner
+  w                <- genW
+  a                <- genA
+  let psk = createPsk pm issuerSafeSigner (toPublic delegateSk) w
   return $ proxySign pm SignProxySK delegateSk psk a
 
 
@@ -192,10 +189,6 @@ genSignature pm genA = sign pm <$> genSignTag <*> genSecretKey <*> genA
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
   signEncoded <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genB
-
-genSigned :: Bi a => Gen a -> Gen (Signed a)
-genSigned genA =
-  mkSigned <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genA
 
 genRedeemSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
@@ -230,12 +223,7 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 --------------------------------------------------------------------------------
 
 genSafeSigner :: Gen SafeSigner
-genSafeSigner = Gen.choice gens
- where
-  gens =
-    [ SafeSigner <$> genEncryptedSecretKey <*> genPassPhrase
-    , FakeSigner <$> genSecretKey
-    ]
+genSafeSigner = SafeSigner <$> genEncryptedSecretKey <*> pure emptyPassphrase
 
 
 --------------------------------------------------------------------------------

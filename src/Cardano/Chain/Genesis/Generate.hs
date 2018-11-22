@@ -65,6 +65,7 @@ import Cardano.Crypto
   , encToSecret
   , keyGen
   , noPassEncrypt
+  , noPassSafeSigner
   , redeemDeterministicKeyGen
   , safeKeyGen
   , toPublic
@@ -124,8 +125,11 @@ generateGenesisData startTime genesisSpec = do
   let
     genesisDlgList :: [ProxySKHeavy]
     genesisDlgList =
-      (\(issuerSK, delegateSK) ->
-          createPsk pm issuerSK (toPublic delegateSK) (HeavyDlgIndex 0)
+      (\(issuerSK, delegateSK) -> createPsk
+          pm
+          (noPassSafeSigner issuerSK)
+          (toPublic delegateSK)
+          (HeavyDlgIndex 0)
         )
         <$> zip dlgIssuersSecrets richSecrets
 

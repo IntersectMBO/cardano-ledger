@@ -36,8 +36,6 @@ spec = describe "Cbor.Bi instances" $ describe "Crypto" $ do
     binaryTest @(Crypto.ProxySecretKey U)
     binaryTest @(Crypto.ProxySignature Int32 Int32)
     binaryTest @(Crypto.ProxySignature U U)
-    binaryTest @(Crypto.Signed Bool)
-    binaryTest @(Crypto.Signed U)
     binaryTest @Crypto.RedeemSecretKey
     binaryTest @Crypto.RedeemPublicKey
     binaryTest @(Crypto.RedeemSignature Bool)
