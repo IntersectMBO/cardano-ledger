@@ -3,6 +3,7 @@
 
 import           Control.Monad           (foldM)
 import qualified Data.Map                as Map
+import           Data.MultiSet           (unions, fromSet, occur, filter, size)
 import           Data.Ratio
 import qualified Data.Set                as Set
 import           Data.Text               (pack)
@@ -352,6 +353,19 @@ propUniqueTxIds = withCoverage $ do
             Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l'))
          where collectIds (TxIn txId _) = txId
 
+-- | Property checks no double spend occurs in the currently generated 'TxWits'
+-- transactions. Note: this is more a property of the current generator.
+propNoDoubleSpend :: Cover
+propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+      (_, steps, fees, ls, txs, next)  <- forAll genNonEmptyAndAdvanceTx
+      case next of
+        Left _    -> failure
+        Right ls' -> do
+          let inputIndicesSet = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+          0 === (Data.MultiSet.size $ Data.MultiSet.filter
+                     (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+                     inputIndicesSet)
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -375,6 +389,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "Completeness and Collision-Freeness of new TxIds"
                     propUniqueTxIds
+                  , testPropertyCoverage
+                    "No Double Spend in valid ledger states"
+                    propNoDoubleSpend
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
