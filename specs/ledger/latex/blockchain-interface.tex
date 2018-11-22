@@ -4,6 +4,9 @@
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
 
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+
 \subsection{Delegation interface}
 \label{sec:delegation-interface}
 
@@ -157,6 +160,59 @@
 \label{sec:update-proposals-interface}
 
 \begin{figure}[htb]
+  \emph{Update-proposals interface environments}
+  \begin{align*}
+    & \UPIEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{k} & \mathbb{N} & \text{chain stability parameter}\\
+        \var{w} & \mathbb{N} & \text{candidate versions window size}\\
+        \var{u} \\
+        \var{e_c}\\
+        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Update-proposals interface states}
+  \begin{align*}
+    & \UPIState
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        (\var{pv}, \var{pps}) & \ProtVer \times \ProtParams
+        & \text{current protocol}\\
+        (\var{pv_c}, \var{pps_c}) & \ProtVer \times \ProtParams
+        & \text{candidate protocol}\\
+        \var{rups} & \type{Rups}
+        & \text{registered update proposals}\\
+        \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
+        & \text{proposals per-epoch per-key}\\
+        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
+        \var{bvs} & \seqof{\ProtVer} & \text{last seen candidate versions}\\
+        \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Update-proposals interface transitions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l}
+      \_ \vdash \_ \trans{upireg}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
+      \_ \vdash \_ \trans{upivote}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
+      \_ \vdash \_ \trans{upibvreg}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
+      \_ \vdash \_ \trans{upiec}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)
+    \end{array}
+  \end{equation*}
+  \caption{Update-proposals interface transition-system types}
+  \label{fig:ts-types:upi}
+\end{figure}
+
+
+\begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-reg-interface}
     \inference
@@ -178,7 +234,7 @@
           \end{array}
         \right)
       }
-      \trans{upa}{\var{up}}
+      \trans{upreg}{\var{up}}
       {
         \left(
           \begin{array}{l}
@@ -205,8 +261,8 @@
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
             \var{eps}\\
             \var{cps}\\
@@ -220,8 +276,8 @@
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{rups'}\\
             \var{eps'}\\
             \var{cps}\\
@@ -238,8 +294,6 @@
 \end{figure}
 
 \clearpage
-
-
 
 \begin{figure}[htb]
   \begin{equation}
@@ -401,7 +455,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
           \end{array}
         \right)
       }
-      \trans{upivbreg}{\var{bv}}
+      \trans{upibvreg}{\var{bv}}
       {
         \left(
           \begin{array}{l}
