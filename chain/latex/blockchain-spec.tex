@@ -80,10 +80,14 @@
 \newcommand{\Data}{\type{Data}}
 \newcommand{\DelegState}{\type{DSIState}}
 
+\newcommand{\ProtParams}{\type{ProtParams}} % protocol parameters
+
+
 %%
 %% Function and relation names
 %%
 \newcommand{\hashname}{bHash}
+\newcommand{\bsizename}{bSize}
 \newcommand{\signname}{sign}
 \newcommand{\verifyname}{verify}
 \newcommand{\delegationname}{delegates} % the delegation relation
@@ -92,6 +96,9 @@
 \newcommand{\incixmapname}{incIxMap}
 
 \newcommand{\hashofblockname}{hashBlock}
+\newcommand{\blocksizelimitname}{blockSizeLimit}
+\newcommand{\maxblocksizename}{maxBlockSize}
+\newcommand{\isebbname}{rbIsEBB}
 \newcommand{\rbdataname}{rbData}
 \newcommand{\rbcertsname}{rbCerts}
 \newcommand{\rbsigname}{rbSig}
@@ -110,6 +117,7 @@
 \newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
+\newcommand{\bsize}[1]{\fun{\bsizename} ~ #1}
 \newcommand{\delegation}[3]{\fun{\delegationname} ~ #1 ~ #2 ~#3}
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
 \newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
@@ -117,6 +125,9 @@
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
 
 \newcommand{\hashofblock}[1]{\fun{\hashofblockname} ~ #1}
+\newcommand{\blocksizelimit}[2]{\fun{\blocksizelimitname} ~ #1 ~ #2}
+\newcommand{\maxblocksize}[1]{\fun{\maxblocksizename} ~ #1}
+\newcommand{\isebb}[1]{\fun{\isebbname} ~ #1}
 \newcommand{\rbdata}[1]{\fun{\rbdataname} ~ #1}
 \newcommand{\rbcerts}[1]{\fun{\rbcertsname} ~ #1}
 \newcommand{\rbsig}[1]{\fun{\rbsigname} ~ #1}
@@ -144,7 +155,7 @@
 
 \author{Marko Dimjašević}
 
-\date{November 14, 2018}
+\date{November 22, 2018}
 
 \maketitle
 
@@ -230,6 +241,18 @@ straightforward to implement in a programming language, e.g., in Haskell.
 This section gives definitions of basic types and functions that operate on
 and with blocks and heavyweight delegation certificates.
 
+
+\subsection{Sets}
+\label{sec:sets}
+
+There are several standard sets used in the document:
+%
+\begin{description}
+\item[Booleans] The set of booleans is denoted with $\mathbb{B}$ and has two
+  values, $\mathbb{B} = \{\bot, \top\}$.
+\item[Natural numbers] The set of natural numbers is denoted with
+  $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
+\end{description}
 
 \subsection{Heavyweight Delegation Certificates}
 \label{sec:certificates}
@@ -322,21 +345,26 @@ In this document $\RBlock$ is kept abstract, but it is a product type with
 projection functions for the following:
 %
 \begin{itemize}
-\item a block index,
 \item a block hash pointing to the block's predecessor,
-\item a slot it is in,
+\item a block index,
 \item a verification key of the block signer,
-\item a set of heavyweight delegation certificates in the body, and
-\item a cryptographic signature.
+\item a set of heavyweight delegation certificates in the body,
+\item a slot it is in,
+\item data that is the block body,
+\item a cryptographic signature, and
+\item a flag indicating if this is an epoch boundary block.
 \end{itemize}
 
 
-%
 For every block, it is possible to compute its hash with the
 $\fun{\hashofblockname}$ function.
 %
 In the case of the genesis block, this simply returns the hash field in the
 block.
+%
+Furthermore, note that the $\fun{\maxblocksizename}$ parameter of a
+$\ProtParams$ is the maximum size only of blocks that are not epoch boundary
+blocks.
 %
 Basic types and functions pertaining to blocks are given in
 Figure~\ref{fig:block-defs}.
@@ -346,7 +374,8 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     ix & \in \BlockIx & \text{block index}\\
-     h & \in \Hash   & \text{hash}
+    h  & \in \Hash   & \text{hash}\\
+    pp & \in \ProtParams & \text{protocol parameters}
   \end{align*}
   %
   \emph{Abstract types}
@@ -369,12 +398,15 @@ Figure~\ref{fig:block-defs}.
     \fun{\rbixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
     \fun{\hashname} & \in \Block \totalf \Hash
       & \text{previous block's hash} \\
+    \fun{\bsizename} & \in \Block \totalf \mathbb{N} & \text{block size in bytes} \\
     \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
     \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
     \fun{\rbcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates} \\
     \fun{\rbsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
-    \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data}
+    \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data} \\
+    \fun{\isebbname} & \in \RBlock \totalf \mathbb{B} & \text{epoch boundary block check}\\
+    \fun{\maxblocksizename} & \in \ProtParams \totalf \mathbb{N} & \text{maximum block size}
   \end{align*}
   %
   \emph{Functions}
@@ -593,7 +625,7 @@ Figure~\ref{fig:block-ext-types-funs}.
   \begin{align*}
     \mapqueue = \VKeyGen \totalf \Queue_\BlockIx
   \end{align*}
-  \emph{Functions}
+  \emph{Functions and relations}
   %
   \begin{align*}
     \fun{\qheadname} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
@@ -612,7 +644,9 @@ Figure~\ref{fig:block-ext-types-funs}.
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
     \fun{\delegationname} & \in \DelegState \times \VKeyGen \times \VKey
-      & \text{delegation relation}
+      & \text{delegation relation}\\
+    \fun{\blocksizelimitname} & \in \Block \times \ProtParams \totalf \mathbb{N}
+      & \text{block size limit in bytes function}
   \end{align*}
   %
   \caption{Blockchain Extension Types and Functions}
@@ -629,10 +663,21 @@ conditions are met:
 %
 \begin{enumerate}
 \item $sk_d$ has a corresponding verification key $vk_d$ that has delegation
-  rights for the slot $sl$, and
+  rights for the slot $sl$,
 \item new delegation certificates that are in the body of $b$ are not in
-  conflict with earlier delegation certificates.
+  conflict with earlier delegation certificates, and
+\item the size of the block in bytes is within limits, as defined by
+  \eqref{eq:blocksizelimit}.
 \end{enumerate}
+
+\begin{align}
+  \label{eq:blocksizelimit}
+  \blocksizelimit{b}{pp} = \
+  \begin{cases}
+    \maxblocksize{pp} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
+    2^{21} & \text{otherwise}
+  \end{cases}
+\end{align}
 
 A rule capturing the blockchain extension is given in
 Figure~\ref{fig:blockchain-extension}.
@@ -644,6 +689,7 @@ Figure~\ref{fig:blockchain-extension}.
     {\begin{array}{c}
       ix = \rbix{b} \wedge vk_d = \rbsigner{b} \wedge sl = \rbsl{b} \\
       \hash{b} \equiv \hashofblock{p} \\
+      \bsize{b} \leq \blocksizelimit{b}{pp} \\
       \delegation{ds}{vk_s}{vk_d} \\
       \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
@@ -655,6 +701,7 @@ Figure~\ref{fig:blockchain-extension}.
   {
     \left(
       {\begin{array}{c}
+         pp \\
          sl \\
          K \\
          t
