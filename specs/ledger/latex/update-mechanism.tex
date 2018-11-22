@@ -43,8 +43,26 @@
 \section{Update mechanism}
 \label{sec:update}
 
-This section formalizes the update mechanism by which the protocol parameters get
-updated.
+This section formalizes the update mechanism by which the protocol parameters
+get updated. This formalization is a simplification of the current update
+mechanism implemented in
+\href{https://github.com/input-output-hk/cardano-sl/}{\texttt{cardano-sl}}, and
+partially documented in:
+\begin{itemize}
+\item \href{https://cardanodocs.com/technical/updater/}{Updater implementation}
+\item \href{https://cardanodocs.com/cardano/update-mechanism/}{Update mechanism}
+\item \href{https://github.com/input-output-hk/cardano-sl/blob/develop/wallet-new/docs/updates.md}{Updates technical documentation}
+\item
+  \href{https://github.com/input-output-hk/cardano-sl/blob/develop/docs/block-processing/us.md}{Update
+    system consensus rules}
+\end{itemize}
+
+The reason for formalizing a simplified version of the current implementation
+is that research work on blockchain update mechanisms is needed before
+introducing unnecessary complexity. Since this specification is to be
+implemented in a federated setting, some of the constraints put in place in the
+current implementation are no longer relevant. Once the research work is ready,
+this specification can be extended to incorporate the research results.
 
 \subsection{Update proposals}
 \label{sec:update-proposals}
@@ -55,7 +73,7 @@ updated.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{up} & \UProp & \text{(protocol) update proposal}\\
-      \var{pa} & \ProtPm & \text{protocol parameters}\\
+      \var{p} & \ProtPm & \text{protocol parameters}\\
       \var{swv} & \type{SWVer} & \text{update software version}\\
       \var{upd} & \type{UpdData} & \text{update data}\\
       \var{upa} & \type{UpdAttr} & \text{update attributes}\\
@@ -130,7 +148,6 @@ to be consistent with the existing chain the value corresponding to
 $\var{cfmThd}$ can be set to $4$, which represents the majority of the $7$
 genesis keys.
 
-
 \subsection{Update proposals registration}
 \label{sec:update-proposals-registration}
 
@@ -180,8 +197,8 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
     at most one.
   \item If the proposed major version is equal to the current major
     version, then the proposed minor version must be incremented by one.
-  \item If the proposed major version is larger than the current major, then
-    the proposed minor version must be zero.
+  \item If the proposed major version is larger than the current major version,
+    then the proposed minor version must be zero.
   \end{itemize}
 \item must be consistent with the current protocol parameters:
   \begin{itemize}
@@ -216,16 +233,18 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \nextdef
   \begin{equation}
     \label{eq:func:can-update}
-    \begin{array}{r c l}
-      \fun{canUpdate}~\var{pps}~\var{up}
-      & = & \var{maxProposalSize} \mapsto \var{mus} \in \var{pps}\\
-      & \wedge & \upSize{up} \leq \var{mus}\\
-      & \wedge & \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}\\
-      & \wedge & \var{maxBlockSize} \mapsto \var{bsm_{up}} \in (\upParams{up})\\
-      & \wedge & \var{bszm_{up}} \leq 2\var{bszm}\\
-      & \wedge & \var{scriptVersion} \mapsto \var{sv} \in \var{pps} \\
-      & \wedge & \var{scriptVersion} \mapsto \var{sv_{up}} \in (\upParams{up}) \\
-      & \wedge &  0 \leq \var{sv_{up}} - \var{sv} \leq 1
+    \begin{array}{l}
+      \fun{canUpdate}~\var{pps}~\var{up}\\
+      {\begin{array}{r c l}
+         & = & \var{maxProposalSize} \mapsto \var{mus} \in \var{pps}\\
+         & \wedge & \upSize{up} \leq \var{mus}\\
+         & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})\\
+         & & \Rightarrow \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}
+             \wedge  \var{bszm_{up}} \leq 2\var{bszm})\\
+         & \wedge & (\var{scriptVersion} \mapsto \var{sv_{up}} \in (\upParams{up}) \\
+         & & \Rightarrow \var{scriptVersion} \mapsto \var{sv} \in \var{pps}
+             \wedge  0 \leq \var{sv_{up}} - \var{sv} \leq 1)
+       \end{array}}
     \end{array}
   \end{equation}
   \nextdef
@@ -789,7 +808,7 @@ blocks. Some clarifications are in order:
   definition to be able to fit the description of the environment in the page
   width.
 \item For the sake of conciseness, we omit the types associated to the
-  transitions $\trans{snocbv}{}$, since they can be inferred from the types of
+  transitions $\trans{addbvvk}{}$, since they can be inferred from the types of
   the $\trans{upbvreg}{}$ transitions.
 \end{itemize}
 
@@ -800,10 +819,10 @@ blocks. Some clarifications are in order:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{k} & \mathbb{N} & \text{chain stability parameter}\\
-        \var{w} & \mathbb{N} & \text{candidate versions window size}\\
         \var{b_n} & \BkNr & \text{current block number}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
                              & \text{current protocol parameters map}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
         \var{rups} & \Rups
                              & \text{registered update proposals}\\
@@ -824,7 +843,8 @@ blocks. Some clarifications are in order:
   \emph{Block protocol version registration transitions}
     \begin{equation*}
     \_ \vdash \_ \trans{upbvreg}{\_} \_ \in
-    \powerset (\BVREnv \times \BVRState \times \ProtVer \times \BVRState)
+    \powerset (\BVREnv \times \BVRState
+    \times (\ProtVer \times \VKey) \times \BVRState)
     \end{equation*}
   \caption{Vote registration transition-system types}
   \label{fig:ts-types:up-bv-reg}
@@ -834,9 +854,10 @@ Rules in \cref{fig:rules:up-bv-reg} specify what happens when a block issuer
 signals that it is ready to upgrade to a new protocol version, given in the
 rule by $\var{bv}$:
 \begin{itemize}
-\item The list of the last $w$ blocks, $\var{bvs}$ is appended with $\var{bv}$.
-  Here $w$ is the window-size parameter determines how many candidate protocol
-  versions we keep in $\var{bvs}$.
+\item The set $\var{bvs}$ that contains which genesis keys are ready to adopt
+  a given protocol version is updated to reflect that all the delegators of the
+  block issuer (identified by its verifying key, $\var{vk}$) are ready to
+  upgrade to $\var{bv}$.
 \item If the candidate protocol version $\var{bv}$ is greater than the current
   candidate version $\var{pv_c}$, and there is a significant number of blocks
   signed with that version (condition formalized in
@@ -857,22 +878,22 @@ rule by $\var{bv}$:
     \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
     & =
     & \var{upAdptThd} \mapsto t \in pps \wedge
-    t \leq \dfrac{\size{\var{bvs} \restrictrange \{\var{bv}\}}}{\size{\var{bvs}}}\\
+    t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
   \end{array}
 \end{equation}
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:snocbv}
+    \label{eq:rule:addbvvk}
     \inference
     {
-      \var{bvs'} = \var{bvs};\var{bv} & m = \size{bvs'}
+      \var{bvs'} = \var{bvs} \cup
+      \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
     }
     {
       {
         \begin{array}{l}
-          w\\
-          \var{pps}
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -883,11 +904,11 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{snocbv}{bv}
+      \trans{addbvvk}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
-            {[m - w, ..]} \restrictdom \var{bvs'}
+            \var{bvs'}
           \end{array}
         \right)
       }
@@ -904,8 +925,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
-          w\\
-          \var{pps}
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -916,7 +936,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{snocbv}{bv}
+      \trans{addbvvk}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -929,9 +949,9 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
-          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
+          \var{dms}\\
           \var{cps}\\
           \var{rups}
         \end{array}
@@ -945,7 +965,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{\var{bv}}
+      \trans{upbvreg}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -967,8 +987,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
-          w\\
-          \var{pps}
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -979,7 +998,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{snocbv}{bv}
+      \trans{addbvvk}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -995,9 +1014,9 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
-          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
+          \var{dms}\\
           \var{cps}\\
           \var{rups}
         \end{array}
@@ -1011,7 +1030,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{\var{bv}}
+      \trans{upbvreg}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1033,8 +1052,7 @@ rule by $\var{bv}$:
       &
       {
         \begin{array}{l}
-          w\\
-          \var{pps}
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -1045,7 +1063,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{snocbv}{bv}
+      \trans{addbvvk}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1062,9 +1080,9 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
-          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
+          \var{dms}\\
           \var{cps}\\
           \var{rups}
         \end{array}
@@ -1078,7 +1096,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{\var{bv}}
+      \trans{upbvreg}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1170,6 +1188,14 @@ why a dynamic alternative is needed.
 
 \subsubsection{No voting deadlines}
 \label{sec:no-voting-deadlines}
+
+The update proposals have a time-to-live, formalized using the parameter $u$ in
+Figure~\ref{fig:ts-types:upi}. This is the total time a proposal has to enter
+the system, and be adopted. Proposals that exceeded this time to live are
+removed from the ledger state. This cleanup takes place at a single place in
+the rules, which simplifies reasoning about the ledger-state size bounds. By
+having a voting deadline, we would still need a time-to-live for confirmed
+proposals that were not adopted, which requires additional logic.
 
 \subsubsection{No checks on unlock-stake-epoch parameter}
 \label{sec:no-unlock-stake-epoch-check}
