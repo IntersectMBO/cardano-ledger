@@ -59,7 +59,7 @@ partially documented in:
 
 The reason for formalizing a simplified version of the current implementation
 is that research work on blockchain update mechanisms is needed before
-introducing unnecessary complexity. Since this specification is to be
+introducing a more complex update logic. Since this specification is to be
 implemented in a federated setting, some of the constraints put in place in the
 current implementation are no longer relevant. Once the research work is ready,
 this specification can be extended to incorporate the research results.
@@ -186,7 +186,7 @@ First we model the validity of a proposal.
   \label{fig:ts-types:up-validity}
 \end{figure}
 
-Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
+In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
 \begin{itemize}
 \item must increase one of the (major, minor, or alternative) of the
   current version in a consistent manner:
@@ -336,7 +336,7 @@ Terse explanation of Rule~\ref{eq:rule:up-validity}: a new proposal:
   \label{fig:ts-types:up-limits}
 \end{figure}
 
-Terse explanation of Rule~\ref{eq:rule:up-limits}:
+In Rule~\ref{eq:rule:up-limits}:
 \begin{itemize}
 \item We consider the update proposal issuers to be the delegators of the key
   ($\var{vk}$) that is associated with the proposal under consideration
@@ -565,7 +565,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
   \label{fig:ts-types:voting}
 \end{figure}
 
-Terse explanation of Rule~\ref{eq:rule:voting}:
+In Rule~\ref{eq:rule:voting}:
 \begin{itemize}
 \item Only genesis keys can vote on an update proposal, although votes can be
   cast by delegates of these genesis keys.
@@ -1118,18 +1118,20 @@ rule by $\var{bv}$:
 \label{sec:deviation-actual-impl}
 
 The current specification of the voting mechanism deviates from the actual
-implementation, although it should be backwards compatible the latter. These
-deviations are required to simplify the voting and update mechanism removing
-unnecessary features and reducing accidental complexity. The following
-subsections highlight the differences between the this specification and the
-current implementation.
+implementation, although it should be backwards compatible with the latter.
+These deviations are required to simplify the voting and update mechanism
+removing unnecessary features for a simplified setting, which will use the OBFT
+consensus protocol with federated genesis key holders. This in turn, enables us
+to remove any accidental complexity that might have been introduced in the
+current implementation. The following subsections highlight the differences
+between the this specification and the current implementation.
 
 \subsubsection{Positive votes}
 \label{sec:only-positive-votes}
 
-Votes are only positive. Genesis keys can only vote positively for an update
-proposal. In the current implementation stakeholders can vote for or against a
-proposal, which makes the voting logic more complex:
+Genesis keys can only vote (positively) for an update proposal. In the current
+implementation stakeholders can vote for or against a proposal, which makes the
+voting logic more complex:
 \begin{itemize}
 \item there are more cases to consider
 \item the current voting validation rules allow voters to change their minds
@@ -1149,16 +1151,16 @@ proposals with the same minor and major versions than $\var{up}$ exist, then
 the alternative version of $\var{up}$ has to be one more than the maximum
 alternative number of $X$. Not only this logic seems to be brittle since it
 depends on the order of arrival of the update proposals, but it requires a more
-complex check (which depends on state) to determine if a proposed version is
-consistent. By being more lenient on the alternative versions of update
-proposals we can simplify the version checking logic considerably.
+complex check (which depends on state) to determine if a proposed version can
+follow the current one. By being more lenient on the alternative versions of
+update proposals we can simplify the version checking logic considerably.
 
 \subsubsection{Cleanup}
 \label{sec:up-cleanup}
 
 Update proposals that are older than $u$ blocks w.r.t. the current block are
-discarded from the state, along with its information. The current
-implementation makes use of the implicit agreement rule, and the epoch boundary
+discarded from the state, along with their associated information. The current
+implementation makes use of the implicit agreement rule and the epoch boundary
 checks: this leads to plenty of different states for a proposal: active,
 adopted, confirmed, competing, never-to-become-adopted, rejected, discarded. If
 the cleanup of proposals can be done in the way specified here we will avoid a
@@ -1192,7 +1194,7 @@ why a dynamic alternative is needed.
 
 The update proposals have a time-to-live, formalized using the parameter $u$ in
 Figure~\ref{fig:ts-types:upi}. This is the total time a proposal has to enter
-the system, and be adopted. Proposals that exceeded this time to live are
+the system and become adopted. Proposals that exceeded this time to live are
 removed from the ledger state. This cleanup takes place at a single place in
 the rules, which simplifies reasoning about the ledger-state size bounds. By
 having a voting deadline, we would still need a time-to-live for confirmed
