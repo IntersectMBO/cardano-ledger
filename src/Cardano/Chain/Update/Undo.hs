@@ -59,7 +59,7 @@ import Data.Time (NominalDiffTime)
 import Formatting.Buildable (Buildable(..))
 
 import Cardano.Binary.Class
-  (Bi(..), DecoderError(..), decodeListLenCanonical, encodeListLen, enforceSize)
+  (Bi(..), DecoderError(..), decodeListLen, encodeListLen, enforceSize)
 import Cardano.Chain.Block.Header (HeaderHash)
 import Cardano.Chain.Common
   (ChainDifficulty, Lovelace, ScriptVersion, StakeholderId, mkKnownLovelace)
@@ -410,7 +410,7 @@ instance Bi a => Bi (PrevValue a) where
   encode (PrevValue a) = encodeListLen 1 <> encode a
   encode NoExist       = encodeListLen 0
 
-  decode = decodeListLenCanonical >>= \case
+  decode = decodeListLen >>= \case
     1   -> PrevValue <$> decode
     0   -> pure NoExist
     len -> cborError $ DecoderErrorUnknownTag "PrevValue" (fromIntegral len)

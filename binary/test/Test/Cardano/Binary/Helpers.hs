@@ -74,12 +74,10 @@ import Test.QuickCheck.Instances ()
 
 import Cardano.Binary.Class
   ( Bi(..)
-  , DecoderError(..)
   , Range(..)
   , Size
   , SizeOverride(..)
-  , decodeFull
-  , decodeListLenCanonicalOf
+  , decodeListLenOf
   , decodeUnknownCborDataItem
   , encodeListLen
   , encodeUnknownCborDataItem
@@ -91,9 +89,6 @@ import Cardano.Binary.Class
   , unsafeDeserialize
   )
 import Cardano.Binary.Limit (Limit(..))
-
-import Test.Cardano.Cbor.Canonicity (perturbCanonicity)
-import qualified Test.Cardano.Cbor.RefImpl as R
 
 
 --------------------------------------------------------------------------------
@@ -107,37 +102,6 @@ binaryEncodeDecode a = (unsafeDeserialize . serialize $ a) === a
 -- | Machinery to test we perform "flat" encoding.
 cborFlatTermValid :: Bi a => a -> Property
 cborFlatTermValid = property . validFlatTerm . toFlatTerm . encode
-
--- Test that serialized 'a' has canonical representation, i.e. if we're able to
--- change its serialized form, it won't be successfully deserialized.
-cborCanonicalRep :: forall a . (Bi a, Show a) => a -> Property
-cborCanonicalRep a = property $ do
-  let sa = serialize a
-  sa' <- R.serialise <$> perturbCanonicity (R.deserialise sa)
-  let out = decodeFull @a sa'
-  pure $ case out of
-    -- perturbCanonicity may have not changed anything. Decoding can
-    -- succeed in this case.
-    Right a' ->
-      counterexample (show a') $ counterexample (show sa) $ counterexample
-        (show sa')
-        (sa == sa')
-    -- It didn't decode. The error had better be a canonicity violation.
-    Left err -> counterexample (show err) (isCanonicityViolation err)
- where
-  isCanonicityViolation :: DecoderError -> Bool
-  isCanonicityViolation = const True
-
-  -- TODO: Properly detect canonicity violations (made harder by 'String' errors
-  --       upstream)
-  --
-  -- isCanonicityViolation (DecoderErrorCanonicityViolation _) = True
-  -- isCanonicityViolation (DecoderErrorDeserialiseFailure _ ds) =
-  --   isCanonicityFailure ds
-  -- isCanonicityViolation _ = False
-
-  -- isCanonicityFailure :: DeserialiseFailure -> Bool
-  -- isCanonicityFailure (DeserialiseFailure _ s) = "canonic" `L.isInfixOf` s
 
 showReadId :: (Show a, Eq a, Read a) => a -> Property
 showReadId a = read (show a) === a
@@ -154,8 +118,8 @@ identityTest = prop typeName
   typeName = show $ typeRep (Proxy @a)
 
 binaryTest :: forall a . IdTestingRequiredClasses Bi a => Spec
-binaryTest = identityTest @a $ \x ->
-  binaryEncodeDecode x .&&. cborFlatTermValid x .&&. cborCanonicalRep x
+binaryTest =
+  identityTest @a $ \x -> binaryEncodeDecode x .&&. cborFlatTermValid x
 
 showReadTest :: forall a . IdTestingRequiredClasses Read a => Spec
 showReadTest = identityTest @a showReadId
@@ -173,7 +137,7 @@ instance Bi U where
     encodeListLen 2 <> encode (word8 :: Word8) <> encodeUnknownCborDataItem
       (LBS.fromStrict bs)
   decode = do
-    decodeListLenCanonicalOf 2
+    decodeListLenOf 2
     U <$> decode <*> decodeUnknownCborDataItem
 
 instance Arbitrary U where
@@ -187,7 +151,7 @@ instance Bi U24 where
     encodeListLen 2 <> encode (word8 :: Word8) <> encodeUnknownCborDataItem
       (LBS.fromStrict bs)
   decode = do
-    decodeListLenCanonicalOf 2
+    decodeListLenOf 2
     U24 <$> decode <*> decodeUnknownCborDataItem
 
 -- | Given a data type which can be extended, verify we can indeed do so

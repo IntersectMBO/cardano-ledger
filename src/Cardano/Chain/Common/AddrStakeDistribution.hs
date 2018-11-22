@@ -59,7 +59,7 @@ instance Bi AddrStakeDistribution where
     SingleKeyDistr      id    -> encode (0 :: Word8, id)
     UnsafeMultiKeyDistr distr -> encode (1 :: Word8, distr)
 
-  decode = Bi.decodeListLenCanonical >>= \case
+  decode = Bi.decodeListLen >>= \case
     0 -> pure BootstrapEraDistr
     2 -> decode @Word8 >>= \case
       0 -> SingleKeyDistr <$> decode
