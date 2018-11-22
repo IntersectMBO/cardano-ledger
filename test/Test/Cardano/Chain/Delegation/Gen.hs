@@ -22,7 +22,7 @@ import Cardano.Chain.Delegation
   , Undo(..)
   , unsafePayload
   )
-import Cardano.Crypto (ProtocolMagic, safeCreatePsk)
+import Cardano.Crypto (ProtocolMagic, createPsk)
 import Data.List (nub)
 
 import Test.Cardano.Chain.Common.Gen (genStakeholderId)
@@ -45,14 +45,14 @@ genProxySKBlockInfo pm = Gen.maybe $ do
 
 genProxySKHeavy :: ProtocolMagic -> Gen ProxySKHeavy
 genProxySKHeavy pm =
-  safeCreatePsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex
+  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex
 
 genProxySKHeavyDistinctList :: ProtocolMagic -> Gen [ProxySKHeavy]
 genProxySKHeavyDistinctList pm = do
   let
     pSKList = Gen.list
       (Range.linear 0 5)
-      (safeCreatePsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex)
+      (createPsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex)
   Gen.filter allDistinct pSKList
  where
   allDistinct :: Eq a => [a] -> Bool

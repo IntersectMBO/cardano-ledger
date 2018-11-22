@@ -41,6 +41,7 @@ import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProxyCert(..)
   , RedeemPublicKey
+  , Signature(..)
   , abstractHash
   , redeemDeterministicKeyGen
   , unsafeProxySecretKey
@@ -90,14 +91,15 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
             }
           )
         )
-        (ProxyCert (fromRight (panic "Something went wrong") $ sig))
+        (ProxyCert sig)
       )
     ]
   )
  where
   issuePubKey = PublicKey
     (CC.XPub {CC.xpubPublicKey = pskPubKey, CC.xpubChaincode = pskChainCode})
-  sig = CC.xsignature
+  sig :: Signature HeavyDlgIndex
+  sig = Signature $ fromRight (panic "Something went wrong") $ CC.xsignature
     (hexToBS
       "bae5422af5405e3803154a4ad986da5d14cf624d670\
                                  \1c5c78a79ec73777f74e13973af83752114d9f18166\

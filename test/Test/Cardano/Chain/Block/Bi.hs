@@ -60,6 +60,7 @@ import Cardano.Crypto
   , abstractHash
   , createPsk
   , hash
+  , noPassSafeSigner
   , proxySign
   , sign
   , toPublic
@@ -317,8 +318,11 @@ exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
  where
   sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
-  psk =
-    createPsk pm issuerSk (toPublic delegateSk) (staticHeavyDlgIndexes !! 0)
+  psk                    = createPsk
+    pm
+    (noPassSafeSigner issuerSk)
+    (toPublic delegateSk)
+    (staticHeavyDlgIndexes !! 0)
   pm = ProtocolMagic 2
 
 exampleConsensusData :: ConsensusData

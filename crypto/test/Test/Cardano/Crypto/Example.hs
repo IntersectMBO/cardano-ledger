@@ -20,8 +20,9 @@ import Data.Maybe (fromJust)
 import Cardano.Crypto
   ( PublicKey(..)
   , RedeemPublicKey
-  , SafeSigner(..)
+  , SafeSigner
   , SecretKey(..)
+  , noPassSafeSigner
   , redeemDeterministicKeyGen
   )
 
@@ -56,4 +57,4 @@ exampleSafeSigner :: Int -> SafeSigner
 exampleSafeSigner offset = staticSafeSigners !! offset
 
 staticSafeSigners :: [SafeSigner]
-staticSafeSigners = map FakeSigner (exampleSecretKeys 1 6)
+staticSafeSigners = map noPassSafeSigner (exampleSecretKeys 1 6)
