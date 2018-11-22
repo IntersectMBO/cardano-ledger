@@ -836,7 +836,8 @@ blocks. Some clarifications are in order:
       \begin{array}{r@{~\in~}lr}
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol}\\
-        \var{bvs} & \seqof{\ProtVer} & \text{last seen candidate versions}
+        \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
+        & \text{keys ready to adopt versions}
       \end{array}\right)
   \end{align*}
   %

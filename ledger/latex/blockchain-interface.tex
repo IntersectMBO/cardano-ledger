@@ -189,7 +189,8 @@
         & \text{proposals per-epoch per-key}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
-        \var{bvs} & \seqof{\ProtVer} & \text{last seen candidate versions}\\
+        \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
+                           & \text{keys ready to adopt versions}\\
         \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
       \end{array}\right)
   \end{align*}
@@ -380,23 +381,25 @@
 \clearpage
 
 The interface rule for protocol-block-version registration makes use of the
-$\trans{upbvreg}{}$ transition, passing only the relevant portion of the state.
-In addition, the proposals that are older than $u$ blocks are removed from the
-parts of the state that holds:
+$\trans{upbvreg}{}$ transition, passing only the portion of the state relevant
+to it. In addition, the proposals that are older than $u$ blocks are removed
+from the parts of the state that hold:
 \begin{itemize}
 \item the registered proposals,
 \item the confirmed proposals,
-\item the votes associated with the proposals, and
+\item the votes associated with the proposals,
+\item the set of keys ready to adopt the different proposals, and
 \item the block number in which proposals where added.
 \end{itemize}
 Note that a proposal that got adopted could be cleaned earlier in some other
 rule, however, by keeping all the cleanup logic associated to block number
-change in one place we make reasoning about state size bounds simpler. The
+change in one place we make reasoning about state-size bounds simpler. The
 epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
 update in which epoch, is cleaned up in the rules given in
 \cref{fig:rules:upi-ec}, which deals with epoch change. Finally, in
-$\var{vs_{del}}$ we compute the set of all the versions associated with
-proposals id's to be removed, and we remove these versions from $\var{bvs}$.
+$\var{vs_{keep}}$ we compute the set of all the versions associated with
+proposals id's to be kept, and restrict the domain of $\var{bvs}$ to these
+versions.
 
 
 \begin{figure}[htb]
@@ -432,8 +435,8 @@ proposals id's to be removed, and we remove these versions from $\var{bvs}$.
           \end{array}
         \right)
       }\\
-      \var{pids_{old}} = \dom~(pws \restrictrange [.., b_n - u])
-      & \var{vs_{del}} = \dom~(\var{pids_{old}} \restrictdom \var{rups})
+      \var{pids_{keep}} = \dom~(pws \restrictrange [b_n - u, ..])
+      & \var{vs_{keep}} = \dom~(\range~(\var{pids_{keep}} \restrictdom \var{rups}))
     }
     {
       {
@@ -468,12 +471,12 @@ proposals id's to be removed, and we remove these versions from $\var{bvs}$.
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
-            \var{pids_{old}} \subtractdom \var{rups}\\
+            \var{pids_{keep}} \restrictdom \var{rups}\\
             \var{eps}\\
-            \var{pids_{old}} \subtractdom \var{cps}\\
-            \var{pids_{old}} \subtractdom \var{vts}\\
-            \var{vs_{del}}  \subtractdom \var{bvs}\\
-            \var{pids_{old}} \subtractdom \var{pws}
+            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{pids_{keep}} \restrictdom \var{vts}\\
+            \var{vs_{keep}}  \restrictdom \var{bvs}\\
+            \var{pids_{keep}} \restrictdom \var{pws}
           \end{array}
         \right)
       }
