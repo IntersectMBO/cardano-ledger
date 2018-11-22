@@ -1,8 +1,8 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/4b4457e75303ce352223b9723f7771fac6fe0600/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/85fe2b8094b10e5f669423e0a8af327017cb0771/snapshot.yaml
 
 packages:
-  - ./
-  - test/
+  - .
+  - test
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
@@ -10,11 +10,6 @@ extra-deps:
     subdirs:
       - .
       - test
-  - git: https://github.com/well-typed/cborg # https://github.com/well-typed/cborg/pull/185
-    # This adds the capability to extract byte offsets in decoders
-    commit: 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d
-    subdirs:
-      - cborg
 
 nix:
   packages:
