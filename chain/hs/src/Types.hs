@@ -43,8 +43,9 @@ newtype Slot = MkSlot Natural deriving (Eq, Ord)
 
 newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord)
 
-newtype ProtParams = MkProtParams
-  { maxBlockSize :: Natural
+data ProtParams = MkProtParams
+  { maxBlockSize  :: !Natural
+  , maxHeaderSize :: !Natural
   }
 
 -- | Block type for two kinds of blocks: a genesis block and a
