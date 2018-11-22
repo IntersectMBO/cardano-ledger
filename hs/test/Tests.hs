@@ -20,7 +20,7 @@ import           Coin
 import           Slot
 import           Keys
 import           LedgerState             (DelegationState (..), Ledger,
-                                          LedgerEntry (..), LedgerState (..),
+                                          LedgerState (..),
                                           ValidationError (..),
                                           LedgerValidation(..),
                                           asStateTransition, emptyDelegation,
@@ -68,32 +68,27 @@ testLedgerValidTransactions ls utxo =
                      LedgerState.emptyDelegation (Epoch 0))
 
 testValidStakeKeyRegistration ::
-  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> Assertion
-testValidStakeKeyRegistration sd utxo stakeKeyRegistration =
+  TxWits -> Map.Map TxIn TxOut -> DelegationState -> Assertion
+testValidStakeKeyRegistration tx utxo stakeKeyRegistration =
   let
-    ls2 = ledgerState sd
+    ls2 = ledgerState [tx]
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
                      (Epoch 0))
 
 testValidDelegation ::
-  [LedgerEntry] -> Map.Map TxIn TxOut -> DelegationState -> StakePool -> Assertion
-testValidDelegation sd utxo stakeKeyRegistration sp =
+  [TxWits] -> Map.Map TxIn TxOut -> DelegationState -> Assertion
+testValidDelegation txs utxo stakeKeyRegistration =
   let
-    stakeDelegation = Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
-    ls2 = ledgerState $ sd ++ [ DelegationData poolRegistration
-                               , DelegationData stakeDelegation]
-    poolRegistration = RegPool sp
+    ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
-
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
-                     {
-                       getDelegations =
+                     { getDelegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-                     , getStPools = Map.fromList [(poolhk, (sp, Slot 0))]
+                     , getStPools = Map.fromList [(poolhk, (stakePool, Slot 0))]
                      }
                      (Epoch 0))
 
@@ -107,8 +102,8 @@ tx1Body = Tx
 aliceTx1Wit :: Wit
 aliceTx1Wit = makeWitness alicePay tx1Body
 
-tx1 :: LedgerEntry
-tx1 = TransactionData $ TxWits tx1Body (Set.fromList [aliceTx1Wit])
+tx1 :: TxWits
+tx1 = TxWits tx1Body (Set.fromList [aliceTx1Wit])
 
 tx1id :: TxId
 tx1id = txid tx1Body
@@ -129,10 +124,35 @@ certBob = RegKey $ vKey bobStake
 certPool1 :: DCert
 certPool1 = RegKey $ vKey stakePoolKey1
 
-sd1 :: [LedgerEntry]
-sd1 = [ DelegationData certAlice
-      , DelegationData certBob
-      , DelegationData certPool1]
+tx2Body :: Tx
+tx2Body = Tx
+          (Set.fromList [TxIn genesisId 0])
+          [ TxOut aliceAddr (Coin 7)
+          , TxOut bobAddr (Coin 3) ]
+          (Set.fromList [ certAlice
+                       , certBob
+                       , certPool1 ])
+
+utxo2 :: Map.Map TxIn TxOut
+utxo2 = Map.fromList
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
+       , (TxIn (txid tx2Body) 0, TxOut aliceAddr (Coin 7))
+       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3)) ]
+
+tx2 :: TxWits
+tx2 = TxWits tx2Body (Set.fromList [makeWitness alicePay tx2Body])
+
+tx3Body :: Tx
+tx3Body = Tx
+          Set.empty
+          []
+          (Set.fromList
+            [ RegPool stakePool
+            , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
+            ])
+
+tx3 :: TxWits
+tx3 = TxWits tx3Body Set.empty
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
@@ -164,9 +184,10 @@ testsValidLedger =
         testLedgerValidTransactions ls1 utxo1
       , testGroup "Tests for stake delegation."
           [ testCase "Valid stake key registration." $
-              testValidStakeKeyRegistration (tx1:sd1) utxo1 stakeKeyRegistration1
+              testValidStakeKeyRegistration tx2 utxo2 stakeKeyRegistration1
           , testCase "Valid stake delegation from Alice to stake pool." $
-              testValidDelegation (tx1:sd1) utxo1 stakeKeyRegistration1 stakePool]
+              testValidDelegation [tx2, tx3] utxo2 stakeKeyRegistration1
+          ]
     ]
 
 testSpendNonexistentInput :: Assertion
@@ -177,7 +198,7 @@ testSpendNonexistentInput =
               [ TxOut aliceAddr (Coin 0) ]
               Set.empty
     aliceWit = makeWitness alicePay txbody
-    tx = TransactionData $ TxWits txbody (Set.fromList [aliceWit])
+    tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [BadInputs, InsuffientWitnesses]
   -- Note that BadInputs implies InsuffientWitnesses
 
@@ -189,7 +210,7 @@ testWitnessNotIncluded =
               [ TxOut aliceAddr (Coin 7)
               , TxOut bobAddr (Coin 3) ]
               Set.empty
-    tx = TransactionData $ TxWits txbody Set.empty
+    tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [InsuffientWitnesses]
 
 testSpendNotOwnedUTxO :: Assertion
@@ -200,7 +221,7 @@ testSpendNotOwnedUTxO =
               [ TxOut aliceAddr (Coin 1)]
               Set.empty
     aliceWit = makeWitness alicePay txbody
-    tx = TransactionData $ TxWits txbody (Set.fromList [aliceWit])
+    tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsuffientWitnesses]
 
 testInvalidTransaction :: Assertion
@@ -210,12 +231,12 @@ testInvalidTransaction =
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 1)]
               Set.empty
-    tx2Body = Tx
+    tx2body = Tx
               (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 10)]
               Set.empty
-    aliceWit = makeWitness alicePay tx2Body
-    tx = TransactionData $ TxWits txbody (Set.fromList [aliceWit])
+    aliceWit = makeWitness alicePay tx2body
+    tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsuffientWitnesses]
 
 testsInvalidLedger :: TestTree
@@ -272,8 +293,8 @@ propPreserveBalanceInitTx =
 -- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Cover
 propBalanceTxInTxOut = withCoverage $ do
-  (l, steps, fee, entry, l')  <- forAll genValidStateTx
-  let tx                       = getTxOfEntry entry
+  (l, steps, fee, txwits, l')  <- forAll genValidStateTx
+  let tx                       = body txwits
   let inps                     = txins tx
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
@@ -282,8 +303,8 @@ propBalanceTxInTxOut = withCoverage $ do
 -- | Property 7.3 (Preserve Outputs of Transaction)
 propPreserveOutputs :: Cover
 propPreserveOutputs = withCoverage $ do
-  (l, steps, _, entry, l') <- forAll genValidStateTx
-  let tx                    = getTxOfEntry entry
+  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  let tx                    = body txwits
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l')
@@ -291,8 +312,8 @@ propPreserveOutputs = withCoverage $ do
 -- | Property 7.4 (Eliminate Inputs of Transaction)
 propEliminateInputs :: Cover
 propEliminateInputs = withCoverage $ do
-  (l, steps, _, entry, l') <- forAll genValidStateTx
-  let tx                    = getTxOfEntry entry
+  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  let tx                    = body txwits
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
@@ -301,8 +322,8 @@ propEliminateInputs = withCoverage $ do
 -- | Property 7.5 (Completeness and Collision-Freeness of new TxIds)
 propUniqueTxIds :: Cover
 propUniqueTxIds = withCoverage $ do
-  (l, steps, _, entry, l') <- forAll genValidStateTx
-  let tx                    = getTxOfEntry entry
+  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  let tx                    = body txwits
   let origTxIds             = collectIds <$> (Map.keys $ utxoMap (getUtxo l))
   let newTxIds              = collectIds <$> (Map.keys $ utxoMap (txouts tx))
   let txId                  = txid tx
@@ -348,8 +369,8 @@ propertyTests = testGroup "Property-Based Testing"
 propBalanceTxInTxOut' :: Cover
 propBalanceTxInTxOut' =
   Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
-  (l, _, fee, entry, lv)  <- forAll genStateTx
-  let tx                       = getTxOfEntry entry
+  (l, _, fee, txwits, lv)  <- forAll genStateTx
+  let tx                       = body txwits
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
   let balanceSource            = balance $ inps <| (getUtxo l)

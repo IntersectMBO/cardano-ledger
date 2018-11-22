@@ -9,7 +9,7 @@ data. Input values are mutated depending on their value.
 module Mutator
     ( mutateNat
     , mutateCoin
-    , mutateLedgerEntry
+    , mutateTxWits
     , mutateTx
     , mutateDCert
     , getAnyStakeKey
@@ -27,7 +27,7 @@ import Coin
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool
 import Keys
-import LedgerState (LedgerEntry(..), DelegationState(..), KeyPairs)
+import LedgerState (DelegationState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 import           Slot
 
@@ -57,13 +57,11 @@ mutateNat lower upper n =
 mutateCoin :: Natural -> Natural -> Coin -> Gen Coin
 mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
 
--- | Mutator of 'LedgerEntry' which mutates the contained transaction of a
--- 'DelegationData' entry.
-mutateLedgerEntry :: LedgerEntry -> Gen LedgerEntry
-mutateLedgerEntry d@(DelegationData _) = mutateId d
-mutateLedgerEntry (TransactionData txwits) = do
+-- | Mutator of 'TxWits' which mutates the contained transaction
+mutateTxWits :: TxWits -> Gen TxWits
+mutateTxWits txwits = do
   body' <- mutateTx $ body txwits
-  pure $ TransactionData $ TxWits body' (witnessSet txwits)
+  pure $ TxWits body' (witnessSet txwits)
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
