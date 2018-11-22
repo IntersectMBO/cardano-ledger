@@ -62,8 +62,7 @@
 %%
 %% Types
 %%
-\newcommand{\Hash}{\type{Hash}}    % addresses as verification key hashes
-\newcommand{\BHash}{\type{BHash}}  % block hashes
+\newcommand{\Hash}{\type{Hash}}  % hashes of various things, including blocks
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\BlockIx}{\type{BlockIx}}
@@ -92,12 +91,13 @@
 \newcommand{\trimixname}{trimIx}
 \newcommand{\incixmapname}{incIxMap}
 
-\newcommand{\hashofblockname}{hash}
-\newcommand{\bdataname}{bData}
-\newcommand{\bcertsname}{bCerts}
-\newcommand{\bsigname}{bSig}
-\newcommand{\bixname}{bIx}
-\newcommand{\bslname}{bSl}
+\newcommand{\hashofblockname}{hashBlock}
+\newcommand{\rbdataname}{rbData}
+\newcommand{\rbcertsname}{rbCerts}
+\newcommand{\rbsigname}{rbSig}
+\newcommand{\rbixname}{rbIx}
+\newcommand{\rbslname}{rbSl}
+\newcommand{\rbsignername}{rbSigner}
 
 \newcommand{\qrestrname}{qRestrict}
 \newcommand{\qpopname}{qPop}
@@ -117,11 +117,12 @@
 \newcommand{\incixmap}[3]{\fun{\incixmapname} ~ #1 ~ #2 ~ #3}
 
 \newcommand{\hashofblock}[1]{\fun{\hashofblockname} ~ #1}
-\newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
-\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
-\newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
-\newcommand{\bix}[1]{\fun{\bixname} ~ #1}
-\newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
+\newcommand{\rbdata}[1]{\fun{\rbdataname} ~ #1}
+\newcommand{\rbcerts}[1]{\fun{\rbcertsname} ~ #1}
+\newcommand{\rbsig}[1]{\fun{\rbsigname} ~ #1}
+\newcommand{\rbix}[1]{\fun{\rbixname} ~ #1}
+\newcommand{\rbsl}[1]{\fun{\rbslname} ~ #1}
+\newcommand{\rbsigner}[1]{\fun{\rbsignername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
@@ -143,16 +144,17 @@
 
 \author{Marko Dimjašević}
 
-\date{November 5, 2018}
+\date{November 14, 2018}
 
 \maketitle
 
 \begin{abstract}
   This documents defines inference rules for operations on a blockchain as a
-  specification of the blockchain layer.
-%
-In particular, a block validity definition is given, which is accompanied by
-small-step operational semantics inference rules.
+  specification of the blockchain layer of Cardano in the Byron release and in
+  a transition to the Shelley release.
+  %
+  In particular, a block validity definition is given, which is accompanied by
+  small-step operational semantics inference rules.
 \end{abstract}
 
 \tableofcontents
@@ -164,6 +166,10 @@ small-step operational semantics inference rules.
 The idea behind this document is to formalise what it means for a new block to
 be added to the blockchain to be valid.
 %
+The scope of the document is the Byron release and a transition phase to the
+Shelley release of the Cardano blockchain platform.
+
+
 Unless a new block is valid, it cannot be added to the blockchain and thereby
 extend it.
 %
@@ -319,6 +325,7 @@ projection functions for the following:
 \item a block index,
 \item a block hash pointing to the block's predecessor,
 \item a slot it is in,
+\item a verification key of the block signer,
 \item a set of heavyweight delegation certificates in the body, and
 \item a cryptographic signature.
 \end{itemize}
@@ -339,7 +346,7 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     ix & \in \BlockIx & \text{block index}\\
-     h & \in \BHash   & \text{block hash}
+     h & \in \Hash   & \text{hash}
   \end{align*}
   %
   \emph{Abstract types}
@@ -359,20 +366,21 @@ Figure~\ref{fig:block-defs}.
   %
   \begin{align*}
     \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
-    \fun{\bixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
-    \fun{\hashname} & \in \Block \totalf \BHash
+    \fun{\rbixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
+    \fun{\hashname} & \in \Block \totalf \Hash
       & \text{previous block's hash} \\
-    \fun{\bslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
-    \fun{\bcertsname} & \in \RBlock \totalf \powerset{\HCert}
+    \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
+    \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
+    \fun{\rbcertsname} & \in \RBlock \totalf \powerset{\HCert}
       & \text{block certificates} \\
-    \fun{\bsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
-    \fun{\bdataname} & \in \RBlock \totalf \Data & \text{block data}
+    \fun{\rbsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
+    \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data}
   \end{align*}
   %
   \emph{Functions}
   %
   \begin{align*}
-    \fun{\hashofblockname} & \in \Block \totalf \BHash & \text{hash of block}
+    \fun{\hashofblockname} & \in \Block \totalf \Hash & \text{hash of block}
   \end{align*}
   %
   \caption{Basic Block-related Types and Functions}
@@ -536,7 +544,7 @@ this is done with $\trimix{\signmapname}{ix}$, as given by
 %
 To finish updating the map, the updated version of $\signmapname$ denoted by
 $\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
-with $\incixmap{vk_s}{\signmapname'}{ix}$, as given by
+with $\incixmap{ix}{vk_s}{\signmapname'}$, as given by
 \eqref{eq:incixmap}.
 %
 Finally, the state $ds$ that is maintained by the ledger layer, is updated;
@@ -560,7 +568,7 @@ Figure~\ref{fig:block-ext-types-funs}.
 
 \begin{equation}
   \label{eq:incixmap}
-  \incixmap{vk_s}{\signmapname}{ix} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
+  \incixmap{ix}{vk_s}{\signmapname} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
 \end{equation}
 
 
@@ -597,9 +605,9 @@ Figure~\ref{fig:block-ext-types-funs}.
       & \text{restricted queue pop function} \\
     \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
       & \text{old block removal function} \\
-    \fun{\incixmapname} & \in \VKeyGen \times \mapqueue \times \BlockIx \totalf \mapqueue
+    \fun{\incixmapname} & \in \BlockIx \times \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
-    \fun{\signname} & \in \SKey \times \BHash \times \Slot \times \Data \partialf \Sig
+    \fun{\signname} & \in \SKey \times \Hash \times \Slot \times \Data \partialf \Sig
       & \text{signature function}\\
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
       & \text{verification relation}\\
@@ -634,16 +642,25 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      ix = \bix{b} \wedge \hash{b} = \hashofblock{p} \\
+      ix = \rbix{b} \wedge vk_d = \rbsigner{b} \wedge sl = \rbsl{b} \\
+      \hash{b} \equiv \hashofblock{p} \\
       \delegation{ds}{vk_s}{vk_d} \\
-      \verify{vk_d}{(\bdata{b})}{(\bsig{b})} \\
+      \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
-      \signmapname' = \incixmap{vk_s}{(\trimix{\signmapname}{ix})}{ix} \\
+      \signmapname' = \incixmap{ix}{vk_s}{(\trimix{\signmapname}{ix})} \\
       p' = b 
      \end{array}}
-   & (\bsl{b}) \vdash ds \trans{\text{DELEG}}{\bcerts{b}} ds'
+   & (sl) \vdash ds \trans{\text{DELEG}}{\rbcerts{b}} ds'
   }
   {
+    \left(
+      {\begin{array}{c}
+         sl \\
+         K \\
+         t
+       \end{array}}
+    \right)
+    \vdash
     \left(
       {\begin{array}{c}
          \signmapname \\

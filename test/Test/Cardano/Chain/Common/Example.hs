@@ -26,14 +26,13 @@ import Cardano.Chain.Common
   , ChainDifficulty(..)
   , LovelacePortion(..)
   , Script(..)
-  , StakeholderId(..)
+  , StakeholderId
   , lovelacePortionDenominator
   , makeAddress
   , mkAttributes
   , mkMultiKeyDistr
   , mkStakeholderId
   )
-import Cardano.Crypto.Hashing (abstractHash)
 import Cardano.Crypto.HD (HDAddressPayload(..))
 import qualified Data.Map as M
 
@@ -98,7 +97,7 @@ exampleMultiKeyDistr = case mkMultiKeyDistr (M.fromList pairs) of
   pairs :: [(StakeholderId, LovelacePortion)]
   pairs = zip stakeIds (map LovelacePortion (remainderCP : lovelacePortions))
   stakeIds :: [StakeholderId]
-  stakeIds = map (StakeholderId . abstractHash) (examplePublicKeys 7 4)
+  stakeIds = exampleStakeholderIds 7 4
   lovelacePortions =
     [ (10 :: Word64) ^ (12 :: Word64)
     , (7 :: Word64) ^ (11 :: Word64)
@@ -110,8 +109,7 @@ exampleScript :: Script
 exampleScript = Script 601 (getBytes 4 32)
 
 exampleStakeholderIds :: Int -> Int -> [StakeholderId]
-exampleStakeholderIds offset l =
-  map (StakeholderId . abstractHash) $ examplePublicKeys offset l
+exampleStakeholderIds offset l = mkStakeholderId <$> examplePublicKeys offset l
 
 exampleStakeholderId :: StakeholderId
 exampleStakeholderId = mkStakeholderId examplePublicKey

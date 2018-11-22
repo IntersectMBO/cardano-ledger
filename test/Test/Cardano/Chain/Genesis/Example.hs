@@ -9,7 +9,6 @@ module Test.Cardano.Chain.Genesis.Example
   , exampleStaticConfig_GCSrc
   , exampleGenesisDelegation
   , exampleGenesisInitializer
-  , exampleProtocolConstants
   )
 where
 
@@ -23,10 +22,9 @@ import Data.Maybe (fromJust)
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
   ( LovelacePortion(..)
-  , SharedSeed(..)
-  , StakeholderId(..)
-  , addressHash
   , mkKnownLovelace
+  , mkKnownLovelacePortion
+  , mkStakeholderId
   )
 import Cardano.Chain.Delegation (HeavyDlgIndex(..))
 import Cardano.Chain.Genesis
@@ -34,29 +32,25 @@ import Cardano.Chain.Genesis
   , GenesisAvvmBalances(..)
   , GenesisDelegation(..)
   , GenesisInitializer(..)
-  , GenesisProtocolConstants(..)
   , GenesisSpec(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
-import Cardano.Chain.ProtocolConstants (VssMaxTTL(..), VssMinTTL(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProxyCert(..)
-  , ProxySecretKey(..)
   , RedeemPublicKey
+  , Signature(..)
   , abstractHash
   , redeemDeterministicKeyGen
+  , unsafeProxySecretKey
   )
 import Cardano.Crypto.Signing (PublicKey(..))
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Update.Example (exampleBlockVersionData)
 import Test.Cardano.Crypto.Bi (getBytes)
-
-exampleSharedSeed :: SharedSeed
-exampleSharedSeed = SharedSeed (getBytes 8 32)
 
 exampleStaticConfig_GCSrc :: StaticConfig
 exampleStaticConfig_GCSrc =
@@ -65,10 +59,10 @@ exampleStaticConfig_GCSrc =
 exampleStaticConfig_GCSpec :: StaticConfig
 exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisAvvmBalances
-  exampleSharedSeed
   exampleGenesisDelegation
   exampleBlockVersionData
-  exampleProtocolConstants
+  37
+  (ProtocolMagic 1783847074)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
@@ -86,25 +80,26 @@ exampleGenesisAvvmBalances = GenesisAvvmBalances
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
-    [ ( StakeholderId $ addressHash issuePubKey
-      , UnsafeProxySecretKey
-        { pskOmega      = HeavyDlgIndex $ EpochIndex 68300481033
-        , pskIssuerPk   = issuePubKey
-        , pskDelegatePk = PublicKey
+    [ ( mkStakeholderId issuePubKey
+      , unsafeProxySecretKey
+        (HeavyDlgIndex $ EpochIndex 68300481033)
+        issuePubKey
+        (PublicKey
           (CC.XPub
             { CC.xpubPublicKey = pskDelPubKey
             , CC.xpubChaincode = pskDelChainCode
             }
           )
-        , pskCert = ProxyCert (fromRight (panic "Something went wrong") $ sig)
-        }
+        )
+        (ProxyCert sig)
       )
     ]
   )
  where
   issuePubKey = PublicKey
     (CC.XPub {CC.xpubPublicKey = pskPubKey, CC.xpubChaincode = pskChainCode})
-  sig = CC.xsignature
+  sig :: Signature HeavyDlgIndex
+  sig = Signature $ fromRight (panic "Something went wrong") $ CC.xsignature
     (hexToBS
       "bae5422af5405e3803154a4ad986da5d14cf624d670\
                                  \1c5c78a79ec73777f74e13973af83752114d9f18166\
@@ -129,26 +124,18 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
                                             \8a879ac3c4bd3e610095419a19696573"
     )
 
-exampleProtocolConstants :: GenesisProtocolConstants
-exampleProtocolConstants = GenesisProtocolConstants
-  { gpcK             = 37
-  , gpcProtocolMagic = ProtocolMagic {getProtocolMagic = 1783847074}
-  , gpcVssMaxTTL     = VssMaxTTL {getVssMaxTTL = 1477558317}
-  , gpcVssMinTTL     = VssMinTTL {getVssMinTTL = 744040476}
-  }
-
 exampleGenesisInitializer :: GenesisInitializer
 exampleGenesisInitializer = GenesisInitializer
   { giTestBalance       = TestnetBalanceOptions
     { tboPoors          = 2448641325904532856
     , tboRichmen        = 14071205313513960321
-    , tboTotalBalance   = 10953275486128625216
-    , tboRichmenShare   = 4.2098713311249885
+    , tboTotalBalance   = mkKnownLovelace @10953275486128625
+    , tboRichmenShare   = mkKnownLovelacePortion @366832547637728
     , tboUseHDAddresses = True
     }
   , giFakeAvvmBalance   = FakeAvvmOptions
     { faoCount      = 17853231730478779264
-    , faoOneBalance = 15087947214890024355
+    , faoOneBalance = mkKnownLovelace @15087947214890024
     }
   , giAvvmBalanceFactor = LovelacePortion {getLovelacePortion = 366832547637728}
   , giUseHeavyDlg       = False
@@ -164,4 +151,3 @@ hexToBS ts = case B16.decode ts of
       <> show partiallyDecoded
       <> " decode failed: "
       <> show invalid
-

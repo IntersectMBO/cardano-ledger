@@ -1,43 +1,34 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE UndecidableInstances #-}
 
--- | Module for safe (zero-memory) signing
-
-module Cardano.Crypto.Signing.Types.Safe
+module Cardano.Crypto.Signing.Safe.EncryptedSecretKey
   ( EncryptedSecretKey(..)
-  , PassPhrase(..)
-  , SafeSigner(..)
-  , passphraseLength
-  , emptyPassphrase
-  , mkEncSecretWithSaltUnsafe
   , mkEncSecretUnsafe
+  , mkEncSecretWithSaltUnsafe
   , encToSecret
   , encToPublic
   , noPassEncrypt
   , checkPassMatches
+  , changeEncPassphrase
   )
 where
 
-import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Prelude
+
+import qualified Cardano.Crypto.Wallet as CC
 import Crypto.Random (MonadRandom)
-import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
-import qualified Data.ByteArray as ByteArray
-import qualified Data.ByteString as BS
 import Data.Default (Default(..))
-import Data.Semigroup (Semigroup)
-import Formatting (int, sformat)
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.Scrypt as S
-import Cardano.Crypto.Signing.Types.Signing
-  (PublicKey(..), SecretKey(..), decodeXPrv, encodeXPrv, toPublic)
+import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
+import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase, emptyPassphrase)
+import Cardano.Crypto.Signing.SecretKey
+  (SecretKey(..), decodeXPrv, encodeXPrv, toPublic)
 
 
 -- | Encrypted HD secret key
@@ -68,51 +59,6 @@ instance Bi EncryptedSecretKey where
       <$  enforceSize "EncryptedSecretKey" 2
       <*> decodeXPrv
       <*> decode
-
-newtype PassPhrase =
-  PassPhrase ScrubbedBytes
-  deriving (Eq, Ord, Semigroup, Monoid, NFData, ByteArray, ByteArrayAccess)
-
-passphraseLength :: Int
-passphraseLength = 32
-
--- | Empty passphrase used in development
-emptyPassphrase :: PassPhrase
-emptyPassphrase = PassPhrase mempty
-
-instance Show PassPhrase where
-  show _ = "<passphrase>"
-
-instance Buildable PassPhrase where
-  build _ = "<passphrase>"
-
-instance Default PassPhrase where
-  def = emptyPassphrase
-
-instance Bi PassPhrase where
-  encode pp = encode (ByteArray.convert pp :: ByteString)
-
-  decode = do
-    bs <- decode @ByteString
-    let bl = BS.length bs
-    -- Currently passphrase may be either 32-byte long or empty (for
-    -- unencrypted keys).
-    toCborError $ if bl == 0 || bl == passphraseLength
-      then Right $ ByteArray.convert bs
-      else Left $ sformat
-        ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
-        passphraseLength
-        bl
-
-{-instance Monoid PassPhrase where
-    mempty = PassPhrase mempty
-    mappend (PassPhrase p1) (PassPhrase p2) = PassPhrase (p1 `mappend` p2)-}
-
--- | SafeSigner datatype to encapsulate sensitive data
-data SafeSigner
-  = SafeSigner EncryptedSecretKey PassPhrase
-  | FakeSigner SecretKey
-  deriving (Show)
 
 -- | Parameters used to evaluate hash of passphrase.
 passScryptParam :: S.ScryptParams
@@ -154,3 +100,17 @@ noPassEncrypt (SecretKey k) =
 checkPassMatches :: (Alternative f) => PassPhrase -> EncryptedSecretKey -> f ()
 checkPassMatches pp (EncryptedSecretKey _ pph) =
   guard (S.verifyPass passScryptParam pp pph)
+
+-- | Regenerates secret key with new passphrase.
+--   Note: This operation keeps corresponding public key and derived (child)
+--   keys unchanged.
+changeEncPassphrase
+  :: MonadRandom m
+  => PassPhrase
+  -> PassPhrase
+  -> EncryptedSecretKey
+  -> m (Maybe EncryptedSecretKey)
+changeEncPassphrase oldPass newPass esk@(EncryptedSecretKey sk _)
+  | isJust $ checkPassMatches oldPass esk = Just
+  <$> mkEncSecretUnsafe newPass (CC.xPrvChangePass oldPass newPass sk)
+  | otherwise = return Nothing

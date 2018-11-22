@@ -13,23 +13,14 @@ import Data.List ((!!))
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Chain.Delegation (Payload(..), ProxySKBlockInfo)
+import Cardano.Chain.Delegation (ProxySKBlockInfo, unsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
 import Test.Cardano.Chain.Delegation.Example
-  ( exampleLightDlgIndices
-  , exampleProxySKBlockInfo
-  , staticHeavyDlgIndexes
-  , staticProxySKHeavys
-  )
+  (exampleProxySKBlockInfo, staticHeavyDlgIndexes, staticProxySKHeavys)
 import Test.Cardano.Chain.Delegation.Gen
-  ( genHeavyDlgIndex
-  , genLightDlgIndices
-  , genPayload
-  , genProxySKBlockInfo
-  , genProxySKHeavy
-  )
+  (genHeavyDlgIndex, genPayload, genProxySKBlockInfo, genProxySKHeavy)
 import Test.Cardano.Crypto.Gen (feedPM)
 
 --------------------------------------------------------------------------------
@@ -37,7 +28,7 @@ import Test.Cardano.Crypto.Gen (feedPM)
 --------------------------------------------------------------------------------
 goldenDlgPayload :: Property
 goldenDlgPayload = goldenTestBi dp "test/golden/bi/delegation/DlgPayload"
-  where dp = UnsafePayload (take 4 staticProxySKHeavys)
+  where dp = unsafePayload (take 4 staticProxySKHeavys)
 
 roundTripDlgPayloadBi :: Property
 roundTripDlgPayloadBi = eachOf 100 (feedPM genPayload) roundTripsBiBuildable
@@ -53,18 +44,6 @@ goldenHeavyDlgIndex = goldenTestBi
 
 roundTripHeavyDlgIndexBi :: Property
 roundTripHeavyDlgIndexBi = eachOf 1000 genHeavyDlgIndex roundTripsBiBuildable
-
---------------------------------------------------------------------------------
--- LightDlgIndices
---------------------------------------------------------------------------------
-goldenLightDlgIndices :: Property
-goldenLightDlgIndices = goldenTestBi
-  exampleLightDlgIndices
-  "test/golden/bi/delegation/LightDlgIndices"
-
-roundTripLightDlgIndicesBi :: Property
-roundTripLightDlgIndicesBi =
-  eachOf 1000 genLightDlgIndices roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- ProxySKBlockInfo

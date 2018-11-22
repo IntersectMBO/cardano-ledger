@@ -23,8 +23,8 @@ import qualified Hedgehog.Gen as Gen
 import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
-  , Body(..)
-  , ConsensusData(..)
+  , Body
+  , ConsensusData
   , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
@@ -33,6 +33,8 @@ import Cardano.Chain.Block
   , SlogUndo(..)
   , ToSign(..)
   , Undo(..)
+  , body
+  , consensusData
   , mkBlockExplicit
   , mkHeaderExplicit
   )
@@ -59,8 +61,6 @@ import Test.Cardano.Crypto.Gen
 genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
   [ BlockSignature <$> genSignature pm mts
-  , BlockPSignatureLight
-    <$> genProxySignature pm mts Delegation.genLightDlgIndices
   , BlockPSignatureHeavy
     <$> genProxySignature pm mts Delegation.genHeavyDlgIndex
   ]
@@ -71,7 +71,7 @@ genHeaderHash = coerce <$> genTextHash
 
 genBody :: ProtocolMagic -> Gen Body
 genBody pm =
-  Body
+  body
     <$> genTxPayload pm
     <*> pure SscPayload
     <*> Delegation.genPayload pm
@@ -92,7 +92,7 @@ genHeader pm epochSlots =
 
 genConsensusData :: ProtocolMagic -> SlotCount -> Gen ConsensusData
 genConsensusData pm epochSlots =
-  ConsensusData
+  consensusData
     <$> genSlotId epochSlots
     <*> genPublicKey
     <*> genChainDifficulty

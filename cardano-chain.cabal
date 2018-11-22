@@ -55,13 +55,11 @@ library
                        Cardano.Chain.Common.LovelacePortion
                        Cardano.Chain.Common.Merkle
                        Cardano.Chain.Common.Script
-                       Cardano.Chain.Common.SharedSeed
                        Cardano.Chain.Common.StakeholderId
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear
 
                        Cardano.Chain.Delegation.HeavyDlgIndex
-                       Cardano.Chain.Delegation.LightDlgIndices
                        Cardano.Chain.Delegation.Payload
                        Cardano.Chain.Delegation.Undo
 
@@ -69,10 +67,10 @@ library
                        Cardano.Chain.Genesis.Config
                        Cardano.Chain.Genesis.Data
                        Cardano.Chain.Genesis.Delegation
+                       Cardano.Chain.Genesis.Generate
                        Cardano.Chain.Genesis.Hash
                        Cardano.Chain.Genesis.Initializer
                        Cardano.Chain.Genesis.NonAvvmBalances
-                       Cardano.Chain.Genesis.ProtocolConstants
                        Cardano.Chain.Genesis.Spec
                        Cardano.Chain.Genesis.WStakeholders
 
@@ -123,6 +121,7 @@ library
                      , containers
                      , cryptonite
                      , Cabal
+                     , filepath
                      , formatting
                      , lens
                      , memory
@@ -166,7 +165,6 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
-                       Test.Cardano.Chain.ProtocolConstants.Gen
                        Test.Cardano.Chain.Ssc.Bi
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen

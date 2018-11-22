@@ -42,6 +42,7 @@ instance FromJSON ApplicationName where
 data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text
+  deriving (Eq, Show)
 
 instance B.Buildable ApplicationNameError where
   build = \case

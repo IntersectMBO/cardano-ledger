@@ -6,7 +6,6 @@
 module Test.Cardano.Chain.Block.Bi
   ( tests
   , exampleBlockSignature
-  , exampleBlockPSignatureLight
   , exampleBlockPSignatureHeavy
   , exampleBody
   , exampleConsensusData
@@ -31,8 +30,8 @@ import Cardano.Binary.Class (decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
-  , Body(..)
-  , ConsensusData(..)
+  , Body
+  , ConsensusData
   , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
@@ -41,7 +40,9 @@ import Cardano.Chain.Block
   , SlogUndo(..)
   , ToSign(..)
   , Undo(..)
-  , decodeBlock
+  , body
+  , consensusData
+  , decodeBlockOrBoundary
   , decodeHeader
   , dropBoundaryBody
   , dropBoundaryConsensusData
@@ -51,7 +52,7 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Delegation as Delegation (Payload(..))
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
@@ -59,21 +60,22 @@ import Cardano.Crypto
   , abstractHash
   , createPsk
   , hash
+  , noPassSafeSigner
   , proxySign
   , sign
   , toPublic
   )
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestBi
-  , deprecatedGoldenDecode
+  ( deprecatedGoldenDecode
+  , goldenTestBi
   , roundTripsBiBuildable
   , roundTripsBiShow
   )
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example
-  (exampleLightDlgIndices, staticHeavyDlgIndexes, staticProxySKHeavys)
+  (staticHeavyDlgIndexes, staticProxySKHeavys)
 import qualified Test.Cardano.Chain.Delegation.Example as Delegation
 import Test.Cardano.Chain.Slotting.Example (exampleSlotId)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
@@ -128,7 +130,7 @@ roundTripBlockCompat = eachOf
   roundTripsBlockCompat a = trippingBuildable
     a
     (serializeEncoding . encodeBlock)
-    (fmap fromJust . decodeFullDecoder "Block" decodeBlock)
+    (fmap fromJust . decodeFullDecoder "Block" decodeBlockOrBoundary)
 
 
 --------------------------------------------------------------------------------
@@ -138,11 +140,6 @@ roundTripBlockCompat = eachOf
 goldenBlockSignature :: Property
 goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
-
-goldenBlockSignature_Light :: Property
-goldenBlockSignature_Light = goldenTestBi
-  exampleBlockPSignatureLight
-  "test/golden/bi/block/BlockSignature_Light"
 
 goldenBlockSignature_Heavy :: Property
 goldenBlockSignature_Heavy = goldenTestBi
@@ -228,7 +225,7 @@ roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
 goldenConsensusData :: Property
 goldenConsensusData = goldenTestBi mcd "test/golden/bi/block/ConsensusData"
  where
-  mcd = ConsensusData
+  mcd = consensusData
     exampleSlotId
     examplePublicKey
     exampleChainDifficulty
@@ -316,25 +313,20 @@ exampleBlockSignature :: BlockSignature
 exampleBlockSignature = BlockSignature
   (sign (ProtocolMagic 7) SignMainBlock exampleSecretKey exampleToSign)
 
-exampleBlockPSignatureLight :: BlockSignature
-exampleBlockPSignatureLight = BlockPSignatureLight sig
- where
-  sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
-  [delegateSk, issuerSk] = exampleSecretKeys 5 2
-  psk = createPsk pm issuerSk (toPublic delegateSk) exampleLightDlgIndices
-  pm                     = ProtocolMagic 2
-
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
  where
   sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
-  psk =
-    createPsk pm issuerSk (toPublic delegateSk) (staticHeavyDlgIndexes !! 0)
+  psk                    = createPsk
+    pm
+    (noPassSafeSigner issuerSk)
+    (toPublic delegateSk)
+    (staticHeavyDlgIndexes !! 0)
   pm = ProtocolMagic 2
 
 exampleConsensusData :: ConsensusData
-exampleConsensusData = ConsensusData
+exampleConsensusData = consensusData
   exampleSlotId
   examplePublicKey
   exampleChainDifficulty
@@ -353,14 +345,14 @@ exampleProof = Proof
   SscProof
   (abstractHash dp)
   Update.exampleProof
-  where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
+  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
 
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
-exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
-  where dp = Delegation.UnsafePayload (take 4 staticProxySKHeavys)
+exampleBody = body exampleTxPayload SscPayload dp Update.examplePayload
+  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
 
 exampleToSign :: ToSign
 exampleToSign = ToSign

@@ -16,11 +16,11 @@ import Data.Aeson.TH (deriveJSON)
 import Data.List (nub)
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common.SharedSeed (SharedSeed)
+import Cardano.Chain.Common (BlockCount)
+import Cardano.Crypto (ProtocolMagic)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation(..))
 import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
-import Cardano.Chain.Genesis.ProtocolConstants (GenesisProtocolConstants(..))
 import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
 
 
@@ -28,16 +28,16 @@ import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
 data GenesisSpec = UnsafeGenesisSpec
   { gsAvvmDistr         :: !GenesisAvvmBalances
   -- ^ Genesis data describes avvm utxo.
-  , gsFtsSeed           :: !SharedSeed
-  -- ^ Seed for FTS for 0-th epoch.
   , gsHeavyDelegation   :: !GenesisDelegation
-  -- ^ Genesis state of heavyweight delegation. Will be concatenated
-  -- with genesis delegation for bootstrap stakeholders if
-  -- 'tiUseHeavyDlg' is 'True'.
+  -- ^ Genesis state of heavyweight delegation. Will be concatenated with
+  --   genesis delegation for bootstrap stakeholders if 'tiUseHeavyDlg' is
+  --   'True'.
   , gsBlockVersionData  :: !BlockVersionData
   -- ^ Genesis 'BlockVersionData'.
-  , gsProtocolConstants :: !GenesisProtocolConstants
-  -- ^ Other constants which affect consensus.
+  , gsK                 :: !BlockCount
+  -- ^ The security parameter of the Ouroboros protocol
+  , gsProtocolMagic     :: !ProtocolMagic
+  -- ^ The magic number unique to any instance of Cardano
   , gsInitializer       :: !GenesisInitializer
   -- ^ Other data which depend on genesis type.
   } deriving (Eq, Show, Generic)
@@ -48,15 +48,15 @@ deriveJSON defaultOptions ''GenesisSpec
 -- goes wrong.
 mkGenesisSpec
   :: GenesisAvvmBalances
-  -> SharedSeed
   -> GenesisDelegation
   -> BlockVersionData
-  -> GenesisProtocolConstants
+  -> BlockCount
+  -> ProtocolMagic
   -> GenesisInitializer
   -> Either String GenesisSpec
-mkGenesisSpec avvmDistr seed delega bvd pc specType = do
+mkGenesisSpec avvmDistr delega bvd k pm specType = do
   let avvmKeys = M.keys $ getGenesisAvvmBalances avvmDistr
   unless (length (nub avvmKeys) == length avvmKeys)
     $ throwError "mkGenesisSpec: there are duplicates in avvm balances"
   -- All checks passed
-  pure $ UnsafeGenesisSpec avvmDistr seed delega bvd pc specType
+  pure $ UnsafeGenesisSpec avvmDistr delega bvd k pm specType

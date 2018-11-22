@@ -41,10 +41,10 @@ import Cardano.Chain.Update
   , ConfirmedProposalState(..)
   , DecidedProposalState(..)
   , DpsExtra(..)
-  , Payload(..)
+  , Payload
   , PrevValue(..)
   , Proof
-  , Proposal(..)
+  , Proposal
   , ProposalBody(..)
   , ProposalState(..)
   , Proposals
@@ -56,11 +56,13 @@ import Cardano.Chain.Update
   , UpId
   , UpdateData(..)
   , UpsExtra(..)
-  , Vote(..)
+  , Vote
   , VoteId
   , VoteState(..)
   , maybeToPrev
+  , mkProposal
   , mkVote
+  , payload
   )
 import Cardano.Crypto (ProtocolMagic)
 
@@ -231,7 +233,7 @@ genUpdateData =
   UpdateData <$> genHashRaw <*> genHashRaw <*> genHashRaw <*> genHashRaw
 
 genPayload :: ProtocolMagic -> Gen Payload
-genPayload pm = Payload <$> Gen.maybe (genProposal pm) <*> Gen.list
+genPayload pm = payload <$> Gen.maybe (genProposal pm) <*> Gen.list
   (Range.linear 0 10)
   (genVote pm)
 
@@ -240,7 +242,7 @@ genProof pm = genAbstractHash (genPayload pm)
 
 genProposal :: ProtocolMagic -> Gen Proposal
 genProposal pm =
-  Proposal
+  mkProposal
     <$> genProposalBody
     <*> genPublicKey
     <*> genSignature pm genProposalBody

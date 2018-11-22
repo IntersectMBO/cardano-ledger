@@ -10,6 +10,7 @@ module Cardano.Chain.Txp.TxWitness
   , TxInWitness(..)
   , TxSigData(..)
   , TxSig
+  , recoverSigData
   )
 where
 
@@ -24,7 +25,8 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi(..)
+  ( Annotated(..)
+  , Bi(..)
   , Case(..)
   , decodeKnownCborDataItem
   , decodeListLenCanonical
@@ -34,6 +36,7 @@ import Cardano.Binary.Class
   , encodeUnknownCborDataItem
   , knownCborDataItemSizeExpr
   , matchSize
+  , serialize'
   , szCases
   )
 import Cardano.Chain.Common (Script, addressHash)
@@ -45,6 +48,7 @@ import Cardano.Crypto
   , RedeemSignature
   , Signature
   , hash
+  , hashDecoded
   , shortHashF
   )
 
@@ -178,6 +182,13 @@ instance NFData TxInWitness
 newtype TxSigData = TxSigData
   { txSigTxHash :: Hash Tx
   } deriving (Eq, Show, Generic)
+
+recoverSigData :: Annotated Tx ByteString -> Annotated TxSigData ByteString
+recoverSigData atx =
+  let
+    txHash      = hashDecoded atx
+    signedBytes = serialize' txHash --TODO: make the prefix bytes explicit
+  in Annotated (TxSigData txHash) signedBytes
 
 instance Bi TxSigData where
   encode txSigData = encode (txSigTxHash txSigData)

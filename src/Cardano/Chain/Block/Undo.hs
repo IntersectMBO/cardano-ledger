@@ -6,6 +6,7 @@
 module Cardano.Chain.Block.Undo
   ( Undo(..)
   , buildUndo
+  , ABlund
   , Blund
   )
 where
@@ -15,7 +16,7 @@ import Cardano.Prelude
 import Formatting (Format, bprint, build, later)
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Block.Block (Block)
+import Cardano.Chain.Block.Block (ABlock, Block)
 import Cardano.Chain.Block.SlogUndo (SlogUndo(..), buildSlogUndo)
 import qualified Cardano.Chain.Delegation as Delegation (Undo)
 import Cardano.Chain.Slotting (SlotCount)
@@ -34,6 +35,7 @@ data Undo = Undo
 
 -- | Block and its Undo
 type Blund = (Block, Undo)
+type ABlund a = (ABlock a, Undo)
 
 buildUndo :: SlotCount -> Format r (Undo -> r)
 buildUndo epochSlots = later $ \undo -> bprint

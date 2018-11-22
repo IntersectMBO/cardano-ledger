@@ -4,6 +4,7 @@
 module Cardano.Chain.Txp.TxProof
   ( TxProof(..)
   , mkTxProof
+  , recoverTxProof
   )
 where
 
@@ -15,9 +16,10 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
 import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxPayload (TxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxPayload
+  (ATxPayload, TxPayload, recoverHashedBytes, txpTxs, txpWitnesses)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
-import Cardano.Crypto (Hash, hash)
+import Cardano.Crypto (Hash, hash, hashDecoded)
 
 
 data TxProof = TxProof
@@ -55,4 +57,11 @@ mkTxProof payload = TxProof
   { txpNumber        = fromIntegral (length $ txpTxs payload)
   , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
   , txpWitnessesHash = hash $ txpWitnesses payload
+  }
+
+recoverTxProof :: ATxPayload ByteString -> TxProof
+recoverTxProof payload = TxProof
+  { txpNumber        = fromIntegral (length $ txpTxs payload)
+  , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
+  , txpWitnessesHash = hashDecoded $ recoverHashedBytes payload
   }

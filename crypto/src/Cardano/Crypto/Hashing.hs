@@ -26,6 +26,7 @@ module Cardano.Crypto.Hashing
   , mediumHashF
   , shortHashF
   , hash
+  , hashDecoded
   , hashRaw
 
          -- * Utility
@@ -53,7 +54,8 @@ import qualified Data.ByteString.Lazy as LBS
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class (Bi(..), DecoderError(..), Raw, withWordSize)
+import Cardano.Binary.Class
+  (Bi(..), Decoded(..), DecoderError(..), Raw, withWordSize)
 import qualified Cardano.Binary.Class as Bi
 
 
@@ -162,6 +164,10 @@ type Hash = AbstractHash Blake2b_256
 -- | Short version of 'unsafeHash'.
 hash :: Bi a => a -> Hash a
 hash = abstractHash
+
+-- | Hashes the annotation
+hashDecoded :: (Decoded t) => t -> Hash (BaseType t)
+hashDecoded = unsafeAbstractHash . LBS.fromStrict . recoverBytes
 
 -- | Raw constructor application.
 hashRaw :: LBS.ByteString -> Hash Raw

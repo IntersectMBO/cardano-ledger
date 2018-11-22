@@ -24,7 +24,7 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 
 
-import Cardano.Binary.Class (biSize)
+import Cardano.Binary.Class (Annotated(..), biSize)
 import Cardano.Chain.Common
   ( Address
   , Lovelace
@@ -40,13 +40,14 @@ import Cardano.Chain.Common
   , subLovelace
   )
 import Cardano.Chain.Txp.Tx (Tx(..), TxIn)
-import Cardano.Chain.Txp.TxAux (TxAux(..))
-import Cardano.Chain.Txp.TxWitness (TxInWitness(..), TxSigData(..))
+import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taTx, taWitness)
+import Cardano.Chain.Txp.TxWitness
+  (TxInWitness(..), TxSigData(..), recoverSigData)
 import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Crypto
-  (ProtocolMagic, SignTag(..), checkSig, hash, redeemCheckSig)
+  (ProtocolMagic, SignTag(..), verifySignatureDecoded, verifyRedeemSigDecoded)
 
 
 -- | A representation of all the ways a transaction might be invalid
@@ -132,18 +133,21 @@ validateTxIn utxo txIn
 validateWitness
   :: MonadError TxValidationError m
   => ProtocolMagic
-  -> TxSigData
+  -> (Annotated TxSigData ByteString)
   -> Address
   -> TxInWitness
   -> m ()
 validateWitness pm sigData addr witness = case witness of
 
   PkWitness pk sig -> unless
-    (checkSig pm SignTx pk sigData sig && checkPubKeyAddress pk addr)
+    (  verifySignatureDecoded pm SignTx pk sigData sig
+    && checkPubKeyAddress pk addr
+    )
     (throwError $ TxValidationInvalidWitness witness)
 
   RedeemWitness pk sig -> unless
-    (redeemCheckSig pm SignRedeemTx pk sigData sig && checkRedeemAddress pk addr
+    (  verifyRedeemSigDecoded pm SignRedeemTx pk sigData sig
+    && checkRedeemAddress pk addr
     )
     (throwError $ TxValidationInvalidWitness witness)
 
@@ -161,7 +165,11 @@ validateWitness pm sigData addr witness = case witness of
  where
 
   txScriptCheck
-    :: MonadError TxValidationError m => TxSigData -> Script -> Script -> m ()
+    :: MonadError TxValidationError m
+    => (Annotated TxSigData ByteString)
+    -> Script
+    -> Script
+    -> m ()
   txScriptCheck _ _ _ = throwError TxValidationScriptWitness
 
 
@@ -191,10 +199,14 @@ updateUTxOWitness
   :: MonadError UTxOValidationError m
   => ProtocolMagic
   -> UTxO
-  -> TxAux
+  -> ATxAux ByteString
   -> m UTxO
-updateUTxOWitness pm utxo (TxAux tx witness) = do
-  let sigData = TxSigData $ hash tx
+updateUTxOWitness pm utxo ta = do
+  let
+    tx      = taTx ta
+    witness = taWitness ta
+    --TODO:  after rebase: hashAnnotated fix
+    sigData = recoverSigData $ aTaTx ta
 
   -- Get the signing addresses for each transaction input from the 'UTxO'
   addresses <-

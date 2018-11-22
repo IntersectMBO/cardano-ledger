@@ -28,8 +28,12 @@ library
                        Cardano.Binary.Class.Core
                        Cardano.Binary.Class.Drop
                        Cardano.Binary.Class.Primitive
+                       Cardano.Binary.Class.Annotated
+                       Cardano.Binary.Class.ToCBOR
+                       Cardano.Binary.Class.FromCBOR
 
-  build-depends:       base
+  build-depends:     base
+                     , aeson
                      , bytestring
                      , cardano-prelude
                      , cborg

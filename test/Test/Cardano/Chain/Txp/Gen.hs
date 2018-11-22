@@ -43,13 +43,13 @@ import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Txp
   ( Tx(..)
   , TxAttributes
-  , TxAux(..)
+  , TxAux
   , TxId
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
   , TxOutAux(..)
-  , TxPayload(..)
+  , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
@@ -57,6 +57,8 @@ import Cardano.Chain.Txp
   , TxWitness
   , TxpConfiguration(..)
   , TxpUndo
+  , mkTxAux
+  , mkTxPayload
   )
 import Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
 
@@ -90,7 +92,7 @@ genTxAttributes :: Gen TxAttributes
 genTxAttributes = pure $ mkAttributes ()
 
 genTxAux :: ProtocolMagic -> Gen TxAux
-genTxAux pm = TxAux <$> genTx <*> (genTxWitness pm)
+genTxAux pm = mkTxAux <$> genTx <*> (genTxWitness pm)
 
 genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash
@@ -135,7 +137,7 @@ genTxpUndo :: Gen TxpUndo
 genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
 genTxPayload :: ProtocolMagic -> Gen TxPayload
-genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
+genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagic -> Gen TxProof
 genTxProof pm =

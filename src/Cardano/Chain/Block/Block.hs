@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveFunctor        #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -10,9 +11,12 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Block
-  ( Block
+  ( ABlock
+  , Block
   , encodeBlock
-  , decodeBlock
+  , decodeABlock
+  , decodeABlockOrBoundary
+  , decodeBlockOrBoundary
   , mkBlock
   , mkBlockExplicit
   , blockPrevHash
@@ -44,24 +48,40 @@ import Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
-  ( Bi(..)
+  ( Annotated(..)
+  , Bi(..)
+  , ByteSpan
   , Decoder
   , DecoderError(..)
   , Dropper
   , Encoding
+  , decodeAnnotated
   , encodeListLen
   , enforceSize
   )
-import Cardano.Chain.Block.Body (Body(..), BodyError, bodyTxs, verifyBody)
+import Cardano.Chain.Block.Body
+  ( ABody
+  , Body
+  , BodyError
+  , bodyDlgPayload
+  , bodySscPayload
+  , bodyTxPayload
+  , bodyTxs
+  , bodyUpdatePayload
+  , decodeABody
+  , verifyBody
+  )
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData(..))
 import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Header
-  ( BlockSignature(..)
-  , Header(..)
+  ( AHeader
+  , BlockSignature(..)
+  , Header
   , HeaderError
   , HeaderHash
+  , decodeAHeader
   , dropBoundaryHeader
   , hashHeader
   , headerAttributes
@@ -69,6 +89,8 @@ import Cardano.Chain.Block.Header
   , headerDifficulty
   , headerEBDataProof
   , headerLeaderKey
+  , headerPrevHash
+  , headerProof
   , headerSignature
   , headerSlot
   , headerSoftwareVersion
@@ -78,26 +100,30 @@ import Cardano.Chain.Block.Header
 import Cardano.Chain.Block.Proof (Proof(..), ProofError, checkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
 import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
-import qualified Cardano.Chain.Delegation.Payload as Delegation (Payload)
+import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (SlotId(..))
 import Cardano.Chain.Ssc (SscPayload)
-import Cardano.Chain.Txp.TxPayload (TxPayload)
+import Cardano.Chain.Txp.TxPayload (ATxPayload)
 import Cardano.Chain.Update.BlockVersion (BlockVersion)
-import qualified Cardano.Chain.Update.Payload as Update (Payload)
+import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto (Hash, ProtocolMagic, PublicKey, SecretKey, hash)
+import Cardano.Crypto
+  (Hash, ProtocolMagic, PublicKey, SecretKey, hash, hashDecoded)
 
 
 --------------------------------------------------------------------------------
 -- Block
 --------------------------------------------------------------------------------
 
-data Block = Block
-  { blockHeader    :: Header
-  , blockBody      :: Body
-  , blockExtraData :: ExtraBodyData
-  } deriving (Eq, Show, Generic, NFData)
+
+type Block = ABlock ()
+
+data ABlock a = ABlock
+  { blockHeader     :: AHeader a
+  , blockBody       :: ABody a
+  , aBlockExtraData :: Annotated ExtraBodyData a
+  } deriving (Eq, Show, Generic, NFData, Functor)
 
 instance B.Buildable Block where
   build block = bprint
@@ -124,9 +150,13 @@ instance Bi Block where
       <> encode (blockBody block)
       <> encode (blockExtraData block)
 
-  decode = do
-    enforceSize "Block" 3
-    Block <$> decode <*> decode <*> decode
+  decode = void <$> decodeABlock
+
+decodeABlock :: Decoder s (ABlock ByteSpan)
+decodeABlock = do
+  enforceSize "Block" 3
+  ABlock <$> decodeAHeader <*> decodeABody <*> decodeAnnotated
+
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
 encodeBlock :: Block -> Encoding
@@ -139,16 +169,18 @@ encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeBlock :: Decoder s (Maybe Block)
-decodeBlock = do
+decodeABlockOrBoundary :: Decoder s (Maybe (ABlock ByteSpan))
+decodeABlockOrBoundary = do
   enforceSize "Block" 2
   decode @Word >>= \case
     0 -> do
       dropBoundaryBlock
       pure Nothing
-    1 -> Just <$> decode
+    1 -> Just <$> decodeABlock
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
+decodeBlockOrBoundary :: Decoder s (Maybe Block)
+decodeBlockOrBoundary = fmap void <$> decodeABlockOrBoundary
 
 --------------------------------------------------------------------------------
 -- BoundaryBlock
@@ -197,10 +229,10 @@ mkBlockExplicit
   -> ProxySKBlockInfo
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body = Block
+mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body = ABlock
   (mkHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
   body
-  extraB
+  (Annotated extraB ())
  where
   extraB :: ExtraBodyData
   extraB = ExtraBodyData (mkAttributes ())
@@ -231,7 +263,8 @@ instance B.Buildable BlockError where
     BlockProofError err ->
       bprint ("Proof was invalid while checking Block.\n Error: " . build) err
 
-verifyBlock :: MonadError BlockError m => ProtocolMagic -> Block -> m ()
+verifyBlock
+  :: MonadError BlockError m => ProtocolMagic -> ABlock ByteString -> m ()
 verifyBlock pm block = do
   liftEither . first BlockHeaderError $ verifyHeader pm (blockHeader block)
   liftEither . first BlockBodyError $ verifyBody pm (blockBody block)
@@ -244,56 +277,59 @@ verifyBlock pm block = do
     (blockProof block)
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
-  let extraDataHash = hash $ blockExtraData block
+  let extraDataHash = hashDecoded (aBlockExtraData block)
   unless (extraDataHash == blockExtraDataProof block) $ throwError
     (BlockInvalidExtraDataProof (blockExtraDataProof block) extraDataHash)
 
 
 --------------------------------------------------------------------------------
--- Block lenses
+-- Block accessors
 --------------------------------------------------------------------------------
 
-blockPrevHash :: Block -> HeaderHash
+blockExtraData :: ABlock a -> ExtraBodyData
+blockExtraData = unAnnotated . aBlockExtraData
+
+blockPrevHash :: ABlock a -> HeaderHash
 blockPrevHash = headerPrevHash . blockHeader
 
-blockProof :: Block -> Proof
+blockProof :: ABlock a -> Proof
 blockProof = headerProof . blockHeader
 
-blockSlot :: Block -> SlotId
+blockSlot :: ABlock a -> SlotId
 blockSlot = headerSlot . blockHeader
 
-blockLeaderKey :: Block -> PublicKey
+blockLeaderKey :: ABlock a -> PublicKey
 blockLeaderKey = headerLeaderKey . blockHeader
 
-blockDifficulty :: Block -> ChainDifficulty
+blockDifficulty :: ABlock a -> ChainDifficulty
 blockDifficulty = headerDifficulty . blockHeader
 
-blockSignature :: Block -> BlockSignature
+blockSignature :: ABlock a -> BlockSignature
 blockSignature = headerSignature . blockHeader
 
-blockBlockVersion :: Block -> BlockVersion
+blockBlockVersion :: ABlock a -> BlockVersion
 blockBlockVersion = headerBlockVersion . blockHeader
 
-blockSoftwareVersion :: Block -> SoftwareVersion
+blockSoftwareVersion :: ABlock a -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockHeaderAttributes :: Block -> Attributes ()
+blockHeaderAttributes :: ABlock a -> Attributes ()
 blockHeaderAttributes = headerAttributes . blockHeader
 
-blockExtraDataProof :: Block -> Hash ExtraBodyData
+blockExtraDataProof :: ABlock a -> Hash ExtraBodyData
 blockExtraDataProof = headerEBDataProof . blockHeader
 
-blockTxPayload :: Block -> TxPayload
+blockTxPayload :: ABlock a -> ATxPayload a
 blockTxPayload = bodyTxPayload . blockBody
 
-blockSscPayload :: Block -> SscPayload
+blockSscPayload :: ABlock a -> SscPayload
 blockSscPayload = bodySscPayload . blockBody
 
-blockUpdatePayload :: Block -> Update.Payload
+blockUpdatePayload :: ABlock a -> Update.APayload a
 blockUpdatePayload = bodyUpdatePayload . blockBody
 
-blockDlgPayload :: Block -> Delegation.Payload
+blockDlgPayload :: ABlock a -> Delegation.APayload a
 blockDlgPayload = bodyDlgPayload . blockBody
 
-blockAttributes :: Block -> Attributes ()
+blockAttributes :: ABlock a -> Attributes ()
 blockAttributes = ebdAttributes . blockExtraData

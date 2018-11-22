@@ -1,14 +1,19 @@
 {-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Body
-  ( Body(..)
+  ( Body
+  , body
+  , ABody(..)
   , BodyError(..)
   , bodyTxs
   , bodyWitnesses
+  , decodeABody
   , verifyBody
   )
 where
@@ -19,30 +24,39 @@ import Control.Monad.Except (MonadError, liftEither)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary.Class
+  (Bi(..), ByteSpan, Decoder, encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
-  (Payload, PayloadError(..), checkPayload)
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxPayload (TxPayload(..), txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxPayload
+  (ATxPayload, TxPayload, decodeATxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Crypto (ProtocolMagic)
 
 
+
 -- | 'Body' consists of payloads of all block components
-data Body = Body
-  { bodyTxPayload     :: !TxPayload
+type Body = ABody ()
+
+-- | Constructor for 'Body'
+body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
+body tx ssc dlg upd = ABody tx ssc dlg upd
+
+-- | 'Body' consists of payloads of all block components
+data ABody a = ABody
+  { bodyTxPayload     :: !(ATxPayload a)
   -- ^ Txp payload
   , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
-  , bodyDlgPayload    :: !Delegation.Payload
+  , bodyDlgPayload    :: !(Delegation.APayload a)
   -- ^ Heavyweight delegation payload (no-ttl certificates)
-  , bodyUpdatePayload :: !Update.Payload
+  , bodyUpdatePayload :: !(Update.APayload a)
   -- ^ Additional update information for the update system
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, Functor, NFData)
 
-instance Bi Body where
+instance Bi (ABody ()) where
   encode bc =
     encodeListLen 4
       <> encode (bodyTxPayload bc)
@@ -50,9 +64,16 @@ instance Bi Body where
       <> encode (bodyDlgPayload bc)
       <> encode (bodyUpdatePayload bc)
 
-  decode = do
-    enforceSize "Body" 4
-    Body <$> decode <*> decode <*> decode <*> decode
+  decode = void <$> decodeABody
+
+decodeABody :: Decoder s (ABody ByteSpan)
+decodeABody = do
+  enforceSize "Body" 4
+  ABody
+    <$> decodeATxPayload
+    <*> decode
+    <*> Delegation.decodeAPayload
+    <*> Update.decodeAPayload
 
 data BodyError
   = BodyDelegationPayloadError Delegation.PayloadError
@@ -67,7 +88,8 @@ instance B.Buildable BodyError where
       ("Update.Payload was invalid while checking Body.\n Error: " . build)
       err
 
-verifyBody :: MonadError BodyError m => ProtocolMagic -> Body -> m ()
+verifyBody
+  :: MonadError BodyError m => ProtocolMagic -> ABody ByteString -> m ()
 verifyBody pm mb = do
   liftEither . first BodyDelegationPayloadError $ Delegation.checkPayload
     pm
