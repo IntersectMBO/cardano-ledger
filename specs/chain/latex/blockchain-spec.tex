@@ -513,7 +513,12 @@ A non-genesis block $\var{b}$ is valid if:
   corresponding verification key in the genesis block.
   %
   The certificate therefore carries a a cryptographic signature $\sigma'$,
-  and
+\item new delegation certificates that are in the body of $b$ are not in
+  conflict with earlier delegation certificates,
+\item the size of the block in bytes is within limits, as defined by
+  \eqref{eq:blocksizelimit},
+\item the size of the block header in bytes is within limits, as defined by
+  protocol parameters, and
 \item in the rolling window of the last $K$ blocks, the number of blocks
   signed by keys that $sk_s$ delegated to is no more than a threshold
   $K \cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from
@@ -521,6 +526,16 @@ A non-genesis block $\var{b}$ is valid if:
     servers, though it should be somehow related to it.}  that will be picked
   in the range $1/5 \leq t \leq 1/4$.
 \end{enumerate}
+
+\begin{align}
+  \label{eq:blocksizelimit}
+  \blocksizelimit{b}{pp} = \
+  \begin{cases}
+    \maxblocksize{pp} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
+    2^{21} & \text{otherwise}
+  \end{cases}
+\end{align}
+
 
 Relationship between the $\text{\signname}$ function and the
 $\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
@@ -666,31 +681,7 @@ Figure~\ref{fig:block-ext-types-funs}.
 \subsection{Blockchain Extension}
 \label{sec:chain-extension}
 
-A new block $b \in \RBlock$ with an index $ix \in BlockIx$, signed by a
-signing key $sk_d$ in a slot $sl$ can extend a blockchain if the following
-conditions are met:
-%
-\begin{enumerate}
-\item $sk_d$ has a corresponding verification key $vk_d$ that has delegation
-  rights for the slot $sl$,
-\item new delegation certificates that are in the body of $b$ are not in
-  conflict with earlier delegation certificates,
-\item the size of the block in bytes is within limits, as defined by
-  \eqref{eq:blocksizelimit}, and.
-\item the size of the block header in bytes is within limits, as defined by
-  protocol parameters.
-\end{enumerate}
-
-\begin{align}
-  \label{eq:blocksizelimit}
-  \blocksizelimit{b}{pp} = \
-  \begin{cases}
-    \maxblocksize{pp} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
-    2^{21} & \text{otherwise}
-  \end{cases}
-\end{align}
-
-A rule capturing the blockchain extension is given in
+The central rule that captures blockchain extension is given with
 Figure~\ref{fig:blockchain-extension}.
 
 \begin{figure}
