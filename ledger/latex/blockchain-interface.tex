@@ -166,7 +166,6 @@
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{k} & \mathbb{N} & \text{chain stability parameter}\\
-        \var{w} & \mathbb{N} & \text{candidate versions window size}\\
         \var{u} & \mathbb{N} & \text{update proposals time-to-live}\\
         \var{e_c} & \Epoch & \text{current epoch}\\
         \var{b_n} & \BkNr & \text{current block number}\\
@@ -203,7 +202,8 @@
       \_ \vdash \_ \trans{upivote}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState \times \Vote \times \UPIState)\\
       \_ \vdash \_ \trans{upibvreg}{\_} \_ &
-      \powerset (\UPIEnv \times \UPIState \times \ProtVer \times \UPIState)\\
+      \powerset (\UPIEnv \times \UPIState
+      \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState \times \Epoch \times \UPIState)
     \end{array}
@@ -251,7 +251,6 @@
       {
         \begin{array}{l}
           k\\
-          w\\
           u\\
           e_c\\
           b_n\\
@@ -334,7 +333,6 @@
       {
         \begin{array}{l}
           k\\
-          w\\
           u\\
           e_c\\
           b_n\\
@@ -396,8 +394,10 @@ rule, however, by keeping all the cleanup logic associated to block number
 change in one place we make reasoning about state size bounds simpler. The
 epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
 update in which epoch, is cleaned up in the rules given in
-\cref{fig:rules:upi-ec}, which deals with epoch change. The sequence
-$\var{bvs}$ is a rolling window, so no cleanup is necessary.
+\cref{fig:rules:upi-ec}, which deals with epoch change. Finally, in
+$\var{vs_{del}}$ we compute the set of all the versions associated with
+proposals id's to be removed, and we remove these versions from $\var{bvs}$.
+
 
 \begin{figure}[htb]
   \begin{equation}
@@ -407,9 +407,9 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
       {
         \begin{array}{l}
           k\\
-          w\\
           b_n\\
           (\var{pv}, \var{pps})\\
+          \var{dms}\\
           \var{cps}\\
           \var{rups}
         \end{array}
@@ -423,7 +423,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
           \end{array}
         \right)
       }
-      \trans{upbvreg}{\var{bv}}
+      \trans{upbvreg}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -433,12 +433,12 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
         \right)
       }\\
       \var{pids_{old}} = \dom~(pws \restrictrange [.., b_n - u])
+      & \var{vs_{del}} = \dom~(\var{pids_{old}} \restrictdom \var{rups})
     }
     {
       {
         \begin{array}{l}
           k\\
-          w\\
           u\\
           e_c\\
           b_n\\
@@ -461,7 +461,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
           \end{array}
         \right)
       }
-      \trans{upibvreg}{\var{bv}}
+      \trans{upibvreg}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -472,7 +472,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
             \var{eps}\\
             \var{pids_{old}} \subtractdom \var{cps}\\
             \var{pids_{old}} \subtractdom \var{vts}\\
-            \var{bvs}\\
+            \var{vs_{del}}  \subtractdom \var{bvs}\\
             \var{pids_{old}} \subtractdom \var{pws}
           \end{array}
         \right)
@@ -492,7 +492,10 @@ In such case, the current epoch is also updated accordingly. The candidate
 versions and parameters map $(\var{pv_c}, \var{pps_c})$ remain constant in this
 transition, even if they become adopted. Finally, the set $\var{eps}$ is
 updated so that only keys that proposed in epochs no earlier than $e_n$ are
-kept.
+kept. Finally, note that we use $\var{pps} \unionoverride \var{pps'}$ in the
+final state, since the candidate proposal might only update some parameters of
+the protocol: by using union override $\var{pps'}$ overwrites the values of the
+parameters in $\var{pps}$.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -581,7 +584,6 @@ kept.
       {
         \begin{array}{l}
           k\\
-          w\\
           u\\
           e_c\\
           b_n\\
@@ -609,7 +611,7 @@ kept.
         \left(
           \begin{array}{l}
             \var{e'}\\
-            \var{(\var{pv'}, \var{pps'})}\\
+            \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
             \var{rups}\\
             {[e_n, ..]} \restrictdom \var{eps}\\
