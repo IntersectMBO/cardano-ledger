@@ -4,6 +4,7 @@
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 \newcommand{\ProtAtt}{\ensuremath{\type{ProtAtt}}}
 \newcommand{\ProtParams}{\ensuremath{\type{ProtParams}}}
+\newcommand{\Rups}{\ensuremath{\type{Rups}}}
 \newcommand{\UPVEnv}{\ensuremath{\type{UPVEnv}}}
 \newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
 \newcommand{\UPLEnv}{\ensuremath{\type{UPLEnv}}}
@@ -88,7 +89,7 @@ updated.
         \end{array}
                    \right)
                    }
-                          & \text{protocol update signed data}
+               & \text{protocol update signed data}
     \end{array}
   \end{equation*}
   \emph{Abstract functions}
@@ -762,7 +763,7 @@ blocks. Some clarifications are in order:
 \item The $k$ parameter is used to determined when a confirmed proposal is
   stable. Given we are in a current block $b_n$, all update proposals confirmed
   at or before block $b_n - k$ are deemed stable.
-\item The type $\type{Rups}$ is equal to
+\item The type $\Rups$ is equal to
   $\UPropId \mapsto (\ProtVer \times \ProtParams)$, we use this local
   definition to be able to fit the description of the environment in the page
   width.
@@ -782,7 +783,7 @@ blocks. Some clarifications are in order:
         \var{b_n} & \BkNr & \text{current block number}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \ProtParams & \text{current protocol parameters}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
-        \var{rups} & \type{Rups}
+        \var{rups} & \Rups
                              & \text{registered update proposals}\\
       \end{array}\right)
   \end{align*}

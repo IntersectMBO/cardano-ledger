@@ -179,11 +179,12 @@
     & \UPIState
       = \left(
       \begin{array}{r@{~\in~}lr}
+        \var{e_p} & \Epoch & \text{previously seen epoch}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \ProtParams
-        & \text{current protocol}\\
+        & \text{current protocol information}\\
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \ProtParams
-        & \text{candidate protocol}\\
-        \var{rups} & \type{Rups}
+        & \text{candidate protocol information}\\
+        \var{rups} & \Rups
         & \text{registered update proposals}\\
         \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
         & \text{proposals per-epoch per-key}\\
@@ -261,6 +262,7 @@
       {
         \left(
           \begin{array}{l}
+            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
@@ -276,6 +278,7 @@
       {
         \left(
           \begin{array}{l}
+            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{rups'}\\
@@ -342,8 +345,9 @@
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
             \var{eps}\\
             \var{cps}\\
@@ -357,8 +361,9 @@
       {
         \left(
           \begin{array}{l}
-            \var{pv}\\
-            \var{pps}\\
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
             \var{eps}\\
             \var{cps'}\\
@@ -444,6 +449,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
       {
         \left(
           \begin{array}{l}
+            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{rups}\\
@@ -459,6 +465,7 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
       {
         \left(
           \begin{array}{l}
+            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
             \var{pids_{old}} \subtractdom \var{rups}\\
@@ -480,18 +487,19 @@ $\var{bvs}$ is a rolling window, so no cleanup is necessary.
 
 Rule~\ref{eq:rule:upi-ec} models how the protocol version and its parameters
 are changed depending on the epoch in the signal ($e_n$ in this case). A change
-only occurs if the new epoch is greater than the current one ($e_c$). In such
-case, the current epoch is also updated accordingly. The candidate versions and
-parameters $(\var{pv_c}, \var{pps_c})$ remain constant in this transition, even
-if they become adopted. Finally, the set $\var{eps}$ is updated so that only
-keys that proposed in epochs no earlier than $e_n$ are kept.
+only occurs if the new epoch is greater than the previously seen epoch ($e_p$).
+In such case, the current epoch is also updated accordingly. The candidate
+versions and parameters $(\var{pv_c}, \var{pps_c})$ remain constant in this
+transition, even if they become adopted. Finally, the set $\var{eps}$ is
+updated so that only keys that proposed in epochs no earlier than $e_n$ are
+kept.
 
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:pvbump-change-noop}
     \inference
     {
-      e_n \leq e_c
+      e_n \leq e_p
     }
     {
       (\var{pv_c}, \var{pps_c})
@@ -499,7 +507,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
       {
         \left(
           \begin{array}{l}
-            \var{e_c}\\
+            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
           \end{array}
         \right)
@@ -508,7 +516,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
       {
         \left(
           \begin{array}{l}
-            \var{e_c}\\
+            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
           \end{array}
         \right)
@@ -520,7 +528,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
     \label{eq:rule:pvbump-change}
     \inference
     {
-      e_c < e_n
+      e_p < e_n
     }
     {
       (\var{pv_c}, \var{pps_c})
@@ -528,7 +536,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
       {
         \left(
           \begin{array}{l}
-            \var{e_c}\\
+            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}
           \end{array}
         \right)
@@ -554,7 +562,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
       {
         \left(
           \begin{array}{l}
-            \var{e_c}\\
+            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}
           \end{array}
         \right)
@@ -574,7 +582,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
         \begin{array}{l}
           k\\
           w\\
-          u
+          u\\
           e_c\\
           b_n\\
           \var{dms}\\
@@ -584,7 +592,7 @@ keys that proposed in epochs no earlier than $e_n$ are kept.
       {
         \left(
           \begin{array}{l}
-            \var{e_c}\\
+            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
             \var{rups}\\
