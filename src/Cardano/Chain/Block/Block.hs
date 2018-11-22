@@ -55,6 +55,7 @@ import Cardano.Binary.Class
   , DecoderError(..)
   , Dropper
   , Encoding
+  , annotatedDecoder
   , decodeAnnotated
   , encodeListLen
   , enforceSize
@@ -169,18 +170,17 @@ encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeABlockOrBoundary :: Decoder s (Maybe (ABlock ByteSpan))
+decodeABlockOrBoundary :: Decoder s (Either ByteSpan (ABlock ByteSpan))
 decodeABlockOrBoundary = do
   enforceSize "Block" 2
   decode @Word >>= \case
-    0 -> do
-      dropBoundaryBlock
-      pure Nothing
-    1 -> Just <$> decodeABlock
+    0 -> Left . annotation <$> annotatedDecoder dropBoundaryBlock
+    1 -> Right <$> decodeABlock
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
 decodeBlockOrBoundary :: Decoder s (Maybe Block)
-decodeBlockOrBoundary = fmap void <$> decodeABlockOrBoundary
+decodeBlockOrBoundary =
+  either (const Nothing) (Just . void) <$> decodeABlockOrBoundary
 
 --------------------------------------------------------------------------------
 -- BoundaryBlock
