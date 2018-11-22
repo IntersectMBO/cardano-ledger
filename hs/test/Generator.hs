@@ -152,26 +152,31 @@ genLedgerStateTx keyList sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (KeyPairs, Natural, Coin, LedgerState, Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
   ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
-  (fees, ls') <- repeatTx steps keyPairs (Coin 0) ls
-  pure (keyPairs, steps, fees, ls, ls')
+  (fees, txs, ls') <- repeatCollectTx steps keyPairs (Coin 0) ls []
+  pure (keyPairs, steps, fees, ls, txs, ls')
 
 -- | Generator for a fixed number of 'n' transaction step executions, using the
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
-repeatTx :: Natural -> KeyPairs -> Coin -> LedgerState ->
-            Gen (Coin, Either [ValidationError] LedgerState)
-repeatTx 0 _ fees ls = pure (fees, Right ls)
-repeatTx n !keyPairs !fees !ls = do
-  (fee, _, next) <- genLedgerStateTx keyPairs ls
+repeatCollectTx
+    :: Natural
+    -> KeyPairs
+    -> Coin
+    -> LedgerState
+    -> [TxWits]
+    -> Gen (Coin, [TxWits], Either [ValidationError] LedgerState)
+repeatCollectTx 0 _ fees ls txs = pure (fees, reverse txs, Right ls)
+repeatCollectTx n keyPairs fees ls txs = do
+  (fee, tx, next) <- genLedgerStateTx keyPairs ls
   case next of
-    Left  _   -> pure (fees, next)
-    Right ls' -> repeatTx (n - 1) keyPairs (fee <> fees) ls'
+    Left _    -> pure (fees, txs, next)
+    Right ls' -> repeatCollectTx (n - 1) keyPairs (fee <> fees) ls' (tx:txs)
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -190,12 +195,12 @@ getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Gen (KeyPairs, Natural, LedgerState)
+genValidLedgerState :: Gen (KeyPairs, Natural, [TxWits], LedgerState)
 genValidLedgerState = do
-  (keyPairs, steps, _, _, newState) <- genNonEmptyAndAdvanceTx
+  (keyPairs, steps, _, _, txs, newState) <- genNonEmptyAndAdvanceTx
   case newState of
     Left _   -> Gen.discard
-    Right ls -> pure (keyPairs, steps, ls)
+    Right ls -> pure (keyPairs, steps, txs, ls)
 
 genValidSuccessorState :: KeyPairs -> LedgerState ->
   Gen (Coin, TxWits, LedgerState)
@@ -207,14 +212,14 @@ genValidSuccessorState keyPairs sourceState = do
 
 genValidStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState)
 genValidStateTx = do
-  (keyPairs, steps, ls) <- genValidLedgerState
-  (fee, entry, ls')     <- genValidSuccessorState keyPairs ls
+  (keyPairs, steps, _, ls) <- genValidLedgerState
+  (fee, entry, ls')        <- genValidSuccessorState keyPairs ls
   pure (ls, steps, fee, entry, ls')
 
 genStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerValidation)
 genStateTx = do
-  (keyPairs, steps, ls) <- genValidLedgerState
-  (fee, entry, lv)      <- genLedgerStateTx' keyPairs ls
+  (keyPairs, steps, _, ls) <- genValidLedgerState
+  (fee, entry, lv)         <- genLedgerStateTx' keyPairs ls
   pure (ls, steps, fee, entry, lv)
 
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
