@@ -7,6 +7,7 @@ module Generator
     , genBool
     , genNatural
     , genNonEmptyAndAdvanceTx
+    , genNonEmptyAndAdvanceTx'
     , genNonemptyGenesisState
     , genStateTx
     , genValidStateTx
@@ -94,7 +95,7 @@ genCoinList minCoin maxCoin lower upper = do
 -- value is generated.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 1 100 (length addrs) (length addrs)
+  ys <- genCoinList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
@@ -160,6 +161,16 @@ genNonEmptyAndAdvanceTx = do
   (fees, txs, ls') <- repeatCollectTx steps keyPairs (Coin 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
+-- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
+genNonEmptyAndAdvanceTx'
+  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], LedgerValidation)
+genNonEmptyAndAdvanceTx' = do
+  keyPairs    <- genKeyPairs 1 10
+  steps       <- genNatural 1 10
+  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Coin 0) ls [] []
+  pure (keyPairs, steps, fees, ls, txs, lv')
+
 -- | Generator for a fixed number of 'n' transaction step executions, using the
 -- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
@@ -177,6 +188,23 @@ repeatCollectTx n keyPairs fees ls txs = do
   case next of
     Left _    -> pure (fees, txs, next)
     Right ls' -> repeatCollectTx (n - 1) keyPairs (fee <> fees) ls' (tx:txs)
+
+-- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
+-- exhausting the UTxO set to prevent calling 'head' on empty input list.
+repeatCollectTx'
+    :: Natural
+    -> KeyPairs
+    -> Coin
+    -> LedgerState
+    -> [TxWits]
+    -> [ValidationError]
+    -> Gen (Coin, [TxWits], LedgerValidation)
+repeatCollectTx' n keyPairs fees ls txs validationErrors
+ | n == 0 || (utxoSize $ getUtxo ls) == 0 =
+     pure (fees, reverse txs, LedgerValidation validationErrors ls)
+ | otherwise = do
+    (fee, tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
+    repeatCollectTx' (n - 1) keyPairs (fee <> fees) ls' (tx:txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
