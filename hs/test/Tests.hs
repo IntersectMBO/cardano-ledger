@@ -299,7 +299,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Cover
 propPreserveBalanceInitTx =
     withCoverage $ do
-      (_, steps, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, steps, fees, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
       classify (steps > 1) "non-trivial number of steps"
       case next of
         Left _    -> failure
