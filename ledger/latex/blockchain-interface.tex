@@ -180,9 +180,9 @@
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{e_p} & \Epoch & \text{previously seen epoch}\\
-        (\var{pv}, \var{pps}) & \ProtVer \times \ProtParams
+        (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
         & \text{current protocol information}\\
-        (\var{pv_c}, \var{pps_c}) & \ProtVer \times \ProtParams
+        (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol information}\\
         \var{rups} & \Rups
         & \text{registered update proposals}\\
@@ -489,7 +489,7 @@ Rule~\ref{eq:rule:upi-ec} models how the protocol version and its parameters
 are changed depending on the epoch in the signal ($e_n$ in this case). A change
 only occurs if the new epoch is greater than the previously seen epoch ($e_p$).
 In such case, the current epoch is also updated accordingly. The candidate
-versions and parameters $(\var{pv_c}, \var{pps_c})$ remain constant in this
+versions and parameters map $(\var{pv_c}, \var{pps_c})$ remain constant in this
 transition, even if they become adopted. Finally, the set $\var{eps}$ is
 updated so that only keys that proposed in epochs no earlier than $e_n$ are
 kept.
