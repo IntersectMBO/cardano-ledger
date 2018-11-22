@@ -366,6 +366,23 @@ propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $
                      (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                      inputIndicesSet)
 
+-- | Classify mutated transaction into double-spends (validated and
+-- non-validated). This is a property of the validator, i.e., no validated
+-- transaction should ever be able to do a double spend.
+classifyInvalidDoubleSpend :: Cover
+classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 10000 $ withCoverage $ do
+      (_, steps, fees, ls, txs, LedgerValidation validationErrors ls')
+          <- forAll genNonEmptyAndAdvanceTx'
+      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+      let multiSpentInputs = (Data.MultiSet.size $ Data.MultiSet.filter
+                                   (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+                                   inputIndicesSet)
+      let isMultiSpend = 0 < multiSpentInputs
+      classify (isMultiSpend && validationErrors == []) "multi-spend, validation OK"
+      classify (isMultiSpend && validationErrors /= []) "multi-spend, validation KO"
+      classify (isMultiSpend) "multi-spend"
+      True === ((not isMultiSpend) || validationErrors /= [])
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -397,6 +414,9 @@ propertyTests = testGroup "Property-Based Testing"
                   [testPropertyCoverage
                    "preserve balance of change in UTxO"
                    propBalanceTxInTxOut'
+                  , testPropertyCoverage
+                    "Classify double spend"
+                    classifyInvalidDoubleSpend
                   ]
                 ]
 
