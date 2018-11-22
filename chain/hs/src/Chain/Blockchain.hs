@@ -7,8 +7,10 @@ module Chain.Blockchain where
 import Control.Lens
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
+import Data.Bits (shift)
 import Data.Queue
 import Data.Set (Set)
+import Numeric.Natural
 
 import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
@@ -17,7 +19,7 @@ import UTxO (Hash)
 import Chain.GenesisBlock (genesisBlock)
 import Delegation.Interface
   (DSIState, delegates, initDSIState, newCertsRule, updateCerts)
-import Types (VKey, Sig, Data, HCert, Interf, BC, Slot, Block(..), BlockIx(..))
+import Types (VKey, Sig, Data, HCert, Interf, BC, Slot, Block(..), BlockIx(..), ProtParams(..))
 
 
 -- | Computes the hash of a block
@@ -25,8 +27,12 @@ hashBlock :: Block -> Hash
 hashBlock b@(RBlock{}) = hashlazy (pack . show $ i) where MkBlockIx i = rbIx b
 hashBlock b@(GBlock{}) = gbHash b
 
+-- | Computes the block size in bytes
+bSize :: Block -> Natural
+bSize = undefined
+
 -- | Size of the block sliding window
-newtype K = MkK Word deriving (Eq, Ord)
+newtype K = MkK Natural deriving (Eq, Ord)
 
 -- | The 't' parameter in K * t in the range 0.2 <= t <= 0.25
 -- that limits the number of blocks a signer can signed in a
@@ -70,13 +76,22 @@ trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m)
 incIxMap :: BlockIx -> VKey -> KeyToQMap -> KeyToQMap
 incIxMap ix = Map.adjust (pushQueue ix)
 
+-- | Environment for blockchain rules
+data BlockchainEnv = MkBlockChainEnv
+  {
+    bcEnvPp :: ProtParams
+  , bcEnvSl :: Slot
+  , bcEnvK :: K
+  , bcEnvT :: T
+  }
+
 -- | Extends a chain by a block
 extendChain :: JudgmentContext BC -> State BC
 extendChain jc =
   let
     (env, st, b@(RBlock{})) = jc
     p'                      = b
-    (sl, k, t )             = env
+    (sl, k, t)              = (bcEnvSl env, bcEnvK env, bcEnvT env)
     (m , p, ds)             = st
     vk_d                    = rbSigner b
     ix                      = rbIx b
@@ -95,11 +110,12 @@ instance STS BC where
   -- | The environment consists of K and t parameters. To support a state
   -- transition subsystem, the environment also includes the slot of the
   -- block to be added.
-  type Environment BC = (Slot, K, T)
+  type Environment BC = BlockchainEnv
   data PredicateFailure BC
     = InvalidPredecessor
     | NoDelegationRight
     | InvalidBlockSignature
+    | InvalidBlockSize
     | SignedMaximumNumberBlocks
     | LedgerFailure [PredicateFailure Interf]
     deriving (Eq, Show)
@@ -112,6 +128,7 @@ instance STS BC where
     , Rule
         [
           validPredecessor
+        , validBlockSize
         , hasRight
         , validSignature
         , lessThanLimitSigned
@@ -126,23 +143,41 @@ instance STS BC where
       -- valid predecessor
       validPredecessor :: Antecedent BC
       validPredecessor = Predicate $ \jc ->
-        let (_, (_, p, _), b@(RBlock {})) = jc
+        let
+          (_, (_, p, _), b@(RBlock {})) = jc
          in if hashBlock p == rbHash b
               then Passed
               else Failed InvalidPredecessor
+      -- has a block size within protocol limits
+      validBlockSize :: Antecedent BC
+      validBlockSize = Predicate sizeCheck where
+        sizeCheck :: JudgmentContext BC -> PredicateResult BC
+        sizeCheck (env, _, b@(RBlock {})) =
+          if bSize b <= (blockSizeLimit b (bcEnvPp env))
+            then Passed
+            else Failed InvalidBlockSize
+         where
+           blockSizeLimit :: Block -> ProtParams -> Natural
+           blockSizeLimit (GBlock {}) pp = maxBlockSize pp
+           blockSizeLimit b@(RBlock {}) pp =
+             if rbIsEBB b
+               then 1 `shift` 21
+               else maxBlockSize pp
       -- has a delegation right
       hasRight :: Antecedent BC
       hasRight = Predicate $ \jc ->
-        let (_, (_, _, ds), b@(RBlock {})) = jc
-            vk_d = rbSigner b
+        let
+          (_, (_, _, ds), b@(RBlock {})) = jc
+          vk_d = rbSigner b
          in case Map.lookup vk_d (delegates ds) of
               Nothing -> Failed NoDelegationRight
               _       -> Passed
       -- valid signature
       validSignature :: Antecedent BC
       validSignature = Predicate $ \jc ->
-        let (_, _, b@(RBlock {})) = jc
-            vk_d = rbSigner b
+        let
+          (_, _, b@(RBlock {})) = jc
+          vk_d = rbSigner b
          in if verify vk_d (rbData b) (rbSig b)
               then Passed
               else Failed InvalidBlockSignature
@@ -150,11 +185,12 @@ instance STS BC where
       -- in a sliding window of the last k blocks
       lessThanLimitSigned :: Antecedent BC
       lessThanLimitSigned = Predicate $ \jc ->
-        let (env, st, b@(RBlock {})) = jc
-            (m, _, ds) = st
-            (_, (MkK k), (MkT t)) = env
-            vk_d = rbSigner b
-            dsm = delegates ds
+        let
+          (env, st, b@(RBlock {})) = jc
+          (m, _, ds) = st
+          ((MkK k), (MkT t)) = (bcEnvK env, bcEnvT env)
+          vk_d = rbSigner b
+          dsm = delegates ds
         in case Map.lookup vk_d dsm of
           Nothing   -> Failed NoDelegationRight
           Just vk_s ->
@@ -166,7 +202,7 @@ instance STS BC where
       legalCerts :: Embed Interf BC => Antecedent BC
       legalCerts = SubTrans (EmbeddedTransition (to proj) newCertsRule) where
         proj :: JudgmentContext BC -> JudgmentContext Interf
-        proj ((sl, k, t), (m, p, d), b@(RBlock {})) = (sl, d, rbCerts b)
+        proj (env, (_, _, d), b@(RBlock {})) = (bcEnvSl env, d, rbCerts b)
 
 instance Embed Interf BC where
   wrapFailed = LedgerFailure
