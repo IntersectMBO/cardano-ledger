@@ -357,10 +357,10 @@ propUniqueTxIds = withCoverage $ do
 -- transactions. Note: this is more a property of the current generator.
 propNoDoubleSpend :: Cover
 propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
-      (_, steps, fees, ls, txs, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, _, _, _, txs, next)  <- forAll genNonEmptyAndAdvanceTx
       case next of
-        Left _    -> failure
-        Right ls' -> do
+        Left _  -> failure
+        Right _ -> do
           let inputIndicesSet = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
           0 === (Data.MultiSet.size $ Data.MultiSet.filter
                      (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
@@ -370,8 +370,8 @@ propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $
 -- non-validated). This is a property of the validator, i.e., no validated
 -- transaction should ever be able to do a double spend.
 classifyInvalidDoubleSpend :: Cover
-classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 10000 $ withCoverage $ do
-      (_, steps, fees, ls, txs, LedgerValidation validationErrors ls')
+classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+      (_, _, _, _, txs, LedgerValidation validationErrors _)
           <- forAll genNonEmptyAndAdvanceTx'
       let inputIndicesSet  = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
       let multiSpentInputs = (Data.MultiSet.size $ Data.MultiSet.filter
