@@ -13,6 +13,8 @@
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
 \newcommand{\VState}{\ensuremath{\type{VState}}}
+\newcommand{\BVREnv}{\ensuremath{\type{BVREnv}}}
+\newcommand{\BVRState}{\ensuremath{\type{BVRState}}}
 \newcommand{\BkNr}{\ensuremath{\type{BkNr}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
@@ -129,7 +131,7 @@ First we model the validity of a proposal.
     \UPVState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \ProtParams)
         & \text{registered update proposals}\\
       \end{array}
     \right)
@@ -360,7 +362,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
     \UPRState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \ProtParams)
         & \text{registered update proposals}\\
         \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
       \end{array}
@@ -498,7 +500,7 @@ Terse explanation of Rule~\ref{eq:rule:up-limits}:
     & \VEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \ProtParams)
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
@@ -585,7 +587,7 @@ Terse explanation of Rule~\ref{eq:rule:voting}:
       \begin{array}{r@{~\in~}lr}
         \var{b_n} & \BkNr & \text{current block number}\\
         \var{pps} & \ProtParams & \text{current protocol parameters}\\
-        \var{rups} & \powerset{\UPropId \mapsto (\ProtVer \times \ProtParams)}
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \ProtParams)
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
@@ -753,6 +755,58 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
 \subsection{Block protocol version registration}
 \label{sec:block-protocol-version-reg}
 
+Figure~\ref{fig:ts-types:up-bv-reg} shows the types of the transition system
+associated with the registration of candidate protocol versions present in
+blocks. Some clarifications are in order:
+\begin{itemize}
+\item The $k$ parameter is used to determined when a confirmed proposal is
+  stable. Given we are in a current block $b_n$, all update proposals confirmed
+  at or before block $b_n - k$ are deemed stable.
+\item The type $\type{Rups}$ is equal to
+  $\UPropId \mapsto (\ProtVer \times \ProtParams)$, we use this local
+  definition to be able to fit the description of the environment in the page
+  width.
+\item For the sake of conciseness, we omit the types associated to the
+  transitions $\trans{snocbv}{}$, since they can be inferred from the types of
+  the $\trans{upbvreg}{}$ transitions.
+\end{itemize}
+
+\begin{figure}[htb]
+  \emph{Block protocol version registration environments}
+  \begin{align*}
+    & \BVREnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{k} & \mathbb{N} & \text{chain stability parameter}\\
+        \var{w} & \mathbb{N} & \text{candidate versions window size}\\
+        \var{b_n} & \BkNr & \text{current block number}\\
+        (\var{pv}, \var{pps}) & \ProtVer \times \ProtParams & \text{current protocol parameters}\\
+        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{rups} & \type{Rups}
+                             & \text{registered update proposals}\\
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Block protocol version registration states}
+  \begin{align*}
+    & \BVRState
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        (\var{pv_c}, \var{pps_c}) & \ProtVer \times \ProtParams
+        & \text{candidate protocol parameters}\\
+        \var{bvs} & \seqof{\ProtVer} & \text{last seen candidate versions}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Block protocol version registration transitions}
+    \begin{equation*}
+    \_ \vdash \_ \trans{upbvreg}{\_} \_ \in
+    \powerset (\BVREnv \times \BVRState \times \ProtVer \times \BVRState)
+    \end{equation*}
+  \caption{Vote registration transition-system types}
+  \label{fig:ts-types:up-bv-reg}
+\end{figure}
+
 Rules in \cref{fig:rules:up-bv-reg} specify what happens when a block issuer
 signals that it is ready to upgrade to a new protocol version, given in the
 rule by $\var{bv}$:
@@ -770,7 +824,8 @@ rule by $\var{bv}$:
   these rules.
 \item The protocol version $\var{bv}$ must refer to a registered update
   proposal (which are contained in $\var{rups}$), and this update proposal must
-  have been confirmed $k$ blocks ago, to ensure stability of the confirmation.
+  have been confirmed at least $k$ blocks ago, to ensure stability of the
+  confirmation.
 \end{itemize}
 
 \begin{equation}
@@ -1011,7 +1066,7 @@ rule by $\var{bv}$:
       }
     }
   \end{equation}
-  \caption{Update-proposals adoption rules}
+  \caption{Block protocol version registration rules}
   \label{fig:rules:up-bv-reg}
 \end{figure}
 
