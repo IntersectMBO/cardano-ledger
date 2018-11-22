@@ -19,7 +19,18 @@ import UTxO (Hash)
 import Chain.GenesisBlock (genesisBlock)
 import Delegation.Interface
   (DSIState, delegates, initDSIState, newCertsRule, updateCerts)
-import Types (VKey, Sig, Data, HCert, Interf, BC, Slot, Block(..), BlockIx(..), ProtParams(..))
+import Types
+  ( VKey
+  , Sig
+  , Data
+  , HCert
+  , Interf
+  , BC
+  , Slot
+  , Block(..)
+  , BlockIx(..)
+  , ProtParams(..)
+  )
 
 
 -- | Computes the hash of a block
@@ -95,7 +106,7 @@ extendChain jc =
   let
     (env, st, b@(RBlock{})) = jc
     p'                      = b
-    (sl, k, t)              = (bcEnvSl env, bcEnvK env, bcEnvT env)
+    (sl, k, t )             = (bcEnvSl env, bcEnvK env, bcEnvT env)
     (m , p, ds)             = st
     vk_d                    = rbSigner b
     ix                      = rbIx b
