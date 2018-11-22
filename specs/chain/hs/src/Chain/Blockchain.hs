@@ -31,6 +31,10 @@ hashBlock b@(GBlock{}) = gbHash b
 bSize :: Block -> Natural
 bSize = undefined
 
+-- | Computes the block header size in bytes
+bHeaderSize :: Block -> Natural
+bHeaderSize = undefined
+
 -- | Size of the block sliding window
 newtype K = MkK Natural deriving (Eq, Ord)
 
@@ -116,6 +120,7 @@ instance STS BC where
     | NoDelegationRight
     | InvalidBlockSignature
     | InvalidBlockSize
+    | InvalidHeaderSize
     | SignedMaximumNumberBlocks
     | LedgerFailure [PredicateFailure Interf]
     deriving (Eq, Show)
@@ -129,6 +134,7 @@ instance STS BC where
         [
           validPredecessor
         , validBlockSize
+        , validHeaderSize
         , hasRight
         , validSignature
         , lessThanLimitSigned
@@ -163,6 +169,12 @@ instance STS BC where
              if rbIsEBB b
                then 1 `shift` 21
                else maxBlockSize pp
+      -- has a block header size within protocol limits
+      validHeaderSize :: Antecedent BC
+      validHeaderSize = Predicate $ \(env, _, b@(RBlock {})) ->
+        if bHeaderSize b <= maxHeaderSize (bcEnvPp env)
+          then Passed
+          else Failed InvalidHeaderSize
       -- has a delegation right
       hasRight :: Antecedent BC
       hasRight = Predicate $ \jc ->
