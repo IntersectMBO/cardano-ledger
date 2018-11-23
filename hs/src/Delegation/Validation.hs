@@ -9,9 +9,9 @@ data ValidationError =
                      -- | The transaction results in an increased total balance of the ledger.
                      | IncreasedTotalBalance
                      -- | The transaction does not have all the transaction witnesses required.
-                     | InsuffientTxWitnesses
+                     | InsufficientTxWitnesses
                      -- | The transaction does not have all the certificate witnesses required.
-                     | InsuffientCertWitnesses
+                     | InsufficientCertWitnesses
                      -- | The transaction contains an invalid stake registration certificate.
                      | BadRegistration
                      -- | The transaction contains an invalid stake deregistration certificate.
