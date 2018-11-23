@@ -61,7 +61,7 @@ data ValidationError =
   -- | The transaction results in an increased total balance of the ledger.
   | IncreasedTotalBalance
   -- | The transaction does not have the required witnesses.
-  | InsuffientWitnesses
+  | InsufficientWitnesses
   -- | A stake key cannot be registered again.
   | StakeKeyAlreadyRegistered
   -- | A stake key must be registered to be used or deregistered.
@@ -169,7 +169,7 @@ witnessed :: TxWits -> LedgerState -> Validity
 witnessed (TxWits tx wits) l =
   if Set.size wits <= Set.size ins && all (hasWitness wits) ins
     then Valid
-    else Invalid [InsuffientWitnesses]
+    else Invalid [InsufficientWitnesses]
   where
     utxo = getUtxo l
     ins = inputs tx
