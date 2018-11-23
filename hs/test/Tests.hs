@@ -139,20 +139,26 @@ utxo2 = Map.fromList
        , (TxIn (txid tx2Body) 0, TxOut aliceAddr (Coin 7))
        , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3)) ]
 
+utxo3 :: Map.Map TxIn TxOut
+utxo3 = Map.fromList
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
+       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3))
+       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 7))]
+
 tx2 :: TxWits
 tx2 = TxWits tx2Body (Set.fromList [makeWitness alicePay tx2Body])
 
 tx3Body :: Tx
 tx3Body = Tx
-          Set.empty
-          []
+          (Set.fromList [TxIn (txid tx2Body) 0])
+          [TxOut aliceAddr (Coin 7)]
           (Set.fromList
             [ RegPool stakePool
             , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
             ])
 
 tx3 :: TxWits
-tx3 = TxWits tx3Body Set.empty
+tx3 = TxWits tx3Body (Set.fromList [makeWitness alicePay tx3Body])
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
@@ -186,7 +192,7 @@ testsValidLedger =
           [ testCase "Valid stake key registration." $
               testValidStakeKeyRegistration tx2 utxo2 stakeKeyRegistration1
           , testCase "Valid stake delegation from Alice to stake pool." $
-              testValidDelegation [tx2, tx3] utxo2 stakeKeyRegistration1
+              testValidDelegation [tx2, tx3] utxo3 stakeKeyRegistration1
           ]
     ]
 
