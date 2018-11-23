@@ -239,12 +239,24 @@ testInvalidTransaction =
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
+testEmptyInputSet :: Assertion
+testEmptyInputSet =
+  let
+    txbody = Tx
+              Set.empty
+              [ TxOut aliceAddr (Coin 1)]
+              Set.empty
+    aliceWit = makeWitness alicePay txbody
+    tx = TxWits txbody (Set.fromList [aliceWit])
+  in ledgerState [tx] @?= Left [InputSetEmpty, IncreasedTotalBalance, InsufficientWitnesses]
+
 testsInvalidLedger :: TestTree
 testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   [ testCase "Invalid Ledger - Alice tries to spend a nonexistent input" testSpendNonexistentInput
   , testCase "Invalid Ledger - Alice does not include a witness" testWitnessNotIncluded
   , testCase "Invalid Ledger - Alice tries to spend Bob's UTxO" testSpendNotOwnedUTxO
   , testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testInvalidTransaction
+  , testCase "Invalid Ledger - Alice's transaction does not consume input" testEmptyInputSet
   ]
 
 unitTests :: TestTree
