@@ -29,13 +29,6 @@ module UTxO
   -- , verify
   , union
   , makeWitness
-  -- * Signing and Verifying
-  -- , Owner(..)
-  -- , SKey(..)
-  -- , VKey(..)
-  -- , KeyPair(..)
-  -- , keyPair
-  -- , Sig(..)
   , Wit(..)
   , TxWits(..)
   ) where
