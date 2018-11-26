@@ -15,12 +15,9 @@ module LedgerState
   , RewardAcnt(..)
   , mkRwdAcnt
   , DelegationState(..)
-  , Ledger
-  , LedgerEntry(..)
   , LedgerValidation(..)
   , KeyPairs
   -- * state transitions
-  , applyTransaction
   , asStateTransition
   , asStateTransition'
   , delegatedStake
@@ -33,6 +30,7 @@ module LedgerState
   , ValidationError (..)
   ) where
 
+import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
 import           Data.List               (find)
 import qualified Data.Map                as Map
@@ -46,16 +44,6 @@ import           UTxO
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
-
--- | A ledger consists of a list of entries where each such entry is either a
--- stake delegation step or a transaction.
-
-data LedgerEntry =
-    TransactionData !TxWits
-  | DelegationData !DCert
-    deriving (Show, Eq)
-
-type Ledger = [LedgerEntry]
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -190,8 +178,8 @@ witnessed (TxWits tx wits) l =
     isWitness tx' input unspent (Wit key sig) =
       verify key tx' sig && authTxin key input unspent
 
-valid :: TxWits -> LedgerState -> Validity
-valid tx l =
+validTx :: TxWits -> LedgerState -> Validity
+validTx tx l =
   validInputs tx l
     <> preserveBalance tx l
     <> witnessed tx l
@@ -219,9 +207,8 @@ validKeyDeregistration cert (LedgerState _ ds _) =
 validStakeDelegation :: DCert -> LedgerState -> Validity
 validStakeDelegation cert (LedgerState _ ds _) =
   case cert of
-    Delegate (Delegation source target)
-      -> if Map.member (hashKey source) (getStKeys ds) &&
-            Map.member (hashKey target) (getStPools ds)
+    Delegate (Delegation source _)
+      -> if Map.member (hashKey source) (getStKeys ds)
          then Valid else Invalid [StakeDelegationImpossible]
     _ -> Valid
 
@@ -244,24 +231,25 @@ validDelegation cert l =
   <> validStakePoolRegister cert l
   <> validStakePoolRetire cert l
 
--- |Apply a raw transaction body as a state transition function on the ledger state.
-applyTx :: LedgerState -> Tx -> LedgerState
-applyTx ls tx =
-    LedgerState (txins tx </| getUtxo ls `union` txouts tx)
-                (getDelegationState ls)
-                (getEpoch ls)
-
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
 asStateTransition
-  :: Slot -> LedgerState -> LedgerEntry -> Either [ValidationError] LedgerState
-asStateTransition _ ls (TransactionData tx) =
-  case valid tx ls of
+  :: Slot -> LedgerState -> TxWits -> Either [ValidationError] LedgerState
+asStateTransition slot ls tx =
+  case validTx tx ls of
     Invalid errors -> Left errors
-    Valid          -> Right $ applyTx ls (body tx)
+    Valid          -> foldM (certAsStateTransition slot) ls' cs
+      where
+        ls' = applyTxBody ls (body tx)
+        cs = certs . body $ tx
 
-asStateTransition slot ls (DelegationData cert) =
+-- |In the case where a certificate is valid for a given ledger state,
+-- apply the certificate as a state transition function on the ledger state.
+-- Otherwise, return a list of validation errors.
+certAsStateTransition
+  :: Slot -> LedgerState -> DCert -> Either [ValidationError] LedgerState
+certAsStateTransition slot ls cert =
   case validDelegation cert ls of
     Invalid errors -> Left errors
     Valid          -> Right $ applyDCert slot cert ls
@@ -269,16 +257,10 @@ asStateTransition slot ls (DelegationData cert) =
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
 asStateTransition'
-  :: Slot -> LedgerValidation -> LedgerEntry -> LedgerValidation
-asStateTransition' _ (LedgerValidation valErrors ls) (TransactionData tx) =
-    let ls' = applyTx ls (body tx) in
-    case valid tx ls of
-      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
-      Valid          -> LedgerValidation valErrors ls'
-
-asStateTransition' slot (LedgerValidation valErrors ls) (DelegationData cert) =
-    let ls' = applyDCert slot cert ls in
-    case validDelegation cert ls of
+  :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
+asStateTransition' _ (LedgerValidation valErrors ls) tx =
+    let ls' = applyTxBody ls (body tx) in
+    case validTx tx ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
 
@@ -342,16 +324,6 @@ applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
     { getRetiring = retiring}}
   where retiring = Map.insert hk_sp epoch (getRetiring ds)
         hk_sp = hashKey key
-
--- |Apply an ordered collection of certificates as a state transition function
--- on the ledger state.
-applyDCerts :: Slot -> LedgerState -> Set.Set DCert -> LedgerState
-applyDCerts slot = Set.fold (applyDCert slot)
-
--- |Apply a transaction as a state transition function on the ledger state.
-applyTransaction :: Slot -> LedgerState -> TxWits -> LedgerState
-applyTransaction slot ls tx = applyTxBody (applyDCerts slot ls cs) (body tx)
-  where cs = (certs . body) tx
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
