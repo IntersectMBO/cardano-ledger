@@ -199,8 +199,8 @@ testSpendNonexistentInput =
               Set.empty
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [BadInputs, InsuffientWitnesses]
-  -- Note that BadInputs implies InsuffientWitnesses
+  in ledgerState [tx] @?= Left [BadInputs, InsufficientWitnesses]
+  -- Note that BadInputs implies InsufficientWitnesses
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -211,7 +211,7 @@ testWitnessNotIncluded =
               , TxOut bobAddr (Coin 3) ]
               Set.empty
     tx = TxWits txbody Set.empty
-  in ledgerState [tx] @?= Left [InsuffientWitnesses]
+  in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
@@ -222,7 +222,7 @@ testSpendNotOwnedUTxO =
               Set.empty
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [InsuffientWitnesses]
+  in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
 testInvalidTransaction :: Assertion
 testInvalidTransaction =
@@ -237,7 +237,7 @@ testInvalidTransaction =
               Set.empty
     aliceWit = makeWitness alicePay tx2body
     tx = TxWits txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [InsuffientWitnesses]
+  in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
