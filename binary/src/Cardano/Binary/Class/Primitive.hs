@@ -222,7 +222,7 @@ unknownCborDataItemSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
 -- failing if the tag cannot be found.
 decodeCborDataItemTag :: D.Decoder s ()
 decodeCborDataItemTag = do
-  t <- D.decodeTagCanonical
+  t <- D.decodeTag
   when (t /= 24) $ cborError $ DecoderErrorUnknownTag
     "decodeCborDataItem"
     (fromIntegral t)
@@ -244,7 +244,7 @@ decodeKnownCborDataItem = do
 decodeUnknownCborDataItem :: D.Decoder s ByteString
 decodeUnknownCborDataItem = do
   decodeCborDataItemTag
-  D.decodeBytesCanonical
+  D.decodeBytes
 
 -- | Encodes a type `a` , protecting it from tampering/network-transport-alteration by
 -- protecting it with a CRC.

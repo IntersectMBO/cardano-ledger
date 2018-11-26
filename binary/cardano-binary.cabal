@@ -67,14 +67,10 @@ test-suite test
   type:                exitcode-stdio-1.0
 
   other-modules:
-                       Spec
                        Test.Cardano.Binary.Bi
                        Test.Cardano.Binary.BiSizeBounds
-                       Test.Cardano.Binary.Cbor.CborSpec
                        Test.Cardano.Binary.Helpers
                        Test.Cardano.Binary.Helpers.GoldenRoundTrip
-                       Test.Cardano.Cbor.RefImpl
-                       Test.Cardano.Cbor.Canonicity
 
   build-depends:       base
                      , bytestring

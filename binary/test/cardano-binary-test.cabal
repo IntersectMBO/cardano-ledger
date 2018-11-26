@@ -20,8 +20,6 @@ library
   exposed-modules:
                        Test.Cardano.Binary.Helpers
                        Test.Cardano.Binary.Helpers.GoldenRoundTrip
-                       Test.Cardano.Cbor.Canonicity
-                       Test.Cardano.Cbor.RefImpl
 
   build-depends:       base
                      , bytestring
