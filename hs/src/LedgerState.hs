@@ -15,7 +15,6 @@ module LedgerState
   , RewardAcnt(..)
   , mkRwdAcnt
   , DelegationState(..)
-  , Ledger
   , LedgerValidation(..)
   , KeyPairs
   -- * state transitions
@@ -45,11 +44,6 @@ import           UTxO
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
-
--- | A ledger consists of a list of entries where each such entry is either a
--- stake delegation step or a transaction.
-
-type Ledger = [TxWits]
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -184,8 +178,8 @@ witnessed (TxWits tx wits) l =
     isWitness tx' input unspent (Wit key sig) =
       verify key tx' sig && authTxin key input unspent
 
-valid :: TxWits -> LedgerState -> Validity
-valid tx l =
+validTx :: TxWits -> LedgerState -> Validity
+validTx tx l =
   validInputs tx l
     <> preserveBalance tx l
     <> witnessed tx l
@@ -243,7 +237,7 @@ validDelegation cert l =
 asStateTransition
   :: Slot -> LedgerState -> TxWits -> Either [ValidationError] LedgerState
 asStateTransition slot ls tx =
-  case valid tx ls of
+  case validTx tx ls of
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot) ls' cs
       where
@@ -266,7 +260,7 @@ asStateTransition'
   :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
 asStateTransition' _ (LedgerValidation valErrors ls) tx =
     let ls' = applyTxBody ls (body tx) in
-    case valid tx ls of
+    case validTx tx ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
 

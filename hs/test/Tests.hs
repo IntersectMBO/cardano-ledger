@@ -19,7 +19,7 @@ import           Generator
 import           Coin
 import           Slot
 import           Keys
-import           LedgerState             (DelegationState (..), Ledger,
+import           LedgerState             (DelegationState (..),
                                           LedgerState (..),
                                           ValidationError (..),
                                           LedgerValidation(..),
@@ -56,7 +56,7 @@ genesis = genesisState
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
 
-ledgerState :: Ledger -> Either [ValidationError] LedgerState
+ledgerState :: [TxWits] -> Either [ValidationError] LedgerState
 ledgerState = foldM (asStateTransition (Slot 0)) genesis
 
 
