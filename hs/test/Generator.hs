@@ -39,6 +39,7 @@ import           LedgerState     (LedgerState (..),
                                  )
 import           Slot
 import           UTxO
+import           PtrlConsts              (PtrlConsts(..))
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
@@ -98,12 +99,16 @@ genTxOut addrs = do
   ys <- genCoinList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
+-- TODO generate sensible protocol constants
+defPCs :: PtrlConsts
+defPCs = PtrlConsts 0 0
+
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
 genNonemptyGenesisState :: Gen LedgerState
 genNonemptyGenesisState = do
   keyPairs <- genKeyPairs 1 10
-  genesisState <$> genTxOut (addrTxins keyPairs)
+  (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
 
 -- | Generator for a new 'TxWits' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
@@ -158,7 +163,7 @@ genNonEmptyAndAdvanceTx
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
   (fees, txs, ls') <- repeatCollectTx steps keyPairs (Coin 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
@@ -168,7 +173,7 @@ genNonEmptyAndAdvanceTx'
 genNonEmptyAndAdvanceTx' = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
   (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Coin 0) ls [] []
   pure (keyPairs, steps, fees, ls, txs, lv')
 
