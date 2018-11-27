@@ -341,9 +341,12 @@ In Rule~\ref{eq:rule:up-limits}:
 \item We consider the update proposal issuers to be the delegators of the key
   ($\var{vk}$) that is associated with the proposal under consideration
   ($\var{up}$).
+
+\item We check that the issuer of a proposal was delegated by a genesis key
+  (which are in the domain of $\var{dms}$).
 \item We check that no key that delegated to $\var{vk}$ has issued a proposal
   in the current epoch $\var{e_c}$.
-\item If the above check succeeds, then all the delegators of $\var{vk}$ are
+\item If the above checks succeeds, then all the delegators of $\var{vk}$ are
   added to the set of keys that proposed in this epoch.
 \end{itemize}
 
@@ -352,6 +355,7 @@ In Rule~\ref{eq:rule:up-limits}:
     \label{eq:rule:up-limits}
     \inference
     {\var{vk} = \upIssuer{up}
+      &  \var{dms} \restrictrange \{\var{vk}\} \neq \emptyset\\
       & \var{eps_{vk}} = \{ (e_c, \var{vk_s})
       \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
       & \var{eps_{vk}} \cap \var{eps} = \emptyset
