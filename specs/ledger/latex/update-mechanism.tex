@@ -264,10 +264,10 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
     \label{eq:rule:up-validity}
     \inference
     {
-      \upIssuer{up} = \var{vk}
-      & \upId{up} = \var{pid}
-      & \upPV{up} = \var{nv}
-      & \upParams{up} = \var{pps_n}\\
+      \var{vk} = \upIssuer{up}
+      & \var{pid} = \upId{up}
+      & \var{nv} = \upPV{up}
+      & \var{pps_n} = \upParams{up}\\
       & \fun{canFollow}~\var{nv}~\var{pv}
       & \fun{canUpdate}~\var{pps}~\var{up}
       & \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})\\
@@ -351,7 +351,7 @@ In Rule~\ref{eq:rule:up-limits}:
   \begin{equation}
     \label{eq:rule:up-limits}
     \inference
-    {\upIssuer{up} = \var{vk}
+    {\var{vk} = \upIssuer{up}
       & \var{eps_{vk}} = \{ (e_c, \var{vk_s})
       \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
       & \var{eps_{vk}} \cap \var{eps} = \emptyset
@@ -583,7 +583,7 @@ In Rule~\ref{eq:rule:voting}:
     \label{eq:rule:voting}
     \inference
     {
-      \vPropId{v} = \var{pid} &  \vCaster{v} = \var{vk} &
+      \var{pid} = \vPropId{v} & \var{vk} = \vCaster{v} &
       \var{vts}_{\var{pid}} =
       \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
       & \var{pid} \in \dom \var{rups} &
@@ -692,7 +692,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
           \end{array}
         \right)
       }\\
-      \vPropId{v} = \var{pid}
+      \var{pid} = \vPropId{v}
       & \var{cfmThd} \mapsto t \in \var{pps}
       & (\size{\{\var{pid}\} \restrictdom \var{vts'}} < t
       \vee \var{pid} \in \dom~\var{cps}
@@ -754,7 +754,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
           \end{array}
         \right)
       }\\
-      \vPropId{v} = \var{pid}
+      \var{pid} = \vPropId{v}
       & \var{cfmThd} \mapsto t \in \var{pps}
       & t \leq \size{\{\var{pid}\} \restrictdom \var{vts'}}
     }
