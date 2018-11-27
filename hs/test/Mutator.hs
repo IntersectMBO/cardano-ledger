@@ -72,6 +72,7 @@ mutateTx tx = do
   pure $ Tx (Set.fromList inputs')
             outputs'
             (certs tx)
+            (fee tx)
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]
