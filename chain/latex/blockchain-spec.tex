@@ -529,9 +529,9 @@ A non-genesis block $\var{b}$ is valid if:
 
 \begin{align}
   \label{eq:blocksizelimit}
-  \blocksizelimit{b}{pp} = \
+  \blocksizelimit{b}{\var{pp}} = \
   \begin{cases}
-    \maxblocksize{pp} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
+    \maxblocksize{\var{pp}} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
     2^{21} & \text{otherwise}
   \end{cases}
 \end{align}
@@ -691,8 +691,8 @@ Figure~\ref{fig:blockchain-extension}.
     {\begin{array}{c}
       ix = \rbix{b} \wedge vk_d = \rbsigner{b} \wedge sl = \rbsl{b} \\
       \hash{b} \equiv \hashofblock{p} \\
-      \bsize{b} \leq \blocksizelimit{b}{pp} \\
-      \bhdrsize{b} \leq \maxheadersize{pp} \\
+      \bsize{b} \leq \blocksizelimit{b}{\var{pp}} \\
+      \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
       \delegation{ds}{vk_s}{vk_d} \\
       \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
       \size{\signmap{vk_s}} \leq K \cdot t \\
