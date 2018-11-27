@@ -97,8 +97,9 @@ tx1Body :: Tx
 tx1Body = Tx
           (Set.fromList [TxIn genesisId 0])
           [ TxOut aliceAddr (Coin 7)
-          , TxOut bobAddr (Coin 3) ]
+          , TxOut bobAddr (Coin 2) ]
           Set.empty
+          (Coin 1)
 
 aliceTx1Wit :: Wit
 aliceTx1Wit = makeWitness alicePay tx1Body
@@ -113,7 +114,7 @@ utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
        , (TxIn tx1id 0, TxOut aliceAddr (Coin 7))
-       , (TxIn tx1id 1, TxOut bobAddr (Coin 3)) ]
+       , (TxIn tx1id 1, TxOut bobAddr (Coin 2)) ]
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -133,6 +134,7 @@ tx2Body = Tx
           (Set.fromList [ certAlice
                        , certBob
                        , certPool1 ])
+          (Coin 0)
 
 utxo2 :: Map.Map TxIn TxOut
 utxo2 = Map.fromList
@@ -157,6 +159,7 @@ tx3Body = Tx
             [ RegPool stakePool
             , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
             ])
+          (Coin 0)
 
 tx3 :: TxWits
 tx3 = TxWits tx3Body (Set.fromList [makeWitness alicePay tx3Body])
@@ -204,6 +207,7 @@ testSpendNonexistentInput =
               (Set.fromList [TxIn genesisId 42])
               [ TxOut aliceAddr (Coin 0) ]
               Set.empty
+              (Coin 0)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [BadInputs, InsufficientWitnesses]
@@ -217,6 +221,7 @@ testWitnessNotIncluded =
               [ TxOut aliceAddr (Coin 7)
               , TxOut bobAddr (Coin 3) ]
               Set.empty
+              (Coin 0)
     tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
@@ -227,6 +232,7 @@ testSpendNotOwnedUTxO =
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 1)]
               Set.empty
+              (Coin 0)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
@@ -238,10 +244,12 @@ testInvalidTransaction =
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 1)]
               Set.empty
+              (Coin 0)
     tx2body = Tx
               (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 10)]
               Set.empty
+              (Coin 0)
     aliceWit = makeWitness alicePay tx2body
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
@@ -312,12 +320,12 @@ propPreserveBalanceInitTx =
 -- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Cover
 propBalanceTxInTxOut = withCoverage $ do
-  (l, steps, fee, txwits, l')  <- forAll genValidStateTx
+  (l, steps, txfee, txwits, l')  <- forAll genValidStateTx
   let tx                       = body txwits
   let inps                     = txins tx
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist (getUtxo l) (getUtxo l')) "non-trivial wealth dist"
-  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> fee)
+  (balance $ inps <| (getUtxo l)) === ((balance $ txouts tx) <> txfee)
 
 -- | Property 7.3 (Preserve Outputs of Transaction)
 propPreserveOutputs :: Cover
@@ -424,7 +432,7 @@ propertyTests = testGroup "Property-Based Testing"
 propBalanceTxInTxOut' :: Cover
 propBalanceTxInTxOut' =
   Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
-  (l, _, fee, txwits, lv)  <- forAll genStateTx
+  (l, _, txfee, txwits, lv)  <- forAll genStateTx
   let tx                       = body txwits
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
@@ -432,14 +440,14 @@ propBalanceTxInTxOut' =
   let balanceTarget            = (balance $ txouts tx)
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
-  let balanceOk                = balanceSource == balanceTarget <> fee
+  let balanceOk                = balanceSource == balanceTarget <> txfee
   classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
   if valErrors /= [] && balanceOk && nonTrivial
   then label (pack (  "inputs: "       ++ (show $ Set.size (inputs tx))
                      ++ " outputs: "   ++ (show $ length (outputs tx))
                      ++ " balance l "  ++ (show balanceSource)
                      ++ " balance l' " ++ (show balanceTarget)
-                     ++ " fee " ++ show fee
+                     ++ " txfee " ++ show txfee
                      ++ "\n  validationErrors: " ++ show valErrors))
   else (if valErrors /= [] && balanceOk
         then label ("non-validated, OK, trivial")

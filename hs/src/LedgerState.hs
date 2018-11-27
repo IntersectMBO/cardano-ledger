@@ -127,7 +127,7 @@ data LedgerState =
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] Set.empty)
+genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -159,7 +159,7 @@ validInputs (TxWits tx _) l =
 -- in an acceptable way by a transaction.
 preserveBalance :: TxWits -> LedgerState -> Validity
 preserveBalance (TxWits tx _) l =
-  if balance (txouts tx) <= balance (txins tx <| getUtxo l)
+  if balance (txouts tx) + (fee tx) == balance (txins tx <| getUtxo l)
     then Valid
     else Invalid [IncreasedTotalBalance]
 
