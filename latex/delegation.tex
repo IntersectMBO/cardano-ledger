@@ -45,7 +45,9 @@ also include a mapping from active stake keys to rewards.
 \label{sec:deleg-defs}
 
 In \cref{fig:delegation-definitons} we give the delegation primitives.
-The additional relevant primitive datatypes for delegation are addresses,
+Here we introduce the following primitive datatypes used in delegation :
+reward addresses
+(different from base addresses introduced later),
 epochs, slot numbers, and duration (the difference between two slot numbers).
 We also make use of the primitive datatype $\StakePool$, which represents
 constants found in a stake pool registration certificate. We make use of
@@ -58,13 +60,6 @@ deregistration or delegation certificate for a key, or a registration/retirement
  certificate for a stake pool. It is denoted as disjoint union in the figure,
 one should, however, think of a term of this type as a term of a specific
 one of these five subtypes.
-
-The terms $\RegKey$, $\DeregKey$, $\Delegate$, $\RegPool$, $\RetirePool$ are
-all predicates on the type $\DCert$. Each of these predicates is true
-when applied to a certificate $c \in \DCert$ of the corresponding type.
-Using these predicates in defining inference rules ensures $c$ is the correct
-type of certificate for the transition
-that a rule describes.
 
 Note that the reason for combining the different types of
 certificates into a common type is that it allows us to use that type to later
@@ -137,9 +132,6 @@ $\Duration$ here by $\var{dur}$).
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-  \fun{hashKey} & \VKey \to \HashKey
-  & \text{hashKeying a key}
-  \\
   \fun{addr_{rwd}} & \HashKey \to \AddrRWD
   & \text{address of a hashKeykey}
   \\
@@ -187,7 +179,8 @@ they have been processed.
 The second, $\var{rewards}$, stores the
 rewards accumulated by stake keys. These are represented by
 a finite
-map that matches addresses with the rewards belonging to them. The third
+map that matches addresses with the coin value of the rewards belonging to the
+key to which this address is associated. The third
 variable in $\DState$ stores currently registered delegations.
 Delegations ($\var{delegations}$) are also expressed by a finite map, which
 associates a stake key with the hash key of the pool to which it delegates.
@@ -349,7 +342,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-dereg}
     \inference[Deleg-Dereg]
     {
-      \DeregKey{c} & \cauthor{c} = hk & hk \in \var{stkeys}
+      \var{c}\in \DCertDeRegKey  & \cauthor{c} = hk & hk \in \var{stkeys}
     }
     {
       \var{slot} \vdash
@@ -374,7 +367,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \Delegate{c} & \cauthor{c} = hk & hk \in \var{stkeys}
+      \var{c}\in \DCertDeleg & \cauthor{c} = hk & hk \in \var{stkeys}
     }
     {
       \var{slot} \vdash
@@ -408,9 +401,7 @@ being delegated to.
 The rules for updating the part of the ledger state defining the current stake
 pools are given in \cref{fig:pool-rules}.
 For each rule, again, we first check that a given certificate $c$ is of
-the correct type using the
-corresponding $\RegPool$ and $\RetirePool$ predicates.
-
+the correct type.
 
 The first rule, \cref{eq:pool-reg}, can only be used to register a stake pool
 with a new key (to which no stake pool was previously registered).
@@ -463,7 +454,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \begin{equation}\label{eq:pool-reg}
     \inference[Pool-Reg]
     {
-      \RegPool{c}
+      \var{c}\in\DCertRegPool
       & \cauthor{c} = \var{hk}
       & hk \notin \dom \var{stpools}
       & \stakepool{c} = \var{stakepool}
@@ -493,7 +484,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \begin{equation}\label{eq:pool-rereg}
     \inference[Pool-reReg]
     {
-      \RegPool{c}
+      \var{c}\in\DCertRegPool 
       & \cauthor{c} = \var{hk}
       & hk \in \dom \var{stpools}
       & \stakepool{c} = \var{stakepool}
@@ -522,7 +513,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \begin{equation}\label{eq:pool-ret}
     \inference[Pool-Retire]
     {
-    \RetirePool{c}
+    \var{c} \in \DCertRetirePool
     & \cauthor{c} = hk
     & \var{hk} \in \dom \var{stpools} \\
     \var{e} = \retire{c}
@@ -553,6 +544,11 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \label{fig:pool-rules}
 
 \end{figure}
+
+\begin{todo}
+  make sure ttl of the transaction carrying a certificate is less than
+  the first slot of (retiring c + 1)
+\end{todo}
 
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
@@ -611,7 +607,7 @@ valid witnessed delegation transition.
       & \text{body of the delegation certificate}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
       & \text{witness for the delegation certificate}\\
-      \fun{dcerts} & \Tx \to \DCert
+      \fun{dcerts} & \Tx \to \text{list}~\DCert
       & \text{delegation certificates in a transaction}\\
     \end{array}
   \end{equation*}
