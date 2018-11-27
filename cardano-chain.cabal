@@ -42,6 +42,7 @@ library
                        Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.SlogUndo
                        Cardano.Chain.Block.Undo
+                       Cardano.Chain.Block.Validation
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
@@ -121,6 +122,7 @@ library
                      , containers
                      , cryptonite
                      , Cabal
+                     , directory
                      , filepath
                      , formatting
                      , lens
@@ -156,23 +158,32 @@ test-suite cardano-chain-test
   other-modules:
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Block.Validation
+
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
+
                        Test.Cardano.Chain.Delegation.Bi
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
+
                        Test.Cardano.Chain.Epoch.File
+
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
+
                        Test.Cardano.Chain.Ssc.Bi
+
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
+
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json
                        Test.Cardano.Chain.Txp.Validation
+
                        Test.Cardano.Chain.Update.Bi
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen

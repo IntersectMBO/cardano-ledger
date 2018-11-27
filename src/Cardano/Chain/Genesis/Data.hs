@@ -8,7 +8,7 @@
 
 module Cardano.Chain.Genesis.Data
   ( GenesisData(..)
-  , GenesisDataError
+  , GenesisDataError(..)
   , readGenesisData
   )
 where
