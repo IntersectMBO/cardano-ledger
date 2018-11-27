@@ -102,7 +102,6 @@ test-suite test
                        Test.Cardano.Crypto.Bi
                        Test.Cardano.Crypto.Arbitrary
                        Test.Cardano.Crypto.Arbitrary.Unsafe
-                       Test.Cardano.Crypto.CborSpec
                        Test.Cardano.Crypto.CryptoSpec
                        Test.Cardano.Crypto.CryptoSpec2
                        Test.Cardano.Crypto.Dummy

@@ -29,7 +29,7 @@ import Cardano.Binary.Class
   , Bi(..)
   , Case(..)
   , decodeKnownCborDataItem
-  , decodeListLenCanonical
+  , decodeListLen
   , decodeUnknownCborDataItem
   , encodeKnownCborDataItem
   , encodeListLen
@@ -149,7 +149,7 @@ instance Bi TxInWitness where
         (LBS.fromStrict bs)
 
   decode = do
-    len <- decodeListLenCanonical
+    len <- decodeListLen
     tag <- decode @Word8
     case tag of
       0 -> do

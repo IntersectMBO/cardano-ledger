@@ -26,10 +26,10 @@ import qualified Codec.CBOR.Decoding as D
 type Dropper s = D.Decoder s ()
 
 dropBytes :: Dropper s
-dropBytes = void D.decodeBytesCanonical
+dropBytes = void D.decodeBytes
 
 dropInt32 :: Dropper s
-dropInt32 = void D.decodeInt32Canonical
+dropInt32 = void D.decodeInt32
 
 -- | Drop a list of values using the supplied `Dropper` for each element
 dropList :: Dropper s -> Dropper s
@@ -39,30 +39,30 @@ dropList dropElems = do
 
 dropMap :: Dropper s -> Dropper s -> Dropper s
 dropMap dropKey dropValue = do
-  n <- D.decodeMapLenCanonical
+  n <- D.decodeMapLen
   replicateM_ n $ dropKey >> dropValue
 
 dropSet :: Dropper s -> Dropper s
 dropSet dropElem = do
-  void D.decodeTagCanonical
-  n <- D.decodeListLenCanonical
+  void D.decodeTag
+  n <- D.decodeListLen
   replicateM_ n dropElem
 
 dropTuple :: Dropper s -> Dropper s -> Dropper s
 dropTuple dropA dropB = do
-  D.decodeListLenCanonicalOf 2
+  D.decodeListLenOf 2
   dropA
   dropB
 
 dropTriple :: Dropper s -> Dropper s -> Dropper s -> Dropper s
 dropTriple dropA dropB dropC = do
-  D.decodeListLenCanonicalOf 3
+  D.decodeListLenOf 3
   dropA
   dropB
   dropC
 
 dropWord8 :: Dropper s
-dropWord8 = void D.decodeWord8Canonical
+dropWord8 = void D.decodeWord8
 
 dropWord64 :: Dropper s
-dropWord64 = void D.decodeWord64Canonical
+dropWord64 = void D.decodeWord64

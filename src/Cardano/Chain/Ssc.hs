@@ -25,7 +25,7 @@ import Cardano.Binary.Class
   ( Bi(..)
   , DecoderError(..)
   , Dropper
-  , decodeListLenCanonical
+  , decodeListLen
   , dropBytes
   , dropList
   , dropMap
@@ -57,7 +57,7 @@ instance Bi SscPayload where
 
 dropSscPayload :: Dropper s
 dropSscPayload = do
-  actualLen <- decodeListLenCanonical
+  actualLen <- decodeListLen
   decode >>= \case
     0 -> do
       matchSize "CommitmentsPayload" 3 actualLen
@@ -95,7 +95,7 @@ instance Bi SscProof where
 
 dropSscProof :: Dropper s
 dropSscProof = do
-  actualLen <- decodeListLenCanonical
+  actualLen <- decodeListLen
   decode >>= \case
     0 -> do
       matchSize "CommitmentsProof" 3 actualLen
