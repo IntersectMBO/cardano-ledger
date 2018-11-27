@@ -33,8 +33,8 @@ module Cardano.Binary.Class.Core
 
     -- * CBOR re-exports
   , E.encodeListLen
-  , D.decodeListLenCanonical
-  , D.decodeListLenCanonicalOf
+  , D.decodeListLen
+  , D.decodeListLenOf
   , E.Encoding
   , D.Decoder
   , CBOR.Read.deserialiseIncremental
@@ -158,8 +158,7 @@ instance B.Buildable DecoderError where
 -- | Enforces that the input size is the same as the decoded one, failing in
 --   case it's not
 enforceSize :: Text -> Int -> D.Decoder s ()
-enforceSize lbl requestedSize =
-  D.decodeListLenCanonical >>= matchSize lbl requestedSize
+enforceSize lbl requestedSize = D.decodeListLen >>= matchSize lbl requestedSize
 
 -- | Compare two sizes, failing if they are not equal
 matchSize :: Text -> Int -> Int -> D.Decoder s ()
@@ -260,13 +259,13 @@ instance Bi Bool where
 instance Bi Char where
   encode c = E.encodeString (Text.singleton c)
   decode = do
-    t <- D.decodeStringCanonical
+    t <- D.decodeString
     matchSize "Char" 1 (Text.length t)
     pure $ Text.head t
 
   -- For [Char]/String we have a special encoding
   encodeList cs = E.encodeString (toS cs)
-  decodeList = toS <$> D.decodeStringCanonical
+  decodeList = toS <$> D.decodeString
 
   encodedSizeExpr _ pxy = encodedSizeRange (Char.ord <$> pxy)
   encodedListSizeExpr size _ =
@@ -282,7 +281,7 @@ instance Bi Char where
 
 instance Bi Integer where
   encode = E.encodeInteger
-  decode = D.decodeIntegerCanonical
+  decode = D.decodeInteger
 
 encodedSizeRange :: forall a . (Integral a, Bounded a) => Proxy a -> Size
 encodedSizeRange _ = szCases
@@ -293,47 +292,47 @@ encodedSizeRange _ = szCases
 
 instance Bi Word where
   encode = E.encodeWord
-  decode = D.decodeWordCanonical
+  decode = D.decodeWord
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Word8 where
   encode = E.encodeWord8
-  decode = D.decodeWord8Canonical
+  decode = D.decodeWord8
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Word16 where
   encode = E.encodeWord16
-  decode = D.decodeWord16Canonical
+  decode = D.decodeWord16
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Word32 where
   encode = E.encodeWord32
-  decode = D.decodeWord32Canonical
+  decode = D.decodeWord32
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Word64 where
   encode = E.encodeWord64
-  decode = D.decodeWord64Canonical
+  decode = D.decodeWord64
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Int where
   encode = E.encodeInt
-  decode = D.decodeIntCanonical
+  decode = D.decodeInt
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Float where
   encode = E.encodeFloat
-  decode = D.decodeFloatCanonical
+  decode = D.decodeFloat
   encodedSizeExpr _ _ = 1 + fromIntegral (sizeOf (0 :: Float))
 
 instance Bi Int32 where
   encode = E.encodeInt32
-  decode = D.decodeInt32Canonical
+  decode = D.decodeInt32
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Int64 where
   encode = E.encodeInt64
-  decode = D.decodeInt64Canonical
+  decode = D.decodeInt64
   encodedSizeExpr _ = encodedSizeRange
 
 instance Bi Nano where
@@ -379,7 +378,7 @@ instance (Typeable s, Bi a) => Bi (Tagged s a) where
 instance (Bi a, Bi b) => Bi (a,b) where
   encode (a, b) = E.encodeListLen 2 <> encode a <> encode b
   decode = do
-    D.decodeListLenCanonicalOf 2
+    D.decodeListLenOf 2
     !x <- decode
     !y <- decode
     return (x, y)
@@ -389,7 +388,7 @@ instance (Bi a, Bi b, Bi c) => Bi (a,b,c) where
   encode (a, b, c) = E.encodeListLen 3 <> encode a <> encode b <> encode c
 
   decode = do
-    D.decodeListLenCanonicalOf 3
+    D.decodeListLenOf 3
     !x <- decode
     !y <- decode
     !z <- decode
@@ -403,7 +402,7 @@ instance (Bi a, Bi b, Bi c, Bi d) => Bi (a,b,c,d) where
     E.encodeListLen 4 <> encode a <> encode b <> encode c <> encode d
 
   decode = do
-    D.decodeListLenCanonicalOf 4
+    D.decodeListLenOf 4
     !a <- decode
     !b <- decode
     !c <- decode
@@ -415,14 +414,14 @@ instance (Bi a, Bi b, Bi c, Bi d) => Bi (a,b,c,d) where
 
 instance Bi BS.ByteString where
   encode = E.encodeBytes
-  decode = D.decodeBytesCanonical
+  decode = D.decodeBytes
   encodedSizeExpr size _ =
     let len = size (Proxy @(LengthOf BS.ByteString))
     in apMono "withWordSize@Int" (withWordSize @Int . fromIntegral) len + len
 
 instance Bi Text.Text where
   encode = E.encodeString
-  decode = D.decodeStringCanonical
+  decode = D.decodeString
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @[Char])
 
 instance Bi BS.Lazy.ByteString where
@@ -442,8 +441,8 @@ instance (Bi a, Bi b) => Bi (Either a b) where
   encode (Right x) = E.encodeListLen 2 <> E.encodeWord 1 <> encode x
 
   decode = do
-    D.decodeListLenCanonicalOf 2
-    t <- D.decodeWordCanonical
+    D.decodeListLenOf 2
+    t <- D.decodeWord
     case t of
       0 -> do
         !x <- decode
@@ -475,7 +474,7 @@ instance Bi a => Bi (Maybe a) where
 
 decodeMaybe :: D.Decoder s a -> D.Decoder s (Maybe a)
 decodeMaybe decoder = do
-  n <- D.decodeListLenCanonical
+  n <- D.decodeListLen
   case n of
     0 -> return Nothing
     1 -> do
@@ -546,7 +545,7 @@ encodeMapSkel size foldrWithKey = encodeContainerSkel
 --   "[..]The keys in every map must be sorted lowest value to highest.[...]"
 decodeMapSkel :: (Ord k, Bi k, Bi v) => ([(k, v)] -> m) -> D.Decoder s m
 decodeMapSkel fromDistinctAscList = do
-  n <- D.decodeMapLenCanonical
+  n <- D.decodeMapLen
   case n of
     0 -> return (fromDistinctAscList [])
     _ -> do
@@ -609,13 +608,13 @@ encodeSetTag = E.encodeTag setTag
 
 decodeSetTag :: D.Decoder s ()
 decodeSetTag = do
-  t <- D.decodeTagCanonical
+  t <- D.decodeTag
   when (t /= setTag) $ cborError $ DecoderErrorUnknownTag "Set" (fromIntegral t)
 
 decodeSetSkel :: (Ord a, Bi a) => ([a] -> c) -> D.Decoder s c
 decodeSetSkel fromDistinctAscList = do
   decodeSetTag
-  n <- D.decodeListLenCanonical
+  n <- D.decodeListLen
   case n of
     0 -> return (fromDistinctAscList [])
     _ -> do
@@ -652,7 +651,7 @@ encodeVector = encodeContainerSkel
 -- definition of 'Serialise' instances for custom vector
 decodeVector :: (Bi a, Vector.Generic.Vector v a) => D.Decoder s (v a)
 decodeVector = decodeContainerSkelWithReplicate
-  D.decodeListLenCanonical
+  D.decodeListLen
   Vector.Generic.replicateM
   Vector.Generic.concat
 {-# INLINE decodeVector #-}

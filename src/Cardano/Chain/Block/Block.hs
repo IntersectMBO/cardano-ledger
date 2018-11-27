@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Block
-  ( ABlock
+  ( ABlock(..)
   , Block
   , encodeBlock
   , decodeABlock
@@ -19,11 +19,14 @@ module Cardano.Chain.Block.Block
   , decodeBlockOrBoundary
   , mkBlock
   , mkBlockExplicit
+  , blockHash
+  , blockHashAnnotated
   , blockPrevHash
   , blockProof
   , blockSlot
   , blockLeaderKey
   , blockDifficulty
+  , blockToSign
   , blockSignature
   , blockBlockVersion
   , blockSoftwareVersion
@@ -36,7 +39,9 @@ module Cardano.Chain.Block.Block
   , blockAttributes
   , verifyBlock
 
-       -- * BoundaryBlock
+  -- * BoundaryBlock
+  , ABlockOrBoundary(..)
+  , BoundaryValidationData(..)
   , dropBoundaryBlock
   )
 where
@@ -50,11 +55,11 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary.Class
   ( Annotated(..)
   , Bi(..)
-  , ByteSpan
+  , ByteSpan(..)
   , Decoder
   , DecoderError(..)
-  , Dropper
   , Encoding
+  , annotatedDecoder
   , decodeAnnotated
   , encodeListLen
   , enforceSize
@@ -81,6 +86,7 @@ import Cardano.Chain.Block.Header
   , Header
   , HeaderError
   , HeaderHash
+  , ToSign
   , decodeAHeader
   , dropBoundaryHeader
   , hashHeader
@@ -94,8 +100,10 @@ import Cardano.Chain.Block.Header
   , headerSignature
   , headerSlot
   , headerSoftwareVersion
+  , headerToSign
   , mkHeaderExplicit
   , verifyHeader
+  , wrapHeaderBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofError, checkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
@@ -162,6 +170,12 @@ decodeABlock = do
 encodeBlock :: Block -> Encoding
 encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
 
+
+data ABlockOrBoundary a
+  = ABOBBlock (ABlock a)
+  | ABOBBoundary (BoundaryValidationData a)
+  deriving (Functor)
+
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 --
 --   Previous versions of Cardano had an explicit boundary block between epochs.
@@ -169,29 +183,47 @@ encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeABlockOrBoundary :: Decoder s (Maybe (ABlock ByteSpan))
+decodeABlockOrBoundary :: Decoder s (ABlockOrBoundary ByteSpan)
 decodeABlockOrBoundary = do
   enforceSize "Block" 2
   decode @Word >>= \case
-    0 -> do
-      dropBoundaryBlock
-      pure Nothing
-    1 -> Just <$> decodeABlock
+    0 -> ABOBBoundary <$> dropBoundaryBlock
+    1 -> ABOBBlock <$> decodeABlock
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
 decodeBlockOrBoundary :: Decoder s (Maybe Block)
-decodeBlockOrBoundary = fmap void <$> decodeABlockOrBoundary
+decodeBlockOrBoundary = decodeABlockOrBoundary >>= \case
+  ABOBBoundary _ -> pure Nothing
+  ABOBBlock    b -> pure . Just $ void b
 
 --------------------------------------------------------------------------------
 -- BoundaryBlock
 --------------------------------------------------------------------------------
 
-dropBoundaryBlock :: Dropper s
+data BoundaryValidationData a = BoundaryValidationData
+  { boundaryBlockLength :: Int64
+  -- ^ The length of the boundary block in bytes
+  , boundaryPrevHash    :: HeaderHash
+  -- ^ The hash of the previous block
+  , boundaryHeaderBytes :: a
+  -- ^ Annotation representing the header bytes
+  } deriving (Functor)
+
+-- | A decoder that drops the boundary block, but preserves the 'ByteSpan' of
+--   the header for hashing
+dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
 dropBoundaryBlock = do
-  enforceSize "BoundaryBlock" 3
-  dropBoundaryHeader
-  dropBoundaryBody
-  dropBoundaryExtraBodyData
+  Annotated (Annotated hh bs) (ByteSpan start end) <- annotatedDecoder $ do
+    enforceSize "BoundaryBlock" 3
+    aHeaderHash <- annotatedDecoder dropBoundaryHeader
+    dropBoundaryBody
+    dropBoundaryExtraBodyData
+    pure aHeaderHash
+  pure $ BoundaryValidationData
+    { boundaryBlockLength = end - start
+    , boundaryPrevHash    = hh
+    , boundaryHeaderBytes = bs
+    }
 
 
 --------------------------------------------------------------------------------
@@ -286,6 +318,12 @@ verifyBlock pm block = do
 -- Block accessors
 --------------------------------------------------------------------------------
 
+blockHash :: Block -> HeaderHash
+blockHash = hashHeader . blockHeader
+
+blockHashAnnotated :: ABlock ByteString -> HeaderHash
+blockHashAnnotated = hashDecoded . fmap wrapHeaderBytes . blockHeader
+
 blockExtraData :: ABlock a -> ExtraBodyData
 blockExtraData = unAnnotated . aBlockExtraData
 
@@ -303,6 +341,9 @@ blockLeaderKey = headerLeaderKey . blockHeader
 
 blockDifficulty :: ABlock a -> ChainDifficulty
 blockDifficulty = headerDifficulty . blockHeader
+
+blockToSign :: ABlock a -> ToSign
+blockToSign = headerToSign . blockHeader
 
 blockSignature :: ABlock a -> BlockSignature
 blockSignature = headerSignature . blockHeader
