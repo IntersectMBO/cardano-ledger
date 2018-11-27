@@ -62,6 +62,8 @@ data ValidationError =
   | IncreasedTotalBalance
   -- | The transaction does not have the required witnesses.
   | InsufficientWitnesses
+  -- | Missing Replay Attack Protection, at least one input must be spent.
+  | InputSetEmpty
   -- | A stake key cannot be registered again.
   | StakeKeyAlreadyRegistered
   -- | A stake key must be registered to be used or deregistered.
@@ -137,6 +139,14 @@ genesisState outs = LedgerState
   emptyDelegation
   (Epoch 0)
 
+-- | Determine if the input set of a transaction consumes at least one input,
+-- else it would be possible to do a replay attack using this transaction.
+validNoReplay :: TxWits -> Validity
+validNoReplay (TxWits tx _) =
+    if txins tx == Set.empty
+    then Invalid [InputSetEmpty]
+    else Valid
+
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs :: TxWits -> LedgerState -> Validity
 validInputs (TxWits tx _) l =
@@ -181,6 +191,7 @@ witnessed (TxWits tx wits) l =
 validTx :: TxWits -> LedgerState -> Validity
 validTx tx l =
   validInputs tx l
+    <> validNoReplay tx
     <> preserveBalance tx l
     <> witnessed tx l
 
