@@ -27,6 +27,7 @@ import           LedgerState             (DelegationState (..),
                                           asStateTransition, emptyDelegation,
                                           mkRwdAcnt, genesisId, genesisState)
 import           UTxO
+import           PtrlConsts
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
@@ -49,10 +50,14 @@ bobStake = keyPair (Owner 4)
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
+pcs :: PtrlConsts
+pcs = PtrlConsts 1 1
+
 genesis :: LedgerState
 genesis = genesisState
-            [ TxOut aliceAddr (Coin 10)
-            , TxOut bobAddr (Coin 1) ]
+            pcs
+            [ TxOut aliceAddr (Coin 10000)
+            , TxOut bobAddr (Coin 1000) ]
 
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
@@ -66,7 +71,9 @@ testLedgerValidTransactions ::
 testLedgerValidTransactions ls utxo =
     ls @?= Right (LedgerState
                      (UTxO utxo)
-                     LedgerState.emptyDelegation (Epoch 0))
+                     LedgerState.emptyDelegation
+                     (Epoch 0)
+                     pcs)
 
 testValidStakeKeyRegistration ::
   TxWits -> Map.Map TxIn TxOut -> DelegationState -> Assertion
@@ -76,7 +83,8 @@ testValidStakeKeyRegistration tx utxo stakeKeyRegistration =
   in ls2 @?= Right (LedgerState
                      (UTxO utxo)
                      stakeKeyRegistration
-                     (Epoch 0))
+                     (Epoch 0)
+                     pcs)
 
 testValidDelegation ::
   [TxWits] -> Map.Map TxIn TxOut -> DelegationState -> Assertion
@@ -91,15 +99,16 @@ testValidDelegation txs utxo stakeKeyRegistration =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
                      , getStPools = Map.fromList [(poolhk, (stakePool, Slot 0))]
                      }
-                     (Epoch 0))
+                     (Epoch 0)
+                     pcs)
 
 tx1Body :: Tx
 tx1Body = Tx
           (Set.fromList [TxIn genesisId 0])
-          [ TxOut aliceAddr (Coin 7)
-          , TxOut bobAddr (Coin 2) ]
+          [ TxOut aliceAddr (Coin 5870)
+          , TxOut bobAddr (Coin 3000) ]
           Set.empty
-          (Coin 1)
+          (Coin 1130)
 
 aliceTx1Wit :: Wit
 aliceTx1Wit = makeWitness alicePay tx1Body
@@ -112,9 +121,9 @@ tx1id = txid tx1Body
 
 utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
-       , (TxIn tx1id 0, TxOut aliceAddr (Coin 7))
-       , (TxIn tx1id 1, TxOut bobAddr (Coin 2)) ]
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+       , (TxIn tx1id 0, TxOut aliceAddr (Coin 5870))
+       , (TxIn tx1id 1, TxOut bobAddr (Coin 3000)) ]
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -129,24 +138,18 @@ certPool1 = RegKey $ vKey stakePoolKey1
 tx2Body :: Tx
 tx2Body = Tx
           (Set.fromList [TxIn genesisId 0])
-          [ TxOut aliceAddr (Coin 7)
-          , TxOut bobAddr (Coin 3) ]
+          [ TxOut aliceAddr (Coin 5700)
+          , TxOut bobAddr (Coin 3000) ]
           (Set.fromList [ certAlice
                        , certBob
                        , certPool1 ])
-          (Coin 0)
+          (Coin 1300)
 
 utxo2 :: Map.Map TxIn TxOut
 utxo2 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
-       , (TxIn (txid tx2Body) 0, TxOut aliceAddr (Coin 7))
-       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3)) ]
-
-utxo3 :: Map.Map TxIn TxOut
-utxo3 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1))
-       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3))
-       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 7))]
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+       , (TxIn (txid tx2Body) 0, TxOut aliceAddr (Coin 5700))
+       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3000)) ]
 
 tx2 :: TxWits
 tx2 = TxWits tx2Body (Set.fromList [makeWitness alicePay tx2Body])
@@ -154,15 +157,21 @@ tx2 = TxWits tx2Body (Set.fromList [makeWitness alicePay tx2Body])
 tx3Body :: Tx
 tx3Body = Tx
           (Set.fromList [TxIn (txid tx2Body) 0])
-          [TxOut aliceAddr (Coin 7)]
+          [ TxOut aliceAddr (Coin 4494) ]
           (Set.fromList
             [ RegPool stakePool
             , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
             ])
-          (Coin 0)
+          (Coin 1206)
 
 tx3 :: TxWits
 tx3 = TxWits tx3Body (Set.fromList [makeWitness alicePay tx3Body])
+
+utxo3 :: Map.Map TxIn TxOut
+utxo3 = Map.fromList
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 4494))
+       , (TxIn (txid tx2Body) 1, TxOut bobAddr (Coin 3000)) ]
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
@@ -205,12 +214,12 @@ testSpendNonexistentInput =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 42])
-              [ TxOut aliceAddr (Coin 0) ]
+              [ TxOut aliceAddr (Coin 10000) ]
               Set.empty
-              (Coin 0)
+              (Coin 1500)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [BadInputs, InsufficientWitnesses]
+  in ledgerState [tx] @?= Left [BadInputs, ValueNotConserved, InsufficientWitnesses]
   -- Note that BadInputs implies InsufficientWitnesses
 
 testWitnessNotIncluded :: Assertion
@@ -218,10 +227,10 @@ testWitnessNotIncluded =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 7)
-              , TxOut bobAddr (Coin 3) ]
+              [ TxOut aliceAddr (Coin 6434)
+              , TxOut bobAddr (Coin 3000) ]
               Set.empty
-              (Coin 0)
+              (Coin 566)
     tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
 
@@ -230,9 +239,9 @@ testSpendNotOwnedUTxO =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 1)]
+              [ TxOut aliceAddr (Coin 232)]
               Set.empty
-              (Coin 0)
+              (Coin 768)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
@@ -242,14 +251,14 @@ testInvalidTransaction =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 1)]
+              [ TxOut aliceAddr (Coin 230)]
               Set.empty
-              (Coin 0)
+              (Coin 770)
     tx2body = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 10)]
+              [ TxOut aliceAddr (Coin 19230)]
               Set.empty
-              (Coin 0)
+              (Coin 770)
     aliceWit = makeWitness alicePay tx2body
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
@@ -261,9 +270,10 @@ testEmptyInputSet =
               Set.empty
               [ TxOut aliceAddr (Coin 1)]
               Set.empty
+              (Coin 584)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [InputSetEmpty, IncreasedTotalBalance, InsufficientWitnesses]
+  in ledgerState [tx] @?= Left [InputSetEmpty, ValueNotConserved, InsufficientWitnesses]
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
