@@ -1,4 +1,8 @@
-with (import <nixpkgs> {});
+{ pkgs ? import ../../../pkgs.nix
+}:
+
+with pkgs;
+
 stdenv.mkDerivation {
   name = "docsEnv";
   buildInputs = [ (texlive.combine {
@@ -23,4 +27,12 @@ stdenv.mkDerivation {
                       ;
                   })
                 ];
+  src = ./.;
+  buildPhase = "make";
+
+  meta = with lib; {
+    description = "Small Steps Semantics Specification";
+    license = licenses.bsd3;
+    platforms = platforms.linux;
+  };
 }
