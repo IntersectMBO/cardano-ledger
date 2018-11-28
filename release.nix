@@ -7,4 +7,5 @@ in pkgs.lib.fix (self: {
   });
   byronLedgerSpec = import ./specs/ledger/latex {};
   byronChainSpec = import ./specs/chain/latex {};
+  semanticsSpec = import ./specs/semantics/latex {};
 })
