@@ -34,16 +34,16 @@ import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
 import           Data.List               (find)
 import qualified Data.Map                as Map
-import           Data.Maybe              (isJust, mapMaybe)
+import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
 import qualified Data.Set                as Set
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..))
+import           Slot                    (Slot (..), Epoch (..), (-*))
 import           Keys
 import           UTxO
 import           PrtlConsts              (PrtlConsts(..))
 
-import           Delegation.Certificates (DCert (..))
+import           Delegation.Certificates (DCert (..), refund)
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -59,10 +59,12 @@ data LedgerValidation = LedgerValidation [ValidationError] LedgerState
 data ValidationError =
   -- | The transaction inputs are not valid.
     BadInputs
+  -- | The transaction has expired
+  | Expired Slot Slot
   -- | The transaction fee is too small
   | FeeTooSmall Coin Coin
   -- | Value is not conserved
-  | ValueNotConserved
+  | ValueNotConserved Coin Coin
   -- | The transaction does not have the required witnesses.
   | InsufficientWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
@@ -97,6 +99,8 @@ newtype RewardAcnt = RewardAcnt HashKey
 mkRwdAcnt :: KeyPair -> RewardAcnt
 mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
 
+type Allocs = Map.Map HashKey Slot
+
 -- |The state associated with the current stake delegation.
 data DelegationState =
     DelegationState
@@ -104,18 +108,20 @@ data DelegationState =
     -- |The active accounts.
       getAccounts    :: Map.Map RewardAcnt Coin
     -- |The active stake keys.
-    , getStKeys      :: Map.Map HashKey Slot
+    , getStKeys      :: Allocs
     -- |The current delegations.
     , getDelegations :: Map.Map HashKey HashKey
     -- |The active stake pools.
-    , getStPools     :: Map.Map HashKey (StakePool, Slot)
+    , getStPools     :: Allocs
+    -- |Stake pool parameters.
+    , getPParams     :: Map.Map HashKey StakePool
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Epoch
     } deriving (Show, Eq)
 
 emptyDelegation :: DelegationState
 emptyDelegation =
-    DelegationState Map.empty Map.empty Map.empty Map.empty Map.empty
+    DelegationState Map.empty Map.empty Map.empty Map.empty Map.empty Map.empty
 
 -- |The state associated with a 'Ledger'.
 data LedgerState =
@@ -124,15 +130,13 @@ data LedgerState =
     getUtxo            :: !UTxO
     -- |The current delegation state
   , getDelegationState :: !DelegationState
-    -- |The current epoch.
-  , getEpoch           :: Epoch
     -- |The current protocol constants.
   , getPCs             :: !PrtlConsts
   } deriving (Show, Eq)
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0))
+genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0) (Slot 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -142,8 +146,14 @@ genesisState pc outs = LedgerState
     [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
   ))
   emptyDelegation
-  (Epoch 0)
   pc
+
+-- | Determine if the transaction has expired
+current :: TxWits -> Slot -> Validity
+current (TxWits tx _) slot =
+    if ttl tx < slot
+    then Invalid [Expired (ttl tx) slot]
+    else Valid
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
@@ -162,27 +172,49 @@ validInputs (TxWits tx _) l =
   where unspentInputs (UTxO utxo) = Map.keysSet utxo
 
 -- |Minimum fee calculation
-minfee :: PrtlConsts -> TxWits -> Coin
-minfee pc txwit = minfeeA pc * x + minfeeB pc
-  where x = Coin $ toEnum $ length (show txwit)
+minfee :: PrtlConsts -> Tx -> Coin
+minfee pc tx = minfeeA pc * x + minfeeB pc
+  where x = Coin $ toEnum $ length (show tx)
 
 -- |Determine if the fee is large enough
 validFee :: TxWits -> LedgerState -> Validity
-validFee txwit l =
+validFee (TxWits tx _) l =
   if needed <= given
     then Valid
     else Invalid [FeeTooSmall needed given]
       where
-        needed = minfee (getPCs l) txwit
-        given = fee $ body txwit
+        needed = minfee (getPCs l) tx
+        given = fee tx
+
+-- |Compute the lovelace which are consumed by the transaction
+destroyed :: Tx -> LedgerState -> Coin
+destroyed tx l = balance (txouts tx) + fee tx + deposits (getPCs l) stpools tx
+  where stpools = getStPools $ getDelegationState l
+
+-- |Compute the key deregistration refunds in a transaction
+keyRefunds :: PrtlConsts -> Allocs -> Tx -> Coin
+keyRefunds pc stkeys tx =
+  sum [refund' key | (RegKey key) <- Set.toList (certs tx)]
+  where refund' key =
+          case Map.lookup (hashKey key) stkeys of
+            Nothing -> Coin 0
+            Just s -> refund (RegKey key) pc (ttl tx -* s)
+
+-- |Compute the lovelace which are created by the transaction
+created :: Tx -> LedgerState -> Coin
+created tx l = balance (txins tx <| getUtxo l) + refunds
+  where refunds = keyRefunds (getPCs l) (getStKeys $ getDelegationState l) tx
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
 preserveBalance :: TxWits -> LedgerState -> Validity
 preserveBalance (TxWits tx _) l =
-  if balance (txouts tx) + fee tx == balance (txins tx <| getUtxo l)
+  if created' == destroyed'
     then Valid
-    else Invalid [ValueNotConserved]
+    else Invalid [ValueNotConserved created' destroyed']
+  where
+    created' = created tx l
+    destroyed' = destroyed tx l
 
 -- |Determine if a transaction input is authorized by a given key.
 authTxin :: VKey -> TxIn -> UTxO -> Bool
@@ -209,9 +241,10 @@ witnessed (TxWits tx wits) l =
     isWitness tx' input unspent (Wit key sig) =
       verify key tx' sig && authTxin key input unspent
 
-validTx :: TxWits -> LedgerState -> Validity
-validTx tx l =
+validTx :: TxWits -> Slot -> LedgerState -> Validity
+validTx tx slot l =
   validInputs tx l
+    <> current tx slot
     <> validNoReplay tx
     <> validFee tx l
     <> preserveBalance tx l
@@ -224,21 +257,21 @@ validTx tx l =
 
 -- | Checks whether a key registration certificat is valid.
 validKeyRegistration :: DCert -> LedgerState -> Validity
-validKeyRegistration cert (LedgerState _ ds _ _) =
+validKeyRegistration cert (LedgerState _ ds _) =
   case cert of
     RegKey key -> if not $ Map.member (hashKey key) (getStKeys ds)
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
     _          -> Valid
 
 validKeyDeregistration :: DCert -> LedgerState -> Validity
-validKeyDeregistration cert (LedgerState _ ds _ _) =
+validKeyDeregistration cert (LedgerState _ ds _) =
   case cert of
     DeRegKey key -> if Map.member (hashKey key) (getStKeys ds)
                     then Valid else Invalid [StakeKeyNotRegistered]
     _            -> Valid
 
 validStakeDelegation :: DCert -> LedgerState -> Validity
-validStakeDelegation cert (LedgerState _ ds _ _) =
+validStakeDelegation cert (LedgerState _ ds _) =
   case cert of
     Delegate (Delegation source _)
       -> if Map.member (hashKey source) (getStKeys ds)
@@ -250,7 +283,7 @@ validStakePoolRegister :: DCert -> LedgerState -> Validity
 validStakePoolRegister _ _ = Valid
 
 validStakePoolRetire :: DCert -> LedgerState -> Validity
-validStakePoolRetire cert (LedgerState _ ds _ _) =
+validStakePoolRetire cert (LedgerState _ ds _) =
   case cert of
     RetirePool key _ -> if Map.member (hashKey key) (getStPools ds)
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
@@ -270,7 +303,7 @@ validDelegation cert l =
 asStateTransition
   :: Slot -> LedgerState -> TxWits -> Either [ValidationError] LedgerState
 asStateTransition slot ls tx =
-  case validTx tx ls of
+  case validTx tx slot ls of
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot) ls' cs
       where
@@ -291,9 +324,9 @@ certAsStateTransition slot ls cert =
 -- way.
 asStateTransition'
   :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
-asStateTransition' _ (LedgerValidation valErrors ls) tx =
+asStateTransition' slot (LedgerValidation valErrors ls) tx =
     let ls' = applyTxBody ls (body tx) in
-    case validTx tx ls of
+    case validTx tx slot ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
 
@@ -301,7 +334,7 @@ asStateTransition' _ (LedgerValidation valErrors ls) tx =
 
 -- |Retire the appropriate stake pools when the epoch changes.
 retirePools :: LedgerState -> Epoch -> LedgerState
-retirePools ls@(LedgerState _ ds _ _) epoch = ls
+retirePools ls@(LedgerState _ ds _) epoch = ls
     { getDelegationState = ds
       { getStPools =
           Map.filterWithKey
@@ -318,14 +351,14 @@ applyTxBody ls tx = ls { getUtxo = newUTxOs }
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
-applyDCert slot (RegKey key) ls@(LedgerState _ ds _ _) = ls
+applyDCert slot (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Map.insert hksk slot (getStKeys ds)
     , getAccounts = Map.insert (RewardAcnt hksk) (Coin 0) (getAccounts ds)}
   }
   where hksk = hashKey key
 
-applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _ _) = ls
+applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Map.delete hksk (getStKeys ds)
     , getAccounts = Map.delete (RewardAcnt hksk) (getAccounts ds)
@@ -334,25 +367,24 @@ applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _ _) = ls
   where hksk = hashKey key
 
 -- TODO do we also have to check hashKey target?
-applyDCert _ (Delegate (Delegation source target)) ls@(LedgerState _ ds _ _) = ls
+applyDCert _ (Delegate (Delegation source target)) ls@(LedgerState _ ds _) = ls
   {getDelegationState = ds
     { getDelegations =
         Map.insert (hashKey source) (hashKey target) (getDelegations ds)}
   }
 
--- TODO what happens if there's already a pool registered with that key?
-applyDCert slot (RegPool sp) ls@(LedgerState _ ds _ _) = ls
+applyDCert slot (RegPool sp) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
-    { getStPools = Map.insert hsk (sp, slot') pools
+    { getStPools = Map.insert hsk slot' pools
+    , getPParams = Map.insert hsk sp pparams
     , getRetiring = Map.delete hsk (getRetiring ds)}}
   where hsk = hashKey $ poolPubKey sp
         pools = getStPools ds
-        slot' = case Map.lookup hsk pools of
-                  Just (_, s) -> s
-                  Nothing -> slot
+        pparams = getPParams ds
+        slot' = fromMaybe slot (Map.lookup hsk pools)
 
 -- TODO check epoch (not in new doc atm.)
-applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _ _) = ls
+applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getRetiring = retiring}}
   where retiring = Map.insert hk_sp epoch (getRetiring ds)
@@ -360,7 +392,7 @@ applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _ _) = ls
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls@(LedgerState _ ds _ _) = Map.fromListWith mappend delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutputs
   where
     getOutputs (UTxO utxo) = Map.elems utxo
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do

@@ -24,6 +24,7 @@ module UTxO
   , txins
   , txouts
   , balance
+  , deposits
   , (<|)
   , (</|)
   -- , verify
@@ -44,8 +45,11 @@ import           Numeric.Natural         (Natural)
 
 import           Coin                    (Coin (..))
 import           Keys
+import           PrtlConsts (PrtlConsts(..))
+import           Slot (Slot(..))
 
-import           Delegation.Certificates (DCert (..))
+import           Delegation.Certificates (DCert (..), dvalue)
+import           Delegation.StakePool (StakePool (..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -72,6 +76,7 @@ data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
              , fee     :: Coin
+             , ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
@@ -125,6 +130,15 @@ union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 balance :: UTxO -> Coin
 balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
+
+-- |Determine the total deposit amount needed
+deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
+deposits pc stpools tx = foldl f (Coin 0) cs
+  where
+    f coin cert = coin + dvalue cert pc
+    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ poolPubKey pool) stpools
+    notRegisteredPool _ = True
+    cs = Set.filter notRegisteredPool (certs tx)
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
