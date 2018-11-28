@@ -18,7 +18,7 @@ all: $(DOCNAME).pdf
 
 ##
 ## CUSTOM BUILD RULES
-## 
+##
 
 
 ##
@@ -40,3 +40,8 @@ watch: $(DOCNAME).tex
 
 clean:
 	latexmk -CA
+
+install:
+	mkdir -pv ${out}/nix-support/
+	cp blockchain-spec.pdf ${out}/
+	echo "doc-pdf none ${out}/blockchain-spec.pdf" > ${out}/nix-support/hydra-build-products
