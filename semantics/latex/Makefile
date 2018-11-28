@@ -44,4 +44,4 @@ clean:
 install:
 	mkdir -pv ${out}/nix-support/
 	cp small-step-semantics.pdf ${out}/
-	echo "doc-pdf none ${out}/small-step-semantics.pdf" > ${out}/nix-support/hydra-build-products
+	echo "doc-pdf semantics-spec ${out}/small-step-semantics.pdf" > ${out}/nix-support/hydra-build-products

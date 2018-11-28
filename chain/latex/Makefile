@@ -44,4 +44,4 @@ clean:
 install:
 	mkdir -pv ${out}/nix-support/
 	cp blockchain-spec.pdf ${out}/
-	echo "doc-pdf none ${out}/blockchain-spec.pdf" > ${out}/nix-support/hydra-build-products
+	echo "doc-pdf blockchain-spec ${out}/blockchain-spec.pdf" > ${out}/nix-support/hydra-build-products
