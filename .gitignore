@@ -42,3 +42,4 @@ auto/
 
 # Nix results
 specs/**/result
+result
