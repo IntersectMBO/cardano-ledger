@@ -25,7 +25,7 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
-import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
+import Cardano.Chain.Delegation.Certificate (Certificate)
 import Cardano.Crypto (isSelfSignedPsk, pskDelegatePk, pskIssuerPk)
 
 
@@ -40,7 +40,7 @@ import Cardano.Crypto (isSelfSignedPsk, pskDelegatePk, pskIssuerPk)
 --      supported. It's not needed in genesis, it can always be reduced.
 --
 newtype GenesisDelegation = UnsafeGenesisDelegation
-  { unGenesisDelegation :: Map StakeholderId ProxySKHeavy
+  { unGenesisDelegation :: Map StakeholderId Certificate
   } deriving (Show, Eq)
 
 instance Monad m => ToJSON m GenesisDelegation where
@@ -58,14 +58,14 @@ instance Aeson.ToJSON GenesisDelegation where
 
 instance Aeson.FromJSON GenesisDelegation where
   parseJSON = Aeson.parseJSON >=> \v -> do
-    (elems' :: Map StakeholderId ProxySKHeavy) <- mapM Aeson.parseJSON v
+    elems' <- mapM Aeson.parseJSON v
     toAesonError $ recreateGenesisDelegation elems'
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer
   | GenesisDelegationInvalidKey StakeholderId StakeholderId
   | GenesisDelegationMultiLayerDelegation StakeholderId
-  | GenesisDelegationSelfSignedPsk ProxySKHeavy
+  | GenesisDelegationSelfSignedPsk Certificate
   deriving (Eq, Show)
 
 instance B.Buildable GenesisDelegationError where
@@ -96,7 +96,7 @@ instance B.Buildable GenesisDelegationError where
 -- | Safe constructor of 'GenesisDelegation' from a list of PSKs.
 mkGenesisDelegation
   :: MonadError GenesisDelegationError m
-  => [ProxySKHeavy]
+  => [Certificate]
   -> m GenesisDelegation
 mkGenesisDelegation psks = do
   unless
@@ -109,7 +109,7 @@ mkGenesisDelegation psks = do
 -- | Safe constructor of 'GenesisDelegation' from existing map.
 recreateGenesisDelegation
   :: MonadError GenesisDelegationError m
-  => Map StakeholderId ProxySKHeavy
+  => Map StakeholderId Certificate
   -> m GenesisDelegation
 recreateGenesisDelegation pskMap = do
   forM_ (M.toList pskMap) $ \(k, psk) -> do

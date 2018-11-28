@@ -20,7 +20,6 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import Data.Coerce (coerce)
-import Data.List ((!!))
 import Data.Maybe (fromJust)
 
 import Hedgehog (Property)
@@ -53,6 +52,7 @@ import Cardano.Chain.Block
   )
 import Cardano.Chain.Common (mkAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
+import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
@@ -74,8 +74,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   )
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
-import Test.Cardano.Chain.Delegation.Example
-  (staticHeavyDlgIndexes, staticProxySKHeavys)
+import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import qualified Test.Cardano.Chain.Delegation.Example as Delegation
 import Test.Cardano.Chain.Slotting.Example (exampleSlotId)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
@@ -322,7 +321,7 @@ exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
     pm
     (noPassSafeSigner issuerSk)
     (toPublic delegateSk)
-    (staticHeavyDlgIndexes !! 0)
+    (EpochIndex 5)
   pm = ProtocolMagic 2
 
 exampleConsensusData :: ConsensusData
@@ -345,14 +344,14 @@ exampleProof = Proof
   SscProof
   (abstractHash dp)
   Update.exampleProof
-  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
+  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
 
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
 exampleBody = body exampleTxPayload SscPayload dp Update.examplePayload
-  where dp = Delegation.unsafePayload (take 4 staticProxySKHeavys)
+  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
 
 exampleToSign :: ToSign
 exampleToSign = ToSign

@@ -18,13 +18,13 @@ import Formatting.Buildable (Buildable(..))
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (StakeholderId)
-import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKHeavy)
+import Cardano.Chain.Delegation.Certificate (Certificate)
 import Cardano.Crypto (ProxySecretKey, isSelfSignedPsk)
 
 
 -- | Undo for the delegation component
 data Undo = Undo
-  { duPsks            :: ![ProxySKHeavy]
+  { duPsks            :: ![Certificate]
     -- ^ PSKs we've modified when applying the block (by deleting or
     --   overwriting). There should be no duplicates, every psk must have a
     --   unique issuer.

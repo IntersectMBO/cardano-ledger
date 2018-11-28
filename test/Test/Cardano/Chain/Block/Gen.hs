@@ -45,7 +45,7 @@ import Cardano.Crypto (ProtocolMagic)
 
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import Test.Cardano.Chain.Slotting.Gen (genFlatSlotId, genSlotId)
+import Test.Cardano.Chain.Slotting.Gen (genEpochIndex, genFlatSlotId, genSlotId)
 import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof, genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -61,8 +61,7 @@ import Test.Cardano.Crypto.Gen
 genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
   [ BlockSignature <$> genSignature pm mts
-  , BlockPSignatureHeavy
-    <$> genProxySignature pm mts Delegation.genHeavyDlgIndex
+  , BlockPSignatureHeavy <$> genProxySignature pm mts genEpochIndex
   ]
   where mts = genToSign pm epochSlots
 

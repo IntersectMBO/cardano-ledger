@@ -107,8 +107,7 @@ import Cardano.Chain.Block.Header
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofError, checkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
-import Cardano.Chain.Delegation.HeavyDlgIndex (ProxySKBlockInfo)
-import qualified Cardano.Chain.Delegation.Payload as Delegation
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (SlotId(..))
 import Cardano.Chain.Ssc (SscPayload)
@@ -238,7 +237,7 @@ mkBlock
   -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
-  -> ProxySKBlockInfo
+  -> Maybe Delegation.Certificate
   -> Body
   -> Block
 mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
@@ -258,11 +257,11 @@ mkBlockExplicit
   -> ChainDifficulty
   -> SlotId
   -> SecretKey
-  -> ProxySKBlockInfo
+  -> Maybe Delegation.Certificate
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty slotId sk pske body = ABlock
-  (mkHeaderExplicit pm prevHash difficulty slotId sk pske body extraH)
+mkBlockExplicit pm bv sv prevHash difficulty slotId sk mDlgCert body = ABlock
+  (mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extraH)
   body
   (Annotated extraB ())
  where

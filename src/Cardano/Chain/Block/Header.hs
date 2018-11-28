@@ -81,15 +81,15 @@ import Cardano.Chain.Block.ExtraHeaderData
   (ExtraHeaderData(..), ExtraHeaderDataError, verifyExtraHeaderData)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty)
-import Cardano.Chain.Delegation.HeavyDlgIndex
-  (ProxySKBlockInfo, ProxySKHeavy, ProxySigHeavy)
+import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
-import Cardano.Chain.Slotting (SlotId(..), slotIdF)
+import Cardano.Chain.Slotting (EpochIndex, SlotId(..), slotIdF)
 import Cardano.Chain.Update.BlockVersion (BlockVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
   ( Hash
   , ProtocolMagic(..)
+  , ProxySignature
   , PublicKey
   , SecretKey
   , SignTag(..)
@@ -99,6 +99,7 @@ import Cardano.Crypto
   , proxySign
   , proxyVerifyDecoded
   , psigPsk
+  , pskIssuerPk
   , sign
   , toPublic
   , unsafeAbstractHash
@@ -192,7 +193,7 @@ mkHeader
   -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
-  -> ProxySKBlockInfo
+  -> Maybe Delegation.Certificate
   -> Body
   -> ExtraHeaderData
   -> Header
@@ -213,11 +214,11 @@ mkHeaderExplicit
   -> ChainDifficulty
   -> SlotId
   -> SecretKey
-  -> ProxySKBlockInfo
+  -> Maybe Delegation.Certificate
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra = AHeader
+mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extra = AHeader
   pm
   (Annotated prevHash ())
   (Annotated proof ())
@@ -225,18 +226,17 @@ mkHeaderExplicit pm prevHash difficulty slotId sk pske body extra = AHeader
   (Annotated extra ())
   ()
  where
-  proof = mkProof body
-  makeSignature :: ToSign -> (ProxySKHeavy, PublicKey) -> BlockSignature
-  makeSignature toSign (psk, _) =
-    BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk psk toSign
-  signature =
-    let toSign = ToSign prevHash proof slotId difficulty extra
-    in
-      maybe
-        (BlockSignature $ sign pm SignMainBlock sk toSign)
-        (makeSignature toSign)
-        pske
-  leaderPk  = maybe (toPublic sk) snd pske
+  proof     = mkProof body
+
+  toSign    = ToSign prevHash proof slotId difficulty extra
+
+  signature = case mDlgCert of
+    Nothing -> BlockSignature $ sign pm SignMainBlock sk toSign
+    Just dlgCert ->
+      BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
+
+  leaderPk  = maybe (toPublic sk) pskIssuerPk mDlgCert
+
   consensus = consensusData slotId leaderPk difficulty signature
 
 headerSlot :: AHeader a -> SlotId
@@ -393,7 +393,7 @@ wrapBoundaryBytes = mappend "\130\NUL"
 --   interval).
 data BlockSignature
   = BlockSignature (Signature ToSign)
-  | BlockPSignatureHeavy (ProxySigHeavy ToSign)
+  | BlockPSignatureHeavy (ProxySignature EpochIndex ToSign)
   deriving (Show, Eq, Generic)
 
 instance NFData BlockSignature
