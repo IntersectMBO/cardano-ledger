@@ -25,3 +25,8 @@ steps:
       - "./check-brittany"
     agents:
       system: x86_64-linux
+
+  - label: 'release.nix'
+    command: 'scripts/buildkite/check-hydra.sh'
+    agents:
+      system: x86_64-linux
