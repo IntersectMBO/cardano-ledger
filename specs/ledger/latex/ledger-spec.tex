@@ -11,12 +11,13 @@
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \usepackage{float}
 \floatstyle{boxed}
 \restylefloat{figure}
+\usepackage{listings} % for code blocks.
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -95,7 +96,7 @@
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
 
-%\includeonly{delegation,blockchain-interface,notation}
+\includeonly{update-mechanism, delegation, blockchain-interface}
 
 %% Parameters that control floats placement. See https://robjhyndman.com/hyndsight/latex-floats/
 \setcounter{topnumber}{2}
@@ -124,6 +125,8 @@
 \include{utxo}
 
 \include{delegation}
+
+\include{update-mechanism}
 
 \include{blockchain-interface}
 

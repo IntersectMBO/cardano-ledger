@@ -4,6 +4,9 @@
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
 
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+
 \subsection{Delegation interface}
 \label{sec:delegation-interface}
 
@@ -149,4 +152,481 @@
       \right)
   \end{align*}
   \caption{Delegation interface functions}
+\end{figure}
+
+\clearpage
+
+\subsection{Update-proposals interface}
+\label{sec:update-proposals-interface}
+
+\begin{figure}[htb]
+  \emph{Update-proposals interface environments}
+  \begin{align*}
+    & \UPIEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{k} & \mathbb{N} & \text{chain stability parameter}\\
+        \var{u} & \mathbb{N} & \text{update proposals time-to-live}\\
+        \var{e_c} & \Epoch & \text{current epoch}\\
+        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Update-proposals interface states}
+  \begin{align*}
+    & \UPIState
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{e_p} & \Epoch & \text{previously seen epoch}\\
+        (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
+        & \text{current protocol information}\\
+        (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
+        & \text{candidate protocol information}\\
+        \var{rups} & \Rups
+        & \text{registered update proposals}\\
+        \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
+        & \text{proposals per-epoch per-key}\\
+        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
+        \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
+                           & \text{keys ready to adopt versions}\\
+        \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
+      \end{array}\right)
+  \end{align*}
+  %
+  \emph{Update-proposals interface transitions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l}
+      \_ \vdash \_ \trans{upireg}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
+      \_ \vdash \_ \trans{upivote}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \Vote \times \UPIState)\\
+      \_ \vdash \_ \trans{upibvreg}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState
+      \times (\ProtVer \times \VKey) \times \UPIState)\\
+      \_ \vdash \_ \trans{upiec}{\_} \_ &
+      \powerset (\UPIEnv \times \UPIState \times \Epoch \times \UPIState)
+    \end{array}
+  \end{equation*}
+  \caption{Update-proposals interface transition-system types}
+  \label{fig:ts-types:upi}
+\end{figure}
+
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-reg-interface}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{e_c}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}\\
+            \var{eps}
+          \end{array}
+        \right)
+      }
+      \trans{upreg}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups'}\\
+            \var{eps'}
+          \end{array}
+        \right)
+      }
+      &
+      pws' = pws \unionoverride \{ \upId{up} \mapsto b_n\}
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          u\\
+          e_c\\
+          b_n\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upireg}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
+            \var{rups'}\\
+            \var{eps'}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Update-proposals registration rules}
+  \label{fig:rules:upi-reg-interface}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-vote}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          b_n\\
+          \var{pps}\\
+          \var{rups}\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{cps}\\
+            \var{vts}
+          \end{array}
+        \right)
+      }
+      \trans{upvote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{cps'}\\
+            \var{vts'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          u\\
+          e_c\\
+          b_n\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upivote}{\var{v}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps'}\\
+            \var{vts'}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Voting on update-proposals rules}
+  \label{fig:rules:upi-vote}
+\end{figure}
+
+\clearpage
+
+The interface rule for protocol-block-version registration makes use of the
+$\trans{upbvreg}{}$ transition, passing only the portion of the state relevant
+to it. In addition, the proposals that are older than $u$ blocks are removed
+from the parts of the state that hold:
+\begin{itemize}
+\item the registered proposals,
+\item the confirmed proposals,
+\item the votes associated with the proposals,
+\item the set of keys ready to adopt the different proposals, and
+\item the block number in which proposals where added.
+\end{itemize}
+Note that a proposal that got adopted could be cleaned earlier in some other
+rule, however, by keeping all the cleanup logic associated to block number
+change in one place we make reasoning about state-size bounds simpler. The
+epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
+update in which epoch, is cleaned up in the rules given in
+\cref{fig:rules:upi-ec}, which deals with epoch change. Finally, in
+$\var{vs_{keep}}$ we compute the set of all the versions associated with
+proposals id's to be kept, and restrict the domain of $\var{bvs}$ to these
+versions.
+
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-bv-reg}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          k\\
+          b_n\\
+          (\var{pv}, \var{pps})\\
+          \var{dms}\\
+          \var{cps}\\
+          \var{rups}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            (\var{pv_c}, \var{pps_c})\\
+            \var{bvs}
+          \end{array}
+        \right)
+      }
+      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      {
+        \left(
+          \begin{array}{l}
+            (\var{pv_c'}, \var{pps_c'})\\
+            \var{bvs'}
+          \end{array}
+        \right)
+      }\\
+      \var{pids_{keep}} = \dom~(pws \restrictrange [b_n - u, ..])
+      & \var{vs_{keep}} = \dom~(\range~(\var{pids_{keep}} \restrictdom \var{rups}))
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          u\\
+          e_c\\
+          b_n\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c}, \var{pps_c})\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upibvreg}{(\var{bv}, \var{vk})}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            (\var{pv}, \var{pps})\\
+            (\var{pv_c'}, \var{pps_c'})\\
+            \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{eps}\\
+            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{pids_{keep}} \restrictdom \var{vts}\\
+            \var{vs_{keep}}  \restrictdom \var{bvs}\\
+            \var{pids_{keep}} \restrictdom \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block version registration rules}
+  \label{fig:rules:upi-bv-reg}
+\end{figure}
+
+\clearpage
+
+Rule~\ref{eq:rule:upi-ec} models how the protocol version and its parameters
+are changed depending on the epoch in the signal ($e_n$ in this case). A change
+only occurs if the new epoch is greater than the previously seen epoch ($e_p$).
+In such case, the current epoch is also updated accordingly. The candidate
+versions and parameters map $(\var{pv_c}, \var{pps_c})$ remain constant in this
+transition, even if they become adopted. Finally, the set $\var{eps}$ is
+updated so that only keys that proposed in epochs no earlier than $e_n$ are
+kept. Finally, note that we use $\var{pps} \unionoverride \var{pps'}$ in the
+final state, since the candidate proposal might only update some parameters of
+the protocol: by using union override $\var{pps'}$ overwrites the values of the
+parameters in $\var{pps}$.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:pvbump-change-noop}
+    \inference
+    {
+      e_n \leq e_p
+    }
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}\\
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}\\
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:pvbump-change}
+    \inference
+    {
+      e_p < e_n
+    }
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_n}\\
+            \var{(\var{pv_c}, \var{pps_c})}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:upi-ec}
+    \inference
+    {
+      (\var{pv_c}, \var{pps_c})
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps'})}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          k\\
+          u\\
+          e_c\\
+          b_n\\
+          \var{dms}\\
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}\\
+            \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{rups}\\
+            \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upiec}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
+            \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{rups}\\
+            {[e_n, ..]} \restrictdom \var{eps}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \caption{Block version adoption on epoch change rules}
+  \label{fig:rules:upi-ec}
 \end{figure}
