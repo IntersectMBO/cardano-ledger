@@ -30,7 +30,6 @@ stdenv.mkDerivation {
                 ];
   src = ./.;
   buildPhase = "make";
-  installPhase = "mkdir $out; cp *.pdf $out/";
 
   meta = with lib; {
     description = "Byron Ledger Specification";
