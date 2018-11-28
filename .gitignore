@@ -39,3 +39,6 @@ TAGS
 
 # Emacs auto-generated Emacs-lisp code
 auto/
+
+# Nix results
+specs/**/result
