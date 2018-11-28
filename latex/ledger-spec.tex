@@ -493,12 +493,6 @@ transaction can only be issued if the refund is bigger than the minimum
 transaction fee. In order to receive a refund in this case, the transaction
 body must also contain inputs onto which this refund can be added.
 
-\begin{todo}
-Is it necessary to have the releasing c check here? Since the refund calc is
-only summed over either keyreg or poolreg certificates?
-\end{todo}
-
-
 \begin{note}
   We define $\fun{certRefund}$ by cases on whether or not
   the refunding certificate has a corresponding
@@ -626,14 +620,10 @@ last epoch before $\fun{ttl}~\var{tx}$, or, if the key was
 registered in the same epoch as the $\fun{ttl}~\var{tx}$ slot,
 since the registration certificate slot number.
 
-\begin{todo}
-Explain why the decayed value is only for one epoch and why this isnt
-an epoch boundary calculation
-\end{todo}
-
 Recall that the the stake pool retirement refunds are issued not when a certificate
 scheduling the retirement is processed, but at the epoch boundary for which
-the retirement is scheduled. For details of this accounting, see
+the retirement is scheduled. The decayed value over the full previous epoch is
+also accounted for at the boundary change. For details of this accounting, see
 Section~\cref{sec:epoch}.
 
 
@@ -1038,9 +1028,9 @@ variable
 The pending withdrawals are updated by:
 
 \begin{itemize}
-\item pair the signal transaction's $\txid$ with the
+\item pair the signal transaction's $\var{txid}$ with the
 reward addresses to which it requested withdrawals, and add these pairs
-to the $wdrls$ set on the ledger
+to the $\var{wdrls}$ set on the ledger
 \end{itemize}
 
 Note that the type of withdrawals of a transaction contains only the
@@ -1190,10 +1180,6 @@ Figure~\ref{fig:rules:utxow}):
  withdrawal address is the same as the hash of the verification key of the witness.
 \end{itemize}
 
-\begin{todo}
-  Why do the reward requests need witnessing?
-\end{todo}
-
 The purpose of witnessing is make sure that the intended action is authorized by
 the holder of the signing key, providing replay protection as a
 consequence.
@@ -1202,6 +1188,11 @@ of UTxO stype accounting, this replay protection is needed only to prevent
 the re-application of old certificates. The way this is
 achieved by the above precondition is by requiring a valid signature on
 the coin transfers made by the transaction (the body of the transaction).
+
+Note that an unauthorized (non-witnessed) reward request would still result in
+rewards being given out to the correct address, but here we add the
+witnessing feature to make sure only whoever is in
+control of the reward address is able to make reward withdrawal requests.
 
 We enforce the condition here that the list of inputs of a transaction can never be empty.
 So, since all the inputs of an applied transaction have already been included
