@@ -22,6 +22,7 @@ library:
   - containers
   - cryptonite
   - memory
+  - multiset
   - tasty
   - tasty-hunit
   - hedgehog
@@ -51,4 +52,5 @@ tests:
     - delegation
     - cryptonite
     - containers
+    - multiset
     - text

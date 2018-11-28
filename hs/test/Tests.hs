@@ -3,6 +3,7 @@
 
 import           Control.Monad           (foldM)
 import qualified Data.Map                as Map
+import           Data.MultiSet           (unions, fromSet, occur, filter, size)
 import           Data.Ratio
 import qualified Data.Set                as Set
 import           Data.Text               (pack)
@@ -299,7 +300,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Cover
 propPreserveBalanceInitTx =
     withCoverage $ do
-      (_, steps, fees, ls, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, steps, fees, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
       classify (steps > 1) "non-trivial number of steps"
       case next of
         Left _    -> failure
@@ -352,6 +353,36 @@ propUniqueTxIds = withCoverage $ do
             Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ getUtxo l'))
          where collectIds (TxIn txId _) = txId
 
+-- | Property checks no double spend occurs in the currently generated 'TxWits'
+-- transactions. Note: this is more a property of the current generator.
+propNoDoubleSpend :: Cover
+propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+      (_, _, _, _, txs, next)  <- forAll genNonEmptyAndAdvanceTx
+      case next of
+        Left _  -> failure
+        Right _ -> do
+          let inputIndicesSet = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+          0 === (Data.MultiSet.size $ Data.MultiSet.filter
+                     (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+                     inputIndicesSet)
+
+-- | Classify mutated transaction into double-spends (validated and
+-- non-validated). This is a property of the validator, i.e., no validated
+-- transaction should ever be able to do a double spend.
+classifyInvalidDoubleSpend :: Cover
+classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+      (_, _, _, _, txs, LedgerValidation validationErrors _)
+          <- forAll genNonEmptyAndAdvanceTx'
+      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+      let multiSpentInputs = (Data.MultiSet.size $ Data.MultiSet.filter
+                                   (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+                                   inputIndicesSet)
+      let isMultiSpend = 0 < multiSpentInputs
+      classify (isMultiSpend && validationErrors == []) "multi-spend, validation OK"
+      classify (isMultiSpend && validationErrors /= []) "multi-spend, validation KO"
+      classify (isMultiSpend) "multi-spend"
+      True === ((not isMultiSpend) || validationErrors /= [])
+
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
@@ -375,11 +406,17 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "Completeness and Collision-Freeness of new TxIds"
                     propUniqueTxIds
+                  , testPropertyCoverage
+                    "No Double Spend in valid ledger states"
+                    propNoDoubleSpend
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
                    "preserve balance of change in UTxO"
                    propBalanceTxInTxOut'
+                  , testPropertyCoverage
+                    "Classify double spend"
+                    classifyInvalidDoubleSpend
                   ]
                 ]
 
