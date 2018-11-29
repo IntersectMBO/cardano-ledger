@@ -60,7 +60,7 @@ data ValidationError =
   -- | The transaction inputs are not valid.
     BadInputs
   -- | The transaction fee is too small
-  | FeeTooSmall String
+  | FeeTooSmall Coin Coin
   -- | Value is not conserved
   | ValueNotConserved
   -- | The transaction does not have the required witnesses.
@@ -171,11 +171,10 @@ validFee :: TxWits -> LedgerState -> Validity
 validFee txwit l =
   if needed <= given
     then Valid
-    else Invalid [FeeTooSmall msg]
+    else Invalid [FeeTooSmall needed given]
       where
         needed = minfee (getPCs l) txwit
         given = fee $ body txwit
-        msg = "needed " ++ show needed ++ ", given " ++ show given
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
