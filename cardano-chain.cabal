@@ -63,6 +63,7 @@ library
                        Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
                        Cardano.Chain.Delegation.Undo
+                       Cardano.Chain.Delegation.Validation
 
                        Cardano.Chain.Genesis.AvvmBalances
                        Cardano.Chain.Genesis.Config

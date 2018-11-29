@@ -27,8 +27,7 @@ exampleCertificates = zipWith4
   staticSafeSigners
   (examplePublicKeys 1 6)
   exampleEpochIndices
- where
-  exampleEpochIndices = EpochIndex <$> [5, 1, 3, 27, 99, 247]
+  where exampleEpochIndices = EpochIndex <$> [5, 1, 3, 27, 99, 247]
 
 exampleUndo :: Undo
 exampleUndo = Undo

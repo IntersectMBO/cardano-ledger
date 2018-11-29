@@ -193,7 +193,10 @@ mkHeader
   -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
+  -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
+  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
+  --   right to sign this block
   -> Body
   -> ExtraHeaderData
   -> Header
@@ -214,7 +217,10 @@ mkHeaderExplicit
   -> ChainDifficulty
   -> SlotId
   -> SecretKey
+  -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
+  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
+  --   right to sign this block
   -> Body
   -> ExtraHeaderData
   -> Header

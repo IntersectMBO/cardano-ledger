@@ -237,7 +237,10 @@ mkBlock
   -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
+  -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
+  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
+  --   right to sign this block
   -> Body
   -> Block
 mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
@@ -257,7 +260,10 @@ mkBlockExplicit
   -> ChainDifficulty
   -> SlotId
   -> SecretKey
+  -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
+  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
+  --   right to sign this block
   -> Body
   -> Block
 mkBlockExplicit pm bv sv prevHash difficulty slotId sk mDlgCert body = ABlock

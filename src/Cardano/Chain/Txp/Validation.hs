@@ -18,7 +18,7 @@ where
 import Cardano.Prelude
 
 
-import Control.Monad.Except (MonadError, liftEither)
+import Control.Monad.Except (MonadError)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Vector as V
@@ -61,14 +61,6 @@ data TxValidationError
   | TxValidationUnknownFeePolicy TxFeePolicy
   | TxValidationUnknownWitnessType Word8
   deriving (Eq, Show)
-
-
--- | A helper for lifting an 'Either' to a 'MonadError'
---
---   By using this function infix we can move the error handling to the end of
---   an expression, hopefully improving readability.
-wrapError :: MonadError e' m => Either e a -> (e -> e') -> m a
-wrapError m wrapper = liftEither $ first wrapper m
 
 
 -- | Validate that:

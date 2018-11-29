@@ -95,9 +95,7 @@ instance B.Buildable GenesisDelegationError where
 
 -- | Safe constructor of 'GenesisDelegation' from a list of PSKs.
 mkGenesisDelegation
-  :: MonadError GenesisDelegationError m
-  => [Certificate]
-  -> m GenesisDelegation
+  :: MonadError GenesisDelegationError m => [Certificate] -> m GenesisDelegation
 mkGenesisDelegation psks = do
   unless
     ((length . nub $ pskIssuerPk <$> psks) == length psks)

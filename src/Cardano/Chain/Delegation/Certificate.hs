@@ -18,11 +18,7 @@ import Text.JSON.Canonical
   (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Chain.Slotting (EpochIndex)
-import Cardano.Crypto
-  ( AProxySecretKey(..)
-  , pskOmega
-  , unsafeProxySecretKey
-  )
+import Cardano.Crypto (AProxySecretKey(..), pskOmega, unsafeProxySecretKey)
 
 
 -- | A delegation certificate is a `ProxySecretKey` tagged with an `EpochIndex`

@@ -41,7 +41,6 @@ import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
   , ChainValidationState
-  , DelegationState
   , SigningHistory(..)
   , blockSlot
   , initialChainValidationState
@@ -76,7 +75,9 @@ tests scenario = do
       <$> runExceptT (mkConfigFromFile "test/mainnet-genesis.json" Nothing)
 
   -- Create an 'IORef' containing the initial 'ChainValidationState'
-  cvsRef <- newIORef $ initialChainValidationState config
+  cvsRef <-
+    newIORef $ either (panic . show) identity $ initialChainValidationState
+      config
 
   let
     takeFiles :: [FilePath] -> [FilePath]
@@ -127,7 +128,7 @@ foldChainValidationState config cvs blocks = S.foldM_
   (\c b ->
     withExceptT (ErrorChainValidationError (blockOrBoundarySlot b)) $ case b of
       ABOBBoundary bvd   -> updateChainBoundary config c bvd
-      ABOBBlock    block -> updateChain config delegates c block
+      ABOBBlock    block -> updateChain config c block
   )
   (pure cvs)
   pure
@@ -137,9 +138,6 @@ foldChainValidationState config cvs blocks = S.foldM_
   blockOrBoundarySlot = \case
     ABOBBoundary _     -> Nothing
     ABOBBlock    block -> Just $ blockSlot block
-
-  delegates :: DelegationState -> PublicKey -> PublicKey -> Bool
-  delegates _ _ _ = True
 
 
 --------------------------------------------------------------------------------

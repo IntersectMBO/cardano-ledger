@@ -12,12 +12,7 @@ import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Delegation
-  ( Certificate
-  , Payload
-  , Undo(..)
-  , unsafePayload
-  )
+import Cardano.Chain.Delegation (Certificate, Payload, Undo(..), unsafePayload)
 import Cardano.Crypto (ProtocolMagic, createPsk)
 import Data.List (nub)
 

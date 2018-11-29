@@ -17,10 +17,9 @@ There are several restrictions on a certificate posted on the blockchain:
 \item Only genesis keys can delegate.
 \item Certificates must be properly signed by the delegator.
 \item Any given key can delegate at most once per-epoch.
+\item Any given key can issue at most one certificate in a given slot.
 \item The epochs in certificates cannot refer to past epochs. This mechanism
   prevents replay attacks.
-\item Two certificates for the same key issued in the same (current) slot
-  cannot contain different epochs.
 \item Certificates do not become active immediately, but they require a certain
   number of slots till they become stable in all the nodes.
 \end{enumerate}
@@ -45,7 +44,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
       \var{e} & \Epoch & n & \mathbb{N} & \text{epoch}\\
       \var{s} & \Slot & s & \mathbb{N} & \text{slot}\\
-      \var{d} & \SlotCount & s & \mathbb{N} & \text{slot}                                         
+      \var{d} & \SlotCount & s & \mathbb{N} & \text{slot}
     \end{array}
   \end{equation*}
 
@@ -103,7 +102,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
     \subseteq \powerset (\DSEnv \times \DSState \times \DCert \times \DSState)
   \end{equation*}
   \caption{Delegation scheduling transition-system types}
-  \label{fig:ts-types:delegation-scheduling}  
+  \label{fig:ts-types:delegation-scheduling}
 \end{figure}
 
 \begin{figure}[htb]
@@ -114,7 +113,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
       (\var{vk_s},~ \sigma) = \dwit{c}
       & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
       (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
-      & (e_d,~ \var{vk_s}) \notin \var{eks} & e < e_d \\ ~ \\
+      & (e_d,~ \var{vk_s}) \notin \var{eks} & e \leq e_d \\ ~ \\
       (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
     {
