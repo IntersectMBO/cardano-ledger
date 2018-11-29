@@ -27,7 +27,7 @@ import           LedgerState             (DelegationState (..),
                                           asStateTransition, emptyDelegation,
                                           mkRwdAcnt, genesisId, genesisState)
 import           UTxO
-import           PtrlConsts
+import           PrtlConsts
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
@@ -50,8 +50,8 @@ bobStake = keyPair (Owner 4)
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
-pcs :: PtrlConsts
-pcs = PtrlConsts 1 1
+pcs :: PrtlConsts
+pcs = PrtlConsts 1 1
 
 genesis :: LedgerState
 genesis = genesisState
