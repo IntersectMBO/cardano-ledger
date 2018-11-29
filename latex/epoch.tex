@@ -1,4 +1,3 @@
-\newcommand{\UTxOEpEnv}{\type{UTxOEpEnv}}
 \newcommand{\UTxOEpState}{\type{UTxOEpState}}
 \newcommand{\Accnt}{\type{Accnt}}
 \newcommand{\AccntEnv}{\type{AccntEnv}}
@@ -15,6 +14,29 @@
 \newcommand{\reward}[5]{\fun{reward}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 
+In this chapter we discuss the ledger state updates that take place at the epoch
+boundary. These are necessary updates that are not triggered by a transaction.
+It is impractical and unnecessary to perform the calculations and updates we
+describe below every slot. The main state updates that take place at the boundary
+are of an accounting nature, calculating new values for the various accounts
+on the ledger (treasury, reserves, rewards, fees). However, it is also when
+pools scheduled for retirement at this boundary are removed from the ledger.
+In addition, if there is an update planned for any of the protocol constants,
+it may only take place at the epoch boundary, and results in a ledger state
+update, which we also give the details of in this chapter.
+
+We introduce a new abstract type in this chapter, $\Production$ (see
+Figure~\ref{fig:epoch-defs}), which represents the set of blocks produced by the
+blockchain this epoch. We also present the abstract function $\fun{makeUTxO}$,
+which builds UTxO entries out of pending withdrawal, coin values in rewards accounts,
+and existing UTxO entries.
+
+\begin{todo}
+  Give details of $utxo$ generation by the $\fun{makeUTxO}$ map
+
+  All we need here is withdrawals and existing UTxO?
+\end{todo}
+
 %%
 %% Figure - Epoch Abstract Types
 %%
@@ -26,9 +48,48 @@
       \var{production} & \Production & \text{blocks produced in the epoch}\\
     \end{array}
   \end{equation*}
+  \emph{Abstract Functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}ll}
+      \fun{makeUTxO} & \UTxO \to \Wdrl \to (\AddrRWD \mapsto Coin)\to \UTxO &
+        \\ \text{generate UTxO entries for withdrawals}\\
+    \end{array}
+  \end{equation*}
   \caption{Epoch definitions}
   \label{fig:epoch-defs}
 \end{figure}
+
+In Figure~\ref{fig:functions:epoch}, we give the functions
+used in the deposit calculations at the boundary. Here we introduce the function
+that gives the value of the total possible (decayed) refunds for both individual and
+pool deposits in a given slot number, $\fun{obligation}$.
+
+Next, we give the type of the function used to calculate additional rewards that will become
+available to be claimed after the boundary. This function is denoted $\fun{reward}$,
+and depends on this epoch's blocks, protocol constants and rewards made available
+for claiming this epoch. Based on these values, the $\fun{reward}$ function
+updates the existing records of the unclaimed coin values in each reward address.
+
+\begin{todo}
+  The delegation design document defines the $\fun{reward}$ function, but the calculation
+  depends on the leader election for the epoch being determined and known at the begining
+  of the epoch. We are currently rearching version of Ouroboros where this assumption
+  does not hold. Therefore we have marked $\fun{reward}$ as ``to be determined".
+
+  Additionally, we should aim to do calculations such as these as incrementally as possible.
+\end{todo}
+
+The function $\fun{poolRefunds}$ is used to calculate the total refunds
+that must be distributed
+for stake pools scheduled to retire at an epoch boundary. Note that this
+calculation takes a slot number as a parameter because that is the type of value
+needed for the decay calculation, but will only ever be invoked
+when the slot number is the last before the boundary.
+
+The map $\fun{poolRefunds}$ uses the pool decay constants in $\PrtclConsts$
+to assign a refund to each pool key in the set of pools scheduled for retirement
+at the epoch boundary.
 
 %%
 %% Figure - Functions for Epoch Rules
@@ -39,7 +100,7 @@
       & \text{total possible refunds} \\
       & \obligation{pc}{stkeys}{stpools}{cslot} =\\
       & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
-        \refund{k_{\mathsf{val}}}{k_{\min}}{(\slotminus{cslot}{s})}{\lambda_d} \\
+        \refund{d_{\mathsf{val}}}{d_{\min}}{(\slotminus{cslot}{s})}{\lambda_d} \\
       & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
         \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda_p} \\
       &
@@ -67,43 +128,40 @@
   \label{fig:functions:epoch}
 \end{figure}
 
-\begin{todo}
-  The delegation design document defines the $\fun{reward}$ function, but the calculation
-  depends on the leader election for the epoch being determined and known at the begining
-  of the epoch. We are currently rearching version of Ouroboros where this assumption
-  does not hold. Therefore we have marked $\fun{reward}$ as ``to be determined".
-
-  Additionally, we should aim to do calculations such as these as incrementally as possible.
-\end{todo}
+The type of the UTxO state transition at the epoch boundary is given in
+Figure~\ref{fig:ts-types:utxoe}. There is no signal for this transition, but rather
+it is the result of a change in the environment, i.e. the slot number changing
+from the last slot of an epoch to the first slot of the subsequent epoch.
 
 %%
 %% Figure - UTxO Epoch Defs
 %%
 \begin{figure}[htb]
-  \emph{UTxO Epoch environment}
-  \begin{equation*}
-    \UTxOEpEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{current slot}\\
-        \var{pc} & \PrtclConsts & \text{protocol constants}\\
-        \var{stkeys} & \Allocs & \text{stake key allocations}\\
-        \var{stpools} & \Allocs & \text{stake pool allocations}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{UTxOE transitions}
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{utxoep}{} \var{\_}
-    \subseteq \powerset (\UTxOEpEnv \times \UTxOState \times \UTxOState)
+    \subseteq \powerset (\UTxOEnv \times \UTxOState \times \UTxOState)
   \end{equation*}
   %
   \caption{UTxO Epoch transition-system types}
   \label{fig:ts-types:utxoe}
 \end{figure}
 
+The inference rule describing when the boundary UTxO state transition can
+take place is presented in~\ref{fig:rules:utxoep}. As a result of the application
+of this rule, the UTxO is updated by
+generating UTxO entries from pending withdrawals and adding them to the
+set of existing UTxO entries. The $\var{deposits}$ value is decreased by the
+amount of decay of refunds this epoch (calculated by the $\fun{obligation}$
+function). The $\var{fees}$ value on the ledger is set to 0, and the set of
+withdrawals is emptied.
+
+\begin{todo}
+Discuss index generation
+
+discuss prevention of double withdrawal
+\end{todo}
 %%
 %% Figure - UTxO Epoch Rule
 %%
@@ -131,7 +189,7 @@
       \trans{utxoep}{}
       \left(
         \begin{array}{r}
-          \var{utxo} \cup \var{wdrls} \\
+          \var{utxo} \cup \fun{makeUTxO}~\var{wdrls} \\
           \obligation{pc}{stkeys}{stpools}{slot} \\
           0 \\
           \emptyset \\
@@ -142,6 +200,14 @@
   \caption{UTxO Epoch inference rules}
   \label{fig:rules:utxoep}
 \end{figure}
+
+The Figure~\ref{fig:ts-types:accnt} gives the definitions related to epoch
+boundary ledger accounting. The figure lists the accounting fields, denoted by
+$\Accnt$, which include $\var{treasury}$, $\var{reserves}$,
+and $\var{rewardPool}$. The figure also gives the set of necessary accounting environment
+variables, $\AccntEnv$, and the accounting state, $\AccntState$, which includes
+the delegation state and the accounting fields. The accounting state transition
+type, as all transition types in this chapter, has no signal.
 
 %%
 %% Figure - Accounting Defs
@@ -194,6 +260,16 @@
   \caption{Accounting transition-system types}
   \label{fig:ts-types:accnt}
 \end{figure}
+
+\begin{todo}
+  Discuss Accounting rule
+
+  What is $\tau$ and $\rho$?
+
+  is $paidRewards$ not used here?
+
+  ... etc
+\end{todo}
 
 %%
 %% Figure - Accounting Rules
@@ -252,6 +328,13 @@
   \label{fig:rules:accnt}
 \end{figure}
 
+Next, we discuss the epoch boundary pool retirement in
+Figure~\ref{fig:ts-types:pool-clean}. The environment needed for the
+cleanup of stake pools scheduled for retirement this epoch boundary includes
+the protocol constants and the current slot number, and the state is made up of
+the current UTxO, delegation and pool states. We also give the type of this
+state transition, with no signal.
+
 %%
 %% Figure - Pool Clean Defs
 %%
@@ -288,6 +371,28 @@
   \caption{Pool Clean Transition}
   \label{fig:ts-types:pool-clean}
 \end{figure}
+
+We now present the pool-cleanup transition rule in Figure~\ref{fig:rules:pool-clean}.
+This rule will be applied whenever there is one or more stake pools scheduled
+to retire this epoch. If so, all of the entries in $\var{stpools}$,
+$\var{pparams}$, and $\var{retiring}$ which correspond to any of the hash keys
+of the stake pools scheduled to retire this epoch are removed from
+these variables.
+
+In addition, the $\var{deposits}$ value on the ledger is
+updated by subtracting from the existing $\var{deposits}$ value the total
+value of all (decayed) refunds for the stake pools scheduled for retirement
+this epoch. The refunds for stake pool retirement end up in the rewards
+accounts of the pool key holders. Specifically, the set of rewards is updated by
+adding to coin value corresponding to each key entry in the $\var{rewards}$
+finite map the amount of (decayed) refund intended for the pool
+key which deregisters the pool.
+
+\begin{todo}
+  So, refunds become rewards?
+
+  What happens if the indivudual key is deregistered?
+\end{todo}
 
 %%
 %% Figure - Pool Clean Rule
@@ -361,6 +466,12 @@
   \label{fig:rules:pool-clean}
 \end{figure}
 
+Finally, reaching the epoch boundary may trigger a change in the protocol
+constants. Besides the current slot number, delegation and pool states, the
+protocol constant environment includes the old and new protocol constants.
+The state change is a change of the $\UTxOState$ and the $\Accnt$ states.
+The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-consts}.
+
 %%
 %% Figure - New Proto Consts Defs
 %%
@@ -401,6 +512,21 @@
   \caption{New Proto Consts transition-system types}
   \label{fig:ts-types:new-proto-consts}
 \end{figure}
+
+The inference rule for changing protocol constants either:
+
+\begin{itemize}
+\item if there are more total possible refunds
+available calculated based on the old protocol constants than the new ones,
+moves the difference between the two values into the $\var{reserves}$
+from the $\var{deposits}$ variable, \textit{or}
+
+\item if there are more refunds available based on the new constants, it moves
+the difference between the two calculations from $\var{deposits}$
+to $\var{reserves}$, \textit{provided that} there is enough coin in the
+$\var{reserves}$ to cover the entire value of the transfer
+\end{itemize}
+
 
 %%
 %% Figure - New Proto Consts Rule
