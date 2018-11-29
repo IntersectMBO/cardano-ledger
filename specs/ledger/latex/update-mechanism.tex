@@ -16,6 +16,8 @@
 \newcommand{\BVREnv}{\ensuremath{\type{BVREnv}}}
 \newcommand{\BVRState}{\ensuremath{\type{BVRState}}}
 \newcommand{\BkNr}{\ensuremath{\type{BkNr}}}
+\newcommand{\ApName}{\ensuremath{\type{ApName}}}
+\newcommand{\SWVer}{\ensuremath{\type{SWVer}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
@@ -24,6 +26,7 @@
 \newcommand{\upSigData}[1]{\ensuremath{\fun{upSigData}~\var{#1}}}
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
 \newcommand{\upParams}[1]{\ensuremath{\fun{upParams}~\var{#1}}}
+\newcommand{\upSwVer}[1]{\ensuremath{\fun{upSwVer}~\var{#1}}}
 \newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
 \newcommand{\vPropId}[1]{\ensuremath{\fun{vPropId}~\var{#1}}}
 \newcommand{\vSig}[1]{\ensuremath{\fun{vSig}~\var{#1}}}
@@ -73,9 +76,9 @@ this specification can be extended to incorporate the research results.
     \begin{array}{r@{~\in~}lr}
       \var{up} & \UProp & \text{(protocol) update proposal}\\
       \var{p} & \ProtPm & \text{protocol parameters}\\
-      \var{swv} & \type{SWVer} & \text{update software version}\\
       \var{upd} & \type{UpdData} & \text{update data}\\
       \var{upa} & \type{UpdAttr} & \text{update attributes}\\
+      \var{an} & \ApName & \text{application name}
     \end{array}
   \end{equation*}
   %
@@ -86,6 +89,9 @@ this specification can be extended to incorporate the research results.
       & (\mathbb{N}, \mathbb{N}, \mathbb{N}) & \text{protocol version}\\
       \var{pps} & \PPMMap & \var{pps} & \ProtPm \mapsto \Value
                                              & \text{protocol parameters map}\\
+      \var{swv} & \SWVer
+      & (\var{an}, \var{av}) & \ApName \times \mathbb{N}
+      & \text{software version}\\
       \var{pb} & \UPropSD
       &
         {\left(\begin{array}{r l}
@@ -119,8 +125,9 @@ this specification can be extended to incorporate the research results.
       \fun{upId} & \UProp \to \UPropId & \text{update proposal id}\\
       \fun{upParams} & \UProp \to \mathbb{\PPMMap}
                                            & \text{new parameters that are proposed}\\
+      \fun{upSwVer} & \UProp \to \SWVer & \text{software version-update proposal}\\
       \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
-      \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}
+      \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}\\
     \end{array}
   \end{equation*}
   \caption{Update proposals definitions}
@@ -187,11 +194,10 @@ First we model the validity of a proposal.
 
 In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
 \begin{itemize}
-\item must increase one of the (major, minor, or alternative) of the
-  current version in a consistent manner:
+\item if it changes the protocol version, it must do it in a consistent manner:
   \begin{itemize}
-  \item The proposed version must be lexicographically bigger than the current
-    version.
+  \item The proposed version must be lexicographically bigger or equal than the
+    current version.
   \item The major versions of the proposed and current version must differ in
     at most one.
   \item If the proposed major version is equal to the current major
@@ -214,16 +220,20 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
     implies that a proposal is uniquely determined by the protocol version it
     proposes.
   \end{itemize}
+\item must increase the software version by at most one (see
+  \cref{eq:func:av-can-follow}).
+\item must not contain a software update proposal that was already registered
+  (in $\var{raups}$).
 \item the protocol version and parameters, along with some other data (see the
   definition of $\fun{upSigdata}$), must be signed by the proposal issuer.
 \end{itemize}
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:func:can-follow}
+    \label{eq:func:pv-can-follow}
     \begin{array}{r c l}
-      \fun{canFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
-      & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_n}, \var{mi_n}, \var{a_n})\\
+      \fun{pvCanFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
+      & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) \leq (\var{mj_n}, \var{mi_n}, \var{a_n})\\
       & \wedge & 0 \leq \var{mj_n} - \var{mj_p} \leq 1\\
       & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))\\
       & \wedge & (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)
@@ -248,11 +258,21 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
   \end{equation}
   \nextdef
   \begin{equation}
-    \label{eq:func:is-new}
+    \label{eq:func:pv-is-new}
     \begin{array}{r c l}
-      \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})
+      \fun{pvIsNew}~\var{rups}~(\var{pid}, \var{nv})
       & = &  \var{pid} \notin \dom \var{rups}
-            \wedge \var{nv} \notin \dom (\range \var{rups})\\
+            \wedge \var{nv} \notin \dom (\range \var{rups})
+    \end{array}
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:func:av-can-follow}
+    \begin{array}{r c l}
+      \fun{avCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
+      & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
+        \Rightarrow 0 \leq \var{av} - \var{av_c} \leq 1)\\
+      & \vee & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
     \end{array}
   \end{equation}
   \caption{Update validity functions}
@@ -260,17 +280,49 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:up-validity}
+    \label{eq:rule:up-av-validity}
+    \inference
+    {
+      (\var{an}, \var{av}) = \upSwVer{up}
+      & \fun{avCanFollow}~\var{avs}~(\var{an}, \var{av})
+      & (\var{an}, \var{av}) \notin \range~\var{raus}
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upsvv}{up}
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus} \unionoverride \{ \upId{up} \mapsto (\var{an}, \var{av})\}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+    \begin{equation}
+    \label{eq:rule:up-pv-validity}
     \inference
     {
       \var{vk} = \upIssuer{up}
       & \var{pid} = \upId{up}
       & \var{nv} = \upPV{up}
       & \var{pps_n} = \upParams{up}\\
-      & \fun{canFollow}~\var{nv}~\var{pv}
+      & \fun{pvCanFollow}~\var{nv}~\var{pv}
       & \fun{canUpdate}~\var{pps}~\var{up}
-      & \fun{isNew}~\var{rups}~(\var{pid}, \var{nv})\\
-      \mathcal{V}_{\var{vk}}\serialised{\upSigData{up}}_{(\upSig{up})}
+      & \fun{pvIsNew}~\var{rups}~(\var{pid}, \var{nv})
     }
     {
       {
@@ -287,11 +339,91 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
           \end{array}
         \right)
       }
-      \trans{upv}{\var{up}}
+      \trans{uppvv}{\var{up}}
       {
         \left(
           \begin{array}{l}
             \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:up-validity}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}
+          \end{array}
+        \right)
+      }
+      \trans{uppvv}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups'}
+          \end{array}
+        \right)
+      }
+      &
+      {
+        \begin{array}{l}
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upsvv}{up}
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus'}
+          \end{array}
+        \right)
+      }
+      \\
+      \mathcal{V}_{\var{vk}}\serialised{\upSigData{up}}_{(\upSig{up})}
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups}\\
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upv}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rups'}\\
+            \var{raus'}
           \end{array}
         \right)
       }
@@ -796,10 +928,10 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
 
 \clearpage
 
-\subsection{Block protocol version registration}
-\label{sec:block-protocol-version-reg}
+\subsection{Update-proposal endorsement}
+\label{sec:proposal-endorsement}
 
-Figure~\ref{fig:ts-types:up-bv-reg} shows the types of the transition system
+Figure~\ref{fig:ts-types:up-end} shows the types of the transition system
 associated with the registration of candidate protocol versions present in
 blocks. Some clarifications are in order:
 \begin{itemize}
@@ -812,11 +944,11 @@ blocks. Some clarifications are in order:
   width.
 \item For the sake of conciseness, we omit the types associated to the
   transitions $\trans{addbvvk}{}$, since they can be inferred from the types of
-  the $\trans{upbvreg}{}$ transitions.
+  the $\trans{upend}{}$ transitions.
 \end{itemize}
 
 \begin{figure}[htb]
-  \emph{Block protocol version registration environments}
+  \emph{Update-proposal endorsement environments}
   \begin{align*}
     & \BVREnv
       = \left(
@@ -832,7 +964,7 @@ blocks. Some clarifications are in order:
       \end{array}\right)
   \end{align*}
   %
-  \emph{Block protocol version registration states}
+  \emph{Update-proposal endorsement states}
   \begin{align*}
     & \BVRState
       = \left(
@@ -840,28 +972,30 @@ blocks. Some clarifications are in order:
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol}\\
         \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
-        & \text{keys ready to adopt versions}
+        & \text{endorsement-key pairs}
       \end{array}\right)
   \end{align*}
   %
-  \emph{Block protocol version registration transitions}
+  \emph{Update-proposal endorsement transitions}
     \begin{equation*}
-    \_ \vdash \_ \trans{upbvreg}{\_} \_ \in
+    \_ \vdash \_ \trans{upend}{\_} \_ \in
     \powerset (\BVREnv \times \BVRState
     \times (\ProtVer \times \VKey) \times \BVRState)
     \end{equation*}
-  \caption{Vote registration transition-system types}
-  \label{fig:ts-types:up-bv-reg}
+  \caption{Update-proposal endorsement transition-system types}
+  \label{fig:ts-types:up-end}
 \end{figure}
 
-Rules in \cref{fig:rules:up-bv-reg} specify what happens when a block issuer
+Rules in \cref{fig:rules:up-end} specify what happens when a block issuer
 signals that it is ready to upgrade to a new protocol version, given in the
 rule by $\var{bv}$:
 \begin{itemize}
-\item The set $\var{bvs}$ that contains which genesis keys are ready to adopt
-  a given protocol version is updated to reflect that all the delegators of the
+\item The set $\var{bvs}$, containing which genesis keys are ready to adopt a
+  given protocol version, is updated to reflect that all the delegators of the
   block issuer (identified by its verifying key, $\var{vk}$) are ready to
-  upgrade to $\var{bv}$.
+  upgrade to $\var{bv}$. Given a pair $(\var{pv}, ~\var{vk_s}) \in \var{bvs}$,
+  we say that (the owner of) key $\var{vk_s}$ endorses the (proposed) protocol
+  version $\var{pv}$.
 \item If the candidate protocol version $\var{bv}$ is greater than the current
   candidate version $\var{pv_c}$, and there is a significant number of blocks
   signed with that version (condition formalized in
@@ -870,10 +1004,16 @@ rule by $\var{bv}$:
   current protocol version $\var{pv}$. If this rule is used in an initial state
   in which $\var{pv} \leq \var{pv_c}$, then this invariant is maintained by
   these rules.
-\item The protocol version $\var{bv}$ must refer to a registered update
+\item Endorsed protocol version $\var{bv}$ must refer to a registered update
   proposal (which are contained in $\var{rups}$), and this update proposal must
   have been confirmed at least $k$ blocks ago, to ensure stability of the
-  confirmation.
+  confirmation. Note that this rule does not guarantee that a confirmed
+  proposal will have $k$ blocks (or $2k$ blocks) before the end of the epoch
+  where nodes can endorse this version. In such case, the proposal can only be
+  adopted in the next epoch. Figure~\ref{fig:proposal-confirmed-too-late} shows
+  an example of a proposal being confirmed too late in an epoch, where it is
+  not possible to get the enough endorsements in the remaining window. In this
+  Figure we take $k = 2$.
 \end{itemize}
 
 \begin{equation}
@@ -969,7 +1109,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      \trans{upend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1034,7 +1174,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      \trans{upend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1100,7 +1240,7 @@ rule by $\var{bv}$:
           \end{array}
         \right)
       }
-      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      \trans{upend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -1111,8 +1251,81 @@ rule by $\var{bv}$:
       }
     }
   \end{equation}
-  \caption{Block protocol version registration rules}
-  \label{fig:rules:up-bv-reg}
+  \caption{Update-proposal endorsement rules}
+  \label{fig:rules:up-end}
+\end{figure}
+
+
+\begin{figure}[htb]
+  \centering
+  \begin{tikzpicture}
+    %%
+    %% Macros used in this picture
+    %%
+    %
+    % Number of slots
+    \pgfmathsetmacro{\nrSlots}{11}
+    % Slot in which the proposal gets confirmed
+    \pgfmathsetmacro{\cSlot}{1}
+    % Our special K.
+    \pgfmathsetmacro{\K}{2}
+    % Epoch end.
+    \pgfmathsetmacro{\eend}{7}
+
+    % Draw the horizontal line
+    \draw[thick, -Triangle] (0,0) -- (\nrSlots,0) node[font=\scriptsize,below left=3pt and -8pt]{slots};
+
+    % % draw vertical lines
+    \foreach \x in {0,1,...,10}
+    \draw (\x cm, 3pt) -- (\x cm, -3pt);
+
+    % Add a label to with the block number in which the proposal got confirmed.
+    \node at (\cSlot, -.7) {$b_j$};
+
+    % Update in cps
+    \node at (\cSlot, -1.5) {$\var{cps'} = \var{cps} \cup \{ \var{pid} \mapsto b_j \}$};
+
+    % The no-endorsements red bar.
+    \draw[red, line width=4pt] (\cSlot, .5) -- +(2*\K, 0);
+
+    % Brace above the no-endorsement window bar.
+    \draw[thick, red, decorate, decoration={brace, amplitude=5pt}]
+    (\cSlot, .7) -- +(2*\K, 0)
+    node[black!20!red, midway, above=4pt, font=\scriptsize] {No-endorsements possible};
+
+    % The endorsements window.
+    \coordinate (ewStart) at (\cSlot + 2*\K, .5);
+    \coordinate (ewEnd) at ($(\eend, .5)$);
+    \draw[green, line width=4pt]
+    (ewStart) -- (ewEnd);
+
+    % Brace above the endorsements window
+    \coordinate (ewStartB) at ($(ewStart) + (0, 0.2)$);
+    \coordinate (ewEndB) at ($(ewEnd) + (0, 0.2)$);
+    \draw[thick, green, decorate, decoration={brace, amplitude=5pt}]
+    (ewStartB) -- (ewEndB)
+    node[black!50!green, midway, above=15pt, font=\scriptsize] {Endorsements window};
+
+    % The 2k before end-of-epoch window.
+    \coordinate (beeStart) at (\eend - 2*\K, -.5);
+    \coordinate (beeEnd) at ($(\eend, -.5)$);
+    \draw[blue, line width=4pt]
+    (beeStart) -- (beeEnd);
+
+    % Brace on above the 2k before end-of-epoch window.
+    \coordinate (beeStartB) at ($(beeStart) - (0, 0.2)$);
+    \coordinate (beeEndB) at ($(beeEnd) - (0, 0.2)$);
+    \draw[thick, blue, decorate, decoration={brace, amplitude=5pt}]
+    (beeEndB) -- (beeStartB)
+    node[black!20!blue, midway, below=5pt, font=\scriptsize] {$2k$ slots before epoch ends};
+
+    \draw[blue, line width=2pt] (\eend, 3pt) -- (\eend, -3pt);
+
+    \draw[->] (\eend, -4pt) -- +(1, -1)
+    node[right, blue, font=\scriptsize] {End of epoch};
+  \end{tikzpicture}
+  \caption{A proposal confirmed too late}
+  \label{fig:proposal-confirmed-too-late}
 \end{figure}
 
 \clearpage
@@ -1192,17 +1405,6 @@ In this specification we only make use of a minimum adoption threshold,
 represented by the protocol parameter $\var{upAdptThd}$ until it becomes clear
 why a dynamic alternative is needed.
 
-\subsubsection{No voting deadlines}
-\label{sec:no-voting-deadlines}
-
-The update proposals have a time-to-live, formalized using the parameter $u$ in
-Figure~\ref{fig:ts-types:upi}. This is the total time a proposal has to enter
-the system and become adopted. Proposals that exceeded this time to live are
-removed from the ledger state. This cleanup takes place at a single place in
-the rules, which simplifies reasoning about the ledger-state size bounds. By
-having a voting deadline, we would still need a time-to-live for confirmed
-proposals that were not adopted, which requires additional logic.
-
 \subsubsection{No checks on unlock-stake-epoch parameter}
 \label{sec:no-unlock-stake-epoch-check}
 
@@ -1234,7 +1436,17 @@ cares about the mechanisms by which the protocol parameters are changed.
 
 \subsubsection{Ignored attributes of proposals}
 
-In Figure~\ref{fig:defs:update-proposals} the types $\type{SWVer}$,
+In Figure~\ref{fig:defs:update-proposals} the types
 $\type{UpdData}$, and $\type{UpdAttr}$ are only needed to model the fact that
 an update proposal must sign such data, however, we do not use them for any
 other purpose in this formalization.
+
+\subsection{Questions}
+\label{sec:up-questions}
+
+This temporary section contains unanswered questions about the formalization of
+update mechanism:
+
+\begin{itemize}
+\item Do we need to model the $\var{scriptVersion}$?
+\end{itemize}
