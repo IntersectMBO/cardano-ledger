@@ -18,7 +18,7 @@ all: $(DOCNAME).pdf
 
 ##
 ## CUSTOM BUILD RULES
-## 
+##
 
 
 ##
@@ -40,3 +40,8 @@ watch: $(DOCNAME).tex
 
 clean:
 	latexmk -CA
+
+install:
+	mkdir -pv ${out}/nix-support/
+	cp small-step-semantics.pdf ${out}/
+	echo "doc-pdf semantics-spec ${out}/small-step-semantics.pdf" > ${out}/nix-support/hydra-build-products

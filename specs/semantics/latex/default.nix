@@ -1,4 +1,8 @@
-with (import <nixpkgs> {});
+{ pkgs ? import ../../../pkgs.nix
+}:
+
+with pkgs;
+
 stdenv.mkDerivation {
   name = "docsEnv";
   buildInputs = [ (texlive.combine {
@@ -6,7 +10,7 @@ stdenv.mkDerivation {
                       scheme-small
 
                       # libraries
-                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor
+                      stmaryrd lm-math amsmath extarrows cleveref semantic tikz-cd xcolor
 
                       # bclogo and dependencies
                       bclogo mdframed xkeyval etoolbox needspace pgf
@@ -23,4 +27,12 @@ stdenv.mkDerivation {
                       ;
                   })
                 ];
+  src = ./.;
+  buildPhase = "make";
+
+  meta = with lib; {
+    description = "Small Steps Semantics Specification";
+    license = licenses.bsd3;
+    platforms = platforms.linux;
+  };
 }
