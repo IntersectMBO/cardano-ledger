@@ -203,8 +203,12 @@ discuss prevention of double withdrawal
 
 The Figure~\ref{fig:ts-types:accnt} gives the definitions related to epoch
 boundary ledger accounting. The figure lists the accounting fields, denoted by
-$\Accnt$, which include $\var{treasury}$, $\var{reserves}$,
-and $\var{rewardPool}$. The figure also gives the set of necessary accounting environment
+$\Accnt$, which include $\var{treasury}$ (the amount of coin currently in
+circulation, but not on the UTxO and not designated for rewards),
+$\var{reserves}$ (the amount of coin
+not yet in circulation),
+and $\var{rewardPool}$ (the total amount available for distribution of rewards).
+The figure also gives the set of necessary accounting environment
 variables, $\AccntEnv$, and the accounting state, $\AccntState$, which includes
 the delegation state and the accounting fields. The accounting state transition
 type, as all transition types in this chapter, has no signal.
@@ -261,15 +265,33 @@ type, as all transition types in this chapter, has no signal.
   \label{fig:ts-types:accnt}
 \end{figure}
 
-\begin{todo}
-  Discuss Accounting rule
+The accounting epoch boundary rule in Figure~\ref{fig:rules:accnt} is the rule
+where the most attention to detail is required in order to adhere to the
+preservation of value condition. In this rule, the funds in each of the
+accounting variables, as well as the individual reward addresses, are adjusted
+as follows:
 
-  What is $\tau$ and $\rho$?
+\begin{itemize}
+\item The $\var{treasury}$ has a fraction $\tau$ of the sum of
+the fees accumulated from transactions this epoch, the decay amount
+of all current deposits, the total reward pool, and the expansion (how much
+coin is added to circulation each epoch) added to it
+\item A fraction $\rho$ of the $\var{reserves}$ comes into circulation (i.e.
+is removed from $\var{reserves}$)
+\item The value added to $\var{treasury}$ is removed from the $\var{rewardPool}$
+\item The the sum total of rewards accumulated for all addresses this epoch
+is removed from the $\var{rewardPool}$
+\item The accumulated fees, deposit decay, and circulation expansion is
+added to the $\var{rewardPool}$
+\item The rewards accumulated this epoch are distributed by
+adding the amount computed for each reward address (by the $\fun{rewardPool}$ calculation)
+to the value of coin corresponding to that address
+\end{itemize}
 
-  is $paidRewards$ not used here?
-
-  ... etc
-\end{todo}
+Note that fees and deposit decay, above, are not explicitly removed from any account:
+the fees come from transactions paying them, and are accounted for whenever
+transactions are processed, and the deposit decay value comes from returning
+smaller refunds for deposits than were paid upon depositing.
 
 %%
 %% Figure - Accounting Rules
@@ -590,6 +612,12 @@ $\var{reserves}$ to cover the entire value of the transfer
   \label{fig:rules:new-proto-consts}
 \end{figure}
 
+Finally, it is possible to define the complete epoch boundary transition type. It
+In the environment of this transition, we have the slot number, blocks produced
+this epoch, and both the old and the new protocol constants. The state is
+made up of the accounting state, the UTxO, the delegation state and the
+pool state.
+
 %%
 %% Figure - Epoch Defs
 %%
@@ -630,6 +658,27 @@ $\var{reserves}$ to cover the entire value of the transfer
   \caption{Epoch transition-system types}
   \label{fig:ts-types:epoch}
 \end{figure}
+
+The epoch transition rule is a compilation of all the state transition rules
+we have defined above. That is, whenever the UTXOEP, ACCNT, POOLCLEAN, and
+NEWPC are all valid transitions between their respective pairs of sets of
+state variables, the total transition between the pair of sets of state variables
+which include all the variables in these four transitions is a valid transition
+forthe complete ledger state at the epoch boundary.
+
+Recall that the epoch boundary is \textit{a point in time}. When the clock signals
+a change of slot $x$ to slot $x+1$, also resulting in an epoch change,
+this transition occurs. The calculations in this transition are done
+\textit{after} this change, so that all the processing in the previous slot
+number is complete, and no new transactions will begin to be processed that
+arrived after the epoch change until the boundary update is complete.
+A stable ledger state is required for this transition to have the correct
+outcome.
+
+Note that the slot numbers used as \textit{current slot numbers}
+for the epoch boundary calculations where they are required are set to
+be the \textit{last slot of the epoch before the boundary}, i.e. $x$ in the
+example above.
 
 %%
 %% Figure - Epoch Rule
