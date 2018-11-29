@@ -59,8 +59,6 @@ data Addr = AddrTxin HashKey HashKey
           deriving (Show, Eq, Ord)
 
 -- |The input of a UTxO.
---
---     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
@@ -73,6 +71,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
+             , fee     :: Coin
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
