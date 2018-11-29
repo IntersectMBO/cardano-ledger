@@ -159,6 +159,16 @@
 \subsection{Update-proposals interface}
 \label{sec:update-proposals-interface}
 
+Figure~\ref{fig:ts-types:upi} defines the types of the transition systems
+related with the update-proposals interface. The acronyms in the transition
+labels have the following meaning:
+\begin{description}
+\item[UPIREG] Update-proposal registration.
+\item[UPIEND] Update-proposal vote.
+\item[UPIEND] Update-proposal endorsement.
+\item[UPIEC] Update-proposal epoch-change.
+\end{description}
+
 \begin{figure}[htb]
   \emph{Update-proposals interface environments}
   \begin{align*}
@@ -190,7 +200,7 @@
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
         \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
-                           & \text{keys ready to adopt versions}\\
+                           & \text{endorsement-key pairs}\\
         \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
       \end{array}\right)
   \end{align*}
@@ -202,7 +212,7 @@
       \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
       \_ \vdash \_ \trans{upivote}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState \times \Vote \times \UPIState)\\
-      \_ \vdash \_ \trans{upibvreg}{\_} \_ &
+      \_ \vdash \_ \trans{upiend}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{\_} \_ &
@@ -382,29 +392,33 @@
 
 The interface rule for protocol-block-version registration makes use of the
 $\trans{upbvreg}{}$ transition, passing only the portion of the state relevant
-to it. In addition, the proposals that are older than $u$ blocks are removed
-from the parts of the state that hold:
+to it. In addition, the unconfirmed proposals that are older than $u$ blocks
+are removed from the parts of the state that hold:
 \begin{itemize}
 \item the registered proposals,
-\item the confirmed proposals,
 \item the votes associated with the proposals,
-\item the set of keys ready to adopt the different proposals, and
+\item the set of endorsement-key pairs, and
 \item the block number in which proposals where added.
 \end{itemize}
-Note that a proposal that got adopted could be cleaned earlier in some other
-rule, however, by keeping all the cleanup logic associated to block number
-change in one place we make reasoning about state-size bounds simpler. The
-epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
-update in which epoch, is cleaned up in the rules given in
-\cref{fig:rules:upi-ec}, which deals with epoch change. Finally, in
-$\var{vs_{keep}}$ we compute the set of all the versions associated with
-proposals id's to be kept, and restrict the domain of $\var{bvs}$ to these
-versions.
+The epoch-key pairs set ($\var{eps}$) that represents which stakeholder
+proposed an update in which epoch, is cleaned up in the rules given in
+\cref{fig:rules:upi-ec}, which deals with epoch change.
 
+In Rule~\ref{eq:rule:upi-pend}, the set of proposal id's $\var{pid_{keep}}$
+contains only those proposals that haven't expired yet or that are confirmed.
+Once a proposal $\var{up}$ is confirmed, it is removed from the set of
+confirmed proposals ($\var{cps}$) either when it is adopted or when a protocol
+version higher than that of $\var{up}$ gets adopted (see
+Rule~\ref{eq:rule:upi-ec}).
+%
+The set of endorsement-key pairs is cleaned here as well as in the epoch change
+rule (Rule~\ref{eq:rule:upi-ec}). The reason for this is that this set grows at
+each block, and it can get considerably large if no proposal gets adopted at
+the end on an epoch.
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:upi-bv-reg}
+    \label{eq:rule:upi-pend}
     \inference
     {
       {
@@ -435,8 +449,13 @@ versions.
           \end{array}
         \right)
       }\\
-      \var{pids_{keep}} = \dom~(pws \restrictrange [b_n - u, ..])
-      & \var{vs_{keep}} = \dom~(\range~(\var{pids_{keep}} \restrictdom \var{rups}))
+      {
+        \begin{array}{r@{~=~}l}
+          \var{pids_{keep}} & \dom~(pws \restrictrange [b_n - u, ..]) \cup \dom~\var{cps}\\
+          \var{vs_{keep}} & \dom~(\range~\var{rups'})\\
+          \var{rups'} & \var{pids_{keep}} \restrictdom \var{rups}
+        \end{array}
+      }
     }
     {
       {
@@ -464,16 +483,16 @@ versions.
           \end{array}
         \right)
       }
-      \trans{upibvreg}{(\var{bv}, \var{vk})}
+      \trans{upiend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
-            \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{rups'}\\
             \var{eps}\\
-            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
             \var{vs_{keep}}  \restrictdom \var{bvs}\\
             \var{pids_{keep}} \restrictdom \var{pws}
@@ -482,8 +501,8 @@ versions.
       }
     }
   \end{equation}
-  \caption{Block version registration rules}
-  \label{fig:rules:upi-bv-reg}
+  \caption{Proposal endorsement rules}
+  \label{fig:rules:upi-pend}
 \end{figure}
 
 \clearpage
@@ -493,12 +512,18 @@ are changed depending on the epoch in the signal ($e_n$ in this case). A change
 only occurs if the new epoch is greater than the previously seen epoch ($e_p$).
 In such case, the current epoch is also updated accordingly. The candidate
 versions and parameters map $(\var{pv_c}, \var{pps_c})$ remain constant in this
-transition, even if they become adopted. Finally, the set $\var{eps}$ is
-updated so that only keys that proposed in epochs no earlier than $e_n$ are
-kept. Finally, note that we use $\var{pps} \unionoverride \var{pps'}$ in the
-final state, since the candidate proposal might only update some parameters of
-the protocol: by using union override $\var{pps'}$ overwrites the values of the
-parameters in $\var{pps}$.
+transition, even if they become adopted. Note that, in the final state, we use
+union override to define the updated parameters
+($\var{pps} \unionoverride \var{pps'}$). This is because candidate proposal
+might only update some parameters of the protocol.
+
+Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables. We keep
+only the information of proposals whose proposed protocol-versions are greater
+than the newly adopted protocol version ($\var{pv'}$). This means that active
+proposals will be discarded even if the voting period is not over (it makes no
+sense to vote on a proposal that proposes to upgrade to an older version of the
+protocol). Furthermore, the set $\var{eps}$ is updated so that only keys that
+proposed in epochs no earlier than $e_n$ are kept.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -581,7 +606,10 @@ parameters in $\var{pps}$.
             \var{(\var{pv'}, \var{pps'})}\\
           \end{array}
         \right)
-      }
+      }\\ ~ \\
+      \var{pids_{keep}} = \{ \var{pid} \mid
+      \var{pid} \mapsto (\var{pv_i}, \wcard) \in \var{rups}
+      ,~ \var{pv'} \leq \var{pv_i}\}
     }
     {
       {
@@ -616,12 +644,12 @@ parameters in $\var{pps}$.
             \var{e'}\\
             \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
-            \var{rups}\\
+            \var{pids_{keep}} \restrictdom \var{rups}\\
             {[e_n, ..]} \restrictdom \var{eps}\\
-            \var{cps}\\
-            \var{vts}\\
-            \var{bvs}\\
-            \var{pws}
+            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{pids_{keep}} \restrictdom \var{vts}\\
+            {[\var{pv'}, ..]} \restrictdom \var{bvs}\\
+            \var{pids_{keep}} \restrictdom \var{pws}
           \end{array}
         \right)
       }
