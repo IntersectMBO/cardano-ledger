@@ -1,12 +1,12 @@
-module PtrlConsts
+module PrtlConsts
     (
-     PtrlConsts(..)
+     PrtlConsts(..)
     ) where
 
 import Coin (Coin(..))
 
-data PtrlConsts =
-  PtrlConsts
+data PrtlConsts =
+  PrtlConsts
   { -- |The linear factor for the minimum fee calculation
     minfeeA :: Coin
     -- |The constant factor for the minimum fee calculation

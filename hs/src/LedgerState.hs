@@ -41,7 +41,7 @@ import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..))
 import           Keys
 import           UTxO
-import           PtrlConsts              (PtrlConsts(..))
+import           PrtlConsts              (PrtlConsts(..))
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
@@ -127,7 +127,7 @@ data LedgerState =
     -- |The current epoch.
   , getEpoch           :: Epoch
     -- |The current protocol constants.
-  , getPCs             :: !PtrlConsts
+  , getPCs             :: !PrtlConsts
   } deriving (Show, Eq)
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
@@ -136,7 +136,7 @@ genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
-genesisState :: PtrlConsts -> [TxOut] -> LedgerState
+genesisState :: PrtlConsts -> [TxOut] -> LedgerState
 genesisState pc outs = LedgerState
   (UTxO (Map.fromList
     [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
@@ -162,7 +162,7 @@ validInputs (TxWits tx _) l =
   where unspentInputs (UTxO utxo) = Map.keysSet utxo
 
 -- |Minimum fee calculation
-minfee :: PtrlConsts -> TxWits -> Coin
+minfee :: PrtlConsts -> TxWits -> Coin
 minfee pc txwit = minfeeA pc * x + minfeeB pc
   where x = Coin $ toEnum $ length (show txwit)
 
