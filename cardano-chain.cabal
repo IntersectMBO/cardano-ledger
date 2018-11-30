@@ -60,9 +60,10 @@ library
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear
 
-                       Cardano.Chain.Delegation.HeavyDlgIndex
+                       Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
                        Cardano.Chain.Delegation.Undo
+                       Cardano.Chain.Delegation.Validation
 
                        Cardano.Chain.Genesis.AvvmBalances
                        Cardano.Chain.Genesis.Config

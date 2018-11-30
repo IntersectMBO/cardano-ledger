@@ -17,6 +17,9 @@ module Cardano.Chain.Slotting.SlotId
   , flattenSlotId
   , flattenEpochIndex
   , unflattenSlotId
+  , addSlotNumber
+  , subSlotNumber
+  , slotNumberEpoch
   , crucialSlot
   )
 where
@@ -34,7 +37,7 @@ import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
   (LocalSlotIndex, getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
-import Cardano.Chain.Slotting.SlotCount (SlotCount)
+import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 
 
 -- | Slot is identified by index of epoch and index of slot in
@@ -114,6 +117,17 @@ unflattenSlotId es n = SlotId {siEpoch = fromIntegral epoch, siSlot = lsi}
 flatSlotId :: SlotCount -> Iso' SlotId FlatSlotId
 flatSlotId epochSlots =
   iso (flattenSlotId epochSlots) (unflattenSlotId epochSlots)
+
+-- | Increase a 'FlatSlotId' by 'SlotCount'
+addSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
+addSlotNumber a b = fromIntegral a + b
+
+-- | Decrease a 'FlatSlotId' by 'SlotCount', going no lower than 0
+subSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
+subSlotNumber (SlotCount a) b = if a > b then 0 else b - a
+
+slotNumberEpoch :: SlotCount -> FlatSlotId -> EpochIndex
+slotNumberEpoch epochSlots slot = siEpoch $ unflattenSlotId epochSlots slot
 
 -- | Slot such that at the beginning of epoch blocks with SlotId ≤- this slot
 --   are stable

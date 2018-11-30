@@ -26,7 +26,6 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , mkStakeholderId
   )
-import Cardano.Chain.Delegation (HeavyDlgIndex(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisAvvmBalances(..)
@@ -82,7 +81,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( mkStakeholderId issuePubKey
       , unsafeProxySecretKey
-        (HeavyDlgIndex $ EpochIndex 68300481033)
+        (EpochIndex 68300481033)
         issuePubKey
         (PublicKey
           (CC.XPub
@@ -98,7 +97,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
  where
   issuePubKey = PublicKey
     (CC.XPub {CC.xpubPublicKey = pskPubKey, CC.xpubChaincode = pskChainCode})
-  sig :: Signature HeavyDlgIndex
+  sig :: Signature EpochIndex
   sig = Signature $ fromRight (panic "Something went wrong") $ CC.xsignature
     (hexToBS
       "bae5422af5405e3803154a4ad986da5d14cf624d670\

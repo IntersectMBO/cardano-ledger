@@ -46,7 +46,7 @@ import Cardano.Chain.Common
   , subLovelace
   , sumLovelace
   )
-import Cardano.Chain.Delegation.HeavyDlgIndex (HeavyDlgIndex(..), ProxySKHeavy)
+import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Data (GenesisData(..))
 import Cardano.Chain.Genesis.Delegation
@@ -123,13 +123,10 @@ generateGenesisData startTime genesisSpec = do
   -- Heavyweight delegation.
   -- genesisDlgList is empty if giUseHeavyDlg = False
   let
-    genesisDlgList :: [ProxySKHeavy]
+    genesisDlgList :: [Delegation.Certificate]
     genesisDlgList =
-      (\(issuerSK, delegateSK) -> createPsk
-          pm
-          (noPassSafeSigner issuerSK)
-          (toPublic delegateSK)
-          (HeavyDlgIndex 0)
+      (\(issuerSK, delegateSK) ->
+          createPsk pm (noPassSafeSigner issuerSK) (toPublic delegateSK) 0
         )
         <$> zip dlgIssuersSecrets richSecrets
 

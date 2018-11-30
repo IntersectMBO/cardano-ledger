@@ -36,7 +36,7 @@ import Cardano.Crypto (ProtocolMagic)
 
 import Test.Cardano.Chain.Common.Gen
   (genBlockCount, genLovelace, genLovelacePortion)
-import Test.Cardano.Chain.Delegation.Gen (genProxySKHeavyDistinctList)
+import Test.Cardano.Chain.Delegation.Gen (genCertificateDistinctList)
 import Test.Cardano.Chain.Update.Gen (genBlockVersionData)
 import Test.Cardano.Crypto.Gen
   (genHashRaw, genProtocolMagic, genRedeemPublicKey, genTextHash)
@@ -58,8 +58,8 @@ genFakeAvvmOptions =
 
 genGenesisDelegation :: ProtocolMagic -> Gen GenesisDelegation
 genGenesisDelegation pm = do
-  proxySKHeavyList <- genProxySKHeavyDistinctList pm
-  case mkGenesisDelegation proxySKHeavyList of
+  certificates <- genCertificateDistinctList pm
+  case mkGenesisDelegation certificates of
     Left  err    -> panic $ sformat build err
     Right genDel -> pure genDel
 

@@ -1,44 +1,36 @@
 module Test.Cardano.Chain.Delegation.Example
-  ( exampleProxySKBlockInfo
+  ( exampleCertificates
   , exampleUndo
-  , staticHeavyDlgIndexes
-  , staticProxySKHeavys
   )
 where
 
 import Cardano.Prelude
 
-import Data.List (zipWith4, (!!))
+import Data.List (zipWith4)
 import qualified Data.Set as Set
 
-import Cardano.Chain.Delegation
-  (HeavyDlgIndex(..), ProxySKBlockInfo, ProxySKHeavy, Undo(..))
+import Cardano.Chain.Delegation (Certificate, Undo(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto (ProtocolMagic(..), createPsk)
 
 import Test.Cardano.Chain.Common.Example (exampleStakeholderId)
-import Test.Cardano.Crypto.Example
-  (examplePublicKey, examplePublicKeys, staticSafeSigners)
+import Test.Cardano.Crypto.Example (examplePublicKeys, staticSafeSigners)
 
-staticHeavyDlgIndexes :: [HeavyDlgIndex]
-staticHeavyDlgIndexes = map (HeavyDlgIndex . EpochIndex) [5, 1, 3, 27, 99, 247]
 
 staticProtocolMagics :: [ProtocolMagic]
 staticProtocolMagics = map ProtocolMagic [0 .. 5]
 
-staticProxySKHeavys :: [ProxySKHeavy]
-staticProxySKHeavys = zipWith4
+exampleCertificates :: [Certificate]
+exampleCertificates = zipWith4
   createPsk
   staticProtocolMagics
   staticSafeSigners
   (examplePublicKeys 1 6)
-  staticHeavyDlgIndexes
-
-exampleProxySKBlockInfo :: ProxySKBlockInfo
-exampleProxySKBlockInfo = Just (staticProxySKHeavys !! 0, examplePublicKey)
+  exampleEpochIndices
+  where exampleEpochIndices = EpochIndex <$> [5, 1, 3, 27, 99, 247]
 
 exampleUndo :: Undo
 exampleUndo = Undo
-  { duPsks            = staticProxySKHeavys
+  { duPsks            = exampleCertificates
   , duPrevEpochPosted = Set.singleton exampleStakeholderId
   }

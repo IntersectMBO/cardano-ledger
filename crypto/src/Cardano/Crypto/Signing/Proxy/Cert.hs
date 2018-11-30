@@ -56,6 +56,9 @@ safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
     $ mconcat ["00", CC.unXPub delegatePk, serialize' o]
 
 -- | Checks if certificate is valid, given issuer pk, delegate pk and ω
+--
+--   We serialize' the annotated 'ByteString' as the Byron release signed that
+--   way
 verifyProxyCert
   :: (Decoded (f ByteString), Functor f)
   => ProtocolMagic
@@ -69,5 +72,5 @@ verifyProxyCert pm issuerPk (PublicKey delegatePk) o cert =
     pm
     SignProxySK
     issuerPk
-    (mappend ("00" <> CC.unXPub delegatePk) <$> o)
+    (serialize' . mappend ("00" <> CC.unXPub delegatePk) <$> o)
     (coerce cert)

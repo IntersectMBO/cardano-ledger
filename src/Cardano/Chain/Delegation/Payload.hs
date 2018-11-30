@@ -32,7 +32,7 @@ import Cardano.Binary.Class
   , annotatedDecoder
   , decodeListWith
   )
-import Cardano.Chain.Delegation.HeavyDlgIndex (AProxySKHeavy, ProxySKHeavy)
+import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Crypto
   (ProtocolMagic, decodeAProxySecretKey, validateProxySecretKey)
 
@@ -40,7 +40,7 @@ import Cardano.Crypto
 -- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing
 --   keys. List of psk issuers should be unique also.
 data APayload a = UnsafeAPayload
-  { getPayload    :: [AProxySKHeavy a]
+  { getPayload    :: [Delegation.ACertificate a]
   , getAnnotation :: a
   } deriving (Show, Eq, Generic, Functor)
 
@@ -48,7 +48,7 @@ instance (NFData a) => NFData (APayload a) where
 
 type Payload = APayload ()
 
-unsafePayload :: [ProxySKHeavy] -> Payload
+unsafePayload :: [Delegation.Certificate] -> Payload
 unsafePayload sks = UnsafeAPayload sks ()
 
 instance Decoded (APayload ByteString) where

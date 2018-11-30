@@ -1,9 +1,7 @@
 module Test.Cardano.Chain.Delegation.Gen
-  ( genPayload
-  , genHeavyDlgIndex
-  , genProxySKBlockInfo
-  , genProxySKHeavy
-  , genProxySKHeavyDistinctList
+  ( genCertificate
+  , genCertificateDistinctList
+  , genPayload
   , genUndo
   )
 where
@@ -14,14 +12,7 @@ import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Delegation
-  ( HeavyDlgIndex(..)
-  , Payload
-  , ProxySKBlockInfo
-  , ProxySKHeavy
-  , Undo(..)
-  , unsafePayload
-  )
+import Cardano.Chain.Delegation (Certificate, Payload, Undo(..), unsafePayload)
 import Cardano.Crypto (ProtocolMagic, createPsk)
 import Data.List (nub)
 
@@ -30,36 +21,27 @@ import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
 import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner)
 
 
-genPayload :: ProtocolMagic -> Gen Payload
-genPayload pm =
-  unsafePayload <$> Gen.list (Range.linear 0 5) (genProxySKHeavy pm)
+genCertificate :: ProtocolMagic -> Gen Certificate
+genCertificate pm =
+  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genEpochIndex
 
-genHeavyDlgIndex :: Gen HeavyDlgIndex
-genHeavyDlgIndex = HeavyDlgIndex <$> genEpochIndex
-
-genProxySKBlockInfo :: ProtocolMagic -> Gen ProxySKBlockInfo
-genProxySKBlockInfo pm = Gen.maybe $ do
-  pSKHeavy <- genProxySKHeavy pm
-  pubKey   <- genPublicKey
-  pure (pSKHeavy, pubKey)
-
-genProxySKHeavy :: ProtocolMagic -> Gen ProxySKHeavy
-genProxySKHeavy pm =
-  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex
-
-genProxySKHeavyDistinctList :: ProtocolMagic -> Gen [ProxySKHeavy]
-genProxySKHeavyDistinctList pm = do
+genCertificateDistinctList :: ProtocolMagic -> Gen [Certificate]
+genCertificateDistinctList pm = do
   let
     pSKList = Gen.list
       (Range.linear 0 5)
-      (createPsk pm <$> genSafeSigner <*> genPublicKey <*> genHeavyDlgIndex)
+      (createPsk pm <$> genSafeSigner <*> genPublicKey <*> genEpochIndex)
   Gen.filter allDistinct pSKList
  where
   allDistinct :: Eq a => [a] -> Bool
   allDistinct ls = length (nub ls) == length ls
 
+genPayload :: ProtocolMagic -> Gen Payload
+genPayload pm =
+  unsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)
+
 genUndo :: ProtocolMagic -> Gen Undo
 genUndo pm =
   Undo
-    <$> Gen.list (Range.linear 1 10) (genProxySKHeavy pm)
+    <$> Gen.list (Range.linear 1 10) (genCertificate pm)
     <*> Gen.set (Range.linear 0 10) genStakeholderId
