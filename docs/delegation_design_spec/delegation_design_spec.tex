@@ -2136,16 +2136,16 @@ the user.
 In order to prevent relying on a central party to host this key value
 store, it will be possible to register multiple servers in the wallet,
 and each of those will be queried. Anybody will have the opportunity to
-run a stakepool registration server, and announce its existence out of
+run a stakepool metadata server, and announce its existence out of
 band.
 
 In order for stakeholders to be able to delegate their stake to a pool,
 the wallet will provide a listing of stake pools, in a section of the UI
-called the \emph{delegation centre}. This listing will be ordered by the
-rewards that a user should expect if they were to delegate to that pool.
-Since those expected rewards depend not only on the costs and margin set
+called the \emph{delegation centre}. This listing will be ordered by
+desirability, as described in \cref{pool-desirability-and-ranking}.
+Since this ranking depends not only on the costs and margin set
 by the stake pool operator, but also on the performance of the pool and
-on the amount of stake that it has accumulated, this will prefer pools
+on the amount of stake that it has accumulated, this will promote pools
 that are reliable, and have not yet reached saturation. In other words,
 the users selfish interest to pick a stake pool that is promising large
 rewards is aligned with the goal of placing the system in the hands of a
@@ -2154,28 +2154,24 @@ The influence of the stake pool operator's pledge on the rewards
 provides protection against a Sybil attack on the stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}).
 
-For estimating the rewards shared by a pool, the wallet needs to predict
-the performance of the pool, i.e.~the ratio of blocks that the pool
-added to the chain and the number of slots it was elected as leader.
-This is done by assuming the performance to be constant, and using the
-performance during the last epoch, which is visible from the blockchain.
+When calculating the desirability of a pool, the wallet will use the
+best data available:
+\begin{itemize}
+\item The cost, margin, and pledged stake will be taken from the most
+  recent stake pool registration certificate of the pool.
+\item The ratio of published blocks and elected slots will be taken
+  from the previous epoch.
+\item The stake of the pool, and the amounn of stake that the owners
+  of the pool contribute (in order to check whether their pledge is
+  honoured) is taken from the current stake distribution (calculated
+  from the current UTxO set and delegation relation on demand when the
+  wallet performs the ranking).
+\end{itemize}
 
-In order to prevent a slight difference in the expected returns to
-result in people conglomerating to a single stake pool, filling it
-rapidly, the order of the list of stake pools will be jittered: for each
-stake pool, the wallet will draw a random number \(r\) close to \(1\),
-and multiply the expected returns by \(r\). I propose to draw \(r\)
-uniformly from the interval \([0.95, 1.05]\), but this choice is
-arbitrary and should be re-evaluated during the operation of the
-testnet.
-
-Since the actual amount of stake that the stake pool owners contribute
-to the pool might change at any point in time, the ordering of pools
-will use the amount of stake that the operator \emph{pledged} when
-registering the pool, not the amount of stake that is currently
-delegated to the pool from registered owner keys. However, pools where
-this amlount is smaller than the amount pledged are expected to give
-zero rewards, and will end up at the end of the list.
+In order to prevent a slight difference in the desirability to result
+in people conglomerating to a single stake pool, filling it rapidly, a
+wallet should jitter the list of stake pools slightly when displaying
+it to a user\todo{Needs discussion with the researchers}.
 
 \subsection{Basic Delegation}
 \label{basic-delegation}
@@ -2520,6 +2516,12 @@ For a given epoch, the \emph{maximal} rewards for a pool are \[
   see \cref{stakepool-registration}).
 \end{itemize}
 
+As mentioned in \cref{stakepool-registration}, the rewards for a pool
+where the owner(s) fail to honour their pledge of stake will receive
+zero rewards, and so will have $f=0$\todo{We could multiply the
+  formula for $f$ with a $\Theta$ function to reflect this, but I
+  don't think it would add much clarity.}
+
 \emph{Note that \(\sigma\) includes the stake \(s\) pledged by the pool
 leader.} For example, let us assume that the total existing supply of
 ADA is \(T=31,000,000,000\), and consider a pool whose pool leader
@@ -2650,7 +2652,8 @@ If the pool is \emph{saturated}, the pool rewards are \[
     \frac{R}{1 + a_0}
     \cdot
     \left(z_0 + \min(s,z_0)\cdot a_0\right).
-\]
+\]\todo{This is based on the maximal pool rewards. Should we not
+  account for recent performance?}
 
 The \emph{desirability} is then defined as \[
     d(c, m, s) :=
@@ -2664,7 +2667,8 @@ The \emph{desirability} is then defined as \[
     \right.
 \] To determine a pool's \emph{rank}, we order pools by decreasing
 desirability. The most desirable pool gets rank 1, the second most
-desirable pool gets rank 2 and so on.
+desirable pool gets rank 2 and so on.\todo{Is it really \(\hat{f}\)
+  here, or rather \(\tilde{f}\)?}
 
 We predict that pools with rank \(\leq k\) will eventually be saturated,
 whereas pools with rank \(>k\) will lose all members and only consist of
@@ -2759,7 +2763,7 @@ protocol participants):
 \subsection{Information in Daedalus}
 \label{information-in-daedalus}
 
-Out game theoretic analysis assumes that every stakeholder has all
+Our game theoretic analysis assumes that every stakeholder has all
 relevant information available at any time.
 
 This means that pool \emph{costs} and \emph{margins} and pool (leader)
