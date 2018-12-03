@@ -2193,10 +2193,23 @@ wallet, but not yet registered on the chain.
 After receiving the initial funds, the user can then participate in
 staking, by posting a stake key registration certificate, as well as a
 delegation certificate for their staking key. Once the key is
-registered, and the registration certificate is in the immutable part
-of the chain (\(k\)
-blocks deep), newly created addresses can be pointer addresses to the
+registered, newly created addresses can be pointer addresses to the
 stake key registration certificate.
+
+Of course, there is a slight possibility that the stake key
+registration certificate can be lost due to a fork. In that case, the
+pointer addresses would no longer point to a valid certificate. Such
+addresses should be considered valid addresses for the purpose of
+moving funds, but ignored when determining the stake distribution
+(just like an enterprise address). The wallet software should detect
+usage of such broken pointer addresses, and ask and assist the user to
+create a new stake pool registration certificate and proper addresses,
+and to move the funds to those addresses. In order to minimise the
+probability of invalid pointer addresses occurring, the wallet should
+only create pointer addresses for certificates that are sufficiently
+deep within the chain (where the exact meaning of sufficiently deep is
+somewhat subjective, and fixed by the security parameter of the
+wallet).
 
 \paragraph{Additional Accounts}
 The user might want to create an additional account in their wallet
