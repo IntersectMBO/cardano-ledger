@@ -87,6 +87,6 @@ instance B.Buildable ProofError where
       p'
 
 checkProof :: MonadError ProofError m => ABody ByteString -> Proof -> m ()
-checkProof body proof = unless (calculatedProof == proof)
-  $ throwError (ProofIncorrect proof calculatedProof)
+checkProof body proof =
+  (calculatedProof == proof) `orThrowError` ProofIncorrect proof calculatedProof
   where calculatedProof = recoverProof body

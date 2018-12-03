@@ -97,9 +97,8 @@ instance B.Buildable GenesisDelegationError where
 mkGenesisDelegation
   :: MonadError GenesisDelegationError m => [Certificate] -> m GenesisDelegation
 mkGenesisDelegation psks = do
-  unless
-    ((length . nub $ pskIssuerPk <$> psks) == length psks)
-    (throwError GenesisDelegationDuplicateIssuer)
+  ((length . nub $ pskIssuerPk <$> psks) == length psks)
+    `orThrowError` GenesisDelegationDuplicateIssuer
   let
     res = M.fromList [ (mkStakeholderId $ pskIssuerPk psk, psk) | psk <- psks ]
   recreateGenesisDelegation res
@@ -113,13 +112,12 @@ recreateGenesisDelegation pskMap = do
   forM_ (M.toList pskMap) $ \(k, psk) -> do
 
     let k' = mkStakeholderId $ pskIssuerPk psk
-    unless (k == k') (throwError $ GenesisDelegationInvalidKey k k')
+    (k == k') `orThrowError` GenesisDelegationInvalidKey k k'
 
-    when (isSelfSignedPsk psk) (throwError $ GenesisDelegationSelfSignedPsk psk)
+    not (isSelfSignedPsk psk) `orThrowError` GenesisDelegationSelfSignedPsk psk
 
     let delegateId = mkStakeholderId $ pskDelegatePk psk
-    when
-      (delegateId `M.member` pskMap)
-      (throwError $ GenesisDelegationMultiLayerDelegation delegateId)
+    (delegateId `M.notMember` pskMap)
+      `orThrowError` GenesisDelegationMultiLayerDelegation delegateId
 
   pure $ UnsafeGenesisDelegation pskMap

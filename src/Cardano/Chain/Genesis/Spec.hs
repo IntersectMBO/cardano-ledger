@@ -10,7 +10,6 @@ where
 import Cardano.Prelude
 import Prelude (String)
 
-import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.List (nub)
@@ -56,7 +55,7 @@ mkGenesisSpec
   -> Either String GenesisSpec
 mkGenesisSpec avvmDistr delega bvd k pm specType = do
   let avvmKeys = M.keys $ getGenesisAvvmBalances avvmDistr
-  unless (length (nub avvmKeys) == length avvmKeys)
-    $ throwError "mkGenesisSpec: there are duplicates in avvm balances"
+  (length (nub avvmKeys) == length avvmKeys)
+    `orThrowError` "mkGenesisSpec: there are duplicates in avvm balances"
   -- All checks passed
   pure $ UnsafeGenesisSpec avvmDistr delega bvd k pm specType

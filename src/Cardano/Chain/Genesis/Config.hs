@@ -222,9 +222,9 @@ mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
   -- the obligations.
   GCSrc fp expectedHash -> do
 
-    when (isJust mSystemStart) $ throwError UnnecessarySystemStartTime
+    isNothing mSystemStart `orThrowError` UnnecessarySystemStartTime
 
-    when (isJust mSeed) $ throwError MeaninglessSeed
+    isNothing mSeed `orThrowError` MeaninglessSeed
 
     mkConfigFromFile (confDir </> fp) (Just expectedHash)
 
@@ -259,10 +259,10 @@ mkConfigFromFile fp mGenesisHash = do
       (readGenesisData fp)
 
   case mGenesisHash of
-    Nothing           -> pure ()
-    Just expectedHash -> unless
+    Nothing -> pure ()
+    Just expectedHash ->
       (getGenesisHash genesisHash == expectedHash)
-      (throwError $ GenesisHashMismatch genesisHash expectedHash)
+        `orThrowError` GenesisHashMismatch genesisHash expectedHash
 
   pure $ Config
     { configGenesisData      = genesisData

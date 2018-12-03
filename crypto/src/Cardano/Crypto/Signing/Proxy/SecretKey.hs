@@ -126,12 +126,11 @@ isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 --   TODO: Make this unnecessary by performing validation in the decoder
 validateProxySecretKey
   :: MonadError Text m => ProtocolMagic -> AProxySecretKey w ByteString -> m ()
-validateProxySecretKey pm psk = unless
-  (verifyProxyCert
-    pm
-    (pskIssuerPk psk)
-    (pskDelegatePk psk)
-    (aPskOmega psk)
-    (pskCert psk)
-  )
-  (throwError "a ProxySecretKey has an invalid signature")
+validateProxySecretKey pm psk =
+  verifyProxyCert
+      pm
+      (pskIssuerPk psk)
+      (pskDelegatePk psk)
+      (aPskOmega psk)
+      (pskCert psk)
+    `orThrowError` "a ProxySecretKey has an invalid signature"
