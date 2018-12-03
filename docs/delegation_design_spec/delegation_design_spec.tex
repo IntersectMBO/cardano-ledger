@@ -2297,35 +2297,24 @@ On a high level, goal of the incentives mechanism is to incentivise
 stakeholders to follow the protocol and thereby guaranteeing secure and
 efficient operation of Cardano.
 
-More specifically, we want a majority of stake (at least 80\%) to
+More specifically, we want a majority of stake to
 delegate to a number of \(k\) \emph{stake pools} (where \(k\) is a
 parameter of the system -- see \cref{parameters}). The
 \emph{pool leaders} of those stake pools are supposed to
 
 \begin{itemize}
 \item
-  provide additional network infrastructure,
+  fulfill their Ouroboros protocol participation responsibilities,
+  such as being online during slots for which they are slot leader and
+  then creating a block containing as many transactions as possible.
 \item
-  be online for and participate in the election mechanism and
-\item
-  be online during slots for which they have been elected slot leader
-  and then create a block containing as many transactions as possible.
+  provide additional network infrastructure.
 \end{itemize}
 
-Stakeholders who do not want to register a pool and become pool leaders
-can either
-
-\begin{itemize}
-\item
-  \emph{delegate} their stake to a registered pool (we hope most will do
-  this) or
-\item
-  participate in the protocol without registering a pool (at most 20\%
-  of stake should belong to such ``one-man pools'').
-\item
-  (They can also not do anything, but will not receive any rewards in
-  that case.)
-\end{itemize}
+Other stakeholders can then \emph{delegate} their stake to a registered
+pool.  Stakeholders are also free to either run their own private
+pools, or not take part in the protocol at all. In the latter case,
+their stake is ignored, and they will not receive any rewards.
 
 Incentives are provided in the form of \emph{social pressure} (by making
 pool leader performance and adherence to the protocol public), but
