@@ -35,6 +35,7 @@ import           Crypto.Hash             (hash)
 import           Data.List               (find)
 import qualified Data.Map                as Map
 import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
+import           Numeric.Natural         (Natural)
 import qualified Data.Set                as Set
 
 import           Coin                    (Coin (..))
@@ -171,10 +172,13 @@ validInputs (TxWits tx _) l =
     else Invalid [BadInputs]
   where unspentInputs (UTxO utxo) = Map.keysSet utxo
 
+-- |Implementation of astract transaction size
+txsize :: Tx -> Natural
+txsize = toEnum . length . show
+
 -- |Minimum fee calculation
 minfee :: PrtlConsts -> Tx -> Coin
-minfee pc tx = minfeeA pc * x + minfeeB pc
-  where x = Coin $ toEnum $ length (show tx)
+minfee pc tx = Coin $ minfeeA pc * (txsize tx) + minfeeB pc
 
 -- |Determine if the fee is large enough
 validFee :: TxWits -> LedgerState -> Validity

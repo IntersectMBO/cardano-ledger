@@ -51,7 +51,7 @@ bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 pcs :: PrtlConsts
-pcs = PrtlConsts 1 1 (Coin 100) (Coin 250) 0.25 0.001
+pcs = PrtlConsts 1 1 100 250 0.25 0.001
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
@@ -106,9 +106,9 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
                      }
                      pcs)
 
-aliceGivesBobAda :: TxIn -> Coin -> Coin -> Coin -> Coin ->
+aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
   Set.Set DCert -> Slot -> TxWits
-aliceGivesBobAda txin coin txfee txdeps txrefs cs s = TxWits txbody wit
+aliceGivesBobLovelace txin coin txfee txdeps txrefs cs s = TxWits txbody wit
   where
     aliceCoin = aliceInitCoin + txrefs - (coin + txfee + txdeps)
     txbody = Tx
@@ -121,7 +121,7 @@ aliceGivesBobAda txin coin txfee txdeps txrefs cs s = TxWits txbody wit
     wit = Set.fromList [makeWitness alicePay txbody]
 
 tx1 :: TxWits
-tx1 = aliceGivesBobAda
+tx1 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
         Set.empty (Slot 0)
@@ -136,7 +136,7 @@ ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
 
 tx2 :: TxWits
-tx2 = aliceGivesBobAda
+tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
         (Set.fromList
@@ -243,7 +243,7 @@ testsValidLedger =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   let
-    tx = aliceGivesBobAda
+    tx = aliceGivesBobLovelace
            (TxIn genesisId 42)
            (Coin 3000) (Coin 1500) (Coin 0) (Coin 0)
            Set.empty (Slot 100)
@@ -317,7 +317,7 @@ testEmptyInputSet =
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
   let
-    tx = aliceGivesBobAda
+    tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
            (Coin 3000) (Coin 1) (Coin 0) (Coin 0)
            Set.empty (Slot 100)
@@ -327,7 +327,7 @@ testFeeTooSmall =
 testExpiredTx :: Assertion
 testExpiredTx =
   let
-    tx = aliceGivesBobAda
+    tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
            (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
            Set.empty (Slot 0)
