@@ -3,7 +3,9 @@ module PrtlConsts
      PrtlConsts(..)
     ) where
 
-import Coin (Coin(..))
+import           Data.Ratio (Rational)
+
+import           Coin (Coin(..))
 
 data PrtlConsts =
   PrtlConsts
@@ -16,7 +18,7 @@ data PrtlConsts =
     -- |The amount of a pool registration deposit
   , poolDeposit :: Coin
     -- |The minimum percent refund guarantee
-  , minRefund :: Float
+  , minRefund :: Rational
     -- |The deposit decay rate
-  , decayRate :: Float
+  , decayRate :: Rational
   } deriving (Show, Eq)

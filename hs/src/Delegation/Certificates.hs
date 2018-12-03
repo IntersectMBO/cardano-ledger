@@ -44,8 +44,9 @@ dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
 refund :: DCert -> PrtlConsts -> Duration -> Coin
-refund cert pc dur = floor (dep * (dmin + (1-dmin) * exp pow))
+refund cert pc dur = floor refund'
   where
     dep = fromIntegral $ dvalue cert pc
-    dmin = minRefund pc
-    pow = - decayRate pc * fromIntegral dur
+    dmin = fromRational $ minRefund pc
+    pow = - fromRational (decayRate pc * fromIntegral dur)
+    refund' = dep * (dmin + (1-dmin) * exp pow) :: Double
