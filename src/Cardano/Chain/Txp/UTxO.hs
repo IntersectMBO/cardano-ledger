@@ -50,7 +50,7 @@ lookupAddress txIn =
 union :: MonadError UTxOError m => UTxO -> UTxO -> m UTxO
 union (UTxO m) (UTxO m') = do
   let m'' = M.union m m'
-  unless (M.size m'' == M.size m + M.size m') $ throwError UTxOOverlappingUnion
+  (M.size m'' == M.size m + M.size m') `orThrowError` UTxOOverlappingUnion
   pure $ UTxO m''
 
 balance :: UTxO -> Either LovelaceError Lovelace

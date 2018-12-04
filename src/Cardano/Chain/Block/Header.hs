@@ -308,8 +308,8 @@ verifyHeader pm header = do
     (headerExtraData header)
   -- Internal consistency: is the signature in the consensus data really for
   -- this block?
-  unless (verifyBlockSignature $ consensusSignature consensus)
-    $ throwError (HeaderInvalidSignature $ consensusSignature consensus)
+  verifyBlockSignature (consensusSignature consensus)
+    `orThrowError` HeaderInvalidSignature (consensusSignature consensus)
  where
   verifyBlockSignature (BlockSignature sig) = verifySignatureDecoded
     pm
@@ -526,8 +526,9 @@ instance B.Buildable ConsensusError where
 
 -- | Verify the consensus data in isolation
 verifyConsensusData :: MonadError ConsensusError m => AConsensusData a -> m ()
-verifyConsensusData mcd = when (selfSignedProxy $ consensusSignature mcd)
-  $ throwError ConsensusSelfSignedPSK
+verifyConsensusData mcd =
+  not (selfSignedProxy $ consensusSignature mcd)
+    `orThrowError` ConsensusSelfSignedPSK
  where
   selfSignedProxy (BlockSignature       _  ) = False
   selfSignedProxy (BlockPSignatureHeavy sig) = isSelfSignedPsk $ psigPsk sig

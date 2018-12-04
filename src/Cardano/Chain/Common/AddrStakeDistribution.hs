@@ -106,9 +106,9 @@ mkMultiKeyDistr distrMap = UnsafeMultiKeyDistr distrMap <$ checkDistrMap
  where
   checkDistrMap :: m ()
   checkDistrMap = do
-    when (null distrMap) $ throwError MkdMapIsEmpty
-    when (length distrMap == 1) $ throwError MkdMapIsSingleton
-    unless (all ((> 0) . getLovelacePortion) distrMap)
-      $ throwError MkdNegativePortion
+    not (null distrMap) `orThrowError` MkdMapIsEmpty
+    (length distrMap /= 1) `orThrowError` MkdMapIsSingleton
+    all ((> 0) . getLovelacePortion) distrMap
+      `orThrowError` MkdNegativePortion
     let distrSum = sum $ map getLovelacePortion distrMap
-    unless (distrSum == lovelacePortionDenominator) $ throwError MkdSumNot1
+    (distrSum == lovelacePortionDenominator) `orThrowError` MkdSumNot1

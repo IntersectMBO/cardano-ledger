@@ -99,10 +99,10 @@ fromAvvmPk addrText = do
   let base64rify = T.replace "-" "+" . T.replace "_" "/"
   let parsedM    = B64.decode . toS $ base64rify addrText
   addrParsed <- case parsedM of
-    Left  _ -> Left (ApeAddressFormat addrText)
+    Left  _ -> throwError $ ApeAddressFormat addrText
     Right a -> Right a
   let len = BS.length addrParsed
-  unless (len == 32) $ Left (ApeAddressLength len)
+  (len == 32) `orThrowError` ApeAddressLength len
   pure $ redeemPkBuild addrParsed
 
 -- | Creates a public key from 32 byte bytestring, fails with 'error' otherwise

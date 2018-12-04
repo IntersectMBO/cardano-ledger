@@ -315,8 +315,10 @@ verifyBlock pm block = do
   -- Check that the headers' extra body data hash is correct.
   -- This isn't subsumed by the body proof check.
   let extraDataHash = hashDecoded (aBlockExtraData block)
-  unless (extraDataHash == blockExtraDataProof block) $ throwError
-    (BlockInvalidExtraDataProof (blockExtraDataProof block) extraDataHash)
+  (extraDataHash == blockExtraDataProof block)
+    `orThrowError` BlockInvalidExtraDataProof
+                    (blockExtraDataProof block)
+                    extraDataHash
 
 
 --------------------------------------------------------------------------------

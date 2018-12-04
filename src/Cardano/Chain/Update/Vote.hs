@@ -248,8 +248,8 @@ checkProposal pm proposal = do
       (proposalIssuer proposal)
       (mappend bodyPrefix <$> aBody)
       (proposalSignature proposal)
-  unless sigIsValid $ throwError $ ProposalInvalidSignature
-    (proposalSignature proposal)
+  sigIsValid
+    `orThrowError` ProposalInvalidSignature (proposalSignature proposal)
 
 
 --------------------------------------------------------------------------------
@@ -397,9 +397,7 @@ instance B.Buildable VoteError where
       bprint ("Invalid signature, " . build . ", in Vote") sig
 
 checkVote :: MonadError VoteError m => ProtocolMagic -> AVote ByteString -> m ()
-checkVote pm uv = unless
-  sigValid
-  (throwError $ VoteInvalidSignature (uvSignature uv))
+checkVote pm uv = sigValid `orThrowError` VoteInvalidSignature (uvSignature uv)
  where
   sigValid = verifySignatureDecoded
     pm

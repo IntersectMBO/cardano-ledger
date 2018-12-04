@@ -192,15 +192,14 @@ decryptChaChaPoly
 decryptChaChaPoly nonce key header encDataWithTag = do
   let tagSize = 16 :: Int
   let l       = B.length encDataWithTag
-  unless (l >= tagSize)
-    $  Left
-    $  "Length of encrypted text must be at least "
-    <> show tagSize
+  (l >= tagSize)
+    `orThrowError` "Length of encrypted text must be at least "
+    <>             show tagSize
   let (encData, rawTag) = B.splitAt (l - 16) encDataWithTag
   tag <- toEither (Poly.authTag rawTag)
   st1 <- toEither (C.nonce12 nonce >>= C.initialize key)
   let st2        = C.finalizeAAD $ C.appendAAD header st1
   let (out, st3) = C.decrypt encData st2
-  unless (C.finalize st3 == tag) $ Left $ "Crypto-tag mismatch"
+  (C.finalize st3 == tag) `orThrowError` "Crypto-tag mismatch"
   -- is it free from mem leaks?
   pure out
