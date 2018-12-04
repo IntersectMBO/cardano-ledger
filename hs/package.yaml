@@ -29,6 +29,7 @@ library:
   - tasty-hedgehog
   - tasty-hedgehog-coverage
   - text
+  - small-steps
 
 tests:
   delegation-test:
