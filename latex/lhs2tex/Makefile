@@ -29,6 +29,9 @@ all: $(DOCNAME).pdf
 ghci:
 	ghci -pgmL lhs2TeX -optL--pre $(DOCNAME).lhs
 
+ghcid:
+	ghcid -c "ghci -fno-diagnostics-show-caret -pgmL lhs2TeX -optL--pre $(DOCNAME).lhs" -T ":! make"
+
 ##
 ## MAIN LATEXMK RULE
 ##
