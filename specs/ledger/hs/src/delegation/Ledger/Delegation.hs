@@ -20,7 +20,7 @@ data DCert = DCert
   { -- | Body of the delegation certificate
     _dbody :: (VKey, Epoch)
     -- | Witness for the delegation cerfiticate
-  , _dwit :: (VKeyGen, Sig VKey)
+  , _dwit :: Sig VKeyGen
     -- | Who delegates to whom
   , _dwho :: (VKeyGen, VKey)
     -- | Certificate epoch
