@@ -8,7 +8,7 @@ data. Input values are mutated depending on their value.
 
 module Mutator
     ( mutateNat
-    , mutateCoin
+    , mutateLovelace
     , mutateTxWits
     , mutateTx
     , mutateDCert
@@ -23,7 +23,7 @@ import Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import Coin
+import Lovelace
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool
 import Keys
@@ -53,9 +53,9 @@ mutateNat :: Natural -> Natural -> Natural -> Gen Natural
 mutateNat lower upper n =
   Gen.choice [mutateId n, mutateNatRange lower upper n, mutateNatSmall n]
 
--- | Mutator for 'Coin' values, based on mutation of the contained value field.
-mutateCoin :: Natural -> Natural -> Coin -> Gen Coin
-mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
+-- | Mutator for 'Lovelace' values, based on mutation of the contained value field.
+mutateLovelace :: Natural -> Natural -> Lovelace -> Gen Lovelace
+mutateLovelace lower upper (Lovelace val) = Lovelace <$> mutateNat lower upper val
 
 -- | Mutator of 'TxWits' which mutates the contained transaction
 mutateTxWits :: TxWits -> Gen TxWits
@@ -100,11 +100,11 @@ mutateOutputs (txout:txouts) = do
   dropTxOut <- Gen.enumBounded
   pure $ if dropTxOut then mtxouts else mtxout:mtxouts
 
--- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
+-- | Mutator for a single 'TxOut' which mutates the associated 'Lovelace' value of
 -- the output.
 mutateOutput :: TxOut -> Gen TxOut
 mutateOutput (TxOut addr c) = do
-  c' <- mutateCoin 0 100 c
+  c' <- mutateLovelace 0 100 c
   pure $ TxOut addr c'
 
 
@@ -117,7 +117,7 @@ mutateOutput (TxOut addr c) = do
 getAnyStakeKey :: KeyPairs -> Gen VKey
 getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
--- | Mutate 'Epoch' analogously to 'Coin' data.
+-- | Mutate 'Epoch' analogously to 'Lovelace' data.
 mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
 mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 
@@ -140,7 +140,7 @@ mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
 
 mutateDCert keys _ (RegPool (StakePool _ pledges cost margin altacnt)) = do
   key'    <- getAnyStakeKey keys
-  cost'   <- mutateCoin 0 100 cost
+  cost'   <- mutateLovelace 0 100 cost
   p' <- mutateNat 0 100 (numerator margin)
   pure $ RegPool (StakePool key' pledges cost' (p' % 100) altacnt)
 

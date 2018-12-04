@@ -17,7 +17,7 @@ import           Hedgehog
 
 import           Generator
 
-import           Coin
+import           Lovelace
 import           Slot
 import           Keys
 import           LedgerState             (DelegationState (..),
@@ -53,17 +53,17 @@ bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 pcs :: PrtlConsts
 pcs = PrtlConsts 1 1 100 250 0.25 0.001
 
-aliceInitCoin :: Coin
-aliceInitCoin = Coin 10000
+aliceInitLovelace :: Lovelace
+aliceInitLovelace = Lovelace 10000
 
-bobInitCoin :: Coin
-bobInitCoin = Coin 1000
+bobInitLovelace :: Lovelace
+bobInitLovelace = Lovelace 1000
 
 genesis :: LedgerState
 genesis = genesisState
             pcs
-            [ TxOut aliceAddr aliceInitCoin
-            , TxOut bobAddr bobInitCoin ]
+            [ TxOut aliceAddr aliceInitLovelace
+            , TxOut bobAddr bobInitLovelace ]
 
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
@@ -106,15 +106,15 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
                      }
                      pcs)
 
-aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
+aliceGivesBobLovelace :: TxIn -> Lovelace -> Lovelace -> Lovelace -> Lovelace ->
   Set.Set DCert -> Slot -> TxWits
-aliceGivesBobLovelace txin coin txfee txdeps txrefs cs s = TxWits txbody wit
+aliceGivesBobLovelace txin lovelace txfee txdeps txrefs cs s = TxWits txbody wit
   where
-    aliceCoin = aliceInitCoin + txrefs - (coin + txfee + txdeps)
+    aliceLovelace = aliceInitLovelace + txrefs - (lovelace + txfee + txdeps)
     txbody = Tx
                (Set.fromList [txin])
-               [ TxOut aliceAddr aliceCoin
-               , TxOut bobAddr coin ]
+               [ TxOut aliceAddr aliceLovelace
+               , TxOut bobAddr lovelace ]
                cs
                txfee
                s
@@ -123,14 +123,14 @@ aliceGivesBobLovelace txin coin txfee txdeps txrefs cs s = TxWits txbody wit
 tx1 :: TxWits
 tx1 = aliceGivesBobLovelace
         (TxIn genesisId 0)
-        (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
+        (Lovelace 3000) (Lovelace 600) (Lovelace 0) (Lovelace 0)
         Set.empty (Slot 0)
 
 utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ body tx1) 0, TxOut aliceAddr (Coin 6400))
-       , (TxIn (txid $ body tx1) 1, TxOut bobAddr (Coin 3000)) ]
+       [ (TxIn genesisId 1, TxOut bobAddr (Lovelace 1000))
+       , (TxIn (txid $ body tx1) 0, TxOut aliceAddr (Lovelace 6400))
+       , (TxIn (txid $ body tx1) 1, TxOut bobAddr (Lovelace 3000)) ]
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -138,7 +138,7 @@ ls1 = ledgerState [tx1]
 tx2 :: TxWits
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
-        (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
+        (Lovelace 3000) (Lovelace 1300) (Lovelace 3*100) (Lovelace 0)
         (Set.fromList
           [ RegKey $ vKey aliceStake
           , RegKey $ vKey bobStake
@@ -149,19 +149,19 @@ tx2 = aliceGivesBobLovelace
 
 utxo2 :: Map.Map TxIn TxOut
 utxo2 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ body tx2) 0, TxOut aliceAddr (Coin 5400))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       [ (TxIn genesisId 1, TxOut bobAddr (Lovelace 1000))
+       , (TxIn (txid $ body tx2) 0, TxOut aliceAddr (Lovelace 5400))
+       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Lovelace 3000)) ]
 
 tx3Body :: Tx
 tx3Body = Tx
           (Set.fromList [TxIn (txid $ body tx2) 0])
-          [ TxOut aliceAddr (Coin 3950) ]
+          [ TxOut aliceAddr (Lovelace 3950) ]
           (Set.fromList
             [ RegPool stakePool
             , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
             ])
-          (Coin 1200)
+          (Lovelace 1200)
           (Slot 100)
 
 tx3 :: TxWits
@@ -169,17 +169,17 @@ tx3 = TxWits tx3Body (Set.fromList [makeWitness alicePay tx3Body])
 
 utxo3 :: Map.Map TxIn TxOut
 utxo3 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       [ (TxIn genesisId 1, TxOut bobAddr (Lovelace 1000))
+       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Lovelace 3950))
+       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Lovelace 3000)) ]
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   {
     getAccounts =
-      Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
-                   , (mkRwdAcnt bobStake, Coin 0)
-                   , (mkRwdAcnt stakePoolKey1, Coin 0)]
+      Map.fromList [ (mkRwdAcnt aliceStake, Lovelace 0)
+                   , (mkRwdAcnt bobStake, Lovelace 0)
+                   , (mkRwdAcnt stakePoolKey1, Lovelace 0)]
   , getStKeys =
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
@@ -191,7 +191,7 @@ stakePool = StakePool
             {
               poolPubKey = vKey stakePoolKey1
             , poolPledges = Map.empty
-            , poolCost = Coin 0      -- TODO: what is a sensible value?
+            , poolCost = Lovelace 0      -- TODO: what is a sensible value?
             , poolMargin = 0 % 1     --          or here?
             , poolAltAcnt = Nothing  --          or here?
             }
@@ -201,7 +201,7 @@ stakePoolUpate = StakePool
                    {
                      poolPubKey = vKey stakePoolKey1
                    , poolPledges = Map.empty
-                   , poolCost = Coin 100      -- TODO: what is a sensible value?
+                   , poolCost = Lovelace 100      -- TODO: what is a sensible value?
                    , poolMargin = 1 % 2     --          or here?
                    , poolAltAcnt = Nothing  --          or here?
                    }
@@ -209,9 +209,9 @@ stakePoolUpate = StakePool
 tx4Body :: Tx
 tx4Body = Tx
           (Set.fromList [TxIn (txid $ body tx3) 0])
-          [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
+          [ TxOut aliceAddr (Lovelace 2950) ] -- Note the deposit is not charged
           (Set.fromList [ RegPool stakePoolUpate ])
-          (Coin 1000)
+          (Lovelace 1000)
           (Slot 100)
 
 tx4 :: TxWits
@@ -219,9 +219,9 @@ tx4 = TxWits tx4Body (Set.fromList [makeWitness alicePay tx4Body])
 
 utxo4 :: Map.Map TxIn TxOut
 utxo4 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       [ (TxIn genesisId 1, TxOut bobAddr (Lovelace 1000))
+       , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Lovelace 2950))
+       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Lovelace 3000)) ]
 
 
 
@@ -245,11 +245,11 @@ testSpendNonexistentInput =
   let
     tx = aliceGivesBobLovelace
            (TxIn genesisId 42)
-           (Coin 3000) (Coin 1500) (Coin 0) (Coin 0)
+           (Lovelace 3000) (Lovelace 1500) (Lovelace 0) (Lovelace 0)
            Set.empty (Slot 100)
   in ledgerState [tx] @?=
        Left [ BadInputs
-            , ValueNotConserved (Coin 0) (Coin 10000)
+            , ValueNotConserved (Lovelace 0) (Lovelace 10000)
             , InsufficientWitnesses]
   -- Note that BadInputs implies InsufficientWitnesses
 
@@ -258,10 +258,10 @@ testWitnessNotIncluded =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 6434)
-              , TxOut bobAddr (Coin 3000) ]
+              [ TxOut aliceAddr (Lovelace 6434)
+              , TxOut bobAddr (Lovelace 3000) ]
               Set.empty
-              (Coin 566)
+              (Lovelace 566)
               (Slot 100)
     tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [InsufficientWitnesses]
@@ -271,9 +271,9 @@ testSpendNotOwnedUTxO =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 232)]
+              [ TxOut aliceAddr (Lovelace 232)]
               Set.empty
-              (Coin 768)
+              (Lovelace 768)
               (Slot 100)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
@@ -284,15 +284,15 @@ testInvalidTransaction =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 230)]
+              [ TxOut aliceAddr (Lovelace 230)]
               Set.empty
-              (Coin 770)
+              (Lovelace 770)
               (Slot 100)
     tx2body = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 19230)]
+              [ TxOut aliceAddr (Lovelace 19230)]
               Set.empty
-              (Coin 770)
+              (Lovelace 770)
               (Slot 100)
     aliceWit = makeWitness alicePay tx2body
     tx = TxWits txbody (Set.fromList [aliceWit])
@@ -303,15 +303,15 @@ testEmptyInputSet =
   let
     txbody = Tx
               Set.empty
-              [ TxOut aliceAddr (Coin 1)]
+              [ TxOut aliceAddr (Lovelace 1)]
               Set.empty
-              (Coin 584)
+              (Lovelace 584)
               (Slot 100)
     aliceWit = makeWitness alicePay txbody
     tx = TxWits txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?=
        Left [ InputSetEmpty
-            , ValueNotConserved (Coin 0) (Coin 585)
+            , ValueNotConserved (Lovelace 0) (Lovelace 585)
             , InsufficientWitnesses]
 
 testFeeTooSmall :: Assertion
@@ -319,17 +319,17 @@ testFeeTooSmall =
   let
     tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
-           (Coin 3000) (Coin 1) (Coin 0) (Coin 0)
+           (Lovelace 3000) (Lovelace 1) (Lovelace 0) (Lovelace 0)
            Set.empty (Slot 100)
   in ledgerState [tx] @?=
-       Left [ FeeTooSmall (Coin 538) (Coin 1) ]
+       Left [ FeeTooSmall (Lovelace 550) (Lovelace 1) ]
 
 testExpiredTx :: Assertion
 testExpiredTx =
   let
     tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
-           (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
+           (Lovelace 3000) (Lovelace 600) (Lovelace 0) (Lovelace 0)
            Set.empty (Slot 0)
   in (asStateTransition (Slot 1) genesis tx) @?=
        Left [ Expired (Slot 0) (Slot 1) ]
@@ -351,19 +351,19 @@ unitTests = testGroup "Unit Tests"
 
 -- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value
 -- already present. Used to fold over 'UTxO' to accumulate funds per address.
-insertOrUpdate :: TxOut -> Map.Map Addr Coin -> Map.Map Addr Coin
+insertOrUpdate :: TxOut -> Map.Map Addr Lovelace -> Map.Map Addr Lovelace
 insertOrUpdate (TxOut a c) m =
     Map.insert a (if Map.member a m
                   then c <> (m Map.! a)
                   else c) m
 
--- | Return True if at least half of the keys have non-trivial coin values to
--- spent, i.e., at least 2 coins per 50% of addresses.
+-- | Return True if at least half of the keys have non-trivial lovelace values to
+-- spent, i.e., at least 2 lovelace per 50% of addresses.
 isNotDustDist :: UTxO -> UTxO -> Bool
 isNotDustDist initUtxo utxo =
     utxoSize initUtxo <=
-           2 * (Map.size $ Map.filter (> Coin 1) coinMap)
-        where coinMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo)
+           2 * (Map.size $ Map.filter (> Lovelace 1) lovelaceMap)
+        where lovelaceMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo)
 
 -- | This property states that a non-empty UTxO set in the genesis state has a
 -- non-zero balance.
@@ -372,7 +372,7 @@ propPositiveBalance =
     property $ do
       initialState <- forAll genNonemptyGenesisState
       utxoSize (getUtxo initialState) /== 0
-      Coin 0 /== balance (getUtxo initialState)
+      Lovelace 0 /== balance (getUtxo initialState)
 
 -- | This property states that the balance of the initial genesis state equals
 -- the balance of the end ledger state plus the collected fees.
@@ -510,7 +510,7 @@ propBalanceTxInTxOut' =
   let balanceSource            = balance $ inps <| (getUtxo l)
   let balanceTarget            = (balance $ txouts tx)
   let valErrors                = getErrors lv
-  let nonTrivial               =  balanceSource /= Coin 0
+  let nonTrivial               =  balanceSource /= Lovelace 0
   let balanceOk                = balanceSource == balanceTarget <> txfee
   classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
   if valErrors /= [] && balanceOk && nonTrivial

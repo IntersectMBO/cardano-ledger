@@ -43,7 +43,7 @@ import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
-import           Coin                    (Coin (..))
+import           Lovelace                (Lovelace (..))
 import           Keys
 import           PrtlConsts (PrtlConsts(..))
 import           Slot (Slot(..))
@@ -66,7 +66,7 @@ data Addr = AddrTxin HashKey HashKey
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
-data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
+data TxOut = TxOut Addr Lovelace deriving (Show, Eq, Ord)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
@@ -75,7 +75,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
-             , fee     :: Coin
+             , fee     :: Lovelace
              , ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
@@ -127,15 +127,15 @@ union :: UTxO -> UTxO -> UTxO
 union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO -> Coin
-balance (UTxO utxo) = foldr addCoins mempty utxo
-  where addCoins (TxOut _ a) b = a <> b
+balance :: UTxO -> Lovelace
+balance (UTxO utxo) = foldr addLovelace mempty utxo
+  where addLovelace (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
-deposits pc stpools tx = foldl f (Coin 0) cs
+deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Lovelace
+deposits pc stpools tx = foldl f (Lovelace 0) cs
   where
-    f coin cert = coin + dvalue cert pc
+    f lovelace cert = lovelace + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ poolPubKey pool) stpools
     notRegisteredPool _ = True
     cs = Set.filter notRegisteredPool (certs tx)

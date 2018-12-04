@@ -38,7 +38,7 @@ import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import qualified Data.Set                as Set
 
-import           Coin                    (Coin (..))
+import           Lovelace                (Lovelace (..))
 import           Slot                    (Slot (..), Epoch (..), (-*))
 import           Keys
 import           UTxO
@@ -63,9 +63,9 @@ data ValidationError =
   -- | The transaction has expired
   | Expired Slot Slot
   -- | The transaction fee is too small
-  | FeeTooSmall Coin Coin
+  | FeeTooSmall Lovelace Lovelace
   -- | Value is not conserved
-  | ValueNotConserved Coin Coin
+  | ValueNotConserved Lovelace Lovelace
   -- | The transaction does not have the required witnesses.
   | InsufficientWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
@@ -107,7 +107,7 @@ data DelegationState =
     DelegationState
     {
     -- |The active accounts.
-      getAccounts    :: Map.Map RewardAcnt Coin
+      getAccounts    :: Map.Map RewardAcnt Lovelace
     -- |The active stake keys.
     , getStKeys      :: Allocs
     -- |The current delegations.
@@ -137,7 +137,7 @@ data LedgerState =
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0) (Slot 0))
+genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Lovelace 0) (Slot 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -177,8 +177,8 @@ txsize :: Tx -> Natural
 txsize = toEnum . length . show
 
 -- |Minimum fee calculation
-minfee :: PrtlConsts -> Tx -> Coin
-minfee pc tx = Coin $ minfeeA pc * (txsize tx) + minfeeB pc
+minfee :: PrtlConsts -> Tx -> Lovelace
+minfee pc tx = Lovelace $ minfeeA pc * (txsize tx) + minfeeB pc
 
 -- |Determine if the fee is large enough
 validFee :: TxWits -> LedgerState -> Validity
@@ -191,21 +191,21 @@ validFee (TxWits tx _) l =
         given = fee tx
 
 -- |Compute the lovelace which are consumed by the transaction
-destroyed :: Tx -> LedgerState -> Coin
+destroyed :: Tx -> LedgerState -> Lovelace
 destroyed tx l = balance (txouts tx) + fee tx + deposits (getPCs l) stpools tx
   where stpools = getStPools $ getDelegationState l
 
 -- |Compute the key deregistration refunds in a transaction
-keyRefunds :: PrtlConsts -> Allocs -> Tx -> Coin
+keyRefunds :: PrtlConsts -> Allocs -> Tx -> Lovelace
 keyRefunds pc stkeys tx =
   sum [refund' key | (RegKey key) <- Set.toList (certs tx)]
   where refund' key =
           case Map.lookup (hashKey key) stkeys of
-            Nothing -> Coin 0
+            Nothing -> Lovelace 0
             Just s -> refund (RegKey key) pc (ttl tx -* s)
 
 -- |Compute the lovelace which are created by the transaction
-created :: Tx -> LedgerState -> Coin
+created :: Tx -> LedgerState -> Lovelace
 created tx l = balance (txins tx <| getUtxo l) + refunds
   where refunds = keyRefunds (getPCs l) (getStKeys $ getDelegationState l) tx
 
@@ -358,7 +358,7 @@ applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
 applyDCert slot (RegKey key) ls@(LedgerState _ ds _) = ls
   { getDelegationState = ds
     { getStKeys = Map.insert hksk slot (getStKeys ds)
-    , getAccounts = Map.insert (RewardAcnt hksk) (Coin 0) (getAccounts ds)}
+    , getAccounts = Map.insert (RewardAcnt hksk) (Lovelace 0) (getAccounts ds)}
   }
   where hksk = hashKey key
 
@@ -395,7 +395,7 @@ applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _) = ls
         hk_sp = hashKey key
 
 -- |Compute how much stake each active stake pool controls.
-delegatedStake :: LedgerState -> Map.Map HashKey Coin
+delegatedStake :: LedgerState -> Map.Map HashKey Lovelace
 delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutputs
   where
     getOutputs (UTxO utxo) = Map.elems utxo

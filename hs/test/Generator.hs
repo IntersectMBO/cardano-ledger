@@ -28,7 +28,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import           Coin
+import           Lovelace
 import           Keys
 import           LedgerState     (LedgerState (..),
                                   LedgerValidation(..),
@@ -84,19 +84,19 @@ genBool = Gen.enumBounded
 genNatural :: Natural -> Natural -> Gen Natural
 genNatural lower upper = Gen.integral $ Range.linear lower upper
 
--- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
--- coins, with values between 'minCoin' and 'maxCoin'.
-genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
-genCoinList minCoin maxCoin lower upper = do
+-- | Generator for List of 'Lovelace' values. Generates between 'lower' and 'upper'
+-- lovelace, with values between 'minLovelace' and 'maxLovelace'.
+genLovelaceList :: Natural -> Natural -> Int -> Int -> Gen [Lovelace]
+genLovelaceList minLovelace maxLovelace lower upper = do
   xs <- Gen.list (Range.linear lower upper)
-        $ Gen.integral (Range.exponential minCoin maxCoin)
-  return (Coin <$> xs)
+        $ Gen.integral (Range.exponential minLovelace maxLovelace)
+  return (Lovelace <$> xs)
 
--- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
+-- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Lovelace
 -- value is generated.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 100 10000 (length addrs) (length addrs)
+  ys <- genLovelaceList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- TODO generate sensible protocol constants
@@ -114,9 +114,9 @@ genNonemptyGenesisState = do
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
 -- address associated to that input, selects a random subsequence of other valid
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
--- coins, the amount spent to each address is 'div b n' and the fees are set to
+-- lovelace, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTxWits :: KeyPairs -> UTxO -> Slot -> Gen (Coin, TxWits)
+genTxWits :: KeyPairs -> UTxO -> Slot -> Gen (Lovelace, TxWits)
 genTxWits keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
@@ -129,7 +129,7 @@ genTxWits keyList (UTxO m) cslot = do
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
   let realN                = length receipients
-  let (perReceipient, txfee) = splitCoin selectedBalance (fromIntegral realN)
+  let (perReceipient, txfee) = splitLovelace selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
           (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   txttl <- genNatural 1 100
@@ -149,7 +149,7 @@ genTxWits keyList (UTxO m) cslot = do
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
 genLedgerStateTx :: KeyPairs -> LedgerState ->
-                    Gen (Coin, TxWits, Either [ValidationError] LedgerState)
+                    Gen (Lovelace, TxWits, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
   slot <- genNatural 0 1000
@@ -161,35 +161,35 @@ genLedgerStateTx keyList sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Natural, Lovelace, LedgerState, [TxWits], Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
   ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
-  (fees, txs, ls') <- repeatCollectTx steps keyPairs (Coin 0) ls []
+  (fees, txs, ls') <- repeatCollectTx steps keyPairs (Lovelace 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
 -- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
 genNonEmptyAndAdvanceTx'
-  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], LedgerValidation)
+  :: Gen (KeyPairs, Natural, Lovelace, LedgerState, [TxWits], LedgerValidation)
 genNonEmptyAndAdvanceTx' = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
   ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
-  (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Coin 0) ls [] []
+  (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Lovelace 0) ls [] []
   pure (keyPairs, steps, fees, ls, txs, lv')
 
 -- | Generator for a fixed number of 'n' transaction step executions, using the
--- list of pairs of key pairs, the 'fees' coin accumulator, initial ledger state
+-- list of pairs of key pairs, the 'fees' lovelace accumulator, initial ledger state
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
 repeatCollectTx
     :: Natural
     -> KeyPairs
-    -> Coin
+    -> Lovelace
     -> LedgerState
     -> [TxWits]
-    -> Gen (Coin, [TxWits], Either [ValidationError] LedgerState)
+    -> Gen (Lovelace, [TxWits], Either [ValidationError] LedgerState)
 repeatCollectTx 0 _ fees ls txs = pure (fees, reverse txs, Right ls)
 repeatCollectTx n keyPairs fees ls txs = do
   (txfee, tx, next) <- genLedgerStateTx keyPairs ls
@@ -202,11 +202,11 @@ repeatCollectTx n keyPairs fees ls txs = do
 repeatCollectTx'
     :: Natural
     -> KeyPairs
-    -> Coin
+    -> Lovelace
     -> LedgerState
     -> [TxWits]
     -> [ValidationError]
-    -> Gen (Coin, [TxWits], LedgerValidation)
+    -> Gen (Lovelace, [TxWits], LedgerValidation)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
  | n == 0 || (utxoSize $ getUtxo ls) == 0 =
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
@@ -239,27 +239,27 @@ genValidLedgerState = do
     Right ls -> pure (keyPairs, steps, txs, ls)
 
 genValidSuccessorState :: KeyPairs -> LedgerState ->
-  Gen (Coin, TxWits, LedgerState)
+  Gen (Lovelace, TxWits, LedgerState)
 genValidSuccessorState keyPairs sourceState = do
   (txfee, entry, next) <- genLedgerStateTx keyPairs sourceState
   case next of
     Left _   -> Gen.discard
     Right ls -> pure (txfee, entry, ls)
 
-genValidStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState)
+genValidStateTx :: Gen (LedgerState, Natural, Lovelace, TxWits, LedgerState)
 genValidStateTx = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
   (txfee, entry, ls')        <- genValidSuccessorState keyPairs ls
   pure (ls, steps, txfee, entry, ls')
 
-genStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerValidation)
+genStateTx :: Gen (LedgerState, Natural, Lovelace, TxWits, LedgerValidation)
 genStateTx = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
   (txfee, entry, lv)         <- genLedgerStateTx' keyPairs ls
   pure (ls, steps, txfee, entry, lv)
 
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
-                    Gen (Coin, TxWits, LedgerValidation)
+                    Gen (Lovelace, TxWits, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo = getUtxo sourceState
   slot <- genNatural 0 1000
@@ -293,7 +293,7 @@ genDCertRetirePool keys epoch = do
 genStakePool :: KeyPairs -> Gen StakePool
 genStakePool keys = do
   poolKey       <- getAnyStakeKey keys
-  cost          <- Coin <$> genNatural 1 100
+  cost          <- Lovelace <$> genNatural 1 100
   marginPercent <- genNatural 0 100
   pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
 

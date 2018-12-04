@@ -1,20 +1,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DerivingVia #-}
 
-module Coin
+module Lovelace
     (
-     Coin(..)
-    , splitCoin
+     Lovelace(..)
+    , splitLovelace
     ) where
 
 import           Data.Monoid (Sum(..))
 import           Numeric.Natural (Natural)
 
 -- |The amount of value held by a transaction output.
-newtype Coin = Coin Natural
+newtype Lovelace = Lovelace Natural
   deriving (Show, Eq, Ord, Num, Integral, Real, Enum)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
-splitCoin :: Coin -> Natural -> (Coin, Coin)
-splitCoin (Coin n) 0 = (Coin 0, Coin n)
-splitCoin (Coin n) m = (Coin $ n `div` m, Coin $ n `rem` m)
+splitLovelace :: Lovelace -> Natural -> (Lovelace, Lovelace)
+splitLovelace (Lovelace n) 0 = (Lovelace 0, Lovelace n)
+splitLovelace (Lovelace n) m = (Lovelace $ n `div` m, Lovelace $ n `rem` m)

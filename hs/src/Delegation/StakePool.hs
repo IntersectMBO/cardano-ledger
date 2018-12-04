@@ -7,14 +7,14 @@ import           Data.Map        (Map)
 import           Data.Ratio
 import           Numeric.Natural
 
-import           Coin            (Coin)
+import           Lovelace        (Lovelace)
 import           Keys
 
 -- |A stake pool.
 data StakePool = StakePool
                    { poolPubKey  :: VKey
-                   , poolPledges :: Map VKey Coin -- TODO not updated currently
-                   , poolCost    :: Coin
+                   , poolPledges :: Map VKey Lovelace -- TODO not updated currently
+                   , poolCost    :: Lovelace
                    , poolMargin  :: Ratio Natural
                    , poolAltAcnt :: Maybe HashKey
                    } deriving (Show, Eq, Ord)

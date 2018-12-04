@@ -6,7 +6,7 @@ module PrtlConsts
 import           Data.Ratio      (Rational)
 import           Numeric.Natural (Natural)
 
-import           Coin            (Coin (..))
+import           Lovelace        (Lovelace (..))
 
 data PrtlConsts =
   PrtlConsts
@@ -15,9 +15,9 @@ data PrtlConsts =
     -- |The constant factor for the minimum fee calculation
   , minfeeB     :: Natural
     -- |The amount of a key registration deposit
-  , keyDeposit  :: Coin
+  , keyDeposit  :: Lovelace
     -- |The amount of a pool registration deposit
-  , poolDeposit :: Coin
+  , poolDeposit :: Lovelace
     -- |The minimum percent refund guarantee
   , minRefund   :: Rational
     -- |The deposit decay rate

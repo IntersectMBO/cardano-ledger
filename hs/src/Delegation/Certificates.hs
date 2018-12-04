@@ -6,7 +6,7 @@ module Delegation.Certificates
   , refund
   ) where
 
-import           Coin (Coin(..))
+import           Lovelace (Lovelace(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..))
 import           PrtlConsts (PrtlConsts(..))
@@ -37,13 +37,13 @@ authDCert key cert = getRequiredSigningKey cert == key
     getRequiredSigningKey (Delegate delegation) = delegator delegation
 
 -- |Retrieve the deposit amount for a certificate
-dvalue :: DCert -> PrtlConsts -> Coin
+dvalue :: DCert -> PrtlConsts -> Lovelace
 dvalue (RegKey _) = keyDeposit
 dvalue (RegPool _) = poolDeposit
-dvalue _ = const $ Coin 0
+dvalue _ = const $ Lovelace 0
 
 -- |Compute a refund on a deposit
-refund :: DCert -> PrtlConsts -> Duration -> Coin
+refund :: DCert -> PrtlConsts -> Duration -> Lovelace
 refund cert pc dur = floor refund'
   where
     dep = fromIntegral $ dvalue cert pc
