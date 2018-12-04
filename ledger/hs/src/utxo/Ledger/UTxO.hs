@@ -6,7 +6,7 @@ module Ledger.UTxO where
 
 import Control.Lens
 import Control.State.Transition
-import qualified Data.ByteArray        as BA
+import qualified Data.ByteArray as BA
 import Data.List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
