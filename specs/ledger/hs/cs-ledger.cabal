@@ -16,50 +16,55 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 cabal-version:       >= 2.0
 
-library utxo-sig
-  signatures:          UTxO
-  exposed-modules:     Ledger.Abstract
+library core-sig
+  signatures:          Ledger.Signatures
   build-depends:       base >=4.11 && <5
                      , bytestring
                      , containers
                      , cryptonite
                      , memory
                      , text
-  hs-source-dirs:      src/sig/utxo
+  hs-source-dirs:      src/core/sig
   default-language:    Haskell2010
 
-library utxo-impl-simple
-  hs-source-dirs:      src/simple/utxo
-  exposed-modules:     UTxO
+library core-inst
+  hs-source-dirs:      src/core/inst
+  exposed-modules:     Ledger.Signatures
   default-language:    Haskell2010
   build-depends:       base >=4.12 && <5
                      , cryptonite
                      , memory
 
-library ledger-simple
-  hs-source-dirs:      src/simple/ledger
-  exposed-modules:     Ledger
-  reexported-modules:  UTxO
+library core-ledger
+  hs-source-dirs:      src/core/core
+  exposed-modules:     Ledger.Core
+  reexported-modules:  Ledger.Signatures
   default-language:    Haskell2010
-  build-depends:       base >=4.11 && <5
+  build-depends:       base >=4.12 && <5
+                     , cryptonite
+                     , core-sig
+                     , core-inst
+
+library ledger-utxo
+  hs-source-dirs:      src/utxo
+  exposed-modules:     Ledger.UTxO
+  reexported-modules:  Ledger.Signatures
+  default-language:    Haskell2010
+  build-depends:       base >=4.12 && <5
                      , bytestring
                      , containers
                      , cryptonite
+                     , lens
                      , memory
                      , small-steps
-                     , utxo-sig
-                     , utxo-impl-simple
+                     , core-ledger
 
-library ledger-witnessed
-  hs-source-dirs:      src/witnessed/ledger
-  exposed-modules:     Ledger
-  reexported-modules:  UTxO
+library ledger-delegation
+  hs-source-dirs:      src/delegation
+  exposed-modules:     Ledger.Delegation
   default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
+  build-depends:       base >=4.11 && <5
                      , containers
-                     , lens
+                     , cryptonite
+                     , memory
                      , small-steps
-                     , utxo-sig
-                     , utxo-impl-simple
-                     , ledger-simple
-  mixins:              ledger-simple (Ledger as Ledger.Simple)

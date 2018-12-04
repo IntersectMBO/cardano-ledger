@@ -6,7 +6,7 @@ This module defines the types and functions for a simple UTxO Ledger
 as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 -}
 
-signature UTxO where
+signature Ledger.Signatures where
 
 ---------------------------------------------------------------------------------
 -- Core UTxO primitives
