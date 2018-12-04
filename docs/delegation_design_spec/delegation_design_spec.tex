@@ -2424,8 +2424,8 @@ be included in the registration:
   splitting rewards amongst members (see
   \cref{pool-leader-reward}).
 \item
-  Proof of \emph{ADA pledged to the pool}. This could be provided as a
-  list of addresses, signed by the corresponding secret spending keys.
+  Proof of \emph{ADA pledged to the pool}, as a list of public stake
+  key hashes that belong to the owner(s) of the pool.
 \end{itemize}
 
 There will be no lower bound on the amount of ADA that has to be
@@ -2438,15 +2438,22 @@ a lot of stake and attacking the system (see requirement
 \subsection{Epoch Rewards}
 \label{epoch-rewards}
 
-There will be three sources of rewards for an epoch: \emph{transaction
-fees}, \emph{monetary expansion} and rewards from the \emph{previous}
-epoch.
+There will be four sources of rewards for an epoch: \emph{transaction
+  fees}, non-refundable parts of \emph{deposits}, \emph{monetary
+  expansion}, and rewards from the \emph{previous} epoch.
 
 \subsubsection{Transaction Fees}
 \label{transaction-fees-1}
 
 All transaction fees from all transactions from all blocks created
 during the epoch will be used as rewards.
+
+\subsubsection{Deposits}
+\label{deposits-1}
+
+As explained in \cref{deposits}, a part of the deposits for
+certificates and UTxO entries are non-refundable, and contribute to
+the rewards pool instead.
 
 \subsubsection{Monetary Expansion}
 \label{monetary-expansion}
@@ -2459,6 +2466,13 @@ future. At this moment, \(T=31,000,000,000\) and
 
 Since \(T_\infty\) is finite, rewards from monetary expansion will
 decrease over time. This has to be compensated by
+
+Note that the fees that have been collected during the bootstrap era,
+where all nodes have been provided by IOHK, Emurgo, and the Cardano
+Foundation, have not been paid out. Those fees have reduced the amount
+of ADA currently in existence, but they did not change
+\(T_\infty\). Effectively, those fees will be distributed amongst
+future stakeholders via monetary expansion.
 
 \begin{itemize}
 \item
@@ -2558,7 +2572,10 @@ the beginning.
 
 The difference \(f(s_j,\sigma_j)-\hat{f}_j\) will be sent to the
 treasury. In particular, this means that \emph{no pool can increase its
-own rewards by somehow preventing another pool from producing blocks}.
+own rewards by somehow preventing another pool from producing
+blocks}. In the initial release, we will track the amount of funds in
+the treasury, but there will be no mechanism for withdrawing from the
+treasury. A proper treasury will be added in a later release.
 
 Note that \(\sum_jf(s_j,\sigma_j)\leq 1\) and that the difference
 \(R-\sum_jf(s_j,\sigma_j)\) will normally be strictly positive. This
@@ -2586,10 +2603,6 @@ Consider
 
 Note that the values \(c\) and \(m\) for registered pools are available
 from the pool registration, see \cref{stakepool-registration}.
-Stakeholders who have \emph{not} registered a pool and participate in
-the protocol on their own are treated like \emph{pool leaders of one-man
-pools with margin 1} (costs are irrelevant in this case, because all
-pool rewards go to the pool leader anyway).
 
 \paragraph{Pool Leader Reward}
 \label{pool-leader-reward}
@@ -3841,7 +3854,10 @@ the holder of the resource is refunded
 \[
     r_R(t)=d_R\cdot\left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda t}\right)\in(d_{\min}\cdot d_R,d_R),
 \]
-whereas the difference $d_R-r_R(t)$ is added to the reward pool of that epoch.
+whereas the difference $d_R-r_R(t)$ is added to the reward pool of
+that epoch\todo{Update this: we should be able to add the decaying
+  part to the rewards pool every epoch in between, not only at the
+  very end}.
 Note that it easily follows from well-known properties of the exponential
 function that
 \[
