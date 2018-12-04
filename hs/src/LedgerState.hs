@@ -172,7 +172,7 @@ validInputs (TxWits tx _) l =
     else Invalid [BadInputs]
   where unspentInputs (UTxO utxo) = Map.keysSet utxo
 
--- |Implementation of astract transaction size
+-- |Implementation of abstract transaction size
 txsize :: Tx -> Natural
 txsize = toEnum . length . show
 
