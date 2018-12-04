@@ -73,6 +73,7 @@ mutateTx tx = do
             outputs'
             (certs tx)
             (fee tx)
+            (ttl tx)
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]
