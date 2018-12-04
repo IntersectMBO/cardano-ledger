@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DerivingVia #-}
-module UTxO where
+module Ledger.Signatures where
 
 import           Crypto.Hash (Digest, SHA256)
 import qualified Data.ByteArray        as BA
