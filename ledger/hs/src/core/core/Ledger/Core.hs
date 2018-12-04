@@ -38,3 +38,18 @@ sign (SKey k) d = Sig d k
 -- |Verify a digital signature
 verify :: Eq a => VKey -> a -> Sig a -> Bool
 verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
+
+---------------------------------------------------------------------------------
+-- Slots and Epochs
+---------------------------------------------------------------------------------
+
+newtype Epoch = Epoch Natural
+
+
+newtype Slot = Slot Natural
+
+-- | A number of slots.
+--
+--   We use this newtype to distinguish between a cardinal slot and a relative
+--   period of slots.
+newtype SlotCount = SlotCount Natural

@@ -66,5 +66,6 @@ library ledger-delegation
   build-depends:       base >=4.11 && <5
                      , containers
                      , cryptonite
-                     , memory
+                     , lens
                      , small-steps
+                     , core-ledger
