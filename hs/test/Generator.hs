@@ -101,7 +101,7 @@ genTxOut addrs = do
 
 -- TODO generate sensible protocol constants
 defPCs :: PrtlConsts
-defPCs = PrtlConsts 0 0
+defPCs = PrtlConsts 0 0 100 100 0 0
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
@@ -116,8 +116,8 @@ genNonemptyGenesisState = do
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTxWits :: KeyPairs -> UTxO -> Gen (Coin, TxWits)
-genTxWits keyList (UTxO m) = do
+genTxWits :: KeyPairs -> UTxO -> Slot -> Gen (Coin, TxWits)
+genTxWits keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
   let !selectedAddr    = addr $ head selectedInputs
@@ -132,11 +132,13 @@ genTxWits keyList (UTxO m) = do
   let (perReceipient, txfee) = splitCoin selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
           (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
+  txttl <- genNatural 1 100
   let !txbody = Tx
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            Set.empty
            txfee
+           (cslot + (Slot txttl))
   let !txwit = makeWitness selectedKeyPair txbody
   pure (txfee, TxWits txbody $ Set.fromList [txwit])
             where utxoInputs = Map.keys m
@@ -150,8 +152,8 @@ genLedgerStateTx :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
   let utxo = getUtxo sourceState
-  (txfee, tx) <- genTxWits keyList utxo
   slot <- genNatural 0 1000
+  (txfee, tx) <- genTxWits keyList utxo (Slot slot)
   pure (txfee, tx, asStateTransition (Slot slot) sourceState tx)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
@@ -260,9 +262,9 @@ genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo = getUtxo sourceState
-  (txfee, tx) <- genTxWits keyList utxo
-  tx'       <- mutateTxWits tx
   slot <- genNatural 0 1000
+  (txfee, tx) <- genTxWits keyList utxo (Slot slot)
+  tx'       <- mutateTxWits tx
   pure (txfee
        , tx'
        , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) tx')
