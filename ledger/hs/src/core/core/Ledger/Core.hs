@@ -48,9 +48,11 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Natural
+  deriving (Eq, Ord, Show)
 
 
 newtype Slot = Slot Natural
+  deriving (Eq, Ord, Show)
 
 -- | A number of slots.
 --
