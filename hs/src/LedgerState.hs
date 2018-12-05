@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-|
 Module      : LedgerState
@@ -46,6 +47,8 @@ import           PrtlConsts              (PrtlConsts(..))
 
 import           Delegation.Certificates (DCert (..), refund)
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
+
+import Control.State.Transition
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -404,3 +407,35 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
       return (pool, c)
     outs = getOutputs . getUtxo $ ls
     delegatedOutputs = mapMaybe (addStake (getDelegations ds)) outs
+
+---------------------------------------------------------------------------------
+-- State transition system
+---------------------------------------------------------------------------------
+
+data UTXOW
+
+instance STS UTXOW where
+    type State UTXOW = LedgerState
+    type Signal UTXOW = TxWits
+    type Environment UTXOW = Slot
+    data PredicateFailure UTXOW = UTXOFailure [ValidationError]
+                   deriving (Eq, Show)
+
+    rules = [applyTxWits]
+
+fromValidity :: Validity -> PredicateResult UTXOW
+fromValidity Valid = Passed
+fromValidity (Invalid xs) = Failed $ UTXOFailure xs
+
+executeTransition :: LedgerState -> TxWits -> LedgerState
+executeTransition lstate txwit = applyTxBody lstate (body txwit)
+
+applyTxWits :: Rule UTXOW
+applyTxWits =
+    Rule
+    [
+     Predicate $ \(slot, lstate, txwit) -> fromValidity $ validTx txwit slot lstate
+    ]
+    ( Extension . Transition $ \(_, lstate, txwit) ->
+          executeTransition lstate txwit
+    )
