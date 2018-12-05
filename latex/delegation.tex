@@ -272,13 +272,6 @@ it should not have any rewards in its associated address. Thus, it is safe
 to set the rewards to 0 using union override (i.e. replace any value previously
 associated with this address with 0).
 
-\begin{todo}
-Here we would add the rules for managing rewards beyond assigning
-the initial 0 value upon registration. The formula that calculates rewards
-takes into account stake pool
-performance (ranked in the order of expected rewards).
-\end{todo}
-
 When deregistering a key (the \cref{eq:deleg-dereg} rule), we again
 require that the certificate is of the correct type. We also require
 that the key of the author is indeed a registered stake key
@@ -317,7 +310,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegPool & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
+      \var{c}\in\DCertRegKey & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
     }
     {
       \var{slot} \vdash
@@ -484,7 +477,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \begin{equation}\label{eq:pool-rereg}
     \inference[Pool-reReg]
     {
-      \var{c}\in\DCertRegPool 
+      \var{c}\in\DCertRegPool
       & \cauthor{c} = \var{hk}
       & hk \in \dom \var{stpools}
       & \stakepool{c} = \var{stakepool}
@@ -545,10 +538,6 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 
 \end{figure}
 
-\begin{todo}
-  make sure ttl of the transaction carrying a certificate is less than
-  the first slot of (retiring c + 1)
-\end{todo}
 
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
@@ -783,6 +772,13 @@ is also valid.
       \var{dwstate''}
     }
     {
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}\\
+      \end{array}
+    }
+    \vdash
       \var{dwstate}
       \trans{delegs}{\Gamma; c}
       \var{dwstate''}

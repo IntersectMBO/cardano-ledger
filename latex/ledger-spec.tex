@@ -237,6 +237,11 @@ the rest of the document.
     \cup \{k\mapsto v_1+v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
     & \text{union override plus} \\
     & & \text{(for monoidal values)}\\
+    M \unionoverrideMinus N
+    & = (M \triangle N)
+    \cup \{k\mapsto v_1-v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
+    & \text{union override plus} \\
+    & & \text{(for monoidal values)}\\
   \end{align*}
   \caption{Non-standard map operators}
   \label{fig:notation:nonstandard}
@@ -329,9 +334,7 @@ organization chosen for an implementation.
 
 
 \begin{todo}
-  Discuss here serialization and
-  \href{https://iohk.myjetbrains.com/youtrack/issue/CDEC-628}{composable
-    serialization}
+  Add serialization reference
 \end{todo}
 
 \section{Delegation}
@@ -690,14 +693,8 @@ a transaction ID with \textit{its own outputs} (by using the $\var{ix}$ indeces)
 thus indicating that these
 can now be spent by another transaction.
 
-Finally, the type $\Wdrl$ is used to store withdrawals
-(from the pool of rewards) on the ledger. Note that rewards are not
-distributed automatically to their recipients. Instead, the wallet must produce
-a withdrawal request and put it inside a transaction, and once the transaction
-in processed, the withdrawals posted on the ledger.
-
-The term of type $\Wdrl$ is a pair of a transation ID and a reward addresses
-the transaction with this ID requested to collect the rewards for.
+The type $\Wdrl$ is a finite map that maps a reward address to a coin value to
+be withdrawn from the rewards awarded to that address.
 
 The map $\fun{txid}$ is a one-way function which computes the $\var{txid}$
 of a given transaction. A transaction can be uniquely identified
@@ -737,7 +734,16 @@ values the blockchain protocol keeps track of, $\PrtclConsts$), as well as
 the contents of the transaction itself.
 
 The $\fun{txwdrls}$ function returns a list of reward addresses provided by a
-given transaction, to which this transaction is requesting rewards.
+given transaction, each paired with the coin value the transaction is requesting
+be reaped, i.e. removed from the the total coin accumulated in the rewards
+account for this address and added to the UTxO.
+
+We also present the abstract function $\fun{wdrlUTxO}$,
+which builds UTxO entries out of withdrawal requests in a given transaction.
+These new entries
+allow the funds assigned to the rewards addresses to be spent like any
+other unspent outputs.
+
 
 \begin{figure*}
   \emph{Abstract types}
@@ -759,6 +765,7 @@ given transaction, to which this transaction is requesting rewards.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \var{addr}
       & \Addr
       & \var{addr}
       & \Addr_{base} \uniondistinct \AddrRWD
@@ -784,7 +791,7 @@ given transaction, to which this transaction is requesting rewards.
       \var{wdrl}
       & \Wdrl
       & (\var{txid},~\var{a})
-      & \powerset \TxId * \AddrRWD
+      & \AddrRWD \mapsto \Coin
       & \text{reward withdrawal}
     \end{array}
   \end{equation*}
@@ -801,7 +808,10 @@ given transaction, to which this transaction is requesting rewards.
       %
       \fun{minfee} & \PrtclConsts \to \Tx \to \Coin & \text{minimum fee}\\
       %
-      \fun{txwdrls} & \Tx \to \powerset{\AddrRWD} & \text{transaction withdrawals}\\
+      \fun{txwdrls} & \Tx \to \Wdrl & \text{transaction withdrawals}\\
+
+      \fun{wdrlUTxO} & \Tx \to \UTxO &
+             \text{UTxO entries for withdrawals}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -824,9 +834,12 @@ The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
 a given UTxO. The calculation $\fun{created}$ gives the value created
 by the transaction $\var{tx}$ in the context of the relevant protocol
 constants, the current UTxO on the ledger, and the resource allocation for
-$\DState$, i.e. $\var{stkeys}$. The calculation is a sum of all coin in the inputs of
-$\var{tx}$ plus the individual key deregistration refunds of the $\var{tx}$ in this context.
+$\DState$, i.e. $\var{stkeys}$. This calculation is a sum of all coin in the inputs of
+$\var{tx}$  and the individual key
+deregistration refunds of the $\var{tx}$ in this context.
 It gives the total coin value the given transaction creates on the ledger UTxO.
+Note here that more value is added to the UTxO than the computed by this
+$\var{created}$ calculation, but this value comes from
 
 The $\fun{destroyed}$ calculation, on the other hand, sums up the
 coin in the outputs of $\var{tx}$, then adds it to the fee that the transaction
@@ -835,6 +848,7 @@ registering individual keys as well as stake pools.
 This calculation gives the total coin value that
 the transaction removes from the current UTxO (given the necessary protocol
 constants).
+
 
 \begin{figure}
   \begin{align*}
@@ -856,20 +870,29 @@ constants).
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
     \nextdef
-    & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Tx \to \Coin
+    & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
+        & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
+         \var{rewards} \unionoverrideMinus \var{wdrls} \\
+    \nextdef
+    & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value created} \\
-    & \created{pc}{utxo}{stkeys}{tx} = \\
-    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} + \keyRefunds{pc}{stkeys}{tx}
+    & \created{pc}{utxo}{stkeys}{rewards}~{tx} = \\
+    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
+        \sum_{(a \mapsto c) \in rr} c  \\
+        & + \keyRefunds{pc}{stkeys}{tx} \\
+    &\where~rr = \fun{reapRewards}~\var{rewards}~(\fun{txwdrls}~\var{tx})\\
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
     & \text{value destroyed} \\
-    & \fun{destroyed} ~ pc ~ stpools ~ tx =
-      \balance{(\txouts{tx})}  + \txfee{tx} + \deposits{pc}{stpools}{tx}\\
+    & \fun{destroyed} ~ pc ~ stpools ~ tx = \\
+    &~~\balance{(\txouts{tx})} + \balance{(\fun{wdrlUTxO}~\var{tx})} \\
+      & + \txfee{tx} + \deposits{pc}{stpools}~{tx}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
 \end{figure}
+
 
 
 The type of the transition of a UTxO is presented in Figure
@@ -883,9 +906,7 @@ to keep track of the current individual and pool resource allocations, and
 the current slot number.
 
 The relevant state variables for a UTxO transition include the UTxO itself,
-as well as the value in the deposits pool, the fees pool, and any pending
-reward withdrawals (due to previous transactions).
-
+as well as the value in the deposits pool and the fees pool.
 The type of UTxO update is a $\UTxOState$ transition signaled by
 a transaction $\var{tx}$ in the environment $\UTxOEnv$.
 
@@ -912,8 +933,6 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
         \var{utxo} & \UTxO & \text{UTxO}\\
         \var{deposits} & \Coin & \text{deposits pool}\\
         \var{fees} & \Coin & \text{fee pool}\\
-        \var{wdrls} & \Wdrl &
-          \text{pending withdrawals}\\
       \end{array}
     \right)
   \end{equation*}
@@ -940,7 +959,7 @@ be applied to a particular $\UTxOState$ in environment $\UTxOEnv$:
 \item The fee paid by the transaction has to be greater than or equal to the
 minimum fee.
 \item Each input spent in the transaction must be in the set of unspent
-  outputs.
+  outputs
 \item All the pool retirement certificates in the transaction schedule the
 retirement for some time after the lifetime of the transaction is over
 \item The amount of coin created by the transaction must be the same as
@@ -979,6 +998,8 @@ associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
 \item add all the $\var{outputs}$ of $\var{tx}$ to the
 UTxO, now associated with the $\var{txid}(\var{tx})$ instead (so they can
 now be spent by future transactions)
+\item add all the entries generated from the rewards addresses, the transaction's
+$\var{txid}$, and amounts requested to the current UTxO
 \end{itemize}
 
 The $\var{deposits}$ is updated by:
@@ -1052,15 +1073,17 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
       \forall \fun{dcerts}~tx,~\var{c}\in\DCertRetirePool \Rightarrow
           ~\fun{ttl}~{tx} \leq \fun{retire}~{c}
       \\
-      \created{pc}{utxo}{stkeys}{tx} = \destroyed{pc}{stpools}{tx}
+      \created{pc}{utxo}{stkeys}{rewards}~{tx} = \destroyed{pc}{stpools}~{tx}
       \\
       ~
       \\
-      \var{refunded} = \keyRefunds{pc}~{stkeys}~{tx}
+      \var{refunded} = \keyRefunds{pc}{stkeys}~{tx}
       \\
-      \var{decayed} = \decayedTx{pc}~{stkeys}~{tx}
+      \var{decayed} = \decayedTx{pc}{stkeys}~{tx}
       \\
       \var{depositChange} = (\deposits{pc}~{stpools}~{tx}) - (\var{refunded} + \var{decayed})
+      \\
+      \var{wd} = \fun{wdrlUTxO}~(\fun{txwdrls}~{tx})
     }
     {
       \begin{array}{l}
@@ -1075,16 +1098,14 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
         \var{utxo} \\
         \var{deposits} \\
         \var{fees} \\
-        \var{wdrls} \\
       \end{array}
       \right)
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx} \\
+        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx} \cup \var{wd}  \\
         \var{deposits} + \var{depositChange} \\
         \var{fees} + (\txfee{tx}) + \var{decayed} \\
-        \var{wdrls} \cup (\{\fun{txid}~{tx},~{a})|\var{a}\in\txwdrls{tx}\})\\
       \end{array}
       \right)
     }
@@ -1103,15 +1124,125 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
   This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
-\subsection{Properties}
-\label{sec:utxo-properties}
+%\subsection{Properties}
+%\label{sec:utxo-properties}
+
+\subsection{Rewards Ledger Update}
+\label{sec:utxo-rewards}
+
+\begin{figure}
+\begin{equation*} \label{eq:rewards-upd}
+  \_ \vdash \_ \trans{delrwds}{\_} \_ \in
+    \powerset (\DWEnv \times \DWState \times \Wdrl \times \DWState)
+\end{equation*}
+%
+\begin{equation*} \label{eq:dstate-total}
+  \_ \vdash \_ \trans{delegt}{\_} \_ \in
+    \powerset (\Slot \times \DWState \times \Tx \times \DWState)
+\end{equation*}
+
+\caption{Delegation Rewards Update Types}
+\label{fig:delegation-rewards}
+\end{figure}
+
+
+\begin{figure}
+  \centering
+  \begin{equation}\label{eq:rewards-rule}
+    \inference[Dist-Rew]
+    {
+    %
+    }
+    {
+    {
+      \begin{array}{l}
+        tx \\
+        slot
+      \end{array}
+    }
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{pstate}
+      \end{array}
+      \right)
+      \trans{delrwds}{\var{wdrls}}
+      \left(
+      \begin{array}{rcl}
+        \var{stkeys} \\
+        \fun{reapRewards}~\var{rewards}~\var{wdrls}\\
+        \var{delegations} \\
+        \var{pstate}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+
+
+    \begin{equation}\label{eq:dstate-tot-r}
+      \inference[Dstate-Tot]
+      {
+      \Gamma = \dcerts{tx} \\
+      \var{wdrls} = \fun{txwdrls}~{tx} \\
+      \forall \var{c}\in \Gamma, \var{c}\in\DCertRegKey \Rightarrow
+        \addrRw~(\fun{author}~{c}) \notin \dom \var{wdrls} \\
+      \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
+        \fun{author}~{c} \notin \dom \var{retiring} \\ ~ \\
+      {
+        \begin{array}{l}
+          tx \\
+          slot
+        \end{array}
+      }
+      \vdash
+      dwstate \trans{delrwds}{\var{wdrls}} dwstate'
+      {
+        \begin{array}{l}
+          tx \\
+          slot
+        \end{array}
+      }
+      \vdash
+      dwstate' \trans{delegs}{\Gamma} dwstate'' \\
+      }
+      {
+      {
+        \begin{array}{l}
+          slot
+        \end{array}
+      }
+        \vdash
+        \left(
+        \begin{array}{r}
+          \var{dwstate}
+        \end{array}
+        \right)
+        \trans{delegt}{\var{tx}}
+        \left(
+        \begin{array}{rcl}
+          \var{dwstate''}
+        \end{array}
+        \right)
+      }
+    \end{equation}
+
+\caption{Delegation Rewards Update Rules}
+\label{fig:delegation-rules}
+\end{figure}
 
 \begin{todo}
-  Can we prove properties of the transition system of this section? For
-  instance we might like to formalize ``double spending'' and prove that these
-  rules prevent it. Do we want it?
-\end{todo}
 
+%  (\fun{txwdrls}~\var{tx})
+
+%  \item Each withdrawal address in the transaction withdrawal requests is in
+%  the set of withdrawal addresses to which rewards are awarded
+
+
+%\dom \fun{txwdrls}~{tx} \subseteq \dom \var{rewards}
+\end{todo}
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -1219,8 +1350,7 @@ being applied to the UTxO.
     {
       {
         \begin{array}{l}
-        \var{slot}\\
-        \var{pc}
+        \var{utxoEnv}
         \end{array}
       }
       \vdash \var{utxoSt} \trans{utxo}{tx} \var{utxoSt'}\\
@@ -1237,8 +1367,7 @@ being applied to the UTxO.
     }
     {
       \begin{array}{l}
-        \var{slot}\\
-        \var{pc}\\
+        \var{utxoEnv}
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}
     }
@@ -1322,7 +1451,6 @@ by the given transaction.
     \label{eq:ledger}
     \inference[ledger]
     {
-      \Gamma = \dcerts{tx} \\ ~ \\
       {
         \begin{array}{r}
         slot\\
@@ -1335,12 +1463,11 @@ by the given transaction.
       %
       {
         \begin{array}{l}
-          tx \\
           slot \\
         \end{array}
       }
       \vdash
-      dwstate \trans{delegs}{\Gamma} dwstate'
+      dwstate \trans{delegt}{\var{tx}} dwstate'
     }
     {
       \begin{array}{l}
@@ -1378,9 +1505,6 @@ by the given transaction.
 \section{Properties}
 \label{sec:properties}
 
-\begin{todo}
-  discuss properties
-\end{todo}
 
 \input{properties}
 
