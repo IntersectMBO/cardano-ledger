@@ -1,16 +1,21 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Ledger.Delegation where
 
 import Control.Lens
+import Control.State.Transition
 import Ledger.Signatures
 import Ledger.Core
 import Numeric.Natural (Natural)
+import qualified Data.List as List
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 --------------------------------------------------------------------------------
 -- Abstract types
@@ -58,9 +63,9 @@ makeFields ''DSState
 
 -- | Delegation state
 data DState = DState
-  { _dSStateDelegationMap :: Map VKeyGen VKey
+  { _dStateDelegationMap :: Map VKeyGen VKey
     -- | When was the last time each genesis key delegated.
-  , _dSStateLastDelegation :: Map VKeyGen Slot
+  , _dStateLastDelegation :: Map VKeyGen Slot
   }
 
 makeFields ''DState
@@ -87,3 +92,108 @@ makeFields ''DIState
 --------------------------------------------------------------------------------
 -- Transition systems
 --------------------------------------------------------------------------------
+
+-- | Delegation scheduling rules
+data SDELEG
+
+instance STS SDELEG where
+  type State SDELEG = DSState
+  type Signal SDELEG = DCert
+  type Environment SDELEG = DSEnv
+
+  data PredicateFailure SDELEG
+    = IsNotGenesisKey
+    | IsPastEpoch
+    | HasAlreadyDelegated
+    | IsAlreadyScheduled
+    | DoesNotVerify
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, st, cert) <- judgmentContext
+        verify cert ?! DoesNotVerify
+        notAlreadyDelegated st cert ?! HasAlreadyDelegated
+        notAlreadyScheduled env st cert ?! IsAlreadyScheduled
+        Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
+        env ^. epoch <= cert ^. depoch ?! IsPastEpoch
+        return $ st
+          & scheduledDelegations <>~ [( ((env ^. slot) `addSlot` (env ^. liveness))
+                                         , cert ^. dwho
+                                        )]
+          & keyEpochDelegations %~ (Set.insert (env ^. epoch, cert ^. dwho . _1))
+    ]
+    where
+      verify :: DCert -> Bool
+      verify = const True
+      -- Check that this delegator hasn't already delegated this epoch
+      notAlreadyDelegated :: DSState -> DCert -> Bool
+      notAlreadyDelegated st cert = not $ Set.member (cert ^. depoch, cert ^. dwho . _1) (st ^. keyEpochDelegations)
+      -- Check that there is not already a scheduled delegation from this key
+      notAlreadyScheduled :: DSEnv -> DSState -> DCert -> Bool
+      notAlreadyScheduled env st cert =
+        List.elem
+          (((env ^. slot) `addSlot` (env ^. liveness)), cert ^. dwho . _1)
+          (st ^. scheduledDelegations . to (fmap $ fmap fst))
+
+-- | Delegation rules
+data ADELEG
+
+instance STS ADELEG where
+  type State ADELEG = DState
+  type Signal ADELEG = (Slot, (VKeyGen, VKey))
+  type Environment ADELEG = ()
+
+  data PredicateFailure ADELEG
+    = BeforeExistingDelegation
+      -- | Not actually a failure; this should just trigger the other rule.
+    | NoLastDelegation
+      -- | Not a failure; this should just pass the other rule
+    | AfterExistingDelegation
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, st, (slot, (vks, vkd))) <- judgmentContext
+        case Map.lookup vks (st ^. lastDelegation) of
+          Nothing -> True ?! BeforeExistingDelegation
+          Just sp -> sp < slot ?! BeforeExistingDelegation
+        return $ st
+          & delegationMap %~ (\sdm -> sdm ⨃ Map.singleton vks vkd)
+          & lastDelegation %~ (\ldm -> ldm ⨃ Map.singleton vks slot)
+    , do
+        jc@(TRC (env, st, (slot, (vks, vkd)))) <- judgmentContext
+        case Map.lookup vks (st ^. lastDelegation) of
+          Just sp -> sp >= slot ?! AfterExistingDelegation
+          Nothing -> False ?! NoLastDelegation
+        return st
+    ]
+
+-- | Delegation scheduling sequencing
+data SDELEGS
+
+instance STS SDELEGS where
+  type State SDELEGS = DSState
+  type Signal SDELEGS = [DCert]
+  type Environment SDELEGS = DSEnv
+
+  data PredicateFailure SDELEGS
+    = SDelegFailure (PredicateFailure SDELEG)
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, st, sig) <- judgmentContext
+        case sig of
+          [] -> return st
+          (x:xs) -> do
+            dss' <- trans @SDELEGS $ TRC (env, st, xs)
+            dss'' <- trans @SDELEG $ TRC (env, dss', x)
+            return dss'
+    ]
+
+instance Embed SDELEG SDELEGS where
+  wrapFailed = SDelegFailure
