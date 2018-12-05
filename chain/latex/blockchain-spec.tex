@@ -121,7 +121,7 @@
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
 \newcommand{\bsize}[1]{\fun{\bsizename} ~ #1}
 \newcommand{\bhdrsize}[1]{\fun{\bhdrsizename} ~ #1}
-\newcommand{\delegation}[3]{\fun{\delegationname} ~ #1 ~ #2 ~#3}
+\newcommand{\delegation}[2]{\fun{\delegationname} ~ #1 ~ #2}
 \newcommand{\signmap}[1]{\fun{\signmapname} ~ #1}
 \newcommand{\qrestr}[2]{\fun{\qrestrname} ~ #1 ~ #2}
 \newcommand{\trimix}[2]{\fun{\trimixname} ~ #1 ~ #2}
@@ -409,7 +409,9 @@ projection functions for the following:
 \item a verification key of the block signer,
 \item a set of heavyweight delegation certificates in the body,
 \item a slot it is in,
-\item data that is the block body,
+\item data that is the block body. Note this comprises delegation certificates
+  and possibly other information that might not be of interest for this
+  specification,
 \item a cryptographic signature, and
 \item a flag indicating if this is an epoch boundary block.
 \end{itemize}
@@ -459,11 +461,12 @@ In particular, if the verification key has the right to sign, the
 functionality should inform who is the delegator $vk_s$.
 %
 The functionality can be modeled as a relation
-$\fun{\delegationname} \subseteq \VKeyGen \times \VKey \times \Slot$.
+$\fun{\delegationname} \subseteq \DelegState \times (\VKey \partialf \VKeyGen)$.
 %
 Note that in the case when $vk_d \in \VKeyGen$, i.e., when the verification
 key is a genesis block verification key, and it has not delegated its signing
-right to any other key, the element from the relation is $(vk_d, vk_d, sl)$.
+right to any other key, the element from the relation is
+$(ds, vk_d \partialf vk_d)$.
 
 
 New delegation certificates are added to the blockchain in blocks, so the
@@ -575,7 +578,7 @@ The initial state is given in Figure~\ref{fig:init-bc-state}.
         {\begin{array}{c}
            \signmapname = \emptyset \\
            p = g_0 \\
-           ds
+           \var{ds}
          \end{array}}
      \right)
    }
@@ -585,27 +588,27 @@ The initial state is given in Figure~\ref{fig:init-bc-state}.
 \end{figure}
 
 The types of components in the initial state, namely of $\fun{\signmapname}$
-and $ds$ are given in Figure~\ref{fig:block-ext-types-funs}.
+and $\var{ds}$ are given in Figure~\ref{fig:block-ext-types-funs}.
 
 Once a new block arrives, the state has to be updated.
 %
-In particular, if a block with an index $ix$ signed by a signing key
-corresponding to a verification key $vk_d$ is to be added to the blockchain,
-the sliding window of the last $K$ blocks moves by one block and the map
-$\fun{\signmapname}$ has to be updated for the key that signed the
+In particular, if a block with an index $\var{ix}$ signed by a signing key
+corresponding to a verification key $\var{vk_d}$ is to be added to the
+blockchain, the sliding window of the last $K$ blocks moves by one block and
+the map $\fun{\signmapname}$ has to be updated for the key that signed the
 $K^{\text{th}}$ previous block;
 %
-this is done with $\trimix{\signmapname}{ix}$, as given by
+this is done with $\trimix{\signmapname}{\var{ix}}$, as given by
 \eqref{eq:trimix}.
 %
 To finish updating the map, the updated version of $\signmapname$ denoted by
-$\signmapname'$ has to push $ix$ to the queue for $vk_s$, which is achieved
-with $\incixmap{ix}{vk_s}{\signmapname'}$, as given by
+$\signmapname'$ has to push $\var{ix}$ to the queue for $\var{vk_s}$, which is
+achieved with $\incixmap{\var{ix}}{\var{vk_s}}{\signmapname'}$, as given by
 \eqref{eq:incixmap}.
 %
-Finally, the state $ds$ that is maintained by the ledger layer, is updated;
-the details of how the state is updated via a transition is given in a
-separate ledger layer specification.
+Finally, the state $\var{ds}$ that is maintained by the ledger layer, is
+updated; the details of how the state is updated via a transition is given in
+a separate ledger layer specification.
 %
 Types of both of these functions are given in
 Figure~\ref{fig:block-ext-types-funs}.
@@ -613,18 +616,18 @@ Figure~\ref{fig:block-ext-types-funs}.
 
 \begin{align}
   \label{eq:trimix}
-  \trimix{\signmapname}{ix} = \Set{(vk_s \partialf q)}{vk_s \in \dom \signmapname.~
-  q = \qrestr{ix}{(\signmap{vk_s}})} \\
-  \qrestr{ix}{q} = \
+  \trimix{\signmapname}{\var{ix}} = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
+  q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
+  \qrestr{\var{ix}}{q} = \
   \begin{cases}
-    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < ix \\
+    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
     q & \text{otherwise}
   \end{cases}
 \end{align}
 
 \begin{equation}
   \label{eq:incixmap}
-  \incixmap{ix}{vk_s}{\signmapname} = \signmapname \unionoverride \{vk_s \partialf \qpush{ix}{(\signmap{vk_s})}\}
+  \incixmap{\var{ix}}{\var{vk_s}}{\signmapname} = \signmapname \unionoverride \{\var{vk_s} \partialf \qpush{\var{ix}}{(\signmap{\var{vk_s}})}\}
 \end{equation}
 
 
@@ -633,15 +636,15 @@ Figure~\ref{fig:block-ext-types-funs}.
   %
   \begin{align*}
     q  & \in \Queue_\BlockIx  & \text{block index queue}\\
-  data & \in \Data    & \text{data}\\
-    ds & \in \DelegState & \text{ledger layer delegation state}
+  \var{data} & \in \Data    & \text{data}\\
+    \var{ds} & \in \DelegState & \text{ledger layer delegation state}
   \end{align*}
   %
   \emph{Derived types}
   %
   \begin{align*}
     \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
-    sk_s & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
+    \var{sk_s} & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
   \end{align*}
   %
   \emph{Type aliases}
@@ -689,23 +692,23 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      ix = \rbix{b} \wedge vk_d = \rbsigner{b} \wedge sl = \rbsl{b} \\
+      \var{ix} = \rbix{b} \wedge \var{vk_d} = \rbsigner{b} \wedge \var{sl} = \rbsl{b} \\
       \hash{b} \equiv \hashofblock{p} \\
       \bsize{b} \leq \blocksizelimit{b}{\var{pp}} \\
       \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
-      \delegation{ds}{vk_s}{vk_d} \\
-      \verify{vk_d}{(\rbdata{b})}{(\rbsig{b})} \\
-      \size{\signmap{vk_s}} \leq K \cdot t \\
-      \signmapname' = \incixmap{ix}{vk_s}{(\trimix{\signmapname}{ix})} \\
+      \exists \var{\var{vk_s}}.~\var{vk_s} = \delegation{\var{ds}}{\var{vk_d}} \\
+      \verify{\var{vk_d}}{(\rbdata{b})}{(\rbsig{b})} \\
+      \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
+      \signmapname' = \incixmap{\var{ix}}{\var{vk_s}}{(\trimix{\signmapname}{\var{ix}})} \\
       p' = b 
      \end{array}}
-   & (sl) \vdash ds \trans{\text{DELEG}}{\rbcerts{b}} ds'
+   & (\var{sl}) \vdash \var{ds} \trans{\text{DELEG}}{\rbcerts{b}} \var{ds'}
   }
   {
     \left(
       {\begin{array}{c}
-         pp \\
-         sl \\
+         \var{pp} \\
+         \var{sl} \\
          K \\
          t
        \end{array}}
@@ -715,7 +718,7 @@ Figure~\ref{fig:blockchain-extension}.
       {\begin{array}{c}
          \signmapname \\
          p \\
-         ds
+         \var{ds}
        \end{array}}
     \right)
     \trans{}{b}
@@ -723,7 +726,7 @@ Figure~\ref{fig:blockchain-extension}.
       {\begin{array}{c}
          \signmapname' \\
          p' \\
-         ds'
+         \var{ds'}
        \end{array}}
     \right)
  }
