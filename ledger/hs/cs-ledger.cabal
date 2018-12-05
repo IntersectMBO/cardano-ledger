@@ -69,3 +69,13 @@ library ledger-delegation
                      , lens
                      , small-steps
                      , core-ledger
+
+library
+  default-language:    Haskell2010
+  reexported-modules:   Ledger.Signatures
+                      , Ledger.Core
+                      , Ledger.UTxO
+                      , Ledger.Delegation
+  build-depends:        core-ledger
+                      , ledger-utxo
+                      , ledger-delegation
