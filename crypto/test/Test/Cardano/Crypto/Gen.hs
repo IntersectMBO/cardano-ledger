@@ -146,22 +146,14 @@ genEncryptedSecretKey = noPassEncrypt <$> genSecretKey
 -- Redeem Key Generators
 --------------------------------------------------------------------------------
 
-genRedeemKeypair :: Gen (Maybe (RedeemPublicKey, RedeemSecretKey))
-genRedeemKeypair = redeemDeterministicKeyGen <$> gen32Bytes
+genRedeemKeypair :: Gen (RedeemPublicKey, RedeemSecretKey)
+genRedeemKeypair = Gen.just $ redeemDeterministicKeyGen <$> gen32Bytes
 
 genRedeemPublicKey :: Gen RedeemPublicKey
-genRedeemPublicKey = do
-  rkp <- genRedeemKeypair
-  case rkp of
-    Nothing      -> panic "Error generating a RedeemPublicKey."
-    Just (pk, _) -> return pk
+genRedeemPublicKey = fst <$> genRedeemKeypair
 
 genRedeemSecretKey :: Gen RedeemSecretKey
-genRedeemSecretKey = do
-  rkp <- genRedeemKeypair
-  case rkp of
-    Nothing      -> panic "Error generating a RedeemSecretKey."
-    Just (_, sk) -> return sk
+genRedeemSecretKey = snd <$> genRedeemKeypair
 
 
 --------------------------------------------------------------------------------

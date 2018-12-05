@@ -50,12 +50,8 @@
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.cryptonite)
             (hsPkgs.formatting)
-            (hsPkgs.generic-arbitrary)
             (hsPkgs.hedgehog)
-            (hsPkgs.hspec)
             (hsPkgs.memory)
-            (hsPkgs.QuickCheck)
-            (hsPkgs.quickcheck-instances)
             (hsPkgs.text)
             ];
           };

@@ -26,11 +26,8 @@
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-prelude-test)
           (hsPkgs.cryptonite)
-          (hsPkgs.generic-arbitrary)
           (hsPkgs.hedgehog)
           (hsPkgs.memory)
-          (hsPkgs.QuickCheck)
-          (hsPkgs.quickcheck-instances)
           ];
         };
       };

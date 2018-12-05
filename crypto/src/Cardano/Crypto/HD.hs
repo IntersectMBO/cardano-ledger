@@ -51,7 +51,7 @@ import Cardano.Crypto.Signing.Safe
 -- | Passphrase is a hash of root public key.
 data HDPassphrase =
   HDPassphrase !ByteString
-  deriving (Show)
+  deriving (Eq, Show)
 
 -- | HDAddressPayload consists of
 --

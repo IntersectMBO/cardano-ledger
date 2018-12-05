@@ -361,7 +361,7 @@ verifyHeader pm epochSlots header = do
     `orThrowError` HeaderInvalidSignature (consensusSignature consensus)
  where
   verifyBlockSignature (BlockSignature proxySig) =
-    proxyVerifyDecoded pm SignMainBlockHeavy proxySig (const True) signed
+    proxyVerifyDecoded pm SignMainBlockHeavy (const True) signed proxySig
   signed    = recoverSignedBytes epochSlots header
   consensus = headerConsensusData header
 
