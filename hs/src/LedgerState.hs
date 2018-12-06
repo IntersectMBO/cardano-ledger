@@ -18,6 +18,7 @@ module LedgerState
   , DelegationState(..)
   , LedgerValidation(..)
   , KeyPairs
+  , UTxOState(..)
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -129,11 +130,19 @@ emptyDelegation :: DelegationState
 emptyDelegation =
     DelegationState Map.empty Map.empty Map.empty Map.empty Map.empty Map.empty
 
+data UTxOState =
+    UTxOState
+    {
+      _utxo      :: !UTxO
+    , _deposits  :: Coin
+    , _fees      :: Coin
+    } deriving (Show, Eq)
+
 -- |The state associated with a 'Ledger'.
 data LedgerState =
   LedgerState
   { -- |The current unspent transaction outputs.
-    getUtxo            :: !UTxO
+    _utxoState          :: !UTxOState
     -- |The current delegation state
   , getDelegationState :: !DelegationState
     -- |The current protocol constants.
@@ -148,9 +157,11 @@ genesisId = TxId $ hash (Tx Set.empty [] [] (Coin 0) (Slot 0))
 -- contains the specified transaction outputs.
 genesisState :: PrtlConsts -> [TxOut] -> LedgerState
 genesisState pc outs = LedgerState
-  (UTxO (Map.fromList
-    [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
-  ))
+  (UTxOState
+    (UTxO $ Map.fromList
+              [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs])
+    (Coin 0)
+    (Coin 0))
   emptyDelegation
   pc
 
@@ -172,7 +183,7 @@ validNoReplay (TxWits tx _) =
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs :: TxWits -> LedgerState -> Validity
 validInputs (TxWits tx _) l =
-  if txins tx `Set.isSubsetOf` dom (getUtxo l)
+  if txins tx `Set.isSubsetOf` dom ((_utxo . _utxoState) l)
     then Valid
     else Invalid [BadInputs]
 
@@ -210,7 +221,7 @@ keyRefunds pc stkeys tx =
 
 -- |Compute the lovelace which are created by the transaction
 created :: Tx -> LedgerState -> Coin
-created tx l = balance (txins tx <| getUtxo l) + refunds
+created tx l = balance (txins tx <| (_utxo . _utxoState) l) + refunds
   where refunds = keyRefunds (getPCs l) (getStKeys $ getDelegationState l) tx
 
 -- |Determine if the balance of the ledger state would be effected
@@ -242,8 +253,8 @@ witnessed (TxWits tx wits) l =
     then Valid
     else Invalid [InsufficientWitnesses]
   where
-    utxo = getUtxo l
-    ins = inputs tx
+    utxo = (_utxo . _utxoState) l
+    ins  = inputs tx
     hasWitness witnesses input =
       isJust $ find (isWitness tx input utxo) witnesses
     isWitness tx' input unspent (Wit key sig) =
@@ -367,8 +378,9 @@ retirePools ls@(LedgerState _ ds _) epoch = ls
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
-applyTxBody ls tx = ls { getUtxo = newUTxOs }
-  where newUTxOs = txins tx </| getUtxo ls `union` txouts tx
+applyTxBody ls tx = ls { _utxoState = oldUTxOstate { _utxo = newUTxOs } }
+  where newUTxOs = txins tx </| (_utxo . _utxoState) ls `union` txouts tx
+        oldUTxOstate = _utxoState ls
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
@@ -419,7 +431,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
     addStake delegations (TxOut (AddrTxin _ hsk) c) = do
       pool <- Map.lookup hsk delegations
       return (pool, c)
-    outs = getOutputs . getUtxo $ ls
+    outs = getOutputs . (_utxo . _utxoState) $ ls
     delegatedOutputs = mapMaybe (addStake (getDelegations ds)) outs
 
 ---------------------------------------------------------------------------------
