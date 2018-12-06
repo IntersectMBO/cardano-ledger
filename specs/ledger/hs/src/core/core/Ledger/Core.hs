@@ -76,3 +76,7 @@ s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
 --
 (⋪) :: Ord a => Set a -> Map a b -> Map a b
 s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+
+-- | Union Override
+(⨃) :: Ord a => Map a b -> Map a b -> Map a b
+d0 ⨃ d1 = d1 `Map.union` (Map.keysSet d1 ⋪ d0)
