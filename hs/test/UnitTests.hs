@@ -18,6 +18,7 @@ import           Keys
 import           LedgerState             (DelegationState (..),
                                           LedgerState (..),
                                           ValidationError (..),
+                                          UTxOState(..),
                                           asStateTransition, emptyDelegation,
                                           genesisId, genesisState, mkRwdAcnt)
 import           PrtlConsts
@@ -68,7 +69,7 @@ testLedgerValidTransactions ::
   Either [ValidationError] LedgerState -> Map.Map TxIn TxOut -> Assertion
 testLedgerValidTransactions ls utxo =
     ls @?= Right (LedgerState
-                     (UTxO utxo)
+                     (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
                      LedgerState.emptyDelegation
                      pcs)
 
@@ -78,7 +79,7 @@ testValidStakeKeyRegistration tx utxo stakeKeyRegistration =
   let
     ls2 = ledgerState [tx]
   in ls2 @?= Right (LedgerState
-                     (UTxO utxo)
+                     (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
                      stakeKeyRegistration
                      pcs)
 
@@ -89,7 +90,7 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
   in ls2 @?= Right (LedgerState
-                     (UTxO utxo)
+                     (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
                      stakeKeyRegistration
                      { getDelegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
@@ -99,16 +100,16 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
                      pcs)
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
-  Set.Set DCert -> Slot -> TxWits
-aliceGivesBobLovelace txin coin txfee txdeps txrefs cs s = TxWits txbody wit
+  [DCert] -> Slot -> TxWits
+aliceGivesBobLovelace txin coin fee txdeps txrefs cs s = TxWits txbody wit
   where
-    aliceCoin = aliceInitCoin + txrefs - (coin + txfee + txdeps)
+    aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
     txbody = Tx
                (Set.fromList [txin])
                [ TxOut aliceAddr aliceCoin
                , TxOut bobAddr coin ]
                cs
-               txfee
+               fee
                s
     wit = Set.fromList [makeWitness alicePay txbody]
 
@@ -116,7 +117,8 @@ tx1 :: TxWits
 tx1 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
-        Set.empty (Slot 0)
+        []
+        (Slot 0)
 
 utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
@@ -131,11 +133,9 @@ tx2 :: TxWits
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
-        (Set.fromList
-          [ RegKey $ vKey aliceStake
-          , RegKey $ vKey bobStake
-          , RegKey $ vKey stakePoolKey1
-        ])
+        [ RegKey $ vKey aliceStake
+        , RegKey $ vKey bobStake
+        , RegKey $ vKey stakePoolKey1]
         (Slot 100)
 
 
@@ -149,10 +149,8 @@ tx3Body :: Tx
 tx3Body = Tx
           (Set.fromList [TxIn (txid $ body tx2) 0])
           [ TxOut aliceAddr (Coin 3950) ]
-          (Set.fromList
-            [ RegPool stakePool
-            , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))
-            ])
+          [ RegPool stakePool
+          , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))]
           (Coin 1200)
           (Slot 100)
 
@@ -202,7 +200,7 @@ tx4Body :: Tx
 tx4Body = Tx
           (Set.fromList [TxIn (txid $ body tx3) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
-          (Set.fromList [ RegPool stakePoolUpate ])
+          [ RegPool stakePoolUpate ]
           (Coin 1000)
           (Slot 100)
 
@@ -238,7 +236,8 @@ testSpendNonexistentInput =
     tx = aliceGivesBobLovelace
            (TxIn genesisId 42)
            (Coin 3000) (Coin 1500) (Coin 0) (Coin 0)
-           Set.empty (Slot 100)
+           []
+           (Slot 100)
   in ledgerState [tx] @?=
        Left [ BadInputs
             , ValueNotConserved (Coin 0) (Coin 10000)
@@ -252,7 +251,7 @@ testWitnessNotIncluded =
               (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 6434)
               , TxOut bobAddr (Coin 3000) ]
-              Set.empty
+              []
               (Coin 566)
               (Slot 100)
     tx = TxWits txbody Set.empty
@@ -264,7 +263,7 @@ testSpendNotOwnedUTxO =
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 232)]
-              Set.empty
+              []
               (Coin 768)
               (Slot 100)
     aliceWit = makeWitness alicePay txbody
@@ -277,13 +276,13 @@ testInvalidTransaction =
     txbody = Tx
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 230)]
-              Set.empty
+              []
               (Coin 770)
               (Slot 100)
     tx2body = Tx
               (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 19230)]
-              Set.empty
+              []
               (Coin 770)
               (Slot 100)
     aliceWit = makeWitness alicePay tx2body
@@ -296,7 +295,7 @@ testEmptyInputSet =
     txbody = Tx
               Set.empty
               [ TxOut aliceAddr (Coin 1)]
-              Set.empty
+              []
               (Coin 584)
               (Slot 100)
     aliceWit = makeWitness alicePay txbody
@@ -312,7 +311,8 @@ testFeeTooSmall =
     tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
            (Coin 3000) (Coin 1) (Coin 0) (Coin 0)
-           Set.empty (Slot 100)
+           []
+           (Slot 100)
   in ledgerState [tx] @?=
        Left [ FeeTooSmall (Coin 538) (Coin 1) ]
 
@@ -322,7 +322,8 @@ testExpiredTx =
     tx = aliceGivesBobLovelace
            (TxIn genesisId 0)
            (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
-           Set.empty (Slot 0)
+           []
+           (Slot 0)
   in (asStateTransition (Slot 1) genesis tx) @?=
        Left [ Expired (Slot 0) (Slot 1) ]
 

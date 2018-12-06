@@ -72,7 +72,7 @@ mutateTx tx = do
   pure $ Tx (Set.fromList inputs')
             outputs'
             (certs tx)
-            (fee tx)
+            (txfee tx)
             (ttl tx)
 
 -- | Mutator for a list of 'TxIn'.
