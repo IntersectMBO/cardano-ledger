@@ -33,14 +33,14 @@ module LedgerState
 
 import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
-import           Data.List               (find)
+import           Data.List               (find, foldl')
 import qualified Data.Map                as Map
 import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import qualified Data.Set                as Set
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*))
+import           Slot                    (Slot (..), Epoch (..), (-*), slotFromEpoch)
 import           Keys
 import           UTxO
 import           PrtlConsts              (PrtlConsts(..))
@@ -65,6 +65,8 @@ data ValidationError =
     BadInputs
   -- | The transaction has expired
   | Expired Slot Slot
+  -- | Pool Retirement Certificate expired
+  | RetirementCertExpired Slot Slot
   -- | The transaction fee is too small
   | FeeTooSmall Coin Coin
   -- | Value is not conserved
@@ -140,7 +142,7 @@ data LedgerState =
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] Set.empty (Coin 0) (Slot 0))
+genesisId = TxId $ hash (Tx Set.empty [] [] (Coin 0) (Slot 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -200,7 +202,7 @@ destroyed tx l = balance (txouts tx) + txfee tx + deposits (getPCs l) stpools tx
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds :: PrtlConsts -> Allocs -> Tx -> Coin
 keyRefunds pc stkeys tx =
-  sum [refund' key | (RegKey key) <- Set.toList (certs tx)]
+  sum [refund' key | (RegKey key) <- certs tx]
   where refund' key =
           case Map.lookup (hashKey key) stkeys of
             Nothing -> Coin 0
@@ -255,6 +257,7 @@ validTx tx slot l =
     <> validFee tx l
     <> preserveBalance tx l
     <> witnessed tx l
+    <> validCertsRetirePoolNotExpired tx slot
 
 -- The rules for checking validiy of stake delegation transitions return
 -- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
@@ -287,6 +290,18 @@ validStakeDelegation cert (LedgerState _ ds _) =
 -- there is currently no requirement that could make this invalid
 validStakePoolRegister :: DCert -> LedgerState -> Validity
 validStakePoolRegister _ _ = Valid
+
+validCertRetirePoolNotExpired :: Slot -> DCert -> Validity
+validCertRetirePoolNotExpired ttlSlot cert  =
+    case cert of
+      (RetirePool _ epoch) ->
+          if ttlSlot <= slotFromEpoch epoch then Valid
+          else Invalid [RetirementCertExpired ttlSlot (slotFromEpoch epoch)]
+      _                    -> Valid
+
+validCertsRetirePoolNotExpired :: TxWits -> Slot -> Validity
+validCertsRetirePoolNotExpired tx slot =
+    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid $ (certs . body $ tx)
 
 validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
