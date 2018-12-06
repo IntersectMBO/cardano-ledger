@@ -75,8 +75,8 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 -- |A raw transaction
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
-             , certs   :: !(Set DCert)
-             , txfee     :: Coin
+             , certs   :: ![DCert]
+             , txfee   :: Coin
              , ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
@@ -143,7 +143,7 @@ deposits pc stpools tx = foldl f (Coin 0) cs
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ poolPubKey pool) stpools
     notRegisteredPool _ = True
-    cs = Set.filter notRegisteredPool (certs tx)
+    cs = filter notRegisteredPool (certs tx)
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
