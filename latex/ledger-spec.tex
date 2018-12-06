@@ -237,9 +237,9 @@ the rest of the document.
     \cup \{k\mapsto v_1+v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
     & \text{union override plus} \\
     & & \text{(for monoidal values)}\\
-    M \unionoverrideMinus N
+    M \unionoverrideZero N
     & = (M \triangle N)
-    \cup \{k\mapsto v_1-v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
+    \cup \{k\mapsto 0\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
     & \text{union override plus} \\
     & & \text{(for monoidal values)}\\
   \end{align*}
@@ -694,7 +694,9 @@ thus indicating that these
 can now be spent by another transaction.
 
 The type $\Wdrl$ is a finite map that maps a reward address to a coin value to
-be withdrawn from the rewards awarded to that address.
+be withdrawn from the rewards awarded to that address. We have made the decision
+to structure the withdrawals in this way to adhere as closely as possible
+to the structure presented in~\cite{chimeric}.
 
 The map $\fun{txid}$ is a one-way function which computes the $\var{txid}$
 of a given transaction. A transaction can be uniquely identified
@@ -837,6 +839,14 @@ constants, the current UTxO on the ledger, and the resource allocation for
 $\DState$, i.e. $\var{stkeys}$. This calculation is a sum of all coin in the inputs of
 $\var{tx}$  and the individual key
 deregistration refunds of the $\var{tx}$ in this context.
+
+Next, we define the function $\fun{reapRewards}$. The purpose of this map is
+to update all the rewards accounts associated with the addresses for which
+reward withdrawals are requested. Since we do only allow withdrawal of reward
+amount which is exactly equal to the value in the reward account (we
+give details about this below), this update explicitly sets the values
+associated to the requested addresses to zero.
+
 It gives the total coin value the given transaction creates on the ledger UTxO.
 Note here that more value is added to the UTxO than the computed by this
 $\var{created}$ calculation, but this value comes from
@@ -849,6 +859,9 @@ This calculation gives the total coin value that
 the transaction removes from the current UTxO (given the necessary protocol
 constants).
 
+\begin{todo}
+  The created and destroyed values here need to be corrected
+\end{todo}
 
 \begin{figure}
   \begin{align*}
@@ -872,13 +885,13 @@ constants).
     \nextdef
     & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideMinus \var{wdrls} \\
+         \var{rewards} \unionoverrideZero \var{wdrls} \\
     \nextdef
     & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value created} \\
     & \created{pc}{utxo}{stkeys}{rewards}~{tx} = \\
     & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
-        \sum_{(a \mapsto c) \in rr} c  \\
+        ((\sum_{(a \mapsto c) \in rewards} c) - (\sum_{(a \mapsto c) \in rr} c))  \\
         & + \keyRefunds{pc}{stkeys}{tx} \\
     &\where~rr = \fun{reapRewards}~\var{rewards}~(\fun{txwdrls}~\var{tx})\\
     \nextdef
@@ -996,12 +1009,15 @@ changes as follows:
 \item remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
 associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
 \item add all the $\var{outputs}$ of $\var{tx}$ to the
-UTxO, now associated with the $\var{txid}(\var{tx})$ instead (so they can
+UTxO, now associated with the $\fun{txid}~\var{tx}$ instead (so they can
 now be spent by future transactions)
 \item add all the entries generated from the rewards addresses, the transaction's
 $\var{txid}$, and amounts requested to the current UTxO
 \end{itemize}
 
+Note here that newly generated and added to the ledger UTxO reward withdrawal
+entries have a list of inputs that is entirely disjoint from the list of
+existing UTxO entries due to the way it is generated.
 The $\var{deposits}$ is updated by:
 
 \begin{itemize}
@@ -1046,32 +1062,17 @@ variable
 \item add the dacayed value of key refunds in certificates in $\var{tx}$ to $\var{fees}$
 \end{itemize}
 
-The pending withdrawals are updated by:
-
-\begin{itemize}
-\item pair the signal transaction's $\var{txid}$ with the
-reward addresses to which it requested withdrawals, and add these pairs
-to the $\var{wdrls}$ set on the ledger
-\end{itemize}
-
-Note that the type of withdrawals of a transaction contains only the
-$\var{txid}$ of the transaction that made the withdrawal request, and the address to which
-it requested the withdrawals. Other data
-needed to include these withdrawals in the UTxO on the ledger (i.e. $\Ix$
-values and the coin value of the reward)
-is calculated and incorporated into the ledger UTxO at the epoch boundary
-(see Section~\ref{sec:epoch}).
 
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \ttl tx \leq \var{slot}
+    { \ttl tx < \var{slot}
       & \txins{tx} \neq \emptyset
       & \minfee{pc}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
       \forall \fun{dcerts}~tx,~\var{c}\in\DCertRetirePool \Rightarrow
-          ~\fun{ttl}~{tx} \leq \fun{retire}~{c}
+          ~\fun{ttl}~{tx} < \fun{slot} (\fun{retire}~{c})
       \\
       \created{pc}{utxo}{stkeys}{rewards}~{tx} = \destroyed{pc}{stpools}~{tx}
       \\
@@ -1130,28 +1131,61 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
 \subsection{Rewards Ledger Update}
 \label{sec:utxo-rewards}
 
+We now describe how key holders can reap the rewards calculated and added to
+their rewards accounts. A request to collect rewards from a particular reward
+address can be sent at any time as part of the $\Wdrl$ list of a transaction.
+We give the transition type for processing this reward request in
+Figure~\ref{fig:delegation-rewards-type}. It is a $\DWState$ transition with a
+$\var{wdrls}$ list as a signal.
+
 \begin{figure}
 \begin{equation*} \label{eq:rewards-upd}
   \_ \vdash \_ \trans{delrwds}{\_} \_ \in
     \powerset (\DWEnv \times \DWState \times \Wdrl \times \DWState)
 \end{equation*}
-%
+\caption{Delegation Rewards Update Types}
+\label{fig:delegation-rewards-type}
+\end{figure}
+
+We also give the type of the complete $\DWState$
+transition, which combines both the certificates and reward
+requests in a single transaction in Figure~\ref{fig:delegation-total-type}.
+
+\begin{figure}
 \begin{equation*} \label{eq:dstate-total}
   \_ \vdash \_ \trans{delegt}{\_} \_ \in
     \powerset (\Slot \times \DWState \times \Tx \times \DWState)
 \end{equation*}
 
 \caption{Delegation Rewards Update Types}
-\label{fig:delegation-rewards}
+\label{fig:delegation-total-type}
 \end{figure}
 
+In the following Figure~\ref{fig:delegation-rewards}, we present the inference
+rule for updating the rewards to reflect the withdrawals a transaction makes
+via the DELRWDS transition. We require that the rule can only be applied when
+all the withdrawal addresses in the signal variable
+are to addresses where rewards accumulated (i.e. in $\dom \var{rewards}$), and
+that the request is for the exact amount that is currently in the requested
+rewards addresses. Both of these conditions are ensured by the one
+precondition we give.
+
+The reason we impose the restriction that it is only possible to withdraw
+the exact available amount of rewards in an address is that we do not see
+a specific reason of why it would be necessary to withdraw a smaller amount.
+Not making it possible to split reward withdrawals into several operations
+of partial withdrawals is also likely to cut down on traffic and increas
+processing speed.
+Additionally, it allows us to avoid any issues pertaining to mathematical
+modeling subtraction, managing negative values, and the integers vs. natural
+numbers datatype concern.
 
 \begin{figure}
   \centering
   \begin{equation}\label{eq:rewards-rule}
     \inference[Dist-Rew]
     {
-    %
+    \var{wdrls} \subseteq \var{rewards}
     }
     {
     {
@@ -1180,8 +1214,37 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
       \right)
     }
   \end{equation}
+  \caption{Delegation Rewards Update Rule}
+  \label{fig:delegation-rewards}
+  \end{figure}
+
+In Figure~\ref{fig:delegation-total}, we present the inference rule for
+the total delegation state transition. This rule is a composition of the
+DELRWDS rule above and the DELEGS $\DWState$ transition defined in
+Section~\ref{sec:delegation}. Several conditions must be satisfied for this
+rule to be applied:
+
+\begin{itemize}
+\item A transaction cannot register a key and simultaneously request
+rewards to the associated address
+\item A transaction is forced to include reward requests for all addresses
+associated with any key that is being deregistered
+\item A transaction cannot request to deregister an individual key
+associated with a stake pool which is scheduled to retire
+\end{itemize}
+
+In the consequent transition of this total rule, the DELRWDS transition is
+applied first in the composition
+because this allows the signal transaction to collect rewards
+and deregister the key of that rewards address in the same transaction. The
+complete delegation state transition is triggered by a signal transaction
+since multiple parts of the transaction data are required here. The rewards
+update is triggered by the withdrawals list part of the transaction, and the
+rest of the delegation state update is triggered by the cetificate list.
 
 
+  \begin{figure}
+    \centering
     \begin{equation}\label{eq:dstate-tot-r}
       \inference[Dstate-Tot]
       {
@@ -1189,6 +1252,8 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
       \var{wdrls} = \fun{txwdrls}~{tx} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertRegKey \Rightarrow
         \addrRw~(\fun{author}~{c}) \notin \dom \var{wdrls} \\
+      \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
+        \addrRw~(\fun{author}~{c}) \in \dom \var{wdrls} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \fun{author}~{c} \notin \dom \var{retiring} \\ ~ \\
       {
@@ -1229,20 +1294,11 @@ is calculated and incorporated into the ledger UTxO at the epoch boundary
       }
     \end{equation}
 
-\caption{Delegation Rewards Update Rules}
-\label{fig:delegation-rules}
+\caption{Delegation Complete Update Rule}
+\label{fig:delegation-total}
 \end{figure}
 
-\begin{todo}
 
-%  (\fun{txwdrls}~\var{tx})
-
-%  \item Each withdrawal address in the transaction withdrawal requests is in
-%  the set of withdrawal addresses to which rewards are awarded
-
-
-%\dom \fun{txwdrls}~{tx} \subseteq \dom \var{rewards}
-\end{todo}
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -1301,13 +1357,13 @@ Figure~\ref{fig:rules:utxow}):
 
 \begin{itemize}
  \item For each input $\var{i}$ of the signal transaction $\var{tx}$,
- there exists a verifiable witness (there could be more than one valid
+ there exists a (unique) verifiable witness (there could be more than one valid
  key-signature pair serving as a witness) such that the hash of the spending key
  of the address corresponding to the output of $\var{i}$ in the current UTxO
  is the same as the hash of the verification key of the witness.
 
  \item For every withdrawal request address of $\var{tx}$,
- there exists a verifiable witness such the hash of the spending key of the
+ there exists a (unique) verifiable witness such the hash of the spending key of the
  withdrawal address is the same as the hash of the verification key of the witness.
 \end{itemize}
 
@@ -1319,6 +1375,10 @@ of UTxO stype accounting, this replay protection is needed only to prevent
 the re-application of old certificates. The way this is
 achieved by the above precondition is by requiring a valid signature on
 the coin transfers made by the transaction (the body of the transaction).
+
+Here, we also enforce the condition that only one witness per input and one
+witness per withdrawal address is allowed. We do so to prevent transactions
+being unnecessarily large and full of redundant witnessing.
 
 Note that an unauthorized (non-witnessed) reward request would still result in
 rewards being given out to the correct address, but here we add the
@@ -1355,12 +1415,12 @@ being applied to the UTxO.
       }
       \vdash \var{utxoSt} \trans{utxo}{tx} \var{utxoSt'}\\
       ~ \\
-      \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot \\
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
       ~ \\
-      & \forall \var{a} \in \txwdrls{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
+      & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot \\
       \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, a)}}_{\sigma}
       \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
@@ -1426,11 +1486,9 @@ by a transaction.
 
 The inference rule describing the complete ledger state transition is given in
 Figure~\ref{fig:rules:ledger}. The consequent of the rule is triggered by
-a transaction $\var{tx}$ such that the (witnessed) ledger state transition in
-the antecedent is
-triggered by that same transaction, and the the (witnessed) delegation state
-transition in the antecedent is triggered by the set of certificates carried by
-this transaction.
+a transaction $\var{tx}$ such that both the (witnessed) ledger state transition
+and the complete delegation state tranition in the antecedent are
+triggered by that same transaction.
 
 Note that the context for the consequent transaction is made up of only the
 protocol constants and slot number, and so is the delegation state transition in
@@ -1440,9 +1498,8 @@ an issue since all this difference is highlighting is that in a $\UTxOState$
 transition, these variables are immutable (but they do change in the full
 ledger state and the $\DWState$ transitions).
 
-The full ledger state transition combines the UTxO transition
-(triggered by the body of a transaction) and delegation transition
-(triggered by the certificates of a transaction) into a single transition
+The full ledger state transition combines the UTxO transition and the
+delegation transition into a single transition
 in the consequent, presented as a transition of both state variables signaled
 by the given transaction.
 
