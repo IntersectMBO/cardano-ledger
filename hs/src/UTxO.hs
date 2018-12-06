@@ -75,7 +75,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
-             , fee     :: Coin
+             , txfee     :: Coin
              , ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
