@@ -6,6 +6,9 @@ module Slot
   , Duration(..)
   , (-*), (+*)
   , Epoch(..)
+  -- conversion functions
+  , slotFromEpoch
+  , epochFromSlot
   ) where
 
 import           Data.Monoid             (Sum(..))
@@ -31,3 +34,12 @@ newtype Epoch = Epoch Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
+-- | Required to convert from / to Slot / Epoch
+slotsPerEpoch :: Natural
+slotsPerEpoch = 100
+
+slotFromEpoch :: Epoch -> Slot
+slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n
+
+epochFromSlot :: Slot -> Epoch
+epochFromSlot (Slot n) = Epoch $ n `rem` slotsPerEpoch
