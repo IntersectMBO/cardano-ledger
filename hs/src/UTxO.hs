@@ -27,6 +27,7 @@ module UTxO
   , deposits
   , (<|)
   , (</|)
+  , dom
   -- , verify
   , union
   , makeWitness
@@ -118,6 +119,10 @@ ins <| (UTxO utxo) =
 (</|) :: Set TxIn -> UTxO -> UTxO
 ins </| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
+
+-- | Domain of UTxO
+dom :: UTxO -> Set TxIn
+dom (UTxO utxo) = Map.keysSet utxo
 
 -- |Combine two collections of UTxO.
 --
