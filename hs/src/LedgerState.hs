@@ -191,11 +191,11 @@ validFee (TxWits tx _) l =
     else Invalid [FeeTooSmall needed given]
       where
         needed = minfee (getPCs l) tx
-        given = fee tx
+        given = txfee tx
 
 -- |Compute the lovelace which are consumed by the transaction
 destroyed :: Tx -> LedgerState -> Coin
-destroyed tx l = balance (txouts tx) + fee tx + deposits (getPCs l) stpools tx
+destroyed tx l = balance (txouts tx) + txfee tx + deposits (getPCs l) stpools tx
   where stpools = getStPools $ getDelegationState l
 
 -- |Compute the key deregistration refunds in a transaction
