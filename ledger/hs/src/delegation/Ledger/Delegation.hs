@@ -1,4 +1,8 @@
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Ledger.Delegation where
 
 import Control.Lens
@@ -14,6 +18,7 @@ import Data.Map.Strict (Map)
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGen = VKeyGen VKey
+  deriving (Eq, Ord, Show)
 
 
 data DCert = DCert
@@ -35,30 +40,49 @@ makeLenses ''DCert
 
 -- | Delegation scheduling environment
 data DSEnv = DSEnv
-  { _dseAllowedDelegators :: Set VKeyGen
-  , _dseEpoch :: Epoch
-  , _dseSlot :: Slot
-  , _dseLiveness :: SlotCount
+  { _dSEnvAllowedDelegators :: Set VKeyGen
+  , _dSEnvEpoch :: Epoch
+  , _dSEnvSlot :: Slot
+  , _dSEnvLiveness :: SlotCount
   }
 
-makeLenses ''DSEnv
+makeFields ''DSEnv
 
 -- | Delegation scheduling state
 data DSState = DSState
-  { _dssScheduledDelegations :: [(Slot, VKeyGen, VKey)]
-  , _dssKeyEpochDelegations :: Set (Epoch, VKeyGen)
+  { _dSStateScheduledDelegations :: [(Slot, (VKeyGen, VKey))]
+  , _dSStateKeyEpochDelegations :: Set (Epoch, VKeyGen)
   }
 
-makeLenses ''DSState
+makeFields ''DSState
 
 -- | Delegation state
 data DState = DState
-  { _dsDelegationMap :: Map VKeyGen VKey
+  { _dSStateDelegationMap :: Map VKeyGen VKey
     -- | When was the last time each genesis key delegated.
-  , _dsLastDelegation :: Map VKeyGen Slot
+  , _dSStateLastDelegation :: Map VKeyGen Slot
   }
 
-makeLenses ''DState
+makeFields ''DState
+
+data DIEnv = DIEnv
+  { _dIEnvAllowedDelegators :: Set VKeyGen
+  , _dIEnvEpoch :: Epoch
+  , _dIEnvSlot :: Slot
+  , _dIEnvLiveness :: SlotCount
+
+  }
+
+makeFields ''DIEnv
+
+data DIState = DIState
+  { _dIStateDelegationMap :: Map VKeyGen VKey
+  , _dIStateLastDelegation :: Map VKeyGen Slot
+  , _dIStateScheduledDelegations :: [(Slot, (VKeyGen, VKey))]
+  , _dIStateKeyEpochDelegations :: Set (Epoch, VKeyGen)
+  }
+
+makeFields ''DIState
 
 --------------------------------------------------------------------------------
 -- Transition systems
