@@ -170,10 +170,9 @@ validNoReplay (TxWits tx _) =
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs :: TxWits -> LedgerState -> Validity
 validInputs (TxWits tx _) l =
-  if txins tx `Set.isSubsetOf` unspentInputs (getUtxo l)
+  if txins tx `Set.isSubsetOf` dom (getUtxo l)
     then Valid
     else Invalid [BadInputs]
-  where unspentInputs (UTxO utxo) = Map.keysSet utxo
 
 -- |Implementation of abstract transaction size
 txsize :: Tx -> Natural
