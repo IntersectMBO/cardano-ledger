@@ -40,7 +40,8 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - tasty-hedgehog-coverage-0.1.0.0
-
+  - ../dependencies/semantics/hs
+  - capability-0.1.0.0@sha256:59fb5c11627d56be3df9f726c920ca12e76a8a4652057ddb6d20bb3c890a9da5
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

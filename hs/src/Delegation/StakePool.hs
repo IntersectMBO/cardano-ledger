@@ -12,14 +12,14 @@ import           Keys
 
 -- |A stake pool.
 data StakePool = StakePool
-                   { poolPubKey  :: VKey
-                   , poolPledges :: Map VKey Coin -- TODO not updated currently
-                   , poolCost    :: Coin
-                   , poolMargin  :: Ratio Natural
-                   , poolAltAcnt :: Maybe HashKey
+                   { _poolPubKey  :: VKey
+                   , _poolPledges :: Map VKey Coin -- TODO not updated currently
+                   , _poolCost    :: Coin
+                   , _poolMargin  :: Ratio Natural
+                   , _poolAltAcnt :: Maybe HashKey
                    } deriving (Show, Eq, Ord)
 
 -- |The delegation of one stake key to another.
-data Delegation = Delegation { delegator :: VKey
-                             , delegatee :: VKey }
+data Delegation = Delegation { _delegator :: VKey
+                             , _delegatee :: VKey }
                              deriving (Show, Eq, Ord)

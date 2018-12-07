@@ -60,20 +60,20 @@ mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
 -- | Mutator of 'TxWits' which mutates the contained transaction
 mutateTxWits :: TxWits -> Gen TxWits
 mutateTxWits txwits = do
-  body' <- mutateTx $ body txwits
-  pure $ TxWits body' (witnessSet txwits)
+  body' <- mutateTx $ _body txwits
+  pure $ TxWits body' (_witnessSet txwits)
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
 mutateTx :: Tx -> Gen Tx
 mutateTx tx = do
-  inputs'  <- mutateInputs  $ Set.toList (inputs tx)
-  outputs' <- mutateOutputs $ outputs tx
+  inputs'  <- mutateInputs  $ Set.toList (_inputs tx)
+  outputs' <- mutateOutputs $ _outputs tx
   pure $ Tx (Set.fromList inputs')
             outputs'
-            (certs tx)
-            (fee tx)
-            (ttl tx)
+            (_certs tx)
+            (_txfee tx)
+            (_ttl tx)
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]

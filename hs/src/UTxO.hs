@@ -27,6 +27,7 @@ module UTxO
   , deposits
   , (<|)
   , (</|)
+  , dom
   -- , verify
   , union
   , makeWitness
@@ -55,7 +56,7 @@ import           Delegation.StakePool (StakePool (..))
 type Hash = Digest SHA256
 
 -- |A unique ID of a transaction, which is computable from the transaction.
-newtype TxId = TxId { getTxId :: Hash }
+newtype TxId = TxId { _TxId :: Hash }
   deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
@@ -72,11 +73,11 @@ data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 
 -- |A raw transaction
-data Tx = Tx { inputs  :: !(Set TxIn)
-             , outputs :: [TxOut]
-             , certs   :: !(Set DCert)
-             , fee     :: Coin
-             , ttl     :: Slot
+data Tx = Tx { _inputs  :: !(Set TxIn)
+             , _outputs :: [TxOut]
+             , _certs   :: ![DCert]
+             , _txfee   :: Coin
+             , _ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
 -- |Compute the id of a transaction.
@@ -85,12 +86,12 @@ txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
 txins :: Tx -> Set TxIn
-txins = inputs
+txins = _inputs
 
 -- |Compute the transaction outputs of a transaction.
 txouts :: Tx -> UTxO
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0..]]
+  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (_outputs tx) [0..]]
   where
     transId = txid tx
 
@@ -101,8 +102,8 @@ data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
 --
 --     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
 data TxWits = TxWits
-              { body       :: !Tx
-              , witnessSet :: !(Set Wit)
+              { _body       :: !Tx
+              , _witnessSet :: !(Set Wit)
               } deriving (Show, Eq, Ord)
 
 -- |Create a witness for transaction
@@ -118,6 +119,10 @@ ins <| (UTxO utxo) =
 (</|) :: Set TxIn -> UTxO -> UTxO
 ins </| (UTxO utxo) =
   UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
+
+-- | Domain of UTxO
+dom :: UTxO -> Set TxIn
+dom (UTxO utxo) = Map.keysSet utxo
 
 -- |Combine two collections of UTxO.
 --
@@ -136,9 +141,9 @@ deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
 deposits pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ poolPubKey pool) stpools
+    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ _poolPubKey pool) stpools
     notRegisteredPool _ = True
-    cs = Set.filter notRegisteredPool (certs tx)
+    cs = filter notRegisteredPool (_certs tx)
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
