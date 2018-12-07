@@ -27,15 +27,7 @@ update, which we also give the details of in this chapter.
 
 We introduce a new abstract type in this chapter, $\Production$ (see
 Figure~\ref{fig:epoch-defs}), which represents the set of blocks produced by the
-blockchain this epoch. We also present the abstract function $\fun{makeUTxO}$,
-which builds UTxO entries out of pending withdrawal, coin values in rewards accounts,
-and existing UTxO entries.
-
-\begin{todo}
-  Give details of $utxo$ generation by the $\fun{makeUTxO}$ map
-
-  All we need here is withdrawals and existing UTxO?
-\end{todo}
+blockchain this epoch.
 
 %%
 %% Figure - Epoch Abstract Types
@@ -46,14 +38,6 @@ and existing UTxO entries.
   \begin{equation*}
     \begin{array}{r@{~\in~}ll}
       \var{production} & \Production & \text{blocks produced in the epoch}\\
-    \end{array}
-  \end{equation*}
-  \emph{Abstract Functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}ll}
-      \fun{makeUTxO} & \UTxO \to \Wdrl \to (\AddrRWD \mapsto Coin)\to \UTxO &
-        \\ \text{generate UTxO entries for withdrawals}\\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -150,18 +134,10 @@ from the last slot of an epoch to the first slot of the subsequent epoch.
 
 The inference rule describing when the boundary UTxO state transition can
 take place is presented in~\ref{fig:rules:utxoep}. As a result of the application
-of this rule, the UTxO is updated by
-generating UTxO entries from pending withdrawals and adding them to the
-set of existing UTxO entries. The $\var{deposits}$ value is decreased by the
+of this rule, the $\var{deposits}$ value is decreased by the
 amount of decay of refunds this epoch (calculated by the $\fun{obligation}$
-function). The $\var{fees}$ value on the ledger is set to 0, and the set of
-withdrawals is emptied.
+function), and $\var{fees}$ value on the ledger is set to 0.
 
-\begin{todo}
-Discuss index generation
-
-discuss prevention of double withdrawal
-\end{todo}
 %%
 %% Figure - UTxO Epoch Rule
 %%
@@ -183,16 +159,14 @@ discuss prevention of double withdrawal
           \var{utxo} \\
           \var{deposits} \\
           \var{fees} \\
-          \var{wdrls} \\
         \end{array}
       \right)
       \trans{utxoep}{}
       \left(
         \begin{array}{r}
-          \var{utxo} \cup \fun{makeUTxO}~\var{wdrls} \\
+          \var{utxo} \\
           \obligation{pc}{stkeys}{stpools}{slot} \\
           0 \\
-          \emptyset \\
         \end{array}
       \right)
     }
@@ -351,43 +325,18 @@ smaller refunds for deposits than were paid upon depositing.
 \end{figure}
 
 Next, we discuss the epoch boundary pool retirement in
-Figure~\ref{fig:ts-types:pool-clean}. The environment needed for the
-cleanup of stake pools scheduled for retirement this epoch boundary includes
-the protocol constants and the current slot number, and the state is made up of
-the current UTxO, delegation and pool states. We also give the type of this
-state transition, with no signal.
+Figure~\ref{fig:ts-types:pool-clean}. The type of this transition is similar
+to the other $\PState$ transition type we defined earlier, which is triggered
+by a signal certificate,
+however, this one has an empty signal (as it happens at the boundary).
 
 %%
 %% Figure - Pool Clean Defs
 %%
 \begin{figure}[htb]
-  \emph{Stake Pool Clean environment}
-  \begin{equation*}
-    \StPlCleanEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{current slot}\\
-        \var{pc} & \PrtclConsts & \text{protocol constants}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Stake Pool Clean States}
-  \begin{equation*}
-    \StPlCleanState =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Pool Clean Transition}
   \begin{equation*}
     \_ \vdash \_ \trans{poolclean}{} \_ \in
-    \powerset (\StPlCleanEnv \times \StPlCleanState \times \StPlCleanState)
+    \powerset (\Slot \times \PState \times \PState)
   \end{equation*}
   %
   \caption{Pool Clean Transition}
@@ -401,21 +350,6 @@ $\var{pparams}$, and $\var{retiring}$ which correspond to any of the hash keys
 of the stake pools scheduled to retire this epoch are removed from
 these variables.
 
-In addition, the $\var{deposits}$ value on the ledger is
-updated by subtracting from the existing $\var{deposits}$ value the total
-value of all (decayed) refunds for the stake pools scheduled for retirement
-this epoch. The refunds for stake pool retirement end up in the rewards
-accounts of the pool key holders. Specifically, the set of rewards is updated by
-adding to coin value corresponding to each key entry in the $\var{rewards}$
-finite map the amount of (decayed) refund intended for the pool
-key which deregisters the pool.
-
-\begin{todo}
-  So, refunds become rewards?
-
-  What happens if the indivudual key is deregistered?
-\end{todo}
-
 %%
 %% Figure - Pool Clean Rule
 %%
@@ -426,47 +360,14 @@ key which deregisters the pool.
       \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
       & \var{retired} \neq \emptyset \\
       ~ \\
-      {
-        \begin{array}{r@{=}l}
-          \var{refunds} & \poolRefunds{pc}{(\var{retired} \restrictdom \var{stpools})}{slot} \\
-          \var{deposits'} & \var{deposits} -
-            \left(\sum\limits_{\{\_\mapsto c\}\in\var{refunds}} c\right) \\
-          \var{rewards'} & \var{rewards} \unionoverridePlus \var{refunds} \\
-        \end{array}
-      } \\ ~ \\ ~ \\
-      \var{utxoSt'} =
-      \left(
-        {
-          \begin{array}{r}
-            \var{utxo} \\
-            \var{deposits'} \\
-            \var{fees} \\
-            \var{wdrls} \\
-          \end{array}
-        }
-      \right)
-      &
-      \var{dstate'} =
-      \left(
-        {
-          \begin{array}{r}
-            \var{stkeys} \\
-            \var{rewards'} \\
-            \var{delegations}
-          \end{array}
-        }
-      \right)
     }
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pc}\\
       \end{array}
       \vdash
       \left(
         \begin{array}{r}
-          \var{utxoSt} \\
-          \var{dstate} \\
           \var{stpools} \\
           \var{pparams} \\
           \var{retiring}
@@ -475,8 +376,6 @@ key which deregisters the pool.
       \trans{poolclean}{}
       \left(
         \begin{array}{rcl}
-          \var{utxoSt'} \\
-          \var{dstate'} \\
           \var{retired} & \subtractdom & \var{stpools} \\
           \var{retired} & \subtractdom & \var{pparams} \\
           \var{retired} & \subtractdom & \var{retiring} \\
@@ -570,7 +469,6 @@ $\var{reserves}$ to cover the entire value of the transfer
             \var{utxo} \\
             \var{oblgNew} \\
             \var{fees} \\
-            \var{wdrls} \\
           \end{array}
         }
       \right)

@@ -1233,6 +1233,10 @@ associated with any key that is being deregistered
 associated with a stake pool which is scheduled to retire
 \end{itemize}
 
+With these checks in place, there are never any unclaimed rewards left over
+in the accounts, so we do not need to clean these up. There are also
+no orphaned pools left over without associated stake keys.
+
 In the consequent transition of this total rule, the DELRWDS transition is
 applied first in the composition
 because this allows the signal transaction to collect rewards
