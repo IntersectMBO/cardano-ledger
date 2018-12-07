@@ -32,14 +32,14 @@ authDCert key cert = getRequiredSigningKey cert == key
   where
     getRequiredSigningKey (RegKey k)            = k
     getRequiredSigningKey (DeRegKey k)          = k
-    getRequiredSigningKey (RegPool pool)        = poolPubKey pool
+    getRequiredSigningKey (RegPool pool)        = _poolPubKey pool
     getRequiredSigningKey (RetirePool k _)      = k
-    getRequiredSigningKey (Delegate delegation) = delegator delegation
+    getRequiredSigningKey (Delegate delegation) = _delegator delegation
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert -> PrtlConsts -> Coin
-dvalue (RegKey _) = keyDeposit
-dvalue (RegPool _) = poolDeposit
+dvalue (RegKey _) = _keyDeposit
+dvalue (RegPool _) = _poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
@@ -47,6 +47,6 @@ refund :: DCert -> PrtlConsts -> Duration -> Coin
 refund cert pc dur = floor refund'
   where
     dep = fromIntegral $ dvalue cert pc
-    dmin = fromRational $ minRefund pc
-    pow = - fromRational (decayRate pc * fromIntegral dur)
+    dmin = fromRational $ _minRefund pc
+    pow = - fromRational (_decayRate pc * fromIntegral dur)
     refund' = dep * (dmin + (1-dmin) * exp pow) :: Double

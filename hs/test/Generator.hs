@@ -300,7 +300,7 @@ genStakePool keys = do
 
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
 genDelegation keys dstate = do
-  poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
+  poolKey      <- Gen.element (Map.keys $ _stKeys dstate)
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
 
