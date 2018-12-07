@@ -91,13 +91,13 @@ This is a simple example of using the small step sematics with lhs2TeX.
 Described here is a vending machine environment, state, signals, and errors.
 The environment contains the cost (in tokens) of a soda, and
 whether or not the machine is powered on.
-The state of the vending machine holds the number unspent tokens
+The state of the vending machine holds the number of unspent tokens
 and the number of remaining sodas.
 There are two signals, pushing the vending button or depositing some
 number of tokens.
 
-> data Env = MkEnv {power :: Bool, cost :: Int} DERIVING
-> data St = MkSt {tokens :: Int, sodas :: Int} DERIVING
+> data Env = MkEnv {getPower :: Bool, getCost :: Int} DERIVING
+> data St = MkSt {getTokens :: Int, getSodas :: Int} DERIVING
 > data Sig = Push | Deposit Int DERIVING
 > data Error = SmallDeposit | OutOfSoda | OutOfOrder DERIVING
 
@@ -118,7 +118,7 @@ number of tokens.
 \inference[vending-rule-deposit]
 {%
 
->     CHECK (power env) OutOfOrder
+>     CHECK (getPower env) OutOfOrder
 
 }{%
 %if style == newcode
@@ -127,7 +127,7 @@ number of tokens.
 
 %endif
 
->     RULE (MkEnv power cost) (MkSt tokens sodas) (Deposit t) (MkSt (tokens st + t) (sodas st))
+>     RULE (MkEnv power cost) (MkSt tokens sodas) (Deposit t) (MkSt (getTokens st + t) (getSodas st))
 
 }
 \end{equation}
@@ -145,12 +145,12 @@ number of tokens.
 \inference[vending-rule-push]
 {%
 
->     CHECK (power env) OutOfOrder
->     AND   (tokens st >= cost env) SmallDeposit
->     AND   (sodas st /= 0) OutOfSoda
+>     CHECK (getPower env) OutOfOrder
+>     AND   (getTokens st >= getCost env) SmallDeposit
+>     AND   (getSodas st /= 0) OutOfSoda
 >
->     tokens'  =  tokens st - cost env
->     sodas'   =  sodas st - 1
+>     tokens'  =  getTokens st - getCost env
+>     sodas'   =  getSodas st - 1
 
 }{%
 %if style == newcode
