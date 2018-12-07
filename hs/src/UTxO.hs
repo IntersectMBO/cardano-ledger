@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 {-|
 Module      : UTxO
@@ -43,6 +44,9 @@ import qualified Data.Map                as Map
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
+--import           Lens.Micro              (over, (^.))
+import Lens.Micro ((^.), (&), (.~), (+~), (-~))
+import Lens.Micro.TH (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Keys
@@ -80,18 +84,20 @@ data Tx = Tx { _inputs  :: !(Set TxIn)
              , _ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
+makeLenses ''Tx
+
 -- |Compute the id of a transaction.
 txid :: Tx -> TxId
 txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
 txins :: Tx -> Set TxIn
-txins = _inputs
+txins = flip (^.) inputs
 
 -- |Compute the transaction outputs of a transaction.
 txouts :: Tx -> UTxO
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (_outputs tx) [0..]]
+  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (tx ^. outputs) [0..]]
   where
     transId = txid tx
 
@@ -143,7 +149,7 @@ deposits pc stpools tx = foldl f (Coin 0) cs
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ _poolPubKey pool) stpools
     notRegisteredPool _ = True
-    cs = filter notRegisteredPool (_certs tx)
+    cs = filter notRegisteredPool (tx ^. certs)
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
