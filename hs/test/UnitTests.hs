@@ -92,10 +92,10 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
   in ls2 @?= Right (LedgerState
                      (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
                      stakeKeyRegistration
-                     { getDelegations =
+                     { _delegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-                     , getStPools = Map.fromList [(poolhk, Slot 0)]
-                     , getPParams = Map.fromList [(poolhk, pool)]
+                     , _stPools = Map.fromList [(poolhk, Slot 0)]
+                     , _pParams = Map.fromList [(poolhk, pool)]
                      }
                      pcs)
 
@@ -108,11 +108,11 @@ testValidRetirement txs utxo stakeKeyRegistration e pool =
   in ls2 @?= Right (LedgerState
                      (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
                      stakeKeyRegistration
-                     { getDelegations =
+                     { _delegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-                     , getStPools = Map.fromList [(poolhk, Slot 0)]
-                     , getPParams = Map.fromList [(poolhk, pool)]
-                     , getRetiring =
+                     , _stPools = Map.fromList [(poolhk, Slot 0)]
+                     , _pParams = Map.fromList [(poolhk, pool)]
+                     , _retiring =
                          Map.fromList [(poolhk, e)]
                      }
                      pcs)
@@ -141,8 +141,8 @@ tx1 = aliceGivesBobLovelace
 utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ body tx1) 0, TxOut aliceAddr (Coin 6400))
-       , (TxIn (txid $ body tx1) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ _body tx1) 0, TxOut aliceAddr (Coin 6400))
+       , (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000)) ]
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -160,12 +160,12 @@ tx2 = aliceGivesBobLovelace
 utxo2 :: Map.Map TxIn TxOut
 utxo2 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ body tx2) 0, TxOut aliceAddr (Coin 5400))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ _body tx2) 0, TxOut aliceAddr (Coin 5400))
+       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
 
 tx3Body :: Tx
 tx3Body = Tx
-          (Set.fromList [TxIn (txid $ body tx2) 0])
+          (Set.fromList [TxIn (txid $ _body tx2) 0])
           [ TxOut aliceAddr (Coin 3950) ]
           [ RegPool stakePool
           , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))]
@@ -179,16 +179,16 @@ utxo3 :: Map.Map TxIn TxOut
 utxo3 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   {
-    getAccounts =
+    _accounts =
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
-  , getStKeys =
+  , _stKeys =
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
                    , (hashKey $ vKey stakePoolKey1, Slot 0)]
@@ -197,26 +197,26 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
 stakePool :: StakePool
 stakePool = StakePool
             {
-              poolPubKey = vKey stakePoolKey1
-            , poolPledges = Map.empty
-            , poolCost = Coin 0      -- TODO: what is a sensible value?
-            , poolMargin = 0 % 1     --          or here?
-            , poolAltAcnt = Nothing  --          or here?
+              _poolPubKey = vKey stakePoolKey1
+            , _poolPledges = Map.empty
+            , _poolCost = Coin 0      -- TODO: what is a sensible value?
+            , _poolMargin = 0 % 1     --          or here?
+            , _poolAltAcnt = Nothing  --          or here?
             }
 
 stakePoolUpdate :: StakePool
 stakePoolUpdate = StakePool
                    {
-                     poolPubKey = vKey stakePoolKey1
-                   , poolPledges = Map.empty
-                   , poolCost = Coin 100      -- TODO: what is a sensible value?
-                   , poolMargin = 1 % 2     --          or here?
-                   , poolAltAcnt = Nothing  --          or here?
+                     _poolPubKey = vKey stakePoolKey1
+                   , _poolPledges = Map.empty
+                   , _poolCost = Coin 100      -- TODO: what is a sensible value?
+                   , _poolMargin = 1 % 2     --          or here?
+                   , _poolAltAcnt = Nothing  --          or here?
                    }
 
 tx4Body :: Tx
 tx4Body = Tx
-          (Set.fromList [TxIn (txid $ body tx3) 0])
+          (Set.fromList [TxIn (txid $ _body tx3) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
           [ RegPool stakePoolUpdate ]
           (Coin 1000)
@@ -229,17 +229,17 @@ utxo4 :: Map.Map TxIn TxOut
 utxo4 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
 
 utxo5 :: Epoch -> Map.Map TxIn TxOut
 utxo5 e = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
 
 tx5Body :: Epoch -> Tx
 tx5Body e = Tx
-          (Set.fromList [TxIn (txid $ body tx3) 0])
+          (Set.fromList [TxIn (txid $ _body tx3) 0])
           [ TxOut aliceAddr (Coin 2950) ]
           [ RetirePool (vKey stakePoolKey1) e ]
           (Coin 1000)
@@ -350,7 +350,7 @@ testFeeTooSmall =
            []
            (Slot 100)
   in ledgerState [tx] @?=
-       Left [ FeeTooSmall (Coin 531) (Coin 1) ]
+       Left [ FeeTooSmall (Coin 534) (Coin 1) ]
 
 testExpiredTx :: Assertion
 testExpiredTx =

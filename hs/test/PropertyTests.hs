@@ -66,7 +66,7 @@ propPreserveBalanceInitTx =
 propBalanceTxInTxOut :: Cover
 propBalanceTxInTxOut = withCoverage $ do
   (l, steps, fee, txwits, l')  <- forAll genValidStateTx
-  let tx                       = body txwits
+  let tx                       = _body txwits
   let inps                     = txins tx
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l')) "non-trivial wealth dist"
@@ -76,7 +76,7 @@ propBalanceTxInTxOut = withCoverage $ do
 propPreserveOutputs :: Cover
 propPreserveOutputs = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = body txwits
+  let tx                    = _body txwits
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l')) "non-trivial wealth dist"
   True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ (_utxo . _utxoState) l')
@@ -85,7 +85,7 @@ propPreserveOutputs = withCoverage $ do
 propEliminateInputs :: Cover
 propEliminateInputs = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = body txwits
+  let tx                    = _body txwits
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l')) "non-trivial wealth dist"
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
@@ -95,7 +95,7 @@ propEliminateInputs = withCoverage $ do
 propUniqueTxIds :: Cover
 propUniqueTxIds = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = body txwits
+  let tx                    = _body txwits
   let origTxIds             = collectIds <$> (Map.keys $ utxoMap ((_utxo . _utxoState) l))
   let newTxIds              = collectIds <$> (Map.keys $ utxoMap (txouts tx))
   let txId                  = txid tx
@@ -114,7 +114,7 @@ propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $
       case next of
         Left _  -> failure
         Right _ -> do
-          let inputIndicesSet = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+          let inputIndicesSet = unions $ map (\txwit -> fromSet $ _inputs $ _body txwit) txs
           0 === (Data.MultiSet.size $ Data.MultiSet.filter
                      (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                      inputIndicesSet)
@@ -126,7 +126,7 @@ classifyInvalidDoubleSpend :: Cover
 classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
       (_, _, _, _, txs, LedgerValidation validationErrors _)
           <- forAll genNonEmptyAndAdvanceTx'
-      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ inputs $ body txwit) txs
+      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ _inputs $ _body txwit) txs
       let multiSpentInputs = (Data.MultiSet.size $ Data.MultiSet.filter
                                    (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                                    inputIndicesSet)
@@ -178,7 +178,7 @@ propBalanceTxInTxOut' :: Cover
 propBalanceTxInTxOut' =
   Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
   (l, _, fee, txwits, lv)  <- forAll genStateTx
-  let tx                       = body txwits
+  let tx                       = _body txwits
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
   let balanceSource            = balance $ inps <| ((_utxo . _utxoState) l)
@@ -188,8 +188,8 @@ propBalanceTxInTxOut' =
   let balanceOk                = balanceSource == balanceTarget <> fee
   classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
   if valErrors /= [] && balanceOk && nonTrivial
-  then label (pack (  "inputs: "       ++ (show $ Set.size (inputs tx))
-                     ++ " outputs: "   ++ (show $ length (outputs tx))
+  then label (pack (  "inputs: "       ++ (show $ Set.size (_inputs tx))
+                     ++ " outputs: "   ++ (show $ length (_outputs tx))
                      ++ " balance l "  ++ (show balanceSource)
                      ++ " balance l' " ++ (show balanceTarget)
                      ++ " txfee " ++ show fee
