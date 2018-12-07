@@ -32,6 +32,7 @@ import           Coin
 import           Keys
 import           LedgerState     (LedgerState (..),
                                   LedgerValidation(..),
+                                  UTxOState(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
                                   genesisState, DelegationState(..),
@@ -136,7 +137,7 @@ genTxWits keyList (UTxO m) cslot = do
   let !txbody = Tx
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
-           Set.empty
+           []
            txfee
            (cslot + (Slot txttl))
   let !txwit = makeWitness selectedKeyPair txbody
@@ -151,7 +152,7 @@ genTxWits keyList (UTxO m) cslot = do
 genLedgerStateTx :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
-  let utxo = getUtxo sourceState
+  let utxo = _utxo $ _utxoState sourceState
   slot <- genNatural 0 1000
   (txfee, tx) <- genTxWits keyList utxo (Slot slot)
   pure (txfee, tx, asStateTransition (Slot slot) sourceState tx)
@@ -208,7 +209,7 @@ repeatCollectTx'
     -> [ValidationError]
     -> Gen (Coin, [TxWits], LedgerValidation)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
- | n == 0 || (utxoSize $ getUtxo ls) == 0 =
+ | n == 0 || (utxoSize $ (_utxo . _utxoState) ls) == 0 =
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
  | otherwise = do
     (txfee, tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
@@ -261,7 +262,7 @@ genStateTx = do
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
-  let utxo = getUtxo sourceState
+  let utxo = (_utxo . _utxoState) sourceState
   slot <- genNatural 0 1000
   (txfee, tx) <- genTxWits keyList utxo (Slot slot)
   tx'       <- mutateTxWits tx
@@ -299,7 +300,7 @@ genStakePool keys = do
 
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
 genDelegation keys dstate = do
-  poolKey      <- Gen.element (Map.keys $ getStKeys dstate)
+  poolKey      <- Gen.element (Map.keys $ _stKeys dstate)
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
 
