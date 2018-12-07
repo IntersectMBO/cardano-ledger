@@ -111,6 +111,10 @@ number of tokens.
 > vend :: Env -> St -> Sig -> Either [Error] St
 > vend env st (Deposit t) =
 >   let
+>     power = getPower env
+>     cost = getCost env
+>     tokens = getTokens st
+>     sodas = getSodas st
 
 %endif
 
@@ -127,7 +131,7 @@ number of tokens.
 
 %endif
 
->     RULE (MkEnv power cost) (MkSt tokens sodas) (Deposit t) (MkSt (getTokens st + t) (getSodas st))
+>     RULE (MkEnv power cost) (MkSt tokens sodas) (Deposit t) (MkSt (tokens + t) (sodas))
 
 }
 \end{equation}
@@ -138,6 +142,10 @@ number of tokens.
 
 > vend env st Push =
 >   let
+>     power = getPower env
+>     cost = getCost env
+>     tokens = getTokens st
+>     sodas = getSodas st
 
 %endif
 
@@ -145,12 +153,12 @@ number of tokens.
 \inference[vending-rule-push]
 {%
 
->     CHECK (getPower env) OutOfOrder
->     AND   (getTokens st >= getCost env) SmallDeposit
->     AND   (getSodas st /= 0) OutOfSoda
+>     CHECK (power) OutOfOrder
+>     AND   (tokens >= cost) SmallDeposit
+>     AND   (sodas /= 0) OutOfSoda
 >
->     tokens'  =  getTokens st - getCost env
->     sodas'   =  getSodas st - 1
+>     tokens'  =  tokens - cost
+>     sodas'   =  sodas - 1
 
 }{%
 %if style == newcode
@@ -193,7 +201,7 @@ number of tokens.
 >   , testCase "test get soda" testGetSoda
 >   , testCase "test deposit too small" testSmallDep
 >   , testCase "test out of soda" testOutOfSoda
->   , testCase "test deposit too small and out of soda" testSmallNoSoda
+>   , testCase "test deposit tooooo small and out of soda" testSmallNoSoda
 >   ]
 
 > tests :: TestTree
