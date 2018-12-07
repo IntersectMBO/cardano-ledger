@@ -302,11 +302,14 @@ validStakeDelegation cert (LedgerState _ ds _) =
 validStakePoolRegister :: DCert -> LedgerState -> Validity
 validStakePoolRegister _ _ = Valid
 
+-- | Validate that if the certificate is a pool retirement certificate, then we
+-- have not yet reached or passed its latest possible application slot.
 validCertRetirePoolNotExpired :: Slot -> DCert -> Validity
 validCertRetirePoolNotExpired ttlSlot cert  =
     case cert of
       (RetirePool _ epoch) ->
-          if ttlSlot <= slotFromEpoch epoch then Valid
+          if ttlSlot <= slotFromEpoch epoch
+          then Valid
           else Invalid [RetirementCertExpired ttlSlot (slotFromEpoch epoch)]
       _                    -> Valid
 

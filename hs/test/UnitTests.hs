@@ -99,6 +99,24 @@ testValidDelegation txs utxo stakeKeyRegistration pool =
                      }
                      pcs)
 
+testValidRetirement ::
+  [TxWits] -> Map.Map TxIn TxOut -> DelegationState -> Epoch -> StakePool -> Assertion
+testValidRetirement txs utxo stakeKeyRegistration e pool =
+  let
+    ls2 = ledgerState txs
+    poolhk = hashKey $ vKey stakePoolKey1
+  in ls2 @?= Right (LedgerState
+                     (UTxOState (UTxO utxo) (Coin 0) (Coin 0))
+                     stakeKeyRegistration
+                     { getDelegations =
+                         Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+                     , getStPools = Map.fromList [(poolhk, Slot 0)]
+                     , getPParams = Map.fromList [(poolhk, pool)]
+                     , getRetiring =
+                         Map.fromList [(poolhk, e)]
+                     }
+                     pcs)
+
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
   [DCert] -> Slot -> TxWits
 aliceGivesBobLovelace txin coin fee txdeps txrefs cs s = TxWits txbody wit
@@ -186,8 +204,8 @@ stakePool = StakePool
             , poolAltAcnt = Nothing  --          or here?
             }
 
-stakePoolUpate :: StakePool
-stakePoolUpate = StakePool
+stakePoolUpdate :: StakePool
+stakePoolUpdate = StakePool
                    {
                      poolPubKey = vKey stakePoolKey1
                    , poolPledges = Map.empty
@@ -200,7 +218,7 @@ tx4Body :: Tx
 tx4Body = Tx
           (Set.fromList [TxIn (txid $ body tx3) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
-          [ RegPool stakePoolUpate ]
+          [ RegPool stakePoolUpdate ]
           (Coin 1000)
           (Slot 100)
 
@@ -213,6 +231,22 @@ utxo4 = Map.fromList
        , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
        , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
 
+utxo5 :: Epoch -> Map.Map TxIn TxOut
+utxo5 e = Map.fromList
+       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+       , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
+       , (TxIn (txid $ body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+
+tx5Body :: Epoch -> Tx
+tx5Body e = Tx
+          (Set.fromList [TxIn (txid $ body tx3) 0])
+          [ TxOut aliceAddr (Coin 2950) ]
+          [ RetirePool (vKey stakePoolKey1) e ]
+          (Coin 1000)
+          (Slot 100)
+
+tx5 :: Epoch -> TxWits
+tx5 e = TxWits (tx5Body e) (Set.fromList [makeWitness alicePay (tx5Body e)])
 
 
 testsValidLedger :: TestTree
@@ -226,7 +260,9 @@ testsValidLedger =
           , testCase "Valid stake delegation from Alice to stake pool." $
               testValidDelegation [tx2, tx3] utxo3 stakeKeyRegistration1 stakePool
           , testCase "Update stake pool parameters" $
-              testValidDelegation [tx2, tx3, tx4] utxo4 stakeKeyRegistration1 stakePoolUpate
+              testValidDelegation [tx2, tx3, tx4] utxo4 stakeKeyRegistration1 stakePoolUpdate
+          , testCase "Retire Pool" $
+            testValidRetirement [tx2, tx3, tx5 (Epoch 1)] (utxo5 (Epoch 1)) stakeKeyRegistration1 (Epoch 1) stakePool
           ]
     ]
 
@@ -335,7 +371,7 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   , testCase "Invalid Ledger - Alice provides witness of wrong UTxO" testInvalidTransaction
   , testCase "Invalid Ledger - Alice's transaction does not consume input" testEmptyInputSet
   , testCase "Invalid Ledger - Alice's fee is too small" testFeeTooSmall
-  , testCase "Invalid Ledger - Alice's transaciton has expired" testExpiredTx
+  , testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx
   ]
 
 unitTests :: TestTree
