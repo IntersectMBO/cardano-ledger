@@ -260,15 +260,20 @@ witnessed (TxWits tx wits) l =
     isWitness tx' input unspent (Wit key sig) =
       verify key tx' sig && authTxin key input unspent
 
+validRuleUTXO :: TxWits -> Slot -> LedgerState -> Validity
+validRuleUTXO tx slot l = validInputs tx l
+                       <> current tx slot
+                       <> validNoReplay tx
+                       <> validFee tx l
+                       <> preserveBalance tx l
+                       <> validCertsRetirePoolNotExpired tx slot
+
+validRuleUTXOW :: TxWits -> Slot -> LedgerState -> Validity
+validRuleUTXOW tx _ l = witnessed tx l
+
 validTx :: TxWits -> Slot -> LedgerState -> Validity
-validTx tx slot l =
-  validInputs tx l
-    <> current tx slot
-    <> validNoReplay tx
-    <> validFee tx l
-    <> preserveBalance tx l
-    <> witnessed tx l
-    <> validCertsRetirePoolNotExpired tx slot
+validTx tx slot l = validRuleUTXO  tx slot l
+                 <> validRuleUTXOW tx slot l
 
 -- The rules for checking validiy of stake delegation transitions return
 -- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
@@ -441,29 +446,29 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
 -- State transition system
 ---------------------------------------------------------------------------------
 
-data UTXOW
+data UTXO
 
-instance STS UTXOW where
-    type State UTXOW = LedgerState
-    type Signal UTXOW = TxWits
-    type Environment UTXOW = Slot
-    data PredicateFailure UTXOW = UTXOFailure [ValidationError]
+instance STS UTXO where
+    type State UTXO = LedgerState
+    type Signal UTXO = TxWits
+    type Environment UTXO = Slot
+    data PredicateFailure UTXO = UTXOFailure [ValidationError]
                    deriving (Eq, Show)
 
     rules = [applyTxWits]
 
-fromValidity :: Validity -> PredicateResult UTXOW
+fromValidity :: Validity -> PredicateResult UTXO
 fromValidity Valid = Passed
 fromValidity (Invalid xs) = Failed $ UTXOFailure xs
 
 executeTransition :: LedgerState -> TxWits -> LedgerState
 executeTransition lstate txwit = applyTxBody lstate (body txwit)
 
-applyTxWits :: Rule UTXOW
+applyTxWits :: Rule UTXO
 applyTxWits =
     Rule
     [
-     Predicate $ \(slot, lstate, txwit) -> fromValidity $ validTx txwit slot lstate
+     Predicate $ \(slot, lstate, txwit) -> fromValidity $ validRuleUTXO txwit slot lstate
     ]
     ( Extension . Transition $ \(_, lstate, txwit) ->
           executeTransition lstate txwit
