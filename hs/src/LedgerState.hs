@@ -1,5 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BangPatterns    #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies    #-}
 
 {-|
 Module      : LedgerState
@@ -39,6 +40,9 @@ import qualified Data.Map                as Map
 import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import qualified Data.Set                as Set
+
+import Lens.Micro ((^.), (&), (.~), (+~), (-~))
+import Lens.Micro.TH (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*), slotFromEpoch)
@@ -148,6 +152,9 @@ data LedgerState =
     -- |The current protocol constants.
   , _pcs               :: !PrtlConsts
   } deriving (Show, Eq)
+
+makeLenses ''UTxOState
+makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
