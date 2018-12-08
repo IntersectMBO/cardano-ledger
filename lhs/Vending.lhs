@@ -122,7 +122,7 @@ number of tokens.
 \inference[vending-rule-deposit]
 {%
 
->     CHECK (getPower env) OutOfOrder
+>     CHECK (power) OutOfOrder
 
 }{%
 %if style == newcode
