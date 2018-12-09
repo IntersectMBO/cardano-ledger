@@ -332,11 +332,6 @@ In this document, the properties and rules we state involving serialization are
 assumed to hold true independently of the storage medium and style of data
 organization chosen for an implementation.
 
-
-\begin{todo}
-  Add serialization reference
-\end{todo}
-
 \section{Delegation}
 \label{sec:delegation}
 \input{delegation.tex}
@@ -484,7 +479,11 @@ $\fun{keyRefunds}$ calculates the total individual refunds for a transaction
 based on \textit{current} protocol constants. This means that any deposits
 made prior to a change will be different from their corresponding
 (decayed) refunds in the case of key deregistration after a change in
-protocol constants.
+protocol constants. Constants may only change at the epoch boundary, and
+ensuring there are always sufficient funds for all
+refunds in the $\var{deposits}$ pool is part of the protocol constant
+change transition, described in Section~\ref{sec:epoch}.
+
 The protocol constants are not
 expected to change often, and using the current ones for the calculation
 is a deliberate simplification choice, which does not introduce any inconsistencies
@@ -725,7 +724,8 @@ indicated explicitly in the protocol constants,
 and must be paid as an amount exactly matching the protocol's requirement.
 For this reason, a refund calculation for given certificate does not need to look up the deposit
 amout in the data of the transaction
-that paid the original registration deposit, but instead looks in the protocol
+that paid the original registration deposit (such data is not even stored),
+but instead looks in the protocol
 constants for this information.
 
 The $\fun{minfee}$ is the minimum
@@ -739,12 +739,6 @@ The $\fun{txwdrls}$ function returns a list of reward addresses provided by a
 given transaction, each paired with the coin value the transaction is requesting
 be reaped, i.e. removed from the the total coin accumulated in the rewards
 account for this address and added to the UTxO.
-
-We also present the abstract function $\fun{wdrlUTxO}$,
-which builds UTxO entries out of withdrawal requests in a given transaction.
-These new entries
-allow the funds assigned to the rewards addresses to be spent like any
-other unspent outputs.
 
 
 \begin{figure*}
@@ -811,9 +805,6 @@ other unspent outputs.
       \fun{minfee} & \PrtclConsts \to \Tx \to \Coin & \text{minimum fee}\\
       %
       \fun{txwdrls} & \Tx \to \Wdrl & \text{transaction withdrawals}\\
-
-      \fun{wdrlUTxO} & \Tx \to \UTxO &
-             \text{UTxO entries for withdrawals}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -826,11 +817,11 @@ along with their types are defined in Figure~\ref{fig:derived-defs:utxo}.
 The map $\fun{txins}$ returns the list of inputs of a given transactions, i.e.
 the pairs type $\TxIn$ within that transaction.
 
-The map $\fun{txouts}~ \var{tx}$ builds a UTxO (finite map) by taking the
-list of inputs of $\var{tx}$, replacing the original $\var{txid}$ in the pair
-with the $\var{txid}$ of $\var{tx}$, and mapping it to the output with the
-corresponding index in the list of outputs of $\var{tx}$ (thereby making a list
-of the unspent outputs of \textit{this} transaction).
+The map $\fun{txouts}~ \var{tx}$ builds a UTxO using the
+list of outputs of $\var{tx}$. It builds a pair for the resulting UTxO
+finite map by making a $txin$ out of the $txid$ of $tx$ and an index in the
+the output $ix \mapsto (a,c)$, to give a $txin = (txid, ix)$ and the
+$txout=(a,c)$.
 
 The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
 a given UTxO. The calculation $\fun{created}$ gives the value created
@@ -847,21 +838,55 @@ amount which is exactly equal to the value in the reward account (we
 give details about this below), this update explicitly sets the values
 associated to the requested addresses to zero.
 
-It gives the total coin value the given transaction creates on the ledger UTxO.
-Note here that more value is added to the UTxO than the computed by this
-$\var{created}$ calculation, but this value comes from
+The $\fun{created}$ calculation sums up all of the unspent outputs that
+have been removed from the ledger. This includes the outputs spent directly
+(made available to the owner of another address), and also, implicitly,
+the outputs which are spent on transaction fees. In order to balance
+the preservation of value equation, we must also add the following values
+to this (the LHS, i.e. $\fun{created}$) side of the equation as they are accounted for implicitly (as
+part of appending to the UTxO the entries of $\fun{txouts}~{tx}$), on the
+other side (RHS):
 
-The $\fun{destroyed}$ calculation, on the other hand, sums up the
-coin in the outputs of $\var{tx}$, then adds it to the fee that the transaction
-has paid and the deposits made by the transaction for the certificates
-registering individual keys as well as stake pools.
-This calculation gives the total coin value that
-the transaction removes from the current UTxO (given the necessary protocol
-constants).
+\begin{itemize}
+\item The total value of all individual key refunds the transaction is taking from
+the (common) $\var{deposit}$ pool
+\item The total value of all of the rewards the transaction is withdrawing from
+the individual $\var{rewards}$ accounts
+\end{itemize}
+
+The total rewards value above is calculated by subtracting the sum total value in the
+updated (after payout) rewards addresses from sum total of the current (pre-rewards
+payout state) of the $\var{rewards}$ map.
+
+The $\fun{destroyed}$ calculation, on the other hand, sums up the total
+value of all unspent outputs added to the UTxO on the ledger. As stated
+above, this value implicitly includes all the unspent outputs generated
+by this transaction for the withdrawing the refunds and the rewards
+(from the corresponding ledger accounts). In addition, this (RHS) of the
+equation must account for the value implicitly removed from the UTxO. That is why
+two more values are added to this side of the equation:
+
+\begin{itemize}
+\item the fee the transaction pays (in unspent outputs)
+\item all registration
+deposits it pays (also in unspent outputs)
+\end{itemize}
 
 \begin{todo}
-  The created and destroyed values here need to be corrected
+  Created and destroyed calculations i think are mostly right, the names
+  can change, though, if necessary
 \end{todo}
+
+\begin{todo}
+  How do we make sure the $wdrls$ of a transaction are the same as the
+  withdrawals included in the outputs??
+\end{todo}
+
+\begin{todo}
+Also, how do we know the fee and deposits are individually correct, and not just
+balancing the equation?
+\end{todo}
+
 
 \begin{figure}
   \begin{align*}
@@ -898,15 +923,13 @@ constants).
     & \fun{destroyed} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
     & \text{value destroyed} \\
     & \fun{destroyed} ~ pc ~ stpools ~ tx = \\
-    &~~\balance{(\txouts{tx})} + \balance{(\fun{wdrlUTxO}~\var{tx})} \\
-      & + \txfee{tx} + \deposits{pc}{stpools}~{tx}\\
+    &~~\balance{(\txouts{tx})}
+     + \txfee{tx} + \deposits{pc}{stpools}~{tx}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
 \end{figure}
-
-
 
 The type of the transition of a UTxO is presented in Figure
 ~\ref{fig:ts-types:utxo}. A
@@ -961,7 +984,10 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \label{fig:ts-types:utxo}
 \end{figure}
 
-The inference rule for unspent outputs are presented in
+\subsection{UTxO, Fees, and Deposits Ledger Update}
+\label{sec:utxo-ufd}
+
+The inference rule for the UTxO, fees, and deposits update is presented in
 Figure~\ref{fig:rules:utxo}.
 Rule~\ref{eq:utxo-inductive} specifies the conditions under which a transaction can
 be applied to a particular $\UTxOState$ in environment $\UTxOEnv$:
@@ -973,16 +999,9 @@ be applied to a particular $\UTxOState$ in environment $\UTxOEnv$:
 minimum fee.
 \item Each input spent in the transaction must be in the set of unspent
   outputs
-\item All the pool retirement certificates in the transaction schedule the
-retirement for some time after the lifetime of the transaction is over
 \item The amount of coin created by the transaction must be the same as
 the amount destroyed (i.e. the \textit{preservation of value} must hold)
 \end{itemize}
-
-The condition on the retirement certificates is necessary because without it,
-there is nothing stopping the rest of the transaction from being processed except
-the retirement certificates scheduling the retirement too soon (i.e. potentially
-in a past epoch).
 
 Note that the fee paid by a transaction is required to be greater than or
 equal to the minim fee. The reason for allowing it to be greater is to have
@@ -1009,15 +1028,34 @@ changes as follows:
 \item remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
 associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
 \item add all the $\var{outputs}$ of $\var{tx}$ to the
-UTxO, now associated with the $\fun{txid}~\var{tx}$ instead (so they can
-now be spent by future transactions)
-\item add all the entries generated from the rewards addresses, the transaction's
-$\var{txid}$, and amounts requested to the current UTxO
+UTxO, associated with the $\fun{txid}~\var{tx}$
 \end{itemize}
 
-Note here that newly generated and added to the ledger UTxO reward withdrawal
-entries have a list of inputs that is entirely disjoint from the list of
-existing UTxO entries due to the way it is generated.
+Note here that output entries for both the deposit refunds and the rewards
+withdrawals must be included in the body of the transaction
+carrying the deregistration certificates (requesting these refunds) and the
+reward requests. It is the job
+of the wallet to calculate the value of these refunds and withdrawals, and
+generate the correct outputs to include in the outputs list of $\var{tx}$ such
+that applying this transaction results in a
+valid ledger update adding correct amounts of coin to the right addresses.
+
+The majority of funds moved by a transaction usually come from unspent outputs
+(i.e. the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
+refunds and rewards works slightly differently. These get included in the outputs list
+only. That is, they do not have any index-matched inputs in the $inputs$ list.
+For each requested refund (or withdrawal), the
+wallet generates a brand new index $ix$, then indicates the $(addr,coin)$ value
+pairing the address to which the refund is going and the refund amount.
+So, this output $(ix \mapsto (addr,coin))$ gets added to $outputs$ of $tx$,
+and it follows that $\fun{txouts}~{tx}$ is a UTxO that contains the entry
+$(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
+
+The main difference, however, in how rewards and refunds work is that refunds
+come from a $\var{deposits}$ pool, which is a single coin value indicating
+the total decayed amount of all the deposits ever made, while rewards come from individual
+accounts where a reward is accumulated to a specific address.
+
 The $\var{deposits}$ is updated by:
 
 \begin{itemize}
@@ -1044,16 +1082,6 @@ boundary, the total decayed value for the whole epoch for both the individual
 and pool deposits is transferred into the fees (independent of refund
 requests).
 
-Recall here that the refunds must be included in the body of the transaction
-carrying the deregistration certificates (requesting these refunds). It is the job
-of the wallet to calculate the value of these refunds, and generate the
-correct lists of inputs and outputs of $\var{tx}$ such that it results in a
-valid ledger update adding correct amounts of coin to addresses belonging
-to the certificate author. This ledger transition rule simply makes sure
-via the preservation of value condition that the correct amount in unspent
-outputs becomes available on the UTxO due to these refund claims (as well
-as all the other accounting).
-
 Now, the fees are updated by:
 
 \begin{itemize}
@@ -1066,13 +1094,10 @@ variable
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
-    { \ttl tx < \var{slot}
+    { \ttl tx \geq \var{slot}
       & \txins{tx} \neq \emptyset
       & \minfee{pc}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
-      \\
-      \forall \fun{dcerts}~tx,~\var{c}\in\DCertRetirePool \Rightarrow
-          ~\fun{ttl}~{tx} < \fun{slot} (\fun{retire}~{c})
       \\
       \created{pc}{utxo}{stkeys}{rewards}~{tx} = \destroyed{pc}{stpools}~{tx}
       \\
@@ -1083,8 +1108,6 @@ variable
       \var{decayed} = \decayedTx{pc}{stkeys}~{tx}
       \\
       \var{depositChange} = (\deposits{pc}~{stpools}~{tx}) - (\var{refunded} + \var{decayed})
-      \\
-      \var{wd} = \fun{wdrlUTxO}~(\fun{txwdrls}~{tx})
     }
     {
       \begin{array}{l}
@@ -1104,7 +1127,7 @@ variable
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx} \cup \var{wd}  \\
+        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}  \\
         \var{deposits} + \var{depositChange} \\
         \var{fees} + (\txfee{tx}) + \var{decayed} \\
       \end{array}
@@ -1125,8 +1148,6 @@ variable
   This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
-%\subsection{Properties}
-%\label{sec:utxo-properties}
 
 \subsection{Rewards Ledger Update}
 \label{sec:utxo-rewards}
@@ -1134,6 +1155,9 @@ variable
 We now describe how key holders can reap the rewards calculated and added to
 their rewards accounts. A request to collect rewards from a particular reward
 address can be sent at any time as part of the $\Wdrl$ list of a transaction.
+Note that this section defines an update to the delegation state, which includes
+the $\var{rewards}$ record. The update to the UTxO on the ledger for reaping
+rewards in outlined in Section~\ref{sec:utxo-ufd}.
 We give the transition type for processing this reward request in
 Figure~\ref{fig:delegation-rewards-type}. It is a $\DWState$ transition with a
 $\var{wdrls}$ list as a signal.
