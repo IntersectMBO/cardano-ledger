@@ -727,6 +727,11 @@ as a DELEG transition signaled by certificate $c$, the transition
 composed of these two transitions in sequence, signaled by the list $c; \Gamma$
 is also valid.
 
+This definition guarantees a transaction cannot be processed unless every
+certificate in it is valid. For example, if a transaction is carrying a
+certificate that schedules a pool retirement in a past epoch, the
+whole transaction will be scrapped.
+
 
 \begin{figure}
 \begin{equation*}

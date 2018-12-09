@@ -55,15 +55,6 @@ and depends on this epoch's blocks, protocol constants and rewards made availabl
 for claiming this epoch. Based on these values, the $\fun{reward}$ function
 updates the existing records of the unclaimed coin values in each reward address.
 
-\begin{todo}
-  The delegation design document defines the $\fun{reward}$ function, but the calculation
-  depends on the leader election for the epoch being determined and known at the begining
-  of the epoch. We are currently rearching version of Ouroboros where this assumption
-  does not hold. Therefore we have marked $\fun{reward}$ as ``to be determined".
-
-  Additionally, we should aim to do calculations such as these as incrementally as possible.
-\end{todo}
-
 The function $\fun{poolRefunds}$ is used to calculate the total refunds
 that must be distributed
 for stake pools scheduled to retire at an epoch boundary. Note that this
@@ -434,10 +425,10 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   \label{fig:ts-types:new-proto-consts}
 \end{figure}
 
-The inference rule for changing protocol constants either:
+The inference rule for changing protocol constants does one of the following:
 
 \begin{itemize}
-\item if there are more total possible refunds
+\item if there are more (or the same amount of) total possible refunds
 available calculated based on the old protocol constants than the new ones,
 moves the difference between the two values into the $\var{reserves}$
 from the $\var{deposits}$ variable, \textit{or}
@@ -448,6 +439,16 @@ to $\var{reserves}$, \textit{provided that} there is enough coin in the
 $\var{reserves}$ to cover the entire value of the transfer
 \end{itemize}
 
+This update of protocol constants ensures that any time a deposit refund is
+requested, the necessary amount of funds is available in the $\var{deposits}$
+pool.
+
+Note that here, unlike most of the inference rules in this document,
+the $\var{utsoSt'}$ and the $\var{accnt'}$ do not come from valid UTxO or
+accounts transitions in the antecedent. We simply define the consequent
+transition using these directly (instead of listing all the fields in both
+states in the consequent transition). It is done this way here
+for ease of reading.
 
 %%
 %% Figure - New Proto Consts Rule
@@ -557,26 +558,15 @@ pool state.
   \label{fig:ts-types:epoch}
 \end{figure}
 
-The epoch transition rule is a compilation of all the state transition rules
+The epoch transition rule is a composition of all the state transition rules
 we have defined above. That is, whenever the UTXOEP, ACCNT, POOLCLEAN, and
 NEWPC are all valid transitions between their respective pairs of sets of
-state variables, the total transition between the pair of sets of state variables
-which include all the variables in these four transitions is a valid transition
-forthe complete ledger state at the epoch boundary.
+state variables, the total transition epoch boundary ledger state transition
+is a composition of these four rules in that order.
 
-Recall that the epoch boundary is \textit{a point in time}. When the clock signals
-a change of slot $x$ to slot $x+1$, also resulting in an epoch change,
-this transition occurs. The calculations in this transition are done
-\textit{after} this change, so that all the processing in the previous slot
-number is complete, and no new transactions will begin to be processed that
-arrived after the epoch change until the boundary update is complete.
-A stable ledger state is required for this transition to have the correct
-outcome.
-
-Note that the slot numbers used as \textit{current slot numbers}
-for the epoch boundary calculations where they are required are set to
-be the \textit{last slot of the epoch before the boundary}, i.e. $x$ in the
-example above.
+Note that the slot number used as \textit{current slot number}
+for the epoch boundary calculations where a slot number is required is set to
+be the \textit{last slot of the epoch before the boundary}.
 
 %%
 %% Figure - Epoch Rule
@@ -633,8 +623,6 @@ example above.
       \left(
         {
           \begin{array}{r}
-            \var{utxoSt'} \\
-            \var{dstate'} \\
             \var{pstate} \\
           \end{array}
         }
@@ -643,8 +631,6 @@ example above.
       \left(
       {
         \begin{array}{rcl}
-            \var{utxoSt''} \\
-            \var{dstate''} \\
             \var{pstate'} \\
         \end{array}
       }
@@ -655,7 +641,7 @@ example above.
           \var{slot}\\
           \var{pcOld}\\
           \var{pcNew}\\
-          \var{dstate''}\\
+          \var{dstate'}\\
           \var{pstate'}\\
         \end{array}
       }
@@ -663,7 +649,7 @@ example above.
       \left(
         {
           \begin{array}{r}
-            \var{utxoSt''} \\
+            \var{utxoSt'} \\
             \var{accnt'} \\
           \end{array}
         }
@@ -672,7 +658,7 @@ example above.
       \left(
       {
         \begin{array}{rcl}
-            \var{utxoSt'''} \\
+            \var{utxoSt''} \\
             \var{accnt''} \\
         \end{array}
       }
@@ -697,9 +683,9 @@ example above.
       \trans{epoch}{}
       \left(
       \begin{array}{rcl}
-        \var{utxoSt'''} \\
+        \var{utxoSt''} \\
         \var{accnt''} \\
-        \var{dstate''} \\
+        \var{dstate'} \\
         \var{pstate'}
       \end{array}
       \right)
