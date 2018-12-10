@@ -99,8 +99,8 @@
 \newcommand{\certRefund}[6]{\fun{certRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
 \newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\created}[4]{\fun{created}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
-\newcommand{\destroyed}[2]{\fun{destroyed}~ \var{#1}~ \var{#2}}
+\newcommand{\destroyed}[4]{\fun{destroyed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\created}[2]{\fun{created}~ \var{#1}~ \var{#2}}
 \newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}
 
 \newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
@@ -824,7 +824,7 @@ the output $ix \mapsto (a,c)$, to give a $txin = (txid, ix)$ and the
 $txout=(a,c)$.
 
 The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
-a given UTxO. The calculation $\fun{created}$ gives the value created
+a given UTxO. The calculation $\fun{destroyed}$ gives the value created
 by the transaction $\var{tx}$ in the context of the relevant protocol
 constants, the current UTxO on the ledger, and the resource allocation for
 $\DState$, i.e. $\var{stkeys}$. This calculation is a sum of all coin in the inputs of
@@ -838,12 +838,13 @@ amount which is exactly equal to the value in the reward account (we
 give details about this below), this update explicitly sets the values
 associated to the requested addresses to zero.
 
-The $\fun{created}$ calculation sums up all of the unspent outputs that
+The $\fun{destroyed}$ calculation sums up all of the unspent outputs that
 have been removed from the ledger. This includes the outputs spent directly
 (made available to the owner of another address), and also, implicitly,
 the outputs which are spent on transaction fees. In order to balance
 the preservation of value equation, we must also add the following values
-to this (the LHS, i.e. $\fun{created}$) side of the equation as they are accounted for implicitly (as
+to this (the LHS, i.e. $\fun{destroyed}$) side of the equation as they are
+accounted for implicitly (as
 part of appending to the UTxO the entries of $\fun{txouts}~{tx}$), on the
 other side (RHS):
 
@@ -858,7 +859,7 @@ The total rewards value above is calculated by subtracting the sum total value i
 updated (after payout) rewards addresses from sum total of the current (pre-rewards
 payout state) of the $\var{rewards}$ map.
 
-The $\fun{destroyed}$ calculation, on the other hand, sums up the total
+The $\fun{created}$ calculation, on the other hand, sums up the total
 value of all unspent outputs added to the UTxO on the ledger. As stated
 above, this value implicitly includes all the unspent outputs generated
 by this transaction for the withdrawing the refunds and the rewards
@@ -871,21 +872,6 @@ two more values are added to this side of the equation:
 \item all registration
 deposits it pays (also in unspent outputs)
 \end{itemize}
-
-\begin{todo}
-  Created and destroyed calculations i think are mostly right, the names
-  can change, though, if necessary
-\end{todo}
-
-\begin{todo}
-  How do we make sure the $wdrls$ of a transaction are the same as the
-  withdrawals included in the outputs??
-\end{todo}
-
-\begin{todo}
-Also, how do we know the fee and deposits are individually correct, and not just
-balancing the equation?
-\end{todo}
 
 
 \begin{figure}
@@ -912,17 +898,16 @@ balancing the equation?
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
          \var{rewards} \unionoverrideZero \var{wdrls} \\
     \nextdef
-    & \fun{created} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
-    & \text{value created} \\
-    & \created{pc}{utxo}{stkeys}{rewards}~{tx} = \\
-    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
-        ((\sum_{(a \mapsto c) \in rewards} c) - (\sum_{(a \mapsto c) \in rr} c))  \\
-        & + \keyRefunds{pc}{stkeys}{tx} \\
-    &\where~rr = \fun{reapRewards}~\var{rewards}~(\fun{txwdrls}~\var{tx})\\
-    \nextdef
-    & \fun{destroyed} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
+    & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value destroyed} \\
-    & \fun{destroyed} ~ pc ~ stpools ~ tx = \\
+    & \destroyed{pc}{utxo}{stkeys}{rewards}~{tx} = \\
+    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
+        \sum_{(a \mapsto c) \in \fun{txwdrls}~{tx}} c  \\
+        & + \keyRefunds{pc}{stkeys}{tx} \\
+    \nextdef
+    & \fun{created} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
+    & \text{value created} \\
+    & \fun{created} ~ pc ~ stpools ~ tx = \\
     &~~\balance{(\txouts{tx})}
      + \txfee{tx} + \deposits{pc}{stpools}~{tx}\\
   \end{align*}
@@ -1012,7 +997,7 @@ a transaction.
 The transaction is required to have at least one input to avoid a situation
 where the witnessing replay protection may fail. Specifically, when a transaction is
 spending only refunds from deregistration or retirement certificates it is
-carrying.
+carrying (or withdrawn rewards).
 
 Here we again emphasize the importance of the \textit{preservation of value}
 condition. No valid UTxO state can be reached without this condition
@@ -1020,7 +1005,8 @@ being satisfied at every step of the transitions leading to a given UTxO state.
 Since the total amout of Ada at genesis is known, this property can be
 checked for arbitrarily generated valid ledgers.
 
-According to this rule, when a UTxO state update is triggered by a
+According to this complete ledger state transition rule, when a UTxO state update
+is triggered by a
 transaction (signal) $\var{tx}$, and the above conditions are met, the UTxO
 changes as follows:
 
@@ -1050,6 +1036,16 @@ pairing the address to which the refund is going and the refund amount.
 So, this output $(ix \mapsto (addr,coin))$ gets added to $outputs$ of $tx$,
 and it follows that $\fun{txouts}~{tx}$ is a UTxO that contains the entry
 $(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
+
+The approach of including refunds and rewards directly in the $outputs$ gives
+great flexibility to the management of the coin value obtained from these
+accounts, i.e. it can be directed to any address. However, means there is no
+direct link between the $wdrls$ requests (similarly, the key deregistration
+certificate addresses and refund amounts) and the $outputs$. We verify the
+correctness of the included outputs through the preservation of value condition
+and the witnesses authorizing them. The combination of the
+preservation of value and witnessing, described in Section~\ref{sec:witnesses},
+assures that the ledger state is updated correctly.
 
 The main difference, however, in how rewards and refunds work is that refunds
 come from a $\var{deposits}$ pool, which is a single coin value indicating
@@ -1099,7 +1095,7 @@ variable
       & \minfee{pc}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
-      \created{pc}{utxo}{stkeys}{rewards}~{tx} = \destroyed{pc}{stpools}~{tx}
+      \destroyed{pc}{utxo}{stkeys}{rewards}~{tx} = \created{pc}{stpools}~{tx}
       \\
       ~
       \\
@@ -1390,8 +1386,13 @@ Figure~\ref{fig:rules:utxow}):
  of the address corresponding to the output of $\var{i}$ in the current UTxO
  is the same as the hash of the verification key of the witness.
 
+ \item For each output $ix \mapsto (a,c)$ (including any withdrawal and refund
+ outputs included) there exists a (unique) verifiable witness such that the hash of
+ the spending key of the
+ output address is the same as the hash of the verification key of the witness.
+
  \item For every withdrawal request address of $\var{tx}$,
- there exists a (unique) verifiable witness such the hash of the spending key of the
+ there exists a (unique) verifiable witness such that the hash of the spending key of the
  withdrawal address is the same as the hash of the verification key of the witness.
 \end{itemize}
 
@@ -1404,20 +1405,22 @@ the re-application of old certificates. The way this is
 achieved by the above precondition is by requiring a valid signature on
 the coin transfers made by the transaction (the body of the transaction).
 
-Here, we also enforce the condition that only one witness per input and one
+Furthermore, expressing
+accounting as a preservation of total value of Ada allows the withdrawals
+and refunds to be sent to any address the transaction indicates
+(such as a different wallet operated by the same or another owner).
+Because of witnessing of the outputs, we know that all the value withdrawn from ledger
+pools ($\var{rewards}$ and $\var{deposits}$) is going to the address intended
+(i.e signed) by the deregistration certificate author
+(or the key holder for the addresses from which the withdrawal is made,
+respectively).
+
+Here, we also enforce the condition that only one witness per each input and each
+output, as well as one
 witness per withdrawal address is allowed. We do so to prevent transactions
-being unnecessarily large and full of redundant witnessing.
-
-Note that an unauthorized (non-witnessed) reward request would still result in
-rewards being given out to the correct address, but here we add the
-witnessing feature to make sure only whoever is in
-control of the reward address is able to make reward withdrawal requests.
-
-We enforce the condition here that the list of inputs of a transaction can never be empty.
-So, since all the inputs of an applied transaction have already been included
-in the current UTxO, it may not be replayed with the same inputs. Thus,
-it must also have a different signature. This would prevent it from
-being applied to the UTxO.
+being unnecessarily large and full of redundant witnessing. We do not
+discuss certificate witnessing here as this is ensured by the DELEGW rule
+in Section~\ref{sec:delegation}.
 
 \begin{figure}
   \emph{UTxO with witness transitions}
@@ -1448,9 +1451,14 @@ being applied to the UTxO.
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
       ~ \\
+      & \forall (ix \mapsto (a, c)) \in outputs \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \cdot \\
+      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, (a,c))}}_{\sigma}
+      \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
+      ~ \\
       & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, a)}}_{\sigma}
+      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, (a,c))}}_{\sigma}
       \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
     }
     {
