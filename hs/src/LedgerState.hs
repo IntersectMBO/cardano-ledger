@@ -51,7 +51,7 @@ import           UTxO
 import           PrtlConsts              (PrtlConsts(..))
 
 import           Delegation.Certificates (DCert (..), refund)
-import           Delegation.StakePool    (Delegation (..), StakePool (..))
+import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
 
 import Control.State.Transition
 
@@ -426,7 +426,7 @@ applyDCert slot (RegPool sp) ls@(LedgerState _ ds _) = ls
     { _stPools = Map.insert hsk slot' pools
     , _pParams = Map.insert hsk sp pparams
     , _retiring = Map.delete hsk (_retiring ds)}}
-  where hsk = hashKey $ _poolPubKey sp
+  where hsk = hashKey $ sp ^. poolPubKey
         pools = _stPools ds
         pparams = _pParams ds
         slot' = fromMaybe slot (Map.lookup hsk pools)

@@ -44,7 +44,7 @@ import qualified Data.Map                as Map
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
---import           Lens.Micro              (over, (^.))
+
 import Lens.Micro ((^.), (&), (.~), (+~), (-~))
 import Lens.Micro.TH (makeLenses)
 
@@ -54,7 +54,7 @@ import           PrtlConsts (PrtlConsts(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (DCert (..), dvalue)
-import           Delegation.StakePool (StakePool (..))
+import           Delegation.StakePool (StakePool (..), poolPubKey)
 
 -- |A hash
 type Hash = Digest SHA256
@@ -147,7 +147,7 @@ depositAmount :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
 depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ _poolPubKey pool) stpools
+    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
     cs = filter notRegisteredPool (tx ^. certs)
 
