@@ -22,6 +22,8 @@ import qualified Data.Map        as Map
 import qualified Data.Set        as Set
 import Data.Ratio
 
+import           Lens.Micro              ((^.), (&), (.~))
+
 import           Numeric.Natural
 
 import           Hedgehog
@@ -36,7 +38,8 @@ import           LedgerState     (LedgerState (..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
                                   genesisState, DelegationState(..),
-                                  KeyPairs
+                                  KeyPairs, utxoState, utxo,
+                                  stKeys
                                  )
 import           Slot
 import           UTxO
@@ -152,9 +155,9 @@ genTxWits keyList (UTxO m) cslot = do
 genLedgerStateTx :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList sourceState = do
-  let utxo = _utxo $ _utxoState sourceState
+  let utxo' = sourceState ^. utxoState . utxo
   slot <- genNatural 0 1000
-  (txfee, tx) <- genTxWits keyList utxo (Slot slot)
+  (txfee, tx) <- genTxWits keyList utxo' (Slot slot)
   pure (txfee, tx, asStateTransition (Slot slot) sourceState tx)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
@@ -209,7 +212,7 @@ repeatCollectTx'
     -> [ValidationError]
     -> Gen (Coin, [TxWits], LedgerValidation)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
- | n == 0 || (utxoSize $ (_utxo . _utxoState) ls) == 0 =
+ | n == 0 || (utxoSize $ ls ^. utxoState . utxo) == 0 =
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
  | otherwise = do
     (txfee, tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
@@ -262,9 +265,9 @@ genStateTx = do
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, TxWits, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
-  let utxo = (_utxo . _utxoState) sourceState
+  let utxo' = sourceState ^. utxoState . utxo
   slot <- genNatural 0 1000
-  (txfee, tx) <- genTxWits keyList utxo (Slot slot)
+  (txfee, tx) <- genTxWits keyList utxo' (Slot slot)
   tx'       <- mutateTxWits tx
   pure (txfee
        , tx'
@@ -300,7 +303,7 @@ genStakePool keys = do
 
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
 genDelegation keys dstate = do
-  poolKey      <- Gen.element (Map.keys $ _stKeys dstate)
+  poolKey      <- Gen.element (Map.keys $ dstate ^. stKeys)
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
 
