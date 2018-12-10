@@ -8,6 +8,8 @@ import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
 
+import           Lens.Micro              ((^.), (&), (.~))
+
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -15,12 +17,13 @@ import           Coin
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 import           Keys
-import           LedgerState             (DelegationState (..),
+import           LedgerState             (DelegationState(..),
                                           LedgerState (..),
                                           ValidationError (..),
                                           UTxOState(..),
                                           asStateTransition, emptyDelegation,
-                                          genesisId, genesisState, mkRwdAcnt)
+                                          genesisId, genesisState, mkRwdAcnt,
+                                          accounts, stKeys)
 import           PrtlConsts
 import           Slot
 import           UTxO
@@ -141,8 +144,8 @@ tx1 = aliceGivesBobLovelace
 utxo1 :: Map.Map TxIn TxOut
 utxo1 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ _body tx1) 0, TxOut aliceAddr (Coin 6400))
-       , (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ tx1 ^. body) 0, TxOut aliceAddr (Coin 6400))
+       , (TxIn (txid $ tx1 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -160,12 +163,12 @@ tx2 = aliceGivesBobLovelace
 utxo2 :: Map.Map TxIn TxOut
 utxo2 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ _body tx2) 0, TxOut aliceAddr (Coin 5400))
-       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ tx2 ^. body) 0, TxOut aliceAddr (Coin 5400))
+       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
 
 tx3Body :: Tx
 tx3Body = Tx
-          (Set.fromList [TxIn (txid $ _body tx2) 0])
+          (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
           [ TxOut aliceAddr (Coin 3950) ]
           [ RegPool stakePool
           , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))]
@@ -179,20 +182,18 @@ utxo3 :: Map.Map TxIn TxOut
 utxo3 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
-       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
-  {
-    _accounts =
+  & accounts .~
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
-  , _stKeys =
+  & stKeys .~
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
                    , (hashKey $ vKey stakePoolKey1, Slot 0)]
-  }
 
 stakePool :: StakePool
 stakePool = StakePool
@@ -216,7 +217,7 @@ stakePoolUpdate = StakePool
 
 tx4Body :: Tx
 tx4Body = Tx
-          (Set.fromList [TxIn (txid $ _body tx3) 0])
+          (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
           [ RegPool stakePoolUpdate ]
           (Coin 1000)
@@ -229,17 +230,17 @@ utxo4 :: Map.Map TxIn TxOut
 utxo4 = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
 
 utxo5 :: Epoch -> Map.Map TxIn TxOut
 utxo5 e = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ]
+       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
 
 tx5Body :: Epoch -> Tx
 tx5Body e = Tx
-          (Set.fromList [TxIn (txid $ _body tx3) 0])
+          (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ]
           [ RetirePool (vKey stakePoolKey1) e ]
           (Coin 1000)
