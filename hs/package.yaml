@@ -30,6 +30,8 @@ library:
   - tasty-hedgehog-coverage
   - text
   - small-steps
+  - microlens
+  - microlens-th
 
 tests:
   delegation-test:
@@ -55,3 +57,4 @@ tests:
     - containers
     - multiset
     - text
+    - microlens

@@ -9,9 +9,12 @@ module Delegation.Certificates
 import           Coin (Coin(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..))
-import           PrtlConsts (PrtlConsts(..))
+import           PrtlConsts (PrtlConsts(..), decayRate, minRefund,
+                                       keyDeposit, poolDeposit)
 
 import           Delegation.StakePool
+
+import Lens.Micro ((^.))
 
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.
@@ -32,14 +35,14 @@ authDCert key cert = getRequiredSigningKey cert == key
   where
     getRequiredSigningKey (RegKey k)            = k
     getRequiredSigningKey (DeRegKey k)          = k
-    getRequiredSigningKey (RegPool pool)        = _poolPubKey pool
+    getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
     getRequiredSigningKey (RetirePool k _)      = k
-    getRequiredSigningKey (Delegate delegation) = _delegator delegation
+    getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert -> PrtlConsts -> Coin
-dvalue (RegKey _) = _keyDeposit
-dvalue (RegPool _) = _poolDeposit
+dvalue (RegKey _)  = flip (^.) keyDeposit
+dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
@@ -47,6 +50,6 @@ refund :: DCert -> PrtlConsts -> Duration -> Coin
 refund cert pc dur = floor refund'
   where
     dep = fromIntegral $ dvalue cert pc
-    dmin = fromRational $ _minRefund pc
-    pow = - fromRational (_decayRate pc * fromIntegral dur)
+    dmin = fromRational $ pc ^. minRefund
+    pow = - fromRational (pc ^. decayRate * fromIntegral dur)
     refund' = dep * (dmin + (1-dmin) * exp pow) :: Double

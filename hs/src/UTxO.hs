@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 {-|
 Module      : UTxO
@@ -24,7 +25,7 @@ module UTxO
   , txins
   , txouts
   , balance
-  , deposits
+  , depositAmount
   , (<|)
   , (</|)
   , dom
@@ -33,6 +34,16 @@ module UTxO
   , makeWitness
   , Wit(..)
   , TxWits(..)
+  -- lenses
+    -- Tx
+  , inputs
+  , outputs
+  , certs
+  , txfee
+  , ttl
+    -- TxWits
+  , body
+  , witnessSet
   ) where
 
 import           Crypto.Hash             (Digest, SHA256, hash)
@@ -44,13 +55,16 @@ import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
+import           Lens.Micro ((^.))
+import           Lens.Micro.TH (makeLenses)
+
 import           Coin                    (Coin (..))
 import           Keys
 import           PrtlConsts (PrtlConsts(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (DCert (..), dvalue)
-import           Delegation.StakePool (StakePool (..))
+import           Delegation.StakePool (poolPubKey)
 
 -- |A hash
 type Hash = Digest SHA256
@@ -80,18 +94,20 @@ data Tx = Tx { _inputs  :: !(Set TxIn)
              , _ttl     :: Slot
              } deriving (Show, Eq, Ord)
 
+makeLenses ''Tx
+
 -- |Compute the id of a transaction.
 txid :: Tx -> TxId
 txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
 txins :: Tx -> Set TxIn
-txins = _inputs
+txins = flip (^.) inputs
 
 -- |Compute the transaction outputs of a transaction.
 txouts :: Tx -> UTxO
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (_outputs tx) [0..]]
+  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (tx ^. outputs) [0..]]
   where
     transId = txid tx
 
@@ -105,6 +121,8 @@ data TxWits = TxWits
               { _body       :: !Tx
               , _witnessSet :: !(Set Wit)
               } deriving (Show, Eq, Ord)
+
+makeLenses ''TxWits
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
@@ -137,13 +155,13 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
-deposits pc stpools tx = foldl f (Coin 0) cs
+depositAmount :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
+depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ _poolPubKey pool) stpools
+    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
-    cs = filter notRegisteredPool (_certs tx)
+    cs = filter notRegisteredPool (tx ^. certs)
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
