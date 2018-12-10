@@ -19,9 +19,7 @@ import           Hedgehog
 import           Generator
 
 import           Coin
-import           LedgerState             ( LedgerState(..)
-                                         , LedgerValidation(..)
-                                         , UTxOState(..)
+import           LedgerState             ( LedgerValidation(..)
                                          , utxoState
                                          , utxo)
 import           UTxO

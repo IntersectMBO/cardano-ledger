@@ -14,7 +14,7 @@ import           PrtlConsts (PrtlConsts(..), decayRate, minRefund,
 
 import           Delegation.StakePool
 
-import Lens.Micro ((^.), (&), (.~), (+~), (-~))
+import Lens.Micro ((^.))
 
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.

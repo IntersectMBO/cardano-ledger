@@ -19,7 +19,6 @@ import           Data.Map        (Map)
 import           Data.Ratio
 import           Numeric.Natural
 
-import Lens.Micro ((^.), (&), (.~), (+~), (-~))
 import Lens.Micro.TH (makeLenses)
 
 import           Coin            (Coin)
