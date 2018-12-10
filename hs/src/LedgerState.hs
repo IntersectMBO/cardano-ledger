@@ -214,7 +214,7 @@ validFee (TxWits tx _) l =
 
 -- |Compute the lovelace which are consumed by the transaction
 destroyed :: Tx -> LedgerState -> Coin
-destroyed tx l = balance (txouts tx) + _txfee tx + deposits (_pcs l) stpools tx
+destroyed tx l = balance (txouts tx) + _txfee tx + depositAmount (_pcs l) stpools tx
   where stpools = _stPools $ _delegationState l
 
 -- |Compute the key deregistration refunds in a transaction

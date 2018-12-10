@@ -25,7 +25,7 @@ module UTxO
   , txins
   , txouts
   , balance
-  , deposits
+  , depositAmount
   , (<|)
   , (</|)
   , dom
@@ -143,8 +143,8 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-deposits :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
-deposits pc stpools tx = foldl f (Coin 0) cs
+depositAmount :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
+depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ _poolPubKey pool) stpools
