@@ -19,11 +19,15 @@ boundary. These are necessary updates that are not triggered by a transaction.
 It is impractical and unnecessary to perform the calculations and updates we
 describe below every slot. The main state updates that take place at the boundary
 are of an accounting nature, calculating new values for the various accounts
-on the ledger (treasury, reserves, rewards, fees). However, it is also when
+on the ledger (treasury, reserves, rewards, fees).
+
+However, it is also when
 pools scheduled for retirement at this boundary are removed from the ledger.
 In addition, if there is an update planned for any of the protocol constants,
 it may only take place at the epoch boundary, and results in a ledger state
 update, which we also give the details of in this chapter.
+Note that witnessing here is not necessary because there is no data to sign
+in the signal.
 
 We introduce a new abstract type in this chapter, $\Production$ (see
 Figure~\ref{fig:epoch-defs}), which represents the set of blocks produced by the
