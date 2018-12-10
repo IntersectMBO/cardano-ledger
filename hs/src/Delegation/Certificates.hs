@@ -13,6 +13,8 @@ import           PrtlConsts (PrtlConsts(..))
 
 import           Delegation.StakePool
 
+import Lens.Micro ((^.), (&), (.~), (+~), (-~))
+
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.
             RegKey VKey
@@ -32,9 +34,9 @@ authDCert key cert = getRequiredSigningKey cert == key
   where
     getRequiredSigningKey (RegKey k)            = k
     getRequiredSigningKey (DeRegKey k)          = k
-    getRequiredSigningKey (RegPool pool)        = _poolPubKey pool
+    getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
     getRequiredSigningKey (RetirePool k _)      = k
-    getRequiredSigningKey (Delegate delegation) = _delegator delegation
+    getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert -> PrtlConsts -> Coin
