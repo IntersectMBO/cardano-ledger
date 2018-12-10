@@ -34,6 +34,16 @@ module UTxO
   , makeWitness
   , Wit(..)
   , TxWits(..)
+  -- lenses
+    -- Tx
+  , inputs
+  , outputs
+  , certs
+  , txfee
+  , ttl
+    -- TxWits
+  , body
+  , witnessSet
   ) where
 
 import           Crypto.Hash             (Digest, SHA256, hash)
@@ -111,6 +121,8 @@ data TxWits = TxWits
               { _body       :: !Tx
               , _witnessSet :: !(Set Wit)
               } deriving (Show, Eq, Ord)
+
+makeLenses ''TxWits
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit

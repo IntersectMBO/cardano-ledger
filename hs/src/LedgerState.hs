@@ -175,8 +175,8 @@ genesisState pc outs = LedgerState
 -- | Determine if the transaction has expired
 current :: TxWits -> Slot -> Validity
 current (TxWits tx _) slot =
-    if _ttl tx < slot
-    then Invalid [Expired (_ttl tx) slot]
+    if tx ^. ttl < slot
+    then Invalid [Expired (tx ^. ttl) slot]
     else Valid
 
 -- | Determine if the input set of a transaction consumes at least one input,
@@ -210,21 +210,21 @@ validFee (TxWits tx _) l =
     else Invalid [FeeTooSmall needed given]
       where
         needed = minfee (_pcs l) tx
-        given = _txfee tx
+        given  = tx ^. txfee
 
 -- |Compute the lovelace which are consumed by the transaction
 destroyed :: Tx -> LedgerState -> Coin
-destroyed tx l = balance (txouts tx) + _txfee tx + depositAmount (_pcs l) stpools tx
+destroyed tx l = balance (txouts tx) + tx ^. txfee + depositAmount (_pcs l) stpools tx
   where stpools = _stPools $ _delegationState l
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds :: PrtlConsts -> Allocs -> Tx -> Coin
 keyRefunds pc stkeys tx =
-  sum [refund' key | (RegKey key) <- _certs tx]
+  sum [refund' key | (RegKey key) <- tx ^. certs]
   where refund' key =
           case Map.lookup (hashKey key) stkeys of
             Nothing -> Coin 0
-            Just s -> refund (RegKey key) pc (_ttl tx -* s)
+            Just s -> refund (RegKey key) pc $ (tx ^. ttl) -* s
 
 -- |Compute the lovelace which are created by the transaction
 created :: Tx -> LedgerState -> Coin
@@ -261,7 +261,7 @@ witnessed (TxWits tx wits) l =
     else Invalid [InsufficientWitnesses]
   where
     utxo = (_utxo . _utxoState) l
-    ins  = _inputs tx
+    ins  = tx ^. inputs
     hasWitness witnesses input =
       isJust $ find (isWitness tx input utxo) witnesses
     isWitness tx' input unspent (Wit key sig) =
@@ -327,7 +327,7 @@ validCertRetirePoolNotExpired ttlSlot cert  =
 
 validCertsRetirePoolNotExpired :: TxWits -> Slot -> Validity
 validCertsRetirePoolNotExpired tx slot =
-    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid $ (_certs . _body $ tx)
+    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid $ (tx ^. body ^. certs)
 
 validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
@@ -354,8 +354,8 @@ asStateTransition slot ls tx =
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot) ls' cs
       where
-        ls' = applyTxBody ls (_body tx)
-        cs = _certs . _body $ tx
+        ls' = applyTxBody ls (tx ^. body)
+        cs = tx ^. body ^. certs
 
 -- |In the case where a certificate is valid for a given ledger state,
 -- apply the certificate as a state transition function on the ledger state.
@@ -372,7 +372,7 @@ certAsStateTransition slot ls cert =
 asStateTransition'
   :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
 asStateTransition' slot (LedgerValidation valErrors ls) tx =
-    let ls' = applyTxBody ls (_body tx) in
+    let ls' = applyTxBody ls (tx ^. body) in
     case validTx tx slot ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
@@ -469,7 +469,7 @@ fromValidity Valid = Passed
 fromValidity (Invalid xs) = Failed $ UTXOFailure xs
 
 executeTransition :: LedgerState -> TxWits -> LedgerState
-executeTransition lstate txwit = applyTxBody lstate (_body txwit)
+executeTransition lstate txwit = applyTxBody lstate $ txwit ^. body
 
 applyTxWits :: Rule UTXO
 applyTxWits =
