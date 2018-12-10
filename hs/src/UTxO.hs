@@ -55,8 +55,8 @@ import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
-import Lens.Micro ((^.), (&), (.~), (+~), (-~))
-import Lens.Micro.TH (makeLenses)
+import           Lens.Micro ((^.))
+import           Lens.Micro.TH (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Keys
@@ -64,7 +64,7 @@ import           PrtlConsts (PrtlConsts(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (DCert (..), dvalue)
-import           Delegation.StakePool (StakePool (..), poolPubKey)
+import           Delegation.StakePool (poolPubKey)
 
 -- |A hash
 type Hash = Digest SHA256
