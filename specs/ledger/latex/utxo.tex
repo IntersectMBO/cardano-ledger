@@ -1,31 +1,48 @@
+\newcommand{\PPMMap}{\ensuremath{\type{Ppms}}}
+\newcommand{\Lmax}{\ensuremath{\mathbb{L}_{\var{max}}}}
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
 
 The transition rules for unspent outputs are presented in
-Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system,
-along with their types are defined in Figure~\ref{fig:defs:utxo}.
-Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
+Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system, along
+with their types are defined in Figure~\ref{fig:defs:utxo}, here we define the
+protocol parameters as an abstract type, this type is made concrete in
+Section~\ref{sec:update}, where the update mechanism is discussed. Functions on
+these types are defined in Figure~\ref{fig:derived-defs:utxo}. In particular,
+note that in function $\fun{minfee}$ we make use of the fact that the
+$\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
 
 \begin{figure*}[htb]
-  \emph{Primitive types}
+  \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
+      %
       \var{txid} & \TxId & \text{transaction id}\\
       %
-      ix & \Ix & \text{index}\\
+      ix & \Ix & \text{transaction index}\\
       %
       \var{addr} & \Addr & \text{address}\\
       %
-      c & \Lovelace & \text{currency value}\\
-      %
-      pc & \PrtclConsts & \text{protocol constants}
+      \var{pps} & \PPMMap & \text{protocol parameters}
+    \end{array}
+  \end{equation*}
+  \emph{Constants}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~=~}lr}
+      \Lmax & 45*10^{15} & \text{Lovelace supply cap}\\
     \end{array}
   \end{equation*}
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \ell & \Lovelace
+      & n  & \{ n \mid n \in  \mathbb{N}, 0 \leq n \leq \Lmax \}
+      & \text{currency value}
+      \\
       \var{txin}
       & \TxIn
       & (\var{txid}, \var{ix})
@@ -46,13 +63,6 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
     \end{array}
   \end{equation*}
   %
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{tx} & \Tx & \text{transaction}\\
-    \end{array}
-  \end{equation*}
-  %
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -63,7 +73,11 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
       %
       \fun{txfee} & \Tx \to \Lovelace & \text{transaction fee}\\
       %
-      \fun{minfee} & \PrtclConsts \to \Tx \to \Lovelace & \text{minimum fee}
+      \fun{a} & \PPMMap \to \mathbb{N} & \text{minumum fee factor}\\
+      %
+      \fun{b} & \PPMMap \to \mathbb{N} & \text{minumum fee constant}\\
+      %
+      \fun{txSize} & \Tx \to \mathbb{N} & \text{abstract size of a transaction}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
@@ -86,9 +100,14 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
                \end{array}
       \right\}
     \nextdef
-    & \fun{balance} \in \UTxO \to \Lovelace
+    & \fun{balance} \in \UTxO \to \mathbb{N}
     & \text{UTxO balance} \\
-    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c\\
+   \nextdef
+   %
+    & \fun{minfee} \in \PPMMap \to \Tx \to \mathbb{N} & \text{minimum fee}\\
+    & \fun{minfee}~\var{pps}~\var{tx} =
+      \fun{a}~\var{pps} * \fun{txSize}~\var{tx} + \fun{b}~\var{pps}
   \end{align*}
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
@@ -99,7 +118,7 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PPMMap \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
@@ -108,11 +127,12 @@ Functions on these types are defined in Figure~\ref{fig:derived-defs:utxo}.
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference
-    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pc}{tx} \leq \txfee{tx}\\
+    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pps}{tx} \leq \txfee{tx}
+      & \balance{(\txins{tx} \restrictdom \var{utxo})} \leq \Lmax \\
       \balance{(\txouts{tx})}  + \txfee{tx} =
-        \balance{(\txins{tx} \restrictdom \var{utxo})}
+      \balance{(\txins{tx} \restrictdom \var{utxo})}
     }
-    {\var{pc} \vdash \var{utxo} \trans{utxo}{tx}
+    {\var{pps} \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
     }
   \end{equation}
@@ -126,22 +146,16 @@ changes with a transaction:
 \begin{itemize}
 \item Each input spent in the transaction must be in the set of unspent
   outputs.
+\item The transaction fee must be no less than the minimum fee, which depends
+  on the transaction and the protocol parameters.
 \item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) must be equal or less than the amount of spent
-  inputs.
+  amount paid in a transaction) plus the transaction fees must be equal to the
+  amount of spent inputs, and these cannot exceed the $\Lovelace$ supply cap
+  ($45*10^{15}$).
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
 \end{itemize}
-
-\begin{note}
-  $\Lovelace$ is defined as a primitive type, but there is a difference
-  between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
-  Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
-  If, however, $\mathbb{Z}$ is used, then extra validation is required
-  to ensure that all $\TxOut$ are non-negative.
-  This extra condition would be added to \cref{eq:utxo-inductive}.
-\end{note}
 
 \subsection{Properties}
 \label{sec:utxo-properties}
@@ -151,6 +165,8 @@ changes with a transaction:
   instance we might like to formalize ``double spending'' and prove that these
   rules prevent it. Do we want it?
 \end{todo}
+
+\clearpage
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -165,7 +181,7 @@ rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
 have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
 different order). The choice here is arbitrary.
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Abstract functions}
   %
   \begin{equation*}
@@ -180,7 +196,7 @@ different order). The choice here is arbitrary.
   \label{fig:defs:utxow}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{align*}
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
@@ -198,7 +214,7 @@ different order). The choice here is arbitrary.
   \begin{equation*}
     \var{\_} \vdash
     \var{\_} \trans{utxow}{\_} \var{\_}
-    \subseteq \powerset (\PrtclConsts \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PPMMap \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}
@@ -208,13 +224,13 @@ different order). The choice here is arbitrary.
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference
-    { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
+    { \var{pps} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
       \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
-    {\var{pc} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
+    {\var{pps} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
   \end{equation}
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
