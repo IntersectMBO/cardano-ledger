@@ -1,12 +1,23 @@
+{-# LANGUAGE TemplateHaskell   #-}
+
 module PrtlConsts
     (
      PrtlConsts(..)
+    -- lenses
+    , minfeeA
+    , minfeeB
+    , keyDeposit
+    , poolDeposit
+    , minRefund
+    , decayRate
     ) where
 
 import           Data.Ratio      (Rational)
 import           Numeric.Natural (Natural)
 
 import           Coin            (Coin (..))
+
+import Lens.Micro.TH (makeLenses)
 
 data PrtlConsts =
   PrtlConsts
@@ -23,3 +34,5 @@ data PrtlConsts =
     -- |The deposit decay rate
   , _decayRate   :: Rational
   } deriving (Show, Eq)
+
+makeLenses ''PrtlConsts

@@ -48,7 +48,7 @@ import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*), slotFromEpoch)
 import           Keys
 import           UTxO
-import           PrtlConsts              (PrtlConsts(..))
+import           PrtlConsts              (PrtlConsts(..), minfeeA, minfeeB)
 
 import           Delegation.Certificates (DCert (..), refund)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
@@ -200,7 +200,7 @@ txsize = toEnum . length . show
 
 -- |Minimum fee calculation
 minfee :: PrtlConsts -> Tx -> Coin
-minfee pc tx = Coin $ _minfeeA pc * (txsize tx) + _minfeeB pc
+minfee pc tx = Coin $ pc ^. minfeeA * (txsize tx) + pc ^. minfeeB
 
 -- |Determine if the fee is large enough
 validFee :: TxWits -> LedgerState -> Validity
