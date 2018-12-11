@@ -95,6 +95,8 @@ data ValidationError =
   | InsufficientWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
   | InputSetEmpty
+  -- | Redundant witness for transaction
+  | RedundantWitnesses
   -- | A stake key cannot be registered again.
   | StakeKeyAlreadyRegistered
   -- | A stake key must be registered to be used or deregistered.
@@ -266,19 +268,31 @@ authTxin key txin (UTxO utxo') =
     Just (TxOut (AddrTxin pay _) _) -> hashKey key == pay
     _                               -> False
 
--- |Given a ledger state, determine if the UTxO witnesses in a given
+-- | Extract the set of hashed pay keys from a list of transaction outputs. This
+-- is the set of hashes of those keys that we need to validate spending of the
+-- given outputs.
+getPayKeys :: [TxOut] -> Set.Set HashKey
+getPayKeys [] = Set.empty
+getPayKeys (txout:ts) =
+    case txout of
+      TxOut (AddrTxin key _) _ -> Set.insert key (getPayKeys ts)
+
+-- | Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
--- We check that there are not more witnesses than inputs, if several inputs
--- from the same address are used, it is not strictly necessary to include more
--- than one witness.
+-- For each different address in a consumed unspent output, there must be
+-- *exactly one* signature.
 witnessed :: TxWits -> LedgerState -> Validity
 witnessed (TxWits tx wits) l =
-  if Set.size wits <= Set.size ins && all (hasWitness wits) ins
+  if Set.size wits == Set.size usedKeys && all (hasWitness wits) ins
     then Valid
-    else Invalid [InsufficientWitnesses]
+    else if not $ all (hasWitness wits) ins
+         then Invalid [InsufficientWitnesses]
+         else Invalid [RedundantWitnesses]
   where
     utxo'= l ^. utxoState . utxo
     ins  = tx ^. inputs
+    (UTxO used) = ins <| utxo'
+    usedKeys    = getPayKeys $ Map.elems used
     hasWitness witnesses input =
         isJust $ find (isWitness tx input utxo') witnesses
     isWitness tx' input unspent (Wit key sig) =

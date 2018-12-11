@@ -340,7 +340,7 @@ testEmptyInputSet =
   in ledgerState [tx] @?=
        Left [ InputSetEmpty
             , ValueNotConserved (Coin 0) (Coin 585)
-            , InsufficientWitnesses]
+            , RedundantWitnesses]
 
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
