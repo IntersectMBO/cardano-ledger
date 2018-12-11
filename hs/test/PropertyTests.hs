@@ -8,7 +8,7 @@ import           Data.MultiSet           (unions, fromSet, occur, filter, size)
 import qualified Data.Set                as Set
 import           Data.Text               (pack)
 
-import           Lens.Micro              ((^.))
+import           Lens.Micro              ((^.), (&), (%~))
 
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
@@ -20,8 +20,12 @@ import           Generator
 
 import           Coin
 import           LedgerState             ( LedgerValidation(..)
+                                         , ValidationError (..)
+                                         , asStateTransition
                                          , utxoState
                                          , utxo)
+
+import           Slot
 import           UTxO
 
 
@@ -163,6 +167,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "No Double Spend in valid ledger states"
                     propNoDoubleSpend
+                  , testPropertyCoverage
+                    "changing witness set"
+                    propCheckMinimalWitnessSet
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
@@ -202,3 +209,25 @@ propBalanceTxInTxOut' =
               else label ("validated")
         ))
   success
+
+-- | Check that we correctly report redundant witnesses. We get the list of the
+-- keys from the generator and use one to generate a new witness. If that key
+-- was used to sign the transaction, then the transaction must validate. If the
+-- witness was not already used to sign the transaction, a `RedundantWitnesses`
+-- validation error must be reported.
+propCheckMinimalWitnessSet :: Cover
+propCheckMinimalWitnessSet = withCoverage $ do
+  (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
+  let keyPair                  = fst $ head keyPairs
+  let tx                       = txwits ^. body
+  let witness                  = makeWitness keyPair tx
+  let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
+  let l''                      = asStateTransition (Slot (steps)) l txwits'
+  classify (not $ witness `Set.member` (txwits ^. witnessSet))
+               "redundant signature added"
+  case l'' of
+    Left [RedundantWitnesses]  ->
+        (witness `Set.member` (txwits ^. witnessSet)) === False
+    Right _                    ->
+        (witness `Set.member` (txwits ^. witnessSet)) === True
+    _                          -> failure

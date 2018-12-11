@@ -11,11 +11,13 @@ module Generator
     , genNonemptyGenesisState
     , genStateTx
     , genValidStateTx
+    , genValidStateTxKeys
     , genDelegationData
     , genDelegation
     , genStakePool
     , genDCertRegPool
     , genDCertDelegate
+    , genKeyPairs
     ) where
 
 import qualified Data.Map        as Map
@@ -254,6 +256,12 @@ genValidStateTx = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
   (txfee', entry, ls')     <- genValidSuccessorState keyPairs ls
   pure (ls, steps, txfee', entry, ls')
+
+genValidStateTxKeys :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState, KeyPairs)
+genValidStateTxKeys = do
+  (keyPairs, steps, _, ls) <- genValidLedgerState
+  (txfee', entry, ls')     <- genValidSuccessorState keyPairs ls
+  pure (ls, steps, txfee', entry, ls', keyPairs)
 
 genStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerValidation)
 genStateTx = do
