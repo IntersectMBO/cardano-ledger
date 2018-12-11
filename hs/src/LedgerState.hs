@@ -14,8 +14,6 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 module LedgerState
   ( LedgerState(..)
-  , RewardAcnt(..)
-  , mkRwdAcnt
   , DelegationState(..)
   , LedgerValidation(..)
   , KeyPairs
@@ -31,6 +29,7 @@ module LedgerState
   , genesisState
   -- * Validation
   , ValidationError (..)
+  , minfee
   -- lenses
   , utxoState
   , delegationState
@@ -50,9 +49,9 @@ module LedgerState
 
 import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
-import           Data.List               (find, foldl')
+import           Data.List               (foldl')
 import qualified Data.Map                as Map
-import           Data.Maybe              (isJust, mapMaybe, fromMaybe)
+import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import qualified Data.Set                as Set
 
@@ -65,7 +64,7 @@ import           Keys
 import           UTxO
 import           PrtlConsts              (PrtlConsts(..), minfeeA, minfeeB)
 
-import           Delegation.Certificates (DCert (..), refund)
+import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
 
 import Control.State.Transition
@@ -91,8 +90,10 @@ data ValidationError =
   | FeeTooSmall Coin Coin
   -- | Value is not conserved
   | ValueNotConserved Coin Coin
+  -- | Unknown reward account
+  | IncorrectRewards
   -- | The transaction does not have the required witnesses.
-  | InsufficientWitnesses
+  | IncorrectWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
   | InputSetEmpty
   -- | A stake key cannot be registered again.
@@ -117,13 +118,6 @@ instance Semigroup Validity where
 instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
-
--- |An account based address for a rewards
-newtype RewardAcnt = RewardAcnt HashKey
-  deriving (Show, Eq, Ord)
-
-mkRwdAcnt :: KeyPair -> RewardAcnt
-mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
 
 type Allocs = Map.Map HashKey Slot
 
@@ -174,7 +168,7 @@ makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] [] (Coin 0) (Slot 0))
+genesisId = TxId $ hash (Tx Set.empty [] [] Map.empty (Coin 0) (Slot 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -216,7 +210,7 @@ txsize = toEnum . length . show
 
 -- |Minimum fee calculation
 minfee :: PrtlConsts -> Tx -> Coin
-minfee pc tx = Coin $ pc ^. minfeeA * (txsize tx) + pc ^. minfeeB
+minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + pc ^. minfeeB
 
 -- |Determine if the fee is large enough
 validFee :: TxWits -> LedgerState -> Validity
@@ -245,8 +239,10 @@ keyRefunds pc stkeys tx =
 
 -- |Compute the lovelace which are created by the transaction
 created :: Tx -> LedgerState -> Coin
-created tx l = balance (txins tx <| (l ^. utxoState . utxo)) + refunds
-  where refunds = keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) tx
+created tx l = balance (txins tx <| (l ^. utxoState . utxo)) + refunds + withdrawals
+  where
+    refunds = keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) tx
+    withdrawals = sum $ tx ^. wdrls
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
@@ -259,12 +255,13 @@ preserveBalance (TxWits tx _) l =
     created' = created tx l
     destroyed' = destroyed tx l
 
--- |Determine if a transaction input is authorized by a given key.
-authTxin :: VKey -> TxIn -> UTxO -> Bool
-authTxin key txin (UTxO utxo') =
-  case Map.lookup txin utxo' of
-    Just (TxOut (AddrTxin pay _) _) -> hashKey key == pay
-    _                               -> False
+-- |Determine if the reward witdrawals correspond
+-- to the rewards in the ledger state
+correctWitdrawals :: TxWits -> LedgerState -> Validity
+correctWitdrawals (TxWits tx _) l =
+  if (tx ^. wdrls) `Map.isSubmapOf` (l ^. delegationState . accounts)
+    then Valid
+    else Invalid [IncorrectRewards]
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
@@ -273,16 +270,27 @@ authTxin key txin (UTxO utxo') =
 -- than one witness.
 witnessed :: TxWits -> LedgerState -> Validity
 witnessed (TxWits tx wits) l =
-  if Set.size wits <= Set.size ins && all (hasWitness wits) ins
+  if neededSigners == signers && verified && notRedundant
     then Valid
-    else Invalid [InsufficientWitnesses]
+    else Invalid [IncorrectWitnesses]
   where
-    utxo'= l ^. utxoState . utxo
-    ins  = tx ^. inputs
-    hasWitness witnesses input =
-        isJust $ find (isWitness tx input utxo') witnesses
-    isWitness tx' input unspent (Wit key sig) =
-      verify key tx' sig && authTxin key input unspent
+    utxo' = l ^. utxoState . utxo
+    inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
+    insertHK txin hkeys =
+      case txinLookup txin utxo' of
+        Just (TxOut (AddrTxin pay _) _) -> Set.insert pay hkeys
+        _                               -> hkeys
+    wdrlAuthors = Set.map getRwdHK (Map.keysSet (tx ^. wdrls))
+    certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
+    getCertHK cert = hashKey $ getRequiredSigningKey cert
+    neededSigners = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
+
+    signers = Set.map getHK wits
+    getHK (Wit vkey _) = hashKey vkey
+
+    verified = all (verifyWit tx) wits
+
+    notRedundant = Set.size wits == Set.size signers
 
 validRuleUTXO :: TxWits -> Slot -> LedgerState -> Validity
 validRuleUTXO tx slot l = validInputs tx l
@@ -290,10 +298,11 @@ validRuleUTXO tx slot l = validInputs tx l
                        <> validNoReplay tx
                        <> validFee tx l
                        <> preserveBalance tx l
+                       <> correctWitdrawals tx l
                        <> validCertsRetirePoolNotExpired tx slot
 
 validRuleUTXOW :: TxWits -> Slot -> LedgerState -> Validity
-validRuleUTXOW tx _ l = witnessed tx l
+validRuleUTXOW tx _ = witnessed tx
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
 validTx tx slot l = validRuleUTXO  tx slot l
@@ -344,7 +353,7 @@ validCertRetirePoolNotExpired ttlSlot cert  =
 
 validCertsRetirePoolNotExpired :: TxWits -> Slot -> Validity
 validCertsRetirePoolNotExpired tx slot =
-    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid $ (tx ^. body . certs)
+    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid (tx ^. body . certs)
 
 validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
@@ -410,7 +419,11 @@ retirePools ls@(LedgerState _ ds _) epoch =
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls & utxoState . utxo .~ newUTxOs
-  where newUTxOs = txins tx </| (ls ^. utxoState . utxo) `union` txouts tx
+                       & delegationState . accounts .~ newAccounts
+  where
+    newUTxOs = txins tx </| (ls ^. utxoState . utxo) `union` txouts tx
+    newAccounts = Map.mapWithKey removeRewards (ls ^. delegationState . accounts)
+    removeRewards k v = if k `Map.member` (tx ^. wdrls) then Coin 0 else v
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
@@ -424,14 +437,14 @@ applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _) =
     ls & delegationState .~
            (ds & stKeys      .~ Map.delete hksk (ds ^. stKeys)
                & accounts    .~ Map.delete (RewardAcnt hksk) (ds ^. accounts)
-               & delegations .~ (Map.delete hksk $ ds ^. delegations))
+               & delegations .~ Map.delete hksk (ds ^. delegations))
         where hksk = hashKey key
 
 -- TODO do we also have to check hashKey target?
 applyDCert _ (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
     ls & delegationState .~
            (ds & delegations .~
-            (Map.insert (hashKey source) (hashKey target) $ ds ^. delegations))
+            Map.insert (hashKey source) (hashKey target) (ds ^. delegations))
 
 applyDCert slot (RegPool sp) ls@(LedgerState _ ds _) =
     ls & delegationState .~

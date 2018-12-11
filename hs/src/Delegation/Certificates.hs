@@ -2,6 +2,7 @@ module Delegation.Certificates
   (
     DCert(..)
   , authDCert
+  ,getRequiredSigningKey
   , dvalue
   , refund
   ) where
@@ -29,15 +30,17 @@ data DCert = -- | A stake key registration certificate.
           | Delegate Delegation
   deriving (Show, Eq, Ord)
 
+-- |Determine the certificate author
+getRequiredSigningKey :: DCert -> VKey
+getRequiredSigningKey (RegKey k)            = k
+getRequiredSigningKey (DeRegKey k)          = k
+getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
+getRequiredSigningKey (RetirePool k _)      = k
+getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
+
 -- |Determine if a certificate is authorized by the given key.
 authDCert :: VKey -> DCert -> Bool
 authDCert key cert = getRequiredSigningKey cert == key
-  where
-    getRequiredSigningKey (RegKey k)            = k
-    getRequiredSigningKey (DeRegKey k)          = k
-    getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
-    getRequiredSigningKey (RetirePool k _)      = k
-    getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert -> PrtlConsts -> Coin
