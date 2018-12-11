@@ -1,20 +1,63 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE DeriveFunctor          #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE StandaloneDeriving     #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 -- | Small step state transition systems.
 module Control.State.Transition where
 
 import Control.Lens
-import Data.Maybe (catMaybes)
+import Control.Monad (unless)
+import Control.Monad.Free.Church
+import Control.Monad.Trans.State.Strict (modify, runState)
+import qualified Control.Monad.Trans.State.Strict as MonadState
+import Data.Foldable (find, traverse_)
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.Kind (Type)
+
+data RuleType
+  = Initial
+  | Transition
+
+-- | Singleton instances.
+--
+--   Since our case is so small we don't bother with the singletons library.
+data SRuleType a where
+  SInitial :: SRuleType Initial
+  STransition :: SRuleType Transition
+
+class RuleTypeRep t where
+  rTypeRep :: SRuleType t
+
+instance RuleTypeRep Initial where
+  rTypeRep = SInitial
+
+instance RuleTypeRep Transition where
+  rTypeRep = STransition
+
+-- | Context available to initial rules.
+newtype IRC sts = IRC (Environment sts)
+-- | Context available to transition rules.
+newtype TRC sts = TRC (Environment sts, State sts, Signal sts)
+
+type family RuleContext (t :: RuleType) = (ctx :: Type -> Type) | ctx -> t where
+  RuleContext Initial = IRC
+  RuleContext Transition = TRC
+
+type InitialRule sts = Rule sts Initial (State sts)
+type TransitionRule sts = Rule sts Transition (State sts)
 
 -- | State transition system.
 class ( Eq (PredicateFailure a)
@@ -33,128 +76,90 @@ class ( Eq (PredicateFailure a)
   data PredicateFailure a :: *
 
   -- | Rules governing transition under this system.
-  rules :: [Rule a]
-
--- | Does a rule generate an initial state?
-isInitial :: STS a => Rule a -> Bool
-isInitial (Rule _ (Base _)) = True
-isInitial _                 = False
-
-initialStates :: forall s . STS s => [State s]
-initialStates = catMaybes $ applyBase <$> rules @s
- where
-  applyBase (Rule _ (Base b)) = Just b
-  applyBase _                 = Nothing
-
--- | The union of the components of the system available for making judgments.
-type JudgmentContext sts = (Environment sts, State sts, Signal sts)
-
--- | A transition under a state transition system
-data Transition sts where
-  Transition
-    :: (   JudgmentContext sts
-        -> State sts
-       )
-    -> Transition sts
-
--- | Apply a transition
-transition :: Transition sts -> JudgmentContext sts -> State sts
-transition (Transition f) = f
+  initialRules :: [InitialRule a]
+  transitionRules :: [TransitionRule a]
 
 -- | Embed one STS within another.
 class (STS sub, STS super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.
-  wrapFailed :: [PredicateFailure sub] -> PredicateFailure super
+  wrapFailed :: PredicateFailure sub -> PredicateFailure super
 
-data PredicateResult sts
-  = Passed
-  | Failed (PredicateFailure sts)
+instance STS sts => Embed sts sts where
+  wrapFailed = id
 
-deriving instance (Eq (PredicateFailure sts)) => Eq (PredicateResult sts)
+data Clause sts (rtype :: RuleType) a where
+  GetCtx :: (RuleContext rtype sts -> a)
+         -> Clause sts rtype a
+  SubTrans :: Embed sub sts
+           => RuleContext rtype sub
+              -- Subsequent computation with state introduced
+           -> (State sub -> a)
+           -> Clause sts rtype a
+  Predicate :: Bool
+               -- Type of failure to return if the predicate fails
+            -> PredicateFailure sts
+            -> a
+            -> Clause sts rtype a
 
-gatherFailures :: [PredicateResult sts] -> [PredicateFailure sts]
-gatherFailures xs = catMaybes $ prToMaybe <$> xs
- where
-  prToMaybe Passed     = Nothing
-  prToMaybe (Failed x) = Just x
+deriving instance Functor (Clause sts rtype)
 
--- | Embed a transition under a sub-system within a super-system.
-data EmbeddedTransition sub sts where
-  EmbeddedTransition
-    :: Embed sub sts
-    => Getter (JudgmentContext sts) (JudgmentContext sub)
-    -> Rule sub
-    -> EmbeddedTransition sub sts
+type Rule sts rtype = F (Clause sts rtype)
 
--- | The antecedent to a transition rule.
-data Antecedent sts where
+-- | Oh noes!
+--
+--   This takes a condition (a boolean expression) and a failure and results in
+--   a clause which will throw that failure if the condition fails.
+(?!) :: STS sts => Bool -> PredicateFailure sts -> Rule sts ctx ()
+cond ?! orElse = wrap $ Predicate cond orElse (pure ())
 
-  -- | This rule is predicated upon a transition under a (sub-)system.
-  SubTrans
-    :: Embed sub sts
-    => EmbeddedTransition sub sts
-    -> Antecedent sts
+infix 1 ?!
 
-  Predicate
-    :: (   JudgmentContext sts
-        -> PredicateResult sts
-       )
-    -> Antecedent sts
+trans
+  :: Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
+trans ctx = wrap $ SubTrans ctx pure
 
--- | Check the antecedent
-checkAntecedent :: JudgmentContext sts -> Antecedent sts -> PredicateResult sts
-checkAntecedent jc ant = case ant of
-  SubTrans (EmbeddedTransition gjc rule) -> case applyRule (jc ^. gjc) rule of
-    Right _   -> Passed
-    Left  pfs -> Failed $ wrapFailed pfs
-  Predicate p -> p jc
-
--- | Get the result from a transition under a subsystem, regardless of whether
--- validation passed.
-subTransResult
-  :: Embed sub super
-  => JudgmentContext super
-  -> EmbeddedTransition sub super
-  -> State sub
-subTransResult jc (EmbeddedTransition jcg rule) =
-  fst $ applyRuleIndifferently (jc ^. jcg) rule
-
-
--- | The consequent to a transition rule.
-data Consequent sts where
-  -- | The consequent describes a valid base state.
-  Base :: State sts -> Consequent sts
-  -- | The consequent describes a valid transition between two states.
-  Extension :: Transition sts -> Consequent sts
-
-applyConsequent :: STS s => JudgmentContext s -> Consequent s -> State s
-applyConsequent jc con = case con of
-  Base      st'            -> st'
-  Extension (Transition f) -> f jc
-
--- | A rule within a transition system.
-data Rule sts where
-  Rule
-    :: [Antecedent sts]
-    -> Consequent sts
-    -> Rule sts
-
-applyRule
-  :: STS s
-  => JudgmentContext s
-  -> Rule s
-  -> Either [PredicateFailure s] (State s)
-applyRule jc (Rule ants con) = case checkAntecedent jc <$> ants of
-  xs | all (== Passed) xs -> Right $ applyConsequent jc con
-  xs                      -> Left $ gatherFailures xs
+-- | Get the judgment context
+judgmentContext :: Rule sts rtype (RuleContext rtype sts)
+judgmentContext = wrap $ GetCtx pure
 
 -- | Apply a rule even if its predicates fail.
 --
 --   If the rule successfully applied, the list of predicate failures will be
 --   empty.
 applyRuleIndifferently
-  :: STS s => JudgmentContext s -> Rule s -> (State s, [PredicateFailure s])
-applyRuleIndifferently jc (Rule ants con) = (res, prs)
+  :: forall s rtype
+   . (STS s, RuleTypeRep rtype)
+  => RuleContext rtype s
+  -> Rule s rtype (State s)
+  -> (State s, [PredicateFailure s])
+applyRuleIndifferently jc r = flip runState [] $ foldF runClause r
  where
-  prs = gatherFailures $ checkAntecedent jc <$> ants
-  res = applyConsequent jc con
+  runClause :: Clause s rtype a -> MonadState.State [PredicateFailure s] a
+  runClause (GetCtx next              ) = next <$> pure jc
+  runClause (Predicate cond orElse val) = do
+    unless cond $ modify (orElse :)
+    pure val
+  runClause (SubTrans subCtx next) = do
+    let (ss, sfails) = applySTSIndifferently subCtx
+    traverse_ (\a -> modify (a :)) $ wrapFailed <$> sfails
+    next <$> pure ss
+
+applySTSIndifferently
+  :: forall s rtype
+   . (STS s, RuleTypeRep rtype)
+  => RuleContext rtype s
+  -> (State s, [PredicateFailure s])
+applySTSIndifferently ctx =
+  successOrFirstFailure $ applySTSIndifferently' @s @rtype rTypeRep ctx
+ where
+  successOrFirstFailure xs = fromMaybe (head xs) $ find (not . null . snd) xs
+  applySTSIndifferently'
+    :: forall s rtype
+     . STS s
+    => SRuleType rtype
+    -> RuleContext rtype s
+    -> [(State s, [PredicateFailure s])]
+  applySTSIndifferently' SInitial env =
+    map (applyRuleIndifferently env) initialRules
+  applySTSIndifferently' STransition jc =
+    map (applyRuleIndifferently jc) transitionRules
