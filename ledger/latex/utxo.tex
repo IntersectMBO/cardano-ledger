@@ -211,7 +211,7 @@ different order). The choice here is arbitrary.
     { \var{pc} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}\\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
+      \mathcal{V}^\sigma_{\var{vk}}~{\serialised{\txbody{tx}}}
       \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
     }
     {\var{pc} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
