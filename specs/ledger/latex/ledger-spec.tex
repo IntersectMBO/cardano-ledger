@@ -25,6 +25,8 @@
 %% Setup for the semantic package
 \setpremisesspace{20pt}
 
+\usepackage{tikz-cd}
+
 %%
 %% Types
 %%
@@ -107,6 +109,8 @@
 \renewcommand{\textfraction}{0.15}
 \renewcommand{\floatpagefraction}{0.7}
 
+\newtheorem{definition}{Definition}
+
 \begin{document}
 
 \input{frontmatter.tex}
@@ -119,8 +123,6 @@
 \include{notation}
 
 \include{crypto-primitives}
-
-\include{serialisation}
 
 \include{utxo}
 
