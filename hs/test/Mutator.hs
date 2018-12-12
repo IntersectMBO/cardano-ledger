@@ -72,6 +72,7 @@ mutateTx tx = do
   pure $ Tx (Set.fromList inputs')
             outputs'
             (_certs tx)
+            (_wdrls tx)
             (_txfee tx)
             (_ttl tx)
 

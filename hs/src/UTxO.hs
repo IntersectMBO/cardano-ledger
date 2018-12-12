@@ -15,6 +15,8 @@ module UTxO
   -- * Primitives
     TxId(..)
   , Addr(..)
+  , RewardAcnt(..)
+  , mkRwdAcnt
   -- * Derived Types
   , TxIn(..)
   , TxOut(..)
@@ -23,15 +25,16 @@ module UTxO
   -- * Functions
   , txid
   , txins
+  , txinLookup
   , txouts
   , balance
   , depositAmount
   , (<|)
   , (</|)
   , dom
-  -- , verify
   , union
   , makeWitness
+  , makeWitnesses
   , Wit(..)
   , TxWits(..)
   -- lenses
@@ -39,11 +42,13 @@ module UTxO
   , inputs
   , outputs
   , certs
+  , wdrls
   , txfee
   , ttl
     -- TxWits
   , body
   , witnessSet
+  , verifyWit
   ) where
 
 import           Crypto.Hash             (Digest, SHA256, hash)
@@ -77,6 +82,13 @@ newtype TxId = TxId { _TxId :: Hash }
 data Addr = AddrTxin HashKey HashKey
           deriving (Show, Eq, Ord)
 
+-- |An account based address for a rewards
+newtype RewardAcnt = RewardAcnt { getRwdHK :: HashKey }
+  deriving (Show, Eq, Ord)
+
+mkRwdAcnt :: KeyPair -> RewardAcnt
+mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
+
 -- |The input of a UTxO.
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
 
@@ -90,6 +102,7 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 data Tx = Tx { _inputs  :: !(Set TxIn)
              , _outputs :: [TxOut]
              , _certs   :: ![DCert]
+             , _wdrls   :: Map RewardAcnt Coin
              , _txfee   :: Coin
              , _ttl     :: Slot
              } deriving (Show, Eq, Ord)
@@ -111,8 +124,16 @@ txouts tx = UTxO $
   where
     transId = txid tx
 
+-- |Lookup a txin for a given UTxO collection
+txinLookup :: TxIn -> UTxO -> Maybe TxOut
+txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
+
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
+
+-- |Verify a transaction body witness
+verifyWit :: Tx -> Wit -> Bool
+verifyWit tx (Wit vkey sig) = verify vkey tx sig
 
 -- |A fully formed transaction.
 --
@@ -125,8 +146,12 @@ data TxWits = TxWits
 makeLenses ''TxWits
 
 -- |Create a witness for transaction
-makeWitness :: KeyPair -> Tx -> Wit
-makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
+makeWitness :: Tx -> KeyPair -> Wit
+makeWitness tx keys = Wit (vKey keys) (sign (sKey keys) tx)
+
+-- |Create witnesses for transaction
+makeWitnesses :: Tx -> [KeyPair] -> Set Wit
+makeWitnesses tx = Set.fromList . fmap (makeWitness tx)
 
 -- |Domain restriction
 (<|) :: Set TxIn -> UTxO -> UTxO
