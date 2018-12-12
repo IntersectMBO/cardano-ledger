@@ -18,17 +18,11 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Control.State.Transition
-                       Control.State.Transition.Generator
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
-                     , capability
-                     , containers
-                     , data-default
-                     , hedgehog
+                     , free
                      , lens
-                     , mmorph
-                     , mtl
-                     , transformers >= 0.5
+                     , transformers
   hs-source-dirs:      src
   default-language:    Haskell2010
