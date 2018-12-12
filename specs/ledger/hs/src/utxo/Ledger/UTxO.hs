@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies          #-}
 module Ledger.UTxO where
 
@@ -114,27 +115,21 @@ instance STS UTXO where
     | IncreasedTotalBalance
     deriving (Eq, Show)
 
-  rules =
-    [ Rule [] $ Base (UTxO Map.empty)
-    , utxoInductive
-    ]
+  initialRules =
+    [ return (UTxO Map.empty) ]
+  transitionRules = [ utxoInductive ]
 
-utxoInductive :: Rule UTXO
-utxoInductive = Rule
-  [ Predicate $ \(_, utxo, tx) ->
-    if balance (txouts tx) <> txfee tx == balance (txins tx ◁ utxo)
-      then Passed
-      else Failed IncreasedTotalBalance
-  , Predicate $ \(pc, _, tx) ->
-    if pcMinFee pc tx <= txfee tx then Passed else Failed FeeTooLow
-  , Predicate $ \(_, utxo, tx) ->
-    let unspentInputs (UTxO utxo) = Map.keysSet utxo
-    in
-      if txins tx `Set.isSubsetOf` unspentInputs utxo
-        then Passed
-        else Failed BadInputs
-  ]
-  (Extension . Transition $ \(pc, utxo, tx) -> (txins tx ⋪ utxo) ∪ txouts tx)
+utxoInductive :: TransitionRule UTXO
+utxoInductive = do
+  TRC (pc, utxo, tx) <- judgmentContext
+  balance (txouts tx)
+    <> txfee tx
+    == balance (txins tx ◁ utxo)
+    ?! IncreasedTotalBalance
+  pcMinFee pc tx <= txfee tx ?! FeeTooLow
+  let unspentInputs (UTxO utxo) = Map.keysSet utxo
+  txins tx `Set.isSubsetOf` unspentInputs utxo ?! BadInputs
+  return $ (txins tx ⋪ utxo) ∪ txouts tx
 
 ---------------------------------------------------------------------------------
 -- UTxO transitions
@@ -163,22 +158,18 @@ instance STS UTXOW where
   type Signal UTXOW = TxWits
   type Environment UTXOW = ProtocolConstants
   data PredicateFailure UTXOW
-    = UtxoFailure [PredicateFailure UTXO]
+    = UtxoFailure (PredicateFailure UTXO)
     | InsufficientWitnesses
     deriving (Eq, Show)
 
-  rules =
-    [ Rule [] $ Base (UTxO Map.empty)
-    , Rule
-      [ SubTrans st1
-      , Predicate $ \(pc, utxo, tw) -> witnessed tw utxo
-      ]
-      ( Extension . Transition $
-        \jc -> subTransResult jc st1
-      )
+  initialRules = [ return $ UTxO Map.empty ]
+  transitionRules =
+    [ do
+        TRC (pc, utxo, tw) <- judgmentContext
+        witnessed tw utxo ?! InsufficientWitnesses
+        res <- trans @UTXO $ TRC (pc, utxo, body tw)
+        return res
     ]
-    where
-      st1 = EmbeddedTransition (to $ \(env, st, sig) -> (env, st, body sig)) utxoInductive
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure
@@ -192,11 +183,9 @@ authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
 -- TODO - should we only check for one witness for each unique input address?
-witnessed :: TxWits -> UTxO -> PredicateResult UTXOW
+witnessed :: TxWits -> UTxO -> Bool
 witnessed (TxWits tx wits) utxo =
-  if Set.size wits == Set.size ins && all (hasWitness wits) ins
-    then Passed
-    else Failed InsufficientWitnesses
+  Set.size wits == Set.size ins && all (hasWitness wits) ins
  where
   ins = inputs tx
   hasWitness witnesses input =
