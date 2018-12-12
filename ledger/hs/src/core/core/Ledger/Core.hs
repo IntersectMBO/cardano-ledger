@@ -6,6 +6,7 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+import GHC.Natural (minusNaturalMaybe)
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -64,6 +65,14 @@ newtype SlotCount = SlotCount Natural
 -- | Add a slot count to a slot.
 addSlot :: Slot -> SlotCount -> Slot
 addSlot (Slot n) (SlotCount m) = Slot $ m + n
+
+-- | Subtract a slot count from a slot.
+--
+--   This is bounded below by 0.
+minusSlot :: Slot -> SlotCount -> Slot
+minusSlot (Slot n) (SlotCount m) = case minusNaturalMaybe m n of
+  Nothing -> Slot 0
+  Just k  -> Slot k
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
