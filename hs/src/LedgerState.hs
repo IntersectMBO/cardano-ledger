@@ -53,6 +53,7 @@ import           Data.List               (foldl')
 import qualified Data.Map                as Map
 import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
+import           Data.Set                (Set)
 import qualified Data.Set                as Set
 
 import           Lens.Micro              ((^.), (&), (.~))
@@ -92,8 +93,12 @@ data ValidationError =
   | ValueNotConserved Coin Coin
   -- | Unknown reward account
   | IncorrectRewards
+  -- | One of the transaction witnesses is invalid.
+  | InvalidWitness
   -- | The transaction does not have the required witnesses.
-  | IncorrectWitnesses
+  | MissingWitnesses
+  -- | The transaction includes a redundant witness.
+  | UnneededWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
   | InputSetEmpty
   -- | A stake key cannot be registered again.
@@ -263,34 +268,52 @@ correctWitdrawals (TxWits tx _) l =
     then Valid
     else Invalid [IncorrectRewards]
 
--- |Given a ledger state, determine if the UTxO witnesses in a given
--- transaction are sufficient.
--- We check that there are not more witnesses than inputs, if several inputs
--- from the same address are used, it is not strictly necessary to include more
--- than one witness.
-witnessed :: TxWits -> LedgerState -> Validity
-witnessed (TxWits tx wits) l =
-  if neededSigners == signers && verified && notRedundant
-    then Valid
-    else Invalid [IncorrectWitnesses]
+-- |Collect the set of hashes of keys that needs to sign a
+-- given transaction. This set consists of the txin owners,
+-- certificate authors, and withdrawal reward accounts.
+requiredSigners :: Tx -> UTxO -> Set HashKey
+requiredSigners tx utxo' = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
   where
-    utxo' = l ^. utxoState . utxo
     inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
         Just (TxOut (AddrTxin pay _) _) -> Set.insert pay hkeys
         _                               -> hkeys
+
     wdrlAuthors = Set.map getRwdHK (Map.keysSet (tx ^. wdrls))
+
     certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
-    neededSigners = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
 
-    signers = Set.map getHK wits
-    getHK (Wit vkey _) = hashKey vkey
+-- |Given a ledger state, determine if the UTxO witnesses in a given
+-- transaction are correct.
+verifiedWits :: TxWits -> Validity
+verifiedWits (TxWits tx wits) =
+  if all (verifyWit tx) wits
+    then Valid
+    else Invalid [InvalidWitness]
 
-    verified = all (verifyWit tx) wits
+-- |Given a ledger state, determine if the UTxO witnesses in a given
+-- transaction are sufficient.
+-- We check that there are not more witnesses than inputs, if several inputs
+-- from the same address are used, it is not strictly necessary to include more
+-- than one witness.
+enoughWits :: TxWits -> LedgerState -> Validity
+enoughWits (TxWits tx wits) l =
+  if requiredSigners tx (l ^. utxoState . utxo) `Set.isSubsetOf` signers
+    then Valid
+    else Invalid [MissingWitnesses]
+  where
+    signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
-    notRedundant = Set.size wits == Set.size signers
+-- |Check that there are no redundant witnesses.
+noUnneededWits :: TxWits -> LedgerState -> Validity
+noUnneededWits (TxWits tx wits) l =
+  if signers `Set.isSubsetOf` requiredSigners tx (l ^. utxoState . utxo)
+    then Valid
+    else Invalid [UnneededWitnesses]
+  where
+    signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
 validRuleUTXO :: TxWits -> Slot -> LedgerState -> Validity
 validRuleUTXO tx slot l = validInputs tx l
@@ -302,7 +325,9 @@ validRuleUTXO tx slot l = validInputs tx l
                        <> validCertsRetirePoolNotExpired tx slot
 
 validRuleUTXOW :: TxWits -> Slot -> LedgerState -> Validity
-validRuleUTXOW tx _ = witnessed tx
+validRuleUTXOW tx _ l = verifiedWits tx
+                     <> enoughWits tx l
+                     <> noUnneededWits tx l
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
 validTx tx slot l = validRuleUTXO  tx slot l

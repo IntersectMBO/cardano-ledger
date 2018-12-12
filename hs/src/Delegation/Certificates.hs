@@ -2,7 +2,7 @@ module Delegation.Certificates
   (
     DCert(..)
   , authDCert
-  ,getRequiredSigningKey
+  , getRequiredSigningKey
   , dvalue
   , refund
   ) where
