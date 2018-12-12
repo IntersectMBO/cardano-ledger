@@ -70,15 +70,8 @@ data DState = DState
 
 makeFields ''DState
 
-data DIEnv = DIEnv
-  { _dIEnvAllowedDelegators :: Set VKeyGen
-  , _dIEnvEpoch :: Epoch
-  , _dIEnvSlot :: Slot
-  , _dIEnvLiveness :: SlotCount
-
-  }
-
-makeFields ''DIEnv
+-- | Interface environment is the same as scheduling environment.
+type DIEnv = DSEnv
 
 data DIState = DIState
   { _dIStateDelegationMap :: Map VKeyGen VKey
@@ -88,6 +81,32 @@ data DIState = DIState
   }
 
 makeFields ''DIState
+
+dIStateDSState :: Lens' DIState DSState
+dIStateDSState = lens
+  (\dis -> DSState (dis ^. scheduledDelegations) (dis ^. keyEpochDelegations))
+  (\dis dss ->
+    dis
+      &  scheduledDelegations
+      .~ dss
+      ^. scheduledDelegations
+      &  keyEpochDelegations
+      .~ dss
+      ^. keyEpochDelegations
+  )
+
+dIStateDState :: Lens' DIState DState
+dIStateDState = lens
+  (\dis -> DState (dis ^. delegationMap) (dis ^. lastDelegation))
+  (\dis dss ->
+    dis
+      &  delegationMap
+      .~ dss
+      ^. delegationMap
+      &  lastDelegation
+      .~ dss
+      ^. lastDelegation
+  )
 
 --------------------------------------------------------------------------------
 -- Transition systems
@@ -197,3 +216,68 @@ instance STS SDELEGS where
 
 instance Embed SDELEG SDELEGS where
   wrapFailed = SDelegFailure
+
+-- | Delegation rules sequencing
+data ADELEGS
+
+instance STS ADELEGS where
+  type State ADELEGS = DState
+  type Signal ADELEGS = [(Slot, (VKeyGen, VKey))]
+  type Environment ADELEGS = ()
+
+  data PredicateFailure ADELEGS
+    = ADelegFailure (PredicateFailure ADELEG)
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, st, sig) <- judgmentContext
+        case sig of
+          [] -> return st
+          (x:xs) -> do
+            ds' <- trans @ADELEGS $ TRC (env, st, xs)
+            ds'' <- trans @ADELEG $ TRC (env, ds', x)
+            return ds''
+    ]
+
+instance Embed ADELEG ADELEGS where
+  wrapFailed = ADelegFailure
+
+-- | Delegation interface
+data DELEG
+
+instance STS DELEG where
+  type State DELEG = DIState
+  type Signal DELEG = [DCert]
+  type Environment DELEG = DIEnv
+
+  data PredicateFailure DELEG
+    = SDelegSFailure (PredicateFailure SDELEGS)
+    | ADelegSFailure (PredicateFailure ADELEGS)
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, st, sig) <- judgmentContext
+        sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
+        let slots = filter ((< (env ^. slot)) . fst) $ sds ^. scheduledDelegations
+        dms <- trans @ADELEGS $ TRC ((), st ^. dIStateDState, slots)
+        return $ DIState
+          (dms ^. delegationMap)
+          (dms ^. lastDelegation)
+          (filter (aboutSlot (env ^. slot) (env ^. liveness) . fst)
+            $ sds ^. scheduledDelegations)
+          (Set.filter ((< (env ^. epoch)) . fst)
+            $ sds ^. keyEpochDelegations)
+    ]
+    where
+      aboutSlot :: Slot -> SlotCount -> (Slot -> Bool)
+      aboutSlot a b c = c >= (a `minusSlot` b) && c <= (a `addSlot` b)
+
+instance Embed SDELEGS DELEG where
+  wrapFailed = SDelegSFailure
+
+instance Embed ADELEGS DELEG where
+  wrapFailed = ADelegSFailure
