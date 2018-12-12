@@ -10,7 +10,7 @@ stdenv.mkDerivation {
                       scheme-small
 
                       # libraries
-                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor
+                      stmaryrd lm-math amsmath extarrows cleveref semantic tikz-cd xcolor
 
                       # bclogo and dependencies
                       bclogo mdframed xkeyval etoolbox needspace pgf
