@@ -1,7 +1,10 @@
 This document is a formal specification of the functionality of the ledger
 on the blockchain. The blockchain layer of the
 protocol and the interaction between the ledger and the blockchain
-layer is presented in a separate document, see~\cite{}.
+layer is presented in a separate document, see~\cite{}. The details of the
+background and the larger context
+for the design decisions formalized in this document are presented
+in~\cite{delegation_design}
 
 In this work,
 we present important properties any implementation of the ledger must have.
@@ -20,8 +23,9 @@ of the functionality of the ledger on the blockchain:
 \end{description}
 
 While the blockchain protocol is a reactive system driven by the arrival
-of blocks, the formal description is a collection of rules which is a
-static description of what a \textit{valid blockchain} is. The specifics of the
+of blocks causing updates to the ledger, the formal description is a collection
+of rules which is a
+static description of what a \textit{valid ledger} is. The specifics of the
 semantics we use to define and apply
 the rules we present in this document are explained in detail in
 \cite{small_step_semantics}. A valid ledger state can only
