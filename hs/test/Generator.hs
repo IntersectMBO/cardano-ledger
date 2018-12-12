@@ -140,9 +140,10 @@ genTxWits keyList (UTxO m) cslot = do
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            []
+           Map.empty -- TODO generate witdrawals
            txfee'
            (cslot + (Slot txttl))
-  let !txwit = makeWitness selectedKeyPair txbody
+  let !txwit = makeWitness txbody selectedKeyPair
   pure (txfee', TxWits txbody $ Set.fromList [txwit])
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
