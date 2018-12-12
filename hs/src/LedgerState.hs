@@ -468,27 +468,55 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
 data UTXO
 
 instance STS UTXO where
-    type State UTXO = LedgerState
-    type Signal UTXO = TxWits
-    type Environment UTXO = Slot
-    data PredicateFailure UTXO = UTXOFailure [ValidationError]
+    type State UTXO       = LedgerState
+    type Signal UTXO      = TxWits
+    type Environment UTXO = (PrtlConsts, Slot)
+    data PredicateFailure UTXO = BadInputsTx
+                               | ExpiredTx Slot Slot
+                               | InputSetEmptyTx
+                               | FeeTooSmallTx Coin Coin
+                               | ValueNotConservedTx Coin Coin
+                               | RetirementCertExpiredTx Slot Slot
+                               | UnexpectedFailure [ValidationError]
+                               | UnexpectedSuccess
                    deriving (Eq, Show)
 
-    rules = [applyTxWits]
+    transitionRules = [ utxoInductive ]
 
-fromValidity :: Validity -> PredicateResult UTXO
-fromValidity Valid = Passed
-fromValidity (Invalid xs) = Failed $ UTXOFailure xs
+    initialRules = [ initialLedgerState ]
 
-executeTransition :: LedgerState -> TxWits -> LedgerState
-executeTransition lstate txwit = applyTxBody lstate $ txwit ^. body
+initialLedgerState :: InitialRule UTXO
+initialLedgerState = do
+  IRC ((pc, _)) <- judgmentContext
+  pure $ LedgerState
+           (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
+           emptyDelegation
+           pc
 
-applyTxWits :: Rule UTXO
-applyTxWits =
-    Rule
-    [
-     Predicate $ \(slot, lstate, txwit) -> fromValidity $ validRuleUTXO txwit slot lstate
-    ]
-    ( Extension . Transition $ \(_, lstate, txwit) ->
-          executeTransition lstate txwit
-    )
+utxoInductive :: TransitionRule UTXO
+utxoInductive = do
+  TRC ((_, slot), l, tx) <- judgmentContext
+  validInputs tx l       == Valid ?! BadInputsTx
+  current tx slot        == Valid ?! ExpiredTx (tx ^. body . ttl) slot
+  validNoReplay tx       == Valid ?! InputSetEmptyTx
+  let validateFee         = validFee tx l
+  validateFee            == Valid ?! (unwrapFailure validateFee)
+  let validateBalance     = preserveBalance tx l
+  validateBalance        == Valid ?! unwrapFailure validateBalance
+  let validateCertsRetire = validCertsRetirePoolNotExpired tx slot
+  validateCertsRetire    == Valid ?! unwrapFailure validateCertsRetire
+  pure $ applyTxBody l $ tx ^. body
+
+unwrapFailure :: Validity -> PredicateFailure UTXO
+unwrapFailure (Invalid [e]) = unwrapFailure' e
+unwrapFailure Valid         = UnexpectedSuccess
+unwrapFailure (Invalid x)   = UnexpectedFailure x
+
+unwrapFailure' :: ValidationError -> PredicateFailure UTXO
+unwrapFailure' BadInputs                    = BadInputsTx
+unwrapFailure' (Expired s s')               = ExpiredTx s s'
+unwrapFailure' InputSetEmpty                = InputSetEmptyTx
+unwrapFailure' (FeeTooSmall c c')           = FeeTooSmallTx c c'
+unwrapFailure' (ValueNotConserved c c')     = ValueNotConservedTx c c'
+unwrapFailure' (RetirementCertExpired s s') = RetirementCertExpiredTx s s'
+unwrapFailure' x                            = UnexpectedFailure [x]
