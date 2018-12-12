@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 module Chain.Blockchain where
@@ -72,7 +73,8 @@ instance STS Interf where
     | InvalidNewCertificates
     deriving (Eq, Show)
 
-  rules = [newCertsRule]
+  initialRules = []
+  transitionRules = [newCertsRule]
 
 -- | Remove the oldest entry in the queues in the range of the map if it is
 --   more than *K* blocks away from the given block index
@@ -101,18 +103,17 @@ data BlockchainEnv = MkBlockChainEnv
   }
 
 -- | Extends a chain by a block
-extendChain :: JudgmentContext BC -> State BC
-extendChain jc =
+extendChain :: (Environment BC, State BC, Signal BC) -> State BC
+extendChain (env, st, b@(RBlock{})) =
   let
-    (env, st, b@(RBlock{})) = jc
-    p'                      = b
-    (sl, k, t )             = (bcEnvSl env, bcEnvK env, bcEnvT env)
-    (m , p, ds)             = st
-    vk_d                    = rbSigner b
-    ix                      = rbIx b
-    vk_s                    = delegates ds Map.! vk_d
-    m'                      = incIxMap ix vk_s (trimIx m k ix)
-    ds'                     = updateCerts sl (rbCerts b) ds
+    p'          = b
+    (sl, k, t ) = (bcEnvSl env, bcEnvK env, bcEnvT env)
+    (m , p, ds) = st
+    vk_d        = rbSigner b
+    ix          = rbIx b
+    vk_s        = delegates ds Map.! vk_d
+    m'          = incIxMap ix vk_s (trimIx m k ix)
+    ds'         = updateCerts sl (rbCerts b) ds
   in (m', p', ds')
 
 instance STS BC where
@@ -133,46 +134,31 @@ instance STS BC where
     | InvalidBlockSize
     | InvalidHeaderSize
     | SignedMaximumNumberBlocks
-    | LedgerFailure [PredicateFailure Interf]
+    | LedgerFailure (PredicateFailure Interf)
     deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
   -- extending the blockchain by a new block
-  rules =
-    [
-      initStateRule
-    , Rule
-        [
-          validPredecessor
-        , validBlockSize
-        , validHeaderSize
-        , hasRight
-        , validSignature
-        , lessThanLimitSigned
-        , legalCerts
-        ]
-        (Extension . Transition $ extendChain)
+  initialRules = [ return $ (Map.empty, genesisBlock, initDSIState) ]
+  transitionRules =
+    [ do
+        TRC jc <- judgmentContext
+        validPredecessor jc ?! InvalidPredecessor
+        validBlockSize jc ?! InvalidBlockSize
+        validHeaderSize jc ?! InvalidHeaderSize
+        hasRight jc ?! NoDelegationRight
+        validSignature jc ?! InvalidBlockSignature
+        lessThanLimitSigned jc
+        _ <- trans @Interf $ TRC (proj jc)
+        return $ extendChain jc
     ]
     where
-      initStateRule :: Rule BC
-      initStateRule =
-        Rule [] $ Base (Map.empty, genesisBlock, initDSIState)
       -- valid predecessor
-      validPredecessor :: Antecedent BC
-      validPredecessor = Predicate $ \jc ->
-        let
-          (_, (_, p, _), b@(RBlock {})) = jc
-         in if hashBlock p == rbHash b
-              then Passed
-              else Failed InvalidPredecessor
+      validPredecessor (_, (_, p, _), b@(RBlock {})) =
+         hashBlock p == rbHash b
       -- has a block size within protocol limits
-      validBlockSize :: Antecedent BC
-      validBlockSize = Predicate sizeCheck where
-        sizeCheck :: JudgmentContext BC -> PredicateResult BC
-        sizeCheck (env, _, b@(RBlock {})) =
-          if bSize b <= (blockSizeLimit b (bcEnvPp env))
-            then Passed
-            else Failed InvalidBlockSize
+      validBlockSize (env, _, b@(RBlock {})) =
+           bSize b <= (blockSizeLimit b (bcEnvPp env))
          where
            blockSizeLimit :: Block -> ProtParams -> Natural
            blockSizeLimit (GBlock {}) pp = maxBlockSize pp
@@ -181,51 +167,28 @@ instance STS BC where
                then 1 `shift` 21
                else maxBlockSize pp
       -- has a block header size within protocol limits
-      validHeaderSize :: Antecedent BC
-      validHeaderSize = Predicate $ \(env, _, b@(RBlock {})) ->
-        if bHeaderSize b <= maxHeaderSize (bcEnvPp env)
-          then Passed
-          else Failed InvalidHeaderSize
+      validHeaderSize (env, _, b@(RBlock {})) =
+        bHeaderSize b <= maxHeaderSize (bcEnvPp env)
       -- has a delegation right
-      hasRight :: Antecedent BC
-      hasRight = Predicate $ \jc ->
-        let
-          (_, (_, _, ds), b@(RBlock {})) = jc
-          vk_d = rbSigner b
-         in case Map.lookup vk_d (delegates ds) of
-              Nothing -> Failed NoDelegationRight
-              _       -> Passed
+      hasRight (_, (_, _, ds), b@(RBlock {})) =
+        Map.member (rbSigner b) (delegates ds)
       -- valid signature
-      validSignature :: Antecedent BC
-      validSignature = Predicate $ \jc ->
-        let
-          (_, _, b@(RBlock {})) = jc
-          vk_d = rbSigner b
-         in if verify vk_d (rbData b) (rbSig b)
-              then Passed
-              else Failed InvalidBlockSignature
+      validSignature (_, _, b@(RBlock {})) =
+         verify (rbSigner b) (rbData b) (rbSig b)
       -- the delegator has not signed more than an allowed number of blocks
       -- in a sliding window of the last k blocks
-      lessThanLimitSigned :: Antecedent BC
-      lessThanLimitSigned = Predicate $ \jc ->
+      lessThanLimitSigned (env, st, b@(RBlock {})) =
         let
-          (env, st, b@(RBlock {})) = jc
           (m, _, ds) = st
           ((MkK k), (MkT t)) = (bcEnvK env, bcEnvT env)
           vk_d = rbSigner b
           dsm = delegates ds
         in case Map.lookup vk_d dsm of
-          Nothing   -> Failed NoDelegationRight
+          Nothing   -> False ?! NoDelegationRight
           Just vk_s ->
-            if fromIntegral (sizeQueue (m Map.! vk_s)) <= (fromIntegral k) * t
-              then Passed
-              else Failed SignedMaximumNumberBlocks
-      -- checks that delegation certificates in the signal block are legal
-      -- with regard to delegation certificates in the delegation state
-      legalCerts :: Embed Interf BC => Antecedent BC
-      legalCerts = SubTrans (EmbeddedTransition (to proj) newCertsRule) where
-        proj :: JudgmentContext BC -> JudgmentContext Interf
-        proj (env, (_, _, d), b@(RBlock {})) = (bcEnvSl env, d, rbCerts b)
+            fromIntegral (sizeQueue (m Map.! vk_s)) <= (fromIntegral k) * t
+              ?! SignedMaximumNumberBlocks
+      proj (env, (_, _, d), b@(RBlock {})) = (bcEnvSl env, d, rbCerts b)
 
 instance Embed Interf BC where
   wrapFailed = LedgerFailure

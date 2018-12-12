@@ -37,7 +37,7 @@ initDSIState :: DSIState
 initDSIState = initDSIStateFromKeys initVKeys
 
 -- | Defines when new certificates can be added to the ledger's state
-newCertsRule :: Rule Interf
+newCertsRule :: TransitionRule Interf
 newCertsRule = undefined
 
 -- | Updates the delegation interface state with a set of heavyweight
