@@ -77,7 +77,7 @@ allocated, and the corresponding slot number in which this allocation
 
 The maps $\fun{hash}$, $\AddrRWD$, $\fun{author}$, $\fun{dpool}$,
 $\fun{stakepool}$,
-$\fun{retire}$, and $\fun{epoch}$ are all used to
+$\fun{retire}$, $\fun{epoch}$, and $\fun{slot}$ are all used to
 retrieve specific information about the origin type. The subtraction $\slotminus{}{}$
 of slots gives the number of slots in between (referred to here as
 $\Duration$ here by $\var{dur}$).
@@ -149,6 +149,9 @@ $\Duration$ here by $\var{dur}$).
   \\
   \fun{epoch} & \Slot \to \Epoch
   & \text{epoch of a slot}
+  \\
+  \fun{slot} & \Epoch \to \Slot
+  & \text{first slot of an epoch}
   \\
     (\slotminus{}{}) & \Slot \to \Slot \to \Duration
   & \text{slot duration}
@@ -272,13 +275,6 @@ it should not have any rewards in its associated address. Thus, it is safe
 to set the rewards to 0 using union override (i.e. replace any value previously
 associated with this address with 0).
 
-\begin{todo}
-Here we would add the rules for managing rewards beyond assigning
-the initial 0 value upon registration. The formula that calculates rewards
-takes into account stake pool
-performance (ranked in the order of expected rewards).
-\end{todo}
-
 When deregistering a key (the \cref{eq:deleg-dereg} rule), we again
 require that the certificate is of the correct type. We also require
 that the key of the author is indeed a registered stake key
@@ -299,7 +295,14 @@ this rule. The use of union override here allows us to use the same rule
 to perform an update on an existing delegation while keeping the rewards
 associated with the key accounted for.
 
-We would like to point out, here, that this specification does not describe
+The rules of the distribution of rewards to eligible stake holders are described
+in Section~\ref{sec:epoch}, since the amount of rewards they can claim in the next
+epoch is calculated at the epoch boundary. However, the claiming of the rewards
+(i.e. conversion of reward value to unspent outputs available to the key
+holder), can be requested by the key holder at any time as part of transaction.
+This process is decribed in Section~\ref{sec:utxo-rewards}.
+
+We would like to point out, here, that this document does not describe
 how the wallet makes a decision about which stake pool a stake key will
 delegate to. This decision, however, is influenced by some parameters in the
 protocol. These parameters determine which stake pools are more profitable
@@ -317,7 +320,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegPool & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
+      \var{c}\in\DCertRegKey & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
     }
     {
       \var{slot} \vdash
@@ -484,7 +487,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
   \begin{equation}\label{eq:pool-rereg}
     \inference[Pool-reReg]
     {
-      \var{c}\in\DCertRegPool 
+      \var{c}\in\DCertRegPool
       & \cauthor{c} = \var{hk}
       & hk \in \dom \var{stpools}
       & \stakepool{c} = \var{stakepool}
@@ -545,10 +548,6 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 
 \end{figure}
 
-\begin{todo}
-  make sure ttl of the transaction carrying a certificate is less than
-  the first slot of (retiring c + 1)
-\end{todo}
 
 \subsection{Witnesses}
 \label{sec:delegation-witnesses}
@@ -728,6 +727,11 @@ as a DELEG transition signaled by certificate $c$, the transition
 composed of these two transitions in sequence, signaled by the list $c; \Gamma$
 is also valid.
 
+This definition guarantees a transaction cannot be processed unless every
+certificate in it is valid. For example, if a transaction is carrying a
+certificate that schedules a pool retirement in a past epoch, the
+whole transaction will be scrapped.
+
 
 \begin{figure}
 \begin{equation*}
@@ -783,6 +787,13 @@ is also valid.
       \var{dwstate''}
     }
     {
+    {
+      \begin{array}{r}
+        \var{tx}\\
+        \var{slot}\\
+      \end{array}
+    }
+    \vdash
       \var{dwstate}
       \trans{delegs}{\Gamma; c}
       \var{dwstate''}
