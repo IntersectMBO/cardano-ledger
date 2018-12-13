@@ -9,13 +9,14 @@ import Control.Lens
 import Chain.GenesisBlock (initVKeys)
 import Control.State.Transition
 import Data.Set (Set)
-import Ledger.Delegation (DIState, VKeyGen)
+import Ledger.Core (VKeyGenesis)
+import Ledger.Delegation (DIState)
 import Types
 
 
 -- | Computes an initial delegation interface state from a set of
 -- verification keys
-initDIStateFromKeys :: Set VKeyGen -> DIState
+initDIStateFromKeys :: Set VKeyGenesis -> DIState
 initDIStateFromKeys certs = undefined
 
 -- | The initial delegation interface state
