@@ -1,6 +1,8 @@
-{-# LANGUAGE BangPatterns    #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-|
 Module      : LedgerState
@@ -528,8 +530,8 @@ instance STS UTXO where
                                | FeeTooSmallUTxO Coin Coin
                                | ValueNotConservedUTxO Coin Coin
                                | RetirementCertExpiredUTxO Slot Slot
-                               | UnexpectedFailure [ValidationError]
-                               | UnexpectedSuccess
+                               | UnexpectedFailureUTXO [ValidationError]
+                               | UnexpectedSuccessUTXO
                    deriving (Eq, Show)
 
     transitionRules = [ utxoInductive ]
@@ -551,23 +553,56 @@ utxoInductive = do
   current tx slot        == Valid ?! ExpiredUTxO (tx ^. body . ttl) slot
   validNoReplay tx       == Valid ?! InputSetEmptyUTxO
   let validateFee         = validFee tx l
-  validateFee            == Valid ?! unwrapFailure validateFee
+  validateFee            == Valid ?! unwrapFailureUTXO validateFee
   let validateBalance     = preserveBalance tx l
-  validateBalance        == Valid ?! unwrapFailure validateBalance
+  validateBalance        == Valid ?! unwrapFailureUTXO validateBalance
   let validateCertsRetire = validCertsRetirePoolNotExpired tx slot
-  validateCertsRetire    == Valid ?! unwrapFailure validateCertsRetire
+  validateCertsRetire    == Valid ?! unwrapFailureUTXO validateCertsRetire
   pure $ applyTxBody l $ tx ^. body
 
-unwrapFailure :: Validity -> PredicateFailure UTXO
-unwrapFailure (Invalid [e]) = unwrapFailure' e
-unwrapFailure Valid         = UnexpectedSuccess
-unwrapFailure (Invalid x)   = UnexpectedFailure x
+unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
+unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
+unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
+unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
 
-unwrapFailure' :: ValidationError -> PredicateFailure UTXO
-unwrapFailure' BadInputs                    = BadInputsUTxO
-unwrapFailure' (Expired s s')               = ExpiredUTxO s s'
-unwrapFailure' InputSetEmpty                = InputSetEmptyUTxO
-unwrapFailure' (FeeTooSmall c c')           = FeeTooSmallUTxO c c'
-unwrapFailure' (ValueNotConserved c c')     = ValueNotConservedUTxO c c'
-unwrapFailure' (RetirementCertExpired s s') = RetirementCertExpiredUTxO s s'
-unwrapFailure' x                            = UnexpectedFailure [x]
+unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
+unwrapFailureUTXO' BadInputs                    = BadInputsUTxO
+unwrapFailureUTXO' (Expired s s')               = ExpiredUTxO s s'
+unwrapFailureUTXO' InputSetEmpty                = InputSetEmptyUTxO
+unwrapFailureUTXO' (FeeTooSmall c c')           = FeeTooSmallUTxO c c'
+unwrapFailureUTXO' (ValueNotConserved c c')     = ValueNotConservedUTxO c c'
+unwrapFailureUTXO' (RetirementCertExpired s s') = RetirementCertExpiredUTxO s s'
+unwrapFailureUTXO' x                            = UnexpectedFailureUTXO [x]
+
+data UTXOW
+
+instance STS UTXOW where
+    type State UTXOW       = LedgerState
+    type Signal UTXOW      = TxWits
+    type Environment UTXOW = (PrtlConsts, Slot)
+    data PredicateFailure UTXOW = InvalidWitnessesUTXOW
+                                | MissingWitnessesUTXOW
+                                | UnneededWitnessesUTXOW
+                                | UtxoFailure (PredicateFailure UTXO)
+                   deriving (Eq, Show)
+
+    transitionRules = [ utxoWitnessed ]
+
+    initialRules = [ initialLedgerStateUTXOW ]
+
+initialLedgerStateUTXOW :: InitialRule UTXOW
+initialLedgerStateUTXOW = do
+  IRC ((pc, slots)) <- judgmentContext
+  trans @UTXO $ IRC ((pc, slots))
+
+
+utxoWitnessed :: TransitionRule UTXOW
+utxoWitnessed = do
+  TRC ((pc, slot), l, txwits) <- judgmentContext
+  verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
+  enoughWits txwits l     == Valid ?! MissingWitnessesUTXOW
+  noUnneededWits txwits l == Valid ?! UnneededWitnessesUTXOW
+  trans @UTXO $ TRC ((pc, slot), l, txwits)
+
+instance Embed UTXO UTXOW where
+    wrapFailed = UtxoFailure
