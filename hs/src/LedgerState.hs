@@ -190,23 +190,23 @@ genesisState pc outs = LedgerState
   pc
 
 -- | Determine if the transaction has expired
-current :: TxWits -> Slot -> Validity
-current (TxWits tx _) slot =
+current :: Tx -> Slot -> Validity
+current tx slot =
     if tx ^. ttl < slot
     then Invalid [Expired (tx ^. ttl) slot]
     else Valid
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
-validNoReplay :: TxWits -> Validity
-validNoReplay (TxWits tx _) =
+validNoReplay :: Tx -> Validity
+validNoReplay tx =
     if txins tx == Set.empty
     then Invalid [InputSetEmpty]
     else Valid
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
-validInputs :: TxWits -> LedgerState -> Validity
-validInputs (TxWits tx _) l =
+validInputs :: Tx -> LedgerState -> Validity
+validInputs tx l =
   if txins tx `Set.isSubsetOf` dom (l ^. utxoState . utxo)
     then Valid
     else Invalid [BadInputs]
@@ -220,8 +220,8 @@ minfee :: PrtlConsts -> Tx -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + pc ^. minfeeB
 
 -- |Determine if the fee is large enough
-validFee :: TxWits -> LedgerState -> Validity
-validFee (TxWits tx _) l =
+validFee :: Tx -> LedgerState -> Validity
+validFee tx l =
   if needed <= given
     then Valid
     else Invalid [FeeTooSmall needed given]
@@ -253,8 +253,8 @@ created tx l = balance (txins tx <| (l ^. utxoState . utxo)) + refunds + withdra
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
-preserveBalance :: TxWits -> LedgerState -> Validity
-preserveBalance (TxWits tx _) l =
+preserveBalance :: Tx -> LedgerState -> Validity
+preserveBalance tx l =
   if created' == destroyed'
     then Valid
     else Invalid [ValueNotConserved created' destroyed']
@@ -264,8 +264,8 @@ preserveBalance (TxWits tx _) l =
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
-correctWitdrawals :: TxWits -> LedgerState -> Validity
-correctWitdrawals (TxWits tx _) l =
+correctWitdrawals :: Tx -> LedgerState -> Validity
+correctWitdrawals tx l =
   if (tx ^. wdrls) `Map.isSubmapOf` (l ^. delegationState . accounts)
     then Valid
     else Invalid [IncorrectRewards]
@@ -317,14 +317,13 @@ noUnneededWits (TxWits tx wits) l =
   where
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
-validRuleUTXO :: TxWits -> Slot -> LedgerState -> Validity
+validRuleUTXO :: Tx -> Slot -> LedgerState -> Validity
 validRuleUTXO tx slot l = validInputs tx l
                        <> current tx slot
                        <> validNoReplay tx
                        <> validFee tx l
                        <> preserveBalance tx l
                        <> correctWitdrawals tx l
-                       <> validCertsRetirePoolNotExpired tx slot
 
 validRuleUTXOW :: TxWits -> Slot -> LedgerState -> Validity
 validRuleUTXOW tx _ l = verifiedWits tx
@@ -332,7 +331,7 @@ validRuleUTXOW tx _ l = verifiedWits tx
                      <> noUnneededWits tx l
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
-validTx tx slot l = validRuleUTXO  tx slot l
+validTx tx slot l = validRuleUTXO  (tx ^. body) slot l
                  <> validRuleUTXOW tx slot l
 
 -- The rules for checking validiy of stake delegation transitions return
@@ -522,14 +521,13 @@ data UTXO
 
 instance STS UTXO where
     type State UTXO       = LedgerState
-    type Signal UTXO      = TxWits
+    type Signal UTXO      = Tx
     type Environment UTXO = (PrtlConsts, Slot)
     data PredicateFailure UTXO = BadInputsUTxO
                                | ExpiredUTxO Slot Slot
                                | InputSetEmptyUTxO
                                | FeeTooSmallUTxO Coin Coin
                                | ValueNotConservedUTxO Coin Coin
-                               | RetirementCertExpiredUTxO Slot Slot
                                | UnexpectedFailureUTXO [ValidationError]
                                | UnexpectedSuccessUTXO
                    deriving (Eq, Show)
@@ -550,15 +548,13 @@ utxoInductive :: TransitionRule UTXO
 utxoInductive = do
   TRC ((_, slot), l, tx) <- judgmentContext
   validInputs tx l       == Valid ?! BadInputsUTxO
-  current tx slot        == Valid ?! ExpiredUTxO (tx ^. body . ttl) slot
+  current tx slot        == Valid ?! ExpiredUTxO (tx ^. ttl) slot
   validNoReplay tx       == Valid ?! InputSetEmptyUTxO
   let validateFee         = validFee tx l
   validateFee            == Valid ?! unwrapFailureUTXO validateFee
   let validateBalance     = preserveBalance tx l
   validateBalance        == Valid ?! unwrapFailureUTXO validateBalance
-  let validateCertsRetire = validCertsRetirePoolNotExpired tx slot
-  validateCertsRetire    == Valid ?! unwrapFailureUTXO validateCertsRetire
-  pure $ applyTxBody l $ tx ^. body
+  pure $ applyTxBody l tx
 
 unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
 unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
@@ -566,13 +562,12 @@ unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
 unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
 
 unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
-unwrapFailureUTXO' BadInputs                    = BadInputsUTxO
-unwrapFailureUTXO' (Expired s s')               = ExpiredUTxO s s'
-unwrapFailureUTXO' InputSetEmpty                = InputSetEmptyUTxO
-unwrapFailureUTXO' (FeeTooSmall c c')           = FeeTooSmallUTxO c c'
-unwrapFailureUTXO' (ValueNotConserved c c')     = ValueNotConservedUTxO c c'
-unwrapFailureUTXO' (RetirementCertExpired s s') = RetirementCertExpiredUTxO s s'
-unwrapFailureUTXO' x                            = UnexpectedFailureUTXO [x]
+unwrapFailureUTXO' BadInputs                = BadInputsUTxO
+unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
+unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
+unwrapFailureUTXO' (FeeTooSmall c c')       = FeeTooSmallUTxO c c'
+unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
+unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
 
 data UTXOW
 
@@ -602,7 +597,7 @@ utxoWitnessed = do
   verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
   enoughWits txwits l     == Valid ?! MissingWitnessesUTXOW
   noUnneededWits txwits l == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((pc, slot), l, txwits)
+  trans @UTXO $ TRC ((pc, slot), l, txwits ^. body)
 
 instance Embed UTXO UTXOW where
     wrapFailed = UtxoFailure
