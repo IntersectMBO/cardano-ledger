@@ -522,12 +522,12 @@ instance STS UTXO where
     type State UTXO       = LedgerState
     type Signal UTXO      = TxWits
     type Environment UTXO = (PrtlConsts, Slot)
-    data PredicateFailure UTXO = BadInputsTx
-                               | ExpiredTx Slot Slot
-                               | InputSetEmptyTx
-                               | FeeTooSmallTx Coin Coin
-                               | ValueNotConservedTx Coin Coin
-                               | RetirementCertExpiredTx Slot Slot
+    data PredicateFailure UTXO = BadInputsUTxO
+                               | ExpiredUTxO Slot Slot
+                               | InputSetEmptyUTxO
+                               | FeeTooSmallUTxO Coin Coin
+                               | ValueNotConservedUTxO Coin Coin
+                               | RetirementCertExpiredUTxO Slot Slot
                                | UnexpectedFailure [ValidationError]
                                | UnexpectedSuccess
                    deriving (Eq, Show)
@@ -547,9 +547,9 @@ initialLedgerState = do
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
   TRC ((_, slot), l, tx) <- judgmentContext
-  validInputs tx l       == Valid ?! BadInputsTx
-  current tx slot        == Valid ?! ExpiredTx (tx ^. body . ttl) slot
-  validNoReplay tx       == Valid ?! InputSetEmptyTx
+  validInputs tx l       == Valid ?! BadInputsUTxO
+  current tx slot        == Valid ?! ExpiredUTxO (tx ^. body . ttl) slot
+  validNoReplay tx       == Valid ?! InputSetEmptyUTxO
   let validateFee         = validFee tx l
   validateFee            == Valid ?! unwrapFailure validateFee
   let validateBalance     = preserveBalance tx l
@@ -564,10 +564,10 @@ unwrapFailure Valid         = UnexpectedSuccess
 unwrapFailure (Invalid x)   = UnexpectedFailure x
 
 unwrapFailure' :: ValidationError -> PredicateFailure UTXO
-unwrapFailure' BadInputs                    = BadInputsTx
-unwrapFailure' (Expired s s')               = ExpiredTx s s'
-unwrapFailure' InputSetEmpty                = InputSetEmptyTx
-unwrapFailure' (FeeTooSmall c c')           = FeeTooSmallTx c c'
-unwrapFailure' (ValueNotConserved c c')     = ValueNotConservedTx c c'
-unwrapFailure' (RetirementCertExpired s s') = RetirementCertExpiredTx s s'
+unwrapFailure' BadInputs                    = BadInputsUTxO
+unwrapFailure' (Expired s s')               = ExpiredUTxO s s'
+unwrapFailure' InputSetEmpty                = InputSetEmptyUTxO
+unwrapFailure' (FeeTooSmall c c')           = FeeTooSmallUTxO c c'
+unwrapFailure' (ValueNotConserved c c')     = ValueNotConservedUTxO c c'
+unwrapFailure' (RetirementCertExpired s s') = RetirementCertExpiredUTxO s s'
 unwrapFailure' x                            = UnexpectedFailure [x]
