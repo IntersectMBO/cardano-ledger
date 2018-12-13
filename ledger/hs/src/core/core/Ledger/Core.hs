@@ -2,6 +2,11 @@ module Ledger.Core where
 
 import Ledger.Signatures
 import Numeric.Natural (Natural)
+import Data.Map.Strict (Map)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
+import GHC.Natural (minusNaturalMaybe)
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -44,12 +49,45 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Natural
+  deriving (Eq, Ord, Show)
 
 
 newtype Slot = Slot Natural
+  deriving (Eq, Ord, Show)
 
 -- | A number of slots.
 --
 --   We use this newtype to distinguish between a cardinal slot and a relative
 --   period of slots.
 newtype SlotCount = SlotCount Natural
+  deriving (Eq, Ord, Show)
+
+-- | Add a slot count to a slot.
+addSlot :: Slot -> SlotCount -> Slot
+addSlot (Slot n) (SlotCount m) = Slot $ m + n
+
+-- | Subtract a slot count from a slot.
+--
+--   This is bounded below by 0.
+minusSlot :: Slot -> SlotCount -> Slot
+minusSlot (Slot n) (SlotCount m) = case minusNaturalMaybe m n of
+  Nothing -> Slot 0
+  Just k  -> Slot k
+
+---------------------------------------------------------------------------------
+-- Domain restriction and exclusion
+---------------------------------------------------------------------------------
+
+-- |Domain restriction
+--
+(◁) :: Ord a => Set a -> Map a b -> Map a b
+s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
+
+-- |Domain exclusion
+--
+(⋪) :: Ord a => Set a -> Map a b -> Map a b
+s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+
+-- | Union Override
+(⨃) :: Ord a => Map a b -> Map a b -> Map a b
+d0 ⨃ d1 = d1 `Map.union` (Map.keysSet d1 ⋪ d0)
