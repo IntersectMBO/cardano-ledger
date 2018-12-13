@@ -1,21 +1,20 @@
 # Summary
 
-Headline summary of the week
+Reward withdrawals in the Haskell model; Began integrating the STS framework
+from cardano-chain into Haskell model; Reworked the reward withdrawals in the
+latex spec to align with our new plan for them.
 
 # PRs and issues completed
 
-| Issue | Links                                                       | Summary                                                            | Epic | Contributors      | Started    | Finished   | Comments      |
-|-------|-------------------------------------------------------------|--------------------------------------------------------------------|------|-------------------|------------|------------|---------------|
-|   100 | https://github.com/input-output-hk/cardano-wallet/issues/79 | Control that each API response returns a JSEnd compliant response. |    1 | @Ktorz, @boothead | YYYY-MM-DD | YYYY-MM-DD | This was easy |
-|       |                                                             |                                                                    |      |                   |            |            |               |
-|       |                                                             |                                                                    |      |                   |            |            |               |
-|       |                                                             |                                                                    |      |                   |            |            |               |
-|       |                                                             |                                                                    |      |                   |            |            |               |
-
-
-## #100
-
-Further info on a PR or Issue if required
+| Issue | PR | Summary |
+|-------|----|---------|
+|       | x | [Anytime rewards rules #113](https://github.com/input-output-hk/fm-ledger-rules/pull/113) |
+|       | x | [experiment to try small step sem. with lhs2tex #114](https://github.com/input-output-hk/fm-ledger-rules/pull/114) |
+|       | x | [STS implementation of `UTXO` rule #115](https://github.com/input-output-hk/fm-ledger-rules/pull/115) |
+|       | x | [Use lenses from `mircolens` where appropriate #116](https://github.com/input-output-hk/fm-ledger-rules/pull/116) |
+|       | x | [adding reward withdrawals #120](https://github.com/input-output-hk/fm-ledger-rules/pull/120) |
+|       | x | [Update `UTXO` rule for new STS framework #121](https://github.com/input-output-hk/fm-ledger-rules/pull/121) |
+| x     |   | [Reward Withdrawals (executable model) #88](https://github.com/input-output-hk/fm-ledger-rules/issues/88) |
 
 # Milestone status
 
@@ -52,4 +51,10 @@ Not started yet
 
 # Lessons learned from last week
 
+ - When challenges come up while working on an issue, then create a new issue
+   for this with additional estimation
+ - Connect PRs to issues, can be several PRs for one issue
+
 # Things to try next week
+
+ - Think about merging `fm-ledger-rules` into `cardano-chain`
