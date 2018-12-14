@@ -441,9 +441,22 @@ retirePools ls@(LedgerState _ ds _) epoch =
                & retiring .~ active)
   where (active, retiring') = Map.partition (epoch /=) (ds ^. retiring)
 
+-- |Calculate the change to the deposit pool for a given transaction.
+depositPoolChange :: LedgerState -> Tx -> Coin
+depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
+  -- Note that while (currentPool + txDeposits) >= txRefunds,
+  -- it could be that txDeposits < txRefunds. We keep the parenthesis above
+  -- to emphasize this point.
+  where
+    currentPool = ls ^. utxoState . deposits
+    txDeposits = depositAmount (ls ^. pcs) (ls ^. delegationState . stPools) tx
+    txRefunds = keyRefunds (ls ^. pcs) (ls ^. delegationState . stKeys) tx
+
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls & utxoState . utxo .~ newUTxOs
+                       & utxoState . deposits .~ depositPoolChange ls tx
+                       & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
                        & delegationState . accounts .~ newAccounts
   where
     newUTxOs = txins tx </| (ls ^. utxoState . utxo) `union` txouts tx
@@ -525,7 +538,7 @@ instance STS UTXO where
 
 initialLedgerState :: InitialRule UTXO
 initialLedgerState = do
-  IRC ((pc, _)) <- judgmentContext
+  IRC (pc, _) <- judgmentContext
   pure $ LedgerState
            (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
            emptyDelegation
@@ -538,7 +551,7 @@ utxoInductive = do
   current tx slot        == Valid ?! ExpiredTx (tx ^. body . ttl) slot
   validNoReplay tx       == Valid ?! InputSetEmptyTx
   let validateFee         = validFee tx l
-  validateFee            == Valid ?! (unwrapFailure validateFee)
+  validateFee            == Valid ?! unwrapFailure validateFee
   let validateBalance     = preserveBalance tx l
   validateBalance        == Valid ?! unwrapFailure validateBalance
   let validateCertsRetire = validCertsRetirePoolNotExpired tx slot

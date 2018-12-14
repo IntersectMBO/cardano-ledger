@@ -68,31 +68,31 @@ ledgerState = foldM (asStateTransition (Slot 0)) genesis
 
 
 testLedgerValidTransactions ::
-  Either [ValidationError] LedgerState -> Map TxIn TxOut -> Assertion
-testLedgerValidTransactions ls utxo' =
+  Either [ValidationError] LedgerState -> UTxOState -> Assertion
+testLedgerValidTransactions ls utxoState' =
     ls @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 0))
+                     utxoState'
                      LedgerState.emptyDelegation
                      testPCs)
 
 testValidStakeKeyRegistration ::
-  TxWits -> Map TxIn TxOut -> DelegationState -> Assertion
-testValidStakeKeyRegistration tx utxo' stakeKeyRegistration =
+  TxWits -> UTxOState -> DelegationState -> Assertion
+testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
   let
     ls2 = ledgerState [tx]
   in ls2 @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 0))
+                     utxoState'
                      stakeKeyRegistration
                      testPCs)
 
 testValidDelegation ::
-  [TxWits] -> Map TxIn TxOut -> DelegationState -> StakePool -> Assertion
-testValidDelegation txs utxo' stakeKeyRegistration pool =
+  [TxWits] -> UTxOState -> DelegationState -> StakePool -> Assertion
+testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
   in ls2 @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 0))
+                     utxoState'
                      stakeKeyRegistration
                      { _delegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
@@ -102,13 +102,13 @@ testValidDelegation txs utxo' stakeKeyRegistration pool =
                      testPCs)
 
 testValidRetirement ::
-  [TxWits] -> Map TxIn TxOut -> DelegationState -> Epoch -> StakePool -> Assertion
-testValidRetirement txs utxo' stakeKeyRegistration e pool =
+  [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
+testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
   in ls2 @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 0))
+                     utxoState'
                      stakeKeyRegistration
                      { _delegations =
                          Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
@@ -145,7 +145,7 @@ testValidWithdrawal =
     expectedDS = LedgerState.emptyDelegation & accounts .~
                    Map.singleton (mkRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 0))
+                     (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
                      expectedDS
                      testPCs)
 
@@ -233,11 +233,15 @@ tx1 = aliceGivesBobLovelace
         (Slot 0)
         [alicePay]
 
-utxo1 :: Map TxIn TxOut
-utxo1 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ tx1 ^. body) 0, TxOut aliceAddr (Coin 6400))
-       , (TxIn (txid $ tx1 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
+
+utxoSt1 :: UTxOState
+utxoSt1 = UTxOState
+            (UTxO $ Map.fromList
+               [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+               , (TxIn (txid $ tx1 ^. body) 0, TxOut aliceAddr (Coin 6400))
+               , (TxIn (txid $ tx1 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+            (Coin 0)
+            (Coin 600)
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -253,11 +257,14 @@ tx2 = aliceGivesBobLovelace
         [alicePay, aliceStake, bobStake, stakePoolKey1]
 
 
-utxo2 :: Map TxIn TxOut
-utxo2 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ tx2 ^. body) 0, TxOut aliceAddr (Coin 5400))
-       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
+utxoSt2 :: UTxOState
+utxoSt2 = UTxOState
+            (UTxO $ Map.fromList
+              [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+              , (TxIn (txid $ tx2 ^. body) 0, TxOut aliceAddr (Coin 5400))
+              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+            (Coin 300)
+            (Coin 1300)
 
 tx3Body :: Tx
 tx3Body = Tx
@@ -273,11 +280,14 @@ tx3 :: TxWits
 tx3 = TxWits tx3Body (makeWitnesses tx3Body keys)
       where keys = [alicePay, aliceStake, stakePoolKey1]
 
-utxo3 :: Map TxIn TxOut
-utxo3 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
-       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
+utxoSt3 :: UTxOState
+utxoSt3 = UTxOState
+            (UTxO $ Map.fromList
+              [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+              , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
+              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+            (Coin 550)
+            (Coin 2500)
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
@@ -322,17 +332,23 @@ tx4Body = Tx
 tx4 :: TxWits
 tx4 = TxWits tx4Body (makeWitnesses tx4Body [alicePay, stakePoolKey1])
 
-utxo4 :: Map TxIn TxOut
-utxo4 = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
+utxoSt4 :: UTxOState
+utxoSt4 = UTxOState
+            (UTxO $ Map.fromList
+              [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+              , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
+              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+            (Coin 550)
+            (Coin 3500)
 
-utxo5 :: Epoch -> Map TxIn TxOut
-utxo5 e = Map.fromList
-       [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-       , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
-       , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ]
+utxo5 :: Epoch -> UTxOState
+utxo5 e = UTxOState
+            (UTxO $ Map.fromList
+              [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
+              , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
+              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+            (Coin 550)
+            (Coin 3500)
 
 tx5Body :: Epoch -> Tx
 tx5Body e = Tx
@@ -351,14 +367,14 @@ testsValidLedger :: TestTree
 testsValidLedger =
   testGroup "Tests with valid transactions in ledger."
     [ testCase "Valid Ledger - Alice gives Bob 3000 of her 10000 lovelace" $
-        testLedgerValidTransactions ls1 utxo1
+        testLedgerValidTransactions ls1 utxoSt1
       , testGroup "Tests for stake delegation."
           [ testCase "Valid stake key registration." $
-              testValidStakeKeyRegistration tx2 utxo2 stakeKeyRegistration1
+              testValidStakeKeyRegistration tx2 utxoSt2 stakeKeyRegistration1
           , testCase "Valid stake delegation from Alice to stake pool." $
-              testValidDelegation [tx2, tx3] utxo3 stakeKeyRegistration1 stakePool
+              testValidDelegation [tx2, tx3] utxoSt3 stakeKeyRegistration1 stakePool
           , testCase "Update stake pool parameters" $
-              testValidDelegation [tx2, tx3, tx4] utxo4 stakeKeyRegistration1 stakePoolUpdate
+              testValidDelegation [tx2, tx3, tx4] utxoSt4 stakeKeyRegistration1 stakePoolUpdate
           , testCase "Retire Pool" $
             testValidRetirement [tx2, tx3, tx5 (Epoch 1)] (utxo5 (Epoch 1)) stakeKeyRegistration1 (Epoch 1) stakePool
           ]
