@@ -8,20 +8,25 @@ import           Data.MultiSet           (unions, fromSet, occur, filter, size)
 import qualified Data.Set                as Set
 import           Data.Text               (pack)
 
-import           Lens.Micro              ((^.))
+import           Lens.Micro              ((^.), (&), (%~), (.~))
 
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
 import           Test.Tasty.Hedgehog.Coverage
 
 import           Hedgehog
+import qualified Hedgehog.Gen    as Gen
 
 import           Generator
 
 import           Coin
 import           LedgerState             ( LedgerValidation(..)
+                                         , ValidationError (..)
+                                         , asStateTransition
                                          , utxoState
                                          , utxo)
+
+import           Slot
 import           UTxO
 
 
@@ -163,6 +168,12 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "No Double Spend in valid ledger states"
                     propNoDoubleSpend
+                  , testPropertyCoverage
+                    "changing witness set"
+                    propCheckMinimalWitnessSet
+                  , testPropertyCoverage
+                    "using subset of witness set"
+                    propCheckMissingWitness
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
@@ -202,3 +213,43 @@ propBalanceTxInTxOut' =
               else label ("validated")
         ))
   success
+
+-- | Check that we correctly report redundant witnesses. We get the list of the
+-- keys from the generator and use one to generate a new witness. If that key
+-- was used to sign the transaction, then the transaction must validate. If the
+-- witness was not already used to sign the transaction, a `UnneededWitnesses`
+-- validation error must be reported.
+propCheckMinimalWitnessSet :: Cover
+propCheckMinimalWitnessSet = withCoverage $ do
+  (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
+  let keyPair                  = fst $ head keyPairs
+  let tx                       = txwits ^. body
+  let witness                  = makeWitness tx keyPair
+  let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
+  let l''                      = asStateTransition (Slot (steps)) l txwits'
+  classify (not $ witness `Set.member` (txwits ^. witnessSet))
+               "unneeded signature added"
+  case l'' of
+    Left [UnneededWitnesses]  ->
+        (witness `Set.member` (txwits ^. witnessSet)) === False
+    Right _                    ->
+        (witness `Set.member` (txwits ^. witnessSet)) === True
+    _                          -> failure
+
+-- | Check that we correctly report missing witnesses.
+propCheckMissingWitness :: Cover
+propCheckMissingWitness = withCoverage $ do
+  (l, steps, _, txwits, _) <- forAll genValidStateTx
+  witnessList              <- forAll (Gen.subsequence $
+                                        Set.toList (txwits ^. witnessSet))
+  let witnessSet''          = txwits ^. witnessSet
+  let witnessSet'           = Set.fromList witnessList
+  let l'                    = asStateTransition (Slot steps) l (txwits & witnessSet .~ witnessSet')
+  let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
+                              witnessSet' /= witnessSet''
+  classify (isRealSubset) "real subset"
+  label (pack ("witnesses:" ++ show (Set.size witnessSet'')))
+  case l' of
+    Left [MissingWitnesses] -> isRealSubset === True
+    Right _                 -> (witnessSet' == witnessSet'') === True
+    _                       -> failure
