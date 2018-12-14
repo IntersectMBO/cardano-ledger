@@ -1481,11 +1481,11 @@ being unnecessarily large and full of redundant witnessing.
      ~ \\
       & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
       \cdot \\
-      \verify{vk}{\serialised{(\dbody{c},~\txdata \var{tx})}}{\sigma}\\
+      \verify{vk}{\serialised{\txdata~\var{tx}}}{\sigma}\\
       ~ \\
       & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{(\txdata{tx}, (a,c))}}_{\sigma}
+      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
       \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
     }
     {
