@@ -600,11 +600,11 @@ given slot number) and the
 full-duration decayed refund value ($\fun{currentRefund}$) calculated based on
 the given slot number.
 
-The amount
-decayed for individual keys is then computed by adding the values of $\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$
+The amount decayed for individual keys is then computed by adding the values of
+$$\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$$
 for each deregistration certificate in a given transaction, and is given by
-$\fun{decayedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
-we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
+$$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$$
+Here, again, we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
 slot number in order to match with the one in the $\fun{keyRefunds}$
 calculation.
 
