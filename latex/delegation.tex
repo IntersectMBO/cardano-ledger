@@ -133,7 +133,7 @@ $\Duration$ here by $\var{dur}$).
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
   \fun{addr_{rwd}} & \HashKey \to \AddrRWD
-  & \text{address of a hashKeykey}
+  & \text{address of a hashKey}
   \\
   \fun{author} & \DCert \to \HashKey
   & \text{certificate author}
@@ -162,6 +162,7 @@ $\Duration$ here by $\var{dur}$).
   \caption{Delegation Definitions}
   \label{fig:delegation-definitons}
 \end{figure}
+
 
 
 \subsection{Delegation Transitions}
@@ -549,69 +550,13 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 \end{figure}
 
 
-\subsection{Witnesses}
-\label{sec:delegation-witnesses}
-
-
-The new definitions needed for updating the ledger state with a given
-certificate witnessed by some key-signature pair
-are given in Figure~\ref{fig:defs:delegationw}. The $\fun{dwit}$ returns
-the witness of a given certificate, and $\fun{dbody}$ gives the body of a
-certificate. It is important to make this separation of certificate data
-in order to avoid signing signatures. The map $\fun{dcerts}$ returns all
-the delegation certificates contained in a given transaction.
-
-We include $\var{slot}$ in the context ($\DWEnv$) because it is needed to update
-$\PState$, as well as the transaction $\var{tx}$ which is being witnessed.
-Note here that the transaction here is part of the context, not the signal.
-(the signal is the certificate to be applied).
-
-The type of the delegation witness
-transition in this figure is meant to describe a complete ledger state
-transition, including an update of both the delegations and the stake pools
-(i.e. $\DState$ as well as the $\PState$, which together we call $\DWState$).
-Now, such a transition is
-composable with any other witnessed ledger state transition.
-
-The rules for certificate witnessed transitions are given in
-Figure~\ref{fig:rules:delegationw}. The actual updates of the ledger state is
-consistent with the rules given in Figures~\ref{fig:delegation-rules}
-and~\ref{fig:pool-rules}. However, we now add the following precondition for the
-application of these rules:
-
-\begin{itemize}
-\item The signature of the transaction and certificate must be verified by the
-  verification key with which the certificate is associated (i.e. witnessed).
-\end{itemize}
-
-That is, when this condition is met and we have a valid $\DState$ or $\PState$
-transition in a given context $\DWEnv$, triggered by certificate $\var{c}$,
-according to these inference rule, the antecedent state transition is a
-valid witnessed delegation transition.
-
+Next, we give the state, environment, and transition type for the full delegation
+state transition, which includes the delegations ($\DState$) and the stake pools
+($\PState$), see
+Figure~\ref{fig:defs:delpl}.
 
 \begin{figure}
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      tx & \Tx & \text{transaction}\\
-      dcb & \DCertBody & \text{certificate body}\\
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Abstract functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \DCertBody
-      & \text{body of the delegation certificate}\\
-      \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
-      & \text{witness for the delegation certificate}\\
-      \fun{dcerts} & \Tx \to \text{list}~\DCert
-      & \text{delegation certificates in a transaction}\\
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Delegation Witnesses environment}
+  \emph{Delegation and Pool Combined Environment}
   \begin{equation*}
     \DWEnv =
     \left(
@@ -622,7 +567,7 @@ valid witnessed delegation transition.
     \right)
   \end{equation*}
   %
-  \emph{Delegation Witnesses state}
+  \emph{Delegation and Pool Combined State}
   \begin{equation*}
     \DWState =
     \left(
@@ -633,25 +578,33 @@ valid witnessed delegation transition.
     \right)
   \end{equation*}
   %
-  \emph{Delegation Witnesses Transition}
+  \emph{Delegation and Pool Combined Transition}
   \begin{equation*}
-    \_ \vdash \_ \trans{delegw}{\_} \_ \in
+    \_ \vdash \_ \trans{delpl}{\_} \_ \in
       \powerset (
         \DWEnv \times \DWState \times \DCert \times \DWState)
   \end{equation*}
-  \caption{Delegation witnesses definitions}
-  \label{fig:defs:delegationw}
+  \caption{Delegation and Pool Combined Transition Type}
+  \label{fig:defs:delpl}
 \end{figure}
+
+
+In the following Figure~\ref{fig:rules:delpl}, we give the rules for
+defining a valid state transition for the combined delegation and pool
+state, $\DWState$, signaled by a certificate. There are two separate rules,
+one where only the
+delegation state changes, and one where only the pool state changes.
+This is because a certificate can never trigger a transition of both kinds,
+and can only be applied to \textit{either} register (deregister) a key,
+\textit{or} to register (retire) a pool.
 
 \begin{figure}
-  \emph{Delegation with witness rule}
+  \emph{Delegation and Pool Combined Rules}
   \begin{equation}
-    \label{eq:deleg-witnesses-keys}
-    \inference[Deleg-wit-keys]
-    { \dwit{c} = (\var{vk_s}, \sigma)
+    \label{eq:delpl-d}
+    \inference[Delpl-Del]
+    {
       & \var{slot} \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
-      \\ ~ \\
-      \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
     }
     { \left(
       \begin{array}{r}
@@ -666,23 +619,20 @@ valid witnessed delegation transition.
         \var{pstate}
       \end{array}
       \right)
-      \trans{delegw}{c}
+      \trans{delpl}{c}
       \left(
       \begin{array}{rcl}
         \var{dstate'} \\
-        \var{pstate'}
+        \var{pstate}
       \end{array}
       \right)
     }
   \end{equation}
-
-  \begin{equation}
-    \label{eq:deleg-witnesses-pools}
-    \inference[Deleg-wit-pools]
-    { \dwit{c} = (\var{vk_s}, \sigma)
-      & \var{slot} \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
-      \\ ~ \\
-      \verify{vk_s}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}
+    \begin{equation}
+    \label{eq:delpl-p}
+    \inference[Delpl-Pool]
+    {
+    & \var{slot} \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
     }
     { \left(
       \begin{array}{r}
@@ -697,40 +647,38 @@ valid witnessed delegation transition.
         \var{pstate}
       \end{array}
       \right)
-      \trans{delegw}{c}
+      \trans{delpl}{c}
       \left(
       \begin{array}{rcl}
-        \var{dstate'} \\
+        \var{dstate} \\
         \var{pstate'}
       \end{array}
       \right)
     }
   \end{equation}
-  \caption{Delegation witnesses inference rules}
-  \label{fig:rules:delegationw}
+  \caption{Delegation and Pool Combined Transition Rules}
+  \label{fig:rules:delpl}
 \end{figure}
 
+
 Now, since a transaction can carry more than one certificate at a time, we need
-to give the specifics of processing all these certificates as a result of
-a single signal transaction. This is a special
-case of the small step semantics rules where we need to express a
-state transition that is the result of more than one antecedent transition.
-In this case, we need to represent the delegation state change resulting
-from the processing of a full transaction containing a list of certificates.
+to give the specifics of processing the entire list of certificates (contained
+in a transaction).
 
 We may do so by defining a new type of transition, where the signal type is a
-list of certificates, as illustrated in Figure~\ref{fig:type:delegations}.
+list of certificates, as illustrated in Figure~\ref{fig:rules:delegation-sequence}.
 The transition itself is defined recursively, so that
 an empty list results in a state transition to itself, and given
 a list $\Gamma$ of certificates signaling a valid DELEGS transition, as well
-as a DELEG transition signaled by certificate $c$, the transition
+as a DELPL transition signaled by certificate $c$, the transition
 composed of these two transitions in sequence, signaled by the list $c; \Gamma$
 is also valid.
 
-This definition guarantees a transaction cannot be processed unless every
+This definition guarantees a certificate list (and therefore, the transaction
+carrying it) cannot be processed unless every
 certificate in it is valid. For example, if a transaction is carrying a
 certificate that schedules a pool retirement in a past epoch, the
-whole transaction will be scrapped.
+whole transaction will be invalid.
 
 
 \begin{figure}
@@ -783,7 +731,7 @@ whole transaction will be scrapped.
     }
     \vdash
       \var{dwstate'}
-      \trans{delegw}{c}
+      \trans{delpl}{c}
       \var{dwstate''}
     }
     {
