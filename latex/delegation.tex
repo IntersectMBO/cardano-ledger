@@ -375,7 +375,7 @@ being delegated to.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} & \union & \{\var{hk} \mapsto slot\}\\
+        \var{stkeysFOO} & \union & \{\var{hk} \mapsto slot\}\\
         \var{rewards} & \unionoverrideRight & \{\addrRw \var{hk} \mapsto 0\}\\
         \var{delegations} \\
         \var{pointeraddr} & \union & \{(slot,\fun{txSlotIx}~\var{tx},
@@ -403,7 +403,7 @@ being delegated to.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \{\var{hk}\} & \subtractdom & \var{stkeys}\\
+        \{\var{hkFOO}\} & \subtractdom & \var{stkeys}\\
         \{\addrRw \var{hk}\} & \subtractdom & \var{rewards} \\
         \{\var{hk}\} & \subtractdom & \var{delegations} \\
         \{(slot,\fun{txSlotIx}~\var{tx},
@@ -433,7 +433,7 @@ being delegated to.
       \begin{array}{rcl}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\} \\
+        \var{delegationsFOO} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\} \\
         \var{pointeraddr}
       \end{array}
       \right)
@@ -522,10 +522,10 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \trans{pool}{c}
       \left(
       \begin{array}{rcl}
-        \var{stpools} & \union
-                      & \{\var{hk} \mapsto \var{slot}\} \\
-        \var{pparams} & \union
-                      & \{\var{hk} \mapsto \var{stakepool}\} \\
+        \varUpdate{\var{stpools}} & \varUpdate{\union}
+                                  & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
+        \varUpdate{\var{pparams}} & \varUpdate{\union}
+                                  & \varUpdate{\{\var{hk} \mapsto \var{stakepool}\}} \\
        \var{retiring} \\
       \end{array}
       \right)
@@ -553,9 +553,9 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \var{pparams} & \unionoverrideRight
-                      & \{\var{hk} \mapsto \var{stakepool}\} \\
-        \{\var{hk}\} & \subtractdom & \var{retiring} \\
+        \varUpdate{\var{pparams}} & \varUpdate{\unionoverrideRight}
+                                  & \varUpdate{\{\var{hk} \mapsto \var{stakepool}\}}\\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
       \end{array}
       \right)
     }
@@ -585,7 +585,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{rcl}
         \var{stpools} \\
         \var{pparams} \\
-        \var{retiring} & \unionoverrideRight & \{\var{hk} \mapsto \var{e}\} \\
+        \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
+                                   & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
       \end{array}
     \right)
   }
@@ -669,7 +670,7 @@ and can only be applied to \textit{either} register (deregister) a key,
       \trans{delpl}{c}
       \left(
       \begin{array}{rcl}
-        \var{dstate'} \\
+        \varUpdate{\var{dstate'}} \\
         \var{pstate}
       \end{array}
       \right)
@@ -698,7 +699,7 @@ and can only be applied to \textit{either} register (deregister) a key,
       \left(
       \begin{array}{rcl}
         \var{dstate} \\
-        \var{pstate'}
+        \varUpdate{\var{pstate'}}
       \end{array}
       \right)
     }
@@ -791,7 +792,7 @@ whole transaction will be invalid.
     \vdash
       \var{dwstate}
       \trans{delegs}{\Gamma; c}
-      \var{dwstate''}
+      \varUpdate{\var{dwstate''}}
     }
     \label{eq:rule:sequence-delegation-inductive}
   \end{equation}

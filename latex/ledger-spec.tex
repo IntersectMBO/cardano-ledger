@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[11pt,a4paper,dvipsnames]{article}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{iohk}
 \usepackage{microtype}
@@ -12,7 +12,7 @@
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \usepackage{float}
@@ -1125,9 +1125,9 @@ variable
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}  \\
-        \var{deposits} + \var{depositChange} \\
-        \var{fees} + (\txfee{tx}) + \var{decayed} \\
+        \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + (\txfee{tx}) + \var{decayed}} \\
       \end{array}
       \right)
     }
@@ -1231,7 +1231,7 @@ numbers datatype concern.
       \left(
       \begin{array}{rcl}
         \var{stkeys} \\
-        \fun{reapRewards}~\var{rewards}~\var{wdrls}\\
+        \varUpdate{\fun{reapRewards}~\var{rewards}~\var{wdrls}}\\
         \var{delegations} \\
         \var{pstate}
       \end{array}
@@ -1324,7 +1324,7 @@ rest of the delegation state update is triggered by the cetificate list.
         \trans{delegt}{\var{tx}}
         \left(
         \begin{array}{rcl}
-          \var{dwstate''}
+          \varUpdate{\var{dwstate''}}
         \end{array}
         \right)
       }
@@ -1509,7 +1509,7 @@ being unnecessarily large and full of redundant witnessing.
       \begin{array}{l}
         \var{utxoEnv}
       \end{array}
-      \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }
   \end{equation}
   \caption{UTxO with witnesses inference rules}
@@ -1620,8 +1620,8 @@ by the given transaction.
       \trans{ledger}{tx}
       \left(
         \begin{array}{ll}
-          utxoSt' \\
-          dwstate' \\
+          \varUpdate{utxoSt'} \\
+          \varUpdate{dwstate'} \\
         \end{array}
       \right)
     }
