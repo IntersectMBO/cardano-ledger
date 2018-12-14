@@ -1440,14 +1440,14 @@ Figure~\ref{fig:rules:utxow}):
 \end{itemize}
 
 The purpose of witnessing is make sure that the intended action is authorized by
-the holder of the signing key, providing replay protection as a
-consequence.
-Due to the nature
-of UTxO stype accounting and the structure of rewards accounts,
-this replay protection is needed only to prevent
-the re-application of old certificates. The way this is
-achieved by the above precondition is by requiring a valid signature
-provided by the author of every certificate in a transaction and the
+the holder of the signing key, providing replay protection as a consequence.
+Replay prevention is an inherent property of UTxO stype accounting
+since transacition IDs are unique.
+Delegation certificates and reward withdrawals do not share this property,
+though if we require all witnesses to sign at least one transaction input,
+the replay prevention of UTxO accounting is then provided to any transaction.
+This is achieved by the above precondition by requiring a valid signature
+from the author of every certificate in a transaction, the
 holder of the key for every rewards account emptied, as well as
 hash keys of each of the inputs addresses.
 
