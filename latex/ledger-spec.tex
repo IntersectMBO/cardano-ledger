@@ -58,6 +58,7 @@
 \newcommand{\DWEnv}{\type{DWEnv}}
 \newcommand{\PState}{\type{PState}}
 \newcommand{\DCertBody}{\type{DCertBody}}
+\newcommand{\TData}{\type{TData}}
 \newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
 
 %% Adding witnesses
@@ -118,13 +119,14 @@
 
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
-\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
 \newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txdata}[1]{\fun{txdata}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
 \newcommand{\txwdrls}[1]{\fun{txwdrls}~ \var{#1}}
 \newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
@@ -237,15 +239,11 @@ the rest of the document.
     \cup \{k\mapsto v_1+v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
     & \text{union override plus} \\
     & & \text{(for monoidal values)}\\
-    M \unionoverrideZero N
-    & = (M \triangle N)
-    \cup \{k\mapsto 0\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
-    & \text{union override plus} \\
-    & & \text{(for monoidal values)}\\
   \end{align*}
   \caption{Non-standard map operators}
   \label{fig:notation:nonstandard}
 \end{figure}
+
 
 \section{Cryptographic primitives}
 \label{sec:crypto-primitives}
@@ -263,7 +261,7 @@ order to guarantee certain security properties of the delegation process, which
 we discuss later.
 
 The cryptographic concepts required for the formal definition
-of delegation with witnesses include public-private key pairs, one-way functions
+of witnessing include public-private key pairs, one-way functions
 and signatures. The constraint we introduce states that a signature of
 some data signed with a (private) key is only correct whenever we can verify
 it using the corresponding public key.
@@ -311,6 +309,7 @@ it using the corresponding public key.
   \caption{Cryptographic definitions}
   \label{fig:crypto-defs}
 \end{figure}
+
 
 \section{Serialization}
 \label{sec:serialization}
@@ -495,15 +494,6 @@ transaction can only be issued if the refund is bigger than the minimum
 transaction fee. In order to receive a refund in this case, the transaction
 body must also contain inputs onto which this refund can be added.
 
-\begin{note}
-  We define $\fun{certRefund}$ by cases on whether or not
-  the refunding certificate has a corresponding
-  resource creating certificate.
-  If our rules are correct, then $\fun{certRefund}$
-  is only called in the case where such a matching
-  certificate exists.
-\end{note}
-
 
 \begin{figure*}
   \emph{Abstract types}
@@ -590,6 +580,7 @@ body must also contain inputs onto which this refund can be added.
   \caption{Functions used in Deposits - Refunds}
   \label{fig:functions:deposits-refunds}
 \end{figure}
+
 
 We define the functions used in calculating deposits in
 Figure~\ref{fig:functions:deposits-refunds}.
@@ -746,9 +737,9 @@ account for this address and added to the UTxO.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
       \var{txid} & \TxId & \text{transaction id}\\
       %
-      ix & \Ix & \text{index}\\
       %
       \var{addr} & \Addr_{base} & \text{base address}\\
       %
@@ -870,9 +861,16 @@ two more values are added to this side of the equation:
 \begin{itemize}
 \item the fee the transaction pays (in unspent outputs)
 \item all registration
-deposits it pays (also in unspent outputs)
+deposits the transaction pays (also in unspent outputs)
 \end{itemize}
 
+We remind the reader here that even though the $\fun{created}$ calculation
+takes $\var{stpools}$ as a parameter, this is only in order to determine,
+within the $\fun{deposits}$ calculation, which
+pool registration certificates are new registrations, and which ones are updates
+(and do not require a deposit payment). The $\fun{deposits}$ calculation is
+a sum of \textit{all} deposits a transaction is making, and the value of these
+deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpools}$.
 
 \begin{figure}
   \begin{align*}
@@ -896,7 +894,7 @@ deposits it pays (also in unspent outputs)
     \nextdef
     & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideZero \var{wdrls} \\
+         \var{rewards} \unionoverrideRight \{(w, 0) \| w \in \var{wdrls}\} \\
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value destroyed} \\
@@ -915,6 +913,7 @@ deposits it pays (also in unspent outputs)
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
 \end{figure}
+
 
 The type of the transition of a UTxO is presented in Figure
 ~\ref{fig:ts-types:utxo}. A
@@ -968,6 +967,7 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
 \end{figure}
+
 
 \subsection{UTxO, Fees, and Deposits Ledger Update}
 \label{sec:utxo-ufd}
@@ -1042,8 +1042,8 @@ great flexibility to the management of the coin value obtained from these
 accounts, i.e. it can be directed to any address. However, means there is no
 direct link between the $wdrls$ requests (similarly, the key deregistration
 certificate addresses and refund amounts) and the $outputs$. We verify the
-correctness of the included outputs through the preservation of value condition
-and the witnesses authorizing them. The combination of the
+the included outputs are correct and authorized through the preservation of value condition
+and witnessing the transaction. The combination of the
 preservation of value and witnessing, described in Section~\ref{sec:witnesses},
 assures that the ledger state is updated correctly.
 
@@ -1167,6 +1167,7 @@ $\var{wdrls}$ list as a signal.
 \label{fig:delegation-rewards-type}
 \end{figure}
 
+
 We also give the type of the complete $\DWState$
 transition, which combines both the certificates and reward
 requests in a single transaction in Figure~\ref{fig:delegation-total-type}.
@@ -1180,6 +1181,7 @@ requests in a single transaction in Figure~\ref{fig:delegation-total-type}.
 \caption{Delegation Rewards Update Types}
 \label{fig:delegation-total-type}
 \end{figure}
+
 
 In the following Figure~\ref{fig:delegation-rewards}, we present the inference
 rule for updating the rewards to reflect the withdrawals a transaction makes
@@ -1238,6 +1240,7 @@ numbers datatype concern.
   \label{fig:delegation-rewards}
   \end{figure}
 
+
 In Figure~\ref{fig:delegation-total}, we present the inference rule for
 the total delegation state transition. This rule is a composition of the
 DELRWDS rule above and the DELEGS $\DWState$ transition defined in
@@ -1250,7 +1253,7 @@ rewards to the associated address
 \item A transaction is forced to include reward requests for all addresses
 associated with any key that is being deregistered
 \item A transaction cannot request to deregister an individual key
-associated with a stake pool which is scheduled to retire
+associated with an existing stake pool
 \end{itemize}
 
 With these checks in place, there are never any unclaimed rewards left over
@@ -1279,7 +1282,7 @@ rest of the delegation state update is triggered by the cetificate list.
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \addrRw~(\fun{author}~{c}) \in \dom \var{wdrls} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
-        \fun{author}~{c} \notin \dom \var{retiring} \\ ~ \\
+        \fun{author}~{c} \notin \dom \var{retiring} \union \dom \var{stpools} \\ ~ \\
       {
         \begin{array}{l}
           tx \\
@@ -1323,23 +1326,46 @@ rest of the delegation state update is triggered by the cetificate list.
 \end{figure}
 
 
-
 \subsection{Witnesses}
 \label{sec:witnesses}
 
-The definitions needed to add witnessing to the UTxO transitions described above
-are presented in Figure~\ref{fig:defs:utxow}. A transaction is witnessed by
+The definitions needed to add witnessing to the UTxO transitions described above,
+as well as the certificates a transaction is carrying,
+are presented in Figure~\ref{fig:defs:utxow}. We introducs two new abstract types,
+representing the body of a certificate ($\DCertBody$) and the data inside a
+transaction ($\TData)$. Both of these types represent everything inside a
+certificate (respectively, transaction) \textit{except} the witnesses.
+
+A transaction is witnessed by
 a signature and a verification key corresponding to this signature, which can
-be obtained from the the transaction by applying the $\fun{wits}$ function. The
+be obtained from the the transaction by applying the $\fun{txwits}$ function.
+The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
+to the certificate. The
 $\fun{hashKey_{spend}}$ map associates to an address the hash of the spending key
 at this address.
 
 \begin{figure}
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      dcb & \DCertBody & \text{certificate body}\\
+      td & \TData
+      & \text{transaction data} \\
+    \end{array}
+  \end{equation*}
   \emph{Abstract functions}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
+      \fun{dbody} & \DCert \mapsto \DCertBody
+      & \text{body of the delegation certificate}\\
+      \fun{txdata} & \Tx \mapsto \TData
+      & \text{transaction data}\\
+      \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
+      & \text{witness for the delegation certificate}\\
+      \fun{dcerts} & \Tx \to \text{list}~\DCert
+      & \text{delegation certificates in a transaction}\\
+      \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
       \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
       & \text{hashKey of a spending key in an address}\\
@@ -1349,8 +1375,10 @@ at this address.
   \label{fig:defs:utxow}
 \end{figure}
 
+
 In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
-associated with a UTxO. The first, $\fun{addr}$, gives the finite map
+associated with input and reward addresses and their keys.
+The first, $\fun{addr}$, gives the finite map
 which associates to a given $\var{txin}$ in the UTxO the address of the
 corresponding $\var{txout}$. The map $\fun{addr_h}$, given a UTxO, returns the
 finite map which associates $\var{txin}$ with the hash of a spending key in
@@ -1386,10 +1414,9 @@ Figure~\ref{fig:rules:utxow}):
  of the address corresponding to the output of $\var{i}$ in the current UTxO
  is the same as the hash of the verification key of the witness.
 
- \item For each output $ix \mapsto (a,c)$ (including any withdrawal and refund
- outputs included) there exists a (unique) verifiable witness such that the hash of
- the spending key of the
- output address is the same as the hash of the verification key of the witness.
+ \item For each certificate in $\var{tx}$, the signature of the transaction
+ and certificate must be witnessed by the
+   verification key with which the certificate is associated
 
  \item For every withdrawal request address of $\var{tx}$,
  there exists a (unique) verifiable witness such that the hash of the spending key of the
@@ -1400,27 +1427,28 @@ The purpose of witnessing is make sure that the intended action is authorized by
 the holder of the signing key, providing replay protection as a
 consequence.
 Due to the nature
-of UTxO stype accounting, this replay protection is needed only to prevent
+of UTxO stype accounting and the structure of rewards accounts,
+this replay protection is needed only to prevent
 the re-application of old certificates. The way this is
-achieved by the above precondition is by requiring a valid signature on
-the coin transfers made by the transaction (the body of the transaction).
+achieved by the above precondition is by requiring a valid signature
+provided by the author of every certificate in a transaction and the
+holder of the key for every rewards account emptied, as well as
+hash keys of each of the inputs addresses.
 
 Furthermore, expressing
 accounting as a preservation of total value of Ada allows the withdrawals
 and refunds to be sent to any address the transaction indicates
 (such as a different wallet operated by the same or another owner).
-Because of witnessing of the outputs, we know that all the value withdrawn from ledger
+Because of witnessing, we know that all the value withdrawn from ledger
 pools ($\var{rewards}$ and $\var{deposits}$) is going to the address intended
 (i.e signed) by the deregistration certificate author
 (or the key holder for the addresses from which the withdrawal is made,
 respectively).
 
-Here, we also enforce the condition that only one witness per each input and each
-output, as well as one
+Here, we also enforce the condition that only one witness per each input,
+as well as one
 witness per withdrawal address is allowed. We do so to prevent transactions
-being unnecessarily large and full of redundant witnessing. We do not
-discuss certificate witnessing here as this is ensured by the DELEGW rule
-in Section~\ref{sec:delegation}.
+being unnecessarily large and full of redundant witnessing.
 
 \begin{figure}
   \emph{UTxO with witness transitions}
@@ -1446,19 +1474,18 @@ in Section~\ref{sec:delegation}.
       }
       \vdash \var{utxoSt} \trans{utxo}{tx} \var{utxoSt'}\\
       ~ \\
-      \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
-      \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
+     \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     ~ \\
+      & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
+      \cdot \\
+      \verify{vk}{\serialised{\txdata~\var{tx}}}{\sigma}\\
       ~ \\
-      & \forall (ix \mapsto (a, c)) \in outputs \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
+      & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, (a,c))}}_{\sigma}
-      \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
-      ~ \\
-      & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
-      \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, (a,c))}}_{\sigma}
+      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
       \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
     }
     {
@@ -1471,6 +1498,7 @@ in Section~\ref{sec:delegation}.
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
+
 
 \subsection{Ledger State Transition}
 \label{sec:ledger}
@@ -1519,6 +1547,7 @@ by a transaction.
   \caption{Ledger transition-system types}
   \label{fig:ts-types:ledger}
 \end{figure}
+
 
 The inference rule describing the complete ledger state transition is given in
 Figure~\ref{fig:rules:ledger}. The consequent of the rule is triggered by
@@ -1587,13 +1616,12 @@ by the given transaction.
   \label{fig:rules:ledger}
 \end{figure}
 
-\clearpage
 
 \section{Epoch Boundary}
 \label{sec:epoch}
 \input{epoch.tex}
 
-\clearpage
+
 
 \section{Properties}
 \label{sec:properties}

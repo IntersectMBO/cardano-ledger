@@ -48,6 +48,7 @@ blockchain this epoch.
   \label{fig:epoch-defs}
 \end{figure}
 
+
 In Figure~\ref{fig:functions:epoch}, we give the functions
 used in the deposit calculations at the boundary. Here we introduce the function
 that gives the value of the total possible (decayed) refunds for both individual and
@@ -107,6 +108,7 @@ at the epoch boundary.
   \label{fig:functions:epoch}
 \end{figure}
 
+
 The type of the UTxO state transition at the epoch boundary is given in
 Figure~\ref{fig:ts-types:utxoe}. There is no signal for this transition, but rather
 it is the result of a change in the environment, i.e. the slot number changing
@@ -126,6 +128,7 @@ from the last slot of an epoch to the first slot of the subsequent epoch.
   \caption{UTxO Epoch transition-system types}
   \label{fig:ts-types:utxoe}
 \end{figure}
+
 
 The inference rule describing when the boundary UTxO state transition can
 take place is presented in~\ref{fig:rules:utxoep}. As a result of the application
@@ -169,6 +172,7 @@ function), and $\var{fees}$ value on the ledger is set to 0.
   \caption{UTxO Epoch inference rules}
   \label{fig:rules:utxoep}
 \end{figure}
+
 
 The Figure~\ref{fig:ts-types:accnt} gives the definitions related to epoch
 boundary ledger accounting. The figure lists the accounting fields, denoted by
@@ -233,6 +237,7 @@ type, as all transition types in this chapter, has no signal.
   \caption{Accounting transition-system types}
   \label{fig:ts-types:accnt}
 \end{figure}
+
 
 The accounting epoch boundary rule in Figure~\ref{fig:rules:accnt} is the rule
 where the most attention to detail is required in order to adhere to the
@@ -319,6 +324,7 @@ smaller refunds for deposits than were paid upon depositing.
   \label{fig:rules:accnt}
 \end{figure}
 
+
 Next, we discuss the epoch boundary pool retirement in
 Figure~\ref{fig:ts-types:pool-clean}. The type of this transition is similar
 to the other $\PState$ transition type we defined earlier, which is triggered
@@ -337,6 +343,7 @@ however, this one has an empty signal (as it happens at the boundary).
   \caption{Pool Clean Transition}
   \label{fig:ts-types:pool-clean}
 \end{figure}
+
 
 We now present the pool-cleanup transition rule in Figure~\ref{fig:rules:pool-clean}.
 This rule will be applied whenever there is one or more stake pools scheduled
@@ -381,6 +388,7 @@ these variables.
   \caption{Pool Clean Inference Rule}
   \label{fig:rules:pool-clean}
 \end{figure}
+
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
 constants. Besides the current slot number, delegation and pool states, the
@@ -428,6 +436,7 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   \caption{New Proto Consts transition-system types}
   \label{fig:ts-types:new-proto-consts}
 \end{figure}
+
 
 The inference rule for changing protocol constants does one of the following:
 
@@ -515,6 +524,7 @@ for ease of reading.
   \label{fig:rules:new-proto-consts}
 \end{figure}
 
+
 Finally, it is possible to define the complete epoch boundary transition type. It
 In the environment of this transition, we have the slot number, blocks produced
 this epoch, and both the old and the new protocol constants. The state is
@@ -561,6 +571,7 @@ pool state.
   \caption{Epoch transition-system types}
   \label{fig:ts-types:epoch}
 \end{figure}
+
 
 The epoch transition rule is a composition of all the state transition rules
 we have defined above. That is, whenever the UTXOEP, ACCNT, POOLCLEAN, and
