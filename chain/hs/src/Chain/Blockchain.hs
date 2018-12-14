@@ -6,32 +6,24 @@
 module Chain.Blockchain where
 
 import Control.Lens
-import Control.State.Transition
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Bits (shift)
-import Data.Queue
 import Data.Set (Set)
 import Numeric.Natural
 
 import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
-import UTxO (Hash)
 
 import Chain.GenesisBlock (genesisBlock)
+import Control.State.Transition
+import Data.Queue
 import Delegation.Interface
-  (DSIState, delegates, initDSIState, newCertsRule, updateCerts)
-import Types
-  ( VKey
-  , Sig
-  , Data
-  , HCert
-  , Interf
-  , BC
-  , Slot
-  , Block(..)
-  , BlockIx(..)
-  , ProtParams(..)
-  )
+  (delegates, maybeMapKeyForValue, mapKeyForValue, initDIState)
+import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify)
+import Ledger.Delegation (DCert, DIState, VKeyGen, DELEG, DSEnv)
+import Ledger.Signatures (Hash)
+import Types (BC, Block(..), BlockIx(..), ProtParams(..))
 
 
 -- | Computes the hash of a block
@@ -41,47 +33,30 @@ hashBlock b@(GBlock{}) = gbHash b
 
 -- | Computes the block size in bytes
 bSize :: Block -> Natural
-bSize = undefined
+bSize b@(GBlock{}) = gbSize b
+bSize b@(RBlock{}) = rbSize b
 
 -- | Computes the block header size in bytes
 bHeaderSize :: Block -> Natural
-bHeaderSize = undefined
-
--- | Size of the block sliding window
-newtype K = MkK Natural deriving (Eq, Ord)
+bHeaderSize b@(GBlock{}) = gbHeaderSize b
+bHeaderSize b@(RBlock{}) = rbHeaderSize b
 
 -- | The 't' parameter in K * t in the range 0.2 <= t <= 0.25
 -- that limits the number of blocks a signer can signed in a
 -- block sliding window of size K
 newtype T = MkT Double deriving (Eq, Ord)
 
--- | Checks whether the signature of data is valid
-verify :: VKey -> Data -> Sig -> Bool
-verify = undefined
-
 -- Gives a map from delegator keys to a queue of block IDs of blocks that
 -- the given key (indirectly) signed in the block sliding window of size K
-type KeyToQMap = Map.Map VKey (Queue BlockIx)
+type KeyToQMap = Map.Map VKeyGen (Queue BlockIx)
 
-
-instance STS Interf where
-  type State Interf = DSIState
-  type Signal Interf = Set HCert
-  type Environment Interf = Slot
-  data PredicateFailure Interf
-    = ConflictWithExistingCerts
-    | InvalidNewCertificates
-    deriving (Eq, Show)
-
-  initialRules = []
-  transitionRules = [newCertsRule]
 
 -- | Remove the oldest entry in the queues in the range of the map if it is
 --   more than *K* blocks away from the given block index
-trimIx :: KeyToQMap -> K -> BlockIx -> KeyToQMap
-trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m)
+trimIx :: KeyToQMap -> SlotCount -> BlockIx -> KeyToQMap
+trimIx m (SlotCount k) ix = foldl (flip f) m (Map.keysSet m)
  where
-  f :: VKey -> KeyToQMap -> KeyToQMap
+  f :: VKeyGen -> KeyToQMap -> KeyToQMap
   f = Map.adjust (qRestrict ix)
   qRestrict :: BlockIx -> Queue BlockIx -> Queue BlockIx
   qRestrict (MkBlockIx ix') q = case headQueue q of
@@ -90,42 +65,41 @@ trimIx m (MkK k) ix = foldl (flip f) m (Map.keysSet m)
 
 -- | Updates a map of genesis verification keys to their signed blocks in
 -- a sliding window by adding a block index to a specified key's list
-incIxMap :: BlockIx -> VKey -> KeyToQMap -> KeyToQMap
+incIxMap :: BlockIx -> VKeyGen -> KeyToQMap -> KeyToQMap
 incIxMap ix = Map.adjust (pushQueue ix)
 
 -- | Environment for blockchain rules
 data BlockchainEnv = MkBlockChainEnv
   {
-    bcEnvPp :: ProtParams
-  , bcEnvSl :: Slot
-  , bcEnvK :: K
-  , bcEnvT :: T
+    bcEnvPp    :: ProtParams
+  , bcEnvDIEnv :: DSEnv
+  , bcEnvK     :: SlotCount
+  , bcEnvT     :: T
   }
 
 -- | Extends a chain by a block
-extendChain :: (Environment BC, State BC, Signal BC) -> State BC
-extendChain (env, st, b@(RBlock{})) =
+extendChain :: (Environment BC, State BC, Signal BC) -> DIState -> State BC
+extendChain (env, st, b@(RBlock{})) dis =
   let
-    p'          = b
-    (sl, k, t ) = (bcEnvSl env, bcEnvK env, bcEnvT env)
-    (m , p, ds) = st
-    vk_d        = rbSigner b
-    ix          = rbIx b
-    vk_s        = delegates ds Map.! vk_d
-    m'          = incIxMap ix vk_s (trimIx m k ix)
-    ds'         = updateCerts sl (rbCerts b) ds
-  in (m', p', ds')
+    p'             = b
+    (dienv, k, t ) = (bcEnvDIEnv env, bcEnvK env, bcEnvT env)
+    (m    , p, ds) = st
+    vk_d           = rbSigner b
+    ix             = rbIx b
+    vk_s           = mapKeyForValue vk_d . delegates $ ds
+    m'             = incIxMap ix vk_s (trimIx m k ix)
+  in (m', p', dis)
 
 instance STS BC where
   -- | The state comprises a map of genesis block verification keys to a queue
   -- of at most K blocks each key signed in a sliding window of size K,
   -- the previous block and the delegation interface state
-  type State BC = (KeyToQMap, Block, DSIState)
+  type State BC = (KeyToQMap, Block, DIState)
   -- | Transitions in the system are triggered by a new block
   type Signal BC = Block
   -- | The environment consists of K and t parameters. To support a state
-  -- transition subsystem, the environment also includes the slot of the
-  -- block to be added.
+  -- transition subsystem, the environment also includes the environment of the
+  -- subsystem.
   type Environment BC = BlockchainEnv
   data PredicateFailure BC
     = InvalidPredecessor
@@ -134,12 +108,12 @@ instance STS BC where
     | InvalidBlockSize
     | InvalidHeaderSize
     | SignedMaximumNumberBlocks
-    | LedgerFailure (PredicateFailure Interf)
+    | LedgerFailure (PredicateFailure DELEG)
     deriving (Eq, Show)
 
   -- There are only two inference rules: 1) for the initial state and 2) for
   -- extending the blockchain by a new block
-  initialRules = [ return $ (Map.empty, genesisBlock, initDSIState) ]
+  initialRules = [ return $ (Map.empty, genesisBlock, initDIState) ]
   transitionRules =
     [ do
         TRC jc <- judgmentContext
@@ -149,8 +123,8 @@ instance STS BC where
         hasRight jc ?! NoDelegationRight
         validSignature jc ?! InvalidBlockSignature
         lessThanLimitSigned jc
-        _ <- trans @Interf $ TRC (proj jc)
-        return $ extendChain jc
+        dis <- trans @DELEG $ TRC (proj jc)
+        return $ extendChain jc dis
     ]
     where
       -- valid predecessor
@@ -158,7 +132,7 @@ instance STS BC where
          hashBlock p == rbHash b
       -- has a block size within protocol limits
       validBlockSize (env, _, b@(RBlock {})) =
-           bSize b <= (blockSizeLimit b (bcEnvPp env))
+           bSize b <= blockSizeLimit b (bcEnvPp env)
          where
            blockSizeLimit :: Block -> ProtParams -> Natural
            blockSizeLimit (GBlock {}) pp = maxBlockSize pp
@@ -171,7 +145,7 @@ instance STS BC where
         bHeaderSize b <= maxHeaderSize (bcEnvPp env)
       -- has a delegation right
       hasRight (_, (_, _, ds), b@(RBlock {})) =
-        Map.member (rbSigner b) (delegates ds)
+        isJust $ maybeMapKeyForValue (rbSigner b) (delegates ds)
       -- valid signature
       validSignature (_, _, b@(RBlock {})) =
          verify (rbSigner b) (rbData b) (rbSig b)
@@ -180,15 +154,15 @@ instance STS BC where
       lessThanLimitSigned (env, st, b@(RBlock {})) =
         let
           (m, _, ds) = st
-          ((MkK k), (MkT t)) = (bcEnvK env, bcEnvT env)
+          (SlotCount k, MkT t) = (bcEnvK env, bcEnvT env)
           vk_d = rbSigner b
           dsm = delegates ds
-        in case Map.lookup vk_d dsm of
+        in case maybeMapKeyForValue vk_d dsm of
           Nothing   -> False ?! NoDelegationRight
           Just vk_s ->
-            fromIntegral (sizeQueue (m Map.! vk_s)) <= (fromIntegral k) * t
+            fromIntegral (sizeQueue (m Map.! vk_s)) <= fromIntegral k * t
               ?! SignedMaximumNumberBlocks
-      proj (env, (_, _, d), b@(RBlock {})) = (bcEnvSl env, d, rbCerts b)
+      proj (env, (_, _, d), b@(RBlock {})) = (bcEnvDIEnv env, d, rbCerts b)
 
-instance Embed Interf BC where
+instance Embed DELEG BC where
   wrapFailed = LedgerFailure

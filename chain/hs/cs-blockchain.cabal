@@ -22,7 +22,6 @@ library
                        Delegation.Interface
                        Types
   other-modules:       Data.Queue
-                       UTxO
   -- other-extensions:
   hs-source-dirs:      src, src/simple/utxo
   default-language:    Haskell2010
