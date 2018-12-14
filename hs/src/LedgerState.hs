@@ -595,3 +595,31 @@ utxoWitnessed = do
 
 instance Embed UTXO UTXOW where
     wrapFailed = UtxoFailure
+
+
+data LEDGER
+
+instance STS LEDGER where
+    type State LEDGER       = (UTxOState, DelegationState)
+    type Signal LEDGER      = TxWits
+    type Environment LEDGER = (PrtlConsts, Slot)
+    data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
+                    deriving (Show, Eq)
+
+    initialRules    = [ initialLedgerStateLEDGER ]
+    transitionRules = [ ledgerTransition ]
+
+initialLedgerStateLEDGER :: InitialRule LEDGER
+initialLedgerStateLEDGER = do
+  IRC ((pc, slot)) <- judgmentContext
+  utxo' <- trans @UTXOW $ IRC ((pc, slot, Map.empty, Map.empty))
+  pure (utxo', emptyDelegation)
+
+ledgerTransition :: TransitionRule LEDGER
+ledgerTransition = do
+  TRC ((pc, slot), (u, d), txwits) <- judgmentContext
+  utxo' <- trans @UTXOW $ TRC ((pc, slot, d ^. stPools, d ^. stKeys), u, txwits)
+  pure (utxo', emptyDelegation)
+
+instance Embed UTXOW LEDGER where
+    wrapFailed = UtxowFailure
