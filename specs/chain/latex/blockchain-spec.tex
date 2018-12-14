@@ -69,7 +69,7 @@
 \newcommand{\GBlock}{\type{GBlock}}
 \newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
-\newcommand{\HCert}{\type{C}}
+\newcommand{\DCert}{\type{DCert}}
 \newcommand{\Queue}{\type{Q}}
 
 \newcommand{\SKey}{\type{SKey}}
@@ -159,7 +159,7 @@
 
 \author{Marko Dimjašević}
 
-\date{November 22, 2018}
+\date{December 13, 2018}
 
 \maketitle
 
@@ -299,16 +299,16 @@ are given in Figure~\ref{fig:cert-defs}.
   \emph{Abstract types}
   %
   \begin{align*}
-    c & \in \HCert  & \text{heavyweight delegation certificate}
+    c & \in \DCert  & \text{heavyweight delegation certificate}
   \end{align*}
   %
   \emph{Functions}
   %
   \begin{align*}
-    \fun{cFrom} & \in \HCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
-    \fun{cTo} & \in \HCert \totalf \VKey & \text{certificate delegatee key projection} \\
-    \fun{cSl} & \in \HCert \totalf \Slot & \text{certificate slot projection} \\
-    \fun{cSig} & \in \HCert \totalf \Sig & \text{certificate signature projection}
+    \fun{cFrom} & \in \DCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
+    \fun{cTo} & \in \DCert \totalf \VKey & \text{certificate delegatee key projection} \\
+    \fun{cSl} & \in \DCert \totalf \Slot & \text{certificate slot projection} \\
+    \fun{cSig} & \in \DCert \totalf \Sig & \text{certificate signature projection}
   \end{align*}
   %
   \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
@@ -350,7 +350,7 @@ are given in Figure~\ref{fig:cert-defs}.
       & \text{previous block's hash} \\
     \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
     \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
-    \fun{\rbcertsname} & \in \RBlock \totalf \powerset{\HCert}
+    \fun{\rbcertsname} & \in \RBlock \totalf \seqof{\DCert}
       & \text{block certificates} \\
     \fun{\rbsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
     \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data} \\
@@ -407,7 +407,10 @@ projection functions for the following:
 \item a block hash pointing to the block's predecessor,
 \item a block index,
 \item a verification key of the block signer,
-\item a set of heavyweight delegation certificates in the body,
+\item a list\footnote{There is no justification why this should be a list,
+    instead of a set of certificates. There is no order between
+    certificates. That said, list was chosen to align with the ledger
+    specification.} of heavyweight delegation certificates in the body,
 \item a slot it is in,
 \item data that is the block body. Note this comprises delegation certificates
   and possibly other information that might not be of interest for this
@@ -692,7 +695,7 @@ Figure~\ref{fig:blockchain-extension}.
   \inference[Blockchain-extension]
   {
     {\begin{array}{c}
-      \var{ix} = \rbix{b} \wedge \var{vk_d} = \rbsigner{b} \wedge \var{sl} = \rbsl{b} \\
+      \var{ix} = \rbix{b} \wedge \var{vk_d} = \rbsigner{b} \\
       \hash{b} \equiv \hashofblock{p} \\
       \bsize{b} \leq \blocksizelimit{b}{\var{pp}} \\
       \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
@@ -702,13 +705,13 @@ Figure~\ref{fig:blockchain-extension}.
       \signmapname' = \incixmap{\var{ix}}{\var{vk_s}}{(\trimix{\signmapname}{\var{ix}})} \\
       p' = b 
      \end{array}}
-   & (\var{sl}) \vdash \var{ds} \trans{\text{DELEG}}{\rbcerts{b}} \var{ds'}
+   & (\var{DSEnv}) \vdash \var{ds} \trans{\text{DELEG}}{\rbcerts{b}} \var{ds'}
   }
   {
     \left(
       {\begin{array}{c}
          \var{pp} \\
-         \var{sl} \\
+         \var{DSEnv} \\
          K \\
          t
        \end{array}}
