@@ -444,6 +444,9 @@ retirePools ls@(LedgerState _ ds _) epoch =
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange :: LedgerState -> Tx -> Coin
 depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
+  -- Note that while (currentPool + txDeposits) >= txRefunds,
+  -- it could be that txDeposits < txRefunds. We keep the parenthesis above
+  -- to emphasize this point.
   where
     currentPool = ls ^. utxoState . deposits
     txDeposits = depositAmount (ls ^. pcs) (ls ^. delegationState . stPools) tx
