@@ -1,6 +1,8 @@
-{-# LANGUAGE BangPatterns    #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-|
 Module      : LedgerState
@@ -49,18 +51,17 @@ module LedgerState
 
 import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
-import           Data.List               (foldl')
 import qualified Data.Map                as Map
 import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 
-import           Lens.Micro              ((^.), (&), (.~))
+import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*), slotFromEpoch)
+import           Slot                    (Slot (..), Epoch (..), (-*))
 import           Keys
 import           UTxO
 import           PrtlConsts              (PrtlConsts(..), minfeeA, minfeeB)
@@ -126,12 +127,14 @@ instance Monoid Validity where
 
 type Allocs = Map.Map HashKey Slot
 
+type RewardAccounts = Map.Map RewardAcnt Coin
+
 -- |The state associated with the current stake delegation.
 data DelegationState =
     DelegationState
     {
     -- |The active accounts.
-      _accounts    :: Map.Map RewardAcnt Coin
+      _accounts    :: RewardAccounts
     -- |The active stake keys.
     , _stKeys      :: Allocs
     -- |The current delegations.
@@ -188,24 +191,24 @@ genesisState pc outs = LedgerState
   pc
 
 -- | Determine if the transaction has expired
-current :: TxWits -> Slot -> Validity
-current (TxWits tx _) slot =
+current :: Tx -> Slot -> Validity
+current tx slot =
     if tx ^. ttl < slot
     then Invalid [Expired (tx ^. ttl) slot]
     else Valid
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
-validNoReplay :: TxWits -> Validity
-validNoReplay (TxWits tx _) =
+validNoReplay :: Tx -> Validity
+validNoReplay tx =
     if txins tx == Set.empty
     then Invalid [InputSetEmpty]
     else Valid
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
-validInputs :: TxWits -> LedgerState -> Validity
-validInputs (TxWits tx _) l =
-  if txins tx `Set.isSubsetOf` dom (l ^. utxoState . utxo)
+validInputs :: Tx -> UTxOState -> Validity
+validInputs tx u =
+  if txins tx `Set.isSubsetOf` dom (u ^. utxo)
     then Valid
     else Invalid [BadInputs]
 
@@ -218,20 +221,19 @@ minfee :: PrtlConsts -> Tx -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + pc ^. minfeeB
 
 -- |Determine if the fee is large enough
-validFee :: TxWits -> LedgerState -> Validity
-validFee (TxWits tx _) l =
+validFee :: PrtlConsts -> Tx -> Validity
+validFee pc tx =
   if needed <= given
     then Valid
     else Invalid [FeeTooSmall needed given]
       where
-        needed = minfee (l ^. pcs) tx
+        needed = minfee pc tx
         given  = tx ^. txfee
 
 -- |Compute the lovelace which are consumed by the transaction
-destroyed :: Tx -> LedgerState -> Coin
-destroyed tx l =
-    balance (txouts tx) + tx ^. txfee + depositAmount (l ^. pcs) stpools tx
-  where stpools = l ^. delegationState . stPools
+destroyed :: Allocs -> PrtlConsts -> Tx -> Coin
+destroyed stakePools pc tx =
+    balance (txouts tx) + tx ^. txfee + depositAmount pc stakePools tx
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds :: PrtlConsts -> Allocs -> Tx -> Coin
@@ -243,28 +245,29 @@ keyRefunds pc stkeys tx =
             Just s -> refund (RegKey key) pc $ (tx ^. ttl) -* s
 
 -- |Compute the lovelace which are created by the transaction
-created :: Tx -> LedgerState -> Coin
-created tx l = balance (txins tx <| (l ^. utxoState . utxo)) + refunds + withdrawals
+created :: Allocs -> PrtlConsts -> Tx -> UTxOState -> Coin
+created stakeKeys pc tx u =
+    balance (txins tx <| (u ^. utxo)) + refunds + withdrawals
   where
-    refunds = keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) tx
+    refunds = keyRefunds pc stakeKeys tx
     withdrawals = sum $ tx ^. wdrls
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
-preserveBalance :: TxWits -> LedgerState -> Validity
-preserveBalance (TxWits tx _) l =
+preserveBalance :: Allocs -> Allocs -> PrtlConsts -> Tx -> UTxOState -> Validity
+preserveBalance stakePools stakeKeys pc tx u =
   if created' == destroyed'
     then Valid
     else Invalid [ValueNotConserved created' destroyed']
   where
-    created' = created tx l
-    destroyed' = destroyed tx l
+    created' = created stakeKeys pc tx u
+    destroyed' = destroyed stakePools pc tx
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
-correctWitdrawals :: TxWits -> LedgerState -> Validity
-correctWitdrawals (TxWits tx _) l =
-  if (tx ^. wdrls) `Map.isSubmapOf` (l ^. delegationState . accounts)
+correctWitdrawals :: RewardAccounts -> Tx -> Validity
+correctWitdrawals accs tx =
+  if (tx ^. wdrls) `Map.isSubmapOf` accs
     then Valid
     else Invalid [IncorrectRewards]
 
@@ -298,40 +301,48 @@ verifiedWits (TxWits tx wits) =
 -- We check that there are not more witnesses than inputs, if several inputs
 -- from the same address are used, it is not strictly necessary to include more
 -- than one witness.
-enoughWits :: TxWits -> LedgerState -> Validity
-enoughWits (TxWits tx wits) l =
-  if requiredSigners tx (l ^. utxoState . utxo) `Set.isSubsetOf` signers
+enoughWits :: TxWits -> UTxOState -> Validity
+enoughWits (TxWits tx wits) u =
+  if requiredSigners tx (u ^. utxo) `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
 -- |Check that there are no redundant witnesses.
-noUnneededWits :: TxWits -> LedgerState -> Validity
-noUnneededWits (TxWits tx wits) l =
-  if signers `Set.isSubsetOf` requiredSigners tx (l ^. utxoState . utxo)
+noUnneededWits :: TxWits -> UTxOState -> Validity
+noUnneededWits (TxWits tx wits) u =
+  if signers `Set.isSubsetOf` requiredSigners tx (u ^. utxo)
     then Valid
     else Invalid [UnneededWitnesses]
   where
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
-validRuleUTXO :: TxWits -> Slot -> LedgerState -> Validity
-validRuleUTXO tx slot l = validInputs tx l
+validRuleUTXO ::
+    RewardAccounts -> Allocs -> Allocs -> PrtlConsts -> Slot -> Tx -> UTxOState -> Validity
+validRuleUTXO accs stakePools stakeKeys pc slot tx u =
+                          validInputs tx u
                        <> current tx slot
                        <> validNoReplay tx
-                       <> validFee tx l
-                       <> preserveBalance tx l
-                       <> correctWitdrawals tx l
-                       <> validCertsRetirePoolNotExpired tx slot
+                       <> validFee pc tx
+                       <> preserveBalance stakePools stakeKeys pc tx u
+                       <> correctWitdrawals accs tx
 
-validRuleUTXOW :: TxWits -> Slot -> LedgerState -> Validity
-validRuleUTXOW tx _ l = verifiedWits tx
-                     <> enoughWits tx l
-                     <> noUnneededWits tx l
+validRuleUTXOW :: TxWits -> LedgerState -> Validity
+validRuleUTXOW tx l = verifiedWits tx
+                   <> enoughWits tx (l ^. utxoState)
+                   <> noUnneededWits tx (l ^. utxoState)
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
-validTx tx slot l = validRuleUTXO  tx slot l
-                 <> validRuleUTXOW tx slot l
+validTx tx slot l =
+    validRuleUTXO  (l ^. delegationState . accounts)
+                   (l ^. delegationState . stPools)
+                   (l ^. delegationState . stKeys)
+                   (l ^. pcs)
+                   slot
+                   (tx ^. body)
+                   (l ^. utxoState)
+ <> validRuleUTXOW tx l
 
 -- The rules for checking validiy of stake delegation transitions return
 -- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
@@ -364,21 +375,6 @@ validStakeDelegation cert (LedgerState _ ds _) =
 -- there is currently no requirement that could make this invalid
 validStakePoolRegister :: DCert -> LedgerState -> Validity
 validStakePoolRegister _ _ = Valid
-
--- | Validate that if the certificate is a pool retirement certificate, then we
--- have not yet reached or passed its latest possible application slot.
-validCertRetirePoolNotExpired :: Slot -> DCert -> Validity
-validCertRetirePoolNotExpired ttlSlot cert  =
-    case cert of
-      (RetirePool _ epoch) ->
-          if ttlSlot <= slotFromEpoch epoch
-          then Valid
-          else Invalid [RetirementCertExpired ttlSlot (slotFromEpoch epoch)]
-      _                    -> Valid
-
-validCertsRetirePoolNotExpired :: TxWits -> Slot -> Validity
-validCertsRetirePoolNotExpired tx slot =
-    foldl' (\validity cert -> validity <> validCertRetirePoolNotExpired slot cert) Valid (tx ^. body . certs)
 
 validStakePoolRetire :: DCert -> LedgerState -> Validity
 validStakePoolRetire cert (LedgerState _ ds _) =
@@ -454,14 +450,16 @@ depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: LedgerState -> Tx -> LedgerState
-applyTxBody ls tx = ls & utxoState . utxo .~ newUTxOs
+applyTxBody ls tx = ls & utxoState %~ flip applyUTxOUpdate tx
                        & utxoState . deposits .~ depositPoolChange ls tx
                        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
                        & delegationState . accounts .~ newAccounts
   where
-    newUTxOs = txins tx </| (ls ^. utxoState . utxo) `union` txouts tx
     newAccounts = Map.mapWithKey removeRewards (ls ^. delegationState . accounts)
     removeRewards k v = if k `Map.member` (tx ^. wdrls) then Coin 0 else v
+
+applyUTxOUpdate :: UTxOState -> Tx -> UTxOState
+applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
@@ -519,17 +517,16 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
 data UTXO
 
 instance STS UTXO where
-    type State UTXO       = LedgerState
-    type Signal UTXO      = TxWits
-    type Environment UTXO = (PrtlConsts, Slot)
-    data PredicateFailure UTXO = BadInputsTx
-                               | ExpiredTx Slot Slot
-                               | InputSetEmptyTx
-                               | FeeTooSmallTx Coin Coin
-                               | ValueNotConservedTx Coin Coin
-                               | RetirementCertExpiredTx Slot Slot
-                               | UnexpectedFailure [ValidationError]
-                               | UnexpectedSuccess
+    type State UTXO       = UTxOState
+    type Signal UTXO      = Tx
+    type Environment UTXO = (PrtlConsts, Slot, Allocs, Allocs)
+    data PredicateFailure UTXO = BadInputsUTxO
+                               | ExpiredUTxO Slot Slot
+                               | InputSetEmptyUTxO
+                               | FeeTooSmallUTxO Coin Coin
+                               | ValueNotConservedUTxO Coin Coin
+                               | UnexpectedFailureUTXO [ValidationError]
+                               | UnexpectedSuccessUTXO
                    deriving (Eq, Show)
 
     transitionRules = [ utxoInductive ]
@@ -538,36 +535,91 @@ instance STS UTXO where
 
 initialLedgerState :: InitialRule UTXO
 initialLedgerState = do
-  IRC (pc, _) <- judgmentContext
-  pure $ LedgerState
-           (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
-           emptyDelegation
-           pc
+  IRC (_) <- judgmentContext
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
 
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
-  TRC ((_, slot), l, tx) <- judgmentContext
-  validInputs tx l       == Valid ?! BadInputsTx
-  current tx slot        == Valid ?! ExpiredTx (tx ^. body . ttl) slot
-  validNoReplay tx       == Valid ?! InputSetEmptyTx
-  let validateFee         = validFee tx l
-  validateFee            == Valid ?! unwrapFailure validateFee
-  let validateBalance     = preserveBalance tx l
-  validateBalance        == Valid ?! unwrapFailure validateBalance
-  let validateCertsRetire = validCertsRetirePoolNotExpired tx slot
-  validateCertsRetire    == Valid ?! unwrapFailure validateCertsRetire
-  pure $ applyTxBody l $ tx ^. body
+  TRC ((pc, slot, stakePools, stakeKeys), u, tx) <- judgmentContext
+  validInputs tx u       == Valid ?! BadInputsUTxO
+  current tx slot        == Valid ?! ExpiredUTxO (tx ^. ttl) slot
+  validNoReplay tx       == Valid ?! InputSetEmptyUTxO
+  let validateFee         = validFee pc tx
+  validateFee            == Valid ?! unwrapFailureUTXO validateFee
+  let validateBalance     = preserveBalance stakePools stakeKeys pc tx u
+  validateBalance        == Valid ?! unwrapFailureUTXO validateBalance
+  pure $ applyUTxOUpdate u tx
 
-unwrapFailure :: Validity -> PredicateFailure UTXO
-unwrapFailure (Invalid [e]) = unwrapFailure' e
-unwrapFailure Valid         = UnexpectedSuccess
-unwrapFailure (Invalid x)   = UnexpectedFailure x
+unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
+unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
+unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
+unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
 
-unwrapFailure' :: ValidationError -> PredicateFailure UTXO
-unwrapFailure' BadInputs                    = BadInputsTx
-unwrapFailure' (Expired s s')               = ExpiredTx s s'
-unwrapFailure' InputSetEmpty                = InputSetEmptyTx
-unwrapFailure' (FeeTooSmall c c')           = FeeTooSmallTx c c'
-unwrapFailure' (ValueNotConserved c c')     = ValueNotConservedTx c c'
-unwrapFailure' (RetirementCertExpired s s') = RetirementCertExpiredTx s s'
-unwrapFailure' x                            = UnexpectedFailure [x]
+unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
+unwrapFailureUTXO' BadInputs                = BadInputsUTxO
+unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
+unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
+unwrapFailureUTXO' (FeeTooSmall c c')       = FeeTooSmallUTxO c c'
+unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
+unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
+
+data UTXOW
+
+instance STS UTXOW where
+    type State UTXOW       = UTxOState
+    type Signal UTXOW      = TxWits
+    type Environment UTXOW = (PrtlConsts, Slot, Allocs, Allocs)
+    data PredicateFailure UTXOW = InvalidWitnessesUTXOW
+                                | MissingWitnessesUTXOW
+                                | UnneededWitnessesUTXOW
+                                | UtxoFailure (PredicateFailure UTXO)
+                   deriving (Eq, Show)
+
+    transitionRules = [ utxoWitnessed ]
+
+    initialRules = [ initialLedgerStateUTXOW ]
+
+initialLedgerStateUTXOW :: InitialRule UTXOW
+initialLedgerStateUTXOW = do
+  IRC ((pc, slots, stakePools, stakeKeys)) <- judgmentContext
+  trans @UTXO $ IRC ((pc, slots, stakePools, stakeKeys))
+
+
+utxoWitnessed :: TransitionRule UTXOW
+utxoWitnessed = do
+  TRC ((pc, slot, stakePools, stakeKeys), u, txwits) <- judgmentContext
+  verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
+  enoughWits txwits u     == Valid ?! MissingWitnessesUTXOW
+  noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
+  trans @UTXO $ TRC ((pc, slot, stakePools, stakeKeys), u, txwits ^. body)
+
+instance Embed UTXO UTXOW where
+    wrapFailed = UtxoFailure
+
+
+data LEDGER
+
+instance STS LEDGER where
+    type State LEDGER       = (UTxOState, DelegationState)
+    type Signal LEDGER      = TxWits
+    type Environment LEDGER = (PrtlConsts, Slot)
+    data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
+                    deriving (Show, Eq)
+
+    initialRules    = [ initialLedgerStateLEDGER ]
+    transitionRules = [ ledgerTransition ]
+
+initialLedgerStateLEDGER :: InitialRule LEDGER
+initialLedgerStateLEDGER = do
+  IRC ((pc, slot)) <- judgmentContext
+  utxo' <- trans @UTXOW $ IRC ((pc, slot, Map.empty, Map.empty))
+  pure (utxo', emptyDelegation)
+
+ledgerTransition :: TransitionRule LEDGER
+ledgerTransition = do
+  TRC ((pc, slot), (u, d), txwits) <- judgmentContext
+  utxo' <- trans @UTXOW $ TRC ((pc, slot, d ^. stPools, d ^. stKeys), u, txwits)
+  pure (utxo', emptyDelegation)
+
+instance Embed UTXOW LEDGER where
+    wrapFailed = UtxowFailure
