@@ -119,13 +119,14 @@
 
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
-\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
 \newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txdata}[1]{\fun{txdata}~ \var{#1}}
 \newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
 \newcommand{\txwdrls}[1]{\fun{txwdrls}~ \var{#1}}
 \newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
@@ -236,11 +237,6 @@ the rest of the document.
     M \unionoverridePlus N
     & = (M \triangle N)
     \cup \{k\mapsto v_1+v_2\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
-    & \text{union override plus} \\
-    & & \text{(for monoidal values)}\\
-    M \unionoverrideZero N
-    & = (M \triangle N)
-    \cup \{k\mapsto 0\mid {k\mapsto v_1}\in M \land {k\mapsto v_2}\in N \}
     & \text{union override plus} \\
     & & \text{(for monoidal values)}\\
   \end{align*}
@@ -744,7 +740,6 @@ account for this address and added to the UTxO.
       \var{tx} & \Tx & \text{transaction}\\
       \var{txid} & \TxId & \text{transaction id}\\
       %
-      ix & \Ix & \text{index}\\
       %
       \var{addr} & \Addr_{base} & \text{base address}\\
       %
@@ -899,7 +894,7 @@ deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpo
     \nextdef
     & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideZero \var{wdrls} \\
+         \var{rewards} \unionoverrideRight \{(w, 0) \| w \in \var{wdrls}\} \\
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value destroyed} \\
@@ -1343,7 +1338,7 @@ certificate (respectively, transaction) \textit{except} the witnesses.
 
 A transaction is witnessed by
 a signature and a verification key corresponding to this signature, which can
-be obtained from the the transaction by applying the $\fun{wits}$ function.
+be obtained from the the transaction by applying the $\fun{txwits}$ function.
 The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
 to the certificate. The
 $\fun{hashKey_{spend}}$ map associates to an address the hash of the spending key
@@ -1364,12 +1359,13 @@ at this address.
     \begin{array}{r@{~\in~}lr}
       \fun{dbody} & \DCert \mapsto \DCertBody
       & \text{body of the delegation certificate}\\
-      \fun{tdata} & \Tx \mapsto \TData
+      \fun{txdata} & \Tx \mapsto \TData
       & \text{transaction data}\\
       \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
       & \text{witness for the delegation certificate}\\
       \fun{dcerts} & \Tx \to \text{list}~\DCert
       & \text{delegation certificates in a transaction}\\
+      \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
       \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
       & \text{hashKey of a spending key in an address}\\
@@ -1478,18 +1474,18 @@ being unnecessarily large and full of redundant witnessing.
       }
       \vdash \var{utxoSt} \trans{utxo}{tx} \var{utxoSt'}\\
       ~ \\
-      \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma}
-      \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
+     \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     ~ \\
+      & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
+      \cdot \\
+      \verify{vk}{\serialised{(\dbody{c},~\txdata \var{tx})}}{\sigma}\\
       ~ \\
-      & \forall c \in \fun{dcerts}~{tx} \cdot \exists! \dwit{c} = (\var{vk}, \sigma)
+      & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
-      \verify{vk}{\serialised{(\dbody{c},~\txbody \var{tx})}}{\sigma}\\
-      ~ \\
-      & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \wits{\var{tx}}
-      \cdot \\
-      \mathcal{V}_{\var{vk}}{\serialised{(\txbody{tx}, (a,c))}}_{\sigma}
+      \mathcal{V}_{\var{vk}}{\serialised{(\txdata{tx}, (a,c))}}_{\sigma}
       \wedge \fun{hashKey_{spend}} \var{a} = \hashKey{vk}\\
     }
     {
