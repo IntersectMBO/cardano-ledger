@@ -458,7 +458,7 @@ refunds for any key deregistration certificates are, in fact, included in
 the $\var{tx}$ itself - meaning that the coin value of the refund must be
 explicitly specified in the outputs of the transaction. So,
 the value of the included refund must be calculated before this transaction
-is ever processed, and be the same \textit{no matter when} $\var{tx}$
+is ever processed, and be the same \textit{no matter when} the $\var{tx}$
 \textit{is actually processed} in order to for the system to continue to
 satisfy the general accounting property.
 
@@ -490,7 +490,7 @@ is a deliberate simplification choice, which does not introduce any inconsistenc
 into the system rules or properties. In particular, the general accounting
 property is not violated.
 
-Finally, note that that a refund for a resource-releasing certificate in a
+Finally, note that a refund for a resource-releasing certificate in a
 transaction can only be issued if the refund is bigger than the minimum
 transaction fee. In order to receive a refund in this case, the transaction
 body must also contain inputs onto which this refund can be added.
