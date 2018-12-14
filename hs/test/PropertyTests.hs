@@ -248,6 +248,7 @@ propCheckMissingWitness = withCoverage $ do
   let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
                               witnessSet' /= witnessSet''
   classify (isRealSubset) "real subset"
+  label (pack ("witnesses:" ++ show (Set.size witnessSet'')))
   case l' of
     Left [MissingWitnesses] -> isRealSubset === True
     Right _                 -> (witnessSet' == witnessSet'') === True
