@@ -53,6 +53,7 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\PtrAddr}{\type{PtrAddr}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\DWState}{\type{DWState}}
 \newcommand{\DWEnv}{\type{DWEnv}}
@@ -331,13 +332,10 @@ In this document, the properties and rules we state involving serialization are
 assumed to hold true independently of the storage medium and style of data
 organization chosen for an implementation.
 
-\clearpage
-
 \section{Delegation}
 \label{sec:delegation}
 \input{delegation.tex}
 
-\clearpage
 
 \section{UTxO}
 \label{sec:utxo}
@@ -658,7 +656,7 @@ Section~\cref{sec:epoch}.
   \label{fig:functions:deposits-decay}
 \end{figure}
 
-\clearpage
+
 
 \subsection{UTxO Transitions}
 \label{sec:state-trans-utxo-1}
@@ -667,9 +665,10 @@ The types involved in defining a UTxO and its transitions are presented in
 Figure~\ref{fig:defs:utxo}. Note that here, among other primitive types,
 we introduce $\Addr_{base}$. This is the usual type of address used for
 coin transfers by the transactions. We also introduce the derived type $\Addr$,
-which is a disjoint union of reward and base-type addresses. Using this type,
+which is a disjoint union of base-type, pointer, and reward addresses. Using this type,
 it is possible to do rewards accounting (which we discuss later in this chapter)
-in the same $\UTxO$ style as the base address coin transfers.
+in the same $\UTxO$ style as the base address coin transfers, as well as
+using the staking keys pointer address records in place of base addresses.
 Similar to the certificate structure, each address is either a reward or a base
 address.
 
@@ -758,7 +757,7 @@ account for this address and added to the UTxO.
       \var{addr}
       & \Addr
       & \var{addr}
-      & \Addr_{base} \uniondistinct \AddrRWD
+      & \Addr_{base} \uniondistinct \PtrAddr \uniondistinct \AddrRWD
       & \text{address}\\
       \var{txin}
       & \TxIn
@@ -925,8 +924,9 @@ This environment is made up of several variables.
 The $\PrtclConsts$ is needed as part of the environment here in order to
 keep track of parameters such as the $\fun{minfee}$ value, deposits, etc.
 The environment also has variables $\var{stkeys}$ and $\var{stpools}$
-to keep track of the current individual and pool resource allocations, and
-the current slot number.
+to keep track of the current individual and pool resource allocations,
+the $\var{pointeraddr}$ variable to look up staking keys corresponding to
+pointer addresses, and the current slot number.
 
 The relevant state variables for a UTxO transition include the UTxO itself,
 as well as the value in the deposits pool and the fees pool.
@@ -944,6 +944,7 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
         \var{pc} & \PrtclConsts & \text{protocol constants}\\
         \var{stkeys} & \Allocs & \text{stake key allocations}\\
         \var{stpools} & \Allocs & \text{stake pool allocations}\\
+        \var{pointeraddr} & \PtrAddr \mapsto \HashKey & \text{pointer addresses}\\
       \end{array}
     \right)
   \end{equation*}
@@ -971,7 +972,6 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \label{fig:ts-types:utxo}
 \end{figure}
 
-\clearpage
 
 \subsection{UTxO, Fees, and Deposits Ledger Update}
 \label{sec:utxo-ufd}
@@ -1115,6 +1115,7 @@ variable
         \var{pc}\\
         \var{stkeys}\\
         \var{stpools}\\
+        \var{pointeraddr} \\
       \end{array}
       \vdash
       \left(
@@ -1148,7 +1149,6 @@ variable
   This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
-\clearpage
 
 \subsection{Rewards Ledger Update}
 \label{sec:utxo-rewards}
@@ -1330,7 +1330,6 @@ rest of the delegation state update is triggered by the cetificate list.
 \label{fig:delegation-total}
 \end{figure}
 
-\clearpage
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -1346,9 +1345,7 @@ A transaction is witnessed by
 a signature and a verification key corresponding to this signature, which can
 be obtained from the the transaction by applying the $\fun{txwits}$ function.
 The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
-to the certificate. The
-$\fun{hashKey_{spend}}$ map associates to an address the hash of the spending key
-at this address.
+to the certificate.
 
 \begin{figure}
   \emph{Abstract types}
@@ -1373,8 +1370,8 @@ at this address.
       & \text{delegation certificates in a transaction}\\
       \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
-      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
-      & \text{hashKey of a spending key in an address}\\
+%      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
+%      & \text{hashKey of a spending key in an address}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
@@ -1395,9 +1392,10 @@ the address in the corresponding $\var{txout}$ in the UTxO.
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hashKey of an input address}\\
-    & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
-      \wedge a \mapsto h \in \fun{hashKey_{spend}} \}
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hashKey of a pointer address}\\
+    & \fun{addr_h}~utxo~\var{pointeraddr} = \\
+    & \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+      \wedge a \mapsto h \in \var{pointeraddr} \}
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
@@ -1417,7 +1415,7 @@ Figure~\ref{fig:rules:utxow}):
  \item For each input $\var{i}$ of the signal transaction $\var{tx}$,
  there exists a (unique) verifiable witness (there could be more than one valid
  key-signature pair serving as a witness) such that the hash of the spending key
- of the address corresponding to the output of $\var{i}$ in the current UTxO
+ of the pointer address corresponding to the output of $\var{i}$ in the current UTxO
  is the same as the hash of the verification key of the witness.
 
  \item For each certificate in $\var{tx}$, the signature of the transaction
@@ -1483,7 +1481,7 @@ being unnecessarily large and full of redundant witnessing.
       \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
-     \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     \wedge  \fun{addr_h}~{utxo}~{pointeraddr}~i = \hashKey{vk}\\
      ~ \\
       & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
       \cdot \\
@@ -1505,7 +1503,6 @@ being unnecessarily large and full of redundant witnessing.
   \label{fig:rules:utxow}
 \end{figure}
 
-\clearpage
 
 \subsection{Ledger State Transition}
 \label{sec:ledger}
@@ -1582,10 +1579,7 @@ by the given transaction.
     {
       {
         \begin{array}{r}
-        slot\\
-        pc\\
-        stkeys\\
-        stpools\\
+        \var{utxoEnv}
         \end{array}
       }
       \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}\\~\\~\\
@@ -1623,14 +1617,12 @@ by the given transaction.
   \label{fig:rules:ledger}
 \end{figure}
 
-\clearpage
 
 \section{Epoch Boundary}
 \label{sec:epoch}
 \input{epoch.tex}
 
 
-\clearpage
 
 \section{Properties}
 \label{sec:properties}
