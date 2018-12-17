@@ -90,5 +90,5 @@ genSlottingData = mkSlottingData <$> genSlottingDataMap >>= \case
 feedPMEpochSlots :: (ProtocolMagic -> SlotCount -> Gen a) -> Gen a
 feedPMEpochSlots genA = do
   pm         <- genProtocolMagic
-  epochSlots <- genSlotCount
+  epochSlots <- SlotCount . fromIntegral <$> Gen.word16 Range.constantBounded
   genA pm epochSlots
