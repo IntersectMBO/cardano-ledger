@@ -265,9 +265,9 @@ preserveBalance stakePools stakeKeys pc tx u =
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
-correctWitdrawals :: RewardAccounts -> Tx -> Validity
-correctWitdrawals accs tx =
-  if (tx ^. wdrls) `Map.isSubmapOf` accs
+correctWitdrawals :: RewardAccounts -> RewardAccounts -> Validity
+correctWitdrawals accs withdrawals =
+  if withdrawals `Map.isSubmapOf` accs
     then Valid
     else Invalid [IncorrectRewards]
 
@@ -326,7 +326,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> validNoReplay tx
                        <> validFee pc tx
                        <> preserveBalance stakePools stakeKeys pc tx u
-                       <> correctWitdrawals accs tx
+                       <> correctWitdrawals accs (tx ^. wdrls)
 
 validRuleUTXOW :: TxWits -> LedgerState -> Validity
 validRuleUTXOW tx l = verifiedWits tx
