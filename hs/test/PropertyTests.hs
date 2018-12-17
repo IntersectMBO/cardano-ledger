@@ -20,12 +20,7 @@ import qualified Hedgehog.Gen    as Gen
 import           Generator
 
 import           Coin
-import           LedgerState             ( LedgerValidation(..)
-                                         , ValidationError (..)
-                                         , asStateTransition
-                                         , utxoState
-                                         , utxo)
-
+import           LedgerState
 import           Slot
 import           UTxO
 
@@ -174,6 +169,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "using subset of witness set"
                     propCheckMissingWitness
+                  , testPropertyCoverage
+                    "Correctly preserve balance"
+                    propPreserveBalance
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
@@ -253,3 +251,16 @@ propCheckMissingWitness = withCoverage $ do
     Left [MissingWitnesses] -> isRealSubset === True
     Right _                 -> (witnessSet' == witnessSet'') === True
     _                       -> failure
+
+-- | Property (Preserve Balance)
+propPreserveBalance :: Cover
+propPreserveBalance = withCoverage $ do
+  (l, _, fee, tx, l') <- forAll genValidStateTx
+  let destroyed =
+           (balance (l ^. utxoState . utxo))
+        <> (keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) $ tx ^. body)
+  let created =
+           (balance (l' ^. utxoState . utxo))
+        <> fee
+        <> (depositAmount (l' ^. pcs) (l' ^. delegationState . stPools) $ tx ^.body)
+  destroyed === created
