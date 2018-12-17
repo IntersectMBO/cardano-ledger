@@ -1,6 +1,6 @@
 \newcommand{\UProp}{\ensuremath{\type{UProp}}}
-\newcommand{\UPropId}{\ensuremath{\type{UPropId}}}
-\newcommand{\UPropSD}{\ensuremath{\type{UPropSD}}}
+\newcommand{\UPropId}{\ensuremath{\type{UpId}}}
+\newcommand{\UPropSD}{\ensuremath{\type{UpSD}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 \newcommand{\ProtPm}{\ensuremath{\type{Ppm}}}
 \newcommand{\Rups}{\ensuremath{\type{Rups}}}
@@ -74,10 +74,10 @@ this specification can be extended to incorporate the research results.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{up} & \UProp & \text{(protocol) update proposal}\\
-      \var{p} & \ProtPm & \text{protocol parameters}\\
+      \var{up} & \UProp & \text{update proposal}\\
+      \var{p} & \ProtPm & \text{protocol parameter}\\
       \var{upd} & \type{UpdData} & \text{update data}\\
-      \var{upa} & \type{UpdAttr} & \text{update attributes}\\
+      \var{upa} & \type{UpdAttrs} & \text{update attributes}\\
       \var{an} & \ApName & \text{application name}
     \end{array}
   \end{equation*}
@@ -85,6 +85,7 @@ this specification can be extended to incorporate the research results.
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
+      \var{b_n} & \BkNr & n & \mathbb{N} & \text{block number}\\
       \var{pv} & \ProtVer & (\var{maj}, \var{min}, \var{alt})
       & (\mathbb{N}, \mathbb{N}, \mathbb{N}) & \text{protocol version}\\
       \var{pps} & \PPMMap & \var{pps} & \ProtPm \mapsto \Value
@@ -108,7 +109,7 @@ this specification can be extended to incorporate the research results.
           \PPMMap\\
           \type{SWVer}\\
           \type{UpdData}\\
-          \type{UpdAttr}\\
+          \type{UpdAttrs}\\
         \end{array}
                    \right)
                    }
@@ -119,13 +120,13 @@ this specification can be extended to incorporate the research results.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{upIssuer} & \UProp \to \VKeyGen & \text{issuer of the update proposal}\\
+      \fun{upIssuer} & \UProp \to \VKeyGen & \text{update proposal issuer}\\
       \fun{upSize} & \UProp \to \mathbb{N} & \text{update proposal size}\\
       \fun{upPV} & \UProp \to \ProtVer & \text{update proposal protocol version}\\
       \fun{upId} & \UProp \to \UPropId & \text{update proposal id}\\
       \fun{upParams} & \UProp \to \mathbb{\PPMMap}
-                                           & \text{new parameters that are proposed}\\
-      \fun{upSwVer} & \UProp \to \SWVer & \text{software version-update proposal}\\
+                                           & \text{proposed parameters update}\\
+      \fun{upSwVer} & \UProp \to \SWVer & \text{software-version update proposal}\\
       \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
       \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}\\
     \end{array}
@@ -134,11 +135,12 @@ this specification can be extended to incorporate the research results.
   \label{fig:defs:update-proposals}
 \end{figure}
 
-The set of protocol parameters is assumed to contain the following keys, which
+The set of protocol parameters ($\ProtPm$) is assumed to contain the following keys, which
 correspond with fields of the current `BlockVersionData` structure:
 \begin{itemize}
 \item Slot duration: $\var{slotDuration}$
 \item Maximum block size: $\var{maxBlockSize}$
+\item Maximum transaction size: $\var{maxTxSize}$
 \item Maximum header size: $\var{maxHeaderSize}$
 \item Maximum transaction size: $\var{maxTxSize}$
 \item Maximum proposal size: $\var{maxProposalSize}$
@@ -167,6 +169,8 @@ First we model the validity of a proposal.
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
+        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        & \text{application versions}\\
       \end{array}
     \right)
   \end{equation*}
@@ -177,7 +181,9 @@ First we model the validity of a proposal.
     = \left(
       \begin{array}{r@{~\in~}lr}
         \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
-        & \text{registered update proposals}\\
+        & \text{registered protocol update proposals}\\
+        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        & \text{registered software update proposals}\\
       \end{array}
     \right)
   \end{equation*}
@@ -209,8 +215,13 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
   \begin{itemize}
   \item the proposal size must not exceed the maximum size specified by
     the current protocol parameters,
-  \item the proposed new maximum block should be not greater than twice current
-    maximum block size, and
+  \item the proposed new maximum block size should be not greater than twice
+    current maximum block size,
+  \item the maximum transaction size must be smaller than the maximum block
+    size (this requirement is \textbf{crucial} for having every transaction
+    fitting in a block \footnote{TODO: we should discuss if this is enough,
+      since a block might contain other data that contributes to its total
+      size}), and
   \item the proposed new script version can be incremented by at most 1.
   \end{itemize}
 \item must be new:
@@ -250,6 +261,9 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
          & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})\\
          & & \Rightarrow \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}
              \wedge  \var{bszm_{up}} \leq 2\var{bszm})\\
+         & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})
+         \wedge \var{maxTxSize} \mapsto \var{txzm_{up}} \in (\upParams{up})\\
+         & & \Rightarrow \var{txzm_{up}} < \var{bszm_{up}})\\
          & \wedge & (\var{scriptVersion} \mapsto \var{sv_{up}} \in (\upParams{up}) \\
          & & \Rightarrow \var{scriptVersion} \mapsto \var{sv} \in \var{pps}
              \wedge  0 \leq \var{sv_{up}} - \var{sv} \leq 1)
@@ -269,7 +283,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
   \begin{equation}
     \label{eq:func:av-can-follow}
     \begin{array}{r c l}
-      \fun{avCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
+      \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
       & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
         \Rightarrow 0 \leq \var{av} - \var{av_c} \leq 1)\\
       & \vee & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
@@ -284,7 +298,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
     \inference
     {
       (\var{an}, \var{av}) = \upSwVer{up}
-      & \fun{avCanFollow}~\var{avs}~(\var{an}, \var{av})
+      & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
       & (\var{an}, \var{av}) \notin \range~\var{raus}
     }
     {
@@ -528,22 +542,26 @@ In Rule~\ref{eq:rule:up-limits}:
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
         \var{e_c} & \Epoch & \text{current epoch}\\
+        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        & \text{application versions}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Update proposals registration states}
-  \begin{equation*}
-    \UPRState
-    = \left(
+  \begin{align*}
+    & \UPRState = \\
+    & \left(
       \begin{array}{r@{~\in~}lr}
         \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered update proposals}\\
+        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        & \text{registered software update proposals}\\
         \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
       \end{array}
     \right)
-  \end{equation*}
+  \end{align*}
   %
   \emph{Update proposals registration transitions}
   \begin{equation*}
@@ -563,7 +581,8 @@ In Rule~\ref{eq:rule:up-limits}:
       {
         \begin{array}{l}
           \var{pv}\\
-          \var{pps}
+          \var{pps}\\
+          \var{avs}
         \end{array}
       }
       \vdash
@@ -571,6 +590,7 @@ In Rule~\ref{eq:rule:up-limits}:
         \left(
           \begin{array}{l}
             \var{rups}\\
+            \var{raus}\\
           \end{array}
         \right)
       }
@@ -579,6 +599,7 @@ In Rule~\ref{eq:rule:up-limits}:
         \left(
           \begin{array}{l}
             \var{rups'}\\
+            \var{raus'}\\
           \end{array}
         \right)
       }
@@ -611,6 +632,7 @@ In Rule~\ref{eq:rule:up-limits}:
           \var{pv}\\
           \var{pps}\\
           \var{e_c}\\
+          \var{avs}\\
           \var{dms}
         \end{array}
       }
@@ -619,6 +641,7 @@ In Rule~\ref{eq:rule:up-limits}:
         \left(
           \begin{array}{l}
             \var{rups}\\
+            \var{raus}\\
             \var{eps}
           \end{array}
         \right)
@@ -628,6 +651,7 @@ In Rule~\ref{eq:rule:up-limits}:
         \left(
           \begin{array}{l}
             \var{rups'}\\
+            \var{raus'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -649,14 +673,6 @@ In Rule~\ref{eq:rule:up-limits}:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{v} & \Vote & \text{vote on an update proposal}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Derived types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
-      \var{b_n} & \BkNr & n & \mathbb{N} & \text{block number}
     \end{array}
   \end{equation*}
   %
@@ -892,6 +908,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
       \var{pid} = \vPropId{v}
       & \var{cfmThd} \mapsto t \in \var{pps}
       & t \leq \size{\{\var{pid}\} \restrictdom \var{vts'}}
+      & \var{pid} \notin \dom~\var{cps}
     }
     {
       {
@@ -938,10 +955,6 @@ blocks. Some clarifications are in order:
 \item The $k$ parameter is used to determined when a confirmed proposal is
   stable. Given we are in a current block $b_n$, all update proposals confirmed
   at or before block $b_n - k$ are deemed stable.
-\item The type $\Rups$ is equal to
-  $\UPropId \mapsto (\ProtVer \times \PPMMap)$, we use this local
-  definition to be able to fit the description of the environment in the page
-  width.
 \item For the sake of conciseness, we omit the types associated to the
   transitions $\trans{addbvvk}{}$, since they can be inferred from the types of
   the $\trans{upend}{}$ transitions.
@@ -959,7 +972,7 @@ blocks. Some clarifications are in order:
                              & \text{current protocol parameters map}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
-        \var{rups} & \Rups
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
                              & \text{registered update proposals}\\
       \end{array}\right)
   \end{align*}
@@ -1008,23 +1021,26 @@ rule by $\var{bv}$:
   proposal (which are contained in $\var{rups}$), and this update proposal must
   have been confirmed at least $k$ blocks ago, to ensure stability of the
   confirmation. Note that this rule does not guarantee that a confirmed
-  proposal will have $k$ blocks (or $2k$ blocks) before the end of the epoch
+  proposal will have $k$ blocks (or $2k$ slots) before the end of the epoch
   where nodes can endorse this version. In such case, the proposal can only be
-  adopted in the next epoch. Figure~\ref{fig:proposal-confirmed-too-late} shows
+  adopted in the next epoch. Figure~\ref{fig:up-confirmed-too-late} shows
   an example of a proposal being confirmed too late in an epoch, where it is
   not possible to get the enough endorsements in the remaining window. In this
   Figure we take $k = 2$.
 \end{itemize}
 
-\begin{equation}
-  \label{eq:predicate:canadopt}
-  \begin{array}{r c l}
-    \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
-    & =
-    & \var{upAdptThd} \mapsto t \in pps \wedge
-    t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
-  \end{array}
-\end{equation}
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:predicate:canadopt}
+    \begin{array}{r c l}
+      \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
+      & =
+      & \var{upAdptThd} \mapsto t \in pps \wedge
+        t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
+    \end{array}
+  \end{equation}
+  \caption{Update-proposal endorsement functions}
+\end{figure}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -1273,7 +1289,8 @@ rule by $\var{bv}$:
     \pgfmathsetmacro{\eend}{7}
 
     % Draw the horizontal line
-    \draw[thick, -Triangle] (0,0) -- (\nrSlots,0) node[font=\scriptsize,below left=3pt and -8pt]{slots};
+    \draw[thick, -Triangle] (0,0) -- (\nrSlots,0)
+    node[font=\scriptsize,below left=3pt and -8pt]{slots};
 
     % % draw vertical lines
     \foreach \x in {0,1,...,10}
@@ -1321,11 +1338,15 @@ rule by $\var{bv}$:
 
     \draw[blue, line width=2pt] (\eend, 3pt) -- (\eend, -3pt);
 
+    \draw[<-] (\cSlot, 4pt) -- +(-1, 1)
+    node [above=2pt, black, font=\scriptsize]
+    {Proposal with id $\var{pid}$ gets confirmed};
+
     \draw[->] (\eend, -4pt) -- +(1, -1)
     node[right, blue, font=\scriptsize] {End of epoch};
   \end{tikzpicture}
-  \caption{A proposal confirmed too late}
-  \label{fig:proposal-confirmed-too-late}
+  \caption{An update proposal confirmed too late}
+  \label{fig:up-confirmed-too-late}
 \end{figure}
 
 \clearpage
@@ -1371,16 +1392,12 @@ complex check (which depends on state) to determine if a proposed version can
 follow the current one. By being more lenient on the alternative versions of
 update proposals we can simplify the version checking logic considerably.
 
-\subsubsection{Cleanup}
-\label{sec:up-cleanup}
+\subsubsection{No implicit agreement}
+\label{sec:no-implicit-agreement}
 
-Update proposals that are older than $u$ blocks w.r.t. the current block are
-discarded from the state, along with their associated information. The current
-implementation makes use of the implicit agreement rule and the epoch boundary
-checks: this leads to plenty of different states for a proposal: active,
-adopted, confirmed, competing, never-to-become-adopted, rejected, discarded. If
-the cleanup of proposals can be done in the way specified here we will avoid a
-great deal of cognitive complexity when reasoning about the update system.
+We do not model the implicit agreement rule. If a proposal does not get enough
+votes before the end of the voting period, then we simply discard it. At the
+moment it is not clear whether the implicit agreement rule is needed.
 
 \subsubsection{Adoption threshold}
 \label{sec:adoption-threshold}
@@ -1419,25 +1436,10 @@ Ouroboros-BFT logic in the software.
 It is unclear at this moment whether we need to model the applications names
 and versions, so this aspect is not modeled in the present rules.
 
-\subsubsection{No model of software-version}
-\label{sec:no-model-software-version}
-
-We do not model the
-\href{https://github.com/input-output-hk/cardano-sl/blob/develop/docs/block-processing/us.md#software-version}{application
-  name and the software version} of this application. It remains to be seen
-whether this is part of the scope of this specification.
-
-
-\subsubsection{Protocol-only vs software updates}
-\label{sec:protocol-vs-software-updates}
-
-We do not distinguish between protocol or software updates. The ledger only
-cares about the mechanisms by which the protocol parameters are changed.
-
 \subsubsection{Ignored attributes of proposals}
 
 In Figure~\ref{fig:defs:update-proposals} the types
-$\type{UpdData}$, and $\type{UpdAttr}$ are only needed to model the fact that
+$\type{UpdData}$, and $\type{UpdAttrs}$ are only needed to model the fact that
 an update proposal must sign such data, however, we do not use them for any
 other purpose in this formalization.
 

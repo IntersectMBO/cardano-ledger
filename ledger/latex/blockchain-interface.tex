@@ -163,10 +163,10 @@ Figure~\ref{fig:ts-types:upi} defines the types of the transition systems
 related with the update-proposals interface. The acronyms in the transition
 labels have the following meaning:
 \begin{description}
-\item[UPIREG] Update-proposal registration.
-\item[UPIEND] Update-proposal vote.
-\item[UPIEND] Update-proposal endorsement.
-\item[UPIEC] Update-proposal epoch-change.
+\item[UPIREG] Update-proposal-interface registration.
+\item[UPIVOTE] Update-proposal-interface vote.
+\item[UPIEND] Update-proposal-interface endorsement.
+\item[UPIEC] Update-proposal-interface epoch-change.
 \end{description}
 
 \begin{figure}[htb]
@@ -185,16 +185,20 @@ labels have the following meaning:
   %
   \emph{Update-proposals interface states}
   \begin{align*}
-    & \UPIState
-      = \left(
+    & \UPIState = \\
+    & \left(
       \begin{array}{r@{~\in~}lr}
         \var{e_p} & \Epoch & \text{previously seen epoch}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
         & \text{current protocol information}\\
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol information}\\
-        \var{rups} & \Rups
-        & \text{registered update proposals}\\
+        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        & \text{application versions}\\
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        & \text{registered protocol update proposals}\\
+        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        & \text{registered software update proposals}\\
         \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
         & \text{proposals per-epoch per-key}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
@@ -202,7 +206,7 @@ labels have the following meaning:
         \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
                            & \text{endorsement-key pairs}\\
         \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
-      \end{array}\right)
+      \end{array}\right)\\
   \end{align*}
   %
   \emph{Update-proposals interface transitions}
@@ -223,7 +227,6 @@ labels have the following meaning:
   \label{fig:ts-types:upi}
 \end{figure}
 
-
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-reg-interface}
@@ -234,6 +237,7 @@ labels have the following meaning:
           \var{pv}\\
           \var{pps}\\
           \var{e_c}\\
+          \var{avs}\\
           \var{dms}
         \end{array}
       }
@@ -242,6 +246,7 @@ labels have the following meaning:
         \left(
           \begin{array}{l}
             \var{rups}\\
+            \var{raus}\\
             \var{eps}
           \end{array}
         \right)
@@ -251,6 +256,7 @@ labels have the following meaning:
         \left(
           \begin{array}{l}
             \var{rups'}\\
+            \var{raus'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -275,7 +281,9 @@ labels have the following meaning:
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -291,7 +299,9 @@ labels have the following meaning:
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups'}\\
+            \var{raus'}\\
             \var{eps'}\\
             \var{cps}\\
             \var{vts}\\
@@ -307,6 +317,17 @@ labels have the following meaning:
 \end{figure}
 
 \clearpage
+
+Rule~\ref{eq:rule:upi-vote} models the effect of voting on an update proposal:
+after a vote, a proposal might get confirmed, which means that it will be added
+to the set $\var{cps'}$. In such case, the mapping of application names to
+their latest version known to the ledger will be updated to include the
+information in the confirmed proposal. Note that, unlike protocol updates,
+software updates take effect as soon as a proposal is confirmed. In this rule,
+we also delete the confirmed proposal id's from the set of registered
+application update proposals ($\var{raus}$), since this information is no
+longer needed once the application-name to software-version map ($\var{avs}$) is
+updated.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -338,7 +359,11 @@ labels have the following meaning:
             \var{vts'}
           \end{array}
         \right)
-      }
+      }\\
+      \var{avs_{new}} = \{ \var{an} \mapsto (\var{av}, \var{b_n})
+      \mid \var{pid} \mapsto (\var{an}, \var{av}) \in \var{raus}
+      ,~ \var{pid} \in \dom~\var{cps'}
+      \}
     }
     {
       {
@@ -357,7 +382,9 @@ labels have the following meaning:
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -373,7 +400,9 @@ labels have the following meaning:
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs} \unionoverride \var{avs_{new}}\\
             \var{rups}\\
+            \dom~ \var{cps} \subtractdom \var{raus}\\
             \var{eps}\\
             \var{cps'}\\
             \var{vts'}\\
@@ -388,14 +417,60 @@ labels have the following meaning:
   \label{fig:rules:upi-vote}
 \end{figure}
 
+Figure~\ref{fig:st-diagram-sw-up} shows the different states in which a
+software proposal update might be: if valid, a software update proposal becomes
+active whenever it is included in a block. If the update proposal gets enough
+votes, then the corresponding software update proposal becomes confirmed, and
+the ledger state reflects this. If the voting period ends without an update
+proposal being confirmed, then the corresponding software update proposal gets
+rejected.
+%
+Protocol updates on the other hand, involve a slightly different logic, and the
+state transition diagram for these kind of updates is shown in
+Figure~\ref{fig:st-diagram-pt-up}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[ align = center
+                     , node distance = 6em and 12em
+                     , text width = 5em
+                     , font = \footnotesize
+                     , >={Latex[width=0.5em, length=0.5em]}
+                     , every node/.style = { rectangle
+                                         , rounded corners
+                                         , draw = black
+                                         , align = center
+                                         , minimum height = 4em }
+                     ]
+
+  \node (active) [fill = blue!10] {Active};
+  \node (rejected) [below = of active, fill = red!10] {Rejected};
+  \node (confirmed) [right = of active, fill = green!30] {Confirmed};
+
+  \tikzset{every node/.style={align=center, text width=10em, text=brown}}
+
+  \draw[->] (active)
+  edge node [above] {Software Update proposal\\ gets enough votes}
+  (confirmed);
+
+  \draw[->] (active)
+  edge node [left] {Voting period \\ends}
+  (rejected);
+
+  \end{tikzpicture}
+
+  \caption{State-transition diagram for software-updates}
+  \label{fig:st-diagram-sw-up}
+\end{figure}
+
 \clearpage
 
-The interface rule for protocol-block-version registration makes use of the
-$\trans{upbvreg}{}$ transition, passing only the portion of the state relevant
+The interface rule for protocol-version endorsement makes use of the
+$\trans{upend}{}$ transition, passing only the portion of the state relevant
 to it. In addition, the unconfirmed proposals that are older than $u$ blocks
 are removed from the parts of the state that hold:
 \begin{itemize}
-\item the registered proposals,
+\item the registered protocol and software update proposals,
 \item the votes associated with the proposals,
 \item the set of endorsement-key pairs, and
 \item the block number in which proposals where added.
@@ -440,7 +515,7 @@ the end on an epoch.
           \end{array}
         \right)
       }
-      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      \trans{upend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -474,7 +549,9 @@ the end on an epoch.
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -490,7 +567,9 @@ the end on an epoch.
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
+            \var{avs}\\
             \var{rups'}\\
+            \var{pids_{keep}} \restrictdom \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
@@ -517,13 +596,18 @@ union override to define the updated parameters
 ($\var{pps} \unionoverride \var{pps'}$). This is because candidate proposal
 might only update some parameters of the protocol.
 
-Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables. We keep
-only the information of proposals whose proposed protocol-versions are greater
-than the newly adopted protocol version ($\var{pv'}$). This means that active
-proposals will be discarded even if the voting period is not over (it makes no
-sense to vote on a proposal that proposes to upgrade to an older version of the
-protocol). Furthermore, the set $\var{eps}$ is updated so that only keys that
-proposed in epochs no earlier than $e_n$ are kept.
+Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
+\begin{itemize}
+\item We keep only the information of proposals whose proposed
+  protocol-versions are greater than the newly adopted protocol version
+  ($\var{pv'}$). This means that active proposals will be discarded even if the
+  voting period is not over (it makes no sense to vote on a proposal that
+  proposes to upgrade to an older version of the protocol).
+\item The set $\var{eps}$ is updated so that only keys that proposed in epochs
+  no earlier than $e_n$ are kept.
+\item The registered software-update proposals need not be cleaned here, since
+  this is done either when a proposal gets confirmed or when it expires.
+\end{itemize}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -628,7 +712,9 @@ proposed in epochs no earlier than $e_n$ are kept.
             \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -644,7 +730,9 @@ proposed in epochs no earlier than $e_n$ are kept.
             \var{e'}\\
             \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{avs}\\
             \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{raus}\\
             {[e_n, ..]} \restrictdom \var{eps}\\
             \var{pids_{keep}} \restrictdom \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
@@ -657,4 +745,52 @@ proposed in epochs no earlier than $e_n$ are kept.
   \end{equation}
   \caption{Block version adoption on epoch change rules}
   \label{fig:rules:upi-ec}
+\end{figure}
+
+Figure~\ref{fig:st-diagram-pt-up} shows the different states a protocol-update
+proposal can be in, and what causes the transitions between them.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[ align = center
+                     , node distance = 8em and 16em
+                     , text width = 5em
+                     , font = \footnotesize
+                     , >={Latex[width=0.5em, length=0.5em]}
+                     , every node/.style = { rectangle
+                                         , rounded corners
+                                         , draw = black
+                                         , align = center
+                                         , minimum height = 4em }
+                     ]
+
+  \node (active) [fill = blue!10] {Active};
+  \node (rejected) [below = of active, fill = red!10] {Rejected};
+  \node (confirmed) [right = of active, fill = green!10] {Confirmed};
+  \node (adopted) [below = of confirmed, fill = green!30] {Adopted};
+
+  \tikzset{every node/.style={align=center, text width=10em, text=brown}}
+
+  \draw[->] (active)
+  edge node [above] {Protocol update proposal\\ gets enough votes}
+  (confirmed);
+
+  \draw[->] (active)
+  edge node [left] {Voting period \\ends}
+  (rejected);
+
+  \draw[->] (confirmed)
+  edge node [above left]
+  {Proposal with higher version adopted}
+  (rejected);
+
+  \draw[->] (confirmed)
+  edge node [right]
+  {Proposal gets enough endorsements}
+  (adopted);
+
+  \end{tikzpicture}
+
+  \caption{State-transition diagram for protocol-updates}
+  \label{fig:st-diagram-pt-up}
 \end{figure}
