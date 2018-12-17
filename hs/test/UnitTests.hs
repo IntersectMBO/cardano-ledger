@@ -57,8 +57,8 @@ genesis = genesisState
             , TxOut bobAddr bobInitCoin ]
 
 changeReward :: LedgerState -> RewardAcnt -> Coin -> LedgerState
-changeReward ls acnt c = ls & delegationState . accounts .~ newAccounts
-  where newAccounts = Map.insert acnt c (ls ^. delegationState . accounts)
+changeReward ls acnt c = ls & delegationState . rewards .~ newAccounts
+  where newAccounts = Map.insert acnt c (ls ^. delegationState . rewards)
 
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
@@ -142,7 +142,7 @@ testValidWithdrawal =
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition (Slot 0) genesisWithReward (TxWits tx wits)
-    expectedDS = LedgerState.emptyDelegation & accounts .~
+    expectedDS = LedgerState.emptyDelegation & rewards .~
                    Map.singleton (mkRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
@@ -291,7 +291,7 @@ utxoSt3 = UTxOState
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
-  & accounts .~
+  & rewards .~
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
