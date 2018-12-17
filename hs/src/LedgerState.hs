@@ -230,9 +230,9 @@ validFee pc tx =
         needed = minfee pc tx
         given  = tx ^. txfee
 
--- |Compute the lovelace which are consumed by the transaction
-destroyed :: Allocs -> PrtlConsts -> Tx -> Coin
-destroyed stakePools pc tx =
+-- |Compute the lovelace which are created by the transaction
+created :: Allocs -> PrtlConsts -> Tx -> Coin
+created stakePools pc tx =
     balance (txouts tx) + tx ^. txfee + depositAmount pc stakePools tx
 
 -- |Compute the key deregistration refunds in a transaction
@@ -244,9 +244,9 @@ keyRefunds pc stkeys tx =
             Nothing -> Coin 0
             Just s -> refund (RegKey key) pc $ (tx ^. ttl) -* s
 
--- |Compute the lovelace which are created by the transaction
-created :: Allocs -> PrtlConsts -> Tx -> UTxOState -> Coin
-created stakeKeys pc tx u =
+-- |Compute the lovelace which are destroyed by the transaction
+destroyed :: Allocs -> PrtlConsts -> Tx -> UTxOState -> Coin
+destroyed stakeKeys pc tx u =
     balance (txins tx <| (u ^. utxo)) + refunds + withdrawals
   where
     refunds = keyRefunds pc stakeKeys tx
@@ -256,12 +256,12 @@ created stakeKeys pc tx u =
 -- in an acceptable way by a transaction.
 preserveBalance :: Allocs -> Allocs -> PrtlConsts -> Tx -> UTxOState -> Validity
 preserveBalance stakePools stakeKeys pc tx u =
-  if created' == destroyed'
+  if destroyed' == created'
     then Valid
-    else Invalid [ValueNotConserved created' destroyed']
+    else Invalid [ValueNotConserved destroyed' created']
   where
-    created' = created stakeKeys pc tx u
-    destroyed' = destroyed stakePools pc tx
+    destroyed' = destroyed stakeKeys pc tx u
+    created' = created stakePools pc tx
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
