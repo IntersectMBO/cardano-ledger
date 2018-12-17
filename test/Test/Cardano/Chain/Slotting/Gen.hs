@@ -42,6 +42,7 @@ import Cardano.Crypto (ProtocolMagicId)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 
+
 genEpochIndex :: Gen EpochIndex
 genEpochIndex = EpochIndex <$> Gen.word64 Range.constantBounded
 

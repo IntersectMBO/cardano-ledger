@@ -1,5 +1,6 @@
 module Test.Cardano.Chain.Update.Gen
-  ( genApplicationName
+  ( genCanonicalProtocolParameters
+  , genApplicationName
   , genProtocolVersion
   , genProtocolParameters
   , genProtocolParameterUpdate
@@ -67,7 +68,8 @@ import Cardano.Chain.Update
 import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen
-  ( genChainDifficulty
+  ( genCanonicalTxFeePolicy
+  , genChainDifficulty
   , genLovelace
   , genLovelacePortion
   , genScriptVersion
@@ -89,6 +91,24 @@ import Test.Cardano.Crypto.Gen
 genApplicationName :: Gen ApplicationName
 genApplicationName =
   ApplicationName <$> Gen.text (Range.constant 0 10) Gen.alphaNum
+
+genCanonicalProtocolParameters :: Gen ProtocolParameters
+genCanonicalProtocolParameters =
+  ProtocolParameters
+    <$> genScriptVersion
+    <*> genNominalDiffTime
+    <*> genNatural
+    <*> genNatural
+    <*> genNatural
+    <*> genNatural
+    <*> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genLovelacePortion
+    <*> genFlatSlotId
+    <*> genSoftforkRule
+    <*> genCanonicalTxFeePolicy
+    <*> genEpochIndex
 
 genProtocolVersion :: Gen ProtocolVersion
 genProtocolVersion =

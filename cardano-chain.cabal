@@ -199,6 +199,7 @@ test-suite cardano-chain-test
   build-depends:       base
                      , base16-bytestring
                      , bytestring
+                     , canonical-json
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-chain

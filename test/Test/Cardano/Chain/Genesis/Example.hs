@@ -5,10 +5,11 @@
 
 module Test.Cardano.Chain.Genesis.Example
   ( exampleGenesisAvvmBalances
-  , exampleStaticConfig_GCSpec
-  , exampleStaticConfig_GCSrc
+  , exampleGenesisData0
   , exampleGenesisDelegation
   , exampleGenesisInitializer
+  , exampleStaticConfig_GCSpec
+  , exampleStaticConfig_GCSrc
   )
 where
 
@@ -18,20 +19,26 @@ import qualified Data.ByteString.Base16 as B16
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
+import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  ( LovelacePortion(..)
+  ( BlockCount(..)
+  , LovelacePortion(..)
   , mkKnownLovelace
   , mkKnownLovelacePortion
   , mkStakeholderId
+  , StakeholderId
   )
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
+  , GenesisNonAvvmBalances(..)
   , GenesisAvvmBalances(..)
+  , GenesisData(..)
   , GenesisDelegation(..)
   , GenesisInitializer(..)
   , GenesisSpec(..)
+  , GenesisWStakeholders(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
@@ -50,8 +57,14 @@ import Cardano.Crypto
 import Cardano.Crypto.Signing (PublicKey(..))
 import qualified Cardano.Crypto.Wallet as CC
 
+import Test.Cardano.Chain.Common.Example
+  (exampleAddress, exampleAddress1, exampleStakeholderId)
 import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.Example (exampleProtocolMagic0)
+
+exampleBlockCount :: BlockCount
+exampleBlockCount = BlockCount 12344
 
 exampleStaticConfig_GCSrc :: StaticConfig
 exampleStaticConfig_GCSrc =
@@ -77,6 +90,18 @@ exampleGenesisAvvmBalances = GenesisAvvmBalances
   exampleRedeemPublicKey' :: (Int, Int) -> RedeemPublicKey
   exampleRedeemPublicKey' (m, n) =
     fromJust (fst <$> redeemDeterministicKeyGen (getBytes m n))
+
+exampleGenesisData0 :: GenesisData
+exampleGenesisData0 = GenesisData
+  { gdBootStakeholders = exampleGenesisWStakeholders
+  , gdHeavyDelegation = exampleGenesisDelegation
+  , gdStartTime = exampleUTCTime0
+  , gdNonAvvmBalances = exampleGenesisNonAvvmBalances0
+  , gdProtocolParameters = exampleProtocolParameters
+  , gdK         = exampleBlockCount
+  , gdProtocolMagic = exampleProtocolMagic0
+  , gdAvvmDistr = exampleGenesisAvvmBalances
+  }
 
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
@@ -142,6 +167,34 @@ exampleGenesisInitializer = GenesisInitializer
   , giUseHeavyDlg = False
   , giSeed        = 0
   }
+
+exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances
+exampleGenesisNonAvvmBalances0 = GenesisNonAvvmBalances
+  { getGenesisNonAvvmBalances = (M.fromList
+                                  [ (exampleAddress , coin)
+                                  , (exampleAddress1, coin1)
+                                  ]
+                                )
+  }
+ where
+  coin  = mkKnownLovelace @36524597913081152
+  coin1 = mkKnownLovelace @37343863242999412
+
+exampleGenesisWStakeholders :: GenesisWStakeholders
+exampleGenesisWStakeholders =
+  let
+    mapSize :: Int
+    mapSize = 1
+    stakeholderIds :: [StakeholderId]
+    stakeholderIds = replicate mapSize exampleStakeholderId
+    word16s :: [Word16]
+    word16s = [1337]
+  in GenesisWStakeholders
+    { getGenesisWStakeholders = M.fromList $ zip stakeholderIds word16s
+    }
+
+exampleUTCTime0 :: UTCTime
+exampleUTCTime0 = UTCTime (ModifiedJulianDay 10000) (secondsToDiffTime 82401)
 
 hexToBS :: ByteString -> ByteString
 hexToBS ts = case B16.decode ts of

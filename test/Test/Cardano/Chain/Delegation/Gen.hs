@@ -1,5 +1,7 @@
 module Test.Cardano.Chain.Delegation.Gen
-  ( genCertificate
+  ( genCanonicalCertificate
+  , genCertificate
+  , genCanonicalCertificateDistinctList
   , genCertificateDistinctList
   , genPayload
   , genUndo
@@ -13,7 +15,8 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation (Certificate, Payload, Undo(..), unsafePayload)
-import Cardano.Crypto (ProtocolMagicId, createPsk)
+import Cardano.Chain.Slotting (EpochIndex(..))
+import Cardano.Crypto (AProxySecretKey(..), ProtocolMagicId, createPsk)
 import Data.List (nub)
 
 import Test.Cardano.Chain.Common.Gen (genStakeholderId)
@@ -21,20 +24,38 @@ import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
 import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner)
 
 
+genCanonicalCertificate :: ProtocolMagicId -> Gen Certificate
+genCanonicalCertificate pm =
+  createPsk pm
+    <$> genSafeSigner
+    <*> genPublicKey
+    <*> (EpochIndex <$> Gen.word64 (Range.constant 0 1000000000000000))
+
 genCertificate :: ProtocolMagicId -> Gen Certificate
 genCertificate pm =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genEpochIndex
 
-genCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
-genCertificateDistinctList pm = do
-  let
-    pSKList = Gen.list
-      (Range.linear 0 5)
-      (createPsk pm <$> genSafeSigner <*> genPublicKey <*> genEpochIndex)
-  Gen.filter allDistinct pSKList
+genCanonicalCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
+genCanonicalCertificateDistinctList pm = do
+  let pSKList = Gen.list (Range.linear 0 5) (genCanonicalCertificate pm)
+  noSelfSigningCerts <$> Gen.filter allDistinct pSKList
  where
   allDistinct :: Eq a => [a] -> Bool
   allDistinct ls = length (nub ls) == length ls
+
+  noSelfSigningCerts :: [Certificate] -> [Certificate]
+  noSelfSigningCerts = filter (\x -> pskIssuerPk x /= pskDelegatePk x)
+
+genCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
+genCertificateDistinctList pm = do
+  let pSKList = Gen.list (Range.linear 0 5) (genCertificate pm)
+  noSelfSigningCerts <$> Gen.filter allDistinct pSKList
+ where
+  allDistinct :: Eq a => [a] -> Bool
+  allDistinct ls = length (nub ls) == length ls
+
+  noSelfSigningCerts :: [Certificate] -> [Certificate]
+  noSelfSigningCerts = filter (\x -> pskIssuerPk x /= pskDelegatePk x)
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =
