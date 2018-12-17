@@ -41,7 +41,7 @@ module LedgerState
   , deposits
   , fees
   -- DelegationState
-  , accounts
+  , rewards
   , stKeys
   , delegations
   , stPools
@@ -600,6 +600,23 @@ utxoWitnessed = do
 instance Embed UTXO UTXOW where
     wrapFailed = UtxoFailure
 
+data DELRWDS
+
+instance STS DELRWDS where
+    type State DELRWDS            = DelegationState
+    type Signal DELRWDS           = RewardAccounts
+    type Environment DELRWDS      = Slot
+    data PredicateFailure DELRWDS = IncorrectWithdrawalDELRWDS
+                     deriving (Show, Eq)
+
+    initialRules    = [ pure emptyDelegation ]
+    transitionRules = [ delrwdsTransition ]
+
+delrwdsTransition :: TransitionRule DELRWDS
+delrwdsTransition = do
+  TRC (_, d, withdrawals) <- judgmentContext
+  correctWithdrawals (d ^. rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
+  pure $ d & rewards .~ (reapRewards (d ^. rewards) withdrawals)
 
 data LEDGER
 
