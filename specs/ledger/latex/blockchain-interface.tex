@@ -159,6 +159,16 @@
 \subsection{Update-proposals interface}
 \label{sec:update-proposals-interface}
 
+Figure~\ref{fig:ts-types:upi} defines the types of the transition systems
+related with the update-proposals interface. The acronyms in the transition
+labels have the following meaning:
+\begin{description}
+\item[UPIREG] Update-proposal-interface registration.
+\item[UPIVOTE] Update-proposal-interface vote.
+\item[UPIEND] Update-proposal-interface endorsement.
+\item[UPIEC] Update-proposal-interface epoch-change.
+\end{description}
+
 \begin{figure}[htb]
   \emph{Update-proposals interface environments}
   \begin{align*}
@@ -175,24 +185,28 @@
   %
   \emph{Update-proposals interface states}
   \begin{align*}
-    & \UPIState
-      = \left(
+    & \UPIState = \\
+    & \left(
       \begin{array}{r@{~\in~}lr}
         \var{e_p} & \Epoch & \text{previously seen epoch}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
         & \text{current protocol information}\\
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol information}\\
-        \var{rups} & \Rups
-        & \text{registered update proposals}\\
+        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        & \text{application versions}\\
+        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        & \text{registered protocol update proposals}\\
+        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        & \text{registered software update proposals}\\
         \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
         & \text{proposals per-epoch per-key}\\
         \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
         \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
-                           & \text{keys ready to adopt versions}\\
+                           & \text{endorsement-key pairs}\\
         \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
-      \end{array}\right)
+      \end{array}\right)\\
   \end{align*}
   %
   \emph{Update-proposals interface transitions}
@@ -202,7 +216,7 @@
       \powerset (\UPIEnv \times \UPIState \times \UProp \times \UPIState)\\
       \_ \vdash \_ \trans{upivote}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState \times \Vote \times \UPIState)\\
-      \_ \vdash \_ \trans{upibvreg}{\_} \_ &
+      \_ \vdash \_ \trans{upiend}{\_} \_ &
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{\_} \_ &
@@ -212,7 +226,6 @@
   \caption{Update-proposals interface transition-system types}
   \label{fig:ts-types:upi}
 \end{figure}
-
 
 \begin{figure}[htb]
   \begin{equation}
@@ -224,6 +237,7 @@
           \var{pv}\\
           \var{pps}\\
           \var{e_c}\\
+          \var{avs}\\
           \var{dms}
         \end{array}
       }
@@ -232,6 +246,7 @@
         \left(
           \begin{array}{l}
             \var{rups}\\
+            \var{raus}\\
             \var{eps}
           \end{array}
         \right)
@@ -241,6 +256,7 @@
         \left(
           \begin{array}{l}
             \var{rups'}\\
+            \var{raus'}\\
             \var{eps'}
           \end{array}
         \right)
@@ -265,7 +281,9 @@
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -281,7 +299,9 @@
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups'}\\
+            \var{raus'}\\
             \var{eps'}\\
             \var{cps}\\
             \var{vts}\\
@@ -297,6 +317,17 @@
 \end{figure}
 
 \clearpage
+
+Rule~\ref{eq:rule:upi-vote} models the effect of voting on an update proposal:
+after a vote, a proposal might get confirmed, which means that it will be added
+to the set $\var{cps'}$. In such case, the mapping of application names to
+their latest version known to the ledger will be updated to include the
+information in the confirmed proposal. Note that, unlike protocol updates,
+software updates take effect as soon as a proposal is confirmed. In this rule,
+we also delete the confirmed proposal id's from the set of registered
+application update proposals ($\var{raus}$), since this information is no
+longer needed once the application-name to software-version map ($\var{avs}$) is
+updated.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -328,7 +359,11 @@
             \var{vts'}
           \end{array}
         \right)
-      }
+      }\\
+      \var{avs_{new}} = \{ \var{an} \mapsto (\var{av}, \var{b_n})
+      \mid \var{pid} \mapsto (\var{an}, \var{av}) \in \var{raus}
+      ,~ \var{pid} \in \dom~\var{cps'}
+      \}
     }
     {
       {
@@ -347,7 +382,9 @@
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -363,7 +400,9 @@
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs} \unionoverride \var{avs_{new}}\\
             \var{rups}\\
+            \dom~ \var{cps} \subtractdom \var{raus}\\
             \var{eps}\\
             \var{cps'}\\
             \var{vts'}\\
@@ -378,33 +417,83 @@
   \label{fig:rules:upi-vote}
 \end{figure}
 
+Figure~\ref{fig:st-diagram-sw-up} shows the different states in which a
+software proposal update might be: if valid, a software update proposal becomes
+active whenever it is included in a block. If the update proposal gets enough
+votes, then the corresponding software update proposal becomes confirmed, and
+the ledger state reflects this. If the voting period ends without an update
+proposal being confirmed, then the corresponding software update proposal gets
+rejected.
+%
+Protocol updates on the other hand, involve a slightly different logic, and the
+state transition diagram for these kind of updates is shown in
+Figure~\ref{fig:st-diagram-pt-up}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[ align = center
+                     , node distance = 6em and 12em
+                     , text width = 5em
+                     , font = \footnotesize
+                     , >={Latex[width=0.5em, length=0.5em]}
+                     , every node/.style = { rectangle
+                                         , rounded corners
+                                         , draw = black
+                                         , align = center
+                                         , minimum height = 4em }
+                     ]
+
+  \node (active) [fill = blue!10] {Active};
+  \node (rejected) [below = of active, fill = red!10] {Rejected};
+  \node (confirmed) [right = of active, fill = green!30] {Confirmed};
+
+  \tikzset{every node/.style={align=center, text width=10em, text=brown}}
+
+  \draw[->] (active)
+  edge node [above] {Software Update proposal\\ gets enough votes}
+  (confirmed);
+
+  \draw[->] (active)
+  edge node [left] {Voting period \\ends}
+  (rejected);
+
+  \end{tikzpicture}
+
+  \caption{State-transition diagram for software-updates}
+  \label{fig:st-diagram-sw-up}
+\end{figure}
+
 \clearpage
 
-The interface rule for protocol-block-version registration makes use of the
-$\trans{upbvreg}{}$ transition, passing only the portion of the state relevant
-to it. In addition, the proposals that are older than $u$ blocks are removed
-from the parts of the state that hold:
+The interface rule for protocol-version endorsement makes use of the
+$\trans{upend}{}$ transition, passing only the portion of the state relevant
+to it. In addition, the unconfirmed proposals that are older than $u$ blocks
+are removed from the parts of the state that hold:
 \begin{itemize}
-\item the registered proposals,
-\item the confirmed proposals,
+\item the registered protocol and software update proposals,
 \item the votes associated with the proposals,
-\item the set of keys ready to adopt the different proposals, and
+\item the set of endorsement-key pairs, and
 \item the block number in which proposals where added.
 \end{itemize}
-Note that a proposal that got adopted could be cleaned earlier in some other
-rule, however, by keeping all the cleanup logic associated to block number
-change in one place we make reasoning about state-size bounds simpler. The
-epoch-key pairs set ($\var{eps}$) that represents which stakeholder proposed an
-update in which epoch, is cleaned up in the rules given in
-\cref{fig:rules:upi-ec}, which deals with epoch change. Finally, in
-$\var{vs_{keep}}$ we compute the set of all the versions associated with
-proposals id's to be kept, and restrict the domain of $\var{bvs}$ to these
-versions.
+The epoch-key pairs set ($\var{eps}$) that represents which stakeholder
+proposed an update in which epoch, is cleaned up in the rules given in
+\cref{fig:rules:upi-ec}, which deals with epoch change.
 
+In Rule~\ref{eq:rule:upi-pend}, the set of proposal id's $\var{pid_{keep}}$
+contains only those proposals that haven't expired yet or that are confirmed.
+Once a proposal $\var{up}$ is confirmed, it is removed from the set of
+confirmed proposals ($\var{cps}$) either when it is adopted or when a protocol
+version higher than that of $\var{up}$ gets adopted (see
+Rule~\ref{eq:rule:upi-ec}).
+%
+The set of endorsement-key pairs is cleaned here as well as in the epoch change
+rule (Rule~\ref{eq:rule:upi-ec}). The reason for this is that this set grows at
+each block, and it can get considerably large if no proposal gets adopted at
+the end on an epoch.
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:upi-bv-reg}
+    \label{eq:rule:upi-pend}
     \inference
     {
       {
@@ -426,7 +515,7 @@ versions.
           \end{array}
         \right)
       }
-      \trans{upbvreg}{(\var{bv}, \var{vk})}
+      \trans{upend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
@@ -435,8 +524,13 @@ versions.
           \end{array}
         \right)
       }\\
-      \var{pids_{keep}} = \dom~(pws \restrictrange [b_n - u, ..])
-      & \var{vs_{keep}} = \dom~(\range~(\var{pids_{keep}} \restrictdom \var{rups}))
+      {
+        \begin{array}{r@{~=~}l}
+          \var{pids_{keep}} & \dom~(pws \restrictrange [b_n - u, ..]) \cup \dom~\var{cps}\\
+          \var{vs_{keep}} & \dom~(\range~\var{rups'})\\
+          \var{rups'} & \var{pids_{keep}} \restrictdom \var{rups}
+        \end{array}
+      }
     }
     {
       {
@@ -455,7 +549,9 @@ versions.
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -464,16 +560,18 @@ versions.
           \end{array}
         \right)
       }
-      \trans{upibvreg}{(\var{bv}, \var{vk})}
+      \trans{upiend}{(\var{bv}, \var{vk})}
       {
         \left(
           \begin{array}{l}
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
-            \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{avs}\\
+            \var{rups'}\\
+            \var{pids_{keep}} \restrictdom \var{raus}\\
             \var{eps}\\
-            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
             \var{vs_{keep}}  \restrictdom \var{bvs}\\
             \var{pids_{keep}} \restrictdom \var{pws}
@@ -482,8 +580,8 @@ versions.
       }
     }
   \end{equation}
-  \caption{Block version registration rules}
-  \label{fig:rules:upi-bv-reg}
+  \caption{Proposal endorsement rules}
+  \label{fig:rules:upi-pend}
 \end{figure}
 
 \clearpage
@@ -493,12 +591,23 @@ are changed depending on the epoch in the signal ($e_n$ in this case). A change
 only occurs if the new epoch is greater than the previously seen epoch ($e_p$).
 In such case, the current epoch is also updated accordingly. The candidate
 versions and parameters map $(\var{pv_c}, \var{pps_c})$ remain constant in this
-transition, even if they become adopted. Finally, the set $\var{eps}$ is
-updated so that only keys that proposed in epochs no earlier than $e_n$ are
-kept. Finally, note that we use $\var{pps} \unionoverride \var{pps'}$ in the
-final state, since the candidate proposal might only update some parameters of
-the protocol: by using union override $\var{pps'}$ overwrites the values of the
-parameters in $\var{pps}$.
+transition, even if they become adopted. Note that, in the final state, we use
+union override to define the updated parameters
+($\var{pps} \unionoverride \var{pps'}$). This is because candidate proposal
+might only update some parameters of the protocol.
+
+Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
+\begin{itemize}
+\item We keep only the information of proposals whose proposed
+  protocol-versions are greater than the newly adopted protocol version
+  ($\var{pv'}$). This means that active proposals will be discarded even if the
+  voting period is not over (it makes no sense to vote on a proposal that
+  proposes to upgrade to an older version of the protocol).
+\item The set $\var{eps}$ is updated so that only keys that proposed in epochs
+  no earlier than $e_n$ are kept.
+\item The registered software-update proposals need not be cleaned here, since
+  this is done either when a proposal gets confirmed or when it expires.
+\end{itemize}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -581,7 +690,10 @@ parameters in $\var{pps}$.
             \var{(\var{pv'}, \var{pps'})}\\
           \end{array}
         \right)
-      }
+      }\\ ~ \\
+      \var{pids_{keep}} = \{ \var{pid} \mid
+      \var{pid} \mapsto (\var{pv_i}, \wcard) \in \var{rups}
+      ,~ \var{pv'} \leq \var{pv_i}\}
     }
     {
       {
@@ -600,7 +712,9 @@ parameters in $\var{pps}$.
             \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{avs}\\
             \var{rups}\\
+            \var{raus}\\
             \var{eps}\\
             \var{cps}\\
             \var{vts}\\
@@ -616,12 +730,14 @@ parameters in $\var{pps}$.
             \var{e'}\\
             \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
-            \var{rups}\\
+            \var{avs}\\
+            \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{raus}\\
             {[e_n, ..]} \restrictdom \var{eps}\\
-            \var{cps}\\
-            \var{vts}\\
-            \var{bvs}\\
-            \var{pws}
+            \var{pids_{keep}} \restrictdom \var{cps}\\
+            \var{pids_{keep}} \restrictdom \var{vts}\\
+            {[\var{pv'}, ..]} \restrictdom \var{bvs}\\
+            \var{pids_{keep}} \restrictdom \var{pws}
           \end{array}
         \right)
       }
@@ -629,4 +745,52 @@ parameters in $\var{pps}$.
   \end{equation}
   \caption{Block version adoption on epoch change rules}
   \label{fig:rules:upi-ec}
+\end{figure}
+
+Figure~\ref{fig:st-diagram-pt-up} shows the different states a protocol-update
+proposal can be in, and what causes the transitions between them.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[ align = center
+                     , node distance = 8em and 16em
+                     , text width = 5em
+                     , font = \footnotesize
+                     , >={Latex[width=0.5em, length=0.5em]}
+                     , every node/.style = { rectangle
+                                         , rounded corners
+                                         , draw = black
+                                         , align = center
+                                         , minimum height = 4em }
+                     ]
+
+  \node (active) [fill = blue!10] {Active};
+  \node (rejected) [below = of active, fill = red!10] {Rejected};
+  \node (confirmed) [right = of active, fill = green!10] {Confirmed};
+  \node (adopted) [below = of confirmed, fill = green!30] {Adopted};
+
+  \tikzset{every node/.style={align=center, text width=10em, text=brown}}
+
+  \draw[->] (active)
+  edge node [above] {Protocol update proposal\\ gets enough votes}
+  (confirmed);
+
+  \draw[->] (active)
+  edge node [left] {Voting period \\ends}
+  (rejected);
+
+  \draw[->] (confirmed)
+  edge node [above left]
+  {Proposal with higher version adopted}
+  (rejected);
+
+  \draw[->] (confirmed)
+  edge node [right]
+  {Proposal gets enough endorsements}
+  (adopted);
+
+  \end{tikzpicture}
+
+  \caption{State-transition diagram for protocol-updates}
+  \label{fig:st-diagram-pt-up}
 \end{figure}
