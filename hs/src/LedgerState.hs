@@ -134,7 +134,7 @@ data DelegationState =
     DelegationState
     {
     -- |The active accounts.
-      _accounts    :: RewardAccounts
+      _rewards     :: RewardAccounts
     -- |The active stake keys.
     , _stKeys      :: Allocs
     -- |The current delegations.
@@ -265,8 +265,8 @@ preserveBalance stakePools stakeKeys pc tx u =
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
-correctWitdrawals :: RewardAccounts -> RewardAccounts -> Validity
-correctWitdrawals accs withdrawals =
+correctWithdrawals :: RewardAccounts -> RewardAccounts -> Validity
+correctWithdrawals accs withdrawals =
   if withdrawals `Map.isSubmapOf` accs
     then Valid
     else Invalid [IncorrectRewards]
@@ -326,7 +326,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> validNoReplay tx
                        <> validFee pc tx
                        <> preserveBalance stakePools stakeKeys pc tx u
-                       <> correctWitdrawals accs (tx ^. wdrls)
+                       <> correctWithdrawals accs (tx ^. wdrls)
 
 validRuleUTXOW :: TxWits -> LedgerState -> Validity
 validRuleUTXOW tx l = verifiedWits tx
@@ -335,7 +335,7 @@ validRuleUTXOW tx l = verifiedWits tx
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
 validTx tx slot l =
-    validRuleUTXO  (l ^. delegationState . accounts)
+    validRuleUTXO  (l ^. delegationState . rewards)
                    (l ^. delegationState . stPools)
                    (l ^. delegationState . stKeys)
                    (l ^. pcs)
@@ -453,10 +453,14 @@ applyTxBody :: LedgerState -> Tx -> LedgerState
 applyTxBody ls tx = ls & utxoState %~ flip applyUTxOUpdate tx
                        & utxoState . deposits .~ depositPoolChange ls tx
                        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
-                       & delegationState . accounts .~ newAccounts
+                       & delegationState . rewards .~ newAccounts
   where
-    newAccounts = Map.mapWithKey removeRewards (ls ^. delegationState . accounts)
-    removeRewards k v = if k `Map.member` (tx ^. wdrls) then Coin 0 else v
+    newAccounts = reapRewards (ls ^. delegationState . rewards) (tx ^. wdrls)
+
+reapRewards :: RewardAccounts -> RewardAccounts -> RewardAccounts
+reapRewards dStateRewards withdrawals =
+    Map.mapWithKey removeRewards dStateRewards
+    where removeRewards k v = if k `Map.member` withdrawals then Coin 0 else v
 
 applyUTxOUpdate :: UTxOState -> Tx -> UTxOState
 applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
@@ -466,13 +470,13 @@ applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
 applyDCert slot (RegKey key) ls@(LedgerState _ ds _) =
     ls & delegationState .~
            (ds & stKeys   .~ Map.insert hksk slot (ds ^. stKeys)
-               & accounts .~ Map.insert (RewardAcnt hksk) (Coin 0) (ds ^. accounts))
+               & rewards .~ Map.insert (RewardAcnt hksk) (Coin 0) (ds ^. rewards))
         where hksk = hashKey key
 
 applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _) =
     ls & delegationState .~
            (ds & stKeys      .~ Map.delete hksk (ds ^. stKeys)
-               & accounts    .~ Map.delete (RewardAcnt hksk) (ds ^. accounts)
+               & rewards     .~ Map.delete (RewardAcnt hksk) (ds ^. rewards)
                & delegations .~ Map.delete hksk (ds ^. delegations))
         where hksk = hashKey key
 
