@@ -350,22 +350,22 @@ validTx tx slot l =
 -- falsified hypothesis.
 
 -- | Checks whether a key registration certificat is valid.
-validKeyRegistration :: DCert -> LedgerState -> Validity
-validKeyRegistration cert (LedgerState _ ds _) =
+validKeyRegistration :: DCert -> DelegationState -> Validity
+validKeyRegistration cert ds =
   case cert of
     RegKey key -> if not $ Map.member (hashKey key) (ds ^. stKeys)
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
     _          -> Valid
 
-validKeyDeregistration :: DCert -> LedgerState -> Validity
-validKeyDeregistration cert (LedgerState _ ds _) =
+validKeyDeregistration :: DCert -> DelegationState -> Validity
+validKeyDeregistration cert ds =
   case cert of
     DeRegKey key -> if Map.member (hashKey key) (ds ^. stKeys)
                     then Valid else Invalid [StakeKeyNotRegistered]
     _            -> Valid
 
-validStakeDelegation :: DCert -> LedgerState -> Validity
-validStakeDelegation cert (LedgerState _ ds _) =
+validStakeDelegation :: DCert -> DelegationState -> Validity
+validStakeDelegation cert ds =
   case cert of
     Delegate (Delegation source _)
       -> if Map.member (hashKey source) (ds ^. stKeys)
@@ -373,23 +373,23 @@ validStakeDelegation cert (LedgerState _ ds _) =
     _ -> Valid
 
 -- there is currently no requirement that could make this invalid
-validStakePoolRegister :: DCert -> LedgerState -> Validity
+validStakePoolRegister :: DCert -> DelegationState -> Validity
 validStakePoolRegister _ _ = Valid
 
-validStakePoolRetire :: DCert -> LedgerState -> Validity
-validStakePoolRetire cert (LedgerState _ ds _) =
+validStakePoolRetire :: DCert -> DelegationState -> Validity
+validStakePoolRetire cert ds =
   case cert of
     RetirePool key _ -> if Map.member (hashKey key) $ ds ^. stPools
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
     _                -> Valid
 
-validDelegation :: DCert -> LedgerState -> Validity
-validDelegation cert l =
-     validKeyRegistration cert l
-  <> validKeyDeregistration cert l
-  <> validStakeDelegation cert l
-  <> validStakePoolRegister cert l
-  <> validStakePoolRetire cert l
+validDelegation :: DCert -> DelegationState -> Validity
+validDelegation cert ds =
+     validKeyRegistration cert ds
+  <> validKeyDeregistration cert ds
+  <> validStakeDelegation cert ds
+  <> validStakePoolRegister cert ds
+  <> validStakePoolRetire cert ds
 
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.
@@ -410,7 +410,7 @@ asStateTransition slot ls tx =
 certAsStateTransition
   :: Slot -> LedgerState -> DCert -> Either [ValidationError] LedgerState
 certAsStateTransition slot ls cert =
-  case validDelegation cert ls of
+  case validDelegation cert (ls ^. delegationState) of
     Invalid errors -> Left errors
     Valid          -> Right $ applyDCert slot cert ls
 
@@ -617,6 +617,42 @@ delrwdsTransition = do
   TRC (_, d, withdrawals) <- judgmentContext
   correctWithdrawals (d ^. rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
   pure $ d & rewards .~ (reapRewards (d ^. rewards) withdrawals)
+
+
+data DELEG
+
+instance STS DELEG where
+    type State DELEG            = DelegationState
+    type Signal DELEG           = DCert
+    type Environment DELEG      = Slot
+    data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
+                                | StakeKeyNotRegisteredDELEG
+                                | StakeDelegationImpossibleDELEG
+                                | WrongCertificateType
+                   deriving (Show, Eq)
+
+    initialRules    = [ pure emptyDelegation ]
+    transitionRules = [ delegationTransition ]
+
+delegationTransition :: TransitionRule DELEG
+delegationTransition = do
+  TRC(slot, d, c) <- judgmentContext
+  case c of
+    RegKey vk  -> do
+           validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
+           pure $ d & stKeys      %~ Map.insert (hashKey vk) slot
+                    & rewards     %~ Map.insert (RewardAcnt $ hashKey vk) (Coin 0)
+    DeRegKey k -> do
+           validKeyDeregistration c d == Valid ?! StakeKeyNotRegisteredDELEG
+           pure $ d & stKeys      %~ Map.delete (hashKey k)
+                    & rewards     %~ Map.delete (RewardAcnt $ hashKey k)
+                    & delegations %~ Map.delete (hashKey k)
+    Delegate (Delegation s t) -> do
+           validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
+           pure $ d & delegations %~ Map.insert (hashKey s) (hashKey t)
+    _         -> do
+           False ?! WrongCertificateType -- this always fails
+           pure d
 
 data LEDGER
 
