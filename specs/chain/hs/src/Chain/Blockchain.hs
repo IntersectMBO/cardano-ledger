@@ -17,13 +17,24 @@ import Data.ByteString.Lazy.Char8 (pack)
 
 import Chain.GenesisBlock (genesisBlock)
 import Control.State.Transition
+import Data.Maybe (fromJust, listToMaybe)
 import Data.Queue
-import Delegation.Interface
-  (delegates, maybeMapKeyForValue, mapKeyForValue, initDIState)
+import Delegation.Interface (initDIState)
 import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify)
-import Ledger.Delegation (DCert, DIState, VKeyGen, DELEG, DSEnv)
+import Ledger.Delegation (DCert, DIState, VKeyGen, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
 import Types (BC, Block(..), BlockIx(..), ProtParams(..))
+
+
+-- | Returns a key from a map for a given value.
+maybeMapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> Maybe k
+maybeMapKeyForValue v = listToMaybe . map fst . Map.toList . Map.filter (== v)
+
+-- | Unsafely returns a key from a map for a given value. It assumes there is
+-- exactly one key mapping to the given value. If there is no such key, it will
+-- result in a runtime exception.
+mapKeyForValue :: (Eq a, Ord k) => a -> Map.Map k a -> k
+mapKeyForValue v = fromJust . maybeMapKeyForValue v
 
 
 -- | Computes the hash of a block
@@ -72,7 +83,7 @@ incIxMap ix = Map.adjust (pushQueue ix)
 data BlockchainEnv = MkBlockChainEnv
   {
     bcEnvPp    :: ProtParams
-  , bcEnvDIEnv :: DSEnv
+  , bcEnvDIEnv :: DIEnv
   , bcEnvK     :: SlotCount
   , bcEnvT     :: T
   }
@@ -86,7 +97,7 @@ extendChain (env, st, b@(RBlock{})) dis =
     (m    , p, ds) = st
     vk_d           = rbSigner b
     ix             = rbIx b
-    vk_s           = mapKeyForValue vk_d . delegates $ ds
+    vk_s           = mapKeyForValue vk_d . (^. delegationMap) $ ds
     m'             = incIxMap ix vk_s (trimIx m k ix)
   in (m', p', dis)
 
@@ -145,7 +156,7 @@ instance STS BC where
         bHeaderSize b <= maxHeaderSize (bcEnvPp env)
       -- has a delegation right
       hasRight (_, (_, _, ds), b@(RBlock {})) =
-        isJust $ maybeMapKeyForValue (rbSigner b) (delegates ds)
+        isJust $ maybeMapKeyForValue (rbSigner b) (ds ^. delegationMap)
       -- valid signature
       validSignature (_, _, b@(RBlock {})) =
          verify (rbSigner b) (rbData b) (rbSig b)
@@ -156,7 +167,7 @@ instance STS BC where
           (m, _, ds) = st
           (SlotCount k, MkT t) = (bcEnvK env, bcEnvT env)
           vk_d = rbSigner b
-          dsm = delegates ds
+          dsm = ds ^. delegationMap
         in case maybeMapKeyForValue vk_d dsm of
           Nothing   -> False ?! NoDelegationRight
           Just vk_s ->
