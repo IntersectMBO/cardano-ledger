@@ -1,7 +1,8 @@
 -- | Provides types and functions for the delegation interface
 -- between the ledger layer and the blockchain layer
 module Delegation.Interface
-  ( initDIState )
+  ( initDIState
+  )
 where
 
 import Control.Lens
