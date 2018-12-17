@@ -354,6 +354,14 @@ $\var{pparams}$, and $\var{retiring}$ which correspond to any of the hash keys
 of the stake pools scheduled to retire this epoch are removed from
 these variables.
 
+It is important to note here that we \textit{do not} clean up delegations to
+retired stake pools. While we do not allow registration to non-existent
+stake pools (because that is a meaningless operation likely to be the result
+of an error), delegating to a pool that was once active means that there may
+be stake associated with this delegation. While this stake becomes inactive when
+the pool is retired, the delegations to that pool must remain on the ledger
+for potential future use.
+
 %%
 %% Figure - Pool Clean Rule
 %%

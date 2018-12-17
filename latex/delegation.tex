@@ -29,19 +29,6 @@ the registered stake pools, and upcoming stake pool retirements.
 Additionally, the blockchain protocol rewards eligible stake, and so we must
 also include a mapping from active stake keys to rewards.
 
-
-
-\begin{note}
-  The current rules allow for delegation to a non-existent pool.
-  Such stake is not eligible for leader election.
-  This allows for a clean separation between the rules in
-  \cref{fig:delegation-rules} and \cref{fig:pool-rules}.
-  We may, however, later choose to enforce that delegation certificates
-  target a registered pool. It would then make sense to remove
-  mappings in $\var{delegations}$ when stake pools retire.
-\end{note}
-
-
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
 
@@ -323,12 +310,25 @@ As a result of this rule, the author's key must be removed from the $\var{stkeys
 and all the rewards, pointer address, and delegations associated with this key must be removed
 from the $\var{rewards}$, $\var{pointeraddr}$, and $\var{delegations}$ parameters also.
 
+Note that we must only allow performing a key deregistration when there
+are no active stake pools associated with this key. This check requires additional
+environment variables. For this reason
+it (and several other checks that need
+additional environment variables to specify a valid delegation state transition)
+are performed in the DELEGT rule, discussed in Section~\ref{sec:utxo-rewards}.
+
 Finally, for creating a delegation (the \cref{eq:deleg-deleg} rule),
 given that the certificate $c$ is of the correct type, we add to the
 $\var{delegations}$ finite map the pair of
 the author's hash key and hash key of the pool being delegated to.
 Again, we require the author's key be a registered key, as it does not make
 sense to allow delegation otherwise.
+
+There is another check which we perform when processing a delegation certificate:
+we must check that the certificate is for delegating to an
+existing stake pool. This, again, is verified in the DELEGT rule, see
+Section~\ref{sec:utxo-rewards}.
+
 The $\var{stkeys}$, $\var{rewards}$, and $\var{pointeraddr}$ parameters are kept constant by
 this rule. The use of union override here allows us to use the same rule
 to perform an update on an existing delegation while keeping the rewards
@@ -468,7 +468,7 @@ in $\var{pparams}$. The author's hash key and associated data
 are also removed from the $\var{retiring}$ parameter to cancel any pending
 retirement for that key.
 
-The second rule, \cref{eq:pool-ret}, starts the pool retirement process. Given a
+The third rule, \cref{eq:pool-ret}, starts the pool retirement process. Given a
 slot number $\var{slot}$, the application of this rule requires that the
 planned retirement epoch $\var{e}$ stated in the certificate is in the future,
 i.e. after

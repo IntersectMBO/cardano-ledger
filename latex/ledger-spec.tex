@@ -1249,8 +1249,9 @@ numbers datatype concern.
 In Figure~\ref{fig:delegation-total}, we present the inference rule for
 the total delegation state transition. This rule is a composition of the
 DELRWDS rule above and the DELEGS $\DWState$ transition defined in
-Section~\ref{sec:delegation}. Several conditions must be satisfied for this
-rule to be applied:
+Section~\ref{sec:delegation}. Having all the the delegation state data as well
+as all the data in a transaction in one place allows us to perform the following
+necassary remaining checks:
 
 \begin{itemize}
 \item A transaction cannot register a key and simultaneously request
@@ -1259,11 +1260,15 @@ rewards to the associated address
 associated with any key that is being deregistered
 \item A transaction cannot request to deregister an individual key
 associated with an existing stake pool
+\item A transaction cannot request to have a key delegate to a non-existent
+stake pool
 \end{itemize}
 
 With these checks in place, there are never any unclaimed rewards left over
 in the accounts, so we do not need to clean these up. There are also
-no orphaned pools left over without associated stake keys.
+no orphaned pools left over without associated stake keys. Furthermore, we
+prevent any problems associated with delegation to a nonexistent pool
+(by mistake or otherwise) by not allowing it.
 
 In the consequent transition of this total rule, the DELRWDS transition is
 applied first in the composition
@@ -1286,6 +1291,8 @@ rest of the delegation state update is triggered by the cetificate list.
         \addrRw~(\fun{author}~{c}) \notin \dom \var{wdrls} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \addrRw~(\fun{author}~{c}) \in \dom \var{wdrls} \\
+      \forall \var{c}\in \Gamma, \var{c}\in\DCertDeleg \Rightarrow
+        \fun{author}~{c} \in \dom \var{stpools} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \fun{author}~{c} \notin \dom \var{retiring} \union \dom \var{stpools} \\ ~ \\
       {
@@ -1370,8 +1377,8 @@ to the certificate.
       & \text{delegation certificates in a transaction}\\
       \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
-%      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
-%      & \text{hashKey of a spending key in an address}\\
+      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
+      & \text{hashKey of a spending key in an address}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
@@ -1383,19 +1390,46 @@ In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
 associated with input and reward addresses and their keys.
 The first, $\fun{addr}$, gives the finite map
 which associates to a given $\var{txin}$ in the UTxO the address of the
-corresponding $\var{txout}$. The map $\fun{addr_h}$, given a UTxO, returns the
+corresponding $\var{txout}$.
+
+The map $\fun{addr_h}$, given a UTxO, returns the
 finite map which associates $\var{txin}$ with the hash of a spending key in
-the address in the corresponding $\var{txout}$ in the UTxO.
+the address in the corresponding $\var{txout}$ in the UTxO. The way this is
+done is different for pointer and base addresses. For base addresses,
+we must look up the address owner using the $\fun{hashKey_{spend}}$ finite map,
+which literally checks the data at a given address for the hash of the key of
+the owner, which is stored there. This base address direct lookup is only done
+for spending keys which are not also registered staking keys (i.e. not in the
+domain of $\var{stkeys}$).
+
+For registered staking keys listed in $\var{stkeys}$, we need to perform this
+hash key lookup in the $\var{pointeraddr}$ variable in the delegation state
+on the ledger, which is a finite map that stores a pointer address
+paired with the hash of the key which controls it. Note that there is a third
+possibility of address type - the reward address. The application of the
+$\fun{addr_h}$ hash key lookup map will not fail in this case either,
+since this fits into the $\notin \dom stkeys$ case. A hash key corresponding
+to a reward address will not be found in the $\fun{hashKey_{spend}}$ finite map,
+so that we will get empty finite map as the result of this lookup.
+We will, however, never be applying the $\fun{addr_h}$ calculation to a
+reward-type address since once the rewards get withdrawn, their value is added
+to the UTxO as standard entries, referencing base or pointer addresses in the
+$\TxOut$ value.
 
 \begin{figure}
   \begin{align*}
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hashKey of a pointer address}\\
-    & \fun{addr_h}~utxo~\var{pointeraddr} = \\
-    & \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
-      \wedge a \mapsto h \in \var{pointeraddr} \}
+    & \fun{addr_h} \in \UTxO \to \Allocs \to \TxIn \mapsto \HashKey &
+        \text{hashKey of a pointer address}\\
+    & \fun{addr_h}~utxo~stkeys~\var{pointeraddr} = \\
+      & \begin{cases}
+      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo} \\
+        \wedge a \mapsto h \in \fun{hashKey_{spend}} \} & \text{if $\var{hk} \notin \dom~stkeys$} \\
+      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo} \\
+        \wedge a \mapsto h \in \var{pointeraddr} \} & \text{if $\var{hk} \in \dom~stkeys$} \\
+        \end{cases} \\
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
@@ -1481,7 +1515,7 @@ being unnecessarily large and full of redundant witnessing.
       \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
-     \wedge  \fun{addr_h}~{utxo}~{pointeraddr}~i = \hashKey{vk}\\
+     \wedge  \fun{addr_h}~{utxo}~{stkeys}~{pointeraddr}~i = \hashKey{vk}\\
      ~ \\
       & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
       \cdot \\
