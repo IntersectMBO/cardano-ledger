@@ -3770,12 +3770,11 @@ It should be possible to do so since the value in the reward account is
 identified with the stake key, and the delegation of the stake key is
 known.
 
-Withdrawal of rewards is done similarly to the withdrawal transaction
-from the Chimeric Ledgers paper. This uses the stake key as the witness,
-which reveals the public part of the stake key. Note that this also
-requires a nonce to prevent replay attacks. One simplifying approach
-here might be to use the epoch number as the nonce, and to require the
-whole reward be withdrawn, and hence this could only be valid once
+Withdrawal of rewards is done similarly to the withdrawal transaction from the
+Chimeric Ledgers paper. This uses the stake key as the witness, which reveals
+the public part of the stake key. Note that this also requires a nonce to
+prevent replay attacks. We choose to use the epoch number as the nonce, and to
+require the whole reward be withdrawn, and hence this could only be valid once
 within the epoch.
 
 This aggregation of rewards -- account style -- is the key to resolving
@@ -3811,7 +3810,7 @@ number of addresses.
 \begin{itemize}
 \item
   stake in reward accounts is ordinary stake, and hence is counted in
-  delegation to stake pools, or can be used directly in creating blocks.
+  delegation to stake pools.
 \item
   There is a potential interaction with UTxO deposit/refund approach. It
   may be that (because the refund is smaller than the reward) that
