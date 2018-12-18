@@ -56,9 +56,15 @@ pool deposits in a given slot number, $\fun{obligation}$.
 
 Next, we give the type of the function used to calculate additional rewards that will become
 available to be claimed after the boundary. This function is denoted $\fun{reward}$,
-and depends on this epoch's blocks, protocol constants and rewards made available
-for claiming this epoch. Based on these values, the $\fun{reward}$ function
-updates the existing records of the unclaimed coin values in each reward address.
+and depends on this epoch's blocks, protocol constants, the delegation
+and pool states, and existing rewards unclaimed in the previous epoch.
+The $\fun{reward}$ function
+updates the existing records of the unclaimed coin values by adding newly
+accumulated rewards this epoch to the value in each reward address.
+
+\begin{todo}
+  This calculation has been decided on already?
+\end{todo}
 
 The function $\fun{poolRefunds}$ is used to calculate the total refunds
 that must be distributed

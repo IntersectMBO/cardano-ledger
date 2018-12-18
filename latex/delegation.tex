@@ -67,13 +67,8 @@ The type $\Allocs$ is a general datatype used to represent both individual and s
 pool resource allocations. It stores, as a finite map, the hash key to which the resource is
 allocated, and the corresponding slot number in which this allocation
 (registration) was made. Here we also introduce pointer address structure
-$\PtrAddr$, which
-we will store associated to every key on the ledger. It is these pointer
-addresses that will will use to retrieve a key associated to an address.
-
-\begin{todo}
-explain what calculations these pointer addresses will be used
-\end{todo}
+$\PtrAddr$, which we will use to index stake keys based on
+when and by what transaction they were registered.
 
 A variable of this type consists of
 the slot number when transaction (which carried the key registration certificate)
@@ -204,9 +199,10 @@ key to which this address is associated. The third
 variable in $\DState$ stores currently registered delegations.
 Delegations ($\var{delegations}$) are also expressed by a finite map, which
 associates a stake key with the hash key of the pool to which it delegates.
-Finally, there a record of which pointer address is associated with which
-registered key is stored in the $\var{pointeraddr}$ variable, also as finite
-map (indexed by the pointer addresses).
+Finally, the finite map $\var{pointeraddr}$ variable stores,
+indexed by pointer addresses,
+the stake keys associated with these pointers. This data is needed for the
+epoch boundary reward calculations, see Section~\ref{sec:epoch}.
 
 The ledger additionally keeps track of the stake pools in a separate state variable
 $\PState$.

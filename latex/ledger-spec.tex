@@ -925,12 +925,7 @@ The $\PrtclConsts$ is needed as part of the environment here in order to
 keep track of parameters such as the $\fun{minfee}$ value, deposits, etc.
 The environment also has variables $\var{stkeys}$ and $\var{stpools}$
 to keep track of the current individual and pool resource allocations,
-the $\var{pointeraddr}$ variable to look up staking keys corresponding to
-pointer addresses, and the current slot number.
-
-\begin{todo}
-  Remove pointeraddr from the UTxOEnv if needed
-\end{todo}
+and the current slot number.
 
 The relevant state variables for a UTxO transition include the UTxO itself,
 as well as the value in the deposits pool and the fees pool.
@@ -948,7 +943,6 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
         \var{pc} & \PrtclConsts & \text{protocol constants}\\
         \var{stkeys} & \Allocs & \text{stake key allocations}\\
         \var{stpools} & \Allocs & \text{stake pool allocations}\\
-        \var{pointeraddr} & \PtrAddr \mapsto \HashKey & \text{pointer addresses}\\
       \end{array}
     \right)
   \end{equation*}
@@ -1119,7 +1113,6 @@ variable
         \var{pc}\\
         \var{stkeys}\\
         \var{stpools}\\
-        \var{pointeraddr} \\
       \end{array}
       \vdash
       \left(
