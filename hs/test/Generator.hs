@@ -154,13 +154,13 @@ genTxWits keyList (UTxO m) cslot = do
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
-genLedgerStateTx :: KeyPairs -> LedgerState ->
+genLedgerStateTx :: KeyPairs -> Slot -> LedgerState ->
                     Gen (Coin, TxWits, Either [ValidationError] LedgerState)
-genLedgerStateTx keyList sourceState = do
+genLedgerStateTx keyList (Slot slot) sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  slot <- genNatural 0 1000
-  (txfee', tx) <- genTxWits keyList utxo' (Slot slot)
-  pure (txfee', tx, asStateTransition (Slot slot) sourceState tx)
+  slot' <- genNatural slot (slot + 100)
+  (txfee', tx) <- genTxWits keyList utxo' (Slot slot')
+  pure (txfee', tx, asStateTransition (Slot slot') sourceState tx)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -172,7 +172,7 @@ genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
   ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
-  (fees, txs, ls') <- repeatCollectTx steps keyPairs (Coin 0) ls []
+  (fees, txs, ls') <- repeatCollectTx steps keyPairs (Slot 1) (Coin 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
 -- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
@@ -192,16 +192,17 @@ genNonEmptyAndAdvanceTx' = do
 repeatCollectTx
     :: Natural
     -> KeyPairs
+    -> Slot
     -> Coin
     -> LedgerState
     -> [TxWits]
     -> Gen (Coin, [TxWits], Either [ValidationError] LedgerState)
-repeatCollectTx 0 _ fees ls txs = pure (fees, reverse txs, Right ls)
-repeatCollectTx n keyPairs fees ls txs = do
-  (txfee', tx, next) <- genLedgerStateTx keyPairs ls
+repeatCollectTx 0 _ _ fees ls txs = pure (fees, reverse txs, Right ls)
+repeatCollectTx n keyPairs (Slot slot) fees ls txs = do
+  (txfee', tx, next) <- genLedgerStateTx keyPairs (Slot slot) ls
   case next of
     Left _    -> pure (fees, txs, next)
-    Right ls' -> repeatCollectTx (n - 1) keyPairs (txfee' <> fees) ls' (tx:txs)
+    Right ls' -> repeatCollectTx (n - 1) keyPairs (Slot $ slot + 1) (txfee' <> fees) ls' (tx:txs)
 
 -- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
 -- exhausting the UTxO set to prevent calling 'head' on empty input list.
@@ -244,10 +245,10 @@ genValidLedgerState = do
     Left _   -> Gen.discard
     Right ls -> pure (keyPairs, steps, txs, ls)
 
-genValidSuccessorState :: KeyPairs -> LedgerState ->
+genValidSuccessorState :: KeyPairs -> Slot -> LedgerState ->
   Gen (Coin, TxWits, LedgerState)
-genValidSuccessorState keyPairs sourceState = do
-  (txfee', entry, next) <- genLedgerStateTx keyPairs sourceState
+genValidSuccessorState keyPairs slot sourceState = do
+  (txfee', entry, next) <- genLedgerStateTx keyPairs slot sourceState
   case next of
     Left _   -> Gen.discard
     Right ls -> pure (txfee', entry, ls)
@@ -260,7 +261,7 @@ genValidStateTx = do
 genValidStateTxKeys :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState, KeyPairs)
 genValidStateTxKeys = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
-  (txfee', entry, ls')     <- genValidSuccessorState keyPairs ls
+  (txfee', entry, ls')     <- genValidSuccessorState keyPairs (Slot $ steps + 1) ls
   pure (ls, steps, txfee', entry, ls', keyPairs)
 
 genStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerValidation)
