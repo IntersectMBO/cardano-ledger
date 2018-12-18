@@ -69,8 +69,13 @@ allocated, and the corresponding slot number in which this allocation
 (registration) was made. Here we also introduce pointer address structure
 $\PtrAddr$, which
 we will store associated to every key on the ledger. It is these pointer
-addresses that will will use to retrieve a key associated to an address
-(for example, to check a signature). A variable of this type consists of
+addresses that will will use to retrieve a key associated to an address.
+
+\begin{todo}
+explain what calculations these pointer addresses will be used
+\end{todo}
+
+A variable of this type consists of
 the slot number when transaction (which carried the key registration certificate)
 was processed, the index of the transaction inside that slot, and the index
 of the certificate inside the transaction (i.e. its position in the list of

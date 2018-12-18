@@ -603,7 +603,7 @@ the given slot number.
 The amount
 decayed for individual keys is then computed by adding the values of $\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$
 for each deregistration certificate in a given transaction, and is given by
-$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
+$\fun{decayedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
 we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
 slot number in order to match with the one in the $\fun{keyRefunds}$
 calculation.
@@ -665,10 +665,10 @@ The types involved in defining a UTxO and its transitions are presented in
 Figure~\ref{fig:defs:utxo}. Note that here, among other primitive types,
 we introduce $\Addr_{base}$. This is the usual type of address used for
 coin transfers by the transactions. We also introduce the derived type $\Addr$,
-which is a disjoint union of base-type, pointer, and reward addresses. Using this type,
+which is a disjoint union of base-type and reward addresses. Using this type,
 it is possible to do rewards accounting (which we discuss later in this chapter)
 in the same $\UTxO$ style as the base address coin transfers, as well as
-using the staking keys pointer address records in place of base addresses.
+the usual base address lookups and calculations.
 Similar to the certificate structure, each address is either a reward or a base
 address.
 
@@ -757,7 +757,7 @@ account for this address and added to the UTxO.
       \var{addr}
       & \Addr
       & \var{addr}
-      & \Addr_{base} \uniondistinct \PtrAddr \uniondistinct \AddrRWD
+      & \Addr_{base} \uniondistinct \AddrRWD
       & \text{address}\\
       \var{txin}
       & \TxIn
@@ -927,6 +927,10 @@ The environment also has variables $\var{stkeys}$ and $\var{stpools}$
 to keep track of the current individual and pool resource allocations,
 the $\var{pointeraddr}$ variable to look up staking keys corresponding to
 pointer addresses, and the current slot number.
+
+\begin{todo}
+  Remove pointeraddr from the UTxOEnv if needed
+\end{todo}
 
 The relevant state variables for a UTxO transition include the UTxO itself,
 as well as the value in the deposits pool and the fees pool.
@@ -1367,17 +1371,17 @@ to the certificate.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \DCertBody
+      \fun{dbody} & \DCert \to \DCertBody
       & \text{body of the delegation certificate}\\
-      \fun{txdata} & \Tx \mapsto \TData
+      \fun{txdata} & \Tx \to \TData
       & \text{transaction data}\\
-      \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
+      \fun{dwit} & \DCert \to (\VKey \times \Sig)
       & \text{witness for the delegation certificate}\\
       \fun{dcerts} & \Tx \to \text{list}~\DCert
       & \text{delegation certificates in a transaction}\\
       \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
-      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
+      \fun{hashKey_{spend}} & \Addr \to \HashKey
       & \text{hashKey of a spending key in an address}\\
     \end{array}
   \end{equation*}
@@ -1395,41 +1399,22 @@ corresponding $\var{txout}$.
 The map $\fun{addr_h}$, given a UTxO, returns the
 finite map which associates $\var{txin}$ with the hash of a spending key in
 the address in the corresponding $\var{txout}$ in the UTxO. The way this is
-done is different for pointer and base addresses. For base addresses,
-we must look up the address owner using the $\fun{hashKey_{spend}}$ finite map,
-which literally checks the data at a given address for the hash of the key of
-the owner, which is stored there. This base address direct lookup is only done
-for spending keys which are not also registered staking keys (i.e. not in the
-domain of $\var{stkeys}$).
-
-For registered staking keys listed in $\var{stkeys}$, we need to perform this
-hash key lookup in the $\var{pointeraddr}$ variable in the delegation state
-on the ledger, which is a finite map that stores a pointer address
-paired with the hash of the key which controls it. Note that there is a third
-possibility of address type - the reward address. The application of the
-$\fun{addr_h}$ hash key lookup map will not fail in this case either,
-since this fits into the $\notin \dom stkeys$ case. A hash key corresponding
-to a reward address will not be found in the $\fun{hashKey_{spend}}$ finite map,
-so that we will get empty finite map as the result of this lookup.
-We will, however, never be applying the $\fun{addr_h}$ calculation to a
-reward-type address since once the rewards get withdrawn, their value is added
-to the UTxO as standard entries, referencing base or pointer addresses in the
-$\TxOut$ value.
+done is by performing a lookup of the address owner using the
+$\fun{hashKey_{spend}}$ map,
+which retrieves the hash of the key of
+the owner from the data stored at the given address.
 
 \begin{figure}
   \begin{align*}
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \Allocs \to \TxIn \mapsto \HashKey &
-        \text{hashKey of a pointer address}\\
-    & \fun{addr_h}~utxo~stkeys~\var{pointeraddr} = \\
-      & \begin{cases}
-      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo} \\
-        \wedge a \mapsto h \in \fun{hashKey_{spend}} \} & \text{if $\var{hk} \notin \dom~stkeys$} \\
-      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo} \\
-        \wedge a \mapsto h \in \var{pointeraddr} \} & \text{if $\var{hk} \in \dom~stkeys$} \\
-        \end{cases} \\
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey &
+        \text{hashKey of an address}\\
+    & \fun{addr_h}~utxo = \\
+      &
+      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+        \wedge \fun{hashKey_{spend}}~{a} = h \} \\
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
@@ -1449,7 +1434,7 @@ Figure~\ref{fig:rules:utxow}):
  \item For each input $\var{i}$ of the signal transaction $\var{tx}$,
  there exists a (unique) verifiable witness (there could be more than one valid
  key-signature pair serving as a witness) such that the hash of the spending key
- of the pointer address corresponding to the output of $\var{i}$ in the current UTxO
+ of the address corresponding to the output of $\var{i}$ in the current UTxO
  is the same as the hash of the verification key of the witness.
 
  \item For each certificate in $\var{tx}$, the signature of the transaction
@@ -1515,11 +1500,12 @@ being unnecessarily large and full of redundant witnessing.
       \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
-     \wedge  \fun{addr_h}~{utxo}~{stkeys}~{pointeraddr}~i = \hashKey{vk}\\
+     \wedge  \fun{addr_h}~{utxo}~i = \hashKey{vk}\\
      ~ \\
       & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
       \cdot \\
-      \verify{vk}{\serialised{\txdata~\var{tx}}}{\sigma}\\
+      \mathcal{V}_{\var{vk}}{\serialised{\txdata~\var{tx}}}_{\sigma}
+      \wedge \fun{hashKey}~{vk} = \fun{author}~{c}\\
       ~ \\
       & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
