@@ -2181,6 +2181,12 @@ best data available:
   push the pool over the saturation threshold.
 \end{itemize}
 
+When the wallet is running and the user has delegated to a stake pool, the
+wallet should monitor the non-myopic rewards regularly. Should the stake pool
+become less favourable (by missing blocks, or even becoming inactive, or by
+changing its cost/margin), the wallet should notify the user, and ask them to
+consider changing their delegation.
+
 We had considered adding some jittering to the ordered list of stake pools, in
 order to prevent a situation where a slight difference in the expected rewards would
 lead to stakeholders all delegating to the same, slightly more preferable, pool.
@@ -2807,7 +2813,7 @@ of ``micro payments'' from rewards after each epoch.
 We have considered multiple solutions to this problem. They are summarised in
 \cref{assessment-of-rewards-sharing-mechanisms}. Considering all the tradeoffs,
 we have chosen to introduce reward accounts, as described in
-\cref{reward-accounts-per-stake-key}.
+\cref{reward-accounts-per-stake-key}, and also in \cref{distributing-rewards}.
 
 \subsection{Information in Daedalus}
 \label{information-in-daedalus}
@@ -3380,9 +3386,13 @@ In the following, we describe how the requirements listed in
   We have two mechanisms for dealing with inactive stake pools. Stake
   pools can be retired via a retirement certificate
   (\cref{stake-pool-registration-and-retirement-certificates}. If a
-  stake pool ceases to operate without being properly retired, its key
-  will be detected as a stale staking key as described in
-  \cref{stale-stake}.
+  stake pool ceases to operate without being properly retired, its members will
+  be incentivised to re-delegate: their rewards will start to diminish, and
+  their wallet will norify them that the pool they have delegated to is
+  not producing blocks anymore \cref{display-of-stake-pools-in-the-wallet}.
+
+  In addition to this, \cref{stale-stake} describes an optional mechanism to
+  detect and ignore inactive pools.
 
 \item[\cref{avoid-hard-transition} Avoid Hard Transition] As described
   in \cref{transition-to-decentralization}, we will have a smooth
@@ -3416,6 +3426,10 @@ In the following, we describe how the requirements listed in
   accounts, with separate staking keys, if they are willing to pay the
   fees for using multiple staking keys. This will give them a level of
   pseudonymity that is not worse than that in the Ethereum network.
+
+  They can also choose to use a distinct staking key per address, or addesses
+  with no staking key at all, which gives psweudonymity that is no worse than in
+  Bitcoin.
 
 \item[\cref{short-addresses} Short Addresses] The goal of having
   reasonably short addresses has guided the design of delegation, and
