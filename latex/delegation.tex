@@ -390,7 +390,7 @@ being delegated to.
     \inference[Deleg-Dereg]
     {
       \var{c}\in \DCertDeRegKey  & \cauthor{c} = hk \\
-    hk \in \var{stkeys} & ptr = (slot,\fun{txSlotIx}~\var{tx}, \fun{cIx}~\var{c})
+    hk \in \dom \var{stkeys} & ptr = (slot,\fun{txSlotIx}~\var{tx}, \fun{cIx}~\var{c})
     }
     {
       \var{slot} \vdash
@@ -417,7 +417,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & \cauthor{c} = hk & hk \in \var{stkeys}
+      \var{c}\in \DCertDeleg & \cauthor{c} = hk & hk \in \dom \var{stkeys}
     }
     {
       \var{slot} \vdash
