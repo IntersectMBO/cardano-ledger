@@ -53,6 +53,7 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\PtrAddr}{\type{PtrAddr}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\DWState}{\type{DWState}}
 \newcommand{\DWEnv}{\type{DWEnv}}
@@ -331,13 +332,10 @@ In this document, the properties and rules we state involving serialization are
 assumed to hold true independently of the storage medium and style of data
 organization chosen for an implementation.
 
-\clearpage
-
 \section{Delegation}
 \label{sec:delegation}
 \input{delegation.tex}
 
-\clearpage
 
 \section{UTxO}
 \label{sec:utxo}
@@ -605,7 +603,7 @@ the given slot number.
 The amount
 decayed for individual keys is then computed by adding the values of $\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$
 for each deregistration certificate in a given transaction, and is given by
-$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
+$\fun{decayedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
 we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
 slot number in order to match with the one in the $\fun{keyRefunds}$
 calculation.
@@ -658,7 +656,7 @@ Section~\cref{sec:epoch}.
   \label{fig:functions:deposits-decay}
 \end{figure}
 
-\clearpage
+
 
 \subsection{UTxO Transitions}
 \label{sec:state-trans-utxo-1}
@@ -667,9 +665,10 @@ The types involved in defining a UTxO and its transitions are presented in
 Figure~\ref{fig:defs:utxo}. Note that here, among other primitive types,
 we introduce $\Addr_{base}$. This is the usual type of address used for
 coin transfers by the transactions. We also introduce the derived type $\Addr$,
-which is a disjoint union of reward and base-type addresses. Using this type,
+which is a disjoint union of base-type and reward addresses. Using this type,
 it is possible to do rewards accounting (which we discuss later in this chapter)
-in the same $\UTxO$ style as the base address coin transfers.
+in the same $\UTxO$ style as the base address coin transfers, as well as
+the usual base address lookups and calculations.
 Similar to the certificate structure, each address is either a reward or a base
 address.
 
@@ -925,8 +924,8 @@ This environment is made up of several variables.
 The $\PrtclConsts$ is needed as part of the environment here in order to
 keep track of parameters such as the $\fun{minfee}$ value, deposits, etc.
 The environment also has variables $\var{stkeys}$ and $\var{stpools}$
-to keep track of the current individual and pool resource allocations, and
-the current slot number.
+to keep track of the current individual and pool resource allocations,
+and the current slot number.
 
 The relevant state variables for a UTxO transition include the UTxO itself,
 as well as the value in the deposits pool and the fees pool.
@@ -971,7 +970,6 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \label{fig:ts-types:utxo}
 \end{figure}
 
-\clearpage
 
 \subsection{UTxO, Fees, and Deposits Ledger Update}
 \label{sec:utxo-ufd}
@@ -1148,7 +1146,6 @@ variable
   This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
-\clearpage
 
 \subsection{Rewards Ledger Update}
 \label{sec:utxo-rewards}
@@ -1249,8 +1246,9 @@ numbers datatype concern.
 In Figure~\ref{fig:delegation-total}, we present the inference rule for
 the total delegation state transition. This rule is a composition of the
 DELRWDS rule above and the DELEGS $\DWState$ transition defined in
-Section~\ref{sec:delegation}. Several conditions must be satisfied for this
-rule to be applied:
+Section~\ref{sec:delegation}. Having all the the delegation state data as well
+as all the data in a transaction in one place allows us to perform the following
+necassary remaining checks:
 
 \begin{itemize}
 \item A transaction cannot register a key and simultaneously request
@@ -1259,11 +1257,15 @@ rewards to the associated address
 associated with any key that is being deregistered
 \item A transaction cannot request to deregister an individual key
 associated with an existing stake pool
+\item A transaction cannot request to have a key delegate to a non-existent
+stake pool
 \end{itemize}
 
 With these checks in place, there are never any unclaimed rewards left over
 in the accounts, so we do not need to clean these up. There are also
-no orphaned pools left over without associated stake keys.
+no orphaned pools left over without associated stake keys. Furthermore, we
+prevent any problems associated with delegation to a nonexistent pool
+(by mistake or otherwise) by not allowing it.
 
 In the consequent transition of this total rule, the DELRWDS transition is
 applied first in the composition
@@ -1286,6 +1288,8 @@ rest of the delegation state update is triggered by the cetificate list.
         \addrRw~(\fun{author}~{c}) \notin \dom \var{wdrls} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \addrRw~(\fun{author}~{c}) \in \dom \var{wdrls} \\
+      \forall \var{c}\in \Gamma, \var{c}\in\DCertDeleg \Rightarrow
+        \fun{author}~{c} \in \dom \var{stpools} \\
       \forall \var{c}\in \Gamma, \var{c}\in\DCertDeRegKey \Rightarrow
         \fun{author}~{c} \notin \dom \var{retiring} \union \dom \var{stpools} \\ ~ \\
       {
@@ -1330,7 +1334,6 @@ rest of the delegation state update is triggered by the cetificate list.
 \label{fig:delegation-total}
 \end{figure}
 
-\clearpage
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -1346,9 +1349,7 @@ A transaction is witnessed by
 a signature and a verification key corresponding to this signature, which can
 be obtained from the the transaction by applying the $\fun{txwits}$ function.
 The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
-to the certificate. The
-$\fun{hashKey_{spend}}$ map associates to an address the hash of the spending key
-at this address.
+to the certificate.
 
 \begin{figure}
   \emph{Abstract types}
@@ -1363,17 +1364,17 @@ at this address.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dbody} & \DCert \mapsto \DCertBody
+      \fun{dbody} & \DCert \to \DCertBody
       & \text{body of the delegation certificate}\\
-      \fun{txdata} & \Tx \mapsto \TData
+      \fun{txdata} & \Tx \to \TData
       & \text{transaction data}\\
-      \fun{dwit} & \DCert \mapsto (\VKey \times \Sig)
+      \fun{dwit} & \DCert \to (\VKey \times \Sig)
       & \text{witness for the delegation certificate}\\
       \fun{dcerts} & \Tx \to \text{list}~\DCert
       & \text{delegation certificates in a transaction}\\
       \fun{txwits} & \Tx \to \powerset{\left(\VKey \times \Sig\right)}
       & \text{witnesses of a transaction}\\
-      \fun{hashKey_{spend}} & \Addr \mapsto \HashKey
+      \fun{hashKey_{spend}} & \Addr \to \HashKey
       & \text{hashKey of a spending key in an address}\\
     \end{array}
   \end{equation*}
@@ -1386,18 +1387,27 @@ In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
 associated with input and reward addresses and their keys.
 The first, $\fun{addr}$, gives the finite map
 which associates to a given $\var{txin}$ in the UTxO the address of the
-corresponding $\var{txout}$. The map $\fun{addr_h}$, given a UTxO, returns the
+corresponding $\var{txout}$.
+
+The map $\fun{addr_h}$, given a UTxO, returns the
 finite map which associates $\var{txin}$ with the hash of a spending key in
-the address in the corresponding $\var{txout}$ in the UTxO.
+the address in the corresponding $\var{txout}$ in the UTxO. The way this is
+done is by performing a lookup of the address owner using the
+$\fun{hashKey_{spend}}$ map,
+which retrieves the hash of the key of
+the owner from the data stored at the given address.
 
 \begin{figure}
   \begin{align*}
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hashKey of an input address}\\
-    & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
-      \wedge a \mapsto h \in \fun{hashKey_{spend}} \}
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey &
+        \text{hashKey of an address}\\
+    & \fun{addr_h}~utxo = \\
+      &
+      \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+        \wedge \fun{hashKey_{spend}}~{a} = h \} \\
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
@@ -1483,11 +1493,12 @@ being unnecessarily large and full of redundant witnessing.
       \forall i \in \txins{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
      \mathcal{V}_{\var{vk}}{\serialised{\txdata{tx}}}_{\sigma}
-     \wedge  \fun{addr_h}~{utxoSt}~i = \hashKey{vk}\\
+     \wedge  \fun{addr_h}~{utxo}~i = \hashKey{vk}\\
      ~ \\
       & \forall c \in \fun{dcerts}~{tx}, \dwit{c} = (\var{vk}, \sigma)
       \cdot \\
-      \verify{vk}{\serialised{\txdata~\var{tx}}}{\sigma}\\
+      \mathcal{V}_{\var{vk}}{\serialised{\txdata~\var{tx}}}_{\sigma}
+      \wedge \fun{hashKey}~{vk} = \fun{author}~{c}\\
       ~ \\
       & \forall (a \mapsto c) \in \txwdrls{tx} \cdot \exists! (\var{vk}, \sigma) \in \txwits{\var{tx}}
       \cdot \\
@@ -1505,7 +1516,6 @@ being unnecessarily large and full of redundant witnessing.
   \label{fig:rules:utxow}
 \end{figure}
 
-\clearpage
 
 \subsection{Ledger State Transition}
 \label{sec:ledger}
@@ -1582,10 +1592,7 @@ by the given transaction.
     {
       {
         \begin{array}{r}
-        slot\\
-        pc\\
-        stkeys\\
-        stpools\\
+        \var{utxoEnv}
         \end{array}
       }
       \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}\\~\\~\\
@@ -1623,14 +1630,12 @@ by the given transaction.
   \label{fig:rules:ledger}
 \end{figure}
 
-\clearpage
 
 \section{Epoch Boundary}
 \label{sec:epoch}
 \input{epoch.tex}
 
 
-\clearpage
 
 \section{Properties}
 \label{sec:properties}
