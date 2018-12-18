@@ -1543,15 +1543,27 @@ full decentralization as described in this document. Starting with
 \(d=1\) and gradually going down to \(d=0\) allows for a smooth
 transition period.
 
-For a given value of \(d\), during the election of slot leaders for the
-current epoch, election will follow the normal process with probability
-\(1-d\), whereas one of the bootstrap keys will be elected with
-probability \(d\).
+For a given value of \(d\), the system will perform two steps to create the
+leader schedule for the next epoch:
+\begin{itemize}
+\item Perform leader election, as specified by the protocol that the new nodes
+  follow (probably Ouroboros Praos-Genesis), for all \(10 k\) slots in the
+  epoch.
+\item Randomly select \(10 k d\) slots of the epoch. For those slots, the result
+  of the leader election will be ignored. Instead, the bootstrap nodes will
+  create blocks for those slots, using Ouroboros BFT.
+\end{itemize}
 
-For reward calculations, all slots assigned to bootstrap keys will be
-ignored. This means that even for high values of \(d\), pool leaders and
-pool members will get their full rewards (even though they have to do
-less ``work'' to get those rewards).
+For reward calculations, all slots assigned to bootstrap keys will be ignored
+(or, in the case of a non-public leader schedule, the expectation value
+\(\mean{N_j}\) of the number of slots for which pool \(j\) was elected will be
+multiplied by \((1-d)\) for all pools, see \cref{pool-rewards}) . This means that
+even for high values of \(d\), pool leaders and pool members will get their full
+rewards (even though they have to do less ``work'' to get those rewards).
+
+Effectively, a fraction of \(d\) of all slots will be masked and handled by the
+bootstrap nodes, derisking the transition without an effect on the rewards of
+any stake pool.
 
 As an example, consider a pool \(A\) with 1\% of stake. In the fully
 decentralized case \(d=0\), \(A\) would be elected slot leader for
