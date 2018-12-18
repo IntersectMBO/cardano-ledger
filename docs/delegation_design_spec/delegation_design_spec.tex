@@ -1717,12 +1717,10 @@ and move them to an ordinary address of their wallet. This withdrawal
 from an account to a UTxO can be done via a special transaction. It
 needs to be signed by the staking key the account belongs to.
 
-In order to prevent replay attacks, this transaction will include an
-epoch number, and all the funds accumulated up to that epoch will be
-withdrawn\todo{We should discuss with the researchers whether they can
-think of any vulnerability with this -- it seems unlikely but not
-impossible that strange things could happen if withdrawal transactions
-for different epochs are re-ordered by the network or things like that.}.
+For replay protection, the transaction that collects rewards is required to have
+at least one UTxO input. As elaborated in \cref{certificate-replay-prevention},
+this extends the replay protection of ordinary UTxO style transactions to the
+transactions withdrawing rewards from an account.
 
 \paragraph{Handling of Bootstrap Addresses}
 \label{handling-of-bootstrap-addresses}
@@ -3787,10 +3785,9 @@ known.
 
 Withdrawal of rewards is done similarly to the withdrawal transaction from the
 Chimeric Ledgers paper. This uses the stake key as the witness, which reveals
-the public part of the stake key. Note that this also requires a nonce to
-prevent replay attacks. We choose to use the epoch number as the nonce, and to
-require the whole reward be withdrawn, and hence this could only be valid once
-within the epoch.
+the public part of the stake key. Note that we also require at least one UTxO
+input to the transaction for replay protection (see
+\cref{certificate-replay-prevention}, \cref{distributing-rewards}).
 
 This aggregation of rewards -- account style -- is the key to resolving
 the UTxO storage asymptotic complexity problem. It is the same
