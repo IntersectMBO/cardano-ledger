@@ -56,9 +56,15 @@ pool deposits in a given slot number, $\fun{obligation}$.
 
 Next, we give the type of the function used to calculate additional rewards that will become
 available to be claimed after the boundary. This function is denoted $\fun{reward}$,
-and depends on this epoch's blocks, protocol constants and rewards made available
-for claiming this epoch. Based on these values, the $\fun{reward}$ function
-updates the existing records of the unclaimed coin values in each reward address.
+and depends on this epoch's blocks, protocol constants, the delegation
+and pool states, and existing rewards unclaimed in the previous epoch.
+The $\fun{reward}$ function
+updates the existing records of the unclaimed coin values by adding newly
+accumulated rewards this epoch to the value in each reward address.
+
+\begin{todo}
+  This calculation has been decided on already?
+\end{todo}
 
 The function $\fun{poolRefunds}$ is used to calculate the total refunds
 that must be distributed
@@ -304,7 +310,8 @@ smaller refunds for deposits than were paid upon depositing.
           \var{rewardPool} \\
           \var{stkeys} \\
           \var{rewards} \\
-          \var{delegations}
+          \var{delegations} \\
+          \var{pointeraddr} \\
         \end{array}
       \right)
       \trans{accnt}{}
@@ -315,7 +322,8 @@ smaller refunds for deposits than were paid upon depositing.
           \var{availablePool} & - & \var{paidRewards} \\
           \var{stkeys} \\
           \var{rewards} & \unionoverridePlus & \var{rewards'} \\
-          \var{delegations}
+          \var{delegations} \\
+          \var{pointeraddr} \\
         \end{array}
       \right)
     }
@@ -351,6 +359,14 @@ to retire this epoch. If so, all of the entries in $\var{stpools}$,
 $\var{pparams}$, and $\var{retiring}$ which correspond to any of the hash keys
 of the stake pools scheduled to retire this epoch are removed from
 these variables.
+
+It is important to note here that we \textit{do not} clean up delegations to
+retired stake pools. While we do not allow registration to non-existent
+stake pools (because that is a meaningless operation likely to be the result
+of an error), delegating to a pool that was once active means that there may
+be stake associated with this delegation. While this stake becomes inactive when
+the pool is retired, the delegations to that pool must remain on the ledger
+for potential future use.
 
 %%
 %% Figure - Pool Clean Rule

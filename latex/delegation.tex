@@ -24,38 +24,30 @@ which it will retire.
 
 Delegation requires the following to be tracked by the ledger state:
 the registered stake keys, the delegation map from registered stake keys to stake
-pools, the registered stake pools, and upcoming stake pool retirements.
+pools, pointer addresses associated with stakey keys,
+the registered stake pools, and upcoming stake pool retirements.
 Additionally, the blockchain protocol rewards eligible stake, and so we must
 also include a mapping from active stake keys to rewards.
-
-
-
-\begin{note}
-  The current rules allow for delegation to a non-existent pool.
-  Such stake is not eligible for leader election.
-  This allows for a clean separation between the rules in
-  \cref{fig:delegation-rules} and \cref{fig:pool-rules}.
-  We may, however, later choose to enforce that delegation certificates
-  target a registered pool. It would then make sense to remove
-  mappings in $\var{delegations}$ when stake pools retire.
-\end{note}
-
-\clearpage
 
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
 
 In \cref{fig:delegation-definitons} we give the delegation primitives.
-Here we introduce the following primitive datatypes used in delegation :
-reward addresses
-(different from base addresses introduced later),
-epochs, slot numbers, and duration (the difference between two slot numbers).
-We also make use of the primitive datatype $\StakePool$, which represents
-constants found in a stake pool registration certificate. We make use of
-these constants after registration is processed and thus they must be kept
-track of.
-The constant $\emax$ gives the number of epochs a stake pool will take to retire.
+Here we introduce the following primitive datatypes used in delegation:
 
+\begin{itemize}
+\item reward addresses: different from base addresses introduced later
+\item indexes: this type is used to index certificates in a transaction,
+index of a transaction inside a slot, outputs inside a transaction,
+and inputs in a UTxO or a transaction
+\item epochs
+\item slot numbers
+\item duration: the difference between two slot numbers
+\item $\StakePool$: constants found in a stake pool registration certificate
+(we must continue to keep track of these after registration is complete)
+\end{itemize}
+
+The constant $\emax$ gives the number of epochs a stake pool will take to retire.
 The type $\DCert$ is a generic certificate type, which can be a registration,
 deregistration or delegation certificate for a key, or a registration/retirement
  certificate for a stake pool. It is denoted as disjoint union in the figure,
@@ -74,16 +66,22 @@ way, a type for transitions describing stake pool-related ledger updates
 The type $\Allocs$ is a general datatype used to represent both individual and stake
 pool resource allocations. It stores, as a finite map, the hash key to which the resource is
 allocated, and the corresponding slot number in which this allocation
-(registration) was made.
+(registration) was made. Here we also introduce pointer address structure
+$\PtrAddr$, which we will use to index stake keys based on
+when and by what transaction they were registered.
 
-The maps $\fun{hash}$, $\AddrRWD$, $\fun{author}$, $\fun{dpool}$,
+A variable of this type consists of
+the slot number when transaction (which carried the key registration certificate)
+was processed, the index of the transaction inside that slot, and the index
+of the certificate inside the transaction (i.e. its position in the list of
+the transaction's certificates).
+
+The maps $\fun{hash}$, $\fun{addr_{rwd}}$, $\fun{author}$, $\fun{dpool}$,
 $\fun{stakepool}$,
 $\fun{retire}$, $\fun{epoch}$, and $\fun{slot}$ are all used to
 retrieve specific information about the origin type. The subtraction $\slotminus{}{}$
 of slots gives the number of slots in between (referred to here as
 $\Duration$ here by $\var{dur}$).
-
-
 
 %%
 %% Figure - Delegation Definitions
@@ -93,6 +91,7 @@ $\Duration$ here by $\var{dur}$).
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      ix & \Ix & \text{index}\\
       a & \AddrRWD & \text{reward address} \\
       slot & \Slot & \text{absolute slot}\\
       dur & \Duration & \text{duration}\\
@@ -125,7 +124,12 @@ $\Duration$ here by $\var{dur}$).
       & \Allocs
       & hkeys \mapsto slot
       & \HashKey \mapsto \Slot
-      & \text{resource allocations}
+      & \text{resource allocations} \\
+      \var{ptr}
+      & \PtrAddr
+      & (s,t,c)
+      & \powerset{(\Slot*\Ix*\Ix)}
+      & \text{pointer addresses}
     \end{array}
   \end{equation*}
   %
@@ -138,6 +142,12 @@ $\Duration$ here by $\var{dur}$).
   \\
   \fun{author} & \DCert \to \HashKey
   & \text{certificate author}
+  \\
+  \fun{txSlotIx} & \Slot \to \Tx \to \Ix
+  & \text{tx index in slot}
+  \\
+  \fun{cIx} & \DCert \to \Ix
+  & \text{certificate index in tx}
   \\
   \fun{dpool} & \DCertDeleg \to \HashKey
   & \text{pool being delegated to}
@@ -165,7 +175,6 @@ $\Duration$ here by $\var{dur}$).
 \end{figure}
 
 
-\clearpage
 
 \subsection{Delegation Transitions}
 \label{sec:deleg-trans}
@@ -190,6 +199,10 @@ key to which this address is associated. The third
 variable in $\DState$ stores currently registered delegations.
 Delegations ($\var{delegations}$) are also expressed by a finite map, which
 associates a stake key with the hash key of the pool to which it delegates.
+Finally, the finite map $\var{pointeraddr}$ variable stores,
+indexed by pointer addresses,
+the stake keys associated with these pointers. This data is needed for the
+epoch boundary reward calculations, see Section~\ref{sec:epoch}.
 
 The ledger additionally keeps track of the stake pools in a separate state variable
 $\PState$.
@@ -227,6 +240,7 @@ certificate (contained in a signal transaction).
       \var{stkeys} & \Allocs & \text{registered stake keys to creation time}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
+      \var{pointeraddr} & \PtrAddr \mapsto \HashKey & \text{pointer address lookup}\\
     \end{array}\right)
     \\
     \\
@@ -255,7 +269,6 @@ certificate (contained in a signal transaction).
   \label{fig:delegation-transitions}
 \end{figure}
 
-\clearpage
 
 \subsection{Delegation Rules}
 \label{sec:deleg-rules}
@@ -270,9 +283,19 @@ already found in the current list of stake keys.
 
 In order to delegate to a stake pool, a stake key must first be registered.
 When registering a new stake key (the \cref{eq:deleg-reg} inference rule),
-the key must be
-added to the set of stake keys ($\var{stkeys}$), the rewards for the address
-corresponding to that key set to 0, and no new delegations added. Note that
+
+\begin{itemize}
+\item the key must be
+added to the set of stake keys ($\var{stkeys}$),
+\item the rewards for the address
+corresponding to that key set to 0,
+\item the pointer address consisting of the current slot number, the
+index of the transaction in this slot, and the index of the certificate, is
+added to the $\var{pointeraddr}$ finite map, mapping to the new key
+\item no new delegations are added
+\end{itemize}
+
+Note that
 since the hash key corresponding to the address must not have been previously
 registered,
 it should not have any rewards in its associated address. Thus, it is safe
@@ -285,8 +308,15 @@ that the key of the author is indeed a registered stake key
 in order to be able to retrieve its address for the rewards update.
 
 As a result of this rule, the author's key must be removed from the $\var{stkeys}$ list,
-and all the rewards and delegations associated with this key must be removed
-from the $\var{rewards}$ and $\var{delegations}$ parameters also.
+and all the rewards, pointer address, and delegations associated with this key must be removed
+from the $\var{rewards}$, $\var{pointeraddr}$, and $\var{delegations}$ parameters also.
+
+Note that we must only allow performing a key deregistration when there
+are no active stake pools associated with this key. This check requires additional
+environment variables. For this reason
+it (and several other checks that need
+additional environment variables to specify a valid delegation state transition)
+are performed in the DELEGT rule, discussed in Section~\ref{sec:utxo-rewards}.
 
 Finally, for creating a delegation (the \cref{eq:deleg-deleg} rule),
 given that the certificate $c$ is of the correct type, we add to the
@@ -294,7 +324,13 @@ $\var{delegations}$ finite map the pair of
 the author's hash key and hash key of the pool being delegated to.
 Again, we require the author's key be a registered key, as it does not make
 sense to allow delegation otherwise.
-The $\var{stkeys}$ and $\var{rewards}$ parameters are kept constant by
+
+There is another check which we perform when processing a delegation certificate:
+we must check that the certificate is for delegating to an
+existing stake pool. This, again, is verified in the DELEGT rule, see
+Section~\ref{sec:utxo-rewards}.
+
+The $\var{stkeys}$, $\var{rewards}$, and $\var{pointeraddr}$ parameters are kept constant by
 this rule. The use of union override here allows us to use the same rule
 to perform an update on an existing delegation while keeping the rewards
 associated with the key accounted for.
@@ -332,7 +368,8 @@ being delegated to.
       \begin{array}{r}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations}
+        \var{delegations} \\
+        \var{pointeraddr}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -340,7 +377,9 @@ being delegated to.
       \begin{array}{rcl}
         \var{stkeys} & \union & \{\var{hk} \mapsto slot\}\\
         \var{rewards} & \unionoverrideRight & \{\addrRw \var{hk} \mapsto 0\}\\
-        \var{delegations}
+        \var{delegations} \\
+        \var{pointeraddr} & \union & \{(slot,\fun{txSlotIx}~\var{tx},
+          \fun{cIx}~\var{c}) \mapsto \var{hk}\}
       \end{array}
       \right)
     }
@@ -357,7 +396,8 @@ being delegated to.
       \begin{array}{r}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations}
+        \var{delegations} \\
+        \var{pointeraddr}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -365,7 +405,9 @@ being delegated to.
       \begin{array}{rcl}
         \{\var{hk}\} & \subtractdom & \var{stkeys}\\
         \{\addrRw \var{hk}\} & \subtractdom & \var{rewards} \\
-        \{\var{hk}\} & \subtractdom & \var{delegations}
+        \{\var{hk}\} & \subtractdom & \var{delegations} \\
+        \{(slot,\fun{txSlotIx}~\var{tx},
+         \fun{cIx}~\var{c})\} & \subtractdom & \var{pointeraddr} \\
       \end{array}
       \right)
     }
@@ -382,7 +424,8 @@ being delegated to.
       \begin{array}{r}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations}
+        \var{delegations} \\
+        \var{pointeraddr}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -390,7 +433,8 @@ being delegated to.
       \begin{array}{rcl}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegations} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\}
+        \var{delegations} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\} \\
+        \var{pointeraddr}
       \end{array}
       \right)
     }
@@ -400,7 +444,6 @@ being delegated to.
 \end{figure}
 
 
-\clearpage
 
 \subsection{Stake Pool Rules}
 \label{sec:pool-rules}
@@ -426,7 +469,7 @@ in $\var{pparams}$. The author's hash key and associated data
 are also removed from the $\var{retiring}$ parameter to cancel any pending
 retirement for that key.
 
-The second rule, \cref{eq:pool-ret}, starts the pool retirement process. Given a
+The third rule, \cref{eq:pool-ret}, starts the pool retirement process. Given a
 slot number $\var{slot}$, the application of this rule requires that the
 planned retirement epoch $\var{e}$ stated in the certificate is in the future,
 i.e. after
