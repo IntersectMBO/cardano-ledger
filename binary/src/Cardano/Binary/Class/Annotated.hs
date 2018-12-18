@@ -21,6 +21,7 @@ import qualified Codec.CBOR.Decoding as D
 import Codec.CBOR.Read (ByteOffset)
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.ByteString.Lazy as BSL
+import Data.Kind (Type)
 
 import Cardano.Binary.Class.Core (Bi(..), DecoderError)
 import Cardano.Binary.Class.Primitive (decodeFullDecoder)
@@ -75,7 +76,7 @@ decodeFullAnnotatedBytes lbl decoder bytes =
     $ decodeFullDecoder lbl decoder bytes
 
 class Decoded t where
-  type BaseType t :: *
+  type BaseType t :: Type
   recoverBytes :: t -> ByteString
 
 instance Decoded (Annotated b ByteString) where
