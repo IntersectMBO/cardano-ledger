@@ -2804,44 +2804,10 @@ mechanism.
 However, there is the challenge to avoid ``bloat'' caused by thousands
 of ``micro payments'' from rewards after each epoch.
 
-We are considering two solutions to this problem:
-
-\begin{itemize}
-\item
-  Use a ``lottery'' which gives everybody the same rewards \emph{in
-  expectation}, but drastically reduces the number of actual payments to
-  a manageable number.
-\end{itemize}
-
-Disadvantage of this idea is the potentially high \emph{variance}, but
-on the other hand, the element of randomness could also add some
-additional ``thrill'' to the process. - Only pay to UTxO's which haven't
-changed over the duration of the epoch and then modify those UTxO's
-instead of creating new ones.
-
-This would imply that people holding on to their ADA instead of spending
-them would get higher rewards, which may or may not be a problem. It
-would certainly fit with the general narrative that transaction fees
-(and incentives in general) flow from people \emph{using} the system
-(spending ADA) to people \emph{operating} the system (holding ADA).
-
-\subsection{System Inputs needed for Calculations}
-\label{system-inputs-needed-for-calculations}
-
-In order to calculate rewards, the following information must be
-available for each pool (including ``one-man pools'' of individual
-protocol participants):
-
-\begin{itemize}
-\item
-  Cost, margin and pledged ADA of the pool leader. (These will be zero,
-  one and zero for ``one-man'' pools.)
-\item
-  Staking addresses of pool leader and pool members.
-\item
-  Number of times per epoch the owner of an address belonging to the
-  pool was elected slot leader and actually created a block.
-\end{itemize}
+We have considered multiple solutions to this problem. They are summarised in
+\cref{assessment-of-rewards-sharing-mechanisms}. Considering all the tradeoffs,
+we have chosen to introduce reward accounts, as described in
+\cref{reward-accounts-per-stake-key}.
 
 \subsection{Information in Daedalus}
 \label{information-in-daedalus}
@@ -2855,8 +2821,8 @@ figures, have to be easily accessible, so that stakeholders can quickly
 react to changes and always choose the strategy that maximizes their own
 rewards.
 
-The \emph{Daedalus} wallet software must therefore make this information
-readily available.
+Daedalus will make this information readily available, as detailed in
+\cref{display-of-stake-pools-in-the-wallet}. 
 
 \subsection{Deciding on Good Values for the Parameters}
 \label{deciding-on-good-values-for-the-parameters}
