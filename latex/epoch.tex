@@ -317,11 +317,11 @@ smaller refunds for deposits than were paid upon depositing.
       \trans{accnt}{}
       \left(
         \begin{array}{rcl}
-          \varUpdate{\var{treasury}} & + & \varUpdate{\var{newTreasury}} \\
-          \varUpdate{\var{reserves}} & - & \varUpdate{\var{expansion}} \\
-          \varUpdate{\var{availablePool}} & - & \varUpdate{\var{paidRewards}} \\
+          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury}} \\
+          \varUpdate{\var{reserves}} & \varUpdate{-} & \varUpdate{\var{expansion}} \\
+          \varUpdate{\var{availablePool}} & \varUpdate{-} & \varUpdate{\var{paidRewards}} \\
           \var{stkeys} \\
-          \var{rewardsFoo} & \unionoverridePlus & \var{rewards'} \\
+          \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{pointeraddr} \\
         \end{array}

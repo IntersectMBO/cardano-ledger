@@ -360,7 +360,8 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegKey & \cauthor{c} = hk & hk \notin \dom \var{stkeys}
+      \var{c}\in\DCertRegKey & \cauthor{c} = hk \\
+      hk \notin \dom \var{stkeys} & ptr = (slot,~\fun{txSlotIx}~\var{tx},~\fun{cIx}~\var{c})
     }
     {
       \var{slot} \vdash
@@ -375,11 +376,10 @@ being delegated to.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \var{stkeysFOO} & \union & \{\var{hk} \mapsto slot\}\\
-        \var{rewards} & \unionoverrideRight & \{\addrRw \var{hk} \mapsto 0\}\\
+        \varUpdate{\var{stkeys}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
+        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideRight} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
-        \var{pointeraddr} & \union & \{(slot,\fun{txSlotIx}~\var{tx},
-          \fun{cIx}~\var{c}) \mapsto \var{hk}\}
+        \varUpdate{\var{pointeraddr}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}}
       \end{array}
       \right)
     }
@@ -388,7 +388,8 @@ being delegated to.
   \begin{equation}\label{eq:deleg-dereg}
     \inference[Deleg-Dereg]
     {
-      \var{c}\in \DCertDeRegKey  & \cauthor{c} = hk & hk \in \var{stkeys}
+      \var{c}\in \DCertDeRegKey  & \cauthor{c} = hk \\
+    hk \in \var{stkeys} & ptr = (slot,\fun{txSlotIx}~\var{tx}, \fun{cIx}~\var{c})
     }
     {
       \var{slot} \vdash
@@ -403,11 +404,10 @@ being delegated to.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \{\var{hkFOO}\} & \subtractdom & \var{stkeys}\\
-        \{\addrRw \var{hk}\} & \subtractdom & \var{rewards} \\
-        \{\var{hk}\} & \subtractdom & \var{delegations} \\
-        \{(slot,\fun{txSlotIx}~\var{tx},
-         \fun{cIx}~\var{c})\} & \subtractdom & \var{pointeraddr} \\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkeys}} \\
+        \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
+        \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{pointeraddr}} \\
       \end{array}
       \right)
     }
@@ -433,7 +433,8 @@ being delegated to.
       \begin{array}{rcl}
         \var{stkeys} \\
         \var{rewards} \\
-        \var{delegationsFOO} & \unionoverrideRight & \{\var{hk} \mapsto \dpool c\} \\
+        \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
+                                      & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
         \var{pointeraddr}
       \end{array}
       \right)
