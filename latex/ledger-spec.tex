@@ -53,7 +53,7 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
-\newcommand{\PtrAddr}{\type{PtrAddr}}
+\newcommand{\Ptr}{\type{Ptr}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\DWState}{\type{DWState}}
 \newcommand{\DWEnv}{\type{DWEnv}}
@@ -746,6 +746,7 @@ account for this address and added to the UTxO.
       %
       %
       \var{addr} & \Addr_{base} & \text{base address}\\
+      \var{addr} & \Addr_{ptr} & \text{pointer address}\\
       %
       c & \Coin & \text{currency value}\\
       %
@@ -759,7 +760,7 @@ account for this address and added to the UTxO.
       \var{addr}
       & \Addr
       & \var{addr}
-      & \Addr_{base} \uniondistinct \AddrRWD
+      & \Addr_{base} \uniondistinct \Addr_{ptr} \uniondistinct \AddrRWD
       & \text{address}\\
       \var{txin}
       & \TxIn
@@ -898,7 +899,7 @@ deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpo
     \nextdef
     & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideRight \{(w, 0) \| w \in \var{wdrls}\} \\
+         \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \var{wdrls}\} \\
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value destroyed} \\

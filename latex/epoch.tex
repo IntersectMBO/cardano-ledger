@@ -12,6 +12,8 @@
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\reward}[5]{\fun{reward}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
+\newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 
 In this chapter we discuss the ledger state updates that take place at the epoch
@@ -37,11 +39,21 @@ blockchain this epoch.
 %% Figure - Epoch Abstract Types
 %%
 \begin{figure}[htb]
-  \emph{Abstract types}
+  \emph{Derived types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}ll}
-      \var{production} & \Production & \text{blocks produced in the epoch}\\
+    \begin{array}{r@{~\in~}lr}
+      hk \mapsto n & \Production & \text{blocks produced in the epoch}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{stakeHK} & \Addr_{base} \to \HashKey
+      & \text{base address hashkey}\\
+      \fun{stakePtr} & \Addr_{ptr} \to \Ptr
+      & \text{pointer address pointer}\\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -78,6 +90,65 @@ to assign a refund to each pool key in the set of pools scheduled for retirement
 at the epoch boundary.
 
 %%
+%% Figure - Functions for Stake Distribution
+%%
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{baseStake} \in \powerset{\TxOut} \to \powerset{(\HashKey \times \Coin)}
+      & \text{base address stake} \\
+      & \fun{baseStake}~{txouts} = \\
+      & ~~ \{(hk, c) \mid a\in\Addr_{base} \land (a, c) \in txouts \land \fun{stakeHK}~a = hk \}
+      \nextdef
+      & \fun{ptrStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
+          \to \powerset{(\HashKey \times \Coin)}
+      & \text{base address stake} \\
+      & \fun{ptrStake}~{txouts}~{ptrs} = \\
+      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in txouts \land (\fun{stakePtr}~a\mapsto hk \in ptrs \}
+      \nextdef
+      & \fun{stake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
+          \to \powerset{(\HashKey \times \Coin)}
+      & \text{base address stake} \\
+      & \fun{stake}~{txouts}~{ptrs} = (\fun{baseStake}~{txouts}) \cup (\fun{ptrStake}~{txouts}~{ptrs})
+      \nextdef
+      & \fun{isActive} \in \HashKey \to \Allocs \to (\HashKey \mapsto \HashKey) \to \Allocs \to \mathbb{B}
+      & \text{active stake} \\
+      & \isActive{v_{sk}}{stkeys}{delegs}{stpools} = \exists \var{v_{p}}\\
+      & ~~ \var{v_{sk}} \in \dom stkeys
+              \land \var{v_{st}}\mapsto\var{v_{p}} \in delegs
+              \land \var{v_{p}} \in \dom \var{stpools}
+      \nextdef
+      & \fun{activeStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
+      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\VKey \mapsto \Coin)
+      & \text{active stake holdings} \\
+      & \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools} = \\
+      & ~~ \left\{
+             hk\mapsto \sum_{hk\mapsto c}c
+             ~\Big\vert~
+             \begin{array}{r}
+             (\isActive{hk}{stkeys}{delegs}{stpools}) \\
+             \land (hk, c) \in (\fun{stake}~{txouts}~{ptrs})
+             \end{array}
+           \right\}
+      \nextdef
+      & \fun{totalStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
+      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to \Coin
+      & \text{total active stake} \\
+      & \fun{totalStake}~\var{txouts}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} =
+        \sum_{\_\mapsto c\in \var{active}}c \\
+      & \where active = \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools}
+      \nextdef
+      & \fun{stakeDistr} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
+      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\VKey \mapsto [0, 1])
+      & \text{stake distribution} \\
+      & \fun{stakeDistr}~\var{txouts}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} = \\
+      & ~~ \left\{ hk\mapsto c \div tot \mid hk \mapsto c \in \var{active} \right\}\\
+      & ~\where active = \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools}
+  \end{align*}
+  \caption{Functions used in Stake Distribution}
+  \label{fig:functions:stake-distribution}
+\end{figure}
+
+%%
 %% Figure - Functions for Epoch Rules
 %%
 \begin{figure}[htb]
@@ -90,7 +161,6 @@ at the epoch boundary.
       & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
         \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda_p} \\
       &
-      %  \where k_{\mathsf{val}}, k_{\min},p_{\mathsf{val}}, p_{\min}, \lambda \in pc
       \begin{array}{lr@{~=~}l}
         \where
           & (\dval,~d_{\min},~\lambda_d) & \fun{decayKey}~\var{pc}\\
@@ -559,7 +629,7 @@ pool state.
         \var{slot} & \Slot & \text{current slot}\\
         \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
         \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
-        \var{production} & \Production & \text{blocks produced in the epoch}\\
+        \var{production} & \VKey \mapsto \mathbb{N} & \text{blocks produced in the epoch}\\
       \end{array}
     \right)
   \end{equation*}
