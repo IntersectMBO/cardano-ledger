@@ -38,6 +38,8 @@ import Cardano.Chain.Genesis
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
+  , ProtocolMagicId(..)
+  , RequiresNetworkMagic(..)
   , ProxyCert(..)
   , RedeemPublicKey
   , Signature(..)
@@ -61,7 +63,7 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisDelegation
   exampleProtocolParameters
   37
-  (ProtocolMagic 1783847074)
+  (ProtocolMagic (ProtocolMagicId 1783847074) RequiresMagic)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances

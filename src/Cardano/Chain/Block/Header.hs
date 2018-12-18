@@ -89,8 +89,10 @@ import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
   ( Hash
   , ProtocolMagic(..)
+  , ProtocolMagicId(..)
   , ProxySignature
   , PublicKey
+  , RequiresNetworkMagic(..)
   , SecretKey
   , SignTag(..)
   , Signature
@@ -161,7 +163,7 @@ instance B.Buildable Header where
 instance Bi Header where
   encode h =
     encodeListLen 5
-      <> encode (getProtocolMagic (headerProtocolMagic h))
+      <> encode (unProtocolMagicId . getProtocolMagicId $ (headerProtocolMagic h))
       <> encode (headerPrevHash h)
       <> encode (headerProof h)
       <> encode (headerConsensusData h)
@@ -175,7 +177,7 @@ decodeAHeader = do
     annotatedDecoder $ do
       enforceSize "Header" 5
       (,,,,)
-        <$> (ProtocolMagic <$> decode)
+        <$> decode
         <*> decodeAnnotated
         <*> decodeAnnotated
         <*> decodeAConsensus

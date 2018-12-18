@@ -60,7 +60,8 @@ import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
   (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
 import Cardano.Crypto.HD (HDAddressPayload(..), HDPassphrase(..))
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic
+  (ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
 import Cardano.Crypto.Signing
   ( EncryptedSecretKey
   , ProxyCert
@@ -95,8 +96,14 @@ import Cardano.Crypto.Signing.Redeem
 --------------------------------------------------------------------------------
 
 genProtocolMagic :: Gen ProtocolMagic
-genProtocolMagic = ProtocolMagic <$> Gen.int32 Range.constantBounded
+genProtocolMagic =
+  ProtocolMagic <$> genProtocolMagicId <*> genRequiresNetworkMagic
 
+genProtocolMagicId :: Gen ProtocolMagicId
+genProtocolMagicId = ProtocolMagicId <$> Gen.int32 Range.constantBounded
+
+genRequiresNetworkMagic :: Gen RequiresNetworkMagic
+genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]
 
 --------------------------------------------------------------------------------
 -- Sign Tag Generator

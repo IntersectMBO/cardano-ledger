@@ -29,6 +29,8 @@ import Cardano.Crypto
   ( AbstractHash
   , PassPhrase
   , ProtocolMagic(..)
+  , ProtocolMagicId(..)
+  , RequiresNetworkMagic(..)
   , ProxyCert
   , ProxySecretKey
   , PublicKey(..)
@@ -103,7 +105,11 @@ goldenSignature :: Property
 goldenSignature = goldenTestBi sig "test/golden/Signature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
-  sig        = sign (ProtocolMagic 0) SignForTestingOnly skey ()
+  sig        = sign
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    SignForTestingOnly
+    skey
+    ()
 
 genUnitSignature :: Gen (Signature ())
 genUnitSignature = do
@@ -173,7 +179,11 @@ goldenRedeemSignature :: Property
 goldenRedeemSignature = goldenTestBi rsig "test/golden/RedeemSignature"
  where
   Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
-  rsig     = redeemSign (ProtocolMagic 0) SignForTestingOnly rsk ()
+  rsig     = redeemSign
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    SignForTestingOnly
+    rsk
+    ()
 
 genUnitRedeemSignature :: Gen (RedeemSignature ())
 genUnitRedeemSignature = do
@@ -207,8 +217,11 @@ goldenProxyCert = goldenTestBi pcert "test/golden/ProxyCert"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
-  pcert =
-    safeCreateProxyCert (ProtocolMagic 0) (noPassSafeSigner skey) pkey ()
+  pcert      = safeCreateProxyCert
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    (noPassSafeSigner skey)
+    pkey
+    ()
 
 genUnitProxyCert :: Gen (ProxyCert ())
 genUnitProxyCert = do
@@ -231,7 +244,11 @@ goldenProxySecretKey = goldenTestBi psk "test/golden/ProxySecretKey"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
-  psk        = createPsk (ProtocolMagic 0) (noPassSafeSigner skey) pkey ()
+  psk        = createPsk
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    (noPassSafeSigner skey)
+    pkey
+    ()
 
 genUnitProxySecretKey :: Gen (ProxySecretKey ())
 genUnitProxySecretKey = do
@@ -255,9 +272,17 @@ goldenProxySignature :: Property
 goldenProxySignature = goldenTestBi psig "test/golden/ProxySignature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
-  psk =
-    createPsk (ProtocolMagic 0) (noPassSafeSigner skey) (toPublic skey) ()
-  psig = proxySign (ProtocolMagic 0) SignForTestingOnly skey psk ()
+  psk        = createPsk
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    (noPassSafeSigner skey)
+    (toPublic skey)
+    ()
+  psig = proxySign
+    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    SignForTestingOnly
+    skey
+    psk
+    ()
 
 roundTripProxySignatureBi :: Property
 roundTripProxySignatureBi = eachOf
@@ -411,7 +436,11 @@ sizeEstimates =
     , ("RedeemPublicKey", testPrecise genRedeemPublicKey)
     , ("RedeemSecretKey", testPrecise genRedeemSecretKey)
     , ( "RedeemSignature PublicKey"
-      , testPrecise (genRedeemSignature (ProtocolMagic 0) genPublicKey)
+      , testPrecise
+        (genRedeemSignature
+          (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+          genPublicKey
+        )
       )
     ]
 

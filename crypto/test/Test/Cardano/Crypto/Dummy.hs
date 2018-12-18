@@ -5,7 +5,11 @@ module Test.Cardano.Crypto.Dummy
   )
 where
 
-import Cardano.Crypto (ProtocolMagic(..))
+import Cardano.Crypto
+  (ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
 
 dummyProtocolMagic :: ProtocolMagic
-dummyProtocolMagic = ProtocolMagic 55550001
+dummyProtocolMagic = ProtocolMagic dummyProtocolMagicId RequiresMagic
+
+dummyProtocolMagicId :: ProtocolMagicId
+dummyProtocolMagicId = ProtocolMagicId 55550001

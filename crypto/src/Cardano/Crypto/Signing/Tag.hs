@@ -14,7 +14,7 @@ import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
 import qualified Cardano.Binary.Class as Bi
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..), ProtocolMagicId(..))
 
 
 -- | To protect against replay attacks (i.e. when an attacker intercepts a
@@ -69,4 +69,6 @@ signTag protocolMagic = \case
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
   SignProxySK        -> "\x0a" <> network
-  where network = Bi.serialize' (getProtocolMagic protocolMagic)
+ where
+  network =
+    Bi.serialize' (unProtocolMagicId $ getProtocolMagicId protocolMagic)

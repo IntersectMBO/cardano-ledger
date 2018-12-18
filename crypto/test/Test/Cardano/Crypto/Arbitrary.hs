@@ -26,7 +26,8 @@ import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import Cardano.Binary.Class (Bi)
 import Cardano.Crypto.Hashing (AbstractHash(..), HashAlgorithm)
 import Cardano.Crypto.HD (HDAddressPayload, HDPassphrase(..))
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic
+  (ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
 import Cardano.Crypto.Random (deterministic)
 import Cardano.Crypto.Signing
   ( EncryptedSecretKey(..)
@@ -56,7 +57,15 @@ import Test.Cardano.Crypto.Arbitrary.Unsafe ()
 import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
 
-deriving instance Arbitrary ProtocolMagic
+instance Arbitrary ProtocolMagic where
+    arbitrary = ProtocolMagic <$> arbitrary
+                              <*> arbitrary
+
+instance Arbitrary ProtocolMagicId where
+    arbitrary = ProtocolMagicId <$> arbitrary
+
+instance Arbitrary RequiresNetworkMagic where
+    arbitrary = elements [RequiresNoMagic, RequiresMagic]
 
 {- A note on 'Arbitrary' instances
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
