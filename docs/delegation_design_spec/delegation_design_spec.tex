@@ -36,6 +36,9 @@
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
 
+\newcommand*\ema[2]{\left\langle {#1} \right\rangle_{{#2}}}
+\newcommand*\mean[1]{\overline{#1}}
+
 \begin{document}
 
 \title{Design Specification for Delegation and Incentives in Cardano \\
@@ -2128,10 +2131,9 @@ unnecessarily complicate engineering.
 \subsection{Display of Stake Pools in the Wallet}
 \label{display-of-stake-pools-in-the-wallet}
 
-The wallet software will maintain a set of all the active stakepools.
-For each, it will perform a lookup of the
-contained \(sks\) to retrieve the corresponding metadata to display to
-the user.
+The wallet software will maintain a set of all the active stakepools. For each,
+it will perform a lookup of the contained \(sks\) to retrieve the corresponding
+metadata to display to the user.
 
 In order to prevent relying on a central party to host this key value
 store, it will be possible to register multiple servers in the wallet,
@@ -2142,8 +2144,10 @@ band.
 In order for stakeholders to be able to delegate their stake to a pool,
 the wallet will provide a listing of stake pools, in a section of the UI
 called the \emph{delegation centre}. This listing will be ordered by
-desirability, as described in \cref{pool-desirability-and-ranking}.
-Since this ranking depends not only on the costs and margin set
+the rewards that the user should expect from delegating to each pool. In
+particular, we use the non-myopic pool member rewards,
+\cref{eq:non-myopic-member-rewards} in \cref{pool-desirability-and-ranking}.
+Since this ordering depends not only on the costs and margin set
 by the stake pool operator, but also on the performance of the pool and
 on the amount of stake that it has accumulated, this will promote pools
 that are reliable, and have not yet reached saturation. In other words,
@@ -2154,18 +2158,37 @@ The influence of the stake pool operator's pledge on the rewards
 provides protection against a Sybil attack on the stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}).
 
-When calculating the desirability of a pool, the wallet will use the
+When calculating the expected rewards, the wallet will use the
 best data available:
 \begin{itemize}
 \item The cost, margin, and pledged stake will be taken from the most
   recent stake pool registration certificate of the pool.
-\item The ratio of published blocks and elected slots will be taken
-  from the previous epoch.
-\item The stake of the pool, and the amounn of stake that the owners
+\item The performance of the pool will be taken as the moving average, as
+  described in \cref{pool-rewards}.
+\item The stake of the pool, and the amount of stake that the owners
   of the pool contribute (in order to check whether their pledge is
   honoured) is taken from the current stake distribution (calculated
   from the current UTxO set and delegation relation on demand when the
-  wallet performs the ranking).
+  wallet performs the ordering).
+\item The member stake \(t\) in \cref{eq:non-myopic-member-rewards} is taken to
+  be the stake that the user is about to delegate.
+
+  For listings outside of the wallet, for informational purposes of which pools
+  are generally desirable, we can instead divide off the factor \(t\) in
+  \cref{eq:non-myopic-member-rewards}\footnote{Effectively taking the constant
+    term in the Taylor expansion in \(t\)} and get the reward per stake
+  delegated to a pool, assuming that the delegated stake is small enough to not
+  push the pool over the saturation threshold.
+\end{itemize}
+
+We had considered adding some jittering to the ordered list of stake pools, in
+order to prevent a situation where a slight difference in the expected rewards would
+lead to stakeholders all delegating to the same, slightly more preferable, pool.
+We decided against this, since
+\begin{itemize}
+\item Our incentive structure will have stake pools saturating anyway.
+\item Randomising the order of display makes it more difficult for stake pool
+  operators to behave rationally when setting their cost and margin.
 \end{itemize}
 
 \subsection{Basic Delegation}
@@ -2544,27 +2567,70 @@ pool members. Then \[
 \end{array}
 \]
 
-The \emph{actual} rewards for a pool \(j\) (with relative stake
-\(\sigma_j\) and relative leader-stake \(s_j\)) which should have
-created \(N_j\) blocks in that epoch and actually created
-\(n_j\leq N_j\) out of those are \[
-    \hat{f}_j := \left(\frac{n_j}{\max(N_j, 1)}\right)^\gamma\cdot f(s_j,\sigma_j).
-\] So if the pool leader of pool \(j\) faithfully creates all blocks in
-slots for which one of the pool members was elected slot leader,
-\(n_j=N_j\) and \(\hat{f}_j=f(s_j,\sigma_j)\), i.e.~the pool gets all
-available rewards.
+The \emph{actual} rewards for a pool \(j\) will take into account the
+\emph{performance} \(p_j\) of that pool, i.e., the ratio of the number \(n_j\)
+of blocks the pool created and the number \(N_j\) of slots for which it was
+elected as a leader,
+\[
+p_j = \frac{n_j}{\max(N_j,1)}\,.
+\]
 
-If on the other hand the pool leader does not create even a single
-block, \(\hat{f}_j=0\), and the pool will get no rewards whatsoever for
-that epoch.
+The idea is to multiply the maximal rewards \(f(s,\sigma)\) by a factor of
+\(p_j^\gamma\). Thus, if the pool faithfully creates all blocks in slots for
+which it was elected slot leader, \(p_j=1\), and the pool gets maximal rewards.
+If, on the other hand, the pool does not create even a single block,
+\(p_j=0\), and the pool will get no rewards whatsoever for that epoch.
 
-What happens in between these two extremes is controlled by parameter
-\(\gamma\in(0,\infty)\): For \(\gamma=1\), the penalty will be
-proportional to the number of missed blocks. For \(0<\gamma<1\),
-penalties for missing the first few blocks will be relatively light,
-whereas for \(\gamma>1\), penalties will be over-proportionally harsh in
-the beginning.
+What happens in between these two extremes is controlled by the parameter
+\(\gamma\in(0,\infty)\): for \(\gamma=1\), the penalty will be proportional to
+the number of missed blocks. For \(0<\gamma<1\), penalties for missing the first
+few blocks will be relatively light, whereas for \(\gamma>1\), penalties will be
+over-proportionally harsh in the beginning.
 
+One complication with this is that the number \(N_j\) will not be publicly known
+for all protocols. For instance, Ouroboros Praos has private leader elections.
+Still, even for Praos, it is straightforward to calculate the \emph{expectation
+  value} \(\mean{N_j}\) of the number of slots that pool \(j\) will be elected
+as leader on average. Directly substitung \(\mean{N_j}\) for the unknown \(N_j\)
+to get
+\[
+\mean{p_j} = \frac{n_j}{\max(\mean{N_j},1)}\,,
+\]
+and multiplying the rewards by a factor of \(\mean{p_j}^\gamma\) is problematic,
+as it leads to two issues:
+\begin{itemize}
+\item Stake pools will regularly be punished despite operating
+  perfectly well and producing a block in each slot they were elected,
+  whenever \(N_j < \mean{N_j}\).
+\item We will also regularly have stake pools where
+  \(N_j > \mean{N_j}\).
+  The rational behaviour for those pools would be to switch off their
+  nodes once they have successfully produced \(\mean{N_j}\)
+  blocks, leading to a period of slow chain growth at the end of each
+  epoch. This would be a hazard for the system.
+\end{itemize}
+
+We can lessen the first issue, and eliminate the second (which is the
+more dangerous), by using a moving average of \(\mean{p_j}\).
+We will use the exponential moving average
+\[
+  \ema{x}{e} =
+  \begin{cases}
+    x_{e_0} & e = e_0\\
+    \alpha x_e + (1-\alpha) \ema{x}{e-1} & e > e_0
+  \end{cases}
+\]
+where \(\alpha\) is a decay constant determining the relative influence of
+recent epochs, \(e\) is the current epoch, \(x_e\) is the value of \(x\) in
+epoch \(e\), and \(e_0\) is the epoch in which we start taking the average (in
+the case of the performance of stake pools, this will be the epoch in which the
+pool was created).
+
+The actual rewards for pool \(j\) (with relative stake \(\sigma_j\) and relative
+leader-stake \(s_j\)) in epoch \(e\) are then computed as
+\[
+    \hat{f}_j := \ema{\left(\frac{n_j}{\max(\mean{N_j}, 1)}\right)}{e}^\gamma\cdot f(s_j,\sigma_j).
+\]
 The difference \(f(s_j,\sigma_j)-\hat{f}_j\) will be sent to the
 treasury. In particular, this means that \emph{no pool can increase its
 own rewards by somehow preventing another pool from producing
@@ -2572,9 +2638,11 @@ blocks}. In the initial release, we will track the amount of funds in
 the treasury, but there will be no mechanism for withdrawing from the
 treasury. A proper treasury will be added in a later release.
 
-Note that \(\sum_jf(s_j,\sigma_j)\leq 1\) and that the difference
-\(R-\sum_jf(s_j,\sigma_j)\) will normally be strictly positive. This
-difference will be added to the following epoch's rewards.
+Note that the sum of all maximal pool rewards never exceeds the size of the
+rewards pool, \(\sum_jf(s_j,\sigma_j)\leq R\), and that the difference
+\(R-\sum_jf(s_j,\sigma_j)\) will normally be strictly positive. This difference
+will be added to the following epoch's rewards. It is safe to do so, since it
+does \emph{not} depend on the performance of any pool.
 
 \subsubsection{Reward Splitting inside a pool}
 \label{reward-splitting-inside-a-pool}
@@ -2658,12 +2726,11 @@ how ``desirable'' or ``attractive'' this pool is to (potential) members.
 
 If the pool is \emph{saturated}, the pool rewards are \[
     \tilde{f}(s) :=
-    f(s,z_0)=
+    \hat{f}(s,z_0)=
     \frac{R}{1 + a_0}
     \cdot
     \left(z_0 + \min(s,z_0)\cdot a_0\right).
-\]\todo{This is based on the maximal pool rewards. Should we not
-  account for recent performance?}
+\]
 
 The \emph{desirability} is then defined as \[
     d(c, m, s) :=
@@ -2671,14 +2738,13 @@ The \emph{desirability} is then defined as \[
     \begin{array}{ll}
         \displaystyle 0 &
         \text{if $\tilde{f}(s)\leq c$,} \\
-        \displaystyle(\hat{f} - c)\cdot(1-m) &
+        \displaystyle\left(\tilde{f}(s) - c\right)\cdot(1-m) &
         \text{otherwise.}
     \end{array}
     \right.
 \] To determine a pool's \emph{rank}, we order pools by decreasing
 desirability. The most desirable pool gets rank 1, the second most
-desirable pool gets rank 2 and so on.\todo{Is it really \(\hat{f}\)
-  here, or rather \(\tilde{f}\)?}
+desirable pool gets rank 2 and so on.
 
 We predict that pools with rank \(\leq k\) will eventually be saturated,
 whereas pools with rank \(>k\) will lose all members and only consist of
@@ -2707,7 +2773,7 @@ Consider a pool with leader stake \(s\), total stake \(\sigma\) and rank
 The non-myopic pool leader rewards of a pool with costs \(c\), margin
 \(m\), leader stake \(s\), stake \(\sigma\) and rank \(r\) are \[
     r_\mathrm{leader, nm}(c, m, s, \sigma, r) :=
-    r_\mathrm{leader}\Bigl(f\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, s, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+    r_\mathrm{leader}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, s, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
 \]
 
 \subsubsection{Non-Myopic Pool Member Rewards}
@@ -2715,10 +2781,17 @@ The non-myopic pool leader rewards of a pool with costs \(c\), margin
 
 The non-myopic pool member rewards of a pool with costs \(c\), margin
 \(m\), leader stake \(s\), stake \(\sigma\), member stake \(t\) and rank
-\(r\) are \[
+\(r\) are
+\begin{equation}
     r_\mathrm{member, nm}(c, m, s, \sigma, t, r) :=
-    r_\mathrm{member}\Bigl(f\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
-\]
+    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+\label{eq:non-myopic-member-rewards}
+\end{equation}
+This formula holds if the pool is amongst the top \(k\) rated pools. If it is
+not, we should expect no rational player to delegate to it, and accordingly we
+will have to replace \(\sigma_\mathrm{nm}\) by \(s + t\) in
+\cref{eq:non-myopic-member-rewards} -- the pool's stake will be entirely made up
+of the leader's stake and the stake that this member chooses to delegate.
 
 \subsection{Claiming Rewards}
 \label{claiming-rewards}
