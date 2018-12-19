@@ -169,8 +169,8 @@ function), and $\var{fees}$ value on the ledger is set to 0.
       \left(
         \begin{array}{r}
           \var{utxo} \\
-          \obligation{pc}{stkeys}{stpools}{slot} \\
-          0 \\
+          \varUpdate{\obligation{pc}{stkeys}{stpools}{slot}} \\
+          \varUpdate{0} \\
         \end{array}
       \right)
     }
@@ -317,11 +317,11 @@ smaller refunds for deposits than were paid upon depositing.
       \trans{accnt}{}
       \left(
         \begin{array}{rcl}
-          \var{treasury} & + & \var{newTreasury}\\
-          \var{reserves} & - & \var{expansion} \\
-          \var{availablePool} & - & \var{paidRewards} \\
+          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury}} \\
+          \varUpdate{\var{reserves}} & \varUpdate{-} & \varUpdate{\var{expansion}} \\
+          \varUpdate{\var{availablePool}} & \varUpdate{-} & \varUpdate{\var{paidRewards}} \\
           \var{stkeys} \\
-          \var{rewards} & \unionoverridePlus & \var{rewards'} \\
+          \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{pointeraddr} \\
         \end{array}
@@ -394,9 +394,9 @@ for potential future use.
       \trans{poolclean}{}
       \left(
         \begin{array}{rcl}
-          \var{retired} & \subtractdom & \var{stpools} \\
-          \var{retired} & \subtractdom & \var{pparams} \\
-          \var{retired} & \subtractdom & \var{retiring} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{pparams}} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \end{array}
       \right)
     }
@@ -497,7 +497,7 @@ for ease of reading.
         {
           \begin{array}{r}
             \var{utxo} \\
-            \var{oblgNew} \\
+            \varUpdate{oblgNew} \\
             \var{fees} \\
           \end{array}
         }
@@ -508,7 +508,7 @@ for ease of reading.
         {
           \begin{array}{r}
             \var{treasury} \\
-            \var{reserves} + \var{diff} \\
+            \varUpdate{reserves + diff} \\
             \var{rewardPool} \\
             \var{rewards} \\
           \end{array}
@@ -530,8 +530,8 @@ for ease of reading.
       \trans{newpc}{}
       \left(
         \begin{array}{rcl}
-          \var{utxoSt'}\\
-          \var{accnt'} \\
+          \varUpdate{utxoSt'}\\
+          \varUpdate{accnt'} \\
         \end{array}
       \right)
     }
@@ -714,10 +714,10 @@ be the \textit{last slot of the epoch before the boundary}.
       \trans{epoch}{}
       \left(
       \begin{array}{rcl}
-        \var{utxoSt''} \\
-        \var{accnt''} \\
-        \var{dstate'} \\
-        \var{pstate'}
+        \varUpdate{\var{utxoSt''}} \\
+        \varUpdate{\var{accnt''}} \\
+        \varUpdate{\var{dstate'}} \\
+        \varUpdate{\var{pstate'}}
       \end{array}
       \right)
     }

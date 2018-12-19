@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[11pt,a4paper,dvipsnames]{article}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{iohk}
 \usepackage{microtype}
@@ -12,7 +12,7 @@
 \usepackage{extarrows}
 \usepackage{slashed}
 \usepackage[colon]{natbib}
-\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \usepackage{float}
@@ -311,6 +311,7 @@ it using the corresponding public key.
   \label{fig:crypto-defs}
 \end{figure}
 
+\clearpage
 
 \section{Serialization}
 \label{sec:serialization}
@@ -336,6 +337,7 @@ organization chosen for an implementation.
 \label{sec:delegation}
 \input{delegation.tex}
 
+\clearpage
 
 \section{UTxO}
 \label{sec:utxo}
@@ -458,7 +460,7 @@ refunds for any key deregistration certificates are, in fact, included in
 the $\var{tx}$ itself - meaning that the coin value of the refund must be
 explicitly specified in the outputs of the transaction. So,
 the value of the included refund must be calculated before this transaction
-is ever processed, and be the same \textit{no matter when} $\var{tx}$
+is ever processed, and be the same \textit{no matter when} the $\var{tx}$
 \textit{is actually processed} in order to for the system to continue to
 satisfy the general accounting property.
 
@@ -490,7 +492,7 @@ is a deliberate simplification choice, which does not introduce any inconsistenc
 into the system rules or properties. In particular, the general accounting
 property is not violated.
 
-Finally, note that that a refund for a resource-releasing certificate in a
+Finally, note that a refund for a resource-releasing certificate in a
 transaction can only be issued if the refund is bigger than the minimum
 transaction fee. In order to receive a refund in this case, the transaction
 body must also contain inputs onto which this refund can be added.
@@ -600,11 +602,11 @@ given slot number) and the
 full-duration decayed refund value ($\fun{currentRefund}$) calculated based on
 the given slot number.
 
-The amount
-decayed for individual keys is then computed by adding the values of $\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$
+The amount decayed for individual keys is then computed by adding the values of
+$$\fun{decayed}~\var{allocs}~\var{pc}~(\fun{ttl}~\var{tx})~\var{c}$$
 for each deregistration certificate in a given transaction, and is given by
-$\fun{decayedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$. Here, again,
-we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
+$$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$$
+Here, again, we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of the current
 slot number in order to match with the one in the $\fun{keyRefunds}$
 calculation.
 
@@ -656,7 +658,7 @@ Section~\cref{sec:epoch}.
   \label{fig:functions:deposits-decay}
 \end{figure}
 
-
+\clearpage
 
 \subsection{UTxO Transitions}
 \label{sec:state-trans-utxo-1}
@@ -970,6 +972,7 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \label{fig:ts-types:utxo}
 \end{figure}
 
+\clearpage
 
 \subsection{UTxO, Fees, and Deposits Ledger Update}
 \label{sec:utxo-ufd}
@@ -1125,9 +1128,9 @@ variable
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}  \\
-        \var{deposits} + \var{depositChange} \\
-        \var{fees} + (\txfee{tx}) + \var{decayed} \\
+        \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + (\txfee{tx}) + \var{decayed}} \\
       \end{array}
       \right)
     }
@@ -1146,6 +1149,7 @@ variable
   This extra condition would be added to \cref{eq:utxo-inductive}.
 \end{note}
 
+\clearpage
 
 \subsection{Rewards Ledger Update}
 \label{sec:utxo-rewards}
@@ -1231,7 +1235,7 @@ numbers datatype concern.
       \left(
       \begin{array}{rcl}
         \var{stkeys} \\
-        \fun{reapRewards}~\var{rewards}~\var{wdrls}\\
+        \varUpdate{\fun{reapRewards}~\var{rewards}~\var{wdrls}}\\
         \var{delegations} \\
         \var{pstate}
       \end{array}
@@ -1324,7 +1328,7 @@ rest of the delegation state update is triggered by the cetificate list.
         \trans{delegt}{\var{tx}}
         \left(
         \begin{array}{rcl}
-          \var{dwstate''}
+          \varUpdate{\var{dwstate''}}
         \end{array}
         \right)
       }
@@ -1334,6 +1338,7 @@ rest of the delegation state update is triggered by the cetificate list.
 \label{fig:delegation-total}
 \end{figure}
 
+\clearpage
 
 \subsection{Witnesses}
 \label{sec:witnesses}
@@ -1440,14 +1445,14 @@ Figure~\ref{fig:rules:utxow}):
 \end{itemize}
 
 The purpose of witnessing is make sure that the intended action is authorized by
-the holder of the signing key, providing replay protection as a
-consequence.
-Due to the nature
-of UTxO stype accounting and the structure of rewards accounts,
-this replay protection is needed only to prevent
-the re-application of old certificates. The way this is
-achieved by the above precondition is by requiring a valid signature
-provided by the author of every certificate in a transaction and the
+the holder of the signing key, providing replay protection as a consequence.
+Replay prevention is an inherent property of UTxO stype accounting
+since transacition IDs are unique.
+Delegation certificates and reward withdrawals do not share this property,
+though if we require all witnesses to sign at least one transaction input,
+the replay prevention of UTxO accounting is then provided to any transaction.
+This is achieved by the above precondition by requiring a valid signature
+from the author of every certificate in a transaction, the
 holder of the key for every rewards account emptied, as well as
 hash keys of each of the inputs addresses.
 
@@ -1509,13 +1514,14 @@ being unnecessarily large and full of redundant witnessing.
       \begin{array}{l}
         \var{utxoEnv}
       \end{array}
-      \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }
   \end{equation}
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
 
+\clearpage
 
 \subsection{Ledger State Transition}
 \label{sec:ledger}
@@ -1620,8 +1626,8 @@ by the given transaction.
       \trans{ledger}{tx}
       \left(
         \begin{array}{ll}
-          utxoSt' \\
-          dwstate' \\
+          \varUpdate{utxoSt'} \\
+          \varUpdate{dwstate'} \\
         \end{array}
       \right)
     }
@@ -1630,12 +1636,13 @@ by the given transaction.
   \label{fig:rules:ledger}
 \end{figure}
 
+\clearpage
 
 \section{Epoch Boundary}
 \label{sec:epoch}
 \input{epoch.tex}
 
-
+\clearpage
 
 \section{Properties}
 \label{sec:properties}
