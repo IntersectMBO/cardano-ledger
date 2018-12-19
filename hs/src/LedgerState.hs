@@ -716,6 +716,30 @@ delegsTransition = do
 instance Embed DELPL DELEGS where
     wrapFailed = DelplFailure
 
+data DELEGT
+instance STS DELEGT where
+    type State DELEGT       = DelegationState
+    type Signal DELEGT      = Tx
+    type Environment DELEGT = Slot
+    data PredicateFailure DELEGT = DelegsFailure (PredicateFailure DELEGS)
+                                 | DelrwdsFailure (PredicateFailure DELRWDS)
+                    deriving (Show, Eq)
+
+    initialRules    = [ pure emptyDelegation ]
+    transitionRules = [ delegtTransition     ]
+
+delegtTransition :: TransitionRule DELEGT
+delegtTransition = do
+  TRC(slot, d, tx) <- judgmentContext
+  d'  <- trans @DELRWDS $ TRC(slot, d, tx ^. wdrls)
+  d'' <- trans @DELEGS $ TRC(slot, d', tx ^. certs)
+  pure d''
+
+instance Embed DELRWDS DELEGT where
+    wrapFailed = DelrwdsFailure
+
+instance Embed DELEGS DELEGT where
+    wrapFailed = DelegsFailure
 
 data LEDGER
 
