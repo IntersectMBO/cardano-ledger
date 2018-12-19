@@ -412,7 +412,7 @@ certAsStateTransition
 certAsStateTransition slot ls cert =
   case validDelegation cert (ls ^. delegationState) of
     Invalid errors -> Left errors
-    Valid          -> Right $ applyDCert slot cert ls
+    Valid          -> Right $ ls & delegationState %~ (applyDCert slot cert)
 
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
@@ -466,42 +466,34 @@ applyUTxOUpdate :: UTxOState -> Tx -> UTxOState
 applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
-applyDCert :: Slot -> DCert -> LedgerState -> LedgerState
-applyDCert slot (RegKey key) ls@(LedgerState _ ds _) =
-    ls & delegationState .~
-           (ds & stKeys   .~ Map.insert hksk slot (ds ^. stKeys)
-               & rewards .~ Map.insert (RewardAcnt hksk) (Coin 0) (ds ^. rewards))
+applyDCert :: Slot -> DCert -> DelegationState -> DelegationState
+applyDCert slot (RegKey key) ds =
+    ds & stKeys  %~ Map.insert hksk slot
+       & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
         where hksk = hashKey key
 
-applyDCert _ (DeRegKey key) ls@(LedgerState _ ds _) =
-    ls & delegationState .~
-           (ds & stKeys      .~ Map.delete hksk (ds ^. stKeys)
-               & rewards     .~ Map.delete (RewardAcnt hksk) (ds ^. rewards)
-               & delegations .~ Map.delete hksk (ds ^. delegations))
+applyDCert _ (DeRegKey key) ds =
+    ds & stKeys      %~ Map.delete hksk
+       & rewards     %~ Map.delete (RewardAcnt hksk)
+       & delegations %~ Map.delete hksk
         where hksk = hashKey key
 
 -- TODO do we also have to check hashKey target?
-applyDCert _ (Delegate (Delegation source target)) ls@(LedgerState _ ds _) =
-    ls & delegationState .~
-           (ds & delegations .~
-            Map.insert (hashKey source) (hashKey target) (ds ^. delegations))
+applyDCert _ (Delegate (Delegation source target)) ds =
+    ds & delegations %~ Map.insert (hashKey source) (hashKey target)
 
-applyDCert slot (RegPool sp) ls@(LedgerState _ ds _) =
-    ls & delegationState .~
-           (ds & stPools  .~ Map.insert hsk slot' pools
-               & pParams  .~ Map.insert hsk sp pparams
-               & retiring .~ Map.delete hsk (ds ^. retiring))
+applyDCert slot (RegPool sp) ds =
+    ds & stPools  %~ Map.insert hsk slot'
+       & pParams  %~ Map.insert hsk sp
+       & retiring %~ Map.delete hsk
   where hsk = hashKey $ sp ^. poolPubKey
         pools = ds ^. stPools
-        pparams = ds ^. pParams
         slot' = fromMaybe slot (Map.lookup hsk pools)
 
 -- TODO check epoch (not in new doc atm.)
-applyDCert _ (RetirePool key epoch) ls@(LedgerState _ ds _) =
-    ls & delegationState .~
-           (ds & retiring .~ retiring')
-  where retiring' = Map.insert hk_sp epoch (ds ^. retiring)
-        hk_sp = hashKey key
+applyDCert _ (RetirePool key epoch) ds =
+    ds & retiring %~ Map.insert hk_sp epoch
+  where hk_sp = hashKey key
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
