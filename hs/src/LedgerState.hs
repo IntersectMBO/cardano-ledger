@@ -696,6 +696,27 @@ instance Embed POOL DELPL where
 instance Embed DELEG DELPL where
     wrapFailed = DelegFailure
 
+
+data DELEGS
+instance STS DELEGS where
+    type State DELEGS       = DelegationState
+    type Signal DELEGS      = [DCert]
+    type Environment DELEGS = Slot
+    data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)
+                    deriving (Show, Eq)
+
+    initialRules    = [ pure emptyDelegation ]
+    transitionRules = [ delegsTransition     ]
+
+delegsTransition :: TransitionRule DELEGS
+delegsTransition = do
+  TRC(slot, d, certificates) <- judgmentContext
+  foldM (\d' c -> trans @DELPL $ TRC(slot, d', c)) d certificates
+
+instance Embed DELPL DELEGS where
+    wrapFailed = DelplFailure
+
+
 data LEDGER
 
 instance STS LEDGER where
