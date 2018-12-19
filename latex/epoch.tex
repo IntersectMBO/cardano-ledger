@@ -96,19 +96,19 @@ at the epoch boundary.
   \begin{align*}
       & \fun{baseStake} \in \powerset{\TxOut} \to \powerset{(\HashKey \times \Coin)}
       & \text{base address stake} \\
-      & \fun{baseStake}~{txouts} = \\
-      & ~~ \{(hk, c) \mid a\in\Addr_{base} \land (a, c) \in txouts \land \fun{stakeHK}~a = hk \}
+      & \fun{baseStake}~{outs} = \\
+      & ~~ \{(hk, c) \mid a\in\Addr_{base} \land (a, c) \in outs \land \fun{stakeHK}~a = hk \}
       \nextdef
       & \fun{ptrStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
           \to \powerset{(\HashKey \times \Coin)}
       & \text{base address stake} \\
-      & \fun{ptrStake}~{txouts}~{ptrs} = \\
-      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in txouts \land (\fun{stakePtr}~a\mapsto hk \in ptrs \}
+      & \fun{ptrStake}~{outs}~{ptrs} = \\
+      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in outs \land (\fun{stakePtr}~a\mapsto hk \in ptrs \}
       \nextdef
       & \fun{stake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
           \to \powerset{(\HashKey \times \Coin)}
-      & \text{base address stake} \\
-      & \fun{stake}~{txouts}~{ptrs} = (\fun{baseStake}~{txouts}) \cup (\fun{ptrStake}~{txouts}~{ptrs})
+      & \text{pointer address stake} \\
+      & \fun{stake}~{outs}~{ptrs} = (\fun{baseStake}~{outs}) \cup (\fun{ptrStake}~{outs}~{ptrs})
       \nextdef
       & \fun{isActive} \in \HashKey \to \Allocs \to (\HashKey \mapsto \HashKey) \to \Allocs \to \mathbb{B}
       & \text{active stake} \\
@@ -118,31 +118,31 @@ at the epoch boundary.
               \land \var{v_{p}} \in \dom \var{stpools}
       \nextdef
       & \fun{activeStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
-      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\VKey \mapsto \Coin)
+      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\HashKey \mapsto \Coin)
       & \text{active stake holdings} \\
-      & \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools} = \\
+      & \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools} = \\
       & ~~ \left\{
              hk\mapsto \sum_{hk\mapsto c}c
              ~\Big\vert~
              \begin{array}{r}
              (\isActive{hk}{stkeys}{delegs}{stpools}) \\
-             \land (hk, c) \in (\fun{stake}~{txouts}~{ptrs})
+             \land (hk, c) \in (\fun{stake}~{outs}~{ptrs})
              \end{array}
            \right\}
       \nextdef
       & \fun{totalStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
       & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to \Coin
       & \text{total active stake} \\
-      & \fun{totalStake}~\var{txouts}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} =
+      & \fun{totalStake}~\var{outs}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} =
         \sum_{\_\mapsto c\in \var{active}}c \\
-      & \where active = \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools}
+      & \where active = \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools}
       \nextdef
       & \fun{stakeDistr} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\
-      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\VKey \mapsto [0, 1])
+      & ~~\to (\HashKey \mapsto \HashKey) \to \Allocs \to (\HashKey \mapsto [0, 1])
       & \text{stake distribution} \\
-      & \fun{stakeDistr}~\var{txouts}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} = \\
+      & \fun{stakeDistr}~\var{outs}~\var{ptrs}~\var{stkeys}~\var{delegs}~\var{stpools} = \\
       & ~~ \left\{ hk\mapsto c \div tot \mid hk \mapsto c \in \var{active} \right\}\\
-      & ~\where active = \activeStake{txouts}{ptrs}{stkeys}{delegs}{stpools}
+      & ~\where active = \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools}
   \end{align*}
   \caption{Functions used in Stake Distribution}
   \label{fig:functions:stake-distribution}
@@ -629,7 +629,7 @@ pool state.
         \var{slot} & \Slot & \text{current slot}\\
         \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
         \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
-        \var{production} & \VKey \mapsto \mathbb{N} & \text{blocks produced in the epoch}\\
+        \var{production} & \HashKey \mapsto \mathbb{N} & \text{blocks produced in the epoch}\\
       \end{array}
     \right)
   \end{equation*}
