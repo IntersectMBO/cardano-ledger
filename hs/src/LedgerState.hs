@@ -620,7 +620,7 @@ instance STS DELEG where
     data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
                                 | StakeKeyNotRegisteredDELEG
                                 | StakeDelegationImpossibleDELEG
-                                | WrongCertificateType
+                                | WrongCertificateTypeDELEG
                    deriving (Show, Eq)
 
     initialRules    = [ pure emptyDelegation ]
@@ -643,8 +643,33 @@ delegationTransition = do
            validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
            pure $ d & delegations %~ Map.insert (hashKey s) (hashKey t)
     _         -> do
-           False ?! WrongCertificateType -- this always fails
+           False ?! WrongCertificateTypeDELEG -- this always fails
            pure d
+
+data POOL
+
+instance STS POOL where
+    type State POOL         = (DelegationState)
+    type Signal POOL        = DCert
+    type Environment POOL   = Slot
+    data PredicateFailure POOL = StakePoolNotRegisteredOnKeyPOOL
+                               | WrongCertificateTypePOOL
+                  deriving (Show, Eq)
+
+    initialRules = [ pure emptyDelegation ]
+    transitionRules = [ poolDelegationTransition ]
+
+poolDelegationTransition :: TransitionRule POOL
+poolDelegationTransition = do
+  TRC(slot, d, c) <- judgmentContext
+  case c of
+    RegPool _      -> pure $ applyDCert slot c d
+    RetirePool _ _ -> do
+           validStakePoolRetire c d == Valid ?! StakePoolNotRegisteredOnKeyPOOL
+           pure $ applyDCert slot c d
+    _   -> do
+           False ?! WrongCertificateTypePOOL
+           pure $ applyDCert slot c d
 
 data LEDGER
 
