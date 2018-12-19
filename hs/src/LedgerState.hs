@@ -630,18 +630,15 @@ delegationTransition :: TransitionRule DELEG
 delegationTransition = do
   TRC(slot, d, c) <- judgmentContext
   case c of
-    RegKey vk  -> do
+    RegKey _   -> do
            validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
-           pure $ d & stKeys      %~ Map.insert (hashKey vk) slot
-                    & rewards     %~ Map.insert (RewardAcnt $ hashKey vk) (Coin 0)
-    DeRegKey k -> do
+           pure $ applyDCert slot c d
+    DeRegKey _ -> do
            validKeyDeregistration c d == Valid ?! StakeKeyNotRegisteredDELEG
-           pure $ d & stKeys      %~ Map.delete (hashKey k)
-                    & rewards     %~ Map.delete (RewardAcnt $ hashKey k)
-                    & delegations %~ Map.delete (hashKey k)
-    Delegate (Delegation s t) -> do
+           pure $ applyDCert slot c d
+    Delegate _ -> do
            validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
-           pure $ d & delegations %~ Map.insert (hashKey s) (hashKey t)
+           pure $ applyDCert slot c d
     _         -> do
            False ?! WrongCertificateTypeDELEG -- this always fails
            pure d
