@@ -668,6 +668,34 @@ poolDelegationTransition = do
            False ?! WrongCertificateTypePOOL
            pure $ applyDCert slot c d
 
+data DELPL
+instance STS DELPL where
+    type State DELPL       = DelegationState
+    type Signal DELPL      = DCert
+    type Environment DELPL = Slot
+    data PredicateFailure DELPL = PoolFailure (PredicateFailure POOL)
+                                | DelegFailure (PredicateFailure DELEG)
+                   deriving (Show, Eq)
+
+    initialRules    = [ pure emptyDelegation ]
+    transitionRules = [ delplTransition      ]
+
+delplTransition :: TransitionRule DELPL
+delplTransition = do
+  TRC(slot, d, c) <- judgmentContext
+  case c of
+    RegPool    _   -> trans @POOL  $ TRC (slot, d, c)
+    RetirePool _ _ -> trans @POOL  $ TRC (slot, d, c)
+    RegKey _       -> trans @DELEG $ TRC (slot, d, c)
+    DeRegKey _     -> trans @DELEG $ TRC (slot, d, c)
+    Delegate _     -> trans @DELEG $ TRC (slot, d, c)
+
+instance Embed POOL DELPL where
+    wrapFailed = PoolFailure
+
+instance Embed DELEG DELPL where
+    wrapFailed = DelegFailure
+
 data LEDGER
 
 instance STS LEDGER where
