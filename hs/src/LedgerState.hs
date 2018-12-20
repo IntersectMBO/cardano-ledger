@@ -723,16 +723,43 @@ instance STS DELEGT where
     type Environment DELEGT = Slot
     data PredicateFailure DELEGT = DelegsFailure (PredicateFailure DELEGS)
                                  | DelrwdsFailure (PredicateFailure DELRWDS)
+                                 | RegCertWithdrawDELEGT
+                                 | DeregCertNotWithdrawDELEGT
+                                 | DelegateCertNotStakePoolsDELEGT
+                                 | DeregCertRetireOrDelegateDELEGT
                     deriving (Show, Eq)
 
     initialRules    = [ pure emptyDelegation ]
     transitionRules = [ delegtTransition     ]
 
+splitCerts :: [DCert] -> ([DCert], [DCert], [DCert]) -> ([DCert], [DCert], [DCert])
+splitCerts [] t = t
+splitCerts (c:cs) (reg, dereg, delegate) = splitCerts cs (reg', dereg', delegate')
+    where (reg', dereg', delegate') =
+              case c of
+                RegKey _   -> (c:reg, dereg, delegate)
+                DeRegKey _ -> (reg, c:dereg, delegate)
+                Delegate _ -> (reg, dereg, c:delegate)
+                _          -> (reg, dereg, delegate)
+
 delegtTransition :: TransitionRule DELEGT
 delegtTransition = do
   TRC(slot, d, tx) <- judgmentContext
-  d'  <- trans @DELRWDS $ TRC(slot, d, tx ^. wdrls)
-  d'' <- trans @DELEGS $ TRC(slot, d', tx ^. certs)
+  let withdrawals = tx ^. wdrls
+  let stakePools  = d ^. stPools
+  let (regC, deregC, delegateC) = splitCerts (tx ^. certs) ([], [], [])
+  let hk c = hashKey $ getRequiredSigningKey c
+  (not $ any (\c -> Map.member (RewardAcnt $ hk c) withdrawals) regC)
+           ?! RegCertWithdrawDELEGT
+  all  (\c -> Map.member (RewardAcnt $ hk c) withdrawals) deregC
+           ?! DeregCertNotWithdrawDELEGT
+  all  (\c -> Map.member (hk c) stakePools) delegateC
+           ?! DelegateCertNotStakePoolsDELEGT
+  (not $ any (\c -> let hsk = hk c in
+              (Map.member hsk stakePools) || Map.member hsk (d ^. retiring)) deregC)
+           ?! DeregCertRetireOrDelegateDELEGT
+  d'  <- trans @DELRWDS $ TRC(slot,  d, tx ^. wdrls)
+  d'' <- trans @DELEGS  $ TRC(slot, d', tx ^. certs)
   pure d''
 
 instance Embed DELRWDS DELEGT where
