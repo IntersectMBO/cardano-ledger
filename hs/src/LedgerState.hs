@@ -589,9 +589,6 @@ utxoWitnessed = do
   noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
   trans @UTXO $ TRC ((pc, slot, stakePools, stakeKeys), u, txwits ^. body)
 
-instance Embed UTXO UTXOW where
-    wrapFailed = UtxoFailure
-
 data DELRWDS
 
 instance STS DELRWDS where
@@ -690,13 +687,6 @@ delplTransition = do
     DeRegKey _     -> trans @DELEG $ TRC (slot, d, c)
     Delegate _     -> trans @DELEG $ TRC (slot, d, c)
 
-instance Embed POOL DELPL where
-    wrapFailed = PoolFailure
-
-instance Embed DELEG DELPL where
-    wrapFailed = DelegFailure
-
-
 data DELEGS
 instance STS DELEGS where
     type State DELEGS       = DelegationState
@@ -712,9 +702,6 @@ delegsTransition :: TransitionRule DELEGS
 delegsTransition = do
   TRC(slot, d, certificates) <- judgmentContext
   foldM (\d' c -> trans @DELPL $ TRC(slot, d', c)) d certificates
-
-instance Embed DELPL DELEGS where
-    wrapFailed = DelplFailure
 
 data DELEGT
 instance STS DELEGT where
@@ -762,12 +749,6 @@ delegtTransition = do
   d'' <- trans @DELEGS  $ TRC(slot, d', tx ^. certs)
   pure d''
 
-instance Embed DELRWDS DELEGT where
-    wrapFailed = DelrwdsFailure
-
-instance Embed DELEGS DELEGT where
-    wrapFailed = DelegsFailure
-
 data LEDGER
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DelegationState)
@@ -794,8 +775,43 @@ ledgerTransition = do
   deleg' <- trans @DELEGT $ TRC (slot, d, txwits ^. body)
   pure (utxo', deleg')
 
+-- STS rules embeddings:
+-- +------------------------------------+
+-- |LEDGER                              |
+-- |+--------------------------++------+|
+-- ||DELEGT                    ||UTXOW ||
+-- ||+---------------++-------+||+----+||
+-- |||DELEGS         ||DELRWDS||||UTXO|||
+-- |||+-------------+|+-------+||+----+||
+-- ||||DELPL        ||         |+------+|
+-- ||||+-----++----+||         |        |
+-- |||||DELEG||POOL|||         |        |
+-- ||||+-----++----+||         |        |
+-- |||+-------------+|         |        |
+-- ||+---------------+         |        |
+-- |+--------------------------+        |
+-- +------------------------------------+
+
 instance Embed UTXOW LEDGER where
     wrapFailed = UtxowFailure
 
+instance Embed UTXO UTXOW where
+    wrapFailed = UtxoFailure
+
 instance Embed DELEGT LEDGER where
     wrapFailed = DelegtFailure
+
+instance Embed DELRWDS DELEGT where
+    wrapFailed = DelrwdsFailure
+
+instance Embed DELEGS DELEGT where
+    wrapFailed = DelegsFailure
+
+instance Embed DELPL DELEGS where
+    wrapFailed = DelplFailure
+
+instance Embed POOL DELPL where
+    wrapFailed = PoolFailure
+
+instance Embed DELEG DELPL where
+    wrapFailed = DelegFailure
