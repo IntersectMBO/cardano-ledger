@@ -7,8 +7,10 @@ import qualified Data.ByteArray        as BA
 import Data.Monoid (Sum(..))
 import           Numeric.Natural       (Natural)
 
+-- | An encoded hash of part of the system.
 type Hash = Digest SHA256
 
+-- | A unit of value held by a UTxO.
 newtype Value = Value Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
