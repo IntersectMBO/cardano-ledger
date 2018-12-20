@@ -16,67 +16,18 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md, README.md
 cabal-version:       >= 2.0
 
-library core-sig
-  signatures:          Ledger.Signatures
-  build-depends:       base >=4.11 && <5
-                     , bytestring
-                     , containers
-                     , cryptonite
-                     , memory
-                     , text
-  hs-source-dirs:      src/core/sig
-  default-language:    Haskell2010
-
-library core-inst
-  hs-source-dirs:      src/core/inst
-  exposed-modules:     Ledger.Signatures
-  default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
-                     , cryptonite
-                     , memory
-
-library core-ledger
-  hs-source-dirs:      src/core/core
-  exposed-modules:     Ledger.Core
-  reexported-modules:  Ledger.Signatures
-  default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
-                     , cryptonite
-                     , containers
-                     , core-sig
-                     , core-inst
-
-library ledger-utxo
-  hs-source-dirs:      src/utxo
-  exposed-modules:     Ledger.UTxO
-  reexported-modules:  Ledger.Signatures
-  default-language:    Haskell2010
-  build-depends:       base >=4.12 && <5
-                     , bytestring
-                     , containers
-                     , cryptonite
-                     , lens
-                     , memory
-                     , small-steps
-                     , core-ledger
-
-library ledger-delegation
-  hs-source-dirs:      src/delegation
-  exposed-modules:     Ledger.Delegation
-  default-language:    Haskell2010
-  build-depends:       base >=4.11 && <5
-                     , containers
-                     , cryptonite
-                     , lens
-                     , small-steps
-                     , core-ledger
-
 library
+  hs-source-dirs:      src
   default-language:    Haskell2010
-  reexported-modules:   Ledger.Signatures
-                      , Ledger.Core
-                      , Ledger.UTxO
-                      , Ledger.Delegation
-  build-depends:        core-ledger
-                      , ledger-utxo
-                      , ledger-delegation
+  exposed-modules:     Ledger.Signatures
+                     , Ledger.Core
+                     , Ledger.UTxO
+                     , Ledger.Delegation
+  build-depends:       base >=4.11 && <5
+                     , bytestring
+                     , containers
+                     , cryptonite
+                     , lens
+                     , memory
+                     , small-steps
+                     , text
