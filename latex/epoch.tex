@@ -101,20 +101,20 @@ at the epoch boundary.
       \nextdef
       & \fun{ptrStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
           \to \powerset{(\HashKey \times \Coin)}
-      & \text{base address stake} \\
+      & \text{pointer address stake} \\
       & \fun{ptrStake}~{outs}~{ptrs} = \\
-      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in outs \land (\fun{stakePtr}~a\mapsto hk \in ptrs \}
+      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in outs \land (\fun{stakePtr}~a)\mapsto hk \in ptrs \}
       \nextdef
       & \fun{stake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
           \to \powerset{(\HashKey \times \Coin)}
-      & \text{pointer address stake} \\
+      & \text{potential stake} \\
       & \fun{stake}~{outs}~{ptrs} = (\fun{baseStake}~{outs}) \cup (\fun{ptrStake}~{outs}~{ptrs})
       \nextdef
       & \fun{isActive} \in \HashKey \to \Allocs \to (\HashKey \mapsto \HashKey) \to \Allocs \to \mathbb{B}
       & \text{active stake} \\
       & \isActive{v_{sk}}{stkeys}{delegs}{stpools} = \exists \var{v_{p}}\\
       & ~~ \var{v_{sk}} \in \dom stkeys
-              \land \var{v_{st}}\mapsto\var{v_{p}} \in delegs
+              \land \var{v_{sk}}\mapsto\var{v_{p}} \in delegs
               \land \var{v_{p}} \in \dom \var{stpools}
       \nextdef
       & \fun{activeStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \Allocs\\

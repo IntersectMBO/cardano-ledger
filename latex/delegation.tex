@@ -119,17 +119,15 @@ $\Duration$ here by $\var{dur}$).
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{allocs}
       & \Allocs
-      & hkeys \mapsto slot
       & \HashKey \mapsto \Slot
       & \text{resource allocations} \\
-      \var{ptr}
+      \var{(s,t,c)}
       & \Ptr
-      & (s,t,c)
-      & \powerset{(\Slot*\Ix*\Ix)}
-      & \text{pointers}
+      & \Slot*\Ix*\Ix
+      & \text{certificate pointer}
     \end{array}
   \end{equation*}
   %
