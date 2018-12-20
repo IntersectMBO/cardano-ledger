@@ -769,28 +769,33 @@ instance Embed DELEGS DELEGT where
     wrapFailed = DelegsFailure
 
 data LEDGER
-
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DelegationState)
     type Signal LEDGER      = TxWits
     type Environment LEDGER = (PrtlConsts, Slot)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
+                                 | DelegtFailure (PredicateFailure DELEGT)
                     deriving (Show, Eq)
 
     initialRules    = [ initialLedgerStateLEDGER ]
-    transitionRules = [ ledgerTransition ]
+    transitionRules = [ ledgerTransition         ]
 
 initialLedgerStateLEDGER :: InitialRule LEDGER
 initialLedgerStateLEDGER = do
   IRC ((pc, slot)) <- judgmentContext
-  utxo' <- trans @UTXOW $ IRC ((pc, slot, Map.empty, Map.empty))
-  pure (utxo', emptyDelegation)
+  utxo' <- trans @UTXOW  $ IRC ((pc, slot, Map.empty, Map.empty))
+  deleg <- trans @DELEGT $ IRC (slot)
+  pure (utxo', deleg)
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
   TRC ((pc, slot), (u, d), txwits) <- judgmentContext
-  utxo' <- trans @UTXOW $ TRC ((pc, slot, d ^. stPools, d ^. stKeys), u, txwits)
-  pure (utxo', emptyDelegation)
+  utxo'  <- trans @UTXOW  $ TRC ((pc, slot, d ^. stPools, d ^. stKeys), u, txwits)
+  deleg' <- trans @DELEGT $ TRC (slot, d, txwits ^. body)
+  pure (utxo', deleg')
 
 instance Embed UTXOW LEDGER where
     wrapFailed = UtxowFailure
+
+instance Embed DELEGT LEDGER where
+    wrapFailed = DelegtFailure
