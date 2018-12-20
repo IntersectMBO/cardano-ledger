@@ -24,7 +24,7 @@ which it will retire.
 
 Delegation requires the following to be tracked by the ledger state:
 the registered stake keys, the delegation map from registered stake keys to stake
-pools, pointer addresses associated with stakey keys,
+pools, pointers associated with stakey keys,
 the registered stake pools, and upcoming stake pool retirements.
 Additionally, the blockchain protocol rewards eligible stake, and so we must
 also include a mapping from active stake keys to rewards.
@@ -66,8 +66,8 @@ way, a type for transitions describing stake pool-related ledger updates
 The type $\Allocs$ is a general datatype used to represent both individual and stake
 pool resource allocations. It stores, as a finite map, the hash key to which the resource is
 allocated, and the corresponding slot number in which this allocation
-(registration) was made. Here we also introduce pointer address structure
-$\PtrAddr$, which we will use to index stake keys based on
+(registration) was made. Here we also introduce pointer structure
+$\Ptr$, which we will use to index stake keys based on
 when and by what transaction they were registered.
 
 A variable of this type consists of
@@ -119,17 +119,15 @@ $\Duration$ here by $\var{dur}$).
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{allocs}
       & \Allocs
-      & hkeys \mapsto slot
       & \HashKey \mapsto \Slot
       & \text{resource allocations} \\
-      \var{ptr}
-      & \PtrAddr
-      & (s,t,c)
-      & \powerset{(\Slot*\Ix*\Ix)}
-      & \text{pointer addresses}
+      \var{(s,t,c)}
+      & \Ptr
+      & \Slot*\Ix*\Ix
+      & \text{certificate pointer}
     \end{array}
   \end{equation*}
   %
@@ -199,8 +197,8 @@ key to which this address is associated. The third
 variable in $\DState$ stores currently registered delegations.
 Delegations ($\var{delegations}$) are also expressed by a finite map, which
 associates a stake key with the hash key of the pool to which it delegates.
-Finally, the finite map $\var{pointeraddr}$ variable stores,
-indexed by pointer addresses,
+Finally, the finite map $\var{pointers}$ variable stores,
+indexed by pointers,
 the stake keys associated with these pointers. This data is needed for the
 epoch boundary reward calculations, see Section~\ref{sec:epoch}.
 
@@ -240,7 +238,7 @@ certificate (contained in a signal transaction).
       \var{stkeys} & \Allocs & \text{registered stake keys to creation time}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey \mapsto \HashKey & \text{delegations}\\
-      \var{pointeraddr} & \PtrAddr \mapsto \HashKey & \text{pointer address lookup}\\
+      \var{ptrs} & \Ptr \mapsto \HashKey & \text{pointer to hashkey}\\
     \end{array}\right)
     \\
     \\
@@ -290,9 +288,9 @@ When registering a new stake key (the \cref{eq:deleg-reg} inference rule),
 added to the set of stake keys ($\var{stkeys}$),
 \item the rewards for the address
 corresponding to that key set to 0,
-\item the pointer address consisting of the current slot number, the
+\item the pointers consisting of the current slot number, the
 index of the transaction in this slot, and the index of the certificate, is
-added to the $\var{pointeraddr}$ finite map, mapping to the new key
+added to the $\var{pointers}$ finite map, mapping to the new key
 \item no new delegations are added
 \end{itemize}
 
@@ -309,8 +307,8 @@ that the key of the author is indeed a registered stake key
 in order to be able to retrieve its address for the rewards update.
 
 As a result of this rule, the author's key must be removed from the $\var{stkeys}$ list,
-and all the rewards, pointer address, and delegations associated with this key must be removed
-from the $\var{rewards}$, $\var{pointeraddr}$, and $\var{delegations}$ parameters also.
+and all the rewards, pointers, and delegations associated with this key must be removed
+from the $\var{rewards}$, $\var{pointers}$, and $\var{delegations}$ parameters also.
 
 Note that we must only allow performing a key deregistration when there
 are no active stake pools associated with this key. This check requires additional
@@ -331,7 +329,7 @@ we must check that the certificate is for delegating to an
 existing stake pool. This, again, is verified in the DELEGT rule, see
 Section~\ref{sec:utxo-rewards}.
 
-The $\var{stkeys}$, $\var{rewards}$, and $\var{pointeraddr}$ parameters are kept constant by
+The $\var{stkeys}$, $\var{rewards}$, and $\var{pointers}$ parameters are kept constant by
 this rule. The use of union override here allows us to use the same rule
 to perform an update on an existing delegation while keeping the rewards
 associated with the key accounted for.
@@ -371,7 +369,7 @@ being delegated to.
         \var{stkeys} \\
         \var{rewards} \\
         \var{delegations} \\
-        \var{pointeraddr}
+        \var{ptrs}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -380,7 +378,7 @@ being delegated to.
         \varUpdate{\var{stkeys}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
         \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideRight} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
-        \varUpdate{\var{pointeraddr}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}}
+        \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}}
       \end{array}
       \right)
     }
@@ -399,7 +397,7 @@ being delegated to.
         \var{stkeys} \\
         \var{rewards} \\
         \var{delegations} \\
-        \var{pointeraddr}
+        \var{ptrs}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -408,7 +406,7 @@ being delegated to.
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkeys}} \\
         \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
-        \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{pointeraddr}} \\
+        \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{ptrs}} \\
       \end{array}
       \right)
     }
@@ -426,7 +424,7 @@ being delegated to.
         \var{stkeys} \\
         \var{rewards} \\
         \var{delegations} \\
-        \var{pointeraddr}
+        \var{ptrs}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -436,7 +434,7 @@ being delegated to.
         \var{rewards} \\
         \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
                                       & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
-        \var{pointeraddr}
+        \var{ptrs}
       \end{array}
       \right)
     }

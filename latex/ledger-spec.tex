@@ -53,7 +53,7 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
-\newcommand{\PtrAddr}{\type{PtrAddr}}
+\newcommand{\Ptr}{\type{Ptr}}
 \newcommand{\DState}{\type{DState}}
 \newcommand{\DWState}{\type{DWState}}
 \newcommand{\DWEnv}{\type{DWEnv}}
@@ -631,7 +631,7 @@ Section~\cref{sec:epoch}.
       \nextdef
       & \fun{decayedKey} \in
       \PrtclConsts \to \Allocs \to \Slot \to \DCert \to \Coin
-      & \text{amount decayed since epoch} \\
+      & \text{decayed since epoch} \\
       & \decayedKey{pc}{allocs}{cslot}{c} =\\
       & \begin{cases}
         0 & \text{if not}~(\fun{releasing}~c)\\
@@ -650,7 +650,7 @@ Section~\cref{sec:epoch}.
       \end{array}\\
       \nextdef
       & \fun{decayedTx} \in \PrtclConsts \to \Allocs \to \Tx \to \Coin
-      & \text{decayed key deposit portions} \\
+      & \text{decayed deposit portions} \\
       & \decayedTx{pc}{stkeys}{tx} =\\
       &   \sum\limits_{c \in \fun{dderegister}~tx} \decayedKey{pc}{stkeys}{(\ttl{tx})}{c}\\
   \end{align*}
@@ -746,6 +746,7 @@ account for this address and added to the UTxO.
       %
       %
       \var{addr} & \Addr_{base} & \text{base address}\\
+      \var{addr} & \Addr_{ptr} & \text{pointer address}\\
       %
       c & \Coin & \text{currency value}\\
       %
@@ -755,33 +756,28 @@ account for this address and added to the UTxO.
   \emph{Derived types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{addr}
       & \Addr
-      & \var{addr}
-      & \Addr_{base} \uniondistinct \AddrRWD
+      & \Addr_{base} \uniondistinct \Addr_{ptr} \uniondistinct \AddrRWD
       & \text{address}\\
-      \var{txin}
+      (\var{txid}, \var{ix})
       & \TxIn
-      & (\var{txid}, \var{ix})
       & \TxId \times \Ix
       & \text{transaction input}
       \\
-      \var{txout}
+      (\var{addr}, c)
       & \type{TxOut}
-      & (\var{addr}, c)
       & \Addr \times \Coin
       & \text{transaction output}
       \\
       \var{utxo}
       & \UTxO
-      & \var{txin} \mapsto \var{txout}
       & \TxIn \mapsto \TxOut
       & \text{unspent tx outputs}
       \\
       \var{wdrl}
       & \Wdrl
-      & (\var{txid},~\var{a})
       & \AddrRWD \mapsto \Coin
       & \text{reward withdrawal}
     \end{array}
@@ -898,7 +894,7 @@ deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpo
     \nextdef
     & \fun{reapRewards} \in (\AddrRWD \mapsto \Coin) \to \Wdrl \to (\AddrRWD \mapsto \Coin) \\
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideRight \{(w, 0) \| w \in \var{wdrls}\} \\
+         \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \var{wdrls}\} \\
     \nextdef
     & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value destroyed} \\
