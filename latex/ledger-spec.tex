@@ -185,7 +185,7 @@ The transition system is explained in \cite{small_step_semantics}.
 \item[Symmetric Difference] Given two sets $\type{X}$ and $\type{Y}$,
   the symmetric difference of $\type{X}$ and $\type{Y}$,
   denoted $\type{X}\triangle\type{Y}$, is the union of $\type{X}$ and $\type{Y}$
-  witout the intersection.
+  without the intersection.
 \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
   sequences having elements taken from $\type{X}$. The empty sequence is
   denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
@@ -252,7 +252,7 @@ the rest of the document.
 
 Figure~\ref{fig:crypto-defs} introduces the cryptographic abstractions used in
 this document. We begin by listing the abstract types, which are meant to
-represent the corresponding concepts in cryptography. Only the funcitonality
+represent the corresponding concepts in cryptography. Only the functionality
 explicitly stated in the figures below is assumed within the scope of this paper.
 That is, their exact
 implementation remains open to interpretation, and we do not rely on
@@ -346,9 +346,9 @@ A key constraint that must always be satisfied as a result and precondition of
 a valid ledger state transition is called the \textit{general accounting
 property}, or the \textit{preservation of value} condition. Every piece of
 software that is a part of the implementation of the
-Cardano cryptocurrency must function in such a way as to not result in a
+Cardano cryptocurrency must function in such a way as to not result in
 a violation of this rule.
-condition is not satisfied, this is an indicator of
+If this condition is not satisfied, it is an indicator of
 incorrect accounting, potentially due to
 malicious disruption or a bug.
 
@@ -356,7 +356,7 @@ The preservation of value is expressed as an equality that uses values in
 the ledger state and the environment, as well as the values in the body of
 the signal transaction.
 We have defined the rules of the delegation protocol in a way that should
-consistently satisfy the presevation of value. In the future, we hope to
+consistently satisfy the preservation of value. In the future, we hope to
 give a formally-verified proof that every \textit{valid} ledger state satisfies
 this property.
 
@@ -368,7 +368,7 @@ value is satisfied. Stake pool retirement refunds are not triggered by a
 transaction (but rather, happen at the epoch boundary), and are therefore
 not considered in our state change rules invoked due to a signal transaction.
 
-Note that when a transaction is issued by a wallet to be applied to the ledger
+Note, that when a transaction is issued by a wallet to be applied to the ledger
 state (i.e. processed),
 we define the rules in this section in such a way that it is impossible to
 apply only some parts of a transaction (e.g. only certain certificates).
@@ -461,7 +461,7 @@ the $\var{tx}$ itself - meaning that the coin value of the refund must be
 explicitly specified in the outputs of the transaction. So,
 the value of the included refund must be calculated before this transaction
 is ever processed, and be the same \textit{no matter when} the $\var{tx}$
-\textit{is actually processed} in order to for the system to continue to
+\textit{is actually processed} in order to allow the system to continue to
 satisfy the general accounting property.
 
 It is impossible to predict the exact slot
@@ -591,8 +591,8 @@ The $\fun{lastEpoch}$ function
 returns the number of the last slot in the previous epoch.
 
 In order to give the full expression of the general accounting property,
-we need the value of the total amout of decay for all the resource releasing
-certificates of a transaction who's authors key is registered. For each
+we need the value of the total amount of decay for all the resource releasing
+certificates of a transaction whose authors key is registered. For each
 certificate in this calculation, the value is computed by the map $\fun{decayed}$.
 Given a set of protocol constants, resource allocations, and a slot
 number, this map outputs the difference between the decayed refund calculated from
@@ -610,7 +610,7 @@ Here, again, we use the $\fun{ttl}~\var{tx}$ value in the calculation instead of
 slot number in order to match with the one in the $\fun{keyRefunds}$
 calculation.
 
-Note that the decayed amout here is only the amount that decayed \textit{within
+Note that the decayed amount here is only the amount that decayed \textit{within
 the epoch until which the signal transaction is live}, i.e. since the end of the
 last epoch before $\fun{ttl}~\var{tx}$, or, if the key was
 registered in the same epoch as the $\fun{ttl}~\var{tx}$ slot,
@@ -683,7 +683,7 @@ which is a record of what address the given coin amount is intended for.
 
 The $\UTxO$ type is the main record type stored on the ledger to keep track of
 unspent transaction outputs. It does so by using a finite map which pairs
-a transaction ID with \textit{its own outputs} (by using the $\var{ix}$ indeces),
+a transaction ID with \textit{its own outputs} (by using the $\var{ix}$ indices),
 thus indicating that these
 can now be spent by another transaction.
 
@@ -713,12 +713,12 @@ specified, and are currently implicitly included in the total input value of
 a transaction.
 
 Note that transaction fees, which can be greater than the minimum fee, are
-indicated in the transactions themselves. This is different than the
+indicated in the transactions themselves. This is different than
 the deposit amounts for registration certificates, which are
 indicated explicitly in the protocol constants,
 and must be paid as an amount exactly matching the protocol's requirement.
 For this reason, a refund calculation for given certificate does not need to look up the deposit
-amout in the data of the transaction
+amount in the data of the transaction
 that paid the original registration deposit (such data is not even stored),
 but instead looks in the protocol
 constants for this information.
@@ -917,7 +917,7 @@ deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpo
 
 The type of the transition of a UTxO is presented in Figure
 ~\ref{fig:ts-types:utxo}. A
-transition can valid in the context of a given environment, $\UTxOEnv$.
+transition can be valid in the context of a given environment, $\UTxOEnv$.
 This environment is made up of several variables.
 The $\PrtclConsts$ is needed as part of the environment here in order to
 keep track of parameters such as the $\fun{minfee}$ value, deposits, etc.
@@ -979,7 +979,7 @@ Rule~\ref{eq:utxo-inductive} specifies the conditions under which a transaction 
 be applied to a particular $\UTxOState$ in environment $\UTxOEnv$:
 
 \begin{itemize}
-\item The trasaction is live (its time to live is less than the current slot)
+\item The transaction is live (its time to live is less than the current slot)
 \item The transaction has at least one input
 \item The fee paid by the transaction has to be greater than or equal to the
 minimum fee.
@@ -1040,9 +1040,9 @@ $(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
 
 The approach of including refunds and rewards directly in the $outputs$ gives
 great flexibility to the management of the coin value obtained from these
-accounts, i.e. it can be directed to any address. However, means there is no
+accounts, i.e. it can be directed to any address. However, it means there is no
 direct link between the $wdrls$ requests (similarly, the key deregistration
-certificate addresses and refund amounts) and the $outputs$. We verify the
+certificate addresses and refund amounts) and the $outputs$. We verify that
 the included outputs are correct and authorized through the preservation of value condition
 and witnessing the transaction. The combination of the
 preservation of value and witnessing, described in Section~\ref{sec:witnesses},
@@ -1084,7 +1084,7 @@ Now, the fees are updated by:
 \begin{itemize}
 \item add the transaction fee paid by the signal transaction to the ledger $\var{fees}$
 variable
-\item add the dacayed value of key refunds in certificates in $\var{tx}$ to $\var{fees}$
+\item add the decayed value of key refunds in certificates in $\var{tx}$ to $\var{fees}$
 \end{itemize}
 
 
@@ -1198,9 +1198,9 @@ The reason we impose the restriction that it is only possible to withdraw
 the exact available amount of rewards in an address is that we do not see
 a specific reason of why it would be necessary to withdraw a smaller amount.
 Not making it possible to split reward withdrawals into several operations
-of partial withdrawals is also likely to cut down on traffic and increas
+of partial withdrawals is also likely to cut down on traffic and increase
 processing speed.
-Additionally, it allows us to avoid any issues pertaining to mathematical
+Additionally, it allows us to avoid any issues pertaining to mathematically
 modeling subtraction, managing negative values, and the integers vs. natural
 numbers datatype concern.
 
@@ -1248,7 +1248,7 @@ the total delegation state transition. This rule is a composition of the
 DELRWDS rule above and the DELEGS $\DWState$ transition defined in
 Section~\ref{sec:delegation}. Having all the the delegation state data as well
 as all the data in a transaction in one place allows us to perform the following
-necassary remaining checks:
+necessary remaining checks:
 
 \begin{itemize}
 \item A transaction cannot register a key and simultaneously request
@@ -1341,7 +1341,7 @@ rest of the delegation state update is triggered by the cetificate list.
 
 The definitions needed to add witnessing to the UTxO transitions described above,
 as well as the certificates a transaction is carrying,
-are presented in Figure~\ref{fig:defs:utxow}. We introducs two new abstract types,
+are presented in Figure~\ref{fig:defs:utxow}. We introduce two new abstract types,
 representing the body of a certificate ($\DCertBody$) and the data inside a
 transaction ($\TData)$. Both of these types represent everything inside a
 certificate (respectively, transaction) \textit{except} the witnesses.
@@ -1442,8 +1442,8 @@ Figure~\ref{fig:rules:utxow}):
 
 The purpose of witnessing is make sure that the intended action is authorized by
 the holder of the signing key, providing replay protection as a consequence.
-Replay prevention is an inherent property of UTxO stype accounting
-since transacition IDs are unique.
+Replay prevention is an inherent property of UTxO type accounting
+since transaction IDs are unique.
 Delegation certificates and reward withdrawals do not share this property,
 though if we require all witnesses to sign at least one transaction input,
 the replay prevention of UTxO accounting is then provided to any transaction.
@@ -1571,7 +1571,7 @@ by a transaction.
 The inference rule describing the complete ledger state transition is given in
 Figure~\ref{fig:rules:ledger}. The consequent of the rule is triggered by
 a transaction $\var{tx}$ such that both the (witnessed) ledger state transition
-and the complete delegation state tranition in the antecedent are
+and the complete delegation state transition in the antecedent are
 triggered by that same transaction.
 
 Note that the context for the consequent transaction is made up of only the
