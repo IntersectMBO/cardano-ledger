@@ -268,12 +268,15 @@ instance STS DELEG where
     | ADelegSFailure (PredicateFailure ADELEGS)
     deriving (Eq, Show)
 
-  initialRules = [ return DIState
-                   { _dIStateDelegationMap        = Map.empty
-                   , _dIStateLastDelegation       = Map.empty
-                   , _dIStateScheduledDelegations = []
-                   , _dIStateKeyEpochDelegations  = Set.empty
-                   }
+  initialRules = [ do
+                     IRC env <- judgmentContext
+                     return DIState
+                       { _dIStateDelegationMap        =
+                           Map.fromSet (\(VKeyGen k) -> k) (env ^. allowedDelegators)
+                       , _dIStateLastDelegation       = Map.empty
+                       , _dIStateScheduledDelegations = []
+                       , _dIStateKeyEpochDelegations  = Set.empty
+                       }
                  ]
   transitionRules =
     [ do
