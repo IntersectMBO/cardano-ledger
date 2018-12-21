@@ -10,8 +10,8 @@ where
 import Data.Set (Set)
 import Numeric.Natural
 
-import Ledger.Core (VKey, Sig, Slot)
-import Ledger.Delegation (DCert, VKeyGen)
+import Ledger.Core (VKey, VKeyGen, Sig, Slot)
+import Ledger.Delegation (DCert)
 import Ledger.Signatures (Hash)
 
 

@@ -8,15 +8,30 @@ where
 import Control.Lens
 import Chain.GenesisBlock (initVKeys)
 import Control.State.Transition
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map (empty, fromSet)
 import Data.Set (Set)
-import Ledger.Delegation (DIState, VKeyGen)
+import qualified Data.Set as Set (empty)
+import Ledger.Core (VKeyGen(VKeyGen), VKey)
+import Ledger.Delegation
+  ( DIState(DIState)
+  , _dIStateDelegationMap
+  , _dIStateLastDelegation
+  , _dIStateScheduledDelegations
+  , _dIStateKeyEpochDelegations
+  )
 import Types
 
 
 -- | Computes an initial delegation interface state from a set of
 -- verification keys
 initDIStateFromKeys :: Set VKeyGen -> DIState
-initDIStateFromKeys certs = undefined
+initDIStateFromKeys keys = DIState
+  { _dIStateDelegationMap        = Map.fromSet (\(VKeyGen k) -> k) keys
+  , _dIStateLastDelegation       = Map.empty
+  , _dIStateScheduledDelegations = []
+  , _dIStateKeyEpochDelegations  = Set.empty
+  }
 
 -- | The initial delegation interface state
 initDIState :: DIState
