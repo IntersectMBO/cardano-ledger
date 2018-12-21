@@ -260,6 +260,7 @@ certificate (contained in a signal transaction).
       \var{pparams} & \HashKey \mapsto \StakePool
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
+      \var{avgs} & \HashKey \mapsto [0, 1] & \text{performance moving average}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
@@ -531,7 +532,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{r}
         \var{stpools} \\
         \var{pparams} \\
-        \var{retiring}
+        \var{retiring} \\
+        \var{avgs}
       \end{array}
       \right)
       \trans{pool}{c}
@@ -542,6 +544,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
         \varUpdate{\var{pparams}} & \varUpdate{\union}
                                   & \varUpdate{\{\var{hk} \mapsto \var{stakepool}\}} \\
        \var{retiring} \\
+       \var{avgs}
       \end{array}
       \right)
     }
@@ -561,7 +564,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{r}
         \var{stpools} \\
         \var{pparams} \\
-        \var{retiring}
+        \var{retiring} \\
+        \var{avgs}
       \end{array}
       \right)
       \trans{pool}{c}
@@ -571,6 +575,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
         \varUpdate{\var{pparams}} & \varUpdate{\unionoverrideRight}
                                   & \varUpdate{\{\var{hk} \mapsto \var{stakepool}\}}\\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
+        \var{avgs}
       \end{array}
       \right)
     }
@@ -592,7 +597,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{r}
         \var{stpools} \\
         \var{pparams} \\
-        \var{retiring}
+        \var{retiring} \\
+        \var{avgs}
       \end{array}
     \right)
     \trans{pool}{c}
@@ -602,6 +608,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
         \var{pparams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
+        \var{avgs}
       \end{array}
     \right)
   }
