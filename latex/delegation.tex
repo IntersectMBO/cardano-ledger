@@ -223,8 +223,9 @@ separate variable in order to allow us to use a signle datatype for
 all deposit and refund calculations for both individual and pool key registrations
 and deregistrations or retirement. The variable that stores other necessary pool
 registration data is $\var{pparams}$, and is a finite map that stores $\StakePool$
-constants indexed
-by the hash keys to which they correspond.
+constants indexed by the hash keys to which they correspond.
+Finally, $\var{avgs}$ stores the latest value of the pool's moving average
+used in the reward calculation, see Section~\ref{sec:epoch}.
 
 The state $\PState$ also keeps track of
 stake pools scheduled to retire via the variable $\var{retiring}$,

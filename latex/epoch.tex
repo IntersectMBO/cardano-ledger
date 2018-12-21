@@ -71,6 +71,8 @@ at a given pointer address.
       & \text{moving average weight}\\
       \fun{movingAvgExp} & \PrtclConsts \to [0, 1]
       & \text{moving average exponent}\\
+      \fun{poolConsts} & \PrtclConsts \to \mathbb{R}_{>0}\times\mathbb{N}
+      & \text{pool constants}\\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -180,10 +182,6 @@ The $\fun{reward}$ function
 updates the existing records of the unclaimed coin values by adding newly
 accumulated rewards this epoch to the value in each reward address.
 
-\begin{todo}
-  Describe calculation
-\end{todo}
-
 The function $\fun{poolRefunds}$ is used to calculate the total refunds
 that must be distributed
 for stake pools scheduled to retire at an epoch boundary. Note that this
@@ -226,6 +224,12 @@ at the epoch boundary.
   \label{fig:functions:epoch}
 \end{figure}
 
+\subsection{Rewards Distribution}
+\label{sec:reward-dist}
+
+The rewards calculations and related functions are presented in
+Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\ref{fig:functions:reward-calc}.
+
 %%
 %% Figure - Functions for the Reward Calculation
 %%
@@ -233,13 +237,13 @@ at the epoch boundary.
   \begin{align*}
       & \fun{maxPool} \in \PrtclConsts \to \Coin \to [0, 1] \to [0, 1] \to \Coin
       & \text{max pool reward} \\
-      & \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{s}~\var{poolConsts} = \\
+      & \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{s} = \\
       & ~~~\floor*{
            \frac{R}{1 + a_0}
            \cdot
            \left(\sigma' + s'\cdot a_0\cdot\frac{\sigma' - s'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
       & ~~~\where \\
-      & ~~~~~~~(a_0, k) = \fun{maxPoolConsts}~pc \\
+      & ~~~~~~~(a_0, k) = \fun{poolConsts}~pc \\
       & ~~~~~~~z_0 = 1/k \\
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
       & ~~~~~~~s'=\min(s,~z_0) \\
@@ -365,6 +369,8 @@ at the epoch boundary.
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
 \end{figure}
+
+\clearpage
 
 \subsection{UTxO Epoch Transition}
 \label{sec:utxo-epoch}
