@@ -21,11 +21,6 @@ import qualified Data.Map.Strict as Map
 -- Abstract types
 --------------------------------------------------------------------------------
 
--- | A genesis key is a specialisation of a generic VKey.
-newtype VKeyGen = VKeyGen VKey
-  deriving (Eq, Ord, Show)
-
-
 data DCert = DCert
   { -- | Body of the delegation certificate
     _dbody :: (VKey, Epoch)

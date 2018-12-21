@@ -7,7 +7,6 @@ module Chain.Blockchain where
 
 import Control.Lens
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
 import Data.Bits (shift)
 import Data.Set (Set)
 import Numeric.Natural
@@ -17,11 +16,11 @@ import Data.ByteString.Lazy.Char8 (pack)
 
 import Chain.GenesisBlock (genesisBlock)
 import Control.State.Transition
-import Data.Maybe (fromJust, listToMaybe)
+import Data.Maybe (isJust, fromJust, listToMaybe)
 import Data.Queue
 import Delegation.Interface (initDIState)
-import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify)
-import Ledger.Delegation (DCert, DIState, VKeyGen, DELEG, DIEnv, delegationMap)
+import Ledger.Core (VKey(..), VKeyGen, Slot, SlotCount(SlotCount), verify)
+import Ledger.Delegation (DCert, DIState, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
 import Types (BC, Block(..), BlockIx(..), ProtParams(..))
 

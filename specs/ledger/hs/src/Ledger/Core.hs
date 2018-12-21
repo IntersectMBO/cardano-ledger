@@ -25,6 +25,10 @@ newtype SKey = SKey Owner deriving (Show, Eq, Ord)
 -- |Verification Key.
 newtype VKey = VKey Owner deriving (Show, Eq, Ord)
 
+-- | A genesis key is a specialisation of a generic VKey.
+newtype VKeyGen = VKeyGen VKey
+  deriving (Eq, Ord, Show)
+
 -- |Key Pair.
 data KeyPair = KeyPair
   {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)

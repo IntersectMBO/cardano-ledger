@@ -8,8 +8,7 @@ where
 import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Set (Set, fromList)
-import Ledger.Core (VKey(VKey), Owner(Owner))
-import Ledger.Delegation (VKeyGen(VKeyGen))
+import Ledger.Core (VKey(VKey), VKeyGen(VKeyGen), Owner(Owner))
 import Numeric.Natural
 import Types
 
