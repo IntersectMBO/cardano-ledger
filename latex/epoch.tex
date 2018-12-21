@@ -31,9 +31,12 @@ update, which we also give the details of in this chapter.
 Note that witnessing here is not necessary because there is no data to sign
 in the signal.
 
-We introduce a new abstract type in this chapter, $\Production$ (see
-Figure~\ref{fig:epoch-defs}), which represents the set of blocks produced by the
-blockchain this epoch.
+We introduce a new derived type in this chapter, $\Production$ (see
+Figure~\ref{fig:epoch-defs}), which represents the number of blocks produced by
+the blockchain this epoch associated to a particular stake key.
+We also introduce two lookup functions. The map $\fun{stakeHK}$ looks up the
+hash key at a base address, and the map $\fun{stakePtr}$ looks up the pointer
+at a given pointer address.
 
 %%
 %% Figure - Epoch Abstract Types
@@ -60,34 +63,48 @@ blockchain this epoch.
   \label{fig:epoch-defs}
 \end{figure}
 
+\subsection{Stake Distribution Calculation}
+\label{sec:stake-dist}
 
-In Figure~\ref{fig:functions:epoch}, we give the functions
-used in the deposit calculations at the boundary. Here we introduce the function
-that gives the value of the total possible (decayed) refunds for both individual and
-pool deposits in a given slot number, $\fun{obligation}$.
+One of the the main characteristics of a proof-of-stake cryptocurrency is stake
+distribution calculation. This calculation is performed at the epoch boundary.
+We give the stake distribution calculations and related functions in
+Figure~\ref{fig:functions:stake-distribution}.
 
-Next, we give the type of the function used to calculate additional rewards that will become
-available to be claimed after the boundary. This function is denoted $\fun{reward}$,
-and depends on this epoch's blocks, protocol constants, the delegation
-and pool states, and existing rewards unclaimed in the previous epoch.
-The $\fun{reward}$ function
-updates the existing records of the unclaimed coin values by adding newly
-accumulated rewards this epoch to the value in each reward address.
+The $\fun{baseStake}$ generates a finite map that pairs a paying key
+associated to a base address with the coin value at that address as recorded
+in the UTxO on the ledger. Note that this is a map indexed by any staking keys,
+which every base address has (but not all of these are registered and delegating).
+After registering a stake key, the base address is added alongside the
+coin value associated to it in $outs$ (the outputs record currently in the
+ledger UTxO).
 
-\begin{todo}
-  This calculation has been decided on already?
-\end{todo}
+The map
+$\fun{ptrStake}$ generates a similar finite map for coin values at a given
+pointer address in the UTxO outputs set, indexed the stake keys the given
+pointer address is associated with.
+This is a key and coin value pair finite map for only registered stake keys.
 
-The function $\fun{poolRefunds}$ is used to calculate the total refunds
-that must be distributed
-for stake pools scheduled to retire at an epoch boundary. Note that this
-calculation takes a slot number as a parameter because that is the type of value
-needed for the decay calculation, but will only ever be invoked
-when the slot number is the last before the boundary.
+The $\fun{stake}$ map is a union of all the stake in both of these finite
+maps, $\fun{baseStake}$ and the $\fun{ptrStake}$.
+The next step of calculating stake distribution is to filter the hash keys in
+the $\fun{stake}$ finite map.
+We want only those (stake) keys for which stake
+from the $\fun{baseStake}$ and the $\fun{ptrStake}$ calculations is active, i.e.
+for which the $\fun{isActive}$ filter is true.
+For a hash key, its stake is active (i.e. $\fun{isActive}$) whenever it is a
+registered stake key
+and it is delegating to some registered stake pool.
 
-The map $\fun{poolRefunds}$ uses the pool decay constants in $\PrtclConsts$
-to assign a refund to each pool key in the set of pools scheduled for retirement
-at the epoch boundary.
+The finite map output of the function $\fun{activeStake}$ gives the subset of
+all the \textit{active} stake computed by $\fun{stake}$. The $\fun{totalStake}$
+calculation sums up the total coin value of the active stake. Finally, the
+$\fun{stakeDistr}$ calculation associates to each hash key that has active
+stake a fraction $c \div tot$ of the total sum $tot$ of all stake (where $c$
+is the active stake of this hash key).
+
+These stake-related calculations are used in the calculation of rewards.
+
 
 %%
 %% Figure - Functions for Stake Distribution
@@ -148,6 +165,37 @@ at the epoch boundary.
   \label{fig:functions:stake-distribution}
 \end{figure}
 
+\subsection{Accounting Functions}
+\label{sec:acc-fun}
+
+In Figure~\ref{fig:functions:epoch}, we give the functions
+used in the deposit calculations at the boundary. Here we introduce the function
+that gives the value of the total possible (decayed) refunds for both individual and
+pool deposits in a given slot number, $\fun{obligation}$.
+
+Next, we give the type of the function used to calculate additional rewards that will become
+available to be claimed after the boundary. This function is denoted $\fun{reward}$,
+and depends on this epoch's blocks, protocol constants, the delegation
+and pool states, and existing rewards unclaimed in the previous epoch.
+The $\fun{reward}$ function
+updates the existing records of the unclaimed coin values by adding newly
+accumulated rewards this epoch to the value in each reward address.
+
+\begin{todo}
+  Describe calculation
+\end{todo}
+
+The function $\fun{poolRefunds}$ is used to calculate the total refunds
+that must be distributed
+for stake pools scheduled to retire at an epoch boundary. Note that this
+calculation takes a slot number as a parameter because that is the type of value
+needed for the decay calculation, but will only ever be invoked
+when the slot number is the last before the boundary.
+
+The map $\fun{poolRefunds}$ uses the pool decay constants in $\PrtclConsts$
+to assign a refund to each pool key in the set of pools scheduled for retirement
+at the epoch boundary.
+
 %%
 %% Figure - Functions for Epoch Rules
 %%
@@ -180,10 +228,12 @@ at the epoch boundary.
       &
         \where (p_{\mathsf{val}},~p_{\min},~\lambda_p) = \fun{decayPool}~\var{pc}\\
   \end{align*}
-  \caption{Functions used in Deposits}
+  \caption{Functions used in Accounting}
   \label{fig:functions:epoch}
 \end{figure}
 
+\subsection{UTxO Epoch Transition}
+\label{sec:utxo-epoch}
 
 The type of the UTxO state transition at the epoch boundary is given in
 Figure~\ref{fig:ts-types:utxoe}. There is no signal for this transition, but rather
@@ -249,6 +299,8 @@ function), and $\var{fees}$ value on the ledger is set to 0.
   \label{fig:rules:utxoep}
 \end{figure}
 
+\subsection{Accounting Epoch Transition}
+\label{sec:acc-trans}
 
 The Figure~\ref{fig:ts-types:accnt} gives the definitions related to epoch
 boundary ledger accounting. The figure lists the accounting fields, denoted by
@@ -381,7 +433,7 @@ smaller refunds for deposits than were paid upon depositing.
           \var{stkeys} \\
           \var{rewards} \\
           \var{delegations} \\
-          \var{pointeraddr} \\
+          \var{ptrs} \\
         \end{array}
       \right)
       \trans{accnt}{}
@@ -393,7 +445,7 @@ smaller refunds for deposits than were paid upon depositing.
           \var{stkeys} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
-          \var{pointeraddr} \\
+          \var{ptrs} \\
         \end{array}
       \right)
     }
@@ -402,6 +454,8 @@ smaller refunds for deposits than were paid upon depositing.
   \label{fig:rules:accnt}
 \end{figure}
 
+\subsection{Epoch Boundary Pool Cleanup}
+\label{sec:pool-clean}
 
 Next, we discuss the epoch boundary pool retirement in
 Figure~\ref{fig:ts-types:pool-clean}. The type of this transition is similar
@@ -475,6 +529,8 @@ for potential future use.
   \label{fig:rules:pool-clean}
 \end{figure}
 
+\subsection{Epoch Boundary Protocol Constants Update}
+\label{sec:prot-const-epoch}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
 constants. Besides the current slot number, delegation and pool states, the
@@ -610,6 +666,8 @@ for ease of reading.
   \label{fig:rules:new-proto-consts}
 \end{figure}
 
+\subsection{Complete Epoch Boundary Transition}
+\label{sec:total-epoch}
 
 Finally, it is possible to define the complete epoch boundary transition type. It
 In the environment of this transition, we have the slot number, blocks produced
