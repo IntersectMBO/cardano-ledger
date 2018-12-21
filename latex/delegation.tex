@@ -180,11 +180,23 @@ $\Duration$ here by $\var{dur}$).
 
 In \cref{fig:delegation-transitions} we give the delegation and stake pool
 state transition types. We define two separate parts of the ledger state.
-
 The part of the ledger state keeping track of current delegations, $\DState$,
 consists of four variables. The first, $\var{stkeys}$, keeps track of individual
 stake key resource allocations using the $\Allocs$ type.
-Note that individual key registration
+
+Note that for security, privacy, and usability reasons, the staking (delegating)
+key pair associated with an address must be different than its paying key pair.
+\textit{Every address} must have a paying key \textit{and} a stake key
+associated to it in order to participate in using the currency. Before the
+stake key is registered and delegates to an existing stake pool,
+the money at its address can be used for
+transactions, but does not accumulate additional stake (i.e. rewards/money).
+Once the stake key is registered and delegating, either the base address or
+the pointer address can be used to generate outputs
+in a transaction. However, it makes more sense to use the shorter pointer
+address at this point. 
+
+Note also that individual key registration
 and deregistration certificates contain no important data beyond a declaration
 of registration, and thus are not stored as part of the state variables once
 they have been processed.
@@ -450,7 +462,10 @@ being delegated to.
 
 
 The rules for updating the part of the ledger state defining the current stake
-pools are given in \cref{fig:pool-rules}.
+pools are given in \cref{fig:pool-rules}. The calculation of stake distribution
+is described in Section~\ref{sec:stake-dist}.
+
+In the pool rules, the stake key is used directly to register a stake pool.
 For each rule, again, we first check that a given certificate $c$ is of
 the correct type.
 
