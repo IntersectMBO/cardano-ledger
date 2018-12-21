@@ -24,7 +24,7 @@ which it will retire.
 
 Delegation requires the following to be tracked by the ledger state:
 the registered stake keys, the delegation map from registered stake keys to stake
-pools, pointers associated with stakey keys,
+pools, pointers associated with stake keys,
 the registered stake pools, and upcoming stake pool retirements.
 Additionally, the blockchain protocol rewards eligible stake, and so we must
 also include a mapping from active stake keys to rewards.
@@ -66,14 +66,14 @@ way, a type for transitions describing stake pool-related ledger updates
 The type $\Allocs$ is a general datatype used to represent both individual and stake
 pool resource allocations. It stores, as a finite map, the hash key to which the resource is
 allocated, and the corresponding slot number in which this allocation
-(registration) was made. Here we also introduce pointer structure
+(registration) was made. Here we also introduce the pointer structure
 $\Ptr$, which we will use to index stake keys based on
 when and by what transaction they were registered.
 
 A variable of this type consists of
 the slot number when transaction (which carried the key registration certificate)
 was processed, the index of the transaction inside that slot, and the index
-of the certificate inside the transaction (i.e. its position in the list of
+of the certificate inside the transaction (i.e.\ its position in the list of
 the transaction's certificates).
 
 The maps $\fun{hash}$, $\fun{addr_{rwd}}$, $\fun{author}$, $\fun{dpool}$,
@@ -182,7 +182,7 @@ In \cref{fig:delegation-transitions} we give the delegation and stake pool
 state transition types. We define two separate parts of the ledger state.
 
 The part of the ledger state keeping track of current delegations, $\DState$,
-consists of three variables. The first, $\var{stkeys}$, keeps track of individual
+consists of four variables. The first, $\var{stkeys}$, keeps track of individual
 stake key resource allocations using the $\Allocs$ type.
 Note that individual key registration
 and deregistration certificates contain no important data beyond a declaration
@@ -197,7 +197,7 @@ key to which this address is associated. The third
 variable in $\DState$ stores currently registered delegations.
 Delegations ($\var{delegations}$) are also expressed by a finite map, which
 associates a stake key with the hash key of the pool to which it delegates.
-Finally, the finite map $\var{pointers}$ variable stores,
+Finally, the finite map $\var{ptrs}$ variable stores,
 indexed by pointers,
 the stake keys associated with these pointers. This data is needed for the
 epoch boundary reward calculations, see Section~\ref{sec:epoch}.
@@ -337,8 +337,8 @@ associated with the key accounted for.
 The rules of the distribution of rewards to eligible stake holders are described
 in Section~\ref{sec:epoch}, since the amount of rewards they can claim in the next
 epoch is calculated at the epoch boundary. However, the claiming of the rewards
-(i.e. conversion of reward value to unspent outputs available to the key
-holder), can be requested by the key holder at any time as part of transaction.
+(i.e.\ conversion of reward value to unspent outputs available to the key
+holder), can be requested by the key holder at any time as part of a transaction.
 This process is decribed in Section~\ref{sec:utxo-rewards}.
 
 We would like to point out, here, that this document does not describe
@@ -492,7 +492,7 @@ could result in a linear (in the number of pools) growth of storage space needed
 for this datatype.
 
 The pools scheduled for retirement must be removed from
-the $\var{retired}$ state variable at the end of the epoch they are scheduled
+the $\var{retiring}$ state variable at the end of the epoch they are scheduled
 to retire in. This non-signaled transition (triggered, instead, directly by a
 change of current slot number in the environment), along with all other transitions
 that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.

@@ -72,7 +72,7 @@ and depends on this epoch's blocks, protocol constants, the delegation
 and pool states, and existing rewards unclaimed in the previous epoch.
 The $\fun{reward}$ function
 updates the existing records of the unclaimed coin values by adding newly
-accumulated rewards this epoch to the value in each reward address.
+accumulated rewards of this epoch to the value in each reward address.
 
 \begin{todo}
   This calculation has been decided on already?
@@ -206,11 +206,11 @@ from the last slot of an epoch to the first slot of the subsequent epoch.
 \end{figure}
 
 
-The inference rule describing when the boundary UTxO state transition can
-take place is presented in~\ref{fig:rules:utxoep}. As a result of the application
-of this rule, the $\var{deposits}$ value is decreased by the
-amount of decay of refunds this epoch (calculated by the $\fun{obligation}$
-function), and $\var{fees}$ value on the ledger is set to 0.
+The inference rule describing when the boundary UTxO state transition can take
+place is presented in Figure~\ref{fig:rules:utxoep}. As a result of the
+application of this rule, the $\var{deposits}$ value is decreased by the amount
+of decay of refunds this epoch (calculated by the $\fun{obligation}$ function),
+and $\var{fees}$ value on the ledger is set to 0.
 
 %%
 %% Figure - UTxO Epoch Rule
@@ -543,7 +543,7 @@ requested, the necessary amount of funds is available in the $\var{deposits}$
 pool.
 
 Note that here, unlike most of the inference rules in this document,
-the $\var{utsoSt'}$ and the $\var{accnt'}$ do not come from valid UTxO or
+the $\var{utxoSt'}$ and the $\var{accnt'}$ do not come from valid UTxO or
 accounts transitions in the antecedent. We simply define the consequent
 transition using these directly (instead of listing all the fields in both
 states in the consequent transition). It is done this way here
@@ -611,7 +611,7 @@ for ease of reading.
 \end{figure}
 
 
-Finally, it is possible to define the complete epoch boundary transition type. It
+Finally, it is possible to define the complete epoch boundary transition type.
 In the environment of this transition, we have the slot number, blocks produced
 this epoch, and both the old and the new protocol constants. The state is
 made up of the accounting state, the UTxO, the delegation state and the
