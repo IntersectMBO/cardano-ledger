@@ -123,7 +123,11 @@ instance STS SDELEG where
     | DoesNotVerify
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return DSState
+                   { _dSStateScheduledDelegations = []
+                   , _dSStateKeyEpochDelegations  = Set.empty
+                   }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, cert) <- judgmentContext
@@ -167,7 +171,11 @@ instance STS ADELEG where
     | AfterExistingDelegation
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return DState
+                   { _dStateDelegationMap  = Map.empty
+                   , _dStateLastDelegation = Map.empty
+                   }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, (slot, (vks, vkd))) <- judgmentContext
@@ -197,7 +205,11 @@ instance STS SDELEGS where
     = SDelegFailure (PredicateFailure SDELEG)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return DSState
+                   { _dSStateScheduledDelegations = []
+                   , _dSStateKeyEpochDelegations  = Set.empty
+                   }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, sig) <- judgmentContext
@@ -224,7 +236,11 @@ instance STS ADELEGS where
     = ADelegFailure (PredicateFailure ADELEG)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return DState
+                   { _dStateDelegationMap  = Map.empty
+                   , _dStateLastDelegation = Map.empty
+                   }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, sig) <- judgmentContext
@@ -252,7 +268,13 @@ instance STS DELEG where
     | ADelegSFailure (PredicateFailure ADELEGS)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return DIState
+                   { _dIStateDelegationMap        = Map.empty
+                   , _dIStateLastDelegation       = Map.empty
+                   , _dIStateScheduledDelegations = []
+                   , _dIStateKeyEpochDelegations  = Set.empty
+                   }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, sig) <- judgmentContext
