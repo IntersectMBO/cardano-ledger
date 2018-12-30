@@ -32,12 +32,20 @@ update, which we also give the details of in this chapter.
 Note that witnessing here is not necessary because there is no data to sign
 in the signal.
 
-We introduce a new derived type in this chapter, $\Production$ (see
+We introduce a two new derived types in this chapter. $\Production$ (see
 Figure~\ref{fig:epoch-defs}), which represents the number of blocks produced by
-the blockchain this epoch associated to a particular stake key.
+the blockchain this epoch associated to a particular stake key. The type
+$\Distr$ is a finite map that pairs a hash key with a fraction. This fraction
+is meant to represent the portion of the total stake corresponding to a key,
+thus this type is used to give the stake distribution.
+
 We also introduce two lookup functions. The map $\fun{stakeHK}$ looks up the
 hash key at a base address, and the map $\fun{stakePtr}$ looks up the pointer
 at a given pointer address.
+
+The next three functions ($\fun{movingAvgWeight}$, $\fun{movingAvgExp}$, and
+$\fun{poolConsts}$) in the figure return a specific subset of constants
+in the set of protocol constants needed for performing rewards calculations.
 
 %%
 %% Figure - Epoch Abstract Types
@@ -53,7 +61,7 @@ at a given pointer address.
       & \text{blocks produced in the epoch} \\
       \var{distr}
       & \Distr
-      & \HashKey \mapsto \mathbb{N}
+      & \HashKey \mapsto [0,1]
       & \text{stake distribution} \\
     \end{array}
   \end{equation*}
@@ -87,7 +95,7 @@ distribution calculation. This calculation is performed at the epoch boundary.
 We give the stake distribution calculations and related functions in
 Figure~\ref{fig:functions:stake-distribution}.
 
-The $\fun{baseStake}$ generates a finite map that pairs a paying key
+The $\fun{baseStake}$ generates a finite map that pairs a staking key
 associated to a base address with the coin value at that address as recorded
 in the UTxO on the ledger. Note that this is a map indexed by any staking keys,
 which every base address has (but not all of these are registered and delegating).
@@ -101,7 +109,8 @@ pointer address in the UTxO outputs set, indexed the stake keys the given
 pointer address is associated with.
 This is a key and coin value pair finite map for only registered stake keys.
 
-The $\fun{stake}$ map is a union of all the stake in both of these finite
+The $\fun{stake}$ map is a union of all the stake (both active and inactive) in
+both of these finite
 maps, $\fun{baseStake}$ and the $\fun{ptrStake}$.
 The next step of calculating stake distribution is to filter the hash keys in
 the $\fun{stake}$ finite map.
@@ -113,11 +122,7 @@ registered stake key
 and it is delegating to some registered stake pool.
 
 The finite map output of the function $\fun{activeStake}$ gives the subset of
-all the \textit{active} stake computed by $\fun{stake}$. The $\fun{totalStake}$
-calculation sums up the total coin value of the active stake. Finally, the
-$\fun{stakeDistr}$ calculation associates to each hash key that has active
-stake a fraction $c \div tot$ of the total sum $tot$ of all stake (where $c$
-is the active stake of this hash key).
+all the \textit{active} stake computed by $\fun{stake}$.
 
 These stake-related calculations are used in the calculation of rewards.
 
@@ -227,8 +232,65 @@ at the epoch boundary.
 \subsection{Rewards Distribution}
 \label{sec:reward-dist}
 
-The rewards calculations and related functions are presented in
-Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\ref{fig:functions:reward-calc}.
+We now discuss reward distribution calculation that happens at the epoch boundary.
+Functions used in reward calculations are presented in
+Figure~\ref{fig:functions:rewards}. The reward calculation below is done as part of the
+epoch boundary accounting to update the various accounting fields on the ledger,
+see Section~\ref{sec:acc-trans}. In the subsequent calculations, we use the
+following variables (sourced as indicated):
+
+\begin{itemize}
+\item[]
+\item $\var{avgs}$ stores the (moving) average for each
+stake pool
+\item $\var{pparams}$ stores stake pool-specific constants \newline
+
+From the boundary accounting transition context
+\item $\var{prod}$ gives the number of blocks produced by each stake pool
+this epoch \newline
+
+Calculated as part of epoch boundary accounting, see
+Section~\ref{sec:acc-trans}: \\
+\item $\var{R}$ is the total available rewards for the epoch (in ADA) \newline
+
+Where is this from? \\
+\item $\overline{N}$, for a given pool, is the expectation value of the number
+of slots that the pool will be elected as leader on average \newline
+
+From protocol constants: \\
+\item $k$ is the optimal number of saturated stake pools (which the system
+tends to by protocol design)
+\item $\var{a_0} \in [0, \infty)$ is a parameter determining leader-stake
+influence on pool rewards \newline
+
+Calculated by the functions defined below using the variables above: \\
+\item $\var{z_0} := 1/k$ is the size of a saturated pool
+\item $\sigma' := \fun{min}(\sigma, z_0)$, where $\sigma$ is the relative stake of the pool
+\item $s' := \fun{min}(s, z_0)$,
+\item $\sigma$ is the average amount of stake (expressed as a fraction of
+the total stake) a pool has
+\item $s$ is the fraction of the total stake a particular pool has \\
+  $s$ is the relative stake of the pool leader (the amount of ADA pledged during pool registration
+\end{itemize}
+
+\begin{todo}
+  What is s? Is sigma correct?
+
+  Where does N come from?
+\end{todo}
+
+The function $\fun{maxPool}$ gives the maximum possible amount of rewards a pool
+can receieve in an epoch. For a given pool, it is calculated as a fraction of
+the total available rewards. This result depends on the protocol
+constants, the average stake distribution, and the amount of stake the pool has.
+
+The function $\fun{movingAvg}$ calculates the new moving average for a
+given stake pool based on protocol constants, pool's block production, and
+the expectation of the number of slots the pool will be elected to be a leader of.
+
+Next, the function $\fun{poolRew}$ gives the total rewards to be distributed
+within the given pool. This value is based on the re-calculated (for this epoch) pool
+average and additional protocol constants.
 
 %%
 %% Figure - Functions for the Reward Calculation
@@ -275,6 +337,28 @@ Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\
   \label{fig:functions:rewards}
 \end{figure}
 
+In Figure~\ref{fig:functions:reward-splitting}, we give the strategy for the
+splitting of the rewards within a given pool. Note that the calculation of
+the total value is presented above, denoted $\fun{poolRew}$.
+
+The portion of rewards allocated to the pool leader and those allocated to
+the rest of the pool members is different. This portion is calculated based
+on pool-specific constants (these come from the ledger state), as well as
+the $\sigma$ and $s$ (calculated as part of reward
+distribution, see below). The calculation for the pool
+leader reward amount is given by the $\fun{leaderRew}$ function, and the
+calculation for the reward amount for each other member is give by $\fun{memberRew}$.
+Finally, $\fun{indivRew}$ puts these two calculations together to give the
+reward amount for any pool member, using a boolean as an input to indicate
+whether a given member is the pool leader or not.
+
+Here we also present the $\fun{groupByPool}$ map, which, given a stake distribution
+for all registered stake keys, as well as the current delegations, produces a
+finite map indexed by the hash keys of pool leaders. Each leader key is associated
+with a subset of the stake distribution finite map. This associated subset
+contains only the stake distribution entries where the hash keys delegate to the pool
+which the given leader is the leader of.
+
 %%
 %% Figure - Functions for the Reward Splitting
 %%
@@ -314,12 +398,72 @@ Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\
       & ~~~\to (\HashKey \mapsto \Distr)
       & \text{pool individual reward} \\
       & \fun{groupByPool}~\var{dstr}~\var{delegs} = \\
-      & ~~~\Big\{ leader \mapsto \{hk \mapsto d \mid (hk \mapsto leader)\in\var{delegs}\}
-                  \Big\vert hk\mapsto d \in distr\Big\}
+      & ~~~\Big\{ leader \mapsto \{hk \mapsto d \in distr \mid (hk \mapsto leader)\in\var{delegs}\}
+                  \Big\}
   \end{align*}
   \caption{Functions used in the Reward Splitting}
   \label{fig:functions:reward-splitting}
 \end{figure}
+
+
+Finally, the reward calculation is presented in
+Figure~\ref{fig:functions:reward-calc}. The calculation is done pool-by-pool.
+The map $\fun{rewardOnePool}$ calculates the rewards given out to each member
+of a given pool (with leader identified by
+the stake key $\var{poolHK}$). The pool is passed to $\fun{rewardOnePool}$
+via the $\var{distr}$ variable, which is a subset of hash keys in this pool
+paired with the stake fractions associated with the keys.
+
+Given, additionally, pool and protocol constants,
+as well as the total available rewards, block production,
+and the pool averages, this map outputs a finite map and an $\var{avg}$
+value. The finite map is indexed
+by reward addresses. In particular, the subset of reward addresses corresponding
+to registered keys delegating to the pool with leader $\var{poolHK}$.
+A reward address of key $hk$ is paired with the individual reward value
+produced by the $\fun{indivRew}$ map applied to relevant data passed to
+$\fun{rewardOnePool}$ as well as the results of the $\fun{maxPool}$
+and $\fun{poolReq}$ calculations. The $\var{avg}$ value for the stake pool
+(i.e. the pool's ranking) is also calculated by the $\fun{poolRew}$ function.
+
+\begin{todo}
+  in rewardOnePool, sigma should be an average, i.e. divided by the size of distr?
+  should it be k $\div$ tot?
+\end{todo}
+
+The $\fun{reward}$ calculation itself uses the $\fun{rewardOnePool}$
+function to reward each pool and calculate the pools' moving averages. In order
+to do this, is given the following parameters:
+
+\begin{itemize}
+\item The number of blocks produced by each key this epoch
+\item The protocol constants
+\item The total coin value of rewards to be distributed this epoch
+\item The full delegation state
+\item The set of outputs in the UTxO on the ledger
+\end{itemize}
+
+The output of the $\fun{reward}$ calculation is a pair. The first component is
+a finite map indicating the new rewards assigned to each reward address.
+The second component is the record of every pool's updated moving average.
+
+Within the $\fun{reward}$ calculation, the stake distribution $\var{stDistr}$
+is calculated for each stake key by dividing the the active stake associated
+with that key by the total active stake. This distribution is then grouped
+into subsets by the pool each stake key belongs to using the
+$\fun{groupByPool}$ mapping.
+
+Next, a dataset of $\var{results}$ is generated
+by pairing each pool key with the set of rewards calculated for each of the delegators to
+the pool with this key, as well as the moving average for the pool.
+Both of these are calculated using the $\fun{rewardOnePool}$ function.
+To generate the final output of the $\fun{reward}$ calculation,
+we take the union of the all the subsets of the rewards recods of individual
+keys from the range values of the $\var{results}$ map, and pair it with the
+union of all the pool keys (the domain of the $\var{results}$) and the associated
+moving averages for these (the second component of the range of the
+$\var{results}$ finite map).
+
 
 %%
 %% Figure - The Reward Calculation
@@ -327,12 +471,12 @@ Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\
 \begin{figure}[htb]
   \begin{align*}
       & \fun{rewardOnePool} \in \PrtclConsts \to \Coin \to \mathbb{N} \to \HashKey \to \StakePool\\
-      & ~~~\to \Distr \to \Distr \to (\AddrRWD \mapsto \Coin)\times[0, 1]
+      & ~~~\to \Distr \to (\HashKey \mapsto \mathbb{R}) \to (\AddrRWD \mapsto \Coin)\times[0, 1]
       & \text{reward one pool} \\
       & \fun{rewardOnePool}~\var{pc}~\var{R}~\var{n}~\var{poolHK}~\var{pool}~\var{distr}~\var{avgs} = \\
-      & ~~~\{ (\AddrRWD~hk)\mapsto ( \fun{indivRew}~\var{poolR}~\var{pool}
+      & ~~~(\{ (\AddrRWD~hk)\mapsto ( \fun{indivRew}~\var{poolR}~\var{pool}
                                              ~\sigma~\var{s}~(hk ==\var{poolHK})) \\
-      & ~~~~~~~\mid hk\mapsto s\in\var{distr}\},~\var{avg}\\
+      & ~~~~~~~\mid hk\mapsto s\in\var{distr}\},~\var{avg})\\
       & ~~~\where \\
       & ~~~~~~~\sigma = \sum_{\_\mapsto t\in\var{distr}} t\\
       & ~~~~~~~maxP = \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{s}~\var{poolConsts}\\
@@ -359,7 +503,7 @@ Figures~\ref{fig:functions:rewards},~\ref{fig:functions:reward-splitting}, and~\
                           \begin{array}{r@{\mapsto}c@{~\in~}l}
                           hk & \var{pool} & \var{pparams} \\
                           hk & \var{n} & \var{prod} \\
-                          hk & \var{distr} & \var{pdist} \\
+                          hk & \var{distr} & \var{pdistr} \\
                           \end{array}
                        \right\} \\
       & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{R}~\var{pc}~\var{n}~\var{hk}~\var{pool}~\var{distr}~\var{avgs}
@@ -514,10 +658,10 @@ accounting variables, as well as the individual reward addresses, are adjusted
 as follows:
 
 \begin{itemize}
-\item The $\var{treasury}$ has a fraction $\tau$ of the sum of
+\item To the $\var{treasury}$ we add a fraction $\tau$ of the sum of
 the fees accumulated from transactions this epoch, the decay amount
 of all current deposits, the total reward pool, and the expansion (how much
-coin is added to circulation each epoch) added to it
+coin is added to circulation each epoch)
 \item A fraction $\rho$ of the $\var{reserves}$ comes into circulation (i.e.
 is removed from $\var{reserves}$)
 \item The value added to $\var{treasury}$ is removed from the $\var{rewardPool}$
@@ -526,14 +670,25 @@ is removed from the $\var{rewardPool}$
 \item The accumulated fees, deposit decay, and circulation expansion is
 added to the $\var{rewardPool}$
 \item The rewards accumulated this epoch are distributed by
-adding the amount computed for each reward address (by the $\fun{rewardPool}$ calculation)
+adding the amount computed for each reward address (by the $\fun{reward}$ calculation)
 to the value of coin corresponding to that address
+\item The $\var{avgs}$ value in the delegation state is re-calculated and
+updated by the $\fun{reward}$ map also
 \end{itemize}
 
 Note that fees and deposit decay, above, are not explicitly removed from any account:
 the fees come from transactions paying them, and are accounted for whenever
 transactions are processed, and the deposit decay value comes from returning
 smaller refunds for deposits than were paid upon depositing.
+
+Recall also that in Section~\ref{sec:reward-dist}, we used $R$ to represent
+the total available rewards. Here, we present the calculation of the value
+passed to $\fun{rewards}$ as $R$, denoted $\var{availablePool}$ above.
+This value is a fraction $1-\tau$ of the sum of fees collected this epoch, the
+deposit decay, leftover rewards from
+the previous epoch, and this epoch's circulation expansion. The rest of this
+value (i.e. $\tau$) goes into the $\var{treasury}$, as stated above.
+
 
 %%
 %% Figure - Accounting Rules
