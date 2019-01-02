@@ -45,7 +45,8 @@ at a given pointer address.
 
 The next three functions ($\fun{movingAvgWeight}$, $\fun{movingAvgExp}$, and
 $\fun{poolConsts}$) in the figure return a specific subset of constants
-in the set of protocol constants needed for performing rewards calculations.
+in the set of protocol constants (stake pool-specific constants, respectively)
+needed for performing rewards calculations.
 
 %%
 %% Figure - Epoch Abstract Types
@@ -81,6 +82,8 @@ in the set of protocol constants needed for performing rewards calculations.
       & \text{moving average exponent}\\
       \fun{poolConsts} & \PrtclConsts \to \mathbb{R}_{>0}\times\mathbb{N}
       & \text{pool constants}\\
+      \fun{poolSpec} & \StakePool \to \Coin\times [0,1] \times \Coin
+      & \text{pool specs}\\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -123,7 +126,6 @@ and it is delegating to some registered stake pool.
 
 The finite map output of the function $\fun{activeStake}$ gives the subset of
 all the \textit{active} stake computed by $\fun{stake}$.
-
 These stake-related calculations are used in the calculation of rewards.
 
 %%
@@ -237,81 +239,95 @@ Functions used in reward calculations are presented in
 Figure~\ref{fig:functions:rewards}. The reward calculation below is done as part of the
 epoch boundary accounting to update the various accounting fields on the ledger,
 see Section~\ref{sec:acc-trans}. In the subsequent calculations, we use the
-following variables (sourced as indicated):
+following variables, sourced as indicated (listed here for reference):
 
 \begin{itemize}
-\item[]
+\item[] From the delegation state:
 \item $\var{avgs}$ stores the (moving) average for each
 stake pool
-\item $\var{pparams}$ stores stake pool-specific constants \newline
+\item $\var{pparams}$ stores stake pool-specific constants
+\item $\var{delegs}$ stores delegations as stake and pool key pairs \newline
 
-From the boundary accounting transition context
+From the boundary accounting transition context:
 \item $\var{prod}$ gives the number of blocks produced by each stake pool
-this epoch \newline
+this epoch, with $n$ representing the number of blocks corresponding to the
+given pool \newline
 
 Calculated as part of epoch boundary accounting, see
-Section~\ref{sec:acc-trans}: \\
-\item $\var{R}$ is the total available rewards for the epoch (in ADA) \newline
+Section~\ref{sec:acc-trans}:
+\item $\var{R} \in \Coin$ is the total available rewards for the epoch (in ADA) \newline
 
-Where is this from? \\
-\item $\overline{N}$, for a given pool, is the expectation value of the number
-of slots that the pool will be elected as leader on average \newline
-
-From protocol constants: \\
-\item $k$ is the optimal number of saturated stake pools (which the system
+From protocol (pool-related) constants:
+\item $k \in \mathbb{N}$ is the optimal number of saturated stake pools (which the system
 tends to by protocol design)
 \item $\var{a_0} \in [0, \infty)$ is a parameter determining leader-stake
-influence on pool rewards \newline
+influence on pool rewards
+\item $\gamma$ is the moving average exponent constant \newline
 
-Calculated by the functions defined below using the variables above: \\
+From pool-specific constants denoted $\var{pool}$, associated to a specific
+hash key in $\var{pparams}$:
+\item $c \in \Coin$ is the pool costs
+\item $m \in [0,1]$ is the stake pool margin
+\item $p \in \Coin$ is the pledge a stake key registering a pool defines (via
+the registration certificate)\newline
+
+Calculated by the functions defined in this section using the variables above:
 \item $\var{z_0} := 1/k$ is the size of a saturated pool
-\item $\sigma' := \fun{min}(\sigma, z_0)$, where $\sigma$ is the relative stake of the pool
-\item $s' := \fun{min}(s, z_0)$,
-\item $\sigma$ is the average amount of stake (expressed as a fraction of
-the total stake) a pool has
-\item $s$ is the fraction of the total stake a particular pool has \\
-  $s$ is the relative stake of the pool leader (the amount of ADA pledged during pool registration
+\item $\var{active}$ is the finite map associating a stake key to all the
+active stake belonging to it
+\item $s \in [0,1]$, or $t$, is the relative stake associated to a specific stake key
+(i.e. the value associated to it in $\var{active}$ stake, normalized)
+\item $\var{tot} \in \Coin$ is the sum total of all the $\var{active}$ stake
+\item $\var{actgr}$ is the subset of the total $\var{active}$ stake
+for which its stake key delegates to a given pool
+\item $\var{pactive}$ is the finite map of all the subsets of $\var{actgr}$,
+each associated to its pool key
+\item $\sigma \in [0,1]$ is the total relative stake of a pool (expressed as a fraction of
+the total stake, which is a sum of the relative member's stake)
+\item $p_r \in [0,1]$ is the relative pledge of a given pool, calculated by normalizing $p$
+\item $\overline{N} \in \mathbb{R}$, for a given pool, is the expectation value of the number
+of slots that the pool will be elected as leader on average
+\item $\var{maxP} \in \Coin$ is the maximum stake that could be received by a particular
+pool
+\item $\var{\hat{f}}$ is the pool rewards
+\item $\var{avg}$ is the relative moving average for a given pool calculated for
+the current epoch
 \end{itemize}
 
-\begin{todo}
-  What is s? Is sigma correct?
-
-  Where does N come from?
-\end{todo}
-
 The function $\fun{maxPool}$ gives the maximum possible amount of rewards a pool
-can receieve in an epoch. For a given pool, it is calculated as a fraction of
-the total available rewards. This result depends on the protocol
-constants, the average stake distribution, and the amount of stake the pool has.
+can receive in an epoch. For a given pool, it is a coin value which is some fraction of
+the total available rewards. This result depends additionally on the protocol
+constants, the pool's relative stake, and the pool's relative pledge.
 
 The function $\fun{movingAvg}$ calculates the new moving average for a
 given stake pool based on protocol constants, pool's block production, and
-the expectation of the number of slots the pool will be elected to be a leader of.
+the moving average of this pool in the previous epoch.
 
-Next, the function $\fun{poolRew}$ gives the total rewards to be distributed
-within the given pool. This value is based on the re-calculated (for this epoch) pool
-average and additional protocol constants.
+Next, the function $\fun{poolRew}$ gives the total rewards available to be distributed
+to the members of the given pool. This value is based on protocol constants,
+the pool's block production, moving average, election expectation, and the maximum
+possible rewards for this pool.
 
 %%
 %% Figure - Functions for the Reward Calculation
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{maxPool} \in \PrtclConsts \to \Coin \to [0, 1] \to [0, 1] \to \Coin
+      & \fun{maxPool} \in \PrtclConsts \to \Coin \to [0, 1] \to [0,1] \to \Coin
       & \text{max pool reward} \\
-      & \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{s} = \\
+      & \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{p_r} = \\
       & ~~~\floor*{
            \frac{R}{1 + a_0}
            \cdot
-           \left(\sigma' + s'\cdot a_0\cdot\frac{\sigma' - s'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
+           \left(\sigma' + p'\cdot a_0\cdot\frac{\sigma' - p'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
       & ~~~\where \\
       & ~~~~~~~(a_0, k) = \fun{poolConsts}~pc \\
       & ~~~~~~~z_0 = 1/k \\
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
-      & ~~~~~~~s'=\min(s,~z_0) \\
+      & ~~~~~~~p'=\min(p_r,~z_0) \\
       \nextdef
       & \fun{movingAvg} \in \PrtclConsts \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
-      & ~~~\to (\HashKey \mapsto \mathbb{R}) \to [0, 1]
+      & ~~~\to \Distr \to [0, 1]
       & \text{moving average} \\
       & \fun{movingAvg}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs} = \\
       & \begin{cases}
@@ -325,7 +341,7 @@ average and additional protocol constants.
       & ~~~~~~~\alpha = \fun{movingAvgWeight}~pc \\
       \nextdef
       & \fun{poolRew} \in \PrtclConsts \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
-      & ~~~\to (\HashKey \mapsto \mathbb{R}) \to \Coin \to (\Coin \times [0, 1])
+      & ~~~\to \Distr \to \Coin \to (\Coin \times [0, 1])
       & \text{pool reward} \\
       & \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} =
       (\floor*{avg^\gamma\cdot \var{maxP}},~\var{avg})\\
@@ -339,26 +355,31 @@ average and additional protocol constants.
 
 In Figure~\ref{fig:functions:reward-splitting}, we give the strategy for the
 splitting of the rewards within a given pool. Note that the calculation of
-the total value is presented above, denoted $\fun{poolRew}$.
+the total value to be split within the pool is presented above, denoted $\fun{poolRew}$.
 
 The portion of rewards allocated to the pool leader and those allocated to
 the rest of the pool members is different. This portion is calculated based
-on pool-specific constants (these come from the ledger state), as well as
-the $\sigma$ and $s$ (calculated as part of reward
-distribution, see below). The calculation for the pool
+on pool-specific constants stored on the ledger, as well as
+the pool's total stake and the individual stake of the key for which the rewards
+are being calculated. The calculation for the pool
 leader reward amount is given by the $\fun{leaderRew}$ function, and the
 calculation for the reward amount for each other member is give by $\fun{memberRew}$.
 Finally, $\fun{indivRew}$ puts these two calculations together to give the
-reward amount for any pool member, using a boolean as an input to indicate
+reward amount for any pool member, using a boolean $\var{isLeader}$
+as an input variable which indicates
 whether a given member is the pool leader or not.
 
-Here we also present the $\fun{groupByPool}$ map, which, given a stake distribution
-for all registered stake keys, as well as the current delegations, produces a
-finite map indexed by the hash keys of pool leaders. Each leader key is associated
-with a subset of the stake distribution finite map. This associated subset
-contains only the stake distribution entries where the hash keys delegate to the pool
+Here we also present the $\fun{groupByPool}$ map, which, given the active stake
+belonging to each registered stake key,
+as well as the current delegations, produces a
+finite map indexed by the hash keys of pool leaders. Each $\var{leader}$ key is associated
+with a subset of the active stake finite map. This associated subset
+contains only the entries where the hash keys delegate to that pool
 which the given leader is the leader of.
 
+\begin{todo}
+  poolSpec pool = (c,m,p) is ok?
+\end{todo}
 %%
 %% Figure - Functions for the Reward Splitting
 %%
@@ -373,18 +394,18 @@ which the given leader is the leader of.
           \text{otherwise.}
         \end{cases} \\
       & ~~~\where \\
-      & ~~~~~~~(c, m) = \fun{poolConsts}~pool \\
+      & ~~~~~~~(c, m, \_) = \fun{poolSpec}~pool \\
       \nextdef
       & \fun{memberRew} \in \Coin \to \StakePool \to [0, 1] \to [0, 1] \to \Coin
       & \text{pool member reward} \\
-      & \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{t} = \\
+      & \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{s} = \\
       & \begin{cases}
           0 & \hat{f} \leq c\\
-          (\hat{f} - c)\cdot(1-m)\cdot\frac{t}{\sigma} &
+          (\hat{f} - c)\cdot(1-m)\cdot\frac{s}{\sigma} &
           \text{otherwise.}
         \end{cases} \\
       & ~~~\where \\
-      & ~~~~~~~(c, m) = \fun{poolConsts}~pool \\
+      & ~~~~~~~(c, m, \_) = \fun{poolSpec}~pool \\
       \nextdef
       & \fun{indivRew} \in \Coin \to \StakePool \to [0, 1] \to [0, 1] \to \mathbb{B} \to \Coin
       & \text{pool individual reward} \\
@@ -394,12 +415,13 @@ which the given leader is the leader of.
         \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{s} & \text{otherwise.}
         \end{cases} \\
       \nextdef
-      & \fun{groupByPool} \in \Distr \to (\HashKey \mapsto \HashKey) \\
+      & \fun{groupByPool} \in (\HashKey \mapsto \Coin) \to (\HashKey \mapsto \HashKey) \\
       & ~~~\to (\HashKey \mapsto \Distr)
       & \text{pool individual reward} \\
-      & \fun{groupByPool}~\var{dstr}~\var{delegs} = \\
-      & ~~~\Big\{ leader \mapsto \{hk \mapsto d \in distr \mid (hk \mapsto leader)\in\var{delegs}\}
-                  \Big\}
+      & \fun{groupByPool}~\var{active}~\var{delegs} = \\
+      & ~~~\Big\{ leader \mapsto
+      \{hk \mapsto c \mid hk \mapsto c \in active\} \\
+      & ~~~~~~            \mid hk \mapsto leader\in\var{delegs} \Big\}
   \end{align*}
   \caption{Functions used in the Reward Splitting}
   \label{fig:functions:reward-splitting}
@@ -410,29 +432,23 @@ Finally, the reward calculation is presented in
 Figure~\ref{fig:functions:reward-calc}. The calculation is done pool-by-pool.
 The map $\fun{rewardOnePool}$ calculates the rewards given out to each member
 of a given pool (with leader identified by
-the stake key $\var{poolHK}$). The pool is passed to $\fun{rewardOnePool}$
-via the $\var{distr}$ variable, which is a subset of hash keys in this pool
-paired with the stake fractions associated with the keys.
+the stake key $\var{poolHK}$). The active stake associated to each
+pool member is passed to $\fun{rewardOnePool}$
+via the $\var{actgr}$ variable, which is a subset of hash keys in this pool
+paired with the stake associated with the keys.
 
-Given, additionally, pool and protocol constants,
-as well as the total available rewards, block production,
-and the pool averages, this map outputs a finite map and an $\var{avg}$
+This $\fun{rewardOnePool}$ map outputs a finite map and an $\var{avg}$
 value. The finite map is indexed
 by reward addresses. In particular, the subset of reward addresses corresponding
 to registered keys delegating to the pool with leader $\var{poolHK}$.
 A reward address of key $hk$ is paired with the individual reward value
 produced by the $\fun{indivRew}$ map applied to relevant data passed to
 $\fun{rewardOnePool}$ as well as the results of the $\fun{maxPool}$
-and $\fun{poolReq}$ calculations. The $\var{avg}$ value for the stake pool
+and $\fun{poolRew}$ calculations. The $\var{avg}$ value for the stake pool
 (i.e. the pool's ranking) is also calculated by the $\fun{poolRew}$ function.
 
-\begin{todo}
-  in rewardOnePool, sigma should be an average, i.e. divided by the size of distr?
-  should it be k $\div$ tot?
-\end{todo}
-
 The $\fun{reward}$ calculation itself uses the $\fun{rewardOnePool}$
-function to reward each pool and calculate the pools' moving averages. In order
+function to reward each pool's members and calculate the pools' moving averages. In order
 to do this, is given the following parameters:
 
 \begin{itemize}
@@ -447,11 +463,12 @@ The output of the $\fun{reward}$ calculation is a pair. The first component is
 a finite map indicating the new rewards assigned to each reward address.
 The second component is the record of every pool's updated moving average.
 
-Within the $\fun{reward}$ calculation, the stake distribution $\var{stDistr}$
-is calculated for each stake key by dividing the the active stake associated
-with that key by the total active stake. This distribution is then grouped
+Within the $\fun{reward}$ calculation, the active stake correspoinding to each
+(active and delegating to an active pool) stake key, $\var{active}$,
+is calculated by adding up the total active stake for that key currently on
+the ledger. The entries of this finite map are then then grouped
 into subsets by the pool each stake key belongs to using the
-$\fun{groupByPool}$ mapping.
+$\fun{groupByPool}$ mapping (to give the $\var{pactive}$ value).
 
 Next, a dataset of $\var{results}$ is generated
 by pairing each pool key with the set of rewards calculated for each of the delegators to
@@ -464,6 +481,22 @@ union of all the pool keys (the domain of the $\var{results}$) and the associate
 moving averages for these (the second component of the range of the
 $\var{results}$ finite map).
 
+\begin{todo}
+  N is sigma times what?
+
+  what should we normalize sigma and c by passing it to indivRew
+
+  pstake divided by tot (stake) or total ada in existence?
+
+  pr, the relative pledge, is p divided by?!
+
+  indivRew takes s=individual relative stake and, i.e. c divided by
+  tot stake (or ADA, which is it)?
+
+  here, indivRew memberRew and leaderRew all need indiv stake? (s)
+
+  maxPool takes pr=relative pledge, right?
+\end{todo}
 
 %%
 %% Figure - The Reward Calculation
@@ -471,15 +504,25 @@ $\var{results}$ finite map).
 \begin{figure}[htb]
   \begin{align*}
       & \fun{rewardOnePool} \in \PrtclConsts \to \Coin \to \mathbb{N} \to \HashKey \to \StakePool\\
-      & ~~~\to \Distr \to (\HashKey \mapsto \mathbb{R}) \to (\AddrRWD \mapsto \Coin)\times[0, 1]
+      & ~~~\to (\HashKey \mapsto \Coin)\to \Distr \to \Coin \to (\AddrRWD \mapsto \Coin)\times[0, 1]
       & \text{reward one pool} \\
-      & \fun{rewardOnePool}~\var{pc}~\var{R}~\var{n}~\var{poolHK}~\var{pool}~\var{distr}~\var{avgs} = \\
+      & \fun{rewardOnePool}~\var{pc}~\var{R}~\var{n}~\var{poolHK}~\var{pool}
+        ~\var{actgr}~\var{avgs}~\var{tot} = \\
       & ~~~(\{ (\AddrRWD~hk)\mapsto ( \fun{indivRew}~\var{poolR}~\var{pool}
-                                             ~\sigma~\var{s}~(hk ==\var{poolHK})) \\
-      & ~~~~~~~\mid hk\mapsto s\in\var{distr}\},~\var{avg})\\
+                                 ~(\sigma\div\var{tot})~(\var{c}\div\var{tot})~(hk ==\var{poolHK})) \\
+      & ~~~~~~~\mid hk\mapsto c\in\var{actgr}\},~\var{avg})\\
       & ~~~\where \\
-      & ~~~~~~~\sigma = \sum_{\_\mapsto t\in\var{distr}} t\\
-      & ~~~~~~~maxP = \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{s}~\var{poolConsts}\\
+      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{actgr}} t \\
+      & ~~~~~~~\sigma = \var{pstake} \div tot \\
+      & ~~~~~~~\var{\overline{N}} = \sigma * \\
+      & ~~~~~~~(\_, \_, p) = \fun{poolSpec}~pool \\
+      & ~~~~~~~p_{r} = p \div tot \\
+      & ~~~~~~~maxP =
+      \begin{cases}
+          \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{p_r}&
+              p \leq \var{pstake}\\
+          0 & \text{otherwise.}
+        \end{cases} \\
       & ~~~~~~~\var{poolR},~\var{avg} = \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} \\
       \nextdef
       & \fun{reward} \in \Production \to \PrtclConsts \to \Coin \\
@@ -496,19 +539,20 @@ $\var{results}$ finite map).
       & ~~~~~~~\var{stpools},\var{pparams},\var{retiring},\var{avgs} = \var{pstate} \\
       & ~~~~~~~active = \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools} \\
       & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{active}}c \\
-      & ~~~~~~~stDistr = \left\{ hk\mapsto c \div tot \mid hk \mapsto c \in \var{active} \right\}\\
-      & ~~~~~~~pdistr = \fun{groupByPool}~\var{stDistr}~\var{delegs} \\
+%      & ~~~~~~~stDistr = \left\{ hk\mapsto c \div tot \mid hk \mapsto c \in \var{active} \right\}\\
+      & ~~~~~~~pactive = \fun{groupByPool}~\var{active}~\var{delegs} \\
       & ~~~~~~~pdata = \left\{
-                         hk\mapsto (pool, n, distr)  \mathrel{\Bigg|}
+                         hk\mapsto (pool, n, actgr)  \mathrel{\Bigg|}
                           \begin{array}{r@{\mapsto}c@{~\in~}l}
                           hk & \var{pool} & \var{pparams} \\
                           hk & \var{n} & \var{prod} \\
-                          hk & \var{distr} & \var{pdistr} \\
+                          hk & \var{actgr} & \var{pactive} \\
                           \end{array}
                        \right\} \\
-      & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{R}~\var{pc}~\var{n}~\var{hk}~\var{pool}~\var{distr}~\var{avgs}
+      & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{R}~\var{pc}~\var{n}~\var{hk}
+      ~\var{pool}~\var{actgr}~\var{avgs}~\var{tot}
                          \mid \\
-      &\qquad \qquad \qquad \qquad hk\mapsto(n, pool, distr)\in\var{pdata} \}
+      &\qquad \qquad \qquad \qquad hk\mapsto(n, pool, actgr)\in\var{pdata} \}
   \end{align*}
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
