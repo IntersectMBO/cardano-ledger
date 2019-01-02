@@ -20,12 +20,7 @@ import qualified Hedgehog.Gen    as Gen
 import           Generator
 
 import           Coin
-import           LedgerState             ( LedgerValidation(..)
-                                         , ValidationError (..)
-                                         , asStateTransition
-                                         , utxoState
-                                         , utxo)
-
+import           LedgerState
 import           Slot
 import           UTxO
 
@@ -60,15 +55,15 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Cover
 propPreserveBalanceInitTx =
     withCoverage $ do
-      (_, steps, fees, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, steps, fee, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
       classify (steps > 1) "non-trivial number of steps"
       case next of
         Left _    -> failure
         Right ls' -> do
               classify (isNotDustDist (ls ^. utxoState . utxo) (ls' ^. utxoState . utxo)) "non-trivial wealth dist"
-              balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) <> fees
+              balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) <> fee
 
--- | Property 7.2 (Preserve Balance Restricted to TxIns in Balance of TxOuts)
+-- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Cover
 propBalanceTxInTxOut = withCoverage $ do
   (l, steps, fee, txwits, l')  <- forAll genValidStateTx
@@ -78,7 +73,7 @@ propBalanceTxInTxOut = withCoverage $ do
   classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
   (balance $ inps <| (l ^. utxoState . utxo)) === ((balance $ txouts tx) <> fee)
 
--- | Property 7.3 (Preserve Outputs of Transaction)
+-- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Cover
 propPreserveOutputs = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
@@ -87,7 +82,7 @@ propPreserveOutputs = withCoverage $ do
   classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
   True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo)
 
--- | Property 7.4 (Eliminate Inputs of Transaction)
+-- | Property (Eliminate Inputs of Transaction)
 propEliminateInputs :: Cover
 propEliminateInputs = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
@@ -97,7 +92,7 @@ propEliminateInputs = withCoverage $ do
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
   Map.empty === Map.restrictKeys (utxoMap $ l' ^. utxoState . utxo) (txins tx)
 
--- | Property 7.5 (Completeness and Collision-Freeness of new TxIds)
+-- | Property (Completeness and Collision-Freeness of new TxIds)
 propUniqueTxIds :: Cover
 propUniqueTxIds = withCoverage $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
@@ -174,6 +169,9 @@ propertyTests = testGroup "Property-Based Testing"
                   , testPropertyCoverage
                     "using subset of witness set"
                     propCheckMissingWitness
+                  , testPropertyCoverage
+                    "Correctly preserve balance"
+                    propPreserveBalance
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testPropertyCoverage
@@ -253,3 +251,16 @@ propCheckMissingWitness = withCoverage $ do
     Left [MissingWitnesses] -> isRealSubset === True
     Right _                 -> (witnessSet' == witnessSet'') === True
     _                       -> failure
+
+-- | Property (Preserve Balance)
+propPreserveBalance :: Cover
+propPreserveBalance = withCoverage $ do
+  (l, _, fee, tx, l') <- forAll genValidStateTx
+  let destroyed =
+           (balance (l ^. utxoState . utxo))
+        <> (keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) $ tx ^. body)
+  let created =
+           (balance (l' ^. utxoState . utxo))
+        <> fee
+        <> (depositAmount (l' ^. pcs) (l' ^. delegationState . stPools) $ tx ^.body)
+  destroyed === created
