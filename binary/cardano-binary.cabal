@@ -42,7 +42,7 @@ library
                      , digest
                      , formatting
                      , lens
-                     , micro-recursion-schemes
+                     , recursion-schemes
                      , mtl
                      , safe-exceptions
                      , tagged

@@ -107,9 +107,10 @@ library
                        Cardano.Chain.Update.Undo
                        Cardano.Chain.Update.Vote
 
-  build-depends:       base >=4.11 && <4.12
+                       Data.Aeson.Options
+
+  build-depends:       base >=4.11 && <5
                      , aeson
-                     , aeson-options
                      , base16-bytestring
                      , base58-bytestring
                      , base64-bytestring-type
