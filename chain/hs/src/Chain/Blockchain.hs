@@ -18,7 +18,6 @@ import Chain.GenesisBlock (genesisBlock)
 import Control.State.Transition
 import Data.Maybe (isJust, fromJust, listToMaybe)
 import Data.Queue
-import Delegation.Interface (initDIState)
 import Ledger.Core (VKey(..), VKeyGen, Slot, SlotCount(SlotCount), verify)
 import Ledger.Delegation (DCert, DIState, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
@@ -123,7 +122,12 @@ instance STS BC where
 
   -- There are only two inference rules: 1) for the initial state and 2) for
   -- extending the blockchain by a new block
-  initialRules = [ return $ (Map.empty, genesisBlock, initDIState) ]
+  initialRules =
+    [ do
+        IRC env <- judgmentContext
+        initDIState <- trans @DELEG $ IRC (bcEnvDIEnv env)
+        return (Map.empty, genesisBlock, initDIState)
+    ]
   transitionRules =
     [ do
         TRC jc <- judgmentContext
