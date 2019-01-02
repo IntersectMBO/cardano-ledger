@@ -75,10 +75,8 @@ state.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
     \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'} \\
-    \implies \fun{balance}(\applyFun{getUTxO}{l}) +
-    \fun{refunds}~\var{pc}~\var{dallocs}~\var{pallocs}~\var{tx} =
-    \fun{balance}(\applyFun{getUTxO}{l'}) + \applyFun{txfee}{tx} +
-    \fun{refunds}~\var{pc}~\var{tx}
+    \implies \applyFun{destroyed}{pc utxo stKeys rewards tx} =
+    \applyFun{created}{pc stPools tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
 \end{property}
@@ -86,7 +84,9 @@ state.
 Property~\ref{prop:ledger-properties-1} states that for each valid ledger $l$,
 if a transaction $tx$ is added to the ledger via the state transition rule
 $utxow$ to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the
-balance of the UTxOs in $l'$ minus the transaction fees.
+balance of the UTxOs in $l'$ in the sense that the amount of created value in
+$l'$ equals the amount of destroyed value in $l$. This means that the total
+amount of value is left unchanged by a transaction.
 
 \begin{property}[\textbf{Preserve Balance Restricted to TxIns in Balance of
     TxOuts}]

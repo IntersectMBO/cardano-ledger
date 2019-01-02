@@ -47,6 +47,8 @@ module LedgerState
   , stPools
   , pParams
   , retiring
+  -- refunds
+  , keyRefunds
   ) where
 
 import           Control.Monad           (foldM)
