@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE DeriveAnyClass   #-}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumDecimals      #-}
 {-# LANGUAGE TupleSections    #-}
@@ -36,8 +38,8 @@ import Cardano.Chain.Block.Block
 import Cardano.Chain.Block.Header
   (BlockSignature(..), HeaderHash, recoverSignedBytes, wrapBoundaryBytes)
 import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
-import Cardano.Chain.Delegation.Payload (APayload(..))
 import qualified Cardano.Chain.Delegation as Delegation
+import Cardano.Chain.Delegation.Payload (APayload(..))
 import Cardano.Chain.Delegation.Validation
   (delegates, initialInterfaceState, updateDelegation)
 import Cardano.Chain.Genesis as Genesis
@@ -72,10 +74,10 @@ import Cardano.Crypto
 --   improve performance. The sum of the `BlockCount`s in the map should be
 --   equal to the length of the sequence.
 data SigningHistory = SigningHistory
-  { shK                 :: BlockCount
-  , shSigningQueue      :: Seq StakeholderId
-  , shStakeholderCounts :: Map StakeholderId BlockCount
-  } deriving (Eq, Show)
+  { shK                 :: !BlockCount
+  , shSigningQueue      :: !(Seq StakeholderId)
+  , shStakeholderCounts :: !(Map StakeholderId BlockCount)
+  } deriving (Eq, Show, Generic, NFData)
 
 checkDelegator :: BlockCount -> PublicKey -> SigningHistory -> Bool
 checkDelegator byzantineNodes s sh =
@@ -119,10 +121,10 @@ updateSigningHistory pk sh
 --------------------------------------------------------------------------------
 
 data ChainValidationState = ChainValidationState
-  { cvsSigningHistory  :: SigningHistory
-  , cvsPreviousHash    :: Maybe HeaderHash
-  , cvsDelegationState :: Delegation.InterfaceState
-  } deriving (Eq, Show)
+  { cvsSigningHistory  :: !SigningHistory
+  , cvsPreviousHash    :: !(Maybe HeaderHash)
+  , cvsDelegationState :: !Delegation.InterfaceState
+  } deriving (Eq, Show, Generic, NFData)
 
 initialChainValidationState
   :: MonadError Delegation.SchedulingError m
