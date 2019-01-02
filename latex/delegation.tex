@@ -194,7 +194,7 @@ transactions, but does not accumulate additional stake (i.e. rewards/money).
 Once the stake key is registered and delegating, either the base address or
 the pointer address can be used to generate outputs
 in a transaction. However, it makes more sense to use the shorter pointer
-address at this point. 
+address at this point.
 
 Note also that individual key registration
 and deregistration certificates contain no important data beyond a declaration
@@ -225,7 +225,9 @@ and deregistrations or retirement. The variable that stores other necessary pool
 registration data is $\var{pparams}$, and is a finite map that stores $\StakePool$
 constants indexed by the hash keys to which they correspond.
 Finally, $\var{avgs}$ stores the latest value of the pool's moving average
-used in the reward calculation, see Section~\ref{sec:epoch}.
+used in the reward calculation, see Section~\ref{sec:epoch}. This value
+quantifies, as a fraction, the desirability of delegating to the given pool, calculated
+based on past performance.
 
 The state $\PState$ also keeps track of
 stake pools scheduled to retire via the variable $\var{retiring}$,
