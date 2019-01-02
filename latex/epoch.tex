@@ -246,33 +246,33 @@ following variables, sourced as indicated (listed here for reference):
 \item $\var{avgs}$ stores the (moving) average for each
 stake pool
 \item $\var{pparams}$ stores stake pool-specific constants
-\item $\var{delegs}$ stores delegations as stake and pool key pairs \newline
+\item $\var{delegs}$ stores delegations as stake and pool key pairs \medskip
 
 From the boundary accounting transition context:
 \item $\var{prod}$ gives the number of blocks produced by each stake pool
 this epoch, with $n$ representing the number of blocks corresponding to the
-given pool \newline
+given pool \medskip
 
 Calculated as part of epoch boundary accounting, see
 Section~\ref{sec:acc-trans}:
-\item $\var{R} \in \Coin$ is the total available rewards for the epoch (in ADA) \newline
+\item $\var{R} \in \Coin$ is the total available rewards for the epoch (in ADA) \medskip
 
 From protocol (pool-related) constants:
-\item $k \in \mathbb{N}$ is the optimal number of saturated stake pools (which the system
+\item $n_{opt} \in \mathbb{N}$ is the optimal number of saturated stake pools (which the system
 tends to by protocol design)
 \item $\var{a_0} \in [0, \infty)$ is a parameter determining leader-stake
 influence on pool rewards
-\item $\gamma$ is the moving average exponent constant \newline
+\item $\gamma$ is the moving average exponent constant \medskip
 
 From pool-specific constants denoted $\var{pool}$, associated to a specific
 hash key in $\var{pparams}$:
 \item $c \in \Coin$ is the pool costs
 \item $m \in [0,1]$ is the stake pool margin
 \item $p \in \Coin$ is the pledge a stake key registering a pool defines (via
-the registration certificate)\newline
+the registration certificate)\medskip
 
 Calculated by the functions defined in this section using the variables above:
-\item $\var{z_0} := 1/k$ is the size of a saturated pool
+\item $\var{z_0} := 1/n_{opt}$ is the size of a saturated pool
 \item $\var{active}$ is the finite map associating a stake key to all the
 active stake belonging to it
 \item $s \in [0,1]$, or $t$, is the relative stake associated to a specific stake key
@@ -285,7 +285,7 @@ each associated to its pool key
 \item $\sigma \in [0,1]$ is the total relative stake of a pool (expressed as a fraction of
 the total stake, which is a sum of the relative member's stake)
 \item $p_r \in [0,1]$ is the relative pledge of a given pool, calculated by normalizing $p$
-\item $\overline{N} \in \mathbb{R}$, for a given pool, is the expectation value of the number
+\item $\overline{N} \in \mathbb{R}$, for a given pool, is the expectated value of the number
 of slots that the pool will be elected as leader on average
 \item $\var{maxP} \in \Coin$ is the maximum stake that could be received by a particular
 pool
@@ -321,8 +321,8 @@ possible rewards for this pool.
            \cdot
            \left(\sigma' + p'\cdot a_0\cdot\frac{\sigma' - p'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
       & ~~~\where \\
-      & ~~~~~~~(a_0, k) = \fun{poolConsts}~pc \\
-      & ~~~~~~~z_0 = 1/k \\
+      & ~~~~~~~(a_0, n_{opt}) = \fun{poolConsts}~pc \\
+      & ~~~~~~~z_0 = 1/n_{opt} \\
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
       & ~~~~~~~p'=\min(p_r,~z_0) \\
       \nextdef
@@ -363,7 +363,7 @@ on pool-specific constants stored on the ledger, as well as
 the pool's total stake and the individual stake of the key for which the rewards
 are being calculated. The calculation for the pool
 leader reward amount is given by the $\fun{leaderRew}$ function, and the
-calculation for the reward amount for each other member is give by $\fun{memberRew}$.
+calculation for the reward amount for each other member is given by $\fun{memberRew}$.
 Finally, $\fun{indivRew}$ puts these two calculations together to give the
 reward amount for any pool member, using a boolean $\var{isLeader}$
 as an input variable which indicates
@@ -377,9 +377,6 @@ with a subset of the active stake finite map. This associated subset
 contains only the entries where the hash keys delegate to that pool
 which the given leader is the leader of.
 
-\begin{todo}
-  poolSpec pool = (c,m,p) is ok?
-\end{todo}
 %%
 %% Figure - Functions for the Reward Splitting
 %%
@@ -448,7 +445,7 @@ and $\fun{poolRew}$ calculations. The $\var{avg}$ value for the stake pool
 (i.e. the pool's ranking) is also calculated by the $\fun{poolRew}$ function.
 
 The $\fun{reward}$ calculation itself uses the $\fun{rewardOnePool}$
-function to reward each pool's members and calculate the pools' moving averages. In order
+function to reward each pool's members and calculate the pool's moving averages. In order
 to do this, is given the following parameters:
 
 \begin{itemize}
@@ -463,7 +460,7 @@ The output of the $\fun{reward}$ calculation is a pair. The first component is
 a finite map indicating the new rewards assigned to each reward address.
 The second component is the record of every pool's updated moving average.
 
-Within the $\fun{reward}$ calculation, the active stake correspoinding to each
+Within the $\fun{reward}$ calculation, the active stake corresponding to each
 (active and delegating to an active pool) stake key, $\var{active}$,
 is calculated by adding up the total active stake for that key currently on
 the ledger. The entries of this finite map are then then grouped
@@ -481,22 +478,14 @@ union of all the pool keys (the domain of the $\var{results}$) and the associate
 moving averages for these (the second component of the range of the
 $\var{results}$ finite map).
 
-\begin{todo}
-  N is sigma times what?
-
-  what should we normalize sigma and c by passing it to indivRew
-
-  pstake divided by tot (stake) or total ada in existence?
-
-  pr, the relative pledge, is p divided by?!
-
-  indivRew takes s=individual relative stake and, i.e. c divided by
-  tot stake (or ADA, which is it)?
-
-  here, indivRew memberRew and leaderRew all need indiv stake? (s)
-
-  maxPool takes pr=relative pledge, right?
-\end{todo}
+\begin{note}
+In the~\cite{delegation_design} document, Section 6.5.1, the values of individual
+relative stake $s$ and pool relative stake $\sigma$ are calculated by
+dividing the corresponding total values by total ADA (31, 000, 000, 000). In this
+document, we normalize pool and individual stake, i.e. obtain $s$ and $\sigma$
+by dividing by the sum total of \textit{all active stake} $tot$. We also calculate
+the relative pledge in the same way, $p_r = p \div tot$.
+\end{note}
 
 %%
 %% Figure - The Reward Calculation
@@ -514,7 +503,7 @@ $\var{results}$ finite map).
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{actgr}} t \\
       & ~~~~~~~\sigma = \var{pstake} \div tot \\
-      & ~~~~~~~\var{\overline{N}} = \sigma * \\
+      & ~~~~~~~\var{\overline{N}} = \sigma * \slotsPer\\
       & ~~~~~~~(\_, \_, p) = \fun{poolSpec}~pool \\
       & ~~~~~~~p_{r} = p \div tot \\
       & ~~~~~~~maxP =
