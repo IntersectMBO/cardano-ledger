@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass   #-}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TupleSections    #-}
 
@@ -63,15 +65,15 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data SchedulingState = SchedulingState
-  { ssScheduledDelegations :: Seq ScheduledDelegation
-  , ssKeyEpochDelegations  :: Set (EpochIndex, StakeholderId)
-  } deriving (Eq, Show)
+  { ssScheduledDelegations :: !(Seq ScheduledDelegation)
+  , ssKeyEpochDelegations  :: !(Set (EpochIndex, StakeholderId))
+  } deriving (Eq, Show, Generic, NFData)
 
 data ScheduledDelegation = ScheduledDelegation
-  { sdSlot      :: FlatSlotId
-  , sdDelegator :: StakeholderId
-  , sdDelegate  :: StakeholderId
-  } deriving (Eq, Show)
+  { sdSlot      :: !FlatSlotId
+  , sdDelegator :: !StakeholderId
+  , sdDelegate  :: !StakeholderId
+  } deriving (Eq, Show, Generic, NFData)
 
 data SchedulingError
 
@@ -160,9 +162,9 @@ scheduleCertificate config slot d ss cert = do
 -- | Maps containing, for each delegator, the active delegation and the slot it
 --   became active in.
 data ActivationState = ActivationState
-  { asDelegationMap   :: Map StakeholderId StakeholderId
-  , asDelegationSlots :: Map StakeholderId FlatSlotId
-  } deriving (Eq, Show)
+  { asDelegationMap   :: !(Map StakeholderId StakeholderId)
+  , asDelegationSlots :: !(Map StakeholderId FlatSlotId)
+  } deriving (Eq, Show, Generic, NFData)
 
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
@@ -190,9 +192,9 @@ activateDelegation as delegation
 
 -- | State shared between the blockchain and the ledger
 data InterfaceState = InterfaceState
-  { isSchedulingState :: SchedulingState
-  , isActivationState :: ActivationState
-  } deriving (Eq, Show)
+  { isSchedulingState :: !SchedulingState
+  , isActivationState :: !ActivationState
+  } deriving (Eq, Show, Generic, NFData)
 
 
 -- | The initial state maps each genesis key to itself and overrides this using
