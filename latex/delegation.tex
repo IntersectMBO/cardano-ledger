@@ -1,4 +1,3 @@
-
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
@@ -185,7 +184,7 @@ consists of four variables. The first, $\var{stkeys}$, keeps track of individual
 stake key resource allocations using the $\Allocs$ type.
 
 Note that for security, privacy, and usability reasons, the staking (delegating)
-key pair associated with an address must be different than its paying key pair.
+key pair associated with an address must be different from its paying key pair.
 \textit{Every address} must have a paying key \textit{and} a stake key
 associated to it in order to participate in using the currency. Before the
 stake key is registered and delegates to an existing stake pool,
@@ -324,7 +323,7 @@ in order to be able to retrieve its address for the rewards update.
 
 As a result of this rule, the author's key must be removed from the $\var{stkeys}$ list,
 and all the rewards, pointers, and delegations associated with this key must be removed
-from the $\var{rewards}$, $\var{pointers}$, and $\var{delegations}$ parameters also.
+from the $\var{rewards}$, $\var{pointers}$, and $\var{delegations}$ parameters as well.
 
 Note that we must only allow performing a key deregistration when there
 are no active stake pools associated with this key. This check requires additional
@@ -363,7 +362,7 @@ delegate to. This decision, however, is influenced by some parameters in the
 protocol. These parameters determine which stake pools are more profitable
 to delegate to, as well as the optimal number of stake pools in the system,
 by means of regulating reward distribution.
-This avoids forming a monopoly of a a single large stake pool constantly
+This avoids forming a monopoly of a single large stake pool constantly
 being delegated to.
 
 
