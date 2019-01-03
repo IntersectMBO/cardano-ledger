@@ -41,7 +41,7 @@ transaction inputs are the empty set for the initial transaction. An element of
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
     \label{eq:2}
-    \forall l_{0},..,l_{n} \in \ledgerState, l_{0} =
+    \forall l_{0},\ldots,l_{n} \in \ledgerState, l_{0} =
     \left(
       \begin{array}{c}
         \left\{
@@ -155,7 +155,7 @@ set of $l$.
 
 \begin{property}[\textbf{Absence of Double-Spend}]
   \begin{multline*}
-    \forall l_{0},..,l_{n} \in \ledgerState, l_{0} =
+    \forall l_{0},\ldots,l_{n} \in \ledgerState, l_{0} =
     \left(
       \begin{array}{c}
         \left\{
@@ -180,7 +180,7 @@ set of $l$.
 Property~\ref{prop:ledger-properties-no-double-spend} states that for each valid
 ledger state $l_{n}$ reachable from the genesis state, each transaction $t_{i}$
 does not share any input with any previous transaction $t_{j}$. This means that
-each output of a transition is spend at most once.
+each output of a transition is spent at most once.
 
 \subsection{Ledger State Properties for Delegation Transitions}
 \label{sec:ledg-prop-deleg}
