@@ -136,13 +136,25 @@ type Allocs = Map.Map HashKey Slot
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
+type Ix  = Natural
+
+-- | Pointer to a slot, transaction index and index in certificate list.
+data Ptr = Ptr Slot Ix Ix
+         deriving (Show, Eq)
+
+-- | Distribution density function
+newtype Distr      = Distr (Map.Map HashKey (Ratio Natural))
+newtype Production = Production (Map.Map HashKey Natural)
+
 data DState = DState
     {  -- |The active stake keys.
       _stKeys      :: Allocs
       -- |The active accounts.
-    ,  _rewards     :: RewardAccounts
+    ,  _rewards    :: RewardAccounts
       -- |The current delegations.
     , _delegations :: Map.Map HashKey HashKey
+      -- |The pointed to hash keys.
+    , _ptrs        :: Map.Map Ptr HashKey
     } deriving (Show, Eq)
 
 data PState = PState
@@ -169,7 +181,7 @@ emptyDelegation =
     DelegationState emptyDState emptyPState
 
 emptyDState :: DState
-emptyDState = DState Map.empty Map.empty Map.empty
+emptyDState = DState Map.empty Map.empty Map.empty Map.empty
 
 emptyPState :: PState
 emptyPState = PState Map.empty Map.empty Map.empty Map.empty
