@@ -1,6 +1,5 @@
 \documentclass[11pt,a4paper,dvipsnames]{article}
 \usepackage[margin=2.5cm]{geometry}
-\usepackage[local]{gitinfo2}
 \usepackage{iohk}
 \usepackage{microtype}
 \usepackage{mathpazo} % nice fonts
@@ -458,7 +457,7 @@ It is important to note here that instead of the \textit{current} slot number,
 the time to live of $\var{tx}$ is passed to the $\fun{certRefunds}$ function
 within the summation in $\fun{keyRefunds}$. The reason for this is that the
 refunds for any key deregistration certificates are, in fact, included in
-the $\var{tx}$ itself --- meaning that the coin value of the refund must be
+the $\var{tx}$ itself - meaning that the coin value of the refund must be
 explicitly specified in the outputs of the transaction. So,
 the value of the included refund must be calculated before this transaction
 is ever processed, and be the same \textit{no matter when} the $\var{tx}$
@@ -617,7 +616,7 @@ last epoch before $\fun{ttl}~\var{tx}$, or, if the key was
 registered in the same epoch as the $\fun{ttl}~\var{tx}$ slot,
 since the registration certificate slot number.
 
-Recall that the stake pool retirement refunds are issued not when a certificate
+Recall that the the stake pool retirement refunds are issued not when a certificate
 scheduling the retirement is processed, but at the epoch boundary for which
 the retirement is scheduled. The decayed value over the full previous epoch is
 also accounted for at the boundary change. For details of this accounting, see
@@ -714,7 +713,7 @@ specified, and are currently implicitly included in the total input value of
 a transaction.
 
 Note that transaction fees, which can be greater than the minimum fee, are
-indicated in the transactions themselves. This is different from
+indicated in the transactions themselves. This is different than
 the deposit amounts for registration certificates, which are
 indicated explicitly in the protocol constants,
 and must be paid as an amount exactly matching the protocol's requirement.
@@ -733,7 +732,7 @@ the contents of the transaction itself.
 
 The $\fun{txwdrls}$ function returns a list of reward addresses provided by a
 given transaction, each paired with the coin value the transaction is requesting
-be reaped, i.e. removed from the total coin accumulated in the rewards
+be reaped, i.e. removed from the the total coin accumulated in the rewards
 account for this address and added to the UTxO.
 
 
@@ -811,7 +810,8 @@ the pairs type $\TxIn$ within that transaction.
 
 The map $\fun{txouts}~ \var{tx}$ builds a UTxO using the
 list of outputs of $\var{tx}$. It builds a pair for the resulting UTxO
-finite map by making a $txin$ out of the $txid$ of $tx$ and an index in the output $ix \mapsto (a,c)$, to give a $txin = (txid, ix)$ and the
+finite map by making a $txin$ out of the $txid$ of $tx$ and an index in the
+the output $ix \mapsto (a,c)$, to give a $txin = (txid, ix)$ and the
 $txout=(a,c)$.
 
 The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
@@ -829,7 +829,7 @@ amount which is exactly equal to the value in the reward account (we
 give details about this below), this update explicitly sets the values
 associated to the requested addresses to zero.
 
-The $\fun{destroyed}$ calculation sums up all the unspent outputs that
+The $\fun{destroyed}$ calculation sums up all of the unspent outputs that
 have been removed from the ledger. This includes the outputs spent directly
 (made available to the owner of another address), and also, implicitly,
 the outputs which are spent on transaction fees. In order to balance
@@ -842,8 +842,8 @@ other side (RHS):
 \begin{itemize}
 \item The total value of all individual key refunds the transaction is taking from
 the (common) $\var{deposit}$ pool
-\item The total value of all the rewards the transaction is withdrawing from
-the individual $\var{rewards}$ accounts
+\item The total value of all of the rewards the transaction is withdrawing from
+the individual $\var{rewards}$ accounts via the $\fun{txwdrls}~{tx}$ set
 \end{itemize}
 
 The total rewards value above is calculated by subtracting the sum total value in the
@@ -896,9 +896,9 @@ deposits is found in the protocol constants, not in $\var{stkeys}$ or $\var{stpo
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
          \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \var{wdrls}\} \\
     \nextdef
-    & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
+    & \fun{destroyed} \in \PrtclConsts \to \UTxO \to \Allocs \to \Tx \to \Coin
     & \text{value destroyed} \\
-    & \destroyed{pc}{utxo}{stkeys}{rewards}~{tx} = \\
+    & \destroyed{pc}{utxo}{stkeys}~{tx} = \\
     & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
         \sum_{(a \mapsto c) \in \fun{txwdrls}~{tx}} c  \\
         & + \keyRefunds{pc}{stkeys}{tx} \\
@@ -1021,7 +1021,7 @@ UTxO, associated with the $\fun{txid}~\var{tx}$
 Note here that output entries for both the deposit refunds and the rewards
 withdrawals must be included in the body of the transaction
 carrying the deregistration certificates (requesting these refunds) and the
-reward requests. It is the job
+reward requests (specifically, the $outputs$ list). It is the job
 of the wallet to calculate the value of these refunds and withdrawals, and
 generate the correct outputs to include in the outputs list of $\var{tx}$ such
 that applying this transaction results in a
@@ -1032,7 +1032,7 @@ The majority of funds moved by a transaction usually come from unspent outputs
 refunds and rewards works slightly differently. These get included in the outputs list
 only. That is, they do not have any index-matched inputs in the $inputs$ list.
 For each requested refund (or withdrawal), the
-wallet generates a brand-new index $ix$, then indicates the $(addr,coin)$ value
+wallet generates a brand new index $ix$, then indicates the $(addr,coin)$ value
 pairing the address to which the refund is going and the refund amount.
 So, this output $(ix \mapsto (addr,coin))$ gets added to $outputs$ of $tx$,
 and it follows that $\fun{txouts}~{tx}$ is a UTxO that contains the entry
@@ -1096,7 +1096,7 @@ variable
       & \minfee{pc}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
-      \destroyed{pc}{utxo}{stkeys}{rewards}~{tx} = \created{pc}{stpools}~{tx}
+      \destroyed{pc}{utxo}{stkeys}~{tx} = \created{pc}{stpools}~{tx}
       \\
       ~
       \\
@@ -1246,7 +1246,7 @@ numbers datatype concern.
 In Figure~\ref{fig:delegation-total}, we present the inference rule for
 the total delegation state transition. This rule is a composition of the
 DELRWDS rule above and the DELEGS $\DWState$ transition defined in
-Section~\ref{sec:delegation}. Having all the delegation state data as well
+Section~\ref{sec:delegation}. Having all the the delegation state data as well
 as all the data in a transaction in one place allows us to perform the following
 necessary remaining checks:
 
@@ -1348,7 +1348,7 @@ certificate (respectively, transaction) \textit{except} the witnesses.
 
 A transaction is witnessed by
 a signature and a verification key corresponding to this signature, which can
-be obtained from the transaction by applying the $\fun{txwits}$ function.
+be obtained from the the transaction by applying the $\fun{txwits}$ function.
 The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
 to the certificate.
 
@@ -1418,7 +1418,8 @@ the owner from the data stored at the given address.
 Note that the UTxO transitions with and without witnesses have the same type
 (see Figure~\ref{fig:ts-types:utxo} and Figure~\ref{fig:ts-types:utxow}).
 The witnessed transition rule, in fact, defines the same UTxO update as the
-non-witnessed rule. Essentially, the witnessed rule says we may only apply the non-witnessed rule whenever the following
+non-witnessed rule. Essentially, the witnessed rule says we may only apply the
+the non-witnessed rule whenever the following
 additional preconditions are satisfied
 (stated in Rule~\ref{eq:utxo-witness-inductive} in
 Figure~\ref{fig:rules:utxow}):
@@ -1448,7 +1449,7 @@ though if we require all witnesses to sign at least one transaction input,
 the replay prevention of UTxO accounting is then provided to any transaction.
 This is achieved by the above precondition by requiring a valid signature
 from the author of every certificate in a transaction, the
-holder of the key for every reward account emptied, as well as
+holder of the key for every rewards account emptied, as well as
 hash keys of each of the inputs addresses.
 
 Furthermore, expressing
@@ -1575,7 +1576,7 @@ triggered by that same transaction.
 
 Note that the context for the consequent transaction is made up of only the
 protocol constants and slot number, and so is the delegation state transition in
-the antecedent. However, the $\UTxOState$ transition also contains the
+the antecedent. However, the $\UTxOState$ transition also contains the the
 stake keys and stake pools resource allocations in the context. This is not
 an issue since all this difference is highlighting is that in a $\UTxOState$
 transition, these variables are immutable (but they do change in the full
