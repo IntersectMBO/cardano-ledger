@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module UnitTests (unitTests) where
@@ -57,8 +56,8 @@ genesis = genesisState
             , TxOut bobAddr bobInitCoin ]
 
 changeReward :: LedgerState -> RewardAcnt -> Coin -> LedgerState
-changeReward ls acnt c = ls & delegationState . rewards .~ newAccounts
-  where newAccounts = Map.insert acnt c (ls ^. delegationState . rewards)
+changeReward ls acnt c = ls & delegationState . dstate . rewards .~ newAccounts
+  where newAccounts = Map.insert acnt c (ls ^. delegationState . dstate. rewards)
 
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
@@ -91,15 +90,14 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
-  in ls2 @?= Right (LedgerState
-                     utxoState'
-                     stakeKeyRegistration
-                     { _delegations =
-                         Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-                     , _stPools = Map.fromList [(poolhk, Slot 0)]
-                     , _pParams = Map.fromList [(poolhk, pool)]
-                     }
-                     testPCs)
+  in ls2 @?= Right
+         (LedgerState
+          utxoState'
+          (stakeKeyRegistration
+           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & pstate . stPools .~ Map.fromList [(poolhk, Slot 0)]
+           & pstate . pParams .~ Map.fromList [(poolhk, pool)])
+          testPCs)
 
 testValidRetirement ::
   [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
@@ -107,17 +105,15 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
-  in ls2 @?= Right (LedgerState
-                     utxoState'
-                     stakeKeyRegistration
-                     { _delegations =
-                         Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-                     , _stPools = Map.fromList [(poolhk, Slot 0)]
-                     , _pParams = Map.fromList [(poolhk, pool)]
-                     , _retiring =
-                         Map.fromList [(poolhk, e)]
-                     }
-                     testPCs)
+  in ls2 @?= Right
+         (LedgerState
+          utxoState'
+          (stakeKeyRegistration
+           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & pstate . stPools .~  Map.fromList [(poolhk, Slot 0)]
+           & pstate . pParams .~ Map.fromList [(poolhk, pool)]
+           & pstate . retiring .~ Map.fromList [(poolhk, e)])
+          testPCs)
 
 bobWithdrawal :: Map RewardAcnt Coin
 bobWithdrawal = Map.singleton (mkRwdAcnt bobStake) (Coin 10)
@@ -142,7 +138,7 @@ testValidWithdrawal =
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition (Slot 0) genesisWithReward (TxWits tx wits)
-    expectedDS = LedgerState.emptyDelegation & rewards .~
+    expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
                    Map.singleton (mkRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
@@ -291,11 +287,11 @@ utxoSt3 = UTxOState
 
 stakeKeyRegistration1 :: DelegationState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
-  & rewards .~
+  & dstate . rewards .~
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
-  & stKeys .~
+  & dstate . stKeys .~
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
                    , (hashKey $ vKey stakePoolKey1, Slot 0)]

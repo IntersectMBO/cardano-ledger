@@ -258,9 +258,9 @@ propPreserveBalance = withCoverage $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
            (balance (l ^. utxoState . utxo))
-        <> (keyRefunds (l ^. pcs) (l ^. delegationState . stKeys) $ tx ^. body)
+        <> (keyRefunds (l ^. pcs) (l ^. delegationState . dstate . stKeys) $ tx ^. body)
   let created =
            (balance (l' ^. utxoState . utxo))
         <> fee
-        <> (depositAmount (l' ^. pcs) (l' ^. delegationState . stPools) $ tx ^.body)
+        <> (depositAmount (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body)
   destroyed === created
