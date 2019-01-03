@@ -6,7 +6,7 @@ stdenv.mkDerivation {
                       scheme-small
 
                       # libraries
-                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor
+                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor xstring
 
                       # bclogo and dependencies
                       bclogo mdframed xkeyval etoolbox needspace
@@ -17,10 +17,14 @@ stdenv.mkDerivation {
                       # libraries for marginal notes
                       xargs todonotes
 
+                      # git info
+                      gitinfo2
+
                       # build tools
                       latexmk
 
                       ;
                   })
+                  gitMinimal
                 ];
 }
