@@ -62,6 +62,7 @@ import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
+import           Data.Ratio
 
 import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
@@ -151,6 +152,8 @@ data PState = PState
     , _pParams     :: Map.Map HashKey StakePool
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map.Map HashKey Epoch
+      -- |Moving average for key in epoch.
+    , _avgs        :: Map.Map HashKey (Ratio Natural)
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -169,7 +172,7 @@ emptyDState :: DState
 emptyDState = DState Map.empty Map.empty Map.empty
 
 emptyPState :: PState
-emptyPState = PState Map.empty Map.empty Map.empty
+emptyPState = PState Map.empty Map.empty Map.empty Map.empty
 
 data UTxOState =
     UTxOState
