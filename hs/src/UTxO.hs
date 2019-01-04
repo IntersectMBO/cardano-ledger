@@ -65,7 +65,7 @@ import           Lens.Micro.TH (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Keys
-import           PrtlConsts (PrtlConsts(..))
+import           PrtclConsts (PrtclConsts(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (DCert (..), dvalue)
@@ -180,7 +180,7 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-depositAmount :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
+depositAmount :: PrtclConsts -> Map.Map HashKey Slot -> Tx -> Coin
 depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
