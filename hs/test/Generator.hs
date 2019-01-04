@@ -38,7 +38,7 @@ import           LedgerState     (LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState, DelegationState(..),
+                                  genesisState, DWState(..),
                                   KeyPairs, utxoState, utxo, dstate,
                                   stKeys
                                  )
@@ -309,7 +309,7 @@ genStakePool keys = do
   marginPercent <- genNatural 0 100
   pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
 
-genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
+genDelegation :: KeyPairs -> DWState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element (Map.keys $ d ^. dstate . stKeys)
   delegatorKey <- getAnyStakeKey keys
@@ -318,5 +318,5 @@ genDelegation keys d = do
 genDCertRegPool :: KeyPairs -> Gen DCert
 genDCertRegPool keys = RegPool <$> genStakePool keys
 
-genDCertDelegate :: KeyPairs -> DelegationState -> Gen DCert
+genDCertDelegate :: KeyPairs -> DWState -> Gen DCert
 genDCertDelegate keys ds = Delegate <$> genDelegation keys ds

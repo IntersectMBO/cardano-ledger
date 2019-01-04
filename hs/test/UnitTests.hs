@@ -77,7 +77,7 @@ testLedgerValidTransactions ls utxoState' =
                      (Slot 0))
 
 testValidStakeKeyRegistration ::
-  TxWits -> UTxOState -> DelegationState -> Assertion
+  TxWits -> UTxOState -> DWState -> Assertion
 testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
   let
     ls2 = ledgerState [tx]
@@ -89,7 +89,7 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
                      (Slot 0))
 
 testValidDelegation ::
-  [TxWits] -> UTxOState -> DelegationState -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> StakePool -> Assertion
 testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
@@ -106,7 +106,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           (Slot 0))
 
 testValidRetirement ::
-  [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> Epoch -> StakePool -> Assertion
 testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
@@ -295,7 +295,7 @@ utxoSt3 = UTxOState
             (Coin 550)
             (Coin 2500)
 
-stakeKeyRegistration1 :: DelegationState
+stakeKeyRegistration1 :: DWState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   & dstate . rewards .~
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
