@@ -72,7 +72,8 @@ testLedgerValidTransactions ls utxoState' =
     ls @?= Right (LedgerState
                      utxoState'
                      LedgerState.emptyDelegation
-                     testPCs)
+                     testPCs
+                     1)
 
 testValidStakeKeyRegistration ::
   TxWits -> UTxOState -> DelegationState -> Assertion
@@ -82,7 +83,8 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
   in ls2 @?= Right (LedgerState
                      utxoState'
                      stakeKeyRegistration
-                     testPCs)
+                     testPCs
+                     1)
 
 testValidDelegation ::
   [TxWits] -> UTxOState -> DelegationState -> StakePool -> Assertion
@@ -97,7 +99,8 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
            & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ Map.fromList [(poolhk, Slot 0)]
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
-          testPCs)
+          testPCs
+          (fromIntegral $ length txs))
 
 testValidRetirement ::
   [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
@@ -113,7 +116,8 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
            & pstate . stPools .~  Map.fromList [(poolhk, Slot 0)]
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
-          testPCs)
+          testPCs
+          3)
 
 bobWithdrawal :: Map RewardAcnt Coin
 bobWithdrawal = Map.singleton (mkRwdAcnt bobStake) (Coin 10)
@@ -143,7 +147,8 @@ testValidWithdrawal =
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
                      expectedDS
-                     testPCs)
+                     testPCs
+                     1)
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
