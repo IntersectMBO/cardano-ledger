@@ -39,7 +39,7 @@ import           LedgerState     (LedgerState (..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
                                   genesisState, DelegationState(..),
-                                  KeyPairs, utxoState, utxo,
+                                  KeyPairs, utxoState, utxo, dstate,
                                   stKeys
                                  )
 import           Slot
@@ -310,8 +310,8 @@ genStakePool keys = do
   pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
 
 genDelegation :: KeyPairs -> DelegationState -> Gen Delegation
-genDelegation keys dstate = do
-  poolKey      <- Gen.element (Map.keys $ dstate ^. stKeys)
+genDelegation keys d = do
+  poolKey      <- Gen.element (Map.keys $ d ^. dstate . stKeys)
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
 
@@ -319,4 +319,4 @@ genDCertRegPool :: KeyPairs -> Gen DCert
 genDCertRegPool keys = RegPool <$> genStakePool keys
 
 genDCertDelegate :: KeyPairs -> DelegationState -> Gen DCert
-genDCertDelegate keys dstate = Delegate <$> genDelegation keys dstate
+genDCertDelegate keys ds = Delegate <$> genDelegation keys ds
