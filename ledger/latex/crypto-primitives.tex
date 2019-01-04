@@ -35,13 +35,15 @@ type suffix, and use simply $\serialised{\wcard}$.
       \fun{verify} & \VKey \times \Data \times \Sig
       & \text{verification relation}\\
       \serialised{\wcard}_\type{A} & \type{A} \to \Data
-      & \text{serialization function for values of type $\type{A}$}
+      & \text{serialization function for values of type $\type{A}$}\\
+      \fun{sign} & \SKey \to \Data \to \Sig
+      & \text{signing function}
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
     & \forall (sk, vk) \in \SkVk,~ m \in \Data,~ \sigma \in \Sig \cdot
-      \verify{vk}{m}{\sigma} \iff \sign{sk}{m} = \sigma
+      \sign{sk}{m} = \sigma \Rightarrow \verify{vk}{m}{\sigma}
   \end{align*}
   \emph{Notation}
   \begin{align*}
