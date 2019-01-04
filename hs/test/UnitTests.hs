@@ -41,7 +41,7 @@ bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 testPCs :: PrtclConsts
-testPCs = PrtclConsts 1 1 100 250 0.25 0.001
+testPCs = PrtclConsts 1 1 100 250 0.25 0.001 (0%1) (0%1) (0%1, 0)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
