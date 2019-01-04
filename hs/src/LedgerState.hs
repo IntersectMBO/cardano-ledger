@@ -17,10 +17,12 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module LedgerState
   ( LedgerState(..)
   , Ix
+  , Ptr(..)
   , DelegationState(..)
   , DState(..)
   , dstate
   , pstate
+  , ptrs
   , PState(..)
   , LedgerValidation(..)
   , KeyPairs
@@ -206,6 +208,7 @@ data LedgerState =
   , _pcs               :: !PrtlConsts
     -- | The current transaction index in the current slot.
   , _txSlotIx          :: Ix
+  , _currentSlot       :: Slot
   } deriving (Show, Eq)
 
 makeLenses ''DelegationState
@@ -230,6 +233,7 @@ genesisState pc outs = LedgerState
   emptyDelegation
   pc
   0
+  (Slot 0)
 
 -- | Determine if the transaction has expired
 current :: Tx -> Slot -> Validity
@@ -442,7 +446,7 @@ asStateTransition slot ls tx =
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
       where
-        ls' = applyTxBody ls (tx ^. body)
+        ls' = applyTxBody slot ls (tx ^. body)
         cs = zip [0..] (tx ^. body . certs) -- index certificates
 
 -- |In the case where a certificate is valid for a given ledger state,
@@ -460,7 +464,7 @@ certAsStateTransition slot txIx ls (clx, cert) =
 asStateTransition'
   :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
 asStateTransition' slot (LedgerValidation valErrors ls) tx =
-    let ls' = applyTxBody ls (tx ^. body) in
+    let ls' = applyTxBody slot ls (tx ^. body) in
     case validTx tx slot ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
@@ -469,7 +473,7 @@ asStateTransition' slot (LedgerValidation valErrors ls) tx =
 
 -- |Retire the appropriate stake pools when the epoch changes.
 retirePools :: LedgerState -> Epoch -> LedgerState
-retirePools ls@(LedgerState _ ds _ _) epoch =
+retirePools ls@(LedgerState _ ds _ _ _) epoch =
     ls & delegationState .~
            (ds & pstate . stPools .~
                  Map.filterWithKey
@@ -490,12 +494,14 @@ depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
     txRefunds = keyRefunds (ls ^. pcs) (ls ^. delegationState . dstate . stKeys) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.
-applyTxBody :: LedgerState -> Tx -> LedgerState
-applyTxBody ls tx = ls & utxoState %~ flip applyUTxOUpdate tx
-                       & utxoState . deposits .~ depositPoolChange ls tx
-                       & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
-                       & delegationState . dstate . rewards .~ newAccounts
-                       & txSlotIx %~ (+1)
+applyTxBody :: Slot -> LedgerState -> Tx -> LedgerState
+applyTxBody slot ls tx =
+    ls & utxoState %~ flip applyUTxOUpdate tx
+       & utxoState . deposits .~ depositPoolChange ls tx
+       & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
+       & delegationState . dstate . rewards .~ newAccounts
+       & txSlotIx  %~ (if slot == ls ^. currentSlot then (+1) else const (0::Natural))
+       & currentSlot .~ slot
   where
     newAccounts = reapRewards (ls ^. delegationState . dstate. rewards) (tx ^. wdrls)
 
@@ -541,7 +547,7 @@ applyDCert _ _ _ (RetirePool key epoch) ds =
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls@(LedgerState _ ds _ _) = Map.fromListWith mappend delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do
@@ -575,7 +581,7 @@ instance STS UTXO where
 
 initialLedgerState :: InitialRule UTXO
 initialLedgerState = do
-  IRC (_) <- judgmentContext
+  IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
 
 utxoInductive :: TransitionRule UTXO

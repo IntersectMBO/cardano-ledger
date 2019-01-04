@@ -73,7 +73,8 @@ testLedgerValidTransactions ls utxoState' =
                      utxoState'
                      LedgerState.emptyDelegation
                      testPCs
-                     1)
+                     1
+                     (Slot 0))
 
 testValidStakeKeyRegistration ::
   TxWits -> UTxOState -> DelegationState -> Assertion
@@ -84,7 +85,8 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
                      utxoState'
                      stakeKeyRegistration
                      testPCs
-                     1)
+                     1
+                     (Slot 0))
 
 testValidDelegation ::
   [TxWits] -> UTxOState -> DelegationState -> StakePool -> Assertion
@@ -100,7 +102,8 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
            & pstate . stPools .~ Map.fromList [(poolhk, Slot 0)]
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           testPCs
-          (fromIntegral $ length txs))
+          (fromIntegral $ length txs)
+          (Slot 0))
 
 testValidRetirement ::
   [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
@@ -117,7 +120,8 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
           testPCs
-          3)
+          3
+          (Slot 0))
 
 bobWithdrawal :: Map RewardAcnt Coin
 bobWithdrawal = Map.singleton (mkRwdAcnt bobStake) (Coin 10)
@@ -148,7 +152,8 @@ testValidWithdrawal =
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
                      expectedDS
                      testPCs
-                     1)
+                     1
+                     (Slot 0))
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
@@ -300,6 +305,11 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
                    , (hashKey $ vKey stakePoolKey1, Slot 0)]
+  & dstate . ptrs .~
+      Map.fromList [ (Ptr (Slot 0) 0 0, hashKey $ vKey aliceStake)
+                   , (Ptr (Slot 0) 0 1, hashKey $ vKey bobStake)
+                   , (Ptr (Slot 0) 0 2, hashKey $ vKey stakePoolKey1)
+                   ]
 
 stakePool :: StakePool
 stakePool = StakePool
