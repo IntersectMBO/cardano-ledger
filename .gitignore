@@ -50,3 +50,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 *.hp
 *.ps
 *.html
+
+# gitinfo2 auxiliary file
+gitHeadLocal.gin
