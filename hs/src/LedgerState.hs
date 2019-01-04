@@ -16,7 +16,14 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 
 module LedgerState
   ( LedgerState(..)
+  , Ix
+  , Ptr(..)
   , DelegationState(..)
+  , DState(..)
+  , dstate
+  , pstate
+  , ptrs
+  , PState(..)
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
@@ -58,6 +65,7 @@ import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
+import           Data.Ratio
 
 import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
@@ -131,27 +139,55 @@ type Allocs = Map.Map HashKey Slot
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
+type Ix  = Natural
+
+-- | Pointer to a slot, transaction index and index in certificate list.
+data Ptr = Ptr Slot Ix Ix
+         deriving (Show, Eq, Ord)
+
+-- | Distribution density function
+newtype Distr      = Distr (Map.Map HashKey (Ratio Natural))
+newtype Production = Production (Map.Map HashKey Natural)
+
+data DState = DState
+    {  -- |The active stake keys.
+      _stKeys      :: Allocs
+      -- |The active accounts.
+    ,  _rewards    :: RewardAccounts
+      -- |The current delegations.
+    , _delegations :: Map.Map HashKey HashKey
+      -- |The pointed to hash keys.
+    , _ptrs        :: Map.Map Ptr HashKey
+    } deriving (Show, Eq)
+
+data PState = PState
+    { -- |The active stake pools.
+      _stPools     :: Allocs
+      -- |The pool parameters.
+    , _pParams     :: Map.Map HashKey StakePool
+      -- |A map of retiring stake pools to the epoch when they retire.
+    , _retiring    :: Map.Map HashKey Epoch
+      -- |Moving average for key in epoch.
+    , _avgs        :: Map.Map HashKey (Ratio Natural)
+    } deriving (Show, Eq)
+
 -- |The state associated with the current stake delegation.
 data DelegationState =
     DelegationState
     {
-    -- |The active accounts.
-      _rewards     :: RewardAccounts
-    -- |The active stake keys.
-    , _stKeys      :: Allocs
-    -- |The current delegations.
-    , _delegations :: Map.Map HashKey HashKey
-    -- |The active stake pools.
-    , _stPools     :: Allocs
-    -- |Stake pool parameters.
-    , _pParams     :: Map.Map HashKey StakePool
-    -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map.Map HashKey Epoch
+      _dstate :: DState
+    , _pstate :: PState
     } deriving (Show, Eq)
 
 emptyDelegation :: DelegationState
 emptyDelegation =
-    DelegationState Map.empty Map.empty Map.empty Map.empty Map.empty Map.empty
+    DelegationState emptyDState emptyPState
+
+emptyDState :: DState
+emptyDState = DState Map.empty Map.empty Map.empty Map.empty
+
+emptyPState :: PState
+emptyPState = PState Map.empty Map.empty Map.empty Map.empty
 
 data UTxOState =
     UTxOState
@@ -170,9 +206,14 @@ data LedgerState =
   , _delegationState   :: !DelegationState
     -- |The current protocol constants.
   , _pcs               :: !PrtlConsts
+    -- | The current transaction index in the current slot.
+  , _txSlotIx          :: Ix
+  , _currentSlot       :: Slot
   } deriving (Show, Eq)
 
 makeLenses ''DelegationState
+makeLenses ''DState
+makeLenses ''PState
 makeLenses ''UTxOState
 makeLenses ''LedgerState
 
@@ -191,6 +232,8 @@ genesisState pc outs = LedgerState
     (Coin 0))
   emptyDelegation
   pc
+  0
+  (Slot 0)
 
 -- | Determine if the transaction has expired
 current :: Tx -> Slot -> Validity
@@ -337,9 +380,9 @@ validRuleUTXOW tx l = verifiedWits tx
 
 validTx :: TxWits -> Slot -> LedgerState -> Validity
 validTx tx slot l =
-    validRuleUTXO  (l ^. delegationState . rewards)
-                   (l ^. delegationState . stPools)
-                   (l ^. delegationState . stKeys)
+    validRuleUTXO  (l ^. delegationState . dstate . rewards)
+                   (l ^. delegationState . pstate . stPools)
+                   (l ^. delegationState . dstate . stKeys)
                    (l ^. pcs)
                    slot
                    (tx ^. body)
@@ -355,14 +398,14 @@ validTx tx slot l =
 validKeyRegistration :: DCert -> DelegationState -> Validity
 validKeyRegistration cert ds =
   case cert of
-    RegKey key -> if not $ Map.member (hashKey key) (ds ^. stKeys)
+    RegKey key -> if not $ Map.member (hashKey key) (ds ^. dstate . stKeys)
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
     _          -> Valid
 
 validKeyDeregistration :: DCert -> DelegationState -> Validity
 validKeyDeregistration cert ds =
   case cert of
-    DeRegKey key -> if Map.member (hashKey key) (ds ^. stKeys)
+    DeRegKey key -> if Map.member (hashKey key) (ds ^. dstate . stKeys)
                     then Valid else Invalid [StakeKeyNotRegistered]
     _            -> Valid
 
@@ -370,7 +413,7 @@ validStakeDelegation :: DCert -> DelegationState -> Validity
 validStakeDelegation cert ds =
   case cert of
     Delegate (Delegation source _)
-      -> if Map.member (hashKey source) (ds ^. stKeys)
+      -> if Map.member (hashKey source) (ds ^. dstate . stKeys)
          then Valid else Invalid [StakeDelegationImpossible]
     _ -> Valid
 
@@ -381,7 +424,7 @@ validStakePoolRegister _ _ = Valid
 validStakePoolRetire :: DCert -> DelegationState -> Validity
 validStakePoolRetire cert ds =
   case cert of
-    RetirePool key _ -> if Map.member (hashKey key) $ ds ^. stPools
+    RetirePool key _ -> if Map.member (hashKey key) $ ds ^. pstate . stPools
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
     _                -> Valid
 
@@ -401,27 +444,27 @@ asStateTransition
 asStateTransition slot ls tx =
   case validTx tx slot ls of
     Invalid errors -> Left errors
-    Valid          -> foldM (certAsStateTransition slot) ls' cs
+    Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
       where
-        ls' = applyTxBody ls (tx ^. body)
-        cs = tx ^. body . certs
+        ls' = applyTxBody slot ls (tx ^. body)
+        cs = zip [0..] (tx ^. body . certs) -- index certificates
 
 -- |In the case where a certificate is valid for a given ledger state,
 -- apply the certificate as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
 certAsStateTransition
-  :: Slot -> LedgerState -> DCert -> Either [ValidationError] LedgerState
-certAsStateTransition slot ls cert =
+  :: Slot -> Ix -> LedgerState -> (Ix, DCert) -> Either [ValidationError] LedgerState
+certAsStateTransition slot txIx ls (clx, cert) =
   case validDelegation cert (ls ^. delegationState) of
     Invalid errors -> Left errors
-    Valid          -> Right $ ls & delegationState %~ (applyDCert slot cert)
+    Valid          -> Right $ ls & delegationState %~ applyDCert slot txIx clx cert
 
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
 asStateTransition'
   :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
 asStateTransition' slot (LedgerValidation valErrors ls) tx =
-    let ls' = applyTxBody ls (tx ^. body) in
+    let ls' = applyTxBody slot ls (tx ^. body) in
     case validTx tx slot ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
@@ -430,14 +473,14 @@ asStateTransition' slot (LedgerValidation valErrors ls) tx =
 
 -- |Retire the appropriate stake pools when the epoch changes.
 retirePools :: LedgerState -> Epoch -> LedgerState
-retirePools ls@(LedgerState _ ds _) epoch =
+retirePools ls@(LedgerState _ ds _ _ _) epoch =
     ls & delegationState .~
-           (ds & stPools .~
+           (ds & pstate . stPools .~
                  Map.filterWithKey
                         (\hk _ -> Map.notMember hk retiring')
-                        (ds ^. stPools)
-               & retiring .~ active)
-  where (active, retiring') = Map.partition (epoch /=) (ds ^. retiring)
+                        (ds ^. pstate . stPools)
+               & pstate . retiring .~ active)
+  where (active, retiring') = Map.partition (epoch /=) (ds ^. pstate . retiring)
 
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange :: LedgerState -> Tx -> Coin
@@ -447,17 +490,20 @@ depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
   -- to emphasize this point.
   where
     currentPool = ls ^. utxoState . deposits
-    txDeposits = depositAmount (ls ^. pcs) (ls ^. delegationState . stPools) tx
-    txRefunds = keyRefunds (ls ^. pcs) (ls ^. delegationState . stKeys) tx
+    txDeposits = depositAmount (ls ^. pcs) (ls ^. delegationState . pstate . stPools) tx
+    txRefunds = keyRefunds (ls ^. pcs) (ls ^. delegationState . dstate . stKeys) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.
-applyTxBody :: LedgerState -> Tx -> LedgerState
-applyTxBody ls tx = ls & utxoState %~ flip applyUTxOUpdate tx
-                       & utxoState . deposits .~ depositPoolChange ls tx
-                       & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
-                       & delegationState . rewards .~ newAccounts
+applyTxBody :: Slot -> LedgerState -> Tx -> LedgerState
+applyTxBody slot ls tx =
+    ls & utxoState %~ flip applyUTxOUpdate tx
+       & utxoState . deposits .~ depositPoolChange ls tx
+       & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
+       & delegationState . dstate . rewards .~ newAccounts
+       & txSlotIx  %~ (if slot == ls ^. currentSlot then (+1) else const (0::Natural))
+       & currentSlot .~ slot
   where
-    newAccounts = reapRewards (ls ^. delegationState . rewards) (tx ^. wdrls)
+    newAccounts = reapRewards (ls ^. delegationState . dstate. rewards) (tx ^. wdrls)
 
 reapRewards :: RewardAccounts -> RewardAccounts -> RewardAccounts
 reapRewards dStateRewards withdrawals =
@@ -468,45 +514,47 @@ applyUTxOUpdate :: UTxOState -> Tx -> UTxOState
 applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
-applyDCert :: Slot -> DCert -> DelegationState -> DelegationState
-applyDCert slot (RegKey key) ds =
-    ds & stKeys  %~ Map.insert hksk slot
-       & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
+applyDCert :: Slot -> Ix -> Ix -> DCert -> DelegationState -> DelegationState
+applyDCert slot txIx clx (RegKey key) ds =
+    ds & dstate . stKeys  %~ Map.insert hksk slot
+       & dstate . rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
+       & dstate . ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
         where hksk = hashKey key
 
-applyDCert _ (DeRegKey key) ds =
-    ds & stKeys      %~ Map.delete hksk
-       & rewards     %~ Map.delete (RewardAcnt hksk)
-       & delegations %~ Map.delete hksk
+applyDCert slot txIx clx (DeRegKey key) ds =
+    ds & dstate . stKeys      %~ Map.delete hksk
+       & dstate . rewards     %~ Map.delete (RewardAcnt hksk)
+       & dstate . delegations %~ Map.delete hksk
+       & dstate . ptrs        %~ Map.delete (Ptr slot txIx clx)
         where hksk = hashKey key
 
 -- TODO do we also have to check hashKey target?
-applyDCert _ (Delegate (Delegation source target)) ds =
-    ds & delegations %~ Map.insert (hashKey source) (hashKey target)
+applyDCert _ _ _ (Delegate (Delegation source target)) ds =
+    ds & dstate . delegations %~ Map.insert (hashKey source) (hashKey target)
 
-applyDCert slot (RegPool sp) ds =
-    ds & stPools  %~ Map.insert hsk slot'
-       & pParams  %~ Map.insert hsk sp
-       & retiring %~ Map.delete hsk
+applyDCert slot _ _ (RegPool sp) ds =
+    ds & pstate . stPools  %~ Map.insert hsk slot'
+       & pstate . pParams  %~ Map.insert hsk sp
+       & pstate . retiring %~ Map.delete hsk
   where hsk = hashKey $ sp ^. poolPubKey
-        pools = ds ^. stPools
+        pools = ds ^. pstate . stPools
         slot' = fromMaybe slot (Map.lookup hsk pools)
 
 -- TODO check epoch (not in new doc atm.)
-applyDCert _ (RetirePool key epoch) ds =
-    ds & retiring %~ Map.insert hk_sp epoch
+applyDCert _ _ _ (RetirePool key epoch) ds =
+    ds & pstate . retiring %~ Map.insert hk_sp epoch
   where hk_sp = hashKey key
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do
       pool <- Map.lookup hsk delegs
       return (pool, c)
     outs = getOutputs $ ls ^. utxoState . utxo
-    delegatedOutputs = mapMaybe (addStake $ ds ^. delegations) outs
+    delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
 
 ---------------------------------------------------------------------------------
 -- State transition system
@@ -533,7 +581,7 @@ instance STS UTXO where
 
 initialLedgerState :: InitialRule UTXO
 initialLedgerState = do
-  IRC (_) <- judgmentContext
+  IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
 
 utxoInductive :: TransitionRule UTXO
@@ -601,13 +649,13 @@ instance STS DELRWDS where
                      deriving (Show, Eq)
 
     initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delrwdsTransition ]
+    transitionRules = [ delrwdsTransition    ]
 
 delrwdsTransition :: TransitionRule DELRWDS
 delrwdsTransition = do
   TRC (_, d, withdrawals) <- judgmentContext
-  correctWithdrawals (d ^. rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
-  pure $ d & rewards .~ (reapRewards (d ^. rewards) withdrawals)
+  correctWithdrawals (d ^. dstate . rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
+  pure $ d & dstate . rewards .~ reapRewards (d ^. dstate . rewards) withdrawals
 
 
 data DELEG
@@ -615,7 +663,7 @@ data DELEG
 instance STS DELEG where
     type State DELEG            = DelegationState
     type Signal DELEG           = DCert
-    type Environment DELEG      = Slot
+    type Environment DELEG      = (Slot, Ix, Ix)
     data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
                                 | StakeKeyNotRegisteredDELEG
                                 | StakeDelegationImpossibleDELEG
@@ -627,17 +675,17 @@ instance STS DELEG where
 
 delegationTransition :: TransitionRule DELEG
 delegationTransition = do
-  TRC(slot, d, c) <- judgmentContext
+  TRC((slot, txIx, clx), d, c) <- judgmentContext
   case c of
     RegKey _   -> do
            validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
-           pure $ applyDCert slot c d
+           pure $ applyDCert slot txIx clx c d
     DeRegKey _ -> do
            validKeyDeregistration c d == Valid ?! StakeKeyNotRegisteredDELEG
-           pure $ applyDCert slot c d
+           pure $ applyDCert slot txIx clx c d
     Delegate _ -> do
            validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
-           pure $ applyDCert slot c d
+           pure $ applyDCert slot txIx clx c d
     _         -> do
            False ?! WrongCertificateTypeDELEG -- this always fails
            pure d
@@ -645,9 +693,9 @@ delegationTransition = do
 data POOL
 
 instance STS POOL where
-    type State POOL         = (DelegationState)
+    type State POOL         = DelegationState
     type Signal POOL        = DCert
-    type Environment POOL   = Slot
+    type Environment POOL   = (Slot, Ix, Ix)
     data PredicateFailure POOL = StakePoolNotRegisteredOnKeyPOOL
                                | WrongCertificateTypePOOL
                   deriving (Show, Eq)
@@ -657,21 +705,21 @@ instance STS POOL where
 
 poolDelegationTransition :: TransitionRule POOL
 poolDelegationTransition = do
-  TRC(slot, d, c) <- judgmentContext
+  TRC((slot, txIx, clx), d, c) <- judgmentContext
   case c of
-    RegPool _      -> pure $ applyDCert slot c d
+    RegPool _      -> pure $ applyDCert slot txIx clx c d
     RetirePool _ _ -> do
            validStakePoolRetire c d == Valid ?! StakePoolNotRegisteredOnKeyPOOL
-           pure $ applyDCert slot c d
+           pure $ applyDCert slot txIx clx c d
     _   -> do
            False ?! WrongCertificateTypePOOL
-           pure $ applyDCert slot c d
+           pure $ applyDCert slot txIx clx c d
 
 data DELPL
 instance STS DELPL where
     type State DELPL       = DelegationState
     type Signal DELPL      = DCert
-    type Environment DELPL = Slot
+    type Environment DELPL = (Slot, Ix, Ix)
     data PredicateFailure DELPL = PoolFailure (PredicateFailure POOL)
                                 | DelegFailure (PredicateFailure DELEG)
                    deriving (Show, Eq)
@@ -681,19 +729,19 @@ instance STS DELPL where
 
 delplTransition :: TransitionRule DELPL
 delplTransition = do
-  TRC(slot, d, c) <- judgmentContext
+  TRC(slotIx, d, c) <- judgmentContext
   case c of
-    RegPool    _   -> trans @POOL  $ TRC (slot, d, c)
-    RetirePool _ _ -> trans @POOL  $ TRC (slot, d, c)
-    RegKey _       -> trans @DELEG $ TRC (slot, d, c)
-    DeRegKey _     -> trans @DELEG $ TRC (slot, d, c)
-    Delegate _     -> trans @DELEG $ TRC (slot, d, c)
+    RegPool    _   -> trans @POOL  $ TRC (slotIx, d, c)
+    RetirePool _ _ -> trans @POOL  $ TRC (slotIx, d, c)
+    RegKey _       -> trans @DELEG $ TRC (slotIx, d, c)
+    DeRegKey _     -> trans @DELEG $ TRC (slotIx, d, c)
+    Delegate _     -> trans @DELEG $ TRC (slotIx, d, c)
 
 data DELEGS
 instance STS DELEGS where
     type State DELEGS       = DelegationState
     type Signal DELEGS      = [DCert]
-    type Environment DELEGS = Slot
+    type Environment DELEGS = (Slot, Ix)
     data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)
                     deriving (Show, Eq)
 
@@ -702,14 +750,15 @@ instance STS DELEGS where
 
 delegsTransition :: TransitionRule DELEGS
 delegsTransition = do
-  TRC(slot, d, certificates) <- judgmentContext
-  foldM (\d' c -> trans @DELPL $ TRC(slot, d', c)) d certificates
+  TRC((slot, ix), d, certificates) <- judgmentContext
+  foldM (\d' (clx, c) -> trans @DELPL $
+                        TRC((slot, ix, clx), d', c)) d $ zip [0..] certificates
 
 data DELEGT
 instance STS DELEGT where
     type State DELEGT       = DelegationState
     type Signal DELEGT      = Tx
-    type Environment DELEGT = Slot
+    type Environment DELEGT = (Slot, Ix)
     data PredicateFailure DELEGT = DelegsFailure (PredicateFailure DELEGS)
                                  | DelrwdsFailure (PredicateFailure DELRWDS)
                                  | RegCertWithdrawDELEGT
@@ -733,29 +782,29 @@ splitCerts (c:cs) (reg, dereg, delegate) = splitCerts cs (reg', dereg', delegate
 
 delegtTransition :: TransitionRule DELEGT
 delegtTransition = do
-  TRC(slot, d, tx) <- judgmentContext
+  TRC(slotIx@(slot, _), d, tx) <- judgmentContext
   let withdrawals = tx ^. wdrls
-  let stakePools  = d ^. stPools
+  let stakePools  = d ^. pstate . stPools
   let (regC, deregC, delegateC) = splitCerts (tx ^. certs) ([], [], [])
   let hk c = hashKey $ getRequiredSigningKey c
-  (not $ any (\c -> Map.member (RewardAcnt $ hk c) withdrawals) regC)
+  not (any (\c -> Map.member (RewardAcnt $ hk c) withdrawals) regC)
            ?! RegCertWithdrawDELEGT
   all  (\c -> Map.member (RewardAcnt $ hk c) withdrawals) deregC
            ?! DeregCertNotWithdrawDELEGT
   all  (\c -> Map.member (hk c) stakePools) delegateC
            ?! DelegateCertNotStakePoolsDELEGT
-  (not $ any (\c -> let hsk = hk c in
-              (Map.member hsk stakePools) || Map.member hsk (d ^. retiring)) deregC)
+  not (any (\c -> let hsk = hk c in
+              Map.member hsk stakePools || Map.member hsk (d ^. pstate . retiring)) deregC)
            ?! DeregCertRetireOrDelegateDELEGT
   d'  <- trans @DELRWDS $ TRC(slot,  d, tx ^. wdrls)
-  d'' <- trans @DELEGS  $ TRC(slot, d', tx ^. certs)
+  d'' <- trans @DELEGS  $ TRC(slotIx, d', tx ^. certs)
   pure d''
 
 data LEDGER
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DelegationState)
     type Signal LEDGER      = TxWits
-    type Environment LEDGER = (PrtlConsts, Slot)
+    type Environment LEDGER = (PrtlConsts, Slot, Ix)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
                                  | DelegtFailure (PredicateFailure DELEGT)
                     deriving (Show, Eq)
@@ -765,16 +814,16 @@ instance STS LEDGER where
 
 initialLedgerStateLEDGER :: InitialRule LEDGER
 initialLedgerStateLEDGER = do
-  IRC ((pc, slot)) <- judgmentContext
-  utxo' <- trans @UTXOW  $ IRC ((pc, slot, Map.empty, Map.empty))
-  deleg <- trans @DELEGT $ IRC (slot)
+  IRC (pc, slot, ix) <- judgmentContext
+  utxo' <- trans @UTXOW  $ IRC (pc, slot, Map.empty, Map.empty)
+  deleg <- trans @DELEGT $ IRC (slot, ix)
   pure (utxo', deleg)
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
-  TRC ((pc, slot), (u, d), txwits) <- judgmentContext
-  utxo'  <- trans @UTXOW  $ TRC ((pc, slot, d ^. stPools, d ^. stKeys), u, txwits)
-  deleg' <- trans @DELEGT $ TRC (slot, d, txwits ^. body)
+  TRC ((pc, slot, ix), (u, d), txwits) <- judgmentContext
+  utxo'  <- trans @UTXOW  $ TRC ((pc, slot, d ^. pstate . stPools, d ^. dstate . stKeys), u, txwits)
+  deleg' <- trans @DELEGT $ TRC ((slot, ix), d, txwits ^. body)
   pure (utxo', deleg')
 
 -- STS rules embeddings:
