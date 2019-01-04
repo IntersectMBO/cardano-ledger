@@ -141,7 +141,7 @@ type Ix  = Natural
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr = Ptr Slot Ix Ix
-         deriving (Show, Eq)
+         deriving (Show, Eq, Ord)
 
 -- | Distribution density function
 newtype Distr      = Distr (Map.Map HashKey (Ratio Natural))
@@ -509,15 +509,17 @@ applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Slot -> Ix -> Ix -> DCert -> DelegationState -> DelegationState
-applyDCert slot _ _ (RegKey key) ds =
+applyDCert slot txIx clx (RegKey key) ds =
     ds & dstate . stKeys  %~ Map.insert hksk slot
        & dstate . rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
+       & dstate . ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
         where hksk = hashKey key
 
-applyDCert _ _ _ (DeRegKey key) ds =
+applyDCert slot txIx clx (DeRegKey key) ds =
     ds & dstate . stKeys      %~ Map.delete hksk
        & dstate . rewards     %~ Map.delete (RewardAcnt hksk)
        & dstate . delegations %~ Map.delete hksk
+       & dstate . ptrs        %~ Map.delete (Ptr slot txIx clx)
         where hksk = hashKey key
 
 -- TODO do we also have to check hashKey target?
