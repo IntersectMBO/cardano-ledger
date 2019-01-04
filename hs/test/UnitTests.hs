@@ -18,7 +18,7 @@ import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 import           Keys
 import           LedgerState
-import           PrtlConsts
+import           PrtclConsts
 import           Slot
 import           UTxO
 
@@ -40,8 +40,8 @@ bobStake = keyPair (Owner 4)
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
-testPCs :: PrtlConsts
-testPCs = PrtlConsts 1 1 100 250 0.25 0.001
+testPCs :: PrtclConsts
+testPCs = PrtclConsts 1 1 100 250 0.25 0.001
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
