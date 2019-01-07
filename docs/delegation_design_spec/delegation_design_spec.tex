@@ -1834,6 +1834,24 @@ certificate in order to be valid, so any deposit that we would require
 for a delegation certificate can instead be included in the deposit
 for the associated stake key registration certificate.
 
+\subsection{Time to Live for Transactions}
+\label{time-to-live-for-transactions}
+
+For multiple reasons, we will require that transactions that are submitted to
+the system include a \emph{Time to Live} (ttl), a slot number\footnote{We use
+  the term ``slot number'' to refer to an absolute slot number, i.e., specifying
+  both the epoch and the slot.} after which the transaction can not be included
+in the ledger any more. An obvious advantage is that this gives users the
+certainty that a transaction that failed to be added to the chain can not be
+replayed in the future, so that they are safe to re-send funds.
+
+In the context of deposits and refunds, a ttl also proves to be useful: When a
+transaction that releases a resource is created and submitted, it is not known
+when it will be effective, and thus the refundable part of the deposit -- which
+depends on the time at which the resource is freed -- can not be computed. But
+if the transaction does include a ttl, the latest slot in which the transaction
+can be added to the ledger can be used to calculate the refund.
+
 \subsection{Design Option: Stale Stake}
 \label{stale-stake}
 
