@@ -15,6 +15,8 @@ module UTxO
   -- * Primitives
     TxId(..)
   , Addr(..)
+  , Ptr(..)
+  , Ix
   , RewardAcnt(..)
   , mkRwdAcnt
   -- * Derived Types
@@ -78,8 +80,15 @@ type Hash = Digest SHA256
 newtype TxId = TxId { _TxId :: Hash }
   deriving (Show, Eq, Ord)
 
+type Ix  = Natural
+
+-- | Pointer to a slot, transaction index and index in certificate list.
+data Ptr = Ptr Slot Ix Ix
+         deriving (Show, Eq, Ord)
+
 -- |An address for UTxO.
-data Addr = AddrTxin HashKey HashKey
+data Addr = AddrTxin { _payHK   :: HashKey, _stakeHK :: HashKey }
+          | AddrPtr { _stakePtr :: Ptr }
           deriving (Show, Eq, Ord)
 
 -- |An account based address for a rewards
