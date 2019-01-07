@@ -1029,9 +1029,7 @@ It contains
 \begin{itemize}
 \item
   the public staking key hash \(\mathcal{H}(vks_\text{pool})\) of the
-  pool\todo{We used to require the actual public key, but I do not
-    think that is required -- the registration certificate does
-    contain the key, so it can be looked up from there.}
+  pool
 \item
   the epoch number, starting from which the stakepool will cease to
   operate
@@ -1096,12 +1094,10 @@ A delegation certificate is a tuple containing
 \begin{itemize}
 \item
   the public staking key hash delegating its staking rights,
-  \(\mathcal{H}(vks_\text{source})\)\todo{Verify that we indeed only
-    need the hash}
+  \(\mathcal{H}(vks_\text{source})\)
 \item
   the public stake pool key hash to which stake is delegated,
-  \(\mathcal{H}(vks_\text{pool})\) \todo{Verify that we indeed only
-    need the hash}
+  \(\mathcal{H}(vks_\text{pool})\)
 \end{itemize}
 
 It must be signed by \(sks_\text{source}\), and that key must be
@@ -3946,7 +3942,7 @@ the holder of the resource is refunded
 whereas the difference $d_R-r_R(t)$ is added to the reward pool of
 that epoch\todo{Update this: we should be able to add the decaying
   part to the rewards pool every epoch in between, not only at the
-  very end}.
+  very end. Update: we actually do!}.
 Note that it easily follows from well-known properties of the exponential
 function that
 \[
