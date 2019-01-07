@@ -2104,6 +2104,9 @@ lead to violation of legislation like the GDPR, so instead of including
 it in the certificate, it will be stored on an external key-value store,
 using \(\mathcal{H}(vks_\text{pool})\) as key. The integrity of the data
 will be ensured by requiring it to be signed with \(sks_\text{pool}\).
+\todo{We need a business decision on whether we do want to store the metadata
+  off-chain. We also need to converge on the actual metadata format and degree
+  of flexibility to post arbitrary data.}
 
 A stake pool operator can change the costs and margin of the pool by
 replacing the registration certificate of the pool with a new
