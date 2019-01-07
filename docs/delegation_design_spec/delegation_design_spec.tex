@@ -987,32 +987,57 @@ The certificate contains the following:
 \begin{itemize}
 \item
   The public key of the pool, \(vks_\text{pool}\).
-\item The public stake key hash of the pool owner,
-  \(\mathcal{H}(vks_\text{owner})\),
-  or a list of such public stake key hashes. If any of the
-  \(vks_\text{owner}\)
-  delegate to this pool, the stake that they delegate will be
-  counted towards the stake pledged to the pool by the owner(s), see
+
+\item
+  A hash \(\mathcal{H}(vks_\text{reward})\) of a staking key. Usually, this will
+  be a \emph{registered} staking key, controlled by the pool operator. The
+  rewards for the pool operator will be paid to the reward account associated
+  with this \emph{reward staking key} \(vks_\text{reward}\)\footnote{We do
+    \emph{not} want rewards to be paid to the key of the pool itself. An
+    important reason for this is that for security reasons, we expect stake pool
+    operators to use operational keys as described in
+    \cref{operational-key-certificates}, while storing the key of the pool
+    securely offline. Requiring this key for withdrawing rewards would be
+    detromental.}.
+
+  If a pool operator wants to donate their rewards to a charity, they can do so
+  by supplying the hash of a staking key that is controlled by that charity as
+  the reward staking key. They can then advertise to other stakeholders that
+  they are doing so (although evidence that the staking key does indeed belong
+  to the charity has to be provided out of band).
+
+  Should the reward stakign key be unregistered, the stake pool operator will be
+  unable to receive rewards. In that case, any rewards that they would be due
+  are instead paid to the treasury\todo{This is an arbitrary choice -- we could
+    just as well carry them over to the next epoch's reward pool, or even move
+    them back to the reserve.} (but the stake pool members would still get their
+  usual rewards).
+
+\item A list of Hashes of public staking keys controlled by the pool owner,
+  \(\mathcal{H}(vks_\text{owner})\). If any of these \emph{owner staking keys}
+  \(vks_\text{owner}\) delegate to this pool, the stake that they delegate will
+  be counted towards the stake pledged to the pool by the owner(s), see
   \cref{stakepool-registration,overview-of-incentives,reward-splitting}. Note
-  that adding a key as \(vks_\text{owner}\)
-  in itself does not actually delegate the stake controlled by that
-  key to the pool -- an additional delegation certificate is required
-  to do so.
+  that adding a key as \(vks_\text{owner}\) in itself does not actually delegate
+  the stake controlled by that key to the pool -- an additional delegation
+  certificate is required to do so.
+
+  During reward distribution, there will be no rewards paid to the reward
+  accounts of the owner staking keys. Instead, the stake delegated by all owner
+  staking keys will be counted as the stake contributed by the pool operator,
+  and their reward will be paid to the reward account of the reward staking key.
+
 \item
   The parameters that specify the reward sharing function of the stake
   pool: cost, margin, and amount of stake pledged to the pool by the
   operator, see \cref{stakepool-registration,reminder-stakepool-registration}.
-\item
-  optionally, a stake pool registration can specify an alternative stake
-  key reward account to pay all owner rewards into. This is specified as
-  the stake key hash \(\mathcal{H}(vks_\text{rewards})\). This allows
-  stakeholders who do not want to get rewards (possibly for regulatory
-  or tax reasons) to have their stake pool's rewards benefit some other
-  party such as a charity.
 \end{itemize}
 
 The certificate must be signed by all \(sks_\text{owner}\), as well as
 by \(sks_\text{pool}\).
+\todo{We could also require a signature by \(sks_\text{reward}\). However, that
+  would require more coordination for ``charity pools'', and I don't see an
+  obvious threat when we do not require that signature.}
 
 Additional, personal, information on the stake pool operator will be
 hosted separately from the blockchain, see \cref{stakepool-registration}.
@@ -1048,11 +1073,14 @@ redelegate by their wallet the next time they are online.
 \end{description}
 
 Note that there is a conceptual difference between the stake pool
-operator and stake pool owners:
+\emph{operator} and stake pool \emph{owners}:
 \begin{description}
-\item[Stake Pool Operator] This is the person who operates the pool --
-  owns or rents a server, holds the staking key of the pool, runs and
-  monitors the node.
+\item[Stake Pool Operator] This is the person who operates the pool -- owns or
+  rents a server, holds the staking key of the pool, runs and monitors the
+  node\footnote{In the chapter on incentives, the stake pool operator is also
+    called \emph{stake pool leader}. This is due to the design of incentives and
+    delegation having been developed in parallel, and merged later. We should
+    change this and stick to one term for consistency.}.
 \item[Stake Pool Owner] This is a person pledging stake
   to the pool, increasing its rewards and desirability. The ability
   for the owner to pledge stake is providing protection against the
@@ -1067,18 +1095,18 @@ people to coordinate and form a stake pool even if none of them had
 enough stake on their own to make a pledge that would make the stake
 pool competitive.
 
-Still, there will only be one operator, the person holding the key of
-the stake pool itself. In addition to signing blocks, this key also
-holds the power to retire the stake pool, or to post updated
-registration certificates without the keys of all owners (in which
-case some of the owners are kicked off the stake pool). That is a
-conscious design decision: collaborating to form a stake pool should
-require some trust between the participants. Otherwise, everyone could
-choose to become a co-owner of a stake pool instead of delegation,
-which would render the mechanism pledging stake ineffective. Allowing the
-operator to shut down the pool, or to kick owners off, raises the
-threshold of necessary trust that owners of the pool must have in the
-operator.
+Still, there will only be one operator, the person holding the key of the stake
+pool itself. In addition to signing blocks, this key also holds the power to
+retire the stake pool, or to post updated registration certificates without the
+keys of all owners (in which case some of the owners are kicked off the stake
+pool). The stake pool operator will also receive the rewards for all the owners,
+and it will be their responsibility to distribute them to their fellow owners.
+That is a conscious design decision: collaborating to form a stake pool should
+require significant trust between the owners. Otherwise, everyone could choose
+to become a co-owner of a stake pool instead of delegating, which would render
+the mechanism of pledging stake ineffective. Allowing the operator to shut down
+the pool, kick other owners off, or fail to distribute rewards raises the
+threshold of necessary trust that owners of the pool must have in the operator.
 
 \subsubsection{Delegation Certificates}
 \label{delegation-certificates}
