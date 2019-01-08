@@ -1507,19 +1507,12 @@ The nodes will use the state from slot \(s_\text{stakedist}\) to
 \subsection{Block Validity and Operational Key Certificates}
 \label{block-validity-and-operational-key-certificates}
 
-Most stake pool operators will use operational key certificates in order to
-protect the key to which their members delegated. A block for a slot
-where the key \(vks_\text{leader}\) has been elected as leader will be
-considered valid by all nodes if either
-
-\begin{itemize}
-\item
-  The block is signed by \(vks_\text{leader}\)
-\item
-  The block is signed by \(vks_\text{hot}\) and contains, in its header,
-  an operational key certificate that transfers the staking rights from
-  \(vks_\text{leader}\) to \(vks_\text{hot}\)
-\end{itemize}
+Stake pool operators will use operational key certificates in order to protect
+the key to which their members delegated. A block for a slot where the key
+\(vks_\text{leader}\) has been elected as leader will be considered valid by all
+nodes if the block is signed by \(vks_\text{hot}\) and contains, in its header,
+an operational key certificate that transfers the staking rights from
+\(vks_\text{leader}\) to \(vks_\text{hot}\).
 
 In case there are more than one block for the current slot, each of
 which are signed using an operational key certificate, the newest certificate
