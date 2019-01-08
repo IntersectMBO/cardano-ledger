@@ -54,3 +54,24 @@ To test run:
 ```sh
 nix-shell --pure --run "runhaskell Setup.hs test"
 ```
+
+### Development
+
+For running the tests you can use:
+
+```sh
+nix-shell --pure --command "cabal new-test <target>"
+```
+
+Example, while on the `specs/ledger/hs` directory one can run:
+
+```sh
+nix-shell --pure --run "cabal new-test ledger-delegation-test"
+```
+
+To have the warnings not being treated as errors the `development` flag can be
+used, e.g.:
+
+```sh
+nix-shell --pure --run "cabal new-test ledger-delegation-test -fdevelopment"
+```

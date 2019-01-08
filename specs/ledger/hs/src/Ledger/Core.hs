@@ -1,12 +1,16 @@
 module Ledger.Core where
 
-import Ledger.Signatures
-import Numeric.Natural (Natural)
+import qualified Crypto.Hash as Crypto
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Char8 as BS
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import GHC.Natural (minusNaturalMaybe)
+import Numeric.Natural (Natural)
+
+import Ledger.Signatures
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -19,11 +23,34 @@ class HasHash a where
 -- |Representation of the owner of key pair.
 newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
+class HasOwner a where
+  owner :: a -> Owner
+
 -- |Signing Key.
 newtype SKey = SKey Owner deriving (Show, Eq, Ord)
 
+instance HasOwner SKey where
+  owner (SKey o) = o
+
 -- |Verification Key.
 newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+
+instance HasHash VKey where
+  hash = Crypto.hash
+
+instance BA.ByteArrayAccess VKey where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack . show
+
+instance HasOwner VKey where
+  owner (VKey o) = o
+
+-- | A genesis key is a specialisation of a generic VKey.
+newtype VKeyGenesis = VKeyGenesis VKey
+  deriving (Eq, Ord, Show)
+
+instance HasOwner VKeyGenesis where
+  owner (VKeyGenesis vk) = owner vk
 
 -- |Key Pair.
 data KeyPair = KeyPair
@@ -31,7 +58,7 @@ data KeyPair = KeyPair
 
 -- |Return a key pair for a given owner.
 keyPair :: Owner -> KeyPair
-keyPair owner = KeyPair (SKey owner) (VKey owner)
+keyPair o = KeyPair (SKey o) (VKey o)
 
 -- |A digital signature.
 data Sig a = Sig a Owner deriving (Show, Eq, Ord)
@@ -50,7 +77,6 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 newtype Epoch = Epoch Natural
   deriving (Eq, Ord, Show)
-
 
 newtype Slot = Slot Natural
   deriving (Eq, Ord, Show)
