@@ -1851,6 +1851,46 @@ depends on the time at which the resource is freed -- can not be computed. But
 if the transaction does include a ttl, the latest slot in which the transaction
 can be added to the ledger can be used to calculate the refund.
 
+\subsection{Robustness at the Epoch Boundary}
+\label{robustness-at-the-epoch-boundary}
+
+As described, there is a lot of work to be done by the nodes as the system
+progresses from epoch to epoch: the stake distribution and slot leader schedule
+need to be calculated, the fees accumulated during the epoch need to be
+addedsummed up, performance of the pools evaluated, deposits decayed, and
+rewards determined and distributed.
+
+Doing all that \emph{at} the transition between two epochs is far from ideal. It
+creates a time period where all the nodes will need additional resources. It
+also required that all nodes finish those calculations within a single slot
+length, and failure to do so will result in missed blocks and temporary forks.
+Worse, since this period of increased activity is perfectly predictble, any
+attacker of the system can leverage this, and time their attack appropriately to
+maximise impact. Effectively, a predetermined breaking point is introduced at
+the epoch boundary.
+
+It is thus desirable to spread this work out over a longer period when possible.
+And it turns out that this is entirely achievable.
+
+\subsubsection{Calculating the Leader Schedule}
+
+The stake distribution and randomness used to determine the leader schedule for
+epoch \(e\) need to be available at the start of epoch \(e\). In the case of a
+public leader schedule, it is also convenient to publish the schedule itself at
+the start of the epoch. But we can start calculating those \emph{before} the end
+of epoch \(e-1\). The details of when the stake distribution has to be taken for
+the leader election, and when the randomness has to be agreed on, depends on the
+choice of consensus protocol.
+
+\subsubsection{Calculating and Distributing Rewards}
+
+The rewards for epoch \(e\) depend on the contents of that epoch, so it is not
+feasible to start calculating them during that epoch. However, there is no hard
+constraint to actually distribute those rewards at the beginning of epoch
+\(e+1\). If we instead defer that payout by one epoch, and pay rewards for epoch
+\(e\) at the beginning of \(e+2\), we will have a whole epoch for that
+calculation.
+
 \subsection{Design Option: Stale Stake}
 \label{stale-stake}
 
