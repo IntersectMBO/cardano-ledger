@@ -2223,25 +2223,6 @@ manually. This seems justified, given that there is only a handful of
 such very large stakeholders and seeing as such a feature would
 unnecessarily complicate engineering.
 
-\emph{Remark}: It may seem counterintuitive that any of the existing stake pools
-would accept a stake pool registration certificate for a new pool, for fear of
-losing some of their future rewards to the increased competition. After all,
-with a naive approach to rewarding pools, a new pool would potentially reduce
-the rewards of every existing pool. Existing systems like Bitcoin tend to
-becoming more centralised because they use naive incentives.
-
-But with the incentive scheme devised in \citep{bkks2018} and summarised in
-\cref{design-of-incentives}, the system tends to a fixed number \(k\) of
-saturated stake pools, and no pool can increase their own rewards by trying to
-reduce the number of active pools below \(k\). As long as there are less than
-\(k\) pools, no one has anything to lose by accepting another pool. If there are
-already \(k\) or more pools, the newly registered pool could supersede the one
-saturated pool that promises the smallest rewards to its members, and this pool
-(or even a couple of pools at the bottom of the list) could try to censor new
-pool registration certificates. But the majority of pools will not feel
-threatened, and thus can be expected to behave honestly, ensuring liveness
-leading to the new certificate being incorporated into the chain.
-
 \subsection{Display of Stake Pools in the Wallet}
 \label{display-of-stake-pools-in-the-wallet}
 
@@ -4058,6 +4039,40 @@ never drop below $d_{\min}\cdot d_R=0.5$ ADA.
 \todo{We have to discuss this proposal with the researchers on the
   Game Theory side. We also need to decide whether we should preclude
   transactions with an overall negative fee.}
+
+\section{FAQ}
+
+\subsection{Why will stake pools accept new stake pool registration
+  certificates?}
+
+It may seem counterintuitive that any of the existing stake pools would accept a
+stake pool registration certificate for a new pool, for fear of losing some of
+their future rewards to the increased competition. After all, with a naive
+approach to rewarding pools, a new pool would potentially reduce the rewards of
+every existing pool. Existing systems like Bitcoin tend to becoming more
+centralised because they use naive incentives.
+
+But with the incentive scheme devised in \citep{bkks2018} and summarised in
+\cref{design-of-incentives}, the system tends to a fixed number \(k\) of
+saturated stake pools, and no pool can increase their own rewards by trying to
+reduce the number of active pools below \(k\). As long as there are less than
+\(k\) pools, no one has anything to lose by accepting another pool. If there are
+already \(k\) or more pools, the newly registered pool could supersede the one
+saturated pool that promises the smallest rewards to its members, and this pool
+(or even a couple of pools at the bottom of the list) could try to censor new
+pool registration certificates. But the majority of pools will not feel
+threatened, and thus can be expected to behave honestly, ensuring liveness
+leading to the new certificate being incorporated into the chain.
+
+
+\subsection{Won't stake pools reject delegation certificates that delegate away
+  from them?}
+
+That would only work if a majority of stake pools colluded to censor such a
+certificate. But all pools are incentivised to include the certificate, via
+fees. So this censorship would only happen if a majority of pools decided to
+partake in malicious behaviour and attack the system, against their direct
+incentives.
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
