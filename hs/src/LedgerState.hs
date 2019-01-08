@@ -26,7 +26,6 @@ module LedgerState
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
-  , Allocs
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -76,7 +75,7 @@ import           Keys
 import           UTxO
 import           PrtclConsts              (PrtclConsts(..), minfeeA, minfeeB)
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey)
+import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
 
 import Control.State.Transition
@@ -134,8 +133,6 @@ instance Semigroup Validity where
 instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
-
-type Allocs = Map.Map HashKey Slot
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
@@ -553,7 +550,6 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedO
       return (pool, c)
     outs = getOutputs $ ls ^. utxoState . utxo
     delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
-
 
 ---------------------------------------------------------------------------------
 -- State transition system

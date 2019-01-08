@@ -70,7 +70,7 @@ import           Keys
 import           PrtclConsts (PrtclConsts(..))
 import           Slot (Slot(..))
 
-import           Delegation.Certificates (DCert (..), dvalue)
+import           Delegation.Certificates (Allocs, DCert (..), dvalue)
 import           Delegation.StakePool (poolPubKey)
 
 -- |A hash
@@ -189,7 +189,7 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-depositAmount :: PrtclConsts -> Map.Map HashKey Slot -> Tx -> Coin
+depositAmount :: PrtclConsts -> Allocs -> Tx -> Coin
 depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
