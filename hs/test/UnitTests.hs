@@ -414,11 +414,11 @@ testWitnessNotIncluded =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 6434)
+              [ TxOut aliceAddr (Coin 6404)
               , TxOut bobAddr (Coin 3000) ]
               []
               Map.empty
-              (Coin 566)
+              (Coin 596)
               (Slot 100)
     tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]
