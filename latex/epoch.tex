@@ -209,9 +209,9 @@ at the epoch boundary.
       & \text{total possible refunds} \\
       & \obligation{pc}{stkeys}{stpools}{cslot} =\\
       & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
-        \refund{d_{\mathsf{val}}}{d_{\min}}{(\slotminus{cslot}{s})}{\lambda_d} \\
+        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})} \\
       & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
-        \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda_p} \\
+        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
       &
       \begin{array}{lr@{~=~}l}
         \where
@@ -223,7 +223,7 @@ at the epoch boundary.
       & \text{pool refunds} \\
       & \poolRefunds{pc}{retiring}{cslot} = \\
       & \bigcup_{\var{hk}\mapsto s\in\var{retiring}}
-          \var{hk}\mapsto( \refund{p_{\mathsf{val}}}{p_{\min}}{(\slotminus{cslot}{s})}{\lambda} ) \\
+          \var{hk}\mapsto( \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{s})} ) \\
       &
         \where (p_{\mathsf{val}},~p_{\min},~\lambda_p) = \fun{decayPool}~\var{pc}\\
   \end{align*}
