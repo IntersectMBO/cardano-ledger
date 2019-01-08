@@ -15,8 +15,8 @@ module EpochBoundary
 
 import           Coin
 import           Keys
-import           LedgerState
 import           UTxO
+import           Delegation.Certificates (Allocs)
 
 import           Data.List   (groupBy, sort)
 import qualified Data.Map    as Map
