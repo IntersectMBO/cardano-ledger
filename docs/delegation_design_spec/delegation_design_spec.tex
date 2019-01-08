@@ -503,12 +503,12 @@ delegation:
   reward account is only associated with the one stake key.
 \item There can be many UTxO entries (funds) for a single address. However a
   UTxO entry refers an available input address to use.
-\item A stake key is associated with exactly zero or one stake pools
-  at any point in time. A stake pool has exactly one staking key that
-  controls the pool (though it can use further operational keys to
-  mitigate key theft as described in
-  \cref{operational-key-certificates}, and there can be multiple
-  staking keys delegating or pledging to the pool).
+\item A stake key is associated with exactly zero or one stake pools at any
+  point in time. A stake pool has exactly one staking key that controls the pool
+  (though it can use further operational keys to mitigate key theft as described
+  in \cref{operational-key-certificates}\todo{Using operational keys is now
+    compulsory, we need to update the document to reflect that.}, and there can
+  be multiple staking keys delegating or pledging to the pool).
 \end{itemize}
 
 \begin{figure*}[ht]
