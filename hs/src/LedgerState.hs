@@ -26,6 +26,7 @@ module LedgerState
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
+  , Allocs
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -62,11 +63,9 @@ import           Crypto.Hash             (hash)
 import qualified Data.Map                as Map
 import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
-import           Data.Maybe              (fromJust, isJust)
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Data.Ratio
-import           Data.List               (sort, groupBy)
 
 import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
@@ -548,61 +547,13 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedO
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do
       pool <- Map.lookup hsk delegs
       return (pool, c)
+    addStake delegs (TxOut (AddrPtr ptr) c) = do
+      key  <- Map.lookup ptr $ ds ^. dstate . ptrs
+      pool <- Map.lookup key delegs
+      return (pool, c)
     outs = getOutputs $ ls ^. utxoState . utxo
     delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
 
---------------------
--- epoch boundary --
---------------------
-
-newtype Stake = Stake (HashKey, Coin)
-    deriving (Show, Eq, Ord)
-
-getStakeHK :: Addr -> Maybe HashKey
-getStakeHK (AddrTxin _ hk) = Just hk
-getStakeHK _ = Nothing
-
-baseStake :: Set.Set TxOut -> Set.Set Stake
-baseStake outs = Set.fromList [Stake (fromJust $ getStakeHK a, c) |
-                               TxOut a c <- Set.toList outs, isJust $ getStakeHK a]
-
-getStakePtr :: Addr -> Maybe Ptr
-getStakePtr (AddrPtr ptr) = Just ptr
-getStakePtr _ = Nothing
-
-ptrStake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
-ptrStake outs pointers =
-    Set.fromList
-           [Stake (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c) |
-            TxOut a c <- Set.toList outs,
-                         isJust $ getStakePtr a,
-                         isJust $ Map.lookup (fromJust $ getStakePtr a) pointers]
-
-stake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
-stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
-
-isActive :: HashKey -> Allocs -> Map.Map HashKey HashKey -> Allocs -> Bool
-isActive vSk stakeKeys delegs stakePools =
-    vSk `Set.member` Map.keysSet stakeKeys &&
-        isJust vp && fromJust vp `Set.member` Map.keysSet stakePools
-    where vp = Map.lookup vSk delegs
-
-activeStake
-    :: Set.Set TxOut
-    -> Map.Map Ptr HashKey
-    -> Allocs
-    -> Map.Map HashKey HashKey
-    -> Allocs
-    -> Map.Map HashKey Coin
-activeStake outs pointers stakeKeys delegs stakePools =
-    Map.fromList $ map (makePair . sumKey) $
-       groupBy (\(Stake (a, _)) (Stake (a', _)) -> a == a') $
-       sort $
-       filter (\(Stake (hk, _)) -> isActive hk stakeKeys delegs stakePools)
-              (Set.toList $ stake outs pointers)
-        where sumKey = foldl1 (\(Stake (key, coin)) (Stake (_, c')) ->
-                                      Stake (key, coin <> c'))
-              makePair (Stake (k, c)) = (k, c)
 
 ---------------------------------------------------------------------------------
 -- State transition system
