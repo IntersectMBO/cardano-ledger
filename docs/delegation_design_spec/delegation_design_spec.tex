@@ -1142,7 +1142,7 @@ source stake key is de-registered.
 \label{operational-key-certificates}
 
 % On the need for a hot/cold key arrangement.
-The stake pool operators can use a \emph{hot}/\emph{cold} key
+The stake pool operators must use a \emph{hot}/\emph{cold} key
 arrangement to mitigate key exposure
 (see~\cref{mitigate-key-exposure}). A \emph{hot}, or operational, key
 is kept online and used to sign blocks, while the \emph{cold} key is
@@ -1150,7 +1150,7 @@ kept securely offline. This requires an \emph{operational key
   certificate} to create a (1-link) chain of trust from the cold key
 to the hot key, allowing this hot key to participate in the \emph{PoS}
 protocol. Should the hot key become compromised, the stake pool
-operator can immediately create a new operational key certificate, and
+operator should immediately create a new operational key certificate, and
 switch to a new key.
 
 % The problems with using in-ledger certificates.
@@ -1207,6 +1207,13 @@ to a hot key \(vks_\text{hot}\).
 They are included in the message (e.g.~block header) and the message
 itself is signed with \(sks_\text{hot}\).
 
+Operational keys will use a key evolving signature (KES) scheme.
+
+Operational key certificates will have a maximal lifetime after which they
+become invalid, to encourage pool operators to regularly rotate their
+operational key. The lifetime of the certificate will be chosen to be shorter
+than the time in which a KES key expires.
+
 In detail, the hot/cold key setup is as follows:
 
 \begin{itemize}
@@ -1228,6 +1235,9 @@ In detail, the hot/cold key setup is as follows:
   pool operator will create a new operational key certificate
   \(C'\), delegating the staking rights to a new hot key
   \(vks_{\text{hot}'}\).
+\item
+  The epoch number from which this certificate can start to be used. The maximal
+  lifetime of the certificate will be counted from this epoch.
 \end{itemize}
 
 In order to render \(sks_\text{hot}\) useless, it must be established
