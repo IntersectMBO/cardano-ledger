@@ -26,7 +26,7 @@ on the ledger (treasury, reserves, rewards, fees).
 
 However, it is also when
 pools scheduled for retirement at this boundary are removed from the ledger.
-In addition, if there is an update planned for any of the protocol constants,
+In addition, if there is an update planned for any of the protocol parameters,
 it may only take place at the epoch boundary, and results in a ledger state
 update, which we also give the details of in this chapter.
 Note that witnessing here is not necessary because there is no data to sign
@@ -44,8 +44,8 @@ hash key at a base address, and the map $\fun{stakePtr}$ looks up the pointer
 at a given pointer address.
 
 The next three functions ($\fun{movingAvgWeight}$, $\fun{movingAvgExp}$, and
-$\fun{poolConsts}$) in the figure return a specific subset of constants
-in the set of protocol constants (stake pool-specific constants, respectively)
+$\fun{poolConsts}$) in the figure return a specific subset of parameters
+in the set of protocol parameters (stake pool-specific parameters, respectively)
 needed for performing rewards calculations.
 
 %%
@@ -76,12 +76,12 @@ needed for performing rewards calculations.
       & \text{base address hashkey}\\
       \fun{stakePtr} & \Addr_{ptr} \to \Ptr
       & \text{pointer address pointer}\\
-      \fun{movingAvgWeight} & \PrtclConsts \to [0, 1]
+      \fun{movingAvgWeight} & \PParams \to [0, 1]
       & \text{moving average weight}\\
-      \fun{movingAvgExp} & \PrtclConsts \to [0, 1]
+      \fun{movingAvgExp} & \PParams \to [0, 1]
       & \text{moving average exponent}\\
-      \fun{poolConsts} & \PrtclConsts \to \mathbb{R}_{>0}\times\mathbb{N}
-      & \text{pool constants}\\
+      \fun{poolConsts} & \PParams \to \mathbb{R}_{>0}\times\mathbb{N}
+      & \text{pool parameters}\\
       \fun{poolSpec} & \StakePool \to \Coin\times [0,1] \times \Coin
       & \text{pool specs}\\
     \end{array}
@@ -183,7 +183,7 @@ and pool deposits in a given slot number.
 
 Next, we give the type of the function used to calculate additional rewards that
 will become available to be claimed after the boundary. This function is denoted
-$\fun{reward}$, and depends on this epoch's blocks, protocol constants, the
+$\fun{reward}$, and depends on this epoch's blocks, protocol parameters, the
 delegation and pool states, and existing rewards unclaimed in the previous
 epoch.  The $\fun{reward}$ function updates the existing records of the
 unclaimed coin values by adding newly accumulated rewards in this epoch to the
@@ -196,7 +196,7 @@ calculation takes a slot number as a parameter because that is the type of value
 needed for the decay calculation, but will only ever be invoked
 when the slot number is the last before the boundary.
 
-The map $\fun{poolRefunds}$ uses the pool decay constants in $\PrtclConsts$
+The map $\fun{poolRefunds}$ uses the pool decay parameters in $\PParams$
 to assign a refund to each pool key in the set of pools scheduled for retirement
 at the epoch boundary.
 
@@ -205,7 +205,7 @@ at the epoch boundary.
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{obligation} \in \PrtclConsts \to \Allocs \to \Allocs \to \Slot \to \Coin
+      & \fun{obligation} \in \PParams \to \Allocs \to \Allocs \to \Slot \to \Coin
       & \text{total possible refunds} \\
       & \obligation{pc}{stkeys}{stpools}{cslot} =\\
       & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
@@ -219,7 +219,7 @@ at the epoch boundary.
           & (p_{\mathsf{val}},~p_{\min},~\lambda_p) & \fun{decayPool}~\var{pc}\\
       \end{array}\\
       \nextdef
-      & \fun{poolRefunds} \in \PrtclConsts \to \Allocs \to \Slot \to (\HashKey \mapsto \Coin)
+      & \fun{poolRefunds} \in \PParams \to \Allocs \to \Slot \to (\HashKey \mapsto \Coin)
       & \text{pool refunds} \\
       & \poolRefunds{pc}{retiring}{cslot} = \\
       & \bigcup_{\var{hk}\mapsto s\in\var{retiring}}
@@ -245,7 +245,7 @@ following variables, sourced as indicated (listed here for reference):
 \item[] From the delegation state:
 \item $\var{avgs}$ stores the (moving) average for each
 stake pool
-\item $\var{pparams}$ stores stake pool-specific constants
+\item $\var{pparams}$ stores stake pool-specific parameters
 \item $\var{delegs}$ stores delegations as stake and pool key pairs \medskip
 
 From the boundary accounting transition context:
@@ -264,7 +264,7 @@ tends to by protocol design)
 influence on pool rewards
 \item $\gamma$ is the moving average exponent constant \medskip
 
-From pool-specific constants denoted $\var{pool}$, associated to a specific
+From pool-specific parameters denoted $\var{pool}$, associated to a specific
 hash key in $\var{pparams}$:
 \item $c \in \Coin$ is the pool costs
 \item $m \in [0,1]$ is the stake pool margin
@@ -297,14 +297,14 @@ the current epoch
 The function $\fun{maxPool}$ gives the maximum possible amount of rewards a pool
 can receive in an epoch. For a given pool, it is a coin value which is some fraction of
 the total available rewards. This result depends additionally on the protocol
-constants, the pool's relative stake, and the pool's relative pledge.
+parameters, the pool's relative stake, and the pool's relative pledge.
 
 The function $\fun{movingAvg}$ calculates the new moving average for a
-given stake pool based on protocol constants, pool's block production, and
+given stake pool based on protocol parameters, pool's block production, and
 the moving average of this pool in the previous epoch.
 
 Next, the function $\fun{poolRew}$ gives the total rewards available to be distributed
-to the members of the given pool. This value is based on protocol constants,
+to the members of the given pool. This value is based on protocol parameters,
 the pool's block production, moving average, election expectation, and the maximum
 possible rewards for this pool.
 
@@ -313,7 +313,7 @@ possible rewards for this pool.
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{maxPool} \in \PrtclConsts \to \Coin \to [0, 1] \to [0,1] \to \Coin
+      & \fun{maxPool} \in \PParams \to \Coin \to [0, 1] \to [0,1] \to \Coin
       & \text{max pool reward} \\
       & \fun{maxPool}~\var{pc}~\var{R}~\sigma~\var{p_r} = \\
       & ~~~\floor*{
@@ -326,7 +326,7 @@ possible rewards for this pool.
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
       & ~~~~~~~p'=\min(p_r,~z_0) \\
       \nextdef
-      & \fun{movingAvg} \in \PrtclConsts \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
+      & \fun{movingAvg} \in \PParams \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
       & ~~~\to \Distr \to [0, 1]
       & \text{moving average} \\
       & \fun{movingAvg}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs} = \\
@@ -340,7 +340,7 @@ possible rewards for this pool.
       & ~~~\where \\
       & ~~~~~~~\alpha = \fun{movingAvgWeight}~pc \\
       \nextdef
-      & \fun{poolRew} \in \PrtclConsts \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
+      & \fun{poolRew} \in \PParams \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
       & ~~~\to \Distr \to \Coin \to (\Coin \times [0, 1])
       & \text{pool reward} \\
       & \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} =
@@ -359,7 +359,7 @@ the total value to be split within the pool is presented above, denoted $\fun{po
 
 The portion of rewards allocated to the pool leader and those allocated to
 the rest of the pool members is different. This portion is calculated based
-on pool-specific constants stored on the ledger, as well as
+on pool-specific parameters stored on the ledger, as well as
 the pool's total stake and the individual stake of the key for which the rewards
 are being calculated. The calculation for the pool
 leader reward amount is given by the $\fun{leaderRew}$ function, and the
@@ -450,7 +450,7 @@ do this, it is given the following parameters:
 
 \begin{itemize}
 \item The number of blocks produced by each key this epoch
-\item The protocol constants
+\item The protocol parameters
 \item The total coin value of rewards to be distributed this epoch
 \item The full delegation state
 \item The set of outputs in the UTxO on the ledger
@@ -491,7 +491,7 @@ the relative pledge in the same way, $p_r = p \div tot$.
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{rewardOnePool} \in \PrtclConsts \to \Coin \to \mathbb{N} \to \HashKey \to \StakePool\\
+      & \fun{rewardOnePool} \in \PParams \to \Coin \to \mathbb{N} \to \HashKey \to \StakePool\\
       & ~~~\to (\HashKey \mapsto \Coin)\to \Distr \to \Coin \to (\AddrRWD \mapsto \Coin)\times[0, 1]
       & \text{reward one pool} \\
       & \fun{rewardOnePool}~\var{pc}~\var{R}~\var{n}~\var{poolHK}~\var{pool}
@@ -513,7 +513,7 @@ the relative pledge in the same way, $p_r = p \div tot$.
         \end{cases} \\
       & ~~~~~~~\var{poolR},~\var{avg} = \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} \\
       \nextdef
-      & \fun{reward} \in \Production \to \PrtclConsts \to \Coin \\
+      & \fun{reward} \in \Production \to \PParams \to \Coin \\
       & ~~ \to \DWState \to \powerset{\TxOut} \to (\AddrRWD \mapsto \Coin)\times\Distr
       & \text{staking rewards} \\
       & \fun{reward}~\var{prod}~\var{pc}~\var{R}~\var{dwstate}~\var{outs} = \\
@@ -639,9 +639,9 @@ type, as all transition types in this chapter, has no signal.
     \Accnt =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{treasury} & \Coin & \text{treasury pool}\\
-        \var{reserves} & \Coin & \text{reserve pool}\\
-        \var{rewardPool} & \Coin & \text{reward pool}\\
+        \var{treasury} & \Coin & \text{treasury pot}\\
+        \var{reserves} & \Coin & \text{reserve pot}\\
+        \var{rewardPool} & \Coin & \text{reward pot}\\
       \end{array}
     \right)
   \end{equation*}
@@ -652,7 +652,7 @@ type, as all transition types in this chapter, has no signal.
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pc} & \PrtclConsts & \text{protocol constants}\\
+        \var{pc} & \PParams & \text{protocol parameters}\\
         \var{production} & \Production & \text{blocks produced in the epoch}\\
         \var{utxoSt} & \UTxOState & \text{utxo state}\\
       \end{array}
@@ -863,8 +863,8 @@ for potential future use.
 \label{sec:prot-const-epoch}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
-constants. Besides the current slot number, delegation and pool states, the
-protocol constant environment includes the old and new protocol constants.
+parameters. Besides the current slot number, delegation and pool states, the
+protocol constant environment includes the old and new protocol parameters.
 The state change is a change of the $\UTxOState$ and the $\Accnt$ states.
 The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-consts}.
 
@@ -878,8 +878,8 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
-        \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
+        \var{pcOld} & \PParams & \text{old protocol parameters}\\
+        \var{pcNew} & \PParams & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
       \end{array}
@@ -910,21 +910,21 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
 \end{figure}
 
 
-The inference rule for changing protocol constants does one of the following:
+The inference rule for changing protocol parameters does one of the following:
 
 \begin{itemize}
 \item if there are more (or the same amount of) total possible refunds
-available calculated based on the old protocol constants than the new ones,
+available calculated based on the old protocol parameters than the new ones,
 moves the difference between the two values into the $\var{reserves}$
 from the $\var{deposits}$ variable, \textit{or}
 
-\item if there are more refunds available based on the new constants, it moves
+\item if there are more refunds available based on the new parameters, it moves
 the difference between the two calculations from $\var{deposits}$
 to $\var{reserves}$, \textit{provided that} there is enough coin in the
 $\var{reserves}$ to cover the entire value of the transfer
 \end{itemize}
 
-This update of protocol constants ensures that any time a deposit refund is
+This update of protocol parameters ensures that any time a deposit refund is
 requested, the necessary amount of funds is available in the $\var{deposits}$
 pool.
 
@@ -1001,7 +1001,7 @@ for ease of reading.
 
 Finally, it is possible to define the complete epoch boundary transition type.
 In the environment of this transition, we have the slot number, blocks produced
-this epoch, and both the old and the new protocol constants. The state is
+this epoch, and both the old and the new protocol parameters. The state is
 made up of the accounting state, the UTxO, the delegation state and the
 pool state.
 
@@ -1015,8 +1015,8 @@ pool state.
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pcOld} & \PrtclConsts & \text{old protocol constants}\\
-        \var{pcNew} & \PrtclConsts & \text{new protocol constants}\\
+        \var{pcOld} & \PParams & \text{old protocol parameters}\\
+        \var{pcNew} & \PParams & \text{new protocol parameters}\\
         \var{production} & \HashKey \mapsto \mathbb{N} & \text{blocks produced in the epoch}\\
       \end{array}
     \right)
