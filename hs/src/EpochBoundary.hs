@@ -11,12 +11,15 @@ module EpochBoundary
   , stake
   , isActive
   , activeStake
+  , poolRefunds
   ) where
 
 import           Coin
 import           Keys
 import           UTxO
-import           Delegation.Certificates (Allocs)
+import           PrtclConsts
+import           Slot
+import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
 
 import           Data.List   (groupBy, sort)
 import qualified Data.Map    as Map
@@ -91,3 +94,9 @@ activeStake outs pointers stakeKeys delegs stakePools =
     sumKey =
       foldl1 (\(Stake (key, coin)) (Stake (_, c')) -> Stake (key, coin <> c'))
     makePair (Stake (k, c)) = (k, c)
+
+-- | Calculate pool refunds
+poolRefunds :: PrtclConsts -> Allocs -> Slot -> Map.Map HashKey Coin
+poolRefunds pc retiring cslot =
+    Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
+    where (pval, pmin, lambda) = decayPool pc

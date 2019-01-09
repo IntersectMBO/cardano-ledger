@@ -11,7 +11,6 @@ module Delegation.Certificates
   , allocating
   , dretire
   , dderegister
-  , obligation
   , decayKey
   , decayPool
   ) where
