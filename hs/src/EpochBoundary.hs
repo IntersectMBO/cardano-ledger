@@ -11,20 +11,21 @@ module EpochBoundary
   , stake
   , isActive
   , activeStake
+  , obligation
   , poolRefunds
   ) where
 
 import           Coin
+import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
 import           Keys
-import           UTxO
 import           PrtclConsts
 import           Slot
-import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
+import           UTxO
 
-import           Data.List   (groupBy, sort)
-import qualified Data.Map    as Map
-import           Data.Maybe  (fromJust, isJust)
-import qualified Data.Set    as Set
+import           Data.List               (groupBy, sort)
+import qualified Data.Map                as Map
+import           Data.Maybe              (fromJust, isJust)
+import qualified Data.Set                as Set
 
 -- | Type of stake as pair of coins associated to a hash key.
 newtype Stake =
@@ -98,5 +99,15 @@ activeStake outs pointers stakeKeys delegs stakePools =
 -- | Calculate pool refunds
 poolRefunds :: PrtclConsts -> Allocs -> Slot -> Map.Map HashKey Coin
 poolRefunds pc retiring cslot =
-    Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
-    where (pval, pmin, lambda) = decayPool pc
+  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
+  where
+    (pval, pmin, lambda) = decayPool pc
+
+-- | Calculate total possible refunds.
+obligation :: PrtclConsts -> Allocs -> Allocs -> Slot -> Coin
+obligation pc stakeKeys stakePools cslot =
+  sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
+  sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
+  where
+    (dval, dmin, lambdad) = decayKey pc
+    (pval, pmin, lambdap) = decayPool pc
