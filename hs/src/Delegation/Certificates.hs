@@ -109,11 +109,3 @@ decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
           pmin    = fromRational $ pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
-
--- | Calculate total possible refunds.
-obligation :: PrtclConsts -> Allocs -> Allocs -> Slot -> Coin
-obligation pc stakeKeys stakePools cslot =
-    sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys)
-  + sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
-        where (dval, dmin, lambdad) = decayKey pc
-              (pval, pmin, lambdap) = decayPool pc
