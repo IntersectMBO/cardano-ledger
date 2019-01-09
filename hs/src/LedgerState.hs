@@ -136,10 +136,6 @@ instance Monoid Validity where
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
--- | Distribution density function
-newtype Distr      = Distr (Map.Map HashKey (Ratio Natural))
-newtype Production = Production (Map.Map HashKey Natural)
-
 data DState = DState
     {  -- |The active stake keys.
       _stKeys      :: Allocs

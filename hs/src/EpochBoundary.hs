@@ -6,6 +6,8 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake
+  , Distr
+  , Production
   , baseStake
   , ptrStake
   , stake
@@ -14,6 +16,8 @@ module EpochBoundary
   , obligation
   , poolRefunds
   , maxPool
+  , movingAvg
+  , poolRew
   ) where
 
 import           Coin
@@ -29,7 +33,16 @@ import           Data.Maybe              (fromJust, isJust)
 import           Data.Ratio
 import qualified Data.Set                as Set
 
+import           Numeric.Natural         (Natural)
+
 import           Lens.Micro              ((^.))
+
+-- | Distribution density function
+newtype Distr =
+  Distr (Map.Map HashKey Rational)
+
+newtype Production =
+  Production (Map.Map HashKey Natural)
 
 -- | Type of stake as pair of coins associated to a hash key.
 newtype Stake =
@@ -128,3 +141,28 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
+
+-- | Calulcate moving average
+movingAvg :: PrtclConsts -> HashKey -> Natural -> Rational -> Distr -> Rational
+movingAvg pc hk n expectedSlots (Distr averages) =
+  let fraction = fromIntegral n / max expectedSlots 1
+   in case Map.lookup hk averages of
+        Nothing -> fraction
+        Just prev -> alpha * fraction + (1 - alpha) * prev
+          where alpha = pc ^. movingAvgWeight
+
+-- | Calculate pool reward
+poolRew ::
+     PrtclConsts
+  -> HashKey
+  -> Natural
+  -> Rational
+  -> Distr
+  -> Coin
+  -> (Coin, Rational)
+poolRew pc hk n expectedSlots averages (Coin maxP) =
+  (floor $ e * fromIntegral maxP, avg)
+  where
+    avg = pc ^. movingAvgExp
+    gamma = movingAvg pc hk n expectedSlots averages
+    e = fromRational avg ** fromRational gamma :: Double
