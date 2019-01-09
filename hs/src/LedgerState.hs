@@ -75,7 +75,7 @@ import           Keys
 import           UTxO
 import           PrtclConsts              (PrtclConsts(..), minfeeA, minfeeB)
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs)
+import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs, decayKey)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
 
 import Control.State.Transition
@@ -278,7 +278,8 @@ keyRefunds pc stkeys tx =
   where refund' key =
           case Map.lookup (hashKey key) stkeys of
             Nothing -> Coin 0
-            Just s -> refund (RegKey key) pc $ (tx ^. ttl) -* s
+            Just s -> refund dval dmin lambda $ (tx ^. ttl) -* s
+        (dval, dmin, lambda) = decayKey pc
 
 -- |Compute the lovelace which are destroyed by the transaction
 destroyed :: Allocs -> PrtclConsts -> Tx -> UTxOState -> Coin

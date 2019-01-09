@@ -12,6 +12,8 @@ module PrtclConsts
   , movingAvgWeight
   , movingAvgExp
   , poolConsts
+  , poolMinRefund
+  , poolDecayRate
   ) where
 
 import           Data.Ratio      (Ratio, Rational)
@@ -40,6 +42,10 @@ data PrtclConsts = PrtclConsts
   , _movingAvgExp    :: Ratio Natural
     -- |Pool constants
   , _poolConsts      :: (Ratio Natural, Natural)
+    -- | The minimum percent pool refund
+  , _poolMinRefund   :: Rational
+    -- | Decay rate for pool deposits
+  , _poolDecayRate   :: Rational
   } deriving (Show, Eq)
 
 makeLenses ''PrtclConsts
