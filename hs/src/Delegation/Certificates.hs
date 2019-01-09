@@ -10,7 +10,7 @@ module Delegation.Certificates
 import           Coin (Coin(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..))
-import           PrtlConsts (PrtlConsts(..), decayRate, minRefund,
+import           PrtclConsts (PrtclConsts(..), decayRate, minRefund,
                                        keyDeposit, poolDeposit)
 
 import           Delegation.StakePool
@@ -43,13 +43,13 @@ authDCert :: VKey -> DCert -> Bool
 authDCert key cert = getRequiredSigningKey cert == key
 
 -- |Retrieve the deposit amount for a certificate
-dvalue :: DCert -> PrtlConsts -> Coin
+dvalue :: DCert -> PrtclConsts -> Coin
 dvalue (RegKey _)  = flip (^.) keyDeposit
 dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
-refund :: DCert -> PrtlConsts -> Duration -> Coin
+refund :: DCert -> PrtclConsts -> Duration -> Coin
 refund cert pc dur = floor refund'
   where
     dep = fromIntegral $ dvalue cert pc
