@@ -13,6 +13,7 @@ module EpochBoundary
   , activeStake
   , obligation
   , poolRefunds
+  , maxPool
   ) where
 
 import           Coin
@@ -25,7 +26,10 @@ import           UTxO
 import           Data.List               (groupBy, sort)
 import qualified Data.Map                as Map
 import           Data.Maybe              (fromJust, isJust)
+import           Data.Ratio
 import qualified Data.Set                as Set
+
+import           Lens.Micro              ((^.))
 
 -- | Type of stake as pair of coins associated to a hash key.
 newtype Stake =
@@ -111,3 +115,16 @@ obligation pc stakeKeys stakePools cslot =
   where
     (dval, dmin, lambdad) = decayKey pc
     (pval, pmin, lambdap) = decayPool pc
+
+-- | Calculate maximal pool reward
+maxPool :: PrtclConsts -> Coin -> Rational -> Rational -> Coin
+maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
+  where
+    (a0, nOpt) = pc ^. poolConsts
+    z0 = 1 % fromIntegral nOpt
+    sigma' = min sigma z0
+    p' = min pR z0
+    factor1 = fromIntegral r / (1 + a0)
+    factor2 = sigma' + p' * a0 * factor3
+    factor3 = (sigma' - p' * factor4) / z0
+    factor4 = (z0 - sigma') / z0

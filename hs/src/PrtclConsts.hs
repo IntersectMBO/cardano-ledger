@@ -41,7 +41,7 @@ data PrtclConsts = PrtclConsts
     -- |Moving average exponent.
   , _movingAvgExp    :: Ratio Natural
     -- |Pool constants
-  , _poolConsts      :: (Ratio Natural, Natural)
+  , _poolConsts      :: (Rational, Natural)
     -- | The minimum percent pool refund
   , _poolMinRefund   :: Rational
     -- | Decay rate for pool deposits
