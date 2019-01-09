@@ -18,7 +18,7 @@ import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 import           Keys
 import           LedgerState
-import           PrtlConsts
+import           PrtclConsts
 import           Slot
 import           UTxO
 
@@ -40,8 +40,8 @@ bobStake = keyPair (Owner 4)
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
-testPCs :: PrtlConsts
-testPCs = PrtlConsts 1 1 100 250 0.25 0.001
+testPCs :: PrtclConsts
+testPCs = PrtclConsts 1 1 100 250 0.25 0.001 (0%1) (0%1) (0%1, 0)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
@@ -77,7 +77,7 @@ testLedgerValidTransactions ls utxoState' =
                      (Slot 0))
 
 testValidStakeKeyRegistration ::
-  TxWits -> UTxOState -> DelegationState -> Assertion
+  TxWits -> UTxOState -> DWState -> Assertion
 testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
   let
     ls2 = ledgerState [tx]
@@ -89,7 +89,7 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
                      (Slot 0))
 
 testValidDelegation ::
-  [TxWits] -> UTxOState -> DelegationState -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> StakePool -> Assertion
 testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
@@ -106,7 +106,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           (Slot 0))
 
 testValidRetirement ::
-  [TxWits] -> UTxOState -> DelegationState -> Epoch -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> Epoch -> StakePool -> Assertion
 testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
@@ -295,7 +295,7 @@ utxoSt3 = UTxOState
             (Coin 550)
             (Coin 2500)
 
-stakeKeyRegistration1 :: DelegationState
+stakeKeyRegistration1 :: DWState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   & dstate . rewards .~
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
@@ -414,11 +414,11 @@ testWitnessNotIncluded =
   let
     txbody = Tx
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 6434)
+              [ TxOut aliceAddr (Coin 6404)
               , TxOut bobAddr (Coin 3000) ]
               []
               Map.empty
-              (Coin 566)
+              (Coin 596)
               (Slot 100)
     tx = TxWits txbody Set.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]

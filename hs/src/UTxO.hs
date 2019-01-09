@@ -15,6 +15,8 @@ module UTxO
   -- * Primitives
     TxId(..)
   , Addr(..)
+  , Ptr(..)
+  , Ix
   , RewardAcnt(..)
   , mkRwdAcnt
   -- * Derived Types
@@ -65,7 +67,7 @@ import           Lens.Micro.TH (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Keys
-import           PrtlConsts (PrtlConsts(..))
+import           PrtclConsts (PrtclConsts(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (DCert (..), dvalue)
@@ -78,8 +80,15 @@ type Hash = Digest SHA256
 newtype TxId = TxId { _TxId :: Hash }
   deriving (Show, Eq, Ord)
 
+type Ix  = Natural
+
+-- | Pointer to a slot, transaction index and index in certificate list.
+data Ptr = Ptr Slot Ix Ix
+         deriving (Show, Eq, Ord)
+
 -- |An address for UTxO.
-data Addr = AddrTxin HashKey HashKey
+data Addr = AddrTxin { _payHK   :: HashKey, _stakeHK :: HashKey }
+          | AddrPtr { _stakePtr :: Ptr }
           deriving (Show, Eq, Ord)
 
 -- |An account based address for a rewards
@@ -180,7 +189,7 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-depositAmount :: PrtlConsts -> Map.Map HashKey Slot -> Tx -> Coin
+depositAmount :: PrtclConsts -> Map.Map HashKey Slot -> Tx -> Coin
 depositAmount pc stpools tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc

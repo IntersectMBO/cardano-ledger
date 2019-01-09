@@ -27,7 +27,7 @@ import Coin
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool
 import Keys
-import LedgerState (DelegationState(..), KeyPairs)
+import LedgerState (DWState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 import           Slot
 
@@ -129,7 +129,7 @@ mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 -- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
-mutateDCert :: KeyPairs -> DelegationState -> DCert -> Gen DCert
+mutateDCert :: KeyPairs -> DWState -> DCert -> Gen DCert
 mutateDCert keys _ (RegKey _) = RegKey <$> vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (DeRegKey _) = DeRegKey <$> vKey . snd <$> Gen.element keys
