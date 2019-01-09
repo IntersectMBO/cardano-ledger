@@ -106,7 +106,7 @@ genTxOut addrs = do
 
 -- TODO generate sensible protocol constants
 defPCs :: PrtclConsts
-defPCs = PrtclConsts 0 0 100 100 0 0 (0%1) (0%1) (0%1, 0)
+defPCs = PrtclConsts 0 0 100 100 0 0 (0%1) (0%1) (0%1, 0) 0 0
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
