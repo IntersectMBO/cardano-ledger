@@ -26,7 +26,6 @@ module LedgerState
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
-  , Allocs
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -76,7 +75,7 @@ import           Keys
 import           UTxO
 import           PrtclConsts              (PrtclConsts(..), minfeeA, minfeeB)
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey)
+import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs, decayKey)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
 
 import Control.State.Transition
@@ -135,13 +134,7 @@ instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
 
-type Allocs = Map.Map HashKey Slot
-
 type RewardAccounts = Map.Map RewardAcnt Coin
-
--- | Distribution density function
-newtype Distr      = Distr (Map.Map HashKey (Ratio Natural))
-newtype Production = Production (Map.Map HashKey Natural)
 
 data DState = DState
     {  -- |The active stake keys.
@@ -281,7 +274,8 @@ keyRefunds pc stkeys tx =
   where refund' key =
           case Map.lookup (hashKey key) stkeys of
             Nothing -> Coin 0
-            Just s -> refund (RegKey key) pc $ (tx ^. ttl) -* s
+            Just s -> refund dval dmin lambda $ (tx ^. ttl) -* s
+        (dval, dmin, lambda) = decayKey pc
 
 -- |Compute the lovelace which are destroyed by the transaction
 destroyed :: Allocs -> PrtclConsts -> Tx -> UTxOState -> Coin
@@ -553,7 +547,6 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedO
       return (pool, c)
     outs = getOutputs $ ls ^. utxoState . utxo
     delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
-
 
 ---------------------------------------------------------------------------------
 -- State transition system
