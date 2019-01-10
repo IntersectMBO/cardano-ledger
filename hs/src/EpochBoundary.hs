@@ -6,22 +6,43 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake
+  , Distr
+  , Production
   , baseStake
   , ptrStake
   , stake
   , isActive
   , activeStake
+  , obligation
+  , poolRefunds
+  , maxPool
+  , movingAvg
+  , poolRew
   ) where
 
 import           Coin
+import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
 import           Keys
-import           LedgerState
+import           PrtclConsts
+import           Slot
 import           UTxO
 
-import           Data.List   (groupBy, sort)
-import qualified Data.Map    as Map
-import           Data.Maybe  (fromJust, isJust)
-import qualified Data.Set    as Set
+import           Data.List               (groupBy, sort)
+import qualified Data.Map                as Map
+import           Data.Maybe              (fromJust, isJust)
+import           Data.Ratio
+import qualified Data.Set                as Set
+
+import           Numeric.Natural         (Natural)
+
+import           Lens.Micro              ((^.))
+
+-- | Distribution density function
+newtype Distr =
+  Distr (Map.Map HashKey Rational)
+
+newtype Production =
+  Production (Map.Map HashKey Natural)
 
 -- | Type of stake as pair of coins associated to a hash key.
 newtype Stake =
@@ -91,3 +112,57 @@ activeStake outs pointers stakeKeys delegs stakePools =
     sumKey =
       foldl1 (\(Stake (key, coin)) (Stake (_, c')) -> Stake (key, coin <> c'))
     makePair (Stake (k, c)) = (k, c)
+
+-- | Calculate pool refunds
+poolRefunds :: PrtclConsts -> Allocs -> Slot -> Map.Map HashKey Coin
+poolRefunds pc retiring cslot =
+  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
+  where
+    (pval, pmin, lambda) = decayPool pc
+
+-- | Calculate total possible refunds.
+obligation :: PrtclConsts -> Allocs -> Allocs -> Slot -> Coin
+obligation pc stakeKeys stakePools cslot =
+  sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
+  sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
+  where
+    (dval, dmin, lambdad) = decayKey pc
+    (pval, pmin, lambdap) = decayPool pc
+
+-- | Calculate maximal pool reward
+maxPool :: PrtclConsts -> Coin -> Rational -> Rational -> Coin
+maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
+  where
+    (a0, nOpt) = pc ^. poolConsts
+    z0 = 1 % fromIntegral nOpt
+    sigma' = min sigma z0
+    p' = min pR z0
+    factor1 = fromIntegral r / (1 + a0)
+    factor2 = sigma' + p' * a0 * factor3
+    factor3 = (sigma' - p' * factor4) / z0
+    factor4 = (z0 - sigma') / z0
+
+-- | Calulcate moving average
+movingAvg :: PrtclConsts -> HashKey -> Natural -> Rational -> Distr -> Rational
+movingAvg pc hk n expectedSlots (Distr averages) =
+  let fraction = fromIntegral n / max expectedSlots 1
+   in case Map.lookup hk averages of
+        Nothing -> fraction
+        Just prev -> alpha * fraction + (1 - alpha) * prev
+          where alpha = pc ^. movingAvgWeight
+
+-- | Calculate pool reward
+poolRew ::
+     PrtclConsts
+  -> HashKey
+  -> Natural
+  -> Rational
+  -> Distr
+  -> Coin
+  -> (Coin, Rational)
+poolRew pc hk n expectedSlots averages (Coin maxP) =
+  (floor $ e * fromIntegral maxP, avg)
+  where
+    avg = pc ^. movingAvgExp
+    gamma = movingAvg pc hk n expectedSlots averages
+    e = fromRational avg ** fromRational gamma :: Double
