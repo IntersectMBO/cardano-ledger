@@ -413,7 +413,13 @@ which the given leader is the leader of.
         \end{cases} \\
       \nextdef
       & \fun{groupByPool} \in (\HashKey \mapsto \Coin) \to (\HashKey \mapsto \HashKey) \\
-      & ~~~\to (\HashKey \mapsto \Distr)
+      & ~~~\to
+        \left(
+        \HashKey \mapsto
+        \left(
+        \HashKey \mapsto \Coin
+        \right)
+        \right)
       & \text{pool individual reward} \\
       & \fun{groupByPool}~\var{active}~\var{delegs} = \\
       & ~~~\Big\{ leader \mapsto
