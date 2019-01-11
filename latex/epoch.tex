@@ -387,7 +387,7 @@ which the given leader is the leader of.
       & \fun{leaderRew}~\hat{f}~\var{pool}~\sigma~\var{s} = \\
       & \begin{cases}
           \hat{f} & \hat{f} \leq c\\
-          c + (\hat{f} - c)\cdot\left(m + (1-m)\cdot\frac{s}{\sigma}\right) &
+          c + \floor*{(\hat{f} - c)\cdot\left(m + (1-m)\cdot\frac{s}{\sigma}\right) }&
           \text{otherwise.}
         \end{cases} \\
       & ~~~\where \\
@@ -398,7 +398,7 @@ which the given leader is the leader of.
       & \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{s} = \\
       & \begin{cases}
           0 & \hat{f} \leq c\\
-          (\hat{f} - c)\cdot(1-m)\cdot\frac{s}{\sigma} &
+          \floor*{(\hat{f} - c)\cdot(1-m)\cdot\frac{s}{\sigma}} &
           \text{otherwise.}
         \end{cases} \\
       & ~~~\where \\
