@@ -18,7 +18,7 @@ module Delegation.Certificates
 import           Coin (Coin(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..), (-*))
-import           PrtclConsts (PrtclConsts(..), decayRate, minRefund,
+import           PParams (PParams(..), decayRate, minRefund,
                                        keyDeposit, poolDeposit, poolMinRefund,
                                        poolDecayRate)
 
@@ -56,7 +56,7 @@ authDCert :: VKey -> DCert -> Bool
 authDCert key cert = getRequiredSigningKey cert == key
 
 -- |Retrieve the deposit amount for a certificate
-dvalue :: DCert -> PrtclConsts -> Coin
+dvalue :: DCert -> PParams -> Coin
 dvalue (RegKey _)  = flip (^.) keyDeposit
 dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
@@ -90,7 +90,7 @@ allocating (RegPool _) = True
 allocating _           = False
 
 -- | Refund for a certificate.
-certRefund :: PrtclConsts -> Allocs -> Slot -> DCert -> Coin
+certRefund :: PParams -> Allocs -> Slot -> DCert -> Coin
 certRefund pc allocs slot cert
     | not $ releasing cert       = Coin 0
     | hsk `Map.notMember` allocs = Coin 0
@@ -98,13 +98,13 @@ certRefund pc allocs slot cert
     where hsk    = hashKey $ getRequiredSigningKey cert
           (dval, dmin, lambda) = decayKey pc
 
-decayKey :: PrtclConsts -> (Coin, Rational, Rational)
+decayKey :: PParams -> (Coin, Rational, Rational)
 decayKey pc = (dval, dmin, lambdad)
     where dval    = fromIntegral $ pc ^. keyDeposit
           dmin    = fromRational $ pc ^. minRefund
           lambdad = pc ^. decayRate
 
-decayPool :: PrtclConsts -> (Coin, Rational, Rational)
+decayPool :: PParams -> (Coin, Rational, Rational)
 decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
           pmin    = fromRational $ pc ^. poolMinRefund
