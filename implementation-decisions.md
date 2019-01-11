@@ -93,3 +93,25 @@ ammended until we agree on the decision (this should be timeboxed) as we can
 always revisit any decisions.
 
 [^1]: https://adr.github.io/
+
+## Decisions
+
+This is the section that should be appended to when decisions are made
+
+### This is where the title goes
+
+#### Context
+
+#### Decision
+
+#### PR
+
+| Number                                       | Base            |
+| ---                                          | ---             |
+| https://github.com/some/other-repo/issues/14 | `develop`       |
+| #42                                          | `release/2.0.0` |
+
+
+#### Development Plan
+
+#### Implications
