@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module PrtclConsts
-  ( PrtclConsts(..)
+module PParams
+  ( PParams(..)
     -- lenses
   , minfeeA
   , minfeeB
@@ -22,7 +22,7 @@ import           Coin            (Coin (..))
 
 import           Lens.Micro.TH   (makeLenses)
 
-data PrtclConsts = PrtclConsts
+data PParams = PParams
   { -- |The linear factor for the minimum fee calculation
     _minfeeA         :: Natural
     -- |The constant factor for the minimum fee calculation
@@ -47,4 +47,4 @@ data PrtclConsts = PrtclConsts
   , _poolDecayRate   :: Rational
   } deriving (Show, Eq)
 
-makeLenses ''PrtclConsts
+makeLenses ''PParams

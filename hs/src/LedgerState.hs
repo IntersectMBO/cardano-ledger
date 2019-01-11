@@ -73,7 +73,7 @@ import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*))
 import           Keys
 import           UTxO
-import           PrtclConsts              (PrtclConsts(..), minfeeA, minfeeB)
+import           PParams                 (PParams(..), minfeeA, minfeeB)
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs, decayKey)
 import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
@@ -192,7 +192,7 @@ data LedgerState =
     -- |The current delegation state
   , _delegationState   :: !DWState
     -- |The current protocol constants.
-  , _pcs               :: !PrtclConsts
+  , _pcs               :: !PParams
     -- | The current transaction index in the current slot.
   , _txSlotIx          :: Ix
   , _currentSlot       :: Slot
@@ -210,7 +210,7 @@ genesisId = TxId $ hash (Tx Set.empty [] [] Map.empty (Coin 0) (Slot 0))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
-genesisState :: PrtclConsts -> [TxOut] -> LedgerState
+genesisState :: PParams -> [TxOut] -> LedgerState
 genesisState pc outs = LedgerState
   (UTxOState
     (UTxO $ Map.fromList
@@ -249,11 +249,11 @@ txsize :: Tx -> Natural
 txsize = toEnum . length . show
 
 -- |Minimum fee calculation
-minfee :: PrtclConsts -> Tx -> Coin
+minfee :: PParams -> Tx -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + pc ^. minfeeB
 
 -- |Determine if the fee is large enough
-validFee :: PrtclConsts -> Tx -> Validity
+validFee :: PParams -> Tx -> Validity
 validFee pc tx =
   if needed <= given
     then Valid
@@ -263,12 +263,12 @@ validFee pc tx =
         given  = tx ^. txfee
 
 -- |Compute the lovelace which are created by the transaction
-created :: Allocs -> PrtclConsts -> Tx -> Coin
+created :: Allocs -> PParams -> Tx -> Coin
 created stakePools pc tx =
     balance (txouts tx) + tx ^. txfee + depositAmount pc stakePools tx
 
 -- |Compute the key deregistration refunds in a transaction
-keyRefunds :: PrtclConsts -> Allocs -> Tx -> Coin
+keyRefunds :: PParams -> Allocs -> Tx -> Coin
 keyRefunds pc stkeys tx =
   sum [refund' key | (RegKey key) <- tx ^. certs]
   where refund' key =
@@ -278,7 +278,7 @@ keyRefunds pc stkeys tx =
         (dval, dmin, lambda) = decayKey pc
 
 -- |Compute the lovelace which are destroyed by the transaction
-destroyed :: Allocs -> PrtclConsts -> Tx -> UTxOState -> Coin
+destroyed :: Allocs -> PParams -> Tx -> UTxOState -> Coin
 destroyed stakeKeys pc tx u =
     balance (txins tx <| (u ^. utxo)) + refunds + withdrawals
   where
@@ -287,7 +287,7 @@ destroyed stakeKeys pc tx u =
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
-preserveBalance :: Allocs -> Allocs -> PrtclConsts -> Tx -> UTxOState -> Validity
+preserveBalance :: Allocs -> Allocs -> PParams -> Tx -> UTxOState -> Validity
 preserveBalance stakePools stakeKeys pc tx u =
   if destroyed' == created'
     then Valid
@@ -352,7 +352,7 @@ noUnneededWits (TxWits tx wits) u =
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
 validRuleUTXO ::
-    RewardAccounts -> Allocs -> Allocs -> PrtclConsts -> Slot -> Tx -> UTxOState -> Validity
+    RewardAccounts -> Allocs -> Allocs -> PParams -> Slot -> Tx -> UTxOState -> Validity
 validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                           validInputs tx u
                        <> current tx slot
@@ -557,7 +557,7 @@ data UTXO
 instance STS UTXO where
     type State UTXO       = UTxOState
     type Signal UTXO      = Tx
-    type Environment UTXO = (PrtclConsts, Slot, Allocs, Allocs)
+    type Environment UTXO = (PParams, Slot, Allocs, Allocs)
     data PredicateFailure UTXO = BadInputsUTxO
                                | ExpiredUTxO Slot Slot
                                | InputSetEmptyUTxO
@@ -606,7 +606,7 @@ data UTXOW
 instance STS UTXOW where
     type State UTXOW       = UTxOState
     type Signal UTXOW      = TxWits
-    type Environment UTXOW = (PrtclConsts, Slot, Allocs, Allocs)
+    type Environment UTXOW = (PParams, Slot, Allocs, Allocs)
     data PredicateFailure UTXOW = InvalidWitnessesUTXOW
                                 | MissingWitnessesUTXOW
                                 | UnneededWitnessesUTXOW
@@ -796,7 +796,7 @@ data LEDGER
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DWState)
     type Signal LEDGER      = TxWits
-    type Environment LEDGER = (PrtclConsts, Slot, Ix)
+    type Environment LEDGER = (PParams, Slot, Ix)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
                                  | DelegtFailure (PredicateFailure DELEGT)
                     deriving (Show, Eq)
