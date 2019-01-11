@@ -21,6 +21,7 @@ module EpochBoundary
   , movingAvg
   , poolRew
   , leaderRew
+  , memberRew
   ) where
 
 import           Coin
@@ -189,6 +190,15 @@ leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
   | f' <= c = f
   | otherwise =
     floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
+  where
+    (Coin c, m, _) = poolSpec pool
+    m' = intervalValue m
+
+-- | Calculate pool member reward
+memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+memberRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
+  | f' <= c = 0
+  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
   where
     (Coin c, m, _) = poolSpec pool
     m' = intervalValue m
