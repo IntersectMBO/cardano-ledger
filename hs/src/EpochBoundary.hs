@@ -23,6 +23,7 @@ module EpochBoundary
   , leaderRew
   , memberRew
   , indivRew
+  , groupByPool
   ) where
 
 import           Coin
@@ -197,7 +198,7 @@ leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
 
 -- | Calculate pool member reward
 memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
-memberRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
+memberRew (Coin f') pool (StakeShare sigma) (StakeShare s)
   | f' <= c = 0
   | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
   where
@@ -208,3 +209,15 @@ memberRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
 indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
 indivRew f pool sigma s True  = leaderRew f pool sigma s
 indivRew f pool sigma s False = memberRew f pool sigma s
+
+-- | Pool individual reward
+groupByPool ::
+     Map.Map HashKey Coin
+  -> Map.Map HashKey HashKey
+  -> Map.Map HashKey (Map.Map HashKey Coin)
+groupByPool active delegs =
+  Map.fromListWith
+    Map.union
+    [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
+    | hk <- Map.keys delegs
+    ]

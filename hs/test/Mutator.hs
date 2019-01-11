@@ -15,6 +15,7 @@ module Mutator
     , getAnyStakeKey
     ) where
 
+import Data.Maybe                (fromMaybe)
 import Data.Ratio
 import Data.Set                  as Set
 import Numeric.Natural
@@ -30,6 +31,7 @@ import Keys
 import LedgerState (DWState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 import           Slot
+import           PParams
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
@@ -139,11 +141,12 @@ mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     key'   <- getAnyStakeKey keys
     pure $ RetirePool key' epoch'
 
-mutateDCert keys _ (RegPool (StakePool _ pledges cost margin altacnt)) = do
+mutateDCert keys _ (RegPool (StakePool _ pledge pledges cost margin altacnt)) = do
   key'    <- getAnyStakeKey keys
   cost'   <- mutateCoin 0 100 cost
-  p' <- mutateNat 0 100 (numerator margin)
-  pure $ RegPool (StakePool key' pledges cost' (p' % 100) altacnt)
+  p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
+  let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
+  pure $ RegPool (StakePool key' pledge pledges cost' interval altacnt)
 
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys

@@ -44,7 +44,7 @@ import           LedgerState     (LedgerState (..),
                                  )
 import           Slot
 import           UTxO
-import           PParams              (PParams(..), interval0)
+import           PParams              (PParams(..), interval0, mkUnitInterval)
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
@@ -307,8 +307,12 @@ genStakePool :: KeyPairs -> Gen StakePool
 genStakePool keys = do
   poolKey       <- getAnyStakeKey keys
   cost          <- Coin <$> genNatural 1 100
+  pledge        <- Coin <$> genNatural 1 100
   marginPercent <- genNatural 0 100
-  pure $ StakePool poolKey Map.empty cost (marginPercent % 100) Nothing
+  let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
+                   Just i  -> i
+                   Nothing -> interval0
+  pure $ StakePool poolKey pledge Map.empty cost interval Nothing
 
 genDelegation :: KeyPairs -> DWState -> Gen Delegation
 genDelegation keys d = do
