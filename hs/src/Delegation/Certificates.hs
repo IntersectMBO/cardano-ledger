@@ -19,8 +19,8 @@ import           Coin (Coin(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..), (-*))
 import           PParams (PParams(..), decayRate, minRefund,
-                                       keyDeposit, poolDeposit, poolMinRefund,
-                                       poolDecayRate)
+                                 keyDeposit, poolDeposit, poolMinRefund,
+                                 poolDecayRate, intervalValue)
 
 import           Delegation.StakePool
 
@@ -101,11 +101,11 @@ certRefund pc allocs slot cert
 decayKey :: PParams -> (Coin, Rational, Rational)
 decayKey pc = (dval, dmin, lambdad)
     where dval    = fromIntegral $ pc ^. keyDeposit
-          dmin    = fromRational $ pc ^. minRefund
+          dmin    = fromRational $ intervalValue $ pc ^. minRefund
           lambdad = pc ^. decayRate
 
 decayPool :: PParams -> (Coin, Rational, Rational)
 decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
-          pmin    = fromRational $ pc ^. poolMinRefund
+          pmin    = fromRational $ intervalValue $ pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate

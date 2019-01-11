@@ -149,7 +149,7 @@ movingAvg pc hk n expectedSlots (Distr averages) =
    in case Map.lookup hk averages of
         Nothing -> fraction
         Just prev -> alpha * fraction + (1 - alpha) * prev
-          where alpha = pc ^. movingAvgWeight
+          where alpha = intervalValue $ pc ^. movingAvgWeight
 
 -- | Calculate pool reward
 poolRew ::
@@ -163,6 +163,6 @@ poolRew ::
 poolRew pc hk n expectedSlots averages (Coin maxP) =
   (floor $ e * fromIntegral maxP, avg)
   where
-    avg = pc ^. movingAvgExp
+    avg = intervalValue $ pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
     e = fromRational avg ** fromRational gamma :: Double
