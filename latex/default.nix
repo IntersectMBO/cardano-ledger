@@ -36,7 +36,7 @@ stdenv.mkDerivation {
   buildPhase = "cd latex && make";
 
   meta = with lib; {
-    description = "Byron Ledger Specification";
+    description = "Shelley Ledger Specification";
     license = licenses.bsd3;
     platforms = platforms.linux;
   };
