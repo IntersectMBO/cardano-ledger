@@ -22,6 +22,7 @@ module EpochBoundary
   , poolRew
   , leaderRew
   , memberRew
+  , indivRew
   ) where
 
 import           Coin
@@ -202,3 +203,8 @@ memberRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
   where
     (Coin c, m, _) = poolSpec pool
     m' = intervalValue m
+
+-- | Calculate individual reward
+indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
+indivRew f pool sigma s True  = leaderRew f pool sigma s
+indivRew f pool sigma s False = memberRew f pool sigma s
