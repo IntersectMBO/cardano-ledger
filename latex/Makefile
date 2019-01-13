@@ -18,7 +18,7 @@ all: $(DOCNAME).pdf
 
 ##
 ## CUSTOM BUILD RULES
-## 
+##
 
 # generate git revision info file for gitinfo2
 include gitinfo2.mk
@@ -43,3 +43,8 @@ watch: $(DOCNAME).tex
 clean:
 	latexmk -CA
 	rm -f gitHeadLocal.gin
+
+install:
+	mkdir -pv ${out}/nix-support/
+	cp $(DOCNAME).pdf ${out}/
+	echo "doc-pdf $(DOCNAME)" > ${out}/nix-support/hydra-build-products
