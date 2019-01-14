@@ -321,19 +321,25 @@ stakePool :: StakePool
 stakePool = StakePool
             {
               _poolPubKey = vKey stakePoolKey1
+            , _poolPledge  = Coin 0
             , _poolPledges = Map.empty
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
-            , _poolMargin = 0 % 1     --          or here?
+            , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
             }
+
+halfInterval :: UnitInterval
+halfInterval = i
+    where Just i = mkUnitInterval 0.5
 
 stakePoolUpdate :: StakePool
 stakePoolUpdate = StakePool
                    {
                      _poolPubKey = vKey stakePoolKey1
+                   , _poolPledge  = Coin 0
                    , _poolPledges = Map.empty
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
-                   , _poolMargin = 1 % 2     --          or here?
+                   , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
                    }
 
