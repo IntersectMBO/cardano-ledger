@@ -193,6 +193,9 @@ copy of it locally.
 In particular, this document gives a formalisation that should be
 straightforward to implement in a programming language, e.g., in Haskell.
 
+This document is intended to be read in conjunction with \cite{ledger-spec},
+which covers the payload carried around in the blockchain. Certain of the
+underlying systems and types defined will rely on definitions in that document.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -697,6 +700,12 @@ Figure~\ref{fig:blockchain-extension}.
   \label{fig:blockchain-extension}
 \end{figure}
 
+\begin{thebibliography}{1}
+\bibitem{ledger-spec}
+  Damian Nadales.
+  \textit{A Simplified Formal Specification of a UTxO Ledger.} \\
+  \url{https://hydra.iohk.io/build/485659/download/1/ledger-spec.pdf}
+\end{thebibliography}
 \end{document}
 
 
