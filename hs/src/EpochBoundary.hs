@@ -20,10 +20,15 @@ module EpochBoundary
   , maxPool
   , movingAvg
   , poolRew
+  , leaderRew
+  , memberRew
+  , indivRew
+  , groupByPool
   ) where
 
 import           Coin
 import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
+import           Delegation.StakePool
 import           Keys
 import           PParams
 import           Slot
@@ -39,14 +44,17 @@ import           Numeric.Natural         (Natural)
 
 import           Lens.Micro              ((^.))
 
-
 -- | StakeShare type
-newtype StakeShare = StakeShare Rational
-    deriving (Show, Ord, Eq)
+newtype StakeShare =
+  StakeShare Rational
+  deriving (Show, Ord, Eq)
 
 -- | Construct an optional probability value
 mkStakeShare :: Rational -> Maybe StakeShare
-mkStakeShare p = if 0 <= p && p <= 1 then Just $ StakeShare p else Nothing
+mkStakeShare p =
+  if 0 <= p && p <= 1
+    then Just $ StakeShare p
+    else Nothing
 
 -- | Distribution density function
 newtype Distr =
@@ -158,7 +166,7 @@ movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
 movingAvg pc hk n expectedSlots (Distr averages) =
   let fraction = fromIntegral n / max expectedSlots 1
    in case Map.lookup hk averages of
-        Nothing                -> fraction
+        Nothing -> fraction
         Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
           where alpha = intervalValue $ pc ^. movingAvgWeight
 
@@ -177,3 +185,39 @@ poolRew pc hk n expectedSlots averages (Coin maxP) =
     avg = intervalValue $ pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
     e = fromRational avg ** fromRational gamma :: Double
+
+-- | Calculate pool leader reward
+leaderRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
+  | f' <= c = f
+  | otherwise =
+    floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
+  where
+    (Coin c, m, _) = poolSpec pool
+    m' = intervalValue m
+
+-- | Calculate pool member reward
+memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+memberRew (Coin f') pool (StakeShare sigma) (StakeShare s)
+  | f' <= c = 0
+  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
+  where
+    (Coin c, m, _) = poolSpec pool
+    m' = intervalValue m
+
+-- | Calculate individual reward
+indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
+indivRew f pool sigma s True  = leaderRew f pool sigma s
+indivRew f pool sigma s False = memberRew f pool sigma s
+
+-- | Pool individual reward
+groupByPool ::
+     Map.Map HashKey Coin
+  -> Map.Map HashKey HashKey
+  -> Map.Map HashKey (Map.Map HashKey Coin)
+groupByPool active delegs =
+  Map.fromListWith
+    Map.union
+    [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
+    | hk <- Map.keys delegs
+    ]
