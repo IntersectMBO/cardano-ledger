@@ -178,7 +178,7 @@ labels have the following meaning:
         \var{k} & \mathbb{N} & \text{chain stability parameter}\\
         \var{u} & \mathbb{N} & \text{update proposals time-to-live}\\
         \var{e_c} & \Epoch & \text{current epoch}\\
-        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{s_n} & \Slot & \text{current slot number}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}\right)
   \end{align*}
@@ -193,19 +193,17 @@ labels have the following meaning:
         & \text{current protocol information}\\
         (\var{pv_c}, \var{pps_c}) & \ProtVer \times \PPMMap
         & \text{candidate protocol information}\\
-        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
         & \text{application versions}\\
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered protocol update proposals}\\
         \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
         & \text{registered software update proposals}\\
-        \var{eps} & \powerset{(\Epoch \times \VKeyGen)}
-        & \text{proposals per-epoch per-key}\\
-        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
         \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
                            & \text{endorsement-key pairs}\\
-        \var{pws} & \UPropId \mapsto \BkNr & \text{proposal timestamps}
+        \var{pws} & \UPropId \mapsto \Slot & \text{proposal timestamps}
       \end{array}\right)\\
   \end{align*}
   %
@@ -236,7 +234,6 @@ labels have the following meaning:
         \begin{array}{l}
           \var{pv}\\
           \var{pps}\\
-          \var{e_c}\\
           \var{avs}\\
           \var{dms}
         \end{array}
@@ -245,9 +242,8 @@ labels have the following meaning:
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
-            \var{raus}\\
-            \var{eps}
+            \var{rpus}\\
+            \var{raus}
           \end{array}
         \right)
       }
@@ -255,14 +251,13 @@ labels have the following meaning:
       {
         \left(
           \begin{array}{l}
-            \var{rups'}\\
-            \var{raus'}\\
-            \var{eps'}
+            \var{rpus'}\\
+            \var{raus'}
           \end{array}
         \right)
       }
       &
-      pws' = pws \unionoverride \{ \upId{up} \mapsto b_n\}
+      pws' = pws \unionoverride \{ \upId{up} \mapsto s_n\}
     }
     {
       {
@@ -270,7 +265,7 @@ labels have the following meaning:
           k\\
           u\\
           e_c\\
-          b_n\\
+          s_n\\
           \var{dms}
         \end{array}
       }
@@ -282,9 +277,8 @@ labels have the following meaning:
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{avs}\\
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}\\
-            \var{eps}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
@@ -300,9 +294,8 @@ labels have the following meaning:
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{avs}\\
-            \var{rups'}\\
+            \var{rpus'}\\
             \var{raus'}\\
-            \var{eps'}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
@@ -336,9 +329,9 @@ updated.
     {
       {
         \begin{array}{l}
-          b_n\\
+          s_n\\
           \var{pps}\\
-          \var{rups}\\
+          \var{\dom~pws}\\
           \var{dms}
         \end{array}
       }
@@ -360,7 +353,7 @@ updated.
           \end{array}
         \right)
       }\\
-      \var{avs_{new}} = \{ \var{an} \mapsto (\var{av}, \var{b_n})
+      \var{avs_{new}} = \{ \var{an} \mapsto (\var{av}, \var{s_n})
       \mid \var{pid} \mapsto (\var{an}, \var{av}) \in \var{raus}
       ,~ \var{pid} \in \dom~\var{cps'}
       \}
@@ -371,7 +364,7 @@ updated.
           k\\
           u\\
           e_c\\
-          b_n\\
+          s_n\\
           \var{dms}
         \end{array}
       }
@@ -383,9 +376,8 @@ updated.
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{avs}\\
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}\\
-            \var{eps}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
@@ -401,9 +393,8 @@ updated.
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{avs} \unionoverride \var{avs_{new}}\\
-            \var{rups}\\
+            \var{rpus}\\
             \dom~ \var{cps} \subtractdom \var{raus}\\
-            \var{eps}\\
             \var{cps'}\\
             \var{vts'}\\
             \var{bvs}\\
@@ -475,9 +466,6 @@ are removed from the parts of the state that hold:
 \item the set of endorsement-key pairs, and
 \item the block number in which proposals where added.
 \end{itemize}
-The epoch-key pairs set ($\var{eps}$) that represents which stakeholder
-proposed an update in which epoch, is cleaned up in the rules given in
-\cref{fig:rules:upi-ec}, which deals with epoch change.
 
 In Rule~\ref{eq:rule:upi-pend}, the set of proposal id's $\var{pid_{keep}}$
 contains only those proposals that haven't expired yet or that are confirmed.
@@ -499,11 +487,11 @@ the end on an epoch.
       {
         \begin{array}{l}
           k\\
-          b_n\\
+          s_n\\
           (\var{pv}, \var{pps})\\
           \var{dms}\\
           \var{cps}\\
-          \var{rups}
+          \var{rpus}
         \end{array}
       }
       \vdash
@@ -526,9 +514,9 @@ the end on an epoch.
       }\\
       {
         \begin{array}{r@{~=~}l}
-          \var{pids_{keep}} & \dom~(pws \restrictrange [b_n - u, ..]) \cup \dom~\var{cps}\\
-          \var{vs_{keep}} & \dom~(\range~\var{rups'})\\
-          \var{rups'} & \var{pids_{keep}} \restrictdom \var{rups}
+          \var{pids_{keep}} & \dom~(pws \restrictrange [s_n - u, ..]) \cup \dom~\var{cps}\\
+          \var{vs_{keep}} & \dom~(\range~\var{rpus'})\\
+          \var{rpus'} & \var{pids_{keep}} \restrictdom \var{rpus}
         \end{array}
       }
     }
@@ -538,7 +526,7 @@ the end on an epoch.
           k\\
           u\\
           e_c\\
-          b_n\\
+          s_n\\
           \var{dms}
         \end{array}
       }
@@ -550,9 +538,8 @@ the end on an epoch.
             (\var{pv}, \var{pps})\\
             (\var{pv_c}, \var{pps_c})\\
             \var{avs}\\
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}\\
-            \var{eps}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
@@ -568,9 +555,8 @@ the end on an epoch.
             (\var{pv}, \var{pps})\\
             (\var{pv_c'}, \var{pps_c'})\\
             \var{avs}\\
-            \var{rups'}\\
+            \var{rpus'}\\
             \var{pids_{keep}} \restrictdom \var{raus}\\
-            \var{eps}\\
             \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
             \var{vs_{keep}}  \restrictdom \var{bvs}\\
@@ -603,8 +589,6 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
   ($\var{pv'}$). This means that active proposals will be discarded even if the
   voting period is not over (it makes no sense to vote on a proposal that
   proposes to upgrade to an older version of the protocol).
-\item The set $\var{eps}$ is updated so that only keys that proposed in epochs
-  no earlier than $e_n$ are kept.
 \item The registered software-update proposals need not be cleaned here, since
   this is done either when a proposal gets confirmed or when it expires.
 \end{itemize}
@@ -692,8 +676,8 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
         \right)
       }\\ ~ \\
       \var{pids_{keep}} = \{ \var{pid} \mid
-      \var{pid} \mapsto (\var{pv_i}, \wcard) \in \var{rups}
-      ,~ \var{pv'} \leq \var{pv_i}\}
+      \var{pid} \mapsto (\var{pv_i}, \wcard) \in \var{rpus}
+      ,~ \var{pv'} < \var{pv_i}\}
     }
     {
       {
@@ -701,7 +685,7 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           k\\
           u\\
           e_c\\
-          b_n\\
+          s_n\\
           \var{dms}\\
         \end{array}
       }
@@ -713,9 +697,8 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
             \var{(\var{pv}, \var{pps})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
             \var{avs}\\
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}\\
-            \var{eps}\\
             \var{cps}\\
             \var{vts}\\
             \var{bvs}\\
@@ -731,9 +714,8 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
             \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
             \var{avs}\\
-            \var{pids_{keep}} \restrictdom \var{rups}\\
+            \var{pids_{keep}} \restrictdom \var{rpus}\\
             \var{raus}\\
-            {[e_n, ..]} \restrictdom \var{eps}\\
             \var{pids_{keep}} \restrictdom \var{cps}\\
             \var{pids_{keep}} \restrictdom \var{vts}\\
             {[\var{pv'}, ..]} \restrictdom \var{bvs}\\
