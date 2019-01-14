@@ -517,14 +517,14 @@ the relative pledge in the same way, $p_r = p \div tot$.
               p \leq \var{pstake}\\
           0 & \text{otherwise.}
         \end{cases} \\
-      & ~~~~~~~\var{poolR},~\var{avg} = \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} \\
+      & ~~~~~~~(\var{poolR},~\var{avg}) = \fun{poolRew}~\var{pc}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} \\
       \nextdef
       & \fun{reward} \in \Production \to \PParams \to \Coin \\
       & ~~ \to \DWState \to \powerset{\TxOut} \to (\AddrRWD \mapsto \Coin)\times\Distr
       & \text{staking rewards} \\
       & \fun{reward}~\var{prod}~\var{pc}~\var{R}~\var{dwstate}~\var{outs} = \\
       & ~~~\left(
-           \bigcup_{hk\mapsto(rew,~\_)\in\var{results}} \var{rew},
+           \bigcup_{hk\mapsto(rew,~\_)\in\var{results}} hk\mapsto\var{rew},
            ~~\bigcup_{hk\mapsto(\_,~\var{avg})\in\var{results}} hk\mapsto\var{avg}
            \right)\\
       & ~~~\where \\
@@ -543,10 +543,10 @@ the relative pledge in the same way, $p_r = p \div tot$.
                           hk & \var{actgr} & \var{pactive} \\
                           \end{array}
                        \right\} \\
-      & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{R}~\var{pc}~\var{n}~\var{hk}
+      & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{pc}~\var{R}~\var{n}~\var{hk}
       ~\var{pool}~\var{actgr}~\var{avgs}~\var{tot}
                          \mid \\
-      &\qquad \qquad \qquad \qquad hk\mapsto(n, pool, actgr)\in\var{pdata} \}
+      &\qquad \qquad \qquad \qquad hk\mapsto(pool, n, actgr)\in\var{pdata} \}
   \end{align*}
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
