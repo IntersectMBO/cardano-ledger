@@ -921,12 +921,19 @@ certificate (which is different for different kinds of certificate).
 Just like UTxO witnesses, the witness is a signature on the entire
 transaction body. This means that provided the transaction spends at
 least one input then we inherit the inherent replay protection of UTxO
-accounting. This is a real constraint, but not an unreasonable one:
-even a transaction that only posts certificates has to pay transaction
-fees and transaction fees need coin inputs. The only case where this
-constraint might bite is in the case of negative fees from deleting
-registrations where the negative fee might be enough to cover the
-overall transaction fee without needing other inputs.
+accounting. The validity rules for transactions will explicitly require each
+transaction to have at least one UTxO entry as an input, so that certificates
+will be protected from replay in this way.
+
+Why do we need to explicitly state this requirement? Won't the need to pay
+transaction fees always implicitly require a UTxO input anyway? There are two
+additional sources of funds that could pay for the transaction fees: refunds and
+the contents of a reward account. So it is possible to create transactions that
+contain enough value to pay transaction fees even without consuming a UTxO
+entry. Such a transaction if valid, could be replayed at a later point in time.
+In order to have all transactions (and by extension, all certificates), be
+protected from replay attacks, we have to explicitly require at least one UTxO
+entry as an input to any transaction.
 
 \subsubsection{Stake key Registration Certificates}
 \label{stake-key-registration-certificates}
