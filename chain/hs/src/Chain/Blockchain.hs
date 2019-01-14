@@ -16,9 +16,9 @@ import Data.ByteString.Lazy.Char8 (pack)
 
 import Chain.GenesisBlock (genesisBlock)
 import Control.State.Transition
-import Data.Maybe (isJust, fromJust, listToMaybe)
+import Data.Maybe (fromJust, listToMaybe, isJust)
 import Data.Queue
-import Ledger.Core (VKey(..), VKeyGen, Slot, SlotCount(SlotCount), verify)
+import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify, VKeyGenesis)
 import Ledger.Delegation (DCert, DIState, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
 import Types (BC, Block(..), BlockIx(..), ProtParams(..))
@@ -57,7 +57,7 @@ newtype T = MkT Double deriving (Eq, Ord)
 
 -- Gives a map from delegator keys to a queue of block IDs of blocks that
 -- the given key (indirectly) signed in the block sliding window of size K
-type KeyToQMap = Map.Map VKeyGen (Queue BlockIx)
+type KeyToQMap = Map.Map VKeyGenesis (Queue BlockIx)
 
 
 -- | Remove the oldest entry in the queues in the range of the map if it is
@@ -65,7 +65,7 @@ type KeyToQMap = Map.Map VKeyGen (Queue BlockIx)
 trimIx :: KeyToQMap -> SlotCount -> BlockIx -> KeyToQMap
 trimIx m (SlotCount k) ix = foldl (flip f) m (Map.keysSet m)
  where
-  f :: VKeyGen -> KeyToQMap -> KeyToQMap
+  f :: VKeyGenesis -> KeyToQMap -> KeyToQMap
   f = Map.adjust (qRestrict ix)
   qRestrict :: BlockIx -> Queue BlockIx -> Queue BlockIx
   qRestrict (MkBlockIx ix') q = case headQueue q of
@@ -74,7 +74,7 @@ trimIx m (SlotCount k) ix = foldl (flip f) m (Map.keysSet m)
 
 -- | Updates a map of genesis verification keys to their signed blocks in
 -- a sliding window by adding a block index to a specified key's list
-incIxMap :: BlockIx -> VKeyGen -> KeyToQMap -> KeyToQMap
+incIxMap :: BlockIx -> VKeyGenesis -> KeyToQMap -> KeyToQMap
 incIxMap ix = Map.adjust (pushQueue ix)
 
 -- | Environment for blockchain rules

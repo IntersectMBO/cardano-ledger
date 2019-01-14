@@ -18,13 +18,12 @@
 -- | Small step state transition systems.
 module Control.State.Transition where
 
-import Control.Lens
 import Control.Monad (unless)
 import Control.Monad.Free.Church
 import Control.Monad.Trans.State.Strict (modify, runState)
 import qualified Control.Monad.Trans.State.Strict as MonadState
 import Data.Foldable (find, traverse_)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Kind (Type)
 
 data RuleType
@@ -35,29 +34,30 @@ data RuleType
 --
 --   Since our case is so small we don't bother with the singletons library.
 data SRuleType a where
-  SInitial :: SRuleType Initial
-  STransition :: SRuleType Transition
+  SInitial :: SRuleType 'Initial
+  STransition :: SRuleType 'Transition
 
 class RuleTypeRep t where
   rTypeRep :: SRuleType t
 
-instance RuleTypeRep Initial where
+instance RuleTypeRep 'Initial where
   rTypeRep = SInitial
 
-instance RuleTypeRep Transition where
+instance RuleTypeRep 'Transition where
   rTypeRep = STransition
 
 -- | Context available to initial rules.
 newtype IRC sts = IRC (Environment sts)
+
 -- | Context available to transition rules.
 newtype TRC sts = TRC (Environment sts, State sts, Signal sts)
 
 type family RuleContext (t :: RuleType) = (ctx :: Type -> Type) | ctx -> t where
-  RuleContext Initial = IRC
-  RuleContext Transition = TRC
+  RuleContext 'Initial = IRC
+  RuleContext 'Transition = TRC
 
-type InitialRule sts = Rule sts Initial (State sts)
-type TransitionRule sts = Rule sts Transition (State sts)
+type InitialRule sts = Rule sts 'Initial (State sts)
+type TransitionRule sts = Rule sts 'Transition (State sts)
 
 -- | State transition system.
 class ( Eq (PredicateFailure a)
@@ -109,7 +109,7 @@ type Rule sts rtype = F (Clause sts rtype)
 --
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
-(?!) :: STS sts => Bool -> PredicateFailure sts -> Rule sts ctx ()
+(?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
 cond ?! orElse = wrap $ Predicate cond orElse (pure ())
 
 infix 1 ?!
@@ -128,7 +128,7 @@ judgmentContext = wrap $ GetCtx pure
 --   empty.
 applyRuleIndifferently
   :: forall s rtype
-   . (STS s, RuleTypeRep rtype)
+   . (RuleTypeRep rtype)
   => RuleContext rtype s
   -> Rule s rtype (State s)
   -> (State s, [PredicateFailure s])
@@ -152,14 +152,24 @@ applySTSIndifferently
 applySTSIndifferently ctx =
   successOrFirstFailure $ applySTSIndifferently' @s @rtype rTypeRep ctx
  where
-  successOrFirstFailure xs = fromMaybe (head xs) $ find (not . null . snd) xs
+  successOrFirstFailure xs = fromMaybe (headOrError xs) $ find (null . snd) xs
   applySTSIndifferently'
-    :: forall s rtype
-     . STS s
-    => SRuleType rtype
-    -> RuleContext rtype s
-    -> [(State s, [PredicateFailure s])]
+    :: forall s' rtype'
+     . STS s'
+    => SRuleType rtype'
+    -> RuleContext rtype' s'
+    -> [(State s', [PredicateFailure s'])]
   applySTSIndifferently' SInitial env =
     map (applyRuleIndifferently env) initialRules
   applySTSIndifferently' STransition jc =
     map (applyRuleIndifferently jc) transitionRules
+  headOrError [] = error "applySTSIndifferently was called with an empty set of rules"
+  headOrError (x:_) = x
+
+applySTS :: forall s rtype
+   . (STS s, RuleTypeRep rtype)
+  => RuleContext rtype s
+  -> Either [PredicateFailure s] (State s)
+applySTS ctx = case applySTSIndifferently ctx of
+  (st, []) -> Right st
+  (_, pfs) -> Left pfs

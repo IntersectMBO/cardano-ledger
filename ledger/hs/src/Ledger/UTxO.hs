@@ -1,11 +1,9 @@
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeApplications          #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 module Ledger.UTxO where
 
-import Control.Lens
 import Control.State.Transition
 import qualified Data.ByteArray as BA
 import Data.List (find)
@@ -41,7 +39,7 @@ data Tx = Tx { inputs  :: Set TxIn
              } deriving (Show, Eq)
 
 -- |Compute the id of a transaction.
-txid :: HasHash Tx => Tx -> TxId
+txid :: Tx -> TxId
 txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
@@ -49,7 +47,7 @@ txins :: Tx -> Set TxIn
 txins = inputs
 
 -- |Compute the UTxO outputs of a transaction.
-txouts :: HasHash Tx => Tx -> UTxO
+txouts :: Tx -> UTxO
 txouts tx = UTxO $ Map.fromList
   [ (TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0 ..] ]
   where transId = txid tx
@@ -84,13 +82,6 @@ balance (UTxO utxo) = Map.foldl' addValues mempty utxo
 instance Ledger.Core.HasHash Tx where
   hash = Crypto.hash
 
-instance Ledger.Core.HasHash VKey where
-  hash = Crypto.hash
-
-instance BA.ByteArrayAccess VKey where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
-
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack  . show
@@ -99,7 +90,7 @@ instance BA.ByteArrayAccess Tx where
 -- UTxO transitions
 ---------------------------------------------------------------------------------
 
-data ProtocolConstants = ProtocolConstants
+newtype ProtocolConstants = ProtocolConstants
   { pcMinFee :: Tx -> Value }
 
 -- | UTXO transition system
@@ -127,7 +118,7 @@ utxoInductive = do
     == balance (txins tx ◁ utxo)
     ?! IncreasedTotalBalance
   pcMinFee pc tx <= txfee tx ?! FeeTooLow
-  let unspentInputs (UTxO utxo) = Map.keysSet utxo
+  let unspentInputs (UTxO aUtxo) = Map.keysSet aUtxo
   txins tx `Set.isSubsetOf` unspentInputs utxo ?! BadInputs
   return $ (txins tx ⋪ utxo) ∪ txouts tx
 
