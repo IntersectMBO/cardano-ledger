@@ -6,6 +6,7 @@ module Slot
   , Duration(..)
   , (-*), (+*)
   , Epoch(..)
+  , slotsPerEpoch
   -- conversion functions
   , slotFromEpoch
   , epochFromSlot
