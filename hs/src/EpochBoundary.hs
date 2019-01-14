@@ -24,6 +24,7 @@ module EpochBoundary
   , memberRew
   , indivRew
   , groupByPool
+  , rewardOnePool
   ) where
 
 import           Coin
@@ -221,3 +222,39 @@ groupByPool active delegs =
     [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
     | hk <- Map.keys delegs
     ]
+
+-- | Reward one pool
+rewardOnePool ::
+     PParams
+  -> Coin
+  -> Natural
+  -> HashKey
+  -> StakePool
+  -> Map.Map HashKey Coin
+  -> Distr
+  -> Coin
+  -> (Map.Map RewardAcnt Coin, StakeShare)
+rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
+  (Map.fromList keysVals, StakeShare avg)
+  where
+    (Coin pstake) = Map.foldl (+) (Coin 0) actgr
+    sigma = fromIntegral pstake % fromIntegral total
+    expectedSlots = sigma * fromIntegral slotsPerEpoch
+    (_, _, Coin p) = poolSpec pool
+    pr = fromIntegral p % fromIntegral total
+    maxP =
+      if p <= pstake
+        then maxPool pc r sigma pr
+        else 0
+    (poolR, avg) = poolRew pc poolHK n expectedSlots averages maxP
+    sFrac = StakeShare (sigma / fromIntegral total)
+    keysVals =
+      [ ( RewardAcnt hk
+        , indivRew
+            poolR
+            pool
+            sFrac
+            (StakeShare (fromIntegral c % fromIntegral total))
+            (hk == poolHK))
+      | (hk, Coin c) <- Map.toList actgr
+      ]
