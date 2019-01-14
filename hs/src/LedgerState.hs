@@ -23,9 +23,13 @@ module LedgerState
   , pstate
   , ptrs
   , PState(..)
+  , avgs
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
+  , StakeShare(..)
+  , Distr(..)
+  , mkStakeShare
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -136,6 +140,23 @@ instance Monoid Validity where
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
+-- | Distribution density function
+newtype Distr =
+  Distr (Map.Map HashKey StakeShare)
+        deriving (Show, Eq)
+
+-- | StakeShare type
+newtype StakeShare =
+  StakeShare Rational
+  deriving (Show, Ord, Eq)
+
+-- | Construct an optional probability value
+mkStakeShare :: Rational -> Maybe StakeShare
+mkStakeShare p =
+  if 0 <= p && p <= 1
+    then Just $ StakeShare p
+    else Nothing
+
 data DState = DState
     {  -- |The active stake keys.
       _stKeys      :: Allocs
@@ -155,7 +176,7 @@ data PState = PState
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map.Map HashKey Epoch
       -- |Moving average for key in epoch.
-    , _avgs        :: Map.Map HashKey (Ratio Natural)
+    , _avgs        :: Distr
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -174,7 +195,7 @@ emptyDState :: DState
 emptyDState = DState Map.empty Map.empty Map.empty Map.empty
 
 emptyPState :: PState
-emptyPState = PState Map.empty Map.empty Map.empty Map.empty
+emptyPState = PState Map.empty Map.empty Map.empty (Distr Map.empty)
 
 data UTxOState =
     UTxOState
