@@ -967,13 +967,10 @@ Registering a stake key introduces a corresponding stake reward account.
 The account is deleted when the stake key is de-registered. See
 \cref{reward-accounts-per-stake-key} for details on reward accounts.
 
-Registering a stake key attracts a special fee that must be included
-into the transaction that posts the certificate. This fee is in fact a
-deposit that is refundable when the stake key is de-registered (i.e.~a
-corresponding negative fee in the transaction that posts the
-de-registration certificate). The deposit is to account for the costs of
-tracking the stake key and maintaining the corresponding stake reward
-account. It is also to incentivise de-registering stake keys that are no
+In addition to a transaction fee, registering a stake key requires a deposit, as
+explained in \cref{fees-deposits} and \cref{deposits}. The deposit is to account
+for the costs of tracking the stake key and maintaining the corresponding stake
+reward account. It is also to incentivise de-registering stake keys that are no
 longer required, so that the corresponding resources can be released.
 
 \subsubsection{Stake Pool Registration Certificates}
@@ -2574,7 +2571,7 @@ during the epoch will be used as rewards.
 \subsubsection{Deposits}
 \label{deposits-1}
 
-As explained in \cref{deposits}, a part of the deposits for
+As explained in \cref{fees-deposits}, a part of the deposits for
 certificates and UTxO entries are non-refundable, and contribute to
 the rewards pool instead.
 
