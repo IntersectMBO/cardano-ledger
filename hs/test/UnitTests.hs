@@ -40,8 +40,14 @@ bobStake = keyPair (Owner 4)
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
+oneFourth :: UnitInterval
+oneFourth = iVal
+    where Just iVal = mkUnitInterval 0.25
+
+
 testPCs :: PParams
-testPCs = PParams 1 1 100 250 0.25 0.001 (0%1) (0%1) (0%1, 0) 0.25 0.001
+testPCs =
+    PParams 1 1 100 250 oneFourth 0.001 interval0 interval0 (0%1, 0) oneFourth 0.001
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000

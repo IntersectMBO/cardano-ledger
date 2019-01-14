@@ -8,6 +8,8 @@ module EpochBoundary
   ( Stake
   , Distr
   , Production
+  , StakeShare
+  , mkStakeShare
   , baseStake
   , ptrStake
   , stake
@@ -37,9 +39,18 @@ import           Numeric.Natural         (Natural)
 
 import           Lens.Micro              ((^.))
 
+
+-- | StakeShare type
+newtype StakeShare = StakeShare Rational
+    deriving (Show, Ord, Eq)
+
+-- | Construct an optional probability value
+mkStakeShare :: Rational -> Maybe StakeShare
+mkStakeShare p = if 0 <= p && p <= 1 then Just $ StakeShare p else Nothing
+
 -- | Distribution density function
 newtype Distr =
-  Distr (Map.Map HashKey Rational)
+  Distr (Map.Map HashKey StakeShare)
 
 newtype Production =
   Production (Map.Map HashKey Natural)
@@ -147,9 +158,9 @@ movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
 movingAvg pc hk n expectedSlots (Distr averages) =
   let fraction = fromIntegral n / max expectedSlots 1
    in case Map.lookup hk averages of
-        Nothing -> fraction
-        Just prev -> alpha * fraction + (1 - alpha) * prev
-          where alpha = pc ^. movingAvgWeight
+        Nothing                -> fraction
+        Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
+          where alpha = intervalValue $ pc ^. movingAvgWeight
 
 -- | Calculate pool reward
 poolRew ::
@@ -163,6 +174,6 @@ poolRew ::
 poolRew pc hk n expectedSlots averages (Coin maxP) =
   (floor $ e * fromIntegral maxP, avg)
   where
-    avg = pc ^. movingAvgExp
+    avg = intervalValue $ pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
     e = fromRational avg ** fromRational gamma :: Double
