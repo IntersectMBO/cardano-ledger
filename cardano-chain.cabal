@@ -175,6 +175,8 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
 
+                       Test.Cardano.Chain.Interpreter
+
                        Test.Cardano.Chain.Ssc.Bi
 
                        Test.Cardano.Chain.Slotting.Example
@@ -206,6 +208,7 @@ test-suite cardano-chain-test
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , cs-ledger
                      , directory
                      , filepath
                      , formatting
