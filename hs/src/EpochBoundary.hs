@@ -8,8 +8,6 @@ module EpochBoundary
   ( Stake
   , Distr
   , Production
-  , StakeShare
-  , mkStakeShare
   , baseStake
   , ptrStake
   , stake
@@ -25,12 +23,14 @@ module EpochBoundary
   , indivRew
   , groupByPool
   , rewardOnePool
+  , reward
   ) where
 
 import           Coin
 import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
 import           Delegation.StakePool
 import           Keys
+import           LedgerState
 import           PParams
 import           Slot
 import           UTxO
@@ -44,22 +44,6 @@ import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
 import           Lens.Micro              ((^.))
-
--- | StakeShare type
-newtype StakeShare =
-  StakeShare Rational
-  deriving (Show, Ord, Eq)
-
--- | Construct an optional probability value
-mkStakeShare :: Rational -> Maybe StakeShare
-mkStakeShare p =
-  if 0 <= p && p <= 1
-    then Just $ StakeShare p
-    else Nothing
-
--- | Distribution density function
-newtype Distr =
-  Distr (Map.Map HashKey StakeShare)
 
 newtype Production =
   Production (Map.Map HashKey Natural)
@@ -106,8 +90,8 @@ stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
 -- active stake pool.
 isActive :: HashKey -> Allocs -> Map.Map HashKey HashKey -> Allocs -> Bool
 isActive vSk stakeKeys delegs stakePools =
-  vSk `Set.member` Map.keysSet stakeKeys &&
-  isJust vp && fromJust vp `Set.member` Map.keysSet stakePools
+  vSk `Set.member` Map.keysSet stakeKeys && isJust vp && fromJust vp `Set.member`
+  Map.keysSet stakePools
   where
     vp = Map.lookup vSk delegs
 
@@ -121,8 +105,7 @@ activeStake ::
   -> Allocs
   -> Map.Map HashKey Coin
 activeStake outs pointers stakeKeys delegs stakePools =
-  Map.fromList $
-  map (makePair . sumKey) $
+  Map.fromList $ map (makePair . sumKey) $
   groupBy (\(Stake (a, _)) (Stake (a', _)) -> a == a') $
   sort $
   filter
@@ -135,8 +118,8 @@ activeStake outs pointers stakeKeys delegs stakePools =
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Allocs -> Slot -> Map.Map HashKey Coin
-poolRefunds pc retiring cslot =
-  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
+poolRefunds pc retirees cslot =
+  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retirees
   where
     (pval, pmin, lambda) = decayPool pc
 
@@ -257,4 +240,40 @@ rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
             (StakeShare (fromIntegral c % fromIntegral total))
             (hk == poolHK))
       | (hk, Coin c) <- Map.toList actgr
+      ]
+
+reward ::
+     Production
+  -> PParams
+  -> Coin
+  -> DWState
+  -> Set.Set TxOut
+  -> (Map.Map RewardAcnt Coin, Distr)
+reward (Production prod) pc r dwstate outs =
+  ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
+  , Distr $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
+  where
+    active =
+      activeStake
+        outs
+        (dwstate ^. dstate . ptrs)
+        (dwstate ^. dstate . stKeys)
+        (dwstate ^. dstate . delegations)
+        (dwstate ^. pstate . stPools)
+    total = Map.foldl (+) (Coin 0) active
+    pactive = groupByPool active (dwstate ^. dstate . delegations)
+    pdata =
+      [ ( key
+        , ( (dwstate ^. pstate . pParams) Map.! key
+          , prod Map.! key
+          , pactive Map.! key))
+      | key <-
+          Set.toList $ Map.keysSet (dwstate ^. pstate . pParams) `Set.intersection`
+          Map.keysSet prod `Set.intersection`
+          Map.keysSet pactive
+      ]
+    results =
+      [ ( hk
+        , rewardOnePool pc r n hk pool actgr (dwstate ^. pstate . avgs) total)
+      | (hk, (pool, n, actgr)) <- pdata
       ]
