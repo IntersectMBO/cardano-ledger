@@ -23,7 +23,7 @@ module EpochBoundary
 import           Coin
 import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
 import           Keys
-import           PrtclConsts
+import           PParams
 import           Slot
 import           UTxO
 
@@ -114,14 +114,14 @@ activeStake outs pointers stakeKeys delegs stakePools =
     makePair (Stake (k, c)) = (k, c)
 
 -- | Calculate pool refunds
-poolRefunds :: PrtclConsts -> Allocs -> Slot -> Map.Map HashKey Coin
+poolRefunds :: PParams -> Allocs -> Slot -> Map.Map HashKey Coin
 poolRefunds pc retiring cslot =
   Map.map (\s -> refund pval pmin lambda (cslot -* s)) retiring
   where
     (pval, pmin, lambda) = decayPool pc
 
 -- | Calculate total possible refunds.
-obligation :: PrtclConsts -> Allocs -> Allocs -> Slot -> Coin
+obligation :: PParams -> Allocs -> Allocs -> Slot -> Coin
 obligation pc stakeKeys stakePools cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
   sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
@@ -130,7 +130,7 @@ obligation pc stakeKeys stakePools cslot =
     (pval, pmin, lambdap) = decayPool pc
 
 -- | Calculate maximal pool reward
-maxPool :: PrtclConsts -> Coin -> Rational -> Rational -> Coin
+maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
 maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
   where
     (a0, nOpt) = pc ^. poolConsts
@@ -143,7 +143,7 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
     factor4 = (z0 - sigma') / z0
 
 -- | Calulcate moving average
-movingAvg :: PrtclConsts -> HashKey -> Natural -> Rational -> Distr -> Rational
+movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
 movingAvg pc hk n expectedSlots (Distr averages) =
   let fraction = fromIntegral n / max expectedSlots 1
    in case Map.lookup hk averages of
@@ -153,7 +153,7 @@ movingAvg pc hk n expectedSlots (Distr averages) =
 
 -- | Calculate pool reward
 poolRew ::
-     PrtclConsts
+     PParams
   -> HashKey
   -> Natural
   -> Rational
