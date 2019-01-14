@@ -10,7 +10,7 @@ where
 import Data.Set (Set)
 import Numeric.Natural
 
-import Ledger.Core (VKey, VKeyGen, Sig, Slot)
+import Ledger.Core (VKey, Sig, Slot, VKeyGenesis)
 import Ledger.Delegation (DCert)
 import Ledger.Signatures (Hash)
 
@@ -30,7 +30,7 @@ data ProtParams = MkProtParams
 data Block
   -- a genesis block
   = GBlock {
-      gbKeys :: Set VKeyGen
+      gbKeys :: Set VKeyGenesis
     , gbHash :: Hash -- ^ Hash of itself
     , gbSize :: Natural -- ^ Size of the genesis block
     , gbHeaderSize :: Natural -- ^ Size of the header of the genesis block

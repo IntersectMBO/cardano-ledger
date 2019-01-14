@@ -1,5 +1,5 @@
 set +e
 
-for f in $(find . -not -path "*/.stack-work*/*" -name '*.hs'); do
+for f in $(find . -not -path "*/.stack-work*/*" -not -path "*specs/*" -name '*.hs'); do
     brittany --config-file scripts/brittany/config.yaml  --write-mode inplace $f
 done

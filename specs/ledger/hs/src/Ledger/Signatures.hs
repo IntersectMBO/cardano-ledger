@@ -3,7 +3,6 @@
 module Ledger.Signatures where
 
 import           Crypto.Hash (Digest, SHA256)
-import qualified Data.ByteArray        as BA
 import Data.Monoid (Sum(..))
 import           Numeric.Natural       (Natural)
 

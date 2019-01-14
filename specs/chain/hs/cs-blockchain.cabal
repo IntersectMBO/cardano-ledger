@@ -13,7 +13,7 @@ maintainer:          formal.methods@iohk.io
 -- copyright:
 category:            Testing
 build-type:          Simple
-extra-source-files:  ChangeLog.md, README.md
+extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
