@@ -1004,10 +1004,8 @@ The certificate contains the following:
 
   Should the reward staking key be unregistered, the stake pool operator will be
   unable to receive rewards. In that case, any rewards that they would be due
-  are instead paid to the treasury\todo{This is an arbitrary choice -- we could
-    just as well carry them over to the next epoch's reward pot, or even move
-    them back to the reserve.} (but the stake pool members would still get their
-  usual rewards).
+  are instead paid to the treasury (but the stake pool members would still get
+  their usual rewards).
 
 \item A list of Hashes of public staking keys controlled by the pool owner(s),
   \(\mathcal{H}(vks_\text{owner})\). If any of these \emph{owner staking keys}
