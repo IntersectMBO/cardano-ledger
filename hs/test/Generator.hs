@@ -44,7 +44,7 @@ import           LedgerState     (LedgerState (..),
                                  )
 import           Slot
 import           UTxO
-import           PParams              (PParams(..))
+import           PParams              (PParams(..), interval0)
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
@@ -106,7 +106,8 @@ genTxOut addrs = do
 
 -- TODO generate sensible protocol constants
 defPCs :: PParams
-defPCs = PParams 0 0 100 100 0 0 (0%1) (0%1) (0%1, 0) 0 0
+defPCs =
+    PParams 0 0 100 100 interval0 0 interval0 interval0 (0%1, 0) interval0 0
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
