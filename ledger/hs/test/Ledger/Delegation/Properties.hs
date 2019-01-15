@@ -77,7 +77,17 @@ import Ledger.Delegation
   ( DCert
   , DCert(DCert)
   , DELEG
-  , DIState
+  , DState(DState)
+  , _dStateDelegationMap
+  , _dStateLastDelegation
+  , DSState(DSState)
+  , _dSStateScheduledDelegations
+  , _dSStateKeyEpochDelegations
+  , DIState(DIState)
+  , _dIStateDelegationMap
+  , _dIStateLastDelegation
+  , _dIStateScheduledDelegations
+  , _dIStateKeyEpochDelegations
   , DSEnv(DSEnv)
   , DSEnv
   , PredicateFailure(IsAlreadyScheduled, SDelegFailure, SDelegSFailure)
@@ -88,7 +98,6 @@ import Ledger.Delegation
   , delegate
   , delegationMap
   , delegator
-  , initialDIState
   , liveness
   , scheduledDelegations
   , slot
@@ -98,6 +107,29 @@ import Ledger.Core.Generator (vkGen)
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
 --------------------------------------------------------------------------------
+
+-- | Initial state for the ADELEG and ADELEGS systems
+initADelegsState :: DState
+initADelegsState = DState
+  { _dStateDelegationMap  = Map.empty
+  , _dStateLastDelegation = Map.empty
+  }
+
+-- | Initial state for the ADELEG and ADELEGS systems
+initSDelegsState :: DSState
+initSDelegsState = DSState
+  { _dSStateScheduledDelegations = []
+  , _dSStateKeyEpochDelegations  = Set.empty
+  }
+
+-- | Initial state for the DELEG system
+initialDIState :: DIState
+initialDIState = DIState
+  { _dIStateDelegationMap  = _dStateDelegationMap initADelegsState
+  , _dIStateLastDelegation = _dStateLastDelegation initADelegsState
+  , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
+  , _dIStateKeyEpochDelegations  = _dSStateKeyEpochDelegations initSDelegsState
+  }
 
 -- | Delegation blocks. Simple blockchain to test delegation.
 data DBLOCK
