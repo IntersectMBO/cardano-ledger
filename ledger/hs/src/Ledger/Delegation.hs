@@ -277,7 +277,7 @@ data ADELEG
 instance STS ADELEG where
   type State ADELEG = DState
   type Signal ADELEG = (Slot, (VKeyGenesis, VKey))
-  type Environment ADELEG = ()
+  type Environment ADELEG = Set VKeyGenesis
 
   data PredicateFailure ADELEG
     = BeforeExistingDelegation
@@ -346,7 +346,7 @@ data ADELEGS
 instance STS ADELEGS where
   type State ADELEGS = DState
   type Signal ADELEGS = [(Slot, (VKeyGenesis, VKey))]
-  type Environment ADELEGS = ()
+  type Environment ADELEGS = Set VKeyGenesis
 
   data PredicateFailure ADELEGS
     = ADelegFailure (PredicateFailure ADELEG)
@@ -390,7 +390,7 @@ instance STS DELEG where
         TRC (env, st, sig) <- judgmentContext
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
-        dms <- trans @ADELEGS $ TRC ((), st ^. dIStateDState, slots)
+        dms <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
         return $ DIState
           (dms ^. delegationMap)
           (dms ^. lastDelegation)
