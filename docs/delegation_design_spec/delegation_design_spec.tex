@@ -1205,12 +1205,14 @@ to a hot key \(vks_\text{hot}\).
 They are included in the message (e.g.~block header) and the message
 itself is signed with \(sks_\text{hot}\).
 
-Operational keys will use a key evolving signature (KES) scheme.
+Operational keys will use key evolving signatures (KES). To be precise, we will
+use keys according to the MMM scheme \citep{cryptoeprint:2001:034}, with 1-day
+regular updates and a key lifetime of \(2^7 = 128\) days, a little over three
+months.
 
-Operational key certificates will have a maximal lifetime after which they
+Operational key certificates will have a lifetime of 90 days after which they
 become invalid, to encourage pool operators to regularly rotate their
-operational key. The lifetime of the certificate will be chosen to be shorter
-than the time in which a KES key expires.
+operational key.
 
 In detail, the hot/cold key setup is as follows:
 
@@ -1234,8 +1236,8 @@ In detail, the hot/cold key setup is as follows:
   \(C'\), delegating the staking rights to a new hot key
   \(vks_{\text{hot}'}\).
 \item
-  The epoch number from which this certificate can start to be used. The maximal
-  lifetime of the certificate will be counted from this epoch.
+  The epoch number from which this certificate can start to be used. certificate
+  will be considered valid for 90 days, from the beginning of that epoch.
 \end{itemize}
 
 In order to render \(sks_\text{hot}\) useless, it must be established
