@@ -326,24 +326,12 @@ As a result of this rule, the author's key must be removed from the $\var{stkeys
 and all the rewards, pointers, and delegations associated with this key must be removed
 from the $\var{rewards}$, $\var{pointers}$, and $\var{delegations}$ parameters as well.
 
-Note that we must only allow performing a key deregistration when there
-are no active stake pools associated with this key. This check requires additional
-environment variables. For this reason
-it (and several other checks that need
-additional environment variables to specify a valid delegation state transition)
-are performed in the DELEGT rule, discussed in Section~\ref{sec:utxo-rewards}.
-
 Finally, for creating a delegation (the \cref{eq:deleg-deleg} rule),
 given that the certificate $c$ is of the correct type, we add to the
 $\var{delegations}$ finite map the pair of
 the author's hash key and hash key of the pool being delegated to.
 Again, we require the author's key be a registered key, as it does not make
 sense to allow delegation otherwise.
-
-There is another check which we perform when processing a delegation certificate:
-we must check that the certificate is for delegating to an
-existing stake pool. This, again, is verified in the DELEGT rule, see
-Section~\ref{sec:utxo-rewards}.
 
 The $\var{stkeys}$, $\var{rewards}$, and $\var{pointers}$ parameters are kept constant by
 this rule. The use of union override here allows us to use the same rule
@@ -355,7 +343,6 @@ in Section~\ref{sec:epoch}, since the amount of rewards they can claim in the ne
 epoch is calculated at the epoch boundary. However, the claiming of the rewards
 (i.e.\ conversion of reward value to unspent outputs available to the key
 holder), can be requested by the key holder at any time as part of a transaction.
-This process is decribed in Section~\ref{sec:utxo-rewards}.
 
 We would like to point out, here, that this document does not describe
 how the wallet makes a decision about which stake pool a stake key will
@@ -767,16 +754,40 @@ whole transaction will be invalid.
 \begin{figure}
   \begin{equation}
     \inference[Seq-delg-base]
-    {}
+    {
+      \var{wdrls} = \txwdrls{tx} & \var{wdrls} \subseteq \var{rewards}
+    }
     {
       \begin{array}{r}
         \var{tx}\\
         \var{slot}
       \end{array}
       \vdash
-      \var{dwstate}
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{stpools} \\
+        \var{pparams} \\
+        \var{retiring} \\
+        \var{avgs}
+      \end{array}
+      \right)
       \trans{delegs}{\epsilon}
-      \var{dwstate}
+      \left(
+      \begin{array}{r}
+        \var{stkeys} \\
+        \varUpdate{\fun{reapRewards}~\var{rewards}~\var{wdrls}} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{stpools} \\
+        \var{pparams} \\
+        \var{retiring} \\
+        \var{avgs}
+      \end{array}
+      \right)
     }
     \label{eq:rule:sequence-delegation-base}
   \end{equation}
@@ -786,6 +797,8 @@ whole transaction will be invalid.
   \begin{equation}
     \inference[Seq-delg-ind]
     {
+      \forall \var{c'}\in \Gamma;c,~\var{c'}\in\DCertDeleg \Rightarrow
+        \fun{dpool}~{c'} \in \dom \var{stpools} \\~\\
       {
         \begin{array}{r}
           \var{tx}\\
@@ -793,9 +806,9 @@ whole transaction will be invalid.
         \end{array}
       }
       \vdash
-      \var{dwstate}
+      \var{dpstate}
       \trans{delegs}{\Gamma}
-      \var{dwstate'}
+      \var{dpstate'}
     \\ ~ \\
     {
       \begin{array}{r}
@@ -804,9 +817,9 @@ whole transaction will be invalid.
       \end{array}
     }
     \vdash
-      \var{dwstate'}
+      \var{dpstate'}
       \trans{delpl}{c}
-      \var{dwstate''}
+      \var{dpstate''}
     }
     {
     {
@@ -816,9 +829,9 @@ whole transaction will be invalid.
       \end{array}
     }
     \vdash
-      \var{dwstate}
+      \var{dpstate}
       \trans{delegs}{\Gamma; c}
-      \varUpdate{\var{dwstate''}}
+      \varUpdate{\var{dpstate''}}
     }
     \label{eq:rule:sequence-delegation-inductive}
   \end{equation}
