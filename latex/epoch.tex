@@ -727,6 +727,62 @@ deposit decay, leftover rewards from
 the previous epoch, and this epoch's circulation expansion. The rest of this
 value (i.e. $\tau$) goes into the $\var{treasury}$, as stated above.
 
+Figure \ref{fig:fund-preservation} captures the potential movement of funds
+between these various locations during the epoch transition and transaction
+processing. In particular, the red subgraph represents the inputs and outputs to
+the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accnt}.
+
+\begin{figure}[htb]
+  \begin{center}
+    \begin{tikzpicture}
+      [ x=30mm, y=30mm
+      , direct/.style={black, draw}
+      , implied/.style={blue, draw}
+      , toTotPot/.style={red, draw}
+      ]
+    \node (C) at (3,3) {Circulation};
+    \node (R) at (5, 1) {Reserves};
+    \node (D) at (1, 2) {Deposits};
+    \node (FR) at (1,1) {Fees/rewards};
+    \node (RA) at (5, 2) {Reward accounts};
+    \node (T) at (3,0) {Treasury};
+
+    \draw[->, direct, thick]
+    (C) edge (D)
+    (C) edge (FR)
+
+    (D) edge (C)
+    (D) edge (FR)
+
+    (RA) edge (C);
+
+    \draw[->, implied, thick]
+    (D) edge (RA)
+    (D) edge (T)
+
+    (FR) edge (T)
+    (FR) edge (RA)
+
+    (R) edge (FR)
+    (R) edge (T)
+    (R) edge (RA);
+
+    \node (TP) at (3, 1.25) {Total pot};
+
+    \draw[->, toTotPot, thick]
+    (D) edge (TP)
+    (FR) edge (TP)
+    (R) edge (TP)
+
+    (TP) edge (RA)
+    (TP) edge (FR)
+    (TP) edge (T);
+
+  \end{tikzpicture}
+  \end{center}
+  \caption{Conservation of money}
+  \label{fig:fund-preservation}
+\end{figure}
 
 %%
 %% Figure - Accounting Rules

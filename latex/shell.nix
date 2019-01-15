@@ -17,6 +17,9 @@ stdenv.mkDerivation {
                       # libraries for marginal notes
                       xargs todonotes
 
+                      # Tikz
+                      pgf
+
                       # git info
                       gitinfo2
 
