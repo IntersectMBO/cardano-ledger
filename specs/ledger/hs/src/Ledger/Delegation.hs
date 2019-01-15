@@ -28,10 +28,16 @@ module Ledger.Delegation
   , DSEnv (DSEnv)
   , allowedDelegators
   , DState(DState)
+  , _dStateDelegationMap
+  , _dStateLastDelegation
   -- * Delegation interface
   , DELEG
   , DIEnv
   , DIState(DIState)
+  , _dIStateDelegationMap
+  , _dIStateLastDelegation
+  , _dIStateScheduledDelegations
+  , _dIStateKeyEpochDelegations
   , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
   -- * State lens fields
   , slot
