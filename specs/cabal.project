@@ -1,3 +1,4 @@
 packages: semantics/hs
           ledger/hs
           chain/hs
+          core/hs

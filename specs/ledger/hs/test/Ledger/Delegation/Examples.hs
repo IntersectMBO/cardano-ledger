@@ -11,6 +11,7 @@ import Numeric.Natural (Natural)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
+import Chain.Types (DCert(DCert))
 import Ledger.Core
   ( Epoch(Epoch)
   , Owner(Owner)
@@ -23,7 +24,6 @@ import Ledger.Core
   )
 import Ledger.Delegation
   ( ADELEG
-  , DCert(DCert)
   , DSEnv(DSEnv)
   , DSState(DSState)
   , DState(DState)

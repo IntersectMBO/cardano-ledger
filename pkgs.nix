@@ -15,6 +15,7 @@ import nixpkgs {
                 enableParallelBuilding = false;
               });
               cs-blockchain = self.callCabal2nix "cs-blockchain" ./specs/chain/hs {};
+              cs-core = self.callCabal2nix "cs-core" ./specs/core/hs {};
             };
           };
         };
