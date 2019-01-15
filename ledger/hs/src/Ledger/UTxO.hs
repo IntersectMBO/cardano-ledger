@@ -11,7 +11,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Ledger.Core hiding ((◁), (⋪))
-import Ledger.Signatures
+import Ledger.Signatures (Addr(Addr), Hash, Value)
 import Numeric.Natural (Natural)
 import Data.Map.Strict (Map)
 import Data.Set (Set)

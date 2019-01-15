@@ -11,17 +11,6 @@ module Ledger.Delegation
   , DSState(DSState)
   , _dSStateScheduledDelegations
   , _dSStateKeyEpochDelegations
-  , DCert(DCert)
-  , _dbody
-  , _dwit
-  , _dwho
-  , _depoch
-  , delegator
-  , delegate
-  , dbody
-  , dwit
-  , dwho
-  , depoch
     -- * Delegation activation
   , ADELEG
   , ADELEGS
@@ -65,11 +54,19 @@ import Control.Lens
   , (<>~)
   , (^.)
   , _1
-  , _2
   , lens
   , makeFields
-  , makeLenses
   , to
+  )
+
+import Chain.Types
+  ( DCert(DCert)
+  , _dbody
+  , _dwit
+  , _dwho
+  , _depoch
+  , dwho
+  , depoch
   )
 
 import Control.State.Transition
@@ -107,32 +104,6 @@ import Ledger.Core
   , owner
   )
 import Ledger.Core.Generator (vkGen, vkgenesisGen)
-
---------------------------------------------------------------------------------
--- Abstract types
---------------------------------------------------------------------------------
-
--- | A delegation certificate.
-data DCert = DCert
-  { -- | Body of the delegation certificate
-    _dbody :: (VKey, Epoch)
-    -- | Witness for the delegation cerfiticate
-  , _dwit :: Sig VKeyGenesis
-    -- | Who delegates to whom
-  , _dwho :: (VKeyGenesis, VKey)
-    -- | Certificate epoch
-  , _depoch :: Epoch
-  } deriving (Show, Eq)
-
-makeLenses ''DCert
-
--- | Key that is delegating.
-delegator :: DCert -> VKeyGenesis
-delegator c = c ^. dwho . _1
-
--- | Key being delegated to.
-delegate :: DCert -> VKey
-delegate c = c ^. dwho . _2
 
 --------------------------------------------------------------------------------
 -- Derived types
