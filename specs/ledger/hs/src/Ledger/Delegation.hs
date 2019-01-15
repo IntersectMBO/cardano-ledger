@@ -8,7 +8,6 @@ module Ledger.Delegation
   ( -- * Delegation scheduling
     SDELEG
   , SDELEGS
-  , initialDSState
   , DSState(DSState)
   , _dSStateScheduledDelegations
   , _dSStateKeyEpochDelegations
@@ -26,7 +25,6 @@ module Ledger.Delegation
     -- * Delegation activation
   , ADELEG
   , ADELEGS
-  , initialDState
   , DSEnv (DSEnv)
   , allowedDelegators
   , DState(DState)
@@ -35,7 +33,6 @@ module Ledger.Delegation
   , DIEnv
   , DIState(DIState)
   , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
-  , initialDIState
   -- * State lens fields
   , slot
   , liveness
@@ -76,6 +73,7 @@ import Control.State.Transition
   , STS
   , Signal
   , State
+  , IRC(IRC)
   , TRC(TRC)
   , (?!)
   , initialRules
@@ -95,7 +93,7 @@ import Ledger.Core
   , Slot(Slot)
   , SlotCount(SlotCount)
   , VKey
-  , VKeyGenesis
+  , VKeyGenesis(VKeyGenesis)
   , (⨃)
   , addSlot
   , minusSlot
@@ -152,12 +150,6 @@ data DSState = DSState
 
 makeFields ''DSState
 
-initialDSState :: DSState
-initialDSState = DSState
-  {  _dSStateScheduledDelegations = []
-  , _dSStateKeyEpochDelegations = Set.empty
-  }
-
 -- | Delegation state
 data DState = DState
   { _dStateDelegationMap :: Map VKeyGenesis VKey
@@ -166,11 +158,6 @@ data DState = DState
   } deriving (Eq, Show)
 
 makeFields ''DState
-
--- | Initial delegation state:
-initialDState :: DState
-initialDState =
-  DState {_dStateDelegationMap = Map.empty, _dStateLastDelegation = Map.empty}
 
 -- | Interface environment is the same as scheduling environment.
 type DIEnv = DSEnv
@@ -183,14 +170,6 @@ data DIState = DIState
   } deriving (Show, Eq)
 
 makeFields ''DIState
-
-initialDIState :: DIState
-initialDIState = DIState
-  { _dIStateDelegationMap = initialDState ^. delegationMap
-  , _dIStateLastDelegation = initialDState ^. lastDelegation
-  , _dIStateScheduledDelegations = initialDSState ^. scheduledDelegations
-  , _dIStateKeyEpochDelegations = initialDSState ^. keyEpochDelegations
-  }
 
 dIStateDSState :: Lens' DIState DSState
 dIStateDSState = lens
@@ -287,10 +266,12 @@ instance STS ADELEG where
     | AfterExistingDelegation
     deriving (Eq, Show)
 
-  initialRules = [ return DState
-                   { _dStateDelegationMap  = Map.empty
-                   , _dStateLastDelegation = Map.empty
-                   }
+  initialRules = [ do
+                     IRC env <- judgmentContext
+                     return DState
+                       { _dStateDelegationMap  = Map.fromSet (\(VKeyGenesis k) -> k) env
+                       , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
+                       }
                  ]
   transitionRules =
     [ do
@@ -321,10 +302,9 @@ instance STS SDELEGS where
     = SDelegFailure (PredicateFailure SDELEG)
     deriving (Eq, Show)
 
-  initialRules = [ return DSState
-                   { _dSStateScheduledDelegations = []
-                   , _dSStateKeyEpochDelegations  = Set.empty
-                   }
+  initialRules = [ do
+                     IRC env <- judgmentContext
+                     trans @SDELEG $ IRC env
                  ]
   transitionRules =
     [ do
@@ -352,10 +332,9 @@ instance STS ADELEGS where
     = ADelegFailure (PredicateFailure ADELEG)
     deriving (Eq, Show)
 
-  initialRules = [ return DState
-                   { _dStateDelegationMap  = Map.empty
-                   , _dStateLastDelegation = Map.empty
-                   }
+  initialRules = [ do
+                     IRC env <- judgmentContext
+                     trans @ADELEG $ IRC env
                  ]
   transitionRules =
     [ do
@@ -384,7 +363,17 @@ instance STS DELEG where
     | ADelegSFailure (PredicateFailure ADELEGS)
     deriving (Eq, Show)
 
-  initialRules = [pure initialDIState]
+  initialRules = [ do
+                     IRC env <- judgmentContext
+                     initADelegsState <- trans @ADELEGS $ IRC (env ^. allowedDelegators)
+                     initSDelegsState <- trans @SDELEGS $ IRC env
+                     return DIState
+                       { _dIStateDelegationMap  = initADelegsState ^. delegationMap
+                       , _dIStateLastDelegation = initADelegsState ^. lastDelegation
+                       , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
+                       , _dIStateKeyEpochDelegations  = initSDelegsState ^. keyEpochDelegations
+                       }
+                 ]
   transitionRules =
     [ do
         TRC (env, st, sig) <- judgmentContext
