@@ -20,7 +20,6 @@ all: $(DOCNAME).pdf
 ## CUSTOM BUILD RULES
 ##
 
-
 ##
 ## MAIN LATEXMK RULE
 ##
