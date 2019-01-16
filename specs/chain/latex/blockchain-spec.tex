@@ -513,32 +513,80 @@ A block $\var{b}$ is valid if:
   \end{cases}
 \end{align}
 
-\begin{figure}
+\clearpage
+
+\section{Blockchain Extension}
+\label{sec:chain-extension}
+
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+
+\newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
+
+% Imported definitions
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\DIEnv}{\type{DIEnv}}
+\newcommand{\DIState}{\type{DIState}}
+
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+
+\begin{figure}[ht]
   \emph{Abstract types}
   %
   \begin{align*}
     \var{data} & \in \Data    & \text{data}\\
     \var{ds} & \in \DelegState & \text{ledger layer delegation state}
   \end{align*}
-  \emph{Functions and relations}
+  \emph{Abstract functions}
   %
   \begin{align*}
     \fun{\verifyname} & \in \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
+      & \text{verification relation} \\
     \fun{\blocksizelimitname} & \in \Block \times \ProtParams \totalf \mathbb{N}
-      & \text{block size limit in bytes function}
+      & \text{block size limit in bytes function} \\
+    \butxo & \in \Block \totalf \UTxO & \text{Block UTxO payload}
   \end{align*}
   %
   \caption{Blockchain Extension Types and Functions}
-  \label{fig:block-ext-types-funs}
+  \label{fig:defs:chain-extension}
 \end{figure}
 
+\begin{figure}[ht]
+  % \emph{Chain extension environments}
+  % \begin{equation*}
+  %   \CEEnv =
+  %   \left(
+  %     \begin{array}{r@{~\in~}lr}
+  %       \var{slot} & \Slot & \text{Current slot}
+  %     \end{array}
+  %   \right)
+  % \end{equation*}
+  \emph{Chain extension states}
+  \begin{equation*}
+    \CEState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{bIx} & \BlockIx & \text{Current block index} \\
+        \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
+        \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{ds} & \DIState & \text{Delegation state}
+      \end{array}
+    \right)
+  \end{equation*}
 
-\subsection{Blockchain Extension}
-\label{sec:chain-extension}
+  \emph{Chain extension transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
+    \powerset (\Slot \times \CEState \times \Block \times \CEState)
+  \end{equation*}
+
+  \caption{Blockchain extension transition-system types}
+  \label{fig:ts-types:chain-extension}
+\end{figure}
 
 The central rule that captures blockchain extension is given with
-Figure~\ref{fig:blockchain-extension}.
+Figure~\ref{fig:defs:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
@@ -547,6 +595,7 @@ Figure~\ref{fig:blockchain-extension}.
     \var{vk_d} = \bsigner{b} & \hash{b} \equiv \hashofblock{p} \\
     \bsize{b} \leq \blocksizelimit{b}{\var{pp}} & \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
     \verify{\var{vk_d}}{(\bdata{b})}{(\bsig{b})} \\
+    \var{pp} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
         pp \\
@@ -556,7 +605,7 @@ Figure~\ref{fig:blockchain-extension}.
     \right)}
     \vdash
     \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname' &&
-    \var{diEnv} \vdash \var{ds} \trans{\text{DELEG}}{\bcerts{b}} \var{ds'}
+    \var{diEnv} \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
   }
   {
     \left(
@@ -568,18 +617,18 @@ Figure~\ref{fig:blockchain-extension}.
     \vdash
     \left(
       {\begin{array}{c}
-         \signmapname \\
-         p \\
          bIx \\
+         \signmapname \\
+         \var{utxo} \\
          \var{ds}
        \end{array}}
     \right)
-    \trans{}{b}
+    \trans{chain}{b}
     \left(
       {\begin{array}{c}
-         \signmapname' \\
-         b \\
          bIx + 1 \\
+         \signmapname' \\
+         \var{utxo}' \\
          \var{ds'}
        \end{array}}
     \right)
@@ -588,7 +637,7 @@ Figure~\ref{fig:blockchain-extension}.
   \caption{The Blockchain Extension Rule}
   \label{fig:blockchain-extension}
 \end{figure}
-
+\clearpage
 \bibliographystyle{plainnat}
 \bibliography{references}
 \end{document}
