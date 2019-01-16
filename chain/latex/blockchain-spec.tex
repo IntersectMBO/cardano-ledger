@@ -285,7 +285,6 @@ There are several standard sets used in the document:
       & \text{block certificates} \\
     \fun{\bsigname} & \in \Block \totalf \Sig & \text{block signature} \\
     \fun{\bdataname} & \in \Block \totalf \Data & \text{block data} \\
-    \fun{\isebbname} & \in \Block \totalf \mathbb{B} & \text{epoch boundary block check}\\
     \fun{\maxblocksizename} & \in \ProtParams \totalf \mathbb{N} & \text{maximum block size} \\
     \fun{\maxheadersizename} & \in \ProtParams \totalf \mathbb{N}
       & \text{maximum block header size} \\
@@ -354,10 +353,13 @@ This section should cover:
 \newcommand{\BSCEnv}{\type{BSCEnv}}
 \newcommand{\BSCState}{\type{BSCState}}
 
-To make sure no signing key with a corresponding genesis block verification
-key gets to sign too many blocks, a state is maintained by keeping a mapping
-of keys to a queue of signed blocks in a sliding window of at most K last
-blocks in the blockchain.
+To guard against the compromise of a minority of the genesis keys,
+we require that in the rolling window of the last $K$ blocks, the number of
+blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
+\cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from the
+  Ouroboros BFT paper draft where it denotes the number of Byzantine servers,
+  though it should be somehow related to it.} that will be picked in the range
+$1/5 \leq t \leq 1/4$.
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -493,25 +495,10 @@ A block $\var{b}$ is valid if:
 \item new delegation certificates that are in the body of $b$ are not in
   conflict with earlier delegation certificates,
 \item the size of the block in bytes is within limits, as defined by
-  \eqref{eq:blocksizelimit},
+  protocol parameters.
 \item the size of the block header in bytes is within limits, as defined by
-  protocol parameters, and
-\item in the rolling window of the last $K$ blocks, the number of blocks
-  signed by keys that $sk_s$ delegated to is no more than a threshold
-  $K \cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from
-    the Ouroboros BFT paper draft where it denotes the number of Byzantine
-    servers, though it should be somehow related to it.}  that will be picked
-  in the range $1/5 \leq t \leq 1/4$.
+  protocol parameters.
 \end{enumerate}
-
-\begin{align}
-  \label{eq:blocksizelimit}
-  \blocksizelimit{b}{\var{pp}} = \
-  \begin{cases}
-    \maxblocksize{\var{pp}} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
-    2^{21} & \text{otherwise}
-  \end{cases}
-\end{align}
 
 \clearpage
 
@@ -545,7 +532,8 @@ A block $\var{b}$ is valid if:
       & \text{verification relation} \\
     \fun{\blocksizelimitname} & \in \Block \times \ProtParams \totalf \mathbb{N}
       & \text{block size limit in bytes function} \\
-    \butxo & \in \Block \totalf \UTxO & \text{Block UTxO payload}
+    \butxo & \in \Block \totalf \UTxO & \text{Block UTxO payload} \\
+    \fun{\isebbname} & \in \Block \totalf \mathbb{B} & \text{epoch boundary block check}
   \end{align*}
   %
   \caption{Blockchain Extension Types and Functions}
@@ -591,15 +579,46 @@ Figure~\ref{fig:defs:chain-extension}.
 \begin{figure}
   \begin{equation*}
   \inference
+  { \isebb{b} & \bsize{b} \leq 2^{21} }
   {
+    \left(
+      {\begin{array}{c}
+         \var{slot}
+       \end{array}}
+    \right)
+    \vdash
+    \left(
+      {\begin{array}{c}
+         bIx \\
+         \signmapname \\
+         \var{utxo} \\
+         \var{ds}
+       \end{array}}
+    \right)
+    \trans{chain}{b}
+    \left(
+      {\begin{array}{c}
+         bIx \\
+         \signmapname \\
+         \var{utxo} \\
+         \var{ds}
+       \end{array}}
+    \right)
+  }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+  \inference
+  {
+    !\isebb{b} &
     \var{vk_d} = \bsigner{b} & \hash{b} \equiv \hashofblock{p} \\
-    \bsize{b} \leq \blocksizelimit{b}{\var{pp}} & \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
+    \bsize{b} \leq \maxblocksize{b}{\var{pp}} & \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
     \verify{\var{vk_d}}{(\bdata{b})}{(\bsig{b})} \\
     \var{pp} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
         pp \\
-        diEnv \\
+        ds \\
         bIx
       \end{array}
     \right)}
@@ -610,8 +629,7 @@ Figure~\ref{fig:defs:chain-extension}.
   {
     \left(
       {\begin{array}{c}
-         \var{pp} \\
-         \var{diEnv}
+         \var{slot}
        \end{array}}
     \right)
     \vdash
@@ -632,7 +650,7 @@ Figure~\ref{fig:defs:chain-extension}.
          \var{ds'}
        \end{array}}
     \right)
- }
+  }
   \end{equation*}
   \caption{The Blockchain Extension Rule}
   \label{fig:blockchain-extension}
