@@ -24,9 +24,9 @@ stdenv.mkDerivation {
 
                       # build tools
                       latexmk
-
                       ;
                   })
+
                 ];
   src = ./.;
   buildPhase = "make";

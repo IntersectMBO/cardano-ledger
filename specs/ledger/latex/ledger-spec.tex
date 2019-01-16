@@ -26,7 +26,7 @@
 \setpremisesspace{20pt}
 \usepackage{tikz}
 \usetikzlibrary{decorations.pathreplacing, positioning, arrows.meta, calc}
-
+% For drawing simple diagrams involving arrows between LaTeX symbols
 \usepackage{tikz-cd}
 
 %%
@@ -99,6 +99,11 @@
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
 
+%% For properties
+\newcommand{\txs}{\ensuremath{\mathcal{T}}}
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
+\newcommand{\biguo}[1]{\ensuremath{\underset{#1}{\underrightarrow\bigcup}}}
+
 %\includeonly{update-mechanism, delegation, blockchain-interface}
 
 %% Parameters that control floats placement. See https://robjhyndman.com/hyndsight/latex-floats/
@@ -111,6 +116,7 @@
 \renewcommand{\floatpagefraction}{0.7}
 
 \newtheorem{definition}{Definition}
+\newtheorem{prop}{Property}
 
 \begin{document}
 
@@ -132,6 +138,8 @@
 \include{update-mechanism}
 
 \include{blockchain-interface}
+
+\include{properties}
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
