@@ -90,9 +90,6 @@ $\Duration$ here by $\var{dur}$).
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      ix & \Ix & \text{index}\\
-      a & \AddrRWD & \text{reward address} \\
-      slot & \Slot & \text{absolute slot}\\
       dur & \Duration & \text{duration}\\
       epoch & \Epoch & \text{epoch} \\
       stakepool & \StakePool & \text{stake pool parameters} \\
@@ -124,10 +121,6 @@ $\Duration$ here by $\var{dur}$).
       & \Allocs
       & \HashKey \mapsto \Slot
       & \text{resource allocations} \\
-      \var{(s,t,c)}
-      & \Ptr
-      & \Slot\times\Ix\times\Ix
-      & \text{certificate pointer}
     \end{array}
   \end{equation*}
   %
@@ -135,9 +128,6 @@ $\Duration$ here by $\var{dur}$).
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-  \fun{addr_{rwd}} & \HashKey \to \AddrRWD
-  & \text{address of a stake key}
-  \\
   \fun{author} & \DCert \to \HashKey
   & \text{certificate author}
   \\
