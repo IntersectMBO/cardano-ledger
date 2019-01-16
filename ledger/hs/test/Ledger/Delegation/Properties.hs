@@ -77,9 +77,7 @@ import Ledger.Delegation
   ( DCert
   , DCert(DCert)
   , DELEG
-  , DState(DState)
-  , _dStateDelegationMap
-  , _dStateLastDelegation
+  , DState(DState, _dStateDelegationMap, _dStateLastDelegation)
   , DSState(DSState)
   , _dSStateScheduledDelegations
   , _dSStateKeyEpochDelegations
