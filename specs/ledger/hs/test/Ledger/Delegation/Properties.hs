@@ -28,15 +28,6 @@ import Hedgehog
 import Hedgehog.Gen (integral)
 import Hedgehog.Range (constant, linear)
 
-import Chain.Types
-  ( DCert(DCert)
-  , _dbody
-  , _depoch
-  , _dwho
-  , _dwit
-  , delegate
-  , delegator
-  )
 import Control.State.Transition
   ( Environment
   , PredicateFailure
@@ -83,7 +74,9 @@ import Ledger.Core
   , owner
   )
 import Ledger.Delegation
-  ( DELEG
+  ( DCert
+  , DCert(DCert)
+  , DELEG
   , DState(DState)
   , _dStateDelegationMap
   , _dStateLastDelegation
@@ -98,7 +91,13 @@ import Ledger.Delegation
   , DSEnv(DSEnv)
   , DSEnv
   , PredicateFailure(IsAlreadyScheduled, SDelegFailure, SDelegSFailure)
+  , _dbody
+  , _depoch
+  , _dwho
+  , _dwit
+  , delegate
   , delegationMap
+  , delegator
   , liveness
   , scheduledDelegations
   , slot

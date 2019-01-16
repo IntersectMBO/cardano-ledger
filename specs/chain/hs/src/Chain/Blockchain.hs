@@ -15,13 +15,13 @@ import Crypto.Hash (hashlazy)
 import Data.ByteString.Lazy.Char8 (pack)
 
 import Chain.GenesisBlock (genesisBlock)
-import Chain.Types (BC, Block(..), BlockIx(..), DCert, ProtParams(..))
 import Control.State.Transition
 import Data.Maybe (fromJust, listToMaybe, isJust)
 import Data.Queue
 import Ledger.Core (VKey(..), Slot, SlotCount(SlotCount), verify, VKeyGenesis)
-import Ledger.Delegation (DIState, DELEG, DIEnv, delegationMap)
+import Ledger.Delegation (DCert, DIState, DELEG, DIEnv, delegationMap)
 import Ledger.Signatures (Hash)
+import Types (BC, Block(..), BlockIx(..), ProtParams(..))
 
 
 -- | Returns a key from a map for a given value.

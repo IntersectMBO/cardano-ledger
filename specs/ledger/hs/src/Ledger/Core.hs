@@ -10,7 +10,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Natural (minusNaturalMaybe)
 import Numeric.Natural (Natural)
 
-import Ledger.Signatures (Hash)
+import Ledger.Signatures
 
 -- | Hash part of the ledger paylod
 class HasHash a where

@@ -1,54 +1,18 @@
-{-# LANGUAGE TemplateHaskell #-}
-
--- | Defines basic types for working with the blockchain
-module Chain.Types
+-- | Defines basic types for working with the ledger and the blockchain
+module Types
   ( BC
   , BlockIx(..)
   , ProtParams(..)
   , Block(..)
-  , DCert(DCert)
-  , _dbody
-  , _dwit
-  , _dwho
-  , _depoch
-  , delegator
-  , delegate
-  , dbody
-  , dwit
-  , dwho
-  , depoch
   )
 where
 
-import Control.Lens (makeLenses, _1, _2, (^.))
 import Data.Set (Set)
 import Numeric.Natural
 
-import Ledger.Core (Epoch, VKey, Sig, Slot, VKeyGenesis)
+import Ledger.Core (VKey, Sig, Slot, VKeyGenesis)
+import Ledger.Delegation (DCert)
 import Ledger.Signatures (Hash)
-
-
--- | A delegation certificate.
-data DCert = DCert
-  { -- | Body of the delegation certificate
-    _dbody :: (VKey, Epoch)
-    -- | Witness for the delegation cerfiticate
-  , _dwit :: Sig VKeyGenesis
-    -- | Who delegates to whom
-  , _dwho :: (VKeyGenesis, VKey)
-    -- | Certificate epoch
-  , _depoch :: Epoch
-  } deriving (Show, Eq)
-
-makeLenses ''DCert
-
--- | Key that is delegating.
-delegator :: DCert -> VKeyGenesis
-delegator c = c ^. dwho . _1
-
--- | Key being delegated to.
-delegate :: DCert -> VKey
-delegate c = c ^. dwho . _2
 
 
 -- | Phantom type for the blockchain extension transition system
