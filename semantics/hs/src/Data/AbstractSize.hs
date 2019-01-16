@@ -27,6 +27,7 @@ import GHC.Generics
   , U1(U1)
   , from
   )
+import GHC.Natural
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
 -- map @m@. The map @m@ determines the abstract size of each 'TypeRep'
@@ -142,4 +143,7 @@ instance HasTypeReps Int where
   typeReps x = [typeOf x]
 
 instance HasTypeReps Double where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Natural where
   typeReps x = [typeOf x]
