@@ -1,7 +1,6 @@
 resolver: lts-13.0
 
 packages:
-- core/hs
 - chain/hs
 - ledger/hs
 - semantics/hs

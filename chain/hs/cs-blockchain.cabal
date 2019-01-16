@@ -18,6 +18,8 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Chain.Blockchain
+                       Chain.GenesisBlock
+                       Types
   other-modules:       Data.Queue
   -- other-extensions:
   hs-source-dirs:      src
@@ -26,7 +28,6 @@ library
                      , bytestring
                      , containers
                      , cryptonite
-                     , cs-core
                      , cs-ledger
                      , lens
                      , memory
