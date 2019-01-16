@@ -126,6 +126,13 @@ instance Bi AddrType where
             tag -> ATUnknown tag
     encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
+instance HeapWords AddrType where
+  heapWords = \case
+    ATPubKey    -> 0
+    ATScript    -> 0
+    ATRedeem    -> 0
+    ATUnknown _ -> 2
+
 -- | Convert 'AddrSpendingData' to the corresponding 'AddrType'.
 addrSpendingDataToType :: AddrSpendingData -> AddrType
 addrSpendingDataToType = \case

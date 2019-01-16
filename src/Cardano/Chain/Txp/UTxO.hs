@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Chain.Txp.UTxO
   ( UTxO
@@ -28,7 +29,7 @@ import Cardano.Crypto (hash)
 
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
-  }
+  } deriving HeapWords
 
 data UTxOError
   = UTxOMissingInput TxIn

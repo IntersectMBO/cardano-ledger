@@ -98,3 +98,7 @@ instance Bi (Attributes AddrAttributes) where
       1 -> (\deriv -> Just $ acc { aaPkDerivationPath = Just deriv })
         <$> Bi.deserialize v
       _ -> pure Nothing
+
+instance HeapWords AddrAttributes where
+  heapWords (AddrAttributes derivationPath stakeDistr) =
+    heapWords2 derivationPath stakeDistr

@@ -1,7 +1,10 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Txp.Tx
   ( Tx(..)
@@ -54,10 +57,10 @@ import Cardano.Binary.Class
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
-  , lovelaceF
-  , lovelaceToInteger
   , decodeTextAddress
   , integerToLovelace
+  , lovelaceF
+  , lovelaceToInteger
   )
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
 import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
@@ -148,6 +151,7 @@ data TxIn
   = TxInUtxo TxId Word32
   | TxInUnknown !Word8 !ByteString
   deriving (Eq, Ord, Generic, Show)
+  deriving anyclass NFData
 
 instance FromJSON TxIn where
   parseJSON v = toAesonError =<< txInFromText <$> parseJSON v
@@ -184,7 +188,10 @@ instance Bi TxIn where
   encodedSizeExpr size _ = 2 + knownCborDataItemSizeExpr
     (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
 
-instance NFData TxIn
+instance HeapWords TxIn where
+  heapWords = \case
+    TxInUtxo txid w32 -> heapWords2 txid w32
+    TxInUnknown _ bs -> 3 + heapWords bs
 
 isTxInUnknown :: TxIn -> Bool
 isTxInUnknown (TxInUnknown _ _) = True
@@ -216,6 +223,7 @@ data TxOut = TxOut
   { txOutAddress :: !Address
   , txOutValue   :: !Lovelace
   } deriving (Eq, Ord, Generic, Show)
+    deriving anyclass NFData
 
 instance FromJSON TxOut where
   parseJSON = withObject "TxOut" $ \o ->
@@ -235,8 +243,6 @@ instance B.Buildable TxOut where
     (txOutValue txOut)
     (txOutAddress txOut)
 
-instance NFData TxOut
-
 instance Bi TxOut where
   encode txOut =
     encodeListLen 2 <> encode (txOutAddress txOut) <> encode (txOutValue txOut)
@@ -247,6 +253,9 @@ instance Bi TxOut where
 
   encodedSizeExpr size pxy =
     1 + size (txOutAddress <$> pxy) + size (txOutValue <$> pxy)
+
+instance HeapWords TxOut where
+  heapWords (TxOut address _) = 3 + heapWords address
 
 makePrisms ''TxOut
 

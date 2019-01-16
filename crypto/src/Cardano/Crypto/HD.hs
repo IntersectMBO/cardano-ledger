@@ -1,8 +1,9 @@
-{-# LANGUAGE BangPatterns       #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Hierarchical derivation interface
 --
@@ -42,9 +43,9 @@ import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import Data.ByteString.Char8 as B
 
 import Cardano.Binary.Class (Bi(..), decodeFull', serialize')
+import Cardano.Crypto.Signing (PublicKey(..))
 import Cardano.Crypto.Signing.Safe
   (EncryptedSecretKey(..), PassPhrase, checkPassMatches)
-import Cardano.Crypto.Signing (PublicKey(..))
 
 
 -- | Passphrase is a hash of root public key.
@@ -60,9 +61,10 @@ data HDPassphrase =
 --   * cryptographic tag
 --
 --   For more information see 'packHDAddressAttr' and 'encryptChaChaPoly'.
-data HDAddressPayload = HDAddressPayload
-  { getHDAddressPayload :: !ByteString
+newtype HDAddressPayload = HDAddressPayload
+  { getHDAddressPayload :: ByteString
   } deriving (Eq, Ord, Show, Generic)
+    deriving newtype (Bi, HeapWords)
     deriving anyclass NFData
 
 instance FromJSON HDAddressPayload where
@@ -70,10 +72,6 @@ instance FromJSON HDAddressPayload where
 
 instance ToJSON HDAddressPayload where
   toJSON = toJSON . makeByteString64 . getHDAddressPayload
-
-instance Bi HDAddressPayload where
-  encode (HDAddressPayload payload) = encode payload
-  decode = HDAddressPayload <$> decode
 
 -- | Compute passphrase as hash of the root public key
 deriveHDPassphrase :: PublicKey -> HDPassphrase

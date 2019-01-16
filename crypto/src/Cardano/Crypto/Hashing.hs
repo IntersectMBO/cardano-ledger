@@ -114,6 +114,9 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => Bi (AbstractHash alg
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
     in fromInteger (toInteger (withWordSize realSz + realSz))
 
+instance HeapWords (AbstractHash algo a) where
+  heapWords _ = 12 -- Hardcoded as 8 word overhead of Digest + 4 words for hash
+
 hashDigestSize' :: forall algo . HashAlgorithm algo => Int
 hashDigestSize' = hashDigestSize @algo
   (panic
