@@ -1,6 +1,7 @@
 \section{Delegation}
 \label{sec:delegation}
 
+\newcommand{\DEnv}{\type{DEnv}}
 \newcommand{\DSEnv}{\type{DSEnv}}
 \newcommand{\DSState}{\type{DSState}}
 \newcommand{\DCert}{\type{DCert}}
@@ -107,6 +108,27 @@ $\trans{sdeleg}{\wcard}$ are presented in
 
 \begin{figure}[htb]
   \begin{equation}
+    \inference[Initial-SDELEG]
+    {
+    }
+    {
+      {\begin{array}{l}
+       \mathcal{K}\\
+        e\\
+        s\\
+        d
+      \end{array}}
+      \vdash
+      \left(
+        \begin{array}{l}
+          \epsilon\\
+          \emptyset
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
     \label{eq:rule:delegation-scheduling}
     \inference
     {
@@ -162,6 +184,16 @@ it. \cref{fig:rules:delegation} models such change.
 \end{figure}
 
 \begin{figure}[htb]
+  \emph{Delegation environments}
+  \begin{equation*}
+    \DEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}
+      \end{array}
+    \right)
+  \end{equation*}
+
   \emph{Delegation states}
   \begin{align*}
     & \DState
@@ -174,18 +206,38 @@ it. \cref{fig:rules:delegation} models such change.
   \emph{Delegation transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{adeleg}{\_} \_ \in
-    \powerset (\DState \times (\Slot \times (\VKeyGen \times \VKey)) \times \DState)
+    \powerset (\DEnv \times \DState \times (\Slot \times (\VKeyGen \times \VKey)) \times \DState)
     \end{equation*}
   \caption{Delegation transition-system types}
   \label{fig:ts-types:delegation}
 \end{figure}
 
 \begin{figure}[htb]
+  \begin{equation}
+    \inference[Initial-ADELEG]
+    {
+      \var{dms_0} = \Set{k \mapsto k}{k \in \mathcal{K}} &
+      \var{dws_0} = \Set{k \mapsto 0}{k \in \mathcal{K}}
+    }
+    {
+      \mathcal{K}
+      \vdash
+      \left(
+        \begin{array}{l}
+          \var{dms_0}\\
+          \var{dws_0}
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
   \begin{equation}\label{eq:rule:delegation-change}
     \inference
     {\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s
     }
     {
+      \mathcal{K}
+      \vdash
       \left(
       \begin{array}{r}
         \var{dms}\\
@@ -207,6 +259,8 @@ it. \cref{fig:rules:delegation} models such change.
     {\var{vk_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p
     }
     {
+      \mathcal{K}
+      \vdash
       \left(
       \begin{array}{r}
         \var{dms}\\
@@ -235,6 +289,27 @@ This section presents the rules that model the effect that sequences of
 delegations have on the ledger.
 
 \begin{figure}[htb]
+  \begin{equation}
+    \inference[Initial-SDELEGS]
+    {
+    }
+    {
+      {\begin{array}{l}
+       \mathcal{K}\\
+        e\\
+        s\\
+        d
+      \end{array}}
+      \vdash
+      \left(
+        \begin{array}{l}
+          \epsilon\\
+          \emptyset
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
   \begin{equation}
     \label{eq:rule:delegation-scheduling-seq-base}
     \inference
@@ -355,11 +430,31 @@ delegations have on the ledger.
 
 \begin{figure}
   \begin{equation}
+    \inference[Initial-ADELEGS]
+    {
+      \var{dms_0} = \Set{k \mapsto k}{k \in \mathcal{K}} &
+      \var{dws_0} = \Set{k \mapsto 0}{k \in \mathcal{K}}
+    }
+    {
+      \mathcal{K}
+      \vdash
+      \left(
+        \begin{array}{l}
+          \var{dms_0}\\
+          \var{dws_0}
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
     \label{eq:rule:delegation-seq-base}
     \inference
     {
     }
     {
+      \mathcal{K}
+      \vdash
       {
         \left(
           \begin{array}{l}
@@ -421,6 +516,8 @@ delegations have on the ledger.
       }
     }
     {
+      \mathcal{K}
+      \vdash
       {
         \left(
           \begin{array}{l}

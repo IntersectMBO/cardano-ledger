@@ -6,6 +6,7 @@ module Ledger.Delegation.Examples
   )
 where
 
+import Data.Set (fromList, Set)
 import Numeric.Natural (Natural)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -34,7 +35,7 @@ import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 deleg :: [TestTree]
 deleg =
   [ testGroup "Activation"
-    [ testCase "Example 0" $ checkTrace @ADELEG () $
+    [ testCase "Example 0" $ checkTrace @ADELEG genKeys $
 
       pure (DState [] [])
 
@@ -84,3 +85,6 @@ deleg =
 
     dc :: VKeyGenesis -> VKey -> Epoch -> DCert
     dc vkg vk ep = DCert (vk, ep) (Sig vkg (owner vkg)) (vkg, vk) ep
+
+    genKeys :: Set VKeyGenesis
+    genKeys = fromList $ map (VKeyGenesis . VKey . Owner) [0 .. 6]
