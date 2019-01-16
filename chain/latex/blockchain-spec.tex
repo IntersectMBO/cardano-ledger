@@ -252,61 +252,6 @@ There are several standard sets used in the document:
   $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
 \end{description}
 
-\subsection{Heavyweight Delegation Certificates}
-\label{sec:certificates}
-
-A heavyweight delegation certificate is a proof that a genesis verification key
-$vk_s$ is delegating its right to sign a block to a signing key $sk_d$, which
-has a corresponding verification key $vk_d$, starting with a slot $sl$, which is
-confirmed by a cryptographic signature $\sigma$.
-%
-The type for a heavyweight delegation certificate is kept abstract in this
-document, but it is a product type with projection functions for the
-following:
-%
-\begin{itemize}
-\item a delegator key,
-\item a delegatee key,
-\item a slot, and
-\item a cryptographic signature.
-\end{itemize}
-
-\begin{figure}
-  \emph{Primitive types}
-  %
-  \begin{align*}
-    sl & \in \Slot    & \text{slot time-stamp}\\
-   sig & \in \Sig     & \text{cryptographic signature}\\
-    sk & \in \SKey    & \text{signing key}\\
-    vk & \in \VKey    & \text{verification key}
-  \end{align*}
-  %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis verification key}
-  \end{align*}
-  %
-  \emph{Abstract types}
-  %
-  \begin{align*}
-    c & \in \DCert  & \text{heavyweight delegation certificate}
-  \end{align*}
-  %
-  \emph{Functions}
-  %
-  \begin{align*}
-    \fun{cFrom} & \in \DCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
-    \fun{cTo} & \in \DCert \totalf \VKey & \text{certificate delegatee key projection} \\
-    \fun{cSl} & \in \DCert \totalf \Slot & \text{certificate slot projection} \\
-    \fun{cSig} & \in \DCert \totalf \Sig & \text{certificate signature projection}
-  \end{align*}
-  %
-  \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
-  \label{fig:cert-defs}
-\end{figure}
-
-
 \subsection{Blocks}
 \label{sec:blocks}
 
@@ -517,8 +462,17 @@ blocks in the blockchain.
 
 \clearpage
 
-\section{State transitions for Blockchain}
-\label{sec:state-trans-chain}
+\section{Block validation}
+\label{sec:block-validation}
+
+We delineate here between validating the header and body of a block. It's useful
+to make this distinction since we may validate headers ahead of validating the
+block body, and we have less context available to validate headers - in
+particular, we must be able to validate block headers without the recent history
+of block bodies.
+
+\todo{Block header validation}
+\todo{Block body validation}
 
 \subsection{Block Validity}
 \label{sec:block-valid}
