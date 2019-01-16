@@ -7,6 +7,8 @@ packages:
   - binary/test
   - crypto
   - crypto/test
+  - specs/ledger/hs
+  - specs/semantics/hs
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
@@ -14,6 +16,7 @@ extra-deps:
     subdirs:
       - .
       - test
+  - sequence-0.9.8
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

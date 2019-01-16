@@ -27,9 +27,17 @@ module Ledger.Delegation
   , ADELEG
   , ADELEGS
   , initialDState
-  , DSEnv (DSEnv)
+  , DSEnv
+    ( DSEnv
+    , _dSEnvAllowedDelegators
+    , _dSEnvEpoch
+    , _dSEnvSlot
+    , _dSEnvLiveness
+    )
   , allowedDelegators
-  , DState(DState)
+  , DState
+    ( DState
+    )
   -- * Delegation interface
   , DELEG
   , DIEnv
@@ -43,6 +51,8 @@ module Ledger.Delegation
   -- * State lens type classes
   , HasScheduledDelegations
   , scheduledDelegations
+  -- * Generators
+  , dcertGen
   )
 where
 
