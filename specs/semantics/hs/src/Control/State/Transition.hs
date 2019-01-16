@@ -114,6 +114,9 @@ cond ?! orElse = wrap $ Predicate cond orElse (pure ())
 
 infix 1 ?!
 
+failBecause :: PredicateFailure sts -> Rule sts ctx ()
+failBecause = (False ?!)
+
 trans
   :: Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
 trans ctx = wrap $ SubTrans ctx pure

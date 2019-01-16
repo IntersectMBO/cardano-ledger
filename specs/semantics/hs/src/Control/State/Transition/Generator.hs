@@ -86,7 +86,7 @@ genTrace env st aSigGen = Gen.sized $ \d -> mkTrace env st <$> go d st []
       Gen.frequency [ (5, return acc)
                     -- The probability of continue with the recursion depends
                     -- on the size parameter of the generator. Here the
-                    -- constant factor is determined ad hoc.
+                    -- constant factor is determined ad-hoc.
                     , (unSize d * 2, do
                           mStSig <- genSigSt @s env sti aSigGen
                           case mStSig of
