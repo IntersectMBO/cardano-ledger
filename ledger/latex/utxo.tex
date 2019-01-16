@@ -1,4 +1,4 @@
-\newcommand{\PPMMap}{\ensuremath{\type{Ppms}}}
+\newcommand{\PPMMap}{\ensuremath{\type{PParams}}}
 \newcommand{\Lmax}{\ensuremath{\mathbb{L}_{\var{max}}}}
 \section{UTxO}
 \label{sec:state-trans-utxo-1}
@@ -10,7 +10,8 @@ protocol parameters as an abstract type, this type is made concrete in
 Section~\ref{sec:update}, where the update mechanism is discussed. Functions on
 these types are defined in Figure~\ref{fig:derived-defs:utxo}. In particular,
 note that in function $\fun{minfee}$ we make use of the fact that the
-$\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
+$\Lovelace$ type is an alias for the set of the integers numbers
+($\mathbb{Z}$).
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -28,19 +29,13 @@ $\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
       \var{pps} & \PPMMap & \text{protocol parameters}
     \end{array}
   \end{equation*}
-  \emph{Constants}
   %
-  \begin{equation*}
-    \begin{array}{r@{~=~}lr}
-      \Lmax & 45*10^{15} & \text{Lovelace supply cap}\\
-    \end{array}
-  \end{equation*}
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
       \ell & \Lovelace
-      & n  & \{ n \mid n \in  \mathbb{N}, 0 \leq n \leq \Lmax \}
+      & n  & \mathbb{Z}
       & \text{currency value}
       \\
       \var{txin}
@@ -57,7 +52,7 @@ $\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
       \\
       \var{utxo}
       & \UTxO
-      & \var{txin} \mapsto \var{txout}
+      & m
       & \TxIn \mapsto \TxOut
       & \text{unspent tx outputs}
     \end{array}
@@ -71,15 +66,20 @@ $\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
       \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
                                   & \text{transaction body}\\
       %
-      \fun{txfee} & \Tx \to \Lovelace & \text{transaction fee}\\
+      \fun{a} & \PPMMap \to \mathbb{Z} & \text{minumum fee factor}\\
       %
-      \fun{a} & \PPMMap \to \mathbb{N} & \text{minumum fee factor}\\
+      \fun{b} & \PPMMap \to \mathbb{Z} & \text{minumum fee constant}\\
       %
-      \fun{b} & \PPMMap \to \mathbb{N} & \text{minumum fee constant}\\
-      %
-      \fun{txSize} & \Tx \to \mathbb{N} & \text{abstract size of a transaction}
+      \fun{txSize} & \Tx \to \mathbb{Z} & \text{abstract size of a transaction}
     \end{array}
   \end{equation*}
+  %
+  \emph{Constraints}
+  \begin{equation}
+    \label{eq:txid-injective}
+    \forall \var{tx_i}, \var{tx_j} \cdot
+    \txid{\var{tx_i}} = \txid{\var{tx_j}} \Rightarrow \var{tx_i} = \var{tx_j}
+  \end{equation}
   \caption{Definitions used in the UTxO transition system}
   \label{fig:defs:utxo}
 \end{figure*}
@@ -100,12 +100,12 @@ $\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
                \end{array}
       \right\}
     \nextdef
-    & \fun{balance} \in \UTxO \to \mathbb{N}
+    & \fun{balance} \in \UTxO \to \mathbb{Z}
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c\\
    \nextdef
    %
-    & \fun{minfee} \in \PPMMap \to \Tx \to \mathbb{N} & \text{minimum fee}\\
+    & \fun{minfee} \in \PPMMap \to \Tx \to \mathbb{Z} & \text{minimum fee}\\
     & \fun{minfee}~\var{pps}~\var{tx} =
       \fun{a}~\var{pps} * \fun{txSize}~\var{tx} + \fun{b}~\var{pps}
   \end{align*}
@@ -127,10 +127,9 @@ $\Lovelace$ type is an alias for the set of natural numbers ($\mathbb{N}$).
 \begin{figure}
   \begin{equation}\label{eq:utxo-inductive}
     \inference
-    { \txins{tx} \subseteq \dom \var{utxo} & \minfee{pps}{tx} \leq \txfee{tx}
-      & \balance{(\txins{tx} \restrictdom \var{utxo})} \leq \Lmax \\
-      \balance{(\txouts{tx})}  + \txfee{tx} =
-      \balance{(\txins{tx} \restrictdom \var{utxo})}
+    { \txins{tx} \subseteq \dom \var{utxo}
+      & \minfee{pps}{tx} \leq \balance{(\txouts{tx})} - \balance{(\txins{tx} \restrictdom \var{utxo})}\\
+      \txins{tx} \neq \emptyset
     }
     {\var{pps} \vdash \var{utxo} \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
@@ -146,25 +145,15 @@ changes with a transaction:
 \begin{itemize}
 \item Each input spent in the transaction must be in the set of unspent
   outputs.
-\item The transaction fee must be no less than the minimum fee, which depends
-  on the transaction and the protocol parameters.
-\item The balance of the unspent outputs in a transaction (i.e. the total
-  amount paid in a transaction) plus the transaction fees must be equal to the
-  amount of spent inputs, and these cannot exceed the $\Lovelace$ supply cap
-  ($45*10^{15}$).
+\item The minimum fee, which depends on the transaction and the protocol
+  parameters, must be less or equal than the difference between the balance of
+  the unspent outputs in a transaction (i.e. the total amount paid in a
+  transaction) and the amount of spent inputs.
+\item The set of inputs must not be empty.
 \item If the above conditions hold, then the new state will not have the inputs
   spent in transaction $\var{tx}$ and it will have the new outputs in
   $\var{tx}$.
 \end{itemize}
-
-\subsection{Properties}
-\label{sec:utxo-properties}
-
-\begin{todo}
-  Can we prove properties of the transition system of this section? For
-  instance we might like to formalize ``double spending'' and prove that these
-  rules prevent it. Do we want it?
-\end{todo}
 
 \clearpage
 
