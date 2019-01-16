@@ -83,7 +83,7 @@ import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*),
-                                               slotsPerEpoch)
+                                               slotsPerEpoch, epochFromSlot)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
@@ -1043,3 +1043,26 @@ utxoEpTransition = do
   TRC ((slot, pc, stakeKeys, stakePools), u, _) <- judgmentContext
   pure $ u & deposits .~ obligation pc stakeKeys stakePools slot
            & fees     .~ Coin 0
+
+data POOLCLEAN
+instance STS POOLCLEAN where
+    type State POOLCLEAN = PState
+    type Signal POOLCLEAN = ()
+    type Environment POOLCLEAN = Slot
+    data PredicateFailure POOLCLEAN = NoRetiredPOOLCLEAN
+                       deriving (Show, Eq)
+
+    initialRules = [ pure emptyPState ]
+    transitionRules = [ poolCleanTransition ]
+
+poolCleanTransition :: TransitionRule POOLCLEAN
+poolCleanTransition = do
+  TRC(slot, p, _) <- judgmentContext
+  let currEpoch = epochFromSlot slot
+  let retired = Map.keysSet $ Map.filter (== currEpoch) $ p ^. retiring
+  let Distr averages = p ^. avgs
+  null retired ?! NoRetiredPOOLCLEAN
+  pure $ p & stPools  %~ flip Map.withoutKeys retired
+           & pParams  %~ flip Map.withoutKeys retired
+           & retiring %~ flip Map.withoutKeys retired
+           & avgs     .~ Distr (Map.withoutKeys averages retired)
