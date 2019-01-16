@@ -1017,3 +1017,29 @@ instance Embed POOL DELPL where
 
 instance Embed DELEG DELPL where
     wrapFailed = DelegFailure
+
+----------------------------------
+-- STS rules for epoch boundary --
+----------------------------------
+
+data UTXOEP
+instance STS UTXOEP where
+    type State UTXOEP = UTxOState
+    type Signal UTXOEP = ()
+    type Environment UTXOEP = (Slot, PParams, Allocs, Allocs)
+    data PredicateFailure UTXOEP = FailureUTXOEP
+                    deriving(Show, Eq)
+
+    initialRules = [ initialUtxo ]
+    transitionRules = [ utxoEpTransition ]
+
+initialUtxo :: InitialRule UTXOEP
+initialUtxo = do
+  IRC _ <- judgmentContext
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
+
+utxoEpTransition :: TransitionRule UTXOEP
+utxoEpTransition = do
+  TRC ((slot, pc, stakeKeys, stakePools), u, _) <- judgmentContext
+  pure $ u & deposits .~ obligation pc stakeKeys stakePools slot
+           & fees     .~ Coin 0
