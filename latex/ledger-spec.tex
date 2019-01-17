@@ -1287,15 +1287,6 @@ variable
 \end{figure}
 
 
-\begin{note}
-  $\Coin$ is defined as a primitive type, but there is a difference
-  between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
-  Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
-  If, however, $\mathbb{Z}$ is used, then extra validation is required
-  to ensure that all $\TxOut$ are non-negative.
-  This extra condition would be added to \cref{eq:utxo-inductive}.
-\end{note}
-
 \clearpage
 
 \subsection{Witnesses}
