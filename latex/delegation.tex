@@ -212,7 +212,7 @@ do contain useful data that must be stored. However, they are stored in a
 separate variable in order to allow us to use a signle datatype for
 all deposit and refund calculations for both individual and pool key registrations
 and deregistrations or retirement. The variable that stores other necessary pool
-registration data is $\var{pparams}$, and is a finite map that stores $\StakePool$
+registration data is $\var{poolParam}$, and is a finite map that stores $\StakePool$
 constants indexed by the hash keys to which they correspond.
 Finally, $\var{avgs}$ stores the latest value of the pool's moving average
 used in the reward calculation, see Section~\ref{sec:epoch}. This value
@@ -250,7 +250,7 @@ certificate (contained in a signal transaction).
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
       \var{stpools} & \Allocs & \text{registered pools to creation time}\\
-      \var{pparams} & \HashKey \mapsto \StakePool
+      \var{poolParam} & \HashKey \mapsto \StakePool
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
       \var{avgs} & \HashKey \mapsto \mathbb{R}_{>0} & \text{performance moving average}\\
@@ -455,14 +455,14 @@ The first rule, \cref{eq:pool-reg}, can only be used to register a stake pool
 with a new key (to which no stake pool was previously registered).
 When this rule is invoked,
  the author's key and current slot number are added to $\var{stpools}$, and the
-key and $\var{stakepool}$ constants in the certificate are added to the $\var{pparams}$
+key and $\var{stakepool}$ constants in the certificate are added to the $\var{poolParam}$
 finite map.
 
 The second rule, \cref{eq:pool-rereg}, is used to re-register a
 stake pool with a new certificate ($\var{c}$), or stop the retirement
 process for that key. It does not update the slot number recorded previously
 for the registration of this key, but it does update the associated pool constants
-in $\var{pparams}$. The author's hash key and associated data
+in $\var{poolParam}$. The author's hash key and associated data
 are also removed from the $\var{retiring}$ parameter to cancel any pending
 retirement for that key.
 
@@ -511,7 +511,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -521,8 +521,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{rcl}
         \varUpdate{\var{stpools}} & \varUpdate{\union}
                                   & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
-        \varUpdate{\var{pparams}} & \varUpdate{\union}
-                                  & \varUpdate{\{\var{hk} \mapsto \stakepool{c}\}} \\
+        \varUpdate{\var{poolParam}} & \varUpdate{\union}
+                                    & \varUpdate{\{\var{hk} \mapsto \stakepool{c}\}} \\
        \var{retiring} \\
        \var{avgs}
       \end{array}
@@ -542,7 +542,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -551,7 +551,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \varUpdate{\var{pparams}} & \varUpdate{\unionoverrideRight}
+        \varUpdate{\var{poolParam}} & \varUpdate{\unionoverrideRight}
                                   & \varUpdate{\{\var{hk} \mapsto \stakepool{c}\}}\\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \var{avgs}
@@ -575,7 +575,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -584,7 +584,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
         \var{avgs}
