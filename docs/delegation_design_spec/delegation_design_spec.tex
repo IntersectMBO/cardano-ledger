@@ -4055,18 +4055,57 @@ approach to rewarding pools, a new pool would potentially reduce the rewards of
 every existing pool. Existing systems like Bitcoin tend to becoming more
 centralised because they use naive incentives.
 
-But with the incentive scheme devised in \citep{bkks2018} and summarised in
-\cref{design-of-incentives}, the system tends to a fixed number \(k\) of
-saturated stake pools, and no pool can increase their own rewards by trying to
-reduce the number of active pools below \(k\). As long as there are less than
-\(k\) pools, no one has anything to lose by accepting another pool. If there are
-already \(k\) or more pools, the newly registered pool could supersede the one
-saturated pool that promises the smallest rewards to its members, and this pool
-(or even a couple of pools at the bottom of the list) could try to censor new
-pool registration certificates. But the majority of pools will not feel
-threatened, and thus can be expected to behave honestly, ensuring liveness
-leading to the new certificate being incorporated into the chain.
+One thing to realise is that Cardano uses a sophisticated incentives scheme
+\citep{bkks2018}, summarised in \cref{design-of-incentives}, where the system
+tends to a fixed number \(k\) of saturated stake pools, and no pool can increase
+their own rewards by trying to reduce the number of active pools below \(k\). So
+there is no general incentive, that would cause every stake pool to try to
+censor the registration of a new pool.
 
+The operator of a pool that is near the bottom of the list of competitive pools
+might fear to be replaced by a new pool, and it would not be unreasonable for
+that operator to try to prevent new pools from registering. But since it only
+takes a \emph{single pool} to include the certificate\footnote{%
+  To be precise, this also requires that a majority of players is going to
+  accept a block that contains a certificate. But dropping a block because it
+  contains a certificate is much worse than just not including the certificate
+  in a block: it creates a fork and thereby attacks the integrity of the system,
+  and a pool doing that risks losing their own block when the fork is resolved.
+  Also, a pool that repeatedly creates a fork after a block that contains a
+  stake pool registration certificate would sooner or later be detected and
+  blamed by the community},%
+there is no hope to achieve this, and the rational behaviour is to just play by
+the rules and include the certificate.
+
+The situation where each pool accepts submitted certificates is a \emph{Nash
+  Equlibrium}, where no player can benefit from deviating from this beaviour.
+Such configurations are stable, since getting to a different state requires
+either collusion between a large number of players, or players acting
+irrationally against their own interests.
+
+However, there is a subtlety here: the state where \emph{no} pool accepts new
+certificates might also be a Nash Equilibrium: in this case, pools may refrain
+from entering a new certificate for fear to lose rewards due to increased
+competition, which will either kick them out of the \(k\) best pools or lower
+their margins.
+
+Let us call the former equilibrium, where certificates are accepted, NE1, and
+the latter, where they are rejected, NE2. Should we be worried that the system
+will end up in NE2? There are three arguments why this is unlikely to happen:
+
+\begin{itemize}
+\item When the system is initially decentralised, a majority of blocks will be
+  created by the federation that ran the Byron network, and those players will
+  behave honestly. So the system will start in NE1.
+\item Stake pool \emph{members} benefit from competition, and while censorship
+  of certificates is not obserable from the final chain itself, the community
+  can be expected to identify pools that try to block the competition, by
+  looking at the certificates that are being broadcast, the produced blocks, and
+  temporary forks. Once this becomes known, members will leave such a pool. So
+  there is a high risk involved for stake pools.
+\item Last but not least, the project is run by a community, and it is not
+  unreasonable to expect members to be at least somewhat cooperative.
+\end{itemize}
 
 \subsection{Won't stake pools reject delegation certificates that delegate away
   from them?}
