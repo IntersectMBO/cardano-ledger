@@ -795,7 +795,7 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
       \begin{array}{r@{=}l}
         \var{obl} & \obligation{pc}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{obl} \\
-        %\rho, \tau \in pc \\
+        \rho, \tau \in pc \\
         \var{expansion} & \floor*{\rho \cdot \var{reserves}} \\
         \var{totalPool} & \var{fees} + \var{decayed} + \var{rewardPool} + \var{expansion} \\
         \var{newTreasury} & \floor*{\tau \cdot \var{totalPool}} \\
@@ -1151,8 +1151,7 @@ be the \textit{last slot of the epoch before the boundary}.
         {
           \begin{array}{r}
             \var{accnt} \\
-            \var{dstate} \\
-            \var{pstate} \\
+            \var{dwstate}
           \end{array}
         }
       \right)
@@ -1161,8 +1160,7 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{rcl}
           \var{accnt'} \\
-          \var{dstate'} \\
-          \var{pstate'} \\
+          \var{dwstate'}
         \end{array}
       }
       \right)
