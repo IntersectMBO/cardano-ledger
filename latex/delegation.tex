@@ -101,7 +101,6 @@ $\Duration$ here by $\var{dur}$).
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \slotsPer & \mathbb{N} & \text{slots per epoch} \\
-      \emax & \Epoch & \text{epoch bound on pool retirement} \\
     \end{array}
   \end{equation*}
   %
@@ -258,15 +257,37 @@ certificate (contained in a signal transaction).
     \end{array}
   \end{equation*}
   %
+  \emph{Delegation Environment}
+  \begin{equation*}
+    \DEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{slot}\\
+        \var{ptr} & \Ptr & \text{certificate pointer}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Pool Environment}
+  \begin{equation*}
+    \PEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{slot}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Delegation Transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{deleg}{\_} \_ \in
-      \powerset (\Slot \times \DState \times \DCert \times \DState)
+      \powerset (\DEnv \times \DState \times \DCert \times \DState)
   \end{equation*}
   %
   \begin{equation*}
     \_ \vdash \_ \trans{pool}{\_} \_ \in
-      \powerset (\Slot \times \PState \times \DCert \times \PState)
+    \powerset (\PEnv \times \PState \times \DCert \times \PState)
   \end{equation*}
   %
   \caption{Delegation Transitions}
@@ -352,13 +373,16 @@ being delegated to.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegKey & hk = \cauthor{c} \\
-      hk \notin \dom \var{stkeys} & ptr = (slot,~\fun{txSlotIx}~\var{tx},~\fun{cIx}~\var{c})
+    \var{c}\in\DCertRegKey & hk = \cauthor{c} & hk \notin \dom \var{stkeys}
     }
     {
-      \var{slot} \vdash
-      \left(
       \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
         \var{stkeys} \\
         \var{rewards} \\
         \var{delegations} \\
@@ -385,7 +409,11 @@ being delegated to.
     hk \mapsto 0 \in \var{rewards}
     }
     {
-      \var{slot} \vdash
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+      \end{array}
+      \vdash
       \left(
       \begin{array}{r}
         \var{stkeys} \\
@@ -412,7 +440,11 @@ being delegated to.
       \var{c}\in \DCertDeleg & hk = \cauthor{c} & hk \in \dom \var{stkeys}
     }
     {
-      \var{slot} \vdash
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+      \end{array}
+      \vdash
       \left(
       \begin{array}{r}
         \var{stkeys} \\
@@ -507,7 +539,11 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       & hk \notin \dom \var{stpools}
     }
     {
-      \var{slot} \vdash
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+      \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -538,7 +574,11 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       & hk \in \dom \var{stpools}
     }
     {
-      \var{slot} \vdash
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+      \vdash
       \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -568,10 +608,14 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     & \var{hk} \in \dom \var{stpools} \\
     \var{e} = \retire{c}
     & \var{cepoch} = \epoch{slot}
-    & \var{cepoch} < \var{e} < \var{cepoch} + \emax
+    & \var{cepoch} < \var{e} < \var{cepoch} + (\fun{emax}~{pp})
   }
   {
-    \var{slot} \vdash
+    \begin{array}{r}
+      \var{slot} \\
+      \var{pp} \\
+    \end{array}
+    \vdash
     \left(
       \begin{array}{r}
         \var{stpools} \\
@@ -610,8 +654,9 @@ Figure~\ref{fig:defs:delpl}.
     \DPEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{tx} & \Tx & \text{transaction}\\
         \var{slot} & \Slot & \text{slot}\\
+        \var{ptr} & \Tx & \text{certificate pointer}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
       \end{array}
     \right)
   \end{equation*}
@@ -640,7 +685,7 @@ Figure~\ref{fig:defs:delpl}.
 
 In the following Figure~\ref{fig:rules:delpl}, we give the rules for
 defining a valid state transition for the combined delegation and pool
-state, $\DWState$, signaled by a certificate. There are two separate rules,
+state, $\DPState$, signaled by a certificate. There are two separate rules,
 one where only the
 delegation state changes, and one where only the pool state changes.
 This is because a certificate can never trigger a transition of both kinds,
@@ -653,13 +698,21 @@ and can only be applied to \textit{either} register (deregister) a key,
     \label{eq:delpl-d}
     \inference[Delpl-Del]
     {
-      & \var{slot} \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
+      &
+      {
+        \begin{array}{r}
+          \var{slot} \\
+          \var{ptr} \\
+        \end{array}
+      }
+      \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
     }
     { \left(
-      \begin{array}{r}
-        \var{tx} \\
-        \var{slot}
-      \end{array}
+        \begin{array}{r}
+          \var{slot} \\
+          \var{ptr} \\
+          \var{pp} \\
+        \end{array}
       \right)
       \vdash
       \left(
@@ -681,13 +734,21 @@ and can only be applied to \textit{either} register (deregister) a key,
     \label{eq:delpl-p}
     \inference[Delpl-Pool]
     {
-    & \var{slot} \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
+    &
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+    }
+    \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
     }
     { \left(
-      \begin{array}{r}
-        \var{tx} \\
-        \var{slot}
-      \end{array}
+        \begin{array}{r}
+          \var{slot} \\
+          \var{ptr} \\
+          \var{pp} \\
+        \end{array}
       \right)
       \vdash
       \left(
@@ -731,13 +792,25 @@ whole transaction will be invalid.
 
 
 \begin{figure}
-\begin{equation*}
-  \_ \vdash \_ \trans{delegs}{\_} \_ \in
+  \emph{Certificate List Environment}
+  \begin{equation*}
+    \DPSEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{slot}\\
+        \var{txIx} & \Ix & \text{transaction index}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \begin{equation*}
+    \_ \vdash \_ \trans{delegs}{\_} \_ \in
     \powerset (
-    \DPEnv \times \DPState \times \seqof{\DCert} \times \DPState)
-\end{equation*}
-\caption{Delegation with a certificate list transition type}
-\label{fig:type:delegations}
+    \DPSEnv \times \DPState \times \seqof{\DCert} \times \DPState)
+  \end{equation*}
+  \caption{Delegation with a certificate list transition type}
+  \label{fig:type:delegations}
 \end{figure}
 
 
@@ -748,10 +821,13 @@ whole transaction will be invalid.
       \var{wdrls} = \txwdrls{tx} & \var{wdrls} \subseteq \var{rewards}
     }
     {
+      \left(
       \begin{array}{r}
-        \var{tx}\\
-        \var{slot}
+        \var{slot} \\
+        \var{txIx} \\
+        \var{pp} \\
       \end{array}
+    \right)
       \vdash
       \left(
       \begin{array}{r}
@@ -760,7 +836,7 @@ whole transaction will be invalid.
         \var{delegations} \\
         \var{ptrs} \\
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -773,7 +849,7 @@ whole transaction will be invalid.
         \var{delegations} \\
         \var{ptrs} \\
         \var{stpools} \\
-        \var{pparams} \\
+        \var{poolParam} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -788,23 +864,30 @@ whole transaction will be invalid.
     \inference[Seq-delg-ind]
     {
       \forall \var{c'}\in \Gamma;c,~\var{c'}\in\DCertDeleg \Rightarrow
-        \fun{dpool}~{c'} \in \dom \var{stpools} \\~\\
-      {
-        \begin{array}{r}
-          \var{tx}\\
-          \var{slot}\\
-        \end{array}
-      }
+        \fun{dpool}~{c'} \in \dom \var{stpools} \\
+        ptr = (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma - 1) \\~\\
+        {
+          \left(
+            \begin{array}{r}
+              \var{slot}\\
+              \var{txIx}\\
+              \var{pp}\\
+            \end{array}
+          \right)
+        }
       \vdash
       \var{dpstate}
       \trans{delegs}{\Gamma}
       \var{dpstate'}
-    \\ ~ \\
+    \\~\\~\\
     {
-      \begin{array}{r}
-        \var{tx}\\
-        \var{slot}\\
-      \end{array}
+      \left(
+        \begin{array}{r}
+          \var{slot}\\
+          \var{ptr}\\
+          \var{pp}\\
+        \end{array}
+      \right)
     }
     \vdash
       \var{dpstate'}
@@ -813,10 +896,13 @@ whole transaction will be invalid.
     }
     {
     {
+      \left(
       \begin{array}{r}
-        \var{tx}\\
         \var{slot}\\
+        \var{txIx}\\
+        \var{pp}\\
       \end{array}
+    \right)
     }
     \vdash
       \var{dpstate}
