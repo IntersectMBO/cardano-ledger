@@ -687,7 +687,7 @@ reward ::
   -> PParams
   -> Coin
   -> DWState
-  -> Set.Set TxOut
+  -> [TxOut]
   -> (Map.Map RewardAcnt Coin, Distr)
 reward (Production prod) pc r dwstate outs =
   ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
@@ -1107,7 +1107,7 @@ accntTransition = do
     let availablePool = totalPool - newTreasury -- underflow?
     let getOutputs (UTxO utxo') = Map.elems utxo'
     let outs = getOutputs (us ^. utxo)
-    let (rewards', avgs') = reward production pp (Coin availablePool) dw (Set.fromList outs)
+    let (rewards', avgs') = reward production pp (Coin availablePool) dw outs
     let paidRewards = Map.foldl (+) (Coin 0) rewards'
     let as' = as & treasury %~ (+) (Coin newTreasury)
                  & reserves %~ (-) expansion      -- underflow?
