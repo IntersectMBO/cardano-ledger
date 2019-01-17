@@ -19,6 +19,7 @@ module LedgerState
   , Ix
   , DWState(..)
   , DState(..)
+  , AccountState(..)
   , dstate
   , pstate
   , ptrs
@@ -200,6 +201,15 @@ data DWState =
     , _pstate :: PState
     } deriving (Show, Eq)
 
+data AccountState = AccountState
+  { _treasury   :: Coin
+  , _reserves   :: Coin
+  , _rewardPool :: Coin
+  } deriving (Show, Eq)
+
+emptyAccount :: AccountState
+emptyAccount = AccountState (Coin 0) (Coin 0) (Coin 0)
+
 emptyDelegation :: DWState
 emptyDelegation =
     DWState emptyDState emptyPState
@@ -236,6 +246,7 @@ makeLenses ''DWState
 makeLenses ''DState
 makeLenses ''PState
 makeLenses ''UTxOState
+makeLenses ''AccountState
 makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
