@@ -1,6 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{array}
 \usepackage{extarrows}
 \usepackage{float}
 \usepackage[margin=2.5cm]{geometry}
@@ -79,8 +80,7 @@
 \newcommand{\Data}{\type{Data}}
 \newcommand{\DelegState}{\type{DIState}}
 
-\newcommand{\ProtParams}{\type{ProtParams}} % protocol parameters
-
+\newcommand{\ProtParams}{\type{PParams}} % protocol parameters
 
 %%
 %% Function and relation names
@@ -88,7 +88,6 @@
 \newcommand{\hashname}{bHash}
 \newcommand{\bsizename}{bSize}
 \newcommand{\bhdrsizename}{bHeaderSize}
-\newcommand{\signname}{sign}
 \newcommand{\verifyname}{verify}
 \newcommand{\delegationname}{delegates} % the delegation relation
 \newcommand{\signmapname}{\mathcal{M}}
@@ -100,12 +99,9 @@
 \newcommand{\maxblocksizename}{maxBlockSize}
 \newcommand{\maxheadersizename}{maxHeaderSize}
 \newcommand{\isebbname}{bIsEBB}
-\newcommand{\bdataname}{bData}
 \newcommand{\bcertsname}{bCerts}
 \newcommand{\bsigname}{bSig}
-\newcommand{\bixname}{bIx}
-\newcommand{\bslname}{bSl}
-\newcommand{\bsignername}{bSigner}
+\newcommand{\bissuername}{bissuer}
 
 \newcommand{\qrestrname}{qRestrict}
 \newcommand{\qpopname}{qPop}
@@ -115,7 +111,6 @@
 %%
 %% Functions and relations
 %%
-\newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
 \newcommand{\hash}[1]{\fun{\hashname}\ #1}
 \newcommand{\bsize}[1]{\fun{\bsizename} ~ #1}
@@ -131,12 +126,9 @@
 \newcommand{\maxblocksize}[1]{\fun{\maxblocksizename} ~ #1}
 \newcommand{\maxheadersize}[1]{\fun{\maxheadersizename} ~ #1}
 \newcommand{\isebb}[1]{\fun{\isebbname} ~ #1}
-\newcommand{\bdata}[1]{\fun{\bdataname} ~ #1}
 \newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
 \newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
-\newcommand{\bix}[1]{\fun{\bixname} ~ #1}
-\newcommand{\bsl}[1]{\fun{\bslname} ~ #1}
-\newcommand{\bsigner}[1]{\fun{\bsignername} ~ #1}
+\newcommand{\bissuer}[1]{\fun{\bissuername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
@@ -252,94 +244,6 @@ There are several standard sets used in the document:
   $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
 \end{description}
 
-\subsection{Blocks}
-\label{sec:blocks}
-
-\begin{figure}
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    b & \Block & \text{block} \\
-    h & \Hash   & \text{hash} \\
-    pp & \ProtParams & \text{protocol parameters}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Derived types}
-  %
-  \begin{equation*}
-  \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-    \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
-  \end{array}
-  \end{equation*}
-  %
-  \emph{Projection functions}
-  %
-  \begin{align*}
-    \fun{\hashname} & \in \Block \totalf \Hash
-      & \text{previous block's hash} \\
-    \fun{\bslname} & \in \Block \totalf \Slot & \text{block slot} \\
-    \fun{\bsignername} & \in \Block \totalf \VKey & \text{block signer} \\
-    \fun{\bcertsname} & \in \Block \totalf \seqof{\DCert}
-      & \text{block certificates} \\
-    \fun{\bsigname} & \in \Block \totalf \Sig & \text{block signature} \\
-    \fun{\bdataname} & \in \Block \totalf \Data & \text{block data} \\
-    \fun{\maxblocksizename} & \in \ProtParams \totalf \mathbb{N} & \text{maximum block size} \\
-    \fun{\maxheadersizename} & \in \ProtParams \totalf \mathbb{N}
-      & \text{maximum block header size} \\
-    \fun{blockSignatureCountWindow} & \in \ProtParams \totalf \mathbb{N} & \text{Block signature count window size} \\
-    \fun{blockSignatureCountThreshold} & \in \ProtParams \totalf \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold}
-  \end{align*}
-  %
-  \emph{Functions}
-  %
-  \begin{align*}
-    \fun{\hashofblockname} & \in \Block \totalf \Hash & \text{hash of block} \\
-    \fun{\bsizename} & \in \Block \totalf \mathbb{N} & \text{block size in bytes} \\
-    \fun{\bhdrsizename} & \in \Block \totalf \mathbb{N}
-      & \text{block header size in bytes}\\
-  \end{align*}
-  %
-  \caption{Basic Block-related Types and Functions}
-  \label{fig:block-defs}
-\end{figure}
-
-
-A block is an element of a blockchain.
-%
-A blockchain is extended by appending a block, denoted by $\Block$.
-%
-In this document $\Block$ is kept abstract, but it is a product type with
-projection functions for the following:
-%
-\begin{itemize}
-\item a block hash pointing to the block's predecessor,
-\item a block index,
-\item a verification key of the block signer,
-\item a list\footnote{There is no justification why this should be a list,
-    instead of a set of certificates. There is no order between
-    certificates. That said, list was chosen to align with the ledger
-    specification.} of heavyweight delegation certificates in the body,
-\item a slot it is in,
-\item data that is the block body. Note this comprises delegation certificates
-  and possibly other information that might not be of interest for this
-  specification,
-\item a cryptographic signature, and
-\item a flag indicating if this is an epoch boundary block.
-\end{itemize}
-
-
-For every block, it is possible to compute its hash with the
-$\fun{\hashofblockname}$ function.
-%
-Furthermore, note that the $\fun{\maxblocksizename}$ parameter of a
-$\ProtParams$ is the maximum size only of blocks that are not epoch boundary
-blocks.
-%
-Basic types and functions pertaining to blocks are given in
-Figure~\ref{fig:block-defs}.
-
 \section{Epoch transitions}
 
 This section should cover:
@@ -370,17 +274,14 @@ $1/5 \leq t \leq 1/4$.
   \end{align*}
   %
   \emph{Derived types}
+  \begin{equation*}
+  \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \var{sk_s} & \SKeyGen & \var{sk_s} &  \SKey & \text{genesis stakeholder signing key}\\
+    \signmapname & \mapqueue & \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
+    \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
+  \end{array}
+  \end{equation*}
   %
-  \begin{align*}
-    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
-    \var{sk_s} & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-  \end{align*}
-  %
-  \emph{Type aliases}
-  %
-  \begin{align*}
-    \mapqueue = \VKeyGen \totalf \Queue_\BlockIx
-  \end{align*}
   \emph{Functions and relations}
   %
   \begin{align*}
@@ -393,8 +294,6 @@ $1/5 \leq t \leq 1/4$.
       & \text{restricted queue pop function} \\
     \fun{\incixmapname} & \in \BlockIx \times \powerset \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
-    \fun{\signname} & \in \SKey \times \Hash \times \Slot \times \Data \partialf \Sig
-      & \text{signature function}\\
   \end{align*}
   \begin{align}
   \label{eq:trimix}
@@ -467,14 +366,56 @@ $1/5 \leq t \leq 1/4$.
 \section{Block validation}
 \label{sec:block-validation}
 
+\newcommand{\bhead}{\type{BlockHeader}}
+\newcommand{\bbody}{\type{BlockBody}}
+
 We delineate here between validating the header and body of a block. It's useful
 to make this distinction since we may validate headers ahead of validating the
 block body, and we have less context available to validate headers - in
 particular, we must be able to validate block headers without the recent history
 of block bodies.
 
-\todo{Block header validation}
-\todo{Block body validation}
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    b & \Block & \text{block} \\
+    h & \Hash   & \text{hash} \\
+    \end{array}
+  \end{equation*}
+  %
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\hashname} & \Block \totalf \Hash
+      & \text{previous block's hash} \\
+    \fun{\bissuername} & \Block \totalf \VKey & \text{block issuer} \\
+    \fun{\bsigname} & \Block \totalf \Sig & \text{block signature} \\
+    \fun{\hashofblockname} & \Block \totalf \Hash & \text{hash of block} \\
+    \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
+    \fun{\bhdrsizename} & \Block \totalf \mathbb{N}
+      & \text{block header size in bytes}\\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \fun{\maxblocksizename} & \mathbb{N} & \text{maximum block size} \\
+    \fun{\maxheadersizename} & \mathbb{N} & \text{maximum block header size} \\
+    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+    \end{array}
+  \end{equation*}
+  \caption{Basic Block-related Types and Functions}
+  \label{fig:block-defs}
+\end{figure}
+
+\subsection{Block header validation}
+\subsection{Block body validation}
+
 
 \subsection{Block Validity}
 \label{sec:block-valid}
@@ -509,6 +450,8 @@ A block $\var{b}$ is valid if:
 \newcommand{\CEState}{\type{CEState}}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
+\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
+\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
@@ -517,24 +460,32 @@ A block $\var{b}$ is valid if:
 
 \newcommand{\UPIEnv}{\type{UPIEnv}}
 \newcommand{\UPIState}{\type{UPIState}}
+\newcommand{\UProp}{\type{UProp}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
 
 \begin{figure}[ht]
   \emph{Abstract types}
   %
-  \begin{align*}
-    \var{data} & \in \Data    & \text{data}\\
-    \var{ds} & \in \DelegState & \text{ledger layer delegation state}
-  \end{align*}
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \var{data} & \Data    & \text{data}\\
+    \var{ds} & \DelegState & \text{ledger layer delegation state}
+  \end{array}
+  \end{equation*}
   \emph{Abstract functions}
   %
-  \begin{align*}
-    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \fun{\verifyname} & \VKey \times \Data \times \Sig
       & \text{verification relation} \\
-    \fun{\blocksizelimitname} & \in \Block \times \ProtParams \totalf \mathbb{N}
-      & \text{block size limit in bytes function} \\
-    \butxo & \in \Block \totalf \UTxO & \text{Block UTxO payload} \\
-    \fun{\isebbname} & \in \Block \totalf \mathbb{B} & \text{epoch boundary block check}
-  \end{align*}
+    \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
+    \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
+      & \text{block certificates} \\
+    \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+    \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
+  \end{array}
+  \end{equation*}
+
   %
   \caption{Blockchain Extension Types and Functions}
   \label{fig:defs:chain-extension}
@@ -558,6 +509,7 @@ A block $\var{b}$ is valid if:
         \var{bIx} & \BlockIx & \text{Current block index} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{upiState} & \UPIState & \text{Update interface state} \\
         \var{ds} & \DIState & \text{Delegation state}
       \end{array}
     \right)
@@ -592,6 +544,7 @@ Figure~\ref{fig:defs:chain-extension}.
          bIx \\
          \signmapname \\
          \var{utxo} \\
+         \var{upiState} \\
          \var{ds}
        \end{array}}
     \right)
@@ -601,6 +554,7 @@ Figure~\ref{fig:defs:chain-extension}.
          bIx \\
          \signmapname \\
          \var{utxo} \\
+         \var{upiState} \\
          \var{ds}
        \end{array}}
     \right)
@@ -611,9 +565,9 @@ Figure~\ref{fig:defs:chain-extension}.
   \inference
   {
     !\isebb{b} &
-    \var{vk_d} = \bsigner{b} & \hash{b} \equiv \hashofblock{p} \\
+    \var{vk_d} = \bissuer{b} & \hash{b} \equiv \hashofblock{p} \\
     \bsize{b} \leq \maxblocksize{b}{\var{pp}} & \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
-    \verify{\var{vk_d}}{(\bdata{b})}{(\bsig{b})} \\
+    \verify{\var{vk_d}}{b}{(\bsig{b})} \\
     \var{pp} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
@@ -638,6 +592,7 @@ Figure~\ref{fig:defs:chain-extension}.
          bIx \\
          \signmapname \\
          \var{utxo} \\
+         \var{upiState} \\
          \var{ds}
        \end{array}}
     \right)
@@ -647,12 +602,13 @@ Figure~\ref{fig:defs:chain-extension}.
          bIx + 1 \\
          \signmapname' \\
          \var{utxo}' \\
+         \var{upiState} \\
          \var{ds'}
        \end{array}}
     \right)
   }
   \end{equation*}
-  \caption{The Blockchain Extension Rule}
+  \caption{Blockchain extension rules}
   \label{fig:blockchain-extension}
 \end{figure}
 \clearpage
