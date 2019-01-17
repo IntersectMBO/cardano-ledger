@@ -985,6 +985,10 @@ from the $\var{deposits}$ variable, \textit{or}
 the difference between the two calculations from $\var{deposits}$
 to $\var{reserves}$, \textit{provided that} there is enough coin in the
 $\var{reserves}$ to cover the entire value of the transfer
+
+\item if there are more refunds available based on the new parameters,
+but there is \textit{not} enough coin in the $\var{reserves}$ to cover
+the entire value of the transfer, the update is ignored entirely.
 \end{itemize}
 
 This update of protocol parameters ensures that any time a deposit refund is
@@ -1002,14 +1006,14 @@ for ease of reading.
 %% Figure - New Proto Consts Rule
 %%
 \begin{figure}[htb]
-  \begin{equation}\label{eq:new-pc}
-    \inference[New-Proto-Consts]
+  \begin{equation}\label{eq:new-pc-accepted}
+    \inference[New-Proto-Consts-Accepted]
     {
       \var{oblgOld} = \obligation{pcOld}{stkeys}{stpools}{slot} \\
       \var{oblgNew} = \obligation{pcNew}{stkeys}{stpools}{slot} \\
       ~\\
-      \var{reserves} + \var{oblgOld} \geq \var{oblgNew}\\
       \var{diff} = \var{oblgOld} - \var{oblgNew} \\
+      \var{reserves} + \var{diff} \geq 0\\
       ~\\
       \var{utxoSt'} =
       \left(
@@ -1039,7 +1043,8 @@ for ease of reading.
         \var{slot}\\
         \var{pcOld}\\
         \var{pcNew}\\
-        \var{dwstate}
+        \var{dstate}\\
+        \var{pstate}\\
       \end{array}
       \vdash
       \left(
@@ -1053,6 +1058,42 @@ for ease of reading.
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
           \varUpdate{accnt'} \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:new-pc-denied}
+    \inference[New-Proto-Consts-Denied]
+    {
+      \var{oblgOld} = \obligation{pcOld}{stkeys}{stpools}{slot} \\
+      \var{oblgNew} = \obligation{pcNew}{stkeys}{stpools}{slot} \\
+      ~\\
+      \var{diff} = \var{oblgOld} - \var{oblgNew} \\
+      \var{reserves} + \var{diff} < 0\\
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pcOld}\\
+        \var{pcNew}\\
+        \var{dstate}\\
+        \var{pstate}\\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{utxoSt} \\
+          \var{accnt}
+        \end{array}
+      \right)
+      \trans{newpc}{}
+      \left(
+        \begin{array}{rcl}
+          \var{utxoSt} \\
+          \var{accnt}
         \end{array}
       \right)
     }
