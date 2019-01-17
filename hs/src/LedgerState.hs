@@ -1139,3 +1139,55 @@ newPcTransition = do
   as ^. reserves + old >= new ?! ExcessObligationNEWPC
   let diff = old - new
   pure (us & deposits .~ new, as & reserves %~ (+) diff)
+
+
+data EPOCH
+instance STS EPOCH where
+    type State EPOCH = (UTxOState, AccountState, DWState)
+    type Signal EPOCH = ()
+    type Environment EPOCH = (Slot, PParams, PParams, Production)
+    data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
+                                | PoolCleanFailure (PredicateFailure POOLCLEAN)
+                                | AccntFailure (PredicateFailure ACCNT)
+                                | NewPcFailure (PredicateFailure NEWPC)
+                   deriving (Show, Eq)
+
+    initialRules = [ initialEpoch ]
+    transitionRules = [ epochTransition ]
+
+initialEpoch :: InitialRule EPOCH
+initialEpoch = do
+    IRC(slot, ppOld, ppNew, _) <- judgmentContext
+    utxo' <- trans @UTXOEP $ IRC (slot, ppOld, Map.empty, Map.empty)
+    (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, Production Map.empty, utxo')
+    pstate'' <- trans @POOLCLEAN $ IRC slot
+    let dw'' = dw' & pstate .~ pstate''
+    (utxo'', accnt'') <- trans @NEWPC $ IRC (slot, ppOld, ppNew, dw'')
+    pure (utxo'', accnt'', dw'')
+
+epochTransition :: TransitionRule EPOCH
+epochTransition = do
+    TRC((slot, ppOld, ppNew, production), (us, as, dw), _) <- judgmentContext
+    us' <- trans @UTXOEP $ TRC ((slot
+                               , ppOld
+                               , dw ^. dstate . stKeys
+                               , dw ^. pstate . stPools), us, ())
+    (as', dw') <- trans @ACCNT $ TRC ((slot, ppOld, production, us')
+                                     , (as, dw)
+                                     , ())
+    pstate'' <- trans @POOLCLEAN $ TRC (slot, dw' ^. pstate, ())
+    let dw'' = dw' & pstate .~ pstate''
+    (us'', as'') <- trans @NEWPC $ TRC ((slot, ppOld, ppNew, dw''), (us, as'), ())
+    pure (us'', as'', dw'')
+
+instance Embed UTXOEP EPOCH where
+    wrapFailed = UtxoEpFailure
+
+instance Embed ACCNT EPOCH where
+    wrapFailed = AccntFailure
+
+instance Embed POOLCLEAN EPOCH where
+    wrapFailed = PoolCleanFailure
+
+instance Embed NEWPC EPOCH where
+    wrapFailed = NewPcFailure
