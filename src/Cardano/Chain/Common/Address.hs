@@ -193,6 +193,10 @@ instance Aeson.FromJSON Address where
 instance Aeson.ToJSON Address where
     toJSON = Aeson.toJSON . sformat addressF
 
+instance HeapWords Address where
+  heapWords (Address root attrs typ) = heapWords3 root attrs typ
+
+
 --------------------------------------------------------------------------------
 -- Formatting, pretty-printing
 --------------------------------------------------------------------------------

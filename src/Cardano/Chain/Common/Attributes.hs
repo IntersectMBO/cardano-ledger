@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -44,7 +46,9 @@ import Cardano.Binary.Class
 --   just a single ByteString) during transition from Store to CBOR.
 newtype UnparsedFields =
   UnparsedFields (Map Word8 LBS.ByteString)
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype HeapWords
+  deriving anyclass NFData
 
 instance FromJSON UnparsedFields where
   parseJSON v =
@@ -70,6 +74,7 @@ data Attributes h = Attributes
   , attrRemain :: UnparsedFields
   -- ^ Remaining, unparsed fields
   } deriving (Eq, Ord, Generic)
+    deriving anyclass NFData
 
 instance Show h => Show (Attributes h) where
   show attr =
@@ -101,7 +106,8 @@ instance Bi (Attributes ()) where
   encode = encodeAttributes []
   decode = decodeAttributes () $ \_ _ _ -> pure Nothing
 
-instance NFData h => NFData (Attributes h)
+instance HeapWords h => HeapWords (Attributes h) where
+  heapWords (Attributes dat unparsed) = heapWords2 dat unparsed
 
 -- | Check whether all data from 'Attributes' is known, i. e. was successfully
 --   parsed into some structured data

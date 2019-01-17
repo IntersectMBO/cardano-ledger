@@ -57,7 +57,7 @@ import Cardano.Chain.Common.Lovelace
 --   threshold).
 newtype LovelacePortion = LovelacePortion
   { getLovelacePortion :: Word64
-  } deriving (Show, Ord, Eq, Generic, NFData)
+  } deriving (Show, Ord, Eq, Generic, HeapWords, NFData)
 
 instance B.Buildable LovelacePortion where
   build cp@(getLovelacePortion -> x) = bprint

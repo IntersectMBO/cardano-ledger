@@ -29,7 +29,16 @@ import Cardano.Crypto.Signing (PublicKey)
 -- | Stakeholder identifier (stakeholders are identified by their public keys)
 newtype StakeholderId = StakeholderId
   { getStakeholderId :: AddressHash PublicKey
-  } deriving (Eq, Ord, Show, NFData, Buildable, FromJSONKey, ToJSONKey, Bi)
+  } deriving ( Eq
+             , Ord
+             , Show
+             , NFData
+             , Buildable
+             , FromJSONKey
+             , ToJSONKey
+             , Bi
+             , HeapWords
+             )
 
 instance Monad m => ToObjectKey m StakeholderId where
     toObjectKey = pure . formatToString hashHexF . getStakeholderId

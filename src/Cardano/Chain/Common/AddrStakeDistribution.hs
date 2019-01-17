@@ -81,6 +81,12 @@ instance Bi AddrStakeDistribution where
     $ Proxy @(Word8, Map StakeholderId LovelacePortion)
     ]
 
+instance HeapWords AddrStakeDistribution where
+  heapWords = \case
+    BootstrapEraDistr -> 0
+    SingleKeyDistr id -> heapWords1 id
+    UnsafeMultiKeyDistr distr -> heapWords1 distr
+
 data MultiKeyDistrError
     = MkdMapIsEmpty
     | MkdMapIsSingleton
