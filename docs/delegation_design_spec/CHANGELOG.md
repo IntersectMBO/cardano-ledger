@@ -4,6 +4,7 @@
 Incorporating the input from the workshop in Berlin, and following discussions,
 into the document.
 
+- Elaborating further on why stake pool registrations will not be censored.
 - Capture choice of KES scheme in design doc.
 - Streamlining information on deposits
     
