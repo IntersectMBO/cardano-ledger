@@ -20,7 +20,6 @@ module EpochBoundary
 
 import           Coin
 import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
-import           Delegation.StakePool
 import           Keys
 import           PParams
 import           Slot
