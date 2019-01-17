@@ -6,8 +6,7 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake
-  , Distr
-  , Production
+  , Production(..)
   , baseStake
   , ptrStake
   , stake
@@ -16,21 +15,12 @@ module EpochBoundary
   , obligation
   , poolRefunds
   , maxPool
-  , movingAvg
-  , poolRew
-  , leaderRew
-  , memberRew
-  , indivRew
   , groupByPool
-  , rewardOnePool
-  , reward
   ) where
 
 import           Coin
 import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
-import           Delegation.StakePool
 import           Keys
-import           LedgerState
 import           PParams
 import           Slot
 import           UTxO
@@ -59,11 +49,12 @@ getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
 
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: Set.Set TxOut -> Set.Set Stake
+baseStake :: [TxOut] -> Set.Set Stake
 baseStake outs =
-  Set.fromList
-    [ Stake (fromJust $ getStakeHK a, c)
-    | TxOut a c <- Set.toList outs
+  Set.fromList $ map Stake $ Map.toList $
+  Map.fromListWith (+)
+    [ (fromJust $ getStakeHK a, c)
+    | TxOut a c <- outs
     , isJust $ getStakeHK a
     ]
 
@@ -73,17 +64,18 @@ getStakePtr (AddrPtr ptr) = Just ptr
 getStakePtr _             = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
-ptrStake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
+ptrStake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
 ptrStake outs pointers =
-  Set.fromList
-    [ Stake (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
-    | TxOut a c <- Set.toList outs
+  Set.fromList $ map Stake $ Map.toList $
+  Map.fromListWith (+)
+    [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
+    | TxOut a c <- outs
     , isJust $ getStakePtr a
     , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
     ]
 
 -- | Calculate stake of all addresses in TxOut set.
-stake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
+stake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
 stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
 
 -- | Check whether a hash key has active stake, i.e., currently delegates to an
@@ -98,7 +90,7 @@ isActive vSk stakeKeys delegs stakePools =
 -- | Calculate total active state in the form of a mapping of hash keys to
 -- coins.
 activeStake ::
-     Set.Set TxOut
+     [TxOut]
   -> Map.Map Ptr HashKey
   -> Allocs
   -> Map.Map HashKey HashKey
@@ -145,55 +137,6 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
 
--- | Calulcate moving average
-movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
-movingAvg pc hk n expectedSlots (Distr averages) =
-  let fraction = fromIntegral n / max expectedSlots 1
-   in case Map.lookup hk averages of
-        Nothing -> fraction
-        Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
-          where alpha = intervalValue $ pc ^. movingAvgWeight
-
--- | Calculate pool reward
-poolRew ::
-     PParams
-  -> HashKey
-  -> Natural
-  -> Rational
-  -> Distr
-  -> Coin
-  -> (Coin, Rational)
-poolRew pc hk n expectedSlots averages (Coin maxP) =
-  (floor $ e * fromIntegral maxP, avg)
-  where
-    avg = intervalValue $ pc ^. movingAvgExp
-    gamma = movingAvg pc hk n expectedSlots averages
-    e = fromRational avg ** fromRational gamma :: Double
-
--- | Calculate pool leader reward
-leaderRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
-leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
-  | f' <= c = f
-  | otherwise =
-    floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
-
--- | Calculate pool member reward
-memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
-memberRew (Coin f') pool (StakeShare sigma) (StakeShare s)
-  | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
-
--- | Calculate individual reward
-indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
-indivRew f pool sigma s True  = leaderRew f pool sigma s
-indivRew f pool sigma s False = memberRew f pool sigma s
-
 -- | Pool individual reward
 groupByPool ::
      Map.Map HashKey Coin
@@ -205,75 +148,3 @@ groupByPool active delegs =
     [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
     | hk <- Map.keys delegs
     ]
-
--- | Reward one pool
-rewardOnePool ::
-     PParams
-  -> Coin
-  -> Natural
-  -> HashKey
-  -> StakePool
-  -> Map.Map HashKey Coin
-  -> Distr
-  -> Coin
-  -> (Map.Map RewardAcnt Coin, StakeShare)
-rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
-  (Map.fromList keysVals, StakeShare avg)
-  where
-    (Coin pstake) = Map.foldl (+) (Coin 0) actgr
-    sigma = fromIntegral pstake % fromIntegral total
-    expectedSlots = sigma * fromIntegral slotsPerEpoch
-    (_, _, Coin p) = poolSpec pool
-    pr = fromIntegral p % fromIntegral total
-    maxP =
-      if p <= pstake
-        then maxPool pc r sigma pr
-        else 0
-    (poolR, avg) = poolRew pc poolHK n expectedSlots averages maxP
-    sFrac = StakeShare (sigma / fromIntegral total)
-    keysVals =
-      [ ( RewardAcnt hk
-        , indivRew
-            poolR
-            pool
-            sFrac
-            (StakeShare (fromIntegral c % fromIntegral total))
-            (hk == poolHK))
-      | (hk, Coin c) <- Map.toList actgr
-      ]
-
-reward ::
-     Production
-  -> PParams
-  -> Coin
-  -> DWState
-  -> Set.Set TxOut
-  -> (Map.Map RewardAcnt Coin, Distr)
-reward (Production prod) pc r dwstate outs =
-  ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
-  , Distr $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
-  where
-    active =
-      activeStake
-        outs
-        (dwstate ^. dstate . ptrs)
-        (dwstate ^. dstate . stKeys)
-        (dwstate ^. dstate . delegations)
-        (dwstate ^. pstate . stPools)
-    total = Map.foldl (+) (Coin 0) active
-    pactive = groupByPool active (dwstate ^. dstate . delegations)
-    pdata =
-      [ ( key
-        , ( (dwstate ^. pstate . pParams) Map.! key
-          , prod Map.! key
-          , pactive Map.! key))
-      | key <-
-          Set.toList $ Map.keysSet (dwstate ^. pstate . pParams) `Set.intersection`
-          Map.keysSet prod `Set.intersection`
-          Map.keysSet pactive
-      ]
-    results =
-      [ ( hk
-        , rewardOnePool pc r n hk pool actgr (dwstate ^. pstate . avgs) total)
-      | (hk, (pool, n, actgr)) <- pdata
-      ]

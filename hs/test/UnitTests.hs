@@ -7,6 +7,7 @@ import           Data.Map                (Map)
 import qualified Data.Map                as Map
 import           Data.Ratio
 import qualified Data.Set                as Set
+import           Data.Maybe              (fromMaybe)
 
 import           Lens.Micro              ((^.), (&), (.~))
 
@@ -41,13 +42,12 @@ bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 oneFourth :: UnitInterval
-oneFourth = iVal
-    where Just iVal = mkUnitInterval 0.25
-
+oneFourth =
+    fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.25
 
 testPCs :: PParams
 testPCs =
-    PParams 1 1 100 250 oneFourth 0.001 interval0 interval0 (0%1, 0) oneFourth 0.001
+    PParams 1 1 100 250 oneFourth 0.001 interval0 interval0 (0%1, 0) oneFourth 0.001 interval0 interval0
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
@@ -329,8 +329,8 @@ stakePool = StakePool
             }
 
 halfInterval :: UnitInterval
-halfInterval = i
-    where Just i = mkUnitInterval 0.5
+halfInterval =
+    fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.5
 
 stakePoolUpdate :: StakePool
 stakePoolUpdate = StakePool
