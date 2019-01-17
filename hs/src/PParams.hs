@@ -14,6 +14,8 @@ module PParams
   , poolConsts
   , poolMinRefund
   , poolDecayRate
+  , rho
+  , tau
   , UnitInterval
   , mkUnitInterval
   , intervalValue
@@ -68,6 +70,9 @@ data PParams = PParams
   , _poolMinRefund   :: UnitInterval
     -- | Decay rate for pool deposits
   , _poolDecayRate   :: Rational
+    -- | Account transition parameter
+  , _rho             :: UnitInterval
+  , _tau             :: UnitInterval
   } deriving (Show, Eq)
 
 makeLenses ''PParams
