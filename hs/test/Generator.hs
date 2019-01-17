@@ -107,7 +107,7 @@ genTxOut addrs = do
 -- TODO generate sensible protocol constants
 defPCs :: PParams
 defPCs =
-    PParams 0 0 100 100 interval0 0 interval0 interval0 (0%1, 0) interval0 0
+    PParams 0 0 100 100 interval0 0 interval0 interval0 (0%1, 0) interval0 0 interval0 interval0
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
@@ -227,6 +227,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
 findPayKeyPair (AddrTxin addr _) keyList =
     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair :: HashKey -> KeyPairs -> KeyPair
