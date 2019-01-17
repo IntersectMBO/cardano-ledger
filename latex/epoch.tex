@@ -795,7 +795,7 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
       \begin{array}{r@{=}l}
         \var{obl} & \obligation{pc}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{obl} \\
-        %\rho, \tau \in pc \\
+        \rho, \tau \in pc \\
         \var{expansion} & \floor*{\rho \cdot \var{reserves}} \\
         \var{totalPool} & \var{fees} + \var{decayed} + \var{rewardPool} + \var{expansion} \\
         \var{newTreasury} & \floor*{\tau \cdot \var{totalPool}} \\
@@ -903,7 +903,8 @@ for potential future use.
         \begin{array}{r}
           \var{stpools} \\
           \var{pparams} \\
-          \var{retiring}
+          \var{retiring} \\
+          \var{avgs}
         \end{array}
       \right)
       \trans{poolclean}{}
@@ -1036,7 +1037,9 @@ for ease of reading.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pc}\\
+        \var{pcOld}\\
+        \var{pcNew}\\
+        \var{dwstate}
       \end{array}
       \vdash
       \left(
@@ -1130,8 +1133,8 @@ be the \textit{last slot of the epoch before the boundary}.
         \begin{array}{l}
           \var{slot}\\
           \var{pcOld}\\
-          \var{dstate}\\
-          \var{pstate}\\
+          \var{stKeys}\\
+          \var{stPools}
         \end{array}
       }
       \vdash \var{utxoSt} \trans{utxoep}{} \var{utxoSt'}
@@ -1150,8 +1153,7 @@ be the \textit{last slot of the epoch before the boundary}.
         {
           \begin{array}{r}
             \var{accnt} \\
-            \var{dstate} \\
-            \var{pstate} \\
+            \var{dwstate}
           \end{array}
         }
       \right)
@@ -1160,16 +1162,14 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{rcl}
           \var{accnt'} \\
-          \var{dstate'} \\
-          \var{pstate'} \\
+          \var{dwstate'}
         \end{array}
       }
       \right)
       \\~\\~\\
       {
         \begin{array}{l}
-          \var{slot}\\
-          \var{pcOld}\\
+          \var{slot}
         \end{array}
       }
       \vdash

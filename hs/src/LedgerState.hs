@@ -19,6 +19,7 @@ module LedgerState
   , Ix
   , DWState(..)
   , DState(..)
+  , AccountState(..)
   , dstate
   , pstate
   , ptrs
@@ -59,6 +60,14 @@ module LedgerState
   , retiring
   -- refunds
   , keyRefunds
+  -- epoch boundary
+  , movingAvg
+  , poolRew
+  , leaderRew
+  , memberRew
+  , indivRew
+  , rewardOnePool
+  , reward
   ) where
 
 import           Control.Monad           (foldM)
@@ -74,13 +83,18 @@ import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*))
+import           Slot                    (Slot (..), Epoch (..), (-*),
+                                               slotsPerEpoch, epochFromSlot)
 import           Keys
 import           UTxO
-import           PParams                 (PParams(..), minfeeA, minfeeB)
+import           PParams                 (PParams(..), minfeeA, minfeeB,
+                                                 intervalValue, movingAvgWeight,
+                                                 movingAvgExp, rho, tau)
+import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs, decayKey)
-import           Delegation.StakePool    (Delegation (..), StakePool (..), poolPubKey)
+import           Delegation.StakePool    (Delegation (..), StakePool (..),
+                                                     poolPubKey, poolSpec)
 
 import Control.State.Transition
 
@@ -187,6 +201,15 @@ data DWState =
     , _pstate :: PState
     } deriving (Show, Eq)
 
+data AccountState = AccountState
+  { _treasury   :: Coin
+  , _reserves   :: Coin
+  , _rewardPool :: Coin
+  } deriving (Show, Eq)
+
+emptyAccount :: AccountState
+emptyAccount = AccountState (Coin 0) (Coin 0) (Coin 0)
+
 emptyDelegation :: DWState
 emptyDelegation =
     DWState emptyDState emptyPState
@@ -223,6 +246,7 @@ makeLenses ''DWState
 makeLenses ''DState
 makeLenses ''PState
 makeLenses ''UTxOState
+makeLenses ''AccountState
 makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
@@ -569,6 +593,131 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedO
     outs = getOutputs $ ls ^. utxoState . utxo
     delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
 
+---------------------------------
+-- epoch boundary calculations --
+---------------------------------
+
+-- | Calulcate moving average
+movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
+movingAvg pc hk n expectedSlots (Distr averages) =
+  let fraction = fromIntegral n / max expectedSlots 1
+   in case Map.lookup hk averages of
+        Nothing -> fraction
+        Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
+          where alpha = intervalValue $ pc ^. movingAvgWeight
+
+-- | Calculate pool reward
+poolRew ::
+     PParams
+  -> HashKey
+  -> Natural
+  -> Rational
+  -> Distr
+  -> Coin
+  -> (Coin, Rational)
+poolRew pc hk n expectedSlots averages (Coin maxP) =
+  (floor $ e * fromIntegral maxP, avg)
+  where
+    avg = intervalValue $ pc ^. movingAvgExp
+    gamma = movingAvg pc hk n expectedSlots averages
+    e = fromRational avg ** fromRational gamma :: Double
+
+-- | Calculate pool leader reward
+leaderRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
+  | f' <= c = f
+  | otherwise =
+    floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
+  where
+    (Coin c, m, _) = poolSpec pool
+    m' = intervalValue m
+
+-- | Calculate pool member reward
+memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+memberRew (Coin f') pool (StakeShare sigma) (StakeShare s)
+  | f' <= c = 0
+  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
+  where
+    (Coin c, m, _) = poolSpec pool
+    m' = intervalValue m
+
+-- | Calculate individual reward
+indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
+indivRew f pool sigma s True  = leaderRew f pool sigma s
+indivRew f pool sigma s False = memberRew f pool sigma s
+
+-- | Reward one pool
+rewardOnePool ::
+     PParams
+  -> Coin
+  -> Natural
+  -> HashKey
+  -> StakePool
+  -> Map.Map HashKey Coin
+  -> Distr
+  -> Coin
+  -> (Map.Map RewardAcnt Coin, StakeShare)
+rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
+  (Map.fromList keysVals, StakeShare avg)
+  where
+    (Coin pstake) = Map.foldl (+) (Coin 0) actgr
+    sigma = fromIntegral pstake % fromIntegral total
+    expectedSlots = sigma * fromIntegral slotsPerEpoch
+    (_, _, Coin p) = poolSpec pool
+    pr = fromIntegral p % fromIntegral total
+    maxP =
+      if p <= pstake
+        then maxPool pc r sigma pr
+        else 0
+    (poolR, avg) = poolRew pc poolHK n expectedSlots averages maxP
+    sFrac = StakeShare (sigma / fromIntegral total)
+    keysVals =
+      [ ( RewardAcnt hk
+        , indivRew
+            poolR
+            pool
+            sFrac
+            (StakeShare (fromIntegral c % fromIntegral total))
+            (hk == poolHK))
+      | (hk, Coin c) <- Map.toList actgr
+      ]
+
+reward ::
+     Production
+  -> PParams
+  -> Coin
+  -> DWState
+  -> [TxOut]
+  -> (Map.Map RewardAcnt Coin, Distr)
+reward (Production prod) pc r dwstate outs =
+  ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
+  , Distr $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
+  where
+    active =
+      activeStake
+        outs
+        (dwstate ^. dstate . ptrs)
+        (dwstate ^. dstate . stKeys)
+        (dwstate ^. dstate . delegations)
+        (dwstate ^. pstate . stPools)
+    total = Map.foldl (+) (Coin 0) active
+    pactive = groupByPool active (dwstate ^. dstate . delegations)
+    pdata =
+      [ ( key
+        , ( (dwstate ^. pstate . pParams) Map.! key
+          , prod Map.! key
+          , pactive Map.! key))
+      | key <-
+          Set.toList $ Map.keysSet (dwstate ^. pstate . pParams) `Set.intersection`
+          Map.keysSet prod `Set.intersection`
+          Map.keysSet pactive
+      ]
+    results =
+      [ ( hk
+        , rewardOnePool pc r n hk pool actgr (dwstate ^. pstate . avgs) total)
+      | (hk, (pool, n, actgr)) <- pdata
+      ]
+
 ---------------------------------------------------------------------------------
 -- State transition system
 ---------------------------------------------------------------------------------
@@ -879,3 +1028,166 @@ instance Embed POOL DELPL where
 
 instance Embed DELEG DELPL where
     wrapFailed = DelegFailure
+
+----------------------------------
+-- STS rules for epoch boundary --
+----------------------------------
+
+data UTXOEP
+instance STS UTXOEP where
+    type State UTXOEP = UTxOState
+    type Signal UTXOEP = ()
+    type Environment UTXOEP = (Slot, PParams, Allocs, Allocs)
+    data PredicateFailure UTXOEP = FailureUTXOEP
+                    deriving(Show, Eq)
+
+    initialRules = [ initialUtxo ]
+    transitionRules = [ utxoEpTransition ]
+
+initialUtxo :: InitialRule UTXOEP
+initialUtxo = do
+  IRC _ <- judgmentContext
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
+
+utxoEpTransition :: TransitionRule UTXOEP
+utxoEpTransition = do
+  TRC ((slot, pc, stakeKeys, stakePools), u, _) <- judgmentContext
+  pure $ u & deposits .~ obligation pc stakeKeys stakePools slot
+           & fees     .~ Coin 0
+
+data POOLCLEAN
+instance STS POOLCLEAN where
+    type State POOLCLEAN = PState
+    type Signal POOLCLEAN = ()
+    type Environment POOLCLEAN = Slot
+    data PredicateFailure POOLCLEAN = NoRetiredPOOLCLEAN
+                       deriving (Show, Eq)
+
+    initialRules = [ pure emptyPState ]
+    transitionRules = [ poolCleanTransition ]
+
+poolCleanTransition :: TransitionRule POOLCLEAN
+poolCleanTransition = do
+  TRC(slot, p, _) <- judgmentContext
+  let currEpoch = epochFromSlot slot
+  let retired = Map.keysSet $ Map.filter (== currEpoch) $ p ^. retiring
+  let Distr averages = p ^. avgs
+  null retired ?! NoRetiredPOOLCLEAN
+  pure $ p & stPools  %~ flip Map.withoutKeys retired
+           & pParams  %~ flip Map.withoutKeys retired
+           & retiring %~ flip Map.withoutKeys retired
+           & avgs     .~ Distr (Map.withoutKeys averages retired)
+
+data ACCNT
+instance STS ACCNT where
+    type State ACCNT = (AccountState, DWState)
+    type Signal ACCNT = ()
+    type Environment ACCNT = (Slot, PParams, Production, UTxOState)
+    data PredicateFailure ACCNT = FailureACCNT
+                   deriving (Show, Eq)
+
+    initialRules = [ initialAccnt ]
+    transitionRules = [ accntTransition ]
+
+initialAccnt :: InitialRule ACCNT
+initialAccnt = pure (emptyAccount, emptyDelegation)
+
+accntTransition :: TransitionRule ACCNT
+accntTransition = do
+    TRC((slot, pp, production, us), (as, dw), _) <- judgmentContext
+
+    let rho' = intervalValue (pp ^. rho)
+    let tau' = intervalValue (pp ^. tau)
+    let obl = obligation pp (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+    let decayed = us ^. deposits - obl          -- underflow?
+    let Coin reserves' = as ^. reserves
+    let expansion = floor $ rho' * fromIntegral reserves'
+    let Coin totalPool = (us ^. fees) + decayed + (as ^. rewardPool) + expansion
+    let newTreasury = floor $ tau' * fromIntegral totalPool
+    let availablePool = totalPool - newTreasury -- underflow?
+    let getOutputs (UTxO utxo') = Map.elems utxo'
+    let outs = getOutputs (us ^. utxo)
+    let (rewards', avgs') = reward production pp (Coin availablePool) dw outs
+    let paidRewards = Map.foldl (+) (Coin 0) rewards'
+    let as' = as & treasury %~ (+) (Coin newTreasury)
+                 & reserves %~ (-) expansion      -- underflow?
+                 & rewardPool .~ Coin availablePool - paidRewards
+    -- union is left-biased, new values take precedence
+    let dw' = dw & dstate . rewards %~ Map.union rewards'
+                 & pstate . avgs .~ avgs'
+    pure (as', dw')
+
+data NEWPC
+instance STS NEWPC where
+    type State NEWPC = (UTxOState, AccountState)
+    type Signal NEWPC = ()
+    type Environment NEWPC = (Slot, PParams, PParams, DWState)
+    data PredicateFailure NEWPC = ExcessObligationNEWPC
+                   deriving (Show, Eq)
+
+    initialRules = [ initialNewPc ]
+    transitionRules = [ newPcTransition ]
+
+initialNewPc :: InitialRule NEWPC
+initialNewPc = pure (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0), emptyAccount)
+
+newPcTransition :: TransitionRule NEWPC
+newPcTransition = do
+  TRC((slot, ppOld, ppNew, dw), (us, as), _) <- judgmentContext
+  let old = obligation ppOld (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+  let new = obligation ppNew (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+  as ^. reserves + old >= new ?! ExcessObligationNEWPC
+  let diff = old - new
+  pure (us & deposits .~ new, as & reserves %~ (+) diff)
+
+
+data EPOCH
+instance STS EPOCH where
+    type State EPOCH = (UTxOState, AccountState, DWState)
+    type Signal EPOCH = ()
+    type Environment EPOCH = (Slot, PParams, PParams, Production)
+    data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
+                                | PoolCleanFailure (PredicateFailure POOLCLEAN)
+                                | AccntFailure (PredicateFailure ACCNT)
+                                | NewPcFailure (PredicateFailure NEWPC)
+                   deriving (Show, Eq)
+
+    initialRules = [ initialEpoch ]
+    transitionRules = [ epochTransition ]
+
+initialEpoch :: InitialRule EPOCH
+initialEpoch = do
+    IRC(slot, ppOld, ppNew, _) <- judgmentContext
+    utxo' <- trans @UTXOEP $ IRC (slot, ppOld, Map.empty, Map.empty)
+    (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, Production Map.empty, utxo')
+    pstate'' <- trans @POOLCLEAN $ IRC slot
+    let dw'' = dw' & pstate .~ pstate''
+    (utxo'', accnt'') <- trans @NEWPC $ IRC (slot, ppOld, ppNew, dw'')
+    pure (utxo'', accnt'', dw'')
+
+epochTransition :: TransitionRule EPOCH
+epochTransition = do
+    TRC((slot, ppOld, ppNew, production), (us, as, dw), _) <- judgmentContext
+    us' <- trans @UTXOEP $ TRC ((slot
+                               , ppOld
+                               , dw ^. dstate . stKeys
+                               , dw ^. pstate . stPools), us, ())
+    (as', dw') <- trans @ACCNT $ TRC ((slot, ppOld, production, us')
+                                     , (as, dw)
+                                     , ())
+    pstate'' <- trans @POOLCLEAN $ TRC (slot, dw' ^. pstate, ())
+    let dw'' = dw' & pstate .~ pstate''
+    (us'', as'') <- trans @NEWPC $ TRC ((slot, ppOld, ppNew, dw''), (us, as'), ())
+    pure (us'', as'', dw'')
+
+instance Embed UTXOEP EPOCH where
+    wrapFailed = UtxoEpFailure
+
+instance Embed ACCNT EPOCH where
+    wrapFailed = AccntFailure
+
+instance Embed POOLCLEAN EPOCH where
+    wrapFailed = PoolCleanFailure
+
+instance Embed NEWPC EPOCH where
+    wrapFailed = NewPcFailure
