@@ -49,11 +49,12 @@ getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
 
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: Set.Set TxOut -> Set.Set Stake
+baseStake :: [TxOut] -> Set.Set Stake
 baseStake outs =
-  Set.fromList
-    [ Stake (fromJust $ getStakeHK a, c)
-    | TxOut a c <- Set.toList outs
+  Set.fromList $ map Stake $ Map.toList $
+  Map.fromListWith (+)
+    [ (fromJust $ getStakeHK a, c)
+    | TxOut a c <- outs
     , isJust $ getStakeHK a
     ]
 
@@ -63,17 +64,18 @@ getStakePtr (AddrPtr ptr) = Just ptr
 getStakePtr _             = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
-ptrStake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
+ptrStake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
 ptrStake outs pointers =
-  Set.fromList
-    [ Stake (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
-    | TxOut a c <- Set.toList outs
+  Set.fromList $ map Stake $ Map.toList $
+  Map.fromListWith (+)
+    [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
+    | TxOut a c <- outs
     , isJust $ getStakePtr a
     , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
     ]
 
 -- | Calculate stake of all addresses in TxOut set.
-stake :: Set.Set TxOut -> Map.Map Ptr HashKey -> Set.Set Stake
+stake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
 stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
 
 -- | Check whether a hash key has active stake, i.e., currently delegates to an
@@ -88,7 +90,7 @@ isActive vSk stakeKeys delegs stakePools =
 -- | Calculate total active state in the form of a mapping of hash keys to
 -- coins.
 activeStake ::
-     Set.Set TxOut
+     [TxOut]
   -> Map.Map Ptr HashKey
   -> Allocs
   -> Map.Map HashKey HashKey
