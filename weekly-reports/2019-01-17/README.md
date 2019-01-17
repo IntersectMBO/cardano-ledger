@@ -1,4 +1,5 @@
 # Summary
+In the last week of 2018 we finished a first version of the ledger spec. This included adding the active stake calculations, the reward calculations, and the exponential moving averages. Explanations were also added for these. On the executable spec side, we added STS instances for everything. In 2019, after the Berlin workshop, we began making changes that originated from the big review. In particular, we combined some transition systems and began re-organizing the tables.
 
 
 
