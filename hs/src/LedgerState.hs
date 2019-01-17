@@ -1116,3 +1116,26 @@ accntTransition = do
     let dw' = dw & dstate . rewards %~ Map.union rewards'
                  & pstate . avgs .~ avgs'
     pure (as', dw')
+
+data NEWPC
+instance STS NEWPC where
+    type State NEWPC = (UTxOState, AccountState)
+    type Signal NEWPC = ()
+    type Environment NEWPC = (Slot, PParams, PParams, DWState)
+    data PredicateFailure NEWPC = ExcessObligationNEWPC
+                   deriving (Show, Eq)
+
+    initialRules = [ initialNewPc ]
+    transitionRules = [ newPcTransition ]
+
+initialNewPc :: InitialRule NEWPC
+initialNewPc = pure (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0), emptyAccount)
+
+newPcTransition :: TransitionRule NEWPC
+newPcTransition = do
+  TRC((slot, ppOld, ppNew, dw), (us, as), _) <- judgmentContext
+  let old = obligation ppOld (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+  let new = obligation ppNew (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+  as ^. reserves + old >= new ?! ExcessObligationNEWPC
+  let diff = old - new
+  pure (us & deposits .~ new, as & reserves %~ (+) diff)
