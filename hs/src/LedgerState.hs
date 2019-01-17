@@ -89,7 +89,7 @@ import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp)
+                                                 movingAvgExp, rho, tau)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, Allocs, decayKey)
@@ -1077,3 +1077,42 @@ poolCleanTransition = do
            & pParams  %~ flip Map.withoutKeys retired
            & retiring %~ flip Map.withoutKeys retired
            & avgs     .~ Distr (Map.withoutKeys averages retired)
+
+data ACCNT
+instance STS ACCNT where
+    type State ACCNT = (AccountState, DWState)
+    type Signal ACCNT = ()
+    type Environment ACCNT = (Slot, PParams, Production, UTxOState)
+    data PredicateFailure ACCNT = FailureACCNT
+                   deriving (Show, Eq)
+
+    initialRules = [ initialAccnt ]
+    transitionRules = [ accntTransition ]
+
+initialAccnt :: InitialRule ACCNT
+initialAccnt = pure (emptyAccount, emptyDelegation)
+
+accntTransition :: TransitionRule ACCNT
+accntTransition = do
+    TRC((slot, pp, production, us), (as, dw), _) <- judgmentContext
+
+    let rho' = intervalValue (pp ^. rho)
+    let tau' = intervalValue (pp ^. tau)
+    let obl = obligation pp (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+    let decayed = us ^. deposits - obl          -- underflow?
+    let Coin reserves' = as ^. reserves
+    let expansion = floor $ rho' * fromIntegral reserves'
+    let Coin totalPool = (us ^. fees) + decayed + (as ^. rewardPool) + expansion
+    let newTreasury = floor $ tau' * fromIntegral totalPool
+    let availablePool = totalPool - newTreasury -- underflow?
+    let getOutputs (UTxO utxo') = Map.elems utxo'
+    let outs = getOutputs (us ^. utxo)
+    let (rewards', avgs') = reward production pp (Coin availablePool) dw (Set.fromList outs)
+    let paidRewards = Map.foldl (+) (Coin 0) rewards'
+    let as' = as & treasury %~ (+) (Coin newTreasury)
+                 & reserves %~ (-) expansion      -- underflow?
+                 & rewardPool .~ Coin availablePool - paidRewards
+    -- union is left-biased, new values take precedence
+    let dw' = dw & dstate . rewards %~ Map.union rewards'
+                 & pstate . avgs .~ avgs'
+    pure (as', dw')
