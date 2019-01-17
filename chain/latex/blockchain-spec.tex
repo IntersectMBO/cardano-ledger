@@ -295,6 +295,14 @@ $1/5 \leq t \leq 1/4$.
     \fun{\incixmapname} & \in \BlockIx \times \powerset \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
   \end{align*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+    \end{array}
+  \end{equation*}
+
   \begin{align}
   \label{eq:trimix}
   \trimix{\signmapname}{\var{ix}} & = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
@@ -338,7 +346,7 @@ $1/5 \leq t \leq 1/4$.
   \begin{equation*}
     \inference
     {
-      \var{K} = \fun{blockSignatureCountWindow} ~ pp & \var{t} = \fun{blockSignatureCountThreshold} ~ pp \\
+      \fun{blockSignatureCountWindow} \partialf \var{K} \in pp & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pp \\
       \forall \var{vk_s} \in \var{dms^{-1}} ~ \var{vk_d} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
       \signmapname' = \incixmap{\var{bIx}}{\left( \var{dms^{-1}} ~ \var{vk_d} \right)}{(\trimix{\signmapname}{\var{bIx}})}
     }
@@ -405,8 +413,6 @@ of block bodies.
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
     \fun{\maxblocksizename} & \mathbb{N} & \text{maximum block size} \\
     \fun{\maxheadersizename} & \mathbb{N} & \text{maximum block header size} \\
-    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
-    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
   \caption{Basic Block-related Types and Functions}
