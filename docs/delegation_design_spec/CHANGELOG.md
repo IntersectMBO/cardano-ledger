@@ -1,9 +1,13 @@
 # Delegation Design Document Changelog
 
-## TBR
-Incorporating the input from the workshop in Berlin, and following discussions,
+## 2019-03-01
+Incorporating further input from the workshop in Berlin, and following discussions,
 into the document.
 
+- Update: Stake pool metadata
+
+  Specify the format for the metadata, and how it is provided. Streamlined the
+  different sections that touch stake pool metadata.
 - Elaborating further on why stake pool registrations will not be censored.
 - Capture choice of KES scheme in design doc.
 - Streamlining information on deposits
@@ -26,6 +30,8 @@ into the document.
     - They will use KES
     - Operational Key Certificates will expire, to encourage key rotation
 - Add FAQ section to the delegation design doc
+- Add a couple of todo entries
+
 
 ## 2019-01-08
 Changes after the second day of the Berlin workshop.
