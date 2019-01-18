@@ -23,6 +23,11 @@ steps:
     agents:
       system: x86_64-linux
 
+  - label: 'nix-tools'
+    command: 'scripts/buildkite/check-nix-tools.sh'
+    agents:
+      system: x86_64-linux
+
   - label: 'release.nix'
     command: 'scripts/buildkite/check-hydra.sh'
     agents:
