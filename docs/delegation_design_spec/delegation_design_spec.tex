@@ -1011,7 +1011,8 @@ The certificate contains the following:
   are instead paid to the treasury (but the stake pool members would still get
   their usual rewards).
 
-\item A list of Hashes of public staking keys controlled by the pool owner(s),
+\item
+  A list of Hashes of public staking keys controlled by the pool owner(s),
   \(\mathcal{H}(vks_\text{owner})\). If any of these \emph{owner staking keys}
   \(vks_\text{owner}\) delegate to this pool, the stake that they delegate will
   be counted towards the stake pledged to the pool by the owner(s), see
@@ -1029,6 +1030,17 @@ The certificate contains the following:
   The parameters that specify the reward sharing function of the stake
   pool: cost, margin, and amount of stake pledged to the pool by the
   operator, see \cref{stakepool-registration,reminder-stakepool-registration}.
+
+\item
+  Optionally, a URL and content hash for additional metadata about the pool, for
+  display in the wallet. The URL is restricted to a length of 64 bytes. It is
+  the obligation of the stake pool operator that this URL points to a JSON
+  object containing the metadata of the pool, as described in
+  \cref{stakepool-metadata}. The content hash of that JSON object should match
+  the content hash in the registration certificate.
+
+  If no URL and content hash is provided, the stake pool will not be listed in
+  wallets. Private pools (\cref{individual-staking}) will use this option.
 \end{itemize}
 
 The certificate must be signed by all \(sks_\text{owner}\), as well as
@@ -1087,6 +1099,9 @@ Note that there is a conceptual difference between the stake pool
   also \cref{stakepool-registration}).
 \end{description}
 
+
+\subsubsection{Single Operator, Possibly Multiple Owners}
+\label{multiple-owners}
 Usually, the stake pool operator and owner will be the same person,
 but a stake pool can also have multiple owners. This is to allow
 people to coordinate and form a stake pool even if none of them had
@@ -2136,27 +2151,20 @@ known during wallet restoration.
 \subsection{Stakepool Registration}
 \label{stakepool-registration}
 
-Publicly announcing a stake pool for other people to delegate to
-requires two steps: posting a stakepool registration certificate to the
-blockchain, and providing additional verifiable personal information.
-
-The second step is essential to establish trust in a stake pool.
-However, storing personal information directly on the blockchain could
-lead to violation of legislation like the GDPR, so instead of including
-it in the certificate, it will be stored on an external key-value store,
-using \(\mathcal{H}(vks_\text{pool})\) as key. The integrity of the data
-will be ensured by requiring it to be signed with \(sks_\text{pool}\).
-\todo{We need a business decision on whether we do want to store the metadata
-  off-chain. We also need to converge on the actual metadata format and degree
-  of flexibility to post arbitrary data.}
+Publicly announcing a stake pool for other people to delegate to requires two
+steps: posting a stakepool registration certificate to the blockchain, and
+providing \emph{pool metadata}, additional information about the pool. The
+certificate contains all the information that is relevant for the execution of
+the protocol (public key hashes, cost, margin, and pledge) as well as the
+content hash of the metadata, while the metadata will be displayed to end users
+by their wallet. For specifics about the metadata, see
+\cref{stakepool-metadata}. If no metadata is provided, the stakepool is
+considered private, and will not be displayed in wallets.
 
 A stake pool operator can change the costs and margin of the pool by
 replacing the registration certificate of the pool with a new
 one. This allows operators to react, for example, to a change in its
-operational costs or the exchange rate of Ada. A wallet that is
-delegating funds to this stake pool should notify the user of such a
-change whenever it detects it, and ask whether the delegation should
-be reconsidered.
+operational costs or the exchange rate of Ada.
 
 The rewards that a stake pool gets depend on a pledge of funds that
 the stake pool owner(s) provide. This adds a cost to creating a
@@ -2176,14 +2184,11 @@ still requires delegation certificates to be posted\footnote{We also
   certificates to prevent double delegation. Imposing a special
   treatment of those keys would also be a violation of the design goal
   from \cref{no-special-wallet-for-stake-pool-operators}.}.
-Allowing a \emph{list} of owner keys allows for stake pool operators
+Using a \emph{list} of owner keys allows for stake pool operators
 to use multiple accounts/wallets for delegating the stake they
 pledged. It also allows a group of people combining their stake to
 form a competitive pool, without losing any control over their funds
-(see also the discussion at the end of
-\cref{stake-pool-registration-certificates}).
-
-
+(see also the discussion in \cref{multiple-owners}).
 
 A stake pool operator will indicate, in the stake pool registration
 certificate,  the amount of stake that the owners pledge to
@@ -2196,7 +2201,7 @@ enforced at the point of leader election; stake pools that do not
 honour their pledge (i.e., pools where the amount of stake delegated
 to the pool from the set of owner keys is less than the pledge listed
 in its stake pool registration certificate) will be excluded from the election,
-and as a consequence forfeit their rewards for that epoch\footnote{We
+and as a consequence forfeit their rewards for that epoch.\footnote{We
   could also just deny the rewards for this pool, but still let it take
   part in the protocol.}.
 
@@ -2204,17 +2209,7 @@ Note that it will still be possible for a stake pool operator to
 decrease the amount of stake that they pledge to the pool, but this will
 require them to post a new certificate, which will notify the
 stakeholders that delegated to the pool, possibly triggering a
-re-delegation.
-
-The pool metadata should include a list of IP-addresses and/or domain
-names, pointing to publicly reachable \emph{relay nodes} under their
-control (It is necessary to have a sufficient number of such publicly
-reachable nodes in order to establish a reliable peer-to-peer
-network.). We will use no technical mechanism to check the validity
-and availability of these relay nodes, but will rely on social
-pressure instead: People contemplating joining a pool will check the
-published data and will put little trust in operators who publish fake
-or unreliable addresses.
+re-delegation (see \cref{display-of-stake-pools-in-the-wallet}).
 
 \emph{Remark}: Due to the nature of our incentives mechanism (see
 \cref{design-of-incentives}), very large stakeholders are
@@ -2224,7 +2219,67 @@ stakeholders to set up all their pools with a single certificate. For
 the present version, however, these pools will have to be created
 manually. This seems justified, given that there is only a handful of
 such very large stakeholders and seeing as such a feature would
-unnecessarily complicate engineering.
+complicate engineering.
+
+\subsection{Stakepool Metadata}
+\label{stakepool-metadata}
+
+The stake pool registration certificate can contain a URL (up to 32 bytes),
+pointing to a JSON object with the following content:
+
+\begin{description}
+\item[A Ticker]
+  of 3-5 characters, for a compact display of stake pools in a
+  wallet.
+\item[A Title/Name]
+  of up to 50 characters.
+\item[A Short Textual Description]
+\item[A URL]
+  to a homepage with additional information about the pool.
+\item[A list of IP addresses and/or Domain Names]
+  of public relay nodes that the stake pool operator provides to contribute to
+  the Cardano network.
+\item[A set of tags]
+\end{description}
+All characters in the metadata will be UTF8 encoded. The metadata is restricted
+to have a size of no more than 512 bytes.
+
+The stake pool operators are responsible for serving this data at the URL
+provided in the stake pool registration certificate. However, wallets will not
+retrieve the data for each stake pool at those individual URLs. Not only would
+that be inefficient, it would also allow malicious actors to intentionally slow
+down all wallets by intentionally delaying the response of their server.
+Instead, metadata will be cached on \emph{metadata proxy servers}.
+
+Those proxy servers will query the metadata URLs in the stakepool registration
+certificates, and cache the metadata, with the pool's \(sks\) as key.
+Invalidating the cache will be triggered when the content hash listed in the
+certificate does not match the content hash of the cached metadata. The wallet
+will then retrieve the metadata for pools it needs to display from one of the
+proxy servers, instead of having to send a request to each of the pool's
+metadata URLs.
+
+Those servers are simple, and in particular, they require relatively little
+trust: because of the content hash, someone running a proxy server can not
+display forged metadata.\todo{Is this actually sufficient, or should
+  we require the metadata to be signed by the pool's key?} The worst thing they
+can do is filter the list of stake pools.
+
+In order to avoid those proxy servers to become a point of centralisation of the
+system, we will encourage third parties (stake pools, people in the community)
+to run metadata proxy servers, and provide code and binaries for the proxies.
+Wallets should be configurable to query a number of those proxy servers.
+
+Another function that the metadata proxy servers provide is filtering malicious
+entries: it is possible to embed a variety of malicious content in the metadata,
+and in particular via the link to the stake pool's homepage. Should it become
+known that a particular pool hosts dangerous or illegal
+content\footnote{for example phishing or trojan software, with the purpose of
+  infecting the computer the wallet is running on}, maintainers of
+a metadata proxy can filter that entry and not provide it to wallets. This is an
+advantage over writing the metadata directly to the chain, in which case there
+would be no way to protect wallet users from visiting malicious sites directly
+from their wallet.
 
 \subsection{Display of Stake Pools in the Wallet}
 \label{display-of-stake-pools-in-the-wallet}
@@ -2233,27 +2288,21 @@ The wallet software will maintain a set of all the active stakepools. For each,
 it will perform a lookup of the contained \(sks\) to retrieve the corresponding
 metadata to display to the user.
 
-In order to prevent relying on a central party to host this key value
-store, it will be possible to register multiple servers in the wallet,
-and each of those will be queried. Anybody will have the opportunity to
-run a stakepool metadata server, and announce its existence out of
-band.
-
-In order for stakeholders to be able to delegate their stake to a pool,
-the wallet will provide a listing of stake pools, in a section of the UI
-called the \emph{delegation centre}. This listing will be ordered by
-the rewards that the user should expect from delegating to each pool. In
-particular, we use the non-myopic pool member rewards,
-\cref{eq:non-myopic-member-rewards} in \cref{pool-desirability-and-ranking}.
-Since this ordering depends not only on the costs and margin set
-by the stake pool operator, but also on the performance of the pool and
-on the amount of stake that it has accumulated, this will promote pools
-that are reliable, and have not yet reached saturation. In other words,
-the users selfish interest to pick a stake pool that is promising large
-rewards is aligned with the goal of placing the system in the hands of a
-number of reliable stake pool operators, and of avoiding centralisation.
-The influence of the stake pool operator's pledge on the rewards
-provides protection against a Sybil attack on the stake pool level
+In order for stakeholders to be able to delegate their stake to a pool, the
+wallet will provide a listing of stake pools, in a section of the UI called the
+\emph{delegation centre}. In order to make it easy for users to do a rational
+choice when delegfating, this listing will be ordered by the rewards that the
+user should expect from delegating to each pool. In particular, we use the
+non-myopic pool member rewards, \cref{eq:non-myopic-member-rewards} in
+\cref{pool-desirability-and-ranking}. Since this ordering depends not only on
+the costs and margin set by the stake pool operator, but also on the performance
+of the pool and on the amount of stake that it already has accumulated, this
+will promote pools that are reliable, have not yet reached saturation, and have
+a low cost and margin. In other words, the users selfish interest to pick a
+stake pool that is promising large rewards is aligned with the goal of placing
+the system in the hands of a number of reliable stake pool operators, and of
+avoiding centralisation. The influence of the stake pool operator's pledge on
+the rewards provides protection against a Sybil attack on the stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}).
 
 When calculating the expected rewards, the wallet will use the
@@ -2283,7 +2332,8 @@ When the wallet is running and the user has delegated to a stake pool, the
 wallet should monitor the non-myopic rewards regularly. Should the stake pool
 become less favourable (by missing blocks, or even becoming inactive, or by
 changing its cost/margin), the wallet should notify the user, and ask them to
-consider changing their delegation.
+consider changing their delegation.\todo{Specify how many places the pool has to
+  drop in order to trigger this notification}
 
 We had considered adding some jittering to the ordered list of stake pools, in
 order to prevent a situation where a slight difference in the expected rewards would
@@ -2391,13 +2441,13 @@ Stakeholders should not be forced to delegate their stake to a
 pool. Instead, they should have the option of running their own node,
 using their own stake.
 
-Technically, such stakeholders will create a \emph{private pool},
-which is just a stake pool with margin \(m=1\). Such pools will
-pay all rewards to the pool operator (which is not a special rule, but
-just the effect of having a margin of 1), and they should not be shown
-in the stake pool directory in Daedalus (although even if they were,
-they would always be listed at the very bottom, since they would not
-yield any rewards to their members).
+Technically, such stakeholders will create a \emph{private pool}, which is just
+a stake pool with margin \(m=1\), and without providing metadata. Such pools
+will pay all rewards to the pool operator (which is not a special rule, but just
+the effect of having a margin of 1), and they will not be shown in the stake
+pool directory in Daedalus (although even if they were, they would always be
+listed at the very bottom, since they would not promise any rewards to their
+members).
 
 We had looked at other options that would not require individual
 stakeholders to register a pool, but they either complicated the
