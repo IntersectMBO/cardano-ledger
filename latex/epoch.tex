@@ -76,14 +76,6 @@ needed for performing rewards calculations.
       & \text{base address hashkey}\\
       \fun{stakePtr} & \Addr_{ptr} \to \Ptr
       & \text{pointer address pointer}\\
-      \fun{movingAvgWeight} & \PParams \to [0, 1]
-      & \text{moving average weight}\\
-      \fun{movingAvgExp} & \PParams \to [0, 1]
-      & \text{moving average exponent}\\
-      \fun{globalPool} & \PParams \to \mathbb{R}_{>0}\times\mathbb{N}
-      & \text{global pool parameters}\\
-      \fun{globalAccntng} & \PParams \to [0,1] \times [0, 1]
-      & \text{global accounting parameters}\\
       \fun{poolCosts} & \StakePool \to \Coin\times [0,1] \times \Coin
       & \text{pool cost parameters}\\
     \end{array}
@@ -323,7 +315,8 @@ possible rewards for this pool.
            \cdot
            \left(\sigma' + p'\cdot a_0\cdot\frac{\sigma' - p'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
       & ~~~\where \\
-      & ~~~~~~~(a_0, n_{opt}) = \fun{globalPool}~pp \\
+      & ~~~~~~~a_0 = \fun{influence}~pp \\
+      & ~~~~~~~n_{opt} = \fun{nopt}~pp \\
       & ~~~~~~~z_0 = 1/n_{opt} \\
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
       & ~~~~~~~p'=\min(p_r,~z_0) \\
@@ -484,15 +477,6 @@ rewards records of individual keys from the range values of the $\var{results}$
 map, and pair it with the union of all the pool keys (the domain of the
 $\var{results}$) and the associated moving averages for these (the second
 component of the range of the $\var{results}$ finite map).
-
-\begin{note}
-In the~\cite{delegation_design} document, Section 6.5.1, the values of individual
-relative stake $s$ and pool relative stake $\sigma$ are calculated by
-dividing the corresponding total values by total ADA (31, 000, 000, 000). In this
-document, we normalize pool and individual stake, i.e. obtain $s$ and $\sigma$
-by dividing by the sum total of \textit{all active stake} $tot$. We also calculate
-the relative pledge in the same way, $p_r = p \div tot$.
-\end{note}
 
 %%
 %% Figure - The Reward Calculation
@@ -731,12 +715,11 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
     {
       {
       \begin{array}{r@{=}l}
-        \rho, \tau & \fun{globalAccntng}~{pp} \\
         \var{obl} & \obligation{pp}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{obl} \\
-        \var{expansion} & \floor*{\rho \cdot \var{reserves}} \\
+        \var{expansion} & \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
         \var{totalPool} & \var{fees} + \var{decayed} + \var{rewardPot} + \var{expansion} \\
-        \var{newTreasury} & \floor*{\tau \cdot \var{totalPool}} \\
+        \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPool}} \\
         \var{availablePool} & \var{totalPool} - \var{newTreasury} \\
         \var{rewards'},~\var{avgs'} & \reward{blocksMade}{pp}{availablePool}{dpstate}{utxo}\\
         \var{paidRewards} & \sum\limits_{\_\mapsto c\in\var{rewards'}}c
@@ -887,8 +870,8 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pcOld} & \PParams & \text{old protocol parameters}\\
-        \var{pcNew} & \PParams & \text{new protocol parameters}\\
+        \var{ppOld} & \PParams & \text{old protocol parameters}\\
+        \var{ppNew} & \PParams & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
       \end{array}
@@ -955,8 +938,8 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-accepted}
     \inference[New-Proto-Consts-Accepted]
     {
-      \var{oblgOld} = \obligation{pcOld}{stkeys}{stpools}{slot} \\
-      \var{oblgNew} = \obligation{pcNew}{stkeys}{stpools}{slot} \\
+      \var{oblgOld} = \obligation{ppOld}{stkeys}{stpools}{slot} \\
+      \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
       ~\\
       \var{diff} = \var{oblgOld} - \var{oblgNew} \\
       \var{reserves} + \var{diff} \geq 0\\
@@ -987,8 +970,8 @@ for ease of reading.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pcOld}\\
-        \var{pcNew}\\
+        \var{ppOld}\\
+        \var{ppNew}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -1014,8 +997,8 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-denied}
     \inference[New-Proto-Consts-Denied]
     {
-      \var{oblgOld} = \obligation{pcOld}{stkeys}{stpools}{slot} \\
-      \var{oblgNew} = \obligation{pcNew}{stkeys}{stpools}{slot} \\
+      \var{oblgOld} = \obligation{ppOld}{stkeys}{stpools}{slot} \\
+      \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
       ~\\
       \var{diff} = \var{oblgOld} - \var{oblgNew} \\
       \var{reserves} + \var{diff} < 0\\
@@ -1023,8 +1006,8 @@ for ease of reading.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pcOld}\\
-        \var{pcNew}\\
+        \var{ppOld}\\
+        \var{ppNew}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -1067,8 +1050,8 @@ pool state.
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pcOld} & \PParams & \text{old protocol parameters}\\
-        \var{pcNew} & \PParams & \text{new protocol parameters}\\
+        \var{ppOld} & \PParams & \text{old protocol parameters}\\
+        \var{ppNew} & \PParams & \text{new protocol parameters}\\
         \var{blocksMade} & \HashKey \mapsto \mathbb{N} & \text{blocks made in the epoch}\\
       \end{array}
     \right)
@@ -1119,7 +1102,7 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{l}
           \var{slot}\\
-          \var{pcOld}\\
+          \var{ppOld}\\
           \var{blocksMade}\\
         \end{array}
       }
@@ -1171,8 +1154,8 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{l}
           \var{slot}\\
-          \var{pcOld}\\
-          \var{pcNew}\\
+          \var{ppOld}\\
+          \var{ppNew}\\
           \var{dstate'}\\
           \var{pstate''}\\
         \end{array}
@@ -1199,8 +1182,8 @@ be the \textit{last slot of the epoch before the boundary}.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pcOld}\\
-        \var{pcNew}\\
+        \var{ppOld}\\
+        \var{ppNew}\\
         \var{blocksMade}\\
       \end{array}
       \vdash

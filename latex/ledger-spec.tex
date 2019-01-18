@@ -60,9 +60,11 @@
 \newcommand{\AddrE}{\type{Addr_{enterprise}}}
 \newcommand{\Ptr}{\type{Ptr}}
 \newcommand{\DState}{\type{DState}}
-\newcommand{\DWState}{\type{DWState}}
 \newcommand{\DWEnv}{\type{DWEnv}}
+\newcommand{\DPSEnv}{\type{DPSEnv}}
 \newcommand{\DPEnv}{\type{DPEnv}}
+\newcommand{\DEnv}{\type{DEnv}}
+\newcommand{\PEnv}{\type{PEnv}}
 \newcommand{\DPState}{\type{DPState}}
 \newcommand{\PState}{\type{PState}}
 \newcommand{\DCertBody}{\type{DCertBody}}
@@ -105,7 +107,7 @@
 \newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
 \newcommand{\decayedKey}[4]{\fun{decayedKey}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\certRefund}[6]{\fun{certRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
+\newcommand{\keyRefund}[6]{\fun{keyRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
 \newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\consumed}[4]{\fun{consumed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
@@ -165,6 +167,10 @@
 \newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
 \newcommand{\slotsPer}{\ensuremath{\mathsf{slotsPerEpoch}}}
 
+\newcommand{\unitInterval}{\ensuremath{[0,~1]}}
+\newcommand{\nonnegReals}{\ensuremath{[0,~\infty)}}
+\newcommand{\posReals}{\ensuremath{(0,~\infty)}}
+
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 
@@ -187,25 +193,25 @@
 The transition system is explained in \cite{small_step_semantics}.
 
 \begin{description}
-\item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
-  the subsets of $X$.
-\item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
-  sequences having elements taken from $\type{X}$. The empty sequence is
-  denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
-  the sequence that results from appending $\type{x} \in \type{X}$ to
-  $\Lambda$.
-\item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
-  Given a function $f$ we write $f~a$ for the application of $f$ to argument
-  $a$.
-\item[Inverse Image] Given a function $f: A \to B$ and $b\in B$, we write
-  $f^{-1}~b$ for the \textbf{inverse image} of $f$ at $b$, which is defined by
-  $\{a \mid\ f a =  b\}$.
-\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
+  \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
+    the subsets of $X$.
+  \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
+    sequences having elements taken from $\type{X}$. The empty sequence is
+    denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
+    the sequence that results from appending $\type{x} \in \type{X}$ to
+    $\Lambda$.
+  \item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
+    Given a function $f$ we write $f~a$ for the application of $f$ to argument
+    $a$.
+  \item[Inverse Image] Given a function $f: A \to B$ and $b\in B$, we write
+    $f^{-1}~b$ for the \textbf{inverse image} of $f$ at $b$, which is defined by
+    $\{a \mid\ f a =  b\}$.
+  \item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
-  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
-  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
-\item[Map Operations] Figure \ref{fig:notation:nonstandard}
-  describes some non-standard map operations.
+    keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
+    $a \mapsto b \in m$ is equivalent to $m~ a = b$.
+  \item[Map Operations] Figure \ref{fig:notation:nonstandard}
+    describes some non-standard map operations.
 
 \end{description}
 
@@ -298,25 +304,25 @@ it using the corresponding public key.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \hashKey{} & \VKey \to \HashKey
-      & \text{hashKey function} \\
-      %
+                 & \text{hashKey function} \\
+                 %
       \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
-      & \text{verification relation}\\
-      %
+                   & \text{verification relation}\\
+                   %
       \fun{sign} & \SKey \to \Data \to \Sig
-      & \text{signing function}\\
+                 & \text{signing function}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
     & \forall (sk, vk) \in \KeyPair,~ d \in \Data,~ \sigma \in \Sig \cdot
-      \sign{sk}{d} = \sigma \implies \verify{vk}{d}{\sigma}
+    \sign{sk}{d} = \sigma \implies \verify{vk}{d}{\sigma}
   \end{align*}
   \emph{Notation for serialized and verified data}
   \begin{align*}
     & \serialised{x} & \text{serialised representation of } x\\
     & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma} = \verify{vk}{d}{\sigma}
-      & \text{shorthand notation for } \fun{verify}
+    & \text{shorthand notation for } \fun{verify}
   \end{align*}
   \caption{Cryptographic definitions}
   \label{fig:crypto-defs}
@@ -349,7 +355,9 @@ organization chosen for an implementation.
 \section{Addresses}
 \label{sec:addresses}
 
-TODO - Move address explanations here.
+\begin{todo}
+Move address explanations here.
+\end{todo}
 
 \begin{figure*}
   \emph{Abstract types}
@@ -404,13 +412,13 @@ TODO - Move address explanations here.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{paymentHK} & \Addr \to \HashKey
-        & \text{hash of payment key from addr}\\
+                      & \text{hash of payment key from addr}\\
       \fun{stakeHK_b} & \AddrB \to \HashKey
-        & \text{hash of stake key from base addr}\\
+                      & \text{hash of stake key from base addr}\\
       \fun{stakeHK_r} & \AddrRWD \to \HashKey
-        & \text{hash of stake key from reward account}\\
+                      & \text{hash of stake key from reward account}\\
       \fun{addrPtr} & \AddrP \to \Ptr
-        & \text{pointer from pointer addr}\\
+                    & \text{pointer from pointer addr}\\
     \end{array}
   \end{equation*}
   %
@@ -425,6 +433,96 @@ TODO - Move address explanations here.
   \end{equation*}
   \caption{Definitions used in Addresses}
   \label{fig:defs:addresses}
+\end{figure*}
+
+\clearpage
+
+\section{Protocol Parameters}
+\label{sec:protocol-parameters}
+
+The $\PParams$ is
+an abstract type that will represent an environment variable that contains
+values on which the functionality of the blockchain protocol depends, such
+as the fees transactions are obligated to pay to be processed.
+
+\begin{todo}
+Move explanations of indididual parameters explanation here.
+\end{todo}
+
+\begin{figure*}
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{coin}
+      & \Coin
+      & \mathbb{Z}
+      & \text{unit of value}
+      \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Protocol Parameters}
+  %
+  \begin{equation*}
+    \PParams =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
+        \var{keyDeposit} & \Coin & \text{stake key deposit}\\
+        \var{keyMinRefund} & \unitInterval & \text{stake key min refund}\\
+        \var{keyDecayRate} & \nonnegReals & \text{stake key decay rate}\\
+        \var{poolDeposit} & \Coin & \text{stake pool deposit}\\
+        \var{poolMinRefund} & \unitInterval & \text{stake pool min refund}\\
+        \var{poolDecayRate} & \nonnegReals & \text{stake pool decay rate}\\
+        \var{movingAvgWeight} & \unitInterval & \text{moving average weight}\\
+        \var{movingAvgExp} & \unitInterval & \text{moving average exponent}\\
+        \var{E_{max}} & \Epoch & \text{epoch bound on pool retirement}\\
+        \var{n_{opt}} & \mathbb{N}^+ & \text{desired number of pools}\\
+        \var{a_0} & \posReals & \text{pool influence}\\
+        \tau & \unitInterval & \text{treasury expansion}\\
+        \rho & \unitInterval & \text{monetary expansion}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Accessor Functions}
+  %
+  \begin{center}
+    \fun{fparams},
+    \fun{keyDeposit},
+    \fun{keyMinRefund},
+    \fun{keyDecayRate},
+    \fun{poolDeposit},
+    \fun{poolMinRefund},
+    \fun{poolDecayRate},
+    \fun{movingAvgWeight},
+    \fun{movingAvgExp},
+    \fun{emax},
+    \fun{nopt},
+  \fun{influence},
+  \fun{tau},
+  \fun{rho}
+  \end{center}
+  %
+  \emph{Abstract Functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{minfee} & \PParams \to \Tx \to \Coin
+                   & \text{minimum fee calculation}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in Protocol Parameters}
+  \label{fig:defs:protocol-parameters}
 \end{figure*}
 
 \clearpage
@@ -478,15 +576,6 @@ that a transaction failed to be processed.
 We present the types of variables and functions needed for deposit and
 refund calculations in Figure~\ref{fig:defs:deposits}.
 
-The $\PParams$ is
-an abstract type that will represent an environment variable that contains
-values on which the functionality of the blockchain protocol depends, such
-as the fees transactions are obligated to pay to be processed. In particular,
-we define two maps here that return values stored in the set of protocol
-parameters. The map $\fun{dvalue}$ returns the amount a certificate must
-deposit to claim a specific resource (i.e. for the declaration of a new staking
-key or the registration of a stake pool, depending on the type of certificate).
-
 The map $\fun{decay}$
 represents the rate of decrease of the value of a unit of $\Coin$.
 The constant returned by $\fun{decay}$ consists of two values. The first is
@@ -530,7 +619,7 @@ which a given resource was allocated $\delta$, and a decay rate constant $\lambd
 The larger the duration, the more
 the value of the deposit decays, up to a minimum refund value.
 
-The function $\fun{certRefund}$, given a set of protocol parameters, resource
+The function $\fun{keyRefund}$, given a set of protocol parameters, resource
 allocations, slot number, and certificate, uses the refund calculation to
 assign a non-zero refund to a resource releasing certificate if also the key of
 the certificate author of which is listed in the provided resource allocations.
@@ -540,14 +629,14 @@ The minimum and decay values are also found in the protocol parameters, while
 the duration is the difference between given slot number and the slot
 number associated with the author's key in the resource allocation argument.
 
-The function $\fun{keyRefunds}$, in turn, uses $\fun{certRefund}$ to calculate
+The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
 the total value to be refunded to all individual key deregistration
 certificate authors in a transaction.
 Given protocol parameters, resource allocations, and a transaction,
 this calculation sums up all the refunds for the individual key
 deregistration certificates
 carried by the given transaction by passing the relevant parameters to the
-$\fun{certRefund}$ function.
+$\fun{keyRefund}$ function.
 
 It is important to note here that instead of the \textit{current} slot number,
 the time to live of $\var{tx}$ is passed to the $\fun{certRefunds}$ function
@@ -595,35 +684,9 @@ body must also contain inputs onto which this refund can be added.
 
 
 \begin{figure*}
-  \emph{Abstract types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      pc & \PParams & \text{protocol parameters}
-    \end{array}
-  \end{equation*}
-  %
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{dvalue} & \PParams \to \DCert \to \Coin
-        & \text{deposit amount of a certificate}\\
-
-      \fun{decayKey} & \PParams \to
-      (\Coin\times\lbrack 0, 1\rbrack\times\mathbb{Q}^{+})
-        & \text{decay parameters for key certificates}\\
-      \fun{decayPool} & \PParams \to
-      (\Coin\times\lbrack 0, 1\rbrack\times\mathbb{Q}^{+})
-        & \text{decay parameters for pool certificates}\\
-
-      \fun{dresource} & \Tx \to \powerset{(\DCertRegKey \uniondistinct \DCertRegPool)}
-        & \text{resource allocating certificates}\\
-
-      \fun{dderegister} & \Tx \to \powerset{\DCertDeRegKey}
-        & \text{resource releasing certificates}\\
-
-      \fun{dretire} & \Tx \to \powerset{\DCertRetirePool}
-        & \text{resource releasing certificates}\\
-
       \fun{ttl} & \Tx \to \Slot
         & \text{time to live}\\
     \end{array}
@@ -634,46 +697,46 @@ body must also contain inputs onto which this refund can be added.
 
 \begin{figure}
   \begin{align*}
-    & \fun{deposits} \in \PParams \to \Allocs \to \Tx \to \Coin
+    & \fun{deposits} \in \PParams \to \Allocs \to \seqof{\DCert} \to \Coin
     & \text{total deposits for transaction} \\
-    & \fun{deposits}~{pc}~{stpools}~{tx} = \sum\limits_{c \in \fun{dresource}~tx
-        \wedge \fun{author}~c \notin \dom~\var{stpools}}(\fun{dvalue}~pc~c)
+    & \fun{deposits}~{pp}~{stpools}~{certs} = \\
+    &  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegKey}}(\fun{keyDeposit}~pp)
+    +  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegPool \\ (\cauthor{c})\notin \var{stpools}}}
+            (\fun{poolDeposit}~pp)
       \nextdef
-      & \fun{isReleasing} \in \DCert \to \mathsf{Bool}
-      & \text{releases resources} \\
-      & \fun{isReleasing}~c = c \in \DCertDeRegKey \cup \DCertRetirePool\\
-      \nextdef
-      & \fun{refund} \in \Coin \to [0, 1] \to \mathbb{Q}^{+} \to \Duration \to \Coin
+      & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
       & \text{refund calculation} \\
       & \refund{\dval}{d_{\min}}{\lambda}{\delta} =
             \floor*{
               \dval \cdot
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
       \nextdef
-      & \fun{certRefund} \in \Coin \to [0, 1] \to \mathbb{Q}^{+} \to \\
-      & ~~~~~\Allocs \to \Slot \to \DCert \to \Coin
-      & \text{refund for a certificate} \\
-      & \certRefund{\dval}{d_{\min}}{\lambda}{allocs}{slot}{c} =\\
+      & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
+      & ~~~~~\Allocs \to \Slot \to \DCertDeRegKey \to \Coin
+      & \text{key refund for a certificate} \\
+      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{slot}{c} =\\
       & ~~~~~\begin{cases}
-        0 & \text{if not}~(\fun{isReleasing}~c)\\
-            0 & \text{if}~\cauthor c \notin \dom allocs\\
+            0 & \text{if}~\cauthor c \notin \dom stkeys\\
             \refund{\dval}{d_{\min}}{\lambda}{\delta}
             & \text{otherwise}
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
         \where
-        &\delta & \slotminus{slot}{(allocs~(\cauthor c))}\\
+        &\delta & \slotminus{slot}{(stkeys~(\cauthor c))}\\
       \end{array}\\
       \nextdef
       & \fun{keyRefunds} \in \PParams \to \Allocs \to \Tx \to \Coin
-      & \text{key refunds for transaction} \\
-      & \keyRefunds{pc}{stkeys}{tx} =\\
-      & ~~~~~ \sum\limits_{c \in \fun{dderegister}~tx} \certRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\ttl{tx})}{c}\\
+      & \text{key refunds for a transaction} \\
+      & \keyRefunds{pp}{stkeys}{tx} =\\
+      & ~~~~~ \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c\in\DCertDeRegKey}}
+              \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\ttl{tx})}{c}\\
       &
       \begin{array}{lr@{~=~}l}
-        \where
-        & (\dval,~d_{\min},~\lambda) & \fun{decayKey}~\var{pc}\\
+        \where \\
+        & \dval & \fun{keyDeposit}~\var{pp}\\
+        & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
+        & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
   \end{align*}
   \caption{Functions used in Deposits - Refunds}
@@ -726,11 +789,10 @@ Section~\cref{sec:epoch}.
       & \fun{lastEpoch}~{s} =  s~\mathsf{mod}~\slotsPer
       \nextdef
       & \fun{decayedKey} \in
-      \PParams \to \Allocs \to \Slot \to \DCert \to \Coin
+      \PParams \to \Allocs \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{decayed since epoch} \\
-      & \decayedKey{pc}{stkeys}{cslot}{c} =\\
+      & \decayedKey{pp}{stkeys}{cslot}{c} =\\
       & \begin{cases}
-        0 & \text{if not}~(\fun{isReleasing}~c)\\
             0 & \text{if}~\cauthor c \notin \dom stkeys\\
             \var{epochRefund} - \var{currentRefund}
             & \text{otherwise}
@@ -740,15 +802,18 @@ Section~\cref{sec:epoch}.
         \where
           & \var{created} & \var{stkeys}~(\cauthor~\var{c}) \\
           & \var{start} & \mathsf{max}~(lastEpoch~cslot)~created \\
-          & \var{epochRefund} & \certRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
-          & \var{currentRefund} & \certRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
-          & (\dval,~d_{\min},~\lambda) & \fun{decayKey}~\var{pc}\\
+          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
+          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
+          & \dval & \fun{keyDeposit}~\var{pp}\\
+          & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
+          & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
       \nextdef
       & \fun{decayedTx} \in \PParams \to \Allocs \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
-      & \decayedTx{pc}{stkeys}{tx} =\\
-      &   \sum\limits_{c \in \fun{dderegister}~tx} \decayedKey{pc}{stkeys}{(\ttl{tx})}{c}\\
+      & \decayedTx{pp}{stkeys}{tx} =\\
+      &   \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c \in\DCertDeRegKey}}
+          \decayedKey{pp}{stkeys}{(\ttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
   \label{fig:functions:deposits-decay}
@@ -877,8 +942,6 @@ account for this address and added to the UTxO.
       %
       \fun{txfee} & \Tx \to \Coin & \text{transaction fee}\\
       %
-      \fun{minfee} & \PParams \to \Tx \to \Coin & \text{minimum fee}\\
-      %
       \fun{txwdrls} & \Tx \to \Wdrl & \text{transaction withdrawals}\\
     \end{array}
   \end{equation*}
@@ -981,16 +1044,16 @@ deposits is found in the protocol parameters, not in $\var{stkeys}$ or $\var{stp
     \nextdef
     & \fun{consumed} \in \PParams \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
-    & \consumed{pc}{utxo}{stkeys}{rewards}~{tx} = \\
+    & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
     & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
         \sum_{(a \mapsto c) \in \fun{txwdrls}~{tx}} c  \\
-        & + \keyRefunds{pc}{stkeys}{tx} \\
+        & + \keyRefunds{pp}{stkeys}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \Allocs \to \Tx \to \Coin
     & \text{value produced} \\
-    & \fun{produced} ~ pc ~ stpools ~ tx = \\
+    & \fun{produced} ~ pp ~ stpools ~ tx = \\
     &~~\balance{(\txouts{tx})}
-     + \txfee{tx} + \deposits{pc}{stpools}~{tx}\\
+    + \txfee{tx} + \deposits{pp}{stpools}~{(\dcerts{tx})}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
@@ -1021,7 +1084,7 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pc} & \PParams & \text{protocol parameters}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
         \var{stkeys} & \Allocs & \text{stake key}\\
         \var{stpools} & \Allocs & \text{stake pool}\\
       \end{array}
@@ -1176,10 +1239,10 @@ variable
     \inference[UTxO-inductive]
     { \ttl tx \geq \var{slot}
       & \txins{tx} \neq \emptyset
-      & \minfee{pc}{tx} \leq \txfee{tx}
+      & \minfee{pp}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
-      \consumed{pc}{utxo}{stkeys}{rewards}~{tx} = \produced{pc}{stpools}~{tx}
+      \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
       \\
       ~
       \\
@@ -1188,16 +1251,16 @@ variable
       \\
       ~
       \\
-      \var{refunded} = \keyRefunds{pc}{stkeys}~{tx}
+      \var{refunded} = \keyRefunds{pp}{stkeys}~{tx}
       \\
-      \var{decayed} = \decayedTx{pc}{stkeys}~{tx}
+      \var{decayed} = \decayedTx{pp}{stkeys}~{tx}
       \\
-      \var{depositChange} = (\deposits{pc}~{stpools}~{tx}) - (\var{refunded} + \var{decayed})
+      \var{depositChange} = (\deposits{pp}~{stpools}~{tx}) - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{pc}\\
+        \var{pp}\\
         \var{stkeys}\\
         \var{stpools}\\
       \end{array}
@@ -1223,15 +1286,6 @@ variable
   \label{fig:rules:utxo}
 \end{figure}
 
-
-\begin{note}
-  $\Coin$ is defined as a primitive type, but there is a difference
-  between implementing it with $\mathbb{N}$ versus $\mathbb{Z}$.
-  Since this is a pure UTxO ledger, $\mathbb{N}$ suffices.
-  If, however, $\mathbb{Z}$ is used, then extra validation is required
-  to ensure that all $\TxOut$ are non-negative.
-  This extra condition would be added to \cref{eq:utxo-inductive}.
-\end{note}
 
 \clearpage
 
@@ -1422,7 +1476,7 @@ protocol parameters.
 
 The full ledger state consists of a $\UTxOState$ state variable (keeping track of
 the UTxO, deposits, fees, etc.), as well as
-a $\DWState$ state variable (which keeps track of registered keys and pools).
+a $\DPState$ state variable (which keeps track of registered keys and pools).
 This state type and the type of the transition rule is given in
 (see Figure~\ref{fig:ts-types:ledger}). The ledger state transition is signaled
 by a transaction.
@@ -1434,7 +1488,8 @@ by a transaction.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{pc} & \PParams & \text{protocol parameters}\\
+        \var{txIx} & \Ix & \text{transaction index}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
       \end{array}
     \right)
   \end{equation*}
@@ -1445,7 +1500,7 @@ by a transaction.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{utxoSt} & \UTxOState & \text{UTxO state}\\
-        \var{dwstate} & \DWState & \text{delegation witnesess state}\\
+        \var{dpstate} & \DPState & \text{delegation and pool state}\\
       \end{array}
     \right)
   \end{equation*}
@@ -1473,7 +1528,7 @@ the antecedent. However, the $\UTxOState$ transition also contains the
 stake keys and stake pools resource allocations in the context. This is not
 an issue since all this difference is highlighting is that in a $\UTxOState$
 transition, these variables are immutable (but they do change in the full
-ledger state and the $\DWState$ transitions).
+ledger state and the $\DPState$ transitions).
 
 The full ledger state transition combines the UTxO transition and the
 delegation transition into a single transition
@@ -1487,11 +1542,11 @@ by the given transaction.
     {
       (\var{dstate}, \var{pstate}) = \var{dpstate} \\
     (\var{stkeys}, \_, \_, \_) = \var{dstate} \\
-    (\_, \_, \var{stpools}, \_) = \var{pstate} \\
+    (\_, \_, \var{stpools}, \_) = \var{pstate} \\~\\
       \left({
         \begin{array}{r}
         \var{slot} \\
-        \var{pc} \\
+        \var{pp} \\
         \var{stkeys} \\
         \var{stpools}
         \end{array}
@@ -1499,18 +1554,25 @@ by the given transaction.
       \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}\\~\\~\\
       %
       {
+        \left(
         \begin{array}{l}
-          slot \\
+          \var{slot} \\
+          \var{txIx} \\
+          \var{pp} \\
         \end{array}
+      \right)
       }
       \vdash
       dpstate \trans{delegs}{\var{tx}} dpstate'
     }
     {
-      \begin{array}{l}
-        \var{slot}\\
-        \var{pc}\\
-      \end{array}
+      \left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{txIx} \\
+          \var{pp} \\
+        \end{array}
+      \right)
       \vdash
       \left(
         \begin{array}{ll}
