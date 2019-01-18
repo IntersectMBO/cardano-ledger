@@ -3,21 +3,21 @@
 \newcommand{\UPropSD}{\ensuremath{\type{UpSD}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 \newcommand{\ProtPm}{\ensuremath{\type{Ppm}}}
-\newcommand{\Rups}{\ensuremath{\type{Rups}}}
+\newcommand{\Rpus}{\ensuremath{\type{Rpus}}}
 \newcommand{\UPVEnv}{\ensuremath{\type{UPVEnv}}}
 \newcommand{\UPVState}{\ensuremath{\type{UPVState}}}
 \newcommand{\UPLEnv}{\ensuremath{\type{UPLEnv}}}
 \newcommand{\UPLState}{\ensuremath{\type{UPLState}}}
-\newcommand{\UPAEnv}{\ensuremath{\type{UPAEnv}}}
+\newcommand{\UPREnv}{\ensuremath{\type{UPREnv}}}
 \newcommand{\UPRState}{\ensuremath{\type{UPRState}}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
 \newcommand{\VState}{\ensuremath{\type{VState}}}
 \newcommand{\BVREnv}{\ensuremath{\type{BVREnv}}}
 \newcommand{\BVRState}{\ensuremath{\type{BVRState}}}
-\newcommand{\BkNr}{\ensuremath{\type{BkNr}}}
 \newcommand{\ApName}{\ensuremath{\type{ApName}}}
 \newcommand{\SWVer}{\ensuremath{\type{SWVer}}}
+\newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
@@ -85,13 +85,14 @@ this specification can be extended to incorporate the research results.
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
-      \var{b_n} & \BkNr & n & \mathbb{N} & \text{block number}\\
+      \var{s_n} & \Slot & n & \mathbb{N} & \text{slot number}\\
       \var{pv} & \ProtVer & (\var{maj}, \var{min}, \var{alt})
       & (\mathbb{N}, \mathbb{N}, \mathbb{N}) & \text{protocol version}\\
       \var{pps} & \PPMMap & \var{pps} & \ProtPm \mapsto \Value
-                                             & \text{protocol parameters map}\\
+                                         & \text{protocol parameters map}\\
+      \var{apv} & \ApVer & n & \mathbb{N}\\
       \var{swv} & \SWVer
-      & (\var{an}, \var{av}) & \ApName \times \mathbb{N}
+      & (\var{an}, \var{av}) & \ApName \times \ApVer
       & \text{software version}\\
       \var{pb} & \UPropSD
       &
@@ -120,7 +121,7 @@ this specification can be extended to incorporate the research results.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{upIssuer} & \UProp \to \VKeyGen & \text{update proposal issuer}\\
+      \fun{upIssuer} & \UProp \to \VKey & \text{update proposal issuer (delegate)}\\
       \fun{upSize} & \UProp \to \mathbb{N} & \text{update proposal size}\\
       \fun{upPV} & \UProp \to \ProtVer & \text{update proposal protocol version}\\
       \fun{upId} & \UProp \to \UPropId & \text{update proposal id}\\
@@ -159,8 +160,6 @@ genesis keys.
 \subsection{Update proposals registration}
 \label{sec:update-proposals-registration}
 
-First we model the validity of a proposal.
-
 \begin{figure}[htb]
   \emph{Update proposals validity environments}
   \begin{equation*}
@@ -169,7 +168,7 @@ First we model the validity of a proposal.
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
         & \text{application versions}\\
       \end{array}
     \right)
@@ -180,9 +179,9 @@ First we model the validity of a proposal.
     \UPVState
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered protocol update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
         & \text{registered software update proposals}\\
       \end{array}
     \right)
@@ -198,11 +197,12 @@ First we model the validity of a proposal.
   \label{fig:ts-types:up-validity}
 \end{figure}
 
-In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
+The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal:
 \begin{itemize}
-\item if it changes the protocol version, it must do it in a consistent manner:
+\item if an update proposal proposes a change in the protocol version, it must
+  do so in a consistent manner:
   \begin{itemize}
-  \item The proposed version must be lexicographically bigger or equal than the
+  \item The proposed version must be lexicographically bigger than the
     current version.
   \item The major versions of the proposed and current version must differ in
     at most one.
@@ -210,41 +210,43 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
     version, then the proposed minor version must be incremented by one.
   \item If the proposed major version is larger than the current major version,
     then the proposed minor version must be zero.
-  \end{itemize}
-\item must be consistent with the current protocol parameters:
-  \begin{itemize}
-  \item the proposal size must not exceed the maximum size specified by
-    the current protocol parameters,
-  \item the proposed new maximum block size should be not greater than twice
-    current maximum block size,
-  \item the maximum transaction size must be smaller than the maximum block
-    size (this requirement is \textbf{crucial} for having every transaction
-    fitting in a block \footnote{TODO: we should discuss if this is enough,
-      since a block might contain other data that contributes to its total
-      size}), and
-  \item the proposed new script version can be incremented by at most 1.
-  \end{itemize}
-\item must be new:
-  \begin{itemize}
-  \item must not exist in the set of registered proposals, and
+  \item must be consistent with the current protocol parameters:
+    \begin{itemize}
+    \item the proposal size must not exceed the maximum size specified by
+      the current protocol parameters,
+    \item the proposed new maximum block size should be not greater than twice
+      current maximum block size,
+    \item the maximum transaction size must be smaller than the maximum block
+      size (this requirement is \textbf{crucial} for having every transaction
+      fitting in a block \footnote{TODO: we should discuss if this is enough,
+        since a block might contain other data that contributes to its total
+        size}), and
+    \item the proposed new script version can be incremented by at most 1.
+    \end{itemize}
   \item must have a unique version among the current active proposals. This
     implies that a proposal is uniquely determined by the protocol version it
     proposes.
   \end{itemize}
-\item must increase the software version by at most one (see
-  \cref{eq:func:av-can-follow}).
-\item must not contain a software update proposal that was already registered
-  (in $\var{raups}$).
-\item the protocol version and parameters, along with some other data (see the
-  definition of $\fun{upSigdata}$), must be signed by the proposal issuer.
+\item if an update proposal proposes to increase the application version
+  version ($\var{av}$) for a given application ($\var{an}$), then there should
+  not be an active update proposal that proposes the same update.
 \end{itemize}
+Note that the rules in Figure~\ref{fig:rules:up-validity} allow for an update
+that does not propose changes in the protocol version, or does not propose
+changes the software version. However the update proposal must contain a change
+proposal in any of these two aspects.
+%
+
+Also note that we do not allow for updating the protocol parameters without
+updating the protocol version. If an update in the protocol parameters does not
+cause a soft-fork we might use the alt version for that purpose.
 
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:func:pv-can-follow}
     \begin{array}{r c l}
       \fun{pvCanFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
-      & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) \leq (\var{mj_n}, \var{mi_n}, \var{a_n})\\
+      & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_n}, \var{mi_n}, \var{a_n})\\
       & \wedge & 0 \leq \var{mj_n} - \var{mj_p} \leq 1\\
       & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))\\
       & \wedge & (\var{mj_p} + 1 = \var{mj_n} \Rightarrow \var{mi_n} = 0)
@@ -260,7 +262,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
          & \wedge & \upSize{up} \leq \var{mus}\\
          & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})\\
          & & \Rightarrow \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}
-             \wedge  \var{bszm_{up}} \leq 2\var{bszm})\\
+             \wedge  \var{bszm_{up}} \leq 2*\var{bszm})\\
          & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})
          \wedge \var{maxTxSize} \mapsto \var{txzm_{up}} \in (\upParams{up})\\
          & & \Rightarrow \var{txzm_{up}} < \var{bszm_{up}})\\
@@ -272,20 +274,11 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
   \end{equation}
   \nextdef
   \begin{equation}
-    \label{eq:func:pv-is-new}
-    \begin{array}{r c l}
-      \fun{pvIsNew}~\var{rups}~(\var{pid}, \var{nv})
-      & = &  \var{pid} \notin \dom \var{rups}
-            \wedge \var{nv} \notin \dom (\range \var{rups})
-    \end{array}
-  \end{equation}
-  \nextdef
-  \begin{equation}
     \label{eq:func:av-can-follow}
     \begin{array}{r c l}
       \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
       & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
-        \Rightarrow 0 \leq \var{av} - \var{av_c} \leq 1)\\
+        \Rightarrow \var{av} = \var{av_c} + 1)\\
       & \vee & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
     \end{array}
   \end{equation}
@@ -330,13 +323,12 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
     \label{eq:rule:up-pv-validity}
     \inference
     {
-      \var{vk} = \upIssuer{up}
-      & \var{pid} = \upId{up}
+      \var{pid} = \upId{up}
       & \var{nv} = \upPV{up}
       & \var{pps_n} = \upParams{up}\\
       & \fun{pvCanFollow}~\var{nv}~\var{pv}
       & \fun{canUpdate}~\var{pps}~\var{up}
-      & \fun{pvIsNew}~\var{rups}~(\var{pid}, \var{nv})
+      & \var{nv} \notin \dom~(\range~\var{rpus})
     }
     {
       {
@@ -349,7 +341,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups}
+            \var{rpus}
           \end{array}
         \right)
       }
@@ -357,7 +349,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
+            \var{rpus} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
           \end{array}
         \right)
       }
@@ -365,7 +357,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
   \end{equation}
   \nextdef
   \begin{equation}
-    \label{eq:rule:up-validity}
+    \label{eq:rule:up-validity-pu-nosu}
     \inference
     {
       {
@@ -378,7 +370,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups}
+            \var{rpus}
           \end{array}
         \right)
       }
@@ -386,7 +378,121 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups'}
+            \var{rpus'}
+          \end{array}
+        \right)
+      }
+      &
+      (\var{an}, \var{av}) = \upSwVer{up} & \var{an} \mapsto \var{av} \in \var{avs}
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus}\\
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upv}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus'}\\
+            \var{raus}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:up-validity-nopu-no}
+    \inference
+    {
+      \var{pv} = \upPV{up} & \upParams{up} = \emptyset &
+      {
+        \begin{array}{l}
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upsvv}{up}
+      {
+        \left(
+          \begin{array}{l}
+            \var{raus'}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}\\
+          \var{avs}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus}\\
+            \var{raus}
+          \end{array}
+        \right)
+      }
+      \trans{upv}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus}\\
+            \var{raus'}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:up-validity-pu-su}
+    \inference
+    {
+      {
+        \begin{array}{l}
+          \var{pv}\\
+          \var{pps}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus}
+          \end{array}
+        \right)
+      }
+      \trans{uppvv}{\var{up}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{rpus'}
           \end{array}
         \right)
       }
@@ -412,8 +518,6 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
           \end{array}
         \right)
       }
-      \\
-      \mathcal{V}_{\var{vk}}\serialised{\upSigData{up}}_{(\upSig{up})}
     }
     {
       {
@@ -427,7 +531,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}
           \end{array}
         \right)
@@ -436,7 +540,7 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
       {
         \left(
           \begin{array}{l}
-            \var{rups'}\\
+            \var{rpus'}\\
             \var{raus'}
           \end{array}
         \right)
@@ -449,100 +553,27 @@ In Rule~\ref{eq:rule:up-validity} we see that a new proposal:
 
 \clearpage
 
-\begin{figure}[htb]
-  \emph{Update proposals limits  environments}
-    \begin{equation*}
-    \UPLEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{e_c} & \Epoch & \text{current epoch}\\
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Update proposals limits states}
-  \begin{equation*}
-    \UPLState
-    = \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Update proposals limits transitions}
-  \begin{equation*}
-    \var{\_} \vdash
-    \var{\_} \trans{upl}{\_} \var{\_}
-    \subseteq \powerset (\UPLEnv \times \UPLState \times \UProp \times \UPLState)
-  \end{equation*}
-  \caption{Update proposals limits transition-system types}
-  \label{fig:ts-types:up-limits}
-\end{figure}
-
-In Rule~\ref{eq:rule:up-limits}:
+The rule of Figure~\ref{fig:rules:up-registration} models the registration of
+an update proposal:
 \begin{itemize}
 \item We consider the update proposal issuers to be the delegators of the key
   ($\var{vk}$) that is associated with the proposal under consideration
   ($\var{up}$).
-
 \item We check that the issuer of a proposal was delegated by a genesis key
   (which are in the domain of $\var{dms}$).
-\item We check that no key that delegated to $\var{vk}$ has issued a proposal
-  in the current epoch $\var{e_c}$.
-\item If the above checks succeeds, then all the delegators of $\var{vk}$ are
-  added to the set of keys that proposed in this epoch.
+\item the update proposal data (see the definition of $\fun{upSigdata}$) must
+  be signed by the proposal issuer.
 \end{itemize}
-
-\begin{figure}[htb]
-  \begin{equation}
-    \label{eq:rule:up-limits}
-    \inference
-    {\var{vk} = \upIssuer{up}
-      &  \var{dms} \restrictrange \{\var{vk}\} \neq \emptyset\\
-      & \var{eps_{vk}} = \{ (e_c, \var{vk_s})
-      \mid \var{vk_s} \mapsto \var{vk} \in \var{dms}\}
-      & \var{eps_{vk}} \cap \var{eps} = \emptyset
-    }
-    {
-      {\begin{array}{l}
-         \var{e_c}\\
-         \var{dms}
-       \end{array}
-      }
-      \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{eps}
-          \end{array}
-        \right)
-      }
-      \trans{upl}{\var{up}}
-      {
-        \left(
-          \begin{array}{l}
-            \var{eps} \cup \var{eps_{vk}}
-          \end{array}
-        \right)
-      }
-    }
-  \end{equation}
-  \caption{Update proposals limits rules}
-  \label{fig:rules:up-limits}
-\end{figure}
 
 \begin{figure}[htb]
   \emph{Update proposals registration  environments}
     \begin{equation*}
-    \UPAEnv =
+    \UPREnv =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{e_c} & \Epoch & \text{current epoch}\\
-        \var{avs} & \ApName \mapsto (\mathbb{N} \times \BkNr)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
         & \text{application versions}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}
@@ -554,11 +585,10 @@ In Rule~\ref{eq:rule:up-limits}:
     & \UPRState = \\
     & \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
-        & \text{registered software update proposals}\\
-        \var{eps} & \powerset{(\Epoch \times \VKeyGen)} & \text{proposals per-epoch per-key}\\
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
+        & \text{registered software update proposals}
       \end{array}
     \right)
   \end{align*}
@@ -567,7 +597,7 @@ In Rule~\ref{eq:rule:up-limits}:
   \begin{equation*}
     \var{\_} \vdash
     \var{\_} \trans{upreg}{\_} \var{\_}
-    \subseteq \powerset (\UPAEnv \times \UPRState \times \UProp \times \UPRState)
+    \subseteq \powerset (\UPREnv \times \UPRState \times \UProp \times \UPRState)
   \end{equation*}
   \caption{Update proposals registration transition-system types}
   \label{fig:ts-types:up-registration}
@@ -589,7 +619,7 @@ In Rule~\ref{eq:rule:up-limits}:
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
+            \var{rpus}\\
             \var{raus}\\
           \end{array}
         \right)
@@ -598,40 +628,21 @@ In Rule~\ref{eq:rule:up-limits}:
       {
         \left(
           \begin{array}{l}
-            \var{rups'}\\
+            \var{rpus'}\\
             \var{raus'}\\
           \end{array}
         \right)
       }
       &
-      {\begin{array}{l}
-          \var{e_c}\\
-          \var{dms}
-        \end{array}
-      }
-      \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{eps}
-          \end{array}
-        \right)
-      }
-      \trans{upl}{\var{up}}
-      {
-        \left(
-          \begin{array}{l}
-            \var{eps'}
-          \end{array}
-        \right)
-      }
+      \var{dms} \restrictrange \{\var{vk}\} \neq \emptyset\\
+      \var{vk} = \upIssuer{up} &
+      \mathcal{V}_{\var{vk}}\serialised{\upSigData{up}}_{(\upSig{up})}
     }
     {
       {
         \begin{array}{l}
           \var{pv}\\
           \var{pps}\\
-          \var{e_c}\\
           \var{avs}\\
           \var{dms}
         \end{array}
@@ -640,9 +651,8 @@ In Rule~\ref{eq:rule:up-limits}:
       {
         \left(
           \begin{array}{l}
-            \var{rups}\\
-            \var{raus}\\
-            \var{eps}
+            \var{rpus}\\
+            \var{raus}
           \end{array}
         \right)
       }
@@ -650,9 +660,8 @@ In Rule~\ref{eq:rule:up-limits}:
       {
         \left(
           \begin{array}{l}
-            \var{rups'}\\
-            \var{raus'}\\
-            \var{eps'}
+            \var{rpus'}\\
+            \var{raus'}
           \end{array}
         \right)
       }
@@ -692,7 +701,7 @@ In Rule~\ref{eq:rule:up-limits}:
     & \VEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{rups} & \powerset{\UPropId}
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
@@ -737,7 +746,7 @@ In Rule~\ref{eq:rule:voting}:
       \var{pid} = \vPropId{v} & \var{vk} = \vCaster{v} &
       \var{vts}_{\var{pid}} =
       \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
-      & \var{pid} \in \dom \var{rups} &
+      & \var{pid} \in \var{rups} &
       \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}\\
     }
     {
@@ -777,9 +786,9 @@ In Rule~\ref{eq:rule:voting}:
     & \VEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{s_n} & \Slot & \text{current slot number}\\
         \var{pps} & \PPMMap & \text{current protocol parameters map}\\
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{rups} & \powerset{\UPropId}
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
@@ -790,7 +799,7 @@ In Rule~\ref{eq:rule:voting}:
     & \VState
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
+        \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{votes}
       \end{array}\right)
   \end{align*}
@@ -852,7 +861,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
     {
       {
         \begin{array}{l}
-          b_n\\
+          s_n\\
           \var{pps}\\
           \var{rups}\\
           \var{dms}
@@ -913,7 +922,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
     {
       {
         \begin{array}{l}
-          \var{b_n}\\
+          \var{s_n}\\
           \var{pps}\\
           \var{rups}\\
           \var{dms}
@@ -932,7 +941,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
       {
         \left(
           \begin{array}{l}
-            \var{cps} \unionoverride  \{\var{pid} \mapsto b_n\} \\
+            \var{cps} \unionoverride  \{\var{pid} \mapsto s_n\} \\
             \var{vts'}
           \end{array}
         \right)
@@ -953,8 +962,8 @@ associated with the registration of candidate protocol versions present in
 blocks. Some clarifications are in order:
 \begin{itemize}
 \item The $k$ parameter is used to determined when a confirmed proposal is
-  stable. Given we are in a current block $b_n$, all update proposals confirmed
-  at or before block $b_n - k$ are deemed stable.
+  stable. Given we are in a current slot $s_n$, all update proposals confirmed
+  at or before slot $s_n - k$ are deemed stable.
 \item For the sake of conciseness, we omit the types associated to the
   transitions $\trans{addbvvk}{}$, since they can be inferred from the types of
   the $\trans{upend}{}$ transitions.
@@ -967,12 +976,12 @@ blocks. Some clarifications are in order:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{k} & \mathbb{N} & \text{chain stability parameter}\\
-        \var{b_n} & \BkNr & \text{current block number}\\
+        \var{s_n} & \Slot & \text{current block number}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
                              & \text{current protocol parameters map}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-        \var{cps} & \UPropId \mapsto \BkNr & \text{confirmed proposals}\\
-        \var{rups} & \UPropId \mapsto (\ProtVer \times \PPMMap)
+        \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
+        \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
                              & \text{registered update proposals}\\
       \end{array}\right)
   \end{align*}
@@ -1018,15 +1027,15 @@ rule by $\var{bv}$:
   in which $\var{pv} \leq \var{pv_c}$, then this invariant is maintained by
   these rules.
 \item Endorsed protocol version $\var{bv}$ must refer to a registered update
-  proposal (which are contained in $\var{rups}$), and this update proposal must
+  proposal (which are contained in $\var{rpus}$), and this update proposal must
   have been confirmed at least $k$ blocks ago, to ensure stability of the
   confirmation. Note that this rule does not guarantee that a confirmed
-  proposal will have $k$ blocks (or $2k$ slots) before the end of the epoch
-  where nodes can endorse this version. In such case, the proposal can only be
-  adopted in the next epoch. Figure~\ref{fig:up-confirmed-too-late} shows
-  an example of a proposal being confirmed too late in an epoch, where it is
-  not possible to get the enough endorsements in the remaining window. In this
-  Figure we take $k = 2$.
+  proposal will have enough blocks before the end of the epoch where nodes can
+  endorse this version. In such case, the proposal can only be adopted in the
+  next epoch. Figure~\ref{fig:up-confirmed-too-late} shows an example of a
+  proposal being confirmed too late in an epoch, where it is not possible to
+  get the enough endorsements (4 out of 7) in the remaining window. In this
+  Figure we take $k = 4$.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -1081,7 +1090,7 @@ rule by $\var{bv}$:
     \label{eq:rule:up-adopted}
     \inference
     {
-      \var{bv} \leq \var{pv_c}
+      (\var{bv} \leq \var{pv_c} \vee \var{pid} \notin \dom~(\var{cps} \restrictrange [.., s_n - k]))
       &
       {
         \begin{array}{l}
@@ -1109,11 +1118,11 @@ rule by $\var{bv}$:
       {
         \begin{array}{l}
           k\\
-          b_n\\
+          s_n\\
           (\var{pv}, \var{pps})\\
           \var{dms}\\
           \var{cps}\\
-          \var{rups}
+          \var{rpus}
         \end{array}
       }
       \vdash
@@ -1167,18 +1176,18 @@ rule by $\var{bv}$:
         \right)
       }
       & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv})\\
-      \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rups}
-      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., b_n - k])
+      \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rpus}
+      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - k])
     }
     {
       {
         \begin{array}{l}
           k\\
-          b_n\\
+          s_n\\
           (\var{pv}, \var{pps})\\
           \var{dms}\\
           \var{cps}\\
-          \var{rups}
+          \var{rpus}
         \end{array}
       }
       \vdash
@@ -1233,18 +1242,18 @@ rule by $\var{bv}$:
       }
       &
       \fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv}\\
-      \var{pid} \mapsto (\var{bv}, \var{pps_c'}) \in \var{rups}
-      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., b_n - k])\\
+      \var{pid} \mapsto (\var{bv}, \var{pps_c'}) \in \var{rpus}
+      & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - k])\\
     }
     {
       {
         \begin{array}{l}
           k\\
-          b_n\\
+          s_n\\
           (\var{pv}, \var{pps})\\
           \var{dms}\\
           \var{cps}\\
-          \var{rups}
+          \var{rpus}
         \end{array}
       }
       \vdash
@@ -1284,9 +1293,11 @@ rule by $\var{bv}$:
     % Slot in which the proposal gets confirmed
     \pgfmathsetmacro{\cSlot}{1}
     % Our special K.
-    \pgfmathsetmacro{\K}{2}
+    \pgfmathsetmacro{\K}{4}
     % Epoch end.
     \pgfmathsetmacro{\eend}{7}
+    % Number of positive votes needed
+    \pgfmathsetmacro{\votes}{4}
 
     % Draw the horizontal line
     \draw[thick, -Triangle] (0,0) -- (\nrSlots,0)
@@ -1303,15 +1314,15 @@ rule by $\var{bv}$:
     \node at (\cSlot, -1.5) {$\var{cps'} = \var{cps} \cup \{ \var{pid} \mapsto b_j \}$};
 
     % The no-endorsements red bar.
-    \draw[red, line width=4pt] (\cSlot, .5) -- +(2*\K, 0);
+    \draw[red, line width=4pt] (\cSlot, .5) -- +(\K, 0);
 
     % Brace above the no-endorsement window bar.
     \draw[thick, red, decorate, decoration={brace, amplitude=5pt}]
-    (\cSlot, .7) -- +(2*\K, 0)
+    (\cSlot, .7) -- +(\K, 0)
     node[black!20!red, midway, above=4pt, font=\scriptsize] {No-endorsements possible};
 
     % The endorsements window.
-    \coordinate (ewStart) at (\cSlot + 2*\K, .5);
+    \coordinate (ewStart) at (\cSlot + \K, .5);
     \coordinate (ewEnd) at ($(\eend, .5)$);
     \draw[green, line width=4pt]
     (ewStart) -- (ewEnd);
@@ -1324,7 +1335,7 @@ rule by $\var{bv}$:
     node[black!50!green, midway, above=15pt, font=\scriptsize] {Endorsements window};
 
     % The 2k before end-of-epoch window.
-    \coordinate (beeStart) at (\eend - 2*\K, -.5);
+    \coordinate (beeStart) at (\eend - \votes + 1, -.5);
     \coordinate (beeEnd) at ($(\eend, -.5)$);
     \draw[blue, line width=4pt]
     (beeStart) -- (beeEnd);
@@ -1334,7 +1345,7 @@ rule by $\var{bv}$:
     \coordinate (beeEndB) at ($(beeEnd) - (0, 0.2)$);
     \draw[thick, blue, decorate, decoration={brace, amplitude=5pt}]
     (beeEndB) -- (beeStartB)
-    node[black!20!blue, midway, below=5pt, font=\scriptsize] {$2k$ slots before epoch ends};
+    node[black!20!blue, midway, below=5pt, font=\scriptsize] {$\votes$ votes needed};
 
     \draw[blue, line width=2pt] (\eend, 3pt) -- (\eend, -3pt);
 
@@ -1425,7 +1436,7 @@ why a dynamic alternative is needed.
 \subsubsection{No checks on unlock-stake-epoch parameter}
 \label{sec:no-unlock-stake-epoch-check}
 
-The rule of Figure~\ref{eq:rule:up-validity} does not check the
+The rule of Figure~\ref{eq:rule:up-pv-validity} does not check the
 \lstinline{bvdUnlockStakeEpoch} parameter, since it will have a different
 meaning in the handover phase: its use will be reserved for unlocking the
 Ouroboros-BFT logic in the software.
@@ -1443,6 +1454,55 @@ $\type{UpdData}$, and $\type{UpdAttrs}$ are only needed to model the fact that
 an update proposal must sign such data, however, we do not use them for any
 other purpose in this formalization.
 
+\subsubsection{No limits on update proposals per-key per-epoch}
+\label{sec:no-up-limits}
+
+In the current system a given genesis key can submit only one proposal per
+epoch. At the moment, it is not clear what are the advantages of such
+constraint:
+\begin{itemize}
+\item Genesis keys are controlled by the Cardano foundation.
+\item Even if a genesis key falls in the hands of the adversary, only one
+  update proposal can be submitted per-block, and proposals have an time to
+  live of $u$ blocks. So in the worst case scenario we are looking at an
+  increase in the state size of the ledger proportional to $u$.
+\end{itemize}
+On the other hand, having that constraint in place brings some extra complexity
+in the specification, and therefore in the code that will implement it.
+Furthermore, in the current system, if an error is made in an update proposal,
+then if an amendment must be made within the current epoch, then a new update
+proposal must be submitted with a different key, which adds extra complexity
+for devops. In light of the preceding discussion, unless there is a benefit for
+restricting the number of times a genesis key can submit an update proposal, we
+opted for removing such constraint in the current specification.
+
+\subsubsection{Protocol only or software only updates allowed}
+\label{sec:ptonly-or-swonly-allowed}
+
+We allow for updates in the protocol version without requiring a software
+version update, and conversely, we allow for a software update without
+requiring an update in the protocol.
+
+\subsubsection{Acceptance of blocks endorsing unconfirmed proposal updates}
+\label{sec:acceptance-of-uncofirmed-up-endorsements}
+
+A consequence of enforcing the update rules in \cref{fig:rules:up-end} is that
+a block that is endorsing an unconfirmed proposal gets accepted, although it
+will not have any effect on the update mechanism. It is not clear at this stage
+whether such block should be rejected, therefore we have chosen to be lenient.
+
+\subsubsection{Proposal require a majority of endorsements to be adopted}
+\label{sec:up-adoption-with-majority}
+
+Instead of considering the endorsements for an update proposal in $2*k$ slots
+before the end of the current epoch, we only require a majority of endorsements
+in the current epoch. This makes the specification and the rules simpler and
+gives a bigger window to accept updates before the end of an epoch, however,
+before the handover phase to Shelley, we must make sure that this will not lead
+to a situation in which an update proposal would be adopted by the new rules,
+but was rejected by the old ones due to its endorsements not arriving $2*k$
+slots before the end of the epoch.
+
 \subsection{Questions}
 \label{sec:up-questions}
 
@@ -1451,4 +1511,5 @@ update mechanism:
 
 \begin{itemize}
 \item Do we need to model the $\var{scriptVersion}$?
+\item Do we allow an update proposal that proposes no update?
 \end{itemize}

@@ -23,6 +23,11 @@
   $A \mapsto A$ represents the identity map on $A$:
   $\{a \mapsto a \mid a \in A\}$. The $\emptyset$ symbol is also used to
   represent the empty map as well.
+\item[Domain and range] Given a relation $R \in \powerset{(A \times B)}$,
+  $\dom~R \in \powerset{A}$ refers to the domain of $R$, and
+  $\range~R \in \powerset{B}$ refers to the range of $R$. Note that (partial)
+  functions (and hence maps) are also relations, so we will be using $\dom$ and
+  $\range$ on functions.
 \item[Domain and range operations] Given a relation
   $R \in \powerset{(A \times B)}$ we make use of the \textit{domain-restriction},
   \textit{domain-exclusion}, and \textit{range-restriction} operators, which
@@ -38,7 +43,7 @@
 \item[Domain and range operations on sequences] We overload the $\restrictdom$,
   $\subtractdom$, and $\restrictrange$ to operate over sequences. So for
   instance given $S \in \seqof{A}$, and $R \in \seqof{(A \times B)}$:
-  $A \restrictdom R$ denotes the sequence
+  $S \restrictdom R$ denotes the sequence
   $[ (a, b) \mid (a, b) \in R, a \in S]$.
 \item[Wildcard variables] When a variable is not needed in a term, we replace
   it by $\wcard$ to make it explicit that we do not use this variable in the
