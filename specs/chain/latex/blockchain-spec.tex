@@ -241,6 +241,9 @@ This section should cover:
 \item Epoch-transition bookkeeping
 \end{itemize}
 
+The epoch transition rules should compute whether a given slot is at the end of
+an epoch
+
 \section{Counting signed blocks}
 
 \newcommand{\BSCEnv}{\type{BSCEnv}}
@@ -313,7 +316,7 @@ $1/5 \leq t \leq 1/4$.
     \BSCEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \ProtParams & \text{Protocol parameters} \\
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
         \var{ds} & \DelegState & \text{Delegation state} \\
         \var{bIx} & \BlockIx & \text{Block index}
       \end{array}
@@ -333,14 +336,14 @@ $1/5 \leq t \leq 1/4$.
   \begin{equation*}
     \inference
     {
-      \fun{blockSignatureCountWindow} \partialf \var{K} \in pp & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pp \\
+      \fun{blockSignatureCountWindow} \partialf \var{K} \in pps & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
       \var{D} = (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
       \signmapname' = \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
     }
     {
       \left(
         {\begin{array}{c}
-          \var{pp} \\
+          \var{pps} \\
           \var{ds} \\
           \var{bIx}
         \end{array}}
@@ -455,7 +458,7 @@ of block bodies.
     \BHEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \ProtParams & \text{Protocol parameters} \\
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
         \var{ds} & \DelegState & \text{Delegation state} \\
       \end{array}
     \right)
@@ -474,14 +477,14 @@ of block bodies.
   \begin{equation*}
     \inference
     { \sigma = \bsig{bh} & \var{vk_d} = \bissuer{bh} & \var{h'} = \bhhash{bh}
-    \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pp} & \bhdrsize{bh} \leq \var{s_{max}}
+    \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
     \\  (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} \neq \emptyset
     \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{\sigma}
     }
     {
       \left(
         {\begin{array}{c}
-          \var{pp} \\
+          \var{pps} \\
           \var{ds} \\
         \end{array}}
       \right)
@@ -540,6 +543,7 @@ of block bodies.
     \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
       & \text{block certificates} \\
     \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+    \fun{bUpdVotes} & \Block \totalf \seqof{Vote} & \text{Block update votes payload} \\
     \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
   \end{array}
   \end{equation*}
@@ -568,7 +572,7 @@ of block bodies.
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
-        \var{upiState} & \UPIState & \text{Update interface state} \\
+        \var{us} & \UPIState & \text{Update interface state} \\
         \var{ds} & \DIState & \text{Delegation state}
       \end{array}
     \right)
@@ -606,7 +610,7 @@ Figure~\ref{fig:defs:chain-extension}.
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
-         \var{upiState} \\
+         \var{us} \\
          \var{ds}
        \end{array}}
     \right)
@@ -617,7 +621,7 @@ Figure~\ref{fig:defs:chain-extension}.
          \signmapname \\
          \var{h'} \\
          \var{utxo} \\
-         \var{upiState} \\
+         \var{us} \\
          \var{ds}
        \end{array}}
     \right)
@@ -627,20 +631,20 @@ Figure~\ref{fig:defs:chain-extension}.
   \begin{equation*}
   \inference
   {
-    \neg\isebb{b} &
-    \bsize{b} \leq \maxblocksize{b}{\var{pp}} \\
+    \neg\isebb{b} \\
+    \bsize{b} \leq \maxblocksize{b}{\var{pps}} \\
     {\left(
         \begin{array}{l}
-          pp \\
+          \fun{pps} ~  us \\
           ds
         \end{array}
       \right)}
     \vdash
     \var{h} \trans{bhead}{\bhead{b}} \var{h'} &
-    \var{pp} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+    \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
-        pp \\
+        \fun{pps} ~  us \\
         ds \\
         bIx
       \end{array}
@@ -662,7 +666,7 @@ Figure~\ref{fig:defs:chain-extension}.
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
-         \var{upiState} \\
+         \var{us} \\
          \var{ds}
        \end{array}}
     \right)
@@ -673,7 +677,7 @@ Figure~\ref{fig:defs:chain-extension}.
          \signmapname' \\
          \var{h'} \\
          \var{utxo}' \\
-         \var{upiState} \\
+         \var{us} \\
          \var{ds'}
        \end{array}}
     \right)
