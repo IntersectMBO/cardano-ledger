@@ -125,7 +125,10 @@ isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 --
 --   TODO: Make this unnecessary by performing validation in the decoder
 validateProxySecretKey
-  :: MonadError Text m => ProtocolMagicId -> AProxySecretKey w ByteString -> m ()
+  :: MonadError Text m
+  => ProtocolMagicId
+  -> AProxySecretKey w ByteString
+  -> m ()
 validateProxySecretKey pm psk =
   verifyProxyCert
       pm

@@ -230,7 +230,10 @@ instance B.Buildable ProposalError where
       err
 
 checkProposal
-  :: MonadError ProposalError m => ProtocolMagicId -> AProposal ByteString -> m ()
+  :: MonadError ProposalError m
+  => ProtocolMagicId
+  -> AProposal ByteString
+  -> m ()
 checkProposal pm proposal = do
   let
     aBody = aProposalBody proposal
@@ -396,7 +399,8 @@ instance B.Buildable VoteError where
     VoteInvalidSignature sig ->
       bprint ("Invalid signature, " . build . ", in Vote") sig
 
-checkVote :: MonadError VoteError m => ProtocolMagicId -> AVote ByteString -> m ()
+checkVote
+  :: MonadError VoteError m => ProtocolMagicId -> AVote ByteString -> m ()
 checkVote pm uv = sigValid `orThrowError` VoteInvalidSignature (uvSignature uv)
  where
   sigValid = verifySignatureDecoded

@@ -60,8 +60,7 @@ import Cardano.Chain.Update
   , payload
   , signProposal
   )
-import Cardano.Crypto
-  (ProtocolMagicId(..), hash)
+import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Chain.Common.Example (exampleAttributes)
 import Test.Cardano.Chain.Slotting.Example (exampleSlottingData)

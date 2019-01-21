@@ -139,7 +139,8 @@ genSignatureEncoded pm genBytestring =
 genSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (Signature a)
 genSignature pm genA = sign pm <$> arbitrary <*> arbitrary <*> genA
 
-genRedeemSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature
+  :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> arbitrary <*> arbitrary <*> genA
 
 instance (Bi a, Arbitrary a) => Arbitrary (Signature a) where

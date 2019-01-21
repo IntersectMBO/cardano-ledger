@@ -108,11 +108,8 @@ exampleTxProof = TxProof 32 mroot hashWit
   hashWit = hash $ [(V.fromList [(PkWitness examplePublicKey exampleTxSig)])]
 
 exampleTxSig :: TxSig
-exampleTxSig = sign
-  (ProtocolMagicId 0)
-  SignForTestingOnly
-  exampleSecretKey
-  exampleTxSigData
+exampleTxSig =
+  sign (ProtocolMagicId 0) SignForTestingOnly exampleSecretKey exampleTxSigData
 
 exampleTxSigData :: TxSigData
 exampleTxSigData = TxSigData exampleHashTx

@@ -30,16 +30,7 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..), liftEither)
 import Data.Aeson
-  ( FromJSON
-  , ToJSON
-  , object
-  , parseJSON
-  , toJSON
-  , withObject
-  , (.:)
-  , (.:?)
-  , (.=)
-  )
+  (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
 import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import System.FilePath ((</>))
@@ -57,7 +48,7 @@ import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Crypto (Hash, ProtocolMagic (..), ProtocolMagicId (..), hash)
+import Cardano.Crypto (Hash, ProtocolMagic(..), ProtocolMagicId(..), hash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Update (ProtocolParameters)
@@ -161,7 +152,7 @@ configProtocolMagic = gdProtocolMagic . configGenesisData
 
 configProtocolMagicId :: Config -> ProtocolMagicId
 configProtocolMagicId =
-   getProtocolMagicId . gdProtocolMagic . configGenesisData
+  getProtocolMagicId . gdProtocolMagic . configGenesisData
 
 
 configGeneratedSecretsThrow :: MonadIO m => Config -> m GeneratedSecrets

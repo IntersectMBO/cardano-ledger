@@ -19,6 +19,4 @@ import qualified Test.Cardano.Crypto.Json
 main :: IO ()
 main = withArgs [] $ do
   hspec spec
-  runTests [ Test.Cardano.Crypto.Bi.tests
-           , Test.Cardano.Crypto.Json.tests
-           ]
+  runTests [Test.Cardano.Crypto.Bi.tests, Test.Cardano.Crypto.Json.tests]

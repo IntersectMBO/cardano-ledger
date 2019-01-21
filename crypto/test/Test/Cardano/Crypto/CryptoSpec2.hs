@@ -166,7 +166,9 @@ signThenVerify t sk a =
 signThenVerifyDifferentKey
   :: Bi a => SignTag -> SecretKey -> PublicKey -> a -> Property
 signThenVerifyDifferentKey t sk1 pk2 a = (toPublic sk1 /= pk2) ==> not
-  (verifySignature dummyProtocolMagicId t pk2 a $ sign dummyProtocolMagicId t sk1 a)
+  ( verifySignature dummyProtocolMagicId t pk2 a
+  $ sign dummyProtocolMagicId t sk1 a
+  )
 
 signThenVerifyDifferentData
   :: (Eq a, Bi a) => SignTag -> SecretKey -> a -> a -> Property
@@ -288,7 +290,7 @@ redeemThenCheckDifferentKey sk1 pk2 a = (redeemToPublic sk1 /= pk2) ==> not
 redeemThenCheckDifferentData
   :: (Eq a, Bi a) => RedeemSecretKey -> a -> a -> Property
 redeemThenCheckDifferentData sk a b = (a /= b) ==> not
-  ( verifyRedeemSig dummyProtocolMagicId SignForTestingOnly (redeemToPublic sk) b
+  (verifyRedeemSig dummyProtocolMagicId SignForTestingOnly (redeemToPublic sk) b
   $ redeemSign dummyProtocolMagicId SignForTestingOnly sk a
   )
 

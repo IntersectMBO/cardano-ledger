@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Crypto.Json
-  (tests)
+  ( tests
+  )
 where
 
 import Cardano.Prelude
@@ -10,9 +11,13 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Test.Cardano.Crypto.Example (exampleProtocolMagic0,
-    exampleProtocolMagic1, exampleProtocolMagic2,
-    exampleProtocolMagic3, exampleProtocolMagic4)
+import Test.Cardano.Crypto.Example
+  ( exampleProtocolMagic0
+  , exampleProtocolMagic1
+  , exampleProtocolMagic2
+  , exampleProtocolMagic3
+  , exampleProtocolMagic4
+  )
 
 --------------------------------------------------------------------------------
 -- ProtocolMagic

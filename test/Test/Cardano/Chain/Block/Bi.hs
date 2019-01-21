@@ -310,12 +310,7 @@ exampleHeader = mkHeaderExplicit
 
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = BlockSignature
-  (sign
-    (ProtocolMagicId 7)
-    SignMainBlock
-    exampleSecretKey
-    exampleToSign
-  )
+  (sign (ProtocolMagicId 7) SignMainBlock exampleSecretKey exampleToSign)
 
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig

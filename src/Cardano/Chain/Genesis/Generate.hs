@@ -126,8 +126,11 @@ generateGenesisData startTime genesisSpec = do
   let
     genesisDlgList :: [Delegation.Certificate]
     genesisDlgList =
-      (\(issuerSK, delegateSK) ->
-          createPsk (getProtocolMagicId pm) (noPassSafeSigner issuerSK) (toPublic delegateSK) 0
+      (\(issuerSK, delegateSK) -> createPsk
+          (getProtocolMagicId pm)
+          (noPassSafeSigner issuerSK)
+          (toPublic delegateSK)
+          0
         )
         <$> zip dlgIssuersSecrets richSecrets
 

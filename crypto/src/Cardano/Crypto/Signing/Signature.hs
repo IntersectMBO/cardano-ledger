@@ -150,7 +150,11 @@ safeSign :: Bi a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
 safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize'
 
 safeSignRaw
-  :: ProtocolMagicId -> Maybe SignTag -> SafeSigner -> ByteString -> Signature Raw
+  :: ProtocolMagicId
+  -> Maybe SignTag
+  -> SafeSigner
+  -> ByteString
+  -> Signature Raw
 safeSignRaw pm mbTag (SafeSigner (EncryptedSecretKey sk _) (PassPhrase pp)) x =
   Signature (CC.sign pp sk (tag <> x))
   where tag = maybe mempty (signTag pm) mbTag

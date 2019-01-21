@@ -57,11 +57,7 @@ import Cardano.Chain.Slotting
   , subSlotNumber
   )
 import Cardano.Crypto
-  ( AProxySecretKey(..)
-  , PublicKey
-  , pskOmega
-  , validateProxySecretKey
-  )
+  (AProxySecretKey(..), PublicKey, pskOmega, validateProxySecretKey)
 
 
 --------------------------------------------------------------------------------

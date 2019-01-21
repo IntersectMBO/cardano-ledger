@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
 module Cardano.Chain.Slotting.LocalSlotIndex
-  ( LocalSlotIndex (..)
+  ( LocalSlotIndex(..)
   , LocalSlotIndexError(..)
   , mkLocalSlotIndex
   , addLocalSlotIndex

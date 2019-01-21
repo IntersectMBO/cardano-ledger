@@ -97,4 +97,5 @@ checkPayload protocolMagicId (UnsafeAPayload payload _) = do
 
   forM_
     payload
-    (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagicId)
+    (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagicId
+    )

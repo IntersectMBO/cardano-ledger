@@ -23,12 +23,7 @@ import Cardano.Chain.Common
   (AddrAttributes(..), Attributes(..), Script(..), mkAttributes)
 import Cardano.Chain.Txp
   (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
-import Cardano.Crypto
-  ( ProtocolMagicId(..)
-  , SignTag(..)
-  , Signature
-  , sign
-  )
+import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip

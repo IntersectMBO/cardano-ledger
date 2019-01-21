@@ -177,7 +177,11 @@ genProxySecretKey pm genW =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
-  :: (Bi w, Bi a) => ProtocolMagicId -> Gen a -> Gen w -> Gen (ProxySignature w a)
+  :: (Bi w, Bi a)
+  => ProtocolMagicId
+  -> Gen a
+  -> Gen w
+  -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
   delegateSk       <- genSecretKey
   issuerSafeSigner <- genSafeSigner
@@ -198,7 +202,8 @@ genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
   signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSecretKey <*> genB
 
-genRedeemSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature
+  :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
  where
   gst  = genSignTag

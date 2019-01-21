@@ -69,6 +69,4 @@ signTag protocolMagic = \case
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
   SignProxySK        -> "\x0a" <> network
- where
-  network =
-    Bi.serialize' (unProtocolMagicId $ protocolMagic)
+  where network = Bi.serialize' (unProtocolMagicId $ protocolMagic)

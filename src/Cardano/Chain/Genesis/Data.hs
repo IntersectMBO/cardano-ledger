@@ -43,7 +43,12 @@ import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto
-  (getProtocolMagic, ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..), hashRaw)
+  ( getProtocolMagic
+  , ProtocolMagic(..)
+  , ProtocolMagicId(..)
+  , RequiresNetworkMagic(..)
+  , hashRaw
+  )
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be
