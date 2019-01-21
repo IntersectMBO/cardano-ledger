@@ -55,6 +55,7 @@
 \newcommand{\var}[1]{\mathit{#1}}
 \newcommand{\fun}[1]{\mathsf{#1}}
 \newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\pp}[1]{\mathsf{#1}}
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
@@ -237,6 +238,12 @@ There are several standard sets used in the document:
 
 \newcommand{\Epoch}{\type{Epoch}}
 
+\newcommand{\ETState}{\type{ETState}}
+\newcommand{\ETEnv}{\type{ETEnv}}
+
+% Imported definitions
+\newcommand{\UPIState}{\type{UPIState}}
+
 This section should cover:
 \begin{itemize}
 \item How we determine the end of an epoch
@@ -245,7 +252,148 @@ This section should cover:
 
 The epoch transition rules should compute whether a given slot is at the end of
 an epoch
+\begin{figure}[ht]
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \pp{slotsPerEpoch} & \mathbb{N} & \text{Number of slots per epoch} \\
+    \end{array}
+  \end{equation*}
+  \caption{Epoch transition types and functions}
+  \label{fig:defs:epoch}
+\end{figure}
 
+\begin{figure}[ht]
+  \emph{Epoch transition environments}
+  \begin{equation*}
+    \ETEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+        \var{slot} & \Slot & \text{Current slot} \\
+        \var{dms} & \VKey \mapsto \VKeyGen & \text{Delegation map}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Epoch transition states}
+  \begin{equation*}
+    \ETState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{e_c} & \Epoch & \text{Current epoch} \\
+        \var{slot_r} & \Slot & \text{First slot of the current epoch} \\
+        \var{us} & \UPIState & \text{Update interface state}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Epoch transition transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{epoch}{} \var{\_} \subseteq
+    \powerset (\ETEnv \times \ETState \times \ETState)
+  \end{equation*}
+  \caption{Epoch transition transition-system types}
+  \label{fig:ts-types:epoch}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    {
+      \pp{slotsPerEpoch} \mapsto \var{es} \in \var{pps}
+      \\
+      \var{slot} < \var{slot_r} + \var{es}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+          \var{slot} \\
+          \var{dms}
+        \end{array}}
+      \right)
+      \vdash
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{slot_r} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+      \trans{epoch}{}
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{slot_r} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+    }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+    \inference
+    {
+      \pp{slotsPerEpoch} \mapsto \var{es} \in \var{pps}
+      &
+      \var{slot} \geq \var{slot_r} + \var{es}
+      \\
+      e_n = e_c + 1
+      \\
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)
+      }
+      \vdash \var{us} \trans{upiec}{\var{e_n}} \var{us'}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+          \var{slot} \\
+          \var{dms}
+        \end{array}}
+      \right)
+      \vdash
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{slot_r} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+      \trans{epoch}{}
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_n} \\
+          \var{slot} \\
+          \var{us'}
+         \end{array}
+        }
+        \right)
+      }
+    }
+  \end{equation*}
+  \caption{Epoch transition rules}
+  \label{fig:rules:epoch}
+\end{figure}
+
+\clearpage
 \section{Counting signed blocks}
 
 \newcommand{\BSCEnv}{\type{BSCEnv}}
@@ -290,8 +438,8 @@ $1/5 \leq t \leq 1/4$.
   \emph{Protocol parameters}
   \begin{equation*}
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
-    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+    \pp{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+    \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
 
@@ -338,7 +486,7 @@ $1/5 \leq t \leq 1/4$.
   \begin{equation*}
     \inference
     {
-      \fun{blockSignatureCountWindow} \partialf \var{K} \in pps & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
+      \pp{blockSignatureCountWindow} \partialf \var{K} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
       \var{D} = (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
       \signmapname' = \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
     }
@@ -387,8 +535,8 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bhtosignname}{bhToSign}
 \newcommand{\bhtosign}[1]{\fun{\bhtosignname}\ #1}
 
-\newcommand{\maxblocksize}{\fun{maxBlockSize}}
-\newcommand{\maxheadersize}{\fun{maxHeaderSize}}
+\newcommand{\maxblocksize}{\pp{maxBlockSize}}
+\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
 
 We delineate here between validating the header and body of a block. It's useful
 to make this distinction since we may validate headers ahead of validating the
@@ -524,12 +672,6 @@ of block bodies.
     \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
     \end{array}
   \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
-    \end{array}
-  \end{equation*}
   \caption{Block body validation types and functions}
   \label{fig:defs:bbody}
 \end{figure}
@@ -595,7 +737,6 @@ of block bodies.
 \newcommand{\DIState}{\type{DIState}}
 
 \newcommand{\UPIEnv}{\type{UPIEnv}}
-\newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UProp}{\type{UProp}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
@@ -638,15 +779,6 @@ of block bodies.
 \end{figure}
 
 \begin{figure}[ht]
-  % \emph{Chain extension environments}
-  % \begin{equation*}
-  %   \CEEnv =
-  %   \left(
-  %     \begin{array}{r@{~\in~}lr}
-  %       \var{slot} & \Slot & \text{Current slot}
-  %     \end{array}
-  %   \right)
-  % \end{equation*}
   \emph{Chain extension states}
   \begin{equation*}
     \CEState =
@@ -654,6 +786,7 @@ of block bodies.
       \begin{array}{r@{~\in~}lr}
         \var{bIx} & \BlockIx & \text{Current block index} \\
         \var{e_c} & \Epoch & \text{Current epoch} \\
+        \var{slot_r} & \Slot & \text{First slot of the current epoch} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
@@ -692,6 +825,8 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx \\
+         \var{e_c} \\
+         \var{slot_r} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -703,6 +838,8 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx \\
+         \var{e_c} \\
+         \var{slot_r} \\
          \signmapname \\
          \var{h'} \\
          \var{utxo} \\
@@ -717,7 +854,38 @@ Figure~\ref{fig:defs:chain-extension}.
   \inference
   {
     \neg\isebb{b} \\
-    \var{slot} \vdash \var{e_c} \trans{epoch}{} \var{e_n}
+    {\left(
+        \begin{array}{l}
+          \fun{pps} ~ us \\
+          \var{slot} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash
+    {\left(
+        \begin{array}{l}
+          \var{e_c} \\
+          \var{slot_r} \\
+          us
+        \end{array}
+      \right)}
+    \trans{epoch}{}
+    {\left(
+        \begin{array}{l}
+          \var{e_n} \\
+          \var{slot_n} \\
+          us'
+        \end{array}
+      \right)}
+    &
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us'} \trans{upireg}{\bupdprop{b}} \var{us''}
     \\
     {\left(
         \begin{array}{l}
@@ -726,8 +894,8 @@ Figure~\ref{fig:defs:chain-extension}.
           \fun{dms} ~ \var{ds}
         \end{array}
       \right)}
-    \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
-    &&
+    \vdash \var{us''} \trans{upivotes}{\bupdvotes{b}} \var{us'''}
+    &
     {\left(
         \begin{array}{l}
           \var{slot} \\
@@ -735,16 +903,7 @@ Figure~\ref{fig:defs:chain-extension}.
           \fun{dms} ~ \var{ds}
         \end{array}
       \right)}
-    \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
-    \\
-    {\left(
-        \begin{array}{l}
-          \var{slot} \\
-          \var{e_n} \\
-          \fun{dms} ~ \var{ds}
-        \end{array}
-      \right)}
-    \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''}
+    \vdash \var{us'''} \trans{upiend}{\bendorsment{b}} \var{us''''}
     \\
     {\left(
         \begin{array}{l}
@@ -777,6 +936,7 @@ Figure~\ref{fig:defs:chain-extension}.
       {\begin{array}{c}
          bIx \\
          e_c \\
+         \var{slot_r} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -789,10 +949,11 @@ Figure~\ref{fig:defs:chain-extension}.
       {\begin{array}{c}
          bIx + 1 \\
          e_n \\
+         \var{slot_n} \\
          \signmapname' \\
          \var{h'} \\
          \var{utxo}' \\
-         \var{us'''} \\
+         \var{us''''} \\
          \var{ds'}
        \end{array}}
     \right)
