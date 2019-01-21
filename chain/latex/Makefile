@@ -36,7 +36,7 @@ $(DOCNAME).pdf: $(DOCNAME).tex
 	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 watch: $(DOCNAME).tex
-	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
+	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode -synctex=1" -use-make $(DOCNAME).tex
 
 clean:
 	latexmk -CA
