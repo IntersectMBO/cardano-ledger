@@ -70,7 +70,7 @@ import Cardano.Chain.Update.SystemTag
   (SystemTag, SystemTagError, checkSystemTag)
 import Cardano.Crypto
   ( Hash
-  , ProtocolMagic
+  , ProtocolMagicId
   , PublicKey
   , SafeSigner
   , SecretKey
@@ -207,7 +207,7 @@ decodeAProposal = do
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
 
-signProposal :: ProtocolMagic -> ProposalBody -> SafeSigner -> Proposal
+signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
 signProposal pm body ss = mkProposal body issuer signature
  where
   issuer    = safeToPublic ss
@@ -230,7 +230,7 @@ instance B.Buildable ProposalError where
       err
 
 checkProposal
-  :: MonadError ProposalError m => ProtocolMagic -> AProposal ByteString -> m ()
+  :: MonadError ProposalError m => ProtocolMagicId -> AProposal ByteString -> m ()
 checkProposal pm proposal = do
   let
     aBody = aProposalBody proposal
@@ -346,7 +346,7 @@ decodeAVote = do
 
 -- | A safe constructor for 'UnsafeVote'
 mkVote
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> SecretKey
   -- ^ The voter
   -> UpId
@@ -362,7 +362,7 @@ mkVote pm sk proposalId decision = UnsafeVote
 
 -- | Same as 'mkVote', but uses 'SafeSigner'
 mkVoteSafe
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> SafeSigner
   -- ^ The voter
   -> UpId
@@ -396,7 +396,7 @@ instance B.Buildable VoteError where
     VoteInvalidSignature sig ->
       bprint ("Invalid signature, " . build . ", in Vote") sig
 
-checkVote :: MonadError VoteError m => ProtocolMagic -> AVote ByteString -> m ()
+checkVote :: MonadError VoteError m => ProtocolMagicId -> AVote ByteString -> m ()
 checkVote pm uv = sigValid `orThrowError` VoteInvalidSignature (uvSignature uv)
  where
   sigValid = verifySignatureDecoded

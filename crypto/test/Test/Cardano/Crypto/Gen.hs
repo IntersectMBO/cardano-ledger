@@ -4,6 +4,7 @@ module Test.Cardano.Crypto.Gen
   (
         -- Protocol Magic Generator
     genProtocolMagic
+  , genProtocolMagicId
 
         -- Sign Tag Generator
   , genSignTag
@@ -167,16 +168,16 @@ genRedeemSecretKey = do
 -- Proxy Cert and Key Generators
 --------------------------------------------------------------------------------
 
-genProxyCert :: Bi w => ProtocolMagic -> Gen w -> Gen (ProxyCert w)
+genProxyCert :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
   safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
 
-genProxySecretKey :: Bi w => ProtocolMagic -> Gen w -> Gen (ProxySecretKey w)
+genProxySecretKey :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxySecretKey w)
 genProxySecretKey pm genW =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
-  :: (Bi w, Bi a) => ProtocolMagic -> Gen a -> Gen w -> Gen (ProxySignature w a)
+  :: (Bi w, Bi a) => ProtocolMagicId -> Gen a -> Gen w -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
   delegateSk       <- genSecretKey
   issuerSafeSigner <- genSafeSigner
@@ -190,14 +191,14 @@ genProxySignature pm genA genW = do
 -- Signature Generators
 --------------------------------------------------------------------------------
 
-genSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (Signature a)
+genSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (Signature a)
 genSignature pm genA = sign pm <$> genSignTag <*> genSecretKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
-  signEncoded <$> genProtocolMagic <*> genSignTag <*> genSecretKey <*> genB
+  signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSecretKey <*> genB
 
-genRedeemSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
  where
   gst  = genSignTag
@@ -256,5 +257,5 @@ genTextHash = do
   sampleText <- Gen.text (Range.linear 0 10) Gen.alphaNum
   pure (hash sampleText :: Hash Text)
 
-feedPM :: (ProtocolMagic -> Gen a) -> Gen a
-feedPM genA = genA =<< genProtocolMagic
+feedPM :: (ProtocolMagicId -> Gen a) -> Gen a
+feedPM genA = genA =<< genProtocolMagicId

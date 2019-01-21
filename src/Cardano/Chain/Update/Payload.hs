@@ -48,7 +48,7 @@ import Cardano.Chain.Update.Vote
   , formatMaybeProposal
   , formatVoteShort
   )
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
 -- | Update System payload
 data APayload a = APayload
@@ -107,7 +107,7 @@ instance B.Buildable PayloadError where
       err
 
 checkPayload
-  :: MonadError PayloadError m => ProtocolMagic -> APayload ByteString -> m ()
+  :: MonadError PayloadError m => ProtocolMagicId -> APayload ByteString -> m ()
 checkPayload pm p = do
   maybe
     (pure ())

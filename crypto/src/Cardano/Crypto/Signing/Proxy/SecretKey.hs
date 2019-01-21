@@ -44,7 +44,7 @@ import Cardano.Binary.Class
   , encodeListLen
   , enforceSize
   )
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Proxy.Cert
   (ProxyCert, safeCreateProxyCert, verifyProxyCert)
 import Cardano.Crypto.Signing.PublicKey (PublicKey)
@@ -109,7 +109,7 @@ instance FromJSON w => FromJSON (AProxySecretKey w ()) where
 
 -- | Creates proxy secret key
 createPsk
-  :: Bi w => ProtocolMagic -> SafeSigner -> PublicKey -> w -> ProxySecretKey w
+  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxySecretKey w
 createPsk pm ss delegatePk w = UnsafeAProxySecretKey
   { aPskOmega     = Annotated w ()
   , pskIssuerPk   = safeToPublic ss
@@ -125,7 +125,7 @@ isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 --
 --   TODO: Make this unnecessary by performing validation in the decoder
 validateProxySecretKey
-  :: MonadError Text m => ProtocolMagic -> AProxySecretKey w ByteString -> m ()
+  :: MonadError Text m => ProtocolMagicId -> AProxySecretKey w ByteString -> m ()
 validateProxySecretKey pm psk =
   verifyProxyCert
       pm

@@ -32,7 +32,7 @@ import Cardano.Chain.Genesis
   , mkGenesisDelegation
   , mkGenesisSpec
   )
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen
   (genBlockCount, genLovelace, genLovelacePortion)
@@ -46,7 +46,7 @@ genGenesisHash = do
   th <- genTextHash
   pure (GenesisHash (coerce th))
 
-genStaticConfig :: ProtocolMagic -> Gen StaticConfig
+genStaticConfig :: ProtocolMagicId -> Gen StaticConfig
 genStaticConfig pm = Gen.choice
   [ GCSrc <$> Gen.string (Range.constant 10 25) Gen.alphaNum <*> genHashRaw
   , GCSpec <$> genGenesisSpec pm
@@ -56,7 +56,7 @@ genFakeAvvmOptions :: Gen FakeAvvmOptions
 genFakeAvvmOptions =
   FakeAvvmOptions <$> Gen.word Range.constantBounded <*> genLovelace
 
-genGenesisDelegation :: ProtocolMagic -> Gen GenesisDelegation
+genGenesisDelegation :: ProtocolMagicId -> Gen GenesisDelegation
 genGenesisDelegation pm = do
   certificates <- genCertificateDistinctList pm
   case mkGenesisDelegation certificates of
@@ -72,7 +72,7 @@ genGenesisInitializer =
     <*> Gen.bool
     <*> Gen.integral (Range.constant 0 10)
 
-genGenesisSpec :: ProtocolMagic -> Gen GenesisSpec
+genGenesisSpec :: ProtocolMagicId -> Gen GenesisSpec
 genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
  where
   mkGenSpec =

@@ -41,7 +41,7 @@ import Cardano.Chain.Block
 import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
@@ -58,7 +58,7 @@ import Test.Cardano.Crypto.Gen
   )
 
 
-genBlockSignature :: ProtocolMagic -> SlotCount -> Gen BlockSignature
+genBlockSignature :: ProtocolMagicId -> SlotCount -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
   [ BlockSignature <$> genSignature pm mts
   , BlockPSignatureHeavy <$> genProxySignature pm mts genEpochIndex
@@ -68,7 +68,7 @@ genBlockSignature pm epochSlots = Gen.choice
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
 
-genBody :: ProtocolMagic -> Gen Body
+genBody :: ProtocolMagicId -> Gen Body
 genBody pm =
   body
     <$> genTxPayload pm
@@ -78,7 +78,7 @@ genBody pm =
 
 -- We use `Nothing` as the ProxySKBlockInfo to avoid clashing key errors
 -- (since we use example keys which aren't related to each other)
-genHeader :: ProtocolMagic -> SlotCount -> Gen Header
+genHeader :: ProtocolMagicId -> SlotCount -> Gen Header
 genHeader pm epochSlots =
   mkHeaderExplicit pm
     <$> genHeaderHash
@@ -89,7 +89,7 @@ genHeader pm epochSlots =
     <*> genBody pm
     <*> genExtraHeaderData
 
-genConsensusData :: ProtocolMagic -> SlotCount -> Gen ConsensusData
+genConsensusData :: ProtocolMagicId -> SlotCount -> Gen ConsensusData
 genConsensusData pm epochSlots =
   consensusData
     <$> genSlotId epochSlots
@@ -108,7 +108,7 @@ genExtraHeaderData =
     <*> pure (mkAttributes ())
     <*> genAbstractHash genExtraBodyData
 
-genProof :: ProtocolMagic -> Gen Proof
+genProof :: ProtocolMagicId -> Gen Proof
 genProof pm =
   Proof
     <$> genTxProof pm
@@ -116,7 +116,7 @@ genProof pm =
     <*> genAbstractHash (Delegation.genPayload pm)
     <*> Update.genProof pm
 
-genToSign :: ProtocolMagic -> SlotCount -> Gen ToSign
+genToSign :: ProtocolMagicId -> SlotCount -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
     <$> genAbstractHash (genHeader pm epochSlots)
@@ -125,7 +125,7 @@ genToSign pm epochSlots =
     <*> genChainDifficulty
     <*> genExtraHeaderData
 
-genBlock :: ProtocolMagic -> SlotCount -> Gen Block
+genBlock :: ProtocolMagicId -> SlotCount -> Gen Block
 genBlock pm epochSlots =
   mkBlockExplicit pm
     <$> Update.genProtocolVersion
@@ -140,7 +140,7 @@ genBlock pm epochSlots =
 genSlogUndo :: Gen SlogUndo
 genSlogUndo = SlogUndo <$> Gen.maybe genFlatSlotId
 
-genUndo :: ProtocolMagic -> SlotCount -> Gen Undo
+genUndo :: ProtocolMagicId -> SlotCount -> Gen Undo
 genUndo pm epochSlots =
   Undo
     <$> genTxpUndo

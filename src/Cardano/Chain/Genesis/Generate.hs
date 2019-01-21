@@ -63,6 +63,7 @@ import Cardano.Crypto
   , deterministic
   , emptyPassphrase
   , encToSecret
+  , getProtocolMagicId
   , keyGen
   , noPassEncrypt
   , noPassSafeSigner
@@ -126,7 +127,7 @@ generateGenesisData startTime genesisSpec = do
     genesisDlgList :: [Delegation.Certificate]
     genesisDlgList =
       (\(issuerSK, delegateSK) ->
-          createPsk pm (noPassSafeSigner issuerSK) (toPublic delegateSK) 0
+          createPsk (getProtocolMagicId pm) (noPassSafeSigner issuerSK) (toPublic delegateSK) 0
         )
         <$> zip dlgIssuersSecrets richSecrets
 

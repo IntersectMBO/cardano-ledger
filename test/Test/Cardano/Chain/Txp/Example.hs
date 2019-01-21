@@ -57,11 +57,9 @@ import Cardano.Chain.Txp
 import Cardano.Crypto
   ( AbstractHash(..)
   , Hash
-  , ProtocolMagic(..)
   , ProtocolMagicId(..)
   , PublicKey(..)
   , RedeemSignature
-  , RequiresNetworkMagic(..)
   , SignTag(..)
   , hash
   , redeemDeterministicKeyGen
@@ -111,7 +109,7 @@ exampleTxProof = TxProof 32 mroot hashWit
 
 exampleTxSig :: TxSig
 exampleTxSig = sign
-  (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+  (ProtocolMagicId 0)
   SignForTestingOnly
   exampleSecretKey
   exampleTxSigData
@@ -127,7 +125,7 @@ exampleTxWitness = V.fromList [(PkWitness examplePublicKey exampleTxSig)]
 
 exampleRedeemSignature :: RedeemSignature TxSigData
 exampleRedeemSignature = redeemSign
-  (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+  (ProtocolMagicId 0)
   SignForTestingOnly
   rsk
   exampleTxSigData

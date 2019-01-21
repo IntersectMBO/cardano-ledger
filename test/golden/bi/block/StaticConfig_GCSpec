@@ -1,6 +1,6 @@
 {
     "spec": {
-        "protocolParameters": {
+        "blockVersionData": {
             "txFeePolicy": {
                 "txSizeLinear": {
                     "a": 999,
@@ -32,10 +32,7 @@
             "U4lgqRZyawnwXJ1NSpIrhbThGs_MFDRnPZUBm3qaUtI=": 36524597913081152,
             "dtXbK7ASFLEa611AHt7SDk_48fVbNja-Tj7PgbE7tPE=": 37343863242999412
         },
-        "protocolMagic": {
-            "pm": 1783847074,
-            "requiresNetworkMagic": "RequiresMagic"
-        },
+        "protocolMagic": 1783847074,
         "initializer": {
             "useHeavyDlg": false,
             "avvmBalanceFactor": 0.366832547637728,

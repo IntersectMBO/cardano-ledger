@@ -1,7 +1,10 @@
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -24,6 +27,8 @@ import Data.Aeson.Types (typeMismatch)
 import Data.List (lookup)
 import Data.String (String)
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
+
+import Cardano.Binary.Class (Bi)
 -- | Magic number which should differ for different clusters. It's
 --   defined here, because it's used for signing. It also used for other
 --   things (e. g. it's part of a serialized block).
@@ -38,7 +43,9 @@ data ProtocolMagic = ProtocolMagic
 
 newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Int32
-  } deriving (Show, Eq, Generic, NFData)
+  } deriving (Show, Eq, Generic)
+    deriving newtype Bi
+    deriving anyclass NFData
 
 -- mhueschen: For backwards-compatibility reasons, I redefine this function
 -- in terms of the two record accessors.

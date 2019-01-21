@@ -64,7 +64,7 @@ import Cardano.Chain.Update
   , mkVote
   , payload
   )
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen
   ( genChainDifficulty
@@ -143,7 +143,7 @@ genProtocolVersionState =
     <*> Gen.maybe genHeaderHash
     <*> Gen.maybe genHeaderHash
 
-genConfirmedProposalState :: ProtocolMagic -> Gen ConfirmedProposalState
+genConfirmedProposalState :: ProtocolMagicId -> Gen ConfirmedProposalState
 genConfirmedProposalState pm =
   ConfirmedProposalState
     <$> genProposal pm
@@ -157,7 +157,7 @@ genConfirmedProposalState pm =
     <*> genLovelace
 
 genDecidedProposalState
-  :: ProtocolMagic -> SlotCount -> Gen DecidedProposalState
+  :: ProtocolMagicId -> SlotCount -> Gen DecidedProposalState
 genDecidedProposalState pm epochSlots =
   DecidedProposalState
     <$> Gen.bool
@@ -171,7 +171,7 @@ genDpsExtra = DpsExtra <$> genHeaderHash <*> Gen.bool
 genPrevValue :: Gen a -> Gen (PrevValue a)
 genPrevValue = fmap maybeToPrev . Gen.maybe
 
-genProposalState :: ProtocolMagic -> SlotCount -> Gen ProposalState
+genProposalState :: ProtocolMagicId -> SlotCount -> Gen ProposalState
 genProposalState pm epochSlots = Gen.choice
   [ PSUndecided <$> genUndecidedProposalState pm epochSlots
   , PSDecided <$> genDecidedProposalState pm epochSlots
@@ -192,7 +192,7 @@ genSystemTag :: Gen SystemTag
 genSystemTag = SystemTag <$> Gen.text (Range.constant 0 10) Gen.alphaNum
 
 genUndecidedProposalState
-  :: ProtocolMagic -> SlotCount -> Gen UndecidedProposalState
+  :: ProtocolMagicId -> SlotCount -> Gen UndecidedProposalState
 genUndecidedProposalState pm epochSlots =
   UndecidedProposalState
     <$> Gen.map (Range.linear 0 10) ((,) <$> genPublicKey <*> genVoteState)
@@ -202,7 +202,7 @@ genUndecidedProposalState pm epochSlots =
     <*> genLovelace
     <*> Gen.maybe genUpsExtra
 
-genUndo :: ProtocolMagic -> SlotCount -> Gen USUndo
+genUndo :: ProtocolMagicId -> SlotCount -> Gen USUndo
 genUndo pm epochSlots =
   USUndo
     <$> Gen.map
@@ -232,22 +232,22 @@ genUpdateData :: Gen UpdateData
 genUpdateData =
   UpdateData <$> genHashRaw <*> genHashRaw <*> genHashRaw <*> genHashRaw
 
-genPayload :: ProtocolMagic -> Gen Payload
+genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm = payload <$> Gen.maybe (genProposal pm) <*> Gen.list
   (Range.linear 0 10)
   (genVote pm)
 
-genProof :: ProtocolMagic -> Gen Proof
+genProof :: ProtocolMagicId -> Gen Proof
 genProof pm = genAbstractHash (genPayload pm)
 
-genProposal :: ProtocolMagic -> Gen Proposal
+genProposal :: ProtocolMagicId -> Gen Proposal
 genProposal pm =
   mkProposal
     <$> genProposalBody
     <*> genPublicKey
     <*> genSignature pm genProposalBody
 
-genProposals :: ProtocolMagic -> Gen Proposals
+genProposals :: ProtocolMagicId -> Gen Proposals
 genProposals pm =
   Gen.map (Range.linear 0 10) ((,) <$> genUpId pm <*> genProposal pm)
 
@@ -260,7 +260,7 @@ genProposalBody =
     <*> genUpsData
     <*> pure (mkAttributes ())
 
-genUpId :: ProtocolMagic -> Gen UpId
+genUpId :: ProtocolMagicId -> Gen UpId
 genUpId pm = genAbstractHash (genProposal pm)
 
 genUpsData :: Gen (Map SystemTag UpdateData)
@@ -270,10 +270,10 @@ genUpsData =
 genUpsExtra :: Gen UpsExtra
 genUpsExtra = UpsExtra <$> genHeaderHash
 
-genVote :: ProtocolMagic -> Gen Vote
+genVote :: ProtocolMagicId -> Gen Vote
 genVote pm = mkVote pm <$> genSecretKey <*> genUpId pm <*> Gen.bool
 
-genVoteId :: ProtocolMagic -> Gen VoteId
+genVoteId :: ProtocolMagicId -> Gen VoteId
 genVoteId pm = (,,) <$> genUpId pm <*> genPublicKey <*> Gen.bool
 
 genVoteState :: Gen VoteState

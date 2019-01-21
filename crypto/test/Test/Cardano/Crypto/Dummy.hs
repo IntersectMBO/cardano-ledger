@@ -2,6 +2,7 @@
 
 module Test.Cardano.Crypto.Dummy
   ( dummyProtocolMagic
+  , dummyProtocolMagicId
   )
 where
 

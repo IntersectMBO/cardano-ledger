@@ -60,7 +60,7 @@ import Cardano.Chain.Txp
   , mkTxAux
   , mkTxPayload
   )
-import Cardano.Crypto (Hash, ProtocolMagic, decodeHash, sign)
+import Cardano.Crypto (Hash, ProtocolMagicId, decodeHash, sign)
 
 import Test.Cardano.Chain.Common.Gen
   (genAddress, genLovelace, genMerkleRoot, genScript)
@@ -75,10 +75,10 @@ import Test.Cardano.Crypto.Gen
   )
 
 
-genPkWitness :: ProtocolMagic -> Gen TxInWitness
+genPkWitness :: ProtocolMagicId -> Gen TxInWitness
 genPkWitness pm = PkWitness <$> genPublicKey <*> genTxSig pm
 
-genRedeemWitness :: ProtocolMagic -> Gen TxInWitness
+genRedeemWitness :: ProtocolMagicId -> Gen TxInWitness
 genRedeemWitness pm =
   RedeemWitness <$> genRedeemPublicKey <*> genRedeemSignature pm genTxSigData
 
@@ -91,7 +91,7 @@ genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
 genTxAttributes :: Gen TxAttributes
 genTxAttributes = pure $ mkAttributes ()
 
-genTxAux :: ProtocolMagic -> Gen TxAux
+genTxAux :: ProtocolMagicId -> Gen TxAux
 genTxAux pm = mkTxAux <$> genTx <*> (genTxWitness pm)
 
 genTxHash :: Gen (Hash Tx)
@@ -136,21 +136,21 @@ genTxpConfiguration = do
 genTxpUndo :: Gen TxpUndo
 genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
-genTxPayload :: ProtocolMagic -> Gen TxPayload
+genTxPayload :: ProtocolMagicId -> Gen TxPayload
 genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
-genTxProof :: ProtocolMagic -> Gen TxProof
+genTxProof :: ProtocolMagicId -> Gen TxProof
 genTxProof pm =
   TxProof <$> genWord32 <*> genMerkleRoot genTx <*> genAbstractHash
     (Gen.list (Range.linear 1 5) (genTxWitness pm))
 
-genTxSig :: ProtocolMagic -> Gen TxSig
+genTxSig :: ProtocolMagicId -> Gen TxSig
 genTxSig pm = sign pm <$> genSignTag <*> genSecretKey <*> genTxSigData
 
 genTxSigData :: Gen TxSigData
 genTxSigData = TxSigData <$> genTxHash
 
-genTxInWitness :: ProtocolMagic -> Gen TxInWitness
+genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice gens
  where
   gens =
@@ -163,7 +163,7 @@ genTxInWitness pm = Gen.choice gens
 genTxUndo :: Gen TxUndo
 genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
 
-genTxWitness :: ProtocolMagic -> Gen TxWitness
+genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
   V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
 

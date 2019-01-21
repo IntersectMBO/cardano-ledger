@@ -24,9 +24,7 @@ import Cardano.Chain.Common
 import Cardano.Chain.Txp
   (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
 import Cardano.Crypto
-  ( ProtocolMagic(..)
-  , ProtocolMagicId(..)
-  , RequiresNetworkMagic(..)
+  ( ProtocolMagicId(..)
   , SignTag(..)
   , Signature
   , sign
@@ -227,7 +225,7 @@ goldenTxSig :: Property
 goldenTxSig = goldenTestBi txSigGold "test/golden/bi/txp/TxSig"
  where
   txSigGold = sign
-    (ProtocolMagic (ProtocolMagicId 0) RequiresMagic)
+    (ProtocolMagicId 0)
     SignForTestingOnly
     exampleSecretKey
     exampleTxSigData
@@ -260,7 +258,7 @@ sizeEstimates
   = let
       sizeTestGen :: (Show a, Bi a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg { gen = g }
-      pm = ProtocolMagic (ProtocolMagicId 0) RequiresMagic
+      pm = ProtocolMagicId 0
       knownTxIn (TxInUnknown _ _) = False
       knownTxIn _                 = True
 

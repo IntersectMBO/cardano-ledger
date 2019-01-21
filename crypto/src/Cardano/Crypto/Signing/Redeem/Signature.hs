@@ -22,7 +22,7 @@ import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary.Class (Bi, Decoded(..), Raw, serialize')
 import Cardano.Crypto.Orphans ()
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Redeem.PublicKey (RedeemPublicKey(..))
 import Cardano.Crypto.Signing.Redeem.SecretKey (RedeemSecretKey(..))
 import Cardano.Crypto.Signing.Tag (SignTag, signTag)
@@ -41,7 +41,7 @@ deriveJSON defaultOptions ''RedeemSignature
 -- | Encode something with 'Bi' and sign it
 redeemSign
   :: Bi a
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> RedeemSecretKey
   -> a
@@ -50,7 +50,7 @@ redeemSign pm tag k = coerce . redeemSignRaw pm (Just tag) k . serialize'
 
 -- | Alias for constructor
 redeemSignRaw
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> Maybe SignTag
   -> RedeemSecretKey
   -> ByteString
@@ -62,7 +62,7 @@ redeemSignRaw pm mbTag (RedeemSecretKey k) x =
 -- | Verify a redeem signature
 verifyRedeemSig
   :: Bi a
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> RedeemPublicKey
   -> a
@@ -73,7 +73,7 @@ verifyRedeemSig pm tag k x s =
 
 verifyRedeemSigDecoded
   :: Decoded t
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> RedeemPublicKey
   -> t
@@ -84,7 +84,7 @@ verifyRedeemSigDecoded pm tag k x s =
 
 -- | Verify raw 'ByteString'
 verifyRedeemSigRaw
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> Maybe SignTag
   -> RedeemPublicKey
   -> ByteString

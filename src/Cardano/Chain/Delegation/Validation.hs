@@ -46,7 +46,7 @@ import Cardano.Chain.Genesis as Genesis
   , configBootStakeholders
   , configEpochSlots
   , configHeavyDelegation
-  , configProtocolMagic
+  , configProtocolMagicId
   )
 import Cardano.Chain.Slotting
   ( EpochIndex
@@ -57,7 +57,11 @@ import Cardano.Chain.Slotting
   , subSlotNumber
   )
 import Cardano.Crypto
-  (AProxySecretKey(..), PublicKey, pskOmega, validateProxySecretKey)
+  ( AProxySecretKey(..)
+  , PublicKey
+  , pskOmega
+  , validateProxySecretKey
+  )
 
 
 --------------------------------------------------------------------------------
@@ -127,7 +131,7 @@ scheduleCertificate config slot d ss cert = do
     `orThrowError` SchedulingMultipleDelegationsForSlot slot delegator
 
   -- Check that the delegation certificate is valid
-  validateProxySecretKey (configProtocolMagic config) cert
+  validateProxySecretKey (configProtocolMagicId config) cert
     `wrapError` SchedulingInvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair

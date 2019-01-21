@@ -14,7 +14,7 @@ import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
 import qualified Cardano.Binary.Class as Bi
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..), ProtocolMagicId(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 
 
 -- | To protect against replay attacks (i.e. when an attacker intercepts a
@@ -56,7 +56,7 @@ instance Buildable SignTag where
 
 -- | Get magic bytes corresponding to a 'SignTag'. Guaranteed to be different
 --   (and begin with a different byte) for different tags.
-signTag :: ProtocolMagic -> SignTag -> ByteString
+signTag :: ProtocolMagicId -> SignTag -> ByteString
 signTag protocolMagic = \case
   SignForTestingOnly -> "\x00"
   SignTx             -> "\x01" <> network
@@ -71,4 +71,4 @@ signTag protocolMagic = \case
   SignProxySK        -> "\x0a" <> network
  where
   network =
-    Bi.serialize' (unProtocolMagicId $ getProtocolMagicId protocolMagic)
+    Bi.serialize' (unProtocolMagicId $ protocolMagic)
