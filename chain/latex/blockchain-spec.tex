@@ -235,6 +235,8 @@ There are several standard sets used in the document:
 
 \section{Epoch transitions}
 
+\newcommand{\Epoch}{\type{Epoch}}
+
 This section should cover:
 \begin{itemize}
 \item How we determine the end of an epoch
@@ -367,12 +369,17 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\BHEnv}{\type{BHEnv}}
 \newcommand{\BHState}{\type{BHState}}
 
+\newcommand{\BBEnv}{\type{BBEnv}}
+\newcommand{\BBState}{\type{BBState}}
+
 \newcommand{\Bhead}{\type{BlockHeader}}
 \newcommand{\Bbody}{\type{BlockBody}}
 \newcommand{\Bhtosign}{\type{BHToSign}}
 
 \newcommand{\bheadname}{bHead}
 \newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
+\newcommand{\bbodyname}{bBody}
+\newcommand{\bbody}[1]{\fun{\bbodyname}\ #1}
 \newcommand{\bhhashname}{bhHash}
 \newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
 \newcommand{\bhprevhashname}{bhPrevHash}
@@ -490,7 +497,7 @@ of block bodies.
       \right)
       \vdash
         {\var{h}}
-      \trans{bhead}{\var{vk_d}}
+      \trans{bhead}{\var{bh}}
         {\var{h'}}
     }
   \end{equation*}
@@ -501,6 +508,72 @@ of block bodies.
 \clearpage
 
 \subsection{Block body validation}
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    bb & \Bbody & \text{Block body}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Block body validation types and functions}
+  \label{fig:defs:bbody}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Block body validation environments}
+  \begin{equation*}
+    \BBEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block body validation transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
+    \powerset (\BBEnv \times \emptyset \times \Block \times \emptyset)
+  \end{equation*}
+  \caption{Block body validation transition-system types}
+  \label{fig:ts-types:bbody}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+        \end{array}}
+      \right)
+      \vdash
+        {\var{h}}
+      \trans{bbody}{\var{vk_d}}
+        {\var{h'}}
+    }
+  \end{equation*}
+  \caption{Block body validation rules}
+  \label{fig:rules:bbody}
+\end{figure}
 
 \clearpage
 
@@ -513,6 +586,8 @@ of block bodies.
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
 \newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
 \newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
+\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
+\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
@@ -523,6 +598,7 @@ of block bodies.
 \newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UProp}{\type{UProp}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -544,8 +620,16 @@ of block bodies.
       & \text{block certificates} \\
     \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
     \fun{bUpdVotes} & \Block \totalf \seqof{Vote} & \text{Block update votes payload} \\
+    \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
     \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
   \end{array}
+  \end{equation*}
+  \emph{Derived functions}
+  \begin{equation*}
+    \begin{array}{rlr}
+      \fun{bEndorsment} & \in \ProtVer \times \VKey & \text{Protocol version endorsment} \\
+      \bendorsment{b} & = (\bprotver{b}, \bissuer{b})
+    \end{array}
   \end{equation*}
 
   %
@@ -569,6 +653,7 @@ of block bodies.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{bIx} & \BlockIx & \text{Current block index} \\
+        \var{e_c} & \Epoch & \text{Current epoch} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
@@ -632,7 +717,35 @@ Figure~\ref{fig:defs:chain-extension}.
   \inference
   {
     \neg\isebb{b} \\
-    \bsize{b} \leq \maxblocksize{b}{\var{pps}} \\
+    \var{slot} \vdash \var{e_c} \trans{epoch}{} \var{e_n}
+    \\
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
+    &&
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
+    \\
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''}
+    \\
     {\left(
         \begin{array}{l}
           \fun{pps} ~  us \\
@@ -663,6 +776,7 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx \\
+         e_c \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -674,10 +788,11 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx + 1 \\
+         e_n \\
          \signmapname' \\
          \var{h'} \\
          \var{utxo}' \\
-         \var{us} \\
+         \var{us'''} \\
          \var{ds'}
        \end{array}}
     \right)
