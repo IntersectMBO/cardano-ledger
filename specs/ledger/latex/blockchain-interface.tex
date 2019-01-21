@@ -175,8 +175,6 @@ labels have the following meaning:
     & \UPIEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{k} & \mathbb{N} & \text{chain stability parameter}\\
-        \var{u} & \mathbb{N} & \text{update proposals time-to-live}\\
         \var{e_c} & \Epoch & \text{current epoch}\\
         \var{s_n} & \Slot & \text{current slot number}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
@@ -262,8 +260,6 @@ labels have the following meaning:
     {
       {
         \begin{array}{l}
-          k\\
-          u\\
           e_c\\
           s_n\\
           \var{dms}
@@ -361,8 +357,6 @@ updated.
     {
       {
         \begin{array}{l}
-          k\\
-          u\\
           e_c\\
           s_n\\
           \var{dms}
@@ -512,6 +506,8 @@ the end on an epoch.
           \end{array}
         \right)
       }\\
+      \var{chainStabilityParameter} \mapsto k \in  \var{pps} &
+      \var{upropTTL} \mapsto u \in \var{pps} \\
       {
         \begin{array}{r@{~=~}l}
           \var{pids_{keep}} & \dom~(pws \restrictrange [s_n - u, ..]) \cup \dom~\var{cps}\\
@@ -523,8 +519,6 @@ the end on an epoch.
     {
       {
         \begin{array}{l}
-          k\\
-          u\\
           e_c\\
           s_n\\
           \var{dms}
@@ -682,8 +676,6 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     {
       {
         \begin{array}{l}
-          k\\
-          u\\
           e_c\\
           s_n\\
           \var{dms}\\

@@ -1,6 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{array}
 \usepackage{extarrows}
 \usepackage{float}
 \usepackage[margin=2.5cm]{geometry}
@@ -44,7 +45,7 @@
 
 %%
 \newcommand{\powerset}[1]{\mathbb{P}~#1}
-\newcommand\Set[2]{\{\,#1\mid#2\,\}}
+\newcommand\Set[2]{\left\{\,#1\mid#2\,\right\}}
 \newcommand{\restrictdom}{\lhd}
 \newcommand{\subtractdom}{\mathbin{\slashed{\restrictdom}}}
 \newcommand{\restrictrange}{\rhd}
@@ -58,67 +59,54 @@
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\nextdef}{\\[1em]}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+
+% Partial and total function aliases
+\newcommand{\totalf}{\to}
+\newcommand{\partialf}{\mapsto}
 
 %%
 %% Types
 %%
 \newcommand{\Hash}{\type{Hash}}  % hashes of various things, including blocks
-\newcommand{\Addr}{\type{Addr}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\BlockIx}{\type{BlockIx}}
-\newcommand{\GBlock}{\type{GBlock}}
-\newcommand{\RBlock}{\type{RBlock}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\Queue}{\type{Q}}
 
-\newcommand{\SKey}{\type{SKey}}
-\newcommand{\SKeyGen}{\type{SKey_G}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
-\newcommand{\DelegState}{\type{DSIState}}
+\newcommand{\DelegState}{\type{DIState}}
 
-\newcommand{\ProtParams}{\type{ProtParams}} % protocol parameters
-
+\newcommand{\ProtParams}{\type{PParams}} % protocol parameters
 
 %%
 %% Function and relation names
 %%
-\newcommand{\hashname}{bHash}
 \newcommand{\bsizename}{bSize}
 \newcommand{\bhdrsizename}{bHeaderSize}
-\newcommand{\signname}{sign}
 \newcommand{\verifyname}{verify}
-\newcommand{\delegationname}{delegates} % the delegation relation
 \newcommand{\signmapname}{\mathcal{M}}
 \newcommand{\trimixname}{trimIx}
 \newcommand{\incixmapname}{incIxMap}
 
-\newcommand{\hashofblockname}{hashBlock}
-\newcommand{\blocksizelimitname}{blockSizeLimit}
-\newcommand{\maxblocksizename}{maxBlockSize}
-\newcommand{\maxheadersizename}{maxHeaderSize}
-\newcommand{\isebbname}{rbIsEBB}
-\newcommand{\rbdataname}{rbData}
-\newcommand{\rbcertsname}{rbCerts}
-\newcommand{\rbsigname}{rbSig}
-\newcommand{\rbixname}{rbIx}
-\newcommand{\rbslname}{rbSl}
-\newcommand{\rbsignername}{rbSigner}
+\newcommand{\isebbname}{bIsEBB}
+\newcommand{\bcertsname}{bCerts}
+\newcommand{\bsigname}{bSig}
+\newcommand{\bissuername}{bIssuer}
 
 \newcommand{\qrestrname}{qRestrict}
 \newcommand{\qpopname}{qPop}
 \newcommand{\qheadname}{qHead}
 \newcommand{\qpushname}{qPush}
 
-%% 
+%%
 %% Functions and relations
 %%
-\newcommand{\sign}[4]{\fun{\signname}\ #1 ~ #2 ~ #3 ~ #4}
 \newcommand{\verify}[3]{\fun{\verifyname} ~ #1 ~ #2 ~ #3}
-\newcommand{\hash}[1]{\fun{\hashname}\ #1}
 \newcommand{\bsize}[1]{\fun{\bsizename} ~ #1}
 \newcommand{\bhdrsize}[1]{\fun{\bhdrsizename} ~ #1}
 \newcommand{\delegation}[2]{\fun{\delegationname} ~ #1 ~ #2}
@@ -129,23 +117,15 @@
 
 \newcommand{\hashofblock}[1]{\fun{\hashofblockname} ~ #1}
 \newcommand{\blocksizelimit}[2]{\fun{\blocksizelimitname} ~ #1 ~ #2}
-\newcommand{\maxblocksize}[1]{\fun{\maxblocksizename} ~ #1}
-\newcommand{\maxheadersize}[1]{\fun{\maxheadersizename} ~ #1}
 \newcommand{\isebb}[1]{\fun{\isebbname} ~ #1}
-\newcommand{\rbdata}[1]{\fun{\rbdataname} ~ #1}
-\newcommand{\rbcerts}[1]{\fun{\rbcertsname} ~ #1}
-\newcommand{\rbsig}[1]{\fun{\rbsigname} ~ #1}
-\newcommand{\rbix}[1]{\fun{\rbixname} ~ #1}
-\newcommand{\rbsl}[1]{\fun{\rbslname} ~ #1}
-\newcommand{\rbsigner}[1]{\fun{\rbsignername} ~ #1}
+\newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
+\newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
+\newcommand{\bissuer}[1]{\fun{\bissuername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
 \newcommand{\qpush}[1]{\fun{\qpushname} ~ #1}
 
-% Partial and total function aliases
-\newcommand{\totalf}{\to}
-\newcommand{\partialf}{\mapsto}
 
 % A type alias for a map from a genesis block verification key to a queue of indices
 \newcommand{\mapqueue}{\mathcal{Q}}
@@ -153,7 +133,6 @@
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
 \begin{document}
-
 
 \title{Specification of the Blockchain Layer}
 
@@ -194,6 +173,9 @@ copy of it locally.
 In particular, this document gives a formalisation that should be
 straightforward to implement in a programming language, e.g., in Haskell.
 
+This document is intended to be read in conjunction with \cite{byron_ledger_spec},
+which covers the payload carried around in the blockchain. Certain of the
+underlying systems and types defined will rely on definitions in that document.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -239,13 +221,6 @@ straightforward to implement in a programming language, e.g., in Haskell.
   \end{figure}
 \end{description}
 
-\section{Basic definitions}
-\label{sec:basic-definitions}
-
-This section gives definitions of basic types and functions that operate on
-and with blocks and heavyweight delegation certificates.
-
-
 \subsection{Sets}
 \label{sec:sets}
 
@@ -258,403 +233,47 @@ There are several standard sets used in the document:
   $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
 \end{description}
 
-\subsection{Heavyweight Delegation Certificates}
-\label{sec:certificates}
+\section{Epoch transitions}
 
-A heavyweight delegation certificate is a proof that a genesis block
-verification key $vk_s$ is delegating its right to sign a block to a signing
-key $sk_d$, which has a corresponding verification key $vk_d$, starting with a
-slot $sl$, which is confirmed by a cryptographic signature $\sigma$.
-%
-The type for a heavyweight delegation certificate is kept abstract in this
-document, but it is a product type with projection functions for the
-following:
-%
+\newcommand{\Epoch}{\type{Epoch}}
+
+This section should cover:
 \begin{itemize}
-\item a delegator key,
-\item a delegatee key,
-\item a slot, and
-\item a cryptographic signature.
+\item How we determine the end of an epoch
+\item Epoch-transition bookkeeping
 \end{itemize}
 
-Basic types and functions pertaining to heavyweight delegation certificates
-are given in Figure~\ref{fig:cert-defs}.
+The epoch transition rules should compute whether a given slot is at the end of
+an epoch
 
-\begin{figure}
-  \emph{Primitive types}
-  %
-  \begin{align*}
-    sl & \in \Slot    & \text{slot time-stamp}\\
-   sig & \in \Sig     & \text{cryptographic signature}\\
-    sk & \in \SKey    & \text{signing key}\\
-    vk & \in \VKey    & \text{verification key}
-  \end{align*}
-  %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    vk_s & \in \VKeyGen \subseteq \VKey & \text{genesis block's verification key}
-  \end{align*}
-  %
-  \emph{Abstract types}
-  %
-  \begin{align*}
-    c & \in \DCert  & \text{heavyweight delegation certificate}
-  \end{align*}
-  %
-  \emph{Functions}
-  %
-  \begin{align*}
-    \fun{cFrom} & \in \DCert \totalf \VKeyGen & \text{certificate delegator key projection} \\
-    \fun{cTo} & \in \DCert \totalf \VKey & \text{certificate delegatee key projection} \\
-    \fun{cSl} & \in \DCert \totalf \Slot & \text{certificate slot projection} \\
-    \fun{cSig} & \in \DCert \totalf \Sig & \text{certificate signature projection}
-  \end{align*}
-  %
-  \caption{Basic Heavyweight Delegation Certificate-related Types and Functions}
-  \label{fig:cert-defs}
-\end{figure}
+\section{Counting signed blocks}
 
+\newcommand{\BSCEnv}{\type{BSCEnv}}
+\newcommand{\BSCState}{\type{BSCState}}
 
-\subsection{Blocks}
-\label{sec:blocks}
+To guard against the compromise of a minority of the genesis keys,
+we require that in the rolling window of the last $K$ blocks, the number of
+blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
+\cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from the
+  Ouroboros BFT paper draft where it denotes the number of Byzantine servers,
+  though it should be somehow related to it.} that will be picked in the range
+$1/5 \leq t \leq 1/4$.
 
-\begin{figure}
-  \emph{Primitive types}
-  %
-  \begin{align*}
-    ix & \in \BlockIx & \text{block index}\\
-    h  & \in \Hash   & \text{hash}\\
-    pp & \in \ProtParams & \text{protocol parameters}
-  \end{align*}
-  %
-  \emph{Abstract types}
-  %
-  \begin{align*}
-    g & \in \GBlock & \text{genesis block} \\
-    r & \in \RBlock & \text{non-genesis block}
-  \end{align*}
-  %
-  \emph{Derived types}
-  %
-  \begin{align*}
-    b & \in \Block = \GBlock + \RBlock & \text{block}
-  \end{align*}
-  %
-  \emph{Projection functions}
-  %
-  \begin{align*}
-    \fun{gbKeys} & \in \GBlock \totalf \VKeyGen^n & \text{block keys} \\
-    \fun{\rbixname} & \in \RBlock \totalf \BlockIx & \text{block index} \\
-    \fun{\hashname} & \in \Block \totalf \Hash
-      & \text{previous block's hash} \\
-    \fun{\rbslname} & \in \RBlock \totalf \Slot & \text{block slot} \\
-    \fun{\rbsignername} & \in \RBlock \totalf \VKey & \text{block signer} \\
-    \fun{\rbcertsname} & \in \RBlock \totalf \seqof{\DCert}
-      & \text{block certificates} \\
-    \fun{\rbsigname} & \in \RBlock \totalf \Sig & \text{block signature} \\
-    \fun{\rbdataname} & \in \RBlock \totalf \Data & \text{block data} \\
-    \fun{\isebbname} & \in \RBlock \totalf \mathbb{B} & \text{epoch boundary block check}\\
-    \fun{\maxblocksizename} & \in \ProtParams \totalf \mathbb{N} & \text{maximum block size} \\
-    \fun{\maxheadersizename} & \in \ProtParams \totalf \mathbb{N}
-      & \text{maximum block header size}
-  \end{align*}
-  %
-  \emph{Functions}
-  %
-  \begin{align*}
-    \fun{\hashofblockname} & \in \Block \totalf \Hash & \text{hash of block} \\
-    \fun{\bsizename} & \in \Block \totalf \mathbb{N} & \text{block size in bytes} \\
-    \fun{\bhdrsizename} & \in \Block \totalf \mathbb{N}
-      & \text{block header size in bytes}\\
-  \end{align*}
-  %
-  \caption{Basic Block-related Types and Functions}
-  \label{fig:block-defs}
-\end{figure}
-
-
-A block is an element of a blockchain.
-%
-A blockchain is extended by appending a block.
-%
-There are two types of blocks.
-%
-The first type is the genesis block, denoted by $\GBlock$ in this document.
-%
-Every blockchain starts with a genesis block.
-%
-A genesis block contains a set of $n$ verification keys.
-%
-These keys are often referred to as the genesis block verification keys.
-%
-A genesis block also contains a hash.
-%
-In this document $\GBlock$ is kept abstract, but it is a product type with
-projection functions for the two just mentioned values:
-%
-\begin{itemize}
-\item a set of $n$ verification keys, and
-\item a block hash.
-\end{itemize}
-
-The second type is for a non-genesis block, denoted by $\RBlock$.
-%
-In this document $\RBlock$ is kept abstract, but it is a product type with
-projection functions for the following:
-%
-\begin{itemize}
-\item a block hash pointing to the block's predecessor,
-\item a block index,
-\item a verification key of the block signer,
-\item a list\footnote{There is no justification why this should be a list,
-    instead of a set of certificates. There is no order between
-    certificates. That said, list was chosen to align with the ledger
-    specification.} of heavyweight delegation certificates in the body,
-\item a slot it is in,
-\item data that is the block body. Note this comprises delegation certificates
-  and possibly other information that might not be of interest for this
-  specification,
-\item a cryptographic signature, and
-\item a flag indicating if this is an epoch boundary block.
-\end{itemize}
-
-
-For every block, it is possible to compute its hash with the
-$\fun{\hashofblockname}$ function.
-%
-In the case of the genesis block, this simply returns the hash field in the
-block.
-%
-Furthermore, note that the $\fun{\maxblocksizename}$ parameter of a
-$\ProtParams$ is the maximum size only of blocks that are not epoch boundary
-blocks.
-%
-Basic types and functions pertaining to blocks are given in
-Figure~\ref{fig:block-defs}.
-
-
-\section{Delegation Interface}
-\label{sec:del-interface}
-
-The blockchain layer and the ledger layer need to communicate delegation
-certificates for the purpose of signing new blocks.
-%
-To enable this communication, there is a delegation interface between the two
-layers.
-%
-The interface communicates the minimum of information needed to enable
-delegation.
-
-
-Given that delegation certificates are in the body of a block just like
-transactions are, the ledger layer keeps track of the state of certificates.
-%
-It does so by keeping a set of certificates that are currently active.
-%
-Furthermore, the ledger layer also needs to maintain a set of delegation
-certificates that have been added to the blockchain, but that will become
-active and that possibly inactivate other certificates in the future.
-%
-As part of the delegation interface, the ledger layer exposes functionality
-for checking if a particular verification key $vk_d$ has the delegation right
-to sign a block in a given slot $sl$.
-%
-In particular, if the verification key has the right to sign, the
-functionality should inform who is the delegator $vk_s$.
-%
-The functionality can be modeled as a relation
-$\fun{\delegationname} \subseteq \DelegState \times (\VKey \partialf \VKeyGen)$.
-%
-Note that in the case when $vk_d \in \VKeyGen$, i.e., when the verification
-key is a genesis block verification key, and it has not delegated its signing
-right to any other key, the element from the relation is
-$(ds, vk_d \partialf vk_d)$.
-
-
-New delegation certificates are added to the blockchain in blocks, so the
-blockchain layer has to inform the ledger layer of new certificates when a new
-block is to be added to the blockchain.
-%
-Therefore, as part of the delegation interface, the blockchain layer exposes
-the new delegation certificates functionality to the ledger layer.
-%
-This is modeled as an abstract state transition updating the state of type
-$\DelegState$.
-%
-Given that the blockchain layer does not keep the state of delegation
-certificates, it has no way of checking if certificates are valid.
-%
-That is why new certificates can be added to the state only if there are no
-conflicts with existing certificates.
-%
-For example, the blockchain layer cannot know if the delegator already posted
-another delegation certificate in the current epoch.
-%
-Furthermore, the slot in which a certificate is claimed to become active might
-not be in K slots, which should disallow such a certificate.
-%
-In case a certificate is such that the state cannot be updated, the block to
-be added to the blockchain is discarded.
-
-
-\section{State transitions for Blockchain}
-\label{sec:state-trans-chain}
-
-\subsection{Block Validity}
-\label{sec:block-valid}
-% This definition is adopted from shelley-plan.md, which is written by
-% Duncan Coutts
-
-A non-genesis block $\var{b}$ is valid if:
-%
-\begin{enumerate}
-\item it is signed by a signing key $sk_d$ for which a valid heavyweight
-  delegation certificate $c$ that is active at the time of signing exists.
-  %
-  The certificate $c$ carries information that signing rights from a genesis
-  block verification key $vk_s$ are transferred to a verification key $vk_d$
-  starting in a slot $sl$,
-\item the corresponding certificate $c$ is signed by a key $sk_s$ that has a
-  corresponding verification key in the genesis block.
-  %
-  The certificate therefore carries a a cryptographic signature $\sigma'$,
-\item new delegation certificates that are in the body of $b$ are not in
-  conflict with earlier delegation certificates,
-\item the size of the block in bytes is within limits, as defined by
-  \eqref{eq:blocksizelimit},
-\item the size of the block header in bytes is within limits, as defined by
-  protocol parameters, and
-\item in the rolling window of the last $K$ blocks, the number of blocks
-  signed by keys that $sk_s$ delegated to is no more than a threshold
-  $K \cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from
-    the Ouroboros BFT paper draft where it denotes the number of Byzantine
-    servers, though it should be somehow related to it.}  that will be picked
-  in the range $1/5 \leq t \leq 1/4$.
-\end{enumerate}
-
-\begin{align}
-  \label{eq:blocksizelimit}
-  \blocksizelimit{b}{\var{pp}} = \
-  \begin{cases}
-    \maxblocksize{\var{pp}} & \text{if $b$ is the genesis block or } \isebb{b} \equiv \bot \\
-    2^{21} & \text{otherwise}
-  \end{cases}
-\end{align}
-
-
-Relationship between the $\text{\signname}$ function and the
-$\text{\verifyname}$ relation is given by \eqref{eq:sign-verify}:
-
-\begin{equation}
-  \label{eq:sign-verify}
-  \forall (sk, vk) \in (\SKey \times \VKey), b = (h, sl, d, \sigma) \in \Block.\
-  \verify{vk}{d}{\sigma} \iff \sign{sk}{h}{sl}{d} = \sigma.
-\end{equation}
-
-
-\subsection{Counting Signed Blocks}
-\label{sec:counting-signed-blocks}
-
-To make sure no signing key with a corresponding genesis block verification
-key gets to sign too many blocks, a state is maintained by keeping a mapping
-of keys to a queue of signed blocks in a sliding window of at most K last
-blocks in the blockchain.
-%
-Initially, when the blockchain is made of the genesis block $g_0 \in \GBlock$
-only, the initial state is such that no key from the genesis block signed a
-block (neither directly or indirectly via delegation) and the last added block
-is the genesis block $p = g_0$.
-%
-The delegation state $ds$ of type $\DelegState$ is kept abstract in this
-document;
-%
-it is defined in the ledger layer specification.
-%
-The initial state is given in Figure~\ref{fig:init-bc-state}.
-
-\begin{figure}
-  \begin{equation*}
-    \inference[Initial-state]
-    {}
-    {\left(
-        {\begin{array}{c}
-           \signmapname = \emptyset \\
-           p = g_0 \\
-           \var{ds}
-         \end{array}}
-     \right)
-   }
- \end{equation*}
- \caption{The Initial State Rule}
- \label{fig:init-bc-state}
-\end{figure}
-
-The types of components in the initial state, namely of $\fun{\signmapname}$
-and $\var{ds}$ are given in Figure~\ref{fig:block-ext-types-funs}.
-
-Once a new block arrives, the state has to be updated.
-%
-In particular, if a block with an index $\var{ix}$ signed by a signing key
-corresponding to a verification key $\var{vk_d}$ is to be added to the
-blockchain, the sliding window of the last $K$ blocks moves by one block and
-the map $\fun{\signmapname}$ has to be updated for the key that signed the
-$K^{\text{th}}$ previous block;
-%
-this is done with $\trimix{\signmapname}{\var{ix}}$, as given by
-\eqref{eq:trimix}.
-%
-To finish updating the map, the updated version of $\signmapname$ denoted by
-$\signmapname'$ has to push $\var{ix}$ to the queue for $\var{vk_s}$, which is
-achieved with $\incixmap{\var{ix}}{\var{vk_s}}{\signmapname'}$, as given by
-\eqref{eq:incixmap}.
-%
-Finally, the state $\var{ds}$ that is maintained by the ledger layer, is
-updated; the details of how the state is updated via a transition is given in
-a separate ledger layer specification.
-%
-Types of both of these functions are given in
-Figure~\ref{fig:block-ext-types-funs}.
-
-
-\begin{align}
-  \label{eq:trimix}
-  \trimix{\signmapname}{\var{ix}} = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
-  q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
-  \qrestr{\var{ix}}{q} = \
-  \begin{cases}
-    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
-    q & \text{otherwise}
-  \end{cases}
-\end{align}
-
-\begin{equation}
-  \label{eq:incixmap}
-  \incixmap{\var{ix}}{\var{vk_s}}{\signmapname} = \signmapname \unionoverride \{\var{vk_s} \partialf \qpush{\var{ix}}{(\signmap{\var{vk_s}})}\}
-\end{equation}
-
-
-\begin{figure}
+\begin{figure}[ht]
   \emph{Abstract types}
   %
   \begin{align*}
     q  & \in \Queue_\BlockIx  & \text{block index queue}\\
-  \var{data} & \in \Data    & \text{data}\\
-    \var{ds} & \in \DelegState & \text{ledger layer delegation state}
   \end{align*}
   %
   \emph{Derived types}
+  \begin{equation*}
+  \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+    \signmapname & \mapqueue & \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
+    \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
+  \end{array}
+  \end{equation*}
   %
-  \begin{align*}
-    \signmapname & \in \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
-    \var{sk_s} & \in \SKeyGen \subseteq \SKey & \text{genesis block's signing key}\\
-  \end{align*}
-  %
-  \emph{Type aliases}
-  %
-  \begin{align*}
-    \mapqueue = \VKeyGen \totalf \Queue_\BlockIx
-  \end{align*}
   \emph{Functions and relations}
   %
   \begin{align*}
@@ -665,83 +284,531 @@ Figure~\ref{fig:block-ext-types-funs}.
       & \text{queue pop function} \\
     \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
       & \text{restricted queue pop function} \\
-    \fun{\trimixname} & \in \mapqueue \times \BlockIx \totalf \mapqueue
-      & \text{old block removal function} \\
-    \fun{\incixmapname} & \in \BlockIx \times \VKeyGen \times \mapqueue \totalf \mapqueue
+    \fun{\incixmapname} & \in \BlockIx \times \powerset \VKeyGen \times \mapqueue \totalf \mapqueue
       & \text{block count increment function}\\
-    \fun{\signname} & \in \SKey \times \Hash \times \Slot \times \Data \partialf \Sig
-      & \text{signature function}\\
-    \fun{\verifyname} & \in \VKey \times \Data \times \Sig
-      & \text{verification relation}\\
-    \fun{\delegationname} & \in \DelegState \times \VKeyGen \times \VKey
-      & \text{delegation relation}\\
-    \fun{\blocksizelimitname} & \in \Block \times \ProtParams \totalf \mathbb{N}
-      & \text{block size limit in bytes function}
   \end{align*}
-  %
-  \caption{Blockchain Extension Types and Functions}
-  \label{fig:block-ext-types-funs}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+    \end{array}
+  \end{equation*}
+
+  \begin{align}
+  \label{eq:trimix}
+  \trimix{\signmapname}{\var{ix}} & = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
+  q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
+  \qrestr{\var{ix}}{q} & = \
+  \begin{cases}
+    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
+    q & \text{otherwise}
+  \end{cases} \\
+  \label{eq:incixmap}
+    \incixmap{\var{ix}}{\var{X}}{\signmapname} & = \signmapname \unionoverride
+                                                 \Set{\var{vk_s} \partialf \qpush{\var{ix}}(\signmap{\var{vk_s}})}{vk_s \in \var{X}}
+  \end{align}
+  \caption{Blockchain signature count types and functions}
+  \label{fig:defs:sigcnt}
 \end{figure}
 
+\begin{figure}[ht]
+  \emph{Block signature count environments}
+  \begin{equation*}
+    \BSCEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+        \var{ds} & \DelegState & \text{Delegation state} \\
+        \var{bIx} & \BlockIx & \text{Block index}
+      \end{array}
+    \right)
+  \end{equation*}
 
-\subsection{Blockchain Extension}
+  \emph{Block signature count transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{sigcnt}{\_} \var{\_} \subseteq
+    \powerset (\BSCEnv \times \signmapname \times \VKey \times \signmapname)
+  \end{equation*}
+  \caption{Block signature count transition-system types}
+  \label{fig:ts-types:sigcnt}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    {
+      \fun{blockSignatureCountWindow} \partialf \var{K} \in pps & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
+      \var{D} = (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
+      \signmapname' = \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+          \var{ds} \\
+          \var{bIx}
+        \end{array}}
+      \right)
+      \vdash
+        {\signmapname}
+      \trans{sigcnt}{\var{vk_d}}
+        {\signmapname'}
+    }
+    \label{eq:rule:sigcnt}
+  \end{equation*}
+  \caption{Block signature count rules}
+  \label{fig:rules:sigcnt}
+\end{figure}
+
+\clearpage
+
+\section{Block validation}
+\label{sec:block-validation}
+
+\newcommand{\BHEnv}{\type{BHEnv}}
+\newcommand{\BHState}{\type{BHState}}
+
+\newcommand{\BBEnv}{\type{BBEnv}}
+\newcommand{\BBState}{\type{BBState}}
+
+\newcommand{\Bhead}{\type{BlockHeader}}
+\newcommand{\Bbody}{\type{BlockBody}}
+\newcommand{\Bhtosign}{\type{BHToSign}}
+
+\newcommand{\bheadname}{bHead}
+\newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
+\newcommand{\bbodyname}{bBody}
+\newcommand{\bbody}[1]{\fun{\bbodyname}\ #1}
+\newcommand{\bhhashname}{bhHash}
+\newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
+\newcommand{\bhprevhashname}{bhPrevHash}
+\newcommand{\bhprevhash}[1]{\fun{\bhhashname}\ #1}
+\newcommand{\bhtosignname}{bhToSign}
+\newcommand{\bhtosign}[1]{\fun{\bhtosignname}\ #1}
+
+\newcommand{\maxblocksize}{\fun{maxBlockSize}}
+\newcommand{\maxheadersize}{\fun{maxHeaderSize}}
+
+We delineate here between validating the header and body of a block. It's useful
+to make this distinction since we may validate headers ahead of validating the
+block body, and we have less context available to validate headers - in
+particular, we must be able to validate block headers without the recent history
+of block bodies.
+
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    b & \Block & \text{block} \\
+    h & \Hash   & \text{hash} \\
+    \end{array}
+  \end{equation*}
+  %
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Basic Block-related Types and Functions}
+  \label{fig:block-defs}
+\end{figure}
+
+\subsection{Block header validation}
+
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    bh & \Bhead & \text{Block header} \\
+    bts & \Bhtosign & \text{Part of the block header which must be signed}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\bheadname} & \Block \totalf \Bhead & \text{Block header} \\
+    \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{Previous header hash} \\
+    \fun{\bhhashname} & \Bhead \totalf \Hash & \text{Header hash} \\
+    \fun{\bsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
+    \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
+    \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
+    \fun{\bhtosignname} & \Bhead \totalf \Bhtosign & \text{Block header to sign}\\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \maxheadersize & \mathbb{N} & \text{maximum block header size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Block header validation types and functions}
+  \label{fig:defs:bhead}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Block header validation environments}
+  \begin{equation*}
+    \BHEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+        \var{ds} & \DelegState & \text{Delegation state} \\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block header validation transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
+    \powerset (\BHEnv \times \Hash \times \Bhead \times \Hash)
+  \end{equation*}
+  \caption{Block header validation transition-system types}
+  \label{fig:ts-types:bhead}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { \sigma = \bsig{bh} & \var{vk_d} = \bissuer{bh} & \var{h'} = \bhhash{bh}
+    \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
+    \\  (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} \neq \emptyset
+    \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{\sigma}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+          \var{ds} \\
+        \end{array}}
+      \right)
+      \vdash
+        {\var{h}}
+      \trans{bhead}{\var{bh}}
+        {\var{h'}}
+    }
+  \end{equation*}
+  \caption{Block header validation rules}
+  \label{fig:rules:bhead}
+\end{figure}
+
+\clearpage
+
+\subsection{Block body validation}
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    bb & \Bbody & \text{Block body}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Block body validation types and functions}
+  \label{fig:defs:bbody}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Block body validation environments}
+  \begin{equation*}
+    \BBEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block body validation transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
+    \powerset (\BBEnv \times \emptyset \times \Block \times \emptyset)
+  \end{equation*}
+  \caption{Block body validation transition-system types}
+  \label{fig:ts-types:bbody}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
+    }
+    {
+      \left(
+        {\begin{array}{c}
+          \var{pps} \\
+        \end{array}}
+      \right)
+      \vdash
+        {\var{h}}
+      \trans{bbody}{\var{vk_d}}
+        {\var{h'}}
+    }
+  \end{equation*}
+  \caption{Block body validation rules}
+  \label{fig:rules:bbody}
+\end{figure}
+
+\clearpage
+
+\section{Blockchain Extension}
 \label{sec:chain-extension}
 
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+
+\newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
+\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
+\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
+\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
+\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
+
+% Imported definitions
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\DIEnv}{\type{DIEnv}}
+\newcommand{\DIState}{\type{DIState}}
+
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+\newcommand{\UProp}{\type{UProp}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \var{data} & \Data    & \text{data}\\
+    \var{ds} & \DelegState & \text{ledger layer delegation state}
+  \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \fun{\verifyname} & \VKey \times \Data \times \Sig
+      & \text{verification relation} \\
+    \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
+    \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
+      & \text{block certificates} \\
+    \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+    \fun{bUpdVotes} & \Block \totalf \seqof{Vote} & \text{Block update votes payload} \\
+    \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
+    \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
+  \end{array}
+  \end{equation*}
+  \emph{Derived functions}
+  \begin{equation*}
+    \begin{array}{rlr}
+      \fun{bEndorsment} & \in \ProtVer \times \VKey & \text{Protocol version endorsment} \\
+      \bendorsment{b} & = (\bprotver{b}, \bissuer{b})
+    \end{array}
+  \end{equation*}
+
+  %
+  \caption{Blockchain Extension Types and Functions}
+  \label{fig:defs:chain-extension}
+\end{figure}
+
+\begin{figure}[ht]
+  % \emph{Chain extension environments}
+  % \begin{equation*}
+  %   \CEEnv =
+  %   \left(
+  %     \begin{array}{r@{~\in~}lr}
+  %       \var{slot} & \Slot & \text{Current slot}
+  %     \end{array}
+  %   \right)
+  % \end{equation*}
+  \emph{Chain extension states}
+  \begin{equation*}
+    \CEState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{bIx} & \BlockIx & \text{Current block index} \\
+        \var{e_c} & \Epoch & \text{Current epoch} \\
+        \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
+        \var{h} & \Hash & \text{Current block hash} \\
+        \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{us} & \UPIState & \text{Update interface state} \\
+        \var{ds} & \DIState & \text{Delegation state}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Chain extension transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
+    \powerset (\Slot \times \CEState \times \Block \times \CEState)
+  \end{equation*}
+
+  \caption{Blockchain extension transition-system types}
+  \label{fig:ts-types:chain-extension}
+\end{figure}
+
 The central rule that captures blockchain extension is given with
-Figure~\ref{fig:blockchain-extension}.
+Figure~\ref{fig:defs:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
-  \inference[Blockchain-extension]
-  {
-    {\begin{array}{c}
-      \var{ix} = \rbix{b} \wedge \var{vk_d} = \rbsigner{b} \\
-      \hash{b} \equiv \hashofblock{p} \\
-      \bsize{b} \leq \blocksizelimit{b}{\var{pp}} \\
-      \bhdrsize{b} \leq \maxheadersize{\var{pp}} \\
-      \exists \var{\var{vk_s}}.~\var{vk_s} = \delegation{\var{ds}}{\var{vk_d}} \\
-      \verify{\var{vk_d}}{(\rbdata{b})}{(\rbsig{b})} \\
-      \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
-      \signmapname' = \incixmap{\var{ix}}{\var{vk_s}}{(\trimix{\signmapname}{\var{ix}})} \\
-      p' = b 
-     \end{array}}
-   & (\var{DSEnv}) \vdash \var{ds} \trans{\text{DELEG}}{\rbcerts{b}} \var{ds'}
+  \inference
+  { \isebb{b} & \bsize{b} \leq 2^{21}
+    \\ \var{h'} = \bhhash{(\bhead b)}
   }
   {
     \left(
       {\begin{array}{c}
-         \var{pp} \\
-         \var{DSEnv} \\
-         K \\
-         t
+         \var{slot}
        \end{array}}
     \right)
     \vdash
     \left(
       {\begin{array}{c}
+         bIx \\
          \signmapname \\
-         p \\
+         \var{h} \\
+         \var{utxo} \\
+         \var{us} \\
          \var{ds}
        \end{array}}
     \right)
-    \trans{}{b}
+    \trans{chain}{b}
     \left(
       {\begin{array}{c}
+         bIx \\
+         \signmapname \\
+         \var{h'} \\
+         \var{utxo} \\
+         \var{us} \\
+         \var{ds}
+       \end{array}}
+    \right)
+  }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+  \inference
+  {
+    \neg\isebb{b} \\
+    \var{slot} \vdash \var{e_c} \trans{epoch}{} \var{e_n}
+    \\
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
+    &&
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
+    \\
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \fun{dms} ~ \var{ds}
+        \end{array}
+      \right)}
+    \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''}
+    \\
+    {\left(
+        \begin{array}{l}
+          \fun{pps} ~  us \\
+          ds
+        \end{array}
+      \right)}
+    \vdash
+    \var{h} \trans{bhead}{\bhead{b}} \var{h'} &
+    \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+    {\left(
+      \begin{array}{l}
+        \fun{pps} ~  us \\
+        ds \\
+        bIx
+      \end{array}
+    \right)}
+    \vdash
+    \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname' &&
+    \var{diEnv} \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
+  }
+  {
+    \left(
+      {\begin{array}{c}
+         \var{slot}
+       \end{array}}
+    \right)
+    \vdash
+    \left(
+      {\begin{array}{c}
+         bIx \\
+         e_c \\
+         \signmapname \\
+         \var{h} \\
+         \var{utxo} \\
+         \var{us} \\
+         \var{ds}
+       \end{array}}
+    \right)
+    \trans{chain}{b}
+    \left(
+      {\begin{array}{c}
+         bIx + 1 \\
+         e_n \\
          \signmapname' \\
-         p' \\
+         \var{h'} \\
+         \var{utxo}' \\
+         \var{us'''} \\
          \var{ds'}
        \end{array}}
     \right)
- }
+  }
   \end{equation*}
-  \caption{The Blockchain Extension Rule}
+  \caption{Blockchain extension rules}
   \label{fig:blockchain-extension}
 \end{figure}
-
+\clearpage
+\bibliographystyle{plainnat}
+\bibliography{references}
 \end{document}
 
 
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: t
+%%% LaTeX-command: "nix-shell --run make"
 %%% End:
