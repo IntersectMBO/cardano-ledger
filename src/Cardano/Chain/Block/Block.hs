@@ -28,7 +28,7 @@ module Cardano.Chain.Block.Block
   , blockDifficulty
   , blockToSign
   , blockSignature
-  , blockBlockVersion
+  , blockProtocolVersion
   , blockSoftwareVersion
   , blockHeaderAttributes
   , blockExtraDataProof
@@ -91,7 +91,7 @@ import Cardano.Chain.Block.Header
   , dropBoundaryHeader
   , hashHeader
   , headerAttributes
-  , headerBlockVersion
+  , headerProtocolVersion
   , headerDifficulty
   , headerEBDataProof
   , headerLeaderKey
@@ -112,7 +112,7 @@ import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (SlotId(..))
 import Cardano.Chain.Ssc (SscPayload)
 import Cardano.Chain.Txp.TxPayload (ATxPayload)
-import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
@@ -232,7 +232,7 @@ dropBoundaryBlock = do
 -- | Smart constructor for 'Block'
 mkBlock
   :: ProtocolMagic
-  -> BlockVersion
+  -> ProtocolVersion
   -> SoftwareVersion
   -> Either GenesisHash Header
   -> SlotId
@@ -254,7 +254,7 @@ mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
 --   the previous header, consider using that one.
 mkBlockExplicit
   :: ProtocolMagic
-  -> BlockVersion
+  -> ProtocolVersion
   -> SoftwareVersion
   -> HeaderHash
   -> ChainDifficulty
@@ -355,8 +355,8 @@ blockToSign = headerToSign . blockHeader
 blockSignature :: ABlock a -> BlockSignature
 blockSignature = headerSignature . blockHeader
 
-blockBlockVersion :: ABlock a -> BlockVersion
-blockBlockVersion = headerBlockVersion . blockHeader
+blockProtocolVersion :: ABlock a -> ProtocolVersion
+blockProtocolVersion = headerProtocolVersion . blockHeader
 
 blockSoftwareVersion :: ABlock a -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader

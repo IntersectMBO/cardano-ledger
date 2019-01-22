@@ -24,7 +24,7 @@ module Cardano.Chain.Block.Header
   , headerLeaderKey
   , headerDifficulty
   , headerSignature
-  , headerBlockVersion
+  , headerProtocolVersion
   , headerSoftwareVersion
   , headerAttributes
   , headerEBDataProof
@@ -84,7 +84,7 @@ import Cardano.Chain.Common (Attributes, ChainDifficulty)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (EpochIndex, SlotId(..), slotIdF)
-import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
   ( Hash
@@ -257,8 +257,8 @@ headerDifficulty = consensusDifficulty . headerConsensusData
 headerSignature :: AHeader a -> BlockSignature
 headerSignature = consensusSignature . headerConsensusData
 
-headerBlockVersion :: AHeader a -> BlockVersion
-headerBlockVersion = ehdBlockVersion . headerExtraData
+headerProtocolVersion :: AHeader a -> ProtocolVersion
+headerProtocolVersion = ehdProtocolVersion . headerExtraData
 
 headerSoftwareVersion :: AHeader a -> SoftwareVersion
 headerSoftwareVersion = ehdSoftwareVersion . headerExtraData

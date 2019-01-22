@@ -17,7 +17,7 @@ module Cardano.Chain.Genesis.Config
   , configHeavyDelegation
   , configStartTime
   , configNonAvvmBalances
-  , configBlockVersionData
+  , configProtocolParameters
   , configAvvmDistr
   , mkConfig
   , mkConfigFromFile
@@ -63,7 +63,7 @@ import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Crypto (Hash, ProtocolMagic, hash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Slotting (SlotCount)
-import Cardano.Chain.Update (BlockVersionData)
+import Cardano.Chain.Update (ProtocolParameters)
 import Cardano.Chain.ProtocolConstants
   (kEpochSlots, kSlotSecurityParam, kChainQualityThreshold)
 
@@ -107,9 +107,9 @@ instance FromJSON StaticConfig where
         -- GenesisDelegation
         heavyDelegationV <- specO .: "heavyDelegation"
         heavyDelegation <- parseJSON heavyDelegationV
-        -- BlockVersionData
-        blockVersionDataV <- specO .: "blockVersionData"
-        blockVersionData <- parseJSON blockVersionDataV
+        -- ProtocolParameters
+        protocolParametersV <- specO .: "protocolParameters"
+        protocolParameters <- parseJSON protocolParametersV
         -- K
         kV <- specO .: "k"
         k <- parseJSON kV
@@ -130,7 +130,7 @@ instance FromJSON StaticConfig where
           UnsafeGenesisSpec
             (GenesisAvvmBalances avvmDistr)
             heavyDelegation
-            blockVersionData
+            protocolParameters
             k
             protocolMagic
             (GenesisInitializer
@@ -192,8 +192,8 @@ configStartTime = gdStartTime . configGenesisData
 configNonAvvmBalances :: Config -> GenesisNonAvvmBalances
 configNonAvvmBalances = gdNonAvvmBalances . configGenesisData
 
-configBlockVersionData :: Config -> BlockVersionData
-configBlockVersionData = gdBlockVersionData . configGenesisData
+configProtocolParameters :: Config -> ProtocolParameters
+configProtocolParameters = gdProtocolParameters . configGenesisData
 
 configAvvmDistr :: Config -> GenesisAvvmBalances
 configAvvmDistr = gdAvvmDistr . configGenesisData

@@ -103,7 +103,7 @@ genExtraBodyData = pure . ExtraBodyData $ mkAttributes ()
 genExtraHeaderData :: Gen ExtraHeaderData
 genExtraHeaderData =
   ExtraHeaderData
-    <$> Update.genBlockVersion
+    <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
     <*> pure (mkAttributes ())
     <*> genAbstractHash genExtraBodyData
@@ -128,7 +128,7 @@ genToSign pm epochSlots =
 genBlock :: ProtocolMagic -> SlotCount -> Gen Block
 genBlock pm epochSlots =
   mkBlockExplicit pm
-    <$> Update.genBlockVersion
+    <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
     <*> genHeaderHash
     <*> genChainDifficulty

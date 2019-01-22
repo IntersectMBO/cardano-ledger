@@ -1,14 +1,16 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Vote
   (
-       -- Software update proposal
+  -- * Software update proposal
     AProposal(..)
   , Proposal
   , ProposalError(..)
@@ -23,7 +25,7 @@ module Cardano.Chain.Update.Vote
   , recoverUpId
   , signProposal
 
-       -- Software update vote
+  -- * Software update vote
   , AVote(..)
   , VoteId
   , Vote
@@ -59,8 +61,8 @@ import Cardano.Binary.Class
   )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
-import Cardano.Chain.Update.BlockVersion (BlockVersion)
-import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
+import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import Cardano.Chain.Update.Data (UpdateData)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
@@ -74,7 +76,6 @@ import Cardano.Crypto
   , SecretKey
   , SignTag(SignUSProposal, SignUSVote)
   , Signature
-  , verifySignatureDecoded
   , hash
   , hashDecoded
   , safeSign
@@ -82,6 +83,7 @@ import Cardano.Crypto
   , shortHashF
   , sign
   , toPublic
+  , verifySignatureDecoded
   )
 
 
@@ -93,8 +95,8 @@ import Cardano.Crypto
 type UpId = Hash Proposal
 
 data ProposalBody = ProposalBody
-  { pbBlockVersion         :: !BlockVersion
-  , pbBlockVersionModifier :: !BlockVersionModifier
+  { pbProtocolVersion      :: !ProtocolVersion
+  , pbProtocolParameterUpdate :: !ProtocolParameterUpdate
   , pbSoftwareVersion      :: !SoftwareVersion
   , pbData                 :: !(Map SystemTag UpdateData)
   -- ^ UpdateData for each system which this update affects. It must be
@@ -102,14 +104,13 @@ data ProposalBody = ProposalBody
   , pbAttributes           :: !(Attributes ())
   -- ^ Attributes which are currently empty, but provide extensibility
   } deriving (Eq, Show, Generic)
-
-instance NFData ProposalBody
+    deriving anyclass NFData
 
 instance Bi ProposalBody where
   encode pb =
     encodeListLen 5
-      <> encode (pbBlockVersion pb)
-      <> encode (pbBlockVersionModifier pb)
+      <> encode (pbProtocolVersion pb)
+      <> encode (pbProtocolParameterUpdate pb)
       <> encode (pbSoftwareVersion pb)
       <> encode (pbData pb)
       <> encode (pbAttributes pb)
@@ -126,8 +127,7 @@ data AProposal a = AProposal
   , proposalSignature  :: !(Signature ProposalBody)
   , proposalAnnotation :: !a
   } deriving (Eq, Show, Generic, Functor)
-
-instance NFData a => NFData (AProposal a)
+    deriving anyclass NFData
 
 type Proposal = AProposal ()
 
@@ -166,9 +166,9 @@ instance B.Buildable (AProposal ()) where
     . " }"
     )
     (pbSoftwareVersion body)
-    (pbBlockVersion body)
+    (pbProtocolVersion body)
     (upId proposal)
-    (pbBlockVersionModifier body)
+    (pbProtocolParameterUpdate body)
     (Map.keys $ pbData body)
     attrsBuilder
    where
@@ -182,8 +182,8 @@ instance B.Buildable (AProposal ()) where
 instance Bi Proposal where
   encode proposal =
     encodeListLen 7
-      <> encode (pbBlockVersion body)
-      <> encode (pbBlockVersionModifier body)
+      <> encode (pbProtocolVersion body)
+      <> encode (pbProtocolParameterUpdate body)
       <> encode (pbSoftwareVersion body)
       <> encode (pbData body)
       <> encode (pbAttributes body)

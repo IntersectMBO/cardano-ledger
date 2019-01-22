@@ -8,28 +8,29 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Update.Undo
-  ( -- * Proposal state
+  (
+  -- * Proposal state
     UndecidedProposalState(..)
   , DecidedProposalState(..)
   , ProposalState(..)
   , UpsExtra(..)
   , DpsExtra(..)
   , ConfirmedProposalState(..)
-  , cpsBlockVersion
+  , cpsProtocolVersion
   , cpsSoftwareVersion
   , propStateToEither
   , psProposal
   , psVotes
   , mkUProposalState
 
-         -- * BlockVersion state
-  , BlockVersionState(..)
+  -- * ProtocolVersion state
+  , ProtocolVersionState(..)
   , bvsIsConfirmed
   , bvsScriptVersion
   , bvsSlotDuration
   , bvsMaxBlockSize
 
-         -- * Rollback
+  -- * Rollback
   , PrevValue(..)
   , maybeToPrev
   , USUndo(..)
@@ -41,7 +42,7 @@ module Cardano.Chain.Update.Undo
   , unPrevProposersL
   , unSlottingDataL
 
-       -- * VoteState
+  -- * VoteState
   , StakeholderVotes
   , LocalVotes
   , VoteState(..)
@@ -65,8 +66,9 @@ import Cardano.Chain.Common
   (ChainDifficulty, Lovelace, ScriptVersion, StakeholderId, mkKnownLovelace)
 import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
-import Cardano.Chain.Update.BlockVersion (BlockVersion)
-import Cardano.Chain.Update.BlockVersionModifier (BlockVersionModifier(..))
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
+import Cardano.Chain.Update.ProtocolParameterUpdate
+  (ProtocolParameterUpdate(..))
 import Cardano.Chain.Update.SoftwareVersion
   (NumSoftwareVersion, SoftwareVersion)
 import Cardano.Chain.Update.Vote
@@ -283,9 +285,9 @@ instance Bi ConfirmedProposalState where
       <*> decode
       <*> decode
 
--- | Get 'BlockVersion' from 'ConfirmedProposalState'
-cpsBlockVersion :: ConfirmedProposalState -> BlockVersion
-cpsBlockVersion = pbBlockVersion . proposalBody . cpsUpdateProposal
+-- | Get 'ProtocolVersion' from 'ConfirmedProposalState'
+cpsProtocolVersion :: ConfirmedProposalState -> ProtocolVersion
+cpsProtocolVersion = pbProtocolVersion . proposalBody . cpsUpdateProposal
 
 -- | Get 'SoftwareVersion' from 'ConfirmedProposalState'
 cpsSoftwareVersion :: ConfirmedProposalState -> SoftwareVersion
@@ -336,23 +338,23 @@ mkUProposalState slot proposal = UndecidedProposalState
 
 
 --------------------------------------------------------------------------------
--- BlockVersion state
+-- ProtocolVersion state
 --------------------------------------------------------------------------------
 
--- | State of BlockVersion from update proposal
-data BlockVersionState = BlockVersionState
-  { bvsModifier          :: !BlockVersionModifier
-  -- ^ 'BlockVersionModifier' associated with this block version
+-- | State of ProtocolVersion from update proposal
+data ProtocolVersionState = ProtocolVersionState
+  { bvsModifier          :: !ProtocolParameterUpdate
+  -- ^ 'ProtocolParameterUpdate' associated with this block version
   , bvsConfirmedEpoch    :: !(Maybe EpochIndex)
   -- ^ Epoch when proposal which generated this block version was confirmed
   , bvsIssuersStable     :: !(Set StakeholderId)
   -- ^ Identifiers of stakeholders which issued stable blocks with this
-  --   'BlockVersion'. Stability is checked by the same rules as used in LRC.
+  --   'ProtocolVersion'. Stability is checked by the same rules as used in LRC.
   --   That is, 'SlotId' is considered. If block is created after crucial slot
   --   of 'i'-th epoch, it is not stable when 'i+1'-th epoch starts.
   , bvsIssuersUnstable   :: !(Set StakeholderId)
   -- ^ Identifiers of stakeholders which issued unstable blocks with this
-  --   'BlockVersion'. See description of 'bvsIssuersStable' for details.
+  --   'ProtocolVersion'. See description of 'bvsIssuersStable' for details.
   , bvsLastBlockStable   :: !(Maybe HeaderHash)
   -- ^ Identifier of last block which modified set of 'bvsIssuersStable'
   , bvsLastBlockUnstable :: !(Maybe HeaderHash)
@@ -360,7 +362,7 @@ data BlockVersionState = BlockVersionState
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
-instance Bi BlockVersionState where
+instance Bi ProtocolVersionState where
   encode bvs =
     encodeListLen 6
       <> encode (bvsModifier bvs)
@@ -371,8 +373,8 @@ instance Bi BlockVersionState where
       <> encode (bvsLastBlockUnstable bvs)
 
   decode = do
-    enforceSize "BlockVersionState" 6
-    BlockVersionState
+    enforceSize "ProtocolVersionState" 6
+    ProtocolVersionState
       <$> decode
       <*> decode
       <*> decode
@@ -380,19 +382,19 @@ instance Bi BlockVersionState where
       <*> decode
       <*> decode
 
--- | Check whether proposal which generated given 'BlockVersionState' is
+-- | Check whether proposal which generated given 'ProtocolVersionState' is
 --   confirmed
-bvsIsConfirmed :: BlockVersionState -> Bool
+bvsIsConfirmed :: ProtocolVersionState -> Bool
 bvsIsConfirmed = isJust . bvsConfirmedEpoch
 
-bvsScriptVersion :: BlockVersionState -> Maybe ScriptVersion
-bvsScriptVersion = bvmScriptVersion . bvsModifier
+bvsScriptVersion :: ProtocolVersionState -> Maybe ScriptVersion
+bvsScriptVersion = ppuScriptVersion . bvsModifier
 
-bvsSlotDuration :: BlockVersionState -> Maybe NominalDiffTime
-bvsSlotDuration = bvmSlotDuration . bvsModifier
+bvsSlotDuration :: ProtocolVersionState -> Maybe NominalDiffTime
+bvsSlotDuration = ppuSlotDuration . bvsModifier
 
-bvsMaxBlockSize :: BlockVersionState -> Maybe Natural
-bvsMaxBlockSize = bvmMaxBlockSize . bvsModifier
+bvsMaxBlockSize :: ProtocolVersionState -> Maybe Natural
+bvsMaxBlockSize = ppuMaxBlockSize . bvsModifier
 
 
 --------------------------------------------------------------------------------
@@ -421,8 +423,8 @@ maybeToPrev Nothing  = NoExist
 
 -- | Data necessary to unapply US data
 data USUndo = USUndo
-  { unChangedBV :: !(Map BlockVersion (PrevValue BlockVersionState))
-  , unLastAdoptedBV :: !(Maybe BlockVersion)
+  { unChangedBV :: !(Map ProtocolVersion (PrevValue ProtocolVersionState))
+  , unLastAdoptedBV :: !(Maybe ProtocolVersion)
   , unChangedProps :: !(Map UpId (PrevValue ProposalState))
   , unChangedSV :: !(Map ApplicationName (PrevValue NumSoftwareVersion))
   , unChangedConfProps :: !(Map SoftwareVersion (PrevValue ConfirmedProposalState))

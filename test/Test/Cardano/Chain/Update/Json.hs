@@ -11,16 +11,16 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Test.Cardano.Chain.Update.Gen (genBlockVersionData, genSoftforkRule)
+import Test.Cardano.Chain.Update.Gen (genProtocolParameters, genSoftforkRule)
 
 
 --------------------------------------------------------------------------------
--- BlockVersionData
+-- ProtocolParameters
 --------------------------------------------------------------------------------
 
-roundTripBlockVersionData :: Property
-roundTripBlockVersionData =
-  eachOf 1000 genBlockVersionData roundTripsAesonBuildable
+roundTripProtocolParameters :: Property
+roundTripProtocolParameters =
+  eachOf 1000 genProtocolParameters roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- SoftforkRule

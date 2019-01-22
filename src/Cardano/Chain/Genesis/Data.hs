@@ -41,7 +41,7 @@ import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
-import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
+import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto (ProtocolMagic(..), hashRaw)
 
 
@@ -52,7 +52,7 @@ data GenesisData = GenesisData
     , gdHeavyDelegation  :: !GenesisDelegation
     , gdStartTime        :: !UTCTime
     , gdNonAvvmBalances  :: !GenesisNonAvvmBalances
-    , gdBlockVersionData :: !BlockVersionData
+    , gdProtocolParameters :: !ProtocolParameters
     , gdK                :: !BlockCount
     , gdProtocolMagic    :: !ProtocolMagic
     , gdAvvmDistr        :: !GenesisAvvmBalances
@@ -64,7 +64,9 @@ instance Monad m => ToJSON m GenesisData where
     , ("heavyDelegation" , toJSON $ gdHeavyDelegation gd)
     , ("startTime"       , toJSON $ gdStartTime gd)
     , ("nonAvvmBalances" , toJSON $ gdNonAvvmBalances gd)
-    , ("blockVersionData", toJSON $ gdBlockVersionData gd)
+    , ("blockVersionData", toJSON $ gdProtocolParameters gd)
+    -- ^ This is called blockVersionData for backwards compatibility with
+    --   mainnet genesis block
     , ( "protocolConsts"
       , mkObject
         [ ("k"            , pure . JSNum . fromIntegral $ gdK gd)
@@ -87,6 +89,8 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> fromJSField obj "startTime"
       <*> fromJSField obj "nonAvvmBalances"
       <*> fromJSField obj "blockVersionData"
+      -- ^ This is called blockVersionData for backwards compatibility with
+      --   mainnet genesis block
       <*> (fromIntegral @Int54 <$> fromJSField protocolConsts "k")
       <*> (ProtocolMagic <$> fromJSField protocolConsts "protocolMagic")
       <*> fromJSField obj "avvmDistr"

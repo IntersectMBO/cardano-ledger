@@ -48,7 +48,7 @@ import Cardano.Crypto
 import Cardano.Crypto.Signing (PublicKey(..))
 import qualified Cardano.Crypto.Wallet as CC
 
-import Test.Cardano.Chain.Update.Example (exampleBlockVersionData)
+import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.Bi (getBytes)
 
 exampleStaticConfig_GCSrc :: StaticConfig
@@ -59,7 +59,7 @@ exampleStaticConfig_GCSpec :: StaticConfig
 exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisAvvmBalances
   exampleGenesisDelegation
-  exampleBlockVersionData
+  exampleProtocolParameters
   37
   (ProtocolMagic 1783847074)
   exampleGenesisInitializer

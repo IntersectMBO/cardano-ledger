@@ -333,7 +333,7 @@ exampleConsensusData = consensusData
 
 exampleExtraHeaderData :: ExtraHeaderData
 exampleExtraHeaderData = ExtraHeaderData
-  Update.exampleBlockVersion
+  Update.exampleProtocolVersion
   Update.exampleSoftwareVersion
   (mkAttributes ())
   (abstractHash (ExtraBodyData (mkAttributes ())))
