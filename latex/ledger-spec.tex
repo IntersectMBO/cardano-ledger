@@ -43,7 +43,8 @@
 \newcommand{\PParams}{\type{PParams}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\Duration}{\type{Duration}}
-\newcommand{\Allocs}{\type{Allocs}}
+\newcommand{\StakePools}{\type{StakePools}}
+\newcommand{\StakeKeys}{\type{StakeKeys}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -51,7 +52,7 @@
 \newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
 \newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
 \newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
-\newcommand{\StakePool}{\type{StakePool}}
+\newcommand{\PoolParam}{\type{PoolParam}}
 \newcommand{\UTxOState}{\ensuremath{\type{UTxOState}}}
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
@@ -124,7 +125,7 @@
 \newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
 \newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
 \newcommand{\dpool}[1]{\fun{dpool}~ \var{#1}}
-\newcommand{\stakepool}[1]{\fun{stakepool}~ \var{#1}}
+\newcommand{\poolParam}[1]{\fun{poolParam}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 \newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
@@ -580,9 +581,6 @@ The constant returned by $\fun{decay}$ consists of two values. The first is
 a natural number which determines the minimal proportion of a deposit that will
 be refunded on resource release. The second is a positive rational number
 used to determine the rate of (exponential) decrease of the value.
-Recall that the $\Allocs$ type pairs a hash key with a slot number and is a generic datatype
-which we use below to represent both individual and pool allocation
-parameters passed to refund calculations.
 
 For a given transaction and protocol parameters, the map $\fun{dresource}$
 returns all the certificates of that transaction which allocate resources
@@ -598,12 +596,10 @@ The functions used in refund calculations are presented in
 Figure~\ref{fig:functions:deposits-refunds}.
 The function
 $\fun{deposits}$ returns the total deposits that have to be made by a transaction.
-This calculation is
-based on the resource-allocating certificates it carries and the protocol parameters.
+This calculation is based on the protocol parameters.
 Specifically, for a given transaction,
-it sums up the values of all the deposits made by the resource-allocating
-certificates that are \textit{resource allocations to new keys}.  Those
-certificates which are
+it sums up the values of the stake key deposits and the stake pool deposits.
+Those certificates which are
 updates of stake pool parameters of already registered pool keys should not
 (and are, in fact, not allowed to) make a deposit.
 
@@ -683,7 +679,7 @@ body must also contain inputs onto which this refund can be added.
 
 \begin{figure}
   \begin{align*}
-    & \fun{deposits} \in \PParams \to \Allocs \to \seqof{\DCert} \to \Coin
+    & \fun{deposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
     & \text{total deposits for transaction} \\
     & \fun{deposits}~{pp}~{stpools}~{certs} = \\
     &  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegKey}}(\fun{keyDeposit}~pp)
@@ -698,7 +694,7 @@ body must also contain inputs onto which this refund can be added.
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
       \nextdef
       & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
-      & ~~~~~\Allocs \to \Slot \to \DCertDeRegKey \to \Coin
+      & ~~~~~\StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{key refund for a certificate} \\
       & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{slot}{c} =\\
       & ~~~~~\begin{cases}
@@ -712,7 +708,7 @@ body must also contain inputs onto which this refund can be added.
         &\delta & \slotminus{slot}{(stkeys~(\cauthor c))}\\
       \end{array}\\
       \nextdef
-      & \fun{keyRefunds} \in \PParams \to \Allocs \to \Tx \to \Coin
+      & \fun{keyRefunds} \in \PParams \to \StakeKeys \to \Tx \to \Coin
       & \text{key refunds for a transaction} \\
       & \keyRefunds{pp}{stkeys}{tx} =\\
       & ~~~~~ \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c\in\DCertDeRegKey}}
@@ -748,7 +744,7 @@ full-duration decayed refund value ($\fun{currentRefund}$) calculated based on
 the given slot number.
 
 The amount decayed for individual keys is then computed by adding the values of
-$$\fun{decayed}~\var{allocs}~\var{pc}~(\fun{txttl}~\var{tx})~\var{c}$$
+$$\fun{decayed}~\var{stkeys}~\var{pc}~(\fun{txttl}~\var{tx})~\var{c}$$
 for each deregistration certificate in a given transaction, and is given by
 $$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$$
 Here, again, we use the $\fun{txttl}~\var{tx}$ value in the calculation instead of the current
@@ -771,7 +767,7 @@ Section~\cref{sec:epoch}.
 \begin{figure}
   \begin{align*}
       & \fun{decayedKey} \in
-      \PParams \to \Allocs \to \Slot \to \DCertDeRegKey \to \Coin
+      \PParams \to \StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{decayed since epoch} \\
       & \decayedKey{pp}{stkeys}{cslot}{c} =\\
       & \begin{cases}
@@ -791,7 +787,7 @@ Section~\cref{sec:epoch}.
           & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
       \nextdef
-      & \fun{decayedTx} \in \PParams \to \Allocs \to \Tx \to \Coin
+      & \fun{decayedTx} \in \PParams \to \StakeKeys \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
       & \decayedTx{pp}{stkeys}{tx} =\\
       &   \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c \in\DCertDeRegKey}}
@@ -1041,16 +1037,16 @@ deposits is found in the protocol parameters, not in $\var{stkeys}$ or $\var{stp
         & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
          \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\} \\
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \Allocs \to \Wdrl \to \Tx \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeKeys \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
     & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
     & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
         \sum_{(a \mapsto c) \in \fun{txwdrls}~{tx}} c  \\
         & + \keyRefunds{pp}{stkeys}{tx} \\
     \nextdef
-    & \fun{produced} \in \PParams \to \Allocs \to \Tx \to \Coin
+    & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
     & \text{value produced} \\
-    & \fun{produced} ~ pp ~ stpools ~ tx = \\
+    & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
     &~~\balance{(\outs{tx})}
     + \txfee{tx} + \deposits{pp}{stpools}~{(\dcerts{tx})}\\
   \end{align*}
@@ -1084,8 +1080,8 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{stkeys} & \Allocs & \text{stake key}\\
-        \var{stpools} & \Allocs & \text{stake pool}\\
+        \var{stkeys} & \StakeKeys & \text{stake key}\\
+        \var{stpools} & \StakePools & \text{stake pool}\\
       \end{array}
     \right)
   \end{equation*}
