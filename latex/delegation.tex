@@ -93,7 +93,6 @@ $\Duration$ here by $\var{dur}$).
       dur & \Duration & \text{duration}\\
       epoch & \Epoch & \text{epoch} \\
       stakepool & \StakePool & \text{stake pool parameters} \\
-      tx & \Tx & \text{transaction}
     \end{array}
   \end{equation*}
   %
@@ -130,17 +129,14 @@ $\Duration$ here by $\var{dur}$).
   \fun{author} & \DCert \to \HashKey
   & \text{certificate author}
   \\
-  \fun{txSlotIx} & \Slot \to \Tx \to \Ix
-  & \text{tx index in slot}
-  \\
-  \fun{cIx} & \DCert \to \Ix
-  & \text{certificate index in tx}
-  \\
   \fun{dpool} & \DCertDeleg \to \HashKey
   & \text{pool being delegated to}
   \\
   \fun{stakepool} & \DCertRegPool \to \StakePool
   & \text{stake pool}
+  \\
+  \fun{poolowners} & \StakePool \to \powerset{\HashKey}
+  & \text{stake pool owners}
   \\
   \fun{retire} & \DCertRetirePool \to \Epoch
   & \text{epoch of pool retirement}
@@ -405,8 +401,7 @@ being delegated to.
     \inference[Deleg-Dereg]
     {
       \var{c}\in \DCertDeRegKey  & hk = \cauthor{c} \\
-    hk \in \dom \var{stkeys} & ptr = (slot,\fun{txSlotIx}~\var{tx}, \fun{cIx}~\var{c}) \\
-    hk \mapsto 0 \in \var{rewards}
+    hk \in \dom \var{stkeys} & hk \mapsto 0 \in \var{rewards}
     }
     {
       \begin{array}{r}
@@ -655,7 +650,7 @@ Figure~\ref{fig:defs:delpl}.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{slot}\\
-        \var{ptr} & \Tx & \text{certificate pointer}\\
+        \var{ptr} & \Ptr & \text{certificate pointer}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
       \end{array}
     \right)
