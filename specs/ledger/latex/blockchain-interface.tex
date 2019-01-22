@@ -19,7 +19,7 @@
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
-        \var{d} & \SlotCount & \text{certificate liveness parameter}
+        \var{pps} & \PPMMap & \text{Protocol parameters}
       \end{array}
     \right)
   \end{equation*}
@@ -54,6 +54,7 @@
     \label{eq:rule:delegation-interface}
     \inference
     {
+      \var{certificateLiveness} \mapsto d \in \var{pps} \\
       {\begin{array}{l}
          \mathcal{K} \\
          e\\
@@ -102,7 +103,7 @@
          \mathcal{K} \\
          e\\
          s\\
-         d
+         pps
       \end{array}}
       \vdash
       {
