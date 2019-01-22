@@ -4,9 +4,9 @@
 
 module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
-  , exampleBlockVersion
-  , exampleBlockVersionData
-  , exampleBlockVersionModifier
+  , exampleProtocolVersion
+  , exampleProtocolParameters
+  , exampleProtocolParameterUpdate
   , exampleSoftwareVersion
   , exampleSystemTag
   , exampleUpdateData
@@ -39,14 +39,14 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId)
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , BlockVersion(..)
-  , BlockVersionData(..)
-  , BlockVersionModifier(..)
   , Payload
   , PrevValue(..)
   , Proof
   , Proposal
   , ProposalBody(..)
+  , ProtocolParameterUpdate(..)
+  , ProtocolParameters(..)
+  , ProtocolVersion(..)
   , SoftforkRule(..)
   , SoftwareVersion(..)
   , SystemTag(..)
@@ -71,11 +71,11 @@ import Test.Cardano.Crypto.Example (examplePublicKey, exampleSafeSigner)
 exampleApplicationName :: ApplicationName
 exampleApplicationName = ApplicationName "Golden"
 
-exampleBlockVersion :: BlockVersion
-exampleBlockVersion = BlockVersion 1 1 1
+exampleProtocolVersion :: ProtocolVersion
+exampleProtocolVersion = ProtocolVersion 1 1 1
 
-exampleBlockVersionData :: BlockVersionData
-exampleBlockVersionData = BlockVersionData
+exampleProtocolParameters :: ProtocolParameters
+exampleProtocolParameters = ProtocolParameters
   (999 :: ScriptVersion)
   (999e-6 :: NominalDiffTime)
   (999 :: Natural)
@@ -99,8 +99,8 @@ exampleBlockVersionData = BlockVersionData
     (LovelacePortion 99)
     (LovelacePortion 99)
 
-exampleBlockVersionModifier :: BlockVersionModifier
-exampleBlockVersionModifier = BlockVersionModifier
+exampleProtocolParameterUpdate :: ProtocolParameterUpdate
+exampleProtocolParameterUpdate = ProtocolParameterUpdate
   (Just (999 :: ScriptVersion))
   (Just (999e-6 :: NominalDiffTime))
   (Just (999 :: Natural))
@@ -135,8 +135,8 @@ exampleSystemTags offset count = map
 
 exampleUndo :: USUndo
 exampleUndo = USUndo
-  { unChangedBV        = Map.singleton exampleBlockVersion NoExist
-  , unLastAdoptedBV    = Just exampleBlockVersion
+  { unChangedBV        = Map.singleton exampleProtocolVersion NoExist
+  , unLastAdoptedBV    = Just exampleProtocolVersion
   , unChangedProps     = Map.singleton exampleUpId NoExist
   , unChangedSV        = Map.singleton exampleApplicationName NoExist
   , unChangedConfProps = Map.singleton exampleSoftwareVersion NoExist
@@ -177,8 +177,8 @@ exampleProposal = signProposal pm exampleProposalBody ss
 exampleProposalBody :: ProposalBody
 exampleProposalBody = ProposalBody bv bvm sv hm ua
  where
-  bv  = exampleBlockVersion
-  bvm = exampleBlockVersionModifier
+  bv  = exampleProtocolVersion
+  bvm = exampleProtocolParameterUpdate
   sv  = exampleSoftwareVersion
   hm  = Map.fromList $ zip (exampleSystemTags 10 5) (exampleUpdateDatas 10 5)
   ua  = exampleAttributes

@@ -1,8 +1,8 @@
 module Test.Cardano.Chain.Update.Gen
   ( genApplicationName
-  , genBlockVersion
-  , genBlockVersionData
-  , genBlockVersionModifier
+  , genProtocolVersion
+  , genProtocolParameters
+  , genProtocolParameterUpdate
   , genSoftforkRule
   , genSoftwareVersion
   , genSystemTag
@@ -34,10 +34,6 @@ import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , BlockVersion(..)
-  , BlockVersionData(..)
-  , BlockVersionModifier(..)
-  , BlockVersionState(..)
   , ConfirmedProposalState(..)
   , DecidedProposalState(..)
   , DpsExtra(..)
@@ -48,6 +44,10 @@ import Cardano.Chain.Update
   , ProposalBody(..)
   , ProposalState(..)
   , Proposals
+  , ProtocolParameterUpdate(..)
+  , ProtocolParameters(..)
+  , ProtocolVersion(..)
+  , ProtocolVersionState(..)
   , SoftforkRule(..)
   , SoftwareVersion(..)
   , SystemTag(..)
@@ -90,16 +90,16 @@ genApplicationName :: Gen ApplicationName
 genApplicationName =
   ApplicationName <$> Gen.text (Range.constant 0 10) Gen.alphaNum
 
-genBlockVersion :: Gen BlockVersion
-genBlockVersion =
-  BlockVersion
+genProtocolVersion :: Gen ProtocolVersion
+genProtocolVersion =
+  ProtocolVersion
     <$> Gen.word16 Range.constantBounded
     <*> Gen.word16 Range.constantBounded
     <*> Gen.word8 Range.constantBounded
 
-genBlockVersionData :: Gen BlockVersionData
-genBlockVersionData =
-  BlockVersionData
+genProtocolParameters :: Gen ProtocolParameters
+genProtocolParameters =
+  ProtocolParameters
     <$> genScriptVersion
     <*> genNominalDiffTime
     <*> genNatural
@@ -115,9 +115,9 @@ genBlockVersionData =
     <*> genTxFeePolicy
     <*> genEpochIndex
 
-genBlockVersionModifier :: Gen BlockVersionModifier
-genBlockVersionModifier =
-  BlockVersionModifier
+genProtocolParameterUpdate :: Gen ProtocolParameterUpdate
+genProtocolParameterUpdate =
+  ProtocolParameterUpdate
     <$> Gen.maybe genScriptVersion
     <*> Gen.maybe genNominalDiffTime
     <*> Gen.maybe genNatural
@@ -133,10 +133,10 @@ genBlockVersionModifier =
     <*> Gen.maybe genTxFeePolicy
     <*> Gen.maybe genEpochIndex
 
-genBlockVersionState :: Gen BlockVersionState
-genBlockVersionState =
-  BlockVersionState
-    <$> genBlockVersionModifier
+genProtocolVersionState :: Gen ProtocolVersionState
+genProtocolVersionState =
+  ProtocolVersionState
+    <$> genProtocolParameterUpdate
     <*> Gen.maybe genEpochIndex
     <*> Gen.set (Range.linear 0 10) genStakeholderId
     <*> Gen.set (Range.linear 0 10) genStakeholderId
@@ -207,8 +207,8 @@ genUndo pm epochSlots =
   USUndo
     <$> Gen.map
           hmRange
-          ((,) <$> genBlockVersion <*> genPrevValue genBlockVersionState)
-    <*> Gen.maybe genBlockVersion
+          ((,) <$> genProtocolVersion <*> genPrevValue genProtocolVersionState)
+    <*> Gen.maybe genProtocolVersion
     <*> Gen.map
           hmRange
           ((,) <$> genUpId pm <*> genPrevValue (genProposalState pm epochSlots))
@@ -254,8 +254,8 @@ genProposals pm =
 genProposalBody :: Gen ProposalBody
 genProposalBody =
   ProposalBody
-    <$> genBlockVersion
-    <*> genBlockVersionModifier
+    <$> genProtocolVersion
+    <*> genProtocolParameterUpdate
     <*> genSoftwareVersion
     <*> genUpsData
     <*> pure (mkAttributes ())

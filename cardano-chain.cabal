@@ -95,9 +95,9 @@ library
                        Cardano.Chain.Txp.Validation
 
                        Cardano.Chain.Update.ApplicationName
-                       Cardano.Chain.Update.BlockVersion
-                       Cardano.Chain.Update.BlockVersionData
-                       Cardano.Chain.Update.BlockVersionModifier
+                       Cardano.Chain.Update.ProtocolVersion
+                       Cardano.Chain.Update.ProtocolParameters
+                       Cardano.Chain.Update.ProtocolParameterUpdate
                        Cardano.Chain.Update.Data
                        Cardano.Chain.Update.Payload
                        Cardano.Chain.Update.Proof

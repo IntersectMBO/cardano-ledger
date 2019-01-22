@@ -1,6 +1,6 @@
 {
     "spec": {
-        "blockVersionData": {
+        "protocolParameters": {
             "txFeePolicy": {
                 "txSizeLinear": {
                     "a": 999,

@@ -21,7 +21,7 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Common (Attributes, areAttributesKnown)
-import Cardano.Chain.Update.BlockVersion (BlockVersion)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
 import Cardano.Crypto (Hash)
@@ -29,10 +29,10 @@ import Cardano.Crypto (Hash)
 
 -- | Represents block header extra data
 data ExtraHeaderData = ExtraHeaderData
-  { ehdBlockVersion    :: !BlockVersion
-  -- ^ Version of block
+  { ehdProtocolVersion :: !ProtocolVersion
+  -- ^ Protocol version used by this block
   , ehdSoftwareVersion :: !SoftwareVersion
-  -- ^ Software version
+  -- ^ Software version used by this block
   , ehdAttributes      :: !(Attributes ())
   -- ^ Header attributes
   , ehdEBDataProof     :: !(Hash ExtraBodyData)
@@ -43,7 +43,7 @@ data ExtraHeaderData = ExtraHeaderData
 instance B.Buildable ExtraHeaderData where
   build mehd = bprint
     ("    block: v" . build . "\n" . "    software: " . build . "\n" . builder)
-    (ehdBlockVersion mehd)
+    (ehdProtocolVersion mehd)
     (ehdSoftwareVersion mehd)
     formattedExtra
    where
@@ -56,7 +56,7 @@ instance B.Buildable ExtraHeaderData where
 instance Bi ExtraHeaderData where
   encode ehd =
     encodeListLen 4
-      <> encode (ehdBlockVersion ehd)
+      <> encode (ehdProtocolVersion ehd)
       <> encode (ehdSoftwareVersion ehd)
       <> encode (ehdAttributes ehd)
       <> encode (ehdEBDataProof ehd)

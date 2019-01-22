@@ -214,14 +214,14 @@ generateGenesisData startTime genesisSpec = do
 
   let
     genesisData = GenesisData
-      { gdBootStakeholders = bootStakeholders
-      , gdHeavyDelegation  = genesisDlg
-      , gdStartTime        = startTime
-      , gdNonAvvmBalances  = nonAvvmDistr
-      , gdBlockVersionData = gsBlockVersionData genesisSpec
-      , gdK                = gsK genesisSpec
-      , gdProtocolMagic    = pm
-      , gdAvvmDistr        = fakeAvvmDistr <> realAvvmMultiplied
+      { gdBootStakeholders   = bootStakeholders
+      , gdHeavyDelegation    = genesisDlg
+      , gdStartTime          = startTime
+      , gdNonAvvmBalances    = nonAvvmDistr
+      , gdProtocolParameters = gsProtocolParameters genesisSpec
+      , gdK                  = gsK genesisSpec
+      , gdProtocolMagic      = pm
+      , gdAvvmDistr          = fakeAvvmDistr <> realAvvmMultiplied
       }
 
   pure (genesisData, generatedSecrets)

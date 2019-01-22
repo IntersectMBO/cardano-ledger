@@ -22,13 +22,13 @@ import Cardano.Crypto (Hash, abstractHash)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
 import Test.Cardano.Chain.Update.Example
-  ( exampleBlockVersion
-  , exampleBlockVersionData
-  , exampleBlockVersionModifier
+  ( exampleProtocolParameterUpdate
   , examplePayload
   , exampleProof
   , exampleProposal
   , exampleProposalBody
+  , exampleProtocolParameters
+  , exampleProtocolVersion
   , exampleSoftwareVersion
   , exampleSystemTag
   , exampleUpId
@@ -38,14 +38,14 @@ import Test.Cardano.Chain.Update.Example
   )
 import Test.Cardano.Chain.Update.Gen
   ( genApplicationName
-  , genBlockVersion
-  , genBlockVersionData
-  , genBlockVersionModifier
+  , genProtocolParameterUpdate
   , genPayload
   , genProof
   , genProposal
   , genProposalBody
   , genProposals
+  , genProtocolParameters
+  , genProtocolVersion
   , genSoftforkRule
   , genSoftwareVersion
   , genSystemTag
@@ -70,42 +70,43 @@ roundTripApplicationName :: Property
 roundTripApplicationName = eachOf 50 genApplicationName roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
--- BlockVersion
+-- ProtocolVersion
 --------------------------------------------------------------------------------
 
-goldenBlockVersion :: Property
-goldenBlockVersion =
-  goldenTestBi exampleBlockVersion "test/golden/bi/update/BlockVersion"
+goldenProtocolVersion :: Property
+goldenProtocolVersion =
+  goldenTestBi exampleProtocolVersion "test/golden/bi/update/ProtocolVersion"
 
-roundTripBlockVersion :: Property
-roundTripBlockVersion = eachOf 50 genBlockVersion roundTripsBiBuildable
+roundTripProtocolVersion :: Property
+roundTripProtocolVersion = eachOf 50 genProtocolVersion roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
--- BlockVersionData
+-- ProtocolParameters
 --------------------------------------------------------------------------------
 
-goldenBlockVersionData :: Property
-goldenBlockVersionData = goldenTestBi
+goldenProtocolParameters :: Property
+goldenProtocolParameters = goldenTestBi
   bVerDat
-  "test/golden/bi/update/BlockVersionData"
-  where bVerDat = exampleBlockVersionData
+  "test/golden/bi/update/ProtocolParameters"
+  where bVerDat = exampleProtocolParameters
 
-roundTripBlockVersionData :: Property
-roundTripBlockVersionData = eachOf 50 genBlockVersionData roundTripsBiBuildable
+roundTripProtocolParameters :: Property
+roundTripProtocolParameters =
+  eachOf 50 genProtocolParameters roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
--- BlockVersionModifier
+-- ProtocolParameterUpdate
 --------------------------------------------------------------------------------
 
-goldenBlockVersionModifier :: Property
-goldenBlockVersionModifier = goldenTestBi
-  bVerMod
-  "test/golden/bi/update/BlockVersionModifier"
-  where bVerMod = exampleBlockVersionModifier
+goldenProtocolParameterUpdate :: Property
+goldenProtocolParameterUpdate = goldenTestBi
+  ppu
+  "test/golden/bi/update/ProtocolParameterUpdate"
+  where ppu = exampleProtocolParameterUpdate
 
-roundTripBlockVersionModifier :: Property
-roundTripBlockVersionModifier =
-  eachOf 50 genBlockVersionModifier roundTripsBiBuildable
+roundTripProtocolParameterUpdate :: Property
+roundTripProtocolParameterUpdate =
+  eachOf 50 genProtocolParameterUpdate roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- HashRaw

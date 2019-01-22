@@ -37,7 +37,7 @@ import Cardano.Crypto (ProtocolMagic)
 import Test.Cardano.Chain.Common.Gen
   (genBlockCount, genLovelace, genLovelacePortion)
 import Test.Cardano.Chain.Delegation.Gen (genCertificateDistinctList)
-import Test.Cardano.Chain.Update.Gen (genBlockVersionData)
+import Test.Cardano.Chain.Update.Gen (genProtocolParameters)
 import Test.Cardano.Crypto.Gen
   (genHashRaw, genProtocolMagic, genRedeemPublicKey, genTextHash)
 
@@ -79,7 +79,7 @@ genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
     mkGenesisSpec
       <$> genGenesisAvvmBalances
       <*> genGenesisDelegation pm
-      <*> genBlockVersionData
+      <*> genProtocolParameters
       <*> genBlockCount
       <*> genProtocolMagic
       <*> genGenesisInitializer

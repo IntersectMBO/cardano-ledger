@@ -20,7 +20,7 @@ import Cardano.Crypto (ProtocolMagic)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation(..))
 import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
-import Cardano.Chain.Update.BlockVersionData (BlockVersionData)
+import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 
 
 -- | Specification how to generate full genesis data.
@@ -31,8 +31,8 @@ data GenesisSpec = UnsafeGenesisSpec
   -- ^ Genesis state of heavyweight delegation. Will be concatenated with
   --   genesis delegation for bootstrap stakeholders if 'tiUseHeavyDlg' is
   --   'True'.
-  , gsBlockVersionData  :: !BlockVersionData
-  -- ^ Genesis 'BlockVersionData'.
+  , gsProtocolParameters  :: !ProtocolParameters
+  -- ^ Genesis 'ProtocolParameters'.
   , gsK                 :: !BlockCount
   -- ^ The security parameter of the Ouroboros protocol
   , gsProtocolMagic     :: !ProtocolMagic
@@ -48,7 +48,7 @@ deriveJSON defaultOptions ''GenesisSpec
 mkGenesisSpec
   :: GenesisAvvmBalances
   -> GenesisDelegation
-  -> BlockVersionData
+  -> ProtocolParameters
   -> BlockCount
   -> ProtocolMagic
   -> GenesisInitializer
