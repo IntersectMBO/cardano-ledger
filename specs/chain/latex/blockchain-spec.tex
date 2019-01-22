@@ -137,7 +137,7 @@
 
 \title{Specification of the Blockchain Layer}
 
-\author{Marko Dimjašević}
+\author{Marko Dimjašević \\ Nicholas Clarke}
 
 \date{December 13, 2018}
 
@@ -241,6 +241,9 @@ There are several standard sets used in the document:
 \newcommand{\ETState}{\type{ETState}}
 \newcommand{\ETEnv}{\type{ETEnv}}
 
+\newcommand{\sepochname}{sEpoch}
+\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
+
 % Imported definitions
 \newcommand{\UPIState}{\type{UPIState}}
 
@@ -253,10 +256,11 @@ This section should cover:
 The epoch transition rules should compute whether a given slot is at the end of
 an epoch
 \begin{figure}[ht]
-  \emph{Protocol parameters}
+  \emph{Abstract functions}
+  %
   \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \pp{slotsPerEpoch} & \mathbb{N} & \text{Number of slots per epoch} \\
+    \begin{array}{r@{~\in~}lr}
+    \fun{\sepochname} & \Slot \totalf \Epoch & \text{Epoch containing this slot} \\
     \end{array}
   \end{equation*}
   \caption{Epoch transition types and functions}
@@ -264,17 +268,6 @@ an epoch
 \end{figure}
 
 \begin{figure}[ht]
-  \emph{Epoch transition environments}
-  \begin{equation*}
-    \ETEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
-        \var{slot} & \Slot & \text{Current slot} \\
-        \var{dms} & \VKey \mapsto \VKeyGen & \text{Delegation map}
-      \end{array}
-    \right)
-  \end{equation*}
 
   \emph{Epoch transition states}
   \begin{equation*}
@@ -282,7 +275,6 @@ an epoch
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{e_c} & \Epoch & \text{Current epoch} \\
-        \var{slot_r} & \Slot & \text{First slot of the current epoch} \\
         \var{us} & \UPIState & \text{Update interface state}
       \end{array}
     \right)
@@ -290,8 +282,8 @@ an epoch
 
   \emph{Epoch transition transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{epoch}{} \var{\_} \subseteq
-    \powerset (\ETEnv \times \ETState \times \ETState)
+    \_ \vdash \var{\_} \trans{epoch}{\_} \var{\_} \subseteq
+    \powerset ((\VKey \mapsto \VKeyGen) \times \ETState \times \Slot \times \ETState)
   \end{equation*}
   \caption{Epoch transition transition-system types}
   \label{fig:ts-types:epoch}
@@ -301,35 +293,23 @@ an epoch
   \begin{equation*}
     \inference
     {
-      \pp{slotsPerEpoch} \mapsto \var{es} \in \var{pps}
-      \\
-      \var{slot} < \var{slot_r} + \var{es}
+      \var{e_c} \geq \sepoch{s}
     }
-    {
-      \left(
-        {\begin{array}{c}
-          \var{pps} \\
-          \var{slot} \\
-          \var{dms}
-        \end{array}}
-      \right)
-      \vdash
+    {\var{dms} \vdash
       {
         \left(
         {\begin{array}{c}
           \var{e_c} \\
-          \var{slot_r} \\
           \var{us}
          \end{array}
         }
         \right)
       }
-      \trans{epoch}{}
+      \trans{epoch}{s}
       {
         \left(
         {\begin{array}{c}
           \var{e_c} \\
-          \var{slot_r} \\
           \var{us}
          \end{array}
         }
@@ -341,47 +321,34 @@ an epoch
   \begin{equation*}
     \inference
     {
-      \pp{slotsPerEpoch} \mapsto \var{es} \in \var{pps}
-      &
-      \var{slot} \geq \var{slot_r} + \var{es}
-      \\
-      e_n = e_c + 1
+      \var{e_c} < \sepoch{s}
       \\
       {\left(
           \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
+            \var{\var{e_c}} \\
+            \var{s} \\
             \var{dms}
           \end{array}
         \right)
       }
-      \vdash \var{us} \trans{upiec}{\var{e_n}} \var{us'}
+      \vdash \var{us} \trans{upiec}{\sepoch{s}} \var{us'}
     }
     {
-      \left(
-        {\begin{array}{c}
-          \var{pps} \\
-          \var{slot} \\
-          \var{dms}
-        \end{array}}
-      \right)
-      \vdash
+      \var{dms} \vdash
       {
         \left(
         {\begin{array}{c}
           \var{e_c} \\
-          \var{slot_r} \\
           \var{us}
          \end{array}
         }
         \right)
       }
-      \trans{epoch}{}
+      \trans{epoch}{\var{s}}
       {
         \left(
         {\begin{array}{c}
-          \var{e_n} \\
-          \var{slot} \\
+          \sepoch{s} \\
           \var{us'}
          \end{array}
         }
@@ -531,9 +498,11 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bhhashname}{bhHash}
 \newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
 \newcommand{\bhprevhashname}{bhPrevHash}
-\newcommand{\bhprevhash}[1]{\fun{\bhhashname}\ #1}
+\newcommand{\bhprevhash}[1]{\fun{\bhprevhashname}\ #1}
 \newcommand{\bhtosignname}{bhToSign}
 \newcommand{\bhtosign}[1]{\fun{\bhtosignname}\ #1}
+\newcommand{\bhslotname}{bhSlot}
+\newcommand{\bhslot}[1]{\fun{\bhslotname}\ #1}
 
 \newcommand{\maxblocksize}{\pp{maxBlockSize}}
 \newcommand{\maxheadersize}{\pp{maxHeaderSize}}
@@ -595,6 +564,7 @@ of block bodies.
     \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
     \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
     \fun{\bhtosignname} & \Bhead \totalf \Bhtosign & \text{Block header to sign}\\
+    \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
     \end{array}
   \end{equation*}
   \emph{Protocol parameters}
@@ -615,6 +585,8 @@ of block bodies.
       \begin{array}{r@{~\in~}lr}
         \var{pps} & \ProtParams & \text{Protocol parameters} \\
         \var{ds} & \DelegState & \text{Delegation state} \\
+        \var{s_{last}} & \Slot & \text{Slot for which the last known block was issued} \\
+        \var{s_{now}} & \Slot & \text{Current slot} \\
       \end{array}
     \right)
   \end{equation*}
@@ -632,15 +604,19 @@ of block bodies.
   \begin{equation*}
     \inference
     { \sigma = \bsig{bh} & \var{vk_d} = \bissuer{bh} & \var{h'} = \bhhash{bh}
+    \\ \var{s} = \bhslot{bh}
     \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
+    \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
     \\  (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} \neq \emptyset
     \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{\sigma}
     }
     {
       \left(
         {\begin{array}{c}
-          \var{pps} \\
-          \var{ds} \\
+           \var{pps} \\
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
         \end{array}}
       \right)
       \vdash
@@ -731,6 +707,9 @@ of block bodies.
 \newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
 \newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
+\newcommand{\bslotname}{bSlot}
+\newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
+
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\DIEnv}{\type{DIEnv}}
@@ -768,8 +747,10 @@ of block bodies.
   \emph{Derived functions}
   \begin{equation*}
     \begin{array}{rlr}
-      \fun{bEndorsment} & \in \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bissuer{b})
+      \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
+      \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
+      \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
+      \bslot{b} & = (\bhslotname \cdot \bheadname)~b
     \end{array}
   \end{equation*}
 
@@ -785,8 +766,7 @@ of block bodies.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{bIx} & \BlockIx & \text{Current block index} \\
-        \var{e_c} & \Epoch & \text{Current epoch} \\
-        \var{slot_r} & \Slot & \text{First slot of the current epoch} \\
+        \var{s_{last}} & \Slot & \text{Slot of the last seen block} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
@@ -807,7 +787,7 @@ of block bodies.
 \end{figure}
 
 The central rule that captures blockchain extension is given with
-Figure~\ref{fig:defs:chain-extension}.
+Figure~\ref{fig:rules:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
@@ -818,15 +798,14 @@ Figure~\ref{fig:defs:chain-extension}.
   {
     \left(
       {\begin{array}{c}
-         \var{slot}
+         \var{s_{now}}
        \end{array}}
     \right)
     \vdash
     \left(
       {\begin{array}{c}
          bIx \\
-         \var{e_c} \\
-         \var{slot_r} \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -838,8 +817,7 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx \\
-         \var{e_c} \\
-         \var{slot_r} \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h'} \\
          \var{utxo} \\
@@ -854,33 +832,24 @@ Figure~\ref{fig:defs:chain-extension}.
   \inference
   {
     \neg\isebb{b} \\
+    \fun{dms} ~ \var{ds} \vdash
     {\left(
         \begin{array}{l}
-          \fun{pps} ~ us \\
-          \var{slot} \\
-          \fun{dms} ~ \var{ds}
-        \end{array}
-      \right)}
-    \vdash
-    {\left(
-        \begin{array}{l}
-          \var{e_c} \\
-          \var{slot_r} \\
+          \sepoch{s_{last}} \\
           us
         \end{array}
       \right)}
-    \trans{epoch}{}
+    \trans{epoch}{\bslot{b}}
     {\left(
         \begin{array}{l}
           \var{e_n} \\
-          \var{slot_n} \\
           us'
         \end{array}
       \right)}
     &
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
@@ -889,7 +858,7 @@ Figure~\ref{fig:defs:chain-extension}.
     \\
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
@@ -898,7 +867,7 @@ Figure~\ref{fig:defs:chain-extension}.
     &
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
@@ -907,36 +876,45 @@ Figure~\ref{fig:defs:chain-extension}.
     \\
     {\left(
         \begin{array}{l}
-          \fun{pps} ~  us \\
-          ds
+          \fun{pps} ~  us' \\
+          ds \\
+          \var{s_{last}} \\
+          \var{s_{now}} \\
         \end{array}
       \right)}
     \vdash
     \var{h} \trans{bhead}{\bhead{b}} \var{h'} &
-    \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+    \fun{pps} ~  us' \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
-        \fun{pps} ~  us \\
+        \fun{pps} ~  us' \\
         ds \\
         bIx
       \end{array}
     \right)}
     \vdash
     \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname' &&
-    \var{diEnv} \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
+    {\left(
+        \begin{array}{l}
+          \dom{\signmapname} \\
+          (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+          \bslot{b} \\
+          \fun{pps} ~  us' \\
+        \end{array}
+      \right)}
+    \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
   }
   {
     \left(
       {\begin{array}{c}
-         \var{slot}
+         \var{s_{now}}
        \end{array}}
     \right)
     \vdash
     \left(
       {\begin{array}{c}
          bIx \\
-         e_c \\
-         \var{slot_r} \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -948,8 +926,7 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx + 1 \\
-         e_n \\
-         \var{slot_n} \\
+         \var{\bslot{b}} \\
          \signmapname' \\
          \var{h'} \\
          \var{utxo}' \\
@@ -960,7 +937,7 @@ Figure~\ref{fig:defs:chain-extension}.
   }
   \end{equation*}
   \caption{Blockchain extension rules}
-  \label{fig:blockchain-extension}
+  \label{fig:rules:chain-extension}
 \end{figure}
 \clearpage
 \bibliographystyle{plainnat}
