@@ -183,10 +183,10 @@ genProxySignature
   -> Gen w
   -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
-  delegateSk       <- genSecretKey
+  delegateSk <- genSecretKey
   issuerSafeSigner <- genSafeSigner
-  w                <- genW
-  a                <- genA
+  w          <- genW
+  a          <- genA
   let psk = createPsk pm issuerSafeSigner (toPublic delegateSk) w
   return $ proxySign pm SignProxySK delegateSk psk a
 

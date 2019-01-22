@@ -61,9 +61,9 @@ import Cardano.Binary.Class
   )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
-import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
-import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
 import Cardano.Chain.Update.Data (UpdateData)
+import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
 import Cardano.Chain.Update.SystemTag
@@ -95,13 +95,13 @@ import Cardano.Crypto
 type UpId = Hash Proposal
 
 data ProposalBody = ProposalBody
-  { pbProtocolVersion      :: !ProtocolVersion
+  { pbProtocolVersion         :: !ProtocolVersion
   , pbProtocolParameterUpdate :: !ProtocolParameterUpdate
-  , pbSoftwareVersion      :: !SoftwareVersion
-  , pbData                 :: !(Map SystemTag UpdateData)
+  , pbSoftwareVersion         :: !SoftwareVersion
+  , pbData                    :: !(Map SystemTag UpdateData)
   -- ^ UpdateData for each system which this update affects. It must be
   --   non-empty.
-  , pbAttributes           :: !(Attributes ())
+  , pbAttributes              :: !(Attributes ())
   -- ^ Attributes which are currently empty, but provide extensibility
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData

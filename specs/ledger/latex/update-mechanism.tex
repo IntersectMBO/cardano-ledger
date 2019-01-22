@@ -282,7 +282,7 @@ cause a soft-fork we might use the alt version for that purpose.
       \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
       & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
         \Rightarrow \var{av} = \var{av_c} + 1)\\
-      & \vee & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
+      & \wedge & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
     \end{array}
   \end{equation}
   \caption{Update validity functions}

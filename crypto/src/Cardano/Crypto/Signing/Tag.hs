@@ -59,14 +59,14 @@ instance Buildable SignTag where
 signTag :: ProtocolMagicId -> SignTag -> ByteString
 signTag protocolMagic = \case
   SignForTestingOnly -> "\x00"
-  SignTx             -> "\x01" <> network
-  SignRedeemTx       -> "\x02" <> network
-  SignVssCert        -> "\x03" <> network
-  SignUSProposal     -> "\x04" <> network
-  SignCommitment     -> "\x05" <> network
-  SignUSVote         -> "\x06" <> network
-  SignMainBlock      -> "\x07" <> network
+  SignTx         -> "\x01" <> network
+  SignRedeemTx   -> "\x02" <> network
+  SignVssCert    -> "\x03" <> network
+  SignUSProposal -> "\x04" <> network
+  SignCommitment -> "\x05" <> network
+  SignUSVote     -> "\x06" <> network
+  SignMainBlock  -> "\x07" <> network
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
-  SignProxySK        -> "\x0a" <> network
+  SignProxySK    -> "\x0a" <> network
   where network = Bi.serialize' (unProtocolMagicId $ protocolMagic)

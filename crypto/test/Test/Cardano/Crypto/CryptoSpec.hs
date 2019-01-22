@@ -51,8 +51,8 @@ hashingSpec =
     $ describe "Hashing"
     $ do
         describe "hashes of different values are different" $ do
-          prop "Bool"              (hashInequality @Bool)
-          prop "[()]"              (hashInequality @[()])
+          prop "Bool" (hashInequality @Bool)
+          prop "[()]" (hashInequality @[()])
           prop "[[Maybe Integer]]" (hashInequality @[[Maybe Integer]])
         -- Let's protect ourselves against *accidental* hash changes
         describe "check hash sample"

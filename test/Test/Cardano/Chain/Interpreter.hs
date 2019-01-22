@@ -70,9 +70,9 @@ prop_interpretedCertsValid =
     { _dSEnvAllowedDelegators = Set.fromList
       . fmap (VKeyGenesis . VKey . Owner)
       $ [0 .. 6]
-    , _dSEnvEpoch             = Epoch 0
-    , _dSEnvSlot              = Slot 0
-    , _dSEnvLiveness          = SlotCount 20
+    , _dSEnvEpoch    = Epoch 0
+    , _dSEnvSlot     = Slot 0
+    , _dSEnvLiveness = SlotCount 20
     }
 
 interpretDCert :: DCert -> Delegation.Certificate
@@ -86,7 +86,7 @@ interpretDCert cert = createPsk
   (_         , delegatorSK) = interpretKeyPair $ vKeyPair delegatorVKey
   (delegatePK, _          ) = interpretKeyPair . vKeyPair $ delegate cert
 
-  Epoch e                   = _depoch cert
+  Epoch e = _depoch cert
 
   epochIndex :: EpochIndex
   epochIndex = fromIntegral e

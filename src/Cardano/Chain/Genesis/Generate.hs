@@ -210,38 +210,38 @@ generateGenesisData startTime genesisSpec = do
 
   (richBals, poorBals) <- genTestnetDistribution tbo nonAvvmBalance
 
-  richDistr            <- safeZip "richDistr" richAddresses richBals
-  poorDistr            <- safeZip "poorDistr" poorAddresses poorBals
+  richDistr <- safeZip "richDistr" richAddresses richBals
+  poorDistr <- safeZip "poorDistr" poorAddresses poorBals
 
   let
     nonAvvmDistr = GenesisNonAvvmBalances . M.fromList $ richDistr ++ poorDistr
 
   let
     genesisData = GenesisData
-      { gdBootStakeholders   = bootStakeholders
-      , gdHeavyDelegation    = genesisDlg
-      , gdStartTime          = startTime
-      , gdNonAvvmBalances    = nonAvvmDistr
+      { gdBootStakeholders = bootStakeholders
+      , gdHeavyDelegation = genesisDlg
+      , gdStartTime = startTime
+      , gdNonAvvmBalances = nonAvvmDistr
       , gdProtocolParameters = gsProtocolParameters genesisSpec
-      , gdK                  = gsK genesisSpec
-      , gdProtocolMagic      = pm
-      , gdAvvmDistr          = fakeAvvmDistr <> realAvvmMultiplied
+      , gdK         = gsK genesisSpec
+      , gdProtocolMagic = pm
+      , gdAvvmDistr = fakeAvvmDistr <> realAvvmMultiplied
       }
 
   pure (genesisData, generatedSecrets)
  where
-  pm                = gsProtocolMagic genesisSpec
-  realAvvmBalances  = gsAvvmDistr genesisSpec
+  pm          = gsProtocolMagic genesisSpec
+  realAvvmBalances = gsAvvmDistr genesisSpec
 
-  gi                = gsInitializer genesisSpec
+  gi          = gsInitializer genesisSpec
 
-  generatedSecrets  = generateSecrets gi
+  generatedSecrets = generateSecrets gi
   dlgIssuersSecrets = gsDlgIssuersSecrets generatedSecrets
-  richSecrets       = gsRichSecrets generatedSecrets
-  poorSecrets       = gsPoorSecrets generatedSecrets
+  richSecrets = gsRichSecrets generatedSecrets
+  poorSecrets = gsPoorSecrets generatedSecrets
 
-  fao               = giFakeAvvmBalance gi
-  tbo               = giTestBalance gi
+  fao         = giFakeAvvmBalance gi
+  tbo         = giTestBalance gi
 
 
 generateSecrets :: GenesisInitializer -> GeneratedSecrets

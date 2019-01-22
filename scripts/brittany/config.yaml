@@ -49,7 +49,7 @@ conf_layout:
   lconfig_importColumn: 50
   lconfig_hangingTypeSignature: false
   lconfig_importAsColumn: 50
-  lconfig_alignmentLimit: 30
+  lconfig_alignmentLimit: 10
   lconfig_indentListSpecial: true
   lconfig_indentAmount: 2
   lconfig_alignmentBreakOnMultiline: true

@@ -118,7 +118,7 @@ validateTx feePolicy utxo tx = do
 validateTxIn :: MonadError TxValidationError m => UTxO -> TxIn -> m ()
 validateTxIn utxo txIn
   | txIn `UTxO.member` utxo = pure ()
-  | otherwise               = throwError $ TxValidationMissingInput txIn
+  | otherwise = throwError $ TxValidationMissingInput txIn
 
 
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'

@@ -33,8 +33,8 @@ tests
       longListOf = Gen.list (Range.linear 0 100000)
     in checkParallel $ Group
       "Encoded size bounds for core types."
-      [ ("()"    , sizeTest $ scfg { gen = pure (), precise = True })
-      , ("Bool"  , sizeTest $ cfg { gen = Gen.bool, precise = True })
+      [ ("()", sizeTest $ scfg { gen = pure (), precise = True })
+      , ("Bool", sizeTest $ cfg { gen = Gen.bool, precise = True })
       , ("Char"  , sizeTest $ cfg { gen = Gen.unicode })
       , ("Char 2", sizeTest $ cfg { gen = Gen.latin1 })
       , ( "String"

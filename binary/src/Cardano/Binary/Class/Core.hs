@@ -174,11 +174,11 @@ withWordSize x =
   let s = fromIntegral x :: Integer
   in
     if
-      | s <= 0x17 && s >= (-0x18)              -> 1
-      | s <= 0xff && s >= (-0x100)             -> 2
-      | s <= 0xffff && s >= (-0x10000)         -> 3
+      | s <= 0x17 && s >= (-0x18) -> 1
+      | s <= 0xff && s >= (-0x100) -> 2
+      | s <= 0xffff && s >= (-0x10000) -> 3
       | s <= 0xffffffff && s >= (-0x100000000) -> 5
-      | otherwise                              -> 9
+      | otherwise -> 9
 
 
 --------------------------------------------------------------------------------
@@ -564,7 +564,7 @@ decodeMapSkel fromDistinctAscList = do
   -- previous key is smaller than the next one.
   decodeEntries
     :: (Bi k, Bi v, Ord k) => Int -> k -> [(k, v)] -> D.Decoder s [(k, v)]
-  decodeEntries 0               _           acc  = pure $ reverse acc
+  decodeEntries 0 _           acc  = pure $ reverse acc
   decodeEntries !remainingPairs previousKey !acc = do
     p@(newKey, _) <- decodeEntry
     -- Order of keys needs to be strictly increasing, because otherwise it's
@@ -622,7 +622,7 @@ decodeSetSkel fromDistinctAscList = do
       fromDistinctAscList <$> decodeEntries (n - 1) firstValue [firstValue]
  where
   decodeEntries :: (Bi v, Ord v) => Int -> v -> [v] -> D.Decoder s [v]
-  decodeEntries 0                 _             acc  = pure $ reverse acc
+  decodeEntries 0 _ acc  = pure $ reverse acc
   decodeEntries !remainingEntries previousValue !acc = do
     newValue <- decode
     -- Order of values needs to be strictly increasing, because otherwise
@@ -835,7 +835,7 @@ szGreedy = encodedSizeExpr szGreedy
 -- | Is this expression a thunk?
 isTodo :: Size -> Bool
 isTodo (Fix (TodoF _ _)) = True
-isTodo _                 = False
+isTodo _ = False
 
 -- | Create a "thunk" that will apply @f@ to @pxy@ when forced.
 todo
@@ -849,9 +849,9 @@ todo f pxy = Fix (TodoF f pxy)
 --      * In all other cases, create a deferred application of @f@.
 apMono :: Text -> (Natural -> Natural) -> Size -> Size
 apMono n f = \case
-  Fix (ValueF x ) -> Fix (ValueF (f x))
+  Fix (ValueF x) -> Fix (ValueF (f x))
   Fix (CasesF cs) -> Fix (CasesF (map (fmap (apMono n f)) cs))
-  x               -> Fix (ApF n f x)
+  x -> Fix (ApF n f x)
 
 -- | Greedily compute the size bounds for a type, using the given context to
 --   override sizes for specific types.
@@ -897,14 +897,14 @@ szSimplify = cata $ \case
     Right xs' ->
       Right (Range {lo = minimum (map lo xs'), hi = maximum (map hi xs')})
     Left _ -> Left (szCases $ map (fmap toSize) xs)
-  AddF x y          -> binOp (+) x y
-  MulF x y          -> binOp (*) x y
-  SubF x y          -> binOp (-) x y
-  NegF x            -> unOp negate x
-  AbsF x            -> unOp abs x
-  SgnF x            -> unOp signum x
+  AddF x y -> binOp (+) x y
+  MulF x y -> binOp (*) x y
+  SubF x y -> binOp (-) x y
+  NegF x   -> unOp negate x
+  AbsF x   -> unOp abs x
+  SgnF x   -> unOp signum x
   ApF _ f (Right x) -> Right (Range {lo = f (lo x), hi = f (hi x)})
-  ApF n f (Left  x) -> Left (apMono n f x)
+  ApF n f (Left x) -> Left (apMono n f x)
  where
   binOp
     :: (forall a . Num a => a -> a -> a)

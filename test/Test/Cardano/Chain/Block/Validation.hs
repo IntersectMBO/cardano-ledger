@@ -167,8 +167,8 @@ prop_signingHistoryUpdatesPreserveInvariants =
 
         let
           initialSigningHistory = SigningHistory
-            { shK                 = k
-            , shSigningQueue      = Seq.Empty
+            { shK = k
+            , shSigningQueue = Seq.Empty
             , shStakeholderCounts = M.fromList $ fmap (, 0) stakeholders
             }
 

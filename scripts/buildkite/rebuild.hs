@@ -124,10 +124,10 @@ cacheS3 CICacheConfig {..} baseBranch cmd = void $ run "cache-s3" args
       ++ cmds
       ++ ml baseBranchArg
   baseBranchArg = format ("--base-branch=" % s) <$> baseBranch
-  maxSize       = format ("--max-size=" % s) <$> ccMaxSize
-  regionArg     = format ("--region=" % s) <$> ccRegion
-  cmds          = ("-c" : T.words cmd)
-  ml            = maybe [] pure
+  maxSize   = format ("--max-size=" % s) <$> ccMaxSize
+  regionArg = format ("--region=" % s) <$> ccRegion
+  cmds      = ("-c" : T.words cmd)
+  ml        = maybe [] pure
 
 run :: Text -> [Text] -> IO ExitCode
 run cmd args = do

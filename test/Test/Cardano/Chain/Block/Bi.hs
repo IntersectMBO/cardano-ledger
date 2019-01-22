@@ -315,9 +315,9 @@ exampleBlockSignature = BlockSignature
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
  where
-  sig                    = proxySign pm SignProxySK delegateSk psk exampleToSign
+  sig = proxySign pm SignProxySK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2
-  psk                    = createPsk
+  psk = createPsk
     pm
     (noPassSafeSigner issuerSk)
     (toPublic delegateSk)

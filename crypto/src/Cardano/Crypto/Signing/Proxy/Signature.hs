@@ -116,7 +116,7 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
   PublicKey issuerPk = pskIssuerPk psk
   -- It's safe to put the tag after issuerPk because `CC.unXPub issuerPk` always
   -- takes 64 bytes
-  sigma              = CC.sign (mempty :: ScrubbedBytes) delegateSk
+  sigma = CC.sign (mempty :: ScrubbedBytes) delegateSk
     $ mconcat ["01", CC.unXPub issuerPk, signTag pm t, serialize' m]
 
 -- | Verify delegated signature given issuer's pk, signature, message
@@ -131,11 +131,11 @@ proxyVerifyDecoded
   -> Bool
 proxyVerifyDecoded pm t psig omegaPred m = predCorrect && sigValid
  where
-  psk                       = psigPsk psig
+  psk         = psigPsk psig
   PublicKey issuerPk        = pskIssuerPk psk
   PublicKey pdDelegatePkRaw = pskDelegatePk psk
-  predCorrect               = omegaPred (pskOmega psk)
-  sigValid                  = CC.verify
+  predCorrect = omegaPred (pskOmega psk)
+  sigValid    = CC.verify
     pdDelegatePkRaw
     (mconcat ["01", CC.unXPub issuerPk, signTag pm t, recoverBytes m])
     (psigSig psig)
@@ -152,11 +152,11 @@ proxyVerify
   -> Bool
 proxyVerify pm t psig omegaPred m = predCorrect && sigValid
  where
-  psk                       = psigPsk psig
+  psk         = psigPsk psig
   PublicKey issuerPk        = pskIssuerPk psk
   PublicKey pdDelegatePkRaw = pskDelegatePk psk
-  predCorrect               = omegaPred (pskOmega psk)
-  sigValid                  = CC.verify
+  predCorrect = omegaPred (pskOmega psk)
+  sigValid    = CC.verify
     pdDelegatePkRaw
     (mconcat ["01", CC.unXPub issuerPk, signTag pm t, serialize' m])
     (psigSig psig)

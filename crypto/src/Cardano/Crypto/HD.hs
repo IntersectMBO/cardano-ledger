@@ -165,7 +165,7 @@ encryptChaChaPoly
   -- ^ Ciphertext with a 128-bit crypto-tag appended.
 encryptChaChaPoly nonce key header plaintext = do
   st1 <- C.nonce12 nonce >>= C.initialize key
-  let st2        = C.finalizeAAD $ C.appendAAD header st1
+  let st2 = C.finalizeAAD $ C.appendAAD header st1
   let (out, st3) = C.encrypt plaintext st2
   let auth       = C.finalize st3
   pure $ out <> BA.convert auth
@@ -190,14 +190,14 @@ decryptChaChaPoly
   -- ^ Decrypted text or error
 decryptChaChaPoly nonce key header encDataWithTag = do
   let tagSize = 16 :: Int
-  let l       = B.length encDataWithTag
+  let l = B.length encDataWithTag
   (l >= tagSize)
     `orThrowError` "Length of encrypted text must be at least "
-    <>             show tagSize
+    <> show tagSize
   let (encData, rawTag) = B.splitAt (l - 16) encDataWithTag
   tag <- toEither (Poly.authTag rawTag)
   st1 <- toEither (C.nonce12 nonce >>= C.initialize key)
-  let st2        = C.finalizeAAD $ C.appendAAD header st1
+  let st2 = C.finalizeAAD $ C.appendAAD header st1
   let (out, st3) = C.decrypt encData st2
   (C.finalize st3 == tag) `orThrowError` "Crypto-tag mismatch"
   -- is it free from mem leaks?

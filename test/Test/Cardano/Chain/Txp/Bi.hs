@@ -255,7 +255,7 @@ sizeEstimates
       sizeTestGen g = sizeTest $ scfg { gen = g }
       pm = ProtocolMagicId 0
       knownTxIn (TxInUnknown _ _) = False
-      knownTxIn _                 = True
+      knownTxIn _ = True
 
       -- Explicit bounds for types, based on the generators from Gen.
       attrUnitSize = (typeRep (Proxy @(Attributes ())), SizeConstant 1)

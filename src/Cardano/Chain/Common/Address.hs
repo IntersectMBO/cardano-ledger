@@ -308,9 +308,9 @@ makePubKeyAddressImpl path (IsBootstrapEraAddr isBootstrapEra) key =
 makeScriptAddress :: Maybe StakeholderId -> Script -> Address
 makeScriptAddress stakeholder scr = makeAddress spendingData attrs
  where
-  spendingData      = ScriptASD scr
+  spendingData = ScriptASD scr
   stakeDistribution = maybe BootstrapEraDistr SingleKeyDistr stakeholder
-  attrs             = AddrAttributes
+  attrs        = AddrAttributes
     { aaPkDerivationPath  = Nothing
     , aaStakeDistribution = stakeDistribution
     }
@@ -450,7 +450,7 @@ isUnknownAddressType addr = case addrType addr of
 isBootstrapEraDistrAddress :: Address -> Bool
 isBootstrapEraDistrAddress addr = case aaStakeDistribution aa of
   BootstrapEraDistr -> True
-  _                 -> False
+  _ -> False
   where aa = addrAttributesUnwrapped addr
 
 --------------------------------------------------------------------------------
