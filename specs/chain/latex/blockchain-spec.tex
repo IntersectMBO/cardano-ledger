@@ -55,6 +55,7 @@
 \newcommand{\var}[1]{\mathit{#1}}
 \newcommand{\fun}[1]{\mathsf{#1}}
 \newcommand{\type}[1]{\mathsf{#1}}
+\newcommand{\pp}[1]{\mathsf{#1}}
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
@@ -136,7 +137,7 @@
 
 \title{Specification of the Blockchain Layer}
 
-\author{Marko Dimjašević}
+\author{Marko Dimjašević \\ Nicholas Clarke}
 
 \date{December 13, 2018}
 
@@ -237,6 +238,15 @@ There are several standard sets used in the document:
 
 \newcommand{\Epoch}{\type{Epoch}}
 
+\newcommand{\ETState}{\type{ETState}}
+\newcommand{\ETEnv}{\type{ETEnv}}
+
+\newcommand{\sepochname}{sEpoch}
+\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
+
+% Imported definitions
+\newcommand{\UPIState}{\type{UPIState}}
+
 This section should cover:
 \begin{itemize}
 \item How we determine the end of an epoch
@@ -245,7 +255,112 @@ This section should cover:
 
 The epoch transition rules should compute whether a given slot is at the end of
 an epoch
+\begin{figure}[ht]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+    \fun{\sepochname} & \Slot \totalf \Epoch & \text{Epoch containing this slot} \\
+    \end{array}
+  \end{equation*}
+  \caption{Epoch transition types and functions}
+  \label{fig:defs:epoch}
+\end{figure}
 
+\begin{figure}[ht]
+
+  \emph{Epoch transition states}
+  \begin{equation*}
+    \ETState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{e_c} & \Epoch & \text{Current epoch} \\
+        \var{us} & \UPIState & \text{Update interface state}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Epoch transition transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{epoch}{\_} \var{\_} \subseteq
+    \powerset ((\VKey \mapsto \VKeyGen) \times \ETState \times \Slot \times \ETState)
+  \end{equation*}
+  \caption{Epoch transition transition-system types}
+  \label{fig:ts-types:epoch}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    {
+      \var{e_c} \geq \sepoch{s}
+    }
+    {\var{dms} \vdash
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+      \trans{epoch}{s}
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+    }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+    \inference
+    {
+      \var{e_c} < \sepoch{s}
+      \\
+      {\left(
+          \begin{array}{l}
+            \var{\var{e_c}} \\
+            \var{s} \\
+            \var{dms}
+          \end{array}
+        \right)
+      }
+      \vdash \var{us} \trans{upiec}{\sepoch{s}} \var{us'}
+    }
+    {
+      \var{dms} \vdash
+      {
+        \left(
+        {\begin{array}{c}
+          \var{e_c} \\
+          \var{us}
+         \end{array}
+        }
+        \right)
+      }
+      \trans{epoch}{\var{s}}
+      {
+        \left(
+        {\begin{array}{c}
+          \sepoch{s} \\
+          \var{us'}
+         \end{array}
+        }
+        \right)
+      }
+    }
+  \end{equation*}
+  \caption{Epoch transition rules}
+  \label{fig:rules:epoch}
+\end{figure}
+
+\clearpage
 \section{Counting signed blocks}
 
 \newcommand{\BSCEnv}{\type{BSCEnv}}
@@ -290,8 +405,8 @@ $1/5 \leq t \leq 1/4$.
   \emph{Protocol parameters}
   \begin{equation*}
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \fun{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
-    \fun{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+    \pp{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+    \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
 
@@ -338,7 +453,7 @@ $1/5 \leq t \leq 1/4$.
   \begin{equation*}
     \inference
     {
-      \fun{blockSignatureCountWindow} \partialf \var{K} \in pps & \fun{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
+      \pp{blockSignatureCountWindow} \partialf \var{K} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
       \var{D} = (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
       \signmapname' = \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
     }
@@ -383,12 +498,14 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bhhashname}{bhHash}
 \newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
 \newcommand{\bhprevhashname}{bhPrevHash}
-\newcommand{\bhprevhash}[1]{\fun{\bhhashname}\ #1}
+\newcommand{\bhprevhash}[1]{\fun{\bhprevhashname}\ #1}
 \newcommand{\bhtosignname}{bhToSign}
 \newcommand{\bhtosign}[1]{\fun{\bhtosignname}\ #1}
+\newcommand{\bhslotname}{bhSlot}
+\newcommand{\bhslot}[1]{\fun{\bhslotname}\ #1}
 
-\newcommand{\maxblocksize}{\fun{maxBlockSize}}
-\newcommand{\maxheadersize}{\fun{maxHeaderSize}}
+\newcommand{\maxblocksize}{\pp{maxBlockSize}}
+\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
 
 We delineate here between validating the header and body of a block. It's useful
 to make this distinction since we may validate headers ahead of validating the
@@ -447,6 +564,7 @@ of block bodies.
     \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
     \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
     \fun{\bhtosignname} & \Bhead \totalf \Bhtosign & \text{Block header to sign}\\
+    \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
     \end{array}
   \end{equation*}
   \emph{Protocol parameters}
@@ -467,6 +585,8 @@ of block bodies.
       \begin{array}{r@{~\in~}lr}
         \var{pps} & \ProtParams & \text{Protocol parameters} \\
         \var{ds} & \DelegState & \text{Delegation state} \\
+        \var{s_{last}} & \Slot & \text{Slot for which the last known block was issued} \\
+        \var{s_{now}} & \Slot & \text{Current slot} \\
       \end{array}
     \right)
   \end{equation*}
@@ -484,15 +604,19 @@ of block bodies.
   \begin{equation*}
     \inference
     { \sigma = \bsig{bh} & \var{vk_d} = \bissuer{bh} & \var{h'} = \bhhash{bh}
+    \\ \var{s} = \bhslot{bh}
     \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
+    \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
     \\  (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} \neq \emptyset
     \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{\sigma}
     }
     {
       \left(
         {\begin{array}{c}
-          \var{pps} \\
-          \var{ds} \\
+           \var{pps} \\
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
         \end{array}}
       \right)
       \vdash
@@ -522,12 +646,6 @@ of block bodies.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
     \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
-    \end{array}
-  \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
     \end{array}
   \end{equation*}
   \caption{Block body validation types and functions}
@@ -589,13 +707,15 @@ of block bodies.
 \newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
 \newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
+\newcommand{\bslotname}{bSlot}
+\newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
+
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
 
 \newcommand{\UPIEnv}{\type{UPIEnv}}
-\newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UProp}{\type{UProp}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
@@ -627,8 +747,10 @@ of block bodies.
   \emph{Derived functions}
   \begin{equation*}
     \begin{array}{rlr}
-      \fun{bEndorsment} & \in \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bissuer{b})
+      \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
+      \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
+      \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
+      \bslot{b} & = (\bhslotname \cdot \bheadname)~b
     \end{array}
   \end{equation*}
 
@@ -638,22 +760,13 @@ of block bodies.
 \end{figure}
 
 \begin{figure}[ht]
-  % \emph{Chain extension environments}
-  % \begin{equation*}
-  %   \CEEnv =
-  %   \left(
-  %     \begin{array}{r@{~\in~}lr}
-  %       \var{slot} & \Slot & \text{Current slot}
-  %     \end{array}
-  %   \right)
-  % \end{equation*}
   \emph{Chain extension states}
   \begin{equation*}
     \CEState =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{bIx} & \BlockIx & \text{Current block index} \\
-        \var{e_c} & \Epoch & \text{Current epoch} \\
+        \var{s_{last}} & \Slot & \text{Slot of the last seen block} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
@@ -674,7 +787,7 @@ of block bodies.
 \end{figure}
 
 The central rule that captures blockchain extension is given with
-Figure~\ref{fig:defs:chain-extension}.
+Figure~\ref{fig:rules:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
@@ -685,13 +798,14 @@ Figure~\ref{fig:defs:chain-extension}.
   {
     \left(
       {\begin{array}{c}
-         \var{slot}
+         \var{s_{now}}
        \end{array}}
     \right)
     \vdash
     \left(
       {\begin{array}{c}
          bIx \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -703,6 +817,7 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h'} \\
          \var{utxo} \\
@@ -717,66 +832,89 @@ Figure~\ref{fig:defs:chain-extension}.
   \inference
   {
     \neg\isebb{b} \\
-    \var{slot} \vdash \var{e_c} \trans{epoch}{} \var{e_n}
-    \\
+    \fun{dms} ~ \var{ds} \vdash
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \sepoch{s_{last}} \\
+          us
+        \end{array}
+      \right)}
+    \trans{epoch}{\bslot{b}}
+    {\left(
+        \begin{array}{l}
+          \var{e_n} \\
+          us'
+        \end{array}
+      \right)}
+    &
+    {\left(
+        \begin{array}{l}
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
       \right)}
-    \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
-    &&
+    \vdash \var{us'} \trans{upireg}{\bupdprop{b}} \var{us''}
+    \\
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
       \right)}
-    \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
-    \\
+    \vdash \var{us''} \trans{upivotes}{\bupdvotes{b}} \var{us'''}
+    &
     {\left(
         \begin{array}{l}
-          \var{slot} \\
+          \bslot{b} \\
           \var{e_n} \\
           \fun{dms} ~ \var{ds}
         \end{array}
       \right)}
-    \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''}
+    \vdash \var{us'''} \trans{upiend}{\bendorsment{b}} \var{us''''}
     \\
     {\left(
         \begin{array}{l}
-          \fun{pps} ~  us \\
-          ds
+          \fun{pps} ~  us' \\
+          ds \\
+          \var{s_{last}} \\
+          \var{s_{now}} \\
         \end{array}
       \right)}
     \vdash
     \var{h} \trans{bhead}{\bhead{b}} \var{h'} &
-    \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+    \fun{pps} ~  us' \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     {\left(
       \begin{array}{l}
-        \fun{pps} ~  us \\
+        \fun{pps} ~  us' \\
         ds \\
         bIx
       \end{array}
     \right)}
     \vdash
     \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname' &&
-    \var{diEnv} \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
+    {\left(
+        \begin{array}{l}
+          \dom{\signmapname} \\
+          (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+          \bslot{b} \\
+          \fun{pps} ~  us' \\
+        \end{array}
+      \right)}
+    \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
   }
   {
     \left(
       {\begin{array}{c}
-         \var{slot}
+         \var{s_{now}}
        \end{array}}
     \right)
     \vdash
     \left(
       {\begin{array}{c}
          bIx \\
-         e_c \\
+         \var{s_{last}} \\
          \signmapname \\
          \var{h} \\
          \var{utxo} \\
@@ -788,18 +926,18 @@ Figure~\ref{fig:defs:chain-extension}.
     \left(
       {\begin{array}{c}
          bIx + 1 \\
-         e_n \\
+         \var{\bslot{b}} \\
          \signmapname' \\
          \var{h'} \\
          \var{utxo}' \\
-         \var{us'''} \\
+         \var{us''''} \\
          \var{ds'}
        \end{array}}
     \right)
   }
   \end{equation*}
   \caption{Blockchain extension rules}
-  \label{fig:blockchain-extension}
+  \label{fig:rules:chain-extension}
 \end{figure}
 \clearpage
 \bibliographystyle{plainnat}
