@@ -62,6 +62,8 @@
 \newcommand{\nextdef}{\\[1em]}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+
 % Partial and total function aliases
 \newcommand{\totalf}{\to}
 \newcommand{\partialf}{\mapsto}
@@ -454,8 +456,8 @@ $1/5 \leq t \leq 1/4$.
     \inference
     {
       \pp{blockSignatureCountWindow} \partialf \var{K} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
-      \var{D} = (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
-      \signmapname' = \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
+      \var{D} \leteq (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
+      \signmapname' \leteq \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
     }
     {
       \left(
@@ -603,12 +605,11 @@ of block bodies.
 \begin{figure}[ht]
   \begin{equation*}
     \inference
-    { \sigma = \bsig{bh} & \var{vk_d} = \bissuer{bh} & \var{h'} = \bhhash{bh}
-    \\ \var{s} = \bhslot{bh}
+    { \var{vk_d} \leteq \bissuer{bh} & \var{s} \leteq \bhslot{bh}
     \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
     \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
-    \\  (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} \neq \emptyset
-    \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{\sigma}
+    \\ \fun{dms} ~  \var{ds} \restrictrange \{\var{vk_d}\} \neq \emptyset
+    \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bsig{bh})}
     }
     {
       \left(
@@ -622,7 +623,7 @@ of block bodies.
       \vdash
         {\var{h}}
       \trans{bhead}{\var{bh}}
-        {\var{h'}}
+        {\bhhash{bh}}
     }
   \end{equation*}
   \caption{Block header validation rules}
@@ -725,8 +726,7 @@ of block bodies.
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-    \var{data} & \Data    & \text{data}\\
-    \var{ds} & \DelegState & \text{ledger layer delegation state}
+    \var{data} & \Data    & \text{data}
   \end{array}
   \end{equation*}
   \emph{Abstract functions}
