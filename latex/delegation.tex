@@ -42,7 +42,7 @@ and inputs in a UTxO or a transaction
 \item epochs
 \item slot numbers
 \item duration: the difference between two slot numbers
-\item $\StakePool$: constants found in a stake pool registration certificate
+\item $\PoolParam$: constants found in a stake pool registration certificate
 (we must continue to keep track of these after registration is complete)
 \end{itemize}
 
@@ -62,8 +62,9 @@ and, in a very similarly
 way, a type for transitions describing stake pool-related ledger updates
 (i.e. $\PState$ transitions).
 
-The type $\Allocs$ is a general datatype used to represent both individual and stake
-pool resource allocations. It stores, as a finite map, the hash key to which the resource is
+The type $\StakeKeys$ represents individual key registrations and $\StakePools$
+represents stake pool registrations.
+They both store, as a finite maps, the hash key to which the resource is
 allocated, and the corresponding slot number in which this allocation
 (registration) was made. Here we also introduce the pointer structure
 $\Ptr$, which we will use to index stake keys based on
@@ -76,7 +77,7 @@ of the certificate inside the transaction (i.e.\ its position in the list of
 the transaction's certificates).
 
 The maps $\fun{hash}$, $\fun{addr_{rwd}}$, $\fun{author}$, $\fun{dpool}$,
-$\fun{stakepool}$,
+$\fun{poolParam}$,
 $\fun{retire}$, $\fun{epoch}$, and $\fun{slot}$ are all used to
 retrieve specific information about the origin type. The subtraction $\slotminus{}{}$
 of slots gives the number of slots in between (referred to here as
@@ -92,7 +93,7 @@ $\Duration$ here by $\var{dur}$).
     \begin{array}{r@{~\in~}lr}
       dur & \Duration & \text{duration}\\
       epoch & \Epoch & \text{epoch} \\
-      stakepool & \StakePool & \text{stake pool parameters} \\
+      poolParam & \PoolParam & \text{stake pool parameters} \\
     \end{array}
   \end{equation*}
   %
@@ -115,10 +116,15 @@ $\Duration$ here by $\var{dur}$).
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{allocs}
-      & \Allocs
+      \var{stkeys}
+      & \StakeKeys
       & \HashKey \mapsto \Slot
-      & \text{resource allocations} \\
+      & \text{registered stake keys} \\
+      %
+      \var{stpools}
+      & \StakePools
+      & \HashKey \mapsto \Slot
+      & \text{registered stake pools} \\
     \end{array}
   \end{equation*}
   %
@@ -132,10 +138,10 @@ $\Duration$ here by $\var{dur}$).
   \fun{dpool} & \DCertDeleg \to \HashKey
   & \text{pool being delegated to}
   \\
-  \fun{stakepool} & \DCertRegPool \to \StakePool
+  \fun{poolParam} & \DCertRegPool \to \PoolParam
   & \text{stake pool}
   \\
-  \fun{poolowners} & \StakePool \to \powerset{\HashKey}
+  \fun{poolowners} & \PoolParam \to \powerset{\HashKey}
   & \text{stake pool owners}
   \\
   \fun{retire} & \DCertRetirePool \to \Epoch
@@ -167,7 +173,7 @@ In \cref{fig:delegation-transitions} we give the delegation and stake pool
 state transition types. We define two separate parts of the ledger state.
 The part of the ledger state keeping track of current delegations, $\DState$,
 consists of four variables. The first, $\var{stkeys}$, keeps track of individual
-stake key resource allocations using the $\Allocs$ type.
+stake key resource allocations.
 
 Note that for security, privacy, and usability reasons, the staking (delegating)
 key pair associated with an address must be different from its paying key pair.
@@ -202,12 +208,12 @@ epoch boundary reward calculations, see Section~\ref{sec:epoch}.
 The ledger additionally keeps track of the stake pools in a separate state variable
 $\PState$.
 This state contains a list of registered stake pools, $\var{stpools}$.
-These are again stored as pairs of type $\Allocs$. The stake pool certificates
-do contain useful data that must be stored. However, they are stored in a
+The stake pool certificates contain useful data that must be stored.
+However, they are stored in a
 separate variable in order to allow us to use a signle datatype for
 all deposit and refund calculations for both individual and pool key registrations
 and deregistrations or retirement. The variable that stores other necessary pool
-registration data is $\var{poolParam}$, and is a finite map that stores $\StakePool$
+registration data is $\var{poolParams}$, and is a finite map that stores $\PoolParam$
 constants indexed by the hash keys to which they correspond.
 Finally, $\var{avgs}$ stores the latest value of the pool's moving average
 used in the reward calculation, see Section~\ref{sec:epoch}. This value
@@ -235,7 +241,7 @@ certificate (contained in a signal transaction).
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \Allocs & \text{registered stake keys}\\
+      \var{stkeys} & \StakeKeys & \text{registered stake keys}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey_{stkey} \mapsto \HashKey_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \HashKey & \text{pointer to hashkey}\\
@@ -244,8 +250,8 @@ certificate (contained in a signal transaction).
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stpools} & \Allocs & \text{registered pools to creation time}\\
-      \var{poolParam} & \HashKey \mapsto \StakePool
+      \var{stpools} & \StakePools & \text{registered pools to creation time}\\
+      \var{poolParams} & \HashKey \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
       \var{avgs} & \HashKey \mapsto \mathbb{R}_{>0} & \text{performance moving average}\\
@@ -482,14 +488,14 @@ The first rule, \cref{eq:pool-reg}, can only be used to register a stake pool
 with a new key (to which no stake pool was previously registered).
 When this rule is invoked,
  the author's key and current slot number are added to $\var{stpools}$, and the
-key and $\var{stakepool}$ constants in the certificate are added to the $\var{poolParam}$
+key and $\var{poolParam}$ constants in the certificate are added to the $\var{poolParams}$
 finite map.
 
 The second rule, \cref{eq:pool-rereg}, is used to re-register a
 stake pool with a new certificate ($\var{c}$), or stop the retirement
 process for that key. It does not update the slot number recorded previously
 for the registration of this key, but it does update the associated pool constants
-in $\var{poolParam}$. The author's hash key and associated data
+in $\var{poolParams}$. The author's hash key and associated data
 are also removed from the $\var{retiring}$ parameter to cancel any pending
 retirement for that key.
 
@@ -542,7 +548,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -552,8 +558,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \begin{array}{rcl}
         \varUpdate{\var{stpools}} & \varUpdate{\union}
                                   & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
-        \varUpdate{\var{poolParam}} & \varUpdate{\union}
-                                    & \varUpdate{\{\var{hk} \mapsto \stakepool{c}\}} \\
+        \varUpdate{\var{poolParams}} & \varUpdate{\union}
+                                    & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
        \var{retiring} \\
        \var{avgs}
       \end{array}
@@ -577,7 +583,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -586,8 +592,8 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
       \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \varUpdate{\var{poolParam}} & \varUpdate{\unionoverrideRight}
-                                  & \varUpdate{\{\var{hk} \mapsto \stakepool{c}\}}\\
+        \varUpdate{\var{poolParams}} & \varUpdate{\unionoverrideRight}
+                                  & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \var{avgs}
       \end{array}
@@ -614,7 +620,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \left(
       \begin{array}{r}
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -623,7 +629,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \left(
       \begin{array}{rcl}
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
         \var{avgs}
@@ -831,7 +837,7 @@ whole transaction will be invalid.
         \var{delegations} \\
         \var{ptrs} \\
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
@@ -844,7 +850,7 @@ whole transaction will be invalid.
         \var{delegations} \\
         \var{ptrs} \\
         \var{stpools} \\
-        \var{poolParam} \\
+        \var{poolParams} \\
         \var{retiring} \\
         \var{avgs}
       \end{array}
