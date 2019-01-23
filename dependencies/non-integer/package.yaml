@@ -1,0 +1,51 @@
+name:                non-integer
+version:             0.1.0.0
+github:              "input-output-hk/implementation-decisions/fm-ledger-rules"
+author:              "IOHK Formal Methods Team"
+maintainer:          "formal.methods@iohk.io"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+description:         Implementation decision for non-integer calculations
+
+dependencies:
+- base >= 4.7 && < 5
+
+executables:
+  nonInt:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - non-integer
+
+library:
+  source-dirs: src
+  ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+
+tests:
+  non-integer-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -Wcompat
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wredundant-constraints
+    dependencies:
+    - non-integer
