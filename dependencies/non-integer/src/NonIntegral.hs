@@ -2,11 +2,21 @@ module NonIntegral
   ( (***)
   , exp'
   , ln'
+  , findE
+  , splitLn
   ) where
 
+import Debug.Trace
+
+import Data.Ratio
+
 -- | Exponentiation
-(***) :: (Fractional a, Enum a, Ord a) => a -> a -> a
-a *** b = exp' $ b * ln' a
+(***) :: (Fractional a, Enum a, Ord a, Show a) => a -> a -> a
+a *** b
+  | a == 0 = if b == 0 then 1 else 0
+  | a == 1 = 1
+  | otherwise = --trace (show a ++ " *** " ++ show b) $
+                exp' $ b * ln' a
 
 -- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scaling
 -- to x' \in [0,1] is currently not done, did not provide advantage for
@@ -27,30 +37,32 @@ logAs a = a' : a' : logAs (a + 1)
   where
     a' = a * a
 
--- | Approximate ln(1+x) for x \in [1, \infty)
-fln :: (Fractional a, Enum a, Ord a) => Int -> a -> a
-fln maxN x = cf maxN 0 Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1 ..]
+-- | Approximate ln(1+x) for x \in [0, \infty)
+fln :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
+fln maxN x = if x < 0
+             then error ("x = " ++ show x ++ "is not inside domain [0, ..) ")
+             else cf maxN 0 Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1 ..]
 
 eps :: (Fractional a) => a
-eps = 1 / 10^25
+eps = 1 / 10^30
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
-cf ::
-     (Fractional a, Ord a)
-  => Int
-  -> Int
-  -> Maybe a
-  -> a
-  -> a
-  -> a
-  -> a
-  -> [a]
-  -> [a]
-  -> a
+-- cf ::
+--      (Fractional a, Ord a)
+--   => Int
+--   -> Int
+--   -> Maybe a
+--   -> a
+--   -> a
+--   -> a
+--   -> a
+--   -> [a]
+--   -> [a]
+--   -> a
 cf _ _ _ _ _ aNm1 bNm1 _ [] = aNm1 / bNm1
 cf _ _ _ _ _ aNm1 bNm1 [] _ = aNm1 / bNm1
 cf maxN n lastVal aNm2 bNm2 aNm1 bNm1 (an:as) (bn:bs)
-  | maxN == n = aN / bN
+  | maxN == n = convergent
   | otherwise = case lastVal of
                   Nothing -> cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
                   Just c' -> if abs(convergent - c') < eps
@@ -108,8 +120,13 @@ findE x = contract e x lower upper
 
 -- | Compute natural logarithm via continued fraction, first splitting integral
 -- part and then using continued fractions approximation for `ln(1+x)`
-ln' :: (Fractional a, Enum a, Ord a) => a -> a
-ln' x = fromIntegral n + fln 1000 x'
-  where
-    n = findE x
-    x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
+ln' :: (Fractional a, Enum a, Ord a, Show a) => a -> a
+ln' x = if x == 0
+        then error "0 is not in domain of ln"
+        else fromIntegral n + fln 1000 x'
+  where (n, x') = splitLn x
+
+splitLn :: (Fractional b, Enum b, Ord b) => b -> (Integer, b)
+splitLn x = (n, x')
+    where n = findE x
+          x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
