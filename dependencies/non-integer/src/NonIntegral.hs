@@ -4,6 +4,7 @@ module NonIntegral
   , ln'
   , findE
   , splitLn
+  , fexp
   ) where
 
 import Debug.Trace
@@ -21,14 +22,14 @@ a *** b
 -- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scaling
 -- to x' \in [0,1] is currently not done, did not provide advantage for
 -- Rational.
-exp' :: (Fractional a, Enum a, Ord a) => a -> a
+exp' :: (Fractional a, Enum a, Ord a, Show a) => a -> a
 exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
   | otherwise = fexp 1000 x
 
 -- | Approximate exp(x) via continued fraction.
-fexp :: (Fractional a, Enum a, Ord a) => Int -> a -> a
+fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
 fexp maxN x =
   cf maxN 0 Nothing 1 0 1 1 [x * a | a <- 1 : [-1,-2 ..]] (1 : [x + b | b <- [2 ..]])
 
@@ -47,30 +48,35 @@ eps :: (Fractional a) => a
 eps = 1 / 10^30
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
--- cf ::
---      (Fractional a, Ord a)
---   => Int
---   -> Int
---   -> Maybe a
---   -> a
---   -> a
---   -> a
---   -> a
---   -> [a]
---   -> [a]
---   -> a
+cf ::
+     (Fractional a, Ord a, Show a)
+  => Int
+  -> Int
+  -> Maybe a
+  -> a
+  -> a
+  -> a
+  -> a
+  -> [a]
+  -> [a]
+  -> a
 cf _ _ _ _ _ aNm1 bNm1 _ [] = aNm1 / bNm1
 cf _ _ _ _ _ aNm1 bNm1 [] _ = aNm1 / bNm1
 cf maxN n lastVal aNm2 bNm2 aNm1 bNm1 (an:as) (bn:bs)
   | maxN == n = convergent
-  | otherwise = case lastVal of
-                  Nothing -> cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
-                  Just c' -> if abs(convergent - c') < eps
-                             then convergent
-                             else cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
+  | otherwise =
+      case lastVal of
+        Nothing -> cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
+        Just c' -> if abs(convergent - c') < eps
+                   then convergent
+                   else cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
   where
-    aN = bn * aNm1 + an * aNm2
-    bN = bn * bNm1 + an * bNm2
+    ba = bn * aNm1
+    aa = an * aNm2
+    aN = ba + aa
+    bb = bn * bNm1
+    ab = an * bNm2
+    bN = bb + ab
     convergent = aN / bN
 
 
@@ -109,11 +115,11 @@ contract factor x l u
     mid = l + ((u - l) `div` 2)
     x' = factor ^^ mid
 
-e :: (Fractional a, Enum a, Ord a) => a
+e :: (Fractional a, Enum a, Ord a, Show a) => a
 e = exp' 1
 
 -- | find n with `e^n<=x<e^(n+1)`
-findE :: (Fractional a, Enum a, Ord a) => a -> Integer
+findE :: (Fractional a, Enum a, Ord a, Show a) => a -> Integer
 findE x = contract e x lower upper
   where
     (lower, upper) = bound e x (1 / e) e (-1) 1
@@ -126,7 +132,7 @@ ln' x = if x == 0
         else fromIntegral n + fln 1000 x'
   where (n, x') = splitLn x
 
-splitLn :: (Fractional b, Enum b, Ord b) => b -> (Integer, b)
+splitLn :: (Fractional b, Enum b, Ord b, Show b) => b -> (Integer, b)
 splitLn x = (n, x')
     where n = findE x
           x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
