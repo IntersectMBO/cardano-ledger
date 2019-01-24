@@ -1,5 +1,9 @@
 # Summary
 
+About half of the issues from the Berlin Workshop have now been resolved.  The UTxO transition rules have been simplified, including the witnessing rules, all the address definitions have been grouped together, all the transaction definitions have been grouped, all the protocol parameters have been grouped, and there was a lot of small clean-up.
+
+Additionally, we have been working on the non-integral calculations in the Haskell model, in order to address issue related to using real numbers.
+
 # PRs and issues completed
 
 input-output-hk/fm-ledger-rules
