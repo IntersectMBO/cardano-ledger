@@ -56,7 +56,9 @@ type PosInt = Positive Integer
 
 prop_ExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp' ( (b%a) + (x%y)) - (exp'(b%a) * exp' (x%y))) < eps) === True
+    (abs (exp' ( (a'%b') + (x'%y')) - (exp'(a'%b') * exp' (x'%y'))) < eps) === True
+    where (b', a') = normalizeInts a b
+          (y', x') = normalizeInts x y
 
 prop_ExpUnitInterval :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_ExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
@@ -99,10 +101,12 @@ prop_DExpLaw (Positive x) (Positive y) (Positive a) (Positive b) =
 prop_DExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_DExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
     (abs (exp' (a'/b' + x'/y') - (exp'(a'/b') * exp'(x'/y'))) < epsD) === True
-        where a' = fromIntegral a
-              b' = fromIntegral b
-              x' = fromIntegral x
-              y' = fromIntegral y
+        where (b'', a'') = normalizeInts a b
+              (y'', x'') = normalizeInts x y
+              a' = fromIntegral a''
+              b' = fromIntegral b''
+              x' = fromIntegral x''
+              y' = fromIntegral y''
 
 expdiffD :: Integer -> Integer -> Integer -> Integer -> Double
 expdiffD x'' y'' a'' b'' =
@@ -164,10 +168,12 @@ prop_FBVExpLaw (Positive x) (Positive y) (Positive a) (Positive b) =
 prop_FBVExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_FBVExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
     (abs (exp' (a'/b' + x'/y') - (exp'(a'/b') * exp'(x'/y'))) < epsFBV) === True
-        where a' = fromIntegral a
-              b' = fromIntegral b
-              x' = fromIntegral x
-              y' = fromIntegral y
+        where (b'', a'') = normalizeInts a b
+              (y'', x'') = normalizeInts x y
+              a' = fromIntegral a''
+              b' = fromIntegral b''
+              x' = fromIntegral x''
+              y' = fromIntegral y''
 
 expdiffFBV :: Integer -> Integer -> Integer -> Integer -> FixedPoint
 expdiffFBV x'' y'' a'' b'' =
@@ -216,9 +222,9 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_DIdemPotent)
   putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
   quickCheck (withMaxSuccess 1000 prop_DIdemPotent')
-  putStrLn "property exponential law (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   quickCheck (withMaxSuccess 1000 prop_DExpLaw)
-  putStrLn "property exponential law exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck (withMaxSuccess 1000 prop_DExpLaw')
   putStrLn ""
 
@@ -239,7 +245,7 @@ main = do
   quickCheck prop_IdemPotent'
   -- putStrLn "prop9"
   -- quickCheck (withMaxSuccess 40 prop_ExpLaw)
-  putStrLn "property exponential law exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck prop_ExpLaw'
   putStrLn ""
 
@@ -258,7 +264,7 @@ main = do
   quickCheck (withMaxSuccess 100 prop_FBVIdemPotent)
   putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
   quickCheck (withMaxSuccess 100 prop_FBVIdemPotent')
-  putStrLn "property exponential law (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   quickCheck (withMaxSuccess 100 prop_FBVExpLaw)
-  putStrLn "property exponential law exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck (withMaxSuccess 100 prop_FBVExpLaw')
