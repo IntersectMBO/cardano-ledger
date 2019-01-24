@@ -262,7 +262,7 @@ an epoch
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-    \fun{\sepochname} & \Slot \totalf \Epoch & \text{Epoch containing this slot} \\
+      \fun{\sepochname} & \Slot \totalf \Epoch & \text{Epoch containing this slot} \\
     \end{array}
   \end{equation*}
   \caption{Epoch transition types and functions}
@@ -300,66 +300,66 @@ an epoch
     {\var{dms} \vdash
       {
         \left(
-        {\begin{array}{c}
-          \var{e_c} \\
-          \var{us}
-         \end{array}
-        }
-        \right)
-      }
-      \trans{epoch}{s}
-      {
-        \left(
-        {\begin{array}{c}
-          \var{e_c} \\
-          \var{us}
-         \end{array}
-        }
-        \right)
-      }
-    }
-  \end{equation*}
-  \vspace{20pt}
-  \begin{equation*}
-    \inference
-    {
-      \var{e_c} < \sepoch{s}
-      \\
-      {\left(
-          \begin{array}{l}
-            \var{\var{e_c}} \\
-            \var{s} \\
-            \var{dms}
+          {\begin{array}{c}
+             \var{e_c} \\
+             \var{us}
+           \end{array}
+         }
+       \right)
+     }
+     \trans{epoch}{s}
+     {
+       \left(
+         {\begin{array}{c}
+            \var{e_c} \\
+            \var{us}
           \end{array}
-        \right)
-      }
-      \vdash \var{us} \trans{upiec}{\sepoch{s}} \var{us'}
-    }
-    {
-      \var{dms} \vdash
-      {
-        \left(
-        {\begin{array}{c}
-          \var{e_c} \\
-          \var{us}
-         \end{array}
         }
-        \right)
-      }
-      \trans{epoch}{\var{s}}
-      {
-        \left(
+      \right)
+    }
+  }
+\end{equation*}
+\vspace{20pt}
+\begin{equation*}
+  \inference
+  {
+    \var{e_c} < \sepoch{s}
+    \\
+    {\left(
+        \begin{array}{l}
+          \var{\var{e_c}} \\
+          \var{s} \\
+          \var{dms}
+        \end{array}
+      \right)
+    }
+    \vdash \var{us} \trans{upiec}{\sepoch{s}} \var{us'}
+  }
+  {
+    \var{dms} \vdash
+    {
+      \left(
         {\begin{array}{c}
+           \var{e_c} \\
+           \var{us}
+         \end{array}
+       }
+     \right)
+   }
+   \trans{epoch}{\var{s}}
+   {
+     \left(
+       {\begin{array}{c}
           \sepoch{s} \\
           \var{us'}
-         \end{array}
-        }
-        \right)
+        \end{array}
       }
-    }
-  \end{equation*}
-  \caption{Epoch transition rules}
-  \label{fig:rules:epoch}
+    \right)
+  }
+}
+\end{equation*}
+\caption{Epoch transition rules}
+\label{fig:rules:epoch}
 \end{figure}
 
 \clearpage
@@ -385,10 +385,10 @@ $1/5 \leq t \leq 1/4$.
   %
   \emph{Derived types}
   \begin{equation*}
-  \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-    \signmapname & \mapqueue & \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
-    \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
-  \end{array}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \signmapname & \mapqueue & \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
+      \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
+    \end{array}
   \end{equation*}
   %
   \emph{Functions and relations}
@@ -396,32 +396,32 @@ $1/5 \leq t \leq 1/4$.
   \begin{align*}
     \fun{\qheadname} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
     \fun{\qpushname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
-      & \text{queue push function} \\
+                                                              & \text{queue push function} \\
     \fun{\qpopname} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
-      & \text{queue pop function} \\
+                                                              & \text{queue pop function} \\
     \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
-      & \text{restricted queue pop function} \\
+                                                              & \text{restricted queue pop function} \\
     \fun{\incixmapname} & \in \BlockIx \times \powerset \VKeyGen \times \mapqueue \totalf \mapqueue
-      & \text{block count increment function}\\
+                                                              & \text{block count increment function}\\
   \end{align*}
   \emph{Protocol parameters}
   \begin{equation*}
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \pp{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
-    \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
+      \pp{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+      \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
 
   \begin{align}
-  \label{eq:trimix}
-  \trimix{\signmapname}{\var{ix}} & = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
-  q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
-  \qrestr{\var{ix}}{q} & = \
-  \begin{cases}
-    \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
-    q & \text{otherwise}
-  \end{cases} \\
-  \label{eq:incixmap}
+    \label{eq:trimix}
+    \trimix{\signmapname}{\var{ix}} & = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
+                                      q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
+    \qrestr{\var{ix}}{q} & = \
+                           \begin{cases}
+                             \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
+                             q & \text{otherwise}
+                           \end{cases} \\
+    \label{eq:incixmap}
     \incixmap{\var{ix}}{\var{X}}{\signmapname} & = \signmapname \unionoverride
                                                  \Set{\var{vk_s} \partialf \qpush{\var{ix}}(\signmap{\var{vk_s}})}{vk_s \in \var{X}}
   \end{align}
@@ -462,26 +462,26 @@ $1/5 \leq t \leq 1/4$.
     {
       \left(
         {\begin{array}{c}
-          \var{pps} \\
-          \var{ds} \\
-          \var{bIx}
-        \end{array}}
-      \right)
-      \vdash
-        {\signmapname}
-      \trans{sigcnt}{\var{vk_d}}
-        {\signmapname'}
-    }
-    \label{eq:rule:sigcnt}
-  \end{equation*}
-  \caption{Block signature count rules}
-  \label{fig:rules:sigcnt}
+           \var{pps} \\
+           \var{ds} \\
+           \var{bIx}
+         \end{array}}
+     \right)
+     \vdash
+     {\signmapname}
+     \trans{sigcnt}{\var{vk_d}}
+     {\signmapname'}
+   }
+   \label{eq:rule:sigcnt}
+ \end{equation*}
+ \caption{Block signature count rules}
+ \label{fig:rules:sigcnt}
 \end{figure}
 
 \clearpage
 
-\section{Block validation}
-\label{sec:block-validation}
+\section{Block processing}
+\label{sec:block-processing}
 
 \newcommand{\BHEnv}{\type{BHEnv}}
 \newcommand{\BHState}{\type{BHState}}
@@ -495,8 +495,6 @@ $1/5 \leq t \leq 1/4$.
 
 \newcommand{\bheadname}{bHead}
 \newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
-\newcommand{\bbodyname}{bBody}
-\newcommand{\bbody}[1]{\fun{\bbodyname}\ #1}
 \newcommand{\bhhashname}{bhHash}
 \newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
 \newcommand{\bhprevhashname}{bhPrevHash}
@@ -506,201 +504,8 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bhslotname}{bhSlot}
 \newcommand{\bhslot}[1]{\fun{\bhslotname}\ #1}
 
-\newcommand{\maxblocksize}{\pp{maxBlockSize}}
-\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
-
-We delineate here between validating the header and body of a block. It's useful
-to make this distinction since we may validate headers ahead of validating the
-block body, and we have less context available to validate headers - in
-particular, we must be able to validate block headers without the recent history
-of block bodies.
-
-\begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    b & \Block & \text{block} \\
-    h & \Hash   & \text{hash} \\
-    \end{array}
-  \end{equation*}
-  %
-  %
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
-    \end{array}
-  \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \maxblocksize & \mathbb{N} & \text{maximum block size} \\
-    \end{array}
-  \end{equation*}
-  \caption{Basic Block-related Types and Functions}
-  \label{fig:block-defs}
-\end{figure}
-
-\subsection{Block header validation}
-
-\begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    bh & \Bhead & \text{Block header} \\
-    bts & \Bhtosign & \text{Part of the block header which must be signed}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    \fun{\bheadname} & \Block \totalf \Bhead & \text{Block header} \\
-    \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{Previous header hash} \\
-    \fun{\bhhashname} & \Bhead \totalf \Hash & \text{Header hash} \\
-    \fun{\bsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
-    \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
-    \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
-    \fun{\bhtosignname} & \Bhead \totalf \Bhtosign & \text{Block header to sign}\\
-    \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
-    \end{array}
-  \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-    \maxheadersize & \mathbb{N} & \text{maximum block header size} \\
-    \end{array}
-  \end{equation*}
-  \caption{Block header validation types and functions}
-  \label{fig:defs:bhead}
-\end{figure}
-
-\begin{figure}[ht]
-  \emph{Block header validation environments}
-  \begin{equation*}
-    \BHEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
-        \var{ds} & \DelegState & \text{Delegation state} \\
-        \var{s_{last}} & \Slot & \text{Slot for which the last known block was issued} \\
-        \var{s_{now}} & \Slot & \text{Current slot} \\
-      \end{array}
-    \right)
-  \end{equation*}
-
-  \emph{Block header validation transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\BHEnv \times \Hash \times \Bhead \times \Hash)
-  \end{equation*}
-  \caption{Block header validation transition-system types}
-  \label{fig:ts-types:bhead}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{equation*}
-    \inference
-    { \var{vk_d} \leteq \bissuer{bh} & \var{s} \leteq \bhslot{bh}
-    \\ \maxheadersize \mapsto \var{s_{max}} \in \var{pps} & \bhdrsize{bh} \leq \var{s_{max}}
-    \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
-    \\ \fun{dms} ~  \var{ds} \restrictrange \{\var{vk_d}\} \neq \emptyset
-    \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bsig{bh})}
-    }
-    {
-      \left(
-        {\begin{array}{c}
-           \var{pps} \\
-           \var{ds} \\
-           \var{s_{last}} \\
-           \var{s_{now}} \\
-        \end{array}}
-      \right)
-      \vdash
-        {\var{h}}
-      \trans{bhead}{\var{bh}}
-        {\bhhash{bh}}
-    }
-  \end{equation*}
-  \caption{Block header validation rules}
-  \label{fig:rules:bhead}
-\end{figure}
-
-\clearpage
-
-\subsection{Block body validation}
-\begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    bb & \Bbody & \text{Block body}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-    \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
-    \end{array}
-  \end{equation*}
-  \caption{Block body validation types and functions}
-  \label{fig:defs:bbody}
-\end{figure}
-
-\begin{figure}[ht]
-  \emph{Block body validation environments}
-  \begin{equation*}
-    \BBEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
-      \end{array}
-    \right)
-  \end{equation*}
-
-  \emph{Block body validation transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset (\BBEnv \times \emptyset \times \Block \times \emptyset)
-  \end{equation*}
-  \caption{Block body validation transition-system types}
-  \label{fig:ts-types:bbody}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{equation*}
-    \inference
-    { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
-    }
-    {
-      \left(
-        {\begin{array}{c}
-          \var{pps} \\
-        \end{array}}
-      \right)
-      \vdash
-        {\var{h}}
-      \trans{bbody}{\var{vk_d}}
-        {\var{h'}}
-    }
-  \end{equation*}
-  \caption{Block body validation rules}
-  \label{fig:rules:bbody}
-\end{figure}
-
-\clearpage
-
-\section{Blockchain Extension}
-\label{sec:chain-extension}
-
-\newcommand{\CEEnv}{\type{CEEnv}}
-\newcommand{\CEState}{\type{CEState}}
+\newcommand{\bslotname}{bSlot}
+\newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
 \newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
@@ -708,8 +513,8 @@ of block bodies.
 \newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
 \newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
-\newcommand{\bslotname}{bSlot}
-\newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
+\newcommand{\maxblocksize}{\pp{maxBlockSize}}
+\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
@@ -721,28 +526,201 @@ of block bodies.
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
+We delineate here between processing the header and body of a block. It's useful
+to make this distinction since we may process headers ahead of the
+block body, and we have less context available to process headers - in
+particular, we must be able to process block headers without the recent history
+of block bodies.
+
 \begin{figure}[ht]
   \emph{Abstract types}
   %
   \begin{equation*}
-  \begin{array}{r@{~\in~}lr}
-    \var{data} & \Data    & \text{data}
-  \end{array}
+    \begin{array}{r@{~\in~}lr}
+      b & \Block & \text{block} \\
+      h & \Hash   & \text{hash} \\
+      \var{data} & \Data    & \text{data}
+    \end{array}
   \end{equation*}
+  %
+  %
   \emph{Abstract functions}
   %
   \begin{equation*}
-  \begin{array}{r@{~\in~}lr}
-    \fun{\verifyname} & \VKey \times \Data \times \Sig
-      & \text{verification relation} \\
-    \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
-    \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
+    \begin{array}{r@{~\in~}lr}
+      \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
+      \fun{\verifyname} & \VKey \times \Data \times \Sig & \text{verification relation} \\
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+      \maxblocksize & \mathbb{N} & \text{maximum block size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Basic Block-related Types and Functions}
+  \label{fig:block-defs}
+\end{figure}
+
+\subsection{Block header processing}
+
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      bh & \Bhead & \text{Block header} \\
+      bts & \Bhtosign & \text{Part of the block header which must be signed}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{\bheadname} & \Block \totalf \Bhead & \text{Block header} \\
+      \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{Previous header hash} \\
+      \fun{\bhhashname} & \Bhead \totalf \Hash & \text{Header hash} \\
+      \fun{\bsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
+      \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
+      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
+      \fun{\bhtosignname} & \Bhead \totalf \Bhtosign & \text{Block header to sign}\\
+      \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
+    \end{array}
+  \end{equation*}
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+      \maxheadersize & \mathbb{N} & \text{maximum block header size} \\
+    \end{array}
+  \end{equation*}
+  \caption{Block header processing types and functions}
+  \label{fig:defs:bhead}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Block header processing environments}
+  \begin{equation*}
+    \BHEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{ds} & \DelegState & \text{Delegation state} \\
+        \var{s_{last}} & \Slot & \text{Slot for which the last known block was issued} \\
+        \var{s_{now}} & \Slot & \text{Current slot} \\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block header processing states}
+  \begin{equation*}
+    \BHState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{h} & \Hash & \text{Tip header hash} \\
+        \var{us} & \UPIState & \text{Update state} \\
+        \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
+        \var{bIx} & \BlockIx & \text{Current block index} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  \emph{Block header processing transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
+    \powerset (\BHEnv \times \BHState \times \Bhead \times \BHState)
+  \end{equation*}
+  \caption{Block header processing transition-system types}
+  \label{fig:ts-types:bhead}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \sepoch{s_{last}} \\
+            us
+          \end{array}
+        \right)}
+      \trans{epoch}{\bslot{b}}
+      {\left(
+          \begin{array}{l}
+            \var{e_n} \\
+            us'
+          \end{array}
+        \right)}
+      \\
+      \var{vk_d} \leteq \bissuer{bh} & \var{s} \leteq \bhslot{bh}
+      \\ \maxheadersize \mapsto \var{s_{max}} \in \fun{pps}~\var{us'} & \bhdrsize{bh} \leq \var{s_{max}}
+      \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
+      \\ \fun{dms} ~  \var{ds} \restrictrange \{\var{vk_d}\} \neq \emptyset
+      \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bsig{bh})}
+      \\
+      {\left(
+          \begin{array}{l}
+            \fun{pps} ~  us' \\
+            ds \\
+            bIx
+          \end{array}
+        \right)}
+      \vdash
+      \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname'
+      \\
+    }
+    {
+      \left(
+        {\begin{array}{c}
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
+         \end{array}}
+     \right)
+     \vdash
+     \left(
+       {\begin{array}{c}
+          \var{h} \\
+          \var{us} \\
+          \signmapname \\
+          bIx \\
+        \end{array}}
+    \right)
+     \trans{bhead}{\var{bh}}
+     \left(
+       {\begin{array}{c}
+          \bhhash{bh} \\
+          \var{us'} \\
+          \signmapname' \\
+          bIx + 1 \\
+        \end{array}}
+    \right)
+   }
+ \end{equation*}
+ \caption{Block header processing rules}
+ \label{fig:rules:bhead}
+\end{figure}
+
+\clearpage
+
+\subsection{Block body processing}
+\begin{figure}[ht]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      bb & \Bbody & \text{Block body}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
+      \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
       & \text{block certificates} \\
-    \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
-    \fun{bUpdVotes} & \Block \totalf \seqof{Vote} & \text{Block update votes payload} \\
-    \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
-    \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
-  \end{array}
+      \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+      \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
+      \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
+    \end{array}
   \end{equation*}
   \emph{Derived functions}
   \begin{equation*}
@@ -753,8 +731,134 @@ of block bodies.
       \bslot{b} & = (\bhslotname \cdot \bheadname)~b
     \end{array}
   \end{equation*}
+  \caption{Block body processing types and functions}
+  \label{fig:defs:bbody}
+\end{figure}
 
+\begin{figure}[ht]
+  \emph{Block body processing environments}
+  \begin{equation*}
+    \BBEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+        \var{e_n} & \Epoch & \text{Epoch we are currently processing blocks for}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block body processing states}
+  \begin{equation*}
+    \BBState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{us} & \UPIState & \text{Update interface state} \\
+        \var{ds} & \DIState & \text{Delegation state}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Block body processing transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
+    \powerset (\BBEnv \times \BBState \times \Block \times \BBState)
+  \end{equation*}
+  \caption{Block body processing transition-system types}
+  \label{fig:ts-types:bbody}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
+      {\left(
+          \begin{array}{l}
+            \bslot{b} \\
+            \var{e_n} \\
+            \fun{dms} ~ \var{ds}
+          \end{array}
+        \right)}
+      \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
+      \\
+      {\left(
+          \begin{array}{l}
+            \bslot{b} \\
+            \var{e_n} \\
+            \fun{dms} ~ \var{ds}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
+      &
+      {\left(
+          \begin{array}{l}
+            \bslot{b} \\
+            \var{e_n} \\
+            \fun{dms} ~ \var{ds}
+          \end{array}
+        \right)}
+      \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''} \\
+      {\left(
+          \begin{array}{l}
+            \dom{(\fun{dms}~ ds)} \\
+            (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+            \bslot{b} \\
+            \fun{pps} ~  us \\
+          \end{array}
+        \right)}
+      \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'} &
+      \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+    }
+    {
+      \left(
+        {\begin{array}{c}
+           \var{pps} \\
+           \var{e_n}
+         \end{array}}
+     \right)
+     \vdash
+     {
+       \left(
+         {\begin{array}{c}
+            \var{utxo} \\
+            \var{ds} \\
+            \var{us}
+          \end{array}}
+      \right)
+    }
+    \trans{bbody}{\var{b}}
+    {
+      \left(
+        {\begin{array}{c}
+           \var{utxo'} \\
+           \var{ds'} \\
+           \var{us'''}
+         \end{array}}
+     \right)
+   }
+ }
+\end{equation*}
+\caption{Block body processing rules}
+\label{fig:rules:bbody}
+\end{figure}
+
+\clearpage
+
+\section{Blockchain Extension}
+\label{sec:chain-extension}
+
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+
+
+\begin{figure}[ht]
+  \emph{Abstract functions}
   %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
+    \end{array}
+  \end{equation*}
   \caption{Blockchain Extension Types and Functions}
   \label{fig:defs:chain-extension}
 \end{figure}
@@ -791,27 +895,27 @@ Figure~\ref{fig:rules:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
-  \inference
-  { \isebb{b} & \bsize{b} \leq 2^{21}
-    \\ \var{h'} = \bhhash{(\bhead b)}
-  }
-  {
-    \left(
-      {\begin{array}{c}
-         \var{s_{now}}
-       \end{array}}
-    \right)
-    \vdash
-    \left(
-      {\begin{array}{c}
-         bIx \\
-         \var{s_{last}} \\
-         \signmapname \\
-         \var{h} \\
-         \var{utxo} \\
-         \var{us} \\
-         \var{ds}
-       \end{array}}
+    \inference
+    { \isebb{b} & \bsize{b} \leq 2^{21}
+      \\ \var{h'} = \bhhash{(\bhead b)}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+           \var{s_{now}}
+         \end{array}}
+     \right)
+     \vdash
+     \left(
+       {\begin{array}{c}
+          bIx \\
+          \var{s_{last}} \\
+          \signmapname \\
+          \var{h} \\
+          \var{utxo} \\
+          \var{us} \\
+          \var{ds}
+        \end{array}}
     \right)
     \trans{chain}{b}
     \left(
@@ -824,120 +928,101 @@ Figure~\ref{fig:rules:chain-extension}.
          \var{us} \\
          \var{ds}
        \end{array}}
-    \right)
-  }
-  \end{equation*}
-  \vspace{20pt}
-  \begin{equation*}
+   \right)
+ }
+\end{equation*}
+\vspace{20pt}
+\begin{equation*}
   \inference
   {
     \neg\isebb{b} \\
-    \fun{dms} ~ \var{ds} \vdash
     {\left(
         \begin{array}{l}
-          \sepoch{s_{last}} \\
-          us
-        \end{array}
-      \right)}
-    \trans{epoch}{\bslot{b}}
-    {\left(
-        \begin{array}{l}
-          \var{e_n} \\
-          us'
-        \end{array}
-      \right)}
-    &
-    {\left(
-        \begin{array}{l}
-          \bslot{b} \\
-          \var{e_n} \\
-          \fun{dms} ~ \var{ds}
-        \end{array}
-      \right)}
-    \vdash \var{us'} \trans{upireg}{\bupdprop{b}} \var{us''}
-    \\
-    {\left(
-        \begin{array}{l}
-          \bslot{b} \\
-          \var{e_n} \\
-          \fun{dms} ~ \var{ds}
-        \end{array}
-      \right)}
-    \vdash \var{us''} \trans{upivotes}{\bupdvotes{b}} \var{us'''}
-    &
-    {\left(
-        \begin{array}{l}
-          \bslot{b} \\
-          \var{e_n} \\
-          \fun{dms} ~ \var{ds}
-        \end{array}
-      \right)}
-    \vdash \var{us'''} \trans{upiend}{\bendorsment{b}} \var{us''''}
-    \\
-    {\left(
-        \begin{array}{l}
-          \fun{pps} ~  us' \\
           ds \\
           \var{s_{last}} \\
           \var{s_{now}} \\
         \end{array}
       \right)}
     \vdash
-    \var{h} \trans{bhead}{\bhead{b}} \var{h'} &
-    \fun{pps} ~  us' \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
-    {\left(
-      \begin{array}{l}
-        \fun{pps} ~  us' \\
-        ds \\
-        bIx
-      \end{array}
-    \right)}
-    \vdash
-    \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname' &&
+    \left(
+       {\begin{array}{c}
+          \var{h} \\
+          \var{us} \\
+          \signmapname \\
+          bIx \\
+        \end{array}}
+    \right)
+    \trans{bhead}{\bhead{b}}
+    \left(
+       {\begin{array}{c}
+          \var{h'} \\
+          \var{us'} \\
+          \signmapname' \\
+          bIx' \\
+        \end{array}}
+    \right)
+    \\
     {\left(
         \begin{array}{l}
-          \dom{\signmapname} \\
-          (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
-          \bslot{b} \\
           \fun{pps} ~  us' \\
+          \sepoch{(\bslot{b})} \\
         \end{array}
       \right)}
-    \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'}
-  }
-  {
-    \left(
-      {\begin{array}{c}
-         \var{s_{now}}
-       \end{array}}
-    \right)
     \vdash
-    \left(
-      {\begin{array}{c}
-         bIx \\
-         \var{s_{last}} \\
-         \signmapname \\
-         \var{h} \\
-         \var{utxo} \\
-         \var{us} \\
-         \var{ds}
-       \end{array}}
-    \right)
-    \trans{chain}{b}
-    \left(
-      {\begin{array}{c}
-         bIx + 1 \\
-         \var{\bslot{b}} \\
-         \signmapname' \\
-         \var{h'} \\
-         \var{utxo}' \\
-         \var{us''''} \\
-         \var{ds'}
-       \end{array}}
+    {
+      \left(
+        {\begin{array}{c}
+           \var{utxo} \\
+           \var{ds} \\
+           \var{us'}
+         \end{array}}
+     \right)
+   }
+   \trans{bbody}{b}
+   {
+     \left(
+       {\begin{array}{c}
+          \var{utxo'} \\
+          \var{ds'} \\
+          \var{us''}
+        \end{array}}
     \right)
   }
-  \end{equation*}
-  \caption{Blockchain extension rules}
-  \label{fig:rules:chain-extension}
+}
+{
+  \left(
+    {\begin{array}{c}
+       \var{s_{now}}
+     \end{array}}
+ \right)
+ \vdash
+ \left(
+   {\begin{array}{c}
+      bIx \\
+      \var{s_{last}} \\
+      \signmapname \\
+      \var{h} \\
+      \var{utxo} \\
+      \var{us'} \\
+      \var{ds}
+    \end{array}}
+\right)
+\trans{chain}{b}
+\left(
+  {\begin{array}{c}
+     bIx' \\
+     \var{\bslot{b}} \\
+     \signmapname' \\
+     \var{h'} \\
+     \var{utxo'} \\
+     \var{us''} \\
+     \var{ds'}
+   \end{array}}
+\right)
+}
+\end{equation*}
+\caption{Blockchain extension rules}
+\label{fig:rules:chain-extension}
 \end{figure}
 \clearpage
 \bibliographystyle{plainnat}
