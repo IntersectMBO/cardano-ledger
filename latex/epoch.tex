@@ -9,13 +9,22 @@
 \newcommand{\EpochEnv}{\type{EpochEnv}}
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
-\newcommand{\Distr}{\type{Distr}}
+\newcommand{\Stake}{\type{Stake}}
+\newcommand{\Avgs}{\type{Avgs}}
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\reward}[5]{\fun{reward}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
+\newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\poolStake}[4]{\fun{poolStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\poolDistr}[3]{\fun{poolDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\lReward}[4]{\fun{r_{leader}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
+\newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
+\newcommand{\poolReward}[6]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}}
+\newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
+\newcommand{\updateAvgs}[4]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 
 In this chapter we discuss the ledger state updates that take place at the epoch
 boundary. These are necessary updates that are not triggered by a transaction.
@@ -35,11 +44,11 @@ in the signal.
 We introduce a two new derived types in this chapter. $\BlocksMade$ (see
 Figure~\ref{fig:epoch-defs}), which represents the number of blocks made by
 the blockchain this epoch associated to a particular stake key. The type
-$\Distr$ is a finite map that pairs a hash key with a fraction. This fraction
+$\Avgs$ is a finite map that pairs a hash key with a fraction. This fraction
 is meant to represent the portion of the total stake corresponding to a key,
 thus this type is used to give the stake distribution.
 
-We also introduce two lookup functions. The map $\fun{stakeHK}$ looks up the
+We also introduce two lookup functions. The map $\fun{stakeHK_b}$ looks up the
 hash key at a base address, and the map $\fun{stakePtr}$ looks up the pointer
 at a given pointer address.
 
@@ -58,26 +67,16 @@ needed for performing rewards calculations.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{prod}
       & \BlocksMade
-      & \HashKey \mapsto \mathbb{N}
-      & \text{blocks made in the epoch} \\
-      \var{distr}
-      & \Distr
-      & \HashKey \mapsto [0,1]
-      & \text{stake distribution} \\
-    \end{array}
-  \end{equation*}
-
-
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{stakeHK} & \Addr_{base} \to \HashKey
-      & \text{base address hashkey}\\
-      \fun{stakePtr} & \Addr_{ptr} \to \Ptr
-      & \text{pointer address pointer}\\
-      \fun{poolCosts} & \PoolParam \to \Coin\times [0,1] \times \Coin
-      & \text{pool cost parameters}\\
+      & \HashKey \mapsto \N
+      & \text{blocks made by a pool} \\
+      \var{stake}
+      & \Stake
+      & \HashKey \mapsto \Coin
+      & \text{stake} \\
+      \var{avgs}
+      & \Avgs
+      & \HashKey \mapsto \Rnn
+      & \text{performance moving averages} \\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -123,48 +122,82 @@ all the \textit{active} stake computed by $\fun{stake}$.
 These stake-related calculations are used in the calculation of rewards.
 
 %%
-%% Figure - Functions for Stake Distribution
+%% Figure - Helper Functions for Stake Distribution
 %%
 \begin{figure}[htb]
+  \emph{Stake Distribution helper functions}
+  %
   \begin{align*}
-      & \fun{baseStake} \in \powerset{\TxOut} \to \powerset{(\HashKey \times \Coin)}
-      & \text{base address stake} \\
-      & \fun{baseStake}~{outs} = \\
-      & ~~ \{(hk, c) \mid a\in\Addr_{base} \land (a, c) \in outs \land \fun{stakeHK}~a = hk \}
+      & \fun{consolidate} \in \UTxO \to (\Addr \mapsto \Coin) \\
+      & \fun{consolidate}~{utxo} =
+        \left\{a \mapsto \left(\sum_{\wcard\mapsto(a,c)\in\var{utxo}}c\right)
+        ~\Big\vert~
+        \wcard\mapsto(a,~\wcard)\in\var{utxo} \right\} \\
       \nextdef
-      & \fun{ptrStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
-          \to \powerset{(\HashKey \times \Coin)}
-      & \text{pointer address stake} \\
-      & \fun{ptrStake}~{outs}~{ptrs} = \\
-      & ~~ \{(hk, c) \mid a\in\Addr_{ptr} \land (a, c) \in outs \land (\fun{stakePtr}~a)\mapsto hk \in ptrs \}
+      & \fun{baseStake} \in (\Addr\mapsto\Coin) \to \Stake \\
+      & \fun{baseStake}~{vals} =
+          \{\fun{stakeHK_b}~{addr}\mapsto c \mid a\mapsto c\in\var{vals},~a\in\AddrB\} \\
       \nextdef
-      & \fun{stake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey)
-          \to \powerset{(\HashKey \times \Coin)}
-      & \text{potential stake} \\
-      & \fun{stake}~{outs}~{ptrs} = (\fun{baseStake}~{outs}) \cup (\fun{ptrStake}~{outs}~{ptrs})
+      & \fun{ptrStake} \in (\Addr\mapsto\Coin) \to (\HashKey\mapsto\Ptr) \to \Stake \\
+      & \fun{ptrStake}~{vals}~{ptrs} =
+          \{\var{hk}\mapsto c
+          \mid a\mapsto
+          c\in~\var{vals},~a\in\AddrP,~(\fun{addrPtr}~a) \mapsto hk\in\var{ptrs}\} \\
       \nextdef
-      & \fun{isActive} \in \HashKey \to \StakeKeys \to (\HashKey \mapsto \HashKey) \\
-      & ~~ \to \StakePools \to \mathbb{B}
-      & \text{active stake} \\
-      & \isActive{v_{sk}}{stkeys}{delegs}{stpools} = \exists \var{v_{p}}\\
-      & ~~ \var{v_{sk}} \in \dom stkeys
-              \land \var{v_{sk}}\mapsto\var{v_{p}} \in delegs
-              \land \var{v_{p}} \in \dom \var{stpools}
+      & \fun{rewardStake} \in (\AddrRWD\mapsto\Coin) \to \Stake \\
+      & \fun{rewardStake}~{rewards} =
+          \{\fun{stakeHK_r}~{addr}\mapsto c \mid a\mapsto c\in\var{rewards}\} \\
       \nextdef
-      & \fun{activeStake} \in \powerset{\TxOut} \to (\Ptr \mapsto \HashKey) \to \StakeKeys\\
-      & ~~\to (\HashKey \mapsto \HashKey) \to \StakePools \to (\HashKey \mapsto \Coin)
-      & \text{active stake holdings} \\
-      & \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools} = \\
-      & ~~ \left\{
-             hk\mapsto \sum_{hk\mapsto c}c
-             ~\Big\vert~
-             \begin{array}{r}
-             (\isActive{hk}{stkeys}{delegs}{stpools}) \\
-             \land (hk, c) \in (\fun{stake}~{outs}~{ptrs})
-             \end{array}
-           \right\}
+      & \fun{poolStake} \in \HashKey \to \powerset{\HashKey} \to (\HashKey \mapsto \HashKey)
+          \to \Stake \to \Stake \\
+      & \poolStake{operator}{owners}{stake}{delegations} = \\
+      & ~~ \left\{hk\mapsto c \mid hk\notin\var{owners'},~hk\mapsto c\in\var{poolStake} \right\}
+           \cup
+           \left\{ \var{operator}\mapsto
+             \sum_{\substack{hk\in\var{owners'} \\ hk\mapsto c\in\var{poolStake}}} c\right\} \\
+      & ~~ \where \\
+      & ~~~~~~ \var{owners'} = owners \cup \{operator\} \\
+      & ~~~~~~ \var{poolStake} =
+                 \{hk \mapsto c
+                 \mid
+                 hk \mapsto c\in\var{stake},~hk\mapsto\var{operator}\in\var{delegations} \} \\
   \end{align*}
-  \caption{Functions used in Stake Distribution}
+  \caption{Helper Functions used in Stake Distribution}
+  \label{fig:functions:helper-stake-distribution}
+\end{figure}
+
+%%
+%% Figure Helper Functions for Stake Distribution
+%%
+\begin{figure}[htb]
+  \emph{Stake Distribution}
+  %
+  \begin{align*}
+      & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Stake \\
+      & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
+          (\dom{\var{activeDelegs}})\restrictdom\var{stake}\\
+      & \where \\
+      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs}) = \var{dstate} \\
+      & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ \var{outs} = \fun{consolidate}~{utxo} \\
+      & ~~~~ \var{stake} = (\fun{baseStake}~{outs})
+                             \unionoverridePlus (\fun{ptrStake}~{outs}~{ptrs})
+                             \unionoverridePlus (\fun{rewardStake}~{rewards}) \\
+      & ~~~~ \var{activeDelegs} =
+               (\dom{stkeys}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+      \nextdef
+      & \fun{poolDistr} \in \UTxO \to \DState \to \PState \to (\HashKey_{pool} \mapsto \Stake) \\
+      & \poolDistr{utxo}{dstate}{pstate} = \\
+      & ~~ \{hk \mapsto \poolStake{hk}{(\fun{poolOwners}~\var{pool})}{delegations}{stake}
+           \mid
+           hk\mapsto pool \in \var{poolParams} \} \\
+      & \where \\
+      & ~~~~ (\wcard,~\wcard,~\var{delegations},~\wcard) = \var{dstate} \\
+      & ~~~~ (\wcard,~\var{poolParams},~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ stake = \fun{stakeDistr}~{utxo}~{dstate}~{pstate}\\
+  \end{align*}
+
+  \caption{Stake Distribution Functions}
   \label{fig:functions:stake-distribution}
 \end{figure}
 
@@ -195,38 +228,6 @@ The map $\fun{poolRefunds}$ uses the pool decay parameters in $\PParams$
 to assign a refund to each pool key in the set of pools scheduled for retirement
 at the epoch boundary.
 
-%%
-%% Figure - Functions for Epoch Rules
-%%
-\begin{figure}[htb]
-  \begin{align*}
-      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin
-      & \text{total possible refunds} \\
-      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
-      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
-        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})} \\
-      & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
-        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-          & (\dval,~d_{\min},~\lambda_d) & \fun{decayKey}~\var{pp}\\
-          & (p_{\mathsf{val}},~p_{\min},~\lambda_p) & \fun{decayPool}~\var{pp}\\
-      \end{array}\\
-      \nextdef
-      & \fun{poolRefunds} \in \PParams \to (\HashKey \mapsto \Epoch) \\
-      & ~~ \to \Slot \to (\HashKey \mapsto \Coin)
-      & \text{pool refunds} \\
-      & \poolRefunds{pp}{retiring}{cslot} = \\
-      & \bigcup_{\var{hk}\mapsto s\in\var{retiring}}
-          \var{hk}\mapsto( \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{s})} ) \\
-      &
-        \where (p_{\mathsf{val}},~p_{\min},~\lambda_p) = \fun{decayPool}~\var{pp}\\
-  \end{align*}
-  \caption{Functions used in Accounting}
-  \label{fig:functions:epoch}
-\end{figure}
-
 \subsection{Rewards Distribution}
 \label{sec:reward-dist}
 
@@ -254,7 +255,7 @@ Section~\ref{sec:acc-trans}:
 \item $\var{R} \in \Coin$ is the total available rewards for the epoch (in ADA) \medskip
 
 From protocol (pool-related) constants:
-\item $n_{opt} \in \mathbb{N}$ is the optimal number of saturated stake pools (which the system
+\item $n_{opt} \in \N$ is the optimal number of saturated stake pools (which the system
 tends to by protocol design)
 \item $\var{a_0} \in [0, \infty)$ is a parameter determining leader-stake
 influence on pool rewards
@@ -281,7 +282,7 @@ each associated to its pool key
 \item $\sigma \in [0,1]$ is the total relative stake of a pool (expressed as a fraction of
 the total stake, which is a sum of the relative member's stake)
 \item $p_r \in [0,1]$ is the relative pledge of a given pool, calculated by normalizing $p$
-\item $\overline{N} \in \mathbb{R}$, for a given pool, is the expectated value of the number
+\item $\overline{N} \in \Rnn$, for a given pool, is the expected value of the number
 of slots that the pool will be elected as leader on average
 \item $\var{maxP} \in \Coin$ is the maximum stake that could be received by a particular
 pool
@@ -299,7 +300,7 @@ The function $\fun{movingAvg}$ calculates the new moving average for a
 given stake pool based on protocol parameters, pool's block production, and
 the moving average of this pool in the previous epoch.
 
-Next, the function $\fun{poolRew}$ gives the total rewards available to be distributed
+Next, the function $\fun{poolReward}$ gives the total rewards available to be distributed
 to the members of the given pool. This value is based on protocol parameters,
 the pool's block production, moving average, election expectation, and the maximum
 possible rewards for this pool.
@@ -308,26 +309,31 @@ possible rewards for this pool.
 %% Figure - Functions for the Reward Calculation
 %%
 \begin{figure}[htb]
+  \emph{Maximal Reward Function, called $f(s,\sigma)$ in section 6.5.1 of \cite{delegation_design}}
+  %
   \begin{align*}
-      & \fun{maxPool} \in \PParams \to \Coin \to [0, 1] \to [0,1] \to \Coin
-      & \text{max pool reward} \\
-      & \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r} = \\
-      & ~~~\floor*{
-           \frac{R}{1 + a_0}
-           \cdot
-           \left(\sigma' + p'\cdot a_0\cdot\frac{\sigma' - p'\frac{z_0-\sigma'}{z_0}}{z_0}\right)} \\
+      & \fun{maxPool} \in \PParams \to \Coin \to \unitInterval \to \unitInterval \to \Coin \\
+      & \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r} =
+          ~~~\floor*{
+             \frac{R}{1 + a_0}
+             \cdot
+             \left(
+               \sigma' + p'\cdot a_0\cdot\frac{\sigma' - p'\frac{z_0-\sigma'}{z_0}}{z_0}
+             \right)} \\
       & ~~~\where \\
       & ~~~~~~~a_0 = \fun{influence}~pp \\
       & ~~~~~~~n_{opt} = \fun{nopt}~pp \\
       & ~~~~~~~z_0 = 1/n_{opt} \\
       & ~~~~~~~\sigma'=\min(\sigma,~z_0) \\
       & ~~~~~~~p'=\min(p_r,~z_0) \\
-      \nextdef
-      & \fun{movingAvg} \in \PParams \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
-      & ~~~\to \Distr \to [0, 1]
-      & \text{moving average} \\
-      & \fun{movingAvg}~\var{pp}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs} = \\
-      & \begin{cases}
+  \end{align*}
+
+  \emph{Exponential moving average, see in section 6.5.1 of \cite{delegation_design}}
+  %
+  \begin{align*}
+      & \fun{movingAvg} \in \PParams \to \HashKey \to \N \to \Rnn \to \Avgs \to \R \\
+      & \movingAvg{pp}{hk}{n}{\overline{N}}{avgs} =
+        \begin{cases}
         \frac{n}{\max(\overline{N}, 1)}
         & hk\notin \dom\var{avgs}\\
         \\
@@ -336,15 +342,17 @@ possible rewards for this pool.
         \end{cases} \\
       & ~~~\where \\
       & ~~~~~~~\alpha = \fun{movingAvgWeight}~pp \\
-      \nextdef
-      & \fun{poolRew} \in \PParams \to \HashKey \to \mathbb{N} \to \mathbb{R} \\
-      & ~~~\to \Distr \to \Coin \to (\Coin \times [0, 1])
-      & \text{pool reward} \\
-      & \fun{poolRew}~\var{pp}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} =
-      (\floor*{avg^\gamma\cdot \var{maxP}},~\var{avg})\\
+  \end{align*}
+
+  \emph{Actual Reward Function, called $\hat{f}_j$ in section 6.5.1 of \cite{delegation_design}}
+  %
+  \begin{align*}
+      & \fun{poolReward} \in \PParams \to \HashKey \to \N \to \Rnn \to \Avgs \to \Coin \to \Coin \\
+      & \poolReward{pp}{hk}{n}{\overline{N}}{avgs}{maxP} =
+      \floor*{avg^\gamma\cdot \var{maxP}}\\
       & ~~~\where \\
       & ~~~~~~~\gamma = \fun{movingAvgExp}~pp \\
-      & ~~~~~~~\var{avg} = \fun{movingAvg}~\var{pp}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs} \\
+      & ~~~~~~~\var{avg} = \movingAvg{pp}{hk}{n}{\overline{N}}{avgs} \\
   \end{align*}
   \caption{Functions used in the Reward Calculation}
   \label{fig:functions:rewards}
@@ -352,16 +360,16 @@ possible rewards for this pool.
 
 In Figure~\ref{fig:functions:reward-splitting}, we give the strategy for the
 splitting of the rewards within a given pool. Note that the calculation of
-the total value to be split within the pool is presented above, denoted $\fun{poolRew}$.
+the total value to be split within the pool is presented above, denoted $\fun{poolReward}$.
 
 The portion of rewards allocated to the pool leader and those allocated to
 the rest of the pool members is different. This portion is calculated based
 on pool-specific parameters stored on the ledger, as well as
 the pool's total stake and the individual stake of the key for which the rewards
 are being calculated. The calculation for the pool
-leader reward amount is given by the $\fun{leaderRew}$ function, and the
-calculation for the reward amount for each other member is given by $\fun{memberRew}$.
-Finally, $\fun{indivRew}$ puts these two calculations together to give the
+leader reward amount is given by the $\fun{lReward}$ function, and the
+calculation for the reward amount for each other member is given by $\fun{mReward}$.
+Finally, $\fun{indivReward}$ puts these two calculations together to give the
 reward amount for any pool member, using a boolean $\var{isLeader}$
 as an input variable which indicates
 whether a given member is the pool leader or not.
@@ -378,51 +386,32 @@ which the given leader is the leader of.
 %% Figure - Functions for the Reward Splitting
 %%
 \begin{figure}[htb]
+  \emph{Pool leader reward, from section 6.5.2 of \cite{delegation_design}}
+  %
   \begin{align*}
-      & \fun{leaderRew} \in \Coin \to \PoolParam \to [0, 1] \to [0, 1] \to \Coin
-      & \text{pool leader reward} \\
-      & \fun{leaderRew}~\hat{f}~\var{pool}~\sigma~\var{s} = \\
-      & \begin{cases}
-          \hat{f} & \hat{f} \leq c\\
-          c + \floor*{(\hat{f} - c)\cdot\left(m + (1-m)\cdot\frac{s}{\sigma}\right) }&
-          \text{otherwise.}
-        \end{cases} \\
-      & ~~~\where \\
-      & ~~~~~~~(c, m, \_) = \fun{poolCosts}~pool \\
-      \nextdef
-      & \fun{memberRew} \in \Coin \to \PoolParam \to [0, 1] \to [0, 1] \to \Coin
-      & \text{pool member reward} \\
-      & \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{s} = \\
-      & \begin{cases}
-          0 & \hat{f} \leq c\\
-          \floor*{(\hat{f} - c)\cdot(1-m)\cdot\frac{s}{\sigma}} &
-          \text{otherwise.}
-        \end{cases} \\
-      & ~~~\where \\
-      & ~~~~~~~(c, m, \_) = \fun{poolCosts}~pool \\
-      \nextdef
-      & \fun{indivRew} \in \Coin \to \PoolParam \to [0, 1] \to [0, 1] \to \mathbb{B} \to \Coin
-      & \text{pool individual reward} \\
-      & \fun{indivRew}~\hat{f}~\var{pool}~\sigma~\var{s}~\var{isLeader} = \\
-      & \begin{cases}
-          \fun{leaderRew}~\hat{f}~\var{pool}~\sigma~\var{s} & \var{isLeader} \\
-        \fun{memberRew}~\hat{f}~\var{pool}~\sigma~\var{s} & \text{otherwise.}
-        \end{cases} \\
-      \nextdef
-      & \fun{groupByPool} \in (\HashKey \mapsto \Coin) \to (\HashKey \mapsto \HashKey) \\
-      & ~~~\to
-        \left(
-        \HashKey \mapsto
-        \left(
-        \HashKey \mapsto \Coin
-        \right)
-        \right)
-      & \text{pool individual reward} \\
-      & \fun{groupByPool}~\var{active}~\var{delegs} = \\
-      & ~~~\Big\{ leader \mapsto
-      \{hk \mapsto c \mid hk \mapsto c \in active\} \\
-      & ~~~~~~            \mid hk \mapsto leader\in\var{delegs} \Big\}
+      & \fun{r_{leader}} \in \Coin \to \PoolParam \to \unitInterval \to \unitInterval \to \Coin \\
+      & \lReward{\hat{f}}{pool}{s}{\sigma} =
+        \begin{cases}
+        \hat{f} & \hat{f} \leq c\\
+        c + \floor*{(\hat{f} - c)\cdot\left(m + (1-m)\cdot\frac{s}{\sigma}\right) }&
+        \text{otherwise.}
+      \end{cases} \\
+      & ~~~\where (c, m, \_) = \fun{poolCosts}~pool \\
   \end{align*}
+
+  \emph{Pool member reward, from section 6.5.2 of \cite{delegation_design}}
+  %
+  \begin{align*}
+    & \fun{mReward} \in \Coin \to \PoolParam \to \unitInterval \to \unitInterval \to \Coin \\
+    & \mReward{\hat{f}}{pool}{t}{\sigma} =
+      \begin{cases}
+        0 & \hat{f} \leq c\\
+        \floor*{(\hat{f} - c)\cdot(1-m)\cdot\frac{t}{\sigma}} &
+        \text{otherwise.}
+      \end{cases} \\
+    & ~~~\where (c, m, \_) = \fun{poolCosts}~pool \\
+  \end{align*}
+
   \caption{Functions used in the Reward Splitting}
   \label{fig:functions:reward-splitting}
 \end{figure}
@@ -442,10 +431,10 @@ value. The finite map is indexed
 by reward addresses. In particular, the subset of reward addresses corresponding
 to registered keys delegating to the pool with leader $\var{poolHK}$.
 A reward address of key $hk$ is paired with the individual reward value
-produced by the $\fun{indivRew}$ map applied to relevant data passed to
+produced by the $\fun{indivReward}$ map applied to relevant data passed to
 $\fun{rewardOnePool}$ as well as the results of the $\fun{maxPool}$
-and $\fun{poolRew}$ calculations. The $\var{avg}$ value for the stake pool
-(i.e. the pool's ranking) is also calculated by the $\fun{poolRew}$ function.
+and $\fun{poolReward}$ calculations. The $\var{avg}$ value for the stake pool
+(i.e. the pool's ranking) is also calculated by the $\fun{poolReward}$ function.
 
 The $\fun{reward}$ calculation itself uses the $\fun{rewardOnePool}$ function to
 reward each pool's members and calculate the pool's moving averages. In order to
@@ -484,58 +473,74 @@ component of the range of the $\var{results}$ finite map).
 %% Figure - The Reward Calculation
 %%
 \begin{figure}[htb]
+  \emph{Calculation to reward a single stake pool}
+  %
   \begin{align*}
-      & \fun{rewardOnePool} \in \PParams \to \Coin \to \mathbb{N} \to \HashKey \to \PoolParam\\
-      & ~~~\to (\HashKey \mapsto \Coin)\to \Distr \to \Coin \to (\AddrRWD \mapsto \Coin)\times[0, 1]
-      & \text{reward one pool} \\
-      & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{poolHK}~\var{pool}
-        ~\var{actgr}~\var{avgs}~\var{tot} = \\
-      & ~~~(\{ (\AddrRWD~hk)\mapsto ( \fun{indivRew}~\var{poolR}~\var{pool}
-                                 ~(\sigma\div\var{tot})~(\var{c}\div\var{tot})~(hk ==\var{poolHK})) \\
-      & ~~~~~~~\mid hk\mapsto c\in\var{actgr}\},~\var{avg})\\
+      & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \HashKey \to \PoolParam\\
+      & ~~~\to \Stake \to \Avgs \to \Coin \to \StakeKeys \to (\AddrRWD \mapsto \Coin)\times\Coin \\
+      & \rewardOnePool{pp}{R}{n}{poolHK}{pool}{stake}{avgs}{tot}{stkeys} =
+          (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
-      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{actgr}} t \\
-      & ~~~~~~~\sigma = \var{pstake} \div tot \\
+      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{stake}} t \\
+      & ~~~~~~~\sigma = \var{pstake} / tot \\
       & ~~~~~~~\var{\overline{N}} = \sigma * \slotsPer\\
-      & ~~~~~~~(\_, \_, p) = \fun{poolCosts}~pool \\
-      & ~~~~~~~p_{r} = p \div tot \\
+      & ~~~~~~~(\_, \_, \var{pledge}) = \fun{poolCosts}~pool \\
+      & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
       & ~~~~~~~maxP =
       \begin{cases}
-          \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r}&
-              p \leq \var{pstake}\\
-          0 & \text{otherwise.}
-        \end{cases} \\
-      & ~~~~~~~(\var{poolR},~\var{avg}) = \fun{poolRew}~\var{pp}~\var{hk}~\var{n}~\var{\overline{N}}~\var{avgs}~\var{maxP} \\
-      \nextdef
-      & \fun{reward} \in \BlocksMade \to \PParams \to \Coin \\
-      & ~~ \to \DPState \to \UTxO \to (\AddrRWD \mapsto \Coin)\times\Distr
-      & \text{staking rewards} \\
-      & \fun{reward}~\var{prod}~\var{pp}~\var{R}~\var{dpstate}~\var{utxo} = \\
-      & ~~~\left(
-           \bigcup_{hk\mapsto(rew,~\_)\in\var{results}} hk\mapsto\var{rew},
-           ~~\bigcup_{hk\mapsto(\_,~\var{avg})\in\var{results}} hk\mapsto\var{avg}
-           \right)\\
+        \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r}&
+        \var{pledge} \leq \var{pstake}\\
+        0 & \text{otherwise.}
+      \end{cases} \\
+      & ~~~~~~~\var{poolR} = \poolReward{pp}{hk}{n}{\overline{N}}{avgs}{maxP} \\
+      & ~~~~~~~\var{mRewards} = \left\{
+                                  \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
+                                  ~\Big\vert~
+                                  hk\mapsto c\in\var{stake},~~hk \neq\var{poolHK}
+                               \right\}\\
+      & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{stake}~\var{poolHK}}{tot}}{\sigma} \\
+      & ~~~~~~~\var{poolAcnt} = \fun{poolAcntHK}~\var{pool} \\
+      & ~~~~~~~\var{rewards} =
+                 \begin{cases}
+                   \var{mReward}\cup\{\addrRw{\var{poolAcnt}}\mapsto\var{lReward}\}
+                   & \var{poolAcnt} \in \dom{stkeys} \\
+                   \var{mReward} & \text{otherwise.} \\
+                 \end{cases} \\
+      & ~~~~~~~\var{unrealized} =
+                 \begin{cases}
+                   \var{maxP} - \var{poolR} & \var{poolAcnt} \in \dom{stkeys} \\
+                   (\var{maxP} - \var{poolR})+\var{lReward} & \text{otherwise.} \\
+                 \end{cases} \\
+  \end{align*}
+
+  \emph{Calculation to reward all stake pools}
+  %
+  \begin{align*}
+      & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \DPState \\
+      & ~~~ \to (\HashKey_{pool} \mapsto \Stake) \to (\AddrRWD \mapsto \Coin)\times\Coin \\
+      & \reward{pp}{blocks}{R}{dpstate}{pooledStake} = (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
-      & ~~~~~~~\var{outs} = \{out\mid\_\mapsto\var{out}\in\var{utxo}\} \\
-      & ~~~~~~~\var{dstate},\var{pstate} = \var{dpstate} \\
-      & ~~~~~~~\var{stkeys},\_,\var{delegs},\var{ptrs} = \var{dstate} \\
-      & ~~~~~~~\var{stpools},\var{poolParams},\var{retiring},\var{avgs} = \var{pstate} \\
-      & ~~~~~~~active = \activeStake{outs}{ptrs}{stkeys}{delegs}{stpools} \\
-      & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{active}}c \\
-%      & ~~~~~~~stDistr = \left\{ hk\mapsto c \div tot \mid hk \mapsto c \in \var{active} \right\}\\
-      & ~~~~~~~pactive = \fun{groupByPool}~\var{active}~\var{delegs} \\
+      & ~~~~~~~(\var{dstate},~\var{pstate}) = \var{dpstate} \\
+      & ~~~~~~~(~\var{stkeys},~\wcard,~\wcard,~\wcard) = \var{dstate} \\
+      & ~~~~~~~(\wcard,~\var{poolParams},~\wcard,~\var{avgs}) = \var{pstate} \\
+      & ~~~~~~~tot = \sum_{\_\mapsto st\in \var{pooledStake}}
+                       \left(
+                       \sum_{\wcard\mapsto c\in\var{st}}c
+                       \right) \\
       & ~~~~~~~pdata = \left\{
-                         hk\mapsto (pool, n, actgr)  \mathrel{\Bigg|}
-                          \begin{array}{r@{\mapsto}c@{~\in~}l}
-                          hk & \var{pool} & \var{poolParams} \\
-                          hk & \var{n} & \var{prod} \\
-                          hk & \var{actgr} & \var{pactive} \\
-                          \end{array}
-                       \right\} \\
-      & ~~~~~~~results = \{hk \mapsto \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{hk}
-      ~\var{pool}~\var{actgr}~\var{avgs}~\var{tot}
-                         \mid \\
-      &\qquad \qquad \qquad \qquad hk\mapsto(pool, n, actgr)\in\var{pdata} \}
+        hk\mapsto (p, n, s)  \mathrel{\Bigg|}
+        \begin{array}{r@{\mapsto}c@{~\in~}l}
+          hk & \var{p} & \var{poolParams} \\
+          hk & \var{n} & \var{blocks} \\
+          hk & \var{s} & \var{pooledStake} \\
+        \end{array}
+      \right\} \\
+      & ~~~~~~~\var{results} = \left\{
+                 hk \mapsto \rewardOnePool{pp}{R}{n}{hk}{p}{s}{avgs}{tot}{stkeys}
+                 \mid
+                 hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
+      & ~~~~~~~\var{unrealized} = \sum_{\wcard\mapsto (\wcard,~u)\in\var{results}}u \\
+      & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto(\var{rwds},~\wcard)}\var{rwds}
   \end{align*}
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
@@ -581,7 +586,7 @@ type, as all transition types in this chapter, has no signal.
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{last slot of epoch}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{blocksMade} & \BlocksMade & \text{blocks made in the epoch}\\
+        \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
       \end{array}
     \right)
   \end{equation*}
@@ -709,6 +714,65 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
 \end{figure}
 
 %%
+%% Figure - Functions for Epoch Rules
+%%
+\begin{figure}[htb]
+  \emph{Total possible refunds}
+  \begin{align*}
+      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin \\
+      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
+      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
+        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
+        + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
+        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+          & \dval,~d_{\min},~\lambda_d
+          & \fun{keyDeposit}~\var{pp},~\fun{keyMinRefund}~\var{pp},~\fun{keyDecayRate}~\var{pp}
+          \\
+          & p_{\mathsf{val}},~p_{\min},~\lambda_p
+          & \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp}
+      \end{array}\\
+  \end{align*}
+  \emph{Pool refunds}
+  \begin{align*}
+      & \fun{poolRefunds} \in \PParams \to (\HashKey \mapsto \Epoch) \to \Slot \to
+        (\HashKey \mapsto \Coin) \\
+      & \poolRefunds{pp}{retiring}{cslot} = \left\{
+        \var{hk}\mapsto
+          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{(\fun{slot}~e)})}
+          \mid
+          \var{hk}\mapsto e\in\var{retiring}
+        \right\}\\
+      & \where p_{\mathsf{val}},~p_{\min},~\lambda_p =
+          \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp} \\
+  \end{align*}
+
+  \emph{Update Moving Averages}
+  \begin{align*}
+      & \fun{updateAvgs} \in \PParams \to \Avgs \to \BlocksMade \to
+          (\HashKey_{pool}\mapsto \Stake) \to \Avgs \\
+      & \updateAvgs{pp}{avgs}{blocks}{pooledStake} = \\
+      & ~~~ \left\{hk\mapsto \movingAvg{pp}{hk}{n}{\overline{N}}{avgs}
+            \mid
+            hk\mapsto n\in\var{blocks}, hk\mapsto\overline{N}\in\var{expectations}
+            \right\} \\
+      & \where \\
+      & ~~~~~ \var{tot} = \sum_{\_\mapsto st\in \var{pooledStake}}
+                          \left(\sum_{\wcard\mapsto c\in\var{st}}c\right) \\
+      & ~~~~~ \var{expectations} =
+                \left\{
+                  hk\mapsto\left(\sum_{\wcard\mapsto c\in\var{st}}c\right)*\slotsPer / tot
+                  \mid
+                  hk\mapsto\var{st} \in pooledStake
+                \right\}
+  \end{align*}
+  \caption{Functions used in Accounting}
+  \label{fig:functions:epoch}
+\end{figure}
+
+%%
 %% Figure - Accounting Rules
 %%
 \begin{figure}[htb]
@@ -723,8 +787,11 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
         \var{totalPool} & \var{fees} + \var{decayed} + \var{rewardPot} + \var{expansion} \\
         \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPool}} \\
         \var{availablePool} & \var{totalPool} - \var{newTreasury} \\
-        \var{rewards'},~\var{avgs'} & \reward{blocksMade}{pp}{availablePool}{dpstate}{utxo}\\
-        \var{paidRewards} & \sum\limits_{\_\mapsto c\in\var{rewards'}}c
+        \var{pooledStake} & \poolDistr{utxo}{dstate}{pstate} \\
+        \var{rewards'},~\var{unrealized} & \reward{pp}{blocks}{availablePool}{dpstate}{pooledStake}\\
+        \var{newTreasury'} & \var{newTreasury} + \var{unrealized} \\
+        \var{paidRewards} & \sum\limits_{\_\mapsto c\in\var{rewards'}}c \\
+        \var{avgs'} & \updateAvgs{pp}{avgs}{blocks}{pooledStake} \\
       \end{array}
       }
     }
@@ -732,7 +799,7 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
       \begin{array}{l}
         \var{slot}\\
         \var{pp}\\
-        \var{blocksMade}\\
+        \var{blocks}\\
       \end{array}
       \vdash
       \left(
@@ -756,7 +823,7 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
       \trans{accnt}{}
       \left(
         \begin{array}{rcl}
-          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury}} \\
+          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury'}} \\
           \varUpdate{\var{reserves}} & \varUpdate{-} & \varUpdate{\var{expansion}} \\
           \varUpdate{\var{availablePool}} & \varUpdate{-} & \varUpdate{\var{paidRewards}} \\
           \var{stkeys} \\
@@ -1054,7 +1121,7 @@ pool state.
         \var{slot} & \Slot & \text{current slot}\\
         \var{ppOld} & \PParams & \text{old protocol parameters}\\
         \var{ppNew} & \PParams & \text{new protocol parameters}\\
-        \var{blocksMade} & \HashKey \mapsto \mathbb{N} & \text{blocks made in the epoch}\\
+        \var{blocks} & \HashKey \mapsto \N & \text{blocks made in the epoch}\\
       \end{array}
     \right)
   \end{equation*}
@@ -1105,7 +1172,7 @@ be the \textit{last slot of the epoch before the boundary}.
         \begin{array}{l}
           \var{slot}\\
           \var{ppOld}\\
-          \var{blocksMade}\\
+          \var{blocks}\\
         \end{array}
       }
       \vdash
@@ -1186,7 +1253,7 @@ be the \textit{last slot of the epoch before the boundary}.
         \var{slot}\\
         \var{ppOld}\\
         \var{ppNew}\\
-        \var{blocksMade}\\
+        \var{blocks}\\
       \end{array}
       \vdash
       \left(

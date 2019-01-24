@@ -100,7 +100,7 @@ $\Duration$ here by $\var{dur}$).
   \emph{Constants}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \slotsPer & \mathbb{N} & \text{slots per epoch} \\
+      \slotsPer & \N & \text{slots per epoch} \\
     \end{array}
   \end{equation*}
   %
@@ -254,7 +254,7 @@ certificate (contained in a signal transaction).
       \var{poolParams} & \HashKey \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
-      \var{avgs} & \HashKey \mapsto \mathbb{R}_{>0} & \text{performance moving average}\\
+      \var{avgs} & \HashKey \mapsto \Rnn & \text{performance moving average}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
