@@ -495,8 +495,6 @@ $1/5 \leq t \leq 1/4$.
 
 \newcommand{\bheadname}{bHead}
 \newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
-\newcommand{\bbodyname}{bBody}
-\newcommand{\bbody}[1]{\fun{\bbodyname}\ #1}
 \newcommand{\bhhashname}{bhHash}
 \newcommand{\bhhash}[1]{\fun{\bhhashname}\ #1}
 \newcommand{\bhprevhashname}{bhPrevHash}
@@ -509,8 +507,24 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bslotname}{bSlot}
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
+\newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
+\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
+\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
+\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
+\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
+
 \newcommand{\maxblocksize}{\pp{maxBlockSize}}
 \newcommand{\maxheadersize}{\pp{maxHeaderSize}}
+
+% Imported definitions
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\DIEnv}{\type{DIEnv}}
+\newcommand{\DIState}{\type{DIState}}
+
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UProp}{\type{UProp}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
 We delineate here between processing the header and body of a block. It's useful
 to make this distinction since we may process headers ahead of the
@@ -525,6 +539,7 @@ of block bodies.
     \begin{array}{r@{~\in~}lr}
       b & \Block & \text{block} \\
       h & \Hash   & \text{hash} \\
+      \var{data} & \Data    & \text{data}
     \end{array}
   \end{equation*}
   %
@@ -534,6 +549,7 @@ of block bodies.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
+      \fun{\verifyname} & \VKey \times \Data \times \Sig & \text{verification relation} \\
     \end{array}
   \end{equation*}
   \emph{Protocol parameters}
@@ -699,7 +715,21 @@ of block bodies.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{\bbodyname} & \Block \totalf \Bbody & \text{Block body} \\
+      \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
+      \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
+      & \text{block certificates} \\
+      \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+      \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
+      \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
+    \end{array}
+  \end{equation*}
+  \emph{Derived functions}
+  \begin{equation*}
+    \begin{array}{rlr}
+      \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
+      \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
+      \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
+      \bslot{b} & = (\bhslotname \cdot \bheadname)~b
     \end{array}
   \end{equation*}
   \caption{Block body processing types and functions}
@@ -821,56 +851,15 @@ of block bodies.
 \newcommand{\CEEnv}{\type{CEEnv}}
 \newcommand{\CEState}{\type{CEState}}
 
-\newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
-\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
-\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
-\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
-\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
-
-% Imported definitions
-\newcommand{\UTxO}{\type{UTxO}}
-\newcommand{\DIEnv}{\type{DIEnv}}
-\newcommand{\DIState}{\type{DIState}}
-
-\newcommand{\UPIEnv}{\type{UPIEnv}}
-\newcommand{\UProp}{\type{UProp}}
-\newcommand{\Vote}{\ensuremath{\type{Vote}}}
-\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
 \begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \var{data} & \Data    & \text{data}
-    \end{array}
-  \end{equation*}
   \emph{Abstract functions}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{\verifyname} & \VKey \times \Data \times \Sig
-      & \text{verification relation} \\
-      \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
-      \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
-      & \text{block certificates} \\
-      \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
-      \fun{bUpdVotes} & \Block \totalf \seqof{Vote} & \text{Block update votes payload} \\
-      \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
       \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
     \end{array}
   \end{equation*}
-  \emph{Derived functions}
-  \begin{equation*}
-    \begin{array}{rlr}
-      \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
-      \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
-      \bslot{b} & = (\bhslotname \cdot \bheadname)~b
-    \end{array}
-  \end{equation*}
-
-  %
   \caption{Blockchain Extension Types and Functions}
   \label{fig:defs:chain-extension}
 \end{figure}
