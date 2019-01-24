@@ -5,32 +5,36 @@ module NonIntegral
   , findE
   , splitLn
   , fexp
+  , scaleExp
   ) where
 
 import Debug.Trace
 
 import Data.Ratio
 
+scaleExp :: (RealFrac b) => b -> (Integer, b)
+scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
+
 -- | Exponentiation
-(***) :: (Fractional a, Enum a, Ord a, Show a) => a -> a -> a
+(***) :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> a -> a
 a *** b
   | a == 0 = if b == 0 then 1 else 0
   | a == 1 = 1
-  | otherwise = --trace (show a ++ " *** " ++ show b) $
+  | otherwise = trace (show a ++ " *** " ++ show b) $
                 exp' $ b * ln' a
 
--- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scaling
--- to x' \in [0,1] is currently not done, did not provide advantage for
--- Rational.
-exp' :: (Fractional a, Enum a, Ord a, Show a) => a -> a
+-- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scale to
+-- x' \in [0,1] to reduce overflow risk in numerical types with limited values.
+exp' :: (RealFrac a, Enum a, Show a) => a -> a
 exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
+  | x > 1  = let (n, euler) = scaleExp x in (exp' euler) ^^ n
   | otherwise = fexp 1000 x
 
 -- | Approximate exp(x) via continued fraction.
 fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
-fexp maxN x =
+fexp maxN x = trace ("fexp " ++ show x) $
   cf maxN 0 Nothing 1 0 1 1 [x * a | a <- 1 : [-1,-2 ..]] (1 : [x + b | b <- [2 ..]])
 
 logAs :: (Num a) => a -> [a]
@@ -115,24 +119,25 @@ contract factor x l u
     mid = l + ((u - l) `div` 2)
     x' = factor ^^ mid
 
-e :: (Fractional a, Enum a, Ord a, Show a) => a
+e :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a
 e = exp' 1
 
 -- | find n with `e^n<=x<e^(n+1)`
-findE :: (Fractional a, Enum a, Ord a, Show a) => a -> Integer
-findE x = contract e x lower upper
+findE :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> Integer
+findE x = contract eone x lower upper
   where
-    (lower, upper) = bound e x (1 / e) e (-1) 1
+    eone           = e
+    (lower, upper) = bound eone x (1 / eone) eone (-1) 1
 
 -- | Compute natural logarithm via continued fraction, first splitting integral
 -- part and then using continued fractions approximation for `ln(1+x)`
-ln' :: (Fractional a, Enum a, Ord a, Show a) => a -> a
+ln' :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> a
 ln' x = if x == 0
         then error "0 is not in domain of ln"
         else fromIntegral n + fln 1000 x'
   where (n, x') = splitLn x
 
-splitLn :: (Fractional b, Enum b, Ord b, Show b) => b -> (Integer, b)
+splitLn :: (RealFrac b, Fractional b, Enum b, Ord b, Show b) => b -> (Integer, b)
 splitLn x = (n, x')
     where n = findE x
           x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
