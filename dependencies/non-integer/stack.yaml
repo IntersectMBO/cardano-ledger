@@ -38,6 +38,8 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 # extra-deps: []
+extra-deps:
+  - FixedPoint-simple-0.6.1@sha256:01f08f712f70b4499d2099adda71ee887f24cc0f285f29c4952815e7d52c2bb8
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

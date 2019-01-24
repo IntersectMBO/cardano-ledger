@@ -24,6 +24,7 @@ executables:
     - -O2
     dependencies:
     - non-integer
+    - FixedPoint-simple
 
 library:
   source-dirs: src
@@ -51,3 +52,4 @@ tests:
     dependencies:
     - non-integer
     - QuickCheck
+    - FixedPoint-simple
