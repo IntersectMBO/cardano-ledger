@@ -13,10 +13,10 @@ import           Test.QuickCheck
 import           NonIntegral
 
 eps :: Rational
-eps    = 1 / 10^10
+eps    = 1 / 10^12
 
 epsD :: Double
-epsD   = 1.0 / 10^10
+epsD   = 1.0 / 10^5
 
 epsFBV :: FixedPoint
 epsFBV = fromRational eps
