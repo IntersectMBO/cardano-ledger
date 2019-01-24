@@ -503,6 +503,8 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bhtosign}[1]{\fun{\bhtosignname}\ #1}
 \newcommand{\bhslotname}{bhSlot}
 \newcommand{\bhslot}[1]{\fun{\bhslotname}\ #1}
+\newcommand{\bupdpayloadname}{bUpdPayload}
+\newcommand{\bupdpayload}[1]{\fun{\bupdpayloadname}\ #1}
 
 \newcommand{\bslotname}{bSlot}
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
@@ -706,7 +708,8 @@ of block bodies.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      bb & \Bbody & \text{Block body}
+      bb & \Bbody & \text{Block body} \\
+
     \end{array}
   \end{equation*}
   %
@@ -717,9 +720,12 @@ of block bodies.
       \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
       \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
       & \text{block certificates} \\
-      \fun{bUpdProp} & \Block \totalf \UProp & \text{Block update proposal payload} \\
+      \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{Block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
+      \fun{bhUtxoSig} & \Bhead \totalf \Sig & \text{UTxO payload signature} \\
+      \fun{bhDlgSig} & \Bhead \totalf \Sig & \text{Delegation payload signature} \\
+      \fun{bhUpdSig} & \Bhead \totalf \Sig & \text{Update payload signature} \\
     \end{array}
   \end{equation*}
   \emph{Derived functions}
@@ -728,7 +734,9 @@ of block bodies.
       \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
       \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
       \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
-      \bslot{b} & = (\bhslotname \cdot \bheadname)~b
+      \bslot{b} & = (\bhslotname \cdot \bheadname)~b \\
+      \fun{\bupdpayloadname} & \in \Block \to (\UProp^{?}\times\seqof{\Vote}) & \text{Block update payload} \\
+      \bupdpayload{b} & = (\bupdprop{b},~\bupdvotes{b})
     \end{array}
   \end{equation*}
   \caption{Block body processing types and functions}
@@ -772,6 +780,10 @@ of block bodies.
   \begin{equation*}
     \inference
     { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
+      \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bissuer{\var{bh}} \\
+      \verify{\var{vk_d}}{\serialised{\butxo{b}}}{(\fun{bhUtxoSig}~\var{bh})} &
+      \verify{\var{vk_d}}{\serialised{\bcerts{b}}}{(\fun{bhDlgSig}~\var{bh})} \\
+      \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
       {\left(
           \begin{array}{l}
             \bslot{b} \\
