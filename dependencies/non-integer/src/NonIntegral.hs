@@ -8,15 +8,13 @@ module NonIntegral
   , scaleExp
   ) where
 
-import Debug.Trace
-
-import Data.Ratio
+--import Debug.Trace
 
 scaleExp :: (RealFrac b) => b -> (Integer, b)
 scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
 
 -- | Exponentiation
-(***) :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> a -> a
+(***) :: (RealFrac a, Enum a, Show a) => a -> a -> a
 a *** b
   | a == 0 = if b == 0 then 1 else 0
   | a == 1 = 1
@@ -30,7 +28,7 @@ exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
   | x > 1  = --trace ("exp of " ++ show x) $
-             let (n, euler) = scaleExp x in (exp' euler) ^^ n
+             let (n, euler) = scaleExp x in exp' euler ^^ n
   | otherwise = fexp 1000 x
 
 -- | Approximate exp(x) via continued fraction.
@@ -123,11 +121,11 @@ contract factor x l u
     mid = l + ((u - l) `div` 2)
     x' = factor ^^ mid
 
-e :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a
+e :: (RealFrac a, Enum a, Show a) => a
 e = exp' 1
 
 -- | find n with `e^n<=x<e^(n+1)`
-findE :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> Integer
+findE :: (RealFrac a, Enum a, Show a) => a -> Integer
 findE x = contract eone x lower upper
   where
     eone           = e
@@ -135,13 +133,13 @@ findE x = contract eone x lower upper
 
 -- | Compute natural logarithm via continued fraction, first splitting integral
 -- part and then using continued fractions approximation for `ln(1+x)`
-ln' :: (RealFrac a, Fractional a, Enum a, Ord a, Show a) => a -> a
+ln' :: (RealFrac a, Enum a, Show a) => a -> a
 ln' x = if x == 0
         then error "0 is not in domain of ln"
         else fromIntegral n + fln 1000 x'
   where (n, x') = splitLn x
 
-splitLn :: (RealFrac b, Fractional b, Enum b, Ord b, Show b) => b -> (Integer, b)
+splitLn :: (RealFrac b, Enum b, Show b) => b -> (Integer, b)
 splitLn x = (n, x')
     where n = findE x
           x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
