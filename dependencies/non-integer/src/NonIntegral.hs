@@ -20,7 +20,7 @@ scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
 a *** b
   | a == 0 = if b == 0 then 1 else 0
   | a == 1 = 1
-  | otherwise = trace (show a ++ " *** " ++ show b) $
+  | otherwise = --trace (show a ++ " *** " ++ show b) $
                 exp' $ b * ln' a
 
 -- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scale to
@@ -29,12 +29,13 @@ exp' :: (RealFrac a, Enum a, Show a) => a -> a
 exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
-  | x > 1  = let (n, euler) = scaleExp x in (exp' euler) ^^ n
+  | x > 1  = --trace ("exp of " ++ show x) $
+             let (n, euler) = scaleExp x in (exp' euler) ^^ n
   | otherwise = fexp 1000 x
 
 -- | Approximate exp(x) via continued fraction.
 fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
-fexp maxN x = trace ("fexp " ++ show x) $
+fexp maxN x = --trace ("fexp " ++ show x) $
   cf maxN 0 Nothing 1 0 1 1 [x * a | a <- 1 : [-1,-2 ..]] (1 : [x + b | b <- [2 ..]])
 
 logAs :: (Num a) => a -> [a]
@@ -46,7 +47,8 @@ logAs a = a' : a' : logAs (a + 1)
 fln :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
 fln maxN x = if x < 0
              then error ("x = " ++ show x ++ "is not inside domain [0, ..) ")
-             else cf maxN 0 Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1 ..]
+             else --trace ("fln") $
+                  cf maxN 0 Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1 ..]
 
 eps :: (Fractional a) => a
 eps = 1 / 10^30
@@ -72,8 +74,10 @@ cf maxN n lastVal aNm2 bNm2 aNm1 bNm1 (an:as) (bn:bs)
       case lastVal of
         Nothing -> cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
         Just c' -> if abs(convergent - c') < eps
-                   then convergent
-                   else cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
+                   then --trace ("cf done n: " ++ show n) $
+                        convergent
+                   else --trace ("cf n: " ++ show n) $
+                        cf maxN (n + 1) (Just convergent) aNm1 bNm1 aN bN as bs
   where
     ba = bn * aNm1
     aa = an * aNm2
