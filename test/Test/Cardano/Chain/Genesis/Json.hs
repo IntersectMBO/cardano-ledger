@@ -19,7 +19,8 @@ import Test.Cardano.Chain.Genesis.Gen
   , genGenesisInitializer
   , genStaticConfig
   )
-import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Chain.Update.Gen (genProtocolVersion)
+import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic)
 
 
 --------------------------------------------------------------------------------
@@ -62,6 +63,22 @@ roundTripGenesisDelegation =
 roundTripGenesisInitializer :: Property
 roundTripGenesisInitializer =
   eachOf 1000 genGenesisInitializer roundTripsAesonShow
+
+--------------------------------------------------------------------------------
+-- BlockVersionData
+--------------------------------------------------------------------------------
+
+roundTripProtocolVersion :: Property
+roundTripProtocolVersion =
+  eachOf 100 genProtocolVersion roundTripsAesonShow
+
+--------------------------------------------------------------------------------
+-- ProtocolMagic
+--------------------------------------------------------------------------------
+
+roundTripProtocolMagic :: Property
+roundTripProtocolMagic =
+  eachOf 100 genProtocolMagic roundTripsAesonShow
 
 tests :: IO Bool
 tests = (&&) <$> H.checkSequential $$discoverGolden <*> H.checkParallel

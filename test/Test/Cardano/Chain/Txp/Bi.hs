@@ -23,7 +23,7 @@ import Cardano.Chain.Common
   (AddrAttributes(..), Attributes(..), Script(..), mkAttributes)
 import Cardano.Chain.Txp
   (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
-import Cardano.Crypto (ProtocolMagic(..), SignTag(..), Signature, sign)
+import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
@@ -220,7 +220,7 @@ goldenTxSig :: Property
 goldenTxSig = goldenTestBi txSigGold "test/golden/bi/txp/TxSig"
  where
   txSigGold = sign
-    (ProtocolMagic 0)
+    (ProtocolMagicId 0)
     SignForTestingOnly
     exampleSecretKey
     exampleTxSigData
@@ -253,7 +253,7 @@ sizeEstimates
   = let
       sizeTestGen :: (Show a, Bi a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg { gen = g }
-      pm = ProtocolMagic 0
+      pm = ProtocolMagicId 0
       knownTxIn (TxInUnknown _ _) = False
       knownTxIn _                 = True
 

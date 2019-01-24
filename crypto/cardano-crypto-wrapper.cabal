@@ -105,7 +105,9 @@ test-suite test
                        Test.Cardano.Crypto.CryptoSpec
                        Test.Cardano.Crypto.CryptoSpec2
                        Test.Cardano.Crypto.Dummy
+                       Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen
+                       Test.Cardano.Crypto.Json
 
   build-depends:       base
                      , bytestring

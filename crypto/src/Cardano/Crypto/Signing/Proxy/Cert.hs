@@ -20,7 +20,7 @@ import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi, Decoded(..), serialize')
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.Safe (SafeSigner)
 import Cardano.Crypto.Signing.Signature
@@ -49,7 +49,7 @@ instance (Typeable x, MonadError SchemaError m) => FromJSON m (ProxyCert x) wher
 -- | Proxy certificate creation from secret key of issuer, public key of
 --   delegate and the message space ω.
 safeCreateProxyCert
-  :: Bi w => ProtocolMagic -> SafeSigner -> PublicKey -> w -> ProxyCert w
+  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyCert w
 safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
  where
   sig = safeSign pm SignProxySK ss
@@ -61,7 +61,7 @@ safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
 --   way
 verifyProxyCert
   :: (Decoded (f ByteString), Functor f)
-  => ProtocolMagic
+  => ProtocolMagicId
   -> PublicKey
   -> PublicKey
   -> f ByteString

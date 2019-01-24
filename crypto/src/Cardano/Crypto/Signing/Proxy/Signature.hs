@@ -33,7 +33,7 @@ import Cardano.Binary.Class
   , enforceSize
   , serialize'
   )
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Proxy.SecretKey
   ( AProxySecretKey(..)
   , ProxySecretKey
@@ -83,7 +83,7 @@ decodeAProxySignature =
 
 validateProxySignature
   :: (MonadError Text m)
-  => ProtocolMagic
+  => ProtocolMagicId
   -> AProxySignature w a ByteString
   -> m ()
 validateProxySignature pm psig = validateProxySecretKey pm (psigPsk psig)
@@ -94,7 +94,7 @@ validateProxySignature pm psig = validateProxySecretKey pm (psigPsk psig)
 --   inside, we panic. Please check this condition outside of this function.
 proxySign
   :: Bi a
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> SecretKey
   -> ProxySecretKey w
@@ -123,7 +123,7 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
 --   space predicate and message itself.
 proxyVerifyDecoded
   :: Decoded t
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> ProxySignature w (BaseType t)
   -> (w -> Bool)
@@ -144,7 +144,7 @@ proxyVerifyDecoded pm t psig omegaPred m = predCorrect && sigValid
 --   predicate and message
 proxyVerify
   :: Bi a
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> ProxySignature w a
   -> (w -> Bool)

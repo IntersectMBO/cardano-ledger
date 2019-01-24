@@ -88,7 +88,7 @@ import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
   ( Hash
-  , ProtocolMagic(..)
+  , ProtocolMagicId(..)
   , ProxySignature
   , PublicKey
   , SecretKey
@@ -114,7 +114,7 @@ import Cardano.Crypto
 type Header = AHeader ()
 
 data AHeader a = AHeader
-  { headerProtocolMagic :: !ProtocolMagic
+  { headerProtocolMagicId :: !ProtocolMagicId
   , aHeaderPrevHash     :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
   , aHeaderProof        :: !(Annotated Proof a)
@@ -161,7 +161,7 @@ instance B.Buildable Header where
 instance Bi Header where
   encode h =
     encodeListLen 5
-      <> encode (getProtocolMagic (headerProtocolMagic h))
+      <> encode (headerProtocolMagicId h)
       <> encode (headerPrevHash h)
       <> encode (headerProof h)
       <> encode (headerConsensusData h)
@@ -175,7 +175,7 @@ decodeAHeader = do
     annotatedDecoder $ do
       enforceSize "Header" 5
       (,,,,)
-        <$> (ProtocolMagic <$> decode)
+        <$> decode
         <*> decodeAnnotated
         <*> decodeAnnotated
         <*> decodeAConsensus
@@ -189,7 +189,7 @@ instance Decoded (AHeader ByteString) where
 
 -- | Smart constructor for 'Header'
 mkHeader
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> Either GenesisHash Header
   -> SlotId
   -> SecretKey
@@ -211,7 +211,7 @@ mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
 -- | Make a 'Header' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.
 mkHeaderExplicit
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> HeaderHash
   -- ^ Parent
   -> ChainDifficulty
@@ -297,7 +297,7 @@ instance B.Buildable HeaderError where
 
 -- | Verify a main block header in isolation
 verifyHeader
-  :: MonadError HeaderError m => ProtocolMagic -> AHeader ByteString -> m ()
+  :: MonadError HeaderError m => ProtocolMagicId -> AHeader ByteString -> m ()
 verifyHeader pm header = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although must

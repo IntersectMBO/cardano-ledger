@@ -37,9 +37,9 @@ import Cardano.Chain.Slotting
   , mkLocalSlotIndex
   , mkSlottingData
   )
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
-import Test.Cardano.Crypto.Gen (genProtocolMagic)
+import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 
 genEpochIndex :: Gen EpochIndex
@@ -87,8 +87,8 @@ genSlottingData = mkSlottingData <$> genSlottingDataMap >>= \case
       [0 .. fromIntegral mapSize - 1]
       epochSlottingDatas
 
-feedPMEpochSlots :: (ProtocolMagic -> SlotCount -> Gen a) -> Gen a
+feedPMEpochSlots :: (ProtocolMagicId -> SlotCount -> Gen a) -> Gen a
 feedPMEpochSlots genA = do
-  pm         <- genProtocolMagic
+  pm         <- genProtocolMagicId
   epochSlots <- SlotCount . fromIntegral <$> Gen.word16 Range.constantBounded
   genA pm epochSlots

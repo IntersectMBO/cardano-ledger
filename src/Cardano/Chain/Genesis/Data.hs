@@ -42,7 +42,13 @@ import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
-import Cardano.Crypto (ProtocolMagic(..), hashRaw)
+import Cardano.Crypto
+  ( getProtocolMagic
+  , ProtocolMagic(..)
+  , ProtocolMagicId(..)
+  , RequiresNetworkMagic(..)
+  , hashRaw
+  )
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be
@@ -92,7 +98,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       -- ^ This is called blockVersionData for backwards compatibility with
       --   mainnet genesis block
       <*> (fromIntegral @Int54 <$> fromJSField protocolConsts "k")
-      <*> (ProtocolMagic <$> fromJSField protocolConsts "protocolMagic")
+      <*> (ProtocolMagic . ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic") <*> pure RequiresMagic)
       <*> fromJSField obj "avvmDistr"
 
 data GenesisDataError

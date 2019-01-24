@@ -47,7 +47,7 @@ import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Crypto
-  (ProtocolMagic, SignTag(..), verifySignatureDecoded, verifyRedeemSigDecoded)
+  (ProtocolMagicId, SignTag(..), verifySignatureDecoded, verifyRedeemSigDecoded)
 
 
 -- | A representation of all the ways a transaction might be invalid
@@ -124,7 +124,7 @@ validateTxIn utxo txIn
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
   :: MonadError TxValidationError m
-  => ProtocolMagic
+  => ProtocolMagicId
   -> (Annotated TxSigData ByteString)
   -> Address
   -> TxInWitness
@@ -188,7 +188,7 @@ updateUTxO utxo tx = do
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
 updateUTxOWitness
   :: MonadError UTxOValidationError m
-  => ProtocolMagic
+  => ProtocolMagicId
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO

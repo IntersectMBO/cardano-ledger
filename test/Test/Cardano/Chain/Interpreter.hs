@@ -42,7 +42,7 @@ import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 import Hedgehog
   (Property, checkSequential, discover, evalEither, forAll, property, withTests)
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
 
 
 tests :: IO Bool
@@ -64,7 +64,7 @@ prop_interpretedCertsValid =
             cert { aPskOmega = Annotated omega (serialize' omega) }
 
         -- Validate the certificate
-        evalEither $ validateProxySecretKey dummyProtocolMagic annotatedCert
+        evalEither $ validateProxySecretKey dummyProtocolMagicId annotatedCert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -77,7 +77,7 @@ prop_interpretedCertsValid =
 
 interpretDCert :: DCert -> Delegation.Certificate
 interpretDCert cert = createPsk
-  dummyProtocolMagic
+  dummyProtocolMagicId
   (noPassSafeSigner delegatorSK)
   delegatePK
   epochIndex

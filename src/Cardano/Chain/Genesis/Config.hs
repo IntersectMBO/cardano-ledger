@@ -12,6 +12,7 @@ module Cardano.Chain.Genesis.Config
   , configChainQualityThreshold
   , configEpochSlots
   , configProtocolMagic
+  , configProtocolMagicId
   , configGeneratedSecretsThrow
   , configBootStakeholders
   , configHeavyDelegation
@@ -29,20 +30,7 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..), liftEither)
 import Data.Aeson
-  ( FromJSON
-  , ToJSON
-  , object
-  , pairs
-  , parseJSON
-  , toEncoding
-  , toJSON
-  , withObject
-  , (.:)
-  , (.:?)
-  , (.=)
-  )
-import Data.Aeson.Encoding (pairStr)
-import Data.Aeson.Encoding.Internal (pair)
+  (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
 import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import System.FilePath ((</>))
@@ -60,7 +48,7 @@ import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Crypto (Hash, ProtocolMagic, hash)
+import Cardano.Crypto (Hash, ProtocolMagic(..), ProtocolMagicId(..), hash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Update (ProtocolParameters)
@@ -81,18 +69,27 @@ data StaticConfig
 
 instance ToJSON StaticConfig where
   toJSON (GCSrc gcsFile gcsHash) =
-      object [ "src"    .= object [ "file" .= gcsFile
-                                  , "hash" .= gcsHash
-                                  ]
+    object [ "src"    .= object [ "file" .= gcsFile
+                                , "hash" .= gcsHash
+                                ]
              ]
-  toJSON (GCSpec value) = object ["spec" .= toJSON value]
-
-  toEncoding (GCSrc gcsFile gcsHash) =
-      pairs $ "src" `pair`
-          pairs (mconcat [ "file" .= gcsFile
-                           , "hash" .= gcsHash
-                           ])
-  toEncoding (GCSpec value) = pairs $ pairStr "spec" (toEncoding value)
+  toJSON (GCSpec
+           (UnsafeGenesisSpec
+             gsAvvmDistr'
+             gsHeavyDelegation'
+             gsProtocolParameters'
+             gsK'
+             gsProtocolMagic'
+             gsInitializer')) =
+    object ["spec" .= object
+             [ "protocolParameters" .= gsProtocolParameters'
+             , "k" .= gsK'
+             , "avvmDistr" .= gsAvvmDistr'
+             , "protocolMagic" .=  gsProtocolMagic'
+             , "initializer" .= gsInitializer'
+             , "heavyDelegation" .= gsHeavyDelegation'
+             ]
+           ]
 
 instance FromJSON StaticConfig where
   parseJSON = withObject "StaticConfig" $ \o -> do
@@ -103,43 +100,25 @@ instance FromJSON StaticConfig where
         specO <- o .: "spec"
         -- GenesisAvvmBalances
         avvmDistrV <- specO .: "avvmDistr"
-        avvmDistr <- parseJSON avvmDistrV
         -- GenesisDelegation
         heavyDelegationV <- specO .: "heavyDelegation"
-        heavyDelegation <- parseJSON heavyDelegationV
         -- ProtocolParameters
         protocolParametersV <- specO .: "protocolParameters"
-        protocolParameters <- parseJSON protocolParametersV
         -- K
         kV <- specO .: "k"
-        k <- parseJSON kV
         -- ProtocolMagic
         protocolMagicV <- specO .: "protocolMagic"
-        protocolMagic <- parseJSON protocolMagicV
         -- GenesisInitializer
-        initializerO <- specO .: "initializer"
-        testBalanceV <- initializerO .: "testBalance"
-        testBalance <- parseJSON testBalanceV
-        fakeAvvmBalanceV <- initializerO .: "fakeAvvmBalance"
-        fakeAvvmBalance <- parseJSON fakeAvvmBalanceV
-        avvmBalanceFactor <- initializerO .: "avvmBalanceFactor"
-        useHeavyDlg <- initializerO .: "useHeavyDlg"
-        seed <- initializerO .: "seed"
+        initializerV <- specO .: "initializer"
 
         return . GCSpec $
           UnsafeGenesisSpec
-            (GenesisAvvmBalances avvmDistr)
-            heavyDelegation
-            protocolParameters
-            k
-            protocolMagic
-            (GenesisInitializer
-              testBalance
-              fakeAvvmBalance
-              avvmBalanceFactor
-              useHeavyDlg
-              seed)
-
+            avvmDistrV
+            heavyDelegationV
+            protocolParametersV
+            kV
+            protocolMagicV
+            initializerV
 
 --------------------------------------------------------------------------------
 -- Config
@@ -170,6 +149,11 @@ configEpochSlots = kEpochSlots . configK
 
 configProtocolMagic :: Config -> ProtocolMagic
 configProtocolMagic = gdProtocolMagic . configGenesisData
+
+configProtocolMagicId :: Config -> ProtocolMagicId
+configProtocolMagicId =
+  getProtocolMagicId . gdProtocolMagic . configGenesisData
+
 
 configGeneratedSecretsThrow :: MonadIO m => Config -> m GeneratedSecrets
 configGeneratedSecretsThrow =

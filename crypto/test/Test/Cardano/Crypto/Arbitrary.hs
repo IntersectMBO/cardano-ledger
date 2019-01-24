@@ -26,7 +26,8 @@ import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import Cardano.Binary.Class (Bi)
 import Cardano.Crypto.Hashing (AbstractHash(..), HashAlgorithm)
 import Cardano.Crypto.HD (HDAddressPayload, HDPassphrase(..))
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic
+  (ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
 import Cardano.Crypto.Random (deterministic)
 import Cardano.Crypto.Signing
   ( EncryptedSecretKey(..)
@@ -53,10 +54,18 @@ import Cardano.Crypto.Signing.Redeem
   (RedeemPublicKey, RedeemSecretKey, RedeemSignature, redeemKeyGen, redeemSign)
 
 import Test.Cardano.Crypto.Arbitrary.Unsafe ()
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
 
 
-deriving instance Arbitrary ProtocolMagic
+instance Arbitrary ProtocolMagic where
+    arbitrary = ProtocolMagic <$> arbitrary
+                              <*> arbitrary
+
+instance Arbitrary ProtocolMagicId where
+    arbitrary = ProtocolMagicId <$> arbitrary
+
+instance Arbitrary RequiresNetworkMagic where
+    arbitrary = elements [RequiresNoMagic, RequiresMagic]
 
 {- A note on 'Arbitrary' instances
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,39 +131,40 @@ instance Nonrepeating RedeemSecretKey where
 -- | Generate a signature with a given 'ProtocolMagic', for some generated
 -- bytes. The 'SignTag' and 'SecretKey' are generated using their
 -- 'Arbitrary' instances.
-genSignatureEncoded :: ProtocolMagic -> Gen ByteString -> Gen (Signature a)
+genSignatureEncoded :: ProtocolMagicId -> Gen ByteString -> Gen (Signature a)
 genSignatureEncoded pm genBytestring =
   signEncoded pm <$> arbitrary <*> arbitrary <*> genBytestring
 
 -- | Like 'genSignatureEncoded' but use an 'a' that can be serialized.
-genSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (Signature a)
+genSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (Signature a)
 genSignature pm genA = sign pm <$> arbitrary <*> arbitrary <*> genA
 
-genRedeemSignature :: Bi a => ProtocolMagic -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature
+  :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> arbitrary <*> arbitrary <*> genA
 
 instance (Bi a, Arbitrary a) => Arbitrary (Signature a) where
-    arbitrary = genSignature dummyProtocolMagic arbitrary
+    arbitrary = genSignature dummyProtocolMagicId arbitrary
 
 instance (Bi a, Arbitrary a) => Arbitrary (RedeemSignature a) where
-    arbitrary = genRedeemSignature dummyProtocolMagic arbitrary
+    arbitrary = genRedeemSignature dummyProtocolMagicId arbitrary
 
 instance (Bi w, Arbitrary w) => Arbitrary (ProxyCert w) where
-    arbitrary = liftA3 (safeCreateProxyCert dummyProtocolMagic) arbitrary arbitrary arbitrary
+    arbitrary = liftA3 (safeCreateProxyCert dummyProtocolMagicId) arbitrary arbitrary arbitrary
 
 instance (Bi w, Arbitrary w) => Arbitrary (ProxySecretKey w) where
-    arbitrary = liftA3 (createPsk dummyProtocolMagic) arbitrary arbitrary arbitrary
+    arbitrary = liftA3 (createPsk dummyProtocolMagicId) arbitrary arbitrary arbitrary
 
 instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
          Arbitrary (ProxySignature w a) where
   arbitrary = do
     delegateSk <- arbitrary
     psk        <-
-      createPsk dummyProtocolMagic
+      createPsk dummyProtocolMagicId
       <$> arbitrary
       <*> pure (toPublic delegateSk)
       <*> arbitrary
-    proxySign dummyProtocolMagic SignProxySK delegateSk psk <$> arbitrary
+    proxySign dummyProtocolMagicId SignProxySK delegateSk psk <$> arbitrary
 
 
 --------------------------------------------------------------------------------

@@ -62,7 +62,7 @@ import Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey, mlSignature)
 
 import Test.Cardano.Binary.Helpers (msgLenLimitedTest)
 import Test.Cardano.Crypto.Arbitrary ()
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
 
 
 spec :: Spec
@@ -160,19 +160,21 @@ keyParsing pk = parseFullPublicKey (sformat fullPublicKeyF pk) === Right pk
 
 signThenVerify :: Bi a => SignTag -> SecretKey -> a -> Bool
 signThenVerify t sk a =
-  verifySignature dummyProtocolMagic t (toPublic sk) a
-    $ sign dummyProtocolMagic t sk a
+  verifySignature dummyProtocolMagicId t (toPublic sk) a
+    $ sign dummyProtocolMagicId t sk a
 
 signThenVerifyDifferentKey
   :: Bi a => SignTag -> SecretKey -> PublicKey -> a -> Property
 signThenVerifyDifferentKey t sk1 pk2 a = (toPublic sk1 /= pk2) ==> not
-  (verifySignature dummyProtocolMagic t pk2 a $ sign dummyProtocolMagic t sk1 a)
+  ( verifySignature dummyProtocolMagicId t pk2 a
+  $ sign dummyProtocolMagicId t sk1 a
+  )
 
 signThenVerifyDifferentData
   :: (Eq a, Bi a) => SignTag -> SecretKey -> a -> a -> Property
 signThenVerifyDifferentData t sk a b = (a /= b) ==> not
-  ( verifySignature dummyProtocolMagic t (toPublic sk) b
-  $ sign dummyProtocolMagic t sk a
+  ( verifySignature dummyProtocolMagicId t (toPublic sk) b
+  $ sign dummyProtocolMagicId t sk a
   )
 
 {- TODO: bring this back after validation rework
@@ -222,16 +224,16 @@ proxySecretKeyCheckIncorrect issuerSk delegateSk pk2 w = do
 proxySignVerify
   :: (Bi a, Bi w, Eq w) => SafeSigner -> SecretKey -> w -> a -> Bool
 proxySignVerify issuerSafeSigner delegateSk w m = proxyVerify
-  dummyProtocolMagic
+  dummyProtocolMagicId
   SignForTestingOnly
   signature
   (== w)
   m
  where
   proxySk =
-    createPsk dummyProtocolMagic issuerSafeSigner (toPublic delegateSk) w
+    createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
 
 -- TODO: Make this test redundant by disallowing invalid `ProxySignature`s
 -- proxySignVerifyDifferentKey
@@ -265,31 +267,31 @@ proxySignVerifyDifferentData
   -> Property
 proxySignVerifyDifferentData issuerSafeSigner delegateSk w m m2 =
   (m /= m2) ==> not
-    (proxyVerify dummyProtocolMagic SignForTestingOnly signature (== w) m2)
+    (proxyVerify dummyProtocolMagicId SignForTestingOnly signature (== w) m2)
  where
   proxySk =
-    createPsk dummyProtocolMagic issuerSafeSigner (toPublic delegateSk) w
+    createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
 
 redeemSignCheck :: Bi a => RedeemSecretKey -> a -> Bool
 redeemSignCheck redeemerSK a =
-  verifyRedeemSig dummyProtocolMagic SignForTestingOnly redeemerPK a
-    $ redeemSign dummyProtocolMagic SignForTestingOnly redeemerSK a
+  verifyRedeemSig dummyProtocolMagicId SignForTestingOnly redeemerPK a
+    $ redeemSign dummyProtocolMagicId SignForTestingOnly redeemerSK a
   where redeemerPK = redeemToPublic redeemerSK
 
 redeemThenCheckDifferentKey
   :: Bi a => RedeemSecretKey -> RedeemPublicKey -> a -> Property
 redeemThenCheckDifferentKey sk1 pk2 a = (redeemToPublic sk1 /= pk2) ==> not
-  ( verifyRedeemSig dummyProtocolMagic SignForTestingOnly pk2 a
-  $ redeemSign dummyProtocolMagic SignForTestingOnly sk1 a
+  ( verifyRedeemSig dummyProtocolMagicId SignForTestingOnly pk2 a
+  $ redeemSign dummyProtocolMagicId SignForTestingOnly sk1 a
   )
 
 redeemThenCheckDifferentData
   :: (Eq a, Bi a) => RedeemSecretKey -> a -> a -> Property
 redeemThenCheckDifferentData sk a b = (a /= b) ==> not
-  ( verifyRedeemSig dummyProtocolMagic SignForTestingOnly (redeemToPublic sk) b
-  $ redeemSign dummyProtocolMagic SignForTestingOnly sk a
+  (verifyRedeemSig dummyProtocolMagicId SignForTestingOnly (redeemToPublic sk) b
+  $ redeemSign dummyProtocolMagicId SignForTestingOnly sk a
   )
 
 packUnpackHDAddress :: HDPassphrase -> [Word32] -> Bool

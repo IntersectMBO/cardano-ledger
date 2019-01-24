@@ -35,7 +35,7 @@ import Cardano.Binary.Class
   )
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Crypto
-  ( ProtocolMagic
+  ( ProtocolMagicId
   , decodeAProxySecretKey
   , validateProxySecretKey
   , AProxySecretKey(..)
@@ -90,11 +90,12 @@ instance Buildable PayloadError where
       err
 
 checkPayload
-  :: MonadError PayloadError m => ProtocolMagic -> APayload ByteString -> m ()
-checkPayload protocolMagic (UnsafeAPayload payload _) = do
+  :: MonadError PayloadError m => ProtocolMagicId -> APayload ByteString -> m ()
+checkPayload protocolMagicId (UnsafeAPayload payload _) = do
   let issuers = pskIssuerPk <$> payload
   (length issuers == length (nub issuers)) `orThrowError` PayloadDuplicateIssuer
 
   forM_
     payload
-    (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagic)
+    (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagicId
+    )

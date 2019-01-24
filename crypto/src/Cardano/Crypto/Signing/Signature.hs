@@ -43,7 +43,7 @@ import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi(..), Decoded(..), Raw, serialize')
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..))
 import Cardano.Crypto.Signing.Tag (SignTag(..), signTag)
@@ -120,7 +120,7 @@ instance Typeable a => Bi (Signature a) where
 -- | Encode something with 'Bi' and sign it
 sign
   :: Bi a
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -- ^ See docs for 'SignTag'
   -> SecretKey
@@ -130,12 +130,12 @@ sign pm tag sk = signEncoded pm tag sk . serialize'
 
 -- | Like 'sign' but without the 'Bi' constraint
 signEncoded
-  :: ProtocolMagic -> SignTag -> SecretKey -> ByteString -> Signature a
+  :: ProtocolMagicId -> SignTag -> SecretKey -> ByteString -> Signature a
 signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk
 
 -- | Sign a 'Raw' bytestring
 signRaw
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> Maybe SignTag
   -- ^ See docs for 'SignTag'. Unlike in 'sign', we allow no tag to be provided
   --   just in case you need to sign /exactly/ the bytestring you provided.
@@ -146,11 +146,15 @@ signRaw pm mTag (SecretKey sk) x = Signature
   (CC.sign (mempty :: ScrubbedBytes) sk (tag <> x))
   where tag = maybe mempty (signTag pm) mTag
 
-safeSign :: Bi a => ProtocolMagic -> SignTag -> SafeSigner -> a -> Signature a
+safeSign :: Bi a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
 safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize'
 
 safeSignRaw
-  :: ProtocolMagic -> Maybe SignTag -> SafeSigner -> ByteString -> Signature Raw
+  :: ProtocolMagicId
+  -> Maybe SignTag
+  -> SafeSigner
+  -> ByteString
+  -> Signature Raw
 safeSignRaw pm mbTag (SafeSigner (EncryptedSecretKey sk _) (PassPhrase pp)) x =
   Signature (CC.sign pp sk (tag <> x))
   where tag = maybe mempty (signTag pm) mbTag
@@ -162,14 +166,14 @@ safeSignRaw pm mbTag (SafeSigner (EncryptedSecretKey sk _) (PassPhrase pp)) x =
 
 -- | Verify a signature
 verifySignature
-  :: Bi a => ProtocolMagic -> SignTag -> PublicKey -> a -> Signature a -> Bool
+  :: Bi a => ProtocolMagicId -> SignTag -> PublicKey -> a -> Signature a -> Bool
 verifySignature pm tag pk x sig =
   verifySignatureRaw pm (Just tag) pk (serialize' x) (coerce sig)
 
 -- | Verify a signature
 verifySignatureDecoded
   :: Decoded t
-  => ProtocolMagic
+  => ProtocolMagicId
   -> SignTag
   -> PublicKey
   -> t
@@ -180,7 +184,7 @@ verifySignatureDecoded pm tag pk x sig =
 
 -- | Verify 'Raw' signature
 verifySignatureRaw
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> Maybe SignTag
   -> PublicKey
   -> ByteString

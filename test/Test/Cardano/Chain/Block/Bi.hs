@@ -55,7 +55,7 @@ import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( ProtocolMagicId(..)
   , SignTag(..)
   , abstractHash
   , createPsk
@@ -299,7 +299,7 @@ roundTripUndo = eachOf 20 (feedPMEpochSlots genUndo) roundTripsBiShow
 
 exampleHeader :: Header
 exampleHeader = mkHeaderExplicit
-  (ProtocolMagic 7)
+  (ProtocolMagicId 7)
   exampleHeaderHash
   exampleChainDifficulty
   exampleSlotId
@@ -310,7 +310,7 @@ exampleHeader = mkHeaderExplicit
 
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = BlockSignature
-  (sign (ProtocolMagic 7) SignMainBlock exampleSecretKey exampleToSign)
+  (sign (ProtocolMagicId 7) SignMainBlock exampleSecretKey exampleToSign)
 
 exampleBlockPSignatureHeavy :: BlockSignature
 exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
@@ -322,7 +322,7 @@ exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
     (noPassSafeSigner issuerSk)
     (toPublic delegateSk)
     (EpochIndex 5)
-  pm = ProtocolMagic 2
+  pm = ProtocolMagicId 7
 
 exampleConsensusData :: ConsensusData
 exampleConsensusData = consensusData

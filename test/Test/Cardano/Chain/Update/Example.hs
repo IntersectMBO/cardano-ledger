@@ -60,7 +60,7 @@ import Cardano.Chain.Update
   , payload
   , signProposal
   )
-import Cardano.Crypto (ProtocolMagic(..), hash)
+import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Chain.Common.Example (exampleAttributes)
 import Test.Cardano.Chain.Slotting.Example (exampleSlottingData)
@@ -171,7 +171,7 @@ exampleProof = mkProof examplePayload
 exampleProposal :: Proposal
 exampleProposal = signProposal pm exampleProposalBody ss
  where
-  pm = ProtocolMagic 0
+  pm = ProtocolMagicId 0
   ss = exampleSafeSigner 0
 
 exampleProposalBody :: ProposalBody
@@ -186,7 +186,7 @@ exampleProposalBody = ProposalBody bv bvm sv hm ua
 exampleVote :: Vote
 exampleVote = mkVoteSafe pm ss ui ar
  where
-  pm = ProtocolMagic 0
+  pm = ProtocolMagicId 0
   ss = exampleSafeSigner 0
   ui = exampleUpId
   ar = True

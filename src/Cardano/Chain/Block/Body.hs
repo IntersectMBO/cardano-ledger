@@ -33,7 +33,7 @@ import Cardano.Chain.Txp.TxPayload
   (ATxPayload, TxPayload, decodeATxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId)
 
 
 
@@ -89,7 +89,7 @@ instance B.Buildable BodyError where
       err
 
 verifyBody
-  :: MonadError BodyError m => ProtocolMagic -> ABody ByteString -> m ()
+  :: MonadError BodyError m => ProtocolMagicId -> ABody ByteString -> m ()
 verifyBody pm mb = do
   liftEither . first BodyDelegationPayloadError $ Delegation.checkPayload
     pm

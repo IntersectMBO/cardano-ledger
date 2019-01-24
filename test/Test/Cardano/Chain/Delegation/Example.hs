@@ -11,14 +11,14 @@ import qualified Data.Set as Set
 
 import Cardano.Chain.Delegation (Certificate, Undo(..))
 import Cardano.Chain.Slotting (EpochIndex(..))
-import Cardano.Crypto (ProtocolMagic(..), createPsk)
+import Cardano.Crypto (ProtocolMagicId(..), createPsk)
 
 import Test.Cardano.Chain.Common.Example (exampleStakeholderId)
 import Test.Cardano.Crypto.Example (examplePublicKeys, staticSafeSigners)
 
 
-staticProtocolMagics :: [ProtocolMagic]
-staticProtocolMagics = map ProtocolMagic [0 .. 5]
+staticProtocolMagics :: [ProtocolMagicId]
+staticProtocolMagics = ProtocolMagicId <$> [0 .. 5]
 
 exampleCertificates :: [Certificate]
 exampleCertificates = zipWith4

@@ -116,7 +116,7 @@ import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
-  (Hash, ProtocolMagic, PublicKey, SecretKey, hash, hashDecoded)
+  (Hash, ProtocolMagicId, PublicKey, SecretKey, hash, hashDecoded)
 
 
 --------------------------------------------------------------------------------
@@ -231,7 +231,7 @@ dropBoundaryBlock = do
 
 -- | Smart constructor for 'Block'
 mkBlock
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> ProtocolVersion
   -> SoftwareVersion
   -> Either GenesisHash Header
@@ -253,7 +253,7 @@ mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
 --   These are derived from the previous header in 'mkBlock' so if you have
 --   the previous header, consider using that one.
 mkBlockExplicit
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> ProtocolVersion
   -> SoftwareVersion
   -> HeaderHash
@@ -301,7 +301,7 @@ instance B.Buildable BlockError where
       bprint ("Proof was invalid while checking Block.\n Error: " . build) err
 
 verifyBlock
-  :: MonadError BlockError m => ProtocolMagic -> ABlock ByteString -> m ()
+  :: MonadError BlockError m => ProtocolMagicId -> ABlock ByteString -> m ()
 verifyBlock pm block = do
   liftEither . first BlockHeaderError $ verifyHeader pm (blockHeader block)
   liftEither . first BlockBodyError $ verifyBody pm (blockBody block)

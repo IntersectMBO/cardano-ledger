@@ -31,7 +31,7 @@ import Cardano.Chain.Genesis (GenesisData(..), readGenesisData)
 import Cardano.Chain.Slotting (SlotId)
 import Cardano.Chain.Txp
   (UTxO, UTxOValidationError, aUnTxPayload, genesisUtxo, updateUTxOWitness)
-import Cardano.Crypto (ProtocolMagic)
+import Cardano.Crypto (ProtocolMagicId, getProtocolMagicId)
 
 import Test.Options (TestScenario(..))
 import Test.Cardano.Chain.Epoch.File (getEpochFiles)
@@ -51,7 +51,7 @@ tests scenario = do
     <$> runExceptT (readGenesisData "test/mainnet-genesis.json")
 
   -- Extract mainnet 'ProtocolMagic'
-  let pm = gdProtocolMagic genesisData
+  let pm = getProtocolMagicId $ gdProtocolMagic genesisData
 
   -- Create an 'IORef' containing the genesis 'UTxO'
   utxoRef <- newIORef $ genesisUtxo genesisData
@@ -81,7 +81,7 @@ data Error
 
 
 -- | Check that a single epoch's transactions are valid by folding over 'Blund's
-epochValid :: ProtocolMagic -> IORef UTxO -> FilePath -> Property
+epochValid :: ProtocolMagicId -> IORef UTxO -> FilePath -> Property
 epochValid pm utxoRef fp = withTests 1 . property $ do
   utxo <- liftIO $ readIORef utxoRef
   let stream = parseEpochFile fp
@@ -92,7 +92,7 @@ epochValid pm utxoRef fp = withTests 1 . property $ do
 
 -- | Fold transaction validation over a 'Stream' of 'Blund's
 foldUTxO
-  :: ProtocolMagic
+  :: ProtocolMagicId
   -> UTxO
   -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO UTxO
@@ -105,7 +105,7 @@ foldUTxO pm utxo blunds = S.foldM_
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Blund'
 foldUTxOBlund
-  :: ProtocolMagic -> UTxO -> ABlund ByteString -> ExceptT Error ResIO UTxO
+  :: ProtocolMagicId -> UTxO -> ABlund ByteString -> ExceptT Error ResIO UTxO
 foldUTxOBlund pm utxo (block, _) =
   withExceptT (ErrorUTxOValidationError $ blockSlot block)
     $ foldM (updateUTxOWitness pm) utxo (aUnTxPayload $ blockTxPayload block)

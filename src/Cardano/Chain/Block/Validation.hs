@@ -49,7 +49,7 @@ import Cardano.Chain.Genesis as Genesis
   , configBootStakeholders
   , configEpochSlots
   , configK
-  , configProtocolMagic
+  , configProtocolMagicId
   , configSlotSecurityParam
   )
 import Cardano.Chain.Slotting (flattenSlotId)
@@ -284,7 +284,7 @@ updateChain config cvs b = do
     , cvsDelegationState = delegationState'
     }
  where
-  pm              = configProtocolMagic config
+  pm              = configProtocolMagicId config
   slot            = flattenSlotId (configEpochSlots config) $ blockSlot b
   d               = configSlotSecurityParam config
 

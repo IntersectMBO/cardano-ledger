@@ -1,7 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Crypto.Example
-  ( examplePublicKey
+  ( exampleProtocolMagic0
+  , exampleProtocolMagic1
+  , exampleProtocolMagic2
+  , exampleProtocolMagic3
+  , exampleProtocolMagic4
+  , examplePublicKey
   , examplePublicKeys
   , exampleRedeemPublicKey
   , exampleSecretKey
@@ -18,8 +23,11 @@ import Data.List ((!!))
 import Data.Maybe (fromJust)
 
 import Cardano.Crypto
-  ( PublicKey(..)
+  ( ProtocolMagic(..)
+  , ProtocolMagicId(..)
+  , PublicKey(..)
   , RedeemPublicKey
+  , RequiresNetworkMagic(..)
   , SafeSigner
   , SecretKey(..)
   , noPassSafeSigner
@@ -28,6 +36,21 @@ import Cardano.Crypto
 
 import Test.Cardano.Crypto.Bi (getBytes)
 
+exampleProtocolMagic0 :: ProtocolMagic
+exampleProtocolMagic0 = ProtocolMagic (ProtocolMagicId 31337) RequiresMagic
+
+exampleProtocolMagic1 :: ProtocolMagic
+exampleProtocolMagic1 =
+  ProtocolMagic (ProtocolMagicId 2147000001) RequiresMagic
+
+exampleProtocolMagic2 :: ProtocolMagic
+exampleProtocolMagic2 = ProtocolMagic (ProtocolMagicId (-58952)) RequiresMagic
+
+exampleProtocolMagic3 :: ProtocolMagic
+exampleProtocolMagic3 = ProtocolMagic (ProtocolMagicId 31337) RequiresMagic
+
+exampleProtocolMagic4 :: ProtocolMagic
+exampleProtocolMagic4 = ProtocolMagic (ProtocolMagicId (-500)) RequiresNoMagic
 
 examplePublicKey :: PublicKey
 examplePublicKey = pk where [pk] = examplePublicKeys 16 1 -- 16 could be any number, as we take the first key
