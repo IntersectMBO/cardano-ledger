@@ -128,7 +128,7 @@
 \newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
 \newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
 \newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
-\newcommand{\cauthor}[1]{\fun{author}~ \var{#1}}
+\newcommand{\cwitness}[1]{\fun{cwitness}~ \var{#1}}
 \newcommand{\dpool}[1]{\fun{dpool}~ \var{#1}}
 \newcommand{\poolParam}[1]{\fun{poolParam}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
@@ -172,7 +172,6 @@
 \newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
 \newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
 \newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
-\newcommand{\slotsPer}{\ensuremath{\mathsf{slotsPerEpoch}}}
 
 \newcommand{\unitInterval}{\ensuremath{[0,~1]}}
 \newcommand{\nonnegReals}{\ensuremath{[0,~\infty)}}
@@ -225,7 +224,7 @@ The transition system is explained in \cite{small_step_semantics}.
 In Figure~\ref{fig:notation:nonstandard}, we specify the notation we use in
 the rest of the document.
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{align*}
     \var{set} \restrictdom \var{map}
     & = \{ k \mapsto v \mid k \mapsto v \in \var{map}, ~ k \in \var{set} \}
@@ -288,7 +287,23 @@ and signatures. The constraint we introduce states that a signature of
 some data signed with a (private) key is only correct whenever we can verify
 it using the corresponding public key.
 
-\begin{figure}
+Besides basic cryptographic abstractions, we also make use of some abstract
+data storage properties in this document in order to build necessary definitions
+and make judgement calls about them.
+
+Abstract data types in this paper are essentially placeholders with names
+indicating the data types they are meant to represent in an implementation.
+Derived types are made up of data structures (i.e. products, lists, finite
+maps, etc.) built from abstract types. The underlying structure of a data type
+is implementation-dependent, and furthermore, the way the data is stored on
+physical storage can vary as well.
+
+Serialization is a physical manifestation of data on a given storage device.
+In this document, the properties and rules we state involving serialization are
+assumed to hold true independently of the storage medium and style of data
+organization chosen for an implementation.
+
+\begin{figure}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
@@ -337,36 +352,35 @@ it using the corresponding public key.
 
 \clearpage
 
-\section{Serialization}
-\label{sec:serialization}
-
-
-Besides basic cryptographic abstractions, we also make use of some abstract
-data storage properties in this document in order to build necessary definitions
-and make judgement calls about them.
-
-Abstract data types in this paper are essentially placeholders with names
-indicating the data types they are meant to represent in an implementation.
-Derived types are made up of data structures (i.e. products, lists, finite
-maps, etc.) built from abstract types. The underlying structure of a data type
-is implementation-dependent, and furthermore, the way the data is stored on
-physical storage can vary as well.
-
-Serialization is a physical manipulation of data on a given storage device.
-In this document, the properties and rules we state involving serialization are
-assumed to hold true independently of the storage medium and style of data
-organization chosen for an implementation.
-
-\clearpage
-
 \section{Addresses}
 \label{sec:addresses}
+Addresses are described in section 4.2 of the delegation design document \cite{delegation_design}.
+The types needed for the addresses are defined in Figure~\ref{fig:defs:addresses}.
+There are three types of UTxO addresses:
+\begin{itemize}
+  \item Base addresses, $\AddrB$,
+        containing the hash of a payment key and the hash of a staking key,
+  \item Pointer addresses, $\AddrP$,
+        containing the hash of a payment key and a pointer to a stake key registration certificate,
+  \item Enterprise addresses, $\AddrE$,
+        containing only the hash of a payment key (and which have no staking rights).
+\end{itemize}
+Together, these three address types make up the $\Addr$ type, which will be used
+in transaction outputs in Section~\ref{sec:ledger}.
 
-\begin{todo}
-Move address explanations here.
-\end{todo}
+Note that for security, privacy, and usability reasons, the staking (delegating)
+key pair associated with an address should be different from its payment key pair.
+Before the stake key is registered and delegated to an existing stake pool,
+the payment key can be used for transactions, though it will not receive rewards from staking.
+Once a stake key is registered, the shorter pointer addresses can generated.
 
-\begin{figure*}
+Finally, there is an account style address $\AddrRWD$ which contains the hash of a staking key.
+These account addresses will only be used for receiving rewards from the proof of
+stake leader election.  Apendix A of \cite{delegation_design} explains this design choice.
+The mechanism for transferring rewards from these accounts will be explained in
+Section~\ref{sec:ledger}, and follows \cite{chimeric}.
+
+\begin{figure*}[hbt]
   \emph{Abstract types}
   %
   \begin{equation*}
@@ -385,11 +399,6 @@ Move address explanations here.
       & \Slot\times\Ix\times\Ix
       & \text{certificate pointer}
       \\
-      \var{acct}
-      & \AddrRWD
-      & \HashKey_{stake}
-      & \text{reward account}
-      \\
       \var{addr}
       & \AddrB
       & \HashKey_{pay}\times\HashKey_{stake}
@@ -405,11 +414,15 @@ Move address explanations here.
       & \HashKey_{pay}
       & \text{enterprise address}
       \\
-
       \var{addr}
       & \Addr
       & \AddrB \uniondistinct \AddrP \uniondistinct \AddrE
       & \text{output address}
+      \\
+      \var{acct}
+      & \AddrRWD
+      & \HashKey_{stake}
+      & \text{reward account}
       \\
     \end{array}
   \end{equation*}
@@ -447,21 +460,28 @@ Move address explanations here.
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
-The $\PParams$ is
-an abstract type that will represent an environment variable that contains
-values on which the functionality of the blockchain protocol depends, such
-as the fees transactions are obligated to pay to be processed.
+The rules for the ledger depend on several parameters and are contained in the $\PParams$ type
+defined in Figure~\ref{fig:defs:protocol-parameters}.
 
-\begin{todo}
-Move explanations of indididual parameters explanation here.
-\end{todo}
+The type $\Coin$ is defined as an alias for the integers.
+Negative values will not be allowed in UTxO outputs or reward accounts,
+and $\Z$ is only chosen over $\N$ for its additive inverses.
 
-\begin{figure*}
+The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
+This value depends on the protocol parameters and the size of the transaction.
+
+Two time related types are introduced, $\Epoch$ and $\type{Duration}$.
+A $\type{Duration}$ is the difference between two slots, as given by $\slotminus{}{}$.
+
+
+\begin{figure*}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
+      \var{dur} & \Duration & \text{difference between slots}\\
+      \var{epoch} & \Epoch & \text{epoch} \\
     \end{array}
   \end{equation*}
   %
@@ -483,6 +503,7 @@ Move explanations of indididual parameters explanation here.
     \PParams =
     \left(
       \begin{array}{r@{~\in~}lr}
+        \var{slotsPerEpoch} & \N & \text{slots per epoch} \\
         \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
         \var{keyDeposit} & \Coin & \text{stake key deposit}\\
         \var{keyMinRefund} & \unitInterval & \text{stake key min refund}\\
@@ -504,6 +525,7 @@ Move explanations of indididual parameters explanation here.
   \emph{Accessor Functions}
   %
   \begin{center}
+    \fun{slotsPerEpoch},
     \fun{fparams},
     \fun{keyDeposit},
     \fun{keyMinRefund},
@@ -525,7 +547,16 @@ Move explanations of indididual parameters explanation here.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{minfee} & \PParams \to \Tx \to \Coin
-                   & \text{minimum fee calculation}\\
+                   & \text{minimum fee calculation}
+      \\
+      (\slotminus{}{}) & \Slot \to \Slot \to \Duration
+                       & \text{duration between slots}
+      \\
+      \fun{epoch} & \Slot \to \Epoch
+                  & \text{epoch of a slot}
+      \\
+      \fun{firstSlot} & \Epoch \to \Slot
+                 & \text{first slot of an epoch}
     \end{array}
   \end{equation*}
   \caption{Definitions used in Protocol Parameters}
@@ -534,353 +565,41 @@ Move explanations of indididual parameters explanation here.
 
 \clearpage
 
-\section{Delegation}
-\label{sec:delegation}
-\input{delegation.tex}
+\section{Transactions}
 
-\clearpage
+Transactions are defined in Figure~\ref{fig:defs:utxo}.
+A transaction body, $\TxBody$, is made up of six pieces:
 
-\section{UTxO}
-\label{sec:utxo}
+\begin{itemize}
+  \item A set of transaction inputs.
+    The $\TxIn$ derived type identifies an output from a previous transaction.
+    It consists of a transaction id and an index to uniquely identify the output.
+  \item An indexed collection of transaction outputs.
+    The $\TxOut$ type is an address paired with a coin value.
+  \item A list of certificates, which will be explained in detail in Section~\ref{sec:delegation}.
+  \item A transaction fee. This value will be added to the fee pot and eventually handed out
+    as stake rewards.
+  \item A time to live. A transaction will be deemed invalid if processed after this slot.
+  \item A mapping of reward account withdrawals.  The type $\Wdrl$ is a finite map that maps
+    a reward address to the coin value to be withdrawn. The coin value must be equal
+    to the full value contained in the account. Explicitly stating these values ensures
+    that error messages can be precise about why a transaction is invalid.
+\end{itemize}
+A transaction, $\Tx$, is a transaction body together with:
 
-A key constraint that must always be satisfied as a result and precondition of
-a valid ledger state transition is called the \textit{general accounting
-property}, or the \textit{preservation of value} condition. Every piece of
-software that is a part of the implementation of the
-Cardano cryptocurrency must function in such a way as to not result in
-a violation of this rule.
-If this condition is not satisfied, it is an indicator of
-incorrect accounting, potentially due to
-malicious disruption or a bug.
+\begin{itemize}
+  \item A collection of witnesses, represented as a finite map from payment verification keys
+    to signatures.
+\end{itemize}
 
-The preservation of value is expressed as an equality that uses values in
-the ledger state and the environment, as well as the values in the body of
-the signal transaction.
-We have defined the rules of the delegation protocol in a way that should
-consistently satisfy the preservation of value. In the future, we hope to
-give a formally-verified proof that every \textit{valid} ledger state satisfies
-this property.
+Additionally, the $\UTxO$ type will be used by the ledger state to store all the
+unspent transaction outputs. It is a finite map from transaction inputs
+to transaction outputs that are available to be spent.
 
-In this section, we discuss the relevant accounting that needs to be done
-as a result of processing a transaction, i.e. the deposits for all certificates,
-transaction fees, transaction withdrawals, and refunds for individual
-deregistration, so that we may keep track of whether the preservation of
-value is satisfied. Stake pool retirement refunds are not triggered by a
-transaction (but rather, happen at the epoch boundary), and are therefore
-not considered in our state change rules invoked due to a signal transaction.
+Finally, $\fun{txid}$ computes the transaction id of a given transaction.
+This function must produce a unique id for each unique transaction.
 
-Note, that when a transaction is issued by a wallet to be applied to the ledger
-state (i.e. processed),
-we define the rules in this section in such a way that it is impossible to
-apply only some parts of a transaction (e.g. only certain certificates).
-Every part of the transaction must be valid and it must be live, otherwise
-it is ignored entirely. It is the wallet's responsibility to inform the user
-that a transaction failed to be processed.
-
-\subsection{Deposits and Refunds}
-\label{sec:deps-refunds}
-
-The map $\fun{decay}$
-represents the rate of decrease of the value of a unit of $\Coin$.
-The constant returned by $\fun{decay}$ consists of two values. The first is
-a natural number which determines the minimal proportion of a deposit that will
-be refunded on resource release. The second is a positive rational number
-used to determine the rate of (exponential) decrease of the value.
-
-For a given transaction and protocol parameters, the map $\fun{dresource}$
-returns all the certificates of that transaction which allocate resources
-(i.e. the stake key and stake pool registration certificates). The map
-$\fun{dderegister}$ returns the resource release certificates for the
-deregistration of a stake key. The map which returns only
-the retirement type certificates is $\fun{dretire}$. The function $\fun{txttl}$ gives the
-time slot in which the validity of a given transaction will expire. That is,
-after slot number $\fun{txttl}~\var{tx}$, the transaction will not be processed.
-This value is generated by the wallet.
-
-The functions used in refund calculations are presented in
-Figure~\ref{fig:functions:deposits-refunds}.
-The function
-$\fun{deposits}$ returns the total deposits that have to be made by a transaction.
-This calculation is based on the protocol parameters.
-Specifically, for a given transaction,
-it sums up the values of the stake key deposits and the stake pool deposits.
-Those certificates which are
-updates of stake pool parameters of already registered pool keys should not
-(and are, in fact, not allowed to) make a deposit.
-
-The $\fun{isReleasing}~\var{c}$ is true for deregistration and retirement
-certificates. The refund calculation gives the decayed value of a
-certificate to be refunded. This fraction is calculated
-based on the coin value of the registration deposit $d_{val}$, the minimum
-refund coefficient $d_{min}$, the
-duration between the given slot number and the slot number in
-which a given resource was allocated $\delta$, and a decay rate constant $\lambda$.
-The larger the duration, the more
-the value of the deposit decays, down to a minimum refund value.
-
-The function $\fun{keyRefund}$, given a set of protocol parameters, resource
-allocations, slot number, and certificate, uses the refund calculation to
-assign a non-zero refund to a resource releasing certificate if
-the certificate’s author is listed in the provided resource allocations.
-The certificate value passed to the $\fun{refund}$ calculation is obtained from
-the protocol parameters based on the type of certificate (i.e. individual or pool).
-The minimum and decay values are also found in the protocol parameters, while
-the duration is the difference between given slot number and the slot
-number associated with the author's key in the resource allocation argument.
-
-The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
-the total value to be refunded to all individual key deregistration
-certificate authors in a transaction.
-Given protocol parameters, resource allocations, and a transaction,
-this calculation sums up all the refunds for the individual key
-deregistration certificates
-carried by the given transaction by passing the relevant parameters to the
-$\fun{keyRefund}$ function.
-
-It is important to note here that instead of the \textit{current} slot number,
-the time to live of $\var{tx}$ is passed to the $\fun{certRefunds}$ function
-within the summation in $\fun{keyRefunds}$. The reason for this is that the
-refunds for any key deregistration certificates are, in fact, included in
-the $\var{tx}$ itself --- meaning that the coin value of the refund must be
-explicitly specified in the outputs of the transaction. So,
-the value of the included refund must be calculated before this transaction
-is ever processed, and be the same \textit{no matter when} the $\var{tx}$
-\textit{is actually processed} in order to allow the system to continue to
-satisfy the general accounting property.
-
-It is impossible to predict the exact slot
-number in which $\var{tx}$ will be processed, but it will be some time before
-slot number $\fun{txttl}~\var{tx}$. So, this is the slot number value used in both
-the calculation to generate the refund coin value in the outputs of $\var{tx}$
-and in the general accounting property equation.
-
-Note that since the refund is based
-on the original deposit paid (as indicated in the protocol parameters that
-were valid in the time slot the deposit was made), the accounting or the slot
-number do not also need to be updated in any way when updating pool constants with
-a certificate.
-
-Note also that
-$\fun{keyRefunds}$ calculates the total individual refunds for a transaction
-based on \textit{current} protocol parameters. This means that any deposits
-made prior to a change will be different from their corresponding
-(decayed) refunds in the case of key deregistration after a change in
-protocol parameters. Constants may only change at the epoch boundary, and
-ensuring there are always sufficient funds for all
-refunds in the $\var{deposits}$ pool is part of the protocol constant
-change transition, described in Section~\ref{sec:epoch}.
-
-The protocol parameters are not
-expected to change often, and using the current ones for the calculation
-is a deliberate simplification choice, which does not introduce any inconsistencies
-into the system rules or properties. In particular, the general accounting
-property is not violated.
-
-Finally, note that a refund for a resource-releasing certificate in a
-transaction can only be issued if the refund is bigger than the minimum
-transaction fee. In order to receive a refund in this case, the transaction
-body must also contain inputs onto which this refund can be added.
-
-
-\begin{figure}
-  \begin{align*}
-    & \fun{deposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
-    & \text{total deposits for transaction} \\
-    & \fun{deposits}~{pp}~{stpools}~{certs} = \\
-    &  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegKey}}(\fun{keyDeposit}~pp)
-    +  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegPool \\ (\cauthor{c})\notin \var{stpools}}}
-            (\fun{poolDeposit}~pp)
-      \nextdef
-      & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
-      & \text{refund calculation} \\
-      & \refund{\dval}{d_{\min}}{\lambda}{\delta} =
-            \floor*{
-              \dval \cdot
-            \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
-      \nextdef
-      & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
-      & ~~~~~\StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
-      & \text{key refund for a certificate} \\
-      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{slot}{c} =\\
-      & ~~~~~\begin{cases}
-            0 & \text{if}~\cauthor c \notin \dom stkeys\\
-            \refund{\dval}{d_{\min}}{\lambda}{\delta}
-            & \text{otherwise}
-        \end{cases}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-        &\delta & \slotminus{slot}{(stkeys~(\cauthor c))}\\
-      \end{array}\\
-      \nextdef
-      & \fun{keyRefunds} \in \PParams \to \StakeKeys \to \Tx \to \Coin
-      & \text{key refunds for a transaction} \\
-      & \keyRefunds{pp}{stkeys}{tx} =\\
-      & ~~~~~ \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c\in\DCertDeRegKey}}
-              \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\txttl{tx})}{c}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where \\
-        & \dval & \fun{keyDeposit}~\var{pp}\\
-        & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
-        & \lambda & \fun{keyDecayRate}~\var{pp}\\
-      \end{array}\\
-  \end{align*}
-  \caption{Functions used in Deposits - Refunds}
-  \label{fig:functions:deposits-refunds}
-\end{figure}
-
-
-We define the functions used in calculating deposits in
-Figure~\ref{fig:functions:deposits-refunds}.
-The $\fun{lastEpoch}$ function
-returns the number of the last slot in the previous epoch.
-
-In order to give the full expression of the general accounting property,
-we need the value of the total amount of decay for all the resource releasing
-certificates of a transaction whose authors key is registered. For each
-certificate in this calculation, the value is computed by the map $\fun{decayed}$.
-Given a set of protocol parameters, resource allocations, and a slot
-number, this map outputs the difference between the decayed refund calculated from
-the last slot of the previous epoch of the given slot number
-(or the certificate creation slot, if it is created in the same epoch as the
-given slot number) and the
-full-duration decayed refund value ($\fun{currentRefund}$) calculated based on
-the given slot number.
-
-The amount decayed for individual keys is then computed by adding the values of
-$$\fun{decayed}~\var{stkeys}~\var{pc}~(\fun{txttl}~\var{tx})~\var{c}$$
-for each deregistration certificate in a given transaction, and is given by
-$$\fun{decatedTx}~\var{pc}~\var{stkeys}~\var{cslot}~\var{c}$$
-Here, again, we use the $\fun{txttl}~\var{tx}$ value in the calculation instead of the current
-slot number in order to match with the one in the $\fun{keyRefunds}$
-calculation.
-
-Note that the decayed amount here is only the amount that decayed \textit{within
-the epoch until which the signal transaction is live}, i.e. since the end of the
-last epoch before $\fun{txttl}~\var{tx}$, or, if the key was
-registered in the same epoch as the $\fun{txttl}~\var{tx}$ slot,
-since the registration certificate slot number.
-
-Recall that the stake pool retirement refunds are issued not when a certificate
-scheduling the retirement is processed, but at the epoch boundary for which
-the retirement is scheduled. The decayed value over the full previous epoch is
-also accounted for at the boundary change. For details of this accounting, see
-Section~\cref{sec:epoch}.
-
-
-\begin{figure}
-  \begin{align*}
-      & \fun{decayedKey} \in
-      \PParams \to \StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
-      & \text{decayed since epoch} \\
-      & \decayedKey{pp}{stkeys}{cslot}{c} =\\
-      & \begin{cases}
-            0 & \text{if}~\cauthor c \notin \dom stkeys\\
-            \var{epochRefund} - \var{currentRefund}
-            & \text{otherwise}
-        \end{cases}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-          & \var{created} & \var{stkeys}~(\cauthor~\var{c}) \\
-          & \var{start} & \mathsf{max}~(\fun{slot}~\epoch{cslot})~created \\
-          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
-          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
-          & \dval & \fun{keyDeposit}~\var{pp}\\
-          & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
-          & \lambda & \fun{keyDecayRate}~\var{pp}\\
-      \end{array}\\
-      \nextdef
-      & \fun{decayedTx} \in \PParams \to \StakeKeys \to \Tx \to \Coin
-      & \text{decayed deposit portions} \\
-      & \decayedTx{pp}{stkeys}{tx} =\\
-      &   \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c \in\DCertDeRegKey}}
-          \decayedKey{pp}{stkeys}{(\txttl{tx})}{c}\\
-  \end{align*}
-  \caption{Functions used in Deposits - Decay}
-  \label{fig:functions:deposits-decay}
-\end{figure}
-
-\clearpage
-
-\subsection{UTxO Transitions}
-\label{sec:state-trans-utxo-1}
-
-The types involved in defining a UTxO and its transitions are presented in
-Figure~\ref{fig:defs:utxo}. Note that here, among other primitive types,
-we introduce $\Addr_{base}$. This is the usual type of address used for
-coin transfers by the transactions. We also introduce the derived type $\Addr$,
-which is a disjoint union of base-type and reward addresses. Using this type,
-it is possible to do rewards accounting (which we discuss later in this chapter)
-in the same $\UTxO$ style as the base address coin transfers, as well as
-the usual base address lookups and calculations.
-Similar to the certificate structure, each address is either a reward or a base
-address.
-
-The $\TxIn$ derived type represents the inputs of a transaction, i.e. a list of
-previous transactions identified by $\var{txid}$, paired with an index
-$\var{ix}$ to
-uniquely identify the input (as there may be several inputs from the same
-transaction). The $\TxOut$ type is a pair of an address and a coin value,
-which is a record of what address the given coin amount is intended for.
-
-The $\UTxO$ type is the main record type stored on the ledger to keep track of
-unspent transaction outputs. It does so by using a finite map which pairs
-a transaction ID with \textit{its own outputs} (by using the $\var{ix}$ indices),
-thus indicating that these
-can now be spent by another transaction.
-
-The type $\Wdrl$ is a finite map that maps a reward address to a coin value to
-be withdrawn from the rewards awarded to that address. We have made the decision
-to structure the withdrawals in this way to adhere as closely as possible
-to the structure presented in~\cite{chimeric}.
-
-The map $\fun{txid}$ is a one-way function which computes the $\var{txid}$
-of a given transaction. A transaction can be uniquely identified
-by its $\var{txid}$ in a given context.
-
-The $\fun{txbody}$ map gives the body of the transaction, i.e. the data that is
-used to update the UTxO on the ledger. The way this data is stored is in
-a pair of a set of terms of type $\TxIn$ representing the inputs of the
-transaction, and a finite map $\Ix \mapsto \TxOut$ representing the outputs.
-Each term in the input list
-corresponds to those $\TxOut$ terms in the outputs list indexed by the same
-$\Ix$ as in the second coordinate of the input. This way, a transaction can have
-inputs from multiple prior transactions and outputs to multiple addresses
-from each of the input transactions.
-
-The transaction fee $\fun{txfee}$ is the
-fee a transaction contributes to the system (this value depends only on
-the transaction itself). The fee does not need to have an explicit output
-specified, and are currently implicitly included in the total input value of
-a transaction.
-
-Note that transaction fees, which can be greater than the minimum fee, are
-indicated in the transactions themselves. This is different from
-the deposit amounts for registration certificates, which are
-indicated explicitly in the protocol parameters,
-and must be paid as an amount exactly matching the protocol's requirement.
-For this reason, a refund calculation for given certificate does not need to look up the deposit
-amount in the data of the transaction
-that paid the original registration deposit (such data is not even stored),
-but instead looks in the protocol
-parameters for this information.
-
-The $\fun{minfee}$ is the minimum
-fee that must be paid by a transaction to be applied to the current UTxO.
-This minimum fee
-is calculated based on the context of the transaction (i.e. a collection of
-values the blockchain protocol keeps track of, $\PParams$), as well as
-the contents of the transaction itself.
-
-The $\fun{txwdrls}$ function returns a list of reward addresses provided by a
-given transaction, each paired with the coin value the transaction is requesting
-be reaped, i.e. removed from the total coin accumulated in the rewards
-account for this address and added to the UTxO.
-
-
-\begin{figure*}
+\begin{figure*}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
@@ -954,76 +673,84 @@ account for this address and added to the UTxO.
   \label{fig:defs:utxo}
 \end{figure*}
 
+\clearpage
 
-A set of functions on UTxOs and transactions appearing in this document,
-along with their types are defined in Figure~\ref{fig:derived-defs:utxo}.
-The map $\fun{txins}$ returns the list of inputs of a given transactions, i.e.
-the pairs type $\TxIn$ within that transaction.
+\section{Ledger State Transitions}
+\label{sec:ledger}
 
-The map $\fun{outs}~ \var{tx}$ builds a UTxO using the
-list of outputs of $\var{tx}$. It builds a pair for the resulting UTxO
-finite map by making a $txin$ out of the $txid$ of $tx$ and an index in the output $ix \mapsto (a,c)$, to give a $txin = (txid, ix)$ and the
-$txout=(a,c)$.
+A key constraint that must always be satisfied as a result and precondition of
+a valid ledger state transition is called the \textit{general accounting
+property}, or the \textit{preservation of value} condition. Every piece of
+software that is a part of the implementation of the
+Cardano cryptocurrency must function in such a way as to not result in
+a violation of this rule.
+If this condition is not satisfied, it is an indicator of
+incorrect accounting, potentially due to
+malicious disruption or a bug.
 
-The $\fun{balance}$ map, as expected, gives the sum total of all the coin in
-a given UTxO. The calculation $\fun{consumed}$ gives the value consumed
-by the transaction $\var{tx}$ in the context of the relevant protocol
-parameters, the current UTxO on the ledger, and the resource allocation for
-$\DState$, i.e. $\var{stkeys}$. This calculation is a sum of all coin in the inputs of
-$\var{tx}$  and the individual key
-deregistration refunds of the $\var{tx}$ in this context.
+The preservation of value is expressed as an equality that uses values in
+the ledger state and the environment, as well as the values in the body of
+the signal transaction.
+We have defined the rules of the delegation protocol in a way that should
+consistently satisfy the preservation of value. In the future, we hope to
+give a formally-verified proof that every \textit{valid} ledger state satisfies
+this property.
 
-Next, we define the function $\fun{reapRewards}$. The purpose of this map is
-to update all the rewards accounts associated with the addresses for which
-reward withdrawals are requested. Since we do only allow withdrawal of reward
-amount which is exactly equal to the value in the reward account (we
-give details about this below), this update explicitly sets the values
-associated to the requested addresses to zero.
+In this section, we discuss the relevant accounting that needs to be done
+as a result of processing a transaction, i.e. the deposits for all certificates,
+transaction fees, transaction withdrawals, and refunds for individual
+deregistration, so that we may keep track of whether the preservation of
+value is satisfied. Stake pool retirement refunds are not triggered by a
+transaction (but rather, happen at the epoch boundary), and are therefore
+not considered in our state change rules invoked due to a signal transaction.
 
-The $\fun{consumed}$ calculation sums up all the unspent outputs that
-have been removed from the ledger. This includes the outputs spent directly
-(made available to the owner of another address), and also, implicitly,
-the outputs which are spent on transaction fees. In order to balance
-the preservation of value equation, we must also add the following values
-to this (the LHS, i.e. $\fun{consumed}$) side of the equation as they are
-accounted for implicitly (as
-part of appending to the UTxO the entries of $\fun{outs}~{tx}$), on the
-other side (RHS):
+Note, that when a transaction is issued by a wallet to be applied to the ledger
+state (i.e. processed),
+we define the rules in this section in such a way that it is impossible to
+apply only some parts of a transaction (e.g. only certain certificates).
+Every part of the transaction must be valid and it must be live, otherwise
+it is ignored entirely. It is the wallet's responsibility to inform the user
+that a transaction failed to be processed.
 
-\begin{itemize}
-\item The total value of all individual key refunds the transaction is taking from
-the (common) $\var{deposit}$ pool
-\item The total value of all the rewards the transaction is withdrawing from
-the individual $\var{rewards}$ accounts
-\end{itemize}
+\subsection{UTxO Transitions}
+\label{sec:utxo-trans}
 
-The total rewards value above is calculated by subtracting the sum total value in the
-updated (after payout) rewards addresses from sum total of the current (pre-rewards
-payout state) of the $\var{rewards}$ map.
-
-The $\fun{consumed}$ calculation, on the other hand, sums up the total
-value of all unspent outputs added to the UTxO on the ledger. As stated
-above, this value implicitly includes all the unspent outputs generated
-by this transaction for the withdrawing the refunds and the rewards
-(from the corresponding ledger accounts). In addition, this (RHS) of the
-equation must account for the value implicitly removed from the UTxO. That is why
-two more values are added to this side of the equation:
+Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition system.
 
 \begin{itemize}
-\item the fee the transaction pays (in unspent outputs)
-\item all registration
-deposits the transaction pays (also in unspent outputs)
+
+  \item
+    The function $\fun{outs}$ creates unspent outputs generated by a transaction, so that
+    they can be added to the ledger state.  For each output in the transaction,
+    $\fun{outs}$ maps the transaction id and output index to the output.
+
+  \item
+    The $\fun{balance}$ function calculates sum total of all the coin in a given UTxO.
+
+  \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
+    in the context of the protocol parameters, the current UTxO on the ledger, and the registered
+    stake keys.  This calculation is a sum of all coin in the inputs of $\var{tx}$,
+    reward withdrawals, and stake key deposit refunds. The method $\fun{keyRefunds}$ used
+    to calculate the refunds will be defined in Section~\ref{sec:deps-refunds}.
+
+  \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
+    in the context of the protocol parameters and the registered stake pools.
+    This calculation is a sum of all coin in the outputs of $\var{tx}$,
+    the transaction fee, and all needed deposits. The method $\fun{deposits}$ used
+    to calculate the deposits will be defined in Section~\ref{sec:deps-refunds}.
 \end{itemize}
 
-We remind the reader here that even though the $\fun{consumed}$ calculation
-takes $\var{stpools}$ as a parameter, this is only in order to determine,
-within the $\fun{deposits}$ calculation, which
-pool registration certificates are new registrations, and which ones are updates
-(and do not require a deposit payment). The $\fun{deposits}$ calculation is
-a sum of \textit{all} deposits a transaction is making, and the value of these
-deposits is found in the protocol parameters, not in $\var{stkeys}$ or $\var{stpools}$.
+The preservation of value property holds for a transaction, for a given ledger state,
+exactly when the results of $\fun{consumed}$ equal the results of $\fun{produced}$.
+Moreover, when the property holds, value is only moved between transaction outputs,
+the reward accounts, the fee pot, and the deposit pot.
 
-\begin{figure}
+Note that the $\fun{consumed}$ function takes the registered stake pools ($\var{stpools}$)
+as a parameter only in order to determine which pool registration certificates are
+new (and thus require a deposit) and which ones are updates.
+Registration will be discussed more in Section~\ref{sec:delegation}.
+
+\begin{figure}[htb]
   \begin{align*}
     & \fun{outs} \in \Tx \to \UTxO
     & \text{tx outputs as UTxO} \\
@@ -1037,10 +764,6 @@ deposits is found in the protocol parameters, not in $\var{stkeys}$ or $\var{stp
     & \fun{balance} \in \UTxO \to \Coin
     & \text{UTxO balance} \\
     & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
-    \nextdef
-    & \fun{reapRewards} \in \Wdrl \to \Wdrl \to \Wdrl \\
-        & \fun{reapRewards}~\var{rewards}~\var{wdrls} =
-         \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\} \\
     \nextdef
     & \fun{consumed} \in \PParams \to \UTxO \to \StakeKeys \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
@@ -1057,27 +780,32 @@ deposits is found in the protocol parameters, not in $\var{stkeys}$ or $\var{stp
   \end{align*}
 
   \caption{Functions used in UTxO rules}
-  \label{fig:derived-defs:utxo}
+  \label{fig:functions:utxo}
 \end{figure}
 
+\clearpage
+The types for the UTxO transition are given in Figure~\ref{fig:ts-types:utxo}.
+The environment, $\UTxOEnv$, consists of:
 
-The type of the transition of a UTxO is presented in Figure
-~\ref{fig:ts-types:utxo}. A
-transition can be valid in the context of a given environment, $\UTxOEnv$.
-This environment is made up of several variables.
-The $\PParams$ is needed as part of the environment here in order to
-keep track of parameters such as the $\fun{minfee}$ value, deposits, etc.
-The environment also has variables $\var{stkeys}$ and $\var{stpools}$
-to keep track of the current individual and pool resource allocations,
-and the current slot number.
+\begin{itemize}
+  \item The current slot.
+  \item The protocol parameters.
+  \item The registered stake keys (which will be explained in Section~\ref{sec:delegation}).
+  \item The registered stake pools (which will be explained in Section~\ref{sec:delegation}).
+\end{itemize}
+The current slot and the registrations are need for the refund calculations
+described in Section~\ref{sec:deps-refunds}.
 
-The relevant state variables for a UTxO transition include the UTxO itself,
-as well as the value in the deposits pool and the fees pool.
-The type of UTxO update is a $\UTxOState$ transition signaled by
-a transaction $\var{tx}$ in the environment $\UTxOEnv$.
+The state needed for the UTxO transition, $\UTxOState$, consists of:
 
+\begin{itemize}
+  \item The current UTxO.
+  \item The deposit pot.
+  \item The fee pot.
+\end{itemize}
+The signal for the UTxO transition is a transaction.
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{UTxO environment}
   \begin{equation*}
     \UTxOEnv =
@@ -1114,55 +842,55 @@ a transaction $\var{tx}$ in the environment $\UTxOEnv$.
   \label{fig:ts-types:utxo}
 \end{figure}
 
-\clearpage
-
-\subsection{UTxO, Fees, and Deposits Ledger Update}
-\label{sec:utxo-ufd}
-
-The inference rule for the UTxO, fees, and deposits update is presented in
-Figure~\ref{fig:rules:utxo}.
+The UTxO transition system is given in Figure~\ref{fig:rules:utxo}.
 Rule~\ref{eq:utxo-inductive} specifies the conditions under which a transaction can
 be applied to a particular $\UTxOState$ in environment $\UTxOEnv$:
 
-\begin{itemize}
-\item The transaction is live (its time to live is less than the current slot)
-\item The transaction has at least one input
-\item The fee paid by the transaction has to be greater than or equal to the
-minimum fee.
-\item Each input spent in the transaction must be in the set of unspent
-  outputs
-\item The amount of coin produced by the transaction must be the same as
-the amount consumed (i.e. the \textit{preservation of value} must hold)
-\end{itemize}
-
-Note that the fee paid by a transaction is required to be greater than or
-equal to the minim fee. The reason for allowing it to be greater is to have
-the option for the implementation to make processing decisions based on the
-size of the fee. Such as, a larger fee would result in faster processing of
-a transaction.
-
-The transaction is required to have at least one input to avoid a situation
-where the witnessing replay protection may fail. Specifically, when a transaction is
-spending only refunds from deregistration or retirement certificates it is
-carrying (or withdrawn rewards).
-
-Here we again emphasize the importance of the \textit{preservation of value}
-condition. No valid UTxO state can be reached without this condition
-being satisfied at every step of the transitions leading to a given UTxO state.
-Since the total amout of Ada at genesis is known, this property can be
-checked for arbitrarily generated valid ledgers.
-
-According to this complete ledger state transition rule, when a UTxO state update
-is triggered by a
-transaction (signal) $\var{tx}$, and the above conditions are met, the UTxO
-changes as follows:
+The transition contains the following predicates:
 
 \begin{itemize}
-\item remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
-associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
-\item add all the $\var{outputs}$ of $\var{tx}$ to the
-UTxO, associated with the $\fun{txid}~\var{tx}$
+  \item
+    The transaction is live (its time to live is less than the current slot).
+  \item
+    The transaction has at least one input.
+    The global uniqueness of transaction inputs prevents replay attacks.
+    By requiring that all transactions spend at least one input,
+    the entire transaction is safe from such attacks.
+    A delegation certificate by itself, for example, does not have this property.
+  \item
+    The fee paid by the transaction has to be greater than or equal to the minimum fee,
+    which is based on the size of the transaction.
+    A user or wallet might choose to create a fee larger than necessary
+    in exchange for a faster processing time.
+  \item
+    Each input spent in the transaction must be in the set of unspent
+    outputs.
+  \item
+    The \textit{preservation of value} property must hold.
+    In other words, the amount of value produced by the transaction must be the same as
+    the amount consumed.
 \end{itemize}
+If all the predicates are satisfied, the state is updated as follows:
+
+\begin{itemize}
+  \item Update the UTxO:
+    \begin{itemize}
+      \item Remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
+        associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
+      \item Add all the $\var{outputs}$ of $\var{tx}$ to the
+        UTxO, associated with the $\fun{txid}~\var{tx}$
+    \end{itemize}
+  \item Add all new deposits to the deposit pot and subtract all refunds.
+  \item Add the transaction fee to the fee pot. Additionally, for any refund
+    returned by this transaction, add the amount of the original deposit
+    which has decayed to the fee pot.
+    The amount decayed will depend on the time to live of the transaction
+    and will be explained further in Section~\ref{sec:deps-refunds}.
+\end{itemize}
+
+The accounting for the reward withdrawals is not done in this transition system.
+The rewards are tracked with the delegation state and will
+be removed in the final delegation transition, see ~\ref{eq:delegs-base}.
 
 Note here that output entries for both the deposit refunds and the rewards
 withdrawals must be included in the body of the transaction
@@ -1199,23 +927,10 @@ come from a $\var{deposits}$ pool, which is a single coin value indicating
 the total decayed amount of all the deposits ever made, while rewards come from individual
 accounts where a reward is accumulated to a specific address.
 
-The $\var{deposits}$ is updated by:
-
-\begin{itemize}
-\item add all the deposits for individual and key registration certificates
-carried by the signal transaction to the current $\var{deposits}$ value on the ledger
-\item subtract from the current $\var{deposits}$ value on the ledger
-the amount by which the deposits for the individual key allocations
-for which $\var{tx}$ carries the deregistration certificates have
-decayed \textit{this epoch}
-\item subtract any individual key refunds for deregistration certificates
-in $\var{tx}$ from the current $\var{deposits}$ value on the ledger
-\end{itemize}
-
 Note that the $\var{refunded}$ and $\var{decayed}$ values added together give what the
 full, non-decayed refund for all the key deregistration certificates in $\var{tx}$
 would be, and this total value is always removed from the $\var{deposits}$
-amount on the leger. The $\var{refunded}$ amount is returned to the certificate
+amount on the ledger. The $\var{refunded}$ amount is returned to the certificate
 author, and the $\var{decayed}$ amount is transferred over to $\var{fees}$
 (this allows the ledger to adhere to the preservation of value).
 
@@ -1225,16 +940,7 @@ boundary, the total decayed value for the whole epoch for both the individual
 and pool deposits is transferred into the fees (independent of refund
 requests).
 
-Now, the fees are updated by:
-
-\begin{itemize}
-\item add the transaction fee paid by the signal transaction to the ledger $\var{fees}$
-variable
-\item add the decayed value of key refunds in certificates in $\var{tx}$ to $\var{fees}$
-\end{itemize}
-
-
-\begin{figure}
+\begin{figure}[htb]
   \begin{equation}\label{eq:utxo-inductive}
     \inference[UTxO-inductive]
     { \txttl tx \geq \var{slot}
@@ -1285,97 +991,214 @@ variable
   \label{fig:rules:utxo}
 \end{figure}
 
+\clearpage
+
+\subsection{Deposits and Refunds}
+\label{sec:deps-refunds}
+
+Deposits are described in appendix B.2 of the delegation design document \cite{delegation_design}.
+These deposit functions were used above in the UTxO transition, \ref{sec:utxo-trans}.
+Deposits are used for stake key registration certificate and pool
+registration certificates, which will be explained in Section~\ref{sec:delegation}.
+In particular, the function $\cwitness{}$, which gets the certificate witness
+from a certificate, will be defined later.
+Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund functions.
+\begin{itemize}
+  \item The function $\fun{deposits}$ returns the total deposits that have to be made
+    by a transaction.  This calculation is based on the protocol parameters.
+    Specifically, for a given transaction, it sums up the values of the stake key deposits
+    and the stake pool deposits.  Those certificates which are
+    updates of stake pool parameters of already registered pool keys should not
+    (and are, in fact, not allowed to) make a deposit.
+  \item The function $\fun{refund}$ calculates the deposit refund with an exponential decay.
+  \item The function $\fun{keyRefund}$, calculates the refund for an individual
+    stake key registration deposit, based on the slot when it was created and
+    the slot passed to the function. The creation slot should always exist in the map
+    $\var{stkeys}$ passed to the function, and this would be a good property
+    to prove about the transition system.
+  \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
+    the total value to be refunded to all individual key deregistration certificate authors
+    in a transaction.
+
+    It is important to note here that instead of the \textit{current} slot number,
+    the time to live of $\var{tx}$ is passed to the $\fun{certRefunds}$ function
+    within the summation in $\fun{keyRefunds}$. The reason for this is that the
+    refunds for any key deregistration certificates are, in fact, included in
+    the $\var{tx}$ itself --- meaning that the coin value of the refund must be
+    explicitly specified in the outputs of the transaction. So,
+    the value of the included refund must be calculated before this transaction
+    is ever processed, and be the same \textit{no matter when} the $\var{tx}$
+    \textit{is actually processed} in order to allow the system to continue to
+    satisfy the general accounting property.
+
+    It is impossible to predict the exact slot number in which $\var{tx}$ will be processed,
+    but it will be some time before slot number $\fun{txttl}~\var{tx}$. So, this is the slot
+    number value used in both the calculation to generate the refund coin value in the outputs
+    of $\var{tx}$ and in the general accounting property equation.
+
+    Note also that
+    $\fun{keyRefunds}$ calculates the total individual refunds for a transaction
+    based on \textit{current} protocol parameters. This means that any deposits
+    made prior to a change will be different from their corresponding
+    (decayed) refunds in the case of key deregistration after a change in
+    protocol parameters. Constants may only change at the epoch boundary, and
+    ensuring there are always sufficient funds for all
+    refunds in the $\var{deposits}$ pool is part of the protocol constant
+    change transition, described in Section~\ref{sec:epoch}.
+
+    The protocol parameters are not
+    expected to change often, and using the current ones for the calculation
+    is a deliberate simplification choice, which does not introduce any inconsistencies
+    into the system rules or properties. In particular, the general accounting
+    property is not violated.
+\end{itemize}
+Figure~\ref{fig:functions:deposits-decay} defines the decays functions.
+\begin{itemize}
+
+  \item The function $\fun{decayedKey}$ calculates how much of a stake key deposit
+    has decayed since the last epoch. Again, this is done using the time to live of
+    the transaction (and not the current slot, as explained above).
+    At the epoch boundaries, decayed portions of deposits are moved to the reward pot,
+    so between epochs we need only account for what has decayed since the last epoch.
+    The value is calculated by subtracting the refund calculation based at the epoch boundary
+    from the refund calculation based at the time to live of the transaction.
+  \item The function $\fun{decayedTx}$ calculates the total decayed deposits associated
+    with all the refunds in a given transaction.
+
+\end{itemize}
+
+Recall that the stake pool retirement refunds are issued not when a certificate
+scheduling the retirement is processed, but at the epoch boundary for which
+the retirement is scheduled. The decayed value over the full previous epoch is
+also accounted for at the boundary change. For details of this accounting, see
+Section~\cref{sec:epoch}.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{deposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
+    & \text{total deposits for transaction} \\
+    & \fun{deposits}~{pp}~{stpools}~{certs} = \\
+    &  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegKey}}(\fun{keyDeposit}~pp)
+    +  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
+            (\fun{poolDeposit}~pp)
+      \nextdef
+      & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
+      & \text{refund calculation} \\
+      & \refund{\dval}{d_{\min}}{\lambda}{\delta} =
+            \floor*{
+              \dval \cdot
+            \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
+      \nextdef
+      & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
+      & ~~~~~\StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
+      & \text{key refund for a certificate} \\
+      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{slot}{c} =\\
+      & ~~~~~\begin{cases}
+            0 & \text{if}~\cwitness c \notin \dom stkeys\\
+            \refund{\dval}{d_{\min}}{\lambda}{\delta}
+            & \text{otherwise}
+        \end{cases}\\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+        &\delta & \slotminus{slot}{(stkeys~(\cwitness c))}\\
+      \end{array}\\
+      \nextdef
+      & \fun{keyRefunds} \in \PParams \to \StakeKeys \to \Tx \to \Coin
+      & \text{key refunds for a transaction} \\
+      & \keyRefunds{pp}{stkeys}{tx} =\\
+      & ~~~~~ \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c\in\DCertDeRegKey}}
+              \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\txttl{tx})}{c}\\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where \\
+        & \dval & \fun{keyDeposit}~\var{pp}\\
+        & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
+        & \lambda & \fun{keyDecayRate}~\var{pp}\\
+      \end{array}\\
+  \end{align*}
+  \caption{Functions used in Deposits - Refunds}
+  \label{fig:functions:deposits-refunds}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{decayedKey} \in
+      \PParams \to \StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
+      & \text{decayed since epoch} \\
+      & \decayedKey{pp}{stkeys}{cslot}{c} =\\
+      & \begin{cases}
+            0 & \text{if}~\cwitness c \notin \dom stkeys\\
+            \var{epochRefund} - \var{currentRefund}
+            & \text{otherwise}
+        \end{cases}\\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+          & \var{created} & \var{stkeys}~(\cwitness~\var{c}) \\
+          & \var{start} & \mathsf{max}~(\fun{firstSlot}~\epoch{cslot})~created \\
+          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
+          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
+          & \dval & \fun{keyDeposit}~\var{pp}\\
+          & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
+          & \lambda & \fun{keyDecayRate}~\var{pp}\\
+      \end{array}\\
+      \nextdef
+      & \fun{decayedTx} \in \PParams \to \StakeKeys \to \Tx \to \Coin
+      & \text{decayed deposit portions} \\
+      & \decayedTx{pp}{stkeys}{tx} =\\
+      &   \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c \in\DCertDeRegKey}}
+          \decayedKey{pp}{stkeys}{(\txttl{tx})}{c}\\
+  \end{align*}
+  \caption{Functions used in Deposits - Decay}
+  \label{fig:functions:deposits-decay}
+\end{figure}
 
 \clearpage
 
 \subsection{Witnesses}
 \label{sec:witnesses}
 
-A transaction is witnessed by
-a signature and a verification key corresponding to this signature, which can
-be obtained from the transaction by applying the $\fun{txwits}$ function.
-The witnesses for each certificate in a transaction are obtained by applying $\fun{dwits}$
-to the certificate.
+The purpose of witnessing is make sure that the intended action is authorized by
+the holder of the signing key, providing replay protection as a consequence.
+Replay prevention is an inherent property of UTxO type accounting
+since transaction IDs are unique, and we require all transaction to
+consume at least one input.
 
-In Figure~\ref{fig:derived-defs:utxow}, we give the definitions of two maps
-associated with input and reward addresses and their keys.
-The first, $\fun{addr}$, gives the finite map
-which associates to a given $\var{txin}$ in the UTxO the address of the
-corresponding $\var{txout}$.
+A transaction is witnessed by a signature and a verification key corresponding to this signature.
+The witnesses, together with the transaction body, form a full transaction.
+Every witness in a transaction signs the transaction body.
+Moreover, the witnesses are represented as finite maps from verification keys to signatures,
+so that any key that is required to sign a transaction only provides a single witness.
+This means that, for example, transaction which includes a delegation certificate and
+a reward withdrawal corresponding to the same stake key still only includes one signature.
 
-The map $\fun{addr_h}$, given a UTxO, returns the
-finite map which associates $\var{txin}$ with the hash of a spending key in
-the address in the corresponding $\var{txout}$ in the UTxO. The way this is
-done is by performing a lookup of the address owner using the
-$\fun{paymentHK}$ function,
-which retrieves the hash of the key of
-the owner from the data stored at the given address.
+Figure~\ref{fig:functions-witnesses} defines the function which
+gathers all the (hashes of) verification keys needed to witness a given transaction.
+This consists of:
+\begin{itemize}
+  \item payment keys for outputs being spent
+  \item stake keys for reward withdrawals
+  \item stake keys for delegation certificates
+  \item stake keys for the pool owners in a pool registration certificate
+\end{itemize}
 
-\begin{figure}
+\begin{figure}[htb]
   \begin{align*}
     & \fun{witsNeeded} \in \UTxO \to \Tx \to \powerset{\HashKey}
     & \text{hashkeys for needed witnesses} \\
     & \fun{witsNeeded}~{utxo}~{tx} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
     & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \txwdrls{tx}\}~\cup \\
-    & ~~\{\cauthor{c} \mid c \in \txcerts{tx}\}~\cup \\
-    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolowners}~{c} \\
+    & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
   \end{align*}
   \caption{Functions used in witness rule}
-  \label{fig:derived-defs:utxow}
+  \label{fig:functions-witnesses}
 \end{figure}
 
-
-Note that the UTxO transitions with and without witnesses have the same type
-(see Figure~\ref{fig:ts-types:utxo} and Figure~\ref{fig:ts-types:utxow}).
-The witnessed transition rule, in fact, defines the same UTxO update as the
-non-witnessed rule. Essentially, the witnessed rule says we may only apply the non-witnessed rule whenever the following
-additional preconditions are satisfied
-(stated in Rule~\ref{eq:utxo-witness-inductive} in
-Figure~\ref{fig:rules:utxow}):
-
-\begin{itemize}
- \item For each input $\var{i}$ of the signal transaction $\var{tx}$,
- there exists a (unique) verifiable witness (there could be more than one valid
- key-signature pair serving as a witness) such that the hash of the spending key
- of the address corresponding to the output of $\var{i}$ in the current UTxO
- is the same as the hash of the verification key of the witness.
-
- \item For each certificate in $\var{tx}$, the signature of the transaction
- and certificate must be witnessed by the
-   verification key with which the certificate is associated
-
- \item For every withdrawal request address of $\var{tx}$,
- there exists a (unique) verifiable witness such that the hash of the spending key of the
- withdrawal address is the same as the hash of the verification key of the witness.
-\end{itemize}
-
-The purpose of witnessing is make sure that the intended action is authorized by
-the holder of the signing key, providing replay protection as a consequence.
-Replay prevention is an inherent property of UTxO type accounting
-since transaction IDs are unique.
-Delegation certificates and reward withdrawals do not share this property,
-though if we require all witnesses to sign at least one transaction input,
-the replay prevention of UTxO accounting is then provided to any transaction.
-This is achieved by the above precondition by requiring a valid signature
-from the author of every certificate in a transaction, the
-holder of the key for every reward account emptied, as well as
-hash keys of each of the inputs addresses.
-
-Furthermore, expressing
-accounting as a preservation of total value of Ada allows the withdrawals
-and refunds to be sent to any address the transaction indicates
-(such as a different wallet operated by the same or another owner).
-Because of witnessing, we know that all the value withdrawn from ledger
-pools ($\var{rewards}$ and $\var{deposits}$) is going to the address intended
-(i.e signed) by the deregistration certificate author
-(or the key holder for the addresses from which the withdrawal is made,
-respectively).
-
-Here, we also enforce the condition that only one witness per each input,
-as well as one
-witness per withdrawal address is allowed. We do so to prevent transactions
-being unnecessarily large and full of redundant witnessing.
+The UTxOW transition system adds witnessing to the previous UTxO transition system.
+Figure~\ref{fig:ts-types:utxow} defines the type for this transition.
 
 \begin{figure}
   \emph{UTxO with witness transitions}
@@ -1388,6 +1211,14 @@ being unnecessarily large and full of redundant witnessing.
   \label{fig:ts-types:utxow}
 \end{figure}
 
+Figure~\ref{fig:rules:utxow} defines UTxOW transition.
+It has two predicates:
+\begin{itemize}
+  \item Every signature in the transaction is a valid signature of the transaction body.
+  \item The set of (hashes of) verification keys given by the transaction is exactly
+    the set of needed (hashes of) verification keys.
+\end{itemize}
+If the predicates are satisfied, the state is transitioned by the UTxO transition rule.
 
 \begin{figure}
   \begin{equation}
@@ -1418,22 +1249,32 @@ being unnecessarily large and full of redundant witnessing.
 
 \clearpage
 
+\section{Delegation}
+\label{sec:delegation}
+\input{delegation.tex}
+
+\clearpage
+
 \subsection{Ledger State Transition}
-\label{sec:ledger}
+\label{sec:ledger-trans}
 
-Having formalized the transitions of state variables above, we can
-now combine these into a single a ledger transition type (and inference rule).
-The environment for this rule is parametrized by the current slot number and
-protocol parameters.
+The entire state transformation of the ledger state caused by a valid transaction
+can now be given as the combination of the UTxO transition and the delegation transitions.
 
-The full ledger state consists of a $\UTxOState$ state variable (keeping track of
-the UTxO, deposits, fees, etc.), as well as
-a $\DPState$ state variable (which keeps track of registered keys and pools).
-This state type and the type of the transition rule is given in
-(see Figure~\ref{fig:ts-types:ledger}). The ledger state transition is signaled
-by a transaction.
+Figure~\ref{fig:ts-types:ledger} defines the types for this transition.
+The environment for this rule is consists of:
+\begin{itemize}
+  \item The current slot.
+  \item The transaction index within the current block.
+  \item The protocol parameters.
+\end{itemize}
+The ledger state consists of:
+\begin{itemize}
+  \item The UTxO state.
+  \item The delegation and pool states.
+\end{itemize}
 
-\begin{figure}
+\begin{figure}[htb]
   \emph{Ledger environment}
   \begin{equation*}
     \LEnv =
@@ -1467,25 +1308,9 @@ by a transaction.
   \label{fig:ts-types:ledger}
 \end{figure}
 
-
-The inference rule describing the complete ledger state transition is given in
-Figure~\ref{fig:rules:ledger}. The consequent of the rule is triggered by
-a transaction $\var{tx}$ such that both the (witnessed) ledger state transition
-and the complete delegation state transition in the antecedent are
-triggered by that same transaction.
-
-Note that the context for the consequent transaction is made up of only the
-protocol parameters and slot number, and so is the delegation state transition in
-the antecedent. However, the $\UTxOState$ transition also contains the
-stake keys and stake pools resource allocations in the context. This is not
-an issue since all this difference is highlighting is that in a $\UTxOState$
-transition, these variables are immutable (but they do change in the full
-ledger state and the $\DPState$ transitions).
-
-The full ledger state transition combines the UTxO transition and the
-delegation transition into a single transition
-in the consequent, presented as a transition of both state variables signaled
-by the given transaction.
+Figure~\ref{fig:ts-types:ledger} defines the ledger state transition.
+It has a single rule, which first calls the $\mathsf{UTXOW}$ transition,
+and then calls the $\mathsf{DELEGS}$ transition.
 
 \begin{figure}
   \begin{equation}
