@@ -1,11 +1,10 @@
 \newcommand{\UTxOEpState}{\type{UTxOEpState}}
-\newcommand{\Accnt}{\type{Accnt}}
-\newcommand{\AccntEnv}{\type{AccntEnv}}
-\newcommand{\AccntState}{\type{AccntState}}
-\newcommand{\StPlCleanEnv}{\type{StPlCleanEnv}}
-\newcommand{\StPlCleanState}{\type{StPlCleanState}}
-\newcommand{\NewProtoConstsEnv}{\type{NewProtoConstsEnv}}
-\newcommand{\NewProtoConstsState}{\type{NewProtoConstsState}}
+\newcommand{\Acnt}{\type{Acnt}}
+\newcommand{\AcntEnv}{\type{AcntEnv}}
+\newcommand{\AcntState}{\type{AcntState}}
+\newcommand{\PlReapState}{\type{PlReapState}}
+\newcommand{\NewPParamEnv}{\type{NewPParamEnv}}
+\newcommand{\NewPParamState}{\type{NewPParamState}}
 \newcommand{\EpochEnv}{\type{EpochEnv}}
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
@@ -26,36 +25,20 @@
 \newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\updateAvgs}[4]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 
-In this chapter we discuss the ledger state updates that take place at the epoch
-boundary. These are necessary updates that are not triggered by a transaction.
-It is impractical and unnecessary to perform the calculations and updates we
-describe below every slot. The main state updates that take place at the boundary
-are of an accounting nature, calculating new values for the various accounts
-on the ledger (treasury, reserves, rewards, fees).
+In this chapter we discuss updates to the ledger state that take place at the epoch boundary.
+These are necessary updates that are not triggered by a transaction.
+Rewards for the proof of stake leader election are calculated, and various accounting values
+are updated, such as the treasury and the reserves.  Additionally, pools scheduled for retirement
+are actually retired, and protocol updates can occur.
 
-However, it is also when
-pools scheduled for retirement at this boundary are removed from the ledger.
-In addition, if there is an update planned for any of the protocol parameters,
-it may only take place at the epoch boundary, and results in a ledger state
-update, which we also give the details of in this chapter.
-Note that witnessing here is not necessary because there is no data to sign
-in the signal.
-
-We introduce a two new derived types in this chapter. $\BlocksMade$ (see
-Figure~\ref{fig:epoch-defs}), which represents the number of blocks made by
-the blockchain this epoch associated to a particular stake key. The type
-$\Avgs$ is a finite map that pairs a hash key with a fraction. This fraction
-is meant to represent the portion of the total stake corresponding to a key,
-thus this type is used to give the stake distribution.
-
-We also introduce two lookup functions. The map $\fun{stakeHK_b}$ looks up the
-hash key at a base address, and the map $\fun{stakePtr}$ looks up the pointer
-at a given pointer address.
-
-The next three functions ($\fun{movingAvgWeight}$, $\fun{movingAvgExp}$, and
-$\fun{globalPool}$) in the figure return a specific subset of parameters
-in the set of protocol parameters (stake pool-specific parameters, respectively)
-needed for performing rewards calculations.
+Figure~\ref{fig:epoch-defs} introduces three new derived types:
+\begin{itemize}
+  \item $\type{BlocksMade}$ represents the number of blocks each stake pool produced
+    during an epoch.
+  \item $\type{Stake}$ represents the amount of stake (in $\type{Coin}$) controlled by each
+    stake pool.
+  \item $\type{Stake}$ represents the performance moving averages of the stake pools.
+\end{itemize}
 
 %%
 %% Figure - Epoch Abstract Types
@@ -86,40 +69,22 @@ needed for performing rewards calculations.
 \subsection{Stake Distribution Calculation}
 \label{sec:stake-dist}
 
-One of the main characteristics of a proof-of-stake cryptocurrency is stake
-distribution calculation. This calculation is performed at the epoch boundary.
-We give the stake distribution calculations and related functions in
-Figure~\ref{fig:functions:stake-distribution}.
-
-The $\fun{baseStake}$ generates a finite map that pairs a staking key
-associated to a base address with the coin value at that address as recorded
-in the UTxO on the ledger. Note that this is a map indexed by any staking keys,
-which every base address has (but not all of these are registered and delegating).
-After registering a stake key, the base address is added alongside the
-coin value associated to it in $outs$ (the outputs record currently in the
-ledger UTxO).
-
-The map
-$\fun{ptrStake}$ generates a similar finite map for coin values at a given
-pointer address in the UTxO outputs set, indexed the stake keys the given
-pointer address is associated with.
-This is a key and coin value pair finite map for only registered stake keys.
-
-The $\fun{stake}$ map is a union of all the stake (both active and inactive) in
-both of these finite
-maps, $\fun{baseStake}$ and the $\fun{ptrStake}$.
-The next step of calculating stake distribution is to filter the hash keys in
-the $\fun{stake}$ finite map.
-We want only those (stake) keys for which stake
-from the $\fun{baseStake}$ and the $\fun{ptrStake}$ calculations is active, i.e.
-for which the $\fun{isActive}$ filter is true.
-For a hash key, its stake is active (i.e. $\fun{isActive}$) whenever it is a
-registered stake key
-and it is delegating to some registered stake pool.
-
-The finite map output of the function $\fun{activeStake}$ gives the subset of
-all the \textit{active} stake computed by $\fun{stake}$.
-These stake-related calculations are used in the calculation of rewards.
+This section defines the stake distribution calculations performed at the epoch boundary.
+Figure~\ref{fig:functions:helper-stake-distribution} defines some helper functions.
+\begin{itemize}
+  \item $\fun{consolidate}$ transforms UTxO into a mapping from addresses to the total amount
+    of $\type{Coin}$ controlled by each address in the UTxO.
+  \item $\fun{baseStake}$ transforms the consolidated stake, as computed above by
+    $\fun{consolidated}$, into a mapping from the base address stake hashkeys to the coin value.
+  \item $\fun{ptrStake}$ transforms the consolidated stake, as computed above by
+    $\fun{consolidated}$, into a mapping from the pointer address stake hashkeys to the coin value.
+    It uses the certificate pointers to create this mapping.
+  \item $\fun{rewardStake}$ transforms the reward accounts into a mapping from hashkeys to coin
+    values.
+  \item $\fun{poolStake}$ filters all stake in the system into just the stake controlled by a given
+    stake pool.  Additionally, it combines all of the stake controlled by the pool owners into
+    a single key-value pair mapping the pool operator's hashkey to the owner-operator total.
+\end{itemize}
 
 %%
 %% Figure - Helper Functions for Stake Distribution
@@ -166,8 +131,17 @@ These stake-related calculations are used in the calculation of rewards.
   \label{fig:functions:helper-stake-distribution}
 \end{figure}
 
+The stake distribution calculations are given in Figure~\ref{fig:functions:stake-distribution}.
+\begin{itemize}
+  \item $\fun{stakeDistr}$ combines the stake from base addresses, pointer addresses, and reward
+    accounts into a single mapping of hashkeys to coin, filtering out keys that are not both
+    registered and delegated.
+  \item $\fun{poolDistr}$ groups the stake distribution calculated by $\fun{stakeDistr}$ above
+    by stake pool operator.
+\end{itemize}
+
 %%
-%% Figure Helper Functions for Stake Distribution
+%% Figure Functions for Stake Distribution
 %%
 \begin{figure}[htb]
   \emph{Stake Distribution}
@@ -201,109 +175,35 @@ These stake-related calculations are used in the calculation of rewards.
   \label{fig:functions:stake-distribution}
 \end{figure}
 
-\subsection{Accounting Functions}
-\label{sec:acc-fun}
-
-In Figure~\ref{fig:functions:epoch}, we give the functions used in the deposit
-calculations at the boundary. Here we introduce the function $\fun{obligation}$
-that gives the value of the total possible (decayed) refunds for both individual
-and pool deposits in a given slot number.
-
-Next, we give the type of the function used to calculate additional rewards that
-will become available to be claimed after the boundary. This function is denoted
-$\fun{reward}$, and depends on this epoch's blocks, protocol parameters, the
-delegation and pool states, and existing rewards unclaimed in the previous
-epoch.  The $\fun{reward}$ function updates the existing records of the
-unclaimed coin values by adding newly accumulated rewards in this epoch to the
-value in each reward address.
-
-The function $\fun{poolRefunds}$ is used to calculate the total refunds
-that must be distributed
-for stake pools scheduled to retire at an epoch boundary. Note that this
-calculation takes a slot number as a parameter because that is the type of value
-needed for the decay calculation, but will only ever be invoked
-when the slot number is the last before the boundary.
-
-The map $\fun{poolRefunds}$ uses the pool decay parameters in $\PParams$
-to assign a refund to each pool key in the set of pools scheduled for retirement
-at the epoch boundary.
+\clearpage
 
 \subsection{Rewards Distribution}
 \label{sec:reward-dist}
 
-We now discuss reward distribution calculation that happens at the epoch boundary.
-Functions used in reward calculations are presented in
-Figure~\ref{fig:functions:rewards}. The reward calculation below is done as part of the
-epoch boundary accounting to update the various accounting fields on the ledger,
-see Section~\ref{sec:acc-trans}. In the subsequent calculations, we use the
-following variables, sourced as indicated (listed here for reference):
+This section defines the reward calculation for the proof of stake leader election.
+Figure~\ref{fig:functions:rewards} defines the pool reward as described in section
+6.5.1 of \cite{delegation_design}.
 
 \begin{itemize}
-\item[] From the delegation state:
-\item $\var{avgs}$ stores the (moving) average for each
-stake pool
-\item $\var{poolParams}$ stores stake pool-specific parameters
-\item $\var{delegs}$ stores delegations as stake and pool key pairs \medskip
-
-From the boundary accounting transition context:
-\item $\var{prod}$ gives the number of blocks made by each stake pool
-this epoch, with $n$ representing the number of blocks corresponding to the
-given pool \medskip
-
-Calculated as part of epoch boundary accounting, see
-Section~\ref{sec:acc-trans}:
-\item $\var{R} \in \Coin$ is the total available rewards for the epoch (in ADA) \medskip
-
-From protocol (pool-related) constants:
-\item $n_{opt} \in \N$ is the optimal number of saturated stake pools (which the system
-tends to by protocol design)
-\item $\var{a_0} \in [0, \infty)$ is a parameter determining leader-stake
-influence on pool rewards
-\item $\gamma$ is the moving average exponent constant \medskip
-
-From pool-specific parameters denoted $\var{pool}$, associated to a specific
-hash key in $\var{poolParams}$:
-\item $c \in \Coin$ is the pool costs
-\item $m \in [0,1]$ is the stake pool margin
-\item $p \in \Coin$ is the pledge a stake key registering a pool defines (via
-the registration certificate)\medskip
-
-Calculated by the functions defined in this section using the variables above:
-\item $\var{z_0} := 1/n_{opt}$ is the size of a saturated pool
-\item $\var{active}$ is the finite map associating a stake key to all the
-active stake belonging to it
-\item $s \in [0,1]$, or $t$, is the relative stake associated to a specific stake key
-(i.e. the value associated to it in $\var{active}$ stake, normalized)
-\item $\var{tot} \in \Coin$ is the sum total of all the $\var{active}$ stake
-\item $\var{actgr}$ is the subset of the total $\var{active}$ stake
-for which its stake key delegates to a given pool
-\item $\var{pactive}$ is the finite map of all the subsets of $\var{actgr}$,
-each associated to its pool key
-\item $\sigma \in [0,1]$ is the total relative stake of a pool (expressed as a fraction of
-the total stake, which is a sum of the relative member's stake)
-\item $p_r \in [0,1]$ is the relative pledge of a given pool, calculated by normalizing $p$
-\item $\overline{N} \in \Rnn$, for a given pool, is the expected value of the number
-of slots that the pool will be elected as leader on average
-\item $\var{maxP} \in \Coin$ is the maximum stake that could be received by a particular
-pool
-\item $\var{\hat{f}}$ is the pool rewards
-\item $\var{avg}$ is the relative moving average for a given pool calculated for
-the current epoch
+  \item The function $\fun{maxPool}$ gives the maximum reward a stake pool can receive in an epoch.
+    This is a fraction of the total available rewards for the epoch.
+    The result depends on the pool's relative stake, the pool's pledge, and the following
+    protocol parameters:
+    \begin{itemize}
+      \item $\var{a_0}$, the leader-stake influence
+      \item $n_{opt}$, the optimal number of saturated stake pools
+    \end{itemize}
+  \item The function $\fun{movingAvg}$ calculates the new moving average for a given stake pool
+    based on its performance and the protocol parameter:
+    \begin{itemize}
+      \item $\alpha$, the moving average weight
+    \end{itemize}
+  \item The function $\fun{poolReward}$ gives the total rewards available to be distributed
+    to the members of the given pool. It depends on one additional protocol parameter:
+    \begin{itemize}
+      \item $\gamma$, the moving average exponent
+    \end{itemize}
 \end{itemize}
-
-The function $\fun{maxPool}$ gives the maximum possible amount of rewards a pool
-can receive in an epoch. For a given pool, it is a coin value which is some fraction of
-the total available rewards. This result depends additionally on the protocol
-parameters, the pool's relative stake, and the pool's relative pledge.
-
-The function $\fun{movingAvg}$ calculates the new moving average for a
-given stake pool based on protocol parameters, pool's block production, and
-the moving average of this pool in the previous epoch.
-
-Next, the function $\fun{poolReward}$ gives the total rewards available to be distributed
-to the members of the given pool. This value is based on protocol parameters,
-the pool's block production, moving average, election expectation, and the maximum
-possible rewards for this pool.
 
 %%
 %% Figure - Functions for the Reward Calculation
@@ -358,29 +258,20 @@ possible rewards for this pool.
   \label{fig:functions:rewards}
 \end{figure}
 
-In Figure~\ref{fig:functions:reward-splitting}, we give the strategy for the
-splitting of the rewards within a given pool. Note that the calculation of
-the total value to be split within the pool is presented above, denoted $\fun{poolReward}$.
+\clearpage
 
-The portion of rewards allocated to the pool leader and those allocated to
-the rest of the pool members is different. This portion is calculated based
-on pool-specific parameters stored on the ledger, as well as
-the pool's total stake and the individual stake of the key for which the rewards
-are being calculated. The calculation for the pool
-leader reward amount is given by the $\fun{lReward}$ function, and the
-calculation for the reward amount for each other member is given by $\fun{mReward}$.
-Finally, $\fun{indivReward}$ puts these two calculations together to give the
-reward amount for any pool member, using a boolean $\var{isLeader}$
-as an input variable which indicates
-whether a given member is the pool leader or not.
+Figure~\ref{fig:functions:reward-splitting} gives the calculation for
+splitting the pool rewards with its members, as described 6.5.2 of \cite{delegation_design}.
+The portion of rewards allocated to the pool operator and owners is different
+than that of the members.
 
-Here we also present the $\fun{groupByPool}$ map, which, given the active stake
-belonging to each registered stake key,
-as well as the current delegations, produces a
-finite map indexed by the hash keys of pool leaders. Each $\var{leader}$ key is associated
-with a subset of the active stake finite map. This associated subset
-contains only the entries where the hash keys delegate to that pool
-which the given leader is the leader of.
+\begin{itemize}
+  \item The $\fun{r_{leader}}$ function calculates the leader reward, based on the pool cost,
+    margin, and proportion of the pool's total stake.  Note that this reward will go to the
+    reward account specified in the pool registration certificate.
+  \item The $\fun{r_{member}}$ function calculates the member reward, proportionally to their
+    stake after the cost and margin are removed.
+\end{itemize}
 
 %%
 %% Figure - Functions for the Reward Splitting
@@ -396,7 +287,9 @@ which the given leader is the leader of.
         c + \floor*{(\hat{f} - c)\cdot\left(m + (1-m)\cdot\frac{s}{\sigma}\right) }&
         \text{otherwise.}
       \end{cases} \\
-      & ~~~\where (c, m, \_) = \fun{poolCosts}~pool \\
+      & ~~~\where \\
+      & ~~~~~~~c = \fun{poolCost}~pool \\
+      & ~~~~~~~m = \fun{poolMargin}~pool \\
   \end{align*}
 
   \emph{Pool member reward, from section 6.5.2 of \cite{delegation_design}}
@@ -409,7 +302,9 @@ which the given leader is the leader of.
         \floor*{(\hat{f} - c)\cdot(1-m)\cdot\frac{t}{\sigma}} &
         \text{otherwise.}
       \end{cases} \\
-    & ~~~\where (c, m, \_) = \fun{poolCosts}~pool \\
+    & ~~~\where \\
+    & ~~~~~~~c = \fun{poolCost}~pool \\
+    & ~~~~~~~m = \fun{poolMargin}~pool \\
   \end{align*}
 
   \caption{Functions used in the Reward Splitting}
@@ -417,57 +312,18 @@ which the given leader is the leader of.
 \end{figure}
 
 
-Finally, the reward calculation is presented in
-Figure~\ref{fig:functions:reward-calc}. The calculation is done pool-by-pool.
-The map $\fun{rewardOnePool}$ calculates the rewards given out to each member
-of a given pool (with leader identified by
-the stake key $\var{poolHK}$). The active stake associated to each
-pool member is passed to $\fun{rewardOnePool}$
-via the $\var{actgr}$ variable, which is a subset of hash keys in this pool
-paired with the stake associated with the keys.
-
-This $\fun{rewardOnePool}$ map outputs a finite map and an $\var{avg}$
-value. The finite map is indexed
-by reward addresses. In particular, the subset of reward addresses corresponding
-to registered keys delegating to the pool with leader $\var{poolHK}$.
-A reward address of key $hk$ is paired with the individual reward value
-produced by the $\fun{indivReward}$ map applied to relevant data passed to
-$\fun{rewardOnePool}$ as well as the results of the $\fun{maxPool}$
-and $\fun{poolReward}$ calculations. The $\var{avg}$ value for the stake pool
-(i.e. the pool's ranking) is also calculated by the $\fun{poolReward}$ function.
-
-The $\fun{reward}$ calculation itself uses the $\fun{rewardOnePool}$ function to
-reward each pool's members and calculate the pool's moving averages. In order to
-do this, it is given the following parameters:
-
+Finally, the full reward calculation is presented in Figure~\ref{fig:functions:reward-calc}.
+The calculation is done pool-by-pool.
 \begin{itemize}
-\item The number of blocks made by each key this epoch
-\item The protocol parameters
-\item The total coin value of rewards to be distributed this epoch
-\item The full delegation state
-\item The set of outputs in the UTxO on the ledger
+  \item The $\fun{rewardOnePool}$ function calculates the rewards given out to each member of a
+    given pool. The pool leader identified by the stake key of the pool operator.  The function
+    returns both the rewards and the total amount of unrealized potential rewards.  The unrealized
+    amount will go to the treasury. The rewards include that of the the pool operator, provided
+    the reward account from the pool registration certificate is still registered.  If the pool
+    reward account is not registered, the operator reward is added to the unrealized total.
+  \item The $\fun{reward}$ function applies $\fun{rewardOnePool}$ to each registered stake
+    pool, calculating both the full reward mapping and the total unrealized rewards value.
 \end{itemize}
-
-The output of the $\fun{reward}$ calculation is a pair. The first component is
-a finite map indicating the new rewards assigned to each reward address.
-The second component is the record of every pool's updated moving average.
-
-Within the $\fun{reward}$ calculation, the active stake corresponding to each
-(active and delegating to an active pool) stake key, $\var{active}$, is
-calculated by adding up the total active stake for that key currently on the
-ledger. The entries of this finite map are then grouped into subsets by the pool
-each stake key belongs to using the $\fun{groupByPool}$ mapping (to give the
-$\var{pactive}$ value).
-
-Next, a dataset of $\var{results}$ is generated by pairing each pool key with
-the set of rewards calculated for each of the delegators to the pool with this
-key, as well as the moving average for the pool. Both of these are calculated
-using the $\fun{rewardOnePool}$ function.  To generate the final output of the
-$\fun{reward}$ calculation, we take the union of the all the subsets of the
-rewards records of individual keys from the range values of the $\var{results}$
-map, and pair it with the union of all the pool keys (the domain of the
-$\var{results}$) and the associated moving averages for these (the second
-component of the range of the $\var{results}$ finite map).
 
 %%
 %% Figure - The Reward Calculation
@@ -483,8 +339,8 @@ component of the range of the $\var{results}$ finite map).
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{stake}} t \\
       & ~~~~~~~\sigma = \var{pstake} / tot \\
-      & ~~~~~~~\var{\overline{N}} = \sigma * \slotsPer\\
-      & ~~~~~~~(\_, \_, \var{pledge}) = \fun{poolCosts}~pool \\
+      & ~~~~~~~\var{\overline{N}} = \sigma * (\fun{slotsPerEpoch}~{pp})\\
+      & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
       & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
       & ~~~~~~~maxP =
       \begin{cases}
@@ -548,20 +404,100 @@ component of the range of the $\var{results}$ finite map).
 
 \clearpage
 
-\subsection{Accounting Epoch Transition}
+\subsection{Accounting Transition}
 \label{sec:acc-trans}
 
-The Figure~\ref{fig:ts-types:accnt} gives the definitions related to epoch
-boundary ledger accounting. The figure lists the accounting fields, denoted by
-$\Accnt$, which include $\var{treasury}$ (the amount of coin currently in
-circulation, but not on the UTxO and not designated for rewards),
-$\var{reserves}$ (the amount of coin
-not yet in circulation),
-and $\var{rewardPot}$ (the total amount available for distribution of rewards).
-The figure also gives the set of necessary accounting environment
-variables, $\AccntEnv$, and the accounting state, $\AccntState$, which includes
-the delegation state and the accounting fields. The accounting state transition
-type, as all transition types in this chapter, has no signal.
+Figure~\ref{fig:funcs:acnt} defines the helper functions needed for the accounting transition.
+
+\begin{itemize}
+  \item The function $\fun{obligation}$ calculates the the minimal amount of coin needed to
+    pay out all depot refunds, as of the current slot.
+  \item The function $\fun{poolRefunds}$ is used to calculate the total refunds
+    that must be distributed for stake pools scheduled to retire at an epoch boundary.
+    Note that this calculation takes a slot number corresponding to the epoch boundary slot
+    when the calculation is performed.
+  \item The function $\fun{updateAvgs}$ calculates the new performance moving averages.
+    Note that these values are computed by the $\fun{poolReward}$ function and could be cached
+    in order to prevent calculating them twice.
+\end{itemize}
+
+
+%%
+%% Figure - Functions for Epoch Rules
+%%
+\begin{figure}[htb]
+  \emph{Total possible refunds}
+  \begin{align*}
+      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin \\
+      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
+      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
+        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
+        + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
+        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+          & \dval,~d_{\min},~\lambda_d
+          & \fun{keyDeposit}~\var{pp},~\fun{keyMinRefund}~\var{pp},~\fun{keyDecayRate}~\var{pp}
+          \\
+          & p_{\mathsf{val}},~p_{\min},~\lambda_p
+          & \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp}
+      \end{array}\\
+  \end{align*}
+  \emph{Pool refunds}
+  \begin{align*}
+      & \fun{poolRefunds} \in \PParams \to (\HashKey \mapsto \Epoch) \to \Slot \to
+        (\HashKey \mapsto \Coin) \\
+      & \poolRefunds{pp}{retiring}{cslot} = \left\{
+        \var{hk}\mapsto
+          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{(\fun{firstSlot}~e)})}
+          \mid
+          \var{hk}\mapsto e\in\var{retiring}
+        \right\}\\
+      & \where p_{\mathsf{val}},~p_{\min},~\lambda_p =
+          \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp} \\
+  \end{align*}
+
+  \emph{Update Moving Averages}
+  \begin{align*}
+      & \fun{updateAvgs} \in \PParams \to \Avgs \to \BlocksMade \to
+          (\HashKey_{pool}\mapsto \Stake) \to \Avgs \\
+      & \updateAvgs{pp}{avgs}{blocks}{pooledStake} = \\
+      & ~~~ \left\{hk\mapsto \movingAvg{pp}{hk}{n}{\overline{N}}{avgs}
+            \mid
+            hk\mapsto n\in\var{blocks}, hk\mapsto\overline{N}\in\var{expectations}
+            \right\} \\
+      & \where \\
+      & ~~~~~ \var{tot} = \sum_{\_\mapsto st\in \var{pooledStake}}
+                          \left(\sum_{\wcard\mapsto c\in\var{st}}c\right) \\
+      & ~~~~~ \var{expectations} =
+                \left\{
+                  hk\mapsto\left(\sum_{
+                    \wcard\mapsto c\in\var{st}}c\right)*(\fun{slotsPerEpoch}~{pp}) / tot
+                  \mid
+                  hk\mapsto\var{st} \in pooledStake
+                \right\}
+  \end{align*}
+  \caption{Helper Functions used in Accounting}
+  \label{fig:funcs:acnt}
+\end{figure}
+
+
+
+Figure~\ref{fig:ts-types:acnt} gives the definitions for the accounting transition.
+The figure lists the accounting fields, denoted by $\Acnt$, which consists of:
+\begin{itemize}
+  \item The value $\var{treasury}$ tracks the amount of coin currently stored in the treasury.
+    Initially there will be no way to remove these funds.
+  \item The value $\var{reserves}$ tracks the amount of coin currently stored in the reserves.
+    This pot is used to pay rewards.
+  \item The value $\var{rewardPot}$ to tracks the rewards from the previous epoch that were not
+    payed out.
+\end{itemize}
+The figure also defines the accounting environment, $\AcntEnv$, and the accounting state,
+$\AcntState$, which combines the accounting fields described above with the UTxO State,
+the delegation state, and the pool state.
+The accounting state transition type, like all the transition types in this section, has no signal.
 
 %%
 %% Figure - Accounting Defs
@@ -569,7 +505,7 @@ type, as all transition types in this chapter, has no signal.
 \begin{figure}[htb]
   \emph{Accounting Fields}
   \begin{equation*}
-    \Accnt =
+    \Acnt =
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{treasury} & \Coin & \text{treasury pot}\\
@@ -581,7 +517,7 @@ type, as all transition types in this chapter, has no signal.
   %
   \emph{Accounting environment}
   \begin{equation*}
-    \AccntEnv =
+    \AcntEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{last slot of epoch}\\
@@ -593,10 +529,10 @@ type, as all transition types in this chapter, has no signal.
   %
   \emph{Accounting States}
   \begin{equation*}
-    \AccntState =
+    \AcntState =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{accnt} & \Accnt & \text{accounting}\\
+        \var{acnt} & \Acnt & \text{accounting}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
         \var{utxoSt} & \UTxOState & \text{utxo state}\\
@@ -607,40 +543,43 @@ type, as all transition types in this chapter, has no signal.
   \emph{Accounting transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{accnt}{} \var{\_}
-    \subseteq \powerset (\AccntEnv \times \AccntState \times \AccntState)
+    \var{\_} \trans{acnt}{} \var{\_}
+    \subseteq \powerset (\AcntEnv \times \AcntState \times \AcntState)
   \end{equation*}
   %
   \caption{Accounting transition-system types}
-  \label{fig:ts-types:accnt}
+  \label{fig:ts-types:acnt}
 \end{figure}
 
+\clearpage
 
-The accounting epoch boundary rule in Figure~\ref{fig:rules:accnt} is the rule
-where the most attention to detail is required in order to adhere to the
-preservation of value condition. In this rule, the funds in each of the
-accounting variables, as well as the individual reward addresses, are adjusted
-as follows:
+Figure~\ref{fig:rules:acnt} defines the accounting transition rule.  Value is moved between
+accounting pots, but the total amount of value in the system remains constant.
+The accounting transition has no preconditions.
 
 \begin{itemize}
-\item To the $\var{treasury}$ we add a fraction $\tau$ of the sum of
-the fees accumulated from transactions this epoch, the decay amount
-of all current deposits, the total reward pool, and the expansion (how much
-coin is added to circulation each epoch)
-\item A fraction $\rho$ of the $\var{reserves}$ comes into circulation (i.e.
-is removed from $\var{reserves}$)
-\item The value added to $\var{treasury}$ is removed from the $\var{rewardPot}$
-\item The sum total of rewards accumulated for all addresses this epoch
-is removed from the $\var{rewardPot}$
-\item The accumulated fees, deposit decay, and circulation expansion is
-added to the $\var{rewardPot}$
-\item The rewards accumulated this epoch are distributed by
-adding the amount computed for each reward address (by the $\fun{reward}$ calculation)
-to the value of coin corresponding to that address
-\item The $\var{avgs}$ value in the delegation state is re-calculated and
-updated by the $\fun{reward}$ map also
-\item The deposit pot is set to the current obligation.
-\item The fee pot is set to zero.
+  \item First we calculate $\var{totalPot}$, the total amount of coin available for rewards this epoch,
+    , as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
+    \begin{itemize}
+      \item The fee pot, containing the transaction fees from the epoch.
+      \item The amount of coin in the deposit pot that is no longer needed, due to decay.
+      \item The reward pot, which is the left-over rewards from the previous epoch.
+      \item Some amount of monetary expansion from the reserves, as determined by the
+        $\rho$ protocol parameter.
+    \end{itemize}
+  \item Some proportion of the total pot is moved to the treasury,
+    as determined by the $\tau$ protocol parameter. The remaining pot is called the
+    $\var{availablePool}$, which is also called $R$ in section 6.5 of \cite{delegation_design}.
+  \item The stake distribution is calculated based on the UTxO and the delegation and pool state.
+  \item The $\var{availablePool}$ is now distributed as rewards. As given by $\fun{maxPool}$,
+    each pool can receive a maximal amount, as determined by its performance.
+    The difference between the maximal amount and the actual amount received is
+    moved to the treasury.
+  \item The reward pot is now set to the $\var{availablePool}$ minus the total amount of rewards
+    actually paid out and the unrealized rewards given to the treasury.
+  \item The moving averages are updated.
+  \item The deposit pot is set to the minimal amount to cover the total refund obligation.
+  \item The fee pot is set to zero.
 \end{itemize}
 
 Note that fees and deposit decay, above, are not explicitly removed from any account:
@@ -648,18 +587,11 @@ the fees come from transactions paying them, and are accounted for whenever
 transactions are processed, and the deposit decay value comes from returning
 smaller refunds for deposits than were paid upon depositing.
 
-Recall also that in Section~\ref{sec:reward-dist}, we used $R$ to represent
-the total available rewards. Here, we present the calculation of the value
-passed to $\fun{rewards}$ as $R$, denoted $\var{availablePool}$ above.
-This value is a fraction $1-\tau$ of the sum of fees collected this epoch, the
-deposit decay, leftover rewards from
-the previous epoch, and this epoch's circulation expansion. The rest of this
-value (i.e. $\tau$) goes into the $\var{treasury}$, as stated above.
-
 Figure \ref{fig:fund-preservation} captures the potential movement of funds
 between these various locations during the epoch transition and transaction
 processing. In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accnt}.
+the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:acnt}.
+The blue arrows represent the movement of funds that pass through the ``total pot''.
 
 \begin{figure}[htb]
   \begin{center}
@@ -713,70 +645,13 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
   \label{fig:fund-preservation}
 \end{figure}
 
-%%
-%% Figure - Functions for Epoch Rules
-%%
-\begin{figure}[htb]
-  \emph{Total possible refunds}
-  \begin{align*}
-      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin \\
-      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
-      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
-        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
-        + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
-        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-          & \dval,~d_{\min},~\lambda_d
-          & \fun{keyDeposit}~\var{pp},~\fun{keyMinRefund}~\var{pp},~\fun{keyDecayRate}~\var{pp}
-          \\
-          & p_{\mathsf{val}},~p_{\min},~\lambda_p
-          & \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp}
-      \end{array}\\
-  \end{align*}
-  \emph{Pool refunds}
-  \begin{align*}
-      & \fun{poolRefunds} \in \PParams \to (\HashKey \mapsto \Epoch) \to \Slot \to
-        (\HashKey \mapsto \Coin) \\
-      & \poolRefunds{pp}{retiring}{cslot} = \left\{
-        \var{hk}\mapsto
-          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{(\fun{slot}~e)})}
-          \mid
-          \var{hk}\mapsto e\in\var{retiring}
-        \right\}\\
-      & \where p_{\mathsf{val}},~p_{\min},~\lambda_p =
-          \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp} \\
-  \end{align*}
-
-  \emph{Update Moving Averages}
-  \begin{align*}
-      & \fun{updateAvgs} \in \PParams \to \Avgs \to \BlocksMade \to
-          (\HashKey_{pool}\mapsto \Stake) \to \Avgs \\
-      & \updateAvgs{pp}{avgs}{blocks}{pooledStake} = \\
-      & ~~~ \left\{hk\mapsto \movingAvg{pp}{hk}{n}{\overline{N}}{avgs}
-            \mid
-            hk\mapsto n\in\var{blocks}, hk\mapsto\overline{N}\in\var{expectations}
-            \right\} \\
-      & \where \\
-      & ~~~~~ \var{tot} = \sum_{\_\mapsto st\in \var{pooledStake}}
-                          \left(\sum_{\wcard\mapsto c\in\var{st}}c\right) \\
-      & ~~~~~ \var{expectations} =
-                \left\{
-                  hk\mapsto\left(\sum_{\wcard\mapsto c\in\var{st}}c\right)*\slotsPer / tot
-                  \mid
-                  hk\mapsto\var{st} \in pooledStake
-                \right\}
-  \end{align*}
-  \caption{Functions used in Accounting}
-  \label{fig:functions:epoch}
-\end{figure}
+\clearpage
 
 %%
 %% Figure - Accounting Rules
 %%
 \begin{figure}[htb]
-  \begin{equation}\label{eq:accnt}
+  \begin{equation}\label{eq:acnt}
     \inference[Accounting]
     {
       {
@@ -784,13 +659,15 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
         \var{obl} & \obligation{pp}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{obl} \\
         \var{expansion} & \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
-        \var{totalPool} & \var{fees} + \var{decayed} + \var{rewardPot} + \var{expansion} \\
-        \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPool}} \\
-        \var{availablePool} & \var{totalPool} - \var{newTreasury} \\
+        \var{totalPot} & \var{fees} + \var{decayed} + \var{rewardPot} + \var{expansion} \\
+        \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
+        \var{availablePool} & \var{totalPot} - \var{newTreasury} \\
         \var{pooledStake} & \poolDistr{utxo}{dstate}{pstate} \\
         \var{rewards'},~\var{unrealized} & \reward{pp}{blocks}{availablePool}{dpstate}{pooledStake}\\
         \var{newTreasury'} & \var{newTreasury} + \var{unrealized} \\
-        \var{paidRewards} & \sum\limits_{\_\mapsto c\in\var{rewards'}}c \\
+        \var{paidRewards} & \left(
+                            \sum\limits_{\_\mapsto c\in\var{rewards'}}c
+                            \right) + \var{unrealized} \\
         \var{avgs'} & \updateAvgs{pp}{avgs}{blocks}{pooledStake} \\
       \end{array}
       }
@@ -820,7 +697,7 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
           \var{fees} \\
         \end{array}
       \right)
-      \trans{accnt}{}
+      \trans{acnt}{}
       \left(
         \begin{array}{rcl}
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury'}} \\
@@ -842,55 +719,84 @@ the ``total pot'' used during the epoch transition in Figure \ref{fig:rules:accn
     }
   \end{equation}
   \caption{Accounting Epoch inference rules}
-  \label{fig:rules:accnt}
+  \label{fig:rules:acnt}
 \end{figure}
 
-\subsection{Epoch Boundary Pool Cleanup}
-\label{sec:pool-clean}
+\subsection{Epoch Boundary Pool Reaping}
+\label{sec:pool-reap}
 
-Next, we discuss the epoch boundary pool retirement in
-Figure~\ref{fig:ts-types:pool-clean}. The type of this transition is similar
-to the other $\PState$ transition type we defined earlier, which is triggered
-by a signal certificate,
-however, this one has an empty signal (as it happens at the boundary).
+Figure~\ref{fig:ts-types:pool-reap} defines the types for the pool reap transition,
+which is responsible for removing pools slated for retirement in the given epoch.
 
 %%
-%% Figure - Pool Clean Defs
+%% Figure - Pool Reap Defs
 %%
 \begin{figure}[htb]
+  \emph{Pool Reap State}
   \begin{equation*}
-    \_ \vdash \_ \trans{poolclean}{} \_ \in
-    \powerset (\Slot \times \PState \times \PState)
+    \PlReapState =
+    \left(
+      \begin{array}{r@{~\in~}ll}
+        \var{acnt} & \Acnt & \text{accounting}\\
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
   \end{equation*}
   %
-  \caption{Pool Clean Transition}
-  \label{fig:ts-types:pool-clean}
+  \emph{Pool Reap transitions}
+  \begin{equation*}
+    \_ \vdash \_ \trans{poolreap}{} \_ \in
+    \powerset (\Slot \times \PlReapState \times \PlReapState)
+  \end{equation*}
+  %
+  \caption{Pool Reap Transition}
+  \label{fig:ts-types:pool-reap}
 \end{figure}
 
 
-We now present the pool-cleanup transition rule in Figure~\ref{fig:rules:pool-clean}.
-This rule will be applied whenever there is one or more stake pools scheduled
-to retire this epoch. If so, all of the entries in $\var{stpools}$,
-$\var{poolParams}$, and $\var{retiring}$ which correspond to any of the hash keys
-of the stake pools scheduled to retire this epoch are removed from
-these variables.
+The pool-reap transition rule is given in Figure~\ref{fig:rules:pool-reap}.
+This transition has no preconditions and results in the following state change:
 
-It is important to note here that we \textit{do not} clean up delegations to
-retired stake pools. While we do not allow registration to non-existent
-stake pools (because that is a meaningless operation likely to be the result
-of an error), delegating to a pool that was once active means that there may
-be stake associated with this delegation. While this stake becomes inactive when
-the pool is retired, the delegations to that pool must remain on the ledger
-for potential future use.
+\begin{itemize}
+  \item For each retiring pool, the refund for the pool registration deposit is added to the
+    pool's registered reward account, provided the reward account is still registered.
+  \item The sum of all the pool deposit refunds for pools without a registered reward
+    accounts is added to the treasury.
+  \item Any delegation to a retiring pool is removed.
+  \item Each retiring pool is removed from all the four maps in the pool state.
+\end{itemize}
 
 %%
-%% Figure - Pool Clean Rule
+%% Figure - Pool Reap Rule
 %%
 \begin{figure}[htb]
-  \begin{equation}\label{eq:pool-clean}
-    \inference[Pool-Clean]
+  \begin{equation}\label{eq:pool-reap}
+    \inference[Pool-Reap]
     {
-      \var{retired} = \var{retiring}^{-1}~\var{(\epoch{slot})}
+      {
+      \begin{array}{r@{=}l}
+        \var{retired} & \var{retiring}^{-1}~\var{(\epoch{slot})} \\
+        \var{pr} & \poolRefunds{pp}{retiring}{cslot} \\
+        \var{rewardAcnts} & \{\var{hk}\mapsto \fun{poolAcntHK}~\var{pool} \mid
+                            \var{hk}\mapsto\var{pool} \in \var{poolParams},
+                            ~\var{hk}\in\var{retired}\} \\
+        \var{refunds} & \left\{
+                        \addrRw{hk'} \mapsto c
+                        \mathrel{\Bigg|}
+                        \begin{array}{r@{~\in~}l}
+                          \var{hk} \mapsto c & \var{pr}, \\
+                          \var{hk}\mapsto\var{hk'} & \var{rewardAcnts}, \\
+                          \var{hk'} & \dom\var{stkeys}
+                        \end{array}
+                      \right\} \\
+        \var{unclaimed} & \sum\limits_{\substack{
+                          hk \mapsto c \in \var{pr} \\
+                          \var{hk}\mapsto\var{hk'} \in \var{rewardAcnts}, \\
+                          \var{hk'} \notin \var{stkeys}
+                          }} c
+      \end{array}
+      }
     }
     {
       \begin{array}{l}
@@ -899,15 +805,29 @@ for potential future use.
       \vdash
       \left(
         \begin{array}{r}
+          \var{treasury} \\
+          \var{reserves} \\
+          \var{rewardPot} \\
+          \var{stkeys} \\
+          \var{rewards} \\
+          \var{delegations} \\
+          \var{ptrs} \\
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
           \var{avgs} \\
         \end{array}
       \right)
-      \trans{poolclean}{}
+      \trans{poolreap}{}
       \left(
         \begin{array}{rcl}
+          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
+          \var{reserves} \\
+          \var{rewardPot} \\
+          \var{stkeys} \\
+          \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
+          \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retiring}} \\
+          \var{ptrs} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
@@ -916,30 +836,32 @@ for potential future use.
       \right)
     }
   \end{equation}
-  \caption{Pool Clean Inference Rule}
-  \label{fig:rules:pool-clean}
+  \caption{Pool Reap Inference Rule}
+  \label{fig:rules:pool-reap}
 \end{figure}
 
+\clearpage
+
 \subsection{Epoch Boundary Protocol Constants Update}
-\label{sec:prot-const-epoch}
+\label{sec:prot-param-epoch}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
 parameters. Besides the current slot number, delegation and pool states, the
-protocol constant environment includes the old and new protocol parameters.
-The state change is a change of the $\UTxOState$ and the $\Accnt$ states.
-The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-consts}.
+protocol parameters environment includes new protocol parameters.
+The state change is a change of the $\UTxOState$, the $\Acnt$ states, and the current
+$\PParams$.
+The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-param}.
 
 %%
-%% Figure - New Proto Consts Defs
+%% Figure - New Proto Param Defs
 %%
 \begin{figure}[htb]
-  \emph{New Proto Consts environment}
+  \emph{New Proto Param environment}
   \begin{equation*}
-    \NewProtoConstsEnv =
+    \NewPParamEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{ppOld} & \PParams & \text{old protocol parameters}\\
         \var{ppNew} & \PParams & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
@@ -947,70 +869,70 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \right)
   \end{equation*}
   %
-  \emph{New Proto Consts States}
+  \emph{New Proto Param States}
   \begin{equation*}
-    \NewProtoConstsState =
+    \NewPParamState =
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{utxoSt} & \UTxOState & \text{utxo state}\\
-        \var{accnt} & \Accnt & \text{accounting}\\
+        \var{acnt} & \Acnt & \text{accounting}\\
+        \var{pp} & \PParams & \text{current protocol parameters}\\
       \end{array}
     \right)
   \end{equation*}
   %
-  \emph{New Proto Consts transitions}
+  \emph{New Proto Param transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{newpc}{} \var{\_}
-    \subseteq \powerset (\NewProtoConstsEnv \times
-    \NewProtoConstsState \times \NewProtoConstsState)
+    \var{\_} \trans{newpp}{} \var{\_}
+    \subseteq \powerset (\NewPParamEnv \times \NewPParamState \times \NewPParamState)
   \end{equation*}
   %
-  \caption{New Proto Consts transition-system types}
-  \label{fig:ts-types:new-proto-consts}
+  \caption{New Proto Param transition-system types}
+  \label{fig:ts-types:new-proto-param}
 \end{figure}
 
 
-The inference rule for changing protocol parameters does one of the following:
+Figure~\ref{fig:rules:new-proto-param} defines the new protocol parameter transition.
+The transition has two rules, depending on whether or not the new protocol parameters
+would incur a debt on the system that could not be covered by the reserves.
+The transition has two rules, each with one precondition. The preconditions are
+negations of each other, so that exactly one rule will have its precondition met.
+This transition results in the following state change:
 
 \begin{itemize}
-\item if there are more (or the same amount of) total possible refunds
-available calculated based on the old protocol parameters than the new ones,
-moves the difference between the two values into the $\var{reserves}$
-from the $\var{deposits}$ variable, \textit{or}
+  \item If the new protocol parameters mean that \textbf{fewer} funds are required in the
+    deposit pot to cover all possible refunds, then Rule~\ref{eq:new-pc-accepted} meets
+    the precondition. The excess is moved to the reserves and the protocol parameters are updated.
 
-\item if there are more refunds available based on the new parameters, it moves
-the difference between the two calculations from $\var{deposits}$
-to $\var{reserves}$, \textit{provided that} there is enough coin in the
-$\var{reserves}$ to cover the entire value of the transfer
+  \item If the new protocol parameters mean that \textbf{more} funds are required in the
+    deposit pot to cover all possible refunds, and the difference is \textbf{less} than
+    the reserve pot, then Rule~\ref{eq:new-pc-accepted} meets the precondition.  Funds are moved
+    from the reserve pot to cover the difference and the protocol parameters are updated.
 
-\item if there are more refunds available based on the new parameters,
-but there is \textit{not} enough coin in the $\var{reserves}$ to cover
-the entire value of the transfer, the update is ignored entirely.
+  \item If the new protocol parameters mean that \textbf{more} funds are required in the
+    deposit pot to cover all possible refunds, and the difference is \textbf{more} than
+    the reserve pot, then Rule~\ref{eq:new-pc-denied} meets the precondition and no state change happens.
 \end{itemize}
 
-This update of protocol parameters ensures that any time a deposit refund is
-requested, the necessary amount of funds is available in the $\var{deposits}$
-pool.
-
 Note that here, unlike most of the inference rules in this document,
-the $\var{utxoSt'}$ and the $\var{accnt'}$ do not come from valid UTxO or
+the $\var{utxoSt'}$ and the $\var{acnt'}$ do not come from valid UTxO or
 accounts transitions in the antecedent. We simply define the consequent
 transition using these directly (instead of listing all the fields in both
 states in the consequent transition). It is done this way here
 for ease of reading.
 
 %%
-%% Figure - New Proto Consts Rule
+%% Figure - New Proto Param Rule
 %%
 \begin{figure}[htb]
   \begin{equation}\label{eq:new-pc-accepted}
-    \inference[New-Proto-Consts-Accepted]
+    \inference[New-Proto-Param-Accepted]
     {
-      \var{oblgOld} = \obligation{ppOld}{stkeys}{stpools}{slot} \\
+      \var{oblgCur} = \obligation{pp}{stkeys}{stpools}{slot} \\
       \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
       ~\\
-      \var{diff} = \var{oblgOld} - \var{oblgNew} \\
+      \var{diff} = \var{oblgCur} - \var{oblgNew} \\
       \var{reserves} + \var{diff} \geq 0\\
       ~\\
       \var{utxoSt'} =
@@ -1024,7 +946,7 @@ for ease of reading.
         }
       \right)
       &
-      \var{accnt'} =
+      \var{acnt'} =
       \left(
         {
           \begin{array}{r}
@@ -1039,7 +961,6 @@ for ease of reading.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{ppOld}\\
         \var{ppNew}\\
         \var{dstate}\\
         \var{pstate}\\
@@ -1048,14 +969,16 @@ for ease of reading.
       \left(
         \begin{array}{r}
           \var{utxoSt} \\
-          \var{accnt}
+          \var{acnt} \\
+          \var{pp}
         \end{array}
       \right)
-      \trans{newpc}{}
+      \trans{newpp}{}
       \left(
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
-          \varUpdate{accnt'} \\
+          \varUpdate{acnt'} \\
+          \varUpdate{\var{ppNew}} \\
         \end{array}
       \right)
     }
@@ -1064,18 +987,17 @@ for ease of reading.
   \nextdef
 
   \begin{equation}\label{eq:new-pc-denied}
-    \inference[New-Proto-Consts-Denied]
+    \inference[New-Proto-Param-Denied]
     {
-      \var{oblgOld} = \obligation{ppOld}{stkeys}{stpools}{slot} \\
+      \var{oblgCur} = \obligation{pp}{stkeys}{stpools}{slot} \\
       \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
       ~\\
-      \var{diff} = \var{oblgOld} - \var{oblgNew} \\
+      \var{diff} = \var{oblgCur} - \var{oblgNew} \\
       \var{reserves} + \var{diff} < 0\\
     }
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{ppOld}\\
         \var{ppNew}\\
         \var{dstate}\\
         \var{pstate}\\
@@ -1084,30 +1006,35 @@ for ease of reading.
       \left(
         \begin{array}{r}
           \var{utxoSt} \\
-          \var{accnt}
+          \var{acnt} \\
+          \var{pp}
         \end{array}
       \right)
-      \trans{newpc}{}
+      \trans{newpp}{}
       \left(
         \begin{array}{rcl}
           \var{utxoSt} \\
-          \var{accnt}
+          \var{acnt} \\
+          \var{pp}
         \end{array}
       \right)
     }
   \end{equation}
-  \caption{New Proto Consts Inference Rule}
-  \label{fig:rules:new-proto-consts}
+  \caption{New Proto Param Inference Rule}
+  \label{fig:rules:new-proto-param}
 \end{figure}
+
+\clearpage
 
 \subsection{Complete Epoch Boundary Transition}
 \label{sec:total-epoch}
 
-Finally, it is possible to define the complete epoch boundary transition type.
-In the environment of this transition, we have the slot number, blocks made
-this epoch, and both the old and the new protocol parameters. The state is
-made up of the accounting state, the UTxO, the delegation state and the
-pool state.
+Finally, it is possible to define the complete epoch boundary transition type,
+which is defined in Figure~\ref{fig:ts-types:epoch}.
+In the environment of this transition, we have the slot number, potentially new
+protocol parameters, and the blocks made this epoch.  The state is made up of the
+the UTxO state, the accounting state, the delegation state, the pool state, and
+the current protocol parameters.
 
 %%
 %% Figure - Epoch Defs
@@ -1119,7 +1046,6 @@ pool state.
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{ppOld} & \PParams & \text{old protocol parameters}\\
         \var{ppNew} & \PParams & \text{new protocol parameters}\\
         \var{blocks} & \HashKey \mapsto \N & \text{blocks made in the epoch}\\
       \end{array}
@@ -1132,9 +1058,10 @@ pool state.
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{utxoSt} & \UTxOState & \text{utxo state}\\
-        \var{accnt} & \Accnt & \text{accounting}\\
+        \var{acnt} & \Acnt & \text{accounting}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
+        \var{pp} & \PParams & \text{current protocol parameters}\\
       \end{array}
     \right)
   \end{equation*}
@@ -1151,11 +1078,8 @@ pool state.
 \end{figure}
 
 
-The epoch transition rule is a composition of all the state transition rules
-we have defined above. That is, whenever the UTXOEP, ACCNT, POOLCLEAN, and
-NEWPC are all valid transitions between their respective pairs of sets of
-state variables, the total transition epoch boundary ledger state transition
-is a composition of these four rules in that order.
+The epoch transition rule is a composition of all the state transition rules we have defined above.
+It calls $\mathsf{ACNT}$, $\mathsf{POOLREAP}$, and $\mathsf{NEWPP}$ in sequence.
 
 Note that the slot number used as \textit{current slot number}
 for the epoch boundary calculations where a slot number is required is set to
@@ -1171,7 +1095,7 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{l}
           \var{slot}\\
-          \var{ppOld}\\
+          \var{pp}\\
           \var{blocks}\\
         \end{array}
       }
@@ -1179,18 +1103,18 @@ be the \textit{last slot of the epoch before the boundary}.
       \left(
         {
           \begin{array}{r}
-            \var{accnt} \\
+            \var{acnt} \\
             \var{dstate} \\
             \var{pstate} \\
             \var{utxoSt} \\
           \end{array}
         }
       \right)
-      \trans{accnt}{}
+      \trans{acnt}{}
       \left(
       {
         \begin{array}{rcl}
-          \var{accnt'} \\
+          \var{acnt'} \\
           \var{dstate'} \\
           \var{pstate'} \\
           \var{utxoSt'} \\
@@ -1207,14 +1131,18 @@ be the \textit{last slot of the epoch before the boundary}.
       \left(
         {
           \begin{array}{r}
+            \var{acnt'} \\
+            \var{dstate'} \\
             \var{pstate'} \\
           \end{array}
         }
       \right)
-      \trans{poolclean}{}
+      \trans{poolreap}{}
       \left(
       {
         \begin{array}{rcl}
+            \var{acnt''} \\
+            \var{dstate''} \\
             \var{pstate''} \\
         \end{array}
       }
@@ -1223,7 +1151,6 @@ be the \textit{last slot of the epoch before the boundary}.
       {
         \begin{array}{l}
           \var{slot}\\
-          \var{ppOld}\\
           \var{ppNew}\\
           \var{dstate'}\\
           \var{pstate''}\\
@@ -1234,16 +1161,18 @@ be the \textit{last slot of the epoch before the boundary}.
         {
           \begin{array}{r}
             \var{utxoSt'} \\
-            \var{accnt'} \\
+            \var{acnt''} \\
+            \var{pp}\\
           \end{array}
         }
       \right)
-      \trans{newpc}{}
+      \trans{newpp}{}
       \left(
       {
         \begin{array}{rcl}
             \var{utxoSt''} \\
-            \var{accnt''} \\
+            \var{acnt'''} \\
+            \var{pp'}\\
         \end{array}
       }
       \right)
@@ -1251,7 +1180,6 @@ be the \textit{last slot of the epoch before the boundary}.
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{ppOld}\\
         \var{ppNew}\\
         \var{blocks}\\
       \end{array}
@@ -1259,18 +1187,20 @@ be the \textit{last slot of the epoch before the boundary}.
       \left(
       \begin{array}{r}
         \var{utxoSt} \\
-        \var{accnt} \\
+        \var{acnt} \\
         \var{dstate} \\
-        \var{pstate}
+        \var{pstate} \\
+        \var{pp} \\
       \end{array}
       \right)
       \trans{epoch}{}
       \left(
       \begin{array}{rcl}
         \varUpdate{\var{utxoSt''}} \\
-        \varUpdate{\var{accnt''}} \\
-        \varUpdate{\var{dstate'}} \\
-        \varUpdate{\var{pstate''}}
+        \varUpdate{\var{acnt'''}} \\
+        \varUpdate{\var{dstate''}} \\
+        \varUpdate{\var{pstate''}} \\
+        \varUpdate{\var{pp'}}
       \end{array}
       \right)
     }
