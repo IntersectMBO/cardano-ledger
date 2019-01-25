@@ -29,6 +29,8 @@ prop_Monotonic constrain f x y =
     then f x <= f y
     else f x > f y
 
+-- | Normalizes the integers, return a pair of integers, both non-negative and
+-- fst <= snd.
 normalizeInts :: Integer -> Integer -> (Integer, Integer)
 normalizeInts x y = (x'', y'')
     where x' = abs x
@@ -67,7 +69,6 @@ prop_ExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
           (a'', b'') = normalizeInts a b
           result = (b'' % a'') *** (y'' % x'')
 
---prop_IdemPotent :: Integer -> Integer -> Property
 prop_IdemPotent :: Positive Rational -> Property
 prop_IdemPotent (Positive a) =
     a > 0 ==> (exp' $ ln' a) - a < eps
@@ -117,14 +118,13 @@ expdiffD x'' y'' a'' b'' =
       where e1 = (((fromIntegral b'' / fromIntegral a'') *** (1.0 / fromIntegral x'')) *** fromIntegral y'')
             e2 = (((fromIntegral b'' / fromIntegral a'') *** fromIntegral y'') *** (1.0/ fromIntegral x''))
 
-prop_DExpUnitInterval :: Integer -> Integer -> Integer -> Integer -> Property
-prop_DExpUnitInterval x y a b =
+prop_DExpUnitInterval :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_DExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
     a'' > 0 && x'' > 0 ==> result >= 0 && result <= 1
     where (x'', y'') = normalizeInts x y
           (a'', b'') = normalizeInts a b
           result = (b'' % a'') *** (y'' % x'')
 
---prop_DIdemPotent :: Integer -> Integer -> Property
 prop_DIdemPotent :: Positive Double -> Property
 prop_DIdemPotent (Positive a) =
     a > 0 ==> (exp' $ ln' a) - a < epsD
@@ -141,7 +141,7 @@ prop_DIdemPotent' (Positive a) (Positive b) =
 -- Fixed-point versions of properties  --
 -----------------------------------------
 
-type FixedPoint = FBV.FixedPoint256256
+type FixedPoint = FBV.FixedPoint512512
 
 instance Arbitrary FixedPoint where
     arbitrary = do
@@ -167,7 +167,7 @@ prop_FBVExpLaw (Positive x) (Positive y) (Positive a) (Positive b) =
 
 prop_FBVExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_FBVExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp' (a'/b' + x'/y') - (exp'(a'/b') * exp'(x'/y'))) < epsFBV) === True
+    ((elawFBV x' y' a' b') < epsFBV) === True
         where (b'', a'') = normalizeInts a b
               (y'', x'') = normalizeInts x y
               a' = fromIntegral a''
@@ -175,10 +175,19 @@ prop_FBVExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
               x' = fromIntegral x''
               y' = fromIntegral y''
 
+elawFBV :: FixedPoint -> FixedPoint -> FixedPoint -> FixedPoint -> FixedPoint
+elawFBV x' y' a' b' =
+    -- trace ("x' " ++ show x' ++ " y' " ++ show y' ++ " a' " ++ show a' ++ " b' " ++ show b') $
+    abs (exp1 - exp2)
+    where c = a'/b'
+          z = x'/y'
+          exp1 = exp' (c + z)
+          exp2 = (exp' c) * (exp' z)
+
 expdiffFBV :: Integer -> Integer -> Integer -> Integer -> FixedPoint
 expdiffFBV x'' y'' a'' b'' =
-    -- trace (show x'' ++ " "++ show y'' ++ " "
-    --     ++ show a'' ++ " " ++ show b'' ++ " e1: "
+    -- trace (" x'' " ++ show x'' ++ " y'' "++ show y'' ++ " a'' "
+    --     ++ show a'' ++ " b'' " ++ show b'' ++ " e1: "
     --     ++ show e1 ++ " e2: " ++ show e2) $
     abs(e1 - e2)
       where e1 = (((fromIntegral b'' / fromIntegral a'') *** (1.0 / fromIntegral x'')) *** fromIntegral y'')
@@ -191,7 +200,6 @@ prop_FBVExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
           (a'', b'') = normalizeInts a b
           result = (b'' % a'') *** (y'' % x'')
 
---prop_FBVIdemPotent :: Integer -> Integer -> Property
 prop_FBVIdemPotent :: FixedPoint -> Property
 prop_FBVIdemPotent a =
     a > 0 ==> (exp' $ ln' a) - a < epsFBV
@@ -202,6 +210,33 @@ prop_FBVIdemPotent' :: PosInt -> PosInt -> Property
 prop_FBVIdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFBV
     where (a'', b'') = normalizeInts a b
+
+
+prop_lnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_lnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
+    ((ln' ((a'%b') *** (x'%y')) - (x'%y') * ln' (a'%b')) < eps) === True
+    where (b', a') = normalizeInts a b
+          (y', x') = normalizeInts x y
+
+prop_DlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_DlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
+    ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < epsD) === True
+    where (b', a') = normalizeInts a b
+          (y', x') = normalizeInts x y
+          a'' = fromIntegral a'
+          b'' = fromIntegral b'
+          x'' = fromIntegral x'
+          y'' = fromIntegral y'
+
+prop_FBVlnLaw :: Integer -> Integer -> Integer -> Integer -> Property
+prop_FBVlnLaw x y a b =
+    ((ln' ((a'' / b'') *** (x'' / y'')) - (x'' / y'') * ln' (a'' / b'')) < epsFBV) === True
+    where (b', a') = normalizeInts a b
+          (y', x') = normalizeInts x y
+          a'' = fromIntegral a'
+          b'' = fromIntegral b'
+          x'' = fromIntegral x'
+          y'' = fromIntegral y'
 
 main :: IO ()
 main = do
@@ -226,6 +261,8 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_DExpLaw)
   putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck (withMaxSuccess 1000 prop_DExpLaw')
+  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+  quickCheck (withMaxSuccess 1000 prop_DlnLaw)
   putStrLn ""
 
   putStrLn "----------------------"
@@ -247,11 +284,13 @@ main = do
   -- quickCheck (withMaxSuccess 40 prop_ExpLaw)
   putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck prop_ExpLaw'
+  -- putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+  -- quickCheck prop_lnLaw
   putStrLn ""
 
-  putStrLn "------------------------------"
-  putStrLn "-- Test of FixedPoint256256 --"
-  putStrLn "------------------------------"
+  putStrLn "------------------------"
+  putStrLn "-- Test of FixedPoint --"
+  putStrLn "------------------------"
   putStrLn "property exp is monotonic"
   quickCheck (withMaxSuccess 100 $ prop_FBVMonotonic (const True) exp')
   putStrLn "property ln is monotonic"
@@ -268,3 +307,5 @@ main = do
   quickCheck (withMaxSuccess 100 prop_FBVExpLaw)
   putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
   quickCheck (withMaxSuccess 100 prop_FBVExpLaw')
+  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+  quickCheck prop_FBVlnLaw
