@@ -31,6 +31,11 @@
 %%
 %% Types
 %%
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
 \newcommand{\Tx}{\type{Tx}}
 \newcommand{\TxBody}{\type{TxBody}}
 \newcommand{\Ix}{\type{Ix}}
@@ -466,7 +471,7 @@ Move explanations of indididual parameters explanation here.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{coin}
       & \Coin
-      & \mathbb{Z}
+      & \Z
       & \text{unit of value}
       \\
     \end{array}
@@ -488,7 +493,7 @@ Move explanations of indididual parameters explanation here.
         \var{movingAvgWeight} & \unitInterval & \text{moving average weight}\\
         \var{movingAvgExp} & \unitInterval & \text{moving average exponent}\\
         \var{E_{max}} & \Epoch & \text{epoch bound on pool retirement}\\
-        \var{n_{opt}} & \mathbb{N}^{+} & \text{desired number of pools}\\
+        \var{n_{opt}} & \Npos & \text{desired number of pools}\\
         \var{a_0} & \posReals & \text{pool influence}\\
         \tau & \unitInterval & \text{treasury expansion}\\
         \rho & \unitInterval & \text{monetary expansion}\\
