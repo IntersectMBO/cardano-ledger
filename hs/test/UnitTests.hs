@@ -15,7 +15,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Coin
-import           Delegation.Certificates (DCert (..))
+import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 import           Keys
 import           LedgerState
@@ -105,7 +105,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           utxoState'
           (stakeKeyRegistration
            & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-           & pstate . stPools .~ Map.fromList [(poolhk, Slot 0)]
+           & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           testPCs
           (fromIntegral $ length txs)
@@ -122,7 +122,7 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
           utxoState'
           (stakeKeyRegistration
            & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
-           & pstate . stPools .~  Map.fromList [(poolhk, Slot 0)]
+           & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
           testPCs
@@ -307,10 +307,10 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
       Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
-  & dstate . stKeys .~
+  & dstate . stKeys .~ (StakeKeys $
       Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
                    , (hashKey $ vKey bobStake, Slot 0)
-                   , (hashKey $ vKey stakePoolKey1, Slot 0)]
+                   , (hashKey $ vKey stakePoolKey1, Slot 0)])
   & dstate . ptrs .~
       Map.fromList [ (Ptr (Slot 0) 0 0, hashKey $ vKey aliceStake)
                    , (Ptr (Slot 0) 0 1, hashKey $ vKey bobStake)

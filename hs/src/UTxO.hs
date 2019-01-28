@@ -70,7 +70,7 @@ import           Keys
 import           PParams                 (PParams(..))
 import           Slot (Slot(..))
 
-import           Delegation.Certificates (Allocs, DCert (..), dvalue)
+import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
 import           Delegation.StakePool (poolPubKey)
 
 -- |A hash
@@ -189,8 +189,8 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-depositAmount :: PParams -> Allocs -> Tx -> Coin
-depositAmount pc stpools tx = foldl f (Coin 0) cs
+depositAmount :: PParams -> StakePools -> Tx -> Coin
+depositAmount pc (StakePools stpools) tx = foldl f (Coin 0) cs
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools

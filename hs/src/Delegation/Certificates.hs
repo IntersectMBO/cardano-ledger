@@ -1,12 +1,12 @@
 module Delegation.Certificates
   (
     DCert(..)
-  , Allocs
+  , StakeKeys(..)
+  , StakePools(..)
   , authDCert
   , getRequiredSigningKey
   , dvalue
   , refund
-  , certRefund
   , releasing
   , allocating
   , dretire
@@ -17,7 +17,7 @@ module Delegation.Certificates
 
 import           Coin (Coin(..))
 import           Keys
-import           Slot (Duration(..), Epoch(..), Slot(..), (-*))
+import           Slot (Duration(..), Epoch(..), Slot(..))
 import           PParams (PParams(..), decayRate, minRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
                                  poolDecayRate, intervalValue)
@@ -28,7 +28,10 @@ import qualified Data.Map as Map
 
 import Lens.Micro ((^.))
 
-type Allocs = Map.Map HashKey Slot
+newtype StakeKeys  = StakeKeys  (Map.Map HashKey Slot)
+    deriving (Show, Eq)
+newtype StakePools = StakePools (Map.Map HashKey Slot)
+    deriving (Show, Eq)
 
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.
@@ -88,15 +91,6 @@ allocating :: DCert -> Bool
 allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
-
--- | Refund for a certificate.
-certRefund :: PParams -> Allocs -> Slot -> DCert -> Coin
-certRefund pc allocs slot cert
-    | not $ releasing cert       = Coin 0
-    | hsk `Map.notMember` allocs = Coin 0
-    | otherwise                  = refund dval dmin lambda (slot -* (allocs Map.! hsk))
-    where hsk    = hashKey $ getRequiredSigningKey cert
-          (dval, dmin, lambda) = decayKey pc
 
 decayKey :: PParams -> (Coin, Rational, Rational)
 decayKey pc = (dval, dmin, lambdad)
