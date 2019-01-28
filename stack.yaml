@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/f2802079ba2c07c4d408e3c0aa000fc363792398/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/7f8544ae9e162b6664f07093227edb148f1c8a5b/snapshot.yaml
 
 packages:
   - .
@@ -12,11 +12,12 @@ packages:
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: db5deaa1780b3a0811aaa4b8941037c5efa17105
+    commit: 7f8544ae9e162b6664f07093227edb148f1c8a5b
     subdirs:
       - .
       - test
   - sequence-0.9.8
+  - tasty-hedgehog-0.2.0.0
 
 nix:
   shell-file: scripts/nix/stack-shell.nix
