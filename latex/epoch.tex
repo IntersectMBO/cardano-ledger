@@ -228,6 +228,38 @@ The map $\fun{poolRefunds}$ uses the pool decay parameters in $\PParams$
 to assign a refund to each pool key in the set of pools scheduled for retirement
 at the epoch boundary.
 
+%%
+%% Figure - Functions for Epoch Rules
+%%
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin
+      & \text{total possible refunds} \\
+      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
+      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
+        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})} \\
+      & + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
+        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+          & (\dval,~d_{\min},~\lambda_d) & \fun{decayKey}~\var{pp}\\
+          & (p_{\mathsf{val}},~p_{\min},~\lambda_p) & \fun{decayPool}~\var{pp}\\
+      \end{array}\\
+      \nextdef
+      & \fun{poolRefunds} \in \PParams \to (\HashKey \mapsto \Slot) \\
+      & ~~ \to \Slot \to (\HashKey \mapsto \Coin)
+      & \text{pool refunds} \\
+      & \poolRefunds{pp}{retiring}{cslot} = \\
+      & \bigcup_{\var{hk}\mapsto s\in\var{retiring}}
+          \var{hk}\mapsto( \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{s})} ) \\
+      &
+        \where (p_{\mathsf{val}},~p_{\min},~\lambda_p) = \fun{decayPool}~\var{pp}\\
+  \end{align*}
+  \caption{Functions used in Accounting}
+  \label{fig:functions:epoch}
+\end{figure}
+
 \subsection{Rewards Distribution}
 \label{sec:reward-dist}
 
