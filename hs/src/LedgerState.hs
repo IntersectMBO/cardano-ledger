@@ -29,7 +29,7 @@ module LedgerState
   , KeyPairs
   , UTxOState(..)
   , StakeShare(..)
-  , Distr(..)
+  , Avgs(..)
   , mkStakeShare
   -- * state transitions
   , asStateTransition
@@ -154,9 +154,9 @@ instance Monoid Validity where
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
--- | Distribution density function
-newtype Distr =
-  Distr (Map.Map HashKey StakeShare)
+-- | Performance moving averages
+newtype Avgs =
+  Avgs (Map.Map HashKey StakeShare)
         deriving (Show, Eq)
 
 -- | StakeShare type
@@ -167,7 +167,7 @@ newtype StakeShare =
 -- | Construct an optional probability value
 mkStakeShare :: Rational -> Maybe StakeShare
 mkStakeShare p =
-  if 0 <= p && p <= 1
+  if 0 <= p
     then Just $ StakeShare p
     else Nothing
 
@@ -190,7 +190,7 @@ data PState = PState
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map.Map HashKey Epoch
       -- |Moving average for key in epoch.
-    , _avgs        :: Distr
+    , _avgs        :: Avgs
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -218,7 +218,7 @@ emptyDState :: DState
 emptyDState = DState Map.empty Map.empty Map.empty Map.empty
 
 emptyPState :: PState
-emptyPState = PState Map.empty Map.empty Map.empty (Distr Map.empty)
+emptyPState = PState Map.empty Map.empty Map.empty (Avgs Map.empty)
 
 data UTxOState =
     UTxOState
@@ -598,8 +598,8 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedO
 ---------------------------------
 
 -- | Calulcate moving average
-movingAvg :: PParams -> HashKey -> Natural -> Rational -> Distr -> Rational
-movingAvg pc hk n expectedSlots (Distr averages) =
+movingAvg :: PParams -> HashKey -> Natural -> Rational -> Avgs -> Rational
+movingAvg pc hk n expectedSlots (Avgs averages) =
   let fraction = fromIntegral n / max expectedSlots 1
    in case Map.lookup hk averages of
         Nothing -> fraction
@@ -612,7 +612,7 @@ poolRew ::
   -> HashKey
   -> Natural
   -> Rational
-  -> Distr
+  -> Avgs
   -> Coin
   -> (Coin, Rational)
 poolRew pc hk n expectedSlots averages (Coin maxP) =
@@ -654,7 +654,7 @@ rewardOnePool ::
   -> HashKey
   -> StakePool
   -> Map.Map HashKey Coin
-  -> Distr
+  -> Avgs
   -> Coin
   -> (Map.Map RewardAcnt Coin, StakeShare)
 rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
@@ -688,10 +688,10 @@ reward ::
   -> Coin
   -> DWState
   -> [TxOut]
-  -> (Map.Map RewardAcnt Coin, Distr)
+  -> (Map.Map RewardAcnt Coin, Avgs)
 reward (Production prod) pc r dwstate outs =
   ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
-  , Distr $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
+  , Avgs $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
   where
     active =
       activeStake
@@ -1071,12 +1071,12 @@ poolCleanTransition = do
   TRC(slot, p, _) <- judgmentContext
   let currEpoch = epochFromSlot slot
   let retired = Map.keysSet $ Map.filter (== currEpoch) $ p ^. retiring
-  let Distr averages = p ^. avgs
+  let Avgs averages = p ^. avgs
   null retired ?! NoRetiredPOOLCLEAN
   pure $ p & stPools  %~ flip Map.withoutKeys retired
            & pParams  %~ flip Map.withoutKeys retired
            & retiring %~ flip Map.withoutKeys retired
-           & avgs     .~ Distr (Map.withoutKeys averages retired)
+           & avgs     .~ Avgs (Map.withoutKeys averages retired)
 
 data ACCNT
 instance STS ACCNT where
