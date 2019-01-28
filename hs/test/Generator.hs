@@ -45,7 +45,7 @@ import           LedgerState     (LedgerState (..),
 import           Slot
 import           UTxO
 import           PParams              (PParams(..), interval0, mkUnitInterval)
-import           Delegation.Certificates  (DCert(..))
+import           Delegation.Certificates  (DCert(..), StakeKeys(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
@@ -317,9 +317,10 @@ genStakePool keys = do
 
 genDelegation :: KeyPairs -> DWState -> Gen Delegation
 genDelegation keys d = do
-  poolKey      <- Gen.element (Map.keys $ d ^. dstate . stKeys)
+  poolKey      <- Gen.element $ Map.keys stKeys'
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
+       where (StakeKeys stKeys') = d ^. dstate . stKeys
 
 genDCertRegPool :: KeyPairs -> Gen DCert
 genDCertRegPool keys = RegPool <$> genStakePool keys

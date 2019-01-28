@@ -19,7 +19,8 @@ module EpochBoundary
   ) where
 
 import           Coin
-import           Delegation.Certificates (Allocs, decayKey, decayPool, refund)
+import           Delegation.Certificates (StakeKeys(..), StakePools(..),
+                                          decayKey, decayPool, refund)
 import           Keys
 import           PParams
 import           Slot
@@ -80,8 +81,8 @@ stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
 
 -- | Check whether a hash key has active stake, i.e., currently delegates to an
 -- active stake pool.
-isActive :: HashKey -> Allocs -> Map.Map HashKey HashKey -> Allocs -> Bool
-isActive vSk stakeKeys delegs stakePools =
+isActive :: HashKey -> StakeKeys -> Map.Map HashKey HashKey -> StakePools -> Bool
+isActive vSk (StakeKeys stakeKeys) delegs (StakePools stakePools) =
   vSk `Set.member` Map.keysSet stakeKeys && isJust vp && fromJust vp `Set.member`
   Map.keysSet stakePools
   where
@@ -92,9 +93,9 @@ isActive vSk stakeKeys delegs stakePools =
 activeStake ::
      [TxOut]
   -> Map.Map Ptr HashKey
-  -> Allocs
+  -> StakeKeys
   -> Map.Map HashKey HashKey
-  -> Allocs
+  -> StakePools
   -> Map.Map HashKey Coin
 activeStake outs pointers stakeKeys delegs stakePools =
   Map.fromList $ map (makePair . sumKey) $
@@ -109,15 +110,15 @@ activeStake outs pointers stakeKeys delegs stakePools =
     makePair (Stake (k, c)) = (k, c)
 
 -- | Calculate pool refunds
-poolRefunds :: PParams -> Allocs -> Slot -> Map.Map HashKey Coin
+poolRefunds :: PParams -> Map.Map HashKey Slot -> Slot -> Map.Map HashKey Coin
 poolRefunds pc retirees cslot =
   Map.map (\s -> refund pval pmin lambda (cslot -* s)) retirees
   where
     (pval, pmin, lambda) = decayPool pc
 
 -- | Calculate total possible refunds.
-obligation :: PParams -> Allocs -> Allocs -> Slot -> Coin
-obligation pc stakeKeys stakePools cslot =
+obligation :: PParams -> StakeKeys -> StakePools -> Slot -> Coin
+obligation pc (StakeKeys stakeKeys) (StakePools stakePools) cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
   sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
   where
