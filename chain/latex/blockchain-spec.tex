@@ -14,6 +14,7 @@
 \usepackage{mathtools}
 \usepackage{microtype}
 \usepackage[colon]{natbib}
+\usepackage[toc,page]{appendix}
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -59,7 +60,6 @@
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
-\newcommand{\nextdef}{\\[1em]}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
@@ -153,6 +153,11 @@
   In particular, a block validity definition is given, which is accompanied by
   small-step operational semantics inference rules.
 \end{abstract}
+
+\section*{List of Contributors}
+\label{acknowledgements}
+
+Damian Nadales, Yun Lu.
 
 \tableofcontents
 \listoffigures
@@ -371,10 +376,9 @@ an epoch
 To guard against the compromise of a minority of the genesis keys,
 we require that in the rolling window of the last $K$ blocks, the number of
 blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
-\cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from the
-  Ouroboros BFT paper draft where it denotes the number of Byzantine servers,
-  though it should be somehow related to it.} that will be picked in the range
-$1/5 \leq t \leq 1/4$.
+\cdot t$, where $t$ is a constant that will be picked in the range
+$1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
+value. See \ref{apdx:calculating-t} for the background on this value.
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -1039,6 +1043,50 @@ Figure~\ref{fig:rules:chain-extension}.
 \clearpage
 \bibliographystyle{plainnat}
 \bibliography{references}
+\begin{appendices}
+\section{Calculating the $t$ parameter}
+\label{apdx:calculating-t}
+
+We originally give the range of $t$ as between $\frac{1}{5}$ and $\frac{1}{4}$.
+The upper bound here is to reduce the possible number of malicious blocks; if
+two of the genesis keys are comprimised, the attackers may not be able to
+produce a longer chain than the honest participants. The lower bound is required
+to prevent a situation in which a chain produced under the initial Ouroboros
+setting produces a chain which, according to the new BFT semantics, is invalid.
+
+In order to determine the best value of $t$, we must consider the likelihood of
+such an invalid chain being produced by the old procedure of randomly selecting
+the slot leaders for each slot. Given the Cardano chain is still federated, the
+likelihood of this happening is the same for each of the 7 stakeholders, and we
+may model the number of selected slots within a $K$-slot window $X$ as a binomial
+distribution $X \sim \mathrm{B}\left(K, \frac{1}{7}\right)$.
+
+In each epoch of size $n$ blocks, there are $n-K+1$ such $K$-block windows.
+Boole's inequality gives us that the likelihood of exceeding the threshold in
+any one of these windows is bounded above by the sum of the likelihoods for each
+window. We may thus consider that the probability of a given stakeholder
+violating the threshold in an epoch to be bounded by $(n-K+1)\cdot P(X > t*K)$.
+Appealing to Boole's inequality again, we may multiply this by the number of
+epochs and the number of stakeholders to give a bound for the likelihood of
+generating an invalid chain.
+
+Figure \ref{fig:calculating-t} gives the bound on the likelihood of threshold
+violation for $t$ in our plausible range: from this we can see that the
+likelihood decreases to a negligible level around 0.21, and so we choose the
+value of $t=0.22$, giving an upper bound on the likelihood around $6e-10$.
+Increasing $t$ beyond this point gives no decrease in the likelihood of
+violation.
+
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[scale=0.5]{calculating-t.png}
+  \end{center}
+  \caption{Probability of generating an invalid chain for values of $t\in\left[
+      \frac{1}{4}, \frac{1}{5} \right]$.}
+  \label{fig:calculating-t}
+\end{figure}
+
+\end{appendices}
 \end{document}
 
 
