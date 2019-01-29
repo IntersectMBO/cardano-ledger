@@ -3,10 +3,6 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/f280
 packages:
   - .
   - test
-  - binary
-  - binary/test
-  - crypto
-  - crypto/test
   - specs/ledger/hs
   - specs/semantics/hs
 
@@ -16,6 +12,19 @@ extra-deps:
     subdirs:
       - .
       - test
+
+  - git: https://github.com/input-output-hk/cardano-chain
+    commit: c14a65370cfd70c2c9a77003072e20113894f6c9
+    subdirs:
+      - binary
+      - binary/test
+
+  - git: https://github.com/input-output-hk/cardano-chain
+    commit: c14a65370cfd70c2c9a77003072e20113894f6c9
+    subdirs:
+      - crypto
+      - crypto/test
+
   - sequence-0.9.8
 
 nix:

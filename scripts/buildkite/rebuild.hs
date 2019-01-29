@@ -37,15 +37,16 @@ main = do
 buildStep :: IO ExitCode
 buildStep = do
   echo "+++ Build and test"
-  build .&&. test
+  test "cardano-binary" .&&. test "cardano-crypto-wrapper" .&&. test
+    "cardano-chain"
  where
   cfg = ["--dump-logs", "--color", "always"]
   stackBuild args = run "stack" $ cfg ++ ["build", "--fast"] ++ args
   buildArgs    = ["--bench", "--no-run-benchmarks", "--no-haddock-deps"]
   buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
   build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
-  test         = stackBuild
-    ["--test", "--jobs", "1", "--ta", "--scenario=ContinuousIntegration"]
+  test pkg = stackBuild
+    [pkg, "--test", "--jobs", "1", "--ta", "--scenario=ContinuousIntegration"]
 
 -- buildkite agents have S3 creds installed, but under different names
 awsCreds :: IO ()
