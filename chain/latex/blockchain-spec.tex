@@ -331,51 +331,51 @@ There are several standard sets used in the document:
       }
       {\var{us'''}}
     }
-\end{equation*}
-\vspace{20pt}
-\begin{equation*}
-  \inference
-  { {\left(
-        \begin{array}{l}
-          \var{slot} \\
-          \var{e_n} \\
-          \var{dms}
-        \end{array}
-      \right)}
-    \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
-    &
-    {\left(
-        \begin{array}{l}
-          \var{slot} \\
-          \var{e_n} \\
-          \var{dms}
-        \end{array}
-      \right)}
-    \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
-  }
-  {
-    {\left(
-        \begin{array}{l}
-          \var{slot} \\
-          \var{e_n} \\
-          \var{dms}
-        \end{array}
-      \right)}
-    \vdash \var{us}
-    \trans{bupi}{
-      \left(
-        \begin{array}{l}
-          1 \\
-          \var{votes} \\
-          \var{end}
-        \end{array}
-      \right)
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+      &
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
     }
-    \var{us''}
-  }
-\end{equation*}
-\caption{Update interface processing rules}
-\label{fig:rules:bupi}
+    {
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us}
+      \trans{bupi}{
+        \left(
+          \begin{array}{l}
+            1 \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      \var{us''}
+    }
+  \end{equation*}
+  \caption{Update interface processing rules}
+  \label{fig:rules:bupi}
 \end{figure}
 
 \clearpage
