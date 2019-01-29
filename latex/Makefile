@@ -35,10 +35,10 @@ include gitinfo2.mk
 # missing file reference and interactively asking you for an alternative.
 
 $(DOCNAME).pdf: $(DOCNAME).tex gitHeadLocal.gin
-	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
+	latexmk -pdf -pdflatex="pdflatex -synctex=1 -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 watch: $(DOCNAME).tex
-	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
+	latexmk -pvc -pdf -pdflatex="pdflatex -synctex=1 -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 clean:
 	latexmk -CA
