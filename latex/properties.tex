@@ -392,6 +392,26 @@ use properties-based testing for validation in the executable spec.
 \end{todo}
 
 
+The two functions $\fun{r_{leader}}$ and $\fun{mReward}$ are closely related as
+they do split the reward between the pool leader and the members.
+
+\begin{property}[\textbf{Reward Splitting}]
+  \label{prop:reward-splitting}
+
+  The reward splitting is done via $\fun{r_{leader}}$ and $\fun{mReward}$, i.e.,
+  a split between the pool leader and the pool members using the pool cost $c$
+  and the pool margin $m$. Therefore the property relates the total reward
+  $\hat{f}$ to the split rewards in the following way:
+
+  \begin{multline*}
+    \forall m\in [0,1], c\in Coin \implies c + \floor*{(\hat{f} - c)\cdot (m +
+      (1 - m)) \cdot \frac{s}{\sigma}} + \sum_{j}\floor*{(\hat{f} -
+      c)\cdot(1-m)\cdot\frac{t_{j}}{\sigma}} \leq \hat{f}
+  \end{multline*}
+
+\end{property}
+
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "ledger-spec"
