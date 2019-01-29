@@ -284,9 +284,9 @@ There are several standard sets used in the document:
     \inference
     { {\left(
           \begin{array}{l}
-            \bslot{b} \\
+            \var{slot} \\
             \var{e_n} \\
-            \fun{dms} ~ \var{ds}
+            \var{dms}
           \end{array}
         \right)
       }
@@ -294,122 +294,88 @@ There are several standard sets used in the document:
       \\
       {\left(
           \begin{array}{l}
-            \bslot{b} \\
+            \var{slot} \\
             \var{e_n} \\
-            \fun{dms} ~ \var{ds}
+            \var{dms}
           \end{array}
         \right)}
       \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
       &
       {\left(
           \begin{array}{l}
-            \bslot{b} \\
+            \var{slot} \\
             \var{e_n} \\
-            \fun{dms} ~ \var{ds}
+            \var{dms}
           \end{array}
         \right)}
       \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
     }
     {
-      \left(
-        {\begin{array}{c}
-           \var{pps} \\
-           \var{e_n}
-         \end{array}}
-     \right)
-     \vdash
-     {
-       \left(
-         {\begin{array}{c}
-            \var{utxo} \\
-            \var{ds} \\
-            \var{us}
-          \end{array}}
-      \right)
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      {\var{us}}
+      \trans{upi}
+      {
+        \left(
+          \begin{array}{l}
+            \var{prop} \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      {\var{us'''}}
     }
-    \trans{upi}
-    {
+\end{equation*}
+\vspace{20pt}
+\begin{equation*}
+  \inference
+  { {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \var{dms}
+        \end{array}
+      \right)}
+    \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+    &
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \var{dms}
+        \end{array}
+      \right)}
+    \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
+  }
+  {
+    {\left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{e_n} \\
+          \var{dms}
+        \end{array}
+      \right)}
+    \vdash \var{us}
+    \trans{bupi}{
       \left(
         \begin{array}{l}
-          \var{prop} \\
+          1 \\
           \var{votes} \\
           \var{end}
         \end{array}
       \right)
     }
-    {
-      \left(
-        {\begin{array}{c}
-           \var{utxo'} \\
-           \var{ds'} \\
-           \var{us'''}
-         \end{array}}
-     \right)
-   }
- }
-\end{equation*}
-\vspace{20pt}
-\begin{equation*}
- \inference
- { {\left(
-       \begin{array}{l}
-         \bslot{b} \\
-         \var{e_n} \\
-         \fun{dms} ~ \var{ds}
-       \end{array}
-     \right)}
-   \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
-   &
-   {\left(
-       \begin{array}{l}
-         \bslot{b} \\
-         \var{e_n} \\
-         \fun{dms} ~ \var{ds}
-       \end{array}
-     \right)}
-   \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
- }
- {
-   \left(
-     {\begin{array}{c}
-        \var{pps} \\
-        \var{e_n}
-      \end{array}}
-  \right)
-  \vdash
-  {
-    \left(
-      {\begin{array}{c}
-         \var{utxo} \\
-         \var{ds} \\
-         \var{us}
-       \end{array}}
-   \right)
- }
- \trans{upi}
- {
-   \left(
-     \begin{array}{l}
-       1 \\
-       \var{votes} \\
-       \var{end}
-     \end{array}
-   \right)
- }
- {
-   \left(
-     {\begin{array}{c}
-        \var{utxo'} \\
-        \var{ds'} \\
-        \var{us''}
-      \end{array}}
-  \right)
-}
-}
-
+    \var{us''}
+  }
 \end{equation*}
 \caption{Update interface processing rules}
-\label{fig:rules:bbody}
+\label{fig:rules:bupi}
 \end{figure}
 
 \clearpage
@@ -970,7 +936,7 @@ of block bodies.
       {\left(
           \begin{array}{l}
             \dom{(\fun{dms}~ ds)} \\
-            (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+            \var{e_n} \\
             \bslot{b} \\
             \fun{pps} ~  us \\
           \end{array}
