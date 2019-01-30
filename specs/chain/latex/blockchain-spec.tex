@@ -241,6 +241,150 @@ There are several standard sets used in the document:
   $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
 \end{description}
 
+\section{Update interface}
+
+\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
+\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
+\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
+\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
+
+\newcommand{\Bupisig}{\type{BUPISig}}
+% Imported definitions
+
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+\newcommand{\UProp}{\type{UProp}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+
+\begin{figure}[ht]
+  \emph{Update interface signals}
+  \begin{equation*}
+    \Bupisig =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{mprop} & \UProp^{?} & \text{Possible update proposal}\\
+        \var{votes} & \seqof{\Vote} & \text{Votes for update proposals}\\
+        \var{end} & (\VKey \times \ProtVer) & \text{Protocol version endorsment}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \caption{Update interface processing types and functions}
+  \label{fig:defs:bupi}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Update interface processing transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bupi}{\_} \var{\_} \subseteq
+    \powerset (\UPIEnv \times \UPIState \times \Bupisig \times \UPIState)
+  \end{equation*}
+  \caption{Update interface processing transition-system types}
+  \label{fig:ts-types:bupi}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)
+      }
+      \vdash \var{us} \trans{upireg}{\var{prop}} \var{us'}
+      \\
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
+      &
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
+    }
+    {
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      {\var{us}}
+      \trans{bupi}
+      {
+        \left(
+          \begin{array}{l}
+            \var{prop} \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      {\var{us'''}}
+    }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+      &
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
+    }
+    {
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us}
+      \trans{bupi}{
+        \left(
+          \begin{array}{l}
+            1 \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      \var{us''}
+    }
+  \end{equation*}
+  \caption{Update interface processing rules}
+  \label{fig:rules:bupi}
+\end{figure}
+
+\clearpage
+
 \section{Epoch transitions}
 
 \newcommand{\Epoch}{\type{Epoch}}
@@ -250,9 +394,6 @@ There are several standard sets used in the document:
 
 \newcommand{\sepochname}{sEpoch}
 \newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
-
-% Imported definitions
-\newcommand{\UPIState}{\type{UPIState}}
 
 This section should cover:
 \begin{itemize}
@@ -514,10 +655,6 @@ value. See \ref{apdx:calculating-t} for the background on this value.
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
-\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
-\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
-\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
-\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
 \newcommand{\maxblocksize}{\pp{maxBlockSize}}
 \newcommand{\maxheadersize}{\pp{maxHeaderSize}}
@@ -526,11 +663,6 @@ value. See \ref{apdx:calculating-t} for the background on this value.
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
-
-\newcommand{\UPIEnv}{\type{UPIEnv}}
-\newcommand{\UProp}{\type{UProp}}
-\newcommand{\Vote}{\ensuremath{\type{Vote}}}
-\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
 We delineate here between processing the header and body of a block. It's useful
 to make this distinction since we may process headers ahead of the
@@ -689,19 +821,19 @@ of block bodies.
           bIx \\
         \end{array}}
     \right)
-     \trans{bhead}{\var{bh}}
-     \left(
-       {\begin{array}{c}
-          \bhhash{bh} \\
-          \var{us'} \\
-          \signmapname' \\
-          bIx + 1 \\
-        \end{array}}
-    \right)
-   }
- \end{equation*}
- \caption{Block header processing rules}
- \label{fig:rules:bhead}
+    \trans{bhead}{\var{bh}}
+    \left(
+      {\begin{array}{c}
+         \bhhash{bh} \\
+         \var{us'} \\
+         \signmapname' \\
+         bIx + 1 \\
+       \end{array}}
+   \right)
+ }
+\end{equation*}
+\caption{Block header processing rules}
+\label{fig:rules:bhead}
 \end{figure}
 
 \clearpage
@@ -723,7 +855,7 @@ of block bodies.
     \begin{array}{r@{~\in~}lr}
       \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
       \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
-      & \text{block certificates} \\
+                                         & \text{block certificates} \\
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{Block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
@@ -795,29 +927,20 @@ of block bodies.
             \fun{dms} ~ \var{ds}
           \end{array}
         \right)}
-      \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
+      \vdash \var{us} \trans{bupi}{
+        {\left(
+            \begin{array}{l}
+              \bupdprop{b} \\
+              \bupdvotes{b} \\
+              \bendorsment{b}
+            \end{array}
+          \right)}
+      } \var{us'}
       \\
       {\left(
           \begin{array}{l}
-            \bslot{b} \\
-            \var{e_n} \\
-            \fun{dms} ~ \var{ds}
-          \end{array}
-        \right)}
-      \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
-      &
-      {\left(
-          \begin{array}{l}
-            \bslot{b} \\
-            \var{e_n} \\
-            \fun{dms} ~ \var{ds}
-          \end{array}
-        \right)}
-      \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''} \\
-      {\left(
-          \begin{array}{l}
             \dom{(\fun{dms}~ ds)} \\
-            (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+            \var{e_n} \\
             \bslot{b} \\
             \fun{pps} ~  us \\
           \end{array}
@@ -848,7 +971,7 @@ of block bodies.
         {\begin{array}{c}
            \var{utxo'} \\
            \var{ds'} \\
-           \var{us'''}
+           \var{us'}
          \end{array}}
      \right)
    }
@@ -961,49 +1084,49 @@ Figure~\ref{fig:rules:chain-extension}.
       \right)}
     \vdash
     \left(
-       {\begin{array}{c}
-          \var{h} \\
-          \var{us} \\
-          \signmapname \\
-          bIx \\
-        \end{array}}
-    \right)
-    \trans{bhead}{\bhead{b}}
+      {\begin{array}{c}
+         \var{h} \\
+         \var{us} \\
+         \signmapname \\
+         bIx \\
+       \end{array}}
+   \right)
+   \trans{bhead}{\bhead{b}}
+   \left(
+     {\begin{array}{c}
+        \var{h'} \\
+        \var{us'} \\
+        \signmapname' \\
+        bIx' \\
+      \end{array}}
+  \right)
+  \\
+  {\left(
+      \begin{array}{l}
+        \fun{pps} ~  us' \\
+        \sepoch{(\bslot{b})} \\
+      \end{array}
+    \right)}
+  \vdash
+  {
     \left(
-       {\begin{array}{c}
-          \var{h'} \\
-          \var{us'} \\
-          \signmapname' \\
-          bIx' \\
-        \end{array}}
-    \right)
-    \\
-    {\left(
-        \begin{array}{l}
-          \fun{pps} ~  us' \\
-          \sepoch{(\bslot{b})} \\
-        \end{array}
-      \right)}
-    \vdash
-    {
-      \left(
-        {\begin{array}{c}
-           \var{utxo} \\
-           \var{ds} \\
-           \var{us'}
-         \end{array}}
-     \right)
-   }
-   \trans{bbody}{b}
-   {
-     \left(
-       {\begin{array}{c}
-          \var{utxo'} \\
-          \var{ds'} \\
-          \var{us''}
-        \end{array}}
-    \right)
-  }
+      {\begin{array}{c}
+         \var{utxo} \\
+         \var{ds} \\
+         \var{us'}
+       \end{array}}
+   \right)
+ }
+ \trans{bbody}{b}
+ {
+   \left(
+     {\begin{array}{c}
+        \var{utxo'} \\
+        \var{ds'} \\
+        \var{us''}
+      \end{array}}
+  \right)
+}
 }
 {
   \left(
