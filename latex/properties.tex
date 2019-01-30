@@ -371,6 +371,21 @@ use properties-based testing for validation in the executable spec.
   \end{multline*}
 \end{property}
 
+\begin{property}[\textbf{Maximal Pool Reward}]
+  \label{prop:maximal-pool-reward}
+
+  The maximal pool reward is the expected maximal reward paid to a stake
+  pool. The sum of all these rewards cannot exceed the total available reward,
+  let $Pool$ be the set of active stake pools:
+
+  \begin{equation*}
+    \forall R \in Coin:\sum_{p \in Pools} \floor*{\frac{R}{1+p_{a_{0}}}\cdot
+      \left(
+        p_{\sigma'}+p_{p'}\cdotp_{a_{0}}\cdot\frac{p_{\sigma'}-p_{p'}\cdot\frac{p_{z_{0}}-p_{\sigma'}}{p_{z_{0}}}}{p_{z_{0}}}
+      \right)}\leq R
+  \end{equation*}
+\end{property}
+
 \begin{property}[\textbf{Actual Reward}]
   \label{prop:actual-reward}
 
