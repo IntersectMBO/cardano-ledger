@@ -11,9 +11,6 @@ steps:
       - "rm -rf /build/cardano-chain"
       - "cp -R . /build/cardano-chain"
       - "cd /build/cardano-chain"
-      - "git lfs install"
-      - "git lfs pull"
-      - "ls -lh test/resources/epochs/"
       - "nix-build scripts/buildkite -o stack-rebuild"
       - "./stack-rebuild"
     agents:
