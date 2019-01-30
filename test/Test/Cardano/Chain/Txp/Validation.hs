@@ -32,9 +32,9 @@ import Cardano.Chain.Slotting (SlotId)
 import Cardano.Chain.Txp
   (UTxO, UTxOValidationError, aUnTxPayload, genesisUtxo, updateUTxOWitness)
 import Cardano.Crypto (ProtocolMagicId, getProtocolMagicId)
+import Cardano.Mirror (mainnetEpochFiles)
 
 import Test.Options (TestScenario(..))
-import Test.Cardano.Chain.Epoch.File (getEpochFiles)
 
 
 -- | These tests perform transaction validation over mainnet epoch files
@@ -64,7 +64,7 @@ tests scenario = do
       QualityAssurance      -> identity
 
   -- Get a list of epoch files to perform validation on
-  files <- takeFiles <$> getEpochFiles
+  files <- takeFiles <$> mainnetEpochFiles
 
   -- Validate the transactions of each epoch file in a single 'Property' and
   -- check them all sequentially
