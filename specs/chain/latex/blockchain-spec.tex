@@ -14,6 +14,7 @@
 \usepackage{mathtools}
 \usepackage{microtype}
 \usepackage[colon]{natbib}
+\usepackage[toc,page]{appendix}
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -59,7 +60,6 @@
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
 \newcommand{\seqof}[1]{#1^{*}}
-\newcommand{\nextdef}{\\[1em]}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 
 \newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
@@ -154,6 +154,11 @@
   small-step operational semantics inference rules.
 \end{abstract}
 
+\section*{List of Contributors}
+\label{acknowledgements}
+
+Damian Nadales, Yun Lu.
+
 \tableofcontents
 \listoffigures
 
@@ -236,6 +241,150 @@ There are several standard sets used in the document:
   $\mathbb{N}$ and defined as $\mathbb{N} = \{0, 1, 2, \dots\}$.
 \end{description}
 
+\section{Update interface}
+
+\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
+\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
+\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
+\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
+
+\newcommand{\Bupisig}{\type{BUPISig}}
+% Imported definitions
+
+\newcommand{\UPIEnv}{\type{UPIEnv}}
+\newcommand{\UPIState}{\type{UPIState}}
+\newcommand{\UProp}{\type{UProp}}
+\newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+
+\begin{figure}[ht]
+  \emph{Update interface signals}
+  \begin{equation*}
+    \Bupisig =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{mprop} & \UProp^{?} & \text{Possible update proposal}\\
+        \var{votes} & \seqof{\Vote} & \text{Votes for update proposals}\\
+        \var{end} & (\VKey \times \ProtVer) & \text{Protocol version endorsment}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \caption{Update interface processing types and functions}
+  \label{fig:defs:bupi}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Update interface processing transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bupi}{\_} \var{\_} \subseteq
+    \powerset (\UPIEnv \times \UPIState \times \Bupisig \times \UPIState)
+  \end{equation*}
+  \caption{Update interface processing transition-system types}
+  \label{fig:ts-types:bupi}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)
+      }
+      \vdash \var{us} \trans{upireg}{\var{prop}} \var{us'}
+      \\
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
+      &
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
+    }
+    {
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      {\var{us}}
+      \trans{bupi}
+      {
+        \left(
+          \begin{array}{l}
+            \var{prop} \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      {\var{us'''}}
+    }
+  \end{equation*}
+  \vspace{20pt}
+  \begin{equation*}
+    \inference
+    { {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+      &
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
+    }
+    {
+      {\left(
+          \begin{array}{l}
+            \var{slot} \\
+            \var{e_n} \\
+            \var{dms}
+          \end{array}
+        \right)}
+      \vdash \var{us}
+      \trans{bupi}{
+        \left(
+          \begin{array}{l}
+            1 \\
+            \var{votes} \\
+            \var{end}
+          \end{array}
+        \right)
+      }
+      \var{us''}
+    }
+  \end{equation*}
+  \caption{Update interface processing rules}
+  \label{fig:rules:bupi}
+\end{figure}
+
+\clearpage
+
 \section{Epoch transitions}
 
 \newcommand{\Epoch}{\type{Epoch}}
@@ -245,9 +394,6 @@ There are several standard sets used in the document:
 
 \newcommand{\sepochname}{sEpoch}
 \newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
-
-% Imported definitions
-\newcommand{\UPIState}{\type{UPIState}}
 
 This section should cover:
 \begin{itemize}
@@ -371,10 +517,9 @@ an epoch
 To guard against the compromise of a minority of the genesis keys,
 we require that in the rolling window of the last $K$ blocks, the number of
 blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
-\cdot t$, where $t$ is a constant\footnote{This is not the same $t$ from the
-  Ouroboros BFT paper draft where it denotes the number of Byzantine servers,
-  though it should be somehow related to it.} that will be picked in the range
-$1/5 \leq t \leq 1/4$.
+\cdot t$, where $t$ is a constant that will be picked in the range
+$1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
+value. See \ref{apdx:calculating-t} for the background on this value.
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -510,10 +655,6 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
-\newcommand{\bupdprop}[1]{\fun{bUpdProp}\ #1}
-\newcommand{\bupdvotes}[1]{\fun{bUpdVotes}\ #1}
-\newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
-\newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
 \newcommand{\maxblocksize}{\pp{maxBlockSize}}
 \newcommand{\maxheadersize}{\pp{maxHeaderSize}}
@@ -522,11 +663,6 @@ $1/5 \leq t \leq 1/4$.
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
-
-\newcommand{\UPIEnv}{\type{UPIEnv}}
-\newcommand{\UProp}{\type{UProp}}
-\newcommand{\Vote}{\ensuremath{\type{Vote}}}
-\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
 We delineate here between processing the header and body of a block. It's useful
 to make this distinction since we may process headers ahead of the
@@ -685,19 +821,19 @@ of block bodies.
           bIx \\
         \end{array}}
     \right)
-     \trans{bhead}{\var{bh}}
-     \left(
-       {\begin{array}{c}
-          \bhhash{bh} \\
-          \var{us'} \\
-          \signmapname' \\
-          bIx + 1 \\
-        \end{array}}
-    \right)
-   }
- \end{equation*}
- \caption{Block header processing rules}
- \label{fig:rules:bhead}
+    \trans{bhead}{\var{bh}}
+    \left(
+      {\begin{array}{c}
+         \bhhash{bh} \\
+         \var{us'} \\
+         \signmapname' \\
+         bIx + 1 \\
+       \end{array}}
+   \right)
+ }
+\end{equation*}
+\caption{Block header processing rules}
+\label{fig:rules:bhead}
 \end{figure}
 
 \clearpage
@@ -719,7 +855,7 @@ of block bodies.
     \begin{array}{r@{~\in~}lr}
       \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
       \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
-      & \text{block certificates} \\
+                                         & \text{block certificates} \\
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{Block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
@@ -791,29 +927,20 @@ of block bodies.
             \fun{dms} ~ \var{ds}
           \end{array}
         \right)}
-      \vdash \var{us} \trans{upireg}{\bupdprop{b}} \var{us'}
+      \vdash \var{us} \trans{bupi}{
+        {\left(
+            \begin{array}{l}
+              \bupdprop{b} \\
+              \bupdvotes{b} \\
+              \bendorsment{b}
+            \end{array}
+          \right)}
+      } \var{us'}
       \\
       {\left(
           \begin{array}{l}
-            \bslot{b} \\
-            \var{e_n} \\
-            \fun{dms} ~ \var{ds}
-          \end{array}
-        \right)}
-      \vdash \var{us'} \trans{upivotes}{\bupdvotes{b}} \var{us''}
-      &
-      {\left(
-          \begin{array}{l}
-            \bslot{b} \\
-            \var{e_n} \\
-            \fun{dms} ~ \var{ds}
-          \end{array}
-        \right)}
-      \vdash \var{us''} \trans{upiend}{\bendorsment{b}} \var{us'''} \\
-      {\left(
-          \begin{array}{l}
             \dom{(\fun{dms}~ ds)} \\
-            (\fun{\sepochname} \cdot \fun{\bslotname}) ~ b \\
+            \var{e_n} \\
             \bslot{b} \\
             \fun{pps} ~  us \\
           \end{array}
@@ -844,7 +971,7 @@ of block bodies.
         {\begin{array}{c}
            \var{utxo'} \\
            \var{ds'} \\
-           \var{us'''}
+           \var{us'}
          \end{array}}
      \right)
    }
@@ -957,49 +1084,49 @@ Figure~\ref{fig:rules:chain-extension}.
       \right)}
     \vdash
     \left(
-       {\begin{array}{c}
-          \var{h} \\
-          \var{us} \\
-          \signmapname \\
-          bIx \\
-        \end{array}}
-    \right)
-    \trans{bhead}{\bhead{b}}
+      {\begin{array}{c}
+         \var{h} \\
+         \var{us} \\
+         \signmapname \\
+         bIx \\
+       \end{array}}
+   \right)
+   \trans{bhead}{\bhead{b}}
+   \left(
+     {\begin{array}{c}
+        \var{h'} \\
+        \var{us'} \\
+        \signmapname' \\
+        bIx' \\
+      \end{array}}
+  \right)
+  \\
+  {\left(
+      \begin{array}{l}
+        \fun{pps} ~  us' \\
+        \sepoch{(\bslot{b})} \\
+      \end{array}
+    \right)}
+  \vdash
+  {
     \left(
-       {\begin{array}{c}
-          \var{h'} \\
-          \var{us'} \\
-          \signmapname' \\
-          bIx' \\
-        \end{array}}
-    \right)
-    \\
-    {\left(
-        \begin{array}{l}
-          \fun{pps} ~  us' \\
-          \sepoch{(\bslot{b})} \\
-        \end{array}
-      \right)}
-    \vdash
-    {
-      \left(
-        {\begin{array}{c}
-           \var{utxo} \\
-           \var{ds} \\
-           \var{us'}
-         \end{array}}
-     \right)
-   }
-   \trans{bbody}{b}
-   {
-     \left(
-       {\begin{array}{c}
-          \var{utxo'} \\
-          \var{ds'} \\
-          \var{us''}
-        \end{array}}
-    \right)
-  }
+      {\begin{array}{c}
+         \var{utxo} \\
+         \var{ds} \\
+         \var{us'}
+       \end{array}}
+   \right)
+ }
+ \trans{bbody}{b}
+ {
+   \left(
+     {\begin{array}{c}
+        \var{utxo'} \\
+        \var{ds'} \\
+        \var{us''}
+      \end{array}}
+  \right)
+}
 }
 {
   \left(
@@ -1039,6 +1166,50 @@ Figure~\ref{fig:rules:chain-extension}.
 \clearpage
 \bibliographystyle{plainnat}
 \bibliography{references}
+\begin{appendices}
+\section{Calculating the $t$ parameter}
+\label{apdx:calculating-t}
+
+We originally give the range of $t$ as between $\frac{1}{5}$ and $\frac{1}{4}$.
+The upper bound here is to reduce the possible number of malicious blocks; if
+two of the genesis keys are comprimised, the attackers may not be able to
+produce a longer chain than the honest participants. The lower bound is required
+to prevent a situation in which a chain produced under the initial Ouroboros
+setting produces a chain which, according to the new BFT semantics, is invalid.
+
+In order to determine the best value of $t$, we must consider the likelihood of
+such an invalid chain being produced by the old procedure of randomly selecting
+the slot leaders for each slot. Given the Cardano chain is still federated, the
+likelihood of this happening is the same for each of the 7 stakeholders, and we
+may model the number of selected slots within a $K$-slot window $X$ as a binomial
+distribution $X \sim \mathrm{B}\left(K, \frac{1}{7}\right)$.
+
+In each epoch of size $n$ blocks, there are $n-K+1$ such $K$-block windows.
+Boole's inequality gives us that the likelihood of exceeding the threshold in
+any one of these windows is bounded above by the sum of the likelihoods for each
+window. We may thus consider that the probability of a given stakeholder
+violating the threshold in an epoch to be bounded by $(n-K+1)\cdot P(X > t*K)$.
+Appealing to Boole's inequality again, we may multiply this by the number of
+epochs and the number of stakeholders to give a bound for the likelihood of
+generating an invalid chain.
+
+Figure \ref{fig:calculating-t} gives the bound on the likelihood of threshold
+violation for $t$ in our plausible range: from this we can see that the
+likelihood decreases to a negligible level around $0.21$, and so we choose the
+value of $t=0.22$, giving an upper bound on the likelihood around $6e-10$.
+Increasing $t$ beyond this point gives no decrease in the likelihood of
+violation.
+
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[scale=0.5]{calculating-t.png}
+  \end{center}
+  \caption{Probability of generating an invalid chain for values of $t\in\left[
+      \frac{1}{4}, \frac{1}{5} \right]$.}
+  \label{fig:calculating-t}
+\end{figure}
+
+\end{appendices}
 \end{document}
 
 
