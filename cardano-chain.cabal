@@ -204,6 +204,7 @@ test-suite cardano-chain-test
                      , cardano-crypto
                      , cardano-crypto-test
                      , cardano-crypto-wrapper
+                     , cardano-mainnet-mirror
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers

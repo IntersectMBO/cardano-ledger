@@ -18,6 +18,7 @@ import qualified Data.Sequence as Seq
 import Data.String (fromString)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
+import System.FilePath (takeFileName)
 
 import Hedgehog
   ( Group(..)
@@ -53,8 +54,8 @@ import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), mkConfigFromFile)
 import Cardano.Chain.Slotting (SlotId)
 import Cardano.Crypto (PublicKey)
+import Cardano.Mirror (mainnetEpochFiles)
 
-import Test.Cardano.Chain.Epoch.File (getEpochFiles)
 import Test.Cardano.Crypto.Gen (genPublicKey)
 import Test.Options (TestScenario(..))
 
@@ -87,14 +88,15 @@ tests scenario = do
       QualityAssurance      -> identity
 
   -- Get a list of epoch files to perform validation on
-  files <- takeFiles <$> getEpochFiles
+  files <- takeFiles <$> mainnetEpochFiles
 
   -- Validate the blocks of each epoch file in a single 'Property' and check
   -- them all sequentially
   let
     properties :: [(PropertyName, Property)]
-    properties =
-      zip (fromString <$> files) (epochValid config cvsRef <$> files)
+    properties = zip
+      (fromString . takeFileName <$> files)
+      (epochValid config cvsRef <$> files)
   (&&)
     <$> checkSequential (Group "Test.Cardano.Chain.Block.Validation" properties)
     <*> checkParallel $$(discover)
