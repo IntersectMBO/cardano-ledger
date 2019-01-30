@@ -12,6 +12,10 @@ where
 
 data Queue a = MkQueue { inbox :: [a], outbox :: [a] }
 
+instance Show a => Show (Queue a) where
+  show (MkQueue i o) = (show $ o ++ reverse i)
+
+
 -- | Creates a new empty 'Queue'
 newQueue :: Queue a
 newQueue = MkQueue [] []
