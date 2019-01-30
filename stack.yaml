@@ -16,6 +16,22 @@ extra-deps:
     subdirs:
       - .
       - test
+
+  # - git: https://github.com/input-output-hk/cardano-chain
+  #   commit: c14a65370cfd70c2c9a77003072e20113894f6c9
+  #   subdirs:
+  #     - binary
+  #     - binary/test
+
+  # - git: https://github.com/input-output-hk/cardano-chain
+  #   commit: c14a65370cfd70c2c9a77003072e20113894f6c9
+  #   subdirs:
+  #     - crypto
+  #     - crypto/test
+
+  - git: https://github.com/input-output-hk/cardano-mainnet-mirror
+    commit: 74ca63f8ad6b47beba2f565c73592cede63ce4b5
+
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
 
