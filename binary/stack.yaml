@@ -12,5 +12,4 @@ extra-deps:
       - test
 
 nix:
-  packages:
-    - zlib
+  shell-file: ../scripts/nix/stack-shell.nix
