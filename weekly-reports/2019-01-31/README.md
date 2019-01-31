@@ -23,6 +23,7 @@ input-output-hk/fm-ledger-rules
 | [214](https://github.com/input-output-hk/fm-ledger-rules/pull/214) | Use `Avgs` instead of `Distr`, relax contraints to non-negative | | [mgudemann](https://github.com/mgudemann) | 2019-01-28 | 2019-01-28 | |
 | [215](https://github.com/input-output-hk/fm-ledger-rules/pull/215) | Add section on non-integral calculations to document | | [mgudemann](https://github.com/mgudemann) | 2019-01-28 | 2019-01-28 | |
 | [216](https://github.com/input-output-hk/fm-ledger-rules/pull/216) | Use synctex in ledger-spec pdf | | [mgudemann](https://github.com/mgudemann) | 2019-01-29 | 2019-01-29 | |
+| [218](https://github.com/input-output-hk/fm-ledger-rules/pull/218) | Properties on the calculation functions | | [mgudemann](https://github.com/mgudemann) | 2019-01-31 | 2019-01-31 | |
 
 # Lessons learned from last week
 
