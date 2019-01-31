@@ -40,7 +40,6 @@ transaction inputs are the empty set for the initial transaction. An element of
 
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
-    \label{eq:2}
     \forall l_{0},\ldots,l_{n} \in \ledgerState, l_{0} =
     \left(
       \begin{array}{c}
@@ -323,6 +322,127 @@ with a delegation transition of type $\DPoolReap$, there exist registered stake
 pools in $l$ which are associated to stake pool registration certificates and
 which are to be retired at the current epoch $\var{cepoch}$. In $l'$ all those
 stake pools are removed from the maps $stpools$ and $retiring$.
+
+
+\subsection{Properties of Numerical Calculations}
+\label{sec:prop-numer-calc}
+
+The numerical calculations for refunds and rewards calculation in
+(see Section~\ref{sec:epoch}) are also required to have certain properties. In
+particular we need to make sure that the functions that use non-integral
+arithmetic have properties which guarantee consistency of the system. Here, we
+state those properties and formulate them in a way that makes them possible to
+use properties-based testing for validation in the executable spec.
+
+\begin{property}[\textbf{Minimal Refund}]
+  \label{prop:minimal-refund}
+
+  The function $\fun{refund}$ takes a value, a minimal percentage, a decay
+  parameter and a duration. It must guarantee that the refunded amount is within
+  the minimal refund (off-by-one for rounding / floor) and the original value.
+
+  \begin{multline*}
+    \forall d_{val} \in \mathbb{N}, d_{min} \in [0,1], \lambda \in (0, \infty),
+    \delta \in \mathbb{N} \\
+    \implies \max(0,d_{val}\cdot d_{min} - 1) \leq \floor*{d_{val}\cdot(d_{min} +
+      (1-d_{min})\cdot e^{-\lambda\cdot\delta})} \leq d_{val}
+  \end{multline*}
+\end{property}
+
+
+\begin{property}[\textbf{Exponential Moving Average}]
+  \label{prop:exponential-moving-average}
+
+  The function $\fun{movingAvg}$ calculates the exponential moving average,
+  dividing the number of blocks created by the pool by the expected number of
+  slots the pool is elected leader (or 1 if the expected number is below 1). It
+  guarantees that the result is (i) non-negative and (ii) if a previous moving
+  average has already been calculated, the new moving average lies between the
+  minimum and maximum of the old and new calculated value. With
+  $current := \frac{n}{\max(\overline{N}, 1)}$ this is trivial for (i), for (ii)
+  it is
+
+  \begin{multline*}
+    \forall \alpha \in [0, 1], n \in \mathbb{N}, \overline{N} \in \Rnn, prev \in
+    \Rnn\\
+    \implies 0\leq \min(prev, current) \leq
+    \alpha\cdot current + (1 - \alpha)\cdot prev
+    \leq \max(prev, current)
+  \end{multline*}
+\end{property}
+
+\begin{property}[\textbf{Maximal Pool Reward}]
+  \label{prop:maximal-pool-reward}
+
+  The maximal pool reward is the expected maximal reward paid to a stake
+  pool. The sum of all these rewards cannot exceed the total available reward,
+  let $Pool$ be the set of active stake pools:
+
+  \begin{equation*}
+    \forall R \in Coin:\sum_{p \in Pools} \floor*{\frac{R}{1+p_{a_{0}}}\cdot
+      \left(
+        p_{\sigma'}+p_{p'}\cdotp_{a_{0}}\cdot\frac{p_{\sigma'}-p_{p'}\cdot\frac{p_{z_{0}}-p_{\sigma'}}{p_{z_{0}}}}{p_{z_{0}}}
+      \right)}\leq R
+  \end{equation*}
+\end{property}
+
+\begin{property}[\textbf{Actual Reward}]
+  \label{prop:actual-reward}
+
+  The actual reward for a stake pool in an epoch is calculated by the function
+  $\fun{poolReward}$. The actual reward per stake pool is non-negative and
+  bounded by the maximal reward for the stake pool, with $avg$ being the
+  calculated moving average of the stake pool and $maxP$ being the maximal
+  reward for the stake pool, we get:
+
+  \begin{equation*}
+    \forall \gamma \in [0,1] \implies 0\leq \floor*{avg^{\gamma}\cdot maxP} \leq maxP
+  \end{equation*}
+\end{property}
+
+\begin{todo}
+  The property~(\ref{prop:actual-reward}) requires that $avg \in [0,1]$, else
+  the actual reward can exceed the maximal reward. This is not true, we need to
+  take into account the rewards for all stake pools.
+\end{todo}
+
+
+The two functions $\fun{r_{leader}}$ and $\fun{mReward}$ are closely related as
+they do split the reward between the pool leader and the members.
+
+\begin{property}[\textbf{Reward Splitting}]
+  \label{prop:reward-splitting}
+
+  The reward splitting is done via $\fun{r_{leader}}$ and $\fun{mReward}$, i.e.,
+  a split between the pool leader and the pool members using the pool cost $c$
+  and the pool margin $m$. Therefore the property relates the total reward
+  $\hat{f}$ to the split rewards in the following way:
+
+  \begin{multline*}
+    \forall m\in [0,1], c\in Coin \implies c + \floor*{(\hat{f} - c)\cdot (m +
+      (1 - m)) \cdot \frac{s}{\sigma}} + \sum_{j}\floor*{(\hat{f} -
+      c)\cdot(1-m)\cdot\frac{t_{j}}{\sigma}} \leq \hat{f}
+  \end{multline*}
+
+\end{property}
+
+\begin{property}[\textbf{Accounting transition}]
+  \label{prop:accnt}
+
+  The $\fun{ACCNT}$ transition rule has the following properties in order to
+  ensure non-negative values:
+
+  \begin{itemize}
+  \item $obl \leq deposits$
+  \item $\forall \rho \in [0,1]: expansion = \floor*{\rho\cdot reserves} \leq
+    reserves$
+  \item $\forall \tau \in [0,1]: newTreasury = \floor*{\tau\cdot totalPool} \leq
+    totalPool$
+  \item $totalPool - newTreasury - paidRewards \geq 0$
+  \end{itemize}
+
+  where $paidRewards$ is the sum of rewards paid to the stake pool members.
+\end{property}
 
 %%% Local Variables:
 %%% mode: latex
