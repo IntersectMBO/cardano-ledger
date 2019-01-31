@@ -55,7 +55,13 @@ The following derived types are introduced:
     \item the pool cost.
     \item the pool margin.
     \item the pool pledge.
+    \item the pool reward account.
   \end{itemize}
+  The idea of pool owners is explained in Section 4.4.4 of \cite{delegation_design}.
+  The pool cost and margin indicate how much more of the rewards pool leaders
+  get than the members.
+  The pool pledge is explained in Section 5.1 of \cite{delegation_design}.
+  The pool reward account is where all pool rewards go.
 \end{itemize}
 
 Accessor functions for certificates and pool parameters are also defined, but
@@ -96,20 +102,17 @@ It does the following:
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{stkeys}
-      & \StakeKeys
+    \begin{array}{l@{\qquad=\qquad}lr}
+      \StakeKeys
       & \HashKey \mapsto \Slot
       & \text{registered stake keys} \\
       %
-      \var{stpools}
-      & \StakePools
+      \StakePools
       & \HashKey \mapsto \Slot
       & \text{registered stake pools} \\
       %
-      \var{poolParam}
-      & \PoolParam
-      & \powerset{\HashKey} \times \Coin \times \unitInterval \times \Coin
+      \PoolParam
+      & \powerset{\HashKey} \times \Coin \times \unitInterval \times \Coin \times \AddrRWD
       & \text{stake pool parameters} \\
     \end{array}
   \end{equation*}
@@ -147,6 +150,9 @@ It does the following:
     \\
     \fun{poolPledge} & \PoolParam \to \Coin
                      & \text{stake pool pledge}
+    \\
+    \fun{poolRAcnt} & \PoolParam \to \AddrRWD
+                     & \text{stake pool reward account}
     \\
   \end{array}
   \end{equation*}
