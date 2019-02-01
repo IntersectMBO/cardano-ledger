@@ -31,76 +31,57 @@ also include a mapping from active stake keys to rewards.
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
 
-In \cref{fig:delegation-definitons} we give the delegation primitives.
+In \cref{fig:delegation-defs} we give the delegation primitives.
 Here we introduce the following primitive datatypes used in delegation:
 
 \begin{itemize}
-\item reward addresses: different from base addresses introduced later
-\item indexes: this type is used to index certificates in a transaction,
-index of a transaction inside a slot, outputs inside a transaction,
-and inputs in a UTxO or a transaction
-\item epochs
-\item slot numbers
-\item duration: the difference between two slot numbers
-\item $\PoolParam$: constants found in a stake pool registration certificate
-(we must continue to keep track of these after registration is complete)
+\item $\DCertRegKey$: a stake key registration certificate.
+\item $\DCertDeRegKey$: a stake key de-registration certificate.
+\item $\DCertDeleg$: a stake key delegation certificate.
+\item $\DCertRegPool$: a stake pool registration certificate.
+\item $\DCertRetirePool$: a stake key retirement certificate.
+\item $\DCert$: any one of of the five certificate types above.
+\end{itemize}
+The following derived types are introduced:
+\begin{itemize}
+  \item $\type{StakeKeys}$ represents registered stake keys, and is represented by a finite
+    map from hashkeys to slot when it was registered.
+  \item$\type{StakePools}$ represents registered stake pools, and has the same type as
+    $\type{StakeKeys}$.
+\item $\PoolParam$ represents the parameters found in a stake pool registration certificate
+  that must be tracked:
+  \begin{itemize}
+    \item the pool owners.
+    \item the pool cost.
+    \item the pool margin.
+    \item the pool pledge.
+  \end{itemize}
 \end{itemize}
 
-The constant $\emax$ gives the number of epochs a stake pool will take to retire.
-The type $\DCert$ is a generic certificate type, which can be a registration,
-deregistration or delegation certificate for a key, or a registration/retirement
- certificate for a stake pool. It is denoted as disjoint union in the figure,
-one should, however, think of a term of this type as a term of a specific
-one of these five subtypes.
-
-Note that the reason for combining the different types of
-certificates into a common type is that it allows us to use that type to later
-define a single type for all
-ledger state transitions having to do with delegation (i.e. $\DState$
-transitions),
-and, in a very similarly
-way, a type for transitions describing stake pool-related ledger updates
-(i.e. $\PState$ transitions).
-
-The type $\StakeKeys$ represents individual key registrations and $\StakePools$
-represents stake pool registrations.
-They both store, as a finite maps, the hash key to which the resource is
-allocated, and the corresponding slot number in which this allocation
-(registration) was made. Here we also introduce the pointer structure
-$\Ptr$, which we will use to index stake keys based on
-when and by what transaction they were registered.
-
-A variable of this type consists of
-the slot number when transaction (which carried the key registration certificate)
-was processed, the index of the transaction inside that slot, and the index
-of the certificate inside the transaction (i.e.\ its position in the list of
-the transaction's certificates).
-
-The maps $\fun{hash}$, $\fun{addr_{rwd}}$, $\fun{author}$, $\fun{dpool}$,
-$\fun{poolParam}$,
-$\fun{retire}$, $\fun{epoch}$, and $\fun{slot}$ are all used to
-retrieve specific information about the origin type. The subtraction $\slotminus{}{}$
-of slots gives the number of slots in between (referred to here as
-$\Duration$ here by $\var{dur}$).
+Accessor functions for certificates and pool parameters are also defined, but
+only the $\cwitness{}$ accessor function needs explanation.
+It does the following:
+\begin{itemize}
+\item For a $\DCertRegKey$ certificate, $\cwitness{}$ returns the hashkey
+  of the key being registered.
+\item For a $\DCertDeRegKey$ certificate, $\cwitness{}$ returns the hashkey
+  of the key being de-registered.
+\item For a $\DCertDeleg$ certificate, $\cwitness{}$ returns the hashkey
+  of the key that is delegating (and not the key to which the stake in being delegated to).
+\item For a $\DCertRegPool$ certificate, $\cwitness{}$ returns the hashkey
+  of the key of the pool operator.
+\item For a $\DCertRetirePool$ certificate, $\cwitness{}$ returns the hashkey
+  of the key of the pool operator.
+\end{itemize}
 
 %%
 %% Figure - Delegation Definitions
 %%
-\begin{figure}
+\begin{figure}[htb]
   \emph{Abstract types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      dur & \Duration & \text{duration}\\
-      epoch & \Epoch & \text{epoch} \\
-      poolParam & \PoolParam & \text{stake pool parameters} \\
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Constants}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \slotsPer & \N & \text{slots per epoch} \\
     \end{array}
   \end{equation*}
   %
@@ -125,15 +106,20 @@ $\Duration$ here by $\var{dur}$).
       & \StakePools
       & \HashKey \mapsto \Slot
       & \text{registered stake pools} \\
+      %
+      \var{poolParam}
+      & \PoolParam
+      & \powerset{\HashKey} \times \Coin \times \unitInterval \times \Coin
+      & \text{stake pool parameters} \\
     \end{array}
   \end{equation*}
   %
-  \emph{Abstract functions}
+  \emph{Certificate Accessor functions}
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-  \fun{author} & \DCert \to \HashKey
-  & \text{certificate author}
+    \cwitness{} & \DCert \to \HashKey
+  & \text{certificate witness}
   \\
   \fun{dpool} & \DCertDeleg \to \HashKey
   & \text{pool being delegated to}
@@ -141,26 +127,32 @@ $\Duration$ here by $\var{dur}$).
   \fun{poolParam} & \DCertRegPool \to \PoolParam
   & \text{stake pool}
   \\
-  \fun{poolowners} & \PoolParam \to \powerset{\HashKey}
-  & \text{stake pool owners}
-  \\
   \fun{retire} & \DCertRetirePool \to \Epoch
   & \text{epoch of pool retirement}
-  \\
-  \fun{epoch} & \Slot \to \Epoch
-  & \text{epoch of a slot}
-  \\
-  \fun{slot} & \Epoch \to \Slot
-  & \text{first slot of an epoch}
-  \\
-    (\slotminus{}{}) & \Slot \to \Slot \to \Duration
-  & \text{duration between slots}
   \end{array}
   \end{equation*}
   %
+  \emph{Pool Parameter Accessor functions}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \fun{poolOwners} & \PoolParam \to \powerset{\HashKey}
+                     & \text{stake pool owners}
+    \\
+    \fun{poolCost} & \PoolParam \to \Coin
+                     & \text{stake pool cost}
+    \\
+    \fun{poolMargin} & \PoolParam \to \unitInterval
+                     & \text{stake pool margin}
+    \\
+    \fun{poolPledge} & \PoolParam \to \Coin
+                     & \text{stake pool pledge}
+    \\
+  \end{array}
+  \end{equation*}
 
   \caption{Delegation Definitions}
-  \label{fig:delegation-definitons}
+  \label{fig:delegation-defs}
 \end{figure}
 
 \clearpage
@@ -171,65 +163,36 @@ $\Duration$ here by $\var{dur}$).
 
 In \cref{fig:delegation-transitions} we give the delegation and stake pool
 state transition types. We define two separate parts of the ledger state.
-The part of the ledger state keeping track of current delegations, $\DState$,
-consists of four variables. The first, $\var{stkeys}$, keeps track of individual
-stake key resource allocations.
 
-Note that for security, privacy, and usability reasons, the staking (delegating)
-key pair associated with an address must be different from its paying key pair.
-\textit{Every address} must have a paying key \textit{and} a stake key
-associated to it in order to participate in using the currency. Before the
-stake key is registered and delegates to an existing stake pool,
-the money at its address can be used for
-transactions, but does not accumulate additional stake (i.e. rewards/money).
-Once the stake key is registered and delegating, either the base address or
-the pointer address can be used to generate outputs
-in a transaction. However, it makes more sense to use the shorter pointer
-address at this point.
+\begin{itemize}
+  \item $\DState$ keeps track of the delegation state, consisting of:
+    \begin{itemize}
+      \item $\var{stkeys}$ tracks the registered stake keys. It consists of a finite
+        mapping from hashkeys to the slot of the registration.
+      \item $\var{rewards}$ stores the rewards accumulated by stake keys.
+        These are represented by a finite map from reward addresses to the accumulated rewards.
+      \item $\var{delegations}$ stores the delegation relation, mapping stake keys to the
+        pool to which is delegates.
+      \item $\var{ptrs}$ maps stake keys to the position of the registration certificate
+        in the blockchain. This is needed to lookup the stake hashkey of a pointer address.
+    \end{itemize}
+  \item $\PState$ keeps track of the stake pool information:
+    \begin{itemize}
+      \item $\var{stpools}$ tracks the registered stake pools. It consists of a finite
+        mapping from hashkeys to the slot of the registration.
+      \item $\var{poolParams}$ tracks the parameters associated with each stake pool, such as
+        their costs and margin.
+      \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
+        the epoch in which it will retire.
+      \item $\var{avgs}$ stores the latest value of the pool's performance moving average.  This
+        value quantifies the desirability of delegating to a given pool, based on past performance.
+    \end{itemize}
+\end{itemize}
 
-Note also that individual key registration
-and deregistration certificates contain no important data beyond a declaration
-of registration, and thus are not stored as part of the state variables once
-they have been processed.
-
-The second, $\var{rewards}$, stores the
-rewards accumulated by stake keys. These are represented by
-a finite
-map that matches addresses with the coin value of the rewards belonging to the
-key to which this address is associated. The third
-variable in $\DState$ stores currently registered delegations.
-Delegations ($\var{delegations}$) are also expressed by a finite map, which
-associates a stake key with the hash key of the pool to which it delegates.
-Finally, the finite map $\var{ptrs}$ variable stores,
-indexed by pointers,
-the stake keys associated with these pointers. This data is needed for the
-epoch boundary reward calculations, see Section~\ref{sec:epoch}.
-
-The ledger additionally keeps track of the stake pools in a separate state variable
-$\PState$.
-This state contains a list of registered stake pools, $\var{stpools}$.
-The stake pool certificates contain useful data that must be stored.
-However, they are stored in a
-separate variable in order to allow us to use a signle datatype for
-all deposit and refund calculations for both individual and pool key registrations
-and deregistrations or retirement. The variable that stores other necessary pool
-registration data is $\var{poolParams}$, and is a finite map that stores $\PoolParam$
-constants indexed by the hash keys to which they correspond.
-Finally, $\var{avgs}$ stores the latest value of the pool's moving average
-used in the reward calculation, see Section~\ref{sec:epoch}. This value
-quantifies, as a fraction, the desirability of delegating to the given pool, calculated
-based on past performance.
-
-The state $\PState$ also keeps track of
-stake pools scheduled to retire via the variable $\var{retiring}$,
-which associates
-a stake pool hash key with the epoch in which it is supposed to retire.
-
-The environment for state transitions for both $\DState$ and $\PState$ contains
-only the current slot number. The $\DState$ transition DELEG as well as
-the $\PState$ transition POOL are both triggered by a
-certificate (contained in a signal transaction).
-
+The environment for the state transition for $\DState$ contains the current slot number
+and the index for the current certificate pointer.
+The environment for the state transition for $\PState$ contains the current slot number
+and the protocol parameters.
 
 %%
 %% Figure - Delegation Transitions
@@ -302,80 +265,57 @@ certificate (contained in a signal transaction).
 \label{sec:deleg-rules}
 
 
-The rules for registering and delegating stake keys are given in
-\cref{fig:delegation-rules}. The preconditions for the registration of a stake
-key ensure that a given certificate $c$ is of the correct type
-(i.e. $\DCertRegKey$),
-and that the hash key associated with the author of the certificate is not
-already found in the current list of stake keys.
-
-In order to delegate to a stake pool, a stake key must first be registered.
-When registering a new stake key (the \cref{eq:deleg-reg} inference rule),
+The rules for registering and delegating stake keys are given in \cref{fig:delegation-rules}.
+Note that section 5.2 of \cite{delegation_design} describes how a wallet would help a user choose
+a stake pool, though these concerns are independent of the ledger rules.
 
 \begin{itemize}
-\item the key must be
-added to the set of stake keys ($\var{stkeys}$),
-\item the rewards for the address
-corresponding to that key set to 0,
-\item the pointers consisting of the current slot number, the
-index of the transaction in this slot, and the index of the certificate, is
-added to the $\var{pointers}$ finite map, mapping to the new key
-\item no new delegations are added
+  \item Stake key registration is handled by \cref{eq:deleg-reg}, since it contains the
+    precondition that the certificate has type $\DCertRegKey$.
+    All the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern of matching
+    on certificate type.
+
+    There is also a precondition on registration that the hashkey associated with the certificate
+    witness of the certificate is not already found in the current list of stake keys.
+
+    Registration causes the following state transformation:
+    \begin{itemize}
+      \item The key is added to the set of registered stake keys.
+      \item A reward account is created for this key, with a starting balance of zero.
+      \item The certificate pointer is mapped to the new stake key.
+    \end{itemize}
+
+  \item Stake key deregistration is handled by \cref{eq:deleg-dereg}.
+    There is a precondition that the key has been registered, and that the reward balance is zero.
+    Deregistration causes the following state transformation:
+    \begin{itemize}
+      \item The key is removed from the collection of registered keys.
+      \item The reward account is removed.
+      \item The key is removed from the delegation relation.
+      \item The certificate pointer is removed.
+    \end{itemize}
+
+  \item Stake key delegation is handled by \cref{eq:deleg-deleg}.
+    There is a precondition that the key has been registered.
+    Delegation causes the following state transformation:
+    \begin{itemize}
+      \item The delegation relation is updated so that stake stake key is delegated to the given
+        stake pool. The use of union override here allows us to use the same rule
+        to perform both an initial delegation and an update to an existing delegation.
+    \end{itemize}
 \end{itemize}
 
-Note that
-since the hash key corresponding to the address must not have been previously
-registered,
-it should not have any rewards in its associated address. Thus, it is safe
-to set the rewards to 0 using union override (i.e. replace any value previously
-associated with this address with 0).
-
-When deregistering a key (the \cref{eq:deleg-dereg} rule), we again
-require that the certificate is of the correct type. We also require
-that the key of the author is indeed a registered stake key
-in order to be able to retrieve its address for the rewards update.
-
-As a result of this rule, the author's key must be removed from the $\var{stkeys}$ list,
-and all the rewards, pointers, and delegations associated with this key must be removed
-from the $\var{rewards}$, $\var{pointers}$, and $\var{delegations}$ parameters as well.
-
-Finally, for creating a delegation (the \cref{eq:deleg-deleg} rule),
-given that the certificate $c$ is of the correct type, we add to the
-$\var{delegations}$ finite map the pair of
-the author's hash key and hash key of the pool being delegated to.
-Again, we require the author's key be a registered key, as it does not make
-sense to allow delegation otherwise.
-
-The $\var{stkeys}$, $\var{rewards}$, and $\var{pointers}$ parameters are kept constant by
-this rule. The use of union override here allows us to use the same rule
-to perform an update on an existing delegation while keeping the rewards
-associated with the key accounted for.
-
-The rules of the distribution of rewards to eligible stake holders are described
-in Section~\ref{sec:epoch}, since the amount of rewards they can claim in the next
-epoch is calculated at the epoch boundary. However, the claiming of the rewards
-(i.e.\ conversion of reward value to unspent outputs available to the key
-holder), can be requested by the key holder at any time as part of a transaction.
-
-We would like to point out, here, that this document does not describe
-how the wallet makes a decision about which stake pool a stake key will
-delegate to. This decision, however, is influenced by some parameters in the
-protocol. These parameters determine which stake pools are more profitable
-to delegate to, as well as the optimal number of stake pools in the system,
-by means of regulating reward distribution.
-This avoids forming a monopoly of a single large stake pool constantly
-being delegated to.
 
 
 %%
 %% Figure - Delegation Rules
 %%
-\begin{figure}
+\begin{figure}[hbt]
   \centering
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-    \var{c}\in\DCertRegKey & hk = \cauthor{c} & hk \notin \dom \var{stkeys}
+    \var{c}\in\DCertRegKey & hk = \cwitness{c} & hk \notin \dom \var{stkeys}
     }
     {
       \begin{array}{r}
@@ -406,7 +346,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-dereg}
     \inference[Deleg-Dereg]
     {
-      \var{c}\in \DCertDeRegKey  & hk = \cauthor{c} \\
+      \var{c}\in \DCertDeRegKey  & hk = \cwitness{c} \\
     hk \in \dom \var{stkeys} & hk \mapsto 0 \in \var{rewards}
     }
     {
@@ -438,7 +378,7 @@ being delegated to.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & hk = \cauthor{c} & hk \in \dom \var{stkeys}
+      \var{c}\in \DCertDeleg & hk = \cwitness{c} & hk \in \dom \var{stkeys}
     }
     {
       \begin{array}{r}
@@ -480,63 +420,60 @@ The rules for updating the part of the ledger state defining the current stake
 pools are given in \cref{fig:pool-rules}. The calculation of stake distribution
 is described in Section~\ref{sec:stake-dist}.
 
-In the pool rules, the stake key is used directly to register a stake pool.
-For each rule, again, we first check that a given certificate $c$ is of
-the correct type.
+In the pool rules, the stake pool is identified with the hashkey of the pool operator.
+For each rule, again, we first check that a given certificate $c$ is of the correct type.
 
-The first rule, \cref{eq:pool-reg}, can only be used to register a stake pool
-with a new key (to which no stake pool was previously registered).
-When this rule is invoked,
- the author's key and current slot number are added to $\var{stpools}$, and the
-key and $\var{poolParam}$ constants in the certificate are added to the $\var{poolParams}$
-finite map.
+\begin{itemize}
+  \item Stake pool registration is handled by \cref{eq:pool-reg}.
+    It is required that the pool not be currently registered.
+    Registration causes the following state transformation:
+    \begin{itemize}
+      \item The key is added to the set of registered stake pools.
+      \item The pool's parameters are stored.
+    \end{itemize}
+  \item Stake pool parameter updates are handled by \cref{eq:pool-reg}.
+    This rule, which also matches on the certificate type $\type{DCertRegPool}$,
+    is distinguished from \cref{eq:pool-reg} by the requirement that
+    the pool be registered. This rule also ends stake pool retirements.
+    Reregistration causes the following state transformation:
+    \begin{itemize}
+      \item The pool's parameters are updated.
+      \item The pool is removed from the collection of retiring pools.
+      \item Note that $\var{stpools}$ is \textbf{not} updated.
+        The registration creation slot does does not change.
+    \end{itemize}
+  \item Stake pool retirements are handled by \cref{eq:pool-ret}.
+    Given a slot number $\var{slot}$, the application of this rule requires that the
+    planned retirement epoch $\var{e}$ stated in the certificate is in the future,
+    i.e. after $\var{cepoch}$, the epoch of the current slot number in this context, as well as
+    that it is less than $\emax$ epochs after the current one.
+    It is also required that the pool be registered.
+    Note that imposing the $\emax$ constraint on the system is not strictly necessary.
+    However, forcing stake pools to announce their retirement a shorter time in
+    advance will curb the growth of the $\var{retiring}$ list in the ledger state.
 
-The second rule, \cref{eq:pool-rereg}, is used to re-register a
-stake pool with a new certificate ($\var{c}$), or stop the retirement
-process for that key. It does not update the slot number recorded previously
-for the registration of this key, but it does update the associated pool constants
-in $\var{poolParams}$. The author's hash key and associated data
-are also removed from the $\var{retiring}$ parameter to cancel any pending
-retirement for that key.
+    The pools scheduled for retirement must be removed from
+    the $\var{retiring}$ state variable at the end of the epoch they are scheduled
+    to retire in. This non-signaled transition (triggered, instead, directly by a
+    change of current slot number in the environment), along with all other transitions
+    that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 
-The third rule, \cref{eq:pool-ret}, starts the pool retirement process. Given a
-slot number $\var{slot}$, the application of this rule requires that the
-planned retirement epoch $\var{e}$ stated in the certificate is in the future,
-i.e. after
-$\var{cepoch}$, the epoch of the current slot number in this context, as well as
-that it is
-less than $\emax$ epochs after the current one. Another precondition for this
-rule is that
-the certificate author's key is in the set of the registered pools' keys.
-This rule simply adds the pair of the
-certificate author's key and the planned retirement epoch $e$ to the $\var{retiring}$
-parameter, overrwiting any existing retirement schedule for the key.
-
-Note that imposing the $\emax$ constraint on the system is not strictly necessary.
-However, forcing stake pools to announce their retirement a shorter time in
-advance will curb the growth of the $\var{retiring}$ list in the ledger state
-(this is a finite map used to keep track of what stake pool is retiring when,
-discussed in more detail later).
-Allowing pools to make retirement announcements arbitrarily far in advance
-could result in a linear (in the number of pools) growth of storage space needed
-for this datatype.
-
-The pools scheduled for retirement must be removed from
-the $\var{retiring}$ state variable at the end of the epoch they are scheduled
-to retire in. This non-signaled transition (triggered, instead, directly by a
-change of current slot number in the environment), along with all other transitions
-that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
-
+    Reregistration causes the following state transformation:
+    \begin{itemize}
+      \item The pool is marked to retire on the given epoch.
+        If it was previously retiring, the retirement epoch is now updated.
+    \end{itemize}
+\end{itemize}
 
 %%
 %% Figure - Pool Rules
 %%
-\begin{figure}
+\begin{figure}[hbt]
   \begin{equation}\label{eq:pool-reg}
     \inference[Pool-Reg]
     {
       \var{c}\in\DCertRegPool
-      & \cauthor{c} = \var{hk}
+      & \cwitness{c} = \var{hk}
       & hk \notin \dom \var{stpools}
     }
     {
@@ -571,7 +508,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \inference[Pool-reReg]
     {
       \var{c}\in\DCertRegPool
-      & \cauthor{c} = \var{hk}
+      & \cwitness{c} = \var{hk}
       & hk \in \dom \var{stpools}
     }
     {
@@ -605,7 +542,7 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
     \inference[Pool-Retire]
     {
     \var{c} \in \DCertRetirePool
-    & hk = \cauthor{c}
+    & hk = \cwitness{c}
     & \var{hk} \in \dom \var{stpools} \\
     \var{e} = \retire{c}
     & \var{cepoch} = \epoch{slot}
@@ -643,13 +580,16 @@ that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
 
 \end{figure}
 
+\clearpage
 
-Next, we give the state, environment, and transition type for the full delegation
-state transition, which includes the delegations ($\DState$) and the stake pools
-($\PState$), see
-Figure~\ref{fig:defs:delpl}.
+\subsection{Delegation and Pool Combined Rules}
+\label{sec:del-pool-rules}
 
-\begin{figure}
+We now combine the delegation and pool transition systems.
+Figure~\ref{fig:defs:delpl} gives the state, environment, and transition type for the
+combined transition.
+
+\begin{figure}[hbt]
   \emph{Delegation and Pool Combined Environment}
   \begin{equation*}
     \DPEnv =
@@ -683,17 +623,14 @@ Figure~\ref{fig:defs:delpl}.
   \label{fig:defs:delpl}
 \end{figure}
 
+\clearpage
 
-In the following Figure~\ref{fig:rules:delpl}, we give the rules for
-defining a valid state transition for the combined delegation and pool
-state, $\DPState$, signaled by a certificate. There are two separate rules,
-one where only the
-delegation state changes, and one where only the pool state changes.
-This is because a certificate can never trigger a transition of both kinds,
-and can only be applied to \textit{either} register (deregister) a key,
-\textit{or} to register (retire) a pool.
+Figure~\ref{fig:rules:delpl}, gives the rules for the combined transition.
+Note that for any given certificate, at most one of the two rules
+(\cref{eq:delpl-d} and \cref{eq:delpl-p})
+will be successful, since the pool certificates are disjoint from the delegation certificates.
 
-\begin{figure}
+\begin{figure}[hbt]
   \emph{Delegation and Pool Combined Rules}
   \begin{equation}
     \label{eq:delpl-d}
@@ -731,7 +668,7 @@ and can only be applied to \textit{either} register (deregister) a key,
       \right)
     }
   \end{equation}
-    \begin{equation}
+  \begin{equation}
     \label{eq:delpl-p}
     \inference[Delpl-Pool]
     {
@@ -771,29 +708,14 @@ and can only be applied to \textit{either} register (deregister) a key,
   \label{fig:rules:delpl}
 \end{figure}
 
+We now describe a transition system that processes the list of certificates inside a transaction.
+It is defined recursively from the transition system in Figure~\ref{fig:rules:delpl} above.
 
-Now, since a transaction can carry more than one certificate at a time, we need
-to give the specifics of processing the entire list of certificates (contained
-in a transaction).
+Figure~\ref{fig:type:delegations} defines the types for the delegation certificate sequence
+transition.
 
-We may do so by defining a new type of transition, where the signal type is a
-list of certificates, as illustrated in Figure~\ref{fig:rules:delegation-sequence}.
-The transition itself is defined recursively, so that
-an empty list results in a state transition to itself, and given
-a list $\Gamma$ of certificates signaling a valid DELEGS transition, as well
-as a DELPL transition signaled by certificate $c$, the transition
-composed of these two transitions in sequence, signaled by the list $c; \Gamma$
-is also valid.
-
-This definition guarantees a certificate list (and therefore, the transaction
-carrying it) cannot be processed unless every
-certificate in it is valid. For example, if a transaction is carrying a
-certificate that schedules a pool retirement in a past epoch, the
-whole transaction will be invalid.
-
-
-\begin{figure}
-  \emph{Certificate List Environment}
+\begin{figure}[hbt]
+  \emph{Certificate Sequence Environment}
   \begin{equation*}
     \DPSEnv =
     \left(
@@ -810,16 +732,48 @@ whole transaction will be invalid.
     \powerset (
     \DPSEnv \times \DPState \times \seqof{\DCert} \times \DPState)
   \end{equation*}
-  \caption{Delegation with a certificate list transition type}
+  \caption{Delegation sequence transition type}
   \label{fig:type:delegations}
 \end{figure}
 
+Figure~\ref{fig:rules:delegation-sequence} defines the transition system recursively.
+This definition guarantees that a certificate list (and therefore, the transaction carrying it)
+cannot be processed unless every certificate in it is valid. For example, if a transaction is
+carrying a certificate that schedules a pool retirement in a past epoch, the whole transaction
+will be invalid.
 
-\begin{figure}
+\begin{itemize}
+  \item The base case, when the list is empty, is captured by \cref{eq:delegs-base}.
+    In the base case, we address one final accounting detail not yet covered by the UTxO
+    transition, namely setting the reward account balance to zero for any account that made a
+    withdrawal.  There is therefore a precondition that all withdrawals are correct, where
+    correct means that there is a reward account for each stake key, and that the balance
+    matches that of the reward being withdrawn.
+    The base case triggers the following state transformation:
+    \begin{itemize}
+      \item Reward accounts are set to zero for each corresponding withdrawal.
+    \end{itemize}
+  \item The inductive case, when the list is non-empty, is captured by \cref{eq:delegs-induct}.
+    It constructs a certificate pointer given the current slot and transaction index,
+    calls $\mathsf{DELPL}$ on the next certificate in the list, and inductively
+    calls $\mathsf{DELEGS}$ on the rest of the list.
+    The inductive case triggers the following state transformation:
+    \begin{itemize}
+      \item The delegation and pool states are (inductively) updated by the results of
+        $\mathsf{DELEGS}$, which is then updated according to $\mathsf{DELPL}$.
+    \end{itemize}
+\end{itemize}
+
+\begin{figure}[hbt]
   \begin{equation}
+    \label{eq:delegs-base}
     \inference[Seq-delg-base]
     {
-      \var{wdrls} = \txwdrls{tx} & \var{wdrls} \subseteq \var{rewards}
+      \var{wdrls} = \txwdrls{tx}
+      &
+      \var{wdrls} \subseteq \var{rewards}
+      \\
+      \var{rewards'} = \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
     }
     {
       \left(
@@ -846,7 +800,7 @@ whole transaction will be invalid.
       \left(
       \begin{array}{r}
         \var{stkeys} \\
-        \varUpdate{\fun{reapRewards}~\var{rewards}~\var{wdrls}} \\
+        \varUpdate{rewards'} \\
         \var{delegations} \\
         \var{ptrs} \\
         \var{stpools} \\
@@ -856,16 +810,15 @@ whole transaction will be invalid.
       \end{array}
       \right)
     }
-    \label{eq:rule:sequence-delegation-base}
   \end{equation}
 
   \nextdef
 
   \begin{equation}
+    \label{eq:delegs-induct}
     \inference[Seq-delg-ind]
     {
-      \forall \var{c'}\in \Gamma;c,~\var{c'}\in\DCertDeleg \Rightarrow
-        \fun{dpool}~{c'} \in \dom \var{stpools} \\
+      \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
         ptr = (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma - 1) \\~\\
         {
           \left(
@@ -910,7 +863,6 @@ whole transaction will be invalid.
       \trans{delegs}{\Gamma; c}
       \varUpdate{\var{dpstate''}}
     }
-    \label{eq:rule:sequence-delegation-inductive}
   \end{equation}
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
