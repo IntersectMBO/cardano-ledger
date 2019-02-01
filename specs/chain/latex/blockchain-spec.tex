@@ -257,6 +257,12 @@ There are several standard sets used in the document:
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
 \newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
 
+We define a general update interface to abstract over the various update state
+transitions which happen when a new block is processed. Figure
+\ref{fig:defs:bupi} defines the type of signals used for this system. Figure
+\ref{fig:rules:bupi} defines the rules for this system. The two rules handle the
+cases where there is or is not an update proposal contained within the block.
+
 \begin{figure}[ht]
   \emph{Update interface signals}
   \begin{equation*}
@@ -395,14 +401,14 @@ There are several standard sets used in the document:
 \newcommand{\sepochname}{sEpoch}
 \newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
 
-This section should cover:
-\begin{itemize}
-\item How we determine the end of an epoch
-\item Epoch-transition bookkeeping
-\end{itemize}
+During each block transition, we must determine whether that block sits on an
+epoch boundary and, if so, carry out various actions which are done on that
+boundary. In the BFT era, the only computation carried out at the epoch boundary
+is the update of protocol versions.
 
-The epoch transition rules should compute whether a given slot is at the end of
-an epoch
+Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
+updates the update state to the correct version.
+
 \begin{figure}[ht]
   \emph{Abstract functions}
   %
@@ -519,7 +525,7 @@ we require that in the rolling window of the last $K$ blocks, the number of
 blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
 \cdot t$, where $t$ is a constant that will be picked in the range
 $1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
-value. See \ref{apdx:calculating-t} for the background on this value.
+value. See Appendix \ref{apdx:calculating-t} for the background on this value.
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -573,6 +579,15 @@ value. See \ref{apdx:calculating-t} for the background on this value.
   \caption{Blockchain signature count types and functions}
   \label{fig:defs:sigcnt}
 \end{figure}
+
+Figure \ref{fig:rules:sigcnt} gives the rules for signature counting. We verify
+that, for all keys delegating to the signer of this block, that key has not
+already signed more than its allowed threshold of blocks. We then update the map
+of counts, ageing off the key(s) corresponding to the $K+1^{\text{th}}$ block and
+including the key(s) delegating to the signer of this block.
+
+Note that this rule does not verify that there \textit{are} any corresponding
+delegators; that is checked in the BHEAD rule later in figure \ref{fig:rules:bhead}.
 
 \begin{figure}[ht]
   \emph{Block signature count environments}
@@ -701,6 +716,33 @@ of block bodies.
 \end{figure}
 
 \subsection{Block header processing}
+
+Figure \ref{fig:ts-types:bhead} gives the transition system types for block
+header processing. In particular, the header state contains the hash of the
+latest seen block (the `tip header'), the update state, the current block index
+and the signature count map.
+
+Figure \ref{fig:rules:bhead} gives the corresponding transition rules. During
+header processing we verify the following things:
+
+\begin{enumerate}
+  \item We first compute whether this block is the first block in a new epoch.
+    If so, we apply the epoch transition updates. Unlike other cases, we use the
+    resulting update state in all downstream verification for this block, since
+    the epoch transition is not contingent on the block itself, but simply a
+    recognition that this is a block in a new epoch.
+  \item We check that the current block is being issued for a slot later than
+    the last block issued.
+  \item We check that the current block is being issued for a slot no later than
+    the current slot (as determined by the system clock).
+  \item We verify that the block signer is the current delegate of at least one
+    of the authorised genesis keys.
+  \item We check that the previous block hash contained in the block header
+    corresponds to the known hash of the previous block.
+  \item We check that the header signature correctly verifies the ``signed''
+    content of the header.
+  \item Finally, we verify and update the signature count rules.
+\end{enumerate}
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -839,6 +881,21 @@ of block bodies.
 \clearpage
 
 \subsection{Block body processing}
+
+During processing of the block body, we perform two main functions: verification
+of the body integrity using the proofs contained in the block header, and update
+of the various state components. These rules are given in figure
+\ref{fig:rules:bbody}.
+
+Verification is done independently for the three components of the body payload:
+UTxO, delegation and update. Each of these three have a signature in the block
+header. Note that Byron-era block payload also has an additional component: the
+VSS payload. This part of the block is unnecessary during the BFT era, and hence
+we do not verify it.
+
+In addition to block verification, we also process the three components of the
+payload; UTxO, delegation and update.
+
 \begin{figure}[ht]
   \emph{Abstract types}
   %
@@ -989,6 +1046,18 @@ of block bodies.
 \newcommand{\CEEnv}{\type{CEEnv}}
 \newcommand{\CEState}{\type{CEState}}
 
+Figure \ref{fig:rules:chain-extension} captures the central chain extension
+rule. This has two variants, depending on whether the block in question is an
+epoch boundary block. Epoch boundary blocks are not required during the BFT era,
+but whilst they are not distributed, epoch boundary blocks must still be
+processed since their hash forms part of the chain. Since we do not care about
+the contents of an epoch boundary block, we check that it does not exceed some
+suitably large size, and otherwise simply update the header hash to the block
+hash.
+
+If the block is not an epoch boundary block, then we process both the header and
+body according to the rules in figures \ref{fig:rules:bhead} and
+\ref{fig:rules:bbody} respectively.
 
 \begin{figure}[ht]
   \emph{Abstract functions}
@@ -1028,9 +1097,6 @@ of block bodies.
   \caption{Blockchain extension transition-system types}
   \label{fig:ts-types:chain-extension}
 \end{figure}
-
-The central rule that captures blockchain extension is given with
-Figure~\ref{fig:rules:chain-extension}.
 
 \begin{figure}
   \begin{equation*}
