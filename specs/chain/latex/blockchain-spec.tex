@@ -891,7 +891,7 @@ Verification is done independently for the three components of the body payload:
 UTxO, delegation and update. Each of these three have a signature in the block
 header. Note that Byron-era block payload also has an additional component: the
 VSS payload. This part of the block is unnecessary during the BFT era, and hence
-we do not bother to verify it.
+we do not verify it.
 
 In addition to block verification, we also process the three components of the
 payload; UTxO, delegation and update.
