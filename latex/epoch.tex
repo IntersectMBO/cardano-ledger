@@ -312,7 +312,7 @@ than that of the members.
   \emph{Pool leader reward, from section 6.5.2 of \cite{delegation_design}}
   %
   \begin{align*}
-      & \fun{r_{leader}} \in \Coin \to \PoolParam \to \unitInterval \to \unitInterval \to \Coin \\
+      & \fun{r_{leader}} \in \Coin \to \PoolParam \to \unitInterval \to \unitIntervalNonNull \to \Coin \\
       & \lReward{\hat{f}}{pool}{s}{\sigma} =
         \begin{cases}
         \hat{f} & \hat{f} \leq c\\
@@ -327,7 +327,7 @@ than that of the members.
   \emph{Pool member reward, from section 6.5.2 of \cite{delegation_design}}
   %
   \begin{align*}
-    & \fun{mReward} \in \Coin \to \PoolParam \to \unitInterval \to \unitInterval \to \Coin \\
+    & \fun{mReward} \in \Coin \to \PoolParam \to \unitInterval \to \unitIntervalNonNull \to \Coin \\
     & \mReward{\hat{f}}{pool}{t}{\sigma} =
       \begin{cases}
         0 & \hat{f} \leq c\\
