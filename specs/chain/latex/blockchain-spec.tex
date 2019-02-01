@@ -428,12 +428,7 @@ updates the update state to the correct version.
     \end{array}
   \end{equation*}
   \begin{equation*}
-    \begin{array}{rlr}
-      \fun{\sepochname}~\var{slot}~\fun{elens} & = \begin{cases}
-        \max{\left\{ \dom{elens} \right\}} + 1 & \text{if } \sum{\left\{ \range{elens} \right\}} > \var{slot} \\
-        \max_{m}\left\{m \middle| \sum_{i < m}{\fun{elens}~i \leq \var{slot}} \right\} & \text{otherwise}
-      \end{cases}
-    \end{array}
+      \fun{\sepochname}~\var{slot}~\fun{elens} = \min  \left\{ e \middle| slot < \sum_{i \leq e} \fun{elens}~i \right\}
   \end{equation*}
 
   \emph{Protocol parameters}
@@ -851,7 +846,7 @@ header processing we verify the following things:
     { {\left(
           \begin{array}{l}
             \var{elens} \\
-            \sepoch{s_{last}} \\
+            \sepoch{s_{last}}{elens} \\
             us
           \end{array}
         \right)}
@@ -1208,7 +1203,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   {\left(
       \begin{array}{l}
         \fun{pps} ~  us' \\
-        \sepoch{(\bslot{b})} \\
+        \sepoch{(\bslot{b})}{elens} \\
       \end{array}
     \right)}
   \vdash
