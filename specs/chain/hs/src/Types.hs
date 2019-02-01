@@ -18,7 +18,7 @@ import Ledger.Signatures (Hash)
 -- | Phantom type for the blockchain extension transition system
 data BC
 
-newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord)
+newtype BlockIx = MkBlockIx Natural deriving (Eq, Ord, Show)
 
 data ProtParams = MkProtParams
   { maxBlockSize  :: !Natural
@@ -50,4 +50,4 @@ data Block
     , rbIsEBB  :: Bool -- ^ Indicates if this is an epoch boundary block
     , rbSize   :: Natural -- ^ Size of the block
     , rbHeaderSize :: Natural -- ^ Size of the header of the block
-    }
+    } deriving (Eq, Show)
