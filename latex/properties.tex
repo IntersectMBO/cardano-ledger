@@ -349,28 +349,6 @@ use properties-based testing for validation in the executable spec.
   \end{multline*}
 \end{property}
 
-\begin{proof}
-  Property~(\ref{prop:minimal-refund}) can be proven automatically in the
-  Metitarski prover using the script:
-
-\begin{verbatim}
-fof(minimal_refund, conjecture,
-! [Dmin, Lambda, Delta, Dval] :
-((Dmin : (=0,1=) & Lambda > 0 & Delta > 0 & Dval > 0
-=>
-Dval*Dmin >= 0 &
-(Dval * (Dmin + (1 - Dmin) * exp(-Lambda * Delta))) : (=Dval * Dmin, Dval=)))).
-
-fof(floor_lower_upper, conjecture,
-! [X] :
-(X >= 0 => X - 1 <= floor(X) & floor(X) <= X)).
-\end{verbatim}
-  \verb|minimal_refund| shows that the resulting value is within the interval
-  $[d_{val}\cdot d_{min}, d_{val}]$ and that $d_{val}\cdot d_{min}$ is
-  non-negative, while \verb|floor_lower_upper| shows that the floor of a value
-  $x$ has an upper bound $x$ and lower bound $x - 1$.
-\end{proof}
-
 \begin{property}[\textbf{Exponential Moving Average}]
   \label{prop:exponential-moving-average}
 
