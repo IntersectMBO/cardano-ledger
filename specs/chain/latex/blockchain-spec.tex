@@ -73,6 +73,7 @@
 %%
 \newcommand{\Hash}{\type{Hash}}  % hashes of various things, including blocks
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\SlotCount}{\type{SlotCount}}
 \newcommand{\BlockIx}{\type{BlockIx}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\DCert}{\type{DCert}}
@@ -399,24 +400,49 @@ cases where there is or is not an update proposal contained within the block.
 \newcommand{\ETEnv}{\type{ETEnv}}
 
 \newcommand{\sepochname}{sEpoch}
-\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
+\newcommand{\sepoch}[2]{\fun{\sepochname}\ #1\ #2}
 
 During each block transition, we must determine whether that block sits on an
 epoch boundary and, if so, carry out various actions which are done on that
 boundary. In the BFT era, the only computation carried out at the epoch boundary
 is the update of protocol versions.
 
+In figure~\ref{fig:defs:epoch} we give the definition of the $\sepoch$
+function to determine the epoch corresponding to a given slot. This relies on
+keeping a map of the length of each epoch. Such a map is also required by the
+database layer to find the requisite epoch file to look up a given block, and is
+hence maintained by the ledger layer for this purpose. We envision that an
+implementation may of course choose a more compact representation for this
+partial function that only records the changes in epoch length, rather than
+storing a length for each epoch.
+
 Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
 updates the update state to the correct version.
 
 \begin{figure}[ht]
-  \emph{Abstract functions}
+  \emph{Derived functions}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \fun{\sepochname} & \Slot \totalf \Epoch & \text{Epoch containing this slot} \\
+    \begin{array}{rlr}
+      \fun{\sepochname} & \in \Slot \totalf (\Epoch \partialf \SlotCount) \totalf \Epoch & \text{Epoch containing this slot} \\
     \end{array}
   \end{equation*}
+  \begin{equation*}
+    \begin{array}{rlr}
+      \fun{\sepochname}~\var{slot}~\fun{elens} & = \begin{cases}
+        \max{\left\{ \dom{elens} \right\}} + 1 & \text{if } \sum{\left\{ \range{elens} \right\}} > \var{slot} \\
+        \max_{m}\left\{m \middle| \sum_{i < m}{\fun{elens}~i \leq \var{slot}} \right\} & \text{otherwise}
+      \end{cases}
+    \end{array}
+  \end{equation*}
+
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
+      \pp{slotsPerEpoch} & \SlotCount & \text{Number of slots in the current epoch} \\
+    \end{array}
+  \end{equation*}
+
   \caption{Epoch transition types and functions}
   \label{fig:defs:epoch}
 \end{figure}
@@ -428,6 +454,7 @@ updates the update state to the correct version.
     \ETState =
     \left(
       \begin{array}{r@{~\in~}lr}
+        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
         \var{e_c} & \Epoch & \text{Current epoch} \\
         \var{us} & \UPIState & \text{Update interface state}
       \end{array}
@@ -447,12 +474,13 @@ updates the update state to the correct version.
   \begin{equation*}
     \inference
     {
-      \var{e_c} \geq \sepoch{s}
+      \var{e_c} \geq \sepoch{s}{elens}
     }
     {\var{dms} \vdash
       {
         \left(
           {\begin{array}{c}
+             \var{elens} \\
              \var{e_c} \\
              \var{us}
            \end{array}
@@ -463,6 +491,7 @@ updates the update state to the correct version.
      {
        \left(
          {\begin{array}{c}
+            \var{elens} \\
             \var{e_c} \\
             \var{us}
           \end{array}
@@ -475,7 +504,8 @@ updates the update state to the correct version.
 \begin{equation*}
   \inference
   {
-    \var{e_c} < \sepoch{s}
+    \pp{slotsPerEpoch} \mapsto \var{es} \in \fun{pps}~\var{us} & \var{e_n} \leteq \sepoch{s}{elens} \\
+    \var{e_c} < \var{e_n}
     \\
     {\left(
         \begin{array}{l}
@@ -485,13 +515,14 @@ updates the update state to the correct version.
         \end{array}
       \right)
     }
-    \vdash \var{us} \trans{upiec}{\sepoch{s}} \var{us'}
+    \vdash \var{us} \trans{upiec}{\var{e_n}} \var{us'}
   }
   {
     \var{dms} \vdash
     {
       \left(
         {\begin{array}{c}
+           \var{elens} \\
            \var{e_c} \\
            \var{us}
          \end{array}
@@ -502,7 +533,8 @@ updates the update state to the correct version.
    {
      \left(
        {\begin{array}{c}
-          \sepoch{s} \\
+          \var{elens} \unionoverride \{\var{e_n} \mapsto \var{es}\}\\
+          \var{e_n} \\
           \var{us'}
         \end{array}
       }
@@ -798,6 +830,7 @@ header processing we verify the following things:
       \begin{array}{r@{~\in~}lr}
         \var{h} & \Hash & \text{Tip header hash} \\
         \var{us} & \UPIState & \text{Update state} \\
+        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{bIx} & \BlockIx & \text{Current block index} \\
       \end{array}
@@ -817,6 +850,7 @@ header processing we verify the following things:
     \inference
     { {\left(
           \begin{array}{l}
+            \var{elens} \\
             \sepoch{s_{last}} \\
             us
           \end{array}
@@ -824,6 +858,7 @@ header processing we verify the following things:
       \trans{epoch}{\bslot{b}}
       {\left(
           \begin{array}{l}
+            \var{elens'} \\
             \var{e_n} \\
             us'
           \end{array}
@@ -1079,6 +1114,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
       \begin{array}{r@{~\in~}lr}
         \var{bIx} & \BlockIx & \text{Current block index} \\
         \var{s_{last}} & \Slot & \text{Slot of the last seen block} \\
+        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
         \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
@@ -1153,6 +1189,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
       {\begin{array}{c}
          \var{h} \\
          \var{us} \\
+         \var{elens} \\
          \signmapname \\
          bIx \\
        \end{array}}
@@ -1162,6 +1199,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
      {\begin{array}{c}
         \var{h'} \\
         \var{us'} \\
+        \var{elens'} \\
         \signmapname' \\
         bIx' \\
       \end{array}}
@@ -1205,10 +1243,11 @@ body according to the rules in figures \ref{fig:rules:bhead} and
    {\begin{array}{c}
       bIx \\
       \var{s_{last}} \\
+      \var{elens} \\
       \signmapname \\
       \var{h} \\
       \var{utxo} \\
-      \var{us'} \\
+      \var{us} \\
       \var{ds}
     \end{array}}
 \right)
@@ -1217,6 +1256,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   {\begin{array}{c}
      bIx' \\
      \var{\bslot{b}} \\
+     \var{elens'} \\
      \signmapname' \\
      \var{h'} \\
      \var{utxo'} \\
@@ -1233,47 +1273,47 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \bibliographystyle{plainnat}
 \bibliography{references}
 \begin{appendices}
-\section{Calculating the $t$ parameter}
-\label{apdx:calculating-t}
+  \section{Calculating the $t$ parameter}
+  \label{apdx:calculating-t}
 
-We originally give the range of $t$ as between $\frac{1}{5}$ and $\frac{1}{4}$.
-The upper bound here is to reduce the possible number of malicious blocks; if
-two of the genesis keys are comprimised, the attackers may not be able to
-produce a longer chain than the honest participants. The lower bound is required
-to prevent a situation in which a chain produced under the initial Ouroboros
-setting produces a chain which, according to the new BFT semantics, is invalid.
+  We originally give the range of $t$ as between $\frac{1}{5}$ and $\frac{1}{4}$.
+  The upper bound here is to reduce the possible number of malicious blocks; if
+  two of the genesis keys are comprimised, the attackers may not be able to
+  produce a longer chain than the honest participants. The lower bound is required
+  to prevent a situation in which a chain produced under the initial Ouroboros
+  setting produces a chain which, according to the new BFT semantics, is invalid.
 
-In order to determine the best value of $t$, we must consider the likelihood of
-such an invalid chain being produced by the old procedure of randomly selecting
-the slot leaders for each slot. Given the Cardano chain is still federated, the
-likelihood of this happening is the same for each of the 7 stakeholders, and we
-may model the number of selected slots within a $K$-slot window $X$ as a binomial
-distribution $X \sim \mathrm{B}\left(K, \frac{1}{7}\right)$.
+  In order to determine the best value of $t$, we must consider the likelihood of
+  such an invalid chain being produced by the old procedure of randomly selecting
+  the slot leaders for each slot. Given the Cardano chain is still federated, the
+  likelihood of this happening is the same for each of the 7 stakeholders, and we
+  may model the number of selected slots within a $K$-slot window $X$ as a binomial
+  distribution $X \sim \mathrm{B}\left(K, \frac{1}{7}\right)$.
 
-In each epoch of size $n$ blocks, there are $n-K+1$ such $K$-block windows.
-Boole's inequality gives us that the likelihood of exceeding the threshold in
-any one of these windows is bounded above by the sum of the likelihoods for each
-window. We may thus consider that the probability of a given stakeholder
-violating the threshold in an epoch to be bounded by $(n-K+1)\cdot P(X > t*K)$.
-Appealing to Boole's inequality again, we may multiply this by the number of
-epochs and the number of stakeholders to give a bound for the likelihood of
-generating an invalid chain.
+  In each epoch of size $n$ blocks, there are $n-K+1$ such $K$-block windows.
+  Boole's inequality gives us that the likelihood of exceeding the threshold in
+  any one of these windows is bounded above by the sum of the likelihoods for each
+  window. We may thus consider that the probability of a given stakeholder
+  violating the threshold in an epoch to be bounded by $(n-K+1)\cdot P(X > t*K)$.
+  Appealing to Boole's inequality again, we may multiply this by the number of
+  epochs and the number of stakeholders to give a bound for the likelihood of
+  generating an invalid chain.
 
-Figure \ref{fig:calculating-t} gives the bound on the likelihood of threshold
-violation for $t$ in our plausible range: from this we can see that the
-likelihood decreases to a negligible level around $0.21$, and so we choose the
-value of $t=0.22$, giving an upper bound on the likelihood around $6e-10$.
-Increasing $t$ beyond this point gives no decrease in the likelihood of
-violation.
+  Figure \ref{fig:calculating-t} gives the bound on the likelihood of threshold
+  violation for $t$ in our plausible range: from this we can see that the
+  likelihood decreases to a negligible level around $0.21$, and so we choose the
+  value of $t=0.22$, giving an upper bound on the likelihood around $6e-10$.
+  Increasing $t$ beyond this point gives no decrease in the likelihood of
+  violation.
 
-\begin{figure}[ht]
-  \begin{center}
-    \includegraphics[scale=0.5]{calculating-t.png}
-  \end{center}
-  \caption{Probability of generating an invalid chain for values of $t\in\left[
-      \frac{1}{4}, \frac{1}{5} \right]$.}
-  \label{fig:calculating-t}
-\end{figure}
+  \begin{figure}[ht]
+    \begin{center}
+      \includegraphics[scale=0.5]{calculating-t.png}
+    \end{center}
+    \caption{Probability of generating an invalid chain for values of $t\in\left[
+        \frac{1}{4}, \frac{1}{5} \right]$.}
+    \label{fig:calculating-t}
+  \end{figure}
 
 \end{appendices}
 \end{document}
