@@ -93,19 +93,11 @@
 \newcommand{\bsizename}{bSize}
 \newcommand{\bhdrsizename}{bHeaderSize}
 \newcommand{\verifyname}{verify}
-\newcommand{\signmapname}{\mathcal{M}}
-\newcommand{\trimixname}{trimIx}
-\newcommand{\incixmapname}{incIxMap}
 
 \newcommand{\isebbname}{bIsEBB}
 \newcommand{\bcertsname}{bCerts}
 \newcommand{\bsigname}{bSig}
 \newcommand{\bissuername}{bIssuer}
-
-\newcommand{\qrestrname}{qRestrict}
-\newcommand{\qpopname}{qPop}
-\newcommand{\qheadname}{qHead}
-\newcommand{\qpushname}{qPush}
 
 %%
 %% Functions and relations
@@ -201,6 +193,16 @@ underlying systems and types defined will rely on definitions in that document.
   %
   Furthermore, $\epsilon$ is an identity element for sequence joining:
   $\epsilon; x = x; \epsilon = x$.
+\item[Dropping on sequences] Given a sequence $\Lambda$,
+  $\Lambda \shortdownarrow n$ is the sequence that is obtained after removing
+  (dropping) the first $n$ elements from $\Lambda$. If $n \leq 0$ then
+  $\Lambda \shortdownarrow n = \Lambda$.
+\item[Appending with a moving window] Given a sequence $\Lambda$, we define
+  $$\Lambda ;_w x \leteq (\Lambda; x) \shortdownarrow (\size{\Lambda} + 1 - w)$$
+\item[Filtering on sequences] Given a sequence $\Lambda$, and a predicate $p$
+  on the elements of $\Lambda$, $\fun{filter}~p~\Lambda$ is the sequence that
+  contains all the elements of $\Lambda$ that satisfy $p$, in the same order
+  they appear on $\Lambda$.
 \item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
   $A$ case corresponds to a case when there is a value of type $A$ and the $1$
   case corresponds to a case when there is no value.
@@ -548,8 +550,8 @@ updates the update state to the correct version.
 \newcommand{\BSCState}{\type{BSCState}}
 
 To guard against the compromise of a minority of the genesis keys,
-we require that in the rolling window of the last $K$ blocks, the number of
-blocks signed by keys that $sk_s$ delegated to is no more than a threshold $K
+we require that in the rolling window of the last $w$ blocks, the number of
+blocks signed by keys that $sk_s$ delegated to is no more than a threshold $w
 \cdot t$, where $t$ is a constant that will be picked in the range
 $1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
 value. Specifically, given $K=2160$, we would allow a single genesis key to
@@ -557,33 +559,6 @@ issue (via delegates) $475$ blocks, but a $476^{\text{th}}$ block would be
 rejected. See Appendix \ref{apdx:calculating-t} for the background on this value.
 
 \begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{align*}
-    q  & \in \Queue_\BlockIx  & \text{block index queue}\\
-  \end{align*}
-  %
-  \emph{Derived types}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
-      \signmapname & \mapqueue & \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map}\\
-      \var{bIx} & \BlockIx & \var{bIx} & \mathbb{N} & \text{Block index}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Functions and relations}
-  %
-  \begin{align*}
-    \fun{\qheadname} & \in \Queue_\BlockIx \totalf \BlockIx^? & \text{head of queue function} \\
-    \fun{\qpushname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
-                                                              & \text{queue push function} \\
-    \fun{\qpopname} & \in \Queue_\BlockIx \totalf {\Queue_\BlockIx}^?
-                                                              & \text{queue pop function} \\
-    \fun{\qrestrname} & \in \BlockIx \times \Queue_\BlockIx \totalf \Queue_\BlockIx
-                                                              & \text{restricted queue pop function} \\
-    \fun{\incixmapname} & \in \BlockIx \times \powerset \VKeyGen \times \mapqueue \totalf \mapqueue
-                                                              & \text{block count increment function}\\
-  \end{align*}
   \emph{Protocol parameters}
   \begin{equation*}
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
@@ -591,32 +566,17 @@ rejected. See Appendix \ref{apdx:calculating-t} for the background on this value
       \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
-
-  \begin{align}
-    \label{eq:trimix}
-    \trimix{\signmapname}{\var{ix}} & = \Set{(\var{vk_s} \partialf q)}{\var{vk_s} \in \dom \signmapname.~
-                                      q = \qrestr{\var{ix}}{(\signmap{\var{vk_s}}})} \\
-    \qrestr{\var{ix}}{q} & = \
-                           \begin{cases}
-                             \qpop{q} & \text{if } \size{q} > 0 \wedge \qhead{q} + K < \var{ix} \\
-                             q & \text{otherwise}
-                           \end{cases} \\
-    \label{eq:incixmap}
-    \incixmap{\var{ix}}{\var{X}}{\signmapname} & = \signmapname \unionoverride
-                                                 \Set{\var{vk_s} \partialf \qpush{\var{ix}}(\signmap{\var{vk_s}})}{vk_s \in \var{X}}
-  \end{align}
-  \caption{Blockchain signature count types and functions}
+  \caption{Blockchain signature count protocol parameters}
   \label{fig:defs:sigcnt}
 \end{figure}
 
 Figure \ref{fig:rules:sigcnt} gives the rules for signature counting. We verify
-that, for all keys delegating to the signer of this block, that key has not
-already signed more than its allowed threshold of blocks. We then update the map
-of counts, ageing off the key(s) corresponding to the $K+1^{\text{th}}$ block and
-including the key(s) delegating to the signer of this block.
-
-Note that this rule does not verify that there \textit{are} any corresponding
-delegators; that is checked in the BHEAD rule later in figure \ref{fig:rules:bhead}.
+that the key that delegates to the signer of this block has not already signed
+more than its allowed threshold of blocks. If there are no delegators for the
+given key, or if there is more than one delegator, the rule will fail to trigger.
+%
+We then update the sequence of signers, and drop those elements that fall
+outside the size of the moving window $w$.
 
 \begin{figure}[ht]
   \emph{Block signature count environments}
@@ -626,7 +586,6 @@ delegators; that is checked in the BHEAD rule later in figure \ref{fig:rules:bhe
       \begin{array}{r@{~\in~}lr}
         \var{pps} & \ProtParams & \text{Protocol parameters} \\
         \var{ds} & \DelegState & \text{Delegation state} \\
-        \var{bIx} & \BlockIx & \text{Block index}
       \end{array}
     \right)
   \end{equation*}
@@ -634,7 +593,7 @@ delegators; that is checked in the BHEAD rule later in figure \ref{fig:rules:bhe
   \emph{Block signature count transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{sigcnt}{\_} \var{\_} \subseteq
-    \powerset (\BSCEnv \times \signmapname \times \VKey \times \signmapname)
+    \powerset (\BSCEnv \times \seqof{\VKeyGen} \times \VKey \times \seqof{\VKeyGen})
   \end{equation*}
   \caption{Block signature count transition-system types}
   \label{fig:ts-types:sigcnt}
@@ -644,22 +603,22 @@ delegators; that is checked in the BHEAD rule later in figure \ref{fig:rules:bhe
   \begin{equation*}
     \inference
     {
-      \pp{blockSignatureCountWindow} \partialf \var{K} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
-      \var{D} \leteq (\fun{dms} ~ \var{ds})^{-1} ~ \var{vk_d} & \forall \var{vk_s} \in \var{D} . \size{\signmap{\var{vk_s}}} \leq K \cdot t \\
-      \signmapname' \leteq \incixmap{\var{bIx}}{\var{D}}{(\trimix{\signmapname}{\var{bIx}})}
+      \pp{blockSignatureCountWindow} \partialf \var{w} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
+      \{\var{vk_g}\} \leteq (\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\}
+      & \var{sgs'} \leteq \var{sgs};_w {vk_g} &
+      \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq w \cdot t \\
     }
     {
       \left(
         {\begin{array}{c}
            \var{pps} \\
-           \var{ds} \\
-           \var{bIx}
+           \var{ds}
          \end{array}}
      \right)
      \vdash
-     {\signmapname}
+     {\var{sgs}}
      \trans{sigcnt}{\var{vk_d}}
-     {\signmapname'}
+     {\var{sgs'}}
    }
    \label{eq:rule:sigcnt}
  \end{equation*}
@@ -828,8 +787,7 @@ header processing we verify the following things:
         \var{h} & \Hash & \text{Tip header hash} \\
         \var{us} & \UPIState & \text{Update state} \\
         \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
-        \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
-        \var{bIx} & \BlockIx & \text{Current block index} \\
+        \var{sgs} & \seqof{\VKeyGen} & \text{Last signers}
       \end{array}
     \right)
   \end{equation*}
@@ -864,18 +822,16 @@ header processing we verify the following things:
       \var{vk_d} \leteq \bissuer{bh} & \var{s} \leteq \bhslot{bh}
       \\ \maxheadersize \mapsto \var{s_{max}} \in \fun{pps}~\var{us'} & \bhdrsize{bh} \leq \var{s_{max}}
       \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
-      \\ \fun{dms} ~  \var{ds} \restrictrange \{\var{vk_d}\} \neq \emptyset
       \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bsig{bh})}
       \\
       {\left(
           \begin{array}{l}
             \fun{pps} ~  us' \\
-            ds \\
-            bIx
+            ds
           \end{array}
         \right)}
       \vdash
-      \signmapname \trans{sigcnt}{\var{vk_d}} \signmapname'
+      \var{sgs} \trans{sigcnt}{\var{vk_d}} \var{sgs'}
       \\
     }
     {
@@ -891,8 +847,7 @@ header processing we verify the following things:
        {\begin{array}{c}
           \var{h} \\
           \var{us} \\
-          \signmapname \\
-          bIx \\
+          \var{sgs}
         \end{array}}
     \right)
     \trans{bhead}{\var{bh}}
@@ -900,8 +855,7 @@ header processing we verify the following things:
       {\begin{array}{c}
          \bhhash{bh} \\
          \var{us'} \\
-         \signmapname' \\
-         bIx + 1 \\
+         \var{sgs}'
        \end{array}}
    \right)
  }
@@ -1109,10 +1063,9 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     \CEState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{bIx} & \BlockIx & \text{Current block index} \\
         \var{s_{last}} & \Slot & \text{Slot of the last seen block} \\
         \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
-        \signmapname & \VKeyGen \totalf \Queue_\BlockIx & \text{key to block index map} \\
+        \var{sgs} & \seqof{\VKeyGen} & \text{Last signers}\\
         \var{h} & \Hash & \text{Current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
         \var{us} & \UPIState & \text{Update interface state} \\
@@ -1134,8 +1087,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \begin{figure}
   \begin{equation*}
     \inference
-    { \isebb{b} & \bsize{b} \leq 2^{21}
-      \\ \var{h'} = \bhhash{(\bhead b)}
+    { \isebb{b} & \bsize{b} \leq 2^{21} &
+       \var{h'} \leteq \bhhash{(\bhead b)}
     }
     {
       \left(
@@ -1146,9 +1099,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
      \vdash
      \left(
        {\begin{array}{c}
-          bIx \\
           \var{s_{last}} \\
-          \signmapname \\
+          \var{sgs} \\
           \var{h} \\
           \var{utxo} \\
           \var{us} \\
@@ -1158,9 +1110,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     \trans{chain}{b}
     \left(
       {\begin{array}{c}
-         bIx \\
          \var{s_{last}} \\
-         \signmapname \\
+         \var{sgs} \\
          \var{h'} \\
          \var{utxo} \\
          \var{us} \\
@@ -1173,7 +1124,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \begin{equation*}
   \inference
   {
-    \neg\isebb{b} \\
+    \neg\isebb{b} &
     {\left(
         \begin{array}{l}
           ds \\
@@ -1187,8 +1138,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
          \var{h} \\
          \var{us} \\
          \var{elens} \\
-         \signmapname \\
-         bIx \\
+         \var{sgs}
        \end{array}}
    \right)
    \trans{bhead}{\bhead{b}}
@@ -1197,11 +1147,10 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \var{h'} \\
         \var{us'} \\
         \var{elens'} \\
-        \signmapname' \\
-        bIx' \\
+        \var{sgs'}
       \end{array}}
   \right)
-  \\
+  \\~\\~\\
   {\left(
       \begin{array}{l}
         \fun{pps} ~  us' \\
@@ -1238,10 +1187,9 @@ body according to the rules in figures \ref{fig:rules:bhead} and
  \vdash
  \left(
    {\begin{array}{c}
-      bIx \\
       \var{s_{last}} \\
       \var{elens} \\
-      \signmapname \\
+      \var{sgs} \\
       \var{h} \\
       \var{utxo} \\
       \var{us} \\
@@ -1251,10 +1199,9 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \trans{chain}{b}
 \left(
   {\begin{array}{c}
-     bIx' \\
      \var{\bslot{b}} \\
      \var{elens'} \\
-     \signmapname' \\
+     \var{sgs'} \\
      \var{h'} \\
      \var{utxo'} \\
      \var{us''} \\
@@ -1284,14 +1231,14 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   such an invalid chain being produced by the old procedure of randomly selecting
   the slot leaders for each slot. Given the Cardano chain is still federated, the
   likelihood of this happening is the same for each of the 7 stakeholders, and we
-  may model the number of selected slots within a $K$-slot window $X$ as a binomial
-  distribution $X \sim \mathrm{B}\left(K, \frac{1}{7}\right)$.
+  may model the number of selected slots within a $w$-slot window $X$ as a binomial
+  distribution $X \sim \mathrm{B}\left(w, \frac{1}{7}\right)$.
 
-  In each epoch of size $n$ blocks, there are $n-K+1$ such $K$-block windows.
+  In each epoch of size $n$ blocks, there are $n-w+1$ such $w$-block windows.
   Boole's inequality gives us that the likelihood of exceeding the threshold in
   any one of these windows is bounded above by the sum of the likelihoods for each
   window. We may thus consider that the probability of a given stakeholder
-  violating the threshold in an epoch to be bounded by $(n-K+1)\cdot P(X > t*K)$.
+  violating the threshold in an epoch to be bounded by $(n-w+1)\cdot P(X > t*w)$.
   Appealing to Boole's inequality again, we may multiply this by the number of
   epochs and the number of stakeholders to give a bound for the likelihood of
   generating an invalid chain.
