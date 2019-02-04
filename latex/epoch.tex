@@ -416,7 +416,7 @@ This transition has no preconditions and results in the following state change:
   \item The pool performance is stored.
   \item The fees and decayed deposits are stored in $\var{feeSS}$. Note that this value will not
     change between epochs, unlike the $\var{fees}$ and $\var{deposits}$ values in the UTxO state.
-  \item In the UTxO state, the decayed deposit amounts are are moved from the deposit pool
+  \item In the UTxO state, the decayed deposit amounts are moved from the deposit pool
     to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-trans}),
     the value $\var{feeSS}$ will be removed from the fee pot in the UTxO state.
 \end{itemize}
