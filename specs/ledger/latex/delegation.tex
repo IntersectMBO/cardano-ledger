@@ -108,7 +108,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
 
 \begin{figure}[htb]
   \begin{equation}
-    \inference[Initial-SDELEG]
+    \inference
     {
     }
     {
@@ -169,9 +169,44 @@ $\trans{sdeleg}{\wcard}$ are presented in
   \label{fig:rules:delegation-scheduling}
 \end{figure}
 
-Once a scheduled certificate becomes active
+\clearpage
+
+The rules in Figure~\ref{fig:rules:delegation} model the activation of
+delegation certificates. Once a scheduled certificate becomes active
 (see~\cref{sec:delegation-interface-rules}), the delegation map is changed by
-it. \cref{fig:rules:delegation} models such change.
+it only if:
+\begin{itemize}
+\item The delegating key ($\var{vk_s}$) did not activate a delegation
+  certificate in a slot greater or equal than the certificate slot ($s$). This
+  check is performed to avoid having the constraint that the delegation
+  certificates have to be activated in slot order.
+\item The key being delegated to ($\var{vk_d}$) has not been delegated by
+  another key (injectivity constraint).
+\end{itemize}
+The reason why we check that the delegation map is injective is to avoid a
+potential risk (during the OBFT era) in which a malicious node gets control of
+a genesis key $\var{vk_m}$ that issued the maximum number of blocks in a given
+window. By delegating to another key $\var{vk_d}$, which was already delegated to
+by some other key $\var{vk_g}$, the malicious node could prevent $\var{vk_g}$
+from issuing blocks. Even though the delegation certificates take several slots
+to become effective, the malicious node could calculate when the certificate
+would become active, and issue a delegation certificate at the right time.
+
+As an additional advantage, by having an injective delegation map, we are able
+to simplify our specification when it comes to counting the blocks issued by
+(delegates of) genesis keys.
+
+Note also, that we could not impose the injectivity constraint in
+Rule~\ref{eq:rule:delegation-scheduling} since we do not have information about
+the delegations that will become effective. We could of course detect a
+violation in the injectivity constraint when scheduling a delegation
+certificate, but this will lead to a complex computation and larger state in
+said rule.
+
+Finally, note that we do not want to reject a scheduled delegation that would
+violate the injectivity constraint (since delegation might not have been
+scheduled by the node issuing the block). Instead, we simply ignore the
+delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
 
 \begin{figure}[htb]
   \begin{align*}
@@ -214,7 +249,7 @@ it. \cref{fig:rules:delegation} models such change.
 
 \begin{figure}[htb]
   \begin{equation}
-    \inference[Initial-ADELEG]
+    \inference
     {
       \var{dms_0} = \Set{k \mapsto k}{k \in \mathcal{K}} &
       \var{dws_0} = \Set{k \mapsto 0}{k \in \mathcal{K}}
@@ -233,7 +268,8 @@ it. \cref{fig:rules:delegation} models such change.
   \nextdef
   \begin{equation}\label{eq:rule:delegation-change}
     \inference
-    {\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s
+    {
+      \var{vk_d} \notin \range~\var{dms} & (\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s)
     }
     {
       \mathcal{K}
@@ -256,7 +292,7 @@ it. \cref{fig:rules:delegation} models such change.
   \nextdef
   \begin{equation}\label{eq:rule:delegation-nop}
     \inference
-    {\var{vk_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p
+    {\var{vk_d} \in \range~\var{dms} \vee (\var{vk_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p)
     }
     {
       \mathcal{K}
@@ -267,7 +303,7 @@ it. \cref{fig:rules:delegation} models such change.
         \var{dws}
       \end{array}
       \right)
-      \trans{adeleg}{(s,~ (vk_s,~ \wcard))}
+      \trans{adeleg}{(s,~ (\var{vk_s},~ \var{vk_d}))}
       \left(
       \begin{array}{lcl}
         \var{dms}\\
