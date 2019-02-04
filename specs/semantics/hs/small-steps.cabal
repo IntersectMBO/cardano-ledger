@@ -25,9 +25,11 @@ library
   exposed-modules:     Control.State.Transition
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
+                     , Data.AbstractSize
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.11 && <5
+                     , containers
                      , data-default
                      , free
                      , hedgehog
@@ -38,10 +40,30 @@ library
                      , transformers >= 0.5
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options: -Wall
-               -Wcompat
-               -Wincomplete-record-updates
-               -Wincomplete-uni-patterns
-               -Wredundant-constraints
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
   if (!flag(development))
-    ghc-options: -Werror
+    ghc-options:      -Werror
+
+test-suite doctests
+  hs-source-dirs:      test
+  main-is:             DoctestDiscover.hs
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                     , doctest
+                     , doctest-discover
+                       --
+                     , small-steps
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -threaded
+
+  if (!flag(development))
+    ghc-options:      -Werror
