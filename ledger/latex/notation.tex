@@ -51,6 +51,13 @@
 \item[Implicit existential quantifications] Given a predicate
   $P \in X \to Bool$, we use $P \wcard$ as a shorthand notation for
   $\exists x \cdot P~x$.
+% TODO: use leteq
+\item[Pattern matching in premises] In the inference-rules premises use
+  $\var{patt} = \var{exp}$ to pattern-match an expression $\var{exp} $ with a
+  certain pattern $\var{patt}$. For instance, we use $\Lambda'; x = \Lambda$ to
+  be able to deconstruct a sequence $\Lambda$ in its last element, and prefix.
+  If an expression does not match the given pattern, then the premise does not
+  hold, and the rule cannot trigger.
 \end{description}
 
 \begin{figure}[htb]
