@@ -27,7 +27,6 @@ import           PParams
 import           Slot
 import           UTxO
 
-import           Data.List               (groupBy, sort)
 import qualified Data.Map                as Map
 import           Data.Maybe              (fromJust, isJust)
 import           Data.Ratio
@@ -91,12 +90,15 @@ poolStake ::
      HashKey
   -> Set.Set HashKey
   -> Map.Map HashKey HashKey
-  -> Set.Set Stake
-  -> Set.Set Stake
-poolStake operator owners delegations stake = undefined
-  where
-    owners' = Set.insert operator owners
-    poolStake = undefined -- Map.mapWithKey (\k _ -> Map.lookup stak)
+  -> Stake
+  -> Stake
+poolStake operator owners delegations (Stake stake) =
+    Stake $ Map.insert operator pstake (Map.withoutKeys poolStake' owners')
+    where
+      owners'    = Set.insert operator owners
+      poolStake' = Map.mapMaybeWithKey (\k _ -> Map.lookup k stake) delegations
+      pstake     = Map.foldl (+) (Coin 0) $ Map.restrictKeys poolStake' owners'
+
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin

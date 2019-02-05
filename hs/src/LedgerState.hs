@@ -68,6 +68,7 @@ module LedgerState
   , rewardOnePool
   , reward
   , updateAvgs
+  , stakeDistr
   ) where
 
 import           Control.Monad           (foldM)
