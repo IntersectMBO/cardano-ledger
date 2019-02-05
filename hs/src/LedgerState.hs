@@ -68,6 +68,7 @@ module LedgerState
   , indivRew
   , rewardOnePool
   , reward
+  , updateAvgs
   ) where
 
 import           Control.Monad           (foldM)
@@ -736,16 +737,19 @@ updateAvgs ::
      PParams
   -> Avgs
   -> BlocksMade
-  -> (Map.Map HashKey (Set.Set Stake))
+  -> Map.Map HashKey (Set.Set Stake)
   -> Avgs
-updateAvgs pp avgs blocks pooledStake = undefined
+updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
+    Avgs $ Map.mapWithKey
+             (\hk n -> StakeShare $ movingAvg pp hk n (expected hk) avgs') blocks
     where
-      tot = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-      sumStake s = Set.foldl (\sum (Stake (_, c)) -> sum + c) (Coin 0) s
-      expected hk = case Map.lookup hk pooledStake of
-                      Just st -> (sumStake st) * fromIntegral (pp ^. slotsPerEpoch)
-                      Nothing -> Coin 0
-
+      (Coin tot)  = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
+      sumStake   = Set.foldl (\s (Stake (_, c)) -> s + c) (Coin 0)
+      getCoinVal (Coin c) = fromIntegral c :: Integer
+      expected hk =
+          case Map.lookup hk pooledStake of
+            Just st -> getCoinVal (sumStake st) * fromIntegral (pp ^. slotsPerEpoch) % fromIntegral tot
+            Nothing -> 0
 
 ---------------------------------------------------------------------------------
 -- State transition system
