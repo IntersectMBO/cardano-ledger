@@ -110,9 +110,9 @@ activeStake outs pointers stakeKeys delegs stakePools =
     makePair (Stake (k, c)) = (k, c)
 
 -- | Calculate pool refunds
-poolRefunds :: PParams -> Map.Map HashKey Slot -> Slot -> Map.Map HashKey Coin
+poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
 poolRefunds pc retirees cslot =
-  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retirees
+  Map.map (\e -> refund pval pmin lambda (cslot -* slotFromEpoch e)) retirees
   where
     (pval, pmin, lambda) = decayPool pc
 
