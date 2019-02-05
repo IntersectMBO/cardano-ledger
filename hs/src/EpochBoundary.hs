@@ -12,7 +12,6 @@ module EpochBoundary
   , baseStake
   , ptrStake
   , poolStake
-  , stake
   , obligation
   , poolRefunds
   , maxPool
@@ -56,14 +55,12 @@ consolidate (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: [TxOut] -> Stake
-baseStake outs =
+baseStake :: Map.Map Addr Coin -> Stake
+baseStake vals =
   Stake $
-  Map.fromList $
-  Map.toList $
   Map.fromListWith
     (+)
-    [(fromJust $ getStakeHK a, c) | TxOut a c <- outs, isJust $ getStakeHK a]
+    [(fromJust $ getStakeHK a, c) | (a, c) <- Map.toList vals, isJust $ getStakeHK a]
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr -> Maybe Ptr
@@ -71,15 +68,13 @@ getStakePtr (AddrPtr ptr) = Just ptr
 getStakePtr _             = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
-ptrStake :: [TxOut] -> Map.Map Ptr HashKey -> Stake
-ptrStake outs pointers =
+ptrStake :: Map.Map Addr Coin -> Map.Map Ptr HashKey -> Stake
+ptrStake vals pointers =
   Stake $
-  Map.fromList $
-  Map.toList $
   Map.fromListWith
     (+)
     [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
-    | TxOut a c <- outs
+    | (a, c) <- Map.toList vals
     , isJust $ getStakePtr a
     , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
     ]
@@ -102,13 +97,6 @@ poolStake operator owners delegations stake = undefined
   where
     owners' = Set.insert operator owners
     poolStake = undefined -- Map.mapWithKey (\k _ -> Map.lookup stak)
-
--- | Calculate stake of all addresses in TxOut set.
-stake :: [TxOut] -> Map.Map Ptr HashKey -> Stake
-stake outs pointers = Stake $ bStake `Map.union` pStake
-  where
-    Stake bStake = baseStake outs
-    Stake pStake = ptrStake outs pointers
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin

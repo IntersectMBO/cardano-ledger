@@ -741,6 +741,29 @@ updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
             Just st -> getCoinVal (sumStake st) * fromIntegral (pp ^. slotsPerEpoch) % fromIntegral tot
             Nothing -> 0
 
+-- | Stake distribution
+stakeDistr :: UTxO -> DState -> PState -> Stake
+stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
+    where
+      DState (StakeKeys stkeys) rewards' delegs ptrs' = ds
+      PState (StakePools stpools) _ _ _              = ps
+      outs = consolidate u
+      stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
+      Stake baseStake'   = baseStake outs
+      Stake pointerStake = ptrStake outs ptrs'
+      Stake rewardStake' = rewardStake rewards'
+      activeDelegs       = Map.filter
+                 (`Set.member` Map.keysSet stpools)
+                 (Map.restrictKeys delegs (Map.keysSet stkeys))
+
+-- | Pool distribution
+poolDistr :: UTxO -> DState -> PState -> PooledStake
+poolDistr u ds ps = undefined   --
+    where
+      delegs     = ds ^. delegations
+      poolParams = ps ^. pParams
+      stake      = stakeDistr u ds ps
+
 ---------------------------------------------------------------------------------
 -- State transition system
 ---------------------------------------------------------------------------------
