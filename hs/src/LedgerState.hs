@@ -93,8 +93,8 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
-import           Delegation.StakePool    (Delegation (..), StakePool (..),
-                                          poolPubKey, poolSpec, poolPledge,
+import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
+                                         poolPubKey, poolSpec, poolPledge,
                                          RewardAcnt(..), poolRAcnt)
 
 import Control.State.Transition
@@ -192,7 +192,7 @@ data PState = PState
     { -- |The active stake pools.
       _stPools     :: StakePools
       -- |The pool parameters.
-    , _pParams     :: Map.Map HashKey StakePool
+    , _pParams     :: Map.Map HashKey PoolParams
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map.Map HashKey Epoch
       -- |Moving average for key in epoch.
@@ -636,7 +636,7 @@ poolRew pc hk n expectedSlots averages (Coin maxP) =
     e = fromRational avg ** fromRational gamma :: Double
 
 -- | Calculate pool leader reward
-leaderRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+leaderRew :: Coin -> PoolParams -> StakeShare -> StakeShare -> Coin
 leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
   | f' <= c = f
   | otherwise =
@@ -646,7 +646,7 @@ leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
     m' = intervalValue m
 
 -- | Calculate pool member reward
-memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
+memberRew :: Coin -> PoolParams -> StakeShare -> StakeShare -> Coin
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = 0
   | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / t
@@ -660,7 +660,7 @@ rewardOnePool ::
   -> Coin
   -> Natural
   -> HashKey
-  -> StakePool
+  -> PoolParams
   -> Stake
   -> Avgs
   -> Coin
@@ -695,11 +695,11 @@ reward ::
   -> BlocksMade
   -> Coin
   -> Set.Set RewardAcnt
-  -> Map.Map HashKey StakePool
+  -> Map.Map HashKey PoolParams
   -> Avgs
   -> Map.Map HashKey Stake
   -> (Map.Map RewardAcnt Coin, Coin)
-reward pp blocks@(BlocksMade b) r addrsRew poolParams avgs' pooledStake =
+reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
   (rewards, unrealized)
   where
     total = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
