@@ -69,6 +69,7 @@ module LedgerState
   , reward
   , updateAvgs
   , stakeDistr
+  , poolDistr
   ) where
 
 import           Control.Monad           (foldM)
