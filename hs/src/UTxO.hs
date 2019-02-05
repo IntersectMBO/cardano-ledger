@@ -70,7 +70,7 @@ import           PParams                 (PParams(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
-import           Delegation.StakePool (poolPubKey, RewardAcnt(..))
+import           Delegation.PoolParams (poolPubKey, RewardAcnt(..))
 
 -- |A hash
 type Hash = Digest SHA256

@@ -16,7 +16,7 @@ import           Test.Tasty.HUnit
 
 import           Coin
 import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(..))
-import           Delegation.StakePool    (Delegation (..), StakePool (..),
+import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                                      RewardAcnt(..))
 import           Keys
 import           LedgerState
@@ -96,7 +96,7 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
                      (Slot 0))
 
 testValidDelegation ::
-  [TxWits] -> UTxOState -> DWState -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> PoolParams -> Assertion
 testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
@@ -113,7 +113,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           (Slot 0))
 
 testValidRetirement ::
-  [TxWits] -> UTxOState -> DWState -> Epoch -> StakePool -> Assertion
+  [TxWits] -> UTxOState -> DWState -> Epoch -> PoolParams -> Assertion
 testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
@@ -318,8 +318,8 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
                    , (Ptr (Slot 0) 0 2, hashKey $ vKey stakePoolKey1)
                    ]
 
-stakePool :: StakePool
-stakePool = StakePool
+stakePool :: PoolParams
+stakePool = PoolParams
             {
               _poolPubKey = vKey stakePoolKey1
             , _poolPledge  = Coin 0
@@ -334,8 +334,8 @@ halfInterval :: UnitInterval
 halfInterval =
     fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.5
 
-stakePoolUpdate :: StakePool
-stakePoolUpdate = StakePool
+stakePoolUpdate :: PoolParams
+stakePoolUpdate = PoolParams
                    {
                      _poolPubKey = vKey stakePoolKey1
                    , _poolPledge  = Coin 0

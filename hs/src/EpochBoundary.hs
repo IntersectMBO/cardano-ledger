@@ -20,9 +20,9 @@ module EpochBoundary
   ) where
 
 import           Coin
-import           Delegation.Certificates (StakeKeys(..), StakePools(..),
+import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
-import           Delegation.StakePool (RewardAcnt(..))
+import           Delegation.PoolParams   (RewardAcnt (..))
 import           Keys
 import           PParams
 import           Slot
@@ -53,17 +53,17 @@ getStakeHK _               = Nothing
 
 consolidate :: UTxO -> Map.Map Addr Coin
 consolidate (UTxO u) =
-    Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
+  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake :: [TxOut] -> Stake
 baseStake outs =
-  Stake $ Map.fromList $ Map.toList $
-  Map.fromListWith (+)
-    [ (fromJust $ getStakeHK a, c)
-    | TxOut a c <- outs
-    , isJust $ getStakeHK a
-    ]
+  Stake $
+  Map.fromList $
+  Map.toList $
+  Map.fromListWith
+    (+)
+    [(fromJust $ getStakeHK a, c) | TxOut a c <- outs, isJust $ getStakeHK a]
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr -> Maybe Ptr
@@ -73,8 +73,11 @@ getStakePtr _             = Nothing
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake :: [TxOut] -> Map.Map Ptr HashKey -> Stake
 ptrStake outs pointers =
-  Stake $ Map.fromList $ Map.toList $
-  Map.fromListWith (+)
+  Stake $
+  Map.fromList $
+  Map.toList $
+  Map.fromListWith
+    (+)
     [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
     | TxOut a c <- outs
     , isJust $ getStakePtr a
@@ -82,29 +85,38 @@ ptrStake outs pointers =
     ]
 
 rewardStake :: Map.Map RewardAcnt Coin -> Stake
-rewardStake rewards = Stake $ Map.foldlWithKey
-        (\m rewKey c -> Map.insert (getRwdHK rewKey) c m) Map.empty rewards
+rewardStake rewards =
+  Stake $
+  Map.foldlWithKey
+    (\m rewKey c -> Map.insert (getRwdHK rewKey) c m)
+    Map.empty
+    rewards
 
 poolStake ::
-    HashKey
- -> Set.Set HashKey
- -> Map.Map HashKey HashKey
- -> Set.Set Stake
- -> Set.Set Stake
+     HashKey
+  -> Set.Set HashKey
+  -> Map.Map HashKey HashKey
+  -> Set.Set Stake
+  -> Set.Set Stake
 poolStake operator owners delegations stake = undefined
-    where owners'   = Set.insert operator owners
-          poolStake = undefined -- Map.mapWithKey (\k _ -> Map.lookup stak)
+  where
+    owners' = Set.insert operator owners
+    poolStake = undefined -- Map.mapWithKey (\k _ -> Map.lookup stak)
 
 -- | Calculate stake of all addresses in TxOut set.
 stake :: [TxOut] -> Map.Map Ptr HashKey -> Stake
 stake outs pointers = Stake $ bStake `Map.union` pStake
-    where Stake bStake = baseStake outs
-          Stake pStake = ptrStake outs pointers
+  where
+    Stake bStake = baseStake outs
+    Stake pStake = ptrStake outs pointers
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
 poolRefunds pp retirees cslot =
-  Map.map (\e -> refund pval pmin lambda (cslot -* slotFromEpoch e (pp ^. slotsPerEpoch))) retirees
+  Map.map
+    (\e ->
+       refund pval pmin lambda (cslot -* slotFromEpoch e (pp ^. slotsPerEpoch)))
+    retirees
   where
     (pval, pmin, lambda) = decayPool pp
 

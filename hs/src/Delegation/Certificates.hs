@@ -22,7 +22,7 @@ import           PParams (PParams(..), decayRate, minRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
                                  poolDecayRate, intervalValue)
 
-import           Delegation.StakePool
+import           Delegation.PoolParams
 
 import qualified Data.Map as Map
 
@@ -39,7 +39,7 @@ data DCert = -- | A stake key registration certificate.
             -- | A stake key deregistration certificate.
           | DeRegKey VKey --TODO this is actually HashKey on page 13, is that what we want?
             -- | A stake pool registration certificate.
-          | RegPool StakePool
+          | RegPool PoolParams
             -- | A stake pool retirement certificate.
           | RetirePool VKey Epoch
             -- | A stake delegation certificate.
