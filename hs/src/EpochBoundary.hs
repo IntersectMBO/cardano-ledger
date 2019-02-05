@@ -7,6 +7,7 @@ This modules implements the necessary functions for the changes that can happen 
 module EpochBoundary
   ( Stake(..)
   , Production(..)
+  , consolidate
   , baseStake
   , ptrStake
   , stake
@@ -48,6 +49,10 @@ newtype Stake =
 getStakeHK :: Addr -> Maybe HashKey
 getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
+
+consolidate :: UTxO -> Map.Map Addr Coin
+consolidate (UTxO u) =
+    Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake :: [TxOut] -> Set.Set Stake
