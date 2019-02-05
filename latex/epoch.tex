@@ -3,6 +3,7 @@
 \newcommand{\RewardEnv}{\type{RewardEnv}}
 \newcommand{\RewardState}{\type{RewardState}}
 \newcommand{\PlReapState}{\type{PlReapState}}
+\newcommand{\PlReapEnv}{\type{PlReapEnv}}
 \newcommand{\NewPParamEnv}{\type{NewPParamEnv}}
 \newcommand{\Snapshots}{\type{Snapshots}}
 \newcommand{\SnapshotEnv}{\type{SnapshotEnv}}
@@ -174,7 +175,7 @@ throughout the rest of the section.
       & ~~~~~ \fun{expected}~\var{hk} =
                 \begin{cases}
                   \left(\sum\limits_{
-                    \wcard\mapsto c\in\var{st}}c\right)*(\fun{slotsPerEpoch}~{pp}) / tot
+                    \wcard\mapsto c\in\var{st}}c\right)\cdot\SlotsPerEpoch / tot
                   &
                   \text{if } hk\mapsto\var{st} \in pooledStake \\
                   0 & \text{otherwise}
@@ -359,7 +360,7 @@ The type $\type{\Snapshots}$ contains the information needing to be saved on the
     \SnapshotEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{current slot}\\
+        \var{e_{new}} & \Epoch & \text{the upcoming epoch}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
@@ -419,6 +420,7 @@ This transition has no preconditions and results in the following state change:
   \item In the UTxO state, the decayed deposit amounts are moved from the deposit pool
     to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-trans}),
     the value $\var{feeSS}$ will be removed from the fee pot in the UTxO state.
+    The decay is calculated based on \textit{the first slot in the upcoming epoch}.
 \end{itemize}
 
 %%
@@ -434,6 +436,7 @@ This transition has no preconditions and results in the following state change:
         (\var{stkeys},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{pooledStake} & \poolDistr{utxo}{dstate}{pstate} \\
+        \var{slot} & \firstSlot{e_{new}} \\
         \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{oblg} \\
       \end{array}
@@ -441,7 +444,7 @@ This transition has no preconditions and results in the following state change:
     }
     {
       \begin{array}{l}
-        \var{slot} \\
+        \var{e_{new}} \\
         \var{pp} \\
         \var{dstate} \\
         \var{pstate} \\
@@ -495,6 +498,17 @@ which is responsible for removing pools slated for retirement in the given epoch
 %% Figure - Pool Reap Defs
 %%
 \begin{figure}[htb]
+  \emph{Pool Reap environment}
+  \begin{equation*}
+    \PlReapEnv =
+    \left(
+      \begin{array}{r@{~\in~}ll}
+        \var{e_{new}} & \Epoch & \text{the upcoming epoch}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Pool Reap State}
   \begin{equation*}
     \PlReapState =
@@ -510,7 +524,7 @@ which is responsible for removing pools slated for retirement in the given epoch
   \emph{Pool Reap transitions}
   \begin{equation*}
     \_ \vdash \_ \trans{poolreap}{} \_ \in
-    \powerset (\Slot \times \PlReapState \times \PlReapState)
+    \powerset (\PlReapEnv \times \PlReapState \times \PlReapState)
   \end{equation*}
   %
   \caption{Pool Reap Transition}
@@ -539,11 +553,11 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{=}l}
-        \var{retired} & \var{retiring}^{-1}~\var{(\epoch{slot})} \\
-        \var{pr} & \poolRefunds{pp}{retiring}{cslot} \\
+        \var{retired} & \var{retiring}^{-1}~\var{e_{new}} \\
+        \var{pr} & \poolRefunds{pp}{retiring}{(\firstSlot{e_{new}})} \\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
-                   \var{hk}\mapsto\var{pool} \in \var{poolParams}\restrictdom\var{retiring} \} \\
+                   \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
         \var{refunds} & \left\{
                         a \mapsto c
                         \mathrel{\Bigg|}
@@ -563,7 +577,8 @@ This transition has no preconditions and results in the following state change:
     }
     {
       \begin{array}{l}
-        \var{slot}\\
+        \var{e_{new}}\\
+        \var{pp}\\
       \end{array}
       \vdash
       \left(
@@ -592,7 +607,7 @@ This transition has no preconditions and results in the following state change:
           ~ \\
           \var{stkeys} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
-          \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retiring}} \\
+          \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
           ~ \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
@@ -613,7 +628,7 @@ This transition has no preconditions and results in the following state change:
 \label{sec:pparam-update}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
-parameters. The protocol parameters environment consists of the current slot number, the new
+parameters. The protocol parameters environment consists of the upcoming epoch number, the new
 protocol parameters, and delegation and pool states.
 The state change is a change of the $\UTxOState$, the $\Acnt$ states, and the current
 $\PParams$.
@@ -628,8 +643,8 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \NewPParamEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{current slot}\\
-        \var{ppNew} & \PParams & \text{new protocol parameters}\\
+        \var{e_{new}} & \Epoch & \text{upcoming epoch}\\
+        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
       \end{array}
@@ -696,18 +711,21 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-accepted}
     \inference[New-Proto-Param-Accepted]
     {
-      \var{oblgCur} = \obligation{pp}{stkeys}{stpools}{slot} \\
-      \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
-      ~\\
-      \var{diff} = \var{oblgCur} - \var{oblgNew} \\
-      \var{reserves} + \var{diff} \geq 0\\
+      {\begin{array}{rcl}
+          \var{slot} & = & \firstSlot{e_{new}} \\
+          \var{oblg_{cur}} & = & \obligation{pp}{stkeys}{stpools}{slot} \\
+          \var{oblg_{new}} & = & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{diff} & = & \var{oblg_{cur}} - \var{oblg_{new}} \\
+          \\
+          \var{reserves} + \var{diff} & \geq & 0\\
+      \end{array}}\\
       ~\\
       \var{utxoSt'} =
       \left(
         {
           \begin{array}{r}
             \var{utxo} \\
-            \varUpdate{oblgNew} \\
+            \varUpdate{oblg_{new}} \\
             \var{fees} \\
           \end{array}
         }
@@ -727,8 +745,8 @@ for ease of reading.
     }
     {
       \begin{array}{l}
-        \var{slot}\\
-        \var{ppNew}\\
+        \var{e_{new}}\\
+        \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -745,7 +763,7 @@ for ease of reading.
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
           \varUpdate{acnt'} \\
-          \varUpdate{\var{ppNew}} \\
+          \varUpdate{\var{pp_{new}}} \\
         \end{array}
       \right)
     }
@@ -756,16 +774,19 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-denied}
     \inference[New-Proto-Param-Denied]
     {
-      \var{oblgCur} = \obligation{pp}{stkeys}{stpools}{slot} \\
-      \var{oblgNew} = \obligation{ppNew}{stkeys}{stpools}{slot} \\
-      ~\\
-      \var{diff} = \var{oblgCur} - \var{oblgNew} \\
-      \var{reserves} + \var{diff} < 0\\
+      {\begin{array}{rcl}
+          \var{slot} & = & \firstSlot{e_{new}} \\
+          \var{oblg_{cur}} & = & \obligation{pp}{stkeys}{stpools}{slot} \\
+          \var{oblg_{new}} & = & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{diff} & = & \var{oblg_{cur}} - \var{oblg_{new}} \\
+          \\
+          \var{reserves} + \var{diff} & < & 0\\
+      \end{array}}\\
     }
     {
       \begin{array}{l}
-        \var{slot}\\
-        \var{ppNew}\\
+        \var{e_{new}}\\
+        \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -812,8 +833,8 @@ the current protocol parameters, and the snapshots.
     \EpochEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{current slot}\\
-        \var{ppNew} & \PParams & \text{new protocol parameters}\\
+        \var{e_{new}} & \Epoch & \text{upcoming epoch}\\
+        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
         \var{blocks} & \HashKey \mapsto \N & \text{blocks made in the epoch}\\
       \end{array}
     \right)
@@ -848,9 +869,6 @@ the current protocol parameters, and the snapshots.
 
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$, and $\mathsf{NEWPP}$
 in sequence.
-Note that the slot number used as \textit{current slot number}
-for the epoch boundary calculations where a slot number is required is set to
-be the \textit{last slot of the epoch before the boundary}.
 
 %%
 %% Figure - Epoch Rule
@@ -861,7 +879,7 @@ be the \textit{last slot of the epoch before the boundary}.
     {
       {
         \begin{array}{l}
-          \var{slot}\\
+          \var{e_{new}}\\
           \var{pp}\\
           \var{dstate} \\
           \var{pstate} \\
@@ -893,7 +911,7 @@ be the \textit{last slot of the epoch before the boundary}.
       \\~\\~\\
       {
         \begin{array}{l}
-          \var{slot}
+          \var{e_{new}}
         \end{array}
       }
       \vdash
@@ -919,8 +937,8 @@ be the \textit{last slot of the epoch before the boundary}.
       \\~\\~\\
       {
         \begin{array}{l}
-          \var{slot}\\
-          \var{ppNew}\\
+          \var{e_{new}}\\
+          \var{pp_{new}}\\
           \var{dstate'}\\
           \var{pstate''}\\
         \end{array}
@@ -948,8 +966,8 @@ be the \textit{last slot of the epoch before the boundary}.
     }
     {
       \begin{array}{l}
-        \var{slot}\\
-        \var{ppNew}\\
+        \var{e_{new}}\\
+        \var{pp_{new}}\\
         \var{blocks}\\
       \end{array}
       \vdash
@@ -970,8 +988,8 @@ be the \textit{last slot of the epoch before the boundary}.
         \varUpdate{\var{acnt'''}} \\
         \varUpdate{\var{dstate''}} \\
         \varUpdate{\var{pstate''}} \\
-        \varUpdate{\var{pp'}}
-        \varUpdate{\var{ss'}}
+        \varUpdate{\var{pp'}} \\
+        \varUpdate{\var{ss'}} \\
       \end{array}
       \right)
     }
@@ -1263,7 +1281,6 @@ The reward state transition type, like all the transition types in this section,
     \RewardEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{slot} & \Slot & \text{last slot of epoch}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
         \var{ss} & \SnapshotState & \text{snapshots}\\
@@ -1425,9 +1442,9 @@ smaller refunds for deposits than were paid upon depositing.
     }
     {
       \begin{array}{l}
-        \var{slot}\\
         \var{pp}\\
         \var{blocks}\\
+        \var{ss}\\
       \end{array}
       \vdash
       \left(
