@@ -7,6 +7,7 @@ This modules implements the necessary functions for the changes that can happen 
 module EpochBoundary
   ( Stake(..)
   , Production(..)
+  , PooledStake(..)
   , rewardStake
   , consolidate
   , baseStake
@@ -39,9 +40,14 @@ import           Lens.Micro              ((^.))
 newtype Production =
   Production (Map.Map HashKey Natural)
 
--- | Type of stake as pair of coins associated to a hash key.
+-- | Type of stake as map from hash key to coins associated.
 newtype Stake =
   Stake (Map.Map HashKey Coin)
+  deriving (Show, Eq, Ord)
+
+-- | Type of pooled stake as map from pool hash key to Stake.
+newtype PooledStake =
+  PooledStake (Map.Map HashKey Stake)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
