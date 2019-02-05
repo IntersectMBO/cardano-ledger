@@ -7,6 +7,7 @@ This modules implements the necessary functions for the changes that can happen 
 module EpochBoundary
   ( Stake(..)
   , Production(..)
+  , rewardStake
   , consolidate
   , baseStake
   , ptrStake
@@ -79,6 +80,10 @@ ptrStake outs pointers =
     , isJust $ getStakePtr a
     , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
     ]
+
+rewardStake :: Map.Map RewardAcnt Coin -> Set.Set Stake
+rewardStake = Map.foldlWithKey
+        (\set rewKey c -> Set.insert (Stake (getRwdHK rewKey, c)) set) Set.empty
 
 -- | Calculate stake of all addresses in TxOut set.
 stake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
