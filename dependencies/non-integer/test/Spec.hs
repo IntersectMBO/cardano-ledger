@@ -2,8 +2,6 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE FlexibleInstances     #-}
 
-import           Debug.Trace
-
 import           Data.Ratio ((%))
 
 import qualified Data.FixedPoint as FBV
@@ -16,7 +14,7 @@ eps :: Rational
 eps    = 1 / 10^12
 
 epsD :: Double
-epsD   = 1.0 / 10^5
+epsD   = 1.0 / 10^12
 
 epsFBV :: FixedPoint
 epsFBV = fromRational eps
@@ -136,6 +134,10 @@ prop_DIdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::Double) - ((fromIntegral b'' / fromIntegral a'')::Double) < epsD
     where (a'', b'') = normalizeInts a b
 
+prop_DfindD :: Positive Double -> Property
+prop_DfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+    where e = exp' 1
+          n = findE a
 
 -----------------------------------------
 -- Fixed-point versions of properties  --
@@ -261,4 +263,6 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_DExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_DlnLaw)
+  putStrLn "check bound of `findE`"
+  quickCheck (withMaxSuccess 1000 prop_DfindD)
   putStrLn ""
