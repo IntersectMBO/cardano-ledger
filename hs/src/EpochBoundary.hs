@@ -5,7 +5,7 @@ Description : Functions and definitions for rules at epoch boundary.
 This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 -}
 module EpochBoundary
-  ( Stake
+  ( Stake(..)
   , Production(..)
   , baseStake
   , ptrStake
@@ -111,10 +111,10 @@ activeStake outs pointers stakeKeys delegs stakePools =
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
-poolRefunds pc retirees cslot =
-  Map.map (\e -> refund pval pmin lambda (cslot -* slotFromEpoch e)) retirees
+poolRefunds pp retirees cslot =
+  Map.map (\e -> refund pval pmin lambda (cslot -* slotFromEpoch e (pp ^. slotsPerEpoch))) retirees
   where
-    (pval, pmin, lambda) = decayPool pc
+    (pval, pmin, lambda) = decayPool pp
 
 -- | Calculate total possible refunds.
 obligation :: PParams -> StakeKeys -> StakePools -> Slot -> Coin

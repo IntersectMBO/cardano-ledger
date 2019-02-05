@@ -84,12 +84,13 @@ import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*),
-                                               slotsPerEpoch, epochFromSlot)
+                                               epochFromSlot)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, rho, tau)
+                                                 movingAvgExp, rho, tau,
+                                                 slotsPerEpoch)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -153,6 +154,11 @@ instance Monoid Validity where
   mappend = (<>)
 
 type RewardAccounts = Map.Map RewardAcnt Coin
+
+-- | Blocks made
+newtype BlocksMade =
+    BlocksMade (Map.Map HashKey Natural)
+               deriving (Show, Eq)
 
 -- | Performance moving averages
 newtype Avgs =
@@ -669,7 +675,7 @@ rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
   where
     (Coin pstake) = Map.foldl (+) (Coin 0) actgr
     sigma = fromIntegral pstake % fromIntegral total
-    expectedSlots = sigma * fromIntegral slotsPerEpoch
+    expectedSlots = sigma * fromIntegral (pc ^. slotsPerEpoch)
     (_, _, Coin p) = poolSpec pool
     pr = fromIntegral p % fromIntegral total
     maxP =
@@ -724,6 +730,22 @@ reward (Production prod) pc r dwstate outs =
         , rewardOnePool pc r n hk pool actgr (dwstate ^. pstate . avgs) total)
       | (hk, (pool, n, actgr)) <- pdata
       ]
+
+-- | Update moving averages
+updateAvgs ::
+     PParams
+  -> Avgs
+  -> BlocksMade
+  -> (Map.Map HashKey (Set.Set Stake))
+  -> Avgs
+updateAvgs pp avgs blocks pooledStake = undefined
+    where
+      tot = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
+      sumStake s = Set.foldl (\sum (Stake (_, c)) -> sum + c) (Coin 0) s
+      expected hk = case Map.lookup hk pooledStake of
+                      Just st -> (sumStake st) * fromIntegral (pp ^. slotsPerEpoch)
+                      Nothing -> Coin 0
+
 
 ---------------------------------------------------------------------------------
 -- State transition system
@@ -1075,8 +1097,8 @@ instance STS POOLCLEAN where
 
 poolCleanTransition :: TransitionRule POOLCLEAN
 poolCleanTransition = do
-  TRC(slot, p, _) <- judgmentContext
-  let currEpoch = epochFromSlot slot
+  TRC(_, p, _) <- judgmentContext
+  let currEpoch = Epoch 100
   let retired = Map.keysSet $ Map.filter (== currEpoch) $ p ^. retiring
   let Avgs averages = p ^. avgs
   null retired ?! NoRetiredPOOLCLEAN

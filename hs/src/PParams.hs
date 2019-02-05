@@ -21,6 +21,7 @@ module PParams
   , intervalValue
   , interval0
   , interval1
+  , slotsPerEpoch
   ) where
 
 import           Numeric.Natural (Natural)
@@ -48,8 +49,10 @@ interval1 :: UnitInterval
 interval1 = UnitInterval 1
 
 data PParams = PParams
-  { -- |The linear factor for the minimum fee calculation
-    _minfeeA         :: Natural
+  { -- | Slots per Epoch
+    _slotsPerEpoch    :: Natural
+    -- |The linear factor for the minimum fee calculation
+  , _minfeeA         :: Natural
     -- |The constant factor for the minimum fee calculation
   , _minfeeB         :: Natural
     -- |The amount of a key registration deposit
