@@ -49,7 +49,7 @@ fln maxN x = if x < 0
                   cf maxN 0 Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1 ..]
 
 eps :: (Fractional a) => a
-eps = 1 / 10^30
+eps = 1 / 10.0^(16::Int)
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
 cf ::
