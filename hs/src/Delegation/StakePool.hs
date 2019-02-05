@@ -3,6 +3,7 @@
 module Delegation.StakePool
   ( StakePool(..)
   , Delegation(..)
+  , RewardAcnt(..)
   -- lenses
     -- StakePool
   , poolPubKey
@@ -12,6 +13,7 @@ module Delegation.StakePool
   , poolMargin
   , poolAltAcnt
   , poolSpec
+  , poolRAcnt
     -- Delegation
   , delegator
   , delegatee
@@ -26,6 +28,10 @@ import           Coin            (Coin)
 import           Keys
 import           PParams
 
+-- |An account based address for a rewards
+newtype RewardAcnt = RewardAcnt { getRwdHK :: HashKey }
+  deriving (Show, Eq, Ord)
+
 -- |A stake pool.
 data StakePool = StakePool
                    { _poolPubKey  :: VKey
@@ -34,6 +40,7 @@ data StakePool = StakePool
                    , _poolCost    :: Coin
                    , _poolMargin  :: UnitInterval
                    , _poolAltAcnt :: Maybe HashKey
+                   , _poolRAcnt   :: RewardAcnt
                    } deriving (Show, Eq, Ord)
 
 makeLenses ''StakePool

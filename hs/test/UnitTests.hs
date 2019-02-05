@@ -16,7 +16,8 @@ import           Test.Tasty.HUnit
 
 import           Coin
 import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(..))
-import           Delegation.StakePool    (Delegation (..), StakePool (..))
+import           Delegation.StakePool    (Delegation (..), StakePool (..),
+                                                     RewardAcnt(..))
 import           Keys
 import           LedgerState
 import           PParams
@@ -326,6 +327,7 @@ stakePool = StakePool
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
+            , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
             }
 
 halfInterval :: UnitInterval
@@ -341,6 +343,7 @@ stakePoolUpdate = StakePool
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
+                   , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
                    }
 
 tx4Body :: Tx

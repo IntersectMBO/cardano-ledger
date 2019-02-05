@@ -132,21 +132,21 @@ mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
 mutateDCert :: KeyPairs -> DWState -> DCert -> Gen DCert
-mutateDCert keys _ (RegKey _) = RegKey <$> vKey . snd <$> Gen.element keys
+mutateDCert keys _ (RegKey _) = RegKey . vKey . snd <$> Gen.element keys
 
-mutateDCert keys _ (DeRegKey _) = DeRegKey <$> vKey . snd <$> Gen.element keys
+mutateDCert keys _ (DeRegKey _) = DeRegKey . vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     epoch' <- mutateEpoch 0 e epoch
     key'   <- getAnyStakeKey keys
     pure $ RetirePool key' epoch'
 
-mutateDCert keys _ (RegPool (StakePool _ pledge pledges cost margin altacnt)) = do
+mutateDCert keys _ (RegPool (StakePool _ pledge pledges cost margin altacnt rwdacnt)) = do
   key'    <- getAnyStakeKey keys
   cost'   <- mutateCoin 0 100 cost
   p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
   let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
-  pure $ RegPool (StakePool key' pledge pledges cost' interval altacnt)
+  pure $ RegPool (StakePool key' pledge pledges cost' interval altacnt rwdacnt)
 
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys
