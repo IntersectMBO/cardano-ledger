@@ -314,7 +314,7 @@ genStakePool keys = do
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey)
+  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey) Set.empty
 
 genDelegation :: KeyPairs -> DWState -> Gen Delegation
 genDelegation keys d = do
