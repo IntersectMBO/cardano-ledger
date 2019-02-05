@@ -97,7 +97,7 @@ import           EpochBoundary
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          poolPubKey, poolSpec, poolPledge,
-                                         RewardAcnt(..), poolRAcnt)
+                                         RewardAcnt(..), poolRAcnt, poolOwners)
 
 import Control.State.Transition
 
@@ -760,7 +760,10 @@ stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
 
 -- | Pool distribution
 poolDistr :: UTxO -> DState -> PState -> PooledStake
-poolDistr u ds ps = undefined   --
+poolDistr u ds ps = PooledStake $
+    Map.mapWithKey
+           (\hk pool -> poolStake hk (pool ^. poolOwners) delegs stake)
+           poolParams
     where
       delegs     = ds ^. delegations
       poolParams = ps ^. pParams

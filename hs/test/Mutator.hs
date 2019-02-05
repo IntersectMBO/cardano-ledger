@@ -141,12 +141,12 @@ mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     key'   <- getAnyStakeKey keys
     pure $ RetirePool key' epoch'
 
-mutateDCert keys _ (RegPool (PoolParams _ pledge pledges cost margin altacnt rwdacnt)) = do
+mutateDCert keys _ (RegPool (PoolParams _ pledge pledges cost margin altacnt rwdacnt owners)) = do
   key'    <- getAnyStakeKey keys
   cost'   <- mutateCoin 0 100 cost
   p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
   let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
-  pure $ RegPool (PoolParams key' pledge pledges cost' interval altacnt rwdacnt)
+  pure $ RegPool (PoolParams key' pledge pledges cost' interval altacnt rwdacnt owners)
 
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys

@@ -328,6 +328,7 @@ stakePool = PoolParams
             , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
             , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+            , _poolOwners  = Set.empty
             }
 
 halfInterval :: UnitInterval
@@ -344,6 +345,7 @@ stakePoolUpdate = PoolParams
                    , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
                    , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+                   , _poolOwners  = Set.empty
                    }
 
 tx4Body :: Tx
