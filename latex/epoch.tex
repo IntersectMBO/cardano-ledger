@@ -1130,6 +1130,8 @@ The calculation is done pool-by-pool.
     Involved in the calculation is:
     \begin{itemize}
       \item $\var{pstake}$, the total amount of stake controlled by the stake pool.
+      \item $\var{ostake}$, the total amount of stake controlled by the stake pool operator
+        and owners
       \item $\sigma$, the total proportion of stake controlled by the stake pool.
       \item $\overline{N}$, the expected number of blocks the pool should have produced.
       \item $\var{pledge}$, the pool's pledge in lovelace.
@@ -1163,14 +1165,15 @@ The calculation is done pool-by-pool.
           (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{stake}} t \\
+      & ~~~~~~~\var{ostake} = \var{stake}~\var{poolHK} \\
       & ~~~~~~~\sigma = \var{pstake} / tot \\
-      & ~~~~~~~\var{\overline{N}} = \sigma * (\fun{slotsPerEpoch}~{pp})\\
+      & ~~~~~~~\var{\overline{N}} = \sigma * \SlotsPerEpoch\\
       & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
       & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
       & ~~~~~~~maxP =
       \begin{cases}
         \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r}&
-        \var{pledge} \leq \var{pstake}\\
+        \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
       & ~~~~~~~\var{poolR} = \poolReward{pp}{hk}{n}{\overline{N}}{avgs}{maxP} \\
@@ -1179,7 +1182,7 @@ The calculation is done pool-by-pool.
                                   ~\Big\vert~
                                   hk\mapsto c\in\var{stake},~~hk \neq\var{poolHK}
                                \right\}\\
-      & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{stake}~\var{poolHK}}{tot}}{\sigma} \\
+      & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{ostake}}{tot}}{\sigma} \\
       & ~~~~~~~\var{potentialRewards} =
                  \var{mReward} \cup
                  \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
