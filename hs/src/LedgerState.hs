@@ -65,7 +65,6 @@ module LedgerState
   , poolRew
   , leaderRew
   , memberRew
-  , indivRew
   , rewardOnePool
   , reward
   , updateAvgs
@@ -84,8 +83,7 @@ import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*),
-                                               epochFromSlot)
+import           Slot                    (Slot (..), Epoch (..), (-*))
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
@@ -96,7 +94,8 @@ import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
 import           Delegation.StakePool    (Delegation (..), StakePool (..),
-                                                     poolPubKey, poolSpec)
+                                          poolPubKey, poolSpec, poolPledge,
+                                         RewardAcnt(..), poolRAcnt)
 
 import Control.State.Transition
 
@@ -628,9 +627,9 @@ poolRew ::
   -> Rational
   -> Avgs
   -> Coin
-  -> (Coin, Rational)
+  -> Coin
 poolRew pc hk n expectedSlots averages (Coin maxP) =
-  (floor $ e * fromIntegral maxP, avg)
+  floor $ e * fromIntegral maxP
   where
     avg = intervalValue $ pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
@@ -638,7 +637,7 @@ poolRew pc hk n expectedSlots averages (Coin maxP) =
 
 -- | Calculate pool leader reward
 leaderRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
-leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
+leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
   | f' <= c = f
   | otherwise =
     floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
@@ -648,17 +647,12 @@ leaderRew f@(Coin f') pool (StakeShare sigma) (StakeShare s)
 
 -- | Calculate pool member reward
 memberRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Coin
-memberRew (Coin f') pool (StakeShare sigma) (StakeShare s)
+memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / s
+  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / t
   where
     (Coin c, m, _) = poolSpec pool
     m' = intervalValue m
-
--- | Calculate individual reward
-indivRew :: Coin -> StakePool -> StakeShare -> StakeShare -> Bool -> Coin
-indivRew f pool sigma s True  = leaderRew f pool sigma s
-indivRew f pool sigma s False = memberRew f pool sigma s
 
 -- | Reward one pool
 rewardOnePool ::
@@ -667,84 +661,80 @@ rewardOnePool ::
   -> Natural
   -> HashKey
   -> StakePool
-  -> Map.Map HashKey Coin
+  -> Stake
   -> Avgs
   -> Coin
-  -> (Map.Map RewardAcnt Coin, StakeShare)
-rewardOnePool pc r n poolHK pool actgr averages (Coin total) =
-  (Map.fromList keysVals, StakeShare avg)
+  -> Set.Set RewardAcnt
+  -> (Map.Map RewardAcnt Coin, Coin)
+rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
+  (rewards, unrealized)
   where
-    (Coin pstake) = Map.foldl (+) (Coin 0) actgr
+    (Coin pstake) = Map.foldl (+) (Coin 0) stake
     sigma = fromIntegral pstake % fromIntegral total
-    expectedSlots = sigma * fromIntegral (pc ^. slotsPerEpoch)
-    (_, _, Coin p) = poolSpec pool
-    pr = fromIntegral p % fromIntegral total
+    expectedSlots = sigma * fromIntegral (pp ^. slotsPerEpoch)
+    Coin pledge = pool ^. poolPledge
+    pr = fromIntegral pledge % fromIntegral total
     maxP =
-      if p <= pstake
-        then maxPool pc r sigma pr
+      if pledge <= pstake
+        then maxPool pp r sigma pr
         else 0
-    (poolR, avg) = poolRew pc poolHK n expectedSlots averages maxP
-    sFrac = StakeShare (sigma / fromIntegral total)
-    keysVals =
-      [ ( RewardAcnt hk
-        , indivRew
-            poolR
-            pool
-            sFrac
-            (StakeShare (fromIntegral c % fromIntegral total))
-            (hk == poolHK))
-      | (hk, Coin c) <- Map.toList actgr
-      ]
+    poolR = poolRew pp poolHK n expectedSlots averages maxP
+    tot = fromIntegral total
+    mRewards = Map.fromList
+     [(RewardAcnt hk,
+       memberRew poolR pool (StakeShare ((fromIntegral c)% tot)) (StakeShare sigma))
+     | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
+    Coin hkStake = stake Map.! poolHK
+    iReward  = leaderRew poolR pool (StakeShare $ (fromIntegral hkStake) % tot) (StakeShare sigma)
+    potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
+    rewards = Map.restrictKeys potentialRewards addrsRew
+    unrealized = r - Map.foldl (+) (Coin 0) rewards
 
 reward ::
-     Production
-  -> PParams
+     PParams
+  -> BlocksMade
   -> Coin
-  -> DWState
-  -> [TxOut]
-  -> (Map.Map RewardAcnt Coin, Avgs)
-reward (Production prod) pc r dwstate outs =
-  ( foldl Map.union Map.empty [rew | (_, (rew, _)) <- results]
-  , Avgs $ Map.fromList [(hk, avg) | (hk, (_, avg)) <- results])
+  -> Set.Set RewardAcnt
+  -> Map.Map HashKey StakePool
+  -> Avgs
+  -> Map.Map HashKey Stake
+  -> (Map.Map RewardAcnt Coin, Coin)
+reward pp blocks@(BlocksMade b) r addrsRew poolParams avgs' pooledStake =
+  (rewards, unrealized)
   where
-    active =
-      activeStake
-        outs
-        (dwstate ^. dstate . ptrs)
-        (dwstate ^. dstate . stKeys)
-        (dwstate ^. dstate . delegations)
-        (dwstate ^. pstate . stPools)
-    total = Map.foldl (+) (Coin 0) active
-    pactive = groupByPool active (dwstate ^. dstate . delegations)
+    total = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
+    sumStake (Stake s) = Map.foldl (\s c -> s + c) (Coin 0) s
     pdata =
       [ ( key
-        , ( (dwstate ^. pstate . pParams) Map.! key
-          , prod Map.! key
-          , pactive Map.! key))
+        , ( poolParams Map.! key
+          , b Map.! key
+          , pooledStake Map.! key))
       | key <-
-          Set.toList $ Map.keysSet (dwstate ^. pstate . pParams) `Set.intersection`
-          Map.keysSet prod `Set.intersection`
-          Map.keysSet pactive
+          Set.toList $ Map.keysSet poolParams `Set.intersection`
+          Map.keysSet b `Set.intersection`
+          Map.keysSet pooledStake
       ]
     results =
       [ ( hk
-        , rewardOnePool pc r n hk pool actgr (dwstate ^. pstate . avgs) total)
+        , rewardOnePool pp r n hk pool actgr avgs' total addrsRew)
       | (hk, (pool, n, actgr)) <- pdata
       ]
+    unrealized = foldl (\s (_, (_, u)) -> s + u) (Coin 0) results
+    rewards = foldl (\m (_, (rwds, _)) -> Map.union m rwds) Map.empty results
 
 -- | Update moving averages
 updateAvgs ::
      PParams
   -> Avgs
   -> BlocksMade
-  -> Map.Map HashKey (Set.Set Stake)
+  -> Map.Map HashKey Stake
   -> Avgs
 updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
     Avgs $ Map.mapWithKey
              (\hk n -> StakeShare $ movingAvg pp hk n (expected hk) avgs') blocks
     where
       (Coin tot)  = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-      sumStake   = Set.foldl (\s (Stake (_, c)) -> s + c) (Coin 0)
+      sumStake (Stake s) = Map.foldl (\s c -> s + c) (Coin 0) s
       getCoinVal (Coin c) = fromIntegral c :: Integer
       expected hk =
           case Map.lookup hk pooledStake of
@@ -1116,40 +1106,40 @@ data ACCNT
 instance STS ACCNT where
     type State ACCNT = (AccountState, DWState)
     type Signal ACCNT = ()
-    type Environment ACCNT = (Slot, PParams, Production, UTxOState)
+    type Environment ACCNT = (Slot, PParams, BlocksMade, UTxOState)
     data PredicateFailure ACCNT = FailureACCNT
                    deriving (Show, Eq)
 
-    initialRules = [ initialAccnt ]
-    transitionRules = [ accntTransition ]
+    initialRules = [  ]
+    transitionRules = [  ]
 
-initialAccnt :: InitialRule ACCNT
-initialAccnt = pure (emptyAccount, emptyDelegation)
+-- initialAccnt :: InitialRule ACCNT
+-- initialAccnt = pure (emptyAccount, emptyDelegation)
 
-accntTransition :: TransitionRule ACCNT
-accntTransition = do
-    TRC((slot, pp, production, us), (as, dw), _) <- judgmentContext
+-- accntTransition :: TransitionRule ACCNT
+-- accntTransition = do
+--     TRC((slot, pp, blocks, us), (as, dw), _) <- judgmentContext
 
-    let rho' = intervalValue (pp ^. rho)
-    let tau' = intervalValue (pp ^. tau)
-    let obl = obligation pp (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
-    let decayed = us ^. deposits - obl          -- underflow?
-    let Coin reserves' = as ^. reserves
-    let expansion = floor $ rho' * fromIntegral reserves'
-    let Coin totalPool = (us ^. fees) + decayed + (as ^. rewardPool) + expansion
-    let newTreasury = floor $ tau' * fromIntegral totalPool
-    let availablePool = totalPool - newTreasury -- underflow?
-    let getOutputs (UTxO utxo') = Map.elems utxo'
-    let outs = getOutputs (us ^. utxo)
-    let (rewards', avgs') = reward production pp (Coin availablePool) dw outs
-    let paidRewards = Map.foldl (+) (Coin 0) rewards'
-    let as' = as & treasury %~ (+) (Coin newTreasury)
-                 & reserves %~ (-) expansion      -- underflow?
-                 & rewardPool .~ Coin availablePool - paidRewards
-    -- union is left-biased, new values take precedence
-    let dw' = dw & dstate . rewards %~ Map.union rewards'
-                 & pstate . avgs .~ avgs'
-    pure (as', dw')
+--     let rho' = intervalValue (pp ^. rho)
+--     let tau' = intervalValue (pp ^. tau)
+--     let obl = obligation pp (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
+--     let decayed = us ^. deposits - obl          -- underflow?
+--     let Coin reserves' = as ^. reserves
+--     let expansion = floor $ rho' * fromIntegral reserves'
+--     let Coin totalPool = (us ^. fees) + decayed + (as ^. rewardPool) + expansion
+--     let newTreasury = floor $ tau' * fromIntegral totalPool
+--     let availablePool = totalPool - newTreasury -- underflow?
+--     let getOutputs (UTxO utxo') = Map.elems utxo'
+--     let outs = getOutputs (us ^. utxo)
+--     let (rewards', avgs') = reward pp (Coin availablePool) dw outs
+--     let paidRewards = Map.foldl (+) (Coin 0) rewards'
+--     let as' = as & treasury %~ (+) (Coin newTreasury)
+--                  & reserves %~ (-) expansion      -- underflow?
+--                  & rewardPool .~ Coin availablePool - paidRewards
+--     -- union is left-biased, new values take precedence
+--     let dw' = dw & dstate . rewards %~ Map.union rewards'
+--                  & pstate . avgs .~ avgs'
+--     pure (as', dw')
 
 data NEWPC
 instance STS NEWPC where
@@ -1179,7 +1169,7 @@ data EPOCH
 instance STS EPOCH where
     type State EPOCH = (UTxOState, AccountState, DWState)
     type Signal EPOCH = ()
-    type Environment EPOCH = (Slot, PParams, PParams, Production)
+    type Environment EPOCH = (Slot, PParams, PParams, BlocksMade)
     data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
                                 | PoolCleanFailure (PredicateFailure POOLCLEAN)
                                 | AccntFailure (PredicateFailure ACCNT)
@@ -1193,7 +1183,7 @@ initialEpoch :: InitialRule EPOCH
 initialEpoch = do
     IRC(slot, ppOld, ppNew, _) <- judgmentContext
     utxo' <- trans @UTXOEP $ IRC (slot, ppOld, StakeKeys Map.empty, StakePools Map.empty)
-    (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, Production Map.empty, utxo')
+    (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, BlocksMade Map.empty, utxo')
     pstate'' <- trans @POOLCLEAN $ IRC slot
     let dw'' = dw' & pstate .~ pstate''
     (utxo'', accnt'') <- trans @NEWPC $ IRC (slot, ppOld, ppNew, dw'')

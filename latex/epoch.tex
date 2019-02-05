@@ -1203,7 +1203,7 @@ The calculation is done pool-by-pool.
       & ~~~~~~~\var{potentialRewards} =
                  \var{mReward} \cup
                  \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
-      & ~~~~~~~\var{rewards} = \var{potentialRewards}\restrictdom{\var{addrs_{rew}}} \\
+      & ~~~~~~~\var{rewards} = \var{addrs_{rew}}\restrictdom{\var{potentialRewards}} \\
       & ~~~~~~~\var{unrealized} = R - \left(\sum_{\wcard\mapsto c\in\var{rewards}} c\right) \\
   \end{align*}
 
