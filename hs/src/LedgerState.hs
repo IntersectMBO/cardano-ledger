@@ -1082,28 +1082,6 @@ instance Embed DELEG DELPL where
 -- STS rules for epoch boundary --
 ----------------------------------
 
-data UTXOEP
-instance STS UTXOEP where
-    type State UTXOEP = UTxOState
-    type Signal UTXOEP = ()
-    type Environment UTXOEP = (Slot, PParams, StakeKeys, StakePools)
-    data PredicateFailure UTXOEP = FailureUTXOEP
-                    deriving(Show, Eq)
-
-    initialRules = [ initialUtxo ]
-    transitionRules = [ utxoEpTransition ]
-
-initialUtxo :: InitialRule UTXOEP
-initialUtxo = do
-  IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
-
-utxoEpTransition :: TransitionRule UTXOEP
-utxoEpTransition = do
-  TRC ((slot, pc, stakeKeys, stakePools), u, _) <- judgmentContext
-  pure $ u & deposits .~ obligation pc stakeKeys stakePools slot
-           & fees     .~ Coin 0
-
 data POOLREAP
 instance STS POOLREAP where
     type State POOLREAP = (AccountState, DState, PState)
@@ -1145,45 +1123,6 @@ poolReapTransition = do
            & pParams     %~ flip Map.withoutKeys retired
            & retiring    %~ flip Map.withoutKeys retired
            & avgs        .~ (Avgs $ Map.withoutKeys averages retired))
-
-data ACCNT
-instance STS ACCNT where
-    type State ACCNT = (AccountState, DWState)
-    type Signal ACCNT = ()
-    type Environment ACCNT = (Slot, PParams, BlocksMade, UTxOState)
-    data PredicateFailure ACCNT = FailureACCNT
-                   deriving (Show, Eq)
-
-    initialRules = [  ]
-    transitionRules = [  ]
-
--- initialAccnt :: InitialRule ACCNT
--- initialAccnt = pure (emptyAccount, emptyDelegation)
-
--- accntTransition :: TransitionRule ACCNT
--- accntTransition = do
---     TRC((slot, pp, blocks, us), (as, dw), _) <- judgmentContext
-
---     let rho' = intervalValue (pp ^. rho)
---     let tau' = intervalValue (pp ^. tau)
---     let obl = obligation pp (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
---     let decayed = us ^. deposits - obl          -- underflow?
---     let Coin reserves' = as ^. reserves
---     let expansion = floor $ rho' * fromIntegral reserves'
---     let Coin totalPool = (us ^. fees) + decayed + (as ^. rewardPool) + expansion
---     let newTreasury = floor $ tau' * fromIntegral totalPool
---     let availablePool = totalPool - newTreasury -- underflow?
---     let getOutputs (UTxO utxo') = Map.elems utxo'
---     let outs = getOutputs (us ^. utxo)
---     let (rewards', avgs') = reward pp (Coin availablePool) dw outs
---     let paidRewards = Map.foldl (+) (Coin 0) rewards'
---     let as' = as & treasury %~ (+) (Coin newTreasury)
---                  & reserves %~ (-) expansion      -- underflow?
---                  & rewardPool .~ Coin availablePool - paidRewards
---     -- union is left-biased, new values take precedence
---     let dw' = dw & dstate . rewards %~ Map.union rewards'
---                  & pstate . avgs .~ avgs'
---     pure (as', dw')
 
 data NEWPP
 instance STS NEWPP where
@@ -1244,12 +1183,11 @@ snapTransition = do
 
 data EPOCH
 instance STS EPOCH where
-    type State EPOCH = (UTxOState, AccountState, DWState)
+    type State EPOCH = (UTxOState, AccountState, DState, PState, PParams, SnapShots)
     type Signal EPOCH = ()
-    type Environment EPOCH = (Slot, PParams, PParams, BlocksMade)
-    data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
-                                | PoolReapFailure (PredicateFailure POOLREAP)
-                                | AccntFailure (PredicateFailure ACCNT)
+    type Environment EPOCH = (Epoch, PParams, BlocksMade)
+    data PredicateFailure EPOCH = PoolReapFailure (PredicateFailure POOLREAP)
+                                | SnapFailure (PredicateFailure SNAP)
                                 | NewPpFailure (PredicateFailure NEWPP)
                    deriving (Show, Eq)
 
@@ -1257,35 +1195,24 @@ instance STS EPOCH where
     transitionRules = [ epochTransition ]
 
 initialEpoch :: InitialRule EPOCH
-initialEpoch = do
-    IRC(slot, ppOld, ppNew, _) <- judgmentContext
-    utxo' <- trans @UTXOEP $ IRC (slot, ppOld, StakeKeys Map.empty, StakePools Map.empty)
-    (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, BlocksMade Map.empty, utxo')
-    pstate'' <- undefined -- trans @POOLREAP $ IRC slot
-    let dw'' = dw' & pstate .~ pstate''
-    (utxo'', accnt'') <- undefined -- trans @NEWPP $ IRC (epochFromSlot slot, ppOld, ppNew, dw'')
-    pure (utxo'', accnt'', dw'')
+initialEpoch = pure ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
+                    , emptyAccount
+                    , emptyDState
+                    , emptyPState
+                    , emptyPParams
+                    , emptySnapShots)
 
 epochTransition :: TransitionRule EPOCH
 epochTransition = do
-    TRC((slot, ppOld, ppNew, production), (us, as, dw), _) <- judgmentContext
-    us' <- trans @UTXOEP $ TRC ((slot
-                               , ppOld
-                               , dw ^. dstate . stKeys
-                               , dw ^. pstate . stPools), us, ())
-    (as', dw') <- trans @ACCNT $ TRC ((slot, ppOld, production, us')
-                                     , (as, dw)
-                                     , ())
-    pstate'' <- undefined -- trans @POOLREAP $ TRC (slot, dw' ^. pstate, ())
-    let dw'' = dw' & pstate .~ pstate''
-    (us'', as'') <- undefined -- trans @NEWPP $ TRC ((epochFromSlot slot, ppOld, ppNew, dw''), (us, as'), ())
-    pure (us'', as'', dw'')
+    TRC((eNew, ppNew, blocks), (us, as, ds, ps, pp, ss), _) <- judgmentContext
+    (ss', us') <- trans @SNAP $ TRC((eNew, pp, ds, ps, blocks), (ss, us), ())
+    (as', ds', ps') <- trans @POOLREAP $ TRC((eNew, pp), (as, ds, ps), ())
+    (us'', as'', pp')
+        <- trans @NEWPP $ TRC((eNew, ppNew, ds', ps'), (us', as', pp), ())
+    pure (us'', as'', ds', ps', pp', ss')
 
-instance Embed UTXOEP EPOCH where
-    wrapFailed = UtxoEpFailure
-
-instance Embed ACCNT EPOCH where
-    wrapFailed = AccntFailure
+instance Embed SNAP EPOCH where
+    wrapFailed = SnapFailure
 
 instance Embed POOLREAP EPOCH where
     wrapFailed = PoolReapFailure
