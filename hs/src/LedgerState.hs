@@ -1098,7 +1098,7 @@ poolReapTransition = do
   TRC((eNew, pp), (a, d, p), _) <- judgmentContext
   let retired     = Map.keysSet $ Map.filter (== eNew) $ p ^. retiring
   let pr          = poolRefunds pp (p ^. retiring) (slotFromEpoch eNew)
-  let relevant    = Map.restrictKeys (p ^. pParams) (Map.keysSet (p ^. retiring))
+  let relevant    = Map.restrictKeys (p ^. pParams) retired
   let rewardAcnts =
           Map.mapMaybeWithKey
                  (\k v -> case Map.lookup k relevant of
@@ -1118,7 +1118,7 @@ poolReapTransition = do
   let Avgs averages         = p ^. avgs
   pure ( a & treasury    %~ (+) unclaimed
        , d & rewards     %~ flip Map.union refunds
-           & delegations %~ Map.filter (`Set.notMember` domRetiring)
+           & delegations %~ flip Map.withoutKeys retired
        , p & stPools     .~ (StakePools $ Map.withoutKeys stakePools retired)
            & pParams     %~ flip Map.withoutKeys retired
            & retiring    %~ flip Map.withoutKeys retired
