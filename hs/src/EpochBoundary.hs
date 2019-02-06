@@ -111,7 +111,7 @@ poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
 poolRefunds pp retirees cslot =
   Map.map
     (\e ->
-       refund pval pmin lambda (cslot -* slotFromEpoch e (pp ^. slotsPerEpoch)))
+       refund pval pmin lambda (cslot -* slotFromEpoch e))
     retirees
   where
     (pval, pmin, lambda) = decayPool pp

@@ -9,6 +9,7 @@ module Slot
   -- conversion functions
   , slotFromEpoch
   , epochFromSlot
+  , slotsPerEpoch
   ) where
 
 import           Data.Monoid             (Sum(..))
@@ -34,8 +35,12 @@ newtype Epoch = Epoch Natural
   deriving (Show, Eq, Ord)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
-slotFromEpoch :: Epoch -> Natural -> Slot
-slotFromEpoch (Epoch n) slotsPerEpoch = Slot $ slotsPerEpoch * n
+slotFromEpoch :: Epoch -> Slot
+slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n
 
-epochFromSlot :: Slot -> Natural -> Epoch
-epochFromSlot (Slot n) slotsPerEpoch = Epoch $ n `rem` slotsPerEpoch
+epochFromSlot :: Slot -> Epoch
+epochFromSlot (Slot n) = Epoch $ n `rem` slotsPerEpoch
+
+-- | Hard coded global constant for number of slots per epoch
+slotsPerEpoch :: Natural
+slotsPerEpoch = 100
