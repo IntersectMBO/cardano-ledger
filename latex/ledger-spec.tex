@@ -50,6 +50,7 @@
 \newcommand{\Coin}{\type{Coin}}
 \newcommand{\PParams}{\type{PParams}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
 \newcommand{\StakeKeys}{\type{StakeKeys}}
@@ -116,6 +117,7 @@
 \newcommand{\values}[1]{\fun{values}~ #1}
 \newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
 \newcommand{\txttl}[1]{\fun{txttl}~ \var{#1}}
+\newcommand{\firstSlot}[1]{\fun{firstSlot}~ \var{#1}}
 \newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
 \newcommand{\decayedKey}[4]{\fun{decayedKey}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
@@ -477,6 +479,9 @@ This value depends on the protocol parameters and the size of the transaction.
 Two time related types are introduced, $\Epoch$ and $\type{Duration}$.
 A $\type{Duration}$ is the difference between two slots, as given by $\slotminus{}{}$.
 
+Lastly, one global constant is defined, $\SlotsPerEpoch$, representing the number of slots
+in an epoch. As a global constant, this value can only be changed by updating the software.
+
 \begin{figure*}[htb]
   \emph{Abstract types}
   %
@@ -506,7 +511,6 @@ A $\type{Duration}$ is the difference between two slots, as given by $\slotminus
     \PParams =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{slotsPerEpoch} & \N & \text{slots per epoch} \\
         \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
         \var{keyDeposit} & \Coin & \text{stake key deposit}\\
         \var{keyMinRefund} & \unitInterval & \text{stake key min refund}\\
@@ -528,7 +532,6 @@ A $\type{Duration}$ is the difference between two slots, as given by $\slotminus
   \emph{Accessor Functions}
   %
   \begin{center}
-    \fun{slotsPerEpoch},
     \fun{fparams},
     \fun{keyDeposit},
     \fun{keyMinRefund},
@@ -562,6 +565,14 @@ A $\type{Duration}$ is the difference between two slots, as given by $\slotminus
                  & \text{first slot of an epoch}
     \end{array}
   \end{equation*}
+  \emph{Global Constants}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \SlotsPerEpoch & \N & \text{slots per epoch} \\
+    \end{array}
+  \end{equation*}
+  %
   \caption{Definitions used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
 \end{figure*}
@@ -1139,7 +1150,7 @@ Section~\cref{sec:epoch}.
       \begin{array}{lr@{~=~}l}
         \where
           & \var{created} & \var{stkeys}~(\cwitness~\var{c}) \\
-          & \var{start} & \mathsf{max}~(\fun{firstSlot}~\epoch{cslot})~created \\
+          & \var{start} & \mathsf{max}~(\firstSlot{\epoch{cslot}})~created \\
           & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
           & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
           & \dval & \fun{keyDeposit}~\var{pp}\\

@@ -220,10 +220,10 @@ and the protocol parameters.
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
       \var{stpools} & \StakePools & \text{registered pools to creation time}\\
-      \var{poolParams} & \HashKey \mapsto \PoolParam
+      \var{poolParams} & \HashKey_{pool} \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
-      \var{retiring} & \HashKey \mapsto \Epoch & \text{retiring stake pools}\\
-      \var{avgs} & \HashKey \mapsto \Rnn & \text{performance moving average}\\
+      \var{retiring} & \HashKey_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
+      \var{avgs} & \HashKey_{pool} \mapsto \Rnn & \text{performance moving average}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
@@ -479,7 +479,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \inference[Pool-Reg]
     {
       \var{c}\in\DCertRegPool
-      & \cwitness{c} = \var{hk}
+      & \var{hk} = \cwitness{c}
       & hk \notin \dom \var{stpools}
     }
     {
@@ -514,7 +514,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \inference[Pool-reReg]
     {
       \var{c}\in\DCertRegPool
-      & \cwitness{c} = \var{hk}
+      & \var{hk} = \cwitness{c}
       & hk \in \dom \var{stpools}
     }
     {
