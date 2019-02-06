@@ -672,12 +672,13 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
   (rewards, unrealized)
   where
     (Coin pstake) = Map.foldl (+) (Coin 0) stake
+    (Coin ostake) = stake Map.! poolHK
     sigma = fromIntegral pstake % fromIntegral total
     expectedSlots = sigma * fromIntegral (pp ^. slotsPerEpoch)
     Coin pledge = pool ^. poolPledge
     pr = fromIntegral pledge % fromIntegral total
     maxP =
-      if pledge <= pstake
+      if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
     poolR = poolRew pp poolHK n expectedSlots averages maxP
