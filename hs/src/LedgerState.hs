@@ -85,12 +85,15 @@ import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*), slotsPerEpoch)
+import           Slot                    (Slot (..), Epoch (..), (-*),
+                                               slotsPerEpoch, epochFromSlot,
+                                               slotFromEpoch)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, rho, tau)
+                                                 movingAvgExp, rho, tau,
+                                                 emptyPParams)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -1169,29 +1172,34 @@ instance STS ACCNT where
 --                  & pstate . avgs .~ avgs'
 --     pure (as', dw')
 
-data NEWPC
-instance STS NEWPC where
-    type State NEWPC = (UTxOState, AccountState)
-    type Signal NEWPC = ()
-    type Environment NEWPC = (Slot, PParams, PParams, DWState)
-    data PredicateFailure NEWPC = ExcessObligationNEWPC
+data NEWPP
+instance STS NEWPP where
+    type State NEWPP = (UTxOState, AccountState, PParams)
+    type Signal NEWPP = ()
+    type Environment NEWPP = (Epoch, PParams, DState, PState)
+    data PredicateFailure NEWPP = FailureNEWPP
                    deriving (Show, Eq)
 
-    initialRules = [ initialNewPc ]
-    transitionRules = [ newPcTransition ]
+    initialRules = [ initialNewPp ]
+    transitionRules = [ newPpTransition ]
 
-initialNewPc :: InitialRule NEWPC
-initialNewPc = pure (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0), emptyAccount)
+initialNewPp :: InitialRule NEWPP
+initialNewPp = pure ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
+                    , emptyAccount
+                    , emptyPParams)
 
-newPcTransition :: TransitionRule NEWPC
-newPcTransition = do
-  TRC((slot, ppOld, ppNew, dw), (us, as), _) <- judgmentContext
-  let old = obligation ppOld (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
-  let new = obligation ppNew (dw ^. dstate . stKeys) (dw ^. pstate . stPools) slot
-  as ^. reserves + old >= new ?! ExcessObligationNEWPC
-  let diff = old - new
-  pure (us & deposits .~ new, as & reserves %~ (+) diff)
-
+newPpTransition :: TransitionRule NEWPP
+newPpTransition = do
+  TRC((eNew, ppNew, ds, ps), (us, as, pp), _) <- judgmentContext
+  let oblgCurr =
+          obligation pp (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
+  let oblgNew =
+          obligation ppNew (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
+  let (oblg', reserves', pp') =
+          if as ^. reserves + oblgCurr >= oblgNew  -- reserves are sufficient
+          then (oblgNew, (as ^. reserves + oblgCurr) - oblgNew, ppNew)
+          else (us ^. deposits, as ^. reserves, pp)
+  pure (us & deposits .~ oblg', as & reserves .~ reserves', pp')
 
 data EPOCH
 instance STS EPOCH where
@@ -1201,7 +1209,7 @@ instance STS EPOCH where
     data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
                                 | PoolCleanFailure (PredicateFailure POOLCLEAN)
                                 | AccntFailure (PredicateFailure ACCNT)
-                                | NewPcFailure (PredicateFailure NEWPC)
+                                | NewPpFailure (PredicateFailure NEWPP)
                    deriving (Show, Eq)
 
     initialRules = [ initialEpoch ]
@@ -1214,7 +1222,7 @@ initialEpoch = do
     (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, BlocksMade Map.empty, utxo')
     pstate'' <- trans @POOLCLEAN $ IRC slot
     let dw'' = dw' & pstate .~ pstate''
-    (utxo'', accnt'') <- trans @NEWPC $ IRC (slot, ppOld, ppNew, dw'')
+    (utxo'', accnt'') <- undefined -- trans @NEWPP $ IRC (epochFromSlot slot, ppOld, ppNew, dw'')
     pure (utxo'', accnt'', dw'')
 
 epochTransition :: TransitionRule EPOCH
@@ -1229,7 +1237,7 @@ epochTransition = do
                                      , ())
     pstate'' <- trans @POOLCLEAN $ TRC (slot, dw' ^. pstate, ())
     let dw'' = dw' & pstate .~ pstate''
-    (us'', as'') <- trans @NEWPC $ TRC ((slot, ppOld, ppNew, dw''), (us, as'), ())
+    (us'', as'') <- undefined -- trans @NEWPP $ TRC ((epochFromSlot slot, ppOld, ppNew, dw''), (us, as'), ())
     pure (us'', as'', dw'')
 
 instance Embed UTXOEP EPOCH where
@@ -1241,5 +1249,5 @@ instance Embed ACCNT EPOCH where
 instance Embed POOLCLEAN EPOCH where
     wrapFailed = PoolCleanFailure
 
-instance Embed NEWPC EPOCH where
-    wrapFailed = NewPcFailure
+instance Embed NEWPP EPOCH where
+    wrapFailed = NewPpFailure
