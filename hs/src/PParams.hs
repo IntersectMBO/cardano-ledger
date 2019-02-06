@@ -21,6 +21,7 @@ module PParams
   , intervalValue
   , interval0
   , interval1
+  , emptyPParams
   ) where
 
 import           Numeric.Natural (Natural)
@@ -76,3 +77,8 @@ data PParams = PParams
   } deriving (Show, Eq)
 
 makeLenses ''PParams
+
+-- | Returns a basic "empty" `PParams` structure with all zero values.
+emptyPParams :: PParams
+emptyPParams =
+    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 interval0 (0, 0) interval0 0 interval0 interval0

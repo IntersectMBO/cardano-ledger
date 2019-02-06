@@ -17,7 +17,6 @@ module UTxO
   , Addr(..)
   , Ptr(..)
   , Ix
-  , RewardAcnt(..)
   , mkRwdAcnt
   -- * Derived Types
   , TxIn(..)
@@ -71,7 +70,7 @@ import           PParams                 (PParams(..))
 import           Slot (Slot(..))
 
 import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
-import           Delegation.StakePool (poolPubKey)
+import           Delegation.PoolParams (poolPubKey, RewardAcnt(..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -90,10 +89,6 @@ data Ptr = Ptr Slot Ix Ix
 data Addr = AddrTxin { _payHK   :: HashKey, _stakeHK :: HashKey }
           | AddrPtr { _stakePtr :: Ptr }
           deriving (Show, Eq, Ord)
-
--- |An account based address for a rewards
-newtype RewardAcnt = RewardAcnt { getRwdHK :: HashKey }
-  deriving (Show, Eq, Ord)
 
 mkRwdAcnt :: KeyPair -> RewardAcnt
 mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
