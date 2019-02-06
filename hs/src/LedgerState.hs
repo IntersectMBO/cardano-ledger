@@ -1109,29 +1109,47 @@ utxoEpTransition = do
   pure $ u & deposits .~ obligation pc stakeKeys stakePools slot
            & fees     .~ Coin 0
 
-data POOLCLEAN
-instance STS POOLCLEAN where
-    type State POOLCLEAN = PState
-    type Signal POOLCLEAN = ()
-    type Environment POOLCLEAN = Slot
-    data PredicateFailure POOLCLEAN = NoRetiredPOOLCLEAN
+data POOLREAP
+instance STS POOLREAP where
+    type State POOLREAP = (AccountState, DState, PState)
+    type Signal POOLREAP = ()
+    type Environment POOLREAP = (Epoch, PParams)
+    data PredicateFailure POOLREAP = FailurePOOLREAP
                        deriving (Show, Eq)
 
-    initialRules = [ pure emptyPState ]
-    transitionRules = [ poolCleanTransition ]
+    initialRules = [ pure (emptyAccount, emptyDState, emptyPState) ]
+    transitionRules = [ poolReapTransition ]
 
-poolCleanTransition :: TransitionRule POOLCLEAN
-poolCleanTransition = do
-  TRC(_, p, _) <- judgmentContext
-  let currEpoch = Epoch 100
-  let retired = Map.keysSet $ Map.filter (== currEpoch) $ p ^. retiring
-  let Avgs averages = p ^. avgs
-  null retired ?! NoRetiredPOOLCLEAN
-  let (StakePools stpools') = p ^. stPools
-  pure $ p & stPools  .~ (StakePools $ Map.withoutKeys stpools' retired)
-           & pParams  %~ flip Map.withoutKeys retired
-           & retiring %~ flip Map.withoutKeys retired
-           & avgs     .~ Avgs (Map.withoutKeys averages retired)
+poolReapTransition :: TransitionRule POOLREAP
+poolReapTransition = do
+  TRC((eNew, pp), (a, d, p), _) <- judgmentContext
+  let retired     = Map.keysSet $ Map.filter (== eNew) $ p ^. retiring
+  let pr          = poolRefunds pp (p ^. retiring) (slotFromEpoch eNew)
+  let relevant    = Map.restrictKeys (p ^. pParams) (Map.keysSet (p ^. retiring))
+  let rewardAcnts =
+          Map.mapMaybeWithKey
+                 (\k v -> case Map.lookup k relevant of
+                            Nothing -> Nothing
+                            Just _  -> Just (v ^. poolRAcnt)) (p ^. pParams)
+  let rewardAcnts' = Map.restrictKeys rewardAcnts (Map.keysSet pr)
+  let refunds'     = Map.foldlWithKey
+                      (\m k addr -> Map.insert addr (pr Map.! k) m)
+                      Map.empty
+                      rewardAcnts'  -- not yet restricted to a in dom(rewards)
+  let domRewards   = Map.keysSet (d ^. rewards)
+  let (refunds, unclaimed') =
+          Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
+  let unclaimed    = Map.foldl (+) (Coin 0) unclaimed'
+  let domRetiring  = Map.keysSet (p ^. retiring)
+  let StakePools stakePools = p ^. stPools
+  let Avgs averages         = p ^. avgs
+  pure ( a & treasury    %~ (+) unclaimed
+       , d & rewards     %~ flip Map.union refunds
+           & delegations %~ Map.filter (`Set.notMember` domRetiring)
+       , p & stPools     .~ (StakePools $ Map.withoutKeys stakePools retired)
+           & pParams     %~ flip Map.withoutKeys retired
+           & retiring    %~ flip Map.withoutKeys retired
+           & avgs        .~ (Avgs $ Map.withoutKeys averages retired))
 
 data ACCNT
 instance STS ACCNT where
@@ -1207,7 +1225,7 @@ instance STS EPOCH where
     type Signal EPOCH = ()
     type Environment EPOCH = (Slot, PParams, PParams, BlocksMade)
     data PredicateFailure EPOCH = UtxoEpFailure (PredicateFailure UTXOEP)
-                                | PoolCleanFailure (PredicateFailure POOLCLEAN)
+                                | PoolReapFailure (PredicateFailure POOLREAP)
                                 | AccntFailure (PredicateFailure ACCNT)
                                 | NewPpFailure (PredicateFailure NEWPP)
                    deriving (Show, Eq)
@@ -1220,7 +1238,7 @@ initialEpoch = do
     IRC(slot, ppOld, ppNew, _) <- judgmentContext
     utxo' <- trans @UTXOEP $ IRC (slot, ppOld, StakeKeys Map.empty, StakePools Map.empty)
     (_, dw') <- trans @ACCNT $ IRC (slot, ppOld, BlocksMade Map.empty, utxo')
-    pstate'' <- trans @POOLCLEAN $ IRC slot
+    pstate'' <- undefined -- trans @POOLREAP $ IRC slot
     let dw'' = dw' & pstate .~ pstate''
     (utxo'', accnt'') <- undefined -- trans @NEWPP $ IRC (epochFromSlot slot, ppOld, ppNew, dw'')
     pure (utxo'', accnt'', dw'')
@@ -1235,7 +1253,7 @@ epochTransition = do
     (as', dw') <- trans @ACCNT $ TRC ((slot, ppOld, production, us')
                                      , (as, dw)
                                      , ())
-    pstate'' <- trans @POOLCLEAN $ TRC (slot, dw' ^. pstate, ())
+    pstate'' <- undefined -- trans @POOLREAP $ TRC (slot, dw' ^. pstate, ())
     let dw'' = dw' & pstate .~ pstate''
     (us'', as'') <- undefined -- trans @NEWPP $ TRC ((epochFromSlot slot, ppOld, ppNew, dw''), (us, as'), ())
     pure (us'', as'', dw'')
@@ -1246,8 +1264,8 @@ instance Embed UTXOEP EPOCH where
 instance Embed ACCNT EPOCH where
     wrapFailed = AccntFailure
 
-instance Embed POOLCLEAN EPOCH where
-    wrapFailed = PoolCleanFailure
+instance Embed POOLREAP EPOCH where
+    wrapFailed = PoolReapFailure
 
 instance Embed NEWPP EPOCH where
     wrapFailed = NewPpFailure
