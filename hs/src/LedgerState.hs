@@ -23,6 +23,7 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
+  , rewardPool
   , PState(..)
   , avgs
   , LedgerValidation(..)
@@ -86,14 +87,12 @@ import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*),
-                                               slotsPerEpoch, epochFromSlot,
-                                               slotFromEpoch)
+                                               slotsPerEpoch, slotFromEpoch)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, rho, tau,
-                                                 emptyPParams)
+                                                 movingAvgExp, emptyPParams)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -666,7 +665,7 @@ rewardOnePool ::
   -> Set.Set RewardAcnt
   -> (Map.Map RewardAcnt Coin, Coin)
 rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
-  (rewards, unrealized)
+  (rewards', unrealized)
   where
     (Coin pstake) = Map.foldl (+) (Coin 0) stake
     (Coin ostake) = stake Map.! poolHK
@@ -687,8 +686,8 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
     Coin hkStake = stake Map.! poolHK
     iReward  = leaderRew poolR pool (StakeShare $ (fromIntegral hkStake) % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
-    rewards = Map.restrictKeys potentialRewards addrsRew
-    unrealized = r - Map.foldl (+) (Coin 0) rewards
+    rewards' = Map.restrictKeys potentialRewards addrsRew
+    unrealized = r - Map.foldl (+) (Coin 0) rewards'
 
 reward ::
      PParams
@@ -700,10 +699,10 @@ reward ::
   -> Map.Map HashKey Stake
   -> (Map.Map RewardAcnt Coin, Coin)
 reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
-  (rewards, unrealized)
+  (rewards', unrealized)
   where
     total = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-    sumStake (Stake s) = Map.foldl (\s c -> s + c) (Coin 0) s
+    sumStake (Stake s) = Map.foldl (\acc c -> acc + c) (Coin 0) s
     pdata =
       [ ( key
         , ( poolParams Map.! key
@@ -720,7 +719,7 @@ reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
       | (hk, (pool, n, actgr)) <- pdata
       ]
     unrealized = foldl (\s (_, (_, u)) -> s + u) (Coin 0) results
-    rewards = foldl (\m (_, (rwds, _)) -> Map.union m rwds) Map.empty results
+    rewards' = foldl (\m (_, (rwds, _)) -> Map.union m rwds) Map.empty results
 
 -- | Update moving averages
 updateAvgs ::
@@ -734,7 +733,7 @@ updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
              (\hk n -> StakeShare $ movingAvg pp hk n (expected hk) avgs') blocks
     where
       (Coin tot)  = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-      sumStake (Stake s) = Map.foldl (\s c -> s + c) (Coin 0) s
+      sumStake (Stake s) = Map.foldl (\acc c -> acc + c) (Coin 0) s
       getCoinVal (Coin c) = fromIntegral c :: Integer
       expected hk =
           case Map.lookup hk pooledStake of
@@ -1113,7 +1112,6 @@ poolReapTransition = do
   let (refunds, unclaimed') =
           Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
   let unclaimed    = Map.foldl (+) (Coin 0) unclaimed'
-  let domRetiring  = Map.keysSet (p ^. retiring)
   let StakePools stakePools = p ^. stPools
   let Avgs averages         = p ^. avgs
   pure ( a & treasury    %~ (+) unclaimed
