@@ -24,7 +24,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/fm-ledger-rules
-    commit: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+    commit: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
     subdirs:
       - specs/semantics/hs
       - specs/ledger/hs
@@ -35,6 +35,9 @@ extra-deps:
 
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
+
+  # To be able to use `stack hoogle`
+  - haskell-src-exts-1.21.0
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

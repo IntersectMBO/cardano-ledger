@@ -160,17 +160,25 @@ test-suite cardano-chain-test
   type:                exitcode-stdio-1.0
 
   other-modules:
+
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Validation
 
+                       Test.Cardano.Chain.Block.Validation.Spec
+
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Common.Lovelace
+                       Test.Cardano.Chain.Config
 
                        Test.Cardano.Chain.Delegation.Bi
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
+
+                       Test.Cardano.Chain.Elaboration.Block
+                       Test.Cardano.Chain.Elaboration.Delegation
+                       Test.Cardano.Chain.Elaboration.Keys
 
                        Test.Cardano.Chain.Epoch.File
 
@@ -178,8 +186,6 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
-
-                       Test.Cardano.Chain.Interpreter
 
                        Test.Cardano.Chain.Ssc.Bi
 
@@ -214,13 +220,16 @@ test-suite cardano-chain-test
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , cs-blockchain
                      , cs-ledger
                      , directory
                      , filepath
                      , formatting
                      , hedgehog
+                     , lens
                      , optparse-applicative
                      , resourcet
+                     , small-steps
                      , streaming
                      , text
                      , time

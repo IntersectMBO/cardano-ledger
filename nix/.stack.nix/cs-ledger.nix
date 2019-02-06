@@ -29,6 +29,14 @@
           ];
         };
       tests = {
+        "doctests" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.doctest)
+            (hsPkgs.doctest-discover)
+            (hsPkgs.cs-ledger)
+            ];
+          };
         "ledger-delegation-test" = {
           depends = [
             (hsPkgs.base)
@@ -47,8 +55,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/fm-ledger-rules";
-      rev = "bf059d1d593e7ef9f3b983a0c904e7bb81362af9";
-      sha256 = "0rdyb0bfk69ndb86m91m9fzcfnhaj4q5yw0cgfj0ap4vmirz92cs";
+      rev = "965b32be3361b2ed404e1e58a6fb3cf525d3a26c";
+      sha256 = "1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7";
       });
     postUnpack = "sourceRoot+=/specs/ledger/hs; echo source root reset to \$sourceRoot";
     }

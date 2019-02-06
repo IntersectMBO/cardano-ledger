@@ -51,14 +51,14 @@ import Cardano.Chain.Block
   )
 import Cardano.Chain.Common (BlockCount(..), mkStakeholderId)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
-import Cardano.Chain.Genesis as Genesis (Config(..), mkConfigFromFile)
+import Cardano.Chain.Genesis as Genesis (Config(..))
 import Cardano.Chain.Slotting (SlotId)
 import Cardano.Crypto (PublicKey)
 import Cardano.Mirror (mainnetEpochFiles)
 
 import Test.Cardano.Crypto.Gen (genPublicKey)
 import Test.Options (TestScenario(..))
-
+import Test.Cardano.Chain.Config (readMainetCfg)
 
 -- | These tests perform chain validation over mainnet epoch files
 --
@@ -69,11 +69,7 @@ import Test.Options (TestScenario(..))
 tests :: TestScenario -> IO Bool
 tests scenario = do
   -- Get the 'Genesis.Config' from the mainnet genesis JSON
-  config <-
-    either
-        (panic "TODO: Add buildable instance for Genesis.ConfigurationError")
-        identity
-      <$> runExceptT (mkConfigFromFile "test/mainnet-genesis.json" Nothing)
+  config <- readMainetCfg
 
   -- Create an 'IORef' containing the initial 'ChainValidationState'
   cvsRef <-
@@ -99,7 +95,7 @@ tests scenario = do
       (epochValid config cvsRef <$> files)
   (&&)
     <$> checkSequential (Group "Test.Cardano.Chain.Block.Validation" properties)
-    <*> checkParallel $$(discover)
+    <*> checkParallel $$discover
 
 
 data Error

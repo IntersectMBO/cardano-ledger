@@ -71,8 +71,8 @@ instance Monad m => ToJSON m GenesisData where
     , ("startTime"       , toJSON $ gdStartTime gd)
     , ("nonAvvmBalances" , toJSON $ gdNonAvvmBalances gd)
     , ("blockVersionData", toJSON $ gdProtocolParameters gd)
-    -- ^ This is called blockVersionData for backwards compatibility with
-    --   mainnet genesis block
+    --  The above is called blockVersionData for backwards compatibility with
+    --  mainnet genesis block
     , ( "protocolConsts"
       , mkObject
         [ ("k"            , pure . JSNum . fromIntegral $ gdK gd)
@@ -95,8 +95,8 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> fromJSField obj "startTime"
       <*> fromJSField obj "nonAvvmBalances"
       <*> fromJSField obj "blockVersionData"
-      -- ^ This is called blockVersionData for backwards compatibility with
-      --   mainnet genesis block
+      -- The above is called blockVersionData for backwards compatibility with
+      -- mainnet genesis block
       <*> (fromIntegral @Int54 <$> fromJSField protocolConsts "k")
       <*> (ProtocolMagic . ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic") <*> pure RequiresMagic)
       <*> fromJSField obj "avvmDistr"
