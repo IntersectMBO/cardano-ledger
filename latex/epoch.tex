@@ -578,6 +578,7 @@ This transition has no preconditions and results in the following state change:
     {
       \begin{array}{l}
         \var{e_{new}}\\
+        \var{pp}
       \end{array}
       \vdash
       \left(
@@ -834,7 +835,7 @@ the current protocol parameters, and the snapshots.
       \begin{array}{r@{~\in~}ll}
         \var{e_{new}} & \Epoch & \text{upcoming epoch}\\
         \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
-        \var{blocks} & \HashKey \mapsto \N & \text{blocks made in the epoch}\\
+        \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
       \end{array}
     \right)
   \end{equation*}
@@ -910,16 +911,17 @@ in sequence.
       \\~\\~\\
       {
         \begin{array}{l}
-          \var{e_{new}}
+          \var{e_{new}}\\
+          \var{pp}
         \end{array}
       }
       \vdash
       \left(
         {
           \begin{array}{r}
-            \var{acnt'} \\
-            \var{dstate'} \\
-            \var{pstate'} \\
+            \var{acnt} \\
+            \var{dstate} \\
+            \var{pstate} \\
           \end{array}
         }
       \right)
@@ -927,9 +929,9 @@ in sequence.
       \left(
       {
         \begin{array}{rcl}
-            \var{acnt''} \\
-            \var{dstate''} \\
-            \var{pstate''} \\
+            \var{acnt'} \\
+            \var{dstate'} \\
+            \var{pstate'} \\
         \end{array}
       }
       \right)
@@ -947,7 +949,7 @@ in sequence.
         {
           \begin{array}{r}
             \var{utxoSt'} \\
-            \var{acnt''} \\
+            \var{acnt'} \\
             \var{pp}\\
           \end{array}
         }
@@ -957,7 +959,7 @@ in sequence.
       {
         \begin{array}{rcl}
             \var{utxoSt''} \\
-            \var{acnt'''} \\
+            \var{acnt''} \\
             \var{pp'}\\
         \end{array}
       }
@@ -984,9 +986,9 @@ in sequence.
       \left(
       \begin{array}{rcl}
         \varUpdate{\var{utxoSt''}} \\
-        \varUpdate{\var{acnt'''}} \\
-        \varUpdate{\var{dstate''}} \\
-        \varUpdate{\var{pstate''}} \\
+        \varUpdate{\var{acnt''}} \\
+        \varUpdate{\var{dstate'}} \\
+        \varUpdate{\var{pstate'}} \\
         \varUpdate{\var{pp'}} \\
         \varUpdate{\var{ss'}} \\
       \end{array}
