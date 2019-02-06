@@ -1,4 +1,4 @@
-resolver: lts-13.0
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/f2802079ba2c07c4d408e3c0aa000fc363792398/snapshot.yaml
 
 packages:
 - chain/hs
@@ -6,6 +6,4 @@ packages:
 - semantics/hs
 
 extra-deps:
-- hedgehog-0.6.1
 - sequence-0.9.8
-- tasty-hedgehog-0.2.0.0

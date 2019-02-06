@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Ledger.Core where
 
 import qualified Crypto.Hash as Crypto
@@ -7,9 +9,11 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+import GHC.Generics (Generic)
 import GHC.Natural (minusNaturalMaybe)
 import Numeric.Natural (Natural)
 
+import Data.AbstractSize
 import Ledger.Signatures
 
 -- | Hash part of the ledger paylod
@@ -21,19 +25,19 @@ class HasHash a where
 ---------------------------------------------------------------------------------
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Ord, HasTypeReps)
 
 class HasOwner a where
   owner :: a -> Owner
 
 -- |Signing Key.
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
+newtype SKey = SKey Owner deriving (Show, Eq, Ord, HasTypeReps)
 
 instance HasOwner SKey where
   owner (SKey o) = o
 
 -- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+newtype VKey = VKey Owner deriving (Show, Eq, Ord, HasTypeReps)
 
 instance HasHash VKey where
   hash = Crypto.hash
@@ -47,21 +51,25 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis VKey
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HasTypeReps)
 
 instance HasOwner VKeyGenesis where
   owner (VKeyGenesis vk) = owner vk
 
 -- |Key Pair.
 data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
+  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord, Generic)
+
+instance HasTypeReps KeyPair
 
 -- |Return a key pair for a given owner.
 keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic)
+
+instance HasTypeReps a => HasTypeReps (Sig a)
 
 -- |Produce a digital signature
 sign :: SKey -> a -> Sig a
@@ -76,10 +84,10 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Natural
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HasTypeReps)
 
 newtype Slot = Slot Natural
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, HasTypeReps)
 
 -- | A number of slots.
 --
