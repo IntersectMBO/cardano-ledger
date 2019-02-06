@@ -29,7 +29,7 @@ exp' x
 
 -- | Approximate exp(x) via continued fraction.
 fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
-fexp maxN x = 
+fexp maxN x =
   cf maxN 0 Nothing 1 0 1 1 [x * a | a <- 1 : [-1,-2 ..]] (1 : [x + b | b <- [2 ..]])
 
 logAs :: (Num a) => a -> [a]
@@ -47,6 +47,21 @@ eps :: (Fractional a) => a
 eps = 1 / 10.0^(16::Int)
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
+-- The 'maxN' parameter gives the maximum recursion depth, 'n' gives the current
+-- rursion depth, 'lastVal' is the optional last value ('Nothing' for the first
+-- iteration). 'aNm2', 'bNm2' are a_{m-2} and b_{m-2}, and 'aNm1' / 'bNm1' are
+-- a_{m-1} / b_{m-1} respectively, 'an' / 'bn' are lists of succecsive a_n / b_n
+-- values for the recurrence relation:
+--
+-- A_{-1}  = 1                              B_{-1} = 0
+-- A_0     = b_0                            B_0    = 1
+-- A_{n+1} = b_{n+1}*A_n + a_{n+1}*A_{n-1}  B_{n+1} = b_{n+1}*B_n + a_{n+1}*B_{n-1}
+--
+-- the convergent is calculated as x_n = A_n/B_n
+--
+-- The recursion stops once 'maxN' iterations have been reached, or either the
+-- list 'as' or 'bs' is exhausted or 'lastVal' differs less than 'eps' from the
+-- new convergent.
 cf ::
      (Fractional a, Ord a, Show a)
   => Int
