@@ -159,11 +159,6 @@ instance Monoid Validity where
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
--- | Blocks made
-newtype BlocksMade =
-    BlocksMade (Map.Map HashKey Natural)
-               deriving (Show, Eq)
-
 -- | Performance moving averages
 newtype Avgs =
   Avgs (Map.Map HashKey StakeShare)

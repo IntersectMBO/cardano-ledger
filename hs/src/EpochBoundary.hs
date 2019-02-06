@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell       #-}
+
 {-|
 Module      : EpochBoundary
 Description : Functions and definitions for rules at epoch boundary.
@@ -6,8 +8,16 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake(..)
-  , Production(..)
   , PooledStake(..)
+  , BlocksMade(..)
+  , SnapShots(..)
+  , pstakeMark
+  , pstakeSet
+  , pstakeGo
+  , poolsSS
+  , blocksSS
+  , feeSS
+  , emptySnapShots
   , rewardStake
   , consolidate
   , baseStake
@@ -22,7 +32,7 @@ module EpochBoundary
 import           Coin
 import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
-import           Delegation.PoolParams   (RewardAcnt (..))
+import           Delegation.PoolParams   (RewardAcnt (..), PoolParams(..))
 import           Keys
 import           PParams
 import           Slot
@@ -36,9 +46,12 @@ import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
 import           Lens.Micro              ((^.))
+import           Lens.Micro.TH           (makeLenses)
 
-newtype Production =
-  Production (Map.Map HashKey Natural)
+-- | Blocks made
+newtype BlocksMade =
+    BlocksMade (Map.Map HashKey Natural)
+               deriving (Show, Eq)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake =
@@ -149,3 +162,21 @@ groupByPool active delegs =
     [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
     | hk <- Map.keys delegs
     ]
+
+data SnapShots =
+    SnapShots
+    { _pstakeMark :: PooledStake
+    , _pstakeSet  :: PooledStake
+    , _pstakeGo   :: PooledStake
+    , _poolsSS    :: Map.Map HashKey PoolParams
+    , _blocksSS   :: BlocksMade
+    , _feeSS      :: Coin
+    } deriving (Show, Eq)
+
+makeLenses ''SnapShots
+
+emptySnapShots :: SnapShots
+emptySnapShots =
+    SnapShots pooledEmpty pooledEmpty pooledEmpty Map.empty blocksEmpty (Coin 0)
+    where pooledEmpty = PooledStake Map.empty
+          blocksEmpty = BlocksMade Map.empty
