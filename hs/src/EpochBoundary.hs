@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell       #-}
+
 {-|
 Module      : EpochBoundary
 Description : Functions and definitions for rules at epoch boundary.
@@ -5,13 +7,22 @@ Description : Functions and definitions for rules at epoch boundary.
 This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 -}
 module EpochBoundary
-  ( Stake
-  , Production(..)
+  ( Stake(..)
+  , PooledStake(..)
+  , BlocksMade(..)
+  , SnapShots(..)
+  , pstakeMark
+  , pstakeSet
+  , pstakeGo
+  , poolsSS
+  , blocksSS
+  , feeSS
+  , emptySnapShots
+  , rewardStake
+  , consolidate
   , baseStake
   , ptrStake
-  , stake
-  , isActive
-  , activeStake
+  , poolStake
   , obligation
   , poolRefunds
   , maxPool
@@ -19,14 +30,14 @@ module EpochBoundary
   ) where
 
 import           Coin
-import           Delegation.Certificates (StakeKeys(..), StakePools(..),
+import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
+import           Delegation.PoolParams   (RewardAcnt (..), PoolParams(..))
 import           Keys
 import           PParams
 import           Slot
 import           UTxO
 
-import           Data.List               (groupBy, sort)
 import qualified Data.Map                as Map
 import           Data.Maybe              (fromJust, isJust)
 import           Data.Ratio
@@ -35,13 +46,21 @@ import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
 import           Lens.Micro              ((^.))
+import           Lens.Micro.TH           (makeLenses)
 
-newtype Production =
-  Production (Map.Map HashKey Natural)
+-- | Blocks made
+newtype BlocksMade =
+    BlocksMade (Map.Map HashKey Natural)
+               deriving (Show, Eq)
 
--- | Type of stake as pair of coins associated to a hash key.
+-- | Type of stake as map from hash key to coins associated.
 newtype Stake =
-  Stake (HashKey, Coin)
+  Stake (Map.Map HashKey Coin)
+  deriving (Show, Eq, Ord)
+
+-- | Type of pooled stake as map from pool hash key to Stake.
+newtype PooledStake =
+  PooledStake (Map.Map HashKey Stake)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
@@ -49,15 +68,17 @@ getStakeHK :: Addr -> Maybe HashKey
 getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
 
+consolidate :: UTxO -> Map.Map Addr Coin
+consolidate (UTxO u) =
+  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
+
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: [TxOut] -> Set.Set Stake
-baseStake outs =
-  Set.fromList $ map Stake $ Map.toList $
-  Map.fromListWith (+)
-    [ (fromJust $ getStakeHK a, c)
-    | TxOut a c <- outs
-    , isJust $ getStakeHK a
-    ]
+baseStake :: Map.Map Addr Coin -> Stake
+baseStake vals =
+  Stake $
+  Map.fromListWith
+    (+)
+    [(fromJust $ getStakeHK a, c) | (a, c) <- Map.toList vals, isJust $ getStakeHK a]
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr -> Maybe Ptr
@@ -65,56 +86,48 @@ getStakePtr (AddrPtr ptr) = Just ptr
 getStakePtr _             = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
-ptrStake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
-ptrStake outs pointers =
-  Set.fromList $ map Stake $ Map.toList $
-  Map.fromListWith (+)
+ptrStake :: Map.Map Addr Coin -> Map.Map Ptr HashKey -> Stake
+ptrStake vals pointers =
+  Stake $
+  Map.fromListWith
+    (+)
     [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
-    | TxOut a c <- outs
+    | (a, c) <- Map.toList vals
     , isJust $ getStakePtr a
     , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
     ]
 
--- | Calculate stake of all addresses in TxOut set.
-stake :: [TxOut] -> Map.Map Ptr HashKey -> Set.Set Stake
-stake outs pointers = baseStake outs `Set.union` ptrStake outs pointers
+rewardStake :: Map.Map RewardAcnt Coin -> Stake
+rewardStake rewards =
+  Stake $
+  Map.foldlWithKey
+    (\m rewKey c -> Map.insert (getRwdHK rewKey) c m)
+    Map.empty
+    rewards
 
--- | Check whether a hash key has active stake, i.e., currently delegates to an
--- active stake pool.
-isActive :: HashKey -> StakeKeys -> Map.Map HashKey HashKey -> StakePools -> Bool
-isActive vSk (StakeKeys stakeKeys) delegs (StakePools stakePools) =
-  vSk `Set.member` Map.keysSet stakeKeys && isJust vp && fromJust vp `Set.member`
-  Map.keysSet stakePools
-  where
-    vp = Map.lookup vSk delegs
-
--- | Calculate total active state in the form of a mapping of hash keys to
--- coins.
-activeStake ::
-     [TxOut]
-  -> Map.Map Ptr HashKey
-  -> StakeKeys
+poolStake ::
+     HashKey
+  -> Set.Set HashKey
   -> Map.Map HashKey HashKey
-  -> StakePools
-  -> Map.Map HashKey Coin
-activeStake outs pointers stakeKeys delegs stakePools =
-  Map.fromList $ map (makePair . sumKey) $
-  groupBy (\(Stake (a, _)) (Stake (a', _)) -> a == a') $
-  sort $
-  filter
-    (\(Stake (hk, _)) -> isActive hk stakeKeys delegs stakePools)
-    (Set.toList $ stake outs pointers)
-  where
-    sumKey =
-      foldl1 (\(Stake (key, coin)) (Stake (_, c')) -> Stake (key, coin <> c'))
-    makePair (Stake (k, c)) = (k, c)
+  -> Stake
+  -> Stake
+poolStake operator owners delegations (Stake stake) =
+    Stake $ Map.insert operator pstake (Map.withoutKeys poolStake' owners')
+    where
+      owners'    = Set.insert operator owners
+      poolStake' = Map.mapMaybeWithKey (\k _ -> Map.lookup k stake) delegations
+      pstake     = Map.foldl (+) (Coin 0) $ Map.restrictKeys poolStake' owners'
+
 
 -- | Calculate pool refunds
-poolRefunds :: PParams -> Map.Map HashKey Slot -> Slot -> Map.Map HashKey Coin
-poolRefunds pc retirees cslot =
-  Map.map (\s -> refund pval pmin lambda (cslot -* s)) retirees
+poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
+poolRefunds pp retirees cslot =
+  Map.map
+    (\e ->
+       refund pval pmin lambda (cslot -* slotFromEpoch e))
+    retirees
   where
-    (pval, pmin, lambda) = decayPool pc
+    (pval, pmin, lambda) = decayPool pp
 
 -- | Calculate total possible refunds.
 obligation :: PParams -> StakeKeys -> StakePools -> Slot -> Coin
@@ -149,3 +162,21 @@ groupByPool active delegs =
     [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
     | hk <- Map.keys delegs
     ]
+
+data SnapShots =
+    SnapShots
+    { _pstakeMark :: PooledStake
+    , _pstakeSet  :: PooledStake
+    , _pstakeGo   :: PooledStake
+    , _poolsSS    :: Map.Map HashKey PoolParams
+    , _blocksSS   :: BlocksMade
+    , _feeSS      :: Coin
+    } deriving (Show, Eq)
+
+makeLenses ''SnapShots
+
+emptySnapShots :: SnapShots
+emptySnapShots =
+    SnapShots pooledEmpty pooledEmpty pooledEmpty Map.empty blocksEmpty (Coin 0)
+    where pooledEmpty = PooledStake Map.empty
+          blocksEmpty = BlocksMade Map.empty

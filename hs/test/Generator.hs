@@ -46,7 +46,7 @@ import           Slot
 import           UTxO
 import           PParams              (PParams(..), interval0, mkUnitInterval)
 import           Delegation.Certificates  (DCert(..), StakeKeys(..))
-import           Delegation.StakePool  (StakePool(..), Delegation(..))
+import           Delegation.PoolParams (PoolParams(..), Delegation(..), RewardAcnt(..))
 
 import           Mutator
 
@@ -304,16 +304,17 @@ genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ RetirePool key epoch
 
-genStakePool :: KeyPairs -> Gen StakePool
+genStakePool :: KeyPairs -> Gen PoolParams
 genStakePool keys = do
   poolKey       <- getAnyStakeKey keys
   cost          <- Coin <$> genNatural 1 100
   pledge        <- Coin <$> genNatural 1 100
   marginPercent <- genNatural 0 100
+  acntKey       <- getAnyStakeKey keys
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ StakePool poolKey pledge Map.empty cost interval Nothing
+  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey) Set.empty
 
 genDelegation :: KeyPairs -> DWState -> Gen Delegation
 genDelegation keys d = do
