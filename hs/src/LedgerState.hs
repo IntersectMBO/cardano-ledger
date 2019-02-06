@@ -85,13 +85,12 @@ import           Lens.Micro              ((^.), (&), (.~), (%~))
 import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*))
+import           Slot                    (Slot (..), Epoch (..), (-*), slotsPerEpoch)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, rho, tau,
-                                                 slotsPerEpoch)
+                                                 movingAvgExp, rho, tau)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -674,7 +673,7 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
     (Coin pstake) = Map.foldl (+) (Coin 0) stake
     (Coin ostake) = stake Map.! poolHK
     sigma = fromIntegral pstake % fromIntegral total
-    expectedSlots = sigma * fromIntegral (pp ^. slotsPerEpoch)
+    expectedSlots = sigma * fromIntegral slotsPerEpoch
     Coin pledge = pool ^. poolPledge
     pr = fromIntegral pledge % fromIntegral total
     maxP =
@@ -741,7 +740,7 @@ updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
       getCoinVal (Coin c) = fromIntegral c :: Integer
       expected hk =
           case Map.lookup hk pooledStake of
-            Just st -> getCoinVal (sumStake st) * fromIntegral (pp ^. slotsPerEpoch) % fromIntegral tot
+            Just st -> getCoinVal (sumStake st) * fromIntegral slotsPerEpoch % fromIntegral tot
             Nothing -> 0
 
 -- | Stake distribution
