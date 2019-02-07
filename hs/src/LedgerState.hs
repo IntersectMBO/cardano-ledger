@@ -389,8 +389,8 @@ correctWithdrawals accs withdrawals =
 -- |Collect the set of hashes of keys that needs to sign a
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
-requiredSigners :: Tx -> UTxO -> Set HashKey
-requiredSigners tx utxo' = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
+witsNeeded :: UTxO -> Tx -> Set HashKey
+witsNeeded utxo' tx = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
   where
     inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
     insertHK txin hkeys =
@@ -418,7 +418,7 @@ verifiedWits (TxWits tx wits) =
 -- than one witness.
 enoughWits :: TxWits -> UTxOState -> Validity
 enoughWits (TxWits tx wits) u =
-  if requiredSigners tx (u ^. utxo) `Set.isSubsetOf` signers
+  if witsNeeded (u ^. utxo) tx `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
@@ -427,7 +427,7 @@ enoughWits (TxWits tx wits) u =
 -- |Check that there are no redundant witnesses.
 noUnneededWits :: TxWits -> UTxOState -> Validity
 noUnneededWits (TxWits tx wits) u =
-  if signers `Set.isSubsetOf` requiredSigners tx (u ^. utxo)
+  if signers `Set.isSubsetOf` witsNeeded (u ^. utxo) tx
     then Valid
     else Invalid [UnneededWitnesses]
   where
@@ -862,7 +862,7 @@ data UTXOW
 instance STS UTXOW where
     type State UTXOW       = UTxOState
     type Signal UTXOW      = TxWits
-    type Environment UTXOW = (PParams, Slot, StakeKeys, StakePools)
+    type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools)
     data PredicateFailure UTXOW = InvalidWitnessesUTXOW
                                 | MissingWitnessesUTXOW
                                 | UnneededWitnessesUTXOW
@@ -875,13 +875,12 @@ instance STS UTXOW where
 
 initialLedgerStateUTXOW :: InitialRule UTXOW
 initialLedgerStateUTXOW = do
-  IRC (pp, slots, stakeKeys, stakePools) <- judgmentContext
+  IRC (slots, pp, stakeKeys, stakePools) <- judgmentContext
   trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools)
-
 
 utxoWitnessed :: TransitionRule UTXOW
 utxoWitnessed = do
-  TRC ((pp, slot, stakeKeys, stakePools), u, txwits) <- judgmentContext
+  TRC ((slot, pp, stakeKeys, stakePools), u, txwits) <- judgmentContext
   verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
   enoughWits txwits u     == Valid ?! MissingWitnessesUTXOW
   noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
@@ -1062,15 +1061,15 @@ instance STS LEDGER where
 
 initialLedgerStateLEDGER :: InitialRule LEDGER
 initialLedgerStateLEDGER = do
-  IRC (pc, slot, ix) <- judgmentContext
-  utxo' <- trans @UTXOW  $ IRC (pc, slot, StakeKeys Map.empty, StakePools Map.empty)
+  IRC (pp, slot, ix) <- judgmentContext
+  utxo' <- trans @UTXOW  $ IRC (slot, pp, StakeKeys Map.empty, StakePools Map.empty)
   deleg <- trans @DELEGT $ IRC (slot, ix)
   pure (utxo', deleg)
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
-  TRC ((pc, slot, ix), (u, d), txwits) <- judgmentContext
-  utxo'  <- trans @UTXOW  $ TRC ((pc, slot, d ^. dstate . stKeys, d ^. pstate . stPools), u, txwits)
+  TRC ((pp, slot, ix), (u, d), txwits) <- judgmentContext
+  utxo'  <- trans @UTXOW  $ TRC ((slot, pp, d ^. dstate . stKeys, d ^. pstate . stPools), u, txwits)
   deleg' <- trans @DELEGT $ TRC ((slot, ix), d, txwits ^. body)
   pure (utxo', deleg')
 
