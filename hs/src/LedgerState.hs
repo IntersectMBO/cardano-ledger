@@ -61,6 +61,9 @@ module LedgerState
   , retiring
   -- refunds
   , keyRefunds
+  , keyRefund
+  , decayedKey
+  , decayedTx
   -- epoch boundary
   , movingAvg
   , poolRew
@@ -87,12 +90,15 @@ import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*),
-                                               slotsPerEpoch, slotFromEpoch)
+                                          slotsPerEpoch, slotFromEpoch,
+                                          firstSlot, epochFromSlot)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, emptyPParams)
+                                                 movingAvgExp, emptyPParams,
+                                                 keyDeposit, minRefund,
+                                                 decayRate, UnitInterval)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -318,13 +324,40 @@ created stakePools pc tx =
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds :: PParams -> StakeKeys -> Tx -> Coin
-keyRefunds pc (StakeKeys stkeys) tx =
-  sum [refund' key | (RegKey key) <- tx ^. certs]
-  where refund' key =
-          case Map.lookup (hashKey key) stkeys of
-            Nothing -> Coin 0
-            Just s -> refund dval dmin lambda $ (tx ^. ttl) -* s
-        (dval, dmin, lambda) = decayKey pc
+keyRefunds pp stk tx =
+  sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DeRegKey _) <- tx ^. certs]
+  where (dval, dmin, lambda) = decayKey pp
+
+-- | Key refund for a deregistration certificate.
+keyRefund :: Coin -> UnitInterval -> Rational -> StakeKeys -> Slot -> DCert -> Coin
+keyRefund dval dmin lambda (StakeKeys stkeys) slot c =
+    case c of
+      DeRegKey key -> case Map.lookup (hashKey key) stkeys of
+                        Nothing -> Coin 0
+                        Just  s -> refund dval dmin lambda $ slot -* s
+      _ -> Coin 0
+
+-- | Functions to calculate decayed deposits
+decayedKey :: PParams -> StakeKeys -> Slot -> DCert -> Coin
+decayedKey pp stk@(StakeKeys stkeys) cslot cert =
+    case cert of
+      DeRegKey key ->
+          if Map.notMember (hashKey key) stkeys
+          then 0
+          else let created'      = stkeys Map.! hashKey key in
+               let start         = max (firstSlot $ epochFromSlot cslot) created' in
+               let dval          = pp ^. keyDeposit in
+               let dmin          = pp ^. minRefund in
+               let lambda        = pp ^. decayRate in
+               let epochRefund   = keyRefund dval dmin lambda stk start cert in
+               let currentRefund = keyRefund dval dmin lambda stk cslot cert in
+               epochRefund - currentRefund
+      _ -> 0
+
+-- | Decayed deposit portions
+decayedTx :: PParams -> StakeKeys -> Tx -> Coin
+decayedTx pp stk tx =
+    sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- tx ^. certs]
 
 -- |Compute the lovelace which are destroyed by the transaction
 destroyed :: StakeKeys -> PParams -> Tx -> UTxOState -> Coin
