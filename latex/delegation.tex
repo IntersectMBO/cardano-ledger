@@ -68,15 +68,15 @@ Accessor functions for certificates and pool parameters are also defined, but
 only the $\cwitness{}$ accessor function needs explanation.
 It does the following:
 \begin{itemize}
-\item For a $\DCertRegKey$ certificate, $\cwitness{}$ returns the hashkey
+  \item For a $\DCertRegKey$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key being registered.
-\item For a $\DCertDeRegKey$ certificate, $\cwitness{}$ returns the hashkey
+\item For a $\DCertDeRegKey$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key being de-registered.
-\item For a $\DCertDeleg$ certificate, $\cwitness{}$ returns the hashkey
+\item For a $\DCertDeleg$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key that is delegating (and not the key to which the stake in being delegated to).
-\item For a $\DCertRegPool$ certificate, $\cwitness{}$ returns the hashkey
+\item For a $\DCertRegPool$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key of the pool operator.
-\item For a $\DCertRetirePool$ certificate, $\cwitness{}$ returns the hashkey
+\item For a $\DCertRetirePool$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key of the pool operator.
 \end{itemize}
 
