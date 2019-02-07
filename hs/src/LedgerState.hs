@@ -1086,7 +1086,7 @@ poolReapTransition :: TransitionRule POOLREAP
 poolReapTransition = do
   TRC((eNew, pp), (a, d, p), _) <- judgmentContext
   let retired     = Map.keysSet $ Map.filter (== eNew) $ p ^. retiring
-  let pr          = poolRefunds pp (p ^. retiring) (slotFromEpoch eNew)
+  let pr          = poolRefunds pp (p ^. retiring) (firstSlot eNew)
   let relevant    = Map.restrictKeys (p ^. pParams) retired
   let rewardAcnts =
           Map.mapMaybeWithKey
@@ -1132,7 +1132,7 @@ newPpTransition :: TransitionRule NEWPP
 newPpTransition = do
   TRC((eNew, ppNew, ds, ps), (us, as, pp), _) <- judgmentContext
   let oblgCurr =
-          obligation pp (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
+          obligation pp (ds ^. stKeys) (ps ^. stPools) (firstSlot eNew)
   let oblgNew =
           obligation ppNew (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
   let (oblg', reserves', pp') =
@@ -1157,7 +1157,7 @@ snapTransition :: TransitionRule SNAP
 snapTransition = do
   TRC((eNew, pparams, d, p, blocks), (s, u), _) <- judgmentContext
   let pooledStake = poolDistr (u ^. utxo) d p
-  let slot = slotFromEpoch eNew
+  let slot = firstSlot eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) slot
   let decayed = (u ^. deposited) - oblg
   pure ( s & pstakeMark .~ pooledStake
