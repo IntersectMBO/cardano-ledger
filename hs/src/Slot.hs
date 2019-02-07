@@ -10,6 +10,7 @@ module Slot
   , slotFromEpoch
   , epochFromSlot
   , slotsPerEpoch
+  , firstSlot
   ) where
 
 import           Data.Monoid             (Sum(..))
@@ -40,6 +41,9 @@ slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n
 
 epochFromSlot :: Slot -> Epoch
 epochFromSlot (Slot n) = Epoch $ n `rem` slotsPerEpoch
+
+firstSlot :: Epoch -> Slot
+firstSlot = slotFromEpoch
 
 -- | Hard coded global constant for number of slots per epoch
 slotsPerEpoch :: Natural
