@@ -50,7 +50,7 @@ module LedgerState
   , pcs
   -- UTxOState
   , utxo
-  , deposits
+  , deposited
   , fees
   -- DelegationState
   , rewards
@@ -234,7 +234,7 @@ data UTxOState =
     UTxOState
     {
       _utxo      :: !UTxO
-    , _deposits  :: Coin
+    , _deposited :: Coin
     , _fees      :: Coin
     } deriving (Show, Eq)
 
@@ -318,9 +318,9 @@ validFee pc tx =
         given  = tx ^. txfee
 
 -- |Compute the lovelace which are created by the transaction
-created :: StakePools -> PParams -> Tx -> Coin
-created stakePools pc tx =
-    balance (txouts tx) + tx ^. txfee + depositAmount pc stakePools tx
+produced :: PParams -> StakePools -> Tx -> Coin
+produced pp stakePools tx =
+    balance (txouts tx) + tx ^. txfee + deposits pp stakePools (tx ^. certs)
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds :: PParams -> StakeKeys -> Tx -> Coin
@@ -360,23 +360,23 @@ decayedTx pp stk tx =
     sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- tx ^. certs]
 
 -- |Compute the lovelace which are destroyed by the transaction
-destroyed :: StakeKeys -> PParams -> Tx -> UTxOState -> Coin
-destroyed stakeKeys pc tx u =
-    balance (txins tx <| (u ^. utxo)) + refunds + withdrawals
+consumed :: PParams -> UTxO -> StakeKeys -> Tx -> Coin
+consumed pp u stakeKeys tx =
+    balance (txins tx <| u) + refunds + withdrawals
   where
-    refunds = keyRefunds pc stakeKeys tx
+    refunds = keyRefunds pp stakeKeys tx
     withdrawals = sum $ tx ^. wdrls
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
 preserveBalance :: StakePools -> StakeKeys -> PParams -> Tx -> UTxOState -> Validity
-preserveBalance stakePools stakeKeys pc tx u =
+preserveBalance stakePools stakeKeys pp tx u =
   if destroyed' == created'
     then Valid
     else Invalid [ValueNotConserved destroyed' created']
   where
-    destroyed' = destroyed stakeKeys pc tx u
-    created' = created stakePools pc tx
+    destroyed' = consumed pp (u ^. utxo) stakeKeys tx
+    created' = produced pp stakePools tx
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
@@ -564,15 +564,15 @@ depositPoolChange ls tx = (currentPool + txDeposits) - txRefunds
   -- it could be that txDeposits < txRefunds. We keep the parenthesis above
   -- to emphasize this point.
   where
-    currentPool = ls ^. utxoState . deposits
-    txDeposits = depositAmount (ls ^. pcs) (ls ^. delegationState . pstate . stPools) tx
+    currentPool = ls ^. utxoState . deposited
+    txDeposits = deposits (ls ^. pcs) (ls ^. delegationState . pstate . stPools) (tx ^. certs)
     txRefunds = keyRefunds (ls ^. pcs) (ls ^. delegationState . dstate . stKeys) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody :: Slot -> LedgerState -> Tx -> LedgerState
 applyTxBody slot ls tx =
     ls & utxoState %~ flip applyUTxOUpdate tx
-       & utxoState . deposits .~ depositPoolChange ls tx
+       & utxoState . deposited .~ depositPoolChange ls tx
        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
        & delegationState . dstate . rewards .~ newAccounts
        & txSlotIx  %~ (if slot == ls ^. currentSlot then (+1) else const (0::Natural))
@@ -766,7 +766,7 @@ updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
              (\hk n -> StakeShare $ movingAvg pp hk n (expected hk) avgs') blocks
     where
       (Coin tot)  = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-      sumStake (Stake s) = Map.foldl (\acc c -> acc + c) (Coin 0) s
+      sumStake (Stake s) = Map.foldl (+) (Coin 0) s
       getCoinVal (Coin c) = fromIntegral c :: Integer
       expected hk =
           case Map.lookup hk pooledStake of
@@ -808,7 +808,7 @@ data UTXO
 instance STS UTXO where
     type State UTXO       = UTxOState
     type Signal UTXO      = Tx
-    type Environment UTXO = (PParams, Slot, StakeKeys, StakePools)
+    type Environment UTXO = (Slot, PParams, StakeKeys, StakePools)
     data PredicateFailure UTXO = BadInputsUTxO
                                | ExpiredUTxO Slot Slot
                                | InputSetEmptyUTxO
@@ -829,13 +829,13 @@ initialLedgerState = do
 
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
-  TRC ((pc, slot, stakeKeys, stakePools), u, tx) <- judgmentContext
+  TRC ((slot, pp, stakeKeys, stakePools), u, tx) <- judgmentContext
   validInputs tx u       == Valid ?! BadInputsUTxO
   current tx slot        == Valid ?! ExpiredUTxO (tx ^. ttl) slot
   validNoReplay tx       == Valid ?! InputSetEmptyUTxO
-  let validateFee         = validFee pc tx
+  let validateFee         = validFee pp tx
   validateFee            == Valid ?! unwrapFailureUTXO validateFee
-  let validateBalance     = preserveBalance stakePools stakeKeys pc tx u
+  let validateBalance     = preserveBalance stakePools stakeKeys pp tx u
   validateBalance        == Valid ?! unwrapFailureUTXO validateBalance
   pure $ applyUTxOUpdate u tx
 
@@ -870,17 +870,17 @@ instance STS UTXOW where
 
 initialLedgerStateUTXOW :: InitialRule UTXOW
 initialLedgerStateUTXOW = do
-  IRC (pc, slots, stakeKeys, stakePools) <- judgmentContext
-  trans @UTXO $ IRC (pc, slots, stakeKeys, stakePools)
+  IRC (pp, slots, stakeKeys, stakePools) <- judgmentContext
+  trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools)
 
 
 utxoWitnessed :: TransitionRule UTXOW
 utxoWitnessed = do
-  TRC ((pc, slot, stakeKeys, stakePools), u, txwits) <- judgmentContext
+  TRC ((pp, slot, stakeKeys, stakePools), u, txwits) <- judgmentContext
   verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
   enoughWits txwits u     == Valid ?! MissingWitnessesUTXOW
   noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((pc, slot, stakeKeys, stakePools), u, txwits ^. body)
+  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools), u, txwits ^. body)
 
 data DELRWDS
 
@@ -1181,8 +1181,8 @@ newPpTransition = do
   let (oblg', reserves', pp') =
           if as ^. reserves + oblgCurr >= oblgNew  -- reserves are sufficient
           then (oblgNew, (as ^. reserves + oblgCurr) - oblgNew, ppNew)
-          else (us ^. deposits, as ^. reserves, pp)
-  pure (us & deposits .~ oblg', as & reserves .~ reserves', pp')
+          else (us ^. deposited, as ^. reserves, pp)
+  pure (us & deposited .~ oblg', as & reserves .~ reserves', pp')
 
 data SNAP
 instance STS SNAP where
@@ -1202,14 +1202,14 @@ snapTransition = do
   let pooledStake = poolDistr (u ^. utxo) d p
   let slot = slotFromEpoch eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) slot
-  let decayed = (u ^. deposits) - oblg
+  let decayed = (u ^. deposited) - oblg
   pure ( s & pstakeMark .~ pooledStake
            & pstakeSet  .~ (s ^. pstakeMark)
            & pstakeGo   .~ (s ^. pstakeSet)
            & poolsSS    .~ (p ^. pParams)
            & blocksSS   .~ blocks
            & feeSS      .~ (u ^. fees) + decayed
-       , u & deposits   .~ oblg
+       , u & deposited  .~ oblg
            & fees       %~ (+) decayed)
 
 data EPOCH
