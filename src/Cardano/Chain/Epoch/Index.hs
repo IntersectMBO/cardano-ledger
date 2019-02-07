@@ -45,5 +45,5 @@ readIndex (EpochIndex file) slot =
       hSeek h AbsoluteSeek readLocation
       bytes <- LBS.hGet h 8
       pure $ case B.runGetOrFail getWord64be bytes of
-        Left  _              -> Nothing
+        Left  _ -> Nothing
         Right (_, _, offset) -> Just offset

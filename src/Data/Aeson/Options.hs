@@ -40,7 +40,7 @@ stripConstructorPrefix t = maybe t (flip drop t . decrementSafe)
 -- is dropped and then the first letter is lowercased.
 defaultOptions :: A.Options
 defaultOptions = A.defaultOptions
-  { A.fieldLabelModifier     = headToLower . stripFieldPrefix . dropPunctuation
+  { A.fieldLabelModifier = headToLower . stripFieldPrefix . dropPunctuation
   , A.constructorTagModifier = headToLower . stripConstructorPrefix
-  , A.sumEncoding            = A.ObjectWithSingleField
+  , A.sumEncoding        = A.ObjectWithSingleField
   }

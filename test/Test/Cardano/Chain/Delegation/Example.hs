@@ -31,6 +31,6 @@ exampleCertificates = zipWith4
 
 exampleUndo :: Undo
 exampleUndo = Undo
-  { duPsks            = exampleCertificates
+  { duPsks = exampleCertificates
   , duPrevEpochPosted = Set.singleton exampleStakeholderId
   }

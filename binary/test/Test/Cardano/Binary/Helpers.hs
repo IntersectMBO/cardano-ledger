@@ -325,9 +325,9 @@ sizeTest SizeTestConfig {..} = HH.property $ do
       annotate ("Value: " <> debug x)
 
   case szVerify ctx x of
-    Exact                          -> success
+    Exact -> success
     WithinBounds _ _ | not precise -> success
-    WithinBounds sz bounds         -> do
+    WithinBounds sz bounds -> do
       badBounds sz bounds
       annotate "Bounds were not exact."
       failure

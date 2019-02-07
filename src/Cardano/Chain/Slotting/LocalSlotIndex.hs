@@ -120,7 +120,7 @@ localSlotIndices slotsInEpoch = fmap UnsafeLocalSlotIndex [0 .. upperBound]
 mkLocalSlotIndex_ :: SlotCount -> Word16 -> Maybe LocalSlotIndex
 mkLocalSlotIndex_ es idx
   | idx < fromIntegral es = Just (UnsafeLocalSlotIndex idx)
-  | otherwise             = Nothing
+  | otherwise = Nothing
 
 mkLocalSlotIndex
   :: MonadError LocalSlotIndexError m => SlotCount -> Word16 -> m LocalSlotIndex
@@ -137,7 +137,7 @@ addLocalSlotIndex
   -> Either LocalSlotIndexError LocalSlotIndex
 addLocalSlotIndex epochSlots x (UnsafeLocalSlotIndex i)
   | s < fromIntegral epochSlots = Right $ UnsafeLocalSlotIndex (fromIntegral s)
-  | otherwise                   = Left $ LocalSlotIndexOverflow epochSlots s
+  | otherwise = Left $ LocalSlotIndexOverflow epochSlots s
  where
   s :: Word64
   s = fromIntegral x + fromIntegral i

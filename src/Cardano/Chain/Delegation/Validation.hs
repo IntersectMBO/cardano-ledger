@@ -234,10 +234,10 @@ initialInterfaceState config = updateDelegation config 0 0 is certificates
 
 -- | Check whether a delegation is valid in the 'InterfaceState'
 delegates :: InterfaceState -> PublicKey -> PublicKey -> Bool
-delegates is delegator delgate =
+delegates is delegator delegate =
   case M.lookup (mkStakeholderId delegator) delegationMap of
     Nothing -> False
-    Just pk -> pk == mkStakeholderId delgate
+    Just pk -> pk == mkStakeholderId delegate
   where delegationMap = asDelegationMap $ isActivationState is
 
 

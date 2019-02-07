@@ -79,7 +79,7 @@ genSlottingData = mkSlottingData <$> genSlottingDataMap >>= \case
  where
   genSlottingDataMap :: Gen (Map EpochIndex EpochSlottingData)
   genSlottingDataMap = do
-    mapSize            <- Gen.int $ Range.linear 2 10
+    mapSize <- Gen.int $ Range.linear 2 10
     epochSlottingDatas <- Gen.list
       (Range.singleton mapSize)
       genEpochSlottingData

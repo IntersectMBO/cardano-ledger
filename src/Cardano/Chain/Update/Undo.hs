@@ -121,28 +121,28 @@ newVoteState True  = PositiveVote
 newVoteState False = NegativeVote
 
 isPositiveVote :: VoteState -> Bool
-isPositiveVote PositiveVote   = True
+isPositiveVote PositiveVote = True
 isPositiveVote PositiveRevote = True
-isPositiveVote _              = False
+isPositiveVote _ = False
 
 -- | Check whether given decision is a valid vote if applied to existing vote
 --   (which may not exist)
 canCombineVotes :: Bool -> Maybe VoteState -> Bool
-canCombineVotes _     Nothing             = True
-canCombineVotes True  (Just NegativeVote) = True
+canCombineVotes _     Nothing = True
+canCombineVotes True (Just NegativeVote) = True
 canCombineVotes False (Just PositiveVote) = True
-canCombineVotes _     _                   = False
+canCombineVotes _     _       = False
 
 -- | Apply decision to given vote (or Nothing). This function returns 'Nothing'
 --   if decision can't be applied. 'canCombineVotes' can be used to check
 --   whether it will be successful.
 combineVotes :: Bool -> Maybe VoteState -> Maybe VoteState
 combineVotes decision oldVote = case (decision, oldVote) of
-  (True , Nothing          ) -> Just PositiveVote
-  (False, Nothing          ) -> Just NegativeVote
-  (True , Just NegativeVote) -> Just PositiveRevote
+  (True , Nothing) -> Just PositiveVote
+  (False, Nothing) -> Just NegativeVote
+  (True, Just NegativeVote) -> Just PositiveRevote
   (False, Just PositiveVote) -> Just NegativeRevote
-  (_    , Just _           ) -> Nothing
+  (_    , Just _ ) -> Nothing
 
 -- | Type alias for set of votes from stakeholders
 type StakeholderVotes = Map PublicKey VoteState

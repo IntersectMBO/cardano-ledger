@@ -106,7 +106,7 @@ updateSigningHistory pk sh
 
   removeStakeholderOut :: SigningHistory -> SigningHistory
   removeStakeholderOut sh' = case shSigningQueue sh' of
-    Empty                   -> sh'
+    Empty -> sh'
     rest :|> stakeholderOut -> sh'
       { shSigningQueue      = rest
       , shStakeholderCounts = M.adjust
@@ -134,13 +134,13 @@ initialChainValidationState config = do
   delegationState <- initialInterfaceState config
   pure $ ChainValidationState
     { cvsSigningHistory  = SigningHistory
-      { shK                 = configK config
+      { shK = configK config
       , shStakeholderCounts = M.fromList
         . map (, 0)
         . M.keys
         . getGenesisWStakeholders
         $ configBootStakeholders config
-      , shSigningQueue      = Empty
+      , shSigningQueue = Empty
       }
     , cvsPreviousHash    = Nothing
     , cvsDelegationState = delegationState
@@ -284,10 +284,10 @@ updateChain config cvs b = do
     , cvsDelegationState = delegationState'
     }
  where
-  pm              = configProtocolMagicId config
-  slot            = flattenSlotId (configEpochSlots config) $ blockSlot b
-  d               = configSlotSecurityParam config
+  pm   = configProtocolMagicId config
+  slot = flattenSlotId (configEpochSlots config) $ blockSlot b
+  d    = configSlotSecurityParam config
 
   delegationState = cvsDelegationState cvs
 
-  certificates    = getPayload $ blockDlgPayload b
+  certificates = getPayload $ blockDlgPayload b

@@ -195,7 +195,7 @@ instance HeapWords TxIn where
 
 isTxInUnknown :: TxIn -> Bool
 isTxInUnknown (TxInUnknown _ _) = True
-isTxInUnknown _                 = False
+isTxInUnknown _ = False
 
 txInFromText :: Text -> Either Text TxIn
 txInFromText t = case T.splitOn "_" t of

@@ -67,8 +67,8 @@ instance B.Buildable SystemTagError where
 checkSystemTag :: MonadError SystemTagError m => SystemTag -> m ()
 checkSystemTag (SystemTag tag)
   | T.length tag > systemTagMaxLength = throwError $ SystemTagTooLong tag
-  | T.any (not . isAscii) tag         = throwError $ SystemTagNotAscii tag
-  | otherwise                         = pure ()
+  | T.any (not . isAscii) tag = throwError $ SystemTagNotAscii tag
+  | otherwise = pure ()
 
 -- | Helper to turn an @OS@ into a @Text@ compatible with the @systemTag@
 --   previously used in 'configuration.yaml'
