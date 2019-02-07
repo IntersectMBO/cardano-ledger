@@ -974,7 +974,7 @@ requests).
       \\
       \var{decayed} = \decayedTx{pp}{stkeys}~{tx}
       \\
-      \var{depositChange} = (\deposits{pp}~{stpools}~{tx}) - (\var{refunded} + \var{decayed})
+      \var{depositChange} = (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{l}

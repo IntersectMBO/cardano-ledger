@@ -830,14 +830,19 @@ initialLedgerState = do
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
   TRC ((slot, pp, stakeKeys, stakePools), u, tx) <- judgmentContext
-  validInputs tx u       == Valid ?! BadInputsUTxO
-  current tx slot        == Valid ?! ExpiredUTxO (tx ^. ttl) slot
-  validNoReplay tx       == Valid ?! InputSetEmptyUTxO
-  let validateFee         = validFee pp tx
-  validateFee            == Valid ?! unwrapFailureUTXO validateFee
-  let validateBalance     = preserveBalance stakePools stakeKeys pp tx u
-  validateBalance        == Valid ?! unwrapFailureUTXO validateBalance
-  pure $ applyUTxOUpdate u tx
+  validInputs tx u    == Valid ?! BadInputsUTxO
+  current tx slot     == Valid ?! ExpiredUTxO (tx ^. ttl) slot
+  validNoReplay tx    == Valid ?! InputSetEmptyUTxO
+  let validateFee      = validFee pp tx
+  validateFee         == Valid ?! unwrapFailureUTXO validateFee
+  let validateBalance  = preserveBalance stakePools stakeKeys pp tx u
+  validateBalance     == Valid ?! unwrapFailureUTXO validateBalance
+  let refunded         = keyRefunds pp stakeKeys tx
+  let decayed          = decayedTx pp stakeKeys tx
+  let depositChange    = deposits pp stakePools (tx ^. certs) - (refunded + decayed)
+  let u' = applyUTxOUpdate u tx
+  pure (u' & deposited %~ (+) depositChange
+           & fees %~ (+) ((tx ^. txfee) + decayed))
 
 unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
 unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
