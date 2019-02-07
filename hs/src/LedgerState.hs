@@ -390,7 +390,8 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsNeeded :: UTxO -> Tx -> Set HashKey
-witsNeeded utxo' tx = inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors
+witsNeeded utxo' tx =
+    inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors `Set.union` owners
   where
     inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
     insertHK txin hkeys =
@@ -399,9 +400,10 @@ witsNeeded utxo' tx = inputAuthors `Set.union` wdrlAuthors `Set.union` certAutho
         _                               -> hkeys
 
     wdrlAuthors = Set.map getRwdHK (Map.keysSet (tx ^. wdrls))
-
+    owners = foldl Set.union Set.empty [pool ^. poolOwners | RegPool pool <- tx ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
+    
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
