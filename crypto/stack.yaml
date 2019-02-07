@@ -15,6 +15,4 @@ extra-deps:
   - ../binary/test
 
 nix:
-  packages:
-    - openssl
-    - zlib
+  shell-file: ../scripts/nix/stack-shell.nix
