@@ -98,7 +98,7 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
                                                  movingAvgExp, emptyPParams,
                                                  keyDeposit, minRefund,
-                                                 decayRate, UnitInterval)
+                                                 decayRate, UnitInterval, eMax)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -942,8 +942,9 @@ data POOL
 instance STS POOL where
     type State POOL         = DWState
     type Signal POOL        = DCert
-    type Environment POOL   = Ptr
+    type Environment POOL   = (Ptr, PParams)
     data PredicateFailure POOL = StakePoolNotRegisteredOnKeyPOOL
+                               | StakePoolRetirementWrongEpochPOOL
                                | WrongCertificateTypePOOL
                   deriving (Show, Eq)
 
@@ -952,11 +953,14 @@ instance STS POOL where
 
 poolDelegationTransition :: TransitionRule POOL
 poolDelegationTransition = do
-  TRC(p, d, c) <- judgmentContext
+  TRC((p@(Ptr slot _ _), pp), d, c) <- judgmentContext
   case c of
     RegPool _      -> pure $ applyDCert p c d
-    RetirePool _ _ -> do
+    RetirePool _ (Epoch e) -> do
            validStakePoolRetire c d == Valid ?! StakePoolNotRegisteredOnKeyPOOL
+           let Epoch cepoch   = epochFromSlot slot
+           let Epoch maxEpoch = pp ^. eMax
+           cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
            pure $ applyDCert p c d
     _   -> do
            False ?! WrongCertificateTypePOOL
@@ -966,7 +970,7 @@ data DELPL
 instance STS DELPL where
     type State DELPL       = DWState
     type Signal DELPL      = DCert
-    type Environment DELPL = Ptr
+    type Environment DELPL = (Ptr, PParams)
     data PredicateFailure DELPL = PoolFailure (PredicateFailure POOL)
                                 | DelegFailure (PredicateFailure DELEG)
                    deriving (Show, Eq)
@@ -976,10 +980,10 @@ instance STS DELPL where
 
 delplTransition :: TransitionRule DELPL
 delplTransition = do
-  TRC(slotIx, d, c) <- judgmentContext
+  TRC((slotIx, pp), d, c) <- judgmentContext
   case c of
-    RegPool    _   -> trans @POOL  $ TRC (slotIx, d, c)
-    RetirePool _ _ -> trans @POOL  $ TRC (slotIx, d, c)
+    RegPool    _   -> trans @POOL  $ TRC ((slotIx, pp), d, c)
+    RetirePool _ _ -> trans @POOL  $ TRC ((slotIx, pp), d, c)
     RegKey _       -> trans @DELEG $ TRC (slotIx, d, c)
     DeRegKey _     -> trans @DELEG $ TRC (slotIx, d, c)
     Delegate _     -> trans @DELEG $ TRC (slotIx, d, c)
@@ -988,7 +992,7 @@ data DELEGS
 instance STS DELEGS where
     type State DELEGS       = DWState
     type Signal DELEGS      = [DCert]
-    type Environment DELEGS = (Slot, Ix)
+    type Environment DELEGS = (Slot, Ix, PParams)
     data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)
                     deriving (Show, Eq)
 
@@ -997,55 +1001,10 @@ instance STS DELEGS where
 
 delegsTransition :: TransitionRule DELEGS
 delegsTransition = do
-  TRC((slot, ix), d, certificates) <- judgmentContext
-  foldM (\d' (clx, c) -> trans @DELPL $
-                        TRC(Ptr slot ix clx, d', c)) d $ zip [0..] certificates
-
-data DELEGT
-instance STS DELEGT where
-    type State DELEGT       = DWState
-    type Signal DELEGT      = Tx
-    type Environment DELEGT = (Slot, Ix)
-    data PredicateFailure DELEGT = DelegsFailure (PredicateFailure DELEGS)
-                                 | DelrwdsFailure (PredicateFailure DELRWDS)
-                                 | RegCertWithdrawDELEGT
-                                 | DeregCertNotWithdrawDELEGT
-                                 | DelegateCertNotStakePoolsDELEGT
-                                 | DeregCertRetireOrDelegateDELEGT
-                    deriving (Show, Eq)
-
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delegtTransition     ]
-
-splitCerts :: [DCert] -> ([DCert], [DCert], [DCert]) -> ([DCert], [DCert], [DCert])
-splitCerts [] t = t
-splitCerts (c:cs) (reg, dereg, delegate) = splitCerts cs (reg', dereg', delegate')
-    where (reg', dereg', delegate') =
-              case c of
-                RegKey _   -> (c:reg, dereg, delegate)
-                DeRegKey _ -> (reg, c:dereg, delegate)
-                Delegate _ -> (reg, dereg, c:delegate)
-                _          -> (reg, dereg, delegate)
-
-delegtTransition :: TransitionRule DELEGT
-delegtTransition = do
-  TRC(slotIx@(slot, _), d, tx) <- judgmentContext
-  let withdrawals = tx ^. wdrls
-  let StakePools stakePools  = d ^. pstate . stPools
-  let (regC, deregC, delegateC) = splitCerts (tx ^. certs) ([], [], [])
-  let hk c = hashKey $ getRequiredSigningKey c
-  not (any (\c -> Map.member (RewardAcnt $ hk c) withdrawals) regC)
-           ?! RegCertWithdrawDELEGT
-  all  (\c -> Map.member (RewardAcnt $ hk c) withdrawals) deregC
-           ?! DeregCertNotWithdrawDELEGT
-  all  (\c -> Map.member (hk c) stakePools) delegateC
-           ?! DelegateCertNotStakePoolsDELEGT
-  not (any (\c -> let hsk = hk c in
-              Map.member hsk stakePools || Map.member hsk (d ^. pstate . retiring)) deregC)
-           ?! DeregCertRetireOrDelegateDELEGT
-  d'  <- trans @DELRWDS $ TRC(slot,  d, tx ^. wdrls)
-  d'' <- trans @DELEGS  $ TRC(slotIx, d', tx ^. certs)
-  pure d''
+  TRC((slot, ix, pp), d, certificates) <- judgmentContext
+  foldM (\d' (clx, c) ->
+             trans @DELPL $
+                   TRC((Ptr slot ix clx, pp), d', c)) d $ zip [0..] certificates
 
 data LEDGER
 instance STS LEDGER where
@@ -1053,7 +1012,7 @@ instance STS LEDGER where
     type Signal LEDGER      = TxWits
     type Environment LEDGER = (PParams, Slot, Ix)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
-                                 | DelegtFailure (PredicateFailure DELEGT)
+                                 | DelegsFailure (PredicateFailure DELEGS)
                     deriving (Show, Eq)
 
     initialRules    = [ initialLedgerStateLEDGER ]
@@ -1063,31 +1022,31 @@ initialLedgerStateLEDGER :: InitialRule LEDGER
 initialLedgerStateLEDGER = do
   IRC (pp, slot, ix) <- judgmentContext
   utxo' <- trans @UTXOW  $ IRC (slot, pp, StakeKeys Map.empty, StakePools Map.empty)
-  deleg <- trans @DELEGT $ IRC (slot, ix)
+  deleg <- trans @DELEGS $ IRC (slot, ix, pp)
   pure (utxo', deleg)
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
   TRC ((pp, slot, ix), (u, d), txwits) <- judgmentContext
   utxo'  <- trans @UTXOW  $ TRC ((slot, pp, d ^. dstate . stKeys, d ^. pstate . stPools), u, txwits)
-  deleg' <- trans @DELEGT $ TRC ((slot, ix), d, txwits ^. body)
+  deleg' <- trans @DELEGS $ TRC ((slot, ix, pp), d, txwits ^. body . certs)
   pure (utxo', deleg')
 
 -- STS rules embeddings:
 -- +------------------------------------+
 -- |LEDGER                              |
--- |+--------------------------++------+|
--- ||DELEGT                    ||UTXOW ||
--- ||+---------------++-------+||+----+||
--- |||DELEGS         ||DELRWDS||||UTXO|||
--- |||+-------------+|+-------+||+----+||
--- ||||DELPL        ||         |+------+|
--- ||||+-----++----+||         |        |
--- |||||DELEG||POOL|||         |        |
--- ||||+-----++----+||         |        |
--- |||+-------------+|         |        |
--- ||+---------------+         |        |
--- |+--------------------------+        |
+-- |                            +------+|
+-- |                            |UTXOW ||
+-- | +---------------+          |+----+||
+-- | |DELEGS         |          ||UTXO|||
+-- | |+-------------+|          |+----+||
+-- | ||DELPL        ||          +------+|
+-- | ||+-----++----+||                  |
+-- | |||DELEG||POOL|||                  |
+-- | ||+-----++----+||                  |
+-- | |+-------------+|                  |
+-- | +---------------+                  |
+-- |                                    |
 -- +------------------------------------+
 
 instance Embed UTXOW LEDGER where
@@ -1096,13 +1055,7 @@ instance Embed UTXOW LEDGER where
 instance Embed UTXO UTXOW where
     wrapFailed = UtxoFailure
 
-instance Embed DELEGT LEDGER where
-    wrapFailed = DelegtFailure
-
-instance Embed DELRWDS DELEGT where
-    wrapFailed = DelrwdsFailure
-
-instance Embed DELEGS DELEGT where
+instance Embed DELEGS LEDGER where
     wrapFailed = DelegsFailure
 
 instance Embed DELPL DELEGS where
