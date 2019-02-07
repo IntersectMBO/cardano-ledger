@@ -4,28 +4,12 @@
 
 import           Data.Ratio ((%))
 
-import qualified Data.FixedPoint as FBV
-
 import           Test.QuickCheck
 
 import           NonIntegral
 
-eps :: Rational
-eps    = 1 / 10^12
-
 epsD :: Double
-epsD   = 1.0 / 10^12
-
-epsFBV :: FixedPoint
-epsFBV = fromRational eps
-
-prop_Monotonic ::
-     (Rational -> Bool) -> (Rational -> Rational) -> Rational -> Rational -> Property
-prop_Monotonic constrain f x y =
-  (constrain x && constrain y) ==>
-  if x <= y
-    then f x <= f y
-    else f x > f y
+epsD   = 1.0 / 10.0^(12::Integer)
 
 -- | Normalizes the integers, return a pair of integers, both non-negative and
 -- fst <= snd.
@@ -53,30 +37,6 @@ type PosInt = Positive Integer
 --     abs(e1 - e2)
 --       where e1 = (((b'' % a'') *** (1% x'')) *** fromIntegral y'')
 --             e2 = (((b'' % a'') *** fromIntegral y'') *** (1% x''))
-
-prop_ExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp' ( (a'%b') + (x'%y')) - (exp'(a'%b') * exp' (x'%y'))) < eps) === True
-    where (b', a') = normalizeInts a b
-          (y', x') = normalizeInts x y
-
-prop_ExpUnitInterval :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_ExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
-    a'' > 0 && x'' > 0 ==> result >= 0 && result <= 1
-    where (x'', y'') = normalizeInts x y
-          (a'', b'') = normalizeInts a b
-          result = (b'' % a'') *** (y'' % x'')
-
-prop_IdemPotent :: Positive Rational -> Property
-prop_IdemPotent (Positive a) =
-    a > 0 ==> (exp' $ ln' a) - a < eps
-    --b'' > 0 && a'' > 0 ==> (exp' $ ln' (b'' % a'')) - (b'' % a'') < eps
-    --where (a'', b'') = normalizeInts a b
-
-prop_IdemPotent' :: PosInt -> PosInt -> Property
-prop_IdemPotent' (Positive a) (Positive b) =
-    b'' > 0 && a'' > 0 ==> (ln' $ exp' (b'' % a'')) - (b'' % a'') < eps
-    where (a'', b'') = normalizeInts a b
 
 -----------------------------------
 -- Double versions of properties --
@@ -139,100 +99,9 @@ prop_DfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
     where e = exp' 1
           n = findE a
 
------------------------------------------
--- Fixed-point versions of properties  --
------------------------------------------
-
-type FixedPoint = FBV.FixedPoint512512
-
-instance Arbitrary FixedPoint where
-    arbitrary = do
-      NonNegative a <- arbitrary
-      Positive b    <- arbitrary
-      pure $ fromRational (a%b)
-    shrink _ = [] -- don't try to shrink values of fixedpoint
-
-prop_FBVMonotonic ::
-     (FixedPoint -> Bool) -> (FixedPoint -> FixedPoint) -> FixedPoint -> FixedPoint -> Property
-prop_FBVMonotonic constrain f x y =
-  (constrain x && constrain y) ==>
-  if x <= y
-    then f x <= f y
-    else f x > f y
-
--- | Takes very long, but (e *** b) *** c is not an operation that we use.
-prop_FBVExpLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_FBVExpLaw (Positive x) (Positive y) (Positive a) (Positive b) =
-    b'' > 0 && y'' > 0 && a'' > 0 && x'' > 0 ==> expdiffFBV x'' y'' a'' b'' < epsFBV
-    where (x'', y'') = normalizeInts x y
-          (a'', b'') = normalizeInts a b
-
-prop_FBVExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_FBVExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
-    ((elawFBV x' y' a' b') < epsFBV) === True
-        where (b'', a'') = normalizeInts a b
-              (y'', x'') = normalizeInts x y
-              a' = fromIntegral a''
-              b' = fromIntegral b''
-              x' = fromIntegral x''
-              y' = fromIntegral y''
-
-elawFBV :: FixedPoint -> FixedPoint -> FixedPoint -> FixedPoint -> FixedPoint
-elawFBV x' y' a' b' =
-    -- trace ("x' " ++ show x' ++ " y' " ++ show y' ++ " a' " ++ show a' ++ " b' " ++ show b') $
-    abs (exp1 - exp2)
-    where c = a'/b'
-          z = x'/y'
-          exp1 = exp' (c + z)
-          exp2 = (exp' c) * (exp' z)
-
-expdiffFBV :: Integer -> Integer -> Integer -> Integer -> FixedPoint
-expdiffFBV x'' y'' a'' b'' =
-    -- trace (" x'' " ++ show x'' ++ " y'' "++ show y'' ++ " a'' "
-    --     ++ show a'' ++ " b'' " ++ show b'' ++ " e1: "
-    --     ++ show e1 ++ " e2: " ++ show e2) $
-    abs(e1 - e2)
-      where e1 = (((fromIntegral b'' / fromIntegral a'') *** (1.0 / fromIntegral x'')) *** fromIntegral y'')
-            e2 = (((fromIntegral b'' / fromIntegral a'') *** fromIntegral y'') *** (1.0/ fromIntegral x''))
-
-prop_FBVExpUnitInterval :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_FBVExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
-    a'' > 0 && x'' > 0 ==> result >= 0 && result <= 1
-    where (x'', y'') = normalizeInts x y
-          (a'', b'') = normalizeInts a b
-          result = (b'' % a'') *** (y'' % x'')
-
-prop_FBVIdemPotent :: FixedPoint -> Property
-prop_FBVIdemPotent a =
-    a > 0 ==> (exp' $ ln' a) - a < epsFBV
-    --b'' > 0 && a'' > 0 ==> (exp' $ ln' (b'' % a'')) - (b'' % a'') < eps
-    --where (a'', b'') = normalizeInts a b
-
-prop_FBVIdemPotent' :: PosInt -> PosInt -> Property
-prop_FBVIdemPotent' (Positive a) (Positive b) =
-    b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFBV
-    where (a'', b'') = normalizeInts a b
-
-
-prop_lnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_lnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
-    ((ln' ((a'%b') *** (x'%y')) - (x'%y') * ln' (a'%b')) < eps) === True
-    where (b', a') = normalizeInts a b
-          (y', x') = normalizeInts x y
-
 prop_DlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_DlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
     ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < epsD) === True
-    where (b', a') = normalizeInts a b
-          (y', x') = normalizeInts x y
-          a'' = fromIntegral a'
-          b'' = fromIntegral b'
-          x'' = fromIntegral x'
-          y'' = fromIntegral y'
-
-prop_FBVlnLaw :: Integer -> Integer -> Integer -> Integer -> Property
-prop_FBVlnLaw x y a b =
-    ((ln' ((a'' / b'') *** (x'' / y'')) - (x'' / y'') * ln' (a'' / b'')) < epsFBV) === True
     where (b', a') = normalizeInts a b
           (y', x') = normalizeInts x y
           a'' = fromIntegral a'
