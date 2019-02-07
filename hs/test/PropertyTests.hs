@@ -262,5 +262,5 @@ propPreserveBalance = withCoverage $ do
   let created =
            (balance (l' ^. utxoState . utxo))
         <> fee
-        <> (depositAmount (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body)
+        <> (deposits (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
   destroyed === created
