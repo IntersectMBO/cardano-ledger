@@ -16,6 +16,7 @@ module UTxO
     TxId(..)
   , Addr(..)
   , Ptr(..)
+  , Wdrl
   , Ix
   , mkRwdAcnt
   -- * Derived Types
@@ -29,7 +30,7 @@ module UTxO
   , txinLookup
   , txouts
   , balance
-  , depositAmount
+  , deposits
   , (<|)
   , (</|)
   , dom
@@ -102,11 +103,13 @@ data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 
+type Wdrl = Map RewardAcnt Coin
+
 -- |A raw transaction
 data Tx = Tx { _inputs  :: !(Set TxIn)
              , _outputs :: [TxOut]
              , _certs   :: ![DCert]
-             , _wdrls   :: Map RewardAcnt Coin
+             , _wdrls   :: Wdrl
              , _txfee   :: Coin
              , _ttl     :: Slot
              } deriving (Show, Eq, Ord)
@@ -184,13 +187,13 @@ balance (UTxO utxo) = foldr addCoins mempty utxo
   where addCoins (TxOut _ a) b = a <> b
 
 -- |Determine the total deposit amount needed
-depositAmount :: PParams -> StakePools -> Tx -> Coin
-depositAmount pc (StakePools stpools) tx = foldl f (Coin 0) cs
+deposits :: PParams -> StakePools -> [DCert] -> Coin
+deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
-    cs = filter notRegisteredPool (tx ^. certs)
+    cs' = filter notRegisteredPool cs
 
 instance BA.ByteArrayAccess Tx where
   length        = BA.length . BS.pack . show

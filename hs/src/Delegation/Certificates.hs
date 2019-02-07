@@ -20,7 +20,7 @@ import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..))
 import           PParams (PParams(..), decayRate, minRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
-                                 poolDecayRate, intervalValue)
+                                 poolDecayRate, intervalValue, UnitInterval)
 
 import           Delegation.PoolParams
 
@@ -65,12 +65,13 @@ dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
-refund :: Coin -> Rational -> Rational -> Duration -> Coin
+refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
 refund (Coin d) dmin lambda delta = floor refund'
   where
     pow     = -fromRational (lambda * fromIntegral delta)
     refund' = fromIntegral d
-            * (fromRational dmin + (1 - fromRational dmin) * exp pow) :: Double
+            * (fromRational dmin' + (1 - fromRational dmin') * exp pow) :: Double
+    dmin'   = intervalValue dmin
 
 -- | Check whether certificate is of releasing type, i.e., key deregistration or
 -- pool retirement.
@@ -92,14 +93,14 @@ allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
 
-decayKey :: PParams -> (Coin, Rational, Rational)
+decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
     where dval    = fromIntegral $ pc ^. keyDeposit
-          dmin    = fromRational $ intervalValue $ pc ^. minRefund
+          dmin    = pc ^. minRefund
           lambdad = pc ^. decayRate
 
-decayPool :: PParams -> (Coin, Rational, Rational)
+decayPool :: PParams -> (Coin, UnitInterval, Rational)
 decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
-          pmin    = fromRational $ intervalValue $ pc ^. poolMinRefund
+          pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate

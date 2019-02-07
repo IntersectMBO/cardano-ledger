@@ -10,6 +10,7 @@ module PParams
   , minRefund
   , decayRate
   , movingAvgWeight
+  , eMax
   , movingAvgExp
   , poolConsts
   , poolMinRefund
@@ -27,6 +28,7 @@ module PParams
 import           Numeric.Natural (Natural)
 
 import           Coin            (Coin (..))
+import           Slot            (Epoch(..))
 
 import           Lens.Micro.TH   (makeLenses)
 
@@ -65,6 +67,8 @@ data PParams = PParams
   , _movingAvgWeight :: UnitInterval
     -- |Moving average exponent.
   , _movingAvgExp    :: UnitInterval
+    -- | epoch bound on pool retirement
+  , _eMax            :: Epoch
     -- |Pool constants
   , _poolConsts      :: (Rational, Natural)
     -- | The minimum percent pool refund
@@ -81,4 +85,4 @@ makeLenses ''PParams
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
 emptyPParams =
-    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 interval0 (0, 0) interval0 0 interval0 interval0
+    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 interval0 (Epoch 0) (0, 0) interval0 0 interval0 interval0
