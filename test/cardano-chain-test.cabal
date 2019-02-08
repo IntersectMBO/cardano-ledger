@@ -22,6 +22,7 @@ library
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
+                       Test.Cardano.Chain.Common.Lovelace
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
                        Test.Cardano.Chain.Genesis.Example
