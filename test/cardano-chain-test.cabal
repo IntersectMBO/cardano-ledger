@@ -40,6 +40,7 @@ library
                      , base16-bytestring
                      , binary
                      , bytestring
+                     , canonical-json
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-chain

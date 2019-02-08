@@ -1,10 +1,17 @@
 module Test.Cardano.Chain.Genesis.Gen
-  ( genGenesisHash
+  ( genCanonicalGenesisData
+  , genCanonicalGenesisDelegation
+  , genGenesisData
+  , genGenesisHash
   , genFakeAvvmOptions
   , genGenesisAvvmBalances
   , genGenesisDelegation
   , genGenesisInitializer
+  , genGenesisNonAvvmBalances
   , genGenesisSpec
+  , genGenesisWStakeholders
+  , genSafeProxyCert
+  , genSignatureEpochIndex
   , genTestnetBalanceOptions
   , genStaticConfig
   )
@@ -13,6 +20,8 @@ where
 import Cardano.Prelude
 
 import Data.Coerce (coerce)
+import qualified Data.Text as T
+import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 import qualified Data.Map.Strict as M
 import Formatting (build, sformat)
 
@@ -20,26 +29,88 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import Cardano.Chain.Common (BlockCount(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisAvvmBalances(..)
+  , GenesisData(..)
   , GenesisDelegation(..)
   , GenesisHash(..)
   , GenesisInitializer(..)
+  , GenesisNonAvvmBalances(..)
   , GenesisSpec(..)
+  , GenesisWStakeholders(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   , mkGenesisDelegation
   , mkGenesisSpec
   )
-import Cardano.Crypto (ProtocolMagicId)
+import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Crypto
+  ( ProtocolMagic(..)
+  , ProtocolMagicId
+  , ProxyCert(..)
+  , RequiresNetworkMagic(..)
+  , Signature(..)
+  , noPassSafeSigner
+  , safeCreateProxyCert
+  , toPublic
+  )
+import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Gen
-  (genBlockCount, genLovelace, genLovelacePortion)
-import Test.Cardano.Chain.Delegation.Gen (genCertificateDistinctList)
-import Test.Cardano.Chain.Update.Gen (genProtocolParameters)
+  (genAddress, genBlockCount, genLovelace, genLovelacePortion, genStakeholderId)
+import Test.Cardano.Chain.Delegation.Gen
+  (genCanonicalCertificateDistinctList, genCertificateDistinctList)
+import Test.Cardano.Chain.Update.Gen
+  (genCanonicalProtocolParameters, genProtocolParameters)
+import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
 import Test.Cardano.Crypto.Gen
-  (genHashRaw, genProtocolMagic, genRedeemPublicKey, genTextHash)
+  ( genHashRaw
+  , genProtocolMagic
+  , genProtocolMagicId
+  , genRedeemPublicKey
+  , genSecretKey
+  , genTextHash
+  )
+
+genCanonicalGenesisData :: ProtocolMagicId -> Gen GenesisData
+genCanonicalGenesisData pm =
+  GenesisData
+    <$> genGenesisWStakeholders
+    <*> genCanonicalGenesisDelegation pm
+    <*> genUTCTime
+    <*> genGenesisNonAvvmBalances
+    <*> genCanonicalProtocolParameters
+    <*> genBlockCount'
+    <*> genProtocolMagicUniform
+    <*> genGenesisAvvmBalances
+ where
+  genProtocolMagicUniform :: Gen ProtocolMagic
+  genProtocolMagicUniform =
+    (ProtocolMagic <$> genProtocolMagicId <*> pure RequiresMagic)
+
+  genBlockCount' :: Gen BlockCount
+  genBlockCount' = BlockCount <$> (Gen.word64 $ Range.linear 0 1000000000)
+
+genCanonicalGenesisDelegation :: ProtocolMagicId -> Gen GenesisDelegation
+genCanonicalGenesisDelegation pm = do
+  certificates <- genCanonicalCertificateDistinctList pm
+  case mkGenesisDelegation certificates of
+    Left  err    -> panic $ sformat build err
+    Right genDel -> pure genDel
+
+genGenesisData :: ProtocolMagicId -> Gen GenesisData
+genGenesisData pm =
+  GenesisData
+    <$> genGenesisWStakeholders
+    <*> genGenesisDelegation pm
+    <*> genUTCTime
+    <*> genGenesisNonAvvmBalances
+    <*> genProtocolParameters
+    <*> genBlockCount
+    <*> genProtocolMagic
+    <*> genGenesisAvvmBalances
 
 genGenesisHash :: Gen GenesisHash
 genGenesisHash = do
@@ -72,6 +143,13 @@ genGenesisInitializer =
     <*> Gen.bool
     <*> Gen.integral (Range.constant 0 10)
 
+genGenesisNonAvvmBalances :: Gen GenesisNonAvvmBalances
+genGenesisNonAvvmBalances = do
+  hmSize    <- Gen.int $ Range.linear 1 10
+  addresses <- Gen.list (Range.singleton hmSize) genAddress
+  ll        <- Gen.list (Range.singleton hmSize) genLovelace
+  pure $ GenesisNonAvvmBalances $ M.fromList $ zip addresses ll
+
 genGenesisSpec :: ProtocolMagicId -> Gen GenesisSpec
 genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
  where
@@ -96,6 +174,35 @@ genTestnetBalanceOptions =
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =
   GenesisAvvmBalances <$> customMapGen genRedeemPublicKey genLovelace
+
+genGenesisWStakeholders :: Gen GenesisWStakeholders
+genGenesisWStakeholders = do
+  mapLength    <- Gen.int (Range.constant 10 25)
+  stakeholders <- Gen.list (Range.singleton mapLength) genStakeholderId
+  weights      <- Gen.list (Range.singleton mapLength)
+    $ Gen.word16 (Range.constant 1 30)
+  let sMap = M.fromList $ zip stakeholders weights
+  pure $ GenesisWStakeholders sMap
+
+genSafeProxyCert :: Gen (ProxyCert EpochIndex)
+genSafeProxyCert = do
+  pmId   <- genProtocolMagicId
+  secKey <- genSecretKey
+  eI     <- genEpochIndex
+  pure $ safeCreateProxyCert pmId (noPassSafeSigner secKey) (toPublic secKey) eI
+
+genSignatureEpochIndex :: Gen (Signature EpochIndex)
+genSignatureEpochIndex = do
+  hex <- Gen.utf8 (Range.constant 64 64) Gen.hexit
+  case CC.xsignature hex of
+    Left  err -> panic $ T.pack err
+    Right sig -> pure $ Signature sig
+
+genUTCTime :: Gen UTCTime
+genUTCTime = do
+  jday    <- Gen.integral (Range.linear 0 1000000)
+  seconds <- Gen.integral (Range.linear 0 86401)
+  pure $ UTCTime (ModifiedJulianDay jday) (secondsToDiffTime seconds)
 
 --------------------------------------------------------------------------------
 -- Helper Generators

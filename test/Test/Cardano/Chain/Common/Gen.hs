@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Chain.Common.Gen
@@ -8,6 +9,7 @@ module Test.Cardano.Chain.Common.Gen
   , genAddrSpendingData
   , genAddrStakeDistribution
   , genBlockCount
+  , genCanonicalTxFeePolicy
   , genChainDifficulty
   , genLovelace
   , genLovelacePortion
@@ -134,6 +136,30 @@ genAddrStakeDistribution = Gen.choice
 
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
+
+-- | `TxFeePolicyUnknown` is not needed because this is a generator
+-- used to generate `GenesisData`.
+genCanonicalTxFeePolicy :: Gen TxFeePolicy
+genCanonicalTxFeePolicy = TxFeePolicyTxSizeLinear <$> genCanonicalTxSizeLinear
+
+genCanonicalTxSizeLinear :: Gen TxSizeLinear
+genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
+ where
+  genLovelace' :: Gen Lovelace
+  genLovelace' =
+    mkLovelace
+      <$> Gen.word64 (Range.constant 0 maxCanonicalLovelaceVal)
+      >>= \case
+            Right lovelace -> pure lovelace
+            Left  err      -> panic $ sformat
+              ("The impossible happened in genLovelace: " . build)
+              err
+  -- | Maximal possible value of `Lovelace` in Canonical JSON (JSNum !Int54)
+  -- This should be (2^53 - 1) ~ 9e15, however in the Canonical ToJSON instance of
+  -- `TxFeePolicy` this number is multiplied by 1e9 to keep compatibility with 'Nano'
+  --  coefficients
+  maxCanonicalLovelaceVal :: Word64
+  maxCanonicalLovelaceVal = 9e6
 
 genChainDifficulty :: Gen ChainDifficulty
 genChainDifficulty = ChainDifficulty <$> genBlockCount
