@@ -451,7 +451,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
   \item Stake pool retirements are handled by \cref{eq:pool-ret}.
     Given a slot number $\var{slot}$, the application of this rule requires that the
     planned retirement epoch $\var{e}$ stated in the certificate is in the future,
-    i.e. after $\var{cepoch}$, the epoch of the current slot number in this context, as well as
+    i.e.~after $\var{cepoch}$, the epoch of the current slot number in this context, as well as
     that it is less than $\emax$ epochs after the current one.
     It is also required that the pool be registered.
     Note that imposing the $\emax$ constraint on the system is not strictly necessary.

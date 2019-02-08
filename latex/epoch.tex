@@ -38,9 +38,9 @@ Neither transition is triggered by a transaction, and in fact have no signal.
 The first one, defined in Section~\ref{sec:total-epoch},
 involves calculations that occur at the epoch boundary.
 This includes taking stake distribution snapshots
-(Sections \ref{sec:stake-dist} and \ref{sec:snapshots}),
-retiring stake pools (Section \ref{sec:pool-reap}),
-and performing protocol updates (Section \ref{sec:pparam-update}).
+(Sections~\ref{sec:stake-dist} and~\ref{sec:snapshots}),
+retiring stake pools (Section~\ref{sec:pool-reap}),
+and performing protocol updates (Section~\ref{sec:pparam-update}).
 The second transition, defined in Sections ~\ref{sec:reward-dist} and ~\ref{sec:reward-trans},
 distributes the leader election rewards.
 
@@ -93,7 +93,7 @@ We must therefore store the last three stake distributions.
 The mnemonic ``mark, set, go'' will be used to keep
 track of the snapshots, where the label ``mark'' refers to the most recent snapshot,
 and ``go'' refers to the snapshot that is ready to be used in the reward calculation.
-In the above diagram, the snapshot taken at (A) is labeled``mark'' during epoch $e_{i-1}$,
+In the above diagram, the snapshot taken at (A) is labeled ``mark'' during epoch $e_{i-1}$,
 ``set'' during epoch $e_i$, and ``go'' during epoch $e_{i+1}$. At (G) the snapshot
 taken at (A) is no longer needed and will be discarded.
 
@@ -1315,11 +1315,11 @@ The reward state transition type, like all the transition types in this section,
 
 \clearpage
 
-Figure \ref{fig:fund-preservation} captures the potential movement of funds in the entire system,
+Figure~\ref{fig:fund-preservation} captures the potential movement of funds in the entire system,
 taking every transition system in this document into account.  Value is moved between
 accounting pots, but the total amount of value in the system remains constant.
 In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the reward calculation in Figure \ref{fig:rules:reward}.
+the ``total pot'' used during the reward calculation in Figure~\ref{fig:rules:reward}.
 The blue arrows represent the movement of funds that pass through the ``total pot''.
 
 \begin{figure}[htb]

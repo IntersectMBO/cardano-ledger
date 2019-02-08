@@ -222,7 +222,7 @@ The transition system is explained in \cite{small_step_semantics}.
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
     keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
     $a \mapsto b \in m$ is equivalent to $m~ a = b$.
-  \item[Map Operations] Figure \ref{fig:notation:nonstandard}
+  \item[Map Operations] Figure~\ref{fig:notation:nonstandard}
     describes some non-standard map operations.
 
 \end{description}
@@ -299,7 +299,7 @@ and make judgement calls about them.
 
 Abstract data types in this paper are essentially placeholders with names
 indicating the data types they are meant to represent in an implementation.
-Derived types are made up of data structures (i.e. products, lists, finite
+Derived types are made up of data structures (i.e.~products, lists, finite
 maps, etc.) built from abstract types. The underlying structure of a data type
 is implementation-dependent, and furthermore, the way the data is stored on
 physical storage can vary as well.
@@ -723,7 +723,7 @@ give a formally-verified proof that every \textit{valid} ledger state satisfies
 this property.
 
 In this section, we discuss the relevant accounting that needs to be done
-as a result of processing a transaction, i.e. the deposits for all certificates,
+as a result of processing a transaction, i.e.~the deposits for all certificates,
 transaction fees, transaction withdrawals, and refunds for individual
 deregistration, so that we may keep track of whether the preservation of
 value is satisfied. Stake pool retirement refunds are not triggered by a
@@ -731,9 +731,9 @@ transaction (but rather, happen at the epoch boundary), and are therefore
 not considered in our state change rules invoked due to a signal transaction.
 
 Note, that when a transaction is issued by a wallet to be applied to the ledger
-state (i.e. processed),
+state (i.e.~processed),
 we define the rules in this section in such a way that it is impossible to
-apply only some parts of a transaction (e.g. only certain certificates).
+apply only some parts of a transaction (e.g.~only certain certificates).
 Every part of the transaction must be valid and it must be live, otherwise
 it is ignored entirely. It is the wallet's responsibility to inform the user
 that a transaction failed to be processed.
@@ -936,7 +936,7 @@ that applying this transaction results in a
 valid ledger update adding correct amounts of coin to the right addresses.
 
 The majority of funds moved by a transaction usually come from unspent outputs
-(i.e. the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
+(i.e.~the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
 refunds and rewards works slightly differently. These get included in the outputs list
 only. That is, they do not have any index-matched inputs in the $inputs$ list.
 For each requested refund (or withdrawal), the
@@ -948,7 +948,7 @@ $(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
 
 The approach of including refunds and rewards directly in the $outputs$ gives
 great flexibility to the management of the coin value obtained from these
-accounts, i.e. it can be directed to any address. However, it means there is no
+accounts, i.e.~it can be directed to any address. However, it means there is no
 direct link between the $wdrls$ requests (similarly, the key deregistration
 certificate addresses and refund amounts) and the $outputs$. We verify that
 the included outputs are correct and authorized through the preservation of value condition
@@ -1031,7 +1031,7 @@ requests).
 \label{sec:deps-refunds}
 
 Deposits are described in appendix B.2 of the delegation design document \cite{delegation_design}.
-These deposit functions were used above in the UTxO transition, \ref{sec:utxo-trans}.
+These deposit functions were used above in the UTxO transition,~\ref{sec:utxo-trans}.
 Deposits are used for stake key registration certificate and pool
 registration certificates, which will be explained in Section~\ref{sec:delegation}.
 In particular, the function $\cwitness{}$, which gets the certificate witness
