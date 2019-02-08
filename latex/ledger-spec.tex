@@ -115,7 +115,7 @@
 \newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
 \newcommand{\outs}[1]{\fun{outs}~ \var{#1}}
 \newcommand{\values}[1]{\fun{values}~ #1}
-\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+\newcommand{\ubalance}[1]{\fun{ubalance}~ \var{#1}}
 \newcommand{\txttl}[1]{\fun{txttl}~ \var{#1}}
 \newcommand{\firstSlot}[1]{\fun{firstSlot}~ \var{#1}}
 \newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
@@ -222,7 +222,7 @@ The transition system is explained in \cite{small_step_semantics}.
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
     keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
     $a \mapsto b \in m$ is equivalent to $m~ a = b$.
-  \item[Map Operations] Figure \ref{fig:notation:nonstandard}
+  \item[Map Operations] Figure~\ref{fig:notation:nonstandard}
     describes some non-standard map operations.
 
 \end{description}
@@ -299,7 +299,7 @@ and make judgement calls about them.
 
 Abstract data types in this paper are essentially placeholders with names
 indicating the data types they are meant to represent in an implementation.
-Derived types are made up of data structures (i.e. products, lists, finite
+Derived types are made up of data structures (i.e.~products, lists, finite
 maps, etc.) built from abstract types. The underlying structure of a data type
 is implementation-dependent, and furthermore, the way the data is stored on
 physical storage can vary as well.
@@ -437,11 +437,11 @@ Section~\ref{sec:ledger}, and follows \cite{chimeric}.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{paymentHK} & \Addr \to \HashKey
+      \fun{paymentHK} & \Addr \to \HashKey_{pay}
                       & \text{hash of payment key from addr}\\
-      \fun{stakeHK_b} & \AddrB \to \HashKey
+      \fun{stakeHK_b} & \AddrB \to \HashKey_{stake}
                       & \text{hash of stake key from base addr}\\
-      \fun{stakeHK_r} & \AddrRWD \to \HashKey
+      \fun{stakeHK_r} & \AddrRWD \to \HashKey_{stake}
                       & \text{hash of stake key from reward account}\\
       \fun{addrPtr} & \AddrP \to \Ptr
                     & \text{pointer from pointer addr}\\
@@ -453,7 +453,7 @@ Section~\ref{sec:ledger}, and follows \cite{chimeric}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{addr_{rwd}}
-        & \HashKey \to \AddrRWD
+        & \HashKey_{stake} \to \AddrRWD
         & \text{construct a reward account}
     \end{array}
   \end{equation*}
@@ -479,8 +479,11 @@ This value depends on the protocol parameters and the size of the transaction.
 Two time related types are introduced, $\Epoch$ and $\type{Duration}$.
 A $\type{Duration}$ is the difference between two slots, as given by $\slotminus{}{}$.
 
-Lastly, one global constant is defined, $\SlotsPerEpoch$, representing the number of slots
+One global constant is defined, $\SlotsPerEpoch$, representing the number of slots
 in an epoch. As a global constant, this value can only be changed by updating the software.
+
+Lastly, there are two functions, $\fun{epoch}$ and $\fun{firstSlot}$ for converting
+between epochs and slots.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -557,14 +560,9 @@ in an epoch. As a global constant, this value can only be changed by updating th
       \\
       (\slotminus{}{}) & \Slot \to \Slot \to \Duration
                        & \text{duration between slots}
-      \\
-      \fun{epoch} & \Slot \to \Epoch
-                  & \text{epoch of a slot}
-      \\
-      \fun{firstSlot} & \Epoch \to \Slot
-                 & \text{first slot of an epoch}
     \end{array}
   \end{equation*}
+  %
   \emph{Global Constants}
   %
   \begin{equation*}
@@ -572,6 +570,20 @@ in an epoch. As a global constant, this value can only be changed by updating th
       \SlotsPerEpoch & \N & \text{slots per epoch} \\
     \end{array}
   \end{equation*}
+  %
+  \emph{Derived Functions}
+  %
+  \begin{align*}
+    \fun{epoch} & \in ~ \Slot \to \Epoch & \text{epoch of a slot}
+    \\
+    \fun{epoch} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerEpoch
+    \\
+    \\
+    \fun{firstSlot} & \in ~ \Epoch \to \Slot
+               & \text{first slot of an epoch}
+    \\
+    \fun{firstSlot} & ~\var{e} = \var{e}~\cdot~\SlotsPerEpoch
+  \end{align*}
   %
   \caption{Definitions used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
@@ -711,7 +723,7 @@ give a formally-verified proof that every \textit{valid} ledger state satisfies
 this property.
 
 In this section, we discuss the relevant accounting that needs to be done
-as a result of processing a transaction, i.e. the deposits for all certificates,
+as a result of processing a transaction, i.e.~the deposits for all certificates,
 transaction fees, transaction withdrawals, and refunds for individual
 deregistration, so that we may keep track of whether the preservation of
 value is satisfied. Stake pool retirement refunds are not triggered by a
@@ -719,9 +731,9 @@ transaction (but rather, happen at the epoch boundary), and are therefore
 not considered in our state change rules invoked due to a signal transaction.
 
 Note, that when a transaction is issued by a wallet to be applied to the ledger
-state (i.e. processed),
+state (i.e.~processed),
 we define the rules in this section in such a way that it is impossible to
-apply only some parts of a transaction (e.g. only certain certificates).
+apply only some parts of a transaction (e.g.~only certain certificates).
 Every part of the transaction must be valid and it must be live, otherwise
 it is ignored entirely. It is the wallet's responsibility to inform the user
 that a transaction failed to be processed.
@@ -739,7 +751,9 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
     $\fun{outs}$ maps the transaction id and output index to the output.
 
   \item
-    The $\fun{balance}$ function calculates sum total of all the coin in a given UTxO.
+    The $\fun{ubalance}$ function calculates sum total of all the coin in a given UTxO.
+  \item
+    The $\fun{wbalance}$ function calculates sum total of all the withdrawals in a transaction.
 
   \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
     in the context of the protocol parameters, the current UTxO on the ledger, and the registered
@@ -775,21 +789,25 @@ Registration will be discussed more in Section~\ref{sec:delegation}.
           \var{ix} \mapsto \var{txout} \in \txouts{tx}
         \right\}
     \nextdef
-    & \fun{balance} \in \UTxO \to \Coin
+    & \fun{ubalance} \in \UTxO \to \Coin
     & \text{UTxO balance} \\
-    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+    & \fun{ubalance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+    \nextdef
+    & \fun{wbalance} \in \Wdrl \to \Coin
+    & \text{withdrawal balance} \\
+    & \fun{wbalance} ~ ws = \sum_{\wcard\mapsto c\in\var{ws}} c
     \nextdef
     & \fun{consumed} \in \PParams \to \UTxO \to \StakeKeys \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
     & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
-    & ~~\balance{(\txins{tx} \restrictdom \var{utxo})} +
-        \sum_{(a \mapsto c) \in \fun{txwdrls}~{tx}} c  \\
-        & + \keyRefunds{pp}{stkeys}{tx} \\
+    & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
+        \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
+    & ~~~~ + \keyRefunds{pp}{stkeys}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
     & \text{value produced} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
-    &~~\balance{(\outs{tx})}
+    &~~\ubalance{(\outs{tx})}
     + \txfee{tx} + \deposits{pp}{stpools}~{(\dcerts{tx})}\\
   \end{align*}
 
@@ -883,6 +901,8 @@ The transition contains the following predicates:
     The \textit{preservation of value} property must hold.
     In other words, the amount of value produced by the transaction must be the same as
     the amount consumed.
+  \item
+    The coin value of each new output must be non-negative.
 \end{itemize}
 If all the predicates are satisfied, the state is updated as follows:
 
@@ -916,7 +936,7 @@ that applying this transaction results in a
 valid ledger update adding correct amounts of coin to the right addresses.
 
 The majority of funds moved by a transaction usually come from unspent outputs
-(i.e. the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
+(i.e.~the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
 refunds and rewards works slightly differently. These get included in the outputs list
 only. That is, they do not have any index-matched inputs in the $inputs$ list.
 For each requested refund (or withdrawal), the
@@ -928,7 +948,7 @@ $(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
 
 The approach of including refunds and rewards directly in the $outputs$ gives
 great flexibility to the management of the coin value obtained from these
-accounts, i.e. it can be directed to any address. However, it means there is no
+accounts, i.e.~it can be directed to any address. However, it means there is no
 direct link between the $wdrls$ requests (similarly, the key deregistration
 certificate addresses and refund amounts) and the $outputs$. We verify that
 the included outputs are correct and authorized through the preservation of value condition
@@ -966,7 +986,7 @@ requests).
       \\
       ~
       \\
-      \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c > 0
+      \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c \geq 0
       \\
       ~
       \\
@@ -996,7 +1016,7 @@ requests).
       \begin{array}{r}
         \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \outs{tx}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + (\txfee{tx}) + \var{decayed}} \\
+        \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
       \end{array}
       \right)
     }
@@ -1011,7 +1031,7 @@ requests).
 \label{sec:deps-refunds}
 
 Deposits are described in appendix B.2 of the delegation design document \cite{delegation_design}.
-These deposit functions were used above in the UTxO transition, \ref{sec:utxo-trans}.
+These deposit functions were used above in the UTxO transition,~\ref{sec:utxo-trans}.
 Deposits are used for stake key registration certificate and pool
 registration certificates, which will be explained in Section~\ref{sec:delegation}.
 In particular, the function $\cwitness{}$, which gets the certificate witness
@@ -1077,7 +1097,8 @@ Figure~\ref{fig:functions:deposits-decay} defines the decays functions.
     The value is calculated by subtracting the refund calculation based at the epoch boundary
     from the refund calculation based at the time to live of the transaction.
   \item The function $\fun{decayedTx}$ calculates the total decayed deposits associated
-    with all the refunds in a given transaction.
+    with all the refunds in a given transaction.  This function was used earlier in the
+    UTxO transition in Figure~\ref{fig:rules:utxo}.
 
 \end{itemize}
 
@@ -1092,8 +1113,8 @@ Section~\cref{sec:epoch}.
     & \fun{deposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
     & \text{total deposits for transaction} \\
     & \fun{deposits}~{pp}~{stpools}~{certs} = \\
-    &  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegKey}}(\fun{keyDeposit}~pp)
-    +  \sum\limits_{\substack{c\in\var{certs} \\ c\in\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
+    &  \sum\limits_{c\in\var{certs} \cap \DCertRegKey}(\fun{keyDeposit}~pp)
+    +  \sum\limits_{\substack{c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
             (\fun{poolDeposit}~pp)
       \nextdef
       & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
@@ -1242,7 +1263,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       (utxo, \wcard, \wcard) = \var{utxoSt} \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwits{tx},
         \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} = \{ \hashKey \var{vk} \mid \var{vk}\in\dom{\txwits{tx}} \}\\
+      \fun{witsNeeded}~{utxo}~{tx} = \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
       {
         \begin{array}{l}
         \var{utxoEnv}
