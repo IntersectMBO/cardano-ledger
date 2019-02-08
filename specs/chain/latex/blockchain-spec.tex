@@ -86,6 +86,7 @@
 \newcommand{\DelegState}{\type{DIState}}
 
 \newcommand{\ProtParams}{\type{PParams}} % protocol parameters
+\newcommand{\Nothing}{\Diamond}
 
 %%
 %% Function and relation names
@@ -203,7 +204,7 @@ underlying systems and types defined will rely on definitions in that document.
   on the elements of $\Lambda$, $\fun{filter}~p~\Lambda$ is the sequence that
   contains all the elements of $\Lambda$ that satisfy $p$, in the same order
   they appear on $\Lambda$.
-\item[Option type] An option type in type $A$ is denoted as $A^? = A + 1$. The
+\item[Option type] An option type in type $A$ is denoted as $A^? = A + \Nothing$. The
   $A$ case corresponds to a case when there is a value of type $A$ and the $1$
   case corresponds to a case when there is no value.
 \item[Union override] The union override operation is defined in
@@ -296,42 +297,14 @@ cases where there is or is not an update proposal contained within the block.
 \begin{figure}[ht]
   \begin{equation*}
     \inference
-    { {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)
-      }
-      \vdash \var{us} \trans{upireg}{\var{prop}} \var{us'}
+    { \Gamma \vdash \var{us} \trans{upireg}{\var{prop}} \var{us'}
       \\
-      {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
-      \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
+      \Gamma \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
       &
-      {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
-      \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
+      \Gamma \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
     }
     {
-      {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
+      \Gamma \vdash
       {\var{us}}
       \trans{bupi}
       {
@@ -349,37 +322,16 @@ cases where there is or is not an update proposal contained within the block.
   \vspace{20pt}
   \begin{equation*}
     \inference
-    { {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
-      \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+    { \Gamma \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
       &
-      {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
-      \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
+      \Gamma \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
     }
     {
-      {\left(
-          \begin{array}{l}
-            \var{slot} \\
-            \var{e_n} \\
-            \var{dms}
-          \end{array}
-        \right)}
-      \vdash \var{us}
+      \Gamma \vdash \var{us}
       \trans{bupi}{
         \left(
           \begin{array}{l}
-            1 \\
+            \Nothing \\
             \var{votes} \\
             \var{end}
           \end{array}
@@ -555,17 +507,17 @@ extension to the chain under the ledger rules).
 
 Cardano's planned evolution can be split into roughly three eras:
 \begin{description}
-\item[Byron/Ouroboros] In the Byron/Ouroboros era, the Ouroboros\todo{Reference}
+\item[Byron/Ouroboros] In the Byron/Ouroboros era, the Ouroboros (\cite{ouroboros})
   protocol is used to control who is eligible to issue a block, using a stake
   distribution mediated by heavyweight delegation certificates. The Byron
   payload includes such things as VSS and payloads verified by individual
   signatures.
 \item[Handover] In the handover era, blocks will be issued according to
-  Ouroboros BFT\todo{Reference}. The Byron payload will be retained, although
+  Ouroboros BFT (\cite{ouroboros_bft}). The Byron payload will be retained, although
   parts of will be superfluous.
 \item[Shelley/Praos] In the Shelley/Praos era, blocks will be issued according
-  to the Ouroboros Praos\todo{Reference} protocol, with stake distribution
-  determined according to the new delegation design in \todo{Reference}.
+  to the Ouroboros Praos (\cite{ouroboros_praos}) protocol, with stake distribution
+  determined according to the new delegation design in \cite{delegation_design}.
 \end{description}
 
 During the handover era (as described in this document), while blocks will be
