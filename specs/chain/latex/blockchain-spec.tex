@@ -97,8 +97,8 @@
 
 \newcommand{\isebbname}{bIsEBB}
 \newcommand{\bcertsname}{bCerts}
-\newcommand{\bsigname}{bSig}
-\newcommand{\bissuername}{bIssuer}
+\newcommand{\bhsigname}{bhSig}
+\newcommand{\bhissuername}{bhissuer}
 
 %%
 %% Functions and relations
@@ -116,8 +116,8 @@
 \newcommand{\blocksizelimit}[2]{\fun{\blocksizelimitname} ~ #1 ~ #2}
 \newcommand{\isebb}[1]{\fun{\isebbname} ~ #1}
 \newcommand{\bcerts}[1]{\fun{\bcertsname} ~ #1}
-\newcommand{\bsig}[1]{\fun{\bsigname} ~ #1}
-\newcommand{\bissuer}[1]{\fun{\bissuername} ~ #1}
+\newcommand{\bhsig}[1]{\fun{\bhsigname} ~ #1}
+\newcommand{\bhissuer}[1]{\fun{\bhissuername} ~ #1}
 
 \newcommand{\qpop}[1]{\fun{\qpopname} ~ #1}
 \newcommand{\qhead}[1]{\fun{\qheadname} ~ #1}
@@ -634,7 +634,7 @@ outside the size of the moving window $w$.
 During PBFT processing of the block header, we do the following:
 \begin{enumerate}
  \item We check that the current block is being issued for a slot later than
-    the last block issued.
+    that of the last block issued.
   \item We check that the current block is being issued for a slot no later than
     the current slot (as determined by the system clock).
   \item We verify that the block signer is the current delegate of at least one
@@ -660,17 +660,17 @@ During PBFT processing of the block header, we do the following:
     \begin{array}{r@{~\in~}lr}
       \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{Previous header hash} \\
       \fun{\bhhashname} & \Bhead \totalf \Hash & \text{Header hash} \\
-      \fun{\bsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
-      \fun{\bissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
+      \fun{\bhsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
+      \fun{\bhissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
       \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
     \end{array}
   \end{equation*}
-  \caption{Progressive BFT types and functions}
+  \caption{Permissive BFT types and functions}
   \label{fig:defs:pbft}
 \end{figure}
 
 \begin{figure}[ht]
-  \emph{Progressive BFT environments}
+  \emph{Permissive BFT environments}
   \begin{equation*}
     \PBFTEnv =
     \left(
@@ -683,7 +683,7 @@ During PBFT processing of the block header, we do the following:
     \right)
   \end{equation*}
 
-  \emph{Progressive BFT states}
+  \emph{Permissive BFT states}
   \begin{equation*}
     \PBFTState =
     \left(
@@ -693,12 +693,12 @@ During PBFT processing of the block header, we do the following:
       \end{array}
     \right)
   \end{equation*}
-  \emph{Progressive BFT transitions}
+  \emph{Permissive BFT transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{pbft}{\_} \var{\_} \subseteq
     \powerset (\PBFTEnv \times \PBFTState \times \Bhead \times \PBFTState)
   \end{equation*}
-  \caption{Progressive BFT transition-system types}
+  \caption{Permissive BFT transition-system types}
   \label{fig:ts-types:pbft}
 \end{figure}
 
@@ -706,9 +706,9 @@ During PBFT processing of the block header, we do the following:
   \begin{equation*}
     \inference
     {
-      \var{vk_d} \leteq \bissuer{bh} & \var{s} \leteq \bhslot{bh}
+      \var{vk_d} \leteq \bhissuer{bh} & \var{s} \leteq \bhslot{bh}
       \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
-      \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bsig{bh})}
+      \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bhsig{bh})}
       \\
       {\left(
           \begin{array}{l}
@@ -745,7 +745,7 @@ During PBFT processing of the block header, we do the following:
    \right)
  }
 \end{equation*}
-\caption{Progressive BFT rules}
+\caption{Permissive BFT rules}
 \label{fig:rules:pbft}
 \end{figure}
 
@@ -973,7 +973,7 @@ payload; UTxO, delegation and update.
   \begin{equation*}
     \begin{array}{rlr}
       \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bissuer{b}) \\
+      \bendorsment{b} & = (\bprotver{b}, \bhissuer{b}) \\
       \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
       \bslot{b} & = (\bhslotname \cdot \bheadname)~b \\
       \fun{\bupdpayloadname} & \in \Block \to (\UProp^{?}\times\seqof{\Vote}) & \text{Block update payload} \\
@@ -1021,7 +1021,7 @@ payload; UTxO, delegation and update.
   \begin{equation*}
     \inference
     { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
-      \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bissuer{\var{bh}} \\
+      \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bhissuer{\var{bh}} \\
       \verify{\var{vk_d}}{\serialised{\butxo{b}}}{(\fun{bhUtxoSig}~\var{bh})} &
       \verify{\var{vk_d}}{\serialised{\bcerts{b}}}{(\fun{bhDlgSig}~\var{bh})} \\
       \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
