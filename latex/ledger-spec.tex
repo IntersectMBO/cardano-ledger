@@ -522,7 +522,7 @@ between epochs and slots.
         \var{poolMinRefund} & \unitInterval & \text{stake pool min refund}\\
         \var{poolDecayRate} & \nonnegReals & \text{stake pool decay rate}\\
         \var{movingAvgWeight} & \unitInterval & \text{moving average weight}\\
-        \var{movingAvgExp} & \unitInterval & \text{moving average exponent}\\
+        \var{movingAvgExp} & \posReals & \text{moving average exponent}\\
         \var{E_{max}} & \Epoch & \text{epoch bound on pool retirement}\\
         \var{n_{opt}} & \Npos & \text{desired number of pools}\\
         \var{a_0} & \posReals & \text{pool influence}\\
@@ -758,14 +758,20 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
   \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
     in the context of the protocol parameters, the current UTxO on the ledger, and the registered
     stake keys.  This calculation is a sum of all coin in the inputs of $\var{tx}$,
-    reward withdrawals, and stake key deposit refunds. The method $\fun{keyRefunds}$ used
-    to calculate the refunds will be defined in Section~\ref{sec:deps-refunds}.
+    reward withdrawals, and stake key deposit refunds.
+    Some of the definitions used in this function will be defined in
+    Section~\ref{sec:deps-refunds}.
+    In particular, $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
+    and $\StakeKeys$ is defined in Figure~\ref{fig:delegation-defs}.
 
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
     in the context of the protocol parameters and the registered stake pools.
     This calculation is a sum of all coin in the outputs of $\var{tx}$,
-    the transaction fee, and all needed deposits. The method $\fun{deposits}$ used
-    to calculate the deposits will be defined in Section~\ref{sec:deps-refunds}.
+    the transaction fee, and all needed deposits.
+    Some of the definitions used in this function will be defined in
+    Section~\ref{sec:deps-refunds}.
+    In particular, $\fun{deposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
+    and $\StakePools$ is defined in Figure~\ref{fig:delegation-defs}.
 \end{itemize}
 
 The preservation of value property holds for a transaction, for a given ledger state,
@@ -822,8 +828,10 @@ The environment, $\UTxOEnv$, consists of:
 \begin{itemize}
   \item The current slot.
   \item The protocol parameters.
-  \item The registered stake keys (which will be explained in Section~\ref{sec:delegation}).
-  \item The registered stake pools (which will be explained in Section~\ref{sec:delegation}).
+  \item The registered stake keys
+    (which will be explained in Section~\ref{sec:delegation}, Figure~\ref{fig:delegation-defs}).
+  \item The registered stake pools
+    (also explained in Section~\ref{sec:delegation}, Figure~\ref{fig:delegation-defs}).
 \end{itemize}
 The current slot and the registrations are need for the refund calculations
 described in Section~\ref{sec:deps-refunds}.
@@ -882,7 +890,7 @@ The transition contains the following predicates:
 
 \begin{itemize}
   \item
-    The transaction is live (its time to live is less than the current slot).
+    The transaction is live (the current slot is less than its time to live).
   \item
     The transaction has at least one input.
     The global uniqueness of transaction inputs prevents replay attacks.
@@ -994,7 +1002,8 @@ requests).
       \\
       \var{decayed} = \decayedTx{pp}{stkeys}~{tx}
       \\
-      \var{depositChange} = (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
+      \var{depositChange} =
+        (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{l}
@@ -1114,8 +1123,9 @@ Section~\cref{sec:epoch}.
     & \text{total deposits for transaction} \\
     & \fun{deposits}~{pp}~{stpools}~{certs} = \\
     &  \sum\limits_{c\in\var{certs} \cap \DCertRegKey}(\fun{keyDeposit}~pp)
-    +  \sum\limits_{\substack{c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
-            (\fun{poolDeposit}~pp)
+    +  \sum\limits_{\substack{
+         c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
+         (\fun{poolDeposit}~pp)
       \nextdef
       & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
       & \text{refund calculation} \\
