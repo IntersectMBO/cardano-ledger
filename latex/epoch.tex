@@ -207,7 +207,7 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{prod}
+      \var{blocks}
       & \BlocksMade
       & \HashKey_{pool} \mapsto \N
       & \text{blocks made by stake pools} \\
@@ -243,7 +243,7 @@ Figure~\ref{fig:functions:helper-stake-distribution} defines some helper functio
   \item $\fun{poolStake}$ filters all stake in the system into just the stake delegated to a given
     stake pool operator hashkey.  Additionally, it combines all of the stake controlled by the
     pool owners into a single key-value pair mapping the pool operator's hashkey to the
-    owner-operator total.
+    owner total.
 \end{itemize}
 
 %%
@@ -276,12 +276,11 @@ Figure~\ref{fig:functions:helper-stake-distribution} defines some helper functio
       & \fun{poolStake} \in \HashKey \to \powerset{\HashKey} \to (\HashKey \mapsto \HashKey)
           \to \Stake \to \Stake \\
       & \poolStake{operator}{owners}{delegations}{stake} = \\
-      & ~~ \left\{hk\mapsto c \mid hk\notin\var{owners'},~hk\mapsto c\in\var{poolStake} \right\}
+      & ~~ \left\{hk\mapsto c \mid hk\notin\var{owners},~hk\mapsto c\in\var{poolStake} \right\}
            \cup
            \left\{ \var{operator}\mapsto
-             \sum_{\substack{hk\in\var{owners'} \\ hk\mapsto c\in\var{poolStake}}} c\right\} \\
+             \sum_{\substack{hk\in\var{owners} \\ hk\mapsto c\in\var{poolStake}}} c\right\} \\
       & ~~ \where \\
-      & ~~~~~~ \var{owners'} = owners \cup \{operator\} \\
       & ~~~~~~ \var{poolStake} =
                  \{hk \mapsto c
                  \mid
@@ -417,7 +416,7 @@ This transition has no preconditions and results in the following state change:
   \item The pool performance is stored.
   \item The fees and decayed deposits are stored in $\var{feeSS}$. Note that this value will not
     change between epochs, unlike the $\var{fees}$ and $\var{deposits}$ values in the UTxO state.
-  \item In the UTxO state, the decayed deposit amounts are moved from the deposit pool
+  \item In the UTxO state, the decayed deposit amounts are moved from the deposit pot
     to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-trans}),
     the value $\var{feeSS}$ will be removed from the fee pot in the UTxO state.
     The decay is calculated based on \textit{the first slot in the upcoming epoch}.
@@ -1183,7 +1182,7 @@ The calculation is done pool-by-pool.
       & \rewardOnePool{pp}{R}{n}{poolHK}{pool}{stake}{avgs}{tot}{addrs_{rew}} =
           (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
-      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto t\in\var{stake}} t \\
+      & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
       & ~~~~~~~\var{ostake} = \var{stake}~\var{poolHK} \\
       & ~~~~~~~\sigma = \var{pstake} / tot \\
       & ~~~~~~~\var{\overline{N}} = \sigma * \SlotsPerEpoch\\
@@ -1235,7 +1234,7 @@ The calculation is done pool-by-pool.
                  \mid
                  hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
       & ~~~~~~~\var{unrealized} = \sum_{\wcard\mapsto (\wcard,~u)\in\var{results}}u \\
-      & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto(\var{rwds},~\wcard)}\var{rwds}
+      & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto(\var{r},~\wcard)\in\var{results}}\var{r}
   \end{align*}
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
