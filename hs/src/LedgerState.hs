@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE EmptyDataDecls        #-}
 
 {-|
 Module      : LedgerState
