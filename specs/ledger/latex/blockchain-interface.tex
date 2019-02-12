@@ -256,7 +256,7 @@ labels have the following meaning:
         \right)
       }
       &
-      pws' = pws \unionoverride \{ \upId{up} \mapsto s_n\}
+      pws' = pws \unionoverrideRight \{ \upId{up} \mapsto s_n\}
     }
     {
       {
@@ -387,7 +387,7 @@ updated.
             \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
-            \var{avs} \unionoverride \var{avs_{new}}\\
+            \var{avs} \unionoverrideRight \var{avs_{new}}\\
             \var{rpus}\\
             \dom~ \var{cps} \subtractdom \var{raus}\\
             \var{cps'}\\
@@ -583,7 +583,7 @@ assume $5$ endorsements are needed to consider a proposal as candidate for
 adoption.
 %
 Note that, in the final state, we use union override to define the updated
-parameters ($\var{pps} \unionoverride \var{pps'}$). This is because candidate
+parameters ($\var{pps} \unionoverrideRight \var{pps'}$). This is because candidate
 proposal might only update some parameters of the protocol.
 
 Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
@@ -766,7 +766,7 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
         \left(
           \begin{array}{l}
             \var{e'}\\
-            \var{(\var{pv'}, \var{pps} \unionoverride \var{pps'})}\\
+            \var{(\var{pv'}, \var{pps} \unionoverrideRight \var{pps'})}\\
             \var{fads'}\\
             \var{avs}\\
             \var{pids_{keep}} \restrictdom \var{rpus}\\
