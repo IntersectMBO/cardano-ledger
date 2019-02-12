@@ -5,7 +5,9 @@
 ##
 
 # Document name
-DOCNAME = ledger-spec
+ifndef DOCNAME
+	DOCNAME = ledger-spec
+endif
 
 # You want latexmk to *always* run, because make does not have all the info.
 # Also, include non-file targets in .PHONY so they are run regardless of any

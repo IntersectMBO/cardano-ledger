@@ -1,3 +1,6 @@
+\section{Properties}
+\label{sec:properties}
+
 In this section we discuss the properties which we want the ledger to have. One
 goal is to include these properties in the executable specification for doing
 property-based testing or formal verification.
@@ -8,8 +11,8 @@ property-based testing or formal verification.
 Many properties only make sense when applied to a valid ledger state. In
 informal terms, a valid ledger state $l$ can only be reached when starting from
 an initial state $l_{0}$ (genesis state) and only executing state transition
-rules as specified in Section~\ref{sec:ledger} for UTxO or
-Section~\ref{sec:delegation} for delegation.
+rules as specified in Section~\ref{sec:utxo} for UTxO or
+Section~\ref{sec:delegation-shelley} for delegation.
 
 \begin{figure}[ht]
   \centering
@@ -442,6 +445,8 @@ they do split the reward between the pool leader and the members.
 
   where $paidRewards$ is the sum of rewards paid to the stake pool members.
 \end{property}
+
+\clearpage
 
 %%% Local Variables:
 %%% mode: latex

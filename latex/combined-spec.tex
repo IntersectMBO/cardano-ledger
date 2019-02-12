@@ -31,6 +31,16 @@
 %% Setup for the semantic package
 \setpremisesspace{20pt}
 
+
+%%
+%% Packages needed for Byron Spec
+%%
+\usetikzlibrary{decorations.pathreplacing, positioning, arrows.meta, calc}
+% For drawing simple diagrams involving arrows between LaTeX symbols
+\usepackage{tikz-cd}
+\usepackage{listings}
+
+
 %%
 %% Types
 %%
@@ -206,6 +216,37 @@
 \include{epoch}
 \include{properties}
 \include{non-integral}
+
+\newpage
+
+
+%%
+%% Byron Spec
+%%
+
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\Lovelace}{\type{Lovelace}}
+\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+\newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\SlotCount}{\type{SlotCount}}
+\newcommand{\DSEnv}{\type{DSEnv}}
+\newcommand{\DSState}{\type{DSState}}
+\newcommand\Set[2]{\{\,#1\mid#2\,\}}
+\newcommand{\Bool}{\type{Bool}}
+\newcommand{\txs}{\ensuremath{\mathcal{T}}}
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
+
+\input{../specs/ledger/latex/intro.tex}
+\input{../specs/ledger/latex/notation.tex}
+\input{../specs/ledger/latex/crypto-primitives.tex}
+\input{../specs/ledger/latex/utxo.tex}
+\input{../specs/ledger/latex/delegation.tex}
+\input{../specs/ledger/latex/update-mechanism.tex}
+\input{../specs/ledger/latex/blockchain-interface.tex}
+\input{../specs/ledger/latex/properties.tex}
 
 \newpage
 
