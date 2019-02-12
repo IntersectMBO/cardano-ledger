@@ -404,7 +404,7 @@ witsNeeded utxo' tx =
     owners = foldl Set.union Set.empty [pool ^. poolOwners | RegPool pool <- tx ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
-    
+
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
@@ -665,7 +665,7 @@ poolRew ::
 poolRew pc hk n expectedSlots averages (Coin maxP) =
   floor $ e * fromIntegral maxP
   where
-    avg = intervalValue $ pc ^. movingAvgExp
+    avg = pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
     e = fromRational avg ** fromRational gamma :: Double
 
@@ -703,8 +703,8 @@ rewardOnePool ::
 rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
   (rewards', unrealized)
   where
-    (Coin pstake) = Map.foldl (+) (Coin 0) stake
-    (Coin ostake) = stake Map.! poolHK
+    Coin pstake = Map.foldl (+) (Coin 0) stake
+    Coin ostake = stake Map.! poolHK
     sigma = fromIntegral pstake % fromIntegral total
     expectedSlots = sigma * fromIntegral slotsPerEpoch
     Coin pledge = pool ^. poolPledge
@@ -717,10 +717,10 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
-       memberRew poolR pool (StakeShare ((fromIntegral c)% tot)) (StakeShare sigma))
+       memberRew poolR pool (StakeShare (fromIntegral c% tot)) (StakeShare sigma))
      | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
     Coin hkStake = stake Map.! poolHK
-    iReward  = leaderRew poolR pool (StakeShare $ (fromIntegral hkStake) % tot) (StakeShare sigma)
+    iReward  = leaderRew poolR pool (StakeShare $ fromIntegral hkStake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
     rewards' = Map.restrictKeys potentialRewards addrsRew
     unrealized = r - Map.foldl (+) (Coin 0) rewards'
@@ -755,7 +755,7 @@ reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
       | (hk, (pool, n, actgr)) <- pdata
       ]
     unrealized = foldl (\s (_, (_, u)) -> s + u) (Coin 0) results
-    rewards' = foldl (\m (_, (rwds, _)) -> Map.union m rwds) Map.empty results
+    rewards' = foldl (\m (_, (r', _)) -> Map.union m r') Map.empty results
 
 -- | Update moving averages
 updateAvgs ::
