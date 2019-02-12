@@ -3,8 +3,6 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/7f85
 packages:
   - .
   - test
-  - specs/ledger/hs
-  - specs/semantics/hs
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude

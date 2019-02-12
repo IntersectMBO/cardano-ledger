@@ -1,9 +1,7 @@
-packages: specs/semantics/hs
-          specs/ledger/hs
-          specs/chain/hs
-	  binary
-	  crypto
-	  ./
+packages:
+  binary
+  crypto
+  ./
 
 source-repository-package
   type: git
