@@ -56,10 +56,10 @@
         };
       };
     } // {
-    src = pkgs.fetchgit {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/well-typed/cborg";
       rev = "80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d";
       sha256 = "1khd1v9yh6jdkcvzvknvhxpc1qvxvww0pp7c43w4hbvdyhs1q8wh";
-      };
+      });
     postUnpack = "sourceRoot+=/cborg; echo source root reset to \$sourceRoot";
     }

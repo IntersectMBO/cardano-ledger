@@ -41,9 +41,9 @@
         };
       };
     } // {
-    src = pkgs.fetchgit {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "http://github.com/nc6/canonical-json";
       rev = "a9dc9b893649bc2e2a770ab22d278a780f7e3a3c";
       sha256 = "0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr";
-      };
+      });
     }

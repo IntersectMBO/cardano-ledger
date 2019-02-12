@@ -16,7 +16,7 @@ let
   th-packages = [
     "hedgehog" "cardano-crypto-wrapper"
     "cardano-crypto-test" "cardano-chain"
-    "small-steps" "cs-ledger" "cs-blockchain" ];
+  ];
 
   # Build the packageset with module support.
   # We can essentially override anything in the modules
