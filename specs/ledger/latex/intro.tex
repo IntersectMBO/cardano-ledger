@@ -1,0 +1,25 @@
+\section{Introduction}
+\label{sec:introduction}
+
+This specification models the \textit{conditions} that the different parts of a
+transaction have to fulfill so that they can extend a ledger, which is
+represented here as a list of transactions. In particular, we model the
+following aspects:
+
+\begin{description}
+\item[Preservation of value] relationship between the total value of input and
+  outputs in a new transaction, and the unspent outputs.
+\item[Witnesses] authentication of parts of the transaction data by means of
+  cryptographic entities (such as signatures and private keys) contained in
+  these transactions.
+\item[Delegation] validity of delegation certificates, which delegate
+  block-signing rights.
+\item[Update validation] voting mechanism which captures the identification of
+  the voters, and the participants that can post update proposals.
+\end{description}
+
+The following aspects will not be modeled (since they are not part of the Byron
+release):
+\begin{description}
+\item[Stake] staking rights associated to an addresses.
+\end{description}
