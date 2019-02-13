@@ -50,10 +50,10 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.libs.small-steps.x86_64-darwin
     jobs.nix-tools.libs.small-steps.x86_64-linux
     jobs.nix-tools.libs.cs-ledger.x86_64-darwin
-	  jobs.nix-tools.libs.cs-ledger.x86_64-linux
+    jobs.nix-tools.libs.cs-ledger.x86_64-linux
 
     jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-darwin
-	  jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-linux
+    jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-linux
 
     # Windows cross-compilation targets
 
