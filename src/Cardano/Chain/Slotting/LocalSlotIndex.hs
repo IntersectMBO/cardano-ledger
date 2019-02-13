@@ -75,7 +75,7 @@ instance B.Buildable LocalSlotIndexError where
     LocalSlotIndexOverflow epochSlots i -> bprint
       ( "Cannot construct LocalSlotIndex: "
       . build
-      . "is greater than or equal to epochSlots, "
+      . " is greater than or equal to epochSlots, "
       . build
       )
       i
@@ -117,16 +117,11 @@ localSlotIndices slotsInEpoch = fmap UnsafeLocalSlotIndex [0 .. upperBound]
   upperBound :: Word16
   upperBound = fromIntegral slotsInEpoch - 1
 
-mkLocalSlotIndex_ :: SlotCount -> Word16 -> Maybe LocalSlotIndex
-mkLocalSlotIndex_ es idx
-  | idx < fromIntegral es = Just (UnsafeLocalSlotIndex idx)
-  | otherwise = Nothing
-
 mkLocalSlotIndex
   :: MonadError LocalSlotIndexError m => SlotCount -> Word16 -> m LocalSlotIndex
-mkLocalSlotIndex es idx = case mkLocalSlotIndex_ es idx of
-  Just it -> pure it
-  Nothing -> throwError $ LocalSlotIndexOverflow es (fromIntegral idx)
+mkLocalSlotIndex es idx
+  | idx < fromIntegral es = pure (UnsafeLocalSlotIndex idx)
+  | otherwise = throwError $ LocalSlotIndexOverflow es (fromIntegral idx)
 
 -- | Shift slot index by given amount, returning a 'LocalSlotIndexError' on
 --   overflow

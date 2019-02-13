@@ -16,12 +16,12 @@ import Cardano.Prelude hiding (empty)
 
 import Data.Text.Lazy.Builder (Builder)
 import Data.Time (NominalDiffTime)
-import Formatting (Format, bprint, build, bytes, int, later, shortest)
+import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, ScriptVersion, TxFeePolicy)
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
+import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters(..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
@@ -57,7 +57,7 @@ instance B.Buildable ProtocolParameterUpdate where
     . ", heavyweight delegation threshold: " . bmodifier build
     . ", update vote threshold: " . bmodifier build
     . ", update proposal threshold: " . bmodifier build
-    . ", update implicit period (slots): " . bmodifier int
+    . ", update implicit period (slots): " . bmodifier build
     . ", softfork rule: " . bmodifier build
     . ", tx fee policy: " . bmodifier build
     . ", unlock stake epoch: " . bmodifier build

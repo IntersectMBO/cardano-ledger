@@ -95,9 +95,10 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
     (Genesis.unGenesisHash $ Genesis.configGenesisHash config)
     (Concrete.cvsPreviousHash st)
 
-  sid = Slotting.unflattenSlotId
-    (coerce (pps ^. bkSlotsPerEpoch))
-    (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
+  sid =
+    Slotting.unflattenSlotId (coerce (pps ^. bkSlotsPerEpoch))
+      $ Slotting.FlatSlotId
+          (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
 
   issuer   = ab ^. Abstract.bHeader . Abstract.bIssuer
 

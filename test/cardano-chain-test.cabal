@@ -31,6 +31,7 @@ library
                        Test.Cardano.Chain.Genesis.Json
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Slotting.Properties
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen

@@ -36,7 +36,7 @@ import Cardano.Chain.Common
   , TxSizeLinear(..)
   , mkKnownLovelace
   )
-import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId)
+import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
@@ -86,7 +86,7 @@ exampleProtocolParameters = ProtocolParameters
   (LovelacePortion 99)
   (LovelacePortion 99)
   (LovelacePortion 99)
-  (99 :: FlatSlotId)
+  (FlatSlotId 99)
   sfrule
   (TxFeePolicyTxSizeLinear tslin)
   (EpochIndex 99)
@@ -111,7 +111,7 @@ exampleProtocolParameterUpdate = ProtocolParameterUpdate
   (Just $ LovelacePortion 99)
   (Just $ LovelacePortion 99)
   (Just $ LovelacePortion 99)
-  (Just (99 :: FlatSlotId))
+  (Just $ FlatSlotId 99)
   (Just sfrule')
   (Just $ TxFeePolicyTxSizeLinear tslin')
   (Just $ EpochIndex 99)
