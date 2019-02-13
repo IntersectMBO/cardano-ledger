@@ -177,7 +177,7 @@ different order). The choice here is arbitrary.
     \begin{array}{r@{~\in~}lr}
       \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
-      \fun{hash_{spend}} & \Addr \mapsto \Hash
+      \fun{hash_{spend}} & \Addr \mapsto \HashKey
       & \text{hash of a spending key in an address}\\
     \end{array}
   \end{equation*}
@@ -190,7 +190,7 @@ different order). The choice here is arbitrary.
     & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \Hash & \text{hash of an input address}\\
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hash of an input address}\\
     & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
       \wedge a \mapsto h \in \fun{hash_{spend}} \}
   \end{align*}

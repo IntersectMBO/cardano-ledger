@@ -1,0 +1,111 @@
+\section{Transactions}
+\label{sec:transactions}
+
+Transactions are defined in Figure~\ref{fig:defs:utxo-shelley}.
+A transaction body, $\TxBody$, is made up of six pieces:
+
+\begin{itemize}
+  \item A set of transaction inputs.
+    The $\TxIn$ derived type identifies an output from a previous transaction.
+    It consists of a transaction id and an index to uniquely identify the output.
+  \item An indexed collection of transaction outputs.
+    The $\TxOut$ type is an address paired with a coin value.
+  \item A list of certificates, which will be explained in detail in
+    Section~\ref{sec:delegation-shelley}.
+  \item A transaction fee. This value will be added to the fee pot and eventually handed out
+    as stake rewards.
+  \item A time to live. A transaction will be deemed invalid if processed after this slot.
+  \item A mapping of reward account withdrawals.  The type $\Wdrl$ is a finite map that maps
+    a reward address to the coin value to be withdrawn. The coin value must be equal
+    to the full value contained in the account. Explicitly stating these values ensures
+    that error messages can be precise about why a transaction is invalid.
+\end{itemize}
+A transaction, $\Tx$, is a transaction body together with:
+
+\begin{itemize}
+  \item A collection of witnesses, represented as a finite map from payment verification keys
+    to signatures.
+\end{itemize}
+
+Additionally, the $\UTxO$ type will be used by the ledger state to store all the
+unspent transaction outputs. It is a finite map from transaction inputs
+to transaction outputs that are available to be spent.
+
+Finally, $\fun{txid}$ computes the transaction id of a given transaction.
+This function must produce a unique id for each unique transaction.
+
+\begin{figure*}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{txid} & \TxId & \text{transaction id}\\
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      (\var{txid}, \var{ix})
+      & \TxIn
+      & \TxId \times \Ix
+      & \text{transaction input}
+      \\
+      (\var{addr}, c)
+      & \type{TxOut}
+      & \Addr \times \Coin
+      & \text{transaction output}
+      \\
+      \var{utxo}
+      & \UTxO
+      & \TxIn \mapsto \TxOut
+      & \text{unspent tx outputs}
+      \\
+      \var{wdrl}
+      & \Wdrl
+      & \AddrRWD \mapsto \Coin
+      & \text{reward withdrawal}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Transaction Types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
+      \var{txbody}
+      & \TxBody
+      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
+        \times \Coin \times \Slot \times \Wdrl
+      \\
+      \var{tx}
+      & \Tx
+      & \TxBody \times (\VKey \mapsto \Sig)
+      \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Accessor Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{txins} & \Tx \to \powerset{\TxIn} & \text{transaction inputs} \\
+      \fun{txouts} & \Tx \to (\Ix \mapsto \TxOut) & \text{transaction outputs} \\
+      \fun{txcerts} & \Tx \to \seqof{\DCert} & \text{delegation certificates} \\
+      \fun{txfee} & \Tx \to \Coin & \text{transaction fee} \\
+      \fun{txttl} & \Tx \to \Slot & \text{time to live} \\
+      \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
+      \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
+      \fun{txwits} & \Tx \to (\VKey \mapsto \Sig) & \text{witnesses} \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system}
+  \label{fig:defs:utxo-shelley}
+\end{figure*}
+
+\clearpage

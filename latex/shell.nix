@@ -6,19 +6,16 @@ stdenv.mkDerivation {
                       scheme-small
 
                       # libraries
-                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor xstring
+                      stmaryrd lm-math extarrows cleveref semantic tikz-cd xcolor xstring
 
                       # bclogo and dependencies
-                      bclogo mdframed xkeyval etoolbox needspace
+                      bclogo mdframed needspace pgf
 
                       # font libraries `mathpazo` seems to depend on palatino, but it isn't pulled.
-                      mathpazo palatino microtype
+                      mathpazo palatino
 
                       # libraries for marginal notes
                       xargs todonotes
-
-                      # Tikz
-                      pgf
 
                       # git info
                       gitinfo2

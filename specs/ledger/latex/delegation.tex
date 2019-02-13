@@ -1,13 +1,6 @@
 \section{Delegation}
 \label{sec:delegation}
 
-\newcommand{\DEnv}{\type{DEnv}}
-\newcommand{\DSEnv}{\type{DSEnv}}
-\newcommand{\DSState}{\type{DSState}}
-\newcommand{\DCert}{\type{DCert}}
-\newcommand{\DState}{\type{DState}}
-\newcommand{\DEState}{\type{DEState}}
-
 An agent owning a key that can sign new blocks can delegate its signing rights
 to another key by means of \textit{delegation certificates}. These certificates
 are included in the ledger, and therefore also included in the body of the
@@ -210,9 +203,9 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
 
 \begin{figure}[htb]
   \begin{align*}
-    & \unionoverride \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
+    & \unionoverrideRight \in (A \mapsto B) \to (A \mapsto B) \to (A \mapsto B)
     & \text{union override}\\
-    & d_0 \unionoverride d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
+    & d_0 \unionoverrideRight d_1 = d_1 \cup (\dom d_1 \subtractdom d_0)
   \end{align*}
   \caption{Functions used in delegation rules}
   \label{fig:funcs:delegation}
@@ -283,8 +276,8 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
       \trans{adeleg}{(s,~ (vk_s,~ vk_d))}
       \left(
       \begin{array}{lcl}
-        \var{dms} & \unionoverride & \{\var{vk_s} \mapsto \var{vk_d}\}\\
-        \var{dws} & \unionoverride & \{\var{vk_s} \mapsto s \}
+        \var{dms} & \unionoverrideRight & \{\var{vk_s} \mapsto \var{vk_d}\}\\
+        \var{dws} & \unionoverrideRight & \{\var{vk_s} \mapsto s \}
       \end{array}
       \right)
     }
