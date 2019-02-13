@@ -12,6 +12,7 @@ import Test.Options (Opts(..), optsParser)
 
 import qualified Test.Cardano.Chain.Block.Bi
 import qualified Test.Cardano.Chain.Block.Validation
+import qualified Test.Cardano.Chain.Common.Lovelace
 import qualified Test.Cardano.Chain.Delegation.Bi
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
@@ -30,6 +31,7 @@ main = do
   runTests
     [ Test.Cardano.Chain.Block.Bi.tests
     , Test.Cardano.Chain.Block.Validation.tests scenario
+    , Test.Cardano.Chain.Common.Lovelace.tests
     , Test.Cardano.Chain.Delegation.Bi.tests
     , Test.Cardano.Chain.Epoch.File.tests
     , Test.Cardano.Chain.Genesis.Json.tests

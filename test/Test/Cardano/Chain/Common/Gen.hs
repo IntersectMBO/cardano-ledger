@@ -11,6 +11,7 @@ module Test.Cardano.Chain.Common.Gen
   , genBlockCount
   , genCanonicalTxFeePolicy
   , genChainDifficulty
+  , genCustomLovelace
   , genLovelace
   , genLovelacePortion
   , genMerkleRoot
@@ -163,6 +164,12 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
 
 genChainDifficulty :: Gen ChainDifficulty
 genChainDifficulty = ChainDifficulty <$> genBlockCount
+
+genCustomLovelace :: Word64 -> Gen Lovelace
+genCustomLovelace size =
+  mkLovelace <$> Gen.word64 (Range.linear 0 size) >>= \case
+    Right lovelace -> pure lovelace
+    Left  err      -> panic $ sformat build err
 
 genLovelace :: Gen Lovelace
 genLovelace =
