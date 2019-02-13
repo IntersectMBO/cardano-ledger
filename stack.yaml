@@ -1,9 +1,11 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/f2802079ba2c07c4d408e3c0aa000fc363792398/snapshot.yaml
 
 packages:
-- chain/hs
-- ledger/hs
-- semantics/hs
+- hs
+- specs/chain/hs
+- specs/ledger/hs
+- specs/semantics/hs
 
 extra-deps:
 - sequence-0.9.8
+- tasty-hedgehog-coverage-0.1.0.0

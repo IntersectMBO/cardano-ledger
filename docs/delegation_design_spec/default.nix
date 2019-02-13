@@ -1,4 +1,8 @@
-with (import <nixpkgs> {});
+{ pkgs ? import (import ../../nix/fetch-nixpkgs.nix) {}
+}:
+
+with pkgs;
+
 stdenv.mkDerivation {
   name = "docsEnv";
   buildInputs = [ (texlive.combine {
@@ -28,4 +32,12 @@ stdenv.mkDerivation {
                   })
                   gitMinimal
                 ];
+  src = ./.;
+  buildPhase = "make";
+
+  meta = with lib; {
+    description = "Delegation Design Specification";
+    license = licenses.bsd3;
+    platforms = platforms.linux;
+  };
 }
