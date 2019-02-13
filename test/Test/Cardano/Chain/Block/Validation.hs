@@ -103,7 +103,6 @@ data Error
   | ErrorChainValidationError (Maybe FlatSlotId) ChainValidationError
   deriving (Eq, Show)
 
-
 -- | Check that a single epoch's 'Block's are valid by folding over them
 epochValid
   :: Genesis.Config -> IORef ChainValidationState -> FilePath -> Property

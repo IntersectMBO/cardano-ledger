@@ -5,6 +5,7 @@
 module Cardano.Chain.Common.NetworkMagic
        ( NetworkMagic (..)
        , makeNetworkMagic
+       , parseReqNetworkMag
        ) where
 
 import Cardano.Prelude hiding ((%))
@@ -37,3 +38,8 @@ makeNetworkMagic :: ProtocolMagic -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of
     RequiresNoMagic -> NetworkMainOrStage
     RequiresMagic   -> NetworkTestnet (getProtocolMagic pm)
+
+parseReqNetworkMag :: Text -> RequiresNetworkMagic
+parseReqNetworkMag "NetworkMainOrStage" = RequiresNoMagic
+parseReqNetworkMag _                    = RequiresMagic
+
