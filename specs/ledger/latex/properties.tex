@@ -82,7 +82,7 @@ implication, and the range of an existential qualification by a conjunction.
 \label{sec:quantifying-over-set-operators}
 
 Given a sequence $\mathcal{A} \in \seqof{A}$, a set $B$, a set operation
-$\bigoplus$, e.g. $\cup$ or $\unionoverride$, and a function
+$\bigoplus$, e.g. $\cup$ or $\unionoverrideRight$, and a function
 $\fun{f} \in \type{A} \to \type{B}$, the term:
 %
 $$
@@ -106,7 +106,7 @@ $$
 In a set operation quantification over a sequence $\mathcal{A}$, the operation
 is applied to the elements the order in which they appear in $\mathcal{A}$.
 This is crucial in the case of non-commutative operations, such as union
-override ($\unionoverride$).
+override ($\unionoverrideRight$).
 
 \subsection{UTxO Properties}
 \label{sec:utxo-properties}
@@ -115,7 +115,7 @@ Property~\ref{prop:no-double-spending} expresses the fact that transaction
 inputs cannot be used more than once. This property requires that the starting
 UTxO does not contain any future outputs, which is a reasonable constraint.
 
-\begin{prop}[No double spending]\label{prop:no-double-spending}
+\begin{property}[No double spending]\label{prop:no-double-spending}
   For all
 
   $$\var{utxo_0} \transtar{UTXO}{\txs} \var{utxo}$$
@@ -131,14 +131,14 @@ UTxO does not contain any future outputs, which is a reasonable constraint.
   $$
   \forall \txs_i,~\txs_j \cdot i < j \Rightarrow \txins{\txs_i} \cap \txins{\txs_j} = \emptyset
   $$
-\end{prop}
+\end{property}
 
 Property~\ref{prop:utxo-out-min-in} expresses the fact that all inputs and
 outputs are accounted for, in such a way that we can reconstruct the final
 (UTxO) state by adding all the outputs to the initial state, and removing the
 spent outputs.
 
-\begin{prop}[UTxO is outputs minus inputs]\label{prop:utxo-out-min-in}
+\begin{property}[UTxO is outputs minus inputs]\label{prop:utxo-out-min-in}
   For all
 
   $$\var{utxo_0} \transtar{UTXO}{\txs} \var{utxo}$$
@@ -155,4 +155,4 @@ spent outputs.
   \bigcup_{\txins{}} \txs \subtractdom (\var{utxo_0} \cup \bigcup_{\txouts{}} \txs) = \var{utxo}
   $$
 
-\end{prop}
+\end{property}

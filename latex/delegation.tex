@@ -1,3 +1,6 @@
+\section{Delegation}
+\label{sec:delegation-shelley}
+
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
@@ -424,7 +427,7 @@ a stake pool, though these concerns are independent of the ledger rules.
 
 The rules for updating the part of the ledger state defining the current stake
 pools are given in \cref{fig:pool-rules}. The calculation of stake distribution
-is described in Section~\ref{sec:stake-dist}.
+is described in Section~\ref{sec:stake-dist-calc}.
 
 In the pool rules, the stake pool is identified with the hashkey of the pool operator.
 For each rule, again, we first check that a given certificate $c$ is of the correct type.
@@ -873,3 +876,5 @@ will be invalid.
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
 \end{figure}
+
+\clearpage

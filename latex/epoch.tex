@@ -1,3 +1,6 @@
+\section{Rewards and the Epoch Boundary}
+\label{sec:epoch}
+
 \newcommand{\UTxOEpState}{\type{UTxOEpState}}
 \newcommand{\Acnt}{\type{Acnt}}
 \newcommand{\RewardEnv}{\type{RewardEnv}}
@@ -38,7 +41,7 @@ Neither transition is triggered by a transaction, and in fact have no signal.
 The first one, defined in Section~\ref{sec:total-epoch},
 involves calculations that occur at the epoch boundary.
 This includes taking stake distribution snapshots
-(Sections~\ref{sec:stake-dist} and~\ref{sec:snapshots}),
+(Sections~\ref{sec:stake-dist-helpers} and~\ref{sec:snapshots}),
 retiring stake pools (Section~\ref{sec:pool-reap}),
 and performing protocol updates (Section~\ref{sec:pparam-update}).
 The second transition, defined in Sections ~\ref{sec:reward-dist} and ~\ref{sec:reward-trans},
@@ -107,7 +110,7 @@ The two main transition systems in this section are:
 \end{itemize}
 
 \subsection{Helper Functions}
-\label{sec:stake-dist}
+\label{sec:stake-dist-helpers}
 
 Figure~\ref{fig:funcs:epoch-helper} defines three helper functions needed
 throughout the rest of the section.
@@ -186,7 +189,7 @@ throughout the rest of the section.
 \end{figure}
 
 \subsection{Stake Distribution Calculation}
-\label{sec:stake-dist}
+\label{sec:stake-dist-calc}
 
 This section defines the stake distribution calculations.
 Figure~\ref{fig:epoch-defs} introduces three new derived types:
@@ -1495,3 +1498,5 @@ smaller refunds for deposits than were paid upon depositing.
   \caption{Rewards inference rules}
   \label{fig:rules:reward}
 \end{figure}
+
+\clearpage

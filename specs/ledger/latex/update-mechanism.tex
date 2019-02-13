@@ -316,7 +316,7 @@ cause a soft-fork we might use the alt version for that purpose.
       {
         \left(
           \begin{array}{l}
-            \var{raus} \unionoverride \{ \upId{up} \mapsto (\var{an}, \var{av})\}
+            \var{raus} \unionoverrideRight \{ \upId{up} \mapsto (\var{an}, \var{av})\}
           \end{array}
         \right)
       }
@@ -353,7 +353,7 @@ cause a soft-fork we might use the alt version for that purpose.
       {
         \left(
           \begin{array}{l}
-            \var{rpus} \unionoverride \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
+            \var{rpus} \unionoverrideRight \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
           \end{array}
         \right)
       }
@@ -945,7 +945,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
       {
         \left(
           \begin{array}{l}
-            \var{cps} \unionoverride  \{\var{pid} \mapsto s_n\} \\
+            \var{cps} \unionoverrideRight  \{\var{pid} \mapsto s_n\} \\
             \var{vts'}
           \end{array}
         \right)
