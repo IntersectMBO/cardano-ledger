@@ -6,7 +6,7 @@ localLib.nix-tools.release-nix {
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
   # are intereted in building on CI via nix-tools.
-  packages = [ "cardano-chain" "cs-ledger" "small-steps" "cs-blockchain" ];
+  packages = [ "cardano-chain" ];
 
   # The set of jobs we consider crutial for each CI run.
   # if a single one of these fails, the build will be marked
@@ -39,32 +39,15 @@ localLib.nix-tools.release-nix {
   #
   required-name = "cardano-chain-required-checks";
   required-targets = jobs: [
-    jobs.byronLedgerSpec
-    jobs.byronChainSpec
-    jobs.semanticsSpec
-
-    jobs.nix-tools.libs.cs-blockchain.x86_64-darwin
-    jobs.nix-tools.libs.cs-blockchain.x86_64-linux
-    jobs.nix-tools.libs.small-steps.x86_64-darwin
-    jobs.nix-tools.libs.small-steps.x86_64-linux
 
     jobs.nix-tools.libs.cardano-chain.x86_64-darwin
     jobs.nix-tools.libs.cardano-chain.x86_64-linux
     jobs.nix-tools.tests.cardano-chain.cardano-chain-test.x86_64-darwin
     jobs.nix-tools.tests.cardano-chain.cardano-chain-test.x86_64-linux
 
-    jobs.nix-tools.libs.cs-ledger.x86_64-darwin
-    jobs.nix-tools.libs.cs-ledger.x86_64-linux
-    jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-darwin
-    jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-linux
-
     # windows cross compilation targets
     jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-chain.x86_64-linux
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cs-blockchain.x86_64-linux
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cs-ledger.x86_64-linux
-    jobs.nix-tools.libs.x86_64-pc-mingw32-small-steps.x86_64-linux
     jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-chain.cardano-chain-test.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-delegation-test.x86_64-linux
   ];
 
 }

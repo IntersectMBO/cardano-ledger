@@ -40,4 +40,11 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../specs/semantics/hs; }
+    } // {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
+      url = "https://github.com/input-output-hk/fm-ledger-rules";
+      rev = "bf059d1d593e7ef9f3b983a0c904e7bb81362af9";
+      sha256 = "0rdyb0bfk69ndb86m91m9fzcfnhaj4q5yw0cgfj0ap4vmirz92cs";
+      });
+    postUnpack = "sourceRoot+=/specs/semantics/hs; echo source root reset to \$sourceRoot";
+    }

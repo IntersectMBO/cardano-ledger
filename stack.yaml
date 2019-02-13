@@ -3,8 +3,6 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/7f85
 packages:
   - .
   - test
-  - specs/ledger/hs
-  - specs/semantics/hs
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
@@ -24,6 +22,13 @@ extra-deps:
     subdirs:
       - crypto
       - crypto/test
+
+  - git: https://github.com/input-output-hk/fm-ledger-rules
+    commit: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+    subdirs:
+      - specs/semantics/hs
+      - specs/ledger/hs
+      - specs/chain/hs
 
   - git: https://github.com/input-output-hk/cardano-mainnet-mirror
     commit: 74ca63f8ad6b47beba2f565c73592cede63ce4b5

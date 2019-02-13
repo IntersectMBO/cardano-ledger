@@ -12,15 +12,15 @@
         } // {
         cardano-chain = ./.stack.nix/cardano-chain.nix;
         cardano-chain-test = ./.stack.nix/cardano-chain-test.nix;
-        cs-ledger = ./.stack.nix/cs-ledger.nix;
-        small-steps = ./.stack.nix/small-steps.nix;
-        cs-blockchain = ./.stack.nix/cs-blockchain.nix;
         cardano-prelude = ./.stack.nix/cardano-prelude.nix;
         cardano-prelude-test = ./.stack.nix/cardano-prelude-test.nix;
         cardano-binary = ./.stack.nix/cardano-binary.nix;
         cardano-binary-test = ./.stack.nix/cardano-binary-test.nix;
         cardano-crypto-wrapper = ./.stack.nix/cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./.stack.nix/cardano-crypto-test.nix;
+        small-steps = ./.stack.nix/small-steps.nix;
+        cs-ledger = ./.stack.nix/cs-ledger.nix;
+        cs-blockchain = ./.stack.nix/cs-blockchain.nix;
         cardano-mainnet-mirror = ./.stack.nix/cardano-mainnet-mirror.nix;
         cborg = ./.stack.nix/cborg.nix;
         cardano-crypto = ./.stack.nix/cardano-crypto.nix;
