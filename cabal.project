@@ -1,8 +1,9 @@
 packages: hs/
-          dependencies/semantics/hs
+          specs/semantics/hs
+          specs/ledger/hs
+          specs/chain/hs
           dependencies/non-integer
           docs/accounting/accounting
 
 constraints:
   tasty-hedgehog-coverage == 0.1.0.0
-
