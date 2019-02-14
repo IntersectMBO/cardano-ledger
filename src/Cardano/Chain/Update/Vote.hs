@@ -30,6 +30,7 @@ module Cardano.Chain.Update.Vote
   , VoteId
   , Vote
   , VoteError(..)
+  , uvProposalId
   , mkVote
   , mkVoteSafe
   , formatVoteShort
@@ -37,6 +38,7 @@ module Cardano.Chain.Update.Vote
   , checkVote
   , decodeAVote
   , mkVoteId
+  , recoverSignedBytes
   )
 where
 
