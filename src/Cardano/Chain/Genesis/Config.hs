@@ -245,7 +245,7 @@ mkConfigFromFile fp mGenesisHash = do
   case mGenesisHash of
     Nothing -> pure ()
     Just expectedHash ->
-      (getGenesisHash genesisHash == expectedHash)
+      (unGenesisHash genesisHash == expectedHash)
         `orThrowError` GenesisHashMismatch genesisHash expectedHash
 
   pure $ Config
@@ -284,3 +284,4 @@ data ConfigurationError
   | MeaninglessSeed
   -- ^ Custom seed was provided, but it doesn't make sense
   | ConfigurationGenerationError GenesisDataGenerationError
+  deriving (Show)

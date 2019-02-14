@@ -202,7 +202,7 @@ mkHeader
   -> Header
 mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
  where
-  prevHash   = either getGenesisHash hashHeader prevHeader
+  prevHash   = either unGenesisHash hashHeader prevHeader
   difficulty = either
     (const 0)
     (succ . consensusDifficulty . headerConsensusData)
