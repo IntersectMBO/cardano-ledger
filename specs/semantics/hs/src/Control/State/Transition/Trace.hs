@@ -67,8 +67,38 @@ deriving instance
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s
 mkTrace = Trace
 
+-- $setup
+-- |
+-- >>> :set -XTypeFamilies
+-- >>> import Control.State.Transition (initialRules, transitionRules)
+-- >>> :{
+-- data DUMMY
+-- instance STS DUMMY where
+--   type Environment DUMMY = Bool
+--   type State DUMMY = Int
+--   type Signal DUMMY = String
+--   data PredicateFailure DUMMY = CeciNEstPasUnePredicateFailure deriving (Eq, Show)
+--   initialRules = []
+--   transitionRules = []
+-- :}
+
 -- | Extract the last state of a trace. Since a trace has at least an initial
 -- state, the last state of a trace is always defined.
+--
+-- Examples:
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> lastState tr0
+-- 0
+--
+-- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
+-- >>> lastState tr01
+-- 1
+--
+-- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> lastState tr012
+-- 2
+--
 lastState :: Trace s -> State s
 lastState tr = case tr ^. traceTrans of
   (st, _):_ -> st
@@ -81,16 +111,67 @@ fromNewestFirst NewestFirst = id
 fromNewestFirst OldestFirst = reverse
 
 -- | Retrieve all the signals in the trace, in the order specified.
+--
+-- Examples:
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> traceSignals NewestFirst tr0
+-- []
+--
+-- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
+-- >>> traceSignals NewestFirst tr01
+-- ["one"]
+--
+-- >>> traceSignals OldestFirst tr01
+-- ["one"]
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> traceSignals NewestFirst tr0123
+-- ["three","two","one"]
+--
+-- >>> traceSignals OldestFirst tr0123
+-- ["one","two","three"]
+--
 traceSignals :: TraceOrder -> Trace s -> [Signal s]
 traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . _2)
 
 -- | Retrieve all the states in the trace, in the order specified.
+--
+-- Examples:
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> traceStates NewestFirst tr0
+-- [0]
+--
+-- >>> traceStates OldestFirst tr0
+-- [0]
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> traceStates NewestFirst tr0123
+-- [3,2,1,0]
+--
+-- >>> traceStates OldestFirst tr0123
+-- [0,1,2,3]
+--
 traceStates :: TraceOrder -> Trace s -> [State s]
 traceStates order tr = fromNewestFirst order (xs ++ [x])
   where
     x = tr ^. traceInitState
     xs = tr ^.. traceTrans . traverse . _1
 
+-- | Compute the length of a trace, defined as the number of signals it
+-- contains.
+--
+-- Examples:
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> traceLength tr0
+-- 0
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> traceLength tr0123
+-- 3
+--
 traceLength :: Trace s -> Int
 traceLength tr = tr ^. traceTrans . to length
 
@@ -101,8 +182,28 @@ traceLength tr = tr ^. traceTrans . to length
 -- Note that the last state in the trace will not be returned, since there is
 -- no corresponding signal, i.e. the last state is not the pre-state of any
 -- signal in the trace.
+--
+-- Examples
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> preStatesAndSignals NewestFirst tr0
+-- []
+--
+-- >>> preStatesAndSignals OldestFirst tr0
+-- []
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> preStatesAndSignals OldestFirst tr0123
+-- [(0,"one"),(1,"two"),(2,"three")]
+--
+-- >>> preStatesAndSignals NewestFirst tr0123
+-- [(2,"three"),(1,"two"),(0,"one")]
+--
 preStatesAndSignals :: TraceOrder -> Trace s -> [(State s, Signal s)]
-preStatesAndSignals order tr = zip (traceStates order tr) (traceSignals order tr)
+preStatesAndSignals OldestFirst tr
+  = zip (traceStates OldestFirst tr) (traceSignals OldestFirst tr)
+preStatesAndSignals NewestFirst tr
+  = reverse $ preStatesAndSignals OldestFirst tr
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces
