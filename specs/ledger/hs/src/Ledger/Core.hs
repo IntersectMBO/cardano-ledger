@@ -6,9 +6,10 @@ import qualified Crypto.Hash as Crypto
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Natural (minusNaturalMaybe)
 import Numeric.Natural (Natural)
@@ -83,17 +84,17 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 -- Slots and Epochs
 ---------------------------------------------------------------------------------
 
-newtype Epoch = Epoch Natural
+newtype Epoch = Epoch Word64
   deriving (Eq, Ord, Show, HasTypeReps)
 
-newtype Slot = Slot Natural
+newtype Slot = Slot { getValue :: Word64 }
   deriving (Eq, Ord, Show, HasTypeReps)
 
 -- | A number of slots.
 --
 --   We use this newtype to distinguish between a cardinal slot and a relative
 --   period of slots.
-newtype SlotCount = SlotCount Natural
+newtype SlotCount = SlotCount Word64
   deriving (Eq, Ord, Show)
 
 -- | Add a slot count to a slot.
@@ -104,9 +105,9 @@ addSlot (Slot n) (SlotCount m) = Slot $ m + n
 --
 --   This is bounded below by 0.
 minusSlot :: Slot -> SlotCount -> Slot
-minusSlot (Slot n) (SlotCount m) = case minusNaturalMaybe m n of
-  Nothing -> Slot 0
-  Just k  -> Slot k
+minusSlot (Slot n) (SlotCount m)
+  | m <= n = Slot 0
+  | n < m  = Slot $ m - n
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion

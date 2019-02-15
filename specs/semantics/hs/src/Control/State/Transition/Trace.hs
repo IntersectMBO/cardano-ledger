@@ -17,8 +17,10 @@ module Control.State.Transition.Trace
   , TraceOrder (NewestFirst, OldestFirst)
   , mkTrace
   , traceEnv
+  , traceInitState
   , traceSignals
   , traceStates
+  , preStatesAndSignals
   , traceLength
   , lastState
   )
@@ -44,11 +46,11 @@ import Control.State.Transition
 --
 data Trace s
   = Trace
-    { _traceEnv :: Environment s
+    { _traceEnv :: !(Environment s)
       -- ^ Environment under which the trace was run.
-      , _traceInitState :: State s
+      , _traceInitState :: !(State s)
       -- ^ Initial state in the trace
-      , _traceTrans :: [(State s, Signal s)]
+      , _traceTrans :: ![(State s, Signal s)]
       -- ^ Signals and resulting states observed in the trace. New elements are
       -- put in front of the list.
     }
@@ -74,20 +76,33 @@ lastState tr = case tr ^. traceTrans of
 
 data TraceOrder = NewestFirst | OldestFirst deriving (Eq)
 
-fromOldestFirst :: TraceOrder -> [a] -> [a]
-fromOldestFirst NewestFirst = reverse
-fromOldestFirst OldestFirst = id
+fromNewestFirst :: TraceOrder -> [a] -> [a]
+fromNewestFirst NewestFirst = id
+fromNewestFirst OldestFirst = reverse
 
 -- | Retrieve all the signals in the trace, in the order specified.
 traceSignals :: TraceOrder -> Trace s -> [Signal s]
-traceSignals order tr = fromOldestFirst order (tr ^.. traceTrans . traverse . _2)
+traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . _2)
 
 -- | Retrieve all the states in the trace, in the order specified.
 traceStates :: TraceOrder -> Trace s -> [State s]
-traceStates order tr = fromOldestFirst order (tr ^.. traceTrans . traverse . _1)
+traceStates order tr = fromNewestFirst order (xs ++ [x])
+  where
+    x = tr ^. traceInitState
+    xs = tr ^.. traceTrans . traverse . _1
 
 traceLength :: Trace s -> Int
 traceLength tr = tr ^. traceTrans . to length
+
+
+-- | Retrieve all the signals in the trace paired with the state prior to the
+-- application of the signal.
+--
+-- Note that the last state in the trace will not be returned, since there is
+-- no corresponding signal, i.e. the last state is not the pre-state of any
+-- signal in the trace.
+preStatesAndSignals :: TraceOrder -> Trace s -> [(State s, Signal s)]
+preStatesAndSignals order tr = zip (traceStates order tr) (traceSignals order tr)
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces

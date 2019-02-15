@@ -7,6 +7,7 @@ module Ledger.Delegation.Examples
 where
 
 import Data.Set (fromList, Set)
+import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
@@ -68,7 +69,7 @@ deleg =
     ]
   ]
   where
-    s :: Natural -> Slot
+    s :: Word64 -> Slot
     s = Slot
 
     k :: Natural -> VKey
@@ -77,10 +78,10 @@ deleg =
     gk :: Natural -> VKeyGenesis
     gk = VKeyGenesis . k
 
-    sc :: Natural -> SlotCount
+    sc :: Word64 -> SlotCount
     sc = SlotCount
 
-    e :: Natural -> Epoch
+    e :: Word64 -> Epoch
     e = Epoch
 
     dc :: VKeyGenesis -> VKey -> Epoch -> DCert

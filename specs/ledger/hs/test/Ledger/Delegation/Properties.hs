@@ -56,7 +56,7 @@ import Control.State.Transition.Generator
   )
 import Control.State.Transition.Trace
   ( Trace
-  , TraceOrder(NewestFirst)
+  , TraceOrder(OldestFirst)
   , lastState
   , traceEnv
   , traceSignals
@@ -176,7 +176,7 @@ dcertsAreTriggeredInTrace tr
     lastDms = st ^. delegationMap
 
     trExpectedDms
-      = expectedDms (env ^. slot) (env ^. liveness) (traceSignals NewestFirst tr)
+      = expectedDms (env ^. slot) (env ^. liveness) (traceSignals OldestFirst tr)
 
     (env, st) = lastState tr
 
@@ -211,9 +211,9 @@ expectedDms s d cs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
     activeCerts = concatMap _blockCerts activeBlocks
 
 minusSlotCount :: Slot -> SlotCount -> Slot
-minusSlotCount (Slot s) (SlotCount c) = case s `minusNaturalMaybe` c of
-  Nothing -> Slot 0
-  Just k  -> Slot k
+minusSlotCount (Slot s) (SlotCount c)
+  | s <= c = Slot 0
+  | c < s  = Slot $ s - c
 
 -- | An initial delegation scheduling environment to be used in the traces
 -- produced by the @DBLOCK@ transition system.

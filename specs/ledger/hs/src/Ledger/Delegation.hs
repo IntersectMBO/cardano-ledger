@@ -19,6 +19,7 @@ module Ledger.Delegation
   , _dwit
   , _dwho
   , _depoch
+  , mkDCert
   , delegator
   , delegate
   , dbody
@@ -145,6 +146,20 @@ data DCert = DCert
 instance HasTypeReps DCert
 
 makeLenses ''DCert
+
+mkDCert
+  :: VKeyGenesis
+  -> Sig VKeyGenesis
+  -> VKey
+  -> Epoch
+  -> DCert
+mkDCert vkg sigVkg vkd e
+  = DCert
+  { _dbody = (vkd, e)
+  , _dwit = sigVkg
+  , _dwho = (vkg, vkd)
+  , _depoch = e
+  }
 
 -- | Key that is delegating.
 delegator :: DCert -> VKeyGenesis

@@ -6,7 +6,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.))
+import Control.Lens ((^.), _1, _3, _5, Getter)
 import qualified Crypto.Hash
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
@@ -106,6 +106,26 @@ instance Embed BBODY CHAIN where
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
 genesisHash = Crypto.Hash.hash ("" :: ByteString)
+
+--------------------------------------------------------------------------------
+-- Chain environment getters.
+--------------------------------------------------------------------------------
+
+-- | Getter for the protocol parameters contained in the environment.
+pps :: Getter (Environment CHAIN) PParams
+pps = _3
+
+--------------------------------------------------------------------------------
+-- Chain state getters.
+--------------------------------------------------------------------------------
+
+-- | Getter for the epoch contained in the chain state.
+epoch :: Getter (State CHAIN) Epoch
+epoch = _1
+
+-- | Getter for the delegation interface state contained in the chain state.
+dis :: Getter (State CHAIN) DIState
+dis = _5
 
 --------------------------------------------------------------------------------
 -- Generators
