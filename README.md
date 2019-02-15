@@ -7,6 +7,54 @@ in the [`specs`](specs/) directory.
 
 [![Build status](https://badge.buildkite.com/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0.svg?branch=master)](https://buildkite.com/input-output-hk/cardano-chain)
 
+## Developing
+
+The `cardano-chain` library depends on other libraries of the `input-output-hk`
+organization, whose versions are pinned in the `stack.yaml` file, e.g.:
+
+```yaml
+extra-deps:
+  - git: https://github.com/input-output-hk/cardano-prelude
+    commit: 7f8544ae9e162b6664f07093227edb148f1c8a5b
+    subdirs:
+      - .
+      - test
+
+  - git: https://github.com/input-output-hk/cardano-chain
+    commit: 4d9eec080374179bf15bf9c4fca09cc7d73e5f53
+    subdirs:
+      - binary
+      - binary/test
+```
+
+Some of these extra dependencies, like `cardano-binary` above, have their
+source files in a sub-directory of the `cardano-chain` repository. When
+developing, sometimes it is necessary to modify not only `cardano-chain` but
+also one of these local dependencies. To avoid having to pin local libraries to
+a specific commit when developing, which allows us to test the changes in a
+more convenient manner, we recommend using a custom `stack` configuration file,
+`stack-local.yaml`, which specifies that the local dependencies are located in
+their corresponding sub-folders. For instance, the `extra-deps` field above,
+could be modified as follows (in the `stack-local.yaml` file):
+
+```yaml
+extra-deps
+  - ../cardano-prelude # Assuming `cardano-prelude` was checked out one directory above.
+  - ../cardano-prelude/test
+  - binary
+  - binary/test
+```
+
+We do not include such `stack-local.yaml` file here, since it depends on the
+particular needs of the work being done. Such file would be a copy of the
+`stack.yaml` file, with the necessary adaptation. However, we do include a
+`local-stack.sh` file, which can be used with the same commands and flags that
+`stack` supports, e.g.:
+
+```sh
+./local-stack.sh build
+```
+
 
 ## Formatting
 
