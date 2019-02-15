@@ -53,3 +53,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 # gitinfo2 auxiliary file
 gitHeadLocal.gin
+
+# Local development
+stack-local.yaml
