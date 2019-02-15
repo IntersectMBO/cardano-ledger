@@ -387,7 +387,7 @@ cause a soft-fork we might use the alt version for that purpose.
         \right)
       }
       &
-      (\var{an}, \var{av}) = \upSwVer{up} & \var{an} \mapsto \var{av} \in \var{avs}
+      (\var{an}, \var{av}) = \upSwVer{up} & \var{an} \mapsto (\var{av}, \_) \in \var{avs}
     }
     {
       {
@@ -996,7 +996,7 @@ blocks. Some clarifications are in order:
       \begin{array}{r@{~\in~}lr}
         \var{fads} & \seqof{(\Slot \times (\ProtVer \times \PPMMap))}
         & \text{future protocol-version adoptions}\\
-        \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
+        \var{bvs} & \powerset{(\ProtVer \times \VKey)}
         & \text{endorsement-key pairs}
       \end{array}\right)
   \end{align*}
@@ -1208,7 +1208,6 @@ rule by $\var{bv}$:
           k\\
           s_n\\
           (\var{pv}, \var{pps})\\
-          \var{dms}\\
           \var{cps}\\
           \var{rpus}
         \end{array}

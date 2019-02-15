@@ -94,7 +94,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --   We use this newtype to distinguish between a cardinal slot and a relative
 --   period of slots.
 newtype SlotCount = SlotCount Word64
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Num, Show)
 
 -- | Add a slot count to a slot.
 addSlot :: Slot -> SlotCount -> Slot
@@ -114,13 +114,20 @@ minusSlot (SlotCount m) (Slot n)
 
 -- |Domain restriction
 --
-(◁) :: Ord a => Set a -> Map a b -> Map a b
+(◁), (◃) :: Ord a => Set a -> Map a b -> Map a b
 s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
+s ◃ r = s ◁ r
 
 -- |Domain exclusion
 --
 (⋪) :: Ord a => Set a -> Map a b -> Map a b
 s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+
+
+-- | Range restriction
+--
+(▹) :: Ord b => Map a b -> Set b -> Map a b
+r ▹ s = Map.filter (flip Set.member s) r
 
 -- | Union Override
 (⨃) :: Ord a => Map a b -> Map a b -> Map a b
