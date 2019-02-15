@@ -15,7 +15,6 @@ import Control.Lens ((^.), makeLenses, (&), (.~), view)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Natural (minusNaturalMaybe)
 import Hedgehog
   ( MonadTest
   , Property
@@ -212,8 +211,8 @@ expectedDms s d cs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
 
 minusSlotCount :: Slot -> SlotCount -> Slot
 minusSlotCount (Slot s) (SlotCount c)
-  | s <= c = Slot 0
-  | c < s  = Slot $ s - c
+  | s <= c    = Slot 0
+  | otherwise = Slot $ s - c
 
 -- | An initial delegation scheduling environment to be used in the traces
 -- produced by the @DBLOCK@ transition system.

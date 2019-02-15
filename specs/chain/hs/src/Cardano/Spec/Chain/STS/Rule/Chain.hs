@@ -3,10 +3,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.), _1, _3, _5, Getter)
+import Control.Lens ((^.), _1, _3, _5, Getting)
 import qualified Crypto.Hash
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
@@ -112,20 +113,44 @@ genesisHash = Crypto.Hash.hash ("" :: ByteString)
 --------------------------------------------------------------------------------
 
 -- | Getter for the protocol parameters contained in the environment.
-pps :: Getter (Environment CHAIN) PParams
-pps = _3
+--
+-- We want to use the getter with lens operations such as '(^.)', however we do
+-- not want the getter to be able to modify the environment using lens
+-- operators such as `.~`.
+--
+-- The type of '(^.)', which is just `view` with the arguments flipped, is:
+--
+-- (^.) :: s -> Getting a s a -> a
+--
+-- Hence the type we gave to 'getPps'.
+--
+-- We could have used:
+--
+-- > Getter (Environment CHAIN) PParams
+--
+-- which is equivalent to:
+--
+-- > forall f . (Contravariant f, Functor f)
+--   => (PParams -> f PParams) -> (Environment CHAIN) -> f (Environment CHAIN)
+--
+-- However @Contravariant f@ is a redundant constraint, and GHC will give a warning.
+--
+-- The same remark applies to the other getters defined in this module.
+--
+getPps :: Getting PParams (Environment CHAIN) PParams
+getPps = _3
 
 --------------------------------------------------------------------------------
 -- Chain state getters.
 --------------------------------------------------------------------------------
 
 -- | Getter for the epoch contained in the chain state.
-epoch :: Getter (State CHAIN) Epoch
-epoch = _1
+getEpoch :: Getting Epoch (State CHAIN) Epoch
+getEpoch = _1
 
 -- | Getter for the delegation interface state contained in the chain state.
-dis :: Getter (State CHAIN) DIState
-dis = _5
+getDis :: Getting DIState (State CHAIN) DIState
+getDis = _5
 
 --------------------------------------------------------------------------------
 -- Generators

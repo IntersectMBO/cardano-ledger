@@ -11,7 +11,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import GHC.Natural (minusNaturalMaybe)
 import Numeric.Natural (Natural)
 
 import Data.AbstractSize
@@ -87,7 +86,7 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 newtype Epoch = Epoch Word64
   deriving (Eq, Ord, Show, HasTypeReps)
 
-newtype Slot = Slot { getValue :: Word64 }
+newtype Slot = Slot { unSlot :: Word64 }
   deriving (Eq, Ord, Show, HasTypeReps)
 
 -- | A number of slots.
@@ -106,8 +105,8 @@ addSlot (Slot n) (SlotCount m) = Slot $ m + n
 --   This is bounded below by 0.
 minusSlot :: Slot -> SlotCount -> Slot
 minusSlot (Slot n) (SlotCount m)
-  | m <= n = Slot 0
-  | n < m  = Slot $ m - n
+  | m <= n    = Slot 0
+  | otherwise = Slot $ m - n
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
