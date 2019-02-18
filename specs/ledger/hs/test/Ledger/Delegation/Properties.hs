@@ -15,7 +15,6 @@ import Control.Lens ((^.), makeLenses, (&), (.~), view)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import GHC.Natural (minusNaturalMaybe)
 import Hedgehog
   ( MonadTest
   , Property
@@ -56,7 +55,7 @@ import Control.State.Transition.Generator
   )
 import Control.State.Transition.Trace
   ( Trace
-  , TraceOrder(NewestFirst)
+  , TraceOrder(OldestFirst)
   , lastState
   , traceEnv
   , traceSignals
@@ -176,7 +175,7 @@ dcertsAreTriggeredInTrace tr
     lastDms = st ^. delegationMap
 
     trExpectedDms
-      = expectedDms (env ^. slot) (env ^. liveness) (traceSignals NewestFirst tr)
+      = expectedDms (env ^. slot) (env ^. liveness) (traceSignals OldestFirst tr)
 
     (env, st) = lastState tr
 
@@ -211,9 +210,9 @@ expectedDms s d cs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
     activeCerts = concatMap _blockCerts activeBlocks
 
 minusSlotCount :: Slot -> SlotCount -> Slot
-minusSlotCount (Slot s) (SlotCount c) = case s `minusNaturalMaybe` c of
-  Nothing -> Slot 0
-  Just k  -> Slot k
+minusSlotCount (Slot s) (SlotCount c)
+  | s <= c    = Slot 0
+  | otherwise = Slot $ s - c
 
 -- | An initial delegation scheduling environment to be used in the traces
 -- produced by the @DBLOCK@ transition system.
