@@ -37,8 +37,7 @@ executable nonInt
       -O2
     build-depends:
       base,
-      non-integer,
-      FixedPoint-simple
+      non-integer
 
 test-suite non-integer-test
     type:                exitcode-stdio-1.0
@@ -57,5 +56,4 @@ test-suite non-integer-test
     build-depends:
       base,
       non-integer,
-      QuickCheck,
-      FixedPoint-simple
+      QuickCheck
