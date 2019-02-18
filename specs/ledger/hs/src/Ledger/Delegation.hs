@@ -435,7 +435,7 @@ instance STS DELEG where
     ]
     where
       aboutSlot :: Slot -> SlotCount -> (Slot -> Bool)
-      aboutSlot a b c = c >= (a `minusSlot` b) && c <= (a `addSlot` b)
+      aboutSlot a b c = c >= (b `minusSlot` a) && c <= (a `addSlot` b)
 
 instance Embed SDELEGS DELEG where
   wrapFailed = SDelegSFailure

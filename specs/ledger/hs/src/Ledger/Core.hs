@@ -100,11 +100,11 @@ newtype SlotCount = SlotCount Word64
 addSlot :: Slot -> SlotCount -> Slot
 addSlot (Slot n) (SlotCount m) = Slot $ m + n
 
--- | Subtract a slot count from a slot.
+-- | Subtract a slot from a slot count.
 --
 --   This is bounded below by 0.
-minusSlot :: Slot -> SlotCount -> Slot
-minusSlot (Slot n) (SlotCount m)
+minusSlot :: SlotCount -> Slot -> Slot
+minusSlot (SlotCount m) (Slot n)
   | m <= n    = Slot 0
   | otherwise = Slot $ m - n
 
