@@ -109,6 +109,8 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
 
 import Control.State.Transition
 
+import           NonIntegral ((***))
+
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
 
@@ -653,6 +655,9 @@ movingAvg pc hk n expectedSlots (Avgs averages) =
         Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
           where alpha = intervalValue $ pc ^. movingAvgWeight
 
+precision :: Double
+precision = 10-16
+
 -- | Calculate pool reward
 poolRew ::
      PParams
@@ -667,7 +672,7 @@ poolRew pc hk n expectedSlots averages (Coin maxP) =
   where
     avg = pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
-    e = fromRational avg ** fromRational gamma :: Double
+    e = approxRational (fromRational avg *** fromRational gamma) precision
 
 -- | Calculate pool leader reward
 leaderRew :: Coin -> PoolParams -> StakeShare -> StakeShare -> Coin
