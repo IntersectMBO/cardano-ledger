@@ -43,7 +43,8 @@ library
     text,
     small-steps,
     microlens,
-    microlens-th
+    microlens-th,
+    non-integer
 
 test-suite delegation-test
     type:                exitcode-stdio-1.0
