@@ -22,6 +22,6 @@ slotsIncrease = property $ forAll trace >>= slotsIncreaseInTrace
 
 slotsIncreaseInTrace :: MonadTest m => Trace CHAIN -> m ()
 slotsIncreaseInTrace tr = assert $ slots == sortedSlots && nub slots == slots
-  where blocks = traceSignals NewestFirst tr
+  where blocks = traceSignals OldestFirst tr
         slots = blocks ^.. traverse . bHeader . bSlot
         sortedSlots = sort slots

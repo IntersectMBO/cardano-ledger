@@ -17,6 +17,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq, (<|), (><), empty)
 import Data.Typeable (TypeRep, Typeable, typeOf)
+import Data.Word (Word64)
 import GHC.Generics
   ( (:*:)((:*:))
   , (:+:)(L1, R1)
@@ -146,4 +147,7 @@ instance HasTypeReps Double where
   typeReps x = [typeOf x]
 
 instance HasTypeReps Natural where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Word64 where
   typeReps x = [typeOf x]
