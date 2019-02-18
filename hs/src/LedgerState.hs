@@ -67,7 +67,7 @@ module LedgerState
   , decayedTx
   -- epoch boundary
   , movingAvg
-  , poolRew
+  , poolRewards
   , leaderRew
   , memberRew
   , rewardOnePool
@@ -659,7 +659,7 @@ precision :: Double
 precision = 10-16
 
 -- | Calculate pool reward
-poolRew ::
+poolRewards ::
      PParams
   -> HashKey
   -> Natural
@@ -667,7 +667,7 @@ poolRew ::
   -> Avgs
   -> Coin
   -> Coin
-poolRew pc hk n expectedSlots averages (Coin maxP) =
+poolRewards pc hk n expectedSlots averages (Coin maxP) =
   floor $ e * fromIntegral maxP
   where
     avg = pc ^. movingAvgExp
@@ -718,7 +718,7 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    poolR = poolRew pp poolHK n expectedSlots averages maxP
+    poolR = poolRewards pp poolHK n expectedSlots averages maxP
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
