@@ -1,6 +1,7 @@
 # Changelog
 
-## [Unreleased]
+## 2019-02-20
+- Calculating the stake distribution uses relations.
 - The prose now makes heavy use of bullet point lists that follow the order in the tables.
 - Helper functions have been separated and labeled as such.
 - The "Rewards Ledger Update" section was removed, and the logic was placed elsewhere.
@@ -45,7 +46,7 @@ It represents the upcomming epoch number.
 - This changelog was added.
 
 
-## [1.1] - 2019-01-03
+## 2019-01-03
 This update was cosmetic. 
 
 - Descriptions were added to the reward calculations.
@@ -54,5 +55,5 @@ This update was cosmetic.
 - Git references where added to the title page.
 - Color and bolding was added to the state transitions.
 
-## [1.0] - 2018-12-21
+## 2018-12-21
 The initial formal specification of the ledger was released.
