@@ -122,6 +122,11 @@ inMap k v m = case Map.lookup k m of
   _ -> False
 
 -- | Invert a map
+--
+--   Examples:
+--
+--   >>> invertMap (Map.fromList [('a', 1 :: Int), ('b', 2), ('c', 3), ('d', 1)])
+--   fromList [(1,fromList "ad"),(2,fromList "b"),(3,fromList "c")]
 invertMap
   :: (Ord k, Ord v)
   => Map k v
@@ -133,6 +138,11 @@ invertMap
 
 -- | Invert a map which we assert to be a bijection.
 --   If this map is not a bijection, the behaviour is not guaranteed.
+--
+--   Examples:
+--
+--   >>> invertBijection (Map.fromList [('a', 1 :: Int), ('b', 2), ('c', 3)])
+--   fromList [(1,'a'),(2,'b'),(3,'c')]
 invertBijection
   :: Ord v
   => Map k v
