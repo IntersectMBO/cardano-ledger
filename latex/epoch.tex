@@ -231,76 +231,51 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
   \label{fig:epoch-defs}
 \end{figure}
 
-Figure~\ref{fig:functions:helper-stake-distribution} defines some relations and a helper
-function that will be used for the stake distribution calculation.
-\begin{itemize}
-  \item $\fun{utxoRel}$ relates addresses to coin values, as given by the UTxO.
-  \item $\fun{ptrRel}$ relates hashkeys to pointer addresses, according to the pointer mapping.
-  \item $\fun{baseRel}$ is just the function $\fun{stakeHK_b}$ viewed as a relation.
-  \item $\fun{rewRel}$ is just the function $\fun{stakeHK_r}$ viewed as a relation.
-  \item $\fun{hkRel}$ is the union of the above three relations.
-  \item $\fun{aggregate_{+}}$ adds together all the coin held by a given hashkey.
-\end{itemize}
-
-%%
-%% Figure - Helper Functions for Stake Distribution
-%%
-\begin{figure}[hbt]
-  %
-  \emph{UTxO relation on: } $\UTxO \times \Addr \times \Coin \times \TxIn$
-  %
-  \begin{align*}
-      & (u, a, c, i) \in \fun{utxoRel} \iff i\mapsto(a, c)\in\var{u} \\
-  \end{align*}
-  %
-  \emph{HashKey relations on: }
-    $(\HashKey_{stake} \mapsto \AddrP) \times \HashKey_{stake} \times \Addr$
-    \begin{equation*}
-      \begin{array}{r@{~\in~}c@{\iff}ll}
-        (ptrs,~hk,~a) & \fun{ptrRel} & \fun{addrPtr}~a\mapsto hk\in\var{ptrs} \\
-        (\wcard,~hk,~a) & \fun{baseRel} & \fun{stakeHK_b}~a=hk \\
-        (\wcard,~hk,~a) & \fun{rewRel} & \fun{stakeHK_r}~a=hk \\
-      \end{array}
-    \end{equation*}
-    \begin{equation*}
-      \fun{hkRel} = \fun{baseRel}\cup\fun{ptrRel}\cup\fun{rewRel}
-    \end{equation*}
-
-  \emph{Aggregation}
-  %
-  \begin{align*}
-      & \fun{aggregate_{+}} \in \powerset{(\HashKey \times (\Coin \times \TxIn))}
-        \to (\HashKey\mapsto\Coin) \\
-      & \fun{aggregate_{+}}~\var{R} = \left\{hk\mapsto \sum_{(hk,~c,~\wcard)\in\var{R}}c
-          ~\mid~hk\in\dom\var{R}\right\} \\
-  \end{align*}
-  \caption{Stake Distribution Relations and Helper Functions}
-  \label{fig:functions:helper-stake-distribution}
-\end{figure}
-
 The stake distribution calculation is given in Figure~\ref{fig:functions:stake-distribution}.
+
 \begin{itemize}
-  \item $\fun{stakeDistr}$ uses the relations in
-    Figure~\ref{fig:functions:helper-stake-distribution} to relate each hashkey with the coins
-    under its control, which is then summed.  Keys that are not both registered and delegated
-    are filtered out.
+  \item $\fun{aggregate_{+}}$ takes a relation on $A\times B$, where $B$ is any monoid,
+    and returns a map from each $a\in A$ to the sum of all $b\in B$ such that $(a, b)\in B$.
+  \item $\fun{stakeDistr}$ uses the $\fun{aggregate_{+}}$ function and several relations to
+    compute the stake distribution, mapping each hashkey to the total coin under its control.
+    Keys that are not both registered and delegated are filtered out.
+    The relation passed to $\fun{aggregate_{+}}$ is made up of:
+    \begin{itemize}
+      \item $\fun{stakeHK_b}^{-1}$, relating hashkeys to (base) addresses
+      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating hashkeys to (pointer)
+        addresses
+      \item $\range{utxo}$, relating addresses to coins
+      \item $\fun{stakeHK_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
+    \end{itemize}
+    The notation for relations is explained in Section~\ref{sec:notation-shelley}.
 \end{itemize}
 
 %%
 %% Figure Functions for Stake Distribution
 %%
 \begin{figure}[htb]
-  \emph{Stake Distribution}
+  \emph{Aggregation (for a monoid B)}
+  %
+  \begin{align*}
+      & \fun{aggregate_{+}} \in \powerset{(A \times B)} \to (A\mapsto B) \\
+      & \fun{aggregate_{+}}~\var{R} = \left\{a\mapsto \sum_{(a,b)\in\var{R}}b
+          ~\mid~a\in\dom\var{R}\right\} \\
+  \end{align*}
+  %
+  \emph{Stake Distribution (using functions and maps as relations)}
   %
   \begin{align*}
       & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Stake \\
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
-          (\dom{\var{activeDelegs}})\restrictdom\var{stake}\\
+      (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
       & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs}) = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard) = \var{pstate} \\
-      & ~~~~ \var{stake} = \fun{aggregate_{+}}~
-        \left(\fun{utxoRel}~\var{utxo}\right)\circ\left(\fun{hkRel}~\var{ptrs}\right) \\
+      & ~~~~ \var{stakeRelation} = \left(
+        \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
+        \circ\left(\range{\var{utxo}}\right)
+        \right)
+        \cup \left(\fun{stakeHK_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
                (\dom{stkeys}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
   \end{align*}
