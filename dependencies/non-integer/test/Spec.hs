@@ -302,41 +302,41 @@ main = do
   putStrLn "-- Test of 32 Decimal Digits Fixed Point --"
   putStrLn "-------------------------------------------"
   putStrLn "property exp is monotonic"
-  quickCheck (withMaxSuccess 10000 $ prop_FPMonotonic (const True) exp')
+  quickCheck (withMaxSuccess 1000 $ prop_FPMonotonic (const True) exp')
   putStrLn "property ln is monotonic"
-  quickCheck (withMaxSuccess 10000 $ prop_FPMonotonic (> 0) ln')
+  quickCheck (withMaxSuccess 1000 $ prop_FPMonotonic (> 0) ln')
   putStrLn "property p,q in (0,1) -> p^q in (0,1)"
-  quickCheck (withMaxSuccess 10000 prop_FPExpUnitInterval)
+  quickCheck (withMaxSuccess 1000 prop_FPExpUnitInterval)
   putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 10000 prop_FPIdemPotent)
+  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent)
   putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 10000 prop_FPIdemPotent')
+  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent')
   putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
-  quickCheck (withMaxSuccess 10000 prop_FPExpLaw)
+  quickCheck (withMaxSuccess 1000 prop_FPExpLaw)
   putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
-  quickCheck (withMaxSuccess 10000 prop_FPExpLaw')
+  quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
-  quickCheck (withMaxSuccess 10000 prop_FPlnLaw)
+  quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
   putStrLn ""
 
   putStrLn "------------------------------"
   putStrLn "-- Test of Rational Numbers --"
   putStrLn "------------------------------"
   putStrLn "property exp is monotonic"
-  quickCheck (withMaxSuccess 100 $ prop_Monotonic (const True) exp')
+  quickCheck (withMaxSuccess 10 $ prop_Monotonic (const True) exp')
   putStrLn "property ln is monotonic"
-  quickCheck (withMaxSuccess 100 $ prop_Monotonic (> 0) ln')
+  quickCheck (withMaxSuccess 10 $ prop_Monotonic (> 0) ln')
   putStrLn "property p,q in (0,1) -> p^q in (0,1)"
-  quickCheck (withMaxSuccess 100 prop_ExpUnitInterval)
+  quickCheck (withMaxSuccess 10 prop_ExpUnitInterval)
   putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 100 prop_IdemPotent)
+  quickCheck (withMaxSuccess 10 prop_IdemPotent)
   putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 100 prop_IdemPotent')
+  quickCheck (withMaxSuccess 10 prop_IdemPotent')
   putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   putStrLn "skipped, takes too long"
   -- quickCheck (withMaxSuccess 5 prop_ExpLaw)
   putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
-  quickCheck (withMaxSuccess 100 prop_ExpLaw')
+  quickCheck (withMaxSuccess 10 prop_ExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   putStrLn "skipped, takes too long"
   -- quickCheck (withMaxSuccess 100 prop_lnLaw)
