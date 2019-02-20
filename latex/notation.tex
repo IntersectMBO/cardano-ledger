@@ -23,6 +23,17 @@ The transition system is explained in \cite{small_step_semantics}.
     $a \mapsto b \in m$ is equivalent to $m~ a = b$.
   \item[Map Operations] Figure~\ref{fig:notation:nonstandard}
     describes some non-standard map operations.
+  \item[Relations] A relation on $A\times B$ is a subset of $A\times B$.
+    Both maps and functions can be thought of as relations.
+    A function $f:A\to B$ is a relation consisting of pairs $(a, f(a))$ such that $a\in A$.
+    A map $m: A\mapsto B$ is a relation consisting of pairs $(a, b)$ such that
+    $a\mapsto b \in m$.
+    Given a relation $R$ on $A\times B$, we define the inverse relation $R^{-1}$ to be
+    all pairs $(b, a)$ such that $(a, b)\in R$. Similarly, given a function $f:A\to B$ we
+    define inverse relation $f^{-1}$ to consist of all pairs $(f(a), a)$.
+    Finally, given two relations $R\subseteq A\times B$ and $S\subseteq B\times C$,
+    we define the compostion $R\circ S$ to be all pairs $(a, c)$ such that
+    $(a, b)\in R$ and $(b, c)\in S$ for some $b\in B$.
 
 \end{description}
 
