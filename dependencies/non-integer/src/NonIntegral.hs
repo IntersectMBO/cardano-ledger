@@ -107,7 +107,8 @@ cf maxN n epsilon lastVal aNm2 bNm2 aNm1 bNm1 (an:as) (bn:bs)
 
 -- | Simple way to find integer powers that bound x. At every step the bounds
 -- are doubled. Assumption x > 0, the calculated bound is `factor^l <= x <=
--- factor^u`.
+-- factor^u`, initially x' is assumed to be `1/factor` and x'' `factor`, l = -1
+-- and u = 1.
 bound ::
      (Fractional a, Ord a)
   => a
@@ -119,7 +120,7 @@ bound ::
   -> (Integer, Integer)
 bound factor x x' x'' l u
   | x' <= x && x'' >= x = (l, u)
-  | otherwise = bound factor x (x' / factor) (x'' * factor) (l - 1) (u + 1)
+  | otherwise = bound factor x (x' * x') (x'' * x'') (2 * l) (2 * u)
 
 -- | Bisect bounds to find the smallest integer power such that
 -- `factor^n<=x<factor^(n+1)`.
