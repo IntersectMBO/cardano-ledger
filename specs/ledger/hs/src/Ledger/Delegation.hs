@@ -279,7 +279,7 @@ instance STS SDELEG where
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` (env ^. liveness)
                                       , cert ^. dwho
                                       )]
-          & keyEpochDelegations %~ Set.insert (env ^. epoch, cert ^. dwho . _1)
+          & keyEpochDelegations %~ Set.insert (epochDelegator cert)
     ]
     where
       verify :: DCert -> Bool
@@ -287,7 +287,11 @@ instance STS SDELEG where
       -- Check that this delegator hasn't already delegated this epoch
       notAlreadyDelegated :: DSState -> DCert -> Bool
       notAlreadyDelegated st cert =
-        Set.notMember (cert ^. depoch, cert ^. dwho . _1) (st ^. keyEpochDelegations)
+        Set.notMember (epochDelegator cert) (st ^. keyEpochDelegations)
+
+      epochDelegator :: DCert -> (Epoch, VKeyGenesis)
+      epochDelegator cert = (cert ^. depoch, cert ^. dwho . _1)
+
       -- Check whether there is a scheduled delegation from this key
       notAlreadyScheduled :: DSEnv -> DSState -> DCert -> Bool
       notAlreadyScheduled env st cert =

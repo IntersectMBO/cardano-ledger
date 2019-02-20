@@ -148,9 +148,9 @@ instance HasTrace CHAIN where
     -- between spec and implementation where @w@ and @k@ are the same.
     w <- Gen.integral (Range.linear 1 10)
 
-    -- TODO: The delegation liveness parameter is equal to `k` as well (and 'k=w')
+    -- TODO: The delegation liveness parameter is equal to `2 * k`.
     -- We should adapt the specs to reflect this.
-    d <- pure $! SlotCount $ fromIntegral w
+    d <- pure $! SlotCount $ 2 * fromIntegral w
 
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
@@ -173,7 +173,7 @@ instance HasTrace CHAIN where
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
           }
-    initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
+    initGKeys <- Gen.set (Range.constant 1 7) vkgenesisGen -- TODO: revert this to 70
     -- If we want to generate large traces, we need to set up the value of the
     -- "clock-slot" to a sufficiently large value.
     clockSlot <- Slot <$>
