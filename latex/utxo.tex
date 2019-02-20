@@ -242,17 +242,6 @@ generate the correct outputs to include in the outputs list of $\var{tx}$ such
 that applying this transaction results in a
 valid ledger update adding correct amounts of coin to the right addresses.
 
-The majority of funds moved by a transaction usually come from unspent outputs
-(i.e.~the $(txid, ix)$ pairs in the inputs of a transaction). The claiming of
-refunds and rewards works slightly differently. These get included in the outputs list
-only. That is, they do not have any index-matched inputs in the $inputs$ list.
-For each requested refund (or withdrawal), the
-wallet generates a brand-new index $ix$, then indicates the $(addr,coin)$ value
-pairing the address to which the refund is going and the refund amount.
-So, this output $(ix \mapsto (addr,coin))$ gets added to $outputs$ of $tx$,
-and it follows that $\fun{outs}~{tx}$ is a UTxO that contains the entry
-$(\fun{txid}~{tx}, ix) \mapsto (addr,coin)$.
-
 The approach of including refunds and rewards directly in the $outputs$ gives
 great flexibility to the management of the coin value obtained from these
 accounts, i.e.~it can be directed to any address. However, it means there is no
@@ -523,7 +512,7 @@ This consists of:
 \begin{itemize}
   \item payment keys for outputs being spent
   \item stake keys for reward withdrawals
-  \item stake keys for delegation certificates
+  \item stake keys for delegation certificates (all five types)
   \item stake keys for the pool owners in a pool registration certificate
 \end{itemize}
 

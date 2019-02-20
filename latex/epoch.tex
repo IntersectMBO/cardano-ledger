@@ -16,24 +16,23 @@
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
 \newcommand{\Stake}{\type{Stake}}
-\newcommand{\PooledStake}{\type{PooledStake}}
 \newcommand{\Avgs}{\type{Avgs}}
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
-\newcommand{\reward}[7]{\fun{reward}
-  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}}
+\newcommand{\reward}[8]{\fun{reward}
+  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}~ \var{#8}}
 \newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
   ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\poolStake}[4]{\fun{poolStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
-\newcommand{\poolDistr}[3]{\fun{poolDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\poolStake}[3]{\fun{poolStake}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\lReward}[4]{\fun{r_{leader}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[6]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
-\newcommand{\updateAvgs}[4]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\updateAvgs}[5]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 
 This chapter introduces two main transition systems.
 Neither transition is triggered by a transaction, and in fact have no signal.
@@ -112,7 +111,7 @@ The two main transition systems in this section are:
 \subsection{Helper Functions}
 \label{sec:stake-dist-helpers}
 
-Figure~\ref{fig:funcs:epoch-helper} defines three helper functions needed
+Figure~\ref{fig:funcs:epoch-helper} defines four helper functions needed
 throughout the rest of the section.
 
 \begin{itemize}
@@ -123,6 +122,7 @@ throughout the rest of the section.
     Note that this calculation takes a slot number corresponding to the epoch boundary slot
     when the calculation is performed.  The returned map maps pool operator hashkeys to the
     refunds, which will ultimately be returned to the registered reward account.
+  \item The function $\fun{poolStake}$ filters the stake distribution to one stake pool.
   \item The function $\fun{updateAvgs}$ calculates the new performance moving averages.
 \end{itemize}
 
@@ -163,27 +163,31 @@ throughout the rest of the section.
           \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp} \\
   \end{align*}
 
+  \emph{Filter Stake to one Pool}
+  \begin{align*}
+      & \fun{poolStake} \in \HashKey_{pool} \to (\HashKey_{stake} \mapsto \HashKey_{pool})
+        \to \Stake \to \Stake \\
+      & \poolStake{hk}{delegs}{stake} =
+        \dom{(\var{delegs}\restrictdom\{hk\})\restrictrange\var{stake}}
+  \end{align*}
+
   \emph{Update Moving Averages}
   \begin{align*}
       & \fun{updateAvgs} \in \PParams \to \Avgs \to \BlocksMade \to
-          (\HashKey_{pool}\mapsto \Stake) \to \Avgs \\
-      & \updateAvgs{pp}{avgs}{blocks}{pooledStake} = \\
+          (\HashKey_{stake}\mapsto \HashKey_{pool}) \to \Stake \to \Avgs \\
+      & \updateAvgs{pp}{avgs}{blocks}{delegs}{stake} = \\
       & ~~~ \left\{hk\mapsto \movingAvg{pp}{hk}{n}{(\fun{expected}~hk)}{avgs}
             \mid
             hk\mapsto n\in\var{blocks}
             \right\} \\
       & \where \\
-      & ~~~~~ \var{tot} = \sum_{\_\mapsto st\in \var{pooledStake}}
-                          \left(\sum_{\wcard\mapsto c\in\var{st}}c\right) \\
+      & ~~~~~ \var{tot} = \sum_{\_\mapsto c\in \var{stake}}c \\
       & ~~~~~ \fun{expected}~\var{hk} =
-                \begin{cases}
                   \left(\sum\limits_{
-                    \wcard\mapsto c\in\var{st}}c\right)\cdot\SlotsPerEpoch / tot
-                  &
-                  \text{if } hk\mapsto\var{st} \in pooledStake \\
-                  0 & \text{otherwise}
-                \end{cases}
+                    \wcard\mapsto c\in\var{(\poolStake{hk}{delegs}{stake}})}c
+                  \right) \cdot\SlotsPerEpoch / tot
   \end{align*}
+
   \caption{Helper Functions used in Rewards and Epoch Boundary}
   \label{fig:funcs:epoch-helper}
 \end{figure}
@@ -198,7 +202,6 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
     during an epoch.
   \item $\type{Stake}$ represents the amount of stake (in $\type{Coin}$) controlled by each
     stake pool.
-  \item $\type{PooledStake}$ groups $\type{Stake}$ by the stake pool operators hashkey.
   \item $\type{Avgs}$ represents the performance moving averages of the stake pools.
 \end{itemize}
 
@@ -218,10 +221,6 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
       & \Stake
       & \HashKey_{stake} \mapsto \Coin
       & \text{stake} \\
-      \var{pstake}
-      & \PooledStake
-      & \HashKey_{pool} \mapsto \Stake
-      & \text{pooled stake} \\
       \var{avgs}
       & \Avgs
       & \HashKey_{pool} \mapsto \Rnn
@@ -232,108 +231,56 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
   \label{fig:epoch-defs}
 \end{figure}
 
-Figure~\ref{fig:functions:helper-stake-distribution} defines some helper functions:
-\begin{itemize}
-  \item $\fun{consolidate}$ transforms UTxO into a mapping from addresses to the total amount
-    of $\type{Coin}$ controlled by each address.
-  \item $\fun{baseStake}$ transforms the consolidated stake, as computed above by
-    $\fun{consolidated}$, into a mapping from the base address stake hashkeys to the coin value.
-  \item $\fun{ptrStake}$ transforms the consolidated stake, as computed above by
-    $\fun{consolidated}$, into a mapping from the pointer address stake hashkeys to the coin value.
-    It uses the certificate pointers to create this mapping.
-  \item $\fun{rewardStake}$ transforms the reward accounts into a mapping from hashkeys to coin
-    values.
-  \item $\fun{poolStake}$ filters all stake in the system into just the stake delegated to a given
-    stake pool operator hashkey.  Additionally, it combines all of the stake controlled by the
-    pool owners into a single key-value pair mapping the pool operator's hashkey to the
-    owner total.
-\end{itemize}
+The stake distribution calculation is given in Figure~\ref{fig:functions:stake-distribution}.
 
-%%
-%% Figure - Helper Functions for Stake Distribution
-%%
-\begin{figure}[hbt]
-  \emph{Stake Distribution helper functions}
-  %
-  \begin{align*}
-      & \fun{consolidate} \in \UTxO \to (\Addr \mapsto \Coin) \\
-      & \fun{consolidate}~{utxo} =
-        \left\{a \mapsto \left(\sum_{\wcard\mapsto(a,c)\in\var{utxo}}c\right)
-        ~\Big\vert~
-        \wcard\mapsto(a,~\wcard)\in\var{utxo} \right\} \\
-      \nextdef
-      & \fun{baseStake} \in (\Addr\mapsto\Coin) \to \Stake \\
-      & \fun{baseStake}~{vals} =
-          \{\fun{stakeHK_b}~{addr}\mapsto c \mid a\mapsto c\in\var{vals},~a\in\AddrB\} \\
-      \nextdef
-      & \fun{ptrStake} \in (\Addr\mapsto\Coin) \to (\HashKey\mapsto\Ptr) \to \Stake \\
-      & \fun{ptrStake}~{vals}~{ptrs} =
-          \{\var{hk}\mapsto c
-          \mid a\mapsto
-          c\in~\var{vals},~a\in\AddrP,~(\fun{addrPtr}~a) \mapsto hk\in\var{ptrs}\} \\
-      \nextdef
-      & \fun{rewardStake} \in (\AddrRWD\mapsto\Coin) \to \Stake \\
-      & \fun{rewardStake}~{rewards} =
-          \{\fun{stakeHK_r}~{a}\mapsto c \mid a\mapsto c\in\var{rewards}\} \\
-      \nextdef
-      & \fun{poolStake} \in \HashKey \to \powerset{\HashKey} \to (\HashKey \mapsto \HashKey)
-          \to \Stake \to \Stake \\
-      & \poolStake{operator}{owners}{delegations}{stake} = \\
-      & ~~ \left\{hk\mapsto c \mid hk\notin\var{owners},~hk\mapsto c\in\var{poolStake} \right\}
-           \cup
-           \left\{ \var{operator}\mapsto
-             \sum_{\substack{hk\in\var{owners} \\ hk\mapsto c\in\var{poolStake}}} c\right\} \\
-      & ~~ \where \\
-      & ~~~~~~ \var{poolStake} =
-                 \{hk \mapsto c
-                 \mid
-                 hk \mapsto c\in\var{stake},~hk\mapsto\var{operator}\in\var{delegations} \} \\
-  \end{align*}
-  \caption{Helper Functions used in Stake Distribution}
-  \label{fig:functions:helper-stake-distribution}
-\end{figure}
-
-The stake distribution calculations are given in Figure~\ref{fig:functions:stake-distribution}.
 \begin{itemize}
-  \item $\fun{stakeDistr}$ combines the stake from base addresses, pointer addresses, and reward
-    accounts into a single mapping of hashkeys to coin, filtering out keys that are not both
-    registered and delegated.
-  \item $\fun{poolDistr}$ groups the stake distribution calculated by $\fun{stakeDistr}$
-    by the stake pool operators.
+  \item $\fun{aggregate_{+}}$ takes a relation on $A\times B$, where $B$ is any monoid,
+    and returns a map from each $a\in A$ to the sum of all $b\in B$ such that $(a, b)\in B$.
+  \item $\fun{stakeDistr}$ uses the $\fun{aggregate_{+}}$ function and several relations to
+    compute the stake distribution, mapping each hashkey to the total coin under its control.
+    Keys that are not both registered and delegated are filtered out.
+    The relation passed to $\fun{aggregate_{+}}$ is made up of:
+    \begin{itemize}
+      \item $\fun{stakeHK_b}^{-1}$, relating hashkeys to (base) addresses
+      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating hashkeys to (pointer)
+        addresses
+      \item $\range{utxo}$, relating addresses to coins
+      \item $\fun{stakeHK_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
+    \end{itemize}
+    The notation for relations is explained in Section~\ref{sec:notation-shelley}.
 \end{itemize}
 
 %%
 %% Figure Functions for Stake Distribution
 %%
 \begin{figure}[htb]
-  \emph{Stake Distribution}
+  \emph{Aggregation (for a monoid B)}
+  %
+  \begin{align*}
+      & \fun{aggregate_{+}} \in \powerset{(A \times B)} \to (A\mapsto B) \\
+      & \fun{aggregate_{+}}~\var{R} = \left\{a\mapsto \sum_{(a,b)\in\var{R}}b
+          ~\mid~a\in\dom\var{R}\right\} \\
+  \end{align*}
+  %
+  \emph{Stake Distribution (using functions and maps as relations)}
   %
   \begin{align*}
       & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Stake \\
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
-          (\dom{\var{activeDelegs}})\restrictdom\var{stake}\\
+      (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
       & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs}) = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard) = \var{pstate} \\
-      & ~~~~ \var{outs} = \fun{consolidate}~{utxo} \\
-      & ~~~~ \var{stake} = (\fun{baseStake}~{outs})
-                             \unionoverridePlus (\fun{ptrStake}~{outs}~{ptrs})
-                             \unionoverridePlus (\fun{rewardStake}~{rewards}) \\
+      & ~~~~ \var{stakeRelation} = \left(
+        \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
+        \circ\left(\range{\var{utxo}}\right)
+        \right)
+        \cup \left(\fun{stakeHK_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
                (\dom{stkeys}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
-      \nextdef
-      & \fun{poolDistr} \in \UTxO \to \DState \to \PState \to \PooledStake \\
-      & \poolDistr{utxo}{dstate}{pstate} = \\
-      & ~~ \{hk \mapsto \poolStake{hk}{(\fun{poolOwners}~\var{pool})}{delegations}{stake}
-           \mid
-           hk\mapsto pool \in \var{poolParams} \} \\
-      & \where \\
-      & ~~~~ (\wcard,~\wcard,~\var{delegations},~\wcard) = \var{dstate} \\
-      & ~~~~ (\wcard,~\var{poolParams},~\wcard,~\wcard) = \var{pstate} \\
-      & ~~~~ stake = \fun{stakeDistr}~{utxo}~{dstate}~{pstate}\\
   \end{align*}
 
-  \caption{Stake Distribution Functions}
+  \caption{Stake Distribution Function}
   \label{fig:functions:stake-distribution}
 \end{figure}
 
@@ -347,7 +294,8 @@ Figure~\ref{fig:ts-types:snapshot}.
 The type $\type{\Snapshots}$ contains the information needing to be saved on the epoch boundary:
 \begin{itemize}
   \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$, and $\var{pstake_{go}}$ are the three
-    stake distribution snapshots, as explained in Section~\ref{sec:reward-overview}.
+    stake distribution snapshots (paired with the corresponding delegation map),
+    as explained in Section~\ref{sec:reward-overview}.
   \item $\var{poolsSS}$ stores the pool parameters from the epoch boundary.
   \item $\var{blocksSS}$ stores the performance of the completed epoch.
   \item $\var{feeSS}$ stores the fees and decayed deposit amounts at the epoch boundary.
@@ -376,9 +324,12 @@ The type $\type{\Snapshots}$ contains the information needing to be saved on the
     \Snapshots =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{pstake_{mark}} & \PooledStake & \text{newest stake}\\
-        \var{pstake_{set}} & \PooledStake & \text{middle stake}\\
-        \var{pstake_{go}} & \PooledStake & \text{oldest stake}\\
+        \var{pstake_{mark}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+                            & \text{newest stake}\\
+        \var{pstake_{set}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+                           & \text{middle stake}\\
+        \var{pstake_{go}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+                          & \text{oldest stake}\\
         \var{poolsSS} & \HashKey \mapsto \PoolParam & \text{pool parameters }\\
         \var{blocksSS} & \BlocksMade & \text{blocks made }\\
         \var{feeSS} & \Coin & \text{fee snapshot}\\
@@ -435,9 +386,9 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{=}l}
         (\var{utxo},~\var{deposits},~\var{fees}) & \var{utxoSt}\\
-        (\var{stkeys},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
+        (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
-        \var{pooledStake} & \poolDistr{utxo}{dstate}{pstate} \\
+        \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e_{new}} \\
         \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{oblg} \\
@@ -470,7 +421,7 @@ This transition has no preconditions and results in the following state change:
       \trans{snap}{}
       \left(
         \begin{array}{r}
-          \varUpdate{\var{pooledStake}} \\
+          \varUpdate{(\var{stake},~\var{delegations})} \\
           \varUpdate{\var{pstake_{mark}}} \\
           \varUpdate{\var{pstake_{set}}} \\
           \varUpdate{\var{poolParams}} \\
@@ -1186,7 +1137,10 @@ The calculation is done pool-by-pool.
           (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
-      & ~~~~~~~\var{ostake} = \var{stake}~\var{poolHK} \\
+      & ~~~~~~~\var{ostake} = \sum_{\substack{
+        hk_\mapsto c\in\var{stake}\\
+        hk\in(\fun{poolOwners}~\var{pool})\\
+        }} c \\
       & ~~~~~~~\sigma = \var{pstake} / tot \\
       & ~~~~~~~\var{\overline{N}} = \sigma * \SlotsPerEpoch\\
       & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
@@ -1216,20 +1170,18 @@ The calculation is done pool-by-pool.
   \begin{align*}
       & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \powerset{\AddrRWD}
       \to (\HashKey \mapsto \PoolParam) \\
-      & ~~~\to \Avgs \to (\HashKey_{pool} \mapsto \Stake) \to (\AddrRWD \mapsto \Coin)\times\Coin\\
-      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{avgs}{pooledStake}
+      & ~~~\to \Avgs \to \Stake \to (\HashKey_{stake} \mapsto \HashKey_{pool}) \to
+      (\AddrRWD \mapsto \Coin)\times\Coin\\
+      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{avgs}{stake}{delegs}
           = (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
-      & ~~~~~~~tot = \sum_{\_\mapsto st\in \var{pooledStake}}
-                       \left(
-                       \sum_{\wcard\mapsto c\in\var{st}}c
-                       \right) \\
+      & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
       & ~~~~~~~pdata = \left\{
-        hk\mapsto (p, n, s)  \mathrel{\Bigg|}
+        hk\mapsto \left(p,~n,~\poolStake{hk}{delegs}{stake}\right)
+        \mathrel{\Bigg|}
         \begin{array}{r@{\mapsto}c@{~\in~}l}
           hk & \var{p} & \var{poolParams} \\
           hk & \var{n} & \var{blocks} \\
-          hk & \var{s} & \var{pooledStake} \\
         \end{array}
       \right\} \\
       & ~~~~~~~\var{results} = \left\{
@@ -1307,7 +1259,7 @@ The reward state transition type, like all the transition types in this section,
   \emph{Rewards transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{acnt}{} \var{\_}
+    \var{\_} \trans{reward}{} \var{\_}
     \subseteq \powerset (\RewardEnv \times \RewardState \times \RewardState)
   \end{equation*}
   %
@@ -1429,17 +1381,18 @@ smaller refunds for deposits than were paid upon depositing.
             \var{feeSS} \\
           \end{array}
         \right) & \var{ss} \\
+        (\var{stake},~\var{delegs}) & \var{pstate_{go}} \\
         \var{expansion} & \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
         \var{totalPot} & \var{feeSS} + \var{rewardPot} + \var{expansion} \\
         \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
         \var{R} & \var{totalPot} - \var{newTreasury} \\
         \var{rewards'},~\var{unrealized}
-          & \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{pstake_{go}} \\
+          & \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{stake}{delegs} \\
         \var{newTreasury'} & \var{newTreasury} + \var{unrealized} \\
         \var{paidRewards} & \left(
                             \sum\limits_{\_\mapsto c\in\var{rewards'}}c
                             \right) + \var{unrealized} \\
-        \var{avgs'} & \updateAvgs{pp}{avgs}{blocks}{pooledStake} \\
+        \var{avgs'} & \updateAvgs{pp}{avgs}{blocks}{delegs}{stake} \\
       \end{array}
       }
     }
