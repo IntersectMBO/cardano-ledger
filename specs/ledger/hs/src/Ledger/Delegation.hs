@@ -434,7 +434,7 @@ instance STS DELEG where
           (as ^. lastDelegation)
           (filter (aboutSlot (env ^. slot) (env ^. liveness) . fst)
             $ sds ^. scheduledDelegations)
-          (Set.filter ((<= (env ^. epoch)) . fst)
+          (Set.filter ((env ^. epoch <=) . fst)
             $ sds ^. keyEpochDelegations)
     ]
     where

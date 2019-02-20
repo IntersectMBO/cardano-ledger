@@ -173,7 +173,7 @@ instance HasTrace CHAIN where
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
           }
-    initGKeys <- Gen.set (Range.constant 1 7) vkgenesisGen -- TODO: revert this to 70
+    initGKeys <- Gen.set (Range.constant 1 20) vkgenesisGen -- TODO: revert this to 70 (or some smaller number if that makes sense)
     -- If we want to generate large traces, we need to set up the value of the
     -- "clock-slot" to a sufficiently large value.
     clockSlot <- Slot <$>
