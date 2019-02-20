@@ -60,6 +60,16 @@ eps = 1 / 10.0^(24::Int)
 --
 -- the convergent is calculated as x_n = A_n/B_n
 --
+--                        a_1
+-- result = b_0 + ---------------------
+--                           a_2
+--                b_1 + ---------------
+--                              a_3
+--                      b_2 + ---------
+--                                  .
+--                            b_3 +  .
+--                                    .
+--
 -- The recursion stops once 'maxN' iterations have been reached, or either the
 -- list 'as' or 'bs' is exhausted or 'lastVal' differs less than 'eps' from the
 -- new convergent.
