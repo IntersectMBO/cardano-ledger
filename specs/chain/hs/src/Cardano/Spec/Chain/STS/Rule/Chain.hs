@@ -7,7 +7,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.), _1, _3, _5, Getting)
+import Control.Lens ((^.), _1, _3, _5, Lens')
 import qualified Crypto.Hash
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
@@ -109,48 +109,25 @@ genesisHash :: Hash
 genesisHash = Crypto.Hash.hash ("" :: ByteString)
 
 --------------------------------------------------------------------------------
--- Chain environment getters.
+-- Chain environment lenses.
 --------------------------------------------------------------------------------
 
--- | Getter for the protocol parameters contained in the environment.
+-- | Lens for the protocol parameters contained in the environment.
 --
--- We want to use the getter with lens operations such as '^.', however we do
--- not want the getter to be able to modify the environment using lens
--- operators such as '.~'
---
--- The type of '^.', which is just `view` with the arguments flipped, is:
---
--- > (^.) :: s -> Getting a s a -> a
---
--- Hence the type we gave to 'getPps'.
---
--- We could have used:
---
--- > Getter (Environment CHAIN) PParams
---
--- which is equivalent to:
---
--- > forall f . (Contravariant f, Functor f)
--- > => (PParams -> f PParams) -> (Environment CHAIN) -> f (Environment CHAIN)
---
--- However @Contravariant f@ is a redundant constraint, and GHC will give a warning.
---
--- The same remark applies to the other getters defined in this module.
---
-getPps :: Getting PParams (Environment CHAIN) PParams
-getPps = _3
+ppsL :: Lens' (Environment CHAIN) PParams
+ppsL = _3
 
 --------------------------------------------------------------------------------
--- Chain state getters.
+-- Chain state lenses.
 --------------------------------------------------------------------------------
 
--- | Getter for the epoch contained in the chain state.
-getEpoch :: Getting Epoch (State CHAIN) Epoch
-getEpoch = _1
+-- | Lens for the epoch contained in the chain state.
+epochL :: Lens' (State CHAIN) Epoch
+epochL = _1
 
--- | Getter for the delegation interface state contained in the chain state.
-getDis :: Getting DIState (State CHAIN) DIState
-getDis = _5
+-- | Lens for the delegation interface state contained in the chain state.
+disL :: Lens' (State CHAIN) DIState
+disL = _5
 
 --------------------------------------------------------------------------------
 -- Generators
@@ -164,15 +141,29 @@ instance HasTrace CHAIN where
     -- those values here. The upper bound is arbitrary though.
     mHSz <- Gen.integral (Range.constant 0 4000000)
     mBSz <- Gen.integral (Range.constant 0 4000000)
-    -- The delegation liveness parameter is arbitrarily determined.
-    d <- SlotCount <$> Gen.integral (Range.linear 0 10)
+
     -- The size of the rolling widow is arbitrarily determined.
-    w <- Gen.integral (Range.linear 0 10)
+
+    -- TODO: this could be 0 but first we need to fix the mismatch problem
+    -- between spec and implementation where @w@ and @k@ are the same.
+    w <- Gen.integral (Range.linear 1 10)
+
+    -- TODO: The delegation liveness parameter is equal to `k` as well (and 'k=w')
+    -- We should adapt the specs to reflect this.
+    d <- pure $! SlotCount $ fromIntegral w
+
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
-    t <- Gen.double (Range.constant (1/6) (1/3))
+    t <- pure (1/5) -- Gen.double (Range.constant (1/6) (1/3))
+    -- TODO: we make this a constant till we solve the problem with the number
+    -- of byzantineNodes being a constant in the implementation.
+
     -- The slots per-epoch is arbitrarily determined.
-    spe <- SlotCount <$> Gen.integral (Range.linear 1 1000)
+    -- spe <- SlotCount <$> Gen.integral (Range.linear 1 1000)
+
+    -- TODO: at the moment the number of slots per epoch is computed from 'k':
+    -- spe = k * 10, and k = w. So we should adapt the specs to account for this.
+    spe <- pure $! SlotCount $ fromIntegral $ w * 10
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
