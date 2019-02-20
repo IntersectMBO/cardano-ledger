@@ -35,6 +35,9 @@ epsD   = 1.0 / 10.0^(12::Integer)
 epsFP :: FixedPoint
 epsFP = (fromIntegral 1) / fromIntegral 10^16
 
+eps :: Rational
+eps = (fromIntegral 1) / fromIntegral 10^16
+
 -- | Normalizes the integers, return a pair of integers, both non-negative and
 -- fst <= snd.
 normalizeInts :: Integer -> Integer -> (Integer, Integer)
@@ -202,6 +205,72 @@ prop_DlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
           x'' = fromIntegral x'
           y'' = fromIntegral y'
 
+-----------------------------
+-- Properties for Rational --
+-----------------------------
+
+prop_Monotonic ::
+     (Double -> Bool) -> (Double -> Double) -> Double -> Double -> Property
+prop_Monotonic constrain f x y =
+  (constrain x && constrain y) ==>
+  if x <= y
+    then f x <= f y
+    else f x > f y
+
+prop_ExpLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_ExpLaw (Positive x) (Positive y) (Positive a) (Positive b) =
+    b'' > 0 && y'' > 0 && a'' > 0 && x'' > 0 ==> expdiff x'' y'' a'' b'' < eps
+    where (x'', y'') = normalizeInts x y
+          (a'', b'') = normalizeInts a b
+
+prop_ExpLaw' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
+    (abs (exp' (a'/b' + x'/y') - (exp'(a'/b') * exp'(x'/y'))) < eps) === True
+        where (b'', a'') = normalizeInts a b
+              (y'', x'') = normalizeInts x y
+              a' = fromIntegral a''
+              b' = fromIntegral b''
+              x' = fromIntegral x''
+              y' = fromIntegral y''
+
+expdiff :: Integer -> Integer -> Integer -> Integer -> Rational
+expdiff x'' y'' a'' b'' =
+    abs(e1 - e2)
+      where e1 = (((fromIntegral b'' / fromIntegral a'') *** (1.0 / fromIntegral x'')) *** fromIntegral y'')
+            e2 = (((fromIntegral b'' / fromIntegral a'') *** fromIntegral y'') *** (1.0/ fromIntegral x''))
+
+prop_ExpUnitInterval :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_ExpUnitInterval (Positive x) (Positive y) (Positive a) (Positive b) =
+    a'' > 0 && x'' > 0 ==> result >= 0 && result <= 1
+    where (x'', y'') = normalizeInts x y
+          (a'', b'') = normalizeInts a b
+          result = (b'' % a'') *** (y'' % x'')
+
+prop_IdemPotent :: Positive Rational -> Property
+prop_IdemPotent (Positive a) =
+    a > 0 ==> (exp' $ ln' a) - a < eps
+
+prop_IdemPotent' :: PosInt -> PosInt -> Property
+prop_IdemPotent' (Positive a) (Positive b) =
+    b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::Rational) - ((fromIntegral b'' / fromIntegral a'')::Rational) < eps
+    where (a'', b'') = normalizeInts a b
+
+prop_findD :: Positive Rational -> Property
+prop_findD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+    where e = exp' 1
+          n = findE e a
+
+prop_lnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_lnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
+    ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < eps) === True
+    where (b', a') = normalizeInts a b
+          (y', x') = normalizeInts x y
+          a'' = fromIntegral a'
+          b'' = fromIntegral b'
+          x'' = fromIntegral x'
+          y'' = fromIntegral y'
+
+
 main :: IO ()
 main = do
   putStrLn "quickcheck properties for non-integral calculation\n"
@@ -248,4 +317,27 @@ main = do
   quickCheck (withMaxSuccess 10000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 10000 prop_FPlnLaw)
+  putStrLn ""
+
+  putStrLn "------------------------------"
+  putStrLn "-- Test of Rational Numbers --"
+  putStrLn "------------------------------"
+  putStrLn "property exp is monotonic"
+  quickCheck (withMaxSuccess 100 $ prop_Monotonic (const True) exp')
+  putStrLn "property ln is monotonic"
+  quickCheck (withMaxSuccess 100 $ prop_Monotonic (> 0) ln')
+  putStrLn "property p,q in (0,1) -> p^q in (0,1)"
+  quickCheck (withMaxSuccess 100 prop_ExpUnitInterval)
+  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
+  quickCheck (withMaxSuccess 100 prop_IdemPotent)
+  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
+  quickCheck (withMaxSuccess 100 prop_IdemPotent')
+  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+  putStrLn "skipped, takes too long"
+  -- quickCheck (withMaxSuccess 5 prop_ExpLaw)
+  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
+  quickCheck (withMaxSuccess 100 prop_ExpLaw')
+  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+  putStrLn "skipped, takes too long"
+  -- quickCheck (withMaxSuccess 100 prop_lnLaw)
   putStrLn ""
