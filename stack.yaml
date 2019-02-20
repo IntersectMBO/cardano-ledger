@@ -5,6 +5,7 @@ packages:
 - specs/chain/hs
 - specs/ledger/hs
 - specs/semantics/hs
+- dependencies/non-integer
 
 extra-deps:
 - sequence-0.9.8
