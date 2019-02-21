@@ -24,9 +24,6 @@ stdenv.mkDerivation {
                       # Tikz
                       pgf
 
-                      # git info
-                      gitinfo2
-
                       # build tools
                       latexmk
 
