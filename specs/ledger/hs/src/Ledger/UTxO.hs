@@ -10,7 +10,7 @@ import Data.List (find)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
-import Ledger.Core hiding ((◁), (⋪))
+import Ledger.Core hiding ((◁), (⋪), (∪))
 import Ledger.Signatures
 import Numeric.Natural (Natural)
 import Data.Map.Strict (Map)

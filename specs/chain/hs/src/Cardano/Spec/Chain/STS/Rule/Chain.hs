@@ -181,6 +181,8 @@ instance HasTrace CHAIN where
     ct <- Gen.integral (Range.linear 1 7)
     -- Update adoption threshold
     uat <- Gen.integral (Range.linear 1 7)
+    -- Chain stability
+    cs <- SlotCount <$> Gen.integral (Range.linear 1 1000)
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
@@ -195,6 +197,7 @@ instance HasTrace CHAIN where
           , _scriptVersion = 1
           , _cfmThd = ct
           , _upAdptThd = uat
+          , _chainStability = cs
           }
     initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the

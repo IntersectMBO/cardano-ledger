@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Ledger.Core where
 
 import qualified Crypto.Hash as Crypto
@@ -112,23 +113,67 @@ minusSlot (Slot m) (SlotCount n)
 -- Domain restriction and exclusion
 ---------------------------------------------------------------------------------
 
--- |Domain restriction
---
-(◁), (◃) :: Ord a => Set a -> Map a b -> Map a b
-s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
-s ◃ r = s ◁ r
+newtype PairSet a b = PairSet {unPairSet :: Set (a,b)}
+  deriving (Eq, Show)
 
--- |Domain exclusion
---
-(⋪) :: Ord a => Set a -> Map a b -> Map a b
-s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+psSize :: PairSet a b -> Int
+psSize = Set.size . unPairSet
 
+class Maplike m where
+  singleton :: a -> b -> m a b
 
--- | Range restriction
---
-(▹) :: Ord b => Map a b -> Set b -> Map a b
-r ▹ s = Map.filter (flip Set.member s) r
+  -- | Domain
+  dom :: Ord a => m a b -> Set a
+  -- | Range
+  range :: Ord b => m a b -> Set b
 
--- | Union Override
-(⨃) :: Ord a => Map a b -> Map a b -> Map a b
-d0 ⨃ d1 = d1 `Map.union` (Map.keysSet d1 ⋪ d0)
+  -- |Domain restriction
+  --
+  (◁), (◃) :: Ord a => Set a -> m a b -> m a b
+
+  -- |Domain exclusion
+  --
+  (⋪) :: Ord a => Set a -> m a b -> m a b
+
+  -- | Range restriction
+  --
+  (▹) :: Ord b => m a b -> Set b -> m a b
+
+  -- | Union
+  (∪) :: (Ord a, Ord b) => m a b -> m a b -> m a b
+
+  -- | Union Override
+  (⨃) :: (Ord a, Ord b) => m a b -> m a b -> m a b
+
+instance Maplike Map where
+  singleton = Map.singleton
+
+  dom = Map.keysSet
+  range = Set.fromList . Map.elems
+
+  s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
+  s ◃ r = s ◁ r
+
+  s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+
+  r ▹ s = Map.filter (flip Set.member s) r
+
+  d0 ∪ d1 = Map.union d0 d1
+  d0 ⨃ d1 = d1 ∪ (Map.keysSet d1 ⋪ d0)
+
+instance Maplike PairSet where
+  singleton a b = PairSet $ Set.singleton (a,b)
+
+  dom = Set.map fst . unPairSet
+  range = Set.map snd . unPairSet
+
+  s ◁ r = PairSet . Set.filter (\(k,_) -> k `Set.member` s) $ unPairSet r
+  s ◃ r = s ◁ r
+
+  s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` s) $ unPairSet r
+
+  r ▹ s = PairSet . Set.filter (\(_,v) -> Set.member v s) $ unPairSet r
+
+  (PairSet d0) ∪ (PairSet d1) = PairSet $ Set.union d0 d1
+
+  d0 ⨃ d1 = d1 ∪ ((dom d1) ⋪ d0)
