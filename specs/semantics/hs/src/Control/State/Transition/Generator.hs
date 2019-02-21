@@ -28,6 +28,7 @@ module Control.State.Transition.Generator
   , HasSizeInfo
   , isTrivial
   , sampleMaxTraceSize
+  , randomTrace
   )
 where
 
@@ -171,3 +172,9 @@ sampleMaxTraceSize
 sampleMaxTraceSize d n =
   maximum <$>
     forM [0..n] (const $ traceLength <$> Gen.sample (Gen.resize (Size d) (trace @s)))
+
+randomTrace
+  :: forall s
+   . HasTrace s
+  => IO (Trace s)
+randomTrace = Gen.sample trace

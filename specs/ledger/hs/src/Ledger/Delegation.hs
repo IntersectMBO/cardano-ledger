@@ -62,6 +62,8 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
+  -- * Functions on delegation state
+  , delegatorOf
   )
 where
 
@@ -199,6 +201,12 @@ data DState = DState
   } deriving (Eq, Show)
 
 makeFields ''DState
+
+delegatorOf :: Map VKeyGenesis VKey -> VKey -> Maybe VKeyGenesis
+delegatorOf dm vk =
+  case Map.keys $ Map.filter (== vk) dm of
+    res:_ -> Just res
+    []    -> Nothing
 
 -- | Interface environment is the same as scheduling environment.
 type DIEnv = DSEnv
