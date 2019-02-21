@@ -11,6 +11,8 @@
 \newcommand{\UPREnv}{\ensuremath{\type{UPREnv}}}
 \newcommand{\UPRState}{\ensuremath{\type{UPRState}}}
 \newcommand{\Vote}{\ensuremath{\type{Vote}}}
+\newcommand{\VREnv}{\ensuremath{\type{VREnv}}}
+\newcommand{\VRState}{\ensuremath{\type{VRState}}}
 \newcommand{\VEnv}{\ensuremath{\type{VEnv}}}
 \newcommand{\VState}{\ensuremath{\type{VState}}}
 \newcommand{\BVREnv}{\ensuremath{\type{BVREnv}}}
@@ -702,7 +704,7 @@ an update proposal:
 \begin{figure}[htb]
   \emph{Voting environments}
   \begin{align*}
-    & \VEnv
+    & \VREnv
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{rups} & \powerset{\UPropId}
@@ -713,7 +715,7 @@ an update proposal:
   %
   \emph{Voting states}
   \begin{align*}
-    & \VState
+    & \VRState
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{votes}
@@ -723,7 +725,7 @@ an update proposal:
   \emph{Voting transitions}
     \begin{equation*}
     \_ \vdash \_ \trans{addvote}{\_} \_ \in
-    \powerset (\VEnv \times \VState \times \Vote \times \VState)
+    \powerset (\VREnv \times \VRState \times \Vote \times \VRState)
     \end{equation*}
   \caption{Voting transition-system types}
   \label{fig:ts-types:voting}
@@ -747,10 +749,10 @@ In Rule~\ref{eq:rule:voting}:
     \label{eq:rule:voting}
     \inference
     {
-      \var{pid} = \vPropId{v} & \var{vk} = \vCaster{v} &
+      \var{pid} = \vPropId{v} & \var{vk} = \vCaster{v} & \var{pid} \in \var{rups}\\
       \var{vts}_{\var{pid}} =
-      \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}\\
-      & \var{pid} \in \var{rups} &
+      \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \} &
+      \var{vts}_{\var{pid}} \neq \emptyset &
       \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}\\
     }
     {
