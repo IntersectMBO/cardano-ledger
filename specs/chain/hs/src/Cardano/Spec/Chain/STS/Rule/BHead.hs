@@ -63,7 +63,7 @@ instance STS BHEAD where
         sLast < sNext ?! SlotDidNotIncrease
         sNext <= sNow ?! SlotInTheFuture
         -- Perform an epoch transition
-        eNext <-  trans @EPOCH $ TRC (dms, eLast, sNext)
+        eNext <-  trans @EPOCH $ TRC (us ^. bkSlotsPerEpoch, eLast, sNext)
         -- Perform a signature count transition
         sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bIssuer)
         return $! ( eNext

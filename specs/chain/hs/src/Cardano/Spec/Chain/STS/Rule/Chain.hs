@@ -59,17 +59,19 @@ instance STS CHAIN where
 
   initialRules =
     [ do
-        IRC (s, gks, pps) <- judgmentContext
-        let dsenv
-              = DSEnv
-              { _dSEnvAllowedDelegators = gks
-              , _dSEnvEpoch = sEpoch s
-              , _dSEnvSlot = s
-              , _dSEnvLiveness = pps ^. dLiveness
-              }
+        IRC (_, gks, pps) <- judgmentContext
+        let
+          s0 = Slot 0
+          dsenv
+            = DSEnv
+            { _dSEnvAllowedDelegators = gks
+            , _dSEnvEpoch = sEpoch s0 (pps ^. bkSlotsPerEpoch)
+            , _dSEnvSlot = s0
+            , _dSEnvLiveness = pps ^. dLiveness
+            }
         ds <- trans @DELEG $ IRC dsenv
         return $! ( Epoch 0
-                  , Slot 0
+                  , s0
                   , genesisHash
                   , []
                   , ds
@@ -173,7 +175,7 @@ instance HasTrace CHAIN where
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
           }
-    initGKeys <- Gen.set (Range.constant 1 20) vkgenesisGen -- TODO: revert this to 70 (or some smaller number if that makes sense)
+    initGKeys <- Gen.set (Range.constant 1 30) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the
     -- "clock-slot" to a sufficiently large value.
     clockSlot <- Slot <$>
