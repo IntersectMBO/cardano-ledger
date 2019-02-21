@@ -64,4 +64,5 @@ test-suite chain-spec-test
                      , tasty-hedgehog
                      -- local deps
                      , cs-blockchain
+                     , cs-ledger
                      , small-steps
