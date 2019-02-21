@@ -48,6 +48,26 @@ library
   if (!flag(development))
     ghc-options: -Werror
 
+test-suite doctests
+  hs-source-dirs:      test
+  main-is:             DoctestDiscover.hs
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                     , doctest
+                     , doctest-discover
+                       --
+                     , cs-ledger
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -threaded
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
 test-suite ledger-delegation-test
   hs-source-dirs: test
   main-is: Main.hs

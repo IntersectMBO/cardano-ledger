@@ -144,10 +144,11 @@ instance HasTrace CHAIN where
     mHSz <- Gen.integral (Range.constant 0 4000000)
     mBSz <- Gen.integral (Range.constant 0 4000000)
 
-    -- The size of the rolling widow is arbitrarily determined.
+    mTxSz <- Gen.integral (Range.constant 0 4000000)
+    mPSz <- Gen.integral (Range.constant 0 4000000)
 
-    -- TODO: this could be 0 but first we need to fix the mismatch problem
-    -- between spec and implementation where @w@ and @k@ are the same.
+    -- The size of the rolling window should be equal to k.
+    -- TODO: we need to adapt the formal specs to reflect this.
     w <- Gen.integral (Range.linear 1 10)
 
     -- TODO: The delegation liveness parameter is equal to `2 * k`.
@@ -160,20 +161,30 @@ instance HasTrace CHAIN where
     -- TODO: we make this a constant till we solve the problem with the number
     -- of byzantineNodes being a constant in the implementation.
 
-    -- The slots per-epoch is arbitrarily determined.
-    -- spe <- SlotCount <$> Gen.integral (Range.linear 1 1000)
-
     -- TODO: at the moment the number of slots per epoch is computed from 'k':
-    -- spe = k * 10, and k = w. So we should adapt the specs to account for this.
+    -- spe = k * 10, and k = w. So we should adapt the formal specs to account
+    -- for this.
     spe <- pure $! SlotCount $ fromIntegral $ w * 10
+    -- Update TTL
+    uttl <- SlotCount <$> Gen.integral (Range.linear 1 100)
+    -- Confirmation threshold
+    ct <- Gen.integral (Range.linear 1 7)
+    -- Update adoption threshold
+    uat <- Gen.integral (Range.linear 1 7)
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
           , _maxBkSz = mBSz
+          , _maxTxSz = mTxSz
+          , _maxPropSz = mPSz
           , _dLiveness = d
           , _bkSgnCntW = w
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
+          , _upTtl = uttl
+          , _scriptVersion = 1
+          , _cfmThd = ct
+          , _upAdptThd = uat
           }
     initGKeys <- Gen.set (Range.constant 1 30) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the

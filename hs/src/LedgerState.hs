@@ -67,7 +67,7 @@ module LedgerState
   , decayedTx
   -- epoch boundary
   , movingAvg
-  , poolRew
+  , poolRewards
   , leaderRew
   , memberRew
   , rewardOnePool
@@ -108,6 +108,8 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          RewardAcnt(..), poolRAcnt, poolOwners)
 
 import Control.State.Transition
+
+import           NonIntegral ((***))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -653,8 +655,11 @@ movingAvg pc hk n expectedSlots (Avgs averages) =
         Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
           where alpha = intervalValue $ pc ^. movingAvgWeight
 
+precision :: Double
+precision = 10-16
+
 -- | Calculate pool reward
-poolRew ::
+poolRewards ::
      PParams
   -> HashKey
   -> Natural
@@ -662,12 +667,12 @@ poolRew ::
   -> Avgs
   -> Coin
   -> Coin
-poolRew pc hk n expectedSlots averages (Coin maxP) =
+poolRewards pc hk n expectedSlots averages (Coin maxP) =
   floor $ e * fromIntegral maxP
   where
     avg = pc ^. movingAvgExp
     gamma = movingAvg pc hk n expectedSlots averages
-    e = fromRational avg ** fromRational gamma :: Double
+    e = approxRational (fromRational avg *** fromRational gamma) precision
 
 -- | Calculate pool leader reward
 leaderRew :: Coin -> PoolParams -> StakeShare -> StakeShare -> Coin
@@ -713,7 +718,7 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    poolR = poolRew pp poolHK n expectedSlots averages maxP
+    poolR = poolRewards pp poolHK n expectedSlots averages maxP
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
