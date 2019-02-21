@@ -164,6 +164,8 @@ instance HasTrace CHAIN where
     -- those values here. The upper bound is arbitrary though.
     mHSz <- Gen.integral (Range.constant 0 4000000)
     mBSz <- Gen.integral (Range.constant 0 4000000)
+    mTxSz <- Gen.integral (Range.constant 0 4000000)
+    mPSz <- Gen.integral (Range.constant 0 4000000)
     -- The delegation liveness parameter is arbitrarily determined.
     d <- SlotCount <$> Gen.integral (Range.linear 0 10)
     -- The size of the rolling widow is arbitrarily determined.
@@ -173,14 +175,26 @@ instance HasTrace CHAIN where
     t <- Gen.double (Range.constant (1/6) (1/3))
     -- The slots per-epoch is arbitrarily determined.
     spe <- SlotCount <$> Gen.integral (Range.linear 1 1000)
+    -- Update TTL
+    uttl <- SlotCount <$> Gen.integral (Range.linear 1 100)
+    -- Confirmation threshold
+    ct <- Gen.integral (Range.linear 1 7)
+    -- Update adoption threshold
+    uat <- Gen.integral (Range.linear 1 7)
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
           , _maxBkSz = mBSz
+          , _maxTxSz = mTxSz
+          , _maxPropSz = mPSz
           , _dLiveness = d
           , _bkSgnCntW = w
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
+          , _upTtl = uttl
+          , _scriptVersion = 1
+          , _cfmThd = ct
+          , _upAdptThd = uat
           }
     initGKeys <- Gen.set (Range.constant 1 70) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the
