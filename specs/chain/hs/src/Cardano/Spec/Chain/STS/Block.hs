@@ -83,11 +83,8 @@ hashHeader = hashlazy . pack . show
 
 
 -- | Compute the epoch for the given _absolute_ slot
-sEpoch :: Slot -> Epoch
-sEpoch (Slot s) = Epoch $ s `div` slotsPerEpoch
-  where
-    -- Hardcoded number of slots per epoch, as per Byron.
-    slotsPerEpoch = 21600
+sEpoch :: Slot -> SlotCount -> Epoch
+sEpoch (Slot s) (SlotCount spe) = Epoch $ s `div` spe
 
 instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)

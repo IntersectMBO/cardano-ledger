@@ -26,6 +26,7 @@
 
 # Cabal & Stack
 .stack-work/
+.stack-work-local/
 *.cabal
 */dist
 *~

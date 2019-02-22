@@ -62,6 +62,8 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
+  -- * Functions on delegation state
+  , delegatorOf
   )
 where
 
@@ -200,6 +202,12 @@ data DState = DState
 
 makeFields ''DState
 
+delegatorOf :: Map VKeyGenesis VKey -> VKey -> Maybe VKeyGenesis
+delegatorOf dm vk =
+  case Map.keys $ Map.filter (== vk) dm of
+    res:_ -> Just res
+    []    -> Nothing
+
 -- | Interface environment is the same as scheduling environment.
 type DIEnv = DSEnv
 
@@ -279,7 +287,7 @@ instance STS SDELEG where
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` (env ^. liveness)
                                       , cert ^. dwho
                                       )]
-          & keyEpochDelegations %~ Set.insert (env ^. epoch, cert ^. dwho . _1)
+          & keyEpochDelegations %~ Set.insert (epochDelegator cert)
     ]
     where
       verify :: DCert -> Bool
@@ -287,7 +295,11 @@ instance STS SDELEG where
       -- Check that this delegator hasn't already delegated this epoch
       notAlreadyDelegated :: DSState -> DCert -> Bool
       notAlreadyDelegated st cert =
-        Set.notMember (cert ^. depoch, cert ^. dwho . _1) (st ^. keyEpochDelegations)
+        Set.notMember (epochDelegator cert) (st ^. keyEpochDelegations)
+
+      epochDelegator :: DCert -> (Epoch, VKeyGenesis)
+      epochDelegator cert = (cert ^. depoch, cert ^. dwho . _1)
+
       -- Check whether there is a scheduled delegation from this key
       notAlreadyScheduled :: DSEnv -> DSState -> DCert -> Bool
       notAlreadyScheduled env st cert =
@@ -430,7 +442,7 @@ instance STS DELEG where
           (as ^. lastDelegation)
           (filter (aboutSlot (env ^. slot) (env ^. liveness) . fst)
             $ sds ^. scheduledDelegations)
-          (Set.filter ((<= (env ^. epoch)) . fst)
+          (Set.filter ((env ^. epoch <=) . fst)
             $ sds ^. keyEpochDelegations)
     ]
     where

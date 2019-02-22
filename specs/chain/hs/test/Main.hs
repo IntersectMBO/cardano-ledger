@@ -14,5 +14,7 @@ main = defaultMain tests
   tests =
     testGroup "Chain"
     [ testGroup "Properties"
-      [testProperty "Increasing slots" slotsIncrease]
+      [ testProperty "Increasing slots" slotsIncrease
+      , testProperty "Block issuers are delegates" blockIssuersAreDelegates
+      ]
     ]

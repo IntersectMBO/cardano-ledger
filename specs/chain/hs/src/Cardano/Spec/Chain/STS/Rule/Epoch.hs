@@ -2,8 +2,6 @@
 
 module Cardano.Spec.Chain.STS.Rule.Epoch where
 
-import Data.Map.Strict (Map)
-
 import Control.State.Transition
 import Ledger.Core
 
@@ -12,7 +10,7 @@ import Cardano.Spec.Chain.STS.Block
 data EPOCH
 
 instance STS EPOCH where
-  type Environment EPOCH = Map VKeyGenesis VKey
+  type Environment EPOCH = SlotCount
   type State EPOCH = Epoch
   type Signal EPOCH = Slot
   data PredicateFailure EPOCH = X
@@ -20,6 +18,6 @@ instance STS EPOCH where
   initialRules = []
   transitionRules =
     [ do
-        TRC (_, _, s) <- judgmentContext
-        return $! sEpoch s
+        TRC (spe, _, s) <- judgmentContext
+        return $! sEpoch s spe
     ]
