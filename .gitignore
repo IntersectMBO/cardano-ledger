@@ -36,7 +36,3 @@ TAGS
 
 # Emacs auto-generated Emacs-lisp code
 auto/
-
-# gitinfo2 auxiliary file
-gitHeadLocal.gin
-result*
