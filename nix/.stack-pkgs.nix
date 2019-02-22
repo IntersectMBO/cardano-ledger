@@ -14,6 +14,7 @@
         cs-blockchain = ./.stack.nix/cs-blockchain.nix;
         cs-ledger = ./.stack.nix/cs-ledger.nix;
         small-steps = ./.stack.nix/small-steps.nix;
+        non-integer = ./.stack.nix/non-integer.nix;
         cborg = ./.stack.nix/cborg.nix;
         cardano-crypto = ./.stack.nix/cardano-crypto.nix;
         plutus-prototype = ./.stack.nix/plutus-prototype.nix;
