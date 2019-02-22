@@ -85,13 +85,13 @@ void mp_expN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 
   while(n <= maxN + 1)
     {
-      mpz_mul(ba, b, AnM1); mpz_tdiv_q(ba, ba, precision);
-      mpz_mul(aa, a, AnM2); mpz_tdiv_q(aa, aa, precision);
-      mpz_add(A, ba, aa);
+      mpz_mul(ba, b, AnM1);
+      mpz_mul(aa, a, AnM2);
+      mpz_add(A, ba, aa); mpz_tdiv_q(A, A, precision);
 
-      mpz_mul(bb, b, BnM1); mpz_tdiv_q(bb, bb, precision);
-      mpz_mul(ab, a, BnM2); mpz_tdiv_q(ab, ab, precision);
-      mpz_add(B, bb, ab);
+      mpz_mul(bb, b, BnM1);
+      mpz_mul(ab, a, BnM2);
+      mpz_add(B, bb, ab); mpz_tdiv_q(B, B, precision);
 
       mpz_tdiv_qr(temp_q, temp_r, A, B); /* ok to use truncating div here? */
       mpz_mul(convergent, temp_q, precision);
@@ -137,7 +137,7 @@ void mp_expN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 {
   mpz_t AnM2, BnM2, AnM1, BnM1, ba, aa, A, bb, ab, B, convergent, last, a, b;
-  mpz_t curr_n, diff, temp_q, temp_r, curr_a;
+  mpz_t curr_n, diff, temp_q, temp_r;
   bool first = true;
   int n = 1;
 
@@ -146,7 +146,7 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
   mpz_init(ba); mpz_init(aa); mpz_init(bb); mpz_init(ab);
   mpz_init(A); mpz_init(B); mpz_init(convergent); mpz_init(last);
   mpz_init(curr_n); mpz_init(a); mpz_init(b);
-  mpz_init(diff); mpz_init(temp_q); mpz_init(temp_r); mpz_init(curr_a);
+  mpz_init(diff); mpz_init(temp_q); mpz_init(temp_r);
 
   /* initialize values */
   /* this is initially 1 and then -n */
@@ -158,22 +158,23 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
   mpz_set_ui(BnM2, 0);
   mpz_set_ui(AnM1, 0);
   mpz_set(BnM1, one);
-  mpz_set(curr_a, one);
+
+  size_t curr_a = 1;
 
   while(n <= maxN + 2)
     {
-      mpz_mul(a, curr_a, curr_a); mpz_tdiv_q(a, a, precision);
-      mpz_mul(a, x, a); mpz_tdiv_q(a, a, precision);
+      const size_t curr_a_2 = curr_a * curr_a;
+      mpz_mul_ui(a, x, curr_a_2);
       if(n > 1 && n % 2 == 1)
-        mpz_add(curr_a, curr_a, one);
+        curr_a++;
 
-      mpz_mul(ba, b, AnM1); mpz_tdiv_q(ba, ba, precision);
-      mpz_mul(aa, a, AnM2); mpz_tdiv_q(aa, aa, precision);
-      mpz_add(A, ba, aa);
+      mpz_mul(ba, b, AnM1);
+      mpz_mul(aa, a, AnM2);
+      mpz_add(A, ba, aa); mpz_tdiv_q(A, A, precision);
 
-      mpz_mul(bb, b, BnM1); mpz_tdiv_q(bb, bb, precision);
-      mpz_mul(ab, a, BnM2); mpz_tdiv_q(ab, ab, precision);
-      mpz_add(B, bb, ab);
+      mpz_mul(bb, b, BnM1);
+      mpz_mul(ab, a, BnM2);
+      mpz_add(B, bb, ab); mpz_tdiv_q(B, B, precision);
 
       mpz_tdiv_qr(temp_q, temp_r, A, B); /* ok to use truncating div here? */
       mpz_mul(convergent, temp_q, precision);
@@ -207,7 +208,7 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
   mpz_clear(ba); mpz_clear(aa); mpz_clear(bb); mpz_clear(ab);
   mpz_clear(A); mpz_clear(B); mpz_clear(convergent); mpz_clear(last);
   mpz_clear(curr_n); mpz_clear(a); mpz_clear(b);
-  mpz_clear(diff); mpz_clear(temp_q); mpz_clear(temp_r); mpz_clear(curr_a);
+  mpz_clear(diff); mpz_clear(temp_q); mpz_clear(temp_r);
 }
 
 /* Entry point for 'exp' approximation. First does the scaling of 'x' to [0,1]
