@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -38,7 +39,11 @@ int main()
 
   initialize(precision.get_mpz_t(), epsilon.get_mpz_t());
 
+  std::chrono::duration<double> total = std::chrono::duration<double>::zero();
+  std::chrono::duration<double> maximal = std::chrono::duration<double>::zero();
+
   // format is "base exponent"
+  size_t n = 0;
   for (std::string s; std::getline(std::cin, s); )
     {
       size_t split = s.find(' ');
@@ -47,16 +52,28 @@ int main()
           mpz_class base(s.substr(0, split));
           mpz_class exponent(s.substr(split, std::string::npos));
 
+          auto before = std::chrono::high_resolution_clock::now();
           mpz_class result;
           ref_pow(
             result.get_mpz_t(),
             base.get_mpz_t(),
             exponent.get_mpz_t());
 
+          auto after = std::chrono::high_resolution_clock::now();
+          n++;
+          std::chrono::duration<double> diff = after - before;
+          total += diff;
+          if(maximal < diff)
+            maximal = diff;
           std::cout << print_fixedp(result, precision, 34)
                     << std::endl;
         }
     }
+
+  std::cerr << "total time: " << total.count()
+            << " average time: " << (total.count() / n)
+            << " maximal time: " << maximal.count()
+            << std::endl;
 
   cleanup();
   return 0;
