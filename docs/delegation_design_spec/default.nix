@@ -22,9 +22,6 @@ stdenv.mkDerivation {
                       # drawing
                       pgf
 
-                      # git info
-                      gitinfo2 xstring
-
                       # build tools
                       latexmk
 
