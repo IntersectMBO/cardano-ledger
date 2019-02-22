@@ -189,9 +189,8 @@ updateChainBoundary
   -> m ChainValidationState
 updateChainBoundary config cvs bvd = do
   let
-    prevHash = fromMaybe
-      (getGenesisHash $ configGenesisHash config)
-      (cvsPreviousHash cvs)
+    prevHash =
+      fromMaybe (unGenesisHash $ configGenesisHash config) (cvsPreviousHash cvs)
 
   -- Validate the previous block hash of 'b'
   (boundaryPrevHash bvd == prevHash)
@@ -224,9 +223,8 @@ updateChain
   -> m ChainValidationState
 updateChain config cvs b = do
   let
-    prevHash = fromMaybe
-      (getGenesisHash $ configGenesisHash config)
-      (cvsPreviousHash cvs)
+    prevHash =
+      fromMaybe (unGenesisHash $ configGenesisHash config) (cvsPreviousHash cvs)
 
   -- Validate the previous block hash of 'b'
   (blockPrevHash b == prevHash)

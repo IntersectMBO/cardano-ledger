@@ -1,17 +1,15 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE NumDecimals      #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Test.Cardano.Chain.Genesis.Dummy
   ( dummyConfig
   , dummyConfigStartTime
-  , dummyProtocolConstants
   , dummyK
   , dummyEpochSlots
   , dummySlotSecurityParam
   , dummyGenesisInitializer
   , dummyGenesisAvvmBalances
-  , dummyGeneratedGenesisData
   , dummyGeneratedSecrets
   , dummyGenesisSecretKeys
   , dummyGenesisSecretKeysRich
@@ -19,7 +17,7 @@ module Test.Cardano.Chain.Genesis.Dummy
   , dummyGenesisSecretsRich
   , dummyGenesisSecretsPoor
   , dummyGenesisSpec
-  , dummyBlockVersionData
+  , dummyProtocolParameters
   , dummyGenesisData
   , dummyGenesisDataStartTime
   , dummyGenesisHash
@@ -28,63 +26,48 @@ where
 
 import Cardano.Prelude
 
+import Data.Time (Day(..), UTCTime(..))
+
+import Cardano.Chain.Common
+  ( BlockCount
+  , TxFeePolicy(..)
+  , TxSizeLinear(..)
+  , mkKnownLovelace
+  , mkKnownLovelacePortion
+  )
 import Cardano.Chain.Genesis
   ( Config(..)
   , FakeAvvmOptions(..)
-  , GeneratedGenesisData(..)
   , GeneratedSecrets(..)
   , GenesisAvvmBalances(..)
   , GenesisData(..)
+  , GenesisDelegation(..)
   , GenesisHash(..)
   , GenesisInitializer(..)
   , GenesisSpec(..)
   , PoorSecret
-  , RichSecrets(..)
   , TestnetBalanceOptions(..)
-  , generateGenesisData
-  , genesisProtocolConstantsFromProtocolConstants
   , gsSecretKeys
   , gsSecretKeysPoor
-  , gsSecretKeysRich
   , mkConfig
-  , noGenesisDelegation
   )
-import Cardano.Chain.Update (BlockVersionData(..), SoftforkRule(..))
-import Cardano.Core
-  ( BlockCount
-  , EpochIndex(..)
-  , ProtocolConstants(..)
-  , SharedSeed(..)
-  , SlotCount
-  , Timestamp
-  , TxFeePolicy(..)
-  , TxSizeLinear(..)
-  , VssMaxTTL(..)
-  , VssMinTTL(..)
-  , kEpochSlots
-  , kSlotSecurityParam
-  , pcBlkSecurityParam
-  , unsafeLovelacePortionFromDouble
-  )
+import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
+import Cardano.Chain.Slotting (EpochIndex(..), SlotCount)
+import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
 import Cardano.Crypto (SecretKey)
 
 import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
 
+
 dummyConfig :: Config
-dummyConfig = dummyConfigStartTime 0
+dummyConfig = dummyConfigStartTime (UTCTime (ModifiedJulianDay 0) 0)
 
-dummyConfigStartTime :: Timestamp -> Config
-dummyConfigStartTime = flip mkConfig dummyGenesisSpec
-
-dummyProtocolConstants :: ProtocolConstants
-dummyProtocolConstants = ProtocolConstants
-  { pcK         = 10
-  , pcVssMinTTL = VssMinTTL 2
-  , pcVssMaxTTL = VssMaxTTL 6
-  }
+dummyConfigStartTime :: UTCTime -> Config
+dummyConfigStartTime startTime =
+  either (panic . show) identity $ mkConfig startTime dummyGenesisSpec
 
 dummyK :: BlockCount
-dummyK = pcBlkSecurityParam dummyProtocolConstants
+dummyK = 10
 
 dummyEpochSlots :: SlotCount
 dummyEpochSlots = kEpochSlots dummyK
@@ -92,17 +75,15 @@ dummyEpochSlots = kEpochSlots dummyK
 dummySlotSecurityParam :: SlotCount
 dummySlotSecurityParam = kSlotSecurityParam dummyK
 
-dummyGeneratedGenesisData :: GeneratedGenesisData
-dummyGeneratedGenesisData = generateGenesisData
-  dummyProtocolMagic
-  dummyProtocolConstants
-  dummyGenesisInitializer
-  dummyGenesisAvvmBalances
-
 dummyGeneratedSecrets :: GeneratedSecrets
-dummyGeneratedSecrets = ggdSecrets dummyGeneratedGenesisData
+dummyGeneratedSecrets =
+  fromMaybe
+      (panic
+        "The impossible happened: GeneratedSecrets should be in dummyConfig"
+      )
+    $ configGeneratedSecrets dummyConfig
 
-dummyGenesisSecretsRich :: [RichSecrets]
+dummyGenesisSecretsRich :: [SecretKey]
 dummyGenesisSecretsRich = gsRichSecrets dummyGeneratedSecrets
 
 dummyGenesisSecretsPoor :: [PoorSecret]
@@ -112,64 +93,68 @@ dummyGenesisSecretKeys :: [SecretKey]
 dummyGenesisSecretKeys = gsSecretKeys dummyGeneratedSecrets
 
 dummyGenesisSecretKeysRich :: [SecretKey]
-dummyGenesisSecretKeysRich = gsSecretKeysRich dummyGeneratedSecrets
+dummyGenesisSecretKeysRich = gsRichSecrets dummyGeneratedSecrets
 
 dummyGenesisSecretKeysPoor :: [SecretKey]
 dummyGenesisSecretKeysPoor = gsSecretKeysPoor dummyGeneratedSecrets
 
 dummyGenesisSpec :: GenesisSpec
 dummyGenesisSpec = UnsafeGenesisSpec
-  dummyGenesisAvvmBalances
-  dummyFtsSeed
-  noGenesisDelegation
-  dummyBlockVersionData
-  (genesisProtocolConstantsFromProtocolConstants
-    dummyProtocolConstants
-    dummyProtocolMagic
-  )
-  dummyGenesisInitializer
+  { gsAvvmDistr   = dummyGenesisAvvmBalances
+  , gsHeavyDelegation = UnsafeGenesisDelegation mempty
+  , gsProtocolParameters = dummyProtocolParameters
+  , gsK           = dummyK
+  , gsProtocolMagic = dummyProtocolMagic
+  , gsInitializer = dummyGenesisInitializer
+  }
 
 dummyGenesisAvvmBalances :: GenesisAvvmBalances
 dummyGenesisAvvmBalances = GenesisAvvmBalances mempty
 
-dummyFtsSeed :: SharedSeed
-dummyFtsSeed = SharedSeed "c2tvdm9yb2RhIEdndXJkYSBib3JvZGEgcHJvdm9kYSA="
-
-dummyBlockVersionData :: BlockVersionData
-dummyBlockVersionData = BlockVersionData
-  0
-  7000
-  2000000
-  2000000
-  4096
-  700
-  (unsafeLovelacePortionFromDouble 0.01)
-  (unsafeLovelacePortionFromDouble 0.005)
-  (unsafeLovelacePortionFromDouble 0.001)
-  (unsafeLovelacePortionFromDouble 0.1)
-  10
-  (SoftforkRule
-    (unsafeLovelacePortionFromDouble 0.9)
-    (unsafeLovelacePortionFromDouble 0.6)
-    (unsafeLovelacePortionFromDouble 0.05)
-  )
-  ( TxFeePolicyTxSizeLinear
-  $ TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44)
-  )
-  (EpochIndex maxBound)
+dummyProtocolParameters :: ProtocolParameters
+dummyProtocolParameters = ProtocolParameters
+  { ppScriptVersion    = 0
+  , ppSlotDuration     = 7000
+  , ppMaxBlockSize     = 2000000
+  , ppMaxHeaderSize    = 2000000
+  , ppMaxTxSize        = 4096
+  , ppMaxProposalSize  = 700
+  , ppMpcThd           = mkKnownLovelacePortion @10000000000000
+  , ppHeavyDelThd      = mkKnownLovelacePortion @5000000000000
+  , ppUpdateVoteThd    = mkKnownLovelacePortion @1000000000000
+  , ppUpdateProposalThd = mkKnownLovelacePortion @100000000000000
+  , ppUpdateImplicit   = 10
+  , ppSoftforkRule     = SoftforkRule
+    (mkKnownLovelacePortion @900000000000000)
+    (mkKnownLovelacePortion @600000000000000)
+    (mkKnownLovelacePortion @50000000000000)
+  , ppTxFeePolicy      = TxFeePolicyTxSizeLinear
+    (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
+  , ppUnlockStakeEpoch = EpochIndex maxBound
+  }
 
 dummyGenesisInitializer :: GenesisInitializer
 dummyGenesisInitializer = GenesisInitializer
-  (TestnetBalanceOptions 12 4 6e17 0.99 True)
-  (FakeAvvmOptions 10 100000)
-  (unsafeLovelacePortionFromDouble 1)
-  True
-  0
+  { giTestBalance = TestnetBalanceOptions
+    { tboPoors          = 12
+    , tboRichmen        = 4
+    , tboTotalBalance   = mkKnownLovelace @6000000000000000
+    , tboRichmenShare   = mkKnownLovelacePortion @990000000000000
+    , tboUseHDAddresses = True
+    }
+  , giFakeAvvmBalance = FakeAvvmOptions
+    { faoCount      = 10
+    , faoOneBalance = mkKnownLovelace @100000
+    }
+  , giAvvmBalanceFactor = mkKnownLovelacePortion @1000000000000000
+  , giUseHeavyDlg = True
+  , giSeed        = 0
+  }
 
 dummyGenesisData :: GenesisData
 dummyGenesisData = configGenesisData dummyConfig
 
-dummyGenesisDataStartTime :: Timestamp -> GenesisData
+dummyGenesisDataStartTime :: UTCTime -> GenesisData
 dummyGenesisDataStartTime = configGenesisData . dummyConfigStartTime
 
 dummyGenesisHash :: GenesisHash

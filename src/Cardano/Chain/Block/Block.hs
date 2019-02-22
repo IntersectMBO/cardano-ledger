@@ -245,7 +245,7 @@ mkBlock
   -> Block
 mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
  where
-  prevHash   = either getGenesisHash hashHeader prevHeader
+  prevHash   = either unGenesisHash hashHeader prevHeader
   difficulty = either (const 0) (succ . headerDifficulty) prevHeader
 
 -- | Smart constructor for 'Block', without requiring the entire previous
