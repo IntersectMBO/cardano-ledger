@@ -7,6 +7,7 @@
 module Cardano.Chain.Update.Validation.Registration
   ( RegistrationError
   , RegistrationState(..)
+  , ProtocolUpdateProposals
   , registerProposal
   )
 where
