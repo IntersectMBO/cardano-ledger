@@ -15,3 +15,6 @@ https://github.com/input-output-hk/haskell-hedgehog.git 2e741bb53afb085741807018
 http://github.com/nc6/canonical-json a9dc9b893649bc2e2a770ab22d278a780f7e3a3c . 0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr canonical-json .stack.nix/canonical-json.nix
 https://github.com/input-output-hk/cardano-prelude e1fb84b1a955b6e3e3e53d9022e8bc0f927417a2 . 0ikxxv3b5rhq56fj2vbfsdnvc3g5lj5yyfxdph05n8wccjx0bd2m cardano-prelude .stack.nix/cardano-prelude.nix
 https://github.com/input-output-hk/cardano-prelude e1fb84b1a955b6e3e3e53d9022e8bc0f927417a2 test 0ikxxv3b5rhq56fj2vbfsdnvc3g5lj5yyfxdph05n8wccjx0bd2m cardano-prelude-test .stack.nix/cardano-prelude-test.nix
+https://github.com/input-output-hk/fm-ledger-rules 965b32be3361b2ed404e1e58a6fb3cf525d3a26c specs/semantics/hs 1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7 small-steps .stack.nix/small-steps.nix
+https://github.com/input-output-hk/fm-ledger-rules 965b32be3361b2ed404e1e58a6fb3cf525d3a26c specs/ledger/hs 1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7 cs-ledger .stack.nix/cs-ledger.nix
+https://github.com/input-output-hk/fm-ledger-rules 965b32be3361b2ed404e1e58a6fb3cf525d3a26c specs/chain/hs 1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7 cs-blockchain .stack.nix/cs-blockchain.nix

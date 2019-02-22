@@ -141,8 +141,12 @@ decodeFull' = decodeFull . BSL.fromStrict
 
 decodeFullDecoder
   :: Text
+  -- ^ Label for error reporting
   -> (forall s . D.Decoder s a)
+  -- ^ The parser for the @ByteString@ to decode. It should decode the given
+  -- @ByteString@ into a value of type @a@
   -> BSL.ByteString
+  -- ^ The @ByteString@ to decode
   -> Either DecoderError a
 decodeFullDecoder lbl decoder bs0 = case deserialiseDecoder decoder bs0 of
   Right (x, leftover) -> if BS.null leftover

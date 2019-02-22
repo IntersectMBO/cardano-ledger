@@ -12,5 +12,6 @@ import Cardano.Crypto
 dummyProtocolMagic :: ProtocolMagic
 dummyProtocolMagic = ProtocolMagic dummyProtocolMagicId RequiresMagic
 
+-- TODO: if we import this qualified we don't need to prepend the 'dummy' name.
 dummyProtocolMagicId :: ProtocolMagicId
 dummyProtocolMagicId = ProtocolMagicId 55550001

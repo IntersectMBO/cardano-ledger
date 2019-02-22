@@ -306,7 +306,7 @@ recoverSignedBytes v =
   let
     bytes = mconcat
       [ "\130"
-      -- ^ This byte is part of the signed payload, but is not part of the transmitted payload.
+      -- The byte above is part of the signed payload, but is not part of the transmitted payload.
       -- This is an implementation artifact of the previous
       , annotation $ aUvProposalId v
       , annotation $ aUvDecision v
