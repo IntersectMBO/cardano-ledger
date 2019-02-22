@@ -1,20 +1,35 @@
+{-# LANGUAGE EmptyDataDecls        #-}
+
 module Main where
+
+import System.IO (isEOF)
 
 import NonIntegral
 
-import Data.Ratio ((%))
+import qualified Data.Fixed as FP
 
-rational :: IO ()
-rational = do
-  print (fromRational $ 2 *** (1%2))
-  print (fromRational $ 3 *** (1%2))
+data E34
 
-double :: IO ()
-double = do
-  print (2.0 *** 0.5)
-  print (3.0 *** 0.5)
+instance FP.HasResolution E34 where
+    resolution _ = 10000000000000000000000000000000000
+
+type Digits34 = FP.Fixed E34
+
+type FixedPoint = Digits34
+
+precision :: FixedPoint
+precision = 10000000000000000000000000000000000
+
+epsilon :: FixedPoint
+epsilon = 100000000000000000000
 
 main :: IO ()
 main = do
-  double
-  rational
+  b <- isEOF
+  if b then return ()
+    else do
+    line <- getLine
+    let base     = read (takeWhile (/= ' ') line)        :: FixedPoint
+    let exponent = read (tail $ dropWhile (/= ' ') line) :: FixedPoint
+    print $ (base / precision) *** (exponent / precision)
+    main
