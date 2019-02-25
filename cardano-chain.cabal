@@ -203,6 +203,7 @@ test-suite cardano-chain-test
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Json
+                       Test.Cardano.Chain.Update.Properties
 
                        Test.Options
 

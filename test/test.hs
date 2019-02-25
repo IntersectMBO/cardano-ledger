@@ -24,6 +24,7 @@ import qualified Test.Cardano.Chain.Txp.Json
 import qualified Test.Cardano.Chain.Txp.Validation
 import qualified Test.Cardano.Chain.Update.Bi
 import qualified Test.Cardano.Chain.Update.Json
+import qualified Test.Cardano.Chain.Update.Properties
 import qualified Test.Cardano.Chain.Elaboration.Delegation
 
 main :: IO ()
@@ -45,5 +46,6 @@ main = do
     , Test.Cardano.Chain.Txp.Validation.tests scenario
     , Test.Cardano.Chain.Update.Bi.tests
     , Test.Cardano.Chain.Update.Json.tests
+    , Test.Cardano.Chain.Update.Properties.tests
     , Test.Cardano.Chain.Block.Validation.Spec.tests
     ]

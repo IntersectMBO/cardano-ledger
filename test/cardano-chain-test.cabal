@@ -38,6 +38,7 @@ library
                        Test.Cardano.Chain.Txp.Json
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
+                       Test.Cardano.Chain.Update.Properties
 
   build-depends:       base
                      , base16-bytestring
