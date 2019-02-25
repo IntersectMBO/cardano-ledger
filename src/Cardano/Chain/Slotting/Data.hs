@@ -23,6 +23,7 @@ module Cardano.Chain.Slotting.Data
   , addEpochSlottingData
   , lookupEpochSlottingData
   , computeSlotStart
+  , unsafeSlottingData
   )
 where
 
@@ -31,7 +32,7 @@ import Cardano.Prelude
 import Data.Map.Strict as M
 import Data.Semigroup (Semigroup)
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
-import Formatting (bprint, build, int, sformat)
+import Formatting (bprint, build, int, sformat, string)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
@@ -76,6 +77,11 @@ newtype SlottingData = SlottingData
   deriving (Eq, Show, Generic)
   deriving newtype (Semigroup, Monoid)
   deriving anyclass NFData
+
+instance B.Buildable SlottingData where
+  build (SlottingData sMap) = bprint
+    ("SlottingData: " . string)
+    (show sMap)
 
 instance Bi SlottingData where
   encode slottingData = encode $ getSlottingDataMap slottingData
@@ -126,6 +132,11 @@ mkSlottingData
 mkSlottingData epochSlottingDataMap = do
   validateSlottingDataMap epochSlottingDataMap
   pure $ SlottingData epochSlottingDataMap
+
+-- This doesn't check invariants, use at your own risk.
+-- Ideally this should only be used in tests
+unsafeSlottingData :: Map EpochIndex EpochSlottingData -> SlottingData
+unsafeSlottingData = SlottingData
 
 -- | The validation for the @SlottingData@. It's visible since it's needed
 --   externally.

@@ -1,10 +1,17 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 module Cardano.Chain.Slotting.SlotId
   ( SlotId(..)
+  , SlotIdError(..)
   , siEpochL
   , siSlotL
   , slotIdF
@@ -12,10 +19,8 @@ module Cardano.Chain.Slotting.SlotId
   , slotIdFromEnum
   , slotIdSucc
   , slotIdPred
-  , FlatSlotId
-  , flatSlotId
+  , FlatSlotId(..)
   , flattenSlotId
-  , flattenEpochIndex
   , unflattenSlotId
   , addSlotNumber
   , subSlotNumber
@@ -26,17 +31,19 @@ where
 
 import Cardano.Prelude
 
-import Control.Lens (Iso', iso, makeLensesFor)
+import Control.Lens (makeLensesFor)
+import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Formatting (Format, bprint, build, ords, sformat)
+import Formatting (Format, bprint, build, int, ords, sformat, shown)
 import qualified Formatting.Buildable as B
+import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
-  (LocalSlotIndex, getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
+  (LocalSlotIndex(..), getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
 import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 
 
@@ -53,6 +60,20 @@ instance B.Buildable SlotId where
     (ords . " slot of " . ords . " epoch")
     (getSlotIndex $ siSlot si)
     (getEpochIndex $ siEpoch si)
+
+instance B.Buildable SlotIdError where
+  build (SlotIdOverflow sId sc) = bprint
+    ("SlotId: "
+    . shown
+    . " and SlotCount: "
+    . shown
+    . " exceeds the maximum boundary when flattened."
+    )
+    sId
+    sc
+
+data SlotIdError
+  = SlotIdOverflow SlotId SlotCount deriving (Eq, Show)
 
 instance NFData SlotId
 
@@ -71,65 +92,107 @@ makeLensesFor
     ]
     ''SlotId
 
-slotIdToEnum :: SlotCount -> Int -> SlotId
-slotIdToEnum epochSlots = unflattenSlotId epochSlots . fromIntegral
+slotIdToEnum :: SlotCount -> FlatSlotId -> SlotId
+slotIdToEnum = unflattenSlotId
 
-slotIdFromEnum :: SlotCount -> SlotId -> Int
-slotIdFromEnum epochSlots = fromIntegral . flattenSlotId epochSlots
+slotIdFromEnum :: SlotCount -> SlotId -> Either SlotIdError Int
+slotIdFromEnum sc sId = fromIntegral . getFlatSlotId <$> flattenSlotId sc sId
 
-slotIdSucc :: SlotCount -> SlotId -> SlotId
-slotIdSucc epochSlots =
-  slotIdToEnum epochSlots . (+ 1) . slotIdFromEnum epochSlots
+slotIdSucc :: SlotCount -> SlotId -> Either SlotIdError SlotId
+slotIdSucc sc sId =
+  slotIdToEnum sc . FlatSlotId . fromIntegral . (1 +) <$> slotIdFromEnum sc sId
 
-slotIdPred :: SlotCount -> SlotId -> SlotId
-slotIdPred epochSlots =
-  slotIdToEnum epochSlots . subtract 1 . slotIdFromEnum epochSlots
+slotIdPred :: SlotCount -> SlotId -> Either SlotIdError SlotId
+slotIdPred epochSlots sId =
+  slotIdToEnum epochSlots
+    .   FlatSlotId
+    .   fromIntegral
+    .   subtract 1
+    <$> slotIdFromEnum epochSlots sId
 
 -- | Specialized formatter for 'SlotId'.
 slotIdF :: Format r (SlotId -> r)
 slotIdF = build
 
 -- | FlatSlotId is a flat version of SlotId
-type FlatSlotId = Word64
+newtype FlatSlotId = FlatSlotId
+      { getFlatSlotId :: Word64
+      } deriving (Eq, Generic, Num, Ord, Show)
+
+instance Bi FlatSlotId where
+  encode = encode . getFlatSlotId
+  decode = FlatSlotId <$> decode
+
+instance Monad m => ToJSON m FlatSlotId where
+  toJSON = toJSON . getFlatSlotId
+
+instance MonadError SchemaError m => FromJSON m FlatSlotId where
+  fromJSON val = do
+    number <- fromJSON val
+    pure $ FlatSlotId number
+
+instance Aeson.FromJSON FlatSlotId where
+  parseJSON v = do
+    c <- Aeson.parseJSON v
+    pure $ FlatSlotId c
+
+instance Aeson.ToJSON FlatSlotId where
+  toJSON = Aeson.toJSON . getFlatSlotId
+
+instance B.Buildable FlatSlotId where
+  build (getFlatSlotId -> x) = bprint
+    int
+    x
+
+instance NFData FlatSlotId
 
 -- | Flatten 'SlotId' (which is basically pair of integers) into a single number.
-flattenSlotId :: SlotCount -> SlotId -> FlatSlotId
-flattenSlotId es si =
-  fromIntegral $ fromIntegral (siEpoch si) * es + fromIntegral
-    (getSlotIndex $ siSlot si)
+flattenSlotId :: SlotCount -> SlotId -> Either SlotIdError FlatSlotId
+flattenSlotId sc si
+  | flattened > fromIntegral (maxBound :: Word64) = Left $ SlotIdOverflow si sc
+  | otherwise = Right . FlatSlotId $ fromIntegral flattened
+ where
+  lsi :: Integer
+  lsi = fromIntegral . getSlotIndex $ siSlot si
+  pastSlots :: Integer
+  pastSlots =
+    fromIntegral . getFlatSlotId $ flattenEpochIndex sc (siEpoch si)
+  flattened :: Integer
+  flattened = pastSlots + lsi
 
 -- | Flattens 'EpochIndex' into a single number
 flattenEpochIndex :: SlotCount -> EpochIndex -> FlatSlotId
 flattenEpochIndex epochSlots (EpochIndex i) =
-  fromIntegral (fromIntegral i * epochSlots)
+  FlatSlotId $ fromIntegral (fromIntegral i * epochSlots)
 
 -- | Construct a 'SlotId' from a flattened variant, using a given 'SlotCount'
 --   modulus
 unflattenSlotId :: SlotCount -> FlatSlotId -> SlotId
-unflattenSlotId es n = SlotId {siEpoch = fromIntegral epoch, siSlot = lsi}
+unflattenSlotId es (FlatSlotId fsId) = SlotId
+  { siEpoch = EpochIndex epoch
+  , siSlot  = lsi
+  }
  where
-  (epoch, slot) = n `divMod` fromIntegral es
+  -- `slot` accounts for the `LocalSlotIndex`
+  (epoch, slot) = fsId `divMod` fromIntegral es
   lsi           = case mkLocalSlotIndex es (fromIntegral slot) of
     Left err -> panic
       $ sformat ("The impossible happened in unflattenSlotId: " . build) err
     Right lsi' -> lsi'
 
-flatSlotId :: SlotCount -> Iso' SlotId FlatSlotId
-flatSlotId epochSlots =
-  iso (flattenSlotId epochSlots) (unflattenSlotId epochSlots)
-
 -- | Increase a 'FlatSlotId' by 'SlotCount'
 addSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
-addSlotNumber a b = fromIntegral a + b
+addSlotNumber a (FlatSlotId b) = FlatSlotId $ fromIntegral a + b
 
 -- | Decrease a 'FlatSlotId' by 'SlotCount', going no lower than 0
 subSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
-subSlotNumber (SlotCount a) b = if a > b then 0 else b - a
+subSlotNumber (SlotCount a) (FlatSlotId b) =
+  if a > b then FlatSlotId 0 else FlatSlotId (b - a)
 
 slotNumberEpoch :: SlotCount -> FlatSlotId -> EpochIndex
 slotNumberEpoch epochSlots slot = siEpoch $ unflattenSlotId epochSlots slot
 
--- | Slot such that at the beginning of epoch blocks with SlotId ≤- this slot
+-- | Slot such that at the beginning of epoch blocks with SlotId ≤ to this slot
 --   are stable
 crucialSlot :: BlockCount -> EpochIndex -> SlotId
 crucialSlot _ 0        = SlotId {siEpoch = 0, siSlot = localSlotIndexMinBound}

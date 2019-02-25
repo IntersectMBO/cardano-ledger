@@ -21,13 +21,13 @@ import Control.Monad.Except (MonadError)
 import qualified Data.Aeson.Options as S (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time (NominalDiffTime)
-import Formatting (Format, bprint, build, bytes, int, shortest)
+import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, ScriptVersion, TxFeePolicy)
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId, isBootstrapEra)
+import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
 
@@ -62,7 +62,7 @@ instance B.Buildable ProtocolParameters where
     . ", heavyweight delegation threshold: " . build
     . ", update vote threshold: " . build
     . ", update proposal threshold: " . build
-    . ", update implicit period: " . int . " slots"
+    . ", update implicit period: " . build . " slots"
     . ", softfork rule: " . build
     . ", tx fee policy: " . build
     . ", unlock stake epoch: " . build

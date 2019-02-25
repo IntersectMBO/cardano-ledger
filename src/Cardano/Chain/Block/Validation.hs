@@ -53,6 +53,7 @@ import Cardano.Chain.Genesis as Genesis
   , configProtocolMagicId
   , configSlotSecurityParam
   )
+import qualified Cardano.Chain.Slotting as Slotting
 import Cardano.Chain.Slotting (flattenSlotId)
 import Cardano.Crypto
   ( AProxySecretKey(..)
@@ -175,6 +176,8 @@ data ChainValidationError
   | ChainValidationTooManyDelegations PublicKey
   -- ^ The delegator for this block has delegated in too many recent blocks
 
+  | ChainValidationSlotIdError Slotting.SlotIdError
+
   deriving (Eq, Show)
 
 
@@ -272,10 +275,14 @@ updateChain config cvs b = do
   -- Update the signing history
   let signingHistory' = updateSigningHistory delegator signingHistory
 
+  delegationState' <- case slot of
+
+    Left err -> throwError $ ChainValidationSlotIdError err
+
   -- Update the delegation state
-  delegationState' <-
-    updateDelegation config slot d delegationState certificates
-      `wrapError` ChainValidationDelegationSchedulingError
+    Right slot' ->
+      updateDelegation config slot' d delegationState certificates
+        `wrapError` ChainValidationDelegationSchedulingError
 
   pure $ ChainValidationState
     { cvsSigningHistory  = signingHistory'

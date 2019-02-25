@@ -50,7 +50,7 @@ import Cardano.Chain.Genesis as Genesis
   )
 import Cardano.Chain.Slotting
   ( EpochIndex
-  , FlatSlotId
+  , FlatSlotId(..)
   , SlotCount
   , addSlotNumber
   , slotNumberEpoch
@@ -173,7 +173,7 @@ data ActivationState = ActivationState
 --   specification.
 activateDelegation :: ActivationState -> ScheduledDelegation -> ActivationState
 activateDelegation as delegation
-  | prevDelegationSlot < slot || slot == 0 = ActivationState
+  | prevDelegationSlot < slot || getFlatSlotId slot == 0 = ActivationState
     { asDelegationMap   = M.insert delegator delegate delegationMap
     , asDelegationSlots = M.insert delegator slot delegationSlots
     }
@@ -183,7 +183,7 @@ activateDelegation as delegation
   ScheduledDelegation slot delegator delegate   = delegation
 
   prevDelegationSlot =
-    fromMaybe 0 $ M.lookup delegator (asDelegationSlots as)
+    fromMaybe (FlatSlotId 0) $ M.lookup delegator (asDelegationSlots as)
 
 
 --------------------------------------------------------------------------------
@@ -201,7 +201,12 @@ data InterfaceState = InterfaceState
 --   certificates from the genesis block.
 initialInterfaceState
   :: MonadError SchedulingError m => Genesis.Config -> m InterfaceState
-initialInterfaceState config = updateDelegation config 0 0 is certificates
+initialInterfaceState config = updateDelegation
+  config
+  (FlatSlotId 0)
+  0
+  is
+  certificates
  where
   is = InterfaceState
     { isSchedulingState = SchedulingState
@@ -210,7 +215,7 @@ initialInterfaceState config = updateDelegation config 0 0 is certificates
       }
     , isActivationState = ActivationState
       { asDelegationMap   = M.fromList $ zip genesisKeys genesisKeys
-      , asDelegationSlots = M.fromList $ (, 0) <$> genesisKeys
+      , asDelegationSlots = M.fromList $ (, FlatSlotId 0) <$> genesisKeys
       }
     }
 

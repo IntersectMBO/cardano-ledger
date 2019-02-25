@@ -191,6 +191,7 @@ test-suite cardano-chain-test
 
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Slotting.Properties
 
                        Test.Cardano.Chain.Txp.Bi
                        Test.Cardano.Chain.Txp.Example
