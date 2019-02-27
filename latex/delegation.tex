@@ -356,7 +356,7 @@ a stake pool, though these concerns are independent of the ledger rules.
     \inference[Deleg-Dereg]
     {
       \var{c}\in \DCertDeRegKey  & hk = \cwitness{c} \\
-    hk \in \dom \var{stkeys} & hk \mapsto 0 \in \var{rewards}
+    hk \in \dom \var{stkeys} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
     }
     {
       \begin{array}{r}
@@ -440,7 +440,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \item The key is added to the set of registered stake pools.
       \item The pool's parameters are stored.
     \end{itemize}
-  \item Stake pool parameter updates are handled by \cref{eq:pool-reg}.
+  \item Stake pool parameter updates are handled by \cref{eq:pool-rereg}.
     This rule, which also matches on the certificate type $\type{DCertRegPool}$,
     is distinguished from \cref{eq:pool-reg} by the requirement that
     the pool be registered. This rule also ends stake pool retirements.

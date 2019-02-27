@@ -50,7 +50,8 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
   \item
     The $\fun{ubalance}$ function calculates sum total of all the coin in a given UTxO.
   \item
-    The $\fun{wbalance}$ function calculates sum total of all the withdrawals in a transaction.
+    The $\fun{wbalance}$ function calculates the total sum of all the reward withdrawals in a
+    transaction.
 
   \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
     in the context of the protocol parameters, the current UTxO on the ledger, and the registered
@@ -403,7 +404,7 @@ Recall that the stake pool retirement refunds are issued not when a certificate
 scheduling the retirement is processed, but at the epoch boundary for which
 the retirement is scheduled. The decayed value over the full previous epoch is
 also accounted for at the boundary change. For details of this accounting, see
-Section~\cref{sec:epoch}.
+Section~\ref{sec:epoch}.
 
 \begin{figure}[htb]
   \begin{align*}
@@ -503,7 +504,7 @@ The witnesses, together with the transaction body, form a full transaction.
 Every witness in a transaction signs the transaction body.
 Moreover, the witnesses are represented as finite maps from verification keys to signatures,
 so that any key that is required to sign a transaction only provides a single witness.
-This means that, for example, transaction which includes a delegation certificate and
+This means that, for example, a transaction which includes a delegation certificate and
 a reward withdrawal corresponding to the same stake key still only includes one signature.
 
 Figure~\ref{fig:functions-witnesses} defines the function which

@@ -124,6 +124,7 @@ throughout the rest of the section.
     refunds, which will ultimately be returned to the registered reward account.
   \item The function $\fun{poolStake}$ filters the stake distribution to one stake pool.
   \item The function $\fun{updateAvgs}$ calculates the new performance moving averages.
+    Note that $\fun{movingAvg}$ is defined in Figure~\ref{fig:functions:rewards}.
 \end{itemize}
 
 
@@ -168,7 +169,7 @@ throughout the rest of the section.
       & \fun{poolStake} \in \HashKey_{pool} \to (\HashKey_{stake} \mapsto \HashKey_{pool})
         \to \Stake \to \Stake \\
       & \poolStake{hk}{delegs}{stake} =
-        \dom{(\var{delegs}\restrictdom\{hk\})\restrictrange\var{stake}}
+        \dom{(\var{delegs}\restrictrange\{hk\})\restrictdom\var{stake}}
   \end{align*}
 
   \emph{Update Moving Averages}
