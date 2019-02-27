@@ -8,6 +8,8 @@ module NonIntegral
   , scaleExp
   ) where
 
+import Debug.Trace
+
 scaleExp :: (RealFrac b) => b -> (Integer, b)
 scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
 
@@ -25,7 +27,10 @@ exp' :: (RealFrac a, Enum a, Show a) => a -> a
 exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
-  | x > 1  = let (n, euler) = scaleExp x in exp' euler ^^ n
+  | x > 1  = let (n, euler) = scaleExp x in
+             let x' = exp' euler in
+             --trace ("(n, euler) = (" ++ show n ++ ", " ++ show euler ++ ") [" ++ show x ++ "]") $
+             x' ^^ n
   | otherwise = fexp 1000 x
 
 -- | Approximate exp(x) via continued fraction.
@@ -155,11 +160,14 @@ findE eone x = contract eone x lower upper
 ln' :: (RealFrac a, Enum a, Show a) => a -> a
 ln' x = if x == 0
         then error "0 is not in domain of ln"
-        else fromIntegral n + approxln
+        else --trace ("(n, x, x') = (" ++ show n ++ ", " ++ show x ++ ", " ++ show x' ++ ")") $
+             fromIntegral n + approxln
   where (n, x') = splitLn x
         approxln = fln 1000 x'
 
 splitLn :: (RealFrac b, Enum b, Show b) => b -> (Integer, b)
-splitLn x = (n, x')
+splitLn x = --trace ("(n, x', y') = (" ++ show n ++ ", " ++ show x' ++ ", " ++ show y' ++ ")") $
+            (n, x')
     where n = findE e x
-          x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
+          y' = exp' (fromIntegral n)
+          x' = (x / y') - 1 -- x / e^n > 1!
