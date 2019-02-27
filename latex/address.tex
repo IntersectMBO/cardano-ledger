@@ -98,6 +98,13 @@ Section~\ref{sec:utxo}, and follows \cite{chimeric}.
         & \text{construct a reward account}
     \end{array}
   \end{equation*}
+  %
+  \emph{Constraints}
+  %
+  \begin{equation*}
+    \var{hk_1} = \var{hk_2} \iff \fun{addr_{rwd}}~\var{hk_2} = \fun{addr_{rwd}}~\var{hk_2}
+    ~~~ \left( \fun{addr_{rwd}} \text{ is injective} \right)
+  \end{equation*}
   \caption{Definitions used in Addresses}
   \label{fig:defs:addresses}
 \end{figure*}
