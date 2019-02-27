@@ -22,7 +22,7 @@ stdenv.mkDerivation {
                       xargs todonotes
 
                       # Tikz
-                      pgf
+                      pgf tikz-cd
 
                       # build tools
                       latexmk
