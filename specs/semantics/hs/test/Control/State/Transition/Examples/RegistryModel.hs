@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -20,7 +21,9 @@ import Hedgehog
   ( MonadTest
   , Property
   , (===)
+  , discover
   , evalEither
+  , checkParallel
   , evalIO
   , forAll
   , property
@@ -56,16 +59,16 @@ instance STS SPAWN where
         return $! Set.insert tid tids
     ]
 
-data DOREG
+data REGISTER
 
-instance STS DOREG where
-  type Environment DOREG = Set AThreadId
+instance STS REGISTER where
+  type Environment REGISTER = Set AThreadId
 
-  type State DOREG = Map String AThreadId
+  type State REGISTER = Map String AThreadId
 
-  type Signal DOREG = (String, AThreadId)
+  type Signal REGISTER = (String, AThreadId)
 
-  data PredicateFailure DOREG
+  data PredicateFailure REGISTER
     = NameAlreadyRegistered String
     | ThreadIdAlreadyRegistered AThreadId
     | ThreadDoesntExist AThreadId
@@ -76,23 +79,24 @@ instance STS DOREG where
   transitionRules =
     [ do
         TRC (tids, regs, (n, t)) <- judgmentContext
+        -- Try commenting out some of these checks and see what happens.
         t `member` tids ?! ThreadDoesntExist t
         n `notElem` Map.keys regs ?! NameAlreadyRegistered n
- --       t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
+        t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
         return $! Map.insert n t regs
     ]
 
 
-data DOUNREG
+data UNREGISTER
 
-instance STS DOUNREG where
-  type Environment DOUNREG = ()
+instance STS UNREGISTER where
+  type Environment UNREGISTER = ()
 
-  type State DOUNREG = Map String AThreadId
+  type State UNREGISTER = Map String AThreadId
 
-  type Signal DOUNREG = String
+  type Signal UNREGISTER = String
 
-  data PredicateFailure DOUNREG
+  data PredicateFailure UNREGISTER
     = NameNotRegistered String
     deriving (Eq, Show)
 
@@ -134,8 +138,8 @@ instance STS REGISTRY where
 
   data PredicateFailure REGISTRY
     = SpawnFailure (PredicateFailure SPAWN)
-    | DoRegFailure (PredicateFailure DOREG)
-    | DoUnregFailure (PredicateFailure DOUNREG)
+    | DoRegFailure (PredicateFailure REGISTER)
+    | DoUnregFailure (PredicateFailure UNREGISTER)
     | WhereIsFailure String
     deriving (Eq, Show)
 
@@ -150,7 +154,7 @@ instance STS REGISTRY where
             tids' <- trans @SPAWN $ TRC ((), tids, tid)
             return $! (tids', regs)
           Register n t -> do
-            regs' <- trans @DOREG $ TRC (tids, regs, (n, t))
+            regs' <- trans @REGISTER $ TRC (tids, regs, (n, t))
             return $! (tids, regs')
           WhereIs n t -> do
             case whereIs n regs of
@@ -161,7 +165,7 @@ instance STS REGISTRY where
                 t == t' ?! undefined
                 return $! (tids, regs)
           Unregister n -> do
-            regs' <- trans @DOUNREG $ TRC ((), regs, n)
+            regs' <- trans @UNREGISTER $ TRC ((), regs, n)
             return $! (tids, regs')
 
     ]
@@ -169,10 +173,10 @@ instance STS REGISTRY where
 instance Embed SPAWN REGISTRY where
   wrapFailed = SpawnFailure
 
-instance Embed DOREG REGISTRY where
+instance Embed REGISTER REGISTRY where
   wrapFailed = DoRegFailure
 
-instance Embed DOUNREG REGISTRY where
+instance Embed UNREGISTER REGISTRY where
   wrapFailed = DoUnregFailure
 
 allNames :: Set String
@@ -256,3 +260,7 @@ executeTrace tr = void $ res
       let expectedTid = fromJust $ Map.lookup atid st
       tid === expectedTid
       return st
+
+tests :: IO Bool
+tests =
+  checkParallel $$(discover)

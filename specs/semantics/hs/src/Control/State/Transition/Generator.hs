@@ -87,9 +87,10 @@ genTrace
   -> State s
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
-genTrace env st aSigGen = Gen.shrink shrinkTrace $ do -- TODO: use prune and shrink!
-  d <- Gen.integral (linear 0 100)
-  mkTrace env st <$> go d st []
+genTrace env st aSigGen =
+  Gen.shrink shrinkTrace $ Gen.prune $ do
+    d <- Gen.integral (linear 0 100)
+    mkTrace env st <$> go d st []
   -- Gen.sized $ \d -> mkTrace env st <$> go d st []
   where
     -- go d sti acc =
