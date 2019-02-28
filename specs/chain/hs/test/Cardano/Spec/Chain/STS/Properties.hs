@@ -20,7 +20,7 @@ slotsIncrease = property $ forAll trace >>= slotsIncreaseInTrace
 slotsIncreaseInTrace :: MonadTest m => Trace CHAIN -> m ()
 slotsIncreaseInTrace tr = assert $ slots == sortedSlots && nub slots == slots
   where blocks = traceSignals OldestFirst tr
-        slots = blocks ^.. traverse . bHeader . bSlot
+        slots = blocks ^.. traverse . bHeader . bhSlot
         sortedSlots = sort slots
 
 blockIssuersAreDelegates :: Property
@@ -37,5 +37,5 @@ blockIssuersAreDelegates =
              Just _ -> pure $! ()
              Nothing -> failure
            where
-             issuer = bk ^. bHeader . bIssuer
+             issuer = bk ^. bHeader . bhIssuer
              dm = st ^. disL . delegationMap
