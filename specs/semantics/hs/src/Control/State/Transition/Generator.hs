@@ -32,10 +32,13 @@ module Control.State.Transition.Generator
   )
 where
 
+import Control.Lens ((^.))
 import Control.Monad (forM)
+import Data.Either (isRight, partitionEithers)
+import Data.List (subsequences)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (Size(Size), unSize)
+import Hedgehog.Range (Size(Size), unSize, linear)
 
 import Control.State.Transition
   ( Environment
@@ -51,8 +54,11 @@ import Control.State.Transition.Trace
   , TraceOrder(OldestFirst)
   , lastState
   , mkTrace
+  , runTrace
   , traceLength
   , traceSignals
+  , traceEnv
+  , traceInitState
   )
 
 class STS s => HasTrace s where
@@ -81,22 +87,52 @@ genTrace
   -> State s
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
-genTrace env st aSigGen = Gen.sized $ \d -> mkTrace env st <$> go d st []
+genTrace env st aSigGen = Gen.shrink shrinkTrace $ do -- TODO: use prune and shrink!
+  d <- Gen.integral (linear 0 100)
+  mkTrace env st <$> go d st []
+  -- Gen.sized $ \d -> mkTrace env st <$> go d st []
   where
-    go d sti acc =
-      Gen.frequency [ (5, return acc)
-                    -- The probability of continue with the recursion depends
-                    -- on the size parameter of the generator. Here the
-                    -- constant factor is determined ad-hoc.
-                    , (unSize d * 2, do
-                          mStSig <- genSigSt @s env sti aSigGen
-                          case mStSig of
-                            Nothing ->
-                              go d sti acc
-                            Just (stNext, sig) ->
-                              go d stNext ((stNext, sig): acc)
-                      )
-                    ]
+    -- go d sti acc =
+    --   Gen.frequency [ (5, return acc)
+    --                 -- The probability of continue with the recursion depends
+    --                 -- on the size parameter of the generator. Here the
+    --                 -- constant factor is determined ad-hoc.
+    --                 , (unSize d * 2, do
+    --                       mStSig <- genSigSt @s env sti aSigGen
+    --                       case mStSig of
+    --                         Nothing ->
+    --                           go d sti acc
+    --                         Just (stNext, sig) ->
+    --                           go d stNext ((stNext, sig): acc)
+    --                   )
+    --                 ]
+    go
+      :: Int
+      -> State s
+      -> [(State s, Signal s)]
+      -> Gen [(State s, Signal s)]
+    go 0 _   acc = return acc
+    go d sti acc = do
+      mStSig <- genSigSt @s env sti aSigGen
+      case mStSig of
+        Nothing ->
+          go (d - 1) sti acc
+        Just (stNext, sig) ->
+          go (d - 1) stNext ((stNext, sig): acc)
+
+shrinkTrace
+  :: forall s
+   . STS s
+  => Trace s
+  -> [Trace s]
+shrinkTrace tr = mkTrace env st0 <$> stSigs
+  where
+    (_, stSigs) = partitionEithers applied
+    applied = (runTrace @s env st0) <$> (subsequences sigs)
+    env = tr ^. traceEnv
+    st0 = tr ^. traceInitState
+    sigs = traceSignals OldestFirst tr
+
   -- An alternate way to generate a trace of the size of the generator might
   -- be:
   --

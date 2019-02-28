@@ -1,20 +1,39 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Control.State.Transition.Examples.Register where
 
+import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Control.Exception (ErrorCall, try)
+import Control.Monad (foldM, void)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.Set (Set, member, (\\))
 import qualified Data.Set as Set
-import Hedgehog (Gen)
+import Hedgehog
+  ( MonadTest
+  , Property
+  , (===)
+  , evalEither
+  , evalIO
+  , forAll
+  , property
+  , withTests
+  )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Control.State.Transition
 import Control.State.Transition.Generator
+import Control.State.Transition.Trace
+
+import Control.State.Transition.Examples.Registry
 
 type AThreadId = Int
 
@@ -59,7 +78,7 @@ instance STS DOREG where
         TRC (tids, regs, (n, t)) <- judgmentContext
         t `member` tids ?! ThreadDoesntExist t
         n `notElem` Map.keys regs ?! NameAlreadyRegistered n
-        t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
+ --       t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
         return $! Map.insert n t regs
     ]
 
@@ -163,7 +182,11 @@ instance HasTrace REGISTER where
   initEnvGen = return ()
 
   sigGen () (tids, regs) =
-    Gen.choice [ Spawn <$> Gen.integral (Range.constant 0 10000)
+    Gen.choice [ do
+                   n <- Gen.integral (Range.constant 0 10000)
+                   if n `member` tids
+                   then (sigGen @REGISTER () (tids, regs))
+                   else return $! Spawn n
                , if Map.null regs
                  then (sigGen @REGISTER () (tids, regs))
                  else uncurry WhereIs <$> Gen.element (Map.toList regs)
@@ -179,9 +202,57 @@ instance HasTrace REGISTER where
                      else do
                        t <- Gen.element (Set.toList atids)
                        return $! Register n t
+               , do
+                   if (Set.null allNames || Set.null tids)
+                   then sigGen @REGISTER () (tids, regs)
+                   else do
+                     n <- Gen.element (Set.toList allNames)
+                     t <- Gen.element (Set.toList tids)
+                     return $! Register n t
                , if null (Map.keys regs)
                  then (sigGen @REGISTER () (tids, regs))
                  else do
                    n <- Gen.element (Map.keys regs)
                    return $! Unregister n
                ]
+
+
+prop_generatedTracesAreValid :: Property
+prop_generatedTracesAreValid =
+  withTests 300 $ property $ do
+    _ <- evalIO cleanUp
+    tr <- forAll trace
+    executeTrace tr
+
+cleanUp :: IO [Either ErrorCall ()]
+cleanUp =
+  sequence [ try (unregister name) :: IO (Either ErrorCall ())
+           | name <- Set.toList allNames ]
+
+executeTrace
+  :: forall m . (MonadTest m, MonadIO m)
+  => Trace REGISTER
+  -> m ()
+executeTrace tr = void $ res
+  where
+    res = foldM perform Map.empty (traceSignals OldestFirst tr)
+
+    perform
+      :: Map AThreadId ThreadId
+      -> RegCmd
+      -> m (Map AThreadId ThreadId)
+    perform st (Spawn atid) = do
+      tid <- evalIO $ forkIO (threadDelay 10000000)
+      return $! Map.insert atid tid st
+    perform st (Register name atid) = do
+      let tid = fromJust $ Map.lookup atid st
+      evalIO $ register name tid
+      return $! st
+    perform st (Unregister name) = do
+      evalIO $ unregister name
+      return st
+    perform st (WhereIs name atid) = do
+      tid <- fmap fromJust $ evalIO $ whereis name
+      let expectedTid = fromJust $ Map.lookup atid st
+      tid === expectedTid
+      return st

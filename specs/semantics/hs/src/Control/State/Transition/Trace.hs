@@ -13,6 +13,7 @@ module Control.State.Transition.Trace
   ( (.-)
   , (.->)
   , checkTrace
+  , runTrace
   , Trace
   , TraceOrder (NewestFirst, OldestFirst)
   , mkTrace
@@ -27,7 +28,7 @@ module Control.State.Transition.Trace
 where
 
 import Control.Lens (makeLenses, (^.), (^..), _1, _2, to)
-import Control.Monad (void)
+import Control.Monad (void, foldM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Test.Tasty.HUnit ((@?=), assertFailure)
@@ -246,3 +247,17 @@ checkTrace
   -> IO ()
 checkTrace env act =
   void $ runReaderT act (\st sig -> applySTS (TRC(env, st, sig)))
+
+runTrace
+  :: forall s
+   . (STS s)
+  => Environment s
+  -> State s
+  -> [Signal s]
+  -> Either [PredicateFailure s] [(State s, Signal s)]
+runTrace env st0 sigs =
+  snd <$> foldM applySTS' (st0, []) sigs
+  where
+    applySTS' (st, acc) sig  = do
+      st' <- applySTS (TRC(env, st, sig))
+      return $! (st', (st', sig): acc)
