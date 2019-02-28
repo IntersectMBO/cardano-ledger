@@ -57,18 +57,18 @@ instance STS BHEAD where
         let sMax = us ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         -- Check that the previous hash matches
-        bh ^. prevHHash == hLast ?! HashesDontMatch
+        bh ^. bhPrevHash == hLast ?! HashesDontMatch
         -- Check sanity of current slot
-        let sNext = bh ^. bSlot
+        let sNext = bh ^. bhSlot
         sLast < sNext ?! SlotDidNotIncrease
         sNext <= sNow ?! SlotInTheFuture
         -- Perform an epoch transition
         eNext <-  trans @EPOCH $ TRC (us ^. bkSlotsPerEpoch, eLast, sNext)
         -- Perform a signature count transition
-        sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bIssuer)
+        sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bhIssuer)
         return $! ( eNext
                   , sNext
-                  , hashHeader bh
+                  , hashHeader bh -- the same as bhToSign bh
                   , sgs'
                   , us
                   )
