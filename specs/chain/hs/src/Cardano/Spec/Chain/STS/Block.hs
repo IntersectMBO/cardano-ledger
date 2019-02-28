@@ -1,6 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Cardano.Spec.Chain.STS.Block where
 
@@ -18,17 +18,17 @@ import Ledger.Delegation
 import Ledger.Signatures
 
 data BlockHeader
-  = BlockHeader
-  { _prevHHash :: !Hash
-    -- ^ Hash of the previous block header, or 'genesisHash' in case of the
-    -- first block in a chain.
-  , _bSlot :: !Slot
-    -- ^ Absolute slot for which the block was generated.
-  , _bIssuer :: !VKey
-    -- ^ Block issuer.
-  , _bSig :: !(Sig VKey)
-    -- ^ Signature of the block by its issuer.
-
+  = MkBlockHeader
+  {
+    -- | Hash of the previous block header, or 'genesisHash' in case of
+    -- the first block in a chain.
+    _bhPrevHash :: Hash
+    -- | Absolute slot for which the block was generated.
+  , _bhSlot :: Slot
+    -- | Block issuer.
+  , _bhIssuer   :: VKey
+    -- | Part of the block header which must be signed.
+  , _bhSig      :: (Sig VKey)
     -- TODO: BlockVersion – the protocol (block) version that created the block
 
     -- TODO: SoftwareVersion – the software version that created the block
@@ -36,13 +36,14 @@ data BlockHeader
 
 makeLenses ''BlockHeader
 
+
 -- We declare a specific instance here to avoid recursing into cardano-crypto
 instance HasTypeReps BlockHeader where
   typeReps x = typeOf x
                <| typeOf (undefined :: Hash)
-               <| typeReps (x ^. bSlot :: Slot)
-               <> typeReps (x ^. bIssuer :: VKey)
-               <> typeReps (x ^. bSig :: Sig VKey)
+               <| typeReps (x ^. bhSlot :: Slot)
+               <> typeReps (x ^. bhIssuer :: VKey)
+               <> typeReps (x ^. bhSig :: Sig VKey)
 
 data BlockBody
   = BlockBody
@@ -78,9 +79,15 @@ bHeaderSize = fromIntegral . abstractSize acctMap
 
 -- | Computes the hash of a header.
 hashHeader :: BlockHeader -> Hash
-hashHeader = hashlazy . pack . show
+hashHeader bh = hashlazy . pack $
+  show (bh ^. bhPrevHash) ++
+  show (bh ^. bhSlot    ) ++
+  show (bh ^. bhIssuer  )
 -- TODO: we might want to serialize this properly, without using show...
 
+-- | Computes the hash of the header.
+bhToSign :: BlockHeader -> Hash
+bhToSign = hashHeader
 
 -- | Compute the epoch for the given _absolute_ slot
 sEpoch :: Slot -> SlotCount -> Epoch

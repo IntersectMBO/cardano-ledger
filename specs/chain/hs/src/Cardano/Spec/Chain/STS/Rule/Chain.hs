@@ -207,11 +207,11 @@ instance HasTrace CHAIN where
           , _dSEnvLiveness = us ^. dLiveness }
     dCerts <- dcertsGen dsEnv
     let bh
-          = BlockHeader
-          { _prevHHash = h
-          , _bSlot = Slot (s + slotInc)
-          , _bIssuer = vkI
-          , _bSig = Sig vkI (owner vkI)
+          = MkBlockHeader
+          { _bhPrevHash = h
+          , _bhSlot = Slot (s + slotInc)
+          , _bhIssuer = vkI
+          , _bhSig = Sig vkI (owner vkI)
           }
         bb
           = BlockBody
