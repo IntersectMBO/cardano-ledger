@@ -34,11 +34,11 @@ where
 
 import Control.Lens ((^.))
 import Control.Monad (forM)
-import Data.Either (isRight, partitionEithers)
+import Data.Either (partitionEithers)
 import Data.List (subsequences)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (Size(Size), unSize, linear)
+import Hedgehog.Range (Size(Size), linear)
 
 import Control.State.Transition
   ( Environment
@@ -91,22 +91,7 @@ genTrace env st aSigGen =
   Gen.shrink shrinkTrace $ Gen.prune $ do
     d <- Gen.integral (linear 0 100)
     mkTrace env st <$> go d st []
-  -- Gen.sized $ \d -> mkTrace env st <$> go d st []
   where
-    -- go d sti acc =
-    --   Gen.frequency [ (5, return acc)
-    --                 -- The probability of continue with the recursion depends
-    --                 -- on the size parameter of the generator. Here the
-    --                 -- constant factor is determined ad-hoc.
-    --                 , (unSize d * 2, do
-    --                       mStSig <- genSigSt @s env sti aSigGen
-    --                       case mStSig of
-    --                         Nothing ->
-    --                           go d sti acc
-    --                         Just (stNext, sig) ->
-    --                           go d stNext ((stNext, sig): acc)
-    --                   )
-    --                 ]
     go
       :: Int
       -> State s

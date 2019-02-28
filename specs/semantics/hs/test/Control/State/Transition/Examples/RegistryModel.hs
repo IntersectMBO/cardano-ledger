@@ -223,7 +223,7 @@ instance HasTrace REGISTRY where
 
 prop_generatedTracesAreValid :: Property
 prop_generatedTracesAreValid =
-  withTests 300 $ property $ do
+  withTests 1000 $ property $ do
     tr <- forAll trace
     _ <- evalIO cleanUp
     executeTrace tr
