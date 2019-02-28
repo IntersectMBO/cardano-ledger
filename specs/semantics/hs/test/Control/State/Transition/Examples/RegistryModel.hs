@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Control.State.Transition.Examples.Register where
+module Control.State.Transition.Examples.RegistryModel where
 
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
 import Control.Exception (ErrorCall, try)
@@ -111,7 +111,7 @@ whereIs = Map.lookup
 
 data KILL
 
-data REGISTER
+data REGISTRY
 
 data RegCmd
   = Spawn AThreadId
@@ -121,18 +121,18 @@ data RegCmd
 --  | KillThread AThreadId
   deriving (Eq, Show)
 
-instance STS REGISTER where
+instance STS REGISTRY where
 
-  type Environment REGISTER = ()
+  type Environment REGISTRY = ()
 
-  type State REGISTER
+  type State REGISTRY
     = ( Set AThreadId
       , Map String AThreadId
       )
 
-  type Signal REGISTER = RegCmd
+  type Signal REGISTRY = RegCmd
 
-  data PredicateFailure REGISTER
+  data PredicateFailure REGISTRY
     = SpawnFailure (PredicateFailure SPAWN)
     | DoRegFailure (PredicateFailure DOREG)
     | DoUnregFailure (PredicateFailure DOUNREG)
@@ -166,51 +166,51 @@ instance STS REGISTER where
 
     ]
 
-instance Embed SPAWN REGISTER where
+instance Embed SPAWN REGISTRY where
   wrapFailed = SpawnFailure
 
-instance Embed DOREG REGISTER where
+instance Embed DOREG REGISTRY where
   wrapFailed = DoRegFailure
 
-instance Embed DOUNREG REGISTER where
+instance Embed DOUNREG REGISTRY where
   wrapFailed = DoUnregFailure
 
 allNames :: Set String
 allNames = ["a", "b", "c", "d", "e"]
 
-instance HasTrace REGISTER where
+instance HasTrace REGISTRY where
   initEnvGen = return ()
 
   sigGen () (tids, regs) =
     Gen.choice [ do
                    n <- Gen.integral (Range.constant 0 10000)
                    if n `member` tids
-                   then (sigGen @REGISTER () (tids, regs))
+                   then (sigGen @REGISTRY () (tids, regs))
                    else return $! Spawn n
                , if Map.null regs
-                 then (sigGen @REGISTER () (tids, regs))
+                 then (sigGen @REGISTRY () (tids, regs))
                  else uncurry WhereIs <$> Gen.element (Map.toList regs)
                , do
                    let anames = allNames \\ Set.fromList (Map.keys regs)
                    if Set.null anames
-                   then (sigGen @REGISTER () (tids, regs))
+                   then (sigGen @REGISTRY () (tids, regs))
                    else do
                      n <- Gen.element (Set.toList anames)
                      let atids = tids \\ Set.fromList (Map.elems regs)
                      if Set.null atids
-                     then (sigGen @REGISTER () (tids, regs))
+                     then (sigGen @REGISTRY () (tids, regs))
                      else do
                        t <- Gen.element (Set.toList atids)
                        return $! Register n t
                , do
                    if (Set.null allNames || Set.null tids)
-                   then sigGen @REGISTER () (tids, regs)
+                   then sigGen @REGISTRY () (tids, regs)
                    else do
                      n <- Gen.element (Set.toList allNames)
                      t <- Gen.element (Set.toList tids)
                      return $! Register n t
                , if null (Map.keys regs)
-                 then (sigGen @REGISTER () (tids, regs))
+                 then (sigGen @REGISTRY () (tids, regs))
                  else do
                    n <- Gen.element (Map.keys regs)
                    return $! Unregister n
@@ -220,8 +220,8 @@ instance HasTrace REGISTER where
 prop_generatedTracesAreValid :: Property
 prop_generatedTracesAreValid =
   withTests 300 $ property $ do
-    _ <- evalIO cleanUp
     tr <- forAll trace
+    _ <- evalIO cleanUp
     executeTrace tr
 
 cleanUp :: IO [Either ErrorCall ()]
@@ -231,7 +231,7 @@ cleanUp =
 
 executeTrace
   :: forall m . (MonadTest m, MonadIO m)
-  => Trace REGISTER
+  => Trace REGISTRY
   -> m ()
 executeTrace tr = void $ res
   where
