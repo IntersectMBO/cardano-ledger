@@ -76,6 +76,7 @@ test-suite examples
   default-language:    Haskell2010
   build-depends:       base
                      , containers
+                     , hedgehog
                      --
                      , small-steps
   if (!flag(development))

@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -6,10 +7,14 @@ module Control.State.Transition.Examples.Register where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set, notMember)
+import Data.Set (Set, member, (\\))
 import qualified Data.Set as Set
+import Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import Control.State.Transition
+import Control.State.Transition.Generator
 
 type AThreadId = Int
 
@@ -52,7 +57,7 @@ instance STS DOREG where
   transitionRules =
     [ do
         TRC (tids, regs, (n, t)) <- judgmentContext
-        t `notMember` tids ?! ThreadDoesntExist t
+        t `member` tids ?! ThreadDoesntExist t
         n `notElem` Map.keys regs ?! NameAlreadyRegistered n
         t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
         return $! Map.insert n t regs
@@ -115,7 +120,8 @@ instance STS REGISTER where
     | WhereIsFailure String
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules =
+    [ return ([], []) ]
 
   transitionRules =
     [ do
@@ -140,6 +146,7 @@ instance STS REGISTER where
             return $! (tids, regs')
 
     ]
+
 instance Embed SPAWN REGISTER where
   wrapFailed = SpawnFailure
 
@@ -148,3 +155,33 @@ instance Embed DOREG REGISTER where
 
 instance Embed DOUNREG REGISTER where
   wrapFailed = DoUnregFailure
+
+allNames :: Set String
+allNames = ["a", "b", "c", "d", "e"]
+
+instance HasTrace REGISTER where
+  initEnvGen = return ()
+
+  sigGen () (tids, regs) =
+    Gen.choice [ Spawn <$> Gen.integral (Range.constant 0 10000)
+               , if Map.null regs
+                 then (sigGen @REGISTER () (tids, regs))
+                 else uncurry WhereIs <$> Gen.element (Map.toList regs)
+               , do
+                   let anames = allNames \\ Set.fromList (Map.keys regs)
+                   if Set.null anames
+                   then (sigGen @REGISTER () (tids, regs))
+                   else do
+                     n <- Gen.element (Set.toList anames)
+                     let atids = tids \\ Set.fromList (Map.elems regs)
+                     if Set.null atids
+                     then (sigGen @REGISTER () (tids, regs))
+                     else do
+                       t <- Gen.element (Set.toList atids)
+                       return $! Register n t
+               , if null (Map.keys regs)
+                 then (sigGen @REGISTER () (tids, regs))
+                 else do
+                   n <- Gen.element (Map.keys regs)
+                   return $! Unregister n
+               ]
