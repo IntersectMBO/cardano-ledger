@@ -2,6 +2,8 @@
 
 module Test.Cardano.Chain.Elaboration.Delegation
   ( elaborateDCert
+  , elaborateDCertAnnotated
+  , elaborateDSEnv
   , tests
   )
 where
@@ -14,8 +16,12 @@ import Hedgehog
   (Group, checkSequential, evalEither, forAll, property)
 
 import Cardano.Binary (Annotated(..), serialize')
-import Cardano.Chain.Delegation as Delegation (Certificate)
+import Cardano.Chain.Common (mkStakeholderId)
+import qualified Cardano.Chain.Delegation as Delegation
+import qualified Cardano.Chain.Delegation.Validation as Concrete
+import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Crypto.Signing
   ( AProxyVerificationKey(..)
   , createPsk
@@ -27,10 +33,9 @@ import Ledger.Core
   (Epoch(..), Owner(..), Slot(..), SlotCount(..), VKey(..), VKeyGenesis(..))
 import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 
-import qualified Cardano.Chain.Genesis as Genesis
-
 import Test.Cardano.Chain.Config (readMainetCfg)
-import Test.Cardano.Chain.Elaboration.Keys (elaborateKeyPair, vKeyPair)
+import Test.Cardano.Chain.Elaboration.Keys
+  (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
 import Test.Options (TestScenario, TSProperty, withTestsTS)
 
 tests :: TestScenario -> IO Bool
@@ -44,20 +49,13 @@ ts_prop_elaboratedCertsValid =
     $ do
         config <- readMainetCfg
 
+        let pm = Genesis.configProtocolMagicId config
+
         -- Generate and elaborate a certificate
-        cert   <- forAll $ elaborateDCert config <$> dcertGen env
-
-        -- Annotate the omega value for signature checking
-        let
-          omega = pskOmega cert
-
-          annotatedCert =
-            cert { aPskOmega = Annotated omega (serialize' omega) }
-
-          pm = Genesis.configProtocolMagicId config
+        cert   <- forAll $ elaborateDCertAnnotated pm <$> dcertGen env
 
         -- Validate the certificate
-        evalEither $ validateProxyVerificationKey pm annotatedCert
+        evalEither $ validateProxyVerificationKey pm cert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -68,9 +66,10 @@ ts_prop_elaboratedCertsValid =
     , _dSEnvLiveness = SlotCount 20
     }
 
-elaborateDCert :: Genesis.Config -> DCert -> Delegation.Certificate
-elaborateDCert config cert = createPsk
-  (Genesis.configProtocolMagicId config)
+
+elaborateDCert :: ProtocolMagicId -> DCert -> Delegation.Certificate
+elaborateDCert pm cert = createPsk
+  pm
   (noPassSafeSigner delegatorSK)
   delegatePK
   epochIndex
@@ -83,3 +82,25 @@ elaborateDCert config cert = createPsk
 
   epochIndex :: EpochIndex
   epochIndex = fromIntegral e
+
+
+elaborateDCertAnnotated :: ProtocolMagicId -> DCert -> Delegation.ACertificate ByteString
+elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
+ where
+  annotateDCert
+    :: Delegation.Certificate
+    -> Delegation.ACertificate ByteString
+  annotateDCert cert = cert { aPskOmega = Annotated omega (serialize' omega) }
+    where omega = pskOmega cert
+
+
+elaborateDSEnv :: DSEnv -> Concrete.SchedulingEnvironment
+elaborateDSEnv abstractEnv = Concrete.SchedulingEnvironment
+  { Concrete.seGenesisKeys  = Set.fromList $
+      mkStakeholderId . elaborateVKeyGenesis <$> Set.toList genesisKeys
+  , Concrete.seCurrentEpoch = fromIntegral e
+  , Concrete.seCurrentSlot  = s
+  , Concrete.seLiveness     = fromIntegral d
+  }
+ where
+  DSEnv genesisKeys (Epoch e) (Slot s) (SlotCount d) = abstractEnv

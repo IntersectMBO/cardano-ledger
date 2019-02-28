@@ -71,8 +71,10 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   , Concrete.blockAnnotation = ()
   }
  where
+  pm = Genesis.configProtocolMagicId config
+
   bh0 = Concrete.mkHeaderExplicit
-    (Genesis.configProtocolMagicId config)
+    pm
     prevHash
     (ChainDifficulty 0)
     (ppsEpochSlots pps)
@@ -110,7 +112,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   (_, ssk) = elaborateKeyPair $ vKeyPair issuer
 
   cDCert :: Delegation.Certificate
-  cDCert = elaborateDCert config $ rcDCert issuer ast
+  cDCert = elaborateDCert pm $ rcDCert issuer ast
 
   bb0    = Concrete.ABody
     { Concrete.bodyTxPayload     = Txp.ATxPayload []
@@ -122,7 +124,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   dcerts =
     ab
       ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to
-            (elaborateDCert config)
+            (elaborateDCert pm)
           )
 
 ppsEpochSlots :: PParams -> Slotting.EpochSlots
