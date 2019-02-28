@@ -29,7 +29,7 @@ void cleanup()
   mpz_clear(e);
 }
 
-void ipow(mpz_t rop, const mpz_t x, int n)
+void ipow_(mpz_t rop, const mpz_t x, int n)
 {
   if(n == 0)
     mpz_set(rop, one);
@@ -37,7 +37,7 @@ void ipow(mpz_t rop, const mpz_t x, int n)
     {
       mpz_t res;
       mpz_init(res);
-      ipow(res, x, n / 2);
+      ipow_(res, x, n / 2);
       mpz_mul(rop, res, res);
       mpz_cdiv_q(rop, rop, precision);
       mpz_clear(res);
@@ -46,13 +46,33 @@ void ipow(mpz_t rop, const mpz_t x, int n)
     {
       mpz_t res;
       mpz_init(res);
-      ipow(res, x, n - 1);
+      ipow_(res, x, n - 1);
       mpz_mul(rop, res, x);
       mpz_cdiv_q(rop, rop, precision);
       mpz_clear(res);
     }
 }
 
+void ipow(mpz_t rop, const mpz_t x, int n)
+{
+  if(n < 0)
+    {
+      mpz_t temp_r, temp_q, temp;
+      mpz_init(temp_r); mpz_init(temp_q); mpz_init(temp);
+
+      ipow_(temp, x, -n);
+
+      mpz_tdiv_qr(temp_q, temp_r, one, temp); /* ok to use truncating div here? */
+      mpz_mul(rop, temp_q, precision);
+      mpz_mul(temp_r, temp_r, precision);
+      mpz_tdiv_q(temp_q, temp_r, temp);
+      mpz_add(rop, rop, temp_q);
+
+      mpz_clear(temp_r); mpz_clear(temp_q); mpz_clear(temp);
+    }
+  else
+    ipow_(rop, x, n);
+}
 
 /* Compute approximation of 'exp(x)' using continued fractions. Either for a
    maximum of 'maxN' iterations or until the absolute difference between two
@@ -277,18 +297,17 @@ int findE(const mpz_t x)
   int u =  1;
   while(mpz_cmp(x_, x) > 0 || mpz_cmp(x__, x) < 0)
     {
-      /* x' := x' / e */
-      mpz_tdiv_qr(temp_q, temp_r, x_, e);
-      mpz_mul(x_, temp_q, precision);
-      mpz_mul(temp_r, temp_r, precision);
-      mpz_tdiv_q(temp_q, temp_r, e);
-      mpz_add(x_, x_, temp_q);
 
-      /* x'' := x'' * e */
-      mpz_mul(x__, x__, e); mpz_tdiv_q(x__, x__, precision);
+      /* x'_{n + 1} = x'_n ^ 2 */
+      mpz_mul(x_, x_, x_);
+      mpz_tdiv_q(x_, x_, precision);
 
-      l   += 1;
-      u   += 1;
+      /* x''_{n + 1} = x''_n ^ 2 */
+      mpz_mul(x__, x__, x__);
+      mpz_tdiv_q(x__, x__, precision);
+
+      l   *= 2;
+      u   *= 2;
     }
 
   while(l+1 != u)

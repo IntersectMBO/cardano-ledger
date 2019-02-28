@@ -21,7 +21,7 @@ precision :: FixedPoint
 precision = 10000000000000000000000000000000000
 
 epsilon :: FixedPoint
-epsilon = 100000000000000000000
+epsilon = 100000000000000000
 
 main :: IO ()
 main = do
@@ -31,5 +31,6 @@ main = do
     line <- getLine
     let base     = read (takeWhile (/= ' ') line)        :: FixedPoint
     let exponent = read (tail $ dropWhile (/= ' ') line) :: FixedPoint
-    print $ (base / precision) *** (exponent / precision)
+    let result   = (base / precision) *** (exponent / precision)
+    print $ (result / epsilon) * epsilon
     main
