@@ -20,11 +20,6 @@ addons:
       - libgmp-dev
 
 before_install:
-# Run CI only on code changes. We use the convention that code feature branches
-# start with `haskell` and latex spec ones with `latex`.
-- if [[ ! ($TRAVIS_PULL_REQUEST_BRANCH =~ ^haskell.* ||
-           $TRAVIS_BRANCH =~ ^haskell.*)
-     ]]; then travis_terminate 0; fi
 # Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
