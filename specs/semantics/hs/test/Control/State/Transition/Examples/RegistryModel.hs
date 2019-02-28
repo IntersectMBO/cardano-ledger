@@ -138,8 +138,8 @@ instance STS REGISTRY where
 
   data PredicateFailure REGISTRY
     = SpawnFailure (PredicateFailure SPAWN)
-    | DoRegFailure (PredicateFailure REGISTER)
-    | DoUnregFailure (PredicateFailure UNREGISTER)
+    | RegFailure (PredicateFailure REGISTER)
+    | UnregFailure (PredicateFailure UNREGISTER)
     | WhereIsFailure String
     deriving (Eq, Show)
 
@@ -174,13 +174,13 @@ instance Embed SPAWN REGISTRY where
   wrapFailed = SpawnFailure
 
 instance Embed REGISTER REGISTRY where
-  wrapFailed = DoRegFailure
+  wrapFailed = RegFailure
 
 instance Embed UNREGISTER REGISTRY where
-  wrapFailed = DoUnregFailure
+  wrapFailed = UnregFailure
 
 allNames :: Set String
-allNames = ["a", "b", "c", "d", "e"]
+allNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
 
 instance HasTrace REGISTRY where
   initEnvGen = return ()
