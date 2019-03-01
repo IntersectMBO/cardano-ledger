@@ -68,7 +68,6 @@ int main()
           total += diff;
           if(maximal < diff)
             maximal = diff;
-          result = (result / resolution) * resolution;
           std::cout << print_fixedp(result, precision, 34)
                     << std::endl;
         }

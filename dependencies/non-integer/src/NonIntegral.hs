@@ -8,6 +8,8 @@ module NonIntegral
   , scaleExp
   ) where
 
+import Debug.Trace
+
 scaleExp :: (RealFrac b) => b -> (Integer, b)
 scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
 
@@ -19,14 +21,29 @@ a *** b
   | otherwise = exp' $ l
     where l = b * ln' a
 
+ipow' :: Num a => a -> Integer -> a
+ipow' x n
+    | n == 0     = 1
+    | mod n 2 == 0 = let res = ipow' x (div n 2) in res * res
+    | otherwise  = x * ipow' x (n - 1)
+
+ipow :: Fractional a => a -> Integer -> a
+ipow x n
+    | n < 0 = 1 / (ipow x (-n))
+    | otherwise = ipow' x n
+
 -- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scale to
 -- x' \in [0,1] to reduce overflow risk in numerical types with limited values.
 exp' :: (RealFrac a, Enum a, Show a) => a -> a
 exp' x
   | x < 0 = 1 / exp' (-x)
   | x == 0 = 1
-  | x > 1  = let (n, euler) = scaleExp x in exp' euler ^^ n
+  | x > 1  = let (n, euler) = scaleExp x in
+             let x' = exp' euler in
+             -- trace ("(n, euler) = (" ++ show n ++ ", " ++ show euler ++ ") [" ++ show x ++ "] = " ++ show (ipow x' n)) $
+             ipow x' n
   | otherwise = fexp 1000 x
+
 
 -- | Approximate exp(x) via continued fraction.
 fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
@@ -139,7 +156,7 @@ contract factor x l u
       else contract factor x mid u
   where
     mid = l + ((u - l) `div` 2)
-    x' = factor ^^ mid
+    x' = ipow factor mid
 
 e :: (RealFrac a, Enum a, Show a) => a
 e = exp' 1
@@ -155,11 +172,14 @@ findE eone x = contract eone x lower upper
 ln' :: (RealFrac a, Enum a, Show a) => a -> a
 ln' x = if x == 0
         then error "0 is not in domain of ln"
-        else fromIntegral n + approxln
+        else --trace ("(n, x, x') = (" ++ show n ++ ", " ++ show x ++ ", " ++ show x' ++ ")") $
+             fromIntegral n + approxln
   where (n, x') = splitLn x
         approxln = fln 1000 x'
 
 splitLn :: (RealFrac b, Enum b, Show b) => b -> (Integer, b)
-splitLn x = (n, x')
+splitLn x = --trace ("(n, x', y') = (" ++ show n ++ ", " ++ show x' ++ ", " ++ show y' ++ ")") $
+            (n, x')
     where n = findE e x
-          x' = (x / exp' (fromIntegral n)) - 1 -- x / e^n > 1!
+          y' = exp' (fromIntegral n)
+          x' = (x / y') - 1 -- x / e^n > 1!
