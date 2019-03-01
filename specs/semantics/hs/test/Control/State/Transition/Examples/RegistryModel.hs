@@ -9,7 +9,7 @@ module Control.State.Transition.Examples.RegistryModel where
 
 import Control.Arrow (second)
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
-import Data.Either (isLeft)
+import Data.Either (isLeft, either)
 import Control.Exception (ErrorCall, try)
 import Control.Monad (foldM, void)
 import Control.Monad.IO.Class (MonadIO)
@@ -329,7 +329,16 @@ registryCmd tidMapRef env =
     callbacks
   where
     gen :: AbstractState v -> Maybe (Gen (RegCmdW v))
-    gen (AbstractState st) = Just $ fmap RegCmdW $ sigGen @REGISTRY env st
+    -- Damn! I'm stuck here! I cannot use the generator to return nothing if
+    -- the application of the generated signal fails :(
+    gen (AbstractState st) =
+      either (const Nothing) (Just . RegCmdW) <$> eCmd
+      where
+        eCmd = do
+          cmd <- sigGen @REGISTRY env st
+          case applySTS @REGISTRY (TRC(env, st, cmd)) of
+            Left _ -> pure $! Left "Boom"
+            Right _ -> pure $! Right cmd
 
     execute :: RegCmdW v -> m RegOut
     execute (RegCmdW (Spawn atid)) = do
