@@ -63,6 +63,9 @@ between epochs and slots.
         \var{a_0} & \posReals & \text{pool influence}\\
         \tau & \unitInterval & \text{treasury expansion}\\
         \rho & \unitInterval & \text{monetary expansion}\\
+        \var{stableAfter} & \type{Duration} & \text{$k$ in \cite{ouroboros_praos}}\\
+        \var{activeSlotCoeff} & \unitInterval
+                              & \text{$f$ in \cite{ouroboros_praos}}\\
       \end{array}
     \right)
   \end{equation*}
@@ -81,9 +84,11 @@ between epochs and slots.
     \fun{movingAvgExp},
     \fun{emax},
     \fun{nopt},
-  \fun{influence},
-  \fun{tau},
-  \fun{rho}
+    \fun{influence},
+    \fun{tau},
+    \fun{rho},
+    \fun{stableAfter},
+    \fun{activeSlotCoeff}
   \end{center}
   %
   \emph{Abstract Functions}
