@@ -5,27 +5,40 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-
 module Control.State.Transition.Examples.RegistryModel where
 
+import Control.Arrow (second)
 import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Data.Either (isLeft)
 import Control.Exception (ErrorCall, try)
 import Control.Monad (foldM, void)
 import Control.Monad.IO.Class (MonadIO)
+import Data.IORef (IORef, newIORef, modifyIORef, readIORef)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Set (Set, member, (\\))
 import qualified Data.Set as Set
 import Hedgehog
-  ( MonadTest
+  ( Callback
+  , assert
+  , Callback(Ensure, Update)
+  , Command(Command)
+  , Concrete
+  , Gen
+  , HTraversable
+  , MonadTest
   , Property
+  , Test
+  , Var
   , (===)
+  , checkParallel
   , discover
   , evalEither
-  , checkParallel
   , evalIO
+  , executeSequential
   , forAll
+  , htraverse
   , property
   , withTests
   )
@@ -82,7 +95,7 @@ instance STS REGISTER where
         -- Try commenting out some of these checks and see what happens.
         t `member` tids ?! ThreadDoesntExist t
         n `notElem` Map.keys regs ?! NameAlreadyRegistered n
-        t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
+        -- t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
         return $! Map.insert n t regs
     ]
 
@@ -119,9 +132,9 @@ data REGISTRY
 
 data RegCmd
   = Spawn AThreadId
-  | WhereIs String AThreadId
   | Register String AThreadId
   | Unregister String
+  | WhereIs String (Maybe AThreadId)
 --  | KillThread AThreadId
   deriving (Eq, Show)
 
@@ -141,6 +154,7 @@ instance STS REGISTRY where
     | RegFailure (PredicateFailure REGISTER)
     | UnregFailure (PredicateFailure UNREGISTER)
     | WhereIsFailure String
+    | WrongWhereIsResult (Maybe AThreadId) (Maybe AThreadId)
     deriving (Eq, Show)
 
   initialRules =
@@ -157,13 +171,8 @@ instance STS REGISTRY where
             regs' <- trans @REGISTER $ TRC (tids, regs, (n, t))
             return $! (tids, regs')
           WhereIs n t -> do
-            case whereIs n regs of
-              Nothing -> do
-                failBecause $! WhereIsFailure n
-                return $! (tids, regs)
-              Just t' -> do
-                t == t' ?! undefined
-                return $! (tids, regs)
+            whereIs n regs == t ?! WrongWhereIsResult t (whereIs n regs)
+            return $! (tids, regs)
           Unregister n -> do
             regs' <- trans @UNREGISTER $ TRC ((), regs, n)
             return $! (tids, regs')
@@ -193,7 +202,9 @@ instance HasTrace REGISTRY where
                    else return $! Spawn n
                , if Map.null regs
                  then (sigGen @REGISTRY () (tids, regs))
-                 else uncurry WhereIs <$> Gen.element (Map.toList regs)
+                 else fmap (uncurry WhereIs)
+                        $ fmap (second Just)
+                        $ Gen.element (Map.toList regs)
                , do
                    let anames = allNames \\ Set.fromList (Map.keys regs)
                    if Set.null anames
@@ -255,11 +266,125 @@ executeTrace tr = void $ res
     perform st (Unregister name) = do
       evalIO $ unregister name
       return st
-    perform st (WhereIs name atid) = do
-      tid <- fmap fromJust $ evalIO $ whereis name
-      let expectedTid = fromJust $ Map.lookup atid st
-      tid === expectedTid
+    perform st (WhereIs name (Just atid)) = do
+      mtid <- evalIO $ whereis name
+      let expectedTid = Map.lookup atid st
+      mtid === expectedTid
       return st
+
+--------------------------------------------------------------------------------
+-- Let's try to hookup the system under test using state machines!
+--------------------------------------------------------------------------------
+
+prop_RegistryImplementsModel :: Property
+prop_RegistryImplementsModel = withTests 1000 $ property $ do
+  tidMapRef <- evalIO $ newIORef []
+  env <- forAll $ initEnvGen @REGISTRY
+  actions <- forAll $
+    Gen.sequential
+      (Range.linear 1 100)
+      initialState
+      [registryCmd tidMapRef env]
+  _ <- evalIO cleanUp
+  executeSequential initialState actions
+
+newtype AbstractState (v :: * -> *) = AbstractState (State REGISTRY)
+  deriving (Show)
+
+initialState :: AbstractState v
+initialState = AbstractState ([], [])
+
+data RegCmdW (v :: * -> *) = RegCmdW RegCmd deriving (Eq, Show)
+
+instance HTraversable RegCmdW where
+  htraverse _ (RegCmdW cmd) = pure (RegCmdW cmd)
+
+data RegOut
+  = Spawned ThreadId
+  | Registered
+  | Unregistered
+  | Found ThreadId
+  | Failed ErrorCall
+  | NotFound String
+  deriving (Eq, Show)
+
+isFailure :: RegOut -> Bool
+isFailure (Failed _) = True
+isFailure _ = False
+
+wasFound :: RegOut -> Bool
+wasFound (Found _) = True
+wasFound _ = False
+
+registryCmd
+  :: forall m
+   . (MonadTest m, MonadIO m)
+  => IORef (Map AThreadId ThreadId)
+  -> Environment REGISTRY
+  -> Command Gen m AbstractState
+registryCmd tidMapRef env =
+  Command
+    gen
+    execute
+    callbacks
+  where
+    gen :: AbstractState v -> Maybe (Gen (RegCmdW v))
+    gen (AbstractState st) = Just $ fmap RegCmdW $ sigGen @REGISTRY env st
+
+    execute :: RegCmdW v -> m RegOut
+    execute (RegCmdW (Spawn atid)) = do
+      etid <- evalIO $ try $ forkIO (threadDelay 10000000)
+      case etid of
+        Left e -> pure $! Failed e
+        Right tid -> do
+          evalIO $ modifyIORef tidMapRef $ Map.insert atid tid
+          return $! Spawned tid
+    execute (RegCmdW (Register name atid)) = do
+      -- We need the abstract-thread-id to thread-id mapping! So I guess we
+      -- have to resort to IORefs :/
+      tidMap <- evalIO $ readIORef tidMapRef
+      let tid = fromJust $ Map.lookup atid tidMap
+      res <- evalIO $ try $ register name tid
+      case res of
+        Left e -> pure $! Failed e
+        Right _ -> pure $! Registered
+    execute (RegCmdW (Unregister name)) = do
+      res <- evalIO $ try $ unregister name
+      case res of
+        Left e -> pure $! Failed e
+        Right _ -> pure $! Unregistered
+    execute (RegCmdW (WhereIs name atid)) = do
+      mtid <- evalIO $ whereis name
+      case mtid of
+        Nothing -> pure $! NotFound name
+        Just tid -> pure $! Found tid
+
+    callbacks :: [Callback RegCmdW RegOut AbstractState]
+    callbacks = [Update update, Ensure post]
+
+    update
+      :: AbstractState v
+      -> RegCmdW v
+      -> Var RegOut v
+      -> AbstractState v
+    update (AbstractState st) (RegCmdW cmd) _ =
+      case applySTS @REGISTRY (TRC(env, st, cmd)) of
+        Left _ -> AbstractState st
+        Right st' -> AbstractState st'
+
+    post
+      :: AbstractState Concrete
+      -> AbstractState Concrete
+      -> RegCmdW Concrete
+      -> RegOut
+      -> Test ()
+    post (AbstractState st) _ (RegCmdW cmd@(WhereIs name Nothing)) res =
+      assert (wasFound res)
+    post (AbstractState st) _ (RegCmdW cmd) res =
+        isLeft ares === isFailure res
+      where
+        ares = applySTS @REGISTRY (TRC(env, st, cmd))
+
 
 tests :: IO Bool
 tests =

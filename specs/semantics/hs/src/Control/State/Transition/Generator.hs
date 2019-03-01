@@ -88,7 +88,8 @@ genTrace
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
 genTrace env st aSigGen =
-  Gen.shrink shrinkTrace $ Gen.prune $ do
+  Gen.shrink shrinkTrace $ do
+  do
     d <- Gen.integral (linear 0 100)
     mkTrace env st <$> go d st []
   where
@@ -118,6 +119,19 @@ shrinkTrace tr = mkTrace env st0 <$> stSigs
     env = tr ^. traceEnv
     st0 = tr ^. traceInitState
     sigs = traceSignals OldestFirst tr
+
+shrinkSigSts
+  :: forall s
+   . STS s
+  => Environment s
+  -> State s
+  -> [(State s, Signal s)]
+  -> [[(State s, Signal s)]]
+shrinkSigSts env st0 sigs = stSigs
+  where
+    (_, stSigs) = partitionEithers applied
+    applied = ((runTrace @s env st0) . fmap snd) <$> (subsequences sigs)
+
 
   -- An alternate way to generate a trace of the size of the generator might
   -- be:
