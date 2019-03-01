@@ -115,3 +115,84 @@ and then calls the $\mathsf{DELEGS}$ transition.
 
 \clearpage
 
+The transition system $\mathsf{LEDGER}$ in Figure~\ref{fig:rules:ledger} is iterated
+in $\mathsf{LEDGERS}$ in order to process a list of transitions.
+
+\begin{figure}[htb]
+  \emph{Ledger Sequence transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{ledgers}{\_} \var{\_}
+    \subseteq \powerset ((\Slot\times\PParams) \times \LState \times \seqof{\Tx} \times \LState)
+  \end{equation*}
+  \caption{Ledger transition-system types}
+  \label{fig:ts-types:ledgers}
+\end{figure}
+
+\begin{figure}[hbt]
+  \begin{equation}
+    \label{eq:ledgers-base}
+    \inference[Seq-ledger-base]
+    {}
+    {
+     \left(
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+    \right)
+    \vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}
+    \label{eq:ledgers-induct}
+    \inference[Seq-ledger-ind]
+    {
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot}\\
+            \var{pp}\\
+          \end{array}
+        \right)
+      }
+      \vdash
+      \var{ls}
+      \trans{ledgers}{\Gamma}
+      \var{ls'}
+      &
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot}\\
+            \mathsf{len}~\Gamma - 1\\
+            \var{pp}\\
+          \end{array}
+        \right)
+      }
+      \vdash
+        \var{ls'}
+        \trans{delpl}{c}
+        \var{ls''}
+    }
+    {
+    {
+      \left(
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+      \end{array}
+    \right)
+    }
+    \vdash
+      \var{ls}
+      \trans{ledgers}{\Gamma; c}
+      \varUpdate{\var{ls''}}
+    }
+  \end{equation}
+  \caption{Ledger sequence rules}
+  \label{fig:rules:ledger-sequence}
+\end{figure}
