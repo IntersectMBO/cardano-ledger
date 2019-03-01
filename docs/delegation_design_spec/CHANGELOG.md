@@ -4,6 +4,8 @@
 Incorporating further input from the workshop in Berlin, and following discussions,
 into the document.
 
+- Decision: transactions have to have at least one UTxO style input
+
 - Update: Stake pool metadata
 
   Specify the format for the metadata, and how it is provided. Streamlined the
