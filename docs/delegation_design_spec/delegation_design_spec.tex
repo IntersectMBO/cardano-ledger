@@ -501,9 +501,8 @@ delegation:
   UTxO entry refers an available input address to use.
 \item A stake key is associated with exactly zero or one stake pools at any
   point in time. A stake pool has exactly one staking key that controls the pool
-  (though it can use further operational keys to mitigate key theft as described
-  in \cref{operational-key-certificates}\todo{Using operational keys is now
-    compulsory, we need to update the document to reflect that.}, and there can
+  (though it has to use further operational keys to mitigate key theft as described
+  in \cref{operational-key-certificates}, and there can
   be multiple staking keys delegating or pledging to the pool).
 \end{itemize}
 
@@ -994,10 +993,10 @@ The certificate contains the following:
   rewards for the pool operator will be paid to the reward account associated
   with this \emph{reward staking key} \(vks_\text{reward}\)\footnote{We do
     \emph{not} want rewards to be paid to the key of the pool itself. An
-    important reason for this is that for security reasons, we expect stake pool
-    operators to use operational keys as described in
+    important reason for this is that for security reasons, stake pool
+    operators are required to use operational keys as described in
     \cref{operational-key-certificates}, while storing the key of the pool
-    securely offline. Requiring this key for withdrawing rewards would be
+    securely offline. Requiring the pool key for withdrawing rewards would be
     detrimental.}.
 
   If a pool operator wants to donate their rewards to a charity, they can do so
@@ -1195,7 +1194,7 @@ To address this problem, a new type of certificate is introduced:
 in the block header itself, as part of the witness, thus solving the
 problem of determining the validity of staking keys. In other words,
 operational key certificates are \textbf{not included in
-  the ledger}, but instead they \textbf{included in a witness} by
+  the ledger}, but instead they are \textbf{included in a witness} by
 stake pools at the point of exercising stake rights including:
 
 \begin{itemize}
@@ -1282,8 +1281,9 @@ defined and are used below.
   one.
 
   This will allow stake pool operators to update their costs and margin
-  if they need to. Stake pool members should be notified of such changes
-  by their wallet the next time they are online.
+  if they need to\footnote{Stake pool members should be notified of such changes
+  by their wallet the next time they are online, if this makes the pool less
+  desirable, see \cref{display-of-stake-pools-in-the-wallet}.}.
 \item
   A revocation certificate is only valid if there is an older
   registration certificate.
@@ -1397,7 +1397,7 @@ the following, in order:
 \item
   a delegation certificate; and
 \item
-  optionally, an operational key certificate.
+  an operational key certificate.
 \end{enumerate}
 
 This restricted pattern of chain delegation allows us to satisfy all
@@ -3555,10 +3555,9 @@ In the following, we describe how the requirements listed in
   introduction of a dedicated staking key (\cref{address-structure})
   avoids the need to use the payment key for delegation purposes.
 
-\item[\cref{mitigate-key-exposure} Mitigate Key Exposure] Stake pool
-  operators can and should use operational key certificates for hot/cold
-  key management, as described in
-  \cref{operational-key-certificates}.
+\item[\cref{mitigate-key-exposure} Mitigate Key Exposure] Stake pool operators
+  are required to use operational key certificates for hot/cold key management,
+  as described in \cref{operational-key-certificates}.
 
 \item[\cref{handle-inactive-stake-pools} Handle Inactive Stake Pools]
   We have two mechanisms for dealing with inactive stake pools. Stake
