@@ -31,6 +31,7 @@ into the document.
     - They are compulsory
     - They will use KES
     - Operational Key Certificates will expire, to encourage key rotation
+    - Slight Change in validity rules
 - Add FAQ section to the delegation design doc
 - Add a couple of todo entries
 

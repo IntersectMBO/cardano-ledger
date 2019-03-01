@@ -1315,6 +1315,12 @@ purpose of establishing precedence:
 \item
   An operational key certificate with a higher counter overrides one with a
   lower counter.
+\item
+  Also, we require that within any given chain, if there are two blocks A and B
+  signed using operational key certificates issued by the same cold key, if A is
+  an older block than B, the counter in the operational certificate in the
+  witness of B must be at least as large as the one in the counter in the
+  operational certificate in the witness of A.
 \end{itemize}
 
 \subsection{Delegation Relations}
@@ -1525,21 +1531,34 @@ The nodes will use the state from slot \(s_\text{stakedist}\) to
 Stake pool operators will use operational key certificates in order to protect
 the key to which their members delegated. A block for a slot where the key
 \(vks_\text{leader}\) has been elected as leader will be considered valid by all
-nodes if the block is signed by \(vks_\text{hot}\) and contains, in its header,
-an operational key certificate that transfers the staking rights from
-\(vks_\text{leader}\) to \(vks_\text{hot}\).
+nodes if
+
+\begin{itemize}
+\item
+  the block is signed by \(vks_\text{hot}\) and contains, in its header, an
+  operational key certificate that transfers the staking rights from
+  \(vks_\text{leader}\) to \(vks_\text{hot}\).
+
+\item
+  The counter of the operational key certificate must not be smaller than the
+  counter of the operational key certificate used to sign the last block of
+  \(vks_\text{leader}\).
+\end{itemize}
 
 In case there are more than one block for the current slot, each of
 which are signed using an operational key certificate, the newest certificate
 (as per the included counter) takes precedence.
 
-Note that nodes take the precedence amongst operational key certificates
-into account only for the \emph{newest} block. In particular, it is
-not possible to force a node to do a rollback by sending it a block
-from a past slot signed using a newer certificate than the block that
-the node already has in its chain for that slot. Otherwise, this would
-open up an attack where a stake pool operator could force nodes to do
-arbitrary rollbacks.
+Note that nodes take the precedence amongst operational key certificates into
+account only \emph{after} comparing the length of the chains. When the node is
+aleady up to date and receives two conflicting blocks that add to its current
+chain, the length will of course always be the same. But this rule is important:
+if we did not compare the lengths of the chains before giving preference to the
+block with the newer operational certificate, it would be possible to force a
+node to do a rollback of arbitraty length, by sending it a block from a past
+slot, signed using a newer certificate than the block that the node already has
+in its chain for that slot. This would open up an attack where a stake pool
+operator could force nodes to do arbitrary rollbacks.
 
 \subsection{Transition to Decentralization}
 \label{transition-to-decentralization}
@@ -3511,26 +3530,24 @@ In the following, we describe how the requirements listed in
 
 \begin{description}
 
-\item[\cref{proof-of-eligibility} Proof of Eligibility] The leader
-  election process takes delegation into account
-  (\cref{slot-leader-schedule}), so the leader schedule will contain
-  the key hash of the pool that is expected to sign the block. If an
-  operational key certificate is used, it will be included in the block
-  header, which will also prove eligibility.
+\item[\cref{proof-of-eligibility} Proof of Eligibility] The leader election
+  process takes delegation into account (\cref{slot-leader-schedule}), so the
+  leader schedule will contain the key hash of the pool that is expected to sign
+  the block. The operational key certificate will be included in the block
+  header.
 
-\item[\cref{visibility-of-delegation-on-the-blockchain} Visibility of
-  Delegation on the Blockchain] Delegation via delegation certificates
-  is visible on the blockchain. Operational key certificates are only
-  intended to be used for hot/cold key management between keys owned
-  by the same person. Thus, they are not relevant for the rewards
-  sharing process, and do not need to be visible on the chain.
+\item[\cref{visibility-of-delegation-on-the-blockchain} Visibility of Delegation
+  on the Blockchain] Delegation via delegation certificates is visible on the
+  blockchain. Operational key certificates are only used for hot/cold key
+  management within a stake pool. Thus, they are not relevant for the rewards
+  sharing process.
 
 \item[\cref{restricting-chain-delegation} Restricting Chain
   Delegation] Chain delegation is properly restricted, as described in
   \cref{chain-delegation}.
 
 \item[\cref{cheap-re-delegation} Cheap Re-Delegation] Re-delegation can
-  be performed cheaply with multi-input transactions.
+  be performed cheaply by issuing a new delegation certificate.
 
 \item[\cref{neutral-addresses} Neutral Addresses] The design includes
   enterprise addresses (\cref{enterprise-address}), which are
