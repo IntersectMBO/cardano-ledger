@@ -2203,7 +2203,8 @@ to the pool from the set of owner keys is less than the pledge listed
 in its stake pool registration certificate) will be excluded from the election,
 and as a consequence forfeit their rewards for that epoch.\footnote{We
   could also just deny the rewards for this pool, but still let it take
-  part in the protocol.}.
+  part in the protocol.}.\todo{Decide whether to exclude pools that do not meet
+  their pledge from the protocol, or only deny them rewards}
 
 Note that it will still be possible for a stake pool operator to
 decrease the amount of stake that they pledge to the pool, but this will
@@ -2311,7 +2312,8 @@ best data available:
 \item The cost, margin, and pledged stake will be taken from the most
   recent stake pool registration certificate of the pool.
 \item The performance of the pool will be taken as the moving average, as
-  described in \cref{pool-rewards}.
+  described in \cref{pool-rewards}.\todo{We're considering moving away from the
+    moving average, so we might have to update this}
 \item The stake of the pool, and the amount of stake that the owners
   of the pool contribute (in order to check whether their pledge is
   honoured) is taken from the current stake distribution (calculated
@@ -2344,6 +2346,9 @@ We decided against this, since
 \item Randomising the order of display makes it more difficult for stake pool
   operators to behave rationally when setting their cost and margin.
 \end{itemize}
+
+\todo{Add a section on stake pools entering the market, based in Aikaterini's
+  write up}
 
 \subsection{Basic Delegation}
 \label{basic-delegation}
@@ -2654,6 +2659,11 @@ of ADA currently in existence, but they did not change
 \(T_\infty\). Effectively, those fees will be distributed amongst
 future stakeholders via monetary expansion.
 
+\todo{It seems to be advantageous to have the monetary expansion depend on the
+  number of blocks in an epoch (for instance, by just having an exponential
+  decay \emph{per block} of the reserves. This discourages block withholding
+  attacks.}
+
 \subsubsection{Rewards from the Previous Epoch}
 \label{rewards-from-the-previous-epoch}
 
@@ -2766,6 +2776,9 @@ as it leads to two issues:
   epoch. This would be a hazard for the system.
 \end{itemize}
 
+\todo{We might switch to determining the rewards directly by the number of
+  blocks produced, instead of the stake. The document will be updated once we
+  have decided on this.}
 We can lessen the first issue, and eliminate the second (which is the
 more dangerous), by using a moving average of \(\mean{p_j}\).
 We will use the exponential moving average
