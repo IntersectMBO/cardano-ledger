@@ -1595,7 +1595,9 @@ leader schedule for the next epoch:
 \item Randomly select \(10 k d\) slots of the epoch. For those slots, the result
   of the leader election will be ignored. Instead, the bootstrap nodes will
   create blocks for those slots, using Ouroboros BFT.
-\end{itemize}
+\end{itemize}\todo{There is a sublety here, in that Praos has more slots than
+  OBFT. We'll have to adjust this slightly. Also, if we do go for rewards per
+  block, we'll have to think about the transition period again.}
 
 For reward calculations, all slots assigned to bootstrap keys will be ignored
 (or, in the case of a non-public leader schedule, the expectation value
