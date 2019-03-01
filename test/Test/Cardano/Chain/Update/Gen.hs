@@ -60,10 +60,12 @@ import Cardano.Chain.Update
   , Vote
   , VoteId
   , VoteState(..)
+  , applicationNameMaxLength
   , maybeToPrev
   , mkProposal
   , mkVote
   , payload
+  , systemTagMaxLength
   )
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -90,7 +92,8 @@ import Test.Cardano.Crypto.Gen
 
 genApplicationName :: Gen ApplicationName
 genApplicationName =
-  ApplicationName <$> Gen.text (Range.constant 0 10) Gen.alphaNum
+  ApplicationName
+    <$> Gen.text (Range.constant 0 applicationNameMaxLength) Gen.alphaNum
 
 genCanonicalProtocolParameters :: Gen ProtocolParameters
 genCanonicalProtocolParameters =
@@ -209,7 +212,8 @@ genSoftwareVersion =
   SoftwareVersion <$> genApplicationName <*> Gen.word32 Range.constantBounded
 
 genSystemTag :: Gen SystemTag
-genSystemTag = SystemTag <$> Gen.text (Range.constant 0 10) Gen.alphaNum
+genSystemTag =
+  SystemTag <$> Gen.text (Range.constant 0 systemTagMaxLength) Gen.alphaNum
 
 genUndecidedProposalState
   :: ProtocolMagicId -> SlotCount -> Gen UndecidedProposalState
