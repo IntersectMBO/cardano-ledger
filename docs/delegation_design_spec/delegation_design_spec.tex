@@ -930,9 +930,9 @@ transaction fees always implicitly require a UTxO input anyway? There are two
 additional sources of funds that could pay for the transaction fees: refunds and
 the contents of a reward account. So it is possible to create transactions that
 contain enough value to pay transaction fees even without consuming a UTxO
-entry. Such a transaction if valid, could be replayed at a later point in time.
+entry. Such a transaction, if valid, could be replayed at a later point in time.
 In order to have all transactions (and by extension, all certificates), be
-protected from replay attacks, we have to explicitly require at least one UTxO
+protected from replay attacks, we will explicitly require at least one UTxO
 entry as an input to any transaction.
 
 \subsubsection{Stake key Registration Certificates}
