@@ -58,7 +58,6 @@ data TxValidationError
   | TxValidationMissingInput TxIn
   | TxValidationScriptWitness
   -- ^ TODO: Remove this once support for script witnesses is added
-  | TxValidationUnknownFeePolicy TxFeePolicy
   | TxValidationUnknownWitnessType Word8
   deriving (Eq, Show)
 
@@ -110,8 +109,6 @@ validateTx feePolicy utxo tx = do
     TxFeePolicyTxSizeLinear txSizeLinear ->
       calculateTxSizeLinear txSizeLinear txSize
         `wrapError` TxValidationLovelaceError "Minimum Fee"
-
-    policy -> throwError $ TxValidationUnknownFeePolicy policy
 
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'

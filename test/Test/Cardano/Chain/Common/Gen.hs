@@ -138,8 +138,6 @@ genAddrStakeDistribution = Gen.choice
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
 
--- | `TxFeePolicyUnknown` is not needed because this is a generator
--- used to generate `GenesisData`.
 genCanonicalTxFeePolicy :: Gen TxFeePolicy
 genCanonicalTxFeePolicy = TxFeePolicyTxSizeLinear <$> genCanonicalTxSizeLinear
 
@@ -200,17 +198,7 @@ genStakeholderId :: Gen StakeholderId
 genStakeholderId = mkStakeholderId <$> genPublicKey
 
 genTxFeePolicy :: Gen TxFeePolicy
-genTxFeePolicy = Gen.choice
-  [ TxFeePolicyTxSizeLinear <$> genTxSizeLinear
-  , TxFeePolicyUnknown <$> genUnknownPolicy <*> genUTF8Byte
-  ]
- where
-    -- 0 is a reserved policy, so we go from 1 to max.
-    -- The Bi instance decoder for TxFeePolicy consolidates the
-    -- tag and the policy number, so a 0 policy in TxFeePolicyUnknown
-    -- causes a decoder error.
-  genUnknownPolicy :: Gen Word8
-  genUnknownPolicy = Gen.word8 (Range.constant 1 maxBound)
+genTxFeePolicy = TxFeePolicyTxSizeLinear <$> genTxSizeLinear
 
 genTxSizeLinear :: Gen TxSizeLinear
 genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genLovelace
