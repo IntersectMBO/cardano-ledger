@@ -105,15 +105,7 @@ genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32
 
 genTxIn :: Gen TxIn
-genTxIn = Gen.choice gens
- where
-  gens =
-    [ TxInUtxo
-      <$> genTxId
-      <*> genWord32
-         -- 0 is reserved for TxInUtxo tag ----------+
-    , TxInUnknown <$> Gen.word8 (Range.constant 1 255) <*> gen32Bytes
-    ]
+genTxIn = TxInUtxo <$> genTxId <*> genWord32
 
 genTxInList :: Gen (NonEmpty TxIn)
 genTxInList = Gen.nonEmpty (Range.linear 1 20) genTxIn

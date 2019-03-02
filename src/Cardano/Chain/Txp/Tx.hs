@@ -15,7 +15,6 @@ module Cardano.Chain.Txp.Tx
   , TxId
   , TxAttributes
   , TxIn(..)
-  , isTxInUnknown
   , TxOut(..)
   , _TxOut
   )
@@ -37,7 +36,6 @@ import Data.Aeson
   )
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Aeson.Types (toJSONKeyText)
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import Formatting (Format, bprint, build, builder, int, sformat)
 import qualified Formatting.Buildable as B
@@ -46,13 +44,12 @@ import Cardano.Binary.Class
   ( Bi(..)
   , Case(..)
   , decodeKnownCborDataItem
-  , decodeUnknownCborDataItem
   , encodeKnownCborDataItem
   , encodeListLen
-  , encodeUnknownCborDataItem
   , enforceSize
   , knownCborDataItemSizeExpr
   , szCases
+  , DecoderError(DecoderErrorUnknownTag)
   )
 import Cardano.Chain.Common
   ( Address(..)
@@ -149,7 +146,6 @@ data TxIn
   -- | TxId = Which transaction's output is used
   -- | Word32 = Index of the output in transaction's outputs
   = TxInUtxo TxId Word32
-  | TxInUnknown !Word8 !ByteString
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass NFData
 
@@ -168,50 +164,34 @@ instance ToJSONKey TxIn where
 instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
     bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
-  build (TxInUnknown tag bs) =
-    bprint ("TxInUnknown " . int . " " . base16F) tag bs
 
 instance Bi TxIn where
   encode (TxInUtxo txInHash txInIndex) =
     encodeListLen 2 <> encode (0 :: Word8) <> encodeKnownCborDataItem
       (txInHash, txInIndex)
-  encode (TxInUnknown tag bs) =
-    encodeListLen 2 <> encode tag <> encodeUnknownCborDataItem (LBS.fromStrict bs)
 
   decode = do
     enforceSize "TxIn" 2
     tag <- decode @Word8
     case tag of
       0 -> uncurry TxInUtxo <$> decodeKnownCborDataItem
-      _ -> TxInUnknown tag <$> decodeUnknownCborDataItem
+      _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
 
   encodedSizeExpr size _ = 2 + knownCborDataItemSizeExpr
     (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
 
 instance HeapWords TxIn where
-  heapWords = \case
-    TxInUtxo txid w32 -> heapWords2 txid w32
-    TxInUnknown _ bs -> 3 + heapWords bs
-
-isTxInUnknown :: TxIn -> Bool
-isTxInUnknown (TxInUnknown _ _) = True
-isTxInUnknown _ = False
+  heapWords (TxInUtxo txid w32) = heapWords2 txid w32
 
 txInFromText :: Text -> Either Text TxIn
 txInFromText t = case T.splitOn "_" t of
   ["TxInUtxo", h, idx] ->
     TxInUtxo <$> decodeAbstractHash h <*> first toS (readEither (toS idx))
-  ["TxInUnknown", tag, bs] ->
-    TxInUnknown <$> first toS (readEither (toS tag)) <*> first
-      show
-      (parseBase16 bs)
   _ -> Left $ "Invalid TxIn " <> t
 
 txInToText :: TxIn -> Text
 txInToText (TxInUtxo txInHash txInIndex) =
   sformat ("TxInUtxo_" . hashHexF . "_" . int) txInHash txInIndex
-txInToText (TxInUnknown tag bs) =
-  sformat ("TxInUnknown_" . int . "_" . base16F) tag bs
 
 
 --------------------------------------------------------------------------------

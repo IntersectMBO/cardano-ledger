@@ -7,7 +7,6 @@
 module Test.Cardano.Chain.Txp.Example
   ( exampleTxId
   , exampleTxInList
-  , exampleTxInUnknown
   , exampleTxInUtxo
   , exampleTxPayload
   , exampleTxProof
@@ -81,9 +80,6 @@ exampleTxId = exampleHashTx
 
 exampleTxInList :: (NonEmpty TxIn)
 exampleTxInList = fromList [exampleTxInUtxo]
-
-exampleTxInUnknown :: TxIn
-exampleTxInUnknown = TxInUnknown 47 ("forty seven" :: ByteString)
 
 exampleTxInUtxo :: TxIn
 exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
