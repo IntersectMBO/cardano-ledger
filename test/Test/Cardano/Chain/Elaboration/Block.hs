@@ -218,6 +218,7 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       (LovelacePortion 0)
       (LovelacePortion 0)
       (LovelacePortion 0)
+      --TODO: TxFeePolicyUnknown no longer exists, what is this supposed to be?
     , Update.ppTxFeePolicy      = TxFeePolicyUnknown
       0
       "Fee policy unspecified at \"Test.Cardano.Chain.Block.Validation.Spec\""
