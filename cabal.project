@@ -1,10 +1,9 @@
 packages:
-  binary
-  binary/test
-  crypto
-  crypto/test
-  ./
-  test
+  crypto crypto/test
+  ./     ./test
+
+package cardano-chain
+  tests: True
 
 source-repository-package
   type: git
@@ -15,12 +14,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 2256fd727c5f92e6218afdcf8cddf6e01c4a9dcd
+  tag: ff5fd5f33849be8a826506c34e5b0278f267f804
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 2256fd727c5f92e6218afdcf8cddf6e01c4a9dcd
+  tag: ff5fd5f33849be8a826506c34e5b0278f267f804
   subdir: test
 
 source-repository-package
@@ -31,19 +30,19 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+  tag: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
   subdir: specs/semantics/hs
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+  tag: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
   subdir: specs/ledger/hs
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
+  tag: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
   subdir: specs/chain/hs
 
 source-repository-package
@@ -51,3 +50,8 @@ source-repository-package
   location: https://github.com/hedgehogqa/haskell-hedgehog
   tag: 2505055760d06ba6343f803783ed023fb0ed6c48
   subdir: hedgehog
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-mainnet-mirror
+  tag: 0232971dddd5cd235c5a0c18d7b4f342a887276f
