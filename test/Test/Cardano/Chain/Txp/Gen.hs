@@ -23,7 +23,6 @@ module Test.Cardano.Chain.Txp.Gen
   , genTxSigData
   , genTxUndo
   , genTxWitness
-  , genUnknownWitnessType
   )
 where
 
@@ -149,7 +148,6 @@ genTxInWitness pm = Gen.choice gens
     [ genPkWitness pm
     , genRedeemWitness pm
     , genScriptWitness
-    , genUnknownWitnessType
     ]
 
 genTxUndo :: Gen TxUndo
@@ -159,6 +157,3 @@ genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
   V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
 
-genUnknownWitnessType :: Gen TxInWitness
-genUnknownWitnessType =
-  UnknownWitnessType <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes

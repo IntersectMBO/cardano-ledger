@@ -18,8 +18,6 @@ import Cardano.Prelude
 
 import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Vector (Vector)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
@@ -30,14 +28,13 @@ import Cardano.Binary.Class
   , Case(..)
   , decodeKnownCborDataItem
   , decodeListLen
-  , decodeUnknownCborDataItem
   , encodeKnownCborDataItem
   , encodeListLen
-  , encodeUnknownCborDataItem
   , knownCborDataItemSizeExpr
   , matchSize
   , serialize'
   , szCases
+  , DecoderError(DecoderErrorUnknownTag)
   )
 import Cardano.Chain.Common (Script, addressHash)
 import Cardano.Chain.Txp.Tx (Tx)
@@ -66,7 +63,6 @@ data TxInWitness
   -- ^ ScriptWitness twValidator twRedeemer
   | RedeemWitness !RedeemPublicKey !(RedeemSignature TxSigData)
   -- ^ RedeemWitness twRedeemKey twRedeemSig
-  | UnknownWitnessType !Word8 !ByteString
   deriving (Eq, Show, Generic)
 
 instance ToJSON TxInWitness where
@@ -83,10 +79,6 @@ instance ToJSON TxInWitness where
       , "redeemKey" .= twRedeemKey
       , "redeemSig" .= twRedeemSig
       ]
-    UnknownWitnessType a b -> object
-      [ "tag" .= ("UnknownWitnessType" :: Text)
-      , "contents" .= [toJSON a, toJSON (makeByteString64 b)]
-      ]
 
 instance FromJSON TxInWitness where
   parseJSON = withObject "TxInWitness" $ \o -> (o .: "tag") >>= \case
@@ -94,14 +86,10 @@ instance FromJSON TxInWitness where
     "ScriptWitness" -> ScriptWitness <$> (o .: "validator") <*> (o .: "redeemer")
     "RedeemWitness" ->
       RedeemWitness <$> (o .: "redeemKey") <*> (o .: "redeemSig")
-    "UnknownWitnessType" -> (o .: "contents") >>= \case
-      [a, b] ->
-        UnknownWitnessType <$> parseJSON a <*> (getByteString64 <$> parseJSON b)
-      _ -> aesonError @Text "expected 'contents' to have two elements"
     _ ->
       aesonError @Text
         "expected 'tag' to be one of 'PkWitness', 'ScriptWitness', \
-                              \'RedeemWitness', 'UnknownWitnessType'"
+                              \'RedeemWitness'"
 
 instance B.Buildable TxInWitness where
   build (PkWitness key sig) = bprint
@@ -127,8 +115,6 @@ instance B.Buildable TxInWitness where
     (hash red)
   build (RedeemWitness key sig) =
     bprint ("PkWitness: key = " . build . ", sig = " . build) key sig
-  build (UnknownWitnessType t bs) =
-    bprint ("UnknownWitnessType " . build . " " . base16F) t bs
 
 instance Bi TxInWitness where
   encode input = case input of
@@ -144,9 +130,6 @@ instance Bi TxInWitness where
       encodeListLen 2
         <> encode (2 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
-    UnknownWitnessType tag bs ->
-      encodeListLen 2 <> encode tag <> encodeUnknownCborDataItem
-        (LBS.fromStrict bs)
 
   decode = do
     len <- decodeListLen
@@ -161,9 +144,7 @@ instance Bi TxInWitness where
       2 -> do
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem
-      _ -> do
-        matchSize "TxInWitness.UnknownWitnessType" len 2
-        UnknownWitnessType tag <$> decodeUnknownCborDataItem
+      _ -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
 
   encodedSizeExpr size _ = 2 + szCases
     (map

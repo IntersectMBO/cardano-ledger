@@ -58,7 +58,6 @@ data TxValidationError
   | TxValidationMissingInput TxIn
   | TxValidationScriptWitness
   -- ^ TODO: Remove this once support for script witnesses is added
-  | TxValidationUnknownWitnessType Word8
   deriving (Eq, Show)
 
 
@@ -148,8 +147,6 @@ validateWitness pm sigData addr witness = case witness of
     (valVersion == redVersion && checkScriptAddress validator addr)
       `orThrowError` TxValidationInvalidWitness witness
     txScriptCheck sigData validator redeemer
-
-  UnknownWitnessType t _ -> throwError $ TxValidationUnknownWitnessType t
  where
 
   txScriptCheck

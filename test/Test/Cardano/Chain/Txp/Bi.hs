@@ -160,12 +160,6 @@ goldenRedeemWitness = goldenTestBi
  where
   redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
 
-goldenUnknownWitnessType :: Property
-goldenUnknownWitnessType = goldenTestBi
-  unkWitType
-  "test/golden/bi/txp/TxInWitness_UnknownWitnessType"
-  where unkWitType = UnknownWitnessType 47 "forty seven"
-
 roundTripTxInWitness :: Property
 roundTripTxInWitness = eachOf 50 (feedPM genTxInWitness) roundTripsBiBuildable
 
