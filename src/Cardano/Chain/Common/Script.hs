@@ -6,7 +6,6 @@
 module Cardano.Chain.Common.Script
   ( Script(..)
   , ScriptVersion
-  , Script_v0
   )
 where
 
@@ -16,7 +15,6 @@ import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
 import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import Formatting (bprint, int)
 import qualified Formatting.Buildable as B
-import qualified PlutusCore.Program as PLCore
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 
@@ -52,6 +50,3 @@ instance Bi Script where
     decode = do
         enforceSize "Script" 2
         Script <$> decode <*> decode
-
--- | Deserialized script (i.e. an AST), version 0.
-type Script_v0 = PLCore.Program

@@ -132,7 +132,6 @@ library
                      , lens
                      , memory
                      , mtl
-                     , plutus-prototype
                      , resourcet
                      , servant
                      , streaming
