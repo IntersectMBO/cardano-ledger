@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/7f8544ae9e162b6664f07093227edb148f1c8a5b/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ff5fd5f33849be8a826506c34e5b0278f267f804/snapshot.yaml
 
 packages:
   - .
@@ -6,7 +6,7 @@ packages:
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: d71ddaacf474bfc9b96f96ce1b7c0e81a156d719
+    commit: ff5fd5f33849be8a826506c34e5b0278f267f804
     subdirs:
       - .
       - test

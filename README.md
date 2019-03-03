@@ -15,7 +15,7 @@ organization, whose versions are pinned in the `stack.yaml` file, e.g.:
 ```yaml
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 7f8544ae9e162b6664f07093227edb148f1c8a5b
+    commit: ff5fd5f33849be8a826506c34e5b0278f267f804
     subdirs:
       - .
       - test
