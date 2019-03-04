@@ -119,7 +119,7 @@ newtype PairSet a b = PairSet {unPairSet :: Set (a,b)}
 psSize :: PairSet a b -> Int
 psSize = Set.size . unPairSet
 
-class Maplike m where
+class Relation m where
   singleton :: a -> b -> m a b
 
   -- | Domain
@@ -127,11 +127,11 @@ class Maplike m where
   -- | Range
   range :: Ord b => m a b -> Set b
 
-  -- |Domain restriction
+  -- | Domain restriction
   --
   (◁), (◃) :: Ord a => Set a -> m a b -> m a b
 
-  -- |Domain exclusion
+  -- | Domain exclusion
   --
   (⋪) :: Ord a => Set a -> m a b -> m a b
 
@@ -145,7 +145,7 @@ class Maplike m where
   -- | Union Override
   (⨃) :: (Ord a, Ord b) => m a b -> m a b -> m a b
 
-instance Maplike Map where
+instance Relation Map where
   singleton = Map.singleton
 
   dom = Map.keysSet
@@ -161,7 +161,7 @@ instance Maplike Map where
   d0 ∪ d1 = Map.union d0 d1
   d0 ⨃ d1 = d1 ∪ (Map.keysSet d1 ⋪ d0)
 
-instance Maplike PairSet where
+instance Relation PairSet where
   singleton a b = PairSet $ Set.singleton (a,b)
 
   dom = Set.map fst . unPairSet

@@ -14,7 +14,7 @@ module Ledger.Update where
 import Control.Lens
 import Control.State.Transition
 import Data.Ix (inRange)
-import Data.List (partition)
+import Data.List (foldl', partition)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, maybeToList)
@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 import Numeric.Natural
-import Ledger.Core (Maplike(..), (⨃), (▹), (⋪), (◃))
+import Ledger.Core (Relation(..), (⨃), (▹), (⋪), (◃))
 import qualified Ledger.Core as Core
 
 import Prelude hiding (min)
@@ -687,7 +687,7 @@ instance STS UPIEND where
         let k = pps ^. chainStability
             u = pps ^. upTtl
         (fads', bvs') <- trans @UPEND $ TRC ((k, sn, (pv, pps), cps, rpus), (fads, bvs), (bv,vk))
-        let pidskeep = dom (Map.filter (> (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
+        let pidskeep = dom (Map.filter (>= (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
             rpus' = pidskeep ◃ rpus
             vskeep = Set.fromList . fmap fst $ Map.elems rpus'
         return ( ep
@@ -734,7 +734,7 @@ instance STS PVBUMP where
     , do
         TRC ((k, sn), (ep, (pv, pps), fads), en) <- judgmentContext
         ep < en ?! OldEpoch
-        return $ case (partition (\(s, _) -> s < sn `Core.minusSlot` (2*k)) fads) of
+        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` (2*k)) fads) of
           ([], _) -> (ep, (pv, pps), fads)
           ((_, (pvc, ppsc)):_, rest) -> (en, (pvc, ppsc), rest)
     ]
@@ -766,7 +766,9 @@ instance STS UPIEC where
             , en) <- judgmentContext
         let k = pps ^. chainStability
         (e', (pv', pps'), fads') <- trans @PVBUMP $ TRC ((k, sn), (ep, (pv, pps), fads), en)
-        let pidskeep = undefined
+        let pidskeep = Set.fromList [ pid | pid <- Set.toList . foldl' Set.union Set.empty
+                                     . Map.elems . Map.filterWithKey (\pvi _ -> pv' < pvi)
+                                     $ invertMap (fst <$> rpus)]
         return ( e'
                 , (pv', pps')
                 , fads'
