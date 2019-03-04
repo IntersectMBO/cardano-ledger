@@ -1011,7 +1011,7 @@ The certificate contains the following:
   their usual rewards).
 
 \item
-  A list of Hashes of public staking keys controlled by the pool owner(s),
+  A list of hashes of public staking keys controlled by the pool owner(s),
   \(\mathcal{H}(vks_\text{owner})\). If any of these \emph{owner staking keys}
   \(vks_\text{owner}\) delegate to this pool, the stake that they delegate will
   be counted towards the stake pledged to the pool by the owner(s), see
@@ -1555,7 +1555,7 @@ which are signed using an operational key certificate, the newest certificate
 
 Note that nodes take the precedence amongst operational key certificates into
 account only \emph{after} comparing the length of the chains. When the node is
-aleady up to date and receives two conflicting blocks that add to its current
+already up to date and receives two conflicting blocks that add to its current
 chain, the length will of course always be the same. But this rule is important:
 if we did not compare the lengths of the chains before giving preference to the
 block with the newer operational certificate, it would be possible to force a
@@ -1618,7 +1618,7 @@ leader schedule for the next epoch:
 \item Randomly select \(10 k d\) slots of the epoch. For those slots, the result
   of the leader election will be ignored. Instead, the bootstrap nodes will
   create blocks for those slots, using Ouroboros BFT.
-\end{itemize}\todo{There is a sublety here, in that Praos has more slots than
+\end{itemize}\todo{There is a subtlety here, in that Praos has more slots than
   OBFT. We'll have to adjust this slightly. Also, if we do go for rewards per
   block, we'll have to think about the transition period again.}
 
@@ -4187,7 +4187,7 @@ will end up in NE2? There are three arguments why this is unlikely to happen:
   created by the federation that ran the Byron network, and those players will
   behave honestly. So the system will start in NE1.
 \item Stake pool \emph{members} benefit from competition, and while censorship
-  of certificates is not obserable from the final chain itself, the community
+  of certificates is not observable from the final chain itself, the community
   can be expected to identify pools that try to block the competition, by
   looking at the certificates that are being broadcast, the produced blocks, and
   temporary forks. Once this becomes known, members will leave such a pool. So
