@@ -1,5 +1,0 @@
-https://github.com/well-typed/cborg 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d cborg 1khd1v9yh6jdkcvzvknvhxpc1qvxvww0pp7c43w4hbvdyhs1q8wh cborg .stack.nix/cborg.nix
-https://github.com/nc6/cardano-crypto d46e8a44d85a71f5da03fb6b176e9427c684144b . 0g8ln8k8wx4csdv92bz09pr7v9dp4lcyv1334b09c9rgwdwhqg1b cardano-crypto .stack.nix/cardano-crypto.nix
-https://github.com/avieth/plutus-prototype d094be301195fcd8ab864d793f114970426a4478 . 1s932rghn4zn441waansp408b5bwk20rc1wsa5693a2nwnp4dijw plutus-prototype .stack.nix/plutus-prototype.nix
-https://github.com/input-output-hk/haskell-hedgehog.git 2e741bb53afb085741807018948ae17d956c53af hedgehog 0l0d1n2b68m0628j4yi214q5fy6pz777qfj1bc1lrra8scs5gcxh hedgehog .stack.nix/hedgehog.nix
-http://github.com/nc6/canonical-json a9dc9b893649bc2e2a770ab22d278a780f7e3a3c . 0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr canonical-json .stack.nix/canonical-json.nix
