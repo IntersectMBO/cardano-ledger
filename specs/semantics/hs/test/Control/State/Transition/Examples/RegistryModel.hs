@@ -331,14 +331,16 @@ registryCmd tidMapRef env =
     gen :: AbstractState v -> Maybe (Gen (RegCmdW v))
     -- Damn! I'm stuck here! I cannot use the generator to return nothing if
     -- the application of the generated signal fails :(
-    gen (AbstractState st) =
-      either (const Nothing) (Just . RegCmdW) <$> eCmd
-      where
-        eCmd = do
-          cmd <- sigGen @REGISTRY env st
-          case applySTS @REGISTRY (TRC(env, st, cmd)) of
-            Left _ -> pure $! Left "Boom"
-            Right _ -> pure $! Right cmd
+    --
+    -- We'd need     :: Gen (Maybe a) -> Maybe (Gen a)
+    gen (AbstractState st) = Just $ fmap RegCmdW $ sigGen @REGISTRY env st
+--      either (const Nothing) (Just . RegCmdW) <$> eCmd
+      -- where
+      --   eCmd = do
+      --     cmd <- sigGen @REGISTRY env st
+      --     case applySTS @REGISTRY (TRC(env, st, cmd)) of
+      --       Left _ -> pure $! Left "Boom"
+      --       Right _ -> pure $! Right cmd
 
     execute :: RegCmdW v -> m RegOut
     execute (RegCmdW (Spawn atid)) = do
@@ -389,6 +391,11 @@ registryCmd tidMapRef env =
       -> Test ()
     post (AbstractState st) _ (RegCmdW cmd@(WhereIs name Nothing)) res =
       assert (wasFound res)
+    post (AbstractState st) _ (RegCmdW cmd@(WhereIs name (Just atid))) (Found tid) =
+      o well ....
+      -- tidMap <- evalIO $ readIORef tidMapRef
+      -- let etid = fromJust $ Map.lookup atid tidMap
+      -- etid === tid
     post (AbstractState st) _ (RegCmdW cmd) res =
         isLeft ares === isFailure res
       where
