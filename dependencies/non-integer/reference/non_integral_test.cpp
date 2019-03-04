@@ -37,6 +37,9 @@ int main()
   mpz_class epsilon("10");
   mpz_pow_ui(epsilon.get_mpz_t(), epsilon.get_mpz_t(), 34 - 24);
 
+  mpz_class resolution("10");
+  mpz_pow_ui(resolution.get_mpz_t(), resolution.get_mpz_t(), 17);
+
   initialize(precision.get_mpz_t(), epsilon.get_mpz_t());
 
   std::chrono::duration<double> total = std::chrono::duration<double>::zero();

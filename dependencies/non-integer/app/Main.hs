@@ -21,7 +21,7 @@ precision :: FixedPoint
 precision = 10000000000000000000000000000000000
 
 epsilon :: FixedPoint
-epsilon = 100000000000000000000
+epsilon = 100000000000000000
 
 main :: IO ()
 main = do

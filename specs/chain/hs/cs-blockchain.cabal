@@ -28,6 +28,7 @@ library
                      , Cardano.Spec.Chain.STS.Rule.Chain
                      , Cardano.Spec.Chain.STS.Rule.Epoch
                      , Cardano.Spec.Chain.STS.Rule.SigCnt
+                     , Cardano.Spec.Consensus.Block
   --other-modules:
   -- other-extensions:
   hs-source-dirs:      src
