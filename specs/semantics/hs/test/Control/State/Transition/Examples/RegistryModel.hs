@@ -22,7 +22,7 @@ import qualified Data.Set as Set
 import Hedgehog
   ( Callback
   , assert
-  , Callback(Ensure, Update)
+  , Callback(Ensure, Update, Require)
   , Command(Command)
   , Concrete
   , Gen
@@ -95,7 +95,7 @@ instance STS REGISTER where
         -- Try commenting out some of these checks and see what happens.
         t `member` tids ?! ThreadDoesntExist t
         n `notElem` Map.keys regs ?! NameAlreadyRegistered n
-        -- t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
+        t `notElem` Map.elems regs ?! ThreadIdAlreadyRegistered t
         return $! Map.insert n t regs
     ]
 
@@ -176,7 +176,6 @@ instance STS REGISTRY where
           Unregister n -> do
             regs' <- trans @UNREGISTER $ TRC ((), regs, n)
             return $! (tids, regs')
-
     ]
 
 instance Embed SPAWN REGISTRY where
@@ -194,7 +193,7 @@ allNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
 instance HasTrace REGISTRY where
   initEnvGen = return ()
 
-  sigGen () (tids, regs) =
+  sigGen () st@(tids, regs) = do
     Gen.choice [ do
                    n <- Gen.integral (Range.constant 0 10000)
                    if n `member` tids
@@ -202,9 +201,10 @@ instance HasTrace REGISTRY where
                    else return $! Spawn n
                , if Map.null regs
                  then (sigGen @REGISTRY () (tids, regs))
-                 else fmap (uncurry WhereIs)
-                        $ fmap (second Just)
-                        $ Gen.element (Map.toList regs)
+                 else
+                   fmap (uncurry WhereIs)
+                     $ fmap (second Just)
+                     $ Gen.element (Map.toList regs)
                , do
                    let anames = allNames \\ Set.fromList (Map.keys regs)
                    if Set.null anames
@@ -328,19 +328,11 @@ registryCmd tidMapRef env =
     execute
     callbacks
   where
+    -- If we're using our STS framework, we should always return a generator. I
+    -- don't know whether there are cases in which we can decide that we won't
+    -- be able to generate an action based on the initial state.
     gen :: AbstractState v -> Maybe (Gen (RegCmdW v))
-    -- Damn! I'm stuck here! I cannot use the generator to return nothing if
-    -- the application of the generated signal fails :(
-    --
-    -- We'd need     :: Gen (Maybe a) -> Maybe (Gen a)
     gen (AbstractState st) = Just $ fmap RegCmdW $ sigGen @REGISTRY env st
---      either (const Nothing) (Just . RegCmdW) <$> eCmd
-      -- where
-      --   eCmd = do
-      --     cmd <- sigGen @REGISTRY env st
-      --     case applySTS @REGISTRY (TRC(env, st, cmd)) of
-      --       Left _ -> pure $! Left "Boom"
-      --       Right _ -> pure $! Right cmd
 
     execute :: RegCmdW v -> m RegOut
     execute (RegCmdW (Spawn atid)) = do
@@ -371,7 +363,25 @@ registryCmd tidMapRef env =
         Just tid -> pure $! Found tid
 
     callbacks :: [Callback RegCmdW RegOut AbstractState]
-    callbacks = [Update update, Ensure post]
+    callbacks = [Require pre, Update update, Ensure post]
+
+    pre
+      :: AbstractState v
+      -> RegCmdW v
+      -> Bool
+    pre (AbstractState (_, regs)) (RegCmdW (WhereIs n (Just t))) =
+      -- Here we need to guard against the shrink steps that will cause
+      -- @WhereIs n (Just x)@ to be the signal of an empty state.
+      --
+      -- So here we're saying, it is ok to apply this step, if the state still
+      -- contains the information that allowed the generation of this action
+      -- (a.k.a signal).
+      t `elem` Map.elems regs
+    pre (AbstractState (tids, _)) (RegCmdW (Register n t)) =
+      -- We start seeing a pattern here: we need to use the precondition to
+      -- filter the states that might have not given rise to the given signal.
+      t `member` tids
+    pre _ _ = True
 
     update
       :: AbstractState v
@@ -389,18 +399,10 @@ registryCmd tidMapRef env =
       -> RegCmdW Concrete
       -> RegOut
       -> Test ()
-    post (AbstractState st) _ (RegCmdW cmd@(WhereIs name Nothing)) res =
-      assert (wasFound res)
-    post (AbstractState st) _ (RegCmdW cmd@(WhereIs name (Just atid))) (Found tid) =
-      o well ....
-      -- tidMap <- evalIO $ readIORef tidMapRef
-      -- let etid = fromJust $ Map.lookup atid tidMap
-      -- etid === tid
     post (AbstractState st) _ (RegCmdW cmd) res =
         isLeft ares === isFailure res
       where
         ares = applySTS @REGISTRY (TRC(env, st, cmd))
-
 
 tests :: IO Bool
 tests =

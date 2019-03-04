@@ -35,7 +35,7 @@ where
 import Control.Lens ((^.))
 import Control.Monad (forM)
 import Data.Either (partitionEithers)
-import Data.List (subsequences)
+import Data.List (subsequences, sortOn)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Range (Size(Size), linear)
@@ -88,8 +88,7 @@ genTrace
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
 genTrace env st aSigGen =
-  Gen.shrink shrinkTrace $ do
-  do
+  Gen.shrink shrinkTrace $ Gen.prune $ do
     d <- Gen.integral (linear 0 100)
     mkTrace env st <$> go d st []
   where
@@ -115,7 +114,12 @@ shrinkTrace
 shrinkTrace tr = mkTrace env st0 <$> stSigs
   where
     (_, stSigs) = partitionEithers applied
-    applied = (runTrace @s env st0) <$> (subsequences sigs)
+    applied = (runTrace @s env st0) <$> sortedSubSeqs
+    sortedSubSeqs
+      = fmap snd
+      $ sortOn fst
+      $ zip (fmap length subSeqs) (subSeqs)
+    subSeqs = subsequences sigs
     env = tr ^. traceEnv
     st0 = tr ^. traceInitState
     sigs = traceSignals OldestFirst tr
