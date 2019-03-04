@@ -1040,6 +1040,10 @@ The certificate contains the following:
 
   If no URL and content hash is provided, the stake pool will not be listed in
   wallets. Private pools (\cref{individual-staking}) will use this option.
+
+  Also, if there is a mismatch in the content hash, the pool will not be
+  displayed. If a stake pool operator changes the metadata, they have to post a
+  new stake pool registration certificate with the new content hash.
 \end{itemize}
 
 The certificate must be signed by all \(sks_\text{owner}\), as well as
@@ -1220,9 +1224,9 @@ They are included in the message (e.g.~block header) and the message
 itself is signed with \(sks_\text{hot}\).
 
 Operational keys will use key evolving signatures (KES). To be precise, we will
-use keys according to the MMM scheme \citep{cryptoeprint:2001:034}, with 1-day
-regular updates and a key lifetime of \(2^7 = 128\) days, a little over three
-months.
+use keys according to the MMM scheme \citep{cryptoeprint:2001:034}, regular
+evolutions after a number of slots that correspond to one day, and a key
+lifetime of \(2^7 = 128\) days, a little over three months.
 
 Operational key certificates will have a lifetime of 90 days after which they
 become invalid, to encourage pool operators to regularly rotate their
@@ -1318,9 +1322,9 @@ purpose of establishing precedence:
 \item
   Also, we require that within any given chain, if there are two blocks A and B
   signed using operational key certificates issued by the same cold key, if A is
-  an older block than B, the counter in the operational certificate in the
-  witness of B must be at least as large as the one in the counter in the
-  operational certificate in the witness of A.
+  an older block than B, the counter in the operational certificate in the cert
+  in the header of B must be at least as large as the one in the counter in the
+  operational certificate in the header of A.
 \end{itemize}
 
 \subsection{Delegation Relations}
@@ -2246,7 +2250,7 @@ complicate engineering.
 \subsection{Stakepool Metadata}
 \label{stakepool-metadata}
 
-The stake pool registration certificate can contain a URL (up to 32 bytes),
+The stake pool registration certificate can contain a URL (up to 64 bytes),
 pointing to a JSON object with the following content:
 
 \begin{description}
@@ -2261,7 +2265,12 @@ pointing to a JSON object with the following content:
 \item[A list of IP addresses and/or Domain Names]
   of public relay nodes that the stake pool operator provides to contribute to
   the Cardano network.
-\item[A set of tags]
+\item[A set of tags,]
+  keywords that can be used to filter stake pools in the wallet UI. For example,
+  a stake pool that gives their rewards to a charity might indicate this by
+  using a ``charity'' tag. Other tags could specify the geographic location, or
+  whether a pool is running on cloud infrastructure or a physcial server owned
+  by the pool operator.
 \end{description}
 All characters in the metadata will be UTF8 encoded. The metadata is restricted
 to have a size of no more than 512 bytes.
@@ -2283,9 +2292,8 @@ metadata URLs.
 
 Those servers are simple, and in particular, they require relatively little
 trust: because of the content hash, someone running a proxy server can not
-display forged metadata.\todo{Is this actually sufficient, or should
-  we require the metadata to be signed by the pool's key?} The worst thing they
-can do is filter the list of stake pools.
+display forged metadata. The worst thing they can do is filter the list of stake
+pools.
 
 In order to avoid those proxy servers to become a point of centralisation of the
 system, we will encourage third parties (stake pools, people in the community)
@@ -2313,7 +2321,7 @@ metadata to display to the user.
 In order for stakeholders to be able to delegate their stake to a pool, the
 wallet will provide a listing of stake pools, in a section of the UI called the
 \emph{delegation centre}. In order to make it easy for users to do a rational
-choice when delegfating, this listing will be ordered by the rewards that the
+choice when delegating, this listing will be ordered by the rewards that the
 user should expect from delegating to each pool. In particular, we use the
 non-myopic pool member rewards, \cref{eq:non-myopic-member-rewards} in
 \cref{pool-desirability-and-ranking}. Since this ordering depends not only on
@@ -2356,7 +2364,7 @@ wallet should monitor the non-myopic rewards regularly. Should the stake pool
 become less favourable (by missing blocks, or even becoming inactive, or by
 changing its cost/margin), the wallet should notify the user, and ask them to
 consider changing their delegation.\todo{Specify how many places the pool has to
-  drop in order to trigger this notification}
+  drop in order to trigger this notification. Needs input from research.}
 
 We had considered adding some jittering to the ordered list of stake pools, in
 order to prevent a situation where a slight difference in the expected rewards would
