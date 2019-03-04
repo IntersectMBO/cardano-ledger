@@ -5,6 +5,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+-- | Model of a process registry.
+--
+-- The registry is a simple local name service for threads. See the file
+-- @Registry.hs@ for more information.
+--
+-- In this model we test three operations of the registry:
+--
+-- >>> register name tid
+--
+-- which registers the given thread-id under the given name.
+--
+-- >>> unregister name
+---
+--- which unregisters the thread with the given name.
+--
+-- >>> whereis name
+--
+-- which returns the thread-id that was registered under that name, if any.
+--
+-- The registry is modeled as a state transition system, using
+-- operational-semantics rules, encoding using the 'STS' framework.
+--
+-- The registry is tested using property based tests using two approaches:
+--
+-- - In 'prop_generatedTracesAreValid' we use property based testing without
+--   state machines. Traces are generated, and then executed, checking the
+--   results at each step.
+--
+-- - In 'prop_RegistryImplementsModel' we use state machine testing, where the
+--   'STS' framework is used to compute the update to the abstract state.
+--
 module Control.State.Transition.Examples.RegistryModel where
 
 import Control.Arrow (second)
@@ -126,8 +158,6 @@ instance STS UNREGISTER where
 whereIs :: String -> Map String AThreadId -> Maybe AThreadId
 whereIs = Map.lookup
 
-data KILL
-
 data REGISTRY
 
 data RegCmd
@@ -135,7 +165,6 @@ data RegCmd
   | Register String AThreadId
   | Unregister String
   | WhereIs String (Maybe AThreadId)
---  | KillThread AThreadId
   deriving (Eq, Show)
 
 instance STS REGISTRY where
