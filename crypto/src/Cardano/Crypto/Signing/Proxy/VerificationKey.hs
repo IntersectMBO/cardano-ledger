@@ -72,7 +72,7 @@ pskOmega = unAnnotated . aPskOmega
 
 instance B.Buildable w => B.Buildable (AProxyVerificationKey w a) where
   build (UnsafeAProxyVerificationKey w iPk dPk _) = bprint
-    ("ProxySk { w = " . build . ", iPk = " . build . ", dPk = " . build . " }")
+    ("ProxyVk { w = " . build . ", iPk = " . build . ", dPk = " . build . " }")
     (unAnnotated w)
     iPk
     dPk
