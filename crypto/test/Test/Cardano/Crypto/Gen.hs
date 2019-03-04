@@ -121,7 +121,7 @@ genSignTag = Gen.element
   , SignUSVote
   , SignMainBlock
   , SignMainBlockHeavy
-  , SignProxySK
+  , SignProxyVK
   ]
 
 
@@ -188,7 +188,7 @@ genProxySignature pm genA genW = do
   w          <- genW
   a          <- genA
   let psk = createPsk pm issuerSafeSigner (toPublic delegateSk) w
-  return $ proxySign pm SignProxySK delegateSk psk a
+  return $ proxySign pm SignProxyVK delegateSk psk a
 
 
 --------------------------------------------------------------------------------

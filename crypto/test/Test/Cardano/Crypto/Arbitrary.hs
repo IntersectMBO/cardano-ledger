@@ -164,7 +164,7 @@ instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
       <$> arbitrary
       <*> pure (toPublic delegateSk)
       <*> arbitrary
-    proxySign dummyProtocolMagicId SignProxySK delegateSk psk <$> arbitrary
+    proxySign dummyProtocolMagicId SignProxyVK delegateSk psk <$> arbitrary
 
 
 --------------------------------------------------------------------------------
