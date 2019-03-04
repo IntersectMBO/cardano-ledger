@@ -32,6 +32,7 @@
           (hsPkgs.small-steps)
           (hsPkgs.microlens)
           (hsPkgs.microlens-th)
+          (hsPkgs.non-integer)
           ];
         };
       tests = {

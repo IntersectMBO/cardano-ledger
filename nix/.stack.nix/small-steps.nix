@@ -38,6 +38,14 @@
             (hsPkgs.small-steps)
             ];
           };
+        "examples" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.containers)
+            (hsPkgs.hedgehog)
+            (hsPkgs.small-steps)
+            ];
+          };
         };
       };
     } // rec { src = (pkgs.lib).mkDefault .././../specs/semantics/hs; }
