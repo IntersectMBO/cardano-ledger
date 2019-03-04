@@ -56,7 +56,7 @@ import Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Slotting as Slotting
 import Cardano.Chain.Slotting (flattenSlotId)
 import Cardano.Crypto
-  ( AProxySecretKey(..)
+  ( AProxyVerificationKey(..)
   , AProxySignature(..)
   , PublicKey
   , SignTag(SignMainBlock, SignMainBlockHeavy)

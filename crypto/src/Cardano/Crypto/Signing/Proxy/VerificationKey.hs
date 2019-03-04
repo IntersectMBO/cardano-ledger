@@ -7,25 +7,25 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Cardano.Crypto.Signing.Proxy.SecretKey
-  ( AProxySecretKey(..)
-  , ProxySecretKey
+module Cardano.Crypto.Signing.Proxy.VerificationKey
+  ( AProxyVerificationKey(..)
+  , ProxyVerificationKey
 
   -- * Constructors
   , createPsk
-  , unsafeProxySecretKey
+  , unsafeProxyVerificationKey
 
   -- * Accessors
   , pskOmega
 
   -- * Decoder
-  , decodeAProxySecretKey
+  , decodeAProxyVerificationKey
 
   -- * Predicates
   , isSelfSignedPsk
 
   -- * Validators
-  , validateProxySecretKey
+  , validateProxyVerificationKey
   )
 where
 
@@ -53,7 +53,7 @@ import Cardano.Crypto.Signing.Safe (SafeSigner, safeToPublic)
 
 -- | Convenient wrapper for secret key, that's basically ω plus
 -- certificate.
-data AProxySecretKey w a = UnsafeAProxySecretKey
+data AProxyVerificationKey w a = UnsafeAProxyVerificationKey
   { aPskOmega     :: Annotated w a
   , pskIssuerPk   :: PublicKey
   , pskDelegatePk :: PublicKey
@@ -61,23 +61,23 @@ data AProxySecretKey w a = UnsafeAProxySecretKey
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass NFData
 
-type ProxySecretKey w = AProxySecretKey w ()
+type ProxyVerificationKey w = AProxyVerificationKey w ()
 
-unsafeProxySecretKey
-  :: w -> PublicKey -> PublicKey -> ProxyCert w -> ProxySecretKey w
-unsafeProxySecretKey w = UnsafeAProxySecretKey (Annotated w ())
+unsafeProxyVerificationKey
+  :: w -> PublicKey -> PublicKey -> ProxyCert w -> ProxyVerificationKey w
+unsafeProxyVerificationKey w = UnsafeAProxyVerificationKey (Annotated w ())
 
-pskOmega :: AProxySecretKey w a -> w
+pskOmega :: AProxyVerificationKey w a -> w
 pskOmega = unAnnotated . aPskOmega
 
-instance B.Buildable w => B.Buildable (AProxySecretKey w a) where
-  build (UnsafeAProxySecretKey w iPk dPk _) = bprint
+instance B.Buildable w => B.Buildable (AProxyVerificationKey w a) where
+  build (UnsafeAProxyVerificationKey w iPk dPk _) = bprint
     ("ProxySk { w = " . build . ", iPk = " . build . ", dPk = " . build . " }")
     (unAnnotated w)
     iPk
     dPk
 
-instance Bi w => Bi (ProxySecretKey w) where
+instance Bi w => Bi (ProxyVerificationKey w) where
   encode psk =
     encodeListLen 4
       <> encode (pskOmega psk)
@@ -85,14 +85,14 @@ instance Bi w => Bi (ProxySecretKey w) where
       <> encode (pskDelegatePk psk)
       <> encode (pskCert psk)
 
-  decode =  void <$> decodeAProxySecretKey
+  decode =  void <$> decodeAProxyVerificationKey
 
-decodeAProxySecretKey :: Bi w => Decoder s (AProxySecretKey w ByteSpan)
-decodeAProxySecretKey = do
-  enforceSize "ProxySecretKey" 4
-  UnsafeAProxySecretKey <$> decodeAnnotated <*> decode <*> decode <*> decode
+decodeAProxyVerificationKey :: Bi w => Decoder s (AProxyVerificationKey w ByteSpan)
+decodeAProxyVerificationKey = do
+  enforceSize "ProxyVerificationKey" 4
+  UnsafeAProxyVerificationKey <$> decodeAnnotated <*> decode <*> decode <*> decode
 
-instance ToJSON w => ToJSON (AProxySecretKey w ()) where
+instance ToJSON w => ToJSON (AProxyVerificationKey w ()) where
   toJSON psk = object
     [ "pskOmega" .= toJSON (pskOmega psk)
     , "pskIssuerPk" .= toJSON (pskIssuerPk psk)
@@ -100,8 +100,8 @@ instance ToJSON w => ToJSON (AProxySecretKey w ()) where
     , "pskCert" .= toJSON (pskCert psk)
     ]
 
-instance FromJSON w => FromJSON (AProxySecretKey w ()) where
-    parseJSON = withObject "ProxySecretKey" $ \v -> unsafeProxySecretKey
+instance FromJSON w => FromJSON (AProxyVerificationKey w ()) where
+    parseJSON = withObject "ProxyVerificationKey" $ \v -> unsafeProxyVerificationKey
         <$> v .: "pskOmega"
         <*> v .: "pskIssuerPk"
         <*> v .: "pskDelegatePk"
@@ -109,8 +109,8 @@ instance FromJSON w => FromJSON (AProxySecretKey w ()) where
 
 -- | Creates proxy secret key
 createPsk
-  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxySecretKey w
-createPsk pm ss delegatePk w = UnsafeAProxySecretKey
+  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyVerificationKey w
+createPsk pm ss delegatePk w = UnsafeAProxyVerificationKey
   { aPskOmega     = Annotated w ()
   , pskIssuerPk   = safeToPublic ss
   , pskDelegatePk = delegatePk
@@ -118,22 +118,22 @@ createPsk pm ss delegatePk w = UnsafeAProxySecretKey
   }
 
 -- | Checks if delegate and issuer fields of proxy secret key are equal
-isSelfSignedPsk :: ProxySecretKey w -> Bool
+isSelfSignedPsk :: ProxyVerificationKey w -> Bool
 isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 
 -- | Return the key if it's valid, and throw an error otherwise
 --
 --   TODO: Make this unnecessary by performing validation in the decoder
-validateProxySecretKey
+validateProxyVerificationKey
   :: MonadError Text m
   => ProtocolMagicId
-  -> AProxySecretKey w ByteString
+  -> AProxyVerificationKey w ByteString
   -> m ()
-validateProxySecretKey pm psk =
+validateProxyVerificationKey pm psk =
   verifyProxyCert
       pm
       (pskIssuerPk psk)
       (pskDelegatePk psk)
       (aPskOmega psk)
       (pskCert psk)
-    `orThrowError` "a ProxySecretKey has an invalid signature"
+    `orThrowError` "a ProxyVerificationKey has an invalid signature"

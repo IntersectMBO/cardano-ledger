@@ -36,9 +36,9 @@ import Cardano.Binary.Class
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Crypto
   ( ProtocolMagicId
-  , decodeAProxySecretKey
-  , validateProxySecretKey
-  , AProxySecretKey(..)
+  , decodeAProxyVerificationKey
+  , validateProxyVerificationKey
+  , AProxyVerificationKey(..)
   )
 
 
@@ -72,7 +72,7 @@ instance Bi (APayload ()) where
 
 decodeAPayload :: Decoder s (APayload ByteSpan)
 decodeAPayload = do
-  (Annotated p a) <- annotatedDecoder (decodeListWith decodeAProxySecretKey)
+  (Annotated p a) <- annotatedDecoder (decodeListWith decodeAProxyVerificationKey)
   pure (UnsafeAPayload p a)
 
 data PayloadError
@@ -84,7 +84,7 @@ instance Buildable PayloadError where
     PayloadDuplicateIssuer -> bprint
       "Encountered multiple delegation certificates from the same issuer."
     PayloadPSKError err -> bprint
-      ( "ProxySecretKey invalid when checking Delegation.Payload.\n Error: "
+      ( "ProxyVerificationKey invalid when checking Delegation.Payload.\n Error: "
       . stext
       )
       err
@@ -97,5 +97,5 @@ checkPayload protocolMagicId (UnsafeAPayload payload _) = do
 
   forM_
     payload
-    (liftEither . first PayloadPSKError . validateProxySecretKey protocolMagicId
+    (liftEither . first PayloadPSKError . validateProxyVerificationKey protocolMagicId
     )

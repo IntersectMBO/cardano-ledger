@@ -34,12 +34,12 @@ import Cardano.Binary.Class
   , serialize'
   )
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
-import Cardano.Crypto.Signing.Proxy.SecretKey
-  ( AProxySecretKey(..)
-  , ProxySecretKey
-  , decodeAProxySecretKey
+import Cardano.Crypto.Signing.Proxy.VerificationKey
+  ( AProxyVerificationKey(..)
+  , ProxyVerificationKey
+  , decodeAProxyVerificationKey
   , pskOmega
-  , validateProxySecretKey
+  , validateProxyVerificationKey
   )
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..), toPublic)
@@ -57,7 +57,7 @@ import Cardano.Crypto.Signing.Tag (SignTag, signTag)
 type ProxySignature w s = AProxySignature w s ()
 
 data AProxySignature w s a = AProxySignature
-  { psigPsk :: AProxySecretKey w a
+  { psigPsk :: AProxyVerificationKey w a
   , psigSig :: CC.XSignature
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass NFData
@@ -77,7 +77,7 @@ decodeAProxySignature :: Bi w => Decoder s (AProxySignature w a ByteSpan)
 decodeAProxySignature =
   AProxySignature
     <$  enforceSize "ProxySignature" 2
-    <*> decodeAProxySecretKey
+    <*> decodeAProxyVerificationKey
     <*> decodeXSignature
 
 
@@ -86,7 +86,7 @@ validateProxySignature
   => ProtocolMagicId
   -> AProxySignature w a ByteString
   -> m ()
-validateProxySignature pm psig = validateProxySecretKey pm (psigPsk psig)
+validateProxySignature pm psig = validateProxyVerificationKey pm (psigPsk psig)
 
 
 -- | Make a proxy delegate signature with help of certificate. If the delegate
@@ -97,7 +97,7 @@ proxySign
   => ProtocolMagicId
   -> SignTag
   -> SecretKey
-  -> ProxySecretKey w
+  -> ProxyVerificationKey w
   -> a
   -> ProxySignature w a
 proxySign pm t sk@(SecretKey delegateSk) psk m

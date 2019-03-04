@@ -110,10 +110,10 @@ spec =
 {- TODO: bring this back after validation rework
           prop
             "correct proxy signature schemes pass correctness check"
-            (proxySecretKeyCheckCorrect @(Int32, Int32))
+            (proxyVerificationKeyCheckCorrect @(Int32, Int32))
           prop
             "incorrect proxy signature schemes fails correctness check"
-            (proxySecretKeyCheckIncorrect @(Int32, Int32))
+            (proxyVerificationKeyCheckIncorrect @(Int32, Int32))
 -}
         describe "redeemer signatures" $ do
           prop
@@ -178,10 +178,10 @@ signThenVerifyDifferentData t sk a b = (a /= b) ==> not
   )
 
 {- TODO: bring this back after validation rework
-proxySecretKeyCheckCorrect
+proxyVerificationKeyCheckCorrect
   :: Bi w => SecretKey -> SecretKey -> w -> Bool
-proxySecretKeyCheckCorrect issuerSk delegateSk w = isRight
-  (validateProxySecretKey dummyProtocolMagic proxySk)
+proxyVerificationKeyCheckCorrect issuerSk delegateSk w = isRight
+  (validateProxyVerificationKey dummyProtocolMagic proxySk)
  where
   proxySk = createPsk
     dummyProtocolMagic
@@ -191,21 +191,21 @@ proxySecretKeyCheckCorrect issuerSk delegateSk w = isRight
 -}
 
 {- TODO: bring this back after validation rework
-proxySecretKeyCheckIncorrect
+proxyVerificationKeyCheckIncorrect
   :: Bi w
   => SecretKey
   -> SecretKey
   -> PublicKey
   -> w
   -> Property
-proxySecretKeyCheckIncorrect issuerSk delegateSk pk2 w = do
+proxyVerificationKeyCheckIncorrect issuerSk delegateSk pk2 w = do
   let
     psk = createPsk
       dummyProtocolMagic
       issuerSk
       (toPublic delegateSk)
       w
-    wrongPsk = unsafeProxySecretKey
+    wrongPsk = unsafeProxyVerificationKey
       (pskOmega psk)
       pk2
       (pskDelegatePk psk)
@@ -214,11 +214,11 @@ proxySecretKeyCheckIncorrect issuerSk delegateSk pk2 w = do
     fromRight (Right x) = x
     badMessage = fromRight $ decodeFullAnnotatedBytes
       "proxy secret key"
-      decodeAProxySecretKey
+      decodeAProxyVerificationKey
       (serialize wrongPsk)
-      :: AProxySecretKey w ByteString
+      :: AProxyVerificationKey w ByteString
   (toPublic issuerSk /= pk2)
-    ==> isLeft (validateProxySecretKey dummyProtocolMagic badMessage)
+    ==> isLeft (validateProxyVerificationKey dummyProtocolMagic badMessage)
 -}
 
 proxySignVerify

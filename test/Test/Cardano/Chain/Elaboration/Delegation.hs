@@ -16,11 +16,11 @@ import Cardano.Binary.Class (Annotated(..), serialize')
 import Cardano.Chain.Delegation as Delegation (Certificate)
 import Cardano.Chain.Slotting (EpochIndex)
 import Cardano.Crypto.Signing
-  ( AProxySecretKey(..)
+  ( AProxyVerificationKey(..)
   , createPsk
   , noPassSafeSigner
   , pskOmega
-  , validateProxySecretKey
+  , validateProxyVerificationKey
   )
 import Ledger.Core
   (Epoch(..), Owner(..), Slot(..), SlotCount(..), VKey(..), VKeyGenesis(..))
@@ -54,7 +54,7 @@ prop_elaboratedCertsValid =
           pm = Genesis.configProtocolMagicId config
 
         -- Validate the certificate
-        evalEither $ validateProxySecretKey pm annotatedCert
+        evalEither $ validateProxyVerificationKey pm annotatedCert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList

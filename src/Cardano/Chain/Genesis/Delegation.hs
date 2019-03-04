@@ -88,7 +88,7 @@ instance B.Buildable GenesisDelegationError where
       )
       k
     GenesisDelegationSelfSignedPsk psk -> bprint
-      ("Encountered self-signed ProxySecretKey while constructing GenesisDelegation.\n"
+      ("Encountered self-signed ProxyVerificationKey while constructing GenesisDelegation.\n"
       . build
       )
       psk

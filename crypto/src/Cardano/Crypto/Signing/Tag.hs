@@ -45,7 +45,7 @@ data SignTag
   -- ^ Main block:       @MainToSign@
   | SignMainBlockHeavy
   | SignProxySK
-  -- ^ Proxy key:        @ProxySecretKey@
+  -- ^ Proxy key:        @ProxyVerificationKey@
   deriving (Eq, Ord, Show, Generic)
 
 -- TODO: it would be nice if we couldn't use 'SignTag' with wrong
