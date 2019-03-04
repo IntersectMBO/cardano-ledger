@@ -124,19 +124,6 @@ shrinkTrace tr = mkTrace env st0 <$> stSigs
     st0 = tr ^. traceInitState
     sigs = traceSignals OldestFirst tr
 
-shrinkSigSts
-  :: forall s
-   . STS s
-  => Environment s
-  -> State s
-  -> [(State s, Signal s)]
-  -> [[(State s, Signal s)]]
-shrinkSigSts env st0 sigs = stSigs
-  where
-    (_, stSigs) = partitionEithers applied
-    applied = ((runTrace @s env st0) . fmap snd) <$> (subsequences sigs)
-
-
   -- An alternate way to generate a trace of the size of the generator might
   -- be:
   --
