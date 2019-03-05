@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/f2802079ba2c07c4d408e3c0aa000fc363792398/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ff5fd5f33849be8a826506c34e5b0278f267f804/snapshot.yaml
 
 packages:
 - hs
@@ -9,4 +9,5 @@ packages:
 
 extra-deps:
 - sequence-0.9.8
+- tasty-hedgehog-0.2.0.0
 - tasty-hedgehog-coverage-0.1.0.0
