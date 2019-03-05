@@ -29,6 +29,14 @@
           ];
         };
       tests = {
+        "doctests" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.doctest)
+            (hsPkgs.doctest-discover)
+            (hsPkgs.cs-ledger)
+            ];
+          };
         "ledger-delegation-test" = {
           depends = [
             (hsPkgs.base)
