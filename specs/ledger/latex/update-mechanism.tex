@@ -138,8 +138,9 @@ this specification can be extended to incorporate the research results.
   \label{fig:defs:update-proposals}
 \end{figure}
 
-The set of protocol parameters ($\ProtPm$) is assumed to contain the following keys, which
-correspond with fields of the current `BlockVersionData` structure:
+The set of protocol parameters ($\ProtPm$) is assumed to contain the following
+keys, some of which correspond with fields of the current `BlockVersionData`
+structure:
 \begin{itemize}
 \item Slot duration: $\var{slotDuration}$
 \item Maximum block size: $\var{maxBlockSize}$
@@ -152,9 +153,9 @@ correspond with fields of the current `BlockVersionData` structure:
 \item Update adoption threshold: $\var{upAdptThd}$. This would correspond with
   `srInitThd` in `SoftForkRule`, if we set `srMinThd` to `srInitThd` and
   `srThdDecrement` to $0$.
-\item Chain stability parameter: $\var{chainStabilityParameter}$.
+\item Chain stability parameter: $\var{stableAfter}$.
 \item Update proposal time-to-live: $\var{upropTTL}$.
-\item Certificate liveness: $\var{certificateLiveness}$.
+\item Delegation certificate liveness: $\var{certificateLiveness}$.
 \end{itemize}
 In addition we make use of the $\var{cfmThd}$ key, which determines the portion
 of the stakeholders that have to vote for a proposal to consider it confirmed.

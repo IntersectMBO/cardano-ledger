@@ -10,6 +10,14 @@ import Data.Set (Set)
 import Control.State.Transition
 import Ledger.Core
 import Ledger.Delegation
+  ( DELEG
+  , DIState
+  , DSEnv(DSEnv)
+  , _dSEnvAllowedDelegators
+  , _dSEnvEpoch
+  , _dSEnvSlot
+  , _dSEnvStableAfter
+  )
 import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block
@@ -44,7 +52,7 @@ instance STS BBODY where
               { _dSEnvAllowedDelegators = gks
               , _dSEnvEpoch = e
               , _dSEnvSlot = s
-              , _dSEnvLiveness = pps ^. dLiveness
+              , _dSEnvStableAfter = pps ^. stableAfter
               }
         ds' <- trans @DELEG
                      $ TRC (diEnv, ds, b ^. bBody . bDCerts)

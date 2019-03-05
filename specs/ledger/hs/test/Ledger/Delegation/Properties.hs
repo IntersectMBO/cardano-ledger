@@ -10,8 +10,9 @@ module Ledger.Delegation.Properties
   )
 where
 
-import Control.Arrow ((&&&))
-import Control.Lens ((^.), makeLenses, (&), (.~), view)
+import Control.Arrow ((&&&), first)
+import Control.Lens ((^.), makeLenses, (&), (.~), view, to)
+import Data.List (last)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -57,11 +58,12 @@ import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
   , lastState
+  , preStatesAndSignals
   , traceEnv
-  , traceSignals
   )
 import Ledger.Core
-  ( Epoch(Epoch)
+  ( BlockCount(BlockCount)
+  , Epoch(Epoch)
   , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
@@ -71,23 +73,25 @@ import Ledger.Core
   , VKeyGenesis(VKeyGenesis)
   , addSlot
   , owner
+  , unSlot
+  , unSlotCount
   )
 import Ledger.Delegation
   ( DCert
   , DCert(DCert)
   , DELEG
-  , DState(DState, _dStateDelegationMap, _dStateLastDelegation)
-  , DSState(DSState)
-  , _dSStateScheduledDelegations
-  , _dSStateKeyEpochDelegations
   , DIState(DIState)
-  , _dIStateDelegationMap
-  , _dIStateLastDelegation
-  , _dIStateScheduledDelegations
-  , _dIStateKeyEpochDelegations
   , DSEnv(DSEnv)
   , DSEnv
+  , DSState(DSState)
+  , DState(DState, _dStateDelegationMap, _dStateLastDelegation)
   , PredicateFailure(IsAlreadyScheduled, SDelegFailure, SDelegSFailure)
+  , _dIStateDelegationMap
+  , _dIStateKeyEpochDelegations
+  , _dIStateLastDelegation
+  , _dIStateScheduledDelegations
+  , _dSStateKeyEpochDelegations
+  , _dSStateScheduledDelegations
   , _dbody
   , _depoch
   , _dwho
@@ -95,9 +99,10 @@ import Ledger.Delegation
   , delegate
   , delegationMap
   , delegator
-  , liveness
+  , liveAfter
   , scheduledDelegations
   , slot
+  , stableAfter
   )
 import Ledger.Core.Generator (vkGen)
 
@@ -175,9 +180,20 @@ dcertsAreTriggeredInTrace tr
     lastDms = st ^. delegationMap
 
     trExpectedDms
-      = expectedDms (env ^. slot) (env ^. liveness) (traceSignals OldestFirst tr)
+      = expectedDms lastSlot
+                    (env ^. stableAfter . to liveAfter . to unSlotCount . to fromIntegral)
+                    slotsAndDcerts
 
     (env, st) = lastState tr
+
+    -- Last slot that was considered for an activation.
+    lastSlot :: Int
+    lastSlot = fst . last $ slotsAndDcerts
+
+    slotsAndDcerts :: [(Int, DBlock)]
+    slotsAndDcerts
+      = first (view (to fst . slot . to unSlot . to fromIntegral))
+      <$> preStatesAndSignals OldestFirst tr
 
 -- | Compute the expected delegation map after applying the sequence of
 -- delegation certificates contained in the given blocks.
@@ -186,33 +202,30 @@ dcertsAreTriggeredInTrace tr
 -- block, and blocks are considered in the order they appear on the list passed
 -- as parameter.
 expectedDms
-  :: Slot
-  -- ^ Current slot
-  -> SlotCount
+  :: Int
+  -- ^ Last slot that should have been considered for certificate activation.
+  -> Int
   -- ^ Delegation certificate liveness parameter.
-  -> [DBlock]
+  -> [(Int, DBlock)]
   -- ^ Delegation certificates to apply.
   -> Map VKeyGenesis VKey
-expectedDms s d cs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
+expectedDms s d sbs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
   where
     -- | We keep all the blocks whose certificates should be active given the
     -- current slot.
     activeBlocks :: [DBlock]
-    activeBlocks = filter (\b -> b ^. blockSlot <= activationSlot) cs
+    activeBlocks
+      =  snd
+     <$> filter ((<= activationSlot) . fst) sbs
 
-    -- | Slot at which the certificates become active.
-    activationSlot :: Slot
-    activationSlot = s `minusSlotCount` d
+    -- | Slot at which the certificates should have become active.
+    activationSlot :: Int
+    activationSlot = s - d
 
     -- | Get the active certificates from each block, and concatenate them all
     -- together.
     activeCerts :: [DCert]
     activeCerts = concatMap _blockCerts activeBlocks
-
-minusSlotCount :: Slot -> SlotCount -> Slot
-minusSlotCount (Slot s) (SlotCount c)
-  | s <= c    = Slot 0
-  | otherwise = Slot $ s - c
 
 -- | An initial delegation scheduling environment to be used in the traces
 -- produced by the @DBLOCK@ transition system.
@@ -222,7 +235,7 @@ initDSEnv
       (Set.fromAscList $ gk <$> [0..6])
       (Epoch 0)
       (Slot 0)
-      (SlotCount 1)
+      (BlockCount 1)
   where
     gk = VKeyGenesis . k
     k n = VKey (Owner n)
@@ -241,7 +254,7 @@ instance HasSizeInfo DBlock where
   isTrivial = null . view blockCerts
 
 dcertsAreTriggered :: Property
-dcertsAreTriggered = withTests 300 $ property $
+dcertsAreTriggered = withTests 1000 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
   forAll nonTrivialTrace >>= dcertsAreTriggeredInTrace

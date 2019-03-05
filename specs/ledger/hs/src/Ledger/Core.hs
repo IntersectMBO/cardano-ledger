@@ -92,9 +92,10 @@ newtype Slot = Slot { unSlot :: Word64 }
 
 -- | A number of slots.
 --
---   We use this newtype to distinguish between a cardinal slot and a relative
---   period of slots.
-newtype SlotCount = SlotCount Word64
+--  We use this newtype to distinguish between a cardinal slot and a relative
+--  period of slots, and also to distinguish between number of slots and number
+--  of blocks.
+newtype SlotCount = SlotCount { unSlotCount :: Word64}
   deriving (Eq, Ord, Num, Show)
 
 -- | Add a slot count to a slot.
@@ -108,6 +109,9 @@ minusSlot :: Slot -> SlotCount -> Slot
 minusSlot (Slot m) (SlotCount n)
   | m <= n    = Slot 0
   | otherwise = Slot $ m - n
+
+newtype BlockCount = BlockCount { unBlockCount :: Word64}
+  deriving (Eq, Ord, Num, Show)
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion

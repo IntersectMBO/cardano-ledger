@@ -536,8 +536,8 @@ block header, since the block body is entirely concerned with the ledger.
 \newcommand{\BSCState}{\type{BSCState}}
 
 To guard against the compromise of a minority of the genesis keys,
-we require that in the rolling window of the last $w$ blocks, the number of
-blocks signed by keys that $sk_s$ delegated to is no more than a threshold $w
+we require that in the rolling window of the last $k$ blocks, the number of
+blocks signed by keys that $sk_s$ delegated to is no more than a threshold $k
 \cdot t$, where $t$ is a constant that will be picked in the range
 $1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
 value. Specifically, given $K=2160$, we would allow a single genesis key to
@@ -548,7 +548,7 @@ rejected. See Appendix \ref{apdx:calculating-t} for the background on this value
   \emph{Protocol parameters}
   \begin{equation*}
     \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \pp{blockSignatureCountWindow} & \mathbb{N} & \text{Block signature count window size} \\
+      \pp{stableAfter} & \mathbb{N} & \text{Chain stability parameter} \\
       \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
     \end{array}
   \end{equation*}
@@ -562,7 +562,7 @@ more than its allowed threshold of blocks. If there are no delegators for the
 given key, or if there is more than one delegator, the rule will fail to trigger.
 %
 We then update the sequence of signers, and drop those elements that fall
-outside the size of the moving window $w$.
+outside the size of the moving window ($k$).
 
 \begin{figure}[ht]
   \emph{Block signature count environments}
@@ -589,10 +589,10 @@ outside the size of the moving window $w$.
   \begin{equation*}
     \inference
     {
-      \pp{blockSignatureCountWindow} \partialf \var{w} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
+      \pp{stableAfter} \partialf \var{k} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
       \{\var{vk_g}\} \leteq (\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\}
-      & \var{sgs'} \leteq \var{sgs};_w {vk_g} &
-      \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq w \cdot t \\
+      & \var{sgs'} \leteq \var{sgs};_k {vk_g} &
+      \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq k \cdot t \\
     }
     {
       \left(
@@ -1306,14 +1306,14 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   such an invalid chain being produced by the old procedure of randomly selecting
   the slot leaders for each slot. Given the Cardano chain is still federated, the
   likelihood of this happening is the same for each of the 7 stakeholders, and we
-  may model the number of selected slots within a $w$-slot window $X$ as a binomial
-  distribution $X \sim \mathrm{B}\left(w, \frac{1}{7}\right)$.
+  may model the number of selected slots within a $k$-slot window $X$ as a binomial
+  distribution $X \sim \mathrm{B}\left(k, \frac{1}{7}\right)$.
 
-  In each epoch of size $n$ blocks, there are $n-w+1$ such $w$-block windows.
+  In each epoch of size $n$ blocks, there are $n-k+1$ such $w$-block windows.
   Boole's inequality gives us that the likelihood of exceeding the threshold in
   any one of these windows is bounded above by the sum of the likelihoods for each
   window. We may thus consider that the probability of a given stakeholder
-  violating the threshold in an epoch to be bounded by $(n-w+1)\cdot P(X > t*w)$.
+  violating the threshold in an epoch to be bounded by $(n-k+1)\cdot P(X > t*k)$.
   Appealing to Boole's inequality again, we may multiply this by the number of
   epochs and the number of stakeholders to give a bound for the likelihood of
   generating an invalid chain.

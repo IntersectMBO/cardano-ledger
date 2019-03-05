@@ -67,7 +67,7 @@ instance STS CHAIN where
             { _dSEnvAllowedDelegators = gks
             , _dSEnvEpoch = sEpoch s0 (pps ^. bkSlotsPerEpoch)
             , _dSEnvSlot = s0
-            , _dSEnvLiveness = pps ^. dLiveness
+            , _dSEnvStableAfter = pps ^. Ledger.Update.stableAfter
             }
         ds <- trans @DELEG $ IRC dsenv
         return $! ( Epoch 0
@@ -147,13 +147,8 @@ instance HasTrace CHAIN where
     mTxSz <- Gen.integral (Range.constant 0 4000000)
     mPSz <- Gen.integral (Range.constant 0 4000000)
 
-    -- The size of the rolling window should be equal to k.
-    -- TODO: we need to adapt the formal specs to reflect this.
-    w <- Gen.integral (Range.linear 1 10)
-
-    -- TODO: The delegation liveness parameter is equal to `2 * k`.
-    -- We should adapt the specs to reflect this.
-    d <- pure $! SlotCount $ 2 * fromIntegral w
+    -- Chain stability.
+    k <- Gen.integral (Range.linear 1 10)
 
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
@@ -161,33 +156,28 @@ instance HasTrace CHAIN where
     -- TODO: we make this a constant till we solve the problem with the number
     -- of byzantineNodes being a constant in the implementation.
 
-    -- TODO: at the moment the number of slots per epoch is computed from 'k':
-    -- spe = k * 10, and k = w. So we should adapt the formal specs to account
-    -- for this.
-    spe <- pure $! SlotCount $ fromIntegral $ w * 10
+    -- The number of slots per epoch is computed from 'k':
+    -- slots per-epoch = k * 10
+    spe <- pure $! SlotCount $ fromIntegral $ k * 10
     -- Update TTL
     uttl <- SlotCount <$> Gen.integral (Range.linear 1 100)
     -- Confirmation threshold
     ct <- Gen.integral (Range.linear 1 7)
     -- Update adoption threshold
     uat <- Gen.integral (Range.linear 1 7)
-    -- Chain stability
-    cs <- SlotCount <$> Gen.integral (Range.linear 1 1000)
     let initPPs
           = PParams
           { _maxHdrSz = mHSz
           , _maxBkSz = mBSz
           , _maxTxSz = mTxSz
           , _maxPropSz = mPSz
-          , _dLiveness = d
-          , _bkSgnCntW = w
           , _bkSgnCntT = t
           , _bkSlotsPerEpoch = spe
           , _upTtl = uttl
           , _scriptVersion = 1
           , _cfmThd = ct
           , _upAdptThd = uat
-          , _chainStability = cs
+          , _stableAfter = BlockCount k
           }
     initGKeys <- Gen.set (Range.constant 1 30) vkgenesisGen
     -- If we want to generate large traces, we need to set up the value of the
@@ -207,7 +197,7 @@ instance HasTrace CHAIN where
           { _dSEnvAllowedDelegators = gks
           , _dSEnvEpoch = e
           , _dSEnvSlot = Slot s
-          , _dSEnvLiveness = us ^. dLiveness }
+          , _dSEnvStableAfter = us ^. Ledger.Update.stableAfter }
     dCerts <- dcertsGen dsEnv
     let bh
           = MkBlockHeader

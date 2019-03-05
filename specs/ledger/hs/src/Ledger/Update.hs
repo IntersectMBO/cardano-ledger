@@ -11,7 +11,7 @@
 
 module Ledger.Update where
 
-import Control.Lens
+import Control.Lens hiding (_2)
 import Control.State.Transition
 import Data.Ix (inRange)
 import Data.List (foldl', partition)
@@ -39,11 +39,6 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Maximum (abstract) transaction size in words.
   , _maxPropSz :: Natural
   -- ^ Maximum (abstract) update proposal size in words.
-  , _dLiveness :: Core.SlotCount
-  -- ^ Delegation liveness parameter: number of slots it takes a delegation
-  -- certificate to take effect.
-  , _bkSgnCntW :: Int
-  -- ^ Size of the moving window to count signatures.
   , _bkSgnCntT :: Double
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
@@ -58,7 +53,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal confirmation threshold (number of votes)
   , _upAdptThd :: Int
   -- ^ Update adoption threshold (number of block issuers)
-  , _chainStability :: Core.SlotCount
+  , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
   } deriving (Eq, Ord, Show)
 
@@ -476,7 +471,7 @@ data UPEND
 
 instance STS UPEND where
   type Environment UPEND =
-    ( Core.SlotCount
+    ( Core.BlockCount
     , Core.Slot
     , (ProtVer, PParams)
     , Map UpId Core.Slot
@@ -504,8 +499,8 @@ instance STS UPEND where
             , (bv, _vk)
             ) <- judgmentContext
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid -> do
-            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` (2*k)) cps) ?! NotAFailure
+          Just pid ->
+            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! NotAFailure
           Nothing -> True ?! NotAFailure
         return (fads, bvs)
     , do
@@ -517,7 +512,7 @@ instance STS UPEND where
         (not $ canAdopt pps bvs' bv) ?! CanAdopt
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
           Just pid ->
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` (2*k)) cps) ?! ProtVerTooRecent
+            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! ProtVerTooRecent
           Nothing -> True ?! ProtVerUnknown
         return (fads, bvs')
     , do
@@ -531,7 +526,7 @@ instance STS UPEND where
           Just pid -> do
             -- This is safe by virtue of the fact we've just inverted the map and found this there
             let (_, ppsc) = fromJust $ Map.lookup pid rpus
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` (2*k)) cps) ?! ProtVerTooRecent
+            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! ProtVerTooRecent
             fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
             return (fads', bvs')
           Nothing -> do
@@ -539,6 +534,10 @@ instance STS UPEND where
             return (fads, bvs)
 
     ]
+    where
+
+_2 :: Core.BlockCount -> Core.SlotCount
+_2 = Core.SlotCount . (2 *) . Core.unBlockCount
 
 instance Embed FADS UPEND where
   wrapFailed = error "No possible failures in FADS"
@@ -684,7 +683,7 @@ instance STS UPIEND where
               , bvs
               , pws)
             , (bv,vk)) <- judgmentContext
-        let k = pps ^. chainStability
+        let k = pps ^. stableAfter
             u = pps ^. upTtl
         (fads', bvs') <- trans @UPEND $ TRC ((k, sn, (pv, pps), cps, rpus), (fads, bvs), (bv,vk))
         let pidskeep = dom (Map.filter (>= (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
@@ -711,7 +710,7 @@ data PVBUMP
 
 instance STS PVBUMP where
   type Environment PVBUMP =
-    ( Core.SlotCount
+    ( Core.BlockCount
     , Core.Slot
     )
   type State PVBUMP =
@@ -734,7 +733,7 @@ instance STS PVBUMP where
     , do
         TRC ((k, sn), (ep, (pv, pps), fads), en) <- judgmentContext
         ep < en ?! OldEpoch
-        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` (2*k)) fads) of
+        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` _2 k) fads) of
           ([], _) -> (ep, (pv, pps), fads)
           ((_, (pvc, ppsc)):_, rest) -> (en, (pvc, ppsc), rest)
     ]
@@ -764,7 +763,7 @@ instance STS UPIEC where
               , bvs
               , pws)
             , en) <- judgmentContext
-        let k = pps ^. chainStability
+        let k = pps ^. stableAfter
         (e', (pv', pps'), fads') <- trans @PVBUMP $ TRC ((k, sn), (ep, (pv, pps), fads), en)
         let pidskeep = Set.fromList [ pid | pid <- Set.toList . foldl' Set.union Set.empty
                                      . Map.elems . Map.filterWithKey (\pvi _ -> pv' < pvi)
