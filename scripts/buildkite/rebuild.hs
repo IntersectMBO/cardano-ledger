@@ -25,6 +25,9 @@ data CICacheConfig = CICacheConfig
   , ccBranch  :: Text
   } deriving (Show)
 
+mainlineBranch :: Text
+mainlineBranch = "master"
+
 main :: IO ()
 main = do
   awsCreds
@@ -111,8 +114,8 @@ cacheUploadStep cacheConfig = do
 
 restoreCICache :: CICacheConfig -> IO ()
 restoreCICache cfg = do
-  -- cacheS3 cfg (Just "develop") "restore stack"
-  cacheS3 cfg (Just "develop") "restore stack work"
+  -- cacheS3 cfg (Just mainlineBranch) "restore stack"
+  cacheS3 cfg (Just mainlineBranch) "restore stack work"
 
 saveCICache :: CICacheConfig -> IO ()
 saveCICache cfg = do
