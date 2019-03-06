@@ -72,7 +72,8 @@ instance Bi (APayload ()) where
 
 decodeAPayload :: Decoder s (APayload ByteSpan)
 decodeAPayload = do
-  (Annotated p a) <- annotatedDecoder (decodeListWith decodeAProxyVerificationKey)
+  (Annotated p a) <- annotatedDecoder
+    (decodeListWith decodeAProxyVerificationKey)
   pure (UnsafeAPayload p a)
 
 data PayloadError
@@ -97,5 +98,7 @@ checkPayload protocolMagicId (UnsafeAPayload payload _) = do
 
   forM_
     payload
-    (liftEither . first PayloadPSKError . validateProxyVerificationKey protocolMagicId
+    ( liftEither
+    . first PayloadPSKError
+    . validateProxyVerificationKey protocolMagicId
     )

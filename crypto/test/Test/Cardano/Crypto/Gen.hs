@@ -172,7 +172,8 @@ genProxyCert :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
   safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
 
-genProxyVerificationKey :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
+genProxyVerificationKey
+  :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
 genProxyVerificationKey pm genW =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 

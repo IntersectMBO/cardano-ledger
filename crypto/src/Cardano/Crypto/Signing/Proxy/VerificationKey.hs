@@ -87,10 +87,15 @@ instance Bi w => Bi (ProxyVerificationKey w) where
 
   decode =  void <$> decodeAProxyVerificationKey
 
-decodeAProxyVerificationKey :: Bi w => Decoder s (AProxyVerificationKey w ByteSpan)
+decodeAProxyVerificationKey
+  :: Bi w => Decoder s (AProxyVerificationKey w ByteSpan)
 decodeAProxyVerificationKey = do
   enforceSize "ProxyVerificationKey" 4
-  UnsafeAProxyVerificationKey <$> decodeAnnotated <*> decode <*> decode <*> decode
+  UnsafeAProxyVerificationKey
+    <$> decodeAnnotated
+    <*> decode
+    <*> decode
+    <*> decode
 
 instance ToJSON w => ToJSON (AProxyVerificationKey w ()) where
   toJSON psk = object
@@ -109,7 +114,12 @@ instance FromJSON w => FromJSON (AProxyVerificationKey w ()) where
 
 -- | Creates proxy secret key
 createPsk
-  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyVerificationKey w
+  :: Bi w
+  => ProtocolMagicId
+  -> SafeSigner
+  -> PublicKey
+  -> w
+  -> ProxyVerificationKey w
 createPsk pm ss delegatePk w = UnsafeAProxyVerificationKey
   { aPskOmega     = Annotated w ()
   , pskIssuerPk   = safeToPublic ss

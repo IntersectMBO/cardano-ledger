@@ -227,7 +227,9 @@ roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
 --------------------------------------------------------------------------------
 
 goldenProxyVerificationKey :: Property
-goldenProxyVerificationKey = goldenTestBi psk "test/golden/ProxyVerificationKey"
+goldenProxyVerificationKey = goldenTestBi
+  psk
+  "test/golden/ProxyVerificationKey"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
