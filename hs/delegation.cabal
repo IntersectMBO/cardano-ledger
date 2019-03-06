@@ -12,7 +12,8 @@ source-repository head
   subdir:   hs
 
 library
-  exposed-modules:   Coin
+  exposed-modules:   BaseTypes
+                     Coin
                      Keys
                      UTxO
                      Slot
