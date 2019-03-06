@@ -182,8 +182,11 @@ dcertsAreTriggeredInTrace :: MonadTest m => Trace DBLOCK -> m ()
 dcertsAreTriggeredInTrace tr
   = lastDms === trExpectedDms
   where
+    -- | Delegation map at the final state.
     lastDms = st ^. delegationMap
 
+    -- | Delegation map what we'd expect to see judging by the delegation
+    -- certificates in the trace' signals.
     trExpectedDms
       = expectedDms lastSlot
                     (env ^. stableAfter . to liveAfter . to unSlotCount . to fromIntegral)
@@ -191,10 +194,17 @@ dcertsAreTriggeredInTrace tr
 
     (env, st) = lastState tr
 
-    -- Last slot that was considered for an activation.
+    -- | Last slot that was considered for an activation.
     lastSlot :: Int
     lastSlot = fst . last $ slotsAndDcerts
 
+    -- | Slots in which each block was applied. This is simply the result of
+    -- pairing the slot number in the pre-state of a signal, with the signal
+    -- itself.
+    --
+    -- We make use of integers, since negative numbers are quite handy when
+    -- computing the slot at which a given certificate should have been
+    -- activated (see 'expectedDms' and 'activationSlot').
     slotsAndDcerts :: [(Int, DBlock)]
     slotsAndDcerts
       = first (view (to fst . slot . to unSlot . to fromIntegral))
@@ -212,7 +222,8 @@ expectedDms
   -> Int
   -- ^ Delegation certificate liveness parameter.
   -> [(Int, DBlock)]
-  -- ^ Delegation certificates to apply.
+  -- ^ Delegation certificates to apply, and the slot at which these
+  -- certificates where scheduled.
   -> Map VKeyGenesis VKey
 expectedDms s d sbs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
   where
@@ -223,7 +234,8 @@ expectedDms s d sbs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
       =  snd
      <$> filter ((<= activationSlot) . fst) sbs
 
-    -- | Slot at which the certificates should have become active.
+    -- | Slot at which the certificates should have become active. If this
+    -- number is negative that means that no certificate can be activated.
     activationSlot :: Int
     activationSlot = s - d
 
@@ -253,7 +265,7 @@ instance HasSizeInfo DBlock where
   isTrivial = null . view blockCerts
 
 dcertsAreTriggered :: Property
-dcertsAreTriggered = withTests 1000 $ property $
+dcertsAreTriggered = withTests 300 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
   forAll nonTrivialTrace >>= dcertsAreTriggeredInTrace

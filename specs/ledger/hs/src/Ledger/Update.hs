@@ -11,8 +11,7 @@
 
 module Ledger.Update where
 
-import Control.Lens hiding (_2)
-import Control.State.Transition
+import Control.Lens
 import Data.Ix (inRange)
 import Data.List (foldl', partition)
 import Data.Map.Strict (Map)
@@ -23,8 +22,12 @@ import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
 import Numeric.Natural
+
+import Control.State.Transition
+
 import Ledger.Core (Relation(..), (⨃), (▹), (⋪), (◃))
 import qualified Ledger.Core as Core
+import Ledger.Delegation (liveAfter)
 
 import Prelude hiding (min)
 
@@ -500,7 +503,7 @@ instance STS UPEND where
             ) <- judgmentContext
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
           Just pid ->
-            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! NotAFailure
+            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! NotAFailure
           Nothing -> True ?! NotAFailure
         return (fads, bvs)
     , do
@@ -512,7 +515,7 @@ instance STS UPEND where
         (not $ canAdopt pps bvs' bv) ?! CanAdopt
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
           Just pid ->
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! ProtVerTooRecent
+            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
           Nothing -> True ?! ProtVerUnknown
         return (fads, bvs')
     , do
@@ -526,7 +529,7 @@ instance STS UPEND where
           Just pid -> do
             -- This is safe by virtue of the fact we've just inverted the map and found this there
             let (_, ppsc) = fromJust $ Map.lookup pid rpus
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` _2 k) cps) ?! ProtVerTooRecent
+            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
             fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
             return (fads', bvs')
           Nothing -> do
@@ -534,10 +537,6 @@ instance STS UPEND where
             return (fads, bvs)
 
     ]
-    where
-
-_2 :: Core.BlockCount -> Core.SlotCount
-_2 = Core.SlotCount . (2 *) . Core.unBlockCount
 
 instance Embed FADS UPEND where
   wrapFailed = error "No possible failures in FADS"
@@ -733,7 +732,7 @@ instance STS PVBUMP where
     , do
         TRC ((k, sn), (ep, (pv, pps), fads), en) <- judgmentContext
         ep < en ?! OldEpoch
-        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` _2 k) fads) of
+        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` liveAfter k) fads) of
           ([], _) -> (ep, (pv, pps), fads)
           ((_, (pvc, ppsc)):_, rest) -> (en, (pvc, ppsc), rest)
     ]

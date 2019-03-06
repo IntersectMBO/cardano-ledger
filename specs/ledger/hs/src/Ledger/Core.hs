@@ -110,7 +110,7 @@ minusSlot (Slot m) (SlotCount n)
   | m <= n    = Slot 0
   | otherwise = Slot $ m - n
 
-newtype BlockCount = BlockCount { unBlockCount :: Word64}
+newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving (Eq, Ord, Num, Show)
 
 ---------------------------------------------------------------------------------
