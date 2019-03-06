@@ -370,6 +370,9 @@ implementation may of course choose a more compact representation for this
 partial function that only records the changes in epoch length, rather than
 storing a length for each epoch.
 
+It is also worth noticing that in the Byron era, the number of slots per-epoch
+is fixed to $10 \cdot k$, where $k$ is the chain stability parameter.
+
 Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
 updates the update state to the correct version.
 
@@ -540,9 +543,10 @@ we require that in the rolling window of the last $k$ blocks, the number of
 blocks signed by keys that $sk_s$ delegated to is no more than a threshold $k
 \cdot t$, where $t$ is a constant that will be picked in the range
 $1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
-value. Specifically, given $K=2160$, we would allow a single genesis key to
-issue (via delegates) $475$ blocks, but a $476^{\text{th}}$ block would be
-rejected. See Appendix \ref{apdx:calculating-t} for the background on this value.
+value. Specifically, given $k=2160$, we would allow a single genesis key to
+issue (via delegates) $475$ blocks (since $2160 \cdot 0.22 = 475.2$), but a
+$476^{\text{th}}$ block would be rejected. See Appendix
+\ref{apdx:calculating-t} for the background on this value.
 
 \begin{figure}[ht]
   \emph{Protocol parameters}
@@ -1313,7 +1317,10 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   Boole's inequality gives us that the likelihood of exceeding the threshold in
   any one of these windows is bounded above by the sum of the likelihoods for each
   window. We may thus consider that the probability of a given stakeholder
-  violating the threshold in an epoch to be bounded by $(n-k+1)\cdot P(X > t*k)$.
+  violating the threshold in an epoch to be bounded by
+
+  $$(n-k+1)\cdot P(X > t*k)$$
+
   Appealing to Boole's inequality again, we may multiply this by the number of
   epochs and the number of stakeholders to give a bound for the likelihood of
   generating an invalid chain.
