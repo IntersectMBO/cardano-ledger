@@ -37,6 +37,7 @@ import Control.State.Transition
   , initialRules
   , transitionRules
   , TRC (TRC)
+  , IRC (IRC)
   , judgmentContext
   , (?!)
   , trans
@@ -149,7 +150,7 @@ makeLenses ''DBlock
 -- | This corresponds to a state-transition rule where blocks with increasing
 -- slot-numbers are produced.
 instance STS DBLOCK where
-  type Environment DBLOCK = ()
+  type Environment DBLOCK = DSEnv -- The initial environment is only used to bootstrap the initial state.
   type State DBLOCK = (DSEnv, DIState)
   type Signal DBLOCK = DBlock
 
@@ -158,7 +159,11 @@ instance STS DBLOCK where
     | NotIncreasingBlockSlot
     deriving (Eq, Show)
 
-  initialRules = [pure (initDSEnv, initialDIState)]
+  initialRules
+    = [ do
+          IRC (env) <- judgmentContext
+          pure (env, initialDIState)
+      ]
 
   transitionRules
     = [ do
@@ -227,22 +232,16 @@ expectedDms s d sbs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
     activeCerts :: [DCert]
     activeCerts = concatMap _blockCerts activeBlocks
 
--- | An initial delegation scheduling environment to be used in the traces
--- produced by the @DBLOCK@ transition system.
-initDSEnv :: DSEnv
-initDSEnv
-  = DSEnv
-      (Set.fromAscList $ gk <$> [0..6])
-      (Epoch 0)
-      (Slot 0)
-      (BlockCount 1)
-  where
-    gk = VKeyGenesis . k
-    k n = VKey (Owner n)
-
 instance HasTrace DBLOCK where
 
-  initEnvGen = return ()
+  initEnvGen = do
+    n <- integral (linear 0 14)
+    e <- integral (linear 0 1000)
+    s <- integral (linear 0 1000)
+    k <- integral (linear 0 1000)
+    pure $! DSEnv (Set.fromAscList $ gk <$> [0..n]) (Epoch e) (Slot s) (BlockCount k)
+    where
+      gk = VKeyGenesis . VKey . Owner
 
   sigGen _ (env, st) = do
     c <- integral (constant 1 10)
