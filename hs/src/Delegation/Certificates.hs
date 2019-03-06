@@ -25,6 +25,7 @@ import           PParams (PParams(..), decayRate, minRefund,
 import           Delegation.PoolParams
 
 import           NonIntegral (exp')
+import           BaseTypes
 
 import qualified Data.Map as Map
 import           Data.Ratio (approxRational)
@@ -35,9 +36,6 @@ newtype StakeKeys  = StakeKeys  (Map.Map HashKey Slot)
     deriving (Show, Eq)
 newtype StakePools = StakePools (Map.Map HashKey Slot)
     deriving (Show, Eq)
-
-precision :: Double
-precision = 10-16
 
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.
@@ -74,10 +72,10 @@ dvalue _ = const $ Coin 0
 refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
 refund (Coin dval) dmin lambda delta = floor refund'
   where
-    pow     = fromRational (-lambda * fromIntegral delta)
+    pow     = fromRational (-lambda * fromIntegral delta) :: FixedPoint
     refund' = fromIntegral dval * (dmin' + (1 - dmin')) * dCay
     dmin'   = intervalValue dmin
-    dCay    = approxRational (exp' pow) precision
+    dCay    = approxRational (exp' pow) fpEpsilon
 
 -- | Check whether certificate is of releasing type, i.e., key deregistration or
 -- pool retirement.
