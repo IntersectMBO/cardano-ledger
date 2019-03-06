@@ -181,9 +181,9 @@ signThenVerifyDifferentData t sk a b = (a /= b) ==> not
 proxyVerificationKeyCheckCorrect
   :: Bi w => SecretKey -> SecretKey -> w -> Bool
 proxyVerificationKeyCheckCorrect issuerSk delegateSk w = isRight
-  (validateProxyVerificationKey dummyProtocolMagic proxySk)
+  (validateProxyVerificationKey dummyProtocolMagic proxyVk)
  where
-  proxySk = createPsk
+  proxyVk = createPsk
     dummyProtocolMagic
     issuerSk
     (toPublic delegateSk)
@@ -230,10 +230,10 @@ proxySignVerify issuerSafeSigner delegateSk w m = proxyVerify
   (== w)
   m
  where
-  proxySk =
+  proxyVk =
     createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxyVk m
 
 -- TODO: Make this test redundant by disallowing invalid `ProxySignature`s
 -- proxySignVerifyDifferentKey
@@ -252,10 +252,10 @@ proxySignVerify issuerSafeSigner delegateSk w m = proxyVerify
 --   psk = createPsk dummyProtocolMagic issuerSafeSigner (toPublic delegateSk) w
 --   psk' = createPsk dummyProtocolMagic issuerSafeSigner' (toPublic delegateSk) w
 --   signature =
---     proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxySk m
+--     proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxyVk m
 
 --   sigBroken :: ProxySignature w a
---   sigBroken = signature { psigPsk = proxySk { pskIssuerPk = pk2 } }
+--   sigBroken = signature { psigPsk = proxyVk { pskIssuerPk = pk2 } }
 
 proxySignVerifyDifferentData
   :: (Bi a, Eq a, Bi w, Eq w)
@@ -269,10 +269,10 @@ proxySignVerifyDifferentData issuerSafeSigner delegateSk w m m2 =
   (m /= m2) ==> not
     (proxyVerify dummyProtocolMagicId SignForTestingOnly signature (== w) m2)
  where
-  proxySk =
+  proxyVk =
     createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxyVk m
 
 redeemSignCheck :: Bi a => RedeemSecretKey -> a -> Bool
 redeemSignCheck redeemerSK a =
