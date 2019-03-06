@@ -8,7 +8,22 @@ import Control.Lens ((^.))
 import Data.Set (Set)
 
 import Control.State.Transition
+  ( Embed
+  , Environment
+  , PredicateFailure
+  , STS
+  , Signal
+  , State
+  , TRC(TRC)
+  , (?!)
+  , initialRules
+  , judgmentContext
+  , trans
+  , transitionRules
+  , wrapFailed
+  )
 import Ledger.Core
+  (Epoch, Slot, VKeyGenesis)
 import Ledger.Delegation
   ( DELEG
   , DIState
@@ -18,9 +33,9 @@ import Ledger.Delegation
   , _dSEnvSlot
   , _dSEnvStableAfter
   )
-import Ledger.Update
+import Ledger.Update (PParams, maxBkSz, stableAfter)
 
-import Cardano.Spec.Chain.STS.Block
+import Cardano.Spec.Chain.STS.Block (Block, bBody, bDCerts, bSize)
 
 data BBODY
 
