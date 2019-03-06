@@ -122,6 +122,10 @@ saveCICache cfg = do
   -- cacheS3 cfg Nothing "save stack"
   cacheS3 cfg Nothing "save stack work"
 
+-- Deletes the files from S3 that would have been put with "cache-s3 save".
+clearCICache :: CICacheConfig -> IO ()
+clearCICache cfg = cacheS3 cfg Nothing "clear"
+
 cacheS3 :: CICacheConfig -> Maybe Text -> Text -> IO ()
 cacheS3 CICacheConfig {..} baseBranch cmd = void $ run "cache-s3" args
  where
