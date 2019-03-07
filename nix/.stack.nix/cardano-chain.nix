@@ -38,7 +38,6 @@
           (hsPkgs.lens)
           (hsPkgs.memory)
           (hsPkgs.mtl)
-          (hsPkgs.plutus-prototype)
           (hsPkgs.resourcet)
           (hsPkgs.servant)
           (hsPkgs.streaming)

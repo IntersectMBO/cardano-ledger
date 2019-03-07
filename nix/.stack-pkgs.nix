@@ -25,7 +25,6 @@
         cardano-mainnet-mirror = ./.stack.nix/cardano-mainnet-mirror.nix;
         cborg = ./.stack.nix/cborg.nix;
         cardano-crypto = ./.stack.nix/cardano-crypto.nix;
-        plutus-prototype = ./.stack.nix/plutus-prototype.nix;
         hedgehog = ./.stack.nix/hedgehog.nix;
         canonical-json = ./.stack.nix/canonical-json.nix;
         };

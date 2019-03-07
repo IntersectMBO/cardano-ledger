@@ -68,8 +68,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-chain";
-      rev = "4d9eec080374179bf15bf9c4fca09cc7d73e5f53";
-      sha256 = "15525inprrbapkvisnqgsxzn8vmcdm1inwv1r6nxnv9qczkb7ca5";
+      rev = "f56742c74ca4b69f03185420e67990af50c2e596";
+      sha256 = "1g6x51mnqs0jpz6ppn6bz17a0h1h2x9nm5zsalcai8lmb0j6cff4";
       });
     postUnpack = "sourceRoot+=/crypto; echo source root reset to \$sourceRoot";
     }
