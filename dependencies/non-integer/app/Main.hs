@@ -31,5 +31,6 @@ main = do
     line <- getLine
     let base     = read (takeWhile (/= ' ') line)        :: FixedPoint
     let exponent = read (tail $ dropWhile (/= ' ') line) :: FixedPoint
-    print $ (base / precision) *** (exponent / precision)
+    putStrLn $ show ((base / precision) *** (exponent / precision))
+            ++ " " ++ show (exp'' (base / precision))
     main
