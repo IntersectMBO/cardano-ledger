@@ -27,7 +27,7 @@ import Test.Cardano.Crypto.Gen (feedPM)
 --------------------------------------------------------------------------------
 
 goldenCertificate :: Property
-goldenCertificate = goldenTestBi cert "test/golden/bi/delegation/ProxySKHeavy"
+goldenCertificate = goldenTestBi cert "test/golden/bi/delegation/ProxyVKHeavy"
   where cert = exampleCertificates !! 0
 
 roundTripCertificateBi :: Property

@@ -19,7 +19,7 @@ import Formatting.Buildable (Buildable(..))
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (StakeholderId)
 import Cardano.Chain.Delegation.Certificate (Certificate)
-import Cardano.Crypto (ProxySecretKey, isSelfSignedPsk)
+import Cardano.Crypto (ProxyVerificationKey, isSelfSignedPsk)
 
 
 -- | Undo for the delegation component
@@ -52,5 +52,5 @@ instance Bi Undo where
     Undo <$> decode <*> decode
 
 -- | Checks if given PSK revokes delegation (issuer == delegate)
-isRevokePsk :: ProxySecretKey w -> Bool
+isRevokePsk :: ProxyVerificationKey w -> Bool
 isRevokePsk = isSelfSignedPsk

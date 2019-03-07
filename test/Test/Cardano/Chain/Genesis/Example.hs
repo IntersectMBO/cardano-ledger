@@ -52,7 +52,7 @@ import Cardano.Crypto
   , Signature(..)
   , abstractHash
   , redeemDeterministicKeyGen
-  , unsafeProxySecretKey
+  , unsafeProxyVerificationKey
   )
 import Cardano.Crypto.Signing (PublicKey(..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -107,7 +107,7 @@ exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( mkStakeholderId issuePubKey
-      , unsafeProxySecretKey
+      , unsafeProxyVerificationKey
         (EpochIndex 68300481033)
         issuePubKey
         (PublicKey

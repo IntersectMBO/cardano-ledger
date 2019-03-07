@@ -522,7 +522,7 @@ data ConsensusError = ConsensusSelfSignedPSK
 instance B.Buildable ConsensusError where
   build = \case
     ConsensusSelfSignedPSK ->
-      bprint "Self-signed ProxySecretKey in ConsensusData"
+      bprint "Self-signed ProxyVerificationKey in ConsensusData"
 
 -- | Verify the consensus data in isolation
 verifyConsensusData :: MonadError ConsensusError m => AConsensusData a -> m ()

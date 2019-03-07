@@ -52,7 +52,7 @@ safeCreateProxyCert
   :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyCert w
 safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
  where
-  sig = safeSign pm SignProxySK ss
+  sig = safeSign pm SignProxyVK ss
     $ mconcat ["00", CC.unXPub delegatePk, serialize' o]
 
 -- | Checks if certificate is valid, given issuer pk, delegate pk and ω
@@ -70,7 +70,7 @@ verifyProxyCert
 verifyProxyCert pm issuerPk (PublicKey delegatePk) o cert =
   verifySignatureDecoded
     pm
-    SignProxySK
+    SignProxyVK
     issuerPk
     (serialize' . mappend ("00" <> CC.unXPub delegatePk) <$> o)
     (coerce cert)

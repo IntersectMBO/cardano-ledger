@@ -110,10 +110,10 @@ spec =
 {- TODO: bring this back after validation rework
           prop
             "correct proxy signature schemes pass correctness check"
-            (proxySecretKeyCheckCorrect @(Int32, Int32))
+            (proxyVerificationKeyCheckCorrect @(Int32, Int32))
           prop
             "incorrect proxy signature schemes fails correctness check"
-            (proxySecretKeyCheckIncorrect @(Int32, Int32))
+            (proxyVerificationKeyCheckIncorrect @(Int32, Int32))
 -}
         describe "redeemer signatures" $ do
           prop
@@ -178,12 +178,12 @@ signThenVerifyDifferentData t sk a b = (a /= b) ==> not
   )
 
 {- TODO: bring this back after validation rework
-proxySecretKeyCheckCorrect
+proxyVerificationKeyCheckCorrect
   :: Bi w => SecretKey -> SecretKey -> w -> Bool
-proxySecretKeyCheckCorrect issuerSk delegateSk w = isRight
-  (validateProxySecretKey dummyProtocolMagic proxySk)
+proxyVerificationKeyCheckCorrect issuerSk delegateSk w = isRight
+  (validateProxyVerificationKey dummyProtocolMagic proxyVk)
  where
-  proxySk = createPsk
+  proxyVk = createPsk
     dummyProtocolMagic
     issuerSk
     (toPublic delegateSk)
@@ -191,21 +191,21 @@ proxySecretKeyCheckCorrect issuerSk delegateSk w = isRight
 -}
 
 {- TODO: bring this back after validation rework
-proxySecretKeyCheckIncorrect
+proxyVerificationKeyCheckIncorrect
   :: Bi w
   => SecretKey
   -> SecretKey
   -> PublicKey
   -> w
   -> Property
-proxySecretKeyCheckIncorrect issuerSk delegateSk pk2 w = do
+proxyVerificationKeyCheckIncorrect issuerSk delegateSk pk2 w = do
   let
     psk = createPsk
       dummyProtocolMagic
       issuerSk
       (toPublic delegateSk)
       w
-    wrongPsk = unsafeProxySecretKey
+    wrongPsk = unsafeProxyVerificationKey
       (pskOmega psk)
       pk2
       (pskDelegatePk psk)
@@ -214,11 +214,11 @@ proxySecretKeyCheckIncorrect issuerSk delegateSk pk2 w = do
     fromRight (Right x) = x
     badMessage = fromRight $ decodeFullAnnotatedBytes
       "proxy secret key"
-      decodeAProxySecretKey
+      decodeAProxyVerificationKey
       (serialize wrongPsk)
-      :: AProxySecretKey w ByteString
+      :: AProxyVerificationKey w ByteString
   (toPublic issuerSk /= pk2)
-    ==> isLeft (validateProxySecretKey dummyProtocolMagic badMessage)
+    ==> isLeft (validateProxyVerificationKey dummyProtocolMagic badMessage)
 -}
 
 proxySignVerify
@@ -230,10 +230,10 @@ proxySignVerify issuerSafeSigner delegateSk w m = proxyVerify
   (== w)
   m
  where
-  proxySk =
+  proxyVk =
     createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxyVk m
 
 -- TODO: Make this test redundant by disallowing invalid `ProxySignature`s
 -- proxySignVerifyDifferentKey
@@ -252,10 +252,10 @@ proxySignVerify issuerSafeSigner delegateSk w m = proxyVerify
 --   psk = createPsk dummyProtocolMagic issuerSafeSigner (toPublic delegateSk) w
 --   psk' = createPsk dummyProtocolMagic issuerSafeSigner' (toPublic delegateSk) w
 --   signature =
---     proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxySk m
+--     proxySign dummyProtocolMagic SignForTestingOnly delegateSk proxyVk m
 
 --   sigBroken :: ProxySignature w a
---   sigBroken = signature { psigPsk = proxySk { pskIssuerPk = pk2 } }
+--   sigBroken = signature { psigPsk = proxyVk { pskIssuerPk = pk2 } }
 
 proxySignVerifyDifferentData
   :: (Bi a, Eq a, Bi w, Eq w)
@@ -269,10 +269,10 @@ proxySignVerifyDifferentData issuerSafeSigner delegateSk w m m2 =
   (m /= m2) ==> not
     (proxyVerify dummyProtocolMagicId SignForTestingOnly signature (== w) m2)
  where
-  proxySk =
+  proxyVk =
     createPsk dummyProtocolMagicId issuerSafeSigner (toPublic delegateSk) w
   signature =
-    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxySk m
+    proxySign dummyProtocolMagicId SignForTestingOnly delegateSk proxyVk m
 
 redeemSignCheck :: Bi a => RedeemSecretKey -> a -> Bool
 redeemSignCheck redeemerSK a =

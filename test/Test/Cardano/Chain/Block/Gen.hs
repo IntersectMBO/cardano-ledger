@@ -76,7 +76,7 @@ genBody pm =
     <*> Delegation.genPayload pm
     <*> Update.genPayload pm
 
--- We use `Nothing` as the ProxySKBlockInfo to avoid clashing key errors
+-- We use `Nothing` as the ProxyVKBlockInfo to avoid clashing key errors
 -- (since we use example keys which aren't related to each other)
 genHeader :: ProtocolMagicId -> SlotCount -> Gen Header
 genHeader pm epochSlots =

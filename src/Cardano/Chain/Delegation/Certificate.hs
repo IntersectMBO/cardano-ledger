@@ -18,13 +18,14 @@ import Text.JSON.Canonical
   (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Chain.Slotting (EpochIndex)
-import Cardano.Crypto (AProxySecretKey(..), pskOmega, unsafeProxySecretKey)
+import Cardano.Crypto
+  (AProxyVerificationKey(..), pskOmega, unsafeProxyVerificationKey)
 
 
--- | A delegation certificate is a `ProxySecretKey` tagged with an `EpochIndex`
+-- | A delegation certificate is a `ProxyVerificationKey` tagged with an `EpochIndex`
 type Certificate = ACertificate ()
 
-type ACertificate a = AProxySecretKey EpochIndex a
+type ACertificate a = AProxyVerificationKey EpochIndex a
 
 instance Monad m => ToJSON m Certificate where
   toJSON psk = mkObject
@@ -37,7 +38,7 @@ instance Monad m => ToJSON m Certificate where
 
 instance MonadError SchemaError m => FromJSON m Certificate where
   fromJSON obj =
-    unsafeProxySecretKey
+    unsafeProxyVerificationKey
       <$> (fromIntegral @Int54 <$> fromJSField obj "omega")
       <*> fromJSField obj "issuerPk"
       <*> fromJSField obj "delegatePk"

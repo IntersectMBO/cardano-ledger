@@ -22,7 +22,7 @@ module Test.Cardano.Crypto.Gen
 
         -- Proxy Cert and Key Generators
   , genProxyCert
-  , genProxySecretKey
+  , genProxyVerificationKey
   , genProxySignature
 
         -- Signature Generators
@@ -66,7 +66,7 @@ import Cardano.Crypto.ProtocolMagic
 import Cardano.Crypto.Signing
   ( EncryptedSecretKey
   , ProxyCert
-  , ProxySecretKey
+  , ProxyVerificationKey
   , ProxySignature
   , PublicKey
   , SafeSigner(..)
@@ -121,7 +121,7 @@ genSignTag = Gen.element
   , SignUSVote
   , SignMainBlock
   , SignMainBlockHeavy
-  , SignProxySK
+  , SignProxyVK
   ]
 
 
@@ -172,8 +172,9 @@ genProxyCert :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
   safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
 
-genProxySecretKey :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxySecretKey w)
-genProxySecretKey pm genW =
+genProxyVerificationKey
+  :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
+genProxyVerificationKey pm genW =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
@@ -188,7 +189,7 @@ genProxySignature pm genA genW = do
   w          <- genW
   a          <- genA
   let psk = createPsk pm issuerSafeSigner (toPublic delegateSk) w
-  return $ proxySign pm SignProxySK delegateSk psk a
+  return $ proxySign pm SignProxyVK delegateSk psk a
 
 
 --------------------------------------------------------------------------------

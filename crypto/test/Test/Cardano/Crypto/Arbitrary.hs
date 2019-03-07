@@ -33,7 +33,7 @@ import Cardano.Crypto.Signing
   ( EncryptedSecretKey(..)
   , PassPhrase
   , ProxyCert
-  , ProxySecretKey
+  , ProxyVerificationKey
   , ProxySignature
   , PublicKey
   , SafeSigner(..)
@@ -152,7 +152,7 @@ instance (Bi a, Arbitrary a) => Arbitrary (RedeemSignature a) where
 instance (Bi w, Arbitrary w) => Arbitrary (ProxyCert w) where
     arbitrary = liftA3 (safeCreateProxyCert dummyProtocolMagicId) arbitrary arbitrary arbitrary
 
-instance (Bi w, Arbitrary w) => Arbitrary (ProxySecretKey w) where
+instance (Bi w, Arbitrary w) => Arbitrary (ProxyVerificationKey w) where
     arbitrary = liftA3 (createPsk dummyProtocolMagicId) arbitrary arbitrary arbitrary
 
 instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
@@ -164,7 +164,7 @@ instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
       <$> arbitrary
       <*> pure (toPublic delegateSk)
       <*> arbitrary
-    proxySign dummyProtocolMagicId SignProxySK delegateSk psk <$> arbitrary
+    proxySign dummyProtocolMagicId SignProxyVK delegateSk psk <$> arbitrary
 
 
 --------------------------------------------------------------------------------

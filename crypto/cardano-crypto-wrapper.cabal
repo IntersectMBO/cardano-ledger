@@ -45,7 +45,7 @@ library
 
                        Cardano.Crypto.Signing.Proxy
                        Cardano.Crypto.Signing.Proxy.Cert
-                       Cardano.Crypto.Signing.Proxy.SecretKey
+                       Cardano.Crypto.Signing.Proxy.VerificationKey
                        Cardano.Crypto.Signing.Proxy.Signature
 
                        Cardano.Crypto.Signing.Redeem.KeyGen

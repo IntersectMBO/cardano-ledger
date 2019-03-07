@@ -16,7 +16,7 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation (Certificate, Payload, Undo(..), unsafePayload)
 import Cardano.Chain.Slotting (EpochIndex(..))
-import Cardano.Crypto (AProxySecretKey(..), ProtocolMagicId, createPsk)
+import Cardano.Crypto (AProxyVerificationKey(..), ProtocolMagicId, createPsk)
 import Data.List (nub)
 
 import Test.Cardano.Chain.Common.Gen (genStakeholderId)

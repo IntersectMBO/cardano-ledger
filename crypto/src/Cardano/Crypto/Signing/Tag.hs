@@ -44,8 +44,8 @@ data SignTag
   | SignMainBlock
   -- ^ Main block:       @MainToSign@
   | SignMainBlockHeavy
-  | SignProxySK
-  -- ^ Proxy key:        @ProxySecretKey@
+  | SignProxyVK
+  -- ^ Proxy key:        @ProxyVerificationKey@
   deriving (Eq, Ord, Show, Generic)
 
 -- TODO: it would be nice if we couldn't use 'SignTag' with wrong
@@ -68,5 +68,5 @@ signTag protocolMagic = \case
   SignMainBlock  -> "\x07" <> network
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
-  SignProxySK    -> "\x0a" <> network
+  SignProxyVK    -> "\x0a" <> network
   where network = Bi.serialize' (unProtocolMagicId $ protocolMagic)

@@ -57,7 +57,7 @@ import Cardano.Chain.Slotting
   , subSlotNumber
   )
 import Cardano.Crypto
-  (AProxySecretKey(..), PublicKey, pskOmega, validateProxySecretKey)
+  (AProxyVerificationKey(..), PublicKey, pskOmega, validateProxyVerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ scheduleCertificate config slot d ss cert = do
     `orThrowError` SchedulingMultipleDelegationsForSlot slot delegator
 
   -- Check that the delegation certificate is valid
-  validateProxySecretKey (configProtocolMagicId config) cert
+  validateProxyVerificationKey (configProtocolMagicId config) cert
     `wrapError` SchedulingInvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair
@@ -229,7 +229,7 @@ initialInterfaceState config = updateDelegation
       $ configHeavyDelegation config
 
   annotateCertificate :: Certificate -> ACertificate ByteString
-  annotateCertificate c = UnsafeAProxySecretKey
+  annotateCertificate c = UnsafeAProxyVerificationKey
     { aPskOmega     = Annotated (pskOmega c) (serialize' $ pskOmega c)
     , pskIssuerPk   = pskIssuerPk c
     , pskDelegatePk = pskDelegatePk c

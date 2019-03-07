@@ -30,7 +30,7 @@ import Cardano.Crypto
   , PassPhrase
   , ProtocolMagicId(..)
   , ProxyCert
-  , ProxySecretKey
+  , ProxyVerificationKey
   , PublicKey(..)
   , RedeemSignature
   , SecretKey(..)
@@ -223,28 +223,30 @@ roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
 
 
 --------------------------------------------------------------------------------
--- ProxySecretKey
+-- ProxyVerificationKey
 --------------------------------------------------------------------------------
 
-goldenProxySecretKey :: Property
-goldenProxySecretKey = goldenTestBi psk "test/golden/ProxySecretKey"
+goldenProxyVerificationKey :: Property
+goldenProxyVerificationKey = goldenTestBi
+  psk
+  "test/golden/ProxyVerificationKey"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   psk        = createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) pkey ()
 
-genUnitProxySecretKey :: Gen (ProxySecretKey ())
-genUnitProxySecretKey = do
+genUnitProxyVerificationKey :: Gen (ProxyVerificationKey ())
+genUnitProxyVerificationKey = do
   pm <- genProtocolMagicId
-  genProxySecretKey pm $ pure ()
+  genProxyVerificationKey pm $ pure ()
 
-roundTripProxySecretKeyBi :: Property
-roundTripProxySecretKeyBi =
-  eachOf 100 genUnitProxySecretKey roundTripsBiBuildable
+roundTripProxyVerificationKeyBi :: Property
+roundTripProxyVerificationKeyBi =
+  eachOf 100 genUnitProxyVerificationKey roundTripsBiBuildable
 
-roundTripProxySecretKeyAeson :: Property
-roundTripProxySecretKeyAeson =
-  eachOf 100 genUnitProxySecretKey roundTripsAesonBuildable
+roundTripProxyVerificationKeyAeson :: Property
+roundTripProxyVerificationKeyAeson =
+  eachOf 100 genUnitProxyVerificationKey roundTripsAesonBuildable
 
 
 --------------------------------------------------------------------------------
