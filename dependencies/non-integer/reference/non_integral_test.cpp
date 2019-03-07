@@ -42,8 +42,14 @@ int main()
 
   initialize(precision.get_mpz_t(), epsilon.get_mpz_t());
 
-  std::chrono::duration<double> total = std::chrono::duration<double>::zero();
-  std::chrono::duration<double> maximal = std::chrono::duration<double>::zero();
+  std::chrono::duration<double> total_exp =
+    std::chrono::duration<double>::zero();
+  std::chrono::duration<double> total_pow =
+    std::chrono::duration<double>::zero();
+  std::chrono::duration<double> maximal_exp =
+    std::chrono::duration<double>::zero();
+  std::chrono::duration<double> maximal_pow =
+    std::chrono::duration<double>::zero();
 
   // format is "base exponent"
   size_t n = 0;
@@ -54,28 +60,44 @@ int main()
         {
           mpz_class base(s.substr(0, split));
           mpz_class exponent(s.substr(split, std::string::npos));
-
-          auto before = std::chrono::high_resolution_clock::now();
           mpz_class result;
-          ref_pow(
-            result.get_mpz_t(),
-            base.get_mpz_t(),
-            exponent.get_mpz_t());
+          mpz_class result_pow;
+          std::chrono::duration<double> diff;
 
-          auto after = std::chrono::high_resolution_clock::now();
+          {
+            auto before = std::chrono::high_resolution_clock::now();
+
+            ref_exp_taylor(result.get_mpz_t(), base.get_mpz_t());
+            auto after = std::chrono::high_resolution_clock::now();
+            diff = after - before;
+            total_exp += diff;
+            if(maximal_exp < diff)
+              maximal_exp = diff;
+          }
+
+          {
+            auto before = std::chrono::high_resolution_clock::now();
+            ref_pow(result_pow.get_mpz_t(), base.get_mpz_t(), exponent.get_mpz_t());
+            auto after = std::chrono::high_resolution_clock::now();
+            diff = after - before;
+            total_pow += diff;
+            if(maximal_pow < diff)
+              maximal_pow = diff;
+          }
+
           n++;
-          std::chrono::duration<double> diff = after - before;
-          total += diff;
-          if(maximal < diff)
-            maximal = diff;
-          std::cout << print_fixedp(result, precision, 34)
+          std::cout << print_fixedp(result_pow, precision, 34)
+                    << " "
+                    << print_fixedp(result, precision, 34)
                     << std::endl;
         }
     }
 
-  std::cerr << "total time: " << total.count()
-            << " average time: " << (total.count() / n)
-            << " maximal time: " << maximal.count()
+  std::cerr << "exp avg: " << (total_exp.count() / n)
+            << " maximal time: " << maximal_exp.count()
+            << std::endl;
+  std::cerr << "cf avg: " << (total_pow.count() / n)
+            << " maximal time: " << maximal_pow.count()
             << std::endl;
 
   cleanup();
