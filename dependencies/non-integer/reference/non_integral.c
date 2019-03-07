@@ -9,6 +9,9 @@ mpz_t precision;
 mpz_t e;
 mpz_t eps;
 
+void mp_exp_taylor(mpz_t, const int, const mpz_t, const mpz_t);
+void ref_exp_taylor(mpz_t, const mpz_t);
+
 void initialize(const mpz_t _precision, const mpz_t epsilon)
 {
   mpz_init_set(precision, _precision);
@@ -260,7 +263,7 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 
 /* Entry point for 'exp' approximation. First does the scaling of 'x' to [0,1]
    and then calls the continued fraction approximation function. */
-void ref_exp(mpz_t rop, const mpz_t x)
+void ref_exp_(mpz_t rop, const mpz_t x, const bool use_cf)
 {
   mpz_t temp_q, temp_r;
   mpz_init(temp_q); mpz_init(temp_r);
@@ -273,7 +276,7 @@ void ref_exp(mpz_t rop, const mpz_t x)
       mpz_init(temp); mpz_init(x_);
       mpz_neg(x_, x);
 
-      ref_exp(temp, x_);
+      ref_exp_(temp, x_, use_cf);
 
       div(rop, one, temp);
 
@@ -297,6 +300,11 @@ void ref_exp(mpz_t rop, const mpz_t x)
     }
 
   mpz_clear(temp_r); mpz_clear(temp_q);
+}
+
+void ref_exp(mpz_t rop, const mpz_t x)
+{
+  ref_exp_(rop, x, true);
 }
 
 int findE(const mpz_t x)
@@ -377,7 +385,55 @@ void ref_pow(mpz_t rop, const mpz_t base, const mpz_t exponent)
   ref_ln(tmp, base);
   mpz_mul(tmp, tmp, exponent);
   scale(tmp);
-  ref_exp(rop, tmp);
+  ref_exp_taylor(rop, tmp);
 
   mpz_clear(tmp);
 }
+
+/* Taylor / MacLaurin series approximation */
+
+void mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
+{
+  mpz_set(rop, one);
+  int n = 0;
+  mpz_t last, divisor, lastX, nextX, diff;
+  mpz_init_set(last, one); mpz_init_set(divisor, one); mpz_init_set(lastX, one);
+  mpz_init(nextX); mpz_init(diff);
+
+  while(n < maxN)
+    {
+      mpz_mul(nextX, x, lastX);
+      scale(nextX);
+      div(nextX, nextX, divisor);
+
+      if(mpz_cmpabs(nextX, epsilon) < 0)
+        break;
+
+      mpz_add(divisor, divisor, one);
+      mpz_set(last, rop);
+      mpz_add(rop, rop, nextX);
+
+      mpz_sub(diff, rop, last);
+
+      mpz_set(lastX, nextX);
+      n++;
+    }
+
+  mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
+  mpz_clear(diff);
+}
+
+void ref_exp_taylor(mpz_t rop, const mpz_t x)
+{
+  ref_exp_(rop, x, false);
+}
+
+/* Raspberry Pi
+exp avg: 0.000318684 maximal time: 0.000730824
+cf avg: 0.000786493 maximal time: 0.00331147
+ */
+
+/* i7
+exp avg: 1.48657e-05 maximal time: 0.000146559
+cf avg: 3.81838e-05 maximal time: 0.000384774
+ */
