@@ -1,13 +1,14 @@
 \section{Blockchain layer}
 \label{sec:chain}
 
-\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
-
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
 \newcommand{\Proof}{\type{Proof}}
-\newcommand{\Seedl}{\mathsf{Seed_\ell}}
-\newcommand{\Seedn}{\mathsf{Seed_n}}
+\newcommand{\Seedl}{\mathsf{Seed}_\ell}
+\newcommand{\Seede}{\mathsf{Seed}_\eta}
+\newcommand{\SlotsPrior}{\mathsf{SlotsPrior}}
+\newcommand{\StartRewards}{\mathsf{StartRewards}}
+\newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
 \newcommand{\Bool}{\type{Bool}}
@@ -15,13 +16,15 @@
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
 \newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
 
-\newcommand{\HashBlock}{\type{HashBlock}}
-\newcommand{\hashBlock}[1]{\fun{hashBlock}~ \var{#1}}
+\newcommand{\HashHeader}{\type{HashHeader}}
+\newcommand{\bhHash}[1]{\fun{bhHash}~ \var{#1}}
+\newcommand{\bHeaderSize}[1]{\fun{bHeaderSize}~ \var{#1}}
+\newcommand{\bSize}[1]{\fun{bSize}~ \var{#1}}
+\newcommand{\bBodySize}[1]{\fun{bBodySize}~ \var{#1}}
 \newcommand{\BHeader}{\type{BHeader}}
 \newcommand{\BHBody}{\type{BHBody}}
 
-\newcommand{\header}[1]{\fun{header}~\var{#1}}
-\newcommand{\hbody}[1]{\fun{hbody}~\var{#1}}
+\newcommand{\bheader}[1]{\fun{bheader}~\var{#1}}
 \newcommand{\hsig}[1]{\fun{hsig}~\var{#1}}
 \newcommand{\bprev}[1]{\fun{bprev}~\var{#1}}
 \newcommand{\bhash}[1]{\fun{bhash}~\var{#1}}
@@ -32,11 +35,18 @@
 \newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
 \newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
 
+\newcommand{\PraosEnv}{\type{PraosEnv}}
+\newcommand{\PraosState}{\type{PraosState}}
 \newcommand{\BHeaderEnv}{\type{BHeaderEnv}}
+\newcommand{\BHeaderState}{\type{BHeaderState}}
+\newcommand{\VRFEnv}{\type{VRFEnv}}
+\newcommand{\VRFState}{\type{VRFState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
+\newcommand{\PoolDistr}{\type{PoolDistr}}
 \newcommand{\BBodyEnv}{\type{BBodyEnv}}
 \newcommand{\BBodyState}{\type{BBodyState}}
+\newcommand{\RUpdEnv}{\type{RUpdEnv}}
 \newcommand{\ChainEnv}{\type{ChainEnv}}
 \newcommand{\ChainState}{\type{ChainState}}
 \newcommand{\ChainSig}{\type{ChainSig}}
@@ -60,17 +70,11 @@
     \end{array}
   \end{equation*}
   %
-  \emph{Seed operation}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \seedOp & \Seed \to \Seed \to \Seed & \text{binary seed operation}
-    \end{array}
-  \end{equation*}
-  %
-  \emph{Abstract VRF functions}
+  \emph{Abstract functions ($T$ an arbitrary type)}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \seedOp & \Seed \to \Seed \to \Seed & \text{monoidial seed operation} \\
       \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
                    & \text{verifiable random function} \\
                    %
@@ -89,18 +93,26 @@
   \emph{Constants}
   \begin{align*}
     & \Seedl \in \Seed & \text{leader seed constant} \\
-    & \Seedn \in \Seed & \text{nonce seed constant}\\
+    & \Seede \in \Seed & \text{nonce seed constant}\\
+    & \SlotsPrior \in \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
+    & \StartRewards \in \Duration & \text{duration to start reward calculations}\\
+    & \ActiveSlotCoeff \in \unitInterval & f\text{ in \cite{ouroboros_praos}}\\
   \end{align*}
 
   \caption{VRF definitions}
   \label{fig:defs-vrf}
 \end{figure}
 
-\begin{todo}
+\begin{question}
   Are there any constraints on $\seedOp$?
-  Could it be $\mathsf{XOR}$ or hashing a list of seeds?
-  This is an implementation decision.
-\end{todo}
+\end{question}
+
+\begin{question}
+  What are good values for $\SlotsPrior$, $\StartRewards$, and $\ActiveSlotCoeff$?
+  Which are better as a constant or a protocol parameter?
+  % $2\cdot\fun{stableAfter}$?
+\end{question}
+
 \clearpage
 
 \subsection{Block Definitions}
@@ -111,7 +123,7 @@
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{hb} & \HashBlock & \text{hash of a block body}\\
+      \var{h} & \HashHeader & \text{hash of a block header}\\
     \end{array}
   \end{equation*}
   %
@@ -121,14 +133,14 @@
     \BHBody =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{prev} & \HashBlock & \text{hash of previous block body}\\
-        \var{hash} & \HashBlock & \text{hash of current block body}\\
+        \var{prev} & \HashHeader & \text{hash of previous block body}\\
         \var{vk} & \VKey & \text{block issuer}\\
         \var{slot} & \Slot & \text{block slot}\\
-        \var{seed_{n}} & \Seed & \text{nonce seed}\\
-        (n,~\var{prf_{n}}) & \unitInterval\times\Proof & \text{nonce proof}\\
-        \var{seed_{\ell}} & \Seed & \text{leader election seed}\\
-        (\ell,~\var{prf_{\ell}}) & \unitInterval\times\Proof & \text{leader election proof}\\
+        \eta & \Seed & \text{nonce}\\
+        \var{prf}_{\eta} & \Proof & \text{nonce proof}\\
+        \ell & \unitInterval & \text{leader election value}\\
+        \var{prf_{\ell}} & \Proof & \text{leader election proof}\\
+        \var{sig} & \Sig & \text{block body signature}\\
       \end{array}
     \right)
   \end{equation*}
@@ -150,8 +162,12 @@
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hashBlock{} & \seqof{\Tx} \to \HashBlock
-                   & \text{hash of a block body} \\
+      \bhHash{} & \BHeader \to \HashHeader
+                   & \text{hash of a block header} \\
+      \bHeaderSize{} & \BHeader \to \N
+                   & \text{size of a block header} \\
+      \bBodySize{} & \seqof{\Tx} \to \N
+                   & \text{size of a block body} \\
       \slotToSeed{} & \Slot \to \Seed
                     & \text{convert a slot to a seed} \\
     \end{array}
@@ -160,18 +176,18 @@
   \emph{Accessor Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{header} & \Block \to \BHeader \\
-      \fun{hbody} & \Block \to \BHBody \\
-      \fun{hsig} & \Block \to \Sig\\
+      \fun{bheader} & \Block \to \BHeader \\
+      \fun{bhbody} & \Block \to \BHBody \\
+      \fun{hsig} & \BHeader \to \Sig\\
       \fun{bbody} & \Block \to \seqof{\Tx} \\
-      \fun{bprev} & \BHBody \to \HashBlock\\
-      \fun{bhash} & \BHBody \to \HashBlock\\
+      \fun{bprev} & \BHBody \to \HashHeader\\
       \fun{bissuer} & \BHBody \to \VKey\\
       \fun{bslot} & \BHBody \to \Slot\\
-      \fun{bseed}_n & \BHBody \to \Seed\\
-      \fun{bprf}_n & \BHBody \to \unitInterval\times\Proof\\
-      \fun{bseed}_\ell & \BHBody \to \Seed\\
-      \fun{bprf}_\ell & \BHBody \to \unitInterval\times\Proof\\
+      \fun{bnonce} & \BHBody \to \Seed\\
+      \fun{bprf}_\eta & \BHBody \to \Proof\\
+      \fun{bleader} & \BHBody \to \unitInterval\\
+      \fun{bprf}_\ell & \BHBody \to \Proof\\
+      \fun{bsig} & \BHBody \to \Sig \\
     \end{array}
   \end{equation*}
   %
@@ -181,109 +197,18 @@
 
 \clearpage
 
-\subsection{Block Header Transition}
-\label{sec:block-header-trans}
-
-\begin{todo}
-  Introduce $\leteq$ notation for let bindings and
-  switch entire document to using it.
-\end{todo}
-
-\begin{figure}[ht]
-  \emph{Block header environments}
-  \begin{equation*}
-    \BHeaderEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{current slot number} \\
-        \var{pps} & \PParams & \text{Protocol parameters} \\
-        \var{sd} & \HashKey\mapsto\unitInterval & \text{relative stake distribution}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Block header transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\BHeaderEnv \times (\seqof{\BHBody}, \seqof{\Seed}) \times \BHeader
-    \times (\seqof{\BHBody}\times\seqof{\Seed}))
-  \end{equation*}
-  \caption{Block header transition-system types}
-  \label{fig:ts-types:header}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{equation}\label{eq:head}
-    \inference[Block-Head]
-    {
-      (\var{bhb},~\sigma) \leteq \var{bh}
-      &
-      (\var{prev},~\var{hash},~\var{vk},~\var{slot},~\var{seed_n},~(n,~\var{prf_n}),
-      ~\var{seed_{\ell}},(\ell,~\var{prf}))
-      \leteq \var{bhb}
-      \\
-      \var{tail};\var{bhb_{last}} \leteq bhbs
-      &
-      \var{w} \leteq 2\left(\fun{stableAfter}~pps\right)+1
-      &
-      \var{f} \leteq \fun{activeSlotCoefficient}~pps
-      \\
-      \bslot{bhb_{last}} < \var{slot} \leq \var{s_{now}}
-      &
-      \var{prev} = \bhash{bhb_{last}}
-      &
-      \mathcal{V}_{\var{vk}}{\serialised{bhb}}_{\sigma}
-      \\
-      \verifyVrf{\Seed}{vk}{seed_{n}}{(n,~\var{prf_{n}})}
-      &
-      \verifyVrf{\unitInterval}{vk}{seed_{\ell}}{(\ell,~\var{prf_{\ell}})}
-      \\
-      \hashKey{vk}\mapsto s\in\var{sd}
-      &
-      \ell < 1 - (1 - f)^{\var{s}}
-      \\
-      \var{tail}';\eta = \var{seeds}
-      &
-      \eta' \leteq (\bseedn{bhb_{last}})\seedOp\eta
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{s_{now}} \\
-            \var{pps} \\
-            \var{sd} \\
-        \end{array}}
-      \right)
-      \vdash
-      {\left(\begin{array}{c}
-            \var{bhbs} \\
-            \var{seeds} \\
-      \end{array}\right)}
-      \trans{bhead}{\var{bh}}
-      {\left(\begin{array}{c}
-            \varUpdate{\var{bhbs};_w\var{bhb}} \\
-            \varUpdate{\var{seeds};_w \eta'} \\
-      \end{array}\right)}
-    }
-  \end{equation}
-  \caption{Block Header rules}
-  \label{fig:rules:block-header}
-\end{figure}
-
-\clearpage
-
 \subsection{New Epoch Transition}
 \label{sec:new-epoch-trans}
 
-\begin{figure}[ht]
+\begin{figure}
   \emph{New Epoch environments}
   \begin{equation*}
     \NewEpochEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{bhbs} & \seqof{\BHBody} & \text{sliding window of block header bodies} \\
-        \var{seeds} & \seqof{\Seed} & \text{sliding window of evolving seeds} \\
-        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
+        \eta_1 & \Seed & \text{add text here} \\
+        \var{pp_n} & \PParams & \text{add text here} \\
+        \var{ru} & \RewardUpdate^? & \text{add text here} \\
       \end{array}
     \right)
   \end{equation*}
@@ -293,234 +218,524 @@
     \NewEpochState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \eta_0 & \Seed & \text{nonce at begining of epoch} \\
-        \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
-        \var{es} & \EpochState & \text{epoch state} \\
+        \var{e_\ell} & \Epoch & \text{add text here} \\
+        \eta_0 & \Seed & \text{add text here} \\
+        \var{b} & \BlocksMade & \text{add text here} \\
+        \var{es} & \EpochState & \text{add text here} \\
+        \var{ru} & \RewardUpdate & \text{add text here} \\
+        \var{pd} & \PoolDistr & \text{add text here} \\
       \end{array}
     \right)
   \end{equation*}
   %
-  \emph{New Epoch transitions}
+  \emph{New Epoch Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{NEWEPOCH}{\_} \var{\_} \subseteq
-    \powerset (\NewEpochEnv \times \NewEpochState \times \BHBody \times \NewEpochState)
+    \_ \vdash \var{\_} \trans{newepoch}{\_} \var{\_} \subseteq
+    \powerset (\NewEpochEnv \times \NewEpochState \times \Epoch \times \NewEpochState)
   \end{equation*}
-  \caption{New epoch transition-system types}
-  \label{fig:ts-types:new-epoch}
+  \caption{NewEpoch transition-system types}
+  \label{fig:ts-types:newepoch}
 \end{figure}
 
 \begin{figure}[ht]
-  \begin{equation}\label{eq:newepoch}
+  \begin{equation}\label{eq:new-epoch}
     \inference[New-Epoch]
     {
-      \var{last};\var{hs} \leteq bhbs
+      e_\ell < e
       &
-      \var{e} \leteq \epoch{\bslot{bhb}}
-      &
-      \epoch{\bslot{last}} < e
+      \var{es}' \leteq \fun{appleRUpd}~\var{ru}~\var{es}
       \\
-      i \leteq \max\left\{j \mid
-      \bslot{(bhbs\downarrow j)} < (\firstSlot{e}) - 2\cdot (\fun{stableAfter}~\var{pps})\right\}
+      {
+        \left(
+          {\begin{array}{c}
+              \var{e} \\
+              \var{pp}_n \\
+              \var{b} \\
+          \end{array}}
+        \right)
+        \vdash
+        \var{es'}\trans{epoch}{\var{e}}\var{es''}
+      }
+      \\
+      \var{pd'} \leteq \mathsf{TODO}\text{ (calculate the new pool distr from }es''\text{)}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \eta_1 \\
+            \var{pp_n} \\
+            \var{ru} \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \var{e_\ell} \\
+            \eta_0 \\
+            \var{b} \\
+            \var{es} \\
+            \var{ru} \\
+            \var{pd} \\
+      \end{array}\right)}
+      \trans{newepoch}{\var{e}}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{e}} \\
+            \varUpdate{\eta_1} \\
+            \varUpdate{\emptyset} \\
+            \varUpdate{\var{es}'} \\
+            \varUpdate{\Nothing} \\
+            \varUpdate{\var{pd}'} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:not-new-epoch}
+    \inference[Not-New-Epoch]
+    {
+      e_\ell \geq e
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \eta_1 \\
+            \var{pp_n} \\
+            \var{ru} \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \var{e_\ell} \\
+            \eta_0 \\
+            \var{b} \\
+            \var{es} \\
+            \var{ru} \\
+            \var{pd} \\
+      \end{array}\right)}
+      \trans{newepoch}{\var{e}}
+      {\left(\begin{array}{c}
+            \var{e_\ell} \\
+            \eta_0 \\
+            \var{b} \\
+            \var{es} \\
+            \var{ru} \\
+            \var{pd} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{New Epoch rules}
+  \label{fig:rules:not-new-epoch}
+\end{figure}
+
+\subsection{Update Nonces Transition}
+\label{sec:update-nonces-trans}
+
+\begin{figure}
+  \emph{Update Nonce Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{updn}{\_} \var{\_} \subseteq
+    \powerset (\Seed \times (\Seed\times\Seed) \times \Slot \times (\Seed\times\Seed))
+  \end{equation*}
+  \caption{UpdNonce transition-system types}
+  \label{fig:ts-types:updnonce}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:update-both}
+    \inference[Update-Both]
+    {
+      s < \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \eta \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \eta_v \\
+            \eta_c \\
+      \end{array}\right)}
+      \trans{updn}{\var{s}}
+      {\left(\begin{array}{c}
+            \varUpdate{\eta_v\seedOp\eta} \\
+            \varUpdate{\eta_v\seedOp\eta} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:only-evolve}
+    \inference[Only-Evolve]
+    {
+      s \geq \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \eta \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \eta_v \\
+            \eta_c \\
+      \end{array}\right)}
+      \trans{updn}{\var{s}}
+      {\left(\begin{array}{c}
+            \varUpdate{\eta_v\seedOp\eta} \\
+            \eta_c \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{Update Nonce rules}
+  \label{fig:rules:update-nonce}
+\end{figure}
+
+
+\subsection{Block Header Transition}
+\label{sec:block-header-trans}
+
+\begin{figure}
+  \emph{Block Header environments}
+  \begin{equation*}
+    \BHeaderEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{s_{now}} & \Slot & \text{add text here} \\
+        \var{pp} & \PParams & \text{add text here} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Block Header states}
+  \begin{equation*}
+    \BHeaderState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{h} & \HashHeader & \text{add text here} \\
+        \var{s_\ell} & \Slot & \text{add text here} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Block Header Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
+    \powerset (\BHeaderEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
+  \end{equation*}
+  \caption{BHeader transition-system types}
+  \label{fig:ts-types:bheader}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:bheader}
+    \inference[BHead]
+    {
+      (\var{bhb},~\sigma) \leteq \var{bh}
+      &
+      \var{slot} \leteq \bslot{bh}
+      &
+      \var{vk} \leteq \bissuer{block}
+      \\
+      \var{s_{last}} < \var{slot} \leq \var{s_{now}}
+      &
+      \var{h} = \bprev{bh}
+      &
+      \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
+      \\
+      \bHeaderSize{bh} < \fun{maxBHSize}~\var{pp}
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{s_{now}} \\
+            \var{pp} \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \var{h} \\
+            \var{s_\ell} \\
+      \end{array}\right)}
+      \trans{bhead}{\var{bh}}
+      {\left(\begin{array}{c}
+            \varUpdate{\bhHash{bh}} \\
+            \varUpdate{slot} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{BHeader rules}
+  \label{fig:rules:bheader}
+\end{figure}
+
+\begin{figure}
+  \emph{VRF environments}
+  \begin{equation*}
+    \VRFEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{s_{now}} & \Slot & \text{add text here} \\
+        \var{pp} & \PParams & \text{add text here} \\
+        \eta_0 & \Seed & \text{add text here} \\
+        \var{pd} & \PoolDistr & \text{add text here} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{VRF states}
+  \begin{equation*}
+    \VRFState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{h} & \HashHeader & \text{add text here} \\
+        \var{s_\ell} & \Slot & \text{add text here} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{VRF Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{vrf}{\_} \var{\_} \subseteq
+    \powerset (\VRFEnv \times \VRFState \times \BHeader \times \VRFState)
+  \end{equation*}
+  \caption{VRF transition-system types}
+  \label{fig:ts-types:vrf}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:vrf}
+    \inference[VRF]
+    {
+      \var{bhb} \leteq \fun{bhbody}~{\var{bh}}
+      &
+      f \leteq \ActiveSlotCoeff
+      \\
+      \var{vk} \leteq \bissuer bhb
+      &
+      \var{ss} \leteq \slotToSeed{\bslot{bhb}}
+      \\~\\
+      \verifyVrf{\Seed}{vk}{(\eta_0\seedOp ss\seedOp\Seede)}{(\bprfn{bhb})}
+      \\
+      \verifyVrf{\unitInterval}{vk}{(\eta_0\seedOp ss\seedOp\Seedl)}{(\bprfl{bhb})}
+      \\
+      \var{vk}\mapsto \sigma\in\var{pd}
+      &
+      \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma}
       \\~\\
       {
         \left(
-        \begin{array}{l}
-          \var{e}\\
-          \var{pp_{new}}\\
-          \var{blocks}\\
-        \end{array}
-      \right)
-        \vdash \var{es} \trans{epoch}{} \var{es}
+          {\begin{array}{c}
+             \var{s_{now}} \\
+             \var{pp} \\
+           \end{array}}
+        \right)
+        \vdash
+        \left(
+          {\begin{array}{c}
+             \var{h} \\
+             \var{s_{\ell}} \\
+           \end{array}}
+        \right)
+        \trans{bhead}{\var{bh}}
+        \left(
+          {\begin{array}{c}
+             \var{h}' \\
+             \var{s_{\ell}}' \\
+           \end{array}}
+        \right)
       }
     }
     {
       \left(
         {\begin{array}{c}
-           \var{bhbs} \\
-           \var{seeds} \\
-           \var{pp_{new}} \\
-         \end{array}}
+            \var{s_{now}} \\
+            \var{pp} \\
+            \eta_0 \\
+            \var{pd} \\
+        \end{array}}
       \right)
       \vdash
-      \left(
-        {\begin{array}{c}
-            \eta_0 \\
-            \var{blocks} \\
-            \var{es} \\
-         \end{array}}
-      \right)
-    \trans{newepoch}{\var{bhb}}
-      \left(
-        {\begin{array}{c}
-            \varUpdate{\var{seeds}\downarrow i} \\
-            \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}'} \\
-         \end{array}}
-     \right)
+      {\left(\begin{array}{c}
+            \var{h} \\
+            \var{s_\ell} \\
+      \end{array}\right)}
+      \trans{vrf}{\var{bh}}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{h}'} \\
+            \varUpdate{\var{s_\ell}'} \\
+      \end{array}\right)}
     }
-   \end{equation}
-
-   \nextdef
-
-  \begin{equation*}
-    \inference[Not-New-Epoch]
-    {
-      \var{last};\var{hs} \leteq bhbs
-      &
-      \var{e} \leteq \epoch{\bslot{bhb}}
-      &
-      \epoch{\bslot{last}} \geq e
-    }
-    {
-      \left(
-        {\begin{array}{c}
-           \var{bhbs} \\
-           \var{seeds} \\
-           \var{pp_{new}} \\
-         \end{array}}
-      \right)
-      \vdash
-      \left(
-        {\begin{array}{c}
-            \eta_0 \\
-            \var{blocks} \\
-            \var{es} \\
-         \end{array}}
-      \right)
-    \trans{newepoch}{\var{bhb}}
-      \left(
-        {\begin{array}{c}
-            \eta_0 \\
-            \var{blocks} \\
-            \var{es} \\
-         \end{array}}
-     \right)
-    }
- \end{equation*}
-
-\caption{New Epoch rules}
-\label{fig:rules:new-epoch}
+  \end{equation}
+  \caption{VRF rules}
+  \label{fig:rules:vrf}
 \end{figure}
-
-\begin{note}
-  In order for $i$ above to be defined, there must be at least
-  $(2\cdot\mathsf{stableAfter} + 1)$-many blocks made in total.
-\end{note}
-
-\clearpage
 
 \subsection{Block Body Transition}
-\label{sec:block-trans}
+\label{sec:block-body-trans}
 
-\begin{figure}[ht]
-  \emph{Block body environments}
-  \begin{equation*}
-    \BBodyEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \eta_0 & \Seed & \text{epoch nonce}\\
-        \var{pp} & \PParams & \text{protocol parameters}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Block body states}
-  \begin{equation*}
-    \BBodyState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{ls} & \LState & \text{ledger state}\\
-        \var{b} & \BlocksMade & \text{blocks made}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Block body transitions}
+\begin{figure}
+  \emph{BBody Transitions}
+
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset (\BBodyEnv \times \BBodyState \times \Block \times \BBodyState)
+    \powerset (\PParams \times (\LState\times\BlocksMade)
+    \times \Block \times (\LState\times\BlocksMade))
   \end{equation*}
-  \caption{Block body transition-system types}
-  \label{fig:ts-types:block}
+  \caption{BBody transition-system types}
+  \label{fig:ts-types:bbody}
 \end{figure}
 
 \begin{figure}[ht]
-  \begin{equation}
+  \begin{equation}\label{eq:bbody}
     \inference[Block-Body]
     {
-      ((bhb,~\wcard),~\var{txs}) \leteq block
+      \var{bhb} \leteq \bhbody{block}
       &
-      s \leteq \slotToSeed{\bslot{bhb}}
-      \\
-      \bseedn{bhb} = \eta_0\seedOp s\seedOp\Seedn
+      \var{txs} \leteq \bbody{block}
       &
-      \bseedl{bhb} = \eta_0\seedOp s\seedOp\Seedl
+      \var{vk} \leteq \bissuer{bhb}
       \\
-      \bhash{bhb} = \hashBlock{txs}
-      \\~\\
-      \var{vk} \leteq \bissuer{block}
+      \bSize{bh} < \fun{maxBBSize}~\var{pp}
       &
       \var{vk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
       \\~\\
       {
         \left(
-        \begin{array}{l}
-          \bslot{bhb}\\
-          \var{pp}\\
-        \end{array}
-      \right)
-        \vdash \var{ls} \trans{ledgers}{} \var{ls'}
+          {\begin{array}{c}
+             \bslot{bhb} \\
+             \var{pp} \\
+           \end{array}}
+        \right)
+        \vdash
+             \var{ls} \\
+        \trans{ledgers}{\var{txs}}
+             \var{ls}' \\
       }
     }
     {
       \left(
         {\begin{array}{c}
-           \eta_0\\
-           \var{pp} \\
-         \end{array}}
+            \var{pp} \\
+        \end{array}}
       \right)
       \vdash
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
+      {\left(\begin{array}{c}
             \var{ls} \\
-         \end{array}}
-      \right)
-    \trans{bbody}{\var{block}}
-      \left(
-        {\begin{array}{l}
-            \varUpdate{b\unionoverrideRight\{\var{vk}\mapsto n+1\}} \\
+            \var{b} \\
+      \end{array}\right)}
+      \trans{bbody}{\var{block}}
+      {\left(\begin{array}{c}
             \varUpdate{\var{ls}'} \\
-         \end{array}}
-     \right)
+            \varUpdate{b \unionoverrideRight \{\var{vk}\mapsto n+1\}} \\
+      \end{array}\right)}
     }
-   \end{equation}
-
-\caption{Block body rules}
-\label{fig:rules:block}
+  \end{equation}
+  \caption{BBody rules}
+  \label{fig:rules:bbody}
 \end{figure}
 
-\clearpage
 
 \subsection{Chain Transition}
 \label{sec:chain-trans}
 
-\begin{figure}[ht]
-  \emph{Chain signal}
+\begin{figure}
+  \emph{Reward Upda environments}
   \begin{equation*}
-    \begin{array}{l@{\qquad=\qquad}lr}
-      \ChainSig
-      & \Block \uniondistinct \{\mathfrak{R}\}
-      & \text{chain transition signal} \\
-    \end{array}
+    \RUpdEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{b} & \BlocksMade & \text{add text here} \\
+        \var{es} & \EpochState & \text{add text here} \\
+      \end{array}
+    \right)
   \end{equation*}
+  %
+  \emph{Reward Update Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{ru}{\_} \var{\_} \subseteq
+    \powerset (\RUpdEnv \times \RewardUpdate^? \times \Slot \times \RewardUpdate^?)
+  \end{equation*}
+  \caption{Reward Update transition-system types}
+  \label{fig:ts-types:reward-update}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:reward-update}
+    \inference[Reward-Update]
+    {
+      s > (\firstSlot{\epoch{s}}) + \StartRewards
+      &
+      ru = \Nothing
+      \\~\\
+      \mathsf{TODO} \text{ turn the REWARD transition into} \\
+      \text{a function from }b\text{ and }es\text{ to }ru
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{slot}}\varUpdate{\var{ru}'}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:no-reward-update}
+    \inference[No-Reward-Update]
+    {
+      ru \neq \Nothing
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:reward-too-early}
+    \inference[Reward-Too-Early]
+    {
+      s \leq (\firstSlot{\epoch{s}}) + \StartRewards
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+    }
+  \end{equation}
+
+  \caption{Reward Update rules}
+  \label{fig:rules:reward-update}
+\end{figure}
+
+
+\begin{figure}
   \emph{Chain environments}
   \begin{equation*}
     \ChainEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{slot} & \Slot & \text{current slot}\\
-        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
+        \var{s_{now}} & \Slot & \text{add text here} \\
+        \var{pp_n} & \PParams & \text{add text here} \\
       \end{array}
     \right)
   \end{equation*}
@@ -530,258 +745,156 @@
     \ChainState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{acnt} & \Acnt & \text{accounting}\\
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
-        \var{bhbs} & \seqof{\BHBody} & \text{block header body rolling window}\\
-        \var{nonces} & \seqof{\Seed} & \text{nonce rolling window}\\
-        \var{ss} & \SnapshotState & \text{snapshots}\\
-        \var{b} & \BlocksMade & \text{blocks made}\\
-        \eta_0 & \Seed & \text{epoch nonce}\\
+        (\eta_0,~\eta_c,~\eta_v) & \Seed\times\Seed\times\Seed & \text{add text here} \\
+        \var{b} & \BlocksMade & \text{add text here} \\
+        \var{s_\ell} & \Slot & \text{add text here} \\
+        \var{e_\ell} & \Epoch & \text{add text here} \\
+        \var{es} & \EpochState & \text{add text here} \\
+        \var{ru} & \RewardUpdate^? & \text{add text here} \\
+        \var{pd} & \PoolDistr & \text{add text here} \\
       \end{array}
     \right)
   \end{equation*}
   %
-  \emph{Chain transitions}
+  \emph{Chain Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
-    \powerset (\ChainEnv \times \ChainState \times \ChainSig \times \ChainState)
+    \powerset (\ChainEnv \times \ChainState \times \Block \times \ChainState)
   \end{equation*}
   \caption{Chain transition-system types}
   \label{fig:ts-types:chain}
 \end{figure}
 
 \begin{figure}[ht]
-  \begin{equation}
-    \inference[Chain-Block]
+  \begin{equation}\label{eq:chain}
+    \inference[Chain]
     {
-      \var{signal}\in\Block
+      \var{bhb} \leteq \bhbody{block}
       &
-      (~\var{pstake_{ready}},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard) \leteq ss
+      \eta \leteq \fun{bnonce}~\var{bhb}
+      &
+      \var{s} \leteq \bslot{bhb}
       \\~\\
       {
         \left(
           {\begin{array}{c}
-             \var{bhbs} \\
-             \var{nonces} \\
-             \var{pp_{new}} \\
-           \end{array}}
-        \right)
-        \vdash
-        \left(
-          {\begin{array}{c}
-              \eta_0 \\
-              \var{blocks} \\
-              \\
-              \var{utxoSt} \\
-              \var{acnt} \\
-              \var{dstate} \\
-              \var{pstate} \\
-              \var{pp} \\
-              \var{ss} \\
-           \end{array}}
-        \right)
-        \trans{newepoch}{\hbody{signal}}
-        \left(
-          {\begin{array}{c}
-              \eta_0' \\
-              \var{blocks}' \\
-              \\
-              \var{utxoSt}' \\
-              \var{acnt}' \\
-              \var{dstate}' \\
-              \var{pstate}' \\
-              \var{pp}' \\
-              \var{ss}' \\
-           \end{array}}
-        \right)
-      }
-      \\~\\~\\
-      {
-        \left(
-          {\begin{array}{c}
-              \var{slot} \\
-              \var{pp} \\
-              \var{pstake_{ready}} \\
+              \eta_c \\
+              \var{pp_n} \\
+              \var{ru} \\
           \end{array}}
         \right)
         \vdash
         {\left(\begin{array}{c}
-              \var{bhbs} \\
-              \var{nonces} \\
+              \var{e_\ell} \\
+              \eta_0 \\
+              \var{b} \\
+              \var{es} \\
+              \var{ru} \\
+              \var{pd} \\
         \end{array}\right)}
-        \trans{bhead}{\header{signal}}
+        \trans{newepoch}{\var{e}}
         {\left(\begin{array}{c}
-              \var{bhbs}' \\
-              \var{nonces}' \\
+              \var{e_\ell}' \\
+              \eta_0' \\
+              \var{b}' \\
+              \var{es}' \\
+              \var{ru}' \\
+              \var{pd}' \\
         \end{array}\right)}
       }
-      \\~\\~\\
+      &
+      {
+        \eta \vdash
+        {\left(\begin{array}{c}
+              \eta_v \\
+              \eta_c \\
+        \end{array}\right)}
+        \trans{updn}{\var{s}}
+        {\left(\begin{array}{c}
+              \eta_v' \\
+              \eta_c' \\
+        \end{array}\right)}
+      }
+      \\~\\
+      (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}') \leteq \var{es}'
+      \\
       {
         \left(
           {\begin{array}{c}
-             \eta_0'\\
-             \var{pp} \\
-           \end{array}}
+              \var{s_{now}} \\
+              \var{pp}' \\
+              \eta_0' \\
+              \var{pd}' \\
+          \end{array}}
         \right)
         \vdash
+        {\left(\begin{array}{c}
+              \var{h} \\
+              \var{s_\ell} \\
+        \end{array}\right)}
+        \trans{vrf}{\var{bh}}
+        {\left(\begin{array}{c}
+              \var{h}' \\
+              \var{s_\ell}' \\
+        \end{array}\right)}
+      }
+      &
+      {
         \left(
           {\begin{array}{c}
               \var{b} \\
-              \\
-              \var{utxoSt}' \\
-              \var{dstate}' \\
-              \var{pstate}' \\
-           \end{array}}
+              \var{ru}' \\
+          \end{array}}
         \right)
-      \trans{bbody}{\var{signal}}
-        \left(
-          {\begin{array}{l}
-              \var{b}'\\
-              \\
-              \var{utxoSt}'' \\
-              \var{dstate}'' \\
-              \var{pstate}'' \\
-           \end{array}}
-       \right)
+        \vdash \var{ru}' \trans{ru}{\var{s}} \var{ru}''
       }
-    }
-    {
-      \left(
-        {\begin{array}{c}
-           \var{slot} \\
-           \var{pp_{new}} \\
-         \end{array}}
-      \right)
-      \vdash
-      \left(
-        {\begin{array}{c}
-           \var{pp} \\
-           \var{acnt} \\
-           \var{dstate} \\
-           \var{pstate} \\
-           \var{utxoSt} \\
-           \var{bhbs} \\
-           \var{nonces} \\
-           \var{ss} \\
-           \var{b} \\
-           \eta_0 \\
-         \end{array}}
-      \right)
-    \trans{chain}{\var{signal}}
-      \left(
-        {\begin{array}{c}
-            \varUpdate{\var{pp}'} \\
-            \varUpdate{\var{acnt}'} \\
-            \varUpdate{\var{dstate}''} \\
-            \varUpdate{\var{pstate}''} \\
-            \varUpdate{\var{utxoSt}''} \\
-            \varUpdate{\var{bhbs}'} \\
-            \varUpdate{\var{nonces}'} \\
-            \varUpdate{\var{ss}'} \\
-            \varUpdate{\var{b}'} \\
-            \varUpdate{\eta_0}' \\
-         \end{array}}
-     \right)
-    }
-   \end{equation}
-
-   \nextdef
-
-  \begin{equation*}
-    \inference[Chain-Reward]
-    {
-      \var{signal}=\mathfrak{R}
-      \\~\\
+      \\
       {
-        \left(
-          {\begin{array}{c}
-             \var{pp} \\
-             \var{b} \\
-             \var{ss} \\
-           \end{array}}
-        \right)
-        \vdash
-        \left(
-          {\begin{array}{c}
-              \var{acnt} \\
-              \var{dstate} \\
-              \var{pstate} \\
-              \var{utxoSt} \\
-           \end{array}}
-        \right)
-        \trans{reward}{}
-        \left(
-          {\begin{array}{c}
-              \var{acnt}' \\
-              \var{dstate}' \\
-              \var{pstate}' \\
-              \var{utxoSt}' \\
-           \end{array}}
-        \right)
+        \var{pp}\vdash
+        {\left(\begin{array}{c}
+              \var{ls'} \\
+              \var{b'} \\
+        \end{array}\right)}
+        \trans{bbody}{\var{block}}
+        {\left(\begin{array}{c}
+              \var{ls}'' \\
+              b'' \\
+        \end{array}\right)}
       }
+      &
+      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}'') 
     }
     {
       \left(
         {\begin{array}{c}
-           \var{slot} \\
-           \var{pp_{new}} \\
-         \end{array}}
+            \var{s_{now}} \\
+            \var{pp_n} \\
+        \end{array}}
       \right)
       \vdash
-      \left(
-        {\begin{array}{c}
-           \var{pp} \\
-           \var{acnt} \\
-           \var{dstate} \\
-           \var{pstate} \\
-           \var{utxoSt} \\
-           \var{bhbs} \\
-           \var{nonces} \\
-           \var{ss} \\
-           \var{b} \\
-           \eta_0 \\
-         \end{array}}
-      \right)
-    \trans{chain}{\var{signal}}
-      \left(
-        {\begin{array}{c}
-           \var{pp} \\
-           \varUpdate{\var{acnt}'} \\
-           \varUpdate{\var{dstate}''} \\
-           \varUpdate{\var{pstate}''} \\
-           \varUpdate{\var{utxoSt}''} \\
-           \var{bhbs} \\
-           \var{nonces} \\
-           \var{ss} \\
-           \var{b} \\
-           \eta_0 \\
-         \end{array}}
-     \right)
+      {\left(\begin{array}{c}
+            (\eta_0,~\eta_c,~\eta_v) \\
+            \var{b} \\
+            \var{s_\ell} \\
+            \var{e_\ell} \\
+            \var{es} \\
+            \var{ru} \\
+            \var{pd} \\
+      \end{array}\right)}
+      \trans{chain}{\var{block}}
+      {\left(\begin{array}{c}
+            \varUpdate{(\eta_0',~\eta_c',~\eta_v')} \\
+            \varUpdate{\var{b}''} \\
+            \varUpdate{\var{s_\ell}'} \\
+            \varUpdate{\var{e_\ell}'} \\
+            \varUpdate{\var{es}''} \\
+            \varUpdate{\var{ru}''} \\
+            \varUpdate{\var{pd}'} \\
+      \end{array}\right)}
     }
- \end{equation*}
-
-\caption{Chain rules}
-\label{fig:rules:chain}
+  \end{equation}
+  \caption{Chain rules}
+  \label{fig:rules:chain}
 \end{figure}
 
 
-\clearpage
-
-\begin{todo}
-  Verify that $pstake_{go}$ is the correct snapshot.
-\end{todo}
-
-\begin{todo}
-  Instead of using the signal $\mathfrak{R}$ to give the rewards in $\mathsf{CHAIN}$,
-  perhaps make $\mathsf{NEWEPOCH}$ be a transition with three rules instead of two:
-  \begin{enumerate}
-    \item new epoch
-    \item slot indicates it is time to do the rewards
-    \item no-op
-  \end{enumerate}
-  So we would need to add option 2 above, which would involve deciding when exactly to
-  start the reward calculation.
-\end{todo}
