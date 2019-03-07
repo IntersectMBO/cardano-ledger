@@ -63,9 +63,8 @@ between epochs and slots.
         \var{a_0} & \posReals & \text{pool influence}\\
         \tau & \unitInterval & \text{treasury expansion}\\
         \rho & \unitInterval & \text{monetary expansion}\\
-        \var{stableAfter} & \type{Duration} & \text{$k$ in \cite{ouroboros_praos}}\\
-        \var{activeSlotCoeff} & \unitInterval
-                              & \text{$f$ in \cite{ouroboros_praos}}\\
+        \var{maxBHSize} & \N & \text{max block header size}\\
+        \var{maxBBSize} & \N & \text{max block body size}\\
       \end{array}
     \right)
   \end{equation*}
@@ -87,8 +86,8 @@ between epochs and slots.
     \fun{influence},
     \fun{tau},
     \fun{rho},
-    \fun{stableAfter},
-    \fun{activeSlotCoeff}
+    \fun{maxBHSize},
+    \fun{maxBBSize},
   \end{center}
   %
   \emph{Abstract Functions}
