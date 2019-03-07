@@ -12,7 +12,7 @@ import           NonIntegral
 import           Debug.Trace
 data E16
 data E20
-data E32
+data E34
 
 instance FP.HasResolution E16 where
     resolution _ = 10000000000000000
@@ -20,14 +20,14 @@ instance FP.HasResolution E16 where
 instance FP.HasResolution E20 where
     resolution _ = 100000000000000000000
 
-instance FP.HasResolution E32 where
-    resolution _ = 100000000000000000000000000000000
+instance FP.HasResolution E34 where
+    resolution _ = 10000000000000000000000000000000000
 
 type Digits16 = FP.Fixed E16
 type Digits20 = FP.Fixed E20
-type Digits32 = FP.Fixed E32
+type Digits34 = FP.Fixed E34
 
-type FixedPoint = Digits32
+type FixedPoint = Digits34
 
 epsD :: Double
 epsD   = 1.0 / 10.0^(12::Integer)
@@ -115,6 +115,15 @@ prop_FPIdemPotent (Positive a) =
 prop_FPIdemPotent' :: PosInt -> PosInt -> Property
 prop_FPIdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
+    where (a'', b'') = normalizeInts a b
+
+prop_FPIdemPotent'' :: Positive FixedPoint -> Property
+prop_FPIdemPotent'' (Positive a) =
+    a > 0 ==> (exp'' $ ln' a) - a < epsFP
+
+prop_FPIdemPotent''' :: PosInt -> PosInt -> Property
+prop_FPIdemPotent''' (Positive a) (Positive b) =
+    b'' > 0 && a'' > 0 ==> (ln' $ exp'' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
     where (a'', b'') = normalizeInts a b
 
 prop_FPfindD :: Positive FixedPoint -> Property
@@ -233,6 +242,16 @@ prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
               x' = fromIntegral x''
               y' = fromIntegral y''
 
+prop_ExpLaw'' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_ExpLaw'' (Positive x) (Positive y) (Positive a) (Positive b) =
+    (abs (exp'' (a'/b' + x'/y') - (exp'' (a'/b') * exp'' (x'/y'))) < eps) === True
+        where (b'', a'') = normalizeInts a b
+              (y'', x'') = normalizeInts x y
+              a' = fromIntegral a''
+              b' = fromIntegral b''
+              x' = fromIntegral x''
+              y' = fromIntegral y''
+
 expdiff :: Integer -> Integer -> Integer -> Integer -> Rational
 expdiff x'' y'' a'' b'' =
     abs(e1 - e2)
@@ -299,7 +318,7 @@ main = do
   putStrLn ""
 
   putStrLn "-------------------------------------------"
-  putStrLn "-- Test of 32 Decimal Digits Fixed Point --"
+  putStrLn "-- Test of 34 Decimal Digits Fixed Point --"
   putStrLn "-------------------------------------------"
   putStrLn "property exp is monotonic"
   quickCheck (withMaxSuccess 1000 $ prop_FPMonotonic (const True) exp')
@@ -317,6 +336,16 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
+  putStrLn "-------------------------------------------------"
+  putStrLn "-- Testing Taylor Series Approximation for exp --"
+  putStrLn "-------------------------------------------------"
+  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+  quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
+  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
+  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent'')
+  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
+  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent''')
+
   putStrLn ""
 
   putStrLn "------------------------------"
