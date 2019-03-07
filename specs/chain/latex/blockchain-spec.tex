@@ -1313,7 +1313,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   may model the number of selected slots within a $k$-slot window $X$ as a binomial
   distribution $X \sim \mathrm{B}\left(k, \frac{1}{7}\right)$.
 
-  In each epoch of size $n$ blocks, there are $n-k+1$ such $w$-block windows.
+  In each epoch of size $n$ blocks, there are $n-k+1$ such $k$-block windows.
   Boole's inequality gives us that the likelihood of exceeding the threshold in
   any one of these windows is bounded above by the sum of the likelihoods for each
   window. We may thus consider that the probability of a given stakeholder

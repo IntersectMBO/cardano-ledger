@@ -147,8 +147,9 @@ instance HasTrace CHAIN where
     mTxSz <- Gen.integral (Range.constant 0 4000000)
     mPSz <- Gen.integral (Range.constant 0 4000000)
 
-    -- Chain stability.
-    k <- Gen.integral (Range.linear 1 10)
+    -- Chain stability. We set this to an integer between 1 and twice the value
+    -- chosen for the Byron release.
+    k <- Gen.integral (Range.constant 1 (2160 * 2))
 
     -- The percentage of the slots will typically be between 1/5 and 1/4,
     -- however we want to stretch that range a bit for testing purposes.
