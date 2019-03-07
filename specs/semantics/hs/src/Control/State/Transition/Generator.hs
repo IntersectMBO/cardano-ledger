@@ -87,8 +87,7 @@ genTrace
   -> State s
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
-genTrace env st aSigGen =
-  Gen.shrink shrinkTrace $ Gen.prune $ do
+genTrace env st aSigGen = do
     d <- Gen.integral (linear 0 100)
     mkTrace env st <$> go d st []
   where
@@ -105,37 +104,6 @@ genTrace env st aSigGen =
           go (d - 1) sti acc
         Just (stNext, sig) ->
           go (d - 1) stNext ((stNext, sig): acc)
-
-shrinkTrace
-  :: forall s
-   . STS s
-  => Trace s
-  -> [Trace s]
-shrinkTrace tr = mkTrace env st0 <$> stSigs
-  where
-    (_, stSigs) = partitionEithers applied
-    applied = (runTrace @s env st0) <$> sortedSubSeqs
-    sortedSubSeqs
-      = fmap snd
-      $ sortOn fst
-      $ zip (fmap length subSeqs) (subSeqs)
-    subSeqs = subsequences sigs
-    env = tr ^. traceEnv
-    st0 = tr ^. traceInitState
-    sigs = traceSignals OldestFirst tr
-
-  -- An alternate way to generate a trace of the size of the generator might
-  -- be:
-  --
-  -- >>>  go 0 _   acc = return acc
-  -- >>>  go d sti acc = do
-  -- >>>    mStSig <- genSigSt @s env sti aSigGen
-  -- >>>    case mStSig of
-  -- >>>      Nothing ->
-  -- >>>        go (d - 1) sti acc
-  -- >>>      Just (stNext, sig) ->
-  -- >>>        go (d - 1) stNext ((stNext, sig): acc)
-  --
 
 -- | Return a signal-and-ensuing-state generator, given an initial state,
 -- environment and signal generator.
