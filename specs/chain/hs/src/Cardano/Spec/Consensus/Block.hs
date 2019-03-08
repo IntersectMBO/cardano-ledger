@@ -56,3 +56,18 @@ instance Block CBM.Block where
 
   bHeader b = b ^. CBM.bHeader
   bBody   b = b ^. CBM.bBody
+
+
+-- | Turns a generic block to a concrete 'CBM.Block'
+concretiseBlock :: Block b => b -> CBM.Block
+concretiseBlock block = CBM.Block
+  { CBM._bHeader = CBM.MkBlockHeader
+      { CBM._bhPrevHash = bhPrevHash (bHeader block)
+      , CBM._bhSlot     = bhSlot     (bHeader block)
+      , CBM._bhIssuer   = bhIssuer   (bHeader block)
+      , CBM._bhSig      = bhSig      (bHeader block)
+      }
+  , CBM._bBody = CBM.BlockBody
+      { CBM._bDCerts    =  bbCerts   (bBody block)
+      }
+  }
