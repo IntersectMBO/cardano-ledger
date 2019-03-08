@@ -49,19 +49,15 @@ void div(mpz_t rop, const mpz_t x, const mpz_t y)
 
 void scale(mpz_t rop)
 {
-  /* mpz_tdiv_q(rop, rop, precision); */
-
   mpz_t temp, a;
   mpz_init(temp); mpz_init(a);
 
   div_qr(a, temp, rop, precision);
-  /* mpz_tdiv_q(a, rop, precision); */
   if(mpz_sgn(rop) < 0 && mpz_cmp(temp, zero) != 0)
     mpz_sub_ui(a, a, 1);
 
   mpz_set(rop, a);
   mpz_clear(temp); mpz_clear(a);
-  /* gmp_printf("rop = %Zd, a = %Zd\n", rop, a); */
 }
 
 void cleanup()
@@ -83,7 +79,7 @@ void ipow_(mpz_t rop, const mpz_t x, int n)
       mpz_init(res);
       ipow_(res, x, n / 2);
       mpz_mul(rop, res, res);
-      scale(rop); /* mpz_cdiv_q(rop, rop, precision); */
+      scale(rop);
       mpz_clear(res);
     }
   else
@@ -92,7 +88,7 @@ void ipow_(mpz_t rop, const mpz_t x, int n)
       mpz_init(res);
       ipow_(res, x, n - 1);
       mpz_mul(rop, res, x);
-      scale(rop); /* mpz_cdiv_q(rop, rop, precision); */
+      scale(rop);
       mpz_clear(res);
     }
 }
@@ -144,19 +140,15 @@ void mp_expN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 
   while(n <= maxN + 1)
     {
-      mpz_mul(ba, b, AnM1); scale(ba); /* mpz_tdiv_q(ba, ba, precision); */
-      mpz_mul(aa, a, AnM2); scale(aa); /* mpz_fdiv_q(aa, aa, precision); */
+      mpz_mul(ba, b, AnM1); scale(ba);
+      mpz_mul(aa, a, AnM2); scale(aa);
       mpz_add(A, ba, aa);
 
-      mpz_mul(bb, b, BnM1); scale(bb); /* mpz_tdiv_q(bb, bb, precision); */
-      mpz_mul(ab, a, BnM2); scale(ab); /* mpz_tdiv_q(ab, ab, precision); */
+      mpz_mul(bb, b, BnM1); scale(bb);
+      mpz_mul(ab, a, BnM2); scale(ab);
       mpz_add(B, bb, ab);
 
       div(convergent, A, B);
-
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.034Zd\n", ba, aa, convergent, last); */
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.034Zd\n", a, b, A, B); */
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.024Zd\n\n", AnM1, BnM1, AnM2, BnM2); */
 
       if(first)
         first = false;
@@ -174,12 +166,11 @@ void mp_expN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
       mpz_set(AnM1, A);
       mpz_set(BnM1, B);
 
-      mpz_mul(a, curr_n, x); scale(a); /* mpz_tdiv_q(a, a, precision); */
+      mpz_mul(a, curr_n, x); scale(a);
       mpz_sub(curr_n, curr_n, one);
       mpz_sub(b, x, curr_n);
     }
 
-  /* gmp_printf("mp_expN n: %d\n", n); */
   mpz_set(rop, convergent);
 
   /* clear all MP values */
@@ -228,19 +219,15 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
       if(n > 1 && n % 2 == 1)
         curr_a++;
 
-      mpz_mul(ba, b, AnM1); scale(ba); /* mpz_tdiv_q(ba, ba, precision); */
-      mpz_mul(aa, a, AnM2); scale(aa); /* mpz_tdiv_q(aa, aa, precision); */
+      mpz_mul(ba, b, AnM1); scale(ba);
+      mpz_mul(aa, a, AnM2); scale(aa);
       mpz_add(A, ba, aa);
 
-      mpz_mul(bb, b, BnM1); scale(bb); /* mpz_tdiv_q(bb, bb, precision); */
-      mpz_mul(ab, a, BnM2); scale(ab); /* mpz_tdiv_q(ab, ab, precision); */
+      mpz_mul(bb, b, BnM1); scale(bb);
+      mpz_mul(ab, a, BnM2); scale(ab);
       mpz_add(B, bb, ab);
 
       div(convergent, A, B);
-
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.034Zd\n", ba, aa, convergent, last); */
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.034Zd\n", a, b, A, B); */
-      /* gmp_printf("%.034Zd %.034Zd %.034Zd %.024Zd\n\n", AnM1, BnM1, AnM2, BnM2); */
 
       if(first)
         first = false;
@@ -261,7 +248,6 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
       mpz_add(b, b, one);
     }
 
-  /* gmp_printf("mp_lnN n: %d\n", n); */
   mpz_set(rop, convergent);
 
   /* clear all MP values */
@@ -304,11 +290,7 @@ void ref_exp(mpz_t rop, const mpz_t x)
       mpz_mul(n_exponent, n_exponent, precision); /* ceil(x) */
 
       mpz_tdiv_q_ui(x_, x, n);
-      //div(x_, x, n_exponent);
-
-      /* gmp_printf("(n, euler) = (%d, %.034Zd) [%.34Zd] = \n", n, x_, x); */
       mp_expN(rop, 1000, x_, eps);
-      /* gmp_printf("%.034Zd\n", rop); */
 
       ipow(rop, rop, n);
       mpz_clear(n_exponent); mpz_clear(x_); mpz_clear(temp_r); mpz_clear(temp_q);
@@ -332,11 +314,11 @@ int findE(const mpz_t x)
 
       /* x'_{n + 1} = x'_n ^ 2 */
       mpz_mul(x_, x_, x_);
-      scale(x_); /* mpz_tdiv_q(x_, x_, precision); */
+      scale(x_);
 
       /* x''_{n + 1} = x''_n ^ 2 */
       mpz_mul(x__, x__, x__);
-      scale(x__); /* mpz_tdiv_q(x__, x__, precision); */
+      scale(x__);
 
       l   *= 2;
       u   *= 2;
@@ -378,10 +360,8 @@ bool ref_ln(mpz_t rop, const mpz_t x)
 
   mpz_sub(x_, x_, one);
 
-  /* gmp_printf("(n, x, x_, factor) = (%d, %.034Zd, %.034Zd, %.034Zd)\n", n, x, x_, factor); */
   mp_lnN(x_, 1000, x_, eps);
   mpz_add(rop, rop, x_);
-  /* gmp_printf("ln %.034Zd\n", rop); */
 
   mpz_clear(temp_r); mpz_clear(temp_q); mpz_clear(x_); mpz_clear(factor);
   return true;
@@ -396,7 +376,7 @@ void ref_pow(mpz_t rop, const mpz_t base, const mpz_t exponent)
 
   ref_ln(tmp, base);
   mpz_mul(tmp, tmp, exponent);
-  scale(tmp); /* mpz_tdiv_q(tmp, tmp, precision); */
+  scale(tmp);
   ref_exp(rop, tmp);
 
   mpz_clear(tmp);
