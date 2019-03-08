@@ -410,7 +410,7 @@ instance STS UPVOTE where
   type Signal UPVOTE = Vote
   data PredicateFailure UPVOTE
     = ADDVOTEFailure (PredicateFailure ADDVOTE)
-    | LowerThanThdAndNotAlreadyConfirmed
+    | HigherThanThdAndNotAlreadyConfirmed
     | CfmThdNotReached
     | AlreadyConfirmed
     deriving (Eq, Show)
@@ -424,7 +424,7 @@ instance STS UPVOTE where
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        Core.psSize (Set.singleton pid ◃ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! LowerThanThdAndNotAlreadyConfirmed
+        Core.psSize (Set.singleton pid ◃ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! HigherThanThdAndNotAlreadyConfirmed
         return (cps, vts')
     , do
         TRC ( (sn, pps, rups, dms)
