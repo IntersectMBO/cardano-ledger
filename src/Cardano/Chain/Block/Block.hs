@@ -37,7 +37,7 @@ module Cardano.Chain.Block.Block
   , blockDlgPayload
   , blockUpdatePayload
   , blockAttributes
-  , verifyBlock
+  , blockLength
 
   -- * BoundaryBlock
   , ABlockOrBoundary(..)
@@ -48,7 +48,7 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError(..), liftEither)
+import qualified Data.ByteString as BS
 import Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
@@ -67,14 +67,12 @@ import Cardano.Binary.Class
 import Cardano.Chain.Block.Body
   ( ABody
   , Body
-  , BodyError
   , bodyDlgPayload
   , bodySscPayload
   , bodyTxPayload
   , bodyTxs
   , bodyUpdatePayload
   , decodeABody
-  , verifyBody
   )
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
@@ -84,7 +82,6 @@ import Cardano.Chain.Block.Header
   ( AHeader
   , BlockSignature(..)
   , Header
-  , HeaderError
   , HeaderHash
   , ToSign
   , decodeAHeader
@@ -103,10 +100,9 @@ import Cardano.Chain.Block.Header
   , headerSoftwareVersion
   , headerToSign
   , mkHeaderExplicit
-  , verifyHeader
   , wrapHeaderBytes
   )
-import Cardano.Chain.Block.Proof (Proof(..), ProofError, checkProof)
+import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
@@ -131,6 +127,7 @@ data ABlock a = ABlock
   { blockHeader     :: AHeader a
   , blockBody       :: ABody a
   , aBlockExtraData :: Annotated ExtraBodyData a
+  , blockAnnotation :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
 
 instance B.Buildable Block where
@@ -162,8 +159,11 @@ instance Bi Block where
 
 decodeABlock :: Decoder s (ABlock ByteSpan)
 decodeABlock = do
-  enforceSize "Block" 3
-  ABlock <$> decodeAHeader <*> decodeABody <*> decodeAnnotated
+  Annotated (header, body, ed) byteSpan <-
+    annotatedDecoder $ do
+      enforceSize "Block" 3
+      (,,) <$> decodeAHeader <*> decodeABody <*> decodeAnnotated
+  pure $ ABlock header body ed byteSpan
 
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
@@ -271,56 +271,12 @@ mkBlockExplicit pm bv sv prevHash difficulty slotId sk mDlgCert body = ABlock
   (mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extraH)
   body
   (Annotated extraB ())
+  ()
  where
   extraB :: ExtraBodyData
   extraB = ExtraBodyData (mkAttributes ())
   extraH :: ExtraHeaderData
   extraH = ExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
-
-data BlockError
-  = BlockBodyError BodyError
-  | BlockHeaderError HeaderError
-  | BlockInvalidExtraDataProof (Hash ExtraBodyData) (Hash ExtraBodyData)
-  | BlockProofError ProofError
-
-instance B.Buildable BlockError where
-  build = \case
-    BlockBodyError err ->
-      bprint ("Body was invalid while checking Block.\n Error: " . build) err
-    BlockHeaderError err ->
-      bprint ("Header was invalid while checking Block.\n Error: " . build) err
-    BlockInvalidExtraDataProof p p' -> bprint
-      ( "Incorrect proof of ExtraBodyData.\n"
-      . "Proof in Block:\n"
-      . build . "\n"
-      . "Calculated proof:\n"
-      . build . "\n"
-      )
-      p
-      p'
-    BlockProofError err ->
-      bprint ("Proof was invalid while checking Block.\n Error: " . build) err
-
-verifyBlock
-  :: MonadError BlockError m => ProtocolMagicId -> ABlock ByteString -> m ()
-verifyBlock pm block = do
-  liftEither . first BlockHeaderError $ verifyHeader pm (blockHeader block)
-  liftEither . first BlockBodyError $ verifyBody pm (blockBody block)
-  -- No need to verify the main extra body data. It's an 'Attributes ()'
-  -- which is valid whenever it's well-formed.
-  --
-  -- Check internal consistency: the body proofs are all correct.
-  liftEither . first BlockProofError $ checkProof
-    (blockBody block)
-    (blockProof block)
-  -- Check that the headers' extra body data hash is correct.
-  -- This isn't subsumed by the body proof check.
-  let extraDataHash = hashDecoded (aBlockExtraData block)
-  (extraDataHash == blockExtraDataProof block)
-    `orThrowError` BlockInvalidExtraDataProof
-                    (blockExtraDataProof block)
-                    extraDataHash
-
 
 --------------------------------------------------------------------------------
 -- Block accessors
@@ -382,3 +338,6 @@ blockDlgPayload = bodyDlgPayload . blockBody
 
 blockAttributes :: ABlock a -> Attributes ()
 blockAttributes = ebdAttributes . blockExtraData
+
+blockLength :: ABlock ByteString -> Int64
+blockLength = fromIntegral . BS.length . blockAnnotation

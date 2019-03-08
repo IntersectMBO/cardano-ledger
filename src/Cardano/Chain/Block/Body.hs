@@ -10,19 +10,13 @@ module Cardano.Chain.Block.Body
   ( Body
   , body
   , ABody(..)
-  , BodyError(..)
   , bodyTxs
   , bodyWitnesses
   , decodeABody
-  , verifyBody
   )
 where
 
 import Cardano.Prelude
-
-import Control.Monad.Except (MonadError, liftEither)
-import Formatting (bprint, build)
-import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class
   (Bi(..), ByteSpan, Decoder, encodeListLen, enforceSize)
@@ -33,9 +27,6 @@ import Cardano.Chain.Txp.TxPayload
   (ATxPayload, TxPayload, decodeATxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import Cardano.Crypto (ProtocolMagicId)
-
-
 
 -- | 'Body' consists of payloads of all block components
 type Body = ABody ()
@@ -74,29 +65,6 @@ decodeABody = do
     <*> decode
     <*> Delegation.decodeAPayload
     <*> Update.decodeAPayload
-
-data BodyError
-  = BodyDelegationPayloadError Delegation.PayloadError
-  | BodyUpdatePayloadError Update.PayloadError
-
-instance B.Buildable BodyError where
-  build = \case
-    BodyDelegationPayloadError err -> bprint
-      ("Delegation.Payload was invalid while checking Body.\n Error: " . build)
-      err
-    BodyUpdatePayloadError err -> bprint
-      ("Update.Payload was invalid while checking Body.\n Error: " . build)
-      err
-
-verifyBody
-  :: MonadError BodyError m => ProtocolMagicId -> ABody ByteString -> m ()
-verifyBody pm mb = do
-  liftEither . first BodyDelegationPayloadError $ Delegation.checkPayload
-    pm
-    (bodyDlgPayload mb)
-  liftEither . first BodyUpdatePayloadError $ Update.checkPayload
-    pm
-    (bodyUpdatePayload mb)
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

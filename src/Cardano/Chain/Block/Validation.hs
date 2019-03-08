@@ -6,7 +6,7 @@
 {-# LANGUAGE TupleSections    #-}
 
 module Cardano.Chain.Block.Validation
-  ( updateChain
+  ( updateBody
   , updateChainBoundary
   , ChainValidationState
   , cvsPreviousHash
@@ -30,10 +30,8 @@ import Cardano.Chain.Block.Block
   ( ABlock(..)
   , BoundaryValidationData(..)
   , blockDlgPayload
-  , blockHashAnnotated
-  , blockLeaderKey
-  , blockPrevHash
-  , blockSignature
+  , blockLength
+  , blockProof
   , blockSlot
   )
 import Cardano.Chain.Block.Header
@@ -44,9 +42,9 @@ import Cardano.Chain.Block.Header
   )
 import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Delegation.Payload (APayload(..))
+import qualified Cardano.Chain.Delegation.Payload as DlgPayload
 import Cardano.Chain.Delegation.Validation
-  (delegates, initialInterfaceState, updateDelegation)
+  (initialInterfaceState, updateDelegation)
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
@@ -54,18 +52,13 @@ import Cardano.Chain.Genesis as Genesis
   , configEpochSlots
   , configGenesisHeaderHash
   , configK
-  , configProtocolMagicId
   , configSlotSecurityParam
   )
 import Cardano.Chain.Slotting (flattenSlotId)
 import Cardano.Crypto
-  ( AProxyVerificationKey(..)
-  , AProxySignature(..)
-  , PublicKey
-  , SignTag(SignMainBlock, SignMainBlockHeavy)
+  ( PublicKey
+  , hash
   , hashRaw
-  , proxyVerifyDecoded
-  , verifySignatureDecoded
   )
 
 
@@ -83,13 +76,6 @@ data SigningHistory = SigningHistory
   , shSigningQueue      :: !(Seq StakeholderId)
   , shStakeholderCounts :: !(Map StakeholderId BlockCount)
   } deriving (Eq, Show, Generic, NFData)
-
-checkDelegator :: BlockCount -> PublicKey -> SigningHistory -> Bool
-checkDelegator byzantineNodes s sh =
-  delegatorSlots % 1 <= shK sh % byzantineNodes
- where
-  delegatorSlots =
-    fromMaybe 0 $ M.lookup (mkStakeholderId s) (shStakeholderCounts sh)
 
 -- | Update the `SigningHistory` with a new signer, removing the oldest value if
 --   the sequence is @K@ blocks long
@@ -161,6 +147,12 @@ data ChainValidationError
   = ChainValidationBoundaryTooLarge
   -- ^ The size of an epoch boundary block exceeds the limit
 
+  | ChainValidationBlockTooLarge
+  -- ^ The size of a regular block exceeds the limit
+
+  | ChainValidationDelegationPayloadError Text
+  -- ^ There is a problem with the delegation payload signature
+
   | ChainValidationInvalidDelegation PublicKey PublicKey
   -- ^ The delegation used in the signature is not valid according to the ledger
 
@@ -169,6 +161,9 @@ data ChainValidationError
 
   | ChainValidationInvalidSignature BlockSignature
   -- ^ The signature of the block is invalid
+
+  | ChainValidationDelegationProofError
+  -- ^ The delegation proof does not correspond to the delegation payload
 
   | ChainValidationDelegationSchedulingError Delegation.SchedulingError
   -- ^ A delegation certificate failed validation in the ledger layer
@@ -216,80 +211,37 @@ updateChainBoundary config cvs bvd = do
       $ boundaryHeaderBytes bvd
     }
 
-
--- | This is an implementation of the blockchain extension rule from the chain
---   specification. It validates a new block and passes parts of the body
---   through to the ledger for validation.
-updateChain
+-- | This is an implementation of the BBODY rule as per the chain specification.
+--   Compared to `updateChain`, this does not validate any header level checks, nor
+--   does it carry out anything which might be considered part of the protocol.
+updateBody
   :: MonadError ChainValidationError m
   => Genesis.Config
   -> ChainValidationState
   -> ABlock ByteString
   -> m ChainValidationState
-updateChain config cvs b = do
-  let
-    prevHash =
-      fromMaybe (configGenesisHeaderHash config) (cvsPreviousHash cvs)
+updateBody config cvs b = do
 
-  -- Validate the previous block hash of 'b'
-  (blockPrevHash b == prevHash)
-    `orThrowError` ChainValidationInvalidHash prevHash (blockPrevHash b)
+  -- Validate the block size
+  -- TODO Max block size should come from protocol params
+  let maxBlockSize :: Int64
+      maxBlockSize = 2e6 in
+    blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
 
-  -- Validate Signature
-  (delegator, signer) <- case blockSignature b of
-
-    BlockSignature signature -> do
-      let signer = blockLeaderKey b
-      verifySignatureDecoded
-          pm
-          SignMainBlock
-          signer
-          (recoverSignedBytes $ blockHeader b)
-          signature
-        `orThrowError` ChainValidationInvalidSignature (blockSignature b)
-      pure (signer, signer)
-
-    BlockPSignatureHeavy signature -> do
-      proxyVerifyDecoded
-          pm
-          SignMainBlockHeavy
-          signature
-          (const True)
-          (recoverSignedBytes $ blockHeader b)
-        `orThrowError` ChainValidationInvalidSignature (blockSignature b)
-      let psk = psigPsk signature
-      pure (pskIssuerPk psk, pskDelegatePk psk)
-
-  -- Check that the delegation is valid according to the ledger
-  delegates (cvsDelegationState cvs) delegator signer
-    `orThrowError` ChainValidationInvalidDelegation delegator signer
-
-  let signingHistory = cvsSigningHistory cvs
-
-  -- Check that 'delegator' hasn't delegated too many previous blocks
-  let
-    byzantineNodes :: BlockCount
-    byzantineNodes = 5
-  checkDelegator byzantineNodes delegator signingHistory
-    `orThrowError` ChainValidationTooManyDelegations delegator
-
-  -- Update the signing history
-  let signingHistory' = updateSigningHistory delegator signingHistory
+  -- Validate the delegation payload signature
+  proofDelegation (blockProof b) == hash (const () <$> blockDlgPayload b)
+    `orThrowError` ChainValidationDelegationProofError
 
   delegationState' <-
       updateDelegation config slot d delegationState certificates
         `wrapError` ChainValidationDelegationSchedulingError
 
-  pure $ ChainValidationState
-    { cvsSigningHistory  = signingHistory'
-    , cvsPreviousHash    = Just $ blockHashAnnotated b
-    , cvsDelegationState = delegationState'
-    }
+  pure $ cvs
+    {cvsDelegationState = delegationState'}
  where
-  pm   = configProtocolMagicId config
   slot = flattenSlotId (configEpochSlots config) $ blockSlot b
   d    = configSlotSecurityParam config
 
   delegationState = cvsDelegationState cvs
 
-  certificates = getPayload $ blockDlgPayload b
+  certificates = DlgPayload.getPayload $ blockDlgPayload b
