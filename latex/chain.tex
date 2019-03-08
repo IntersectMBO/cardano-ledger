@@ -206,9 +206,9 @@
     \NewEpochEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \eta_1 & \Seed & \text{add text here} \\
-        \var{pp_n} & \PParams & \text{add text here} \\
-        \var{ru} & \RewardUpdate^? & \text{add text here} \\
+        \eta_1 & \Seed & \text{epoch nonce} \\
+        \var{pp_n} & \PParams & \text{new protocol parameters} \\
+        \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
       \end{array}
     \right)
   \end{equation*}
@@ -218,12 +218,12 @@
     \NewEpochState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{e_\ell} & \Epoch & \text{add text here} \\
-        \eta_0 & \Seed & \text{add text here} \\
-        \var{b} & \BlocksMade & \text{add text here} \\
-        \var{es} & \EpochState & \text{add text here} \\
-        \var{ru} & \RewardUpdate & \text{add text here} \\
-        \var{pd} & \PoolDistr & \text{add text here} \\
+        \var{e_\ell} & \Epoch & \text{last epoch} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{es} & \EpochState & \text{epoch state} \\
+        \var{ru} & \RewardUpdate^? & \text{reward update} \\
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
       \end{array}
     \right)
   \end{equation*}
@@ -404,8 +404,8 @@
     \BHeaderEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{add text here} \\
-        \var{pp} & \PParams & \text{add text here} \\
+        \var{s_{now}} & \Slot & \text{current slot (wall-clock)} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
       \end{array}
     \right)
   \end{equation*}
@@ -415,8 +415,8 @@
     \BHeaderState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{h} & \HashHeader & \text{add text here} \\
-        \var{s_\ell} & \Slot & \text{add text here} \\
+        \var{h} & \HashHeader & \text{latest header hash} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
       \end{array}
     \right)
   \end{equation*}
@@ -477,10 +477,10 @@
     \VRFEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{add text here} \\
-        \var{pp} & \PParams & \text{add text here} \\
-        \eta_0 & \Seed & \text{add text here} \\
-        \var{pd} & \PoolDistr & \text{add text here} \\
+        \var{s_{now}} & \Slot & \text{current slot} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
       \end{array}
     \right)
   \end{equation*}
@@ -490,8 +490,8 @@
     \VRFState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{h} & \HashHeader & \text{add text here} \\
-        \var{s_\ell} & \Slot & \text{add text here} \\
+        \var{h} & \HashHeader & \text{latest header hash} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
       \end{array}
     \right)
   \end{equation*}
@@ -647,8 +647,8 @@
     \RUpdEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{b} & \BlocksMade & \text{add text here} \\
-        \var{es} & \EpochState & \text{add text here} \\
+        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{es} & \EpochState & \text{epoch state} \\
       \end{array}
     \right)
   \end{equation*}
@@ -734,8 +734,8 @@
     \ChainEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{add text here} \\
-        \var{pp_n} & \PParams & \text{add text here} \\
+        \var{s_{now}} & \Slot & \text{current slot} \\
+        \var{pp_n} & \PParams & \text{new protocol parameters} \\
       \end{array}
     \right)
   \end{equation*}
@@ -745,13 +745,13 @@
     \ChainState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        (\eta_0,~\eta_c,~\eta_v) & \Seed\times\Seed\times\Seed & \text{add text here} \\
-        \var{b} & \BlocksMade & \text{add text here} \\
-        \var{s_\ell} & \Slot & \text{add text here} \\
-        \var{e_\ell} & \Epoch & \text{add text here} \\
-        \var{es} & \EpochState & \text{add text here} \\
-        \var{ru} & \RewardUpdate^? & \text{add text here} \\
-        \var{pd} & \PoolDistr & \text{add text here} \\
+        (\eta_0,~\eta_c,~\eta_v) & \Seed\times\Seed\times\Seed & \text{nonces} \\
+        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
+        \var{e_\ell} & \Epoch & \text{lats epoch} \\
+        \var{es} & \EpochState & \text{epoch state} \\
+        \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
       \end{array}
     \right)
   \end{equation*}
