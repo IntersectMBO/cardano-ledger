@@ -25,6 +25,9 @@ data CICacheConfig = CICacheConfig
   , ccBranch  :: Text
   } deriving (Show)
 
+mainlineBranch :: Text
+mainlineBranch = "master"
+
 main :: IO ()
 main = do
   awsCreds
@@ -111,13 +114,17 @@ cacheUploadStep cacheConfig = do
 
 restoreCICache :: CICacheConfig -> IO ()
 restoreCICache cfg = do
-  -- cacheS3 cfg (Just "develop") "restore stack"
-  cacheS3 cfg (Just "develop") "restore stack work"
+  -- cacheS3 cfg (Just mainlineBranch) "restore stack"
+  cacheS3 cfg (Just mainlineBranch) "restore stack work"
 
 saveCICache :: CICacheConfig -> IO ()
 saveCICache cfg = do
   -- cacheS3 cfg Nothing "save stack"
   cacheS3 cfg Nothing "save stack work"
+
+-- Deletes the files from S3 that would have been put with "cache-s3 save".
+clearCICache :: CICacheConfig -> IO ()
+clearCICache cfg = cacheS3 cfg Nothing "clear"
 
 cacheS3 :: CICacheConfig -> Maybe Text -> Text -> IO ()
 cacheS3 CICacheConfig {..} baseBranch cmd = void $ run "cache-s3" args
