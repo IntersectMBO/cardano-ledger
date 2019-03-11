@@ -33,6 +33,7 @@
 %%
 %% Types
 %%
+\newcommand{\Nothing}{\Diamond}
 \newcommand{\N}{\ensuremath{\mathbb{N}}}
 \newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
 \newcommand{\Z}{\ensuremath{\mathbb{Z}}}
@@ -170,6 +171,7 @@
 \newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
 \newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\bhbody}[1]{\fun{bhbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
 %% ledgerstate constants
 \newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
@@ -185,6 +187,8 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{property}{Property}[section]
+
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
 
 \begin{document}
 
@@ -203,6 +207,7 @@
 \include{delegation}
 \include{ledger}
 \include{epoch}
+\include{chain}
 \include{properties}
 \include{non-integral}
 

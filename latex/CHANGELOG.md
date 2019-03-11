@@ -1,5 +1,8 @@
 # Changelog
 
+## 2019-03-01
+- Added the blockchain layer to the spec for Praos, including a new top-level transition CHAIN.
+
 ## 2019-02-20
 - Calculating the stake distribution uses relations.
 - The prose now makes heavy use of bullet point lists that follow the order in the tables.
