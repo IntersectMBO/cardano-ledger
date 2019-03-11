@@ -8,11 +8,34 @@ import Control.Lens ((^.))
 import Data.Set (Set)
 
 import Control.State.Transition
+  ( Embed
+  , Environment
+  , PredicateFailure
+  , STS
+  , Signal
+  , State
+  , TRC(TRC)
+  , (?!)
+  , initialRules
+  , judgmentContext
+  , trans
+  , transitionRules
+  , wrapFailed
+  )
 import Ledger.Core
+  (Epoch, Slot, VKeyGenesis)
 import Ledger.Delegation
-import Ledger.Update
+  ( DELEG
+  , DIState
+  , DSEnv(DSEnv)
+  , _dSEnvAllowedDelegators
+  , _dSEnvEpoch
+  , _dSEnvSlot
+  , _dSEnvStableAfter
+  )
+import Ledger.Update (PParams, maxBkSz, stableAfter)
 
-import Cardano.Spec.Chain.STS.Block
+import Cardano.Spec.Chain.STS.Block (Block, bBody, bDCerts, bSize)
 
 data BBODY
 
@@ -44,7 +67,7 @@ instance STS BBODY where
               { _dSEnvAllowedDelegators = gks
               , _dSEnvEpoch = e
               , _dSEnvSlot = s
-              , _dSEnvLiveness = pps ^. dLiveness
+              , _dSEnvStableAfter = pps ^. stableAfter
               }
         ds' <- trans @DELEG
                      $ TRC (diEnv, ds, b ^. bBody . bDCerts)

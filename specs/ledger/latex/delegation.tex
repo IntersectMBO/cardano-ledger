@@ -73,7 +73,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
-        \var{d} & \SlotCount & \text{certificate liveness parameter}
+        \var{k} & \SlotCount & \text{chain stability parameter}
       \end{array}
     \right)
   \end{equation*}
@@ -129,14 +129,14 @@ $\trans{sdeleg}{\wcard}$ are presented in
       & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
       (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
       & (e_d,~ \var{vk_s}) \notin \var{eks} & e \leq e_d \\ ~ \\
-      (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
+      d \leteq 2 \cdot k & (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
     {
       {\begin{array}{l}
        \mathcal{K}\\
         e\\
         s\\
-        d
+        k
       \end{array}}
       \vdash
       {
