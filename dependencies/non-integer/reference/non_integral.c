@@ -293,7 +293,10 @@ void ref_exp_(mpz_t rop, const mpz_t x, const bool use_cf)
       mpz_mul(n_exponent, n_exponent, precision); /* ceil(x) */
 
       mpz_tdiv_q_ui(x_, x, n);
-      mp_expN(rop, 1000, x_, eps);
+      if(use_cf)
+        mp_expN(rop, 1000, x_, eps);
+      else
+        mp_exp_taylor(rop, 1000, x_, eps);
 
       ipow(rop, rop, n);
       mpz_clear(n_exponent); mpz_clear(x_); mpz_clear(temp_r); mpz_clear(temp_q);
