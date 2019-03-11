@@ -2,7 +2,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
-import Control.Lens ((^.))
+import Control.Lens ((^.), to)
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Sequence (Seq, (|>))
@@ -43,7 +43,7 @@ instance STS SIGCNT where
   transitionRules =
     [ do
         TRC ((pps, dms), sgs, vk) <- judgmentContext
-        let w = pps ^. bkSgnCntW
+        let k = pps ^. stableAfter . to unBlockCount . to fromIntegral
             t = pps ^. bkSgnCntT
         case Map.keys (Map.filter (== vk) dms) of
         -- Currently we do not restrict the number of delegators to a given key
@@ -52,9 +52,9 @@ instance STS SIGCNT where
         -- Even we implement the restriction in the delegation rules, we might
         -- still want to check this (unless the types forbid such situation).
           [vkG] -> do
-            let sgs' = S.drop (S.length sgs + 1 - w) (sgs |> vkG)
+            let sgs' = S.drop (S.length sgs + 1 - k) (sgs |> vkG)
                 nrSignedBks = fromIntegral (S.length (S.filter (==vkG) sgs'))
-            nrSignedBks <= fromIntegral w * t ?! TooManyIssuedBlocks vkG
+            nrSignedBks <= fromIntegral k * t ?! TooManyIssuedBlocks vkG
             return $! sgs'
           [] -> do
             failBecause NotADelegate

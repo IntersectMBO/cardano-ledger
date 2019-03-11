@@ -360,10 +360,19 @@ lower for the same number of iterations.
 \label{sec:conclusion}
 
 From these experiments one can conclude that the convergence speed is higher for
-continued fractions, in particular for the natural logarithm. This, together
-with the fact that continued fractions can be implemented in a general way,
-taking only sequence generators for $a_{i}$ and $b_{i}$ as input, it seems to be
-advantageous to base both approximations on continued fractions.
+continued fractions, in particular for the natural logarithm. On the other hand,
+timing analysis showed that due to the simpler calculation per iteration of
+Taylor series, the exponential function can be approximated more efficiently
+using that approach. Therefore we decided to use both, Taylor series for $\exp$
+and continued fractions for $\ln$.
+
+To decide when the approximation has enough precision, we use the following
+criterion for two succeeding approximations $x_{n}, x_{n+1}$:
+\begin{equation*}
+  \vert x_{n} - x_{n+1}\vert < \epsilon
+\end{equation*}
+
+Therefore both approximation schemes result in the same precision.
 
 \section{Reference Implementation}
 \label{sec:refer-impl}

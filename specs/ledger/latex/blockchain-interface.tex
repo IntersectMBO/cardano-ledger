@@ -54,12 +54,12 @@
     \label{eq:rule:delegation-interface}
     \inference
     {
-      \var{certificateLiveness} \mapsto d \in \var{pps} \\
+      \var{stableAfter} \mapsto k \in \var{pps} & d \leteq 2 \cdot k \\
       {\begin{array}{l}
          \mathcal{K} \\
          e\\
          s\\
-         d
+         k
        \end{array}}
       \vdash
       {
@@ -132,30 +132,6 @@
   \caption{Delegation interface rules}
   \label{fig:rules:delegation-interface}
 \end{figure}
-
-\subsubsection{Delegation interface functions}
-\label{sec:delegation-interface-functions}
-
-\begin{figure}[htb]
-  \begin{align*}
-    & \fun{delegates} \in \DIState \to (\VKeyGen \times \VKey) \to \Bool & \text{delegation relationship}\\
-    & \fun{delegates}~s~(\var{vk_s}, \var{vk_d}) = \var{vk_s} \mapsto \var{vk_d} \in (\var{dms}~s)\\
-    \nextdef
-    & \fun{initialDS} \in \VKeyGen \to \DIState & \text{initial delegation state}\\
-    & \fun{initialDS}~\var{ks} =
-      \left(
-      \begin{array}{l}
-        \var{ks} \mapsto \var{ks}\\
-        \emptyset\\
-        \epsilon\\
-        \emptyset\\
-      \end{array}
-      \right)
-  \end{align*}
-  \caption{Delegation interface functions}
-\end{figure}
-
-\clearpage
 
 \subsection{Update-proposals interface}
 \label{sec:update-proposals-interface}
@@ -506,7 +482,7 @@ the end on an epoch.
           \end{array}
         \right)
       }\\
-      \var{chainStability} \mapsto k \in  \var{pps} &
+      \var{stableAfter} \mapsto k \in  \var{pps} &
       \var{upropTTL} \mapsto u \in \var{pps} \\
       {
         \begin{array}{r@{~=~}l}
@@ -707,7 +683,7 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     \label{eq:rule:upi-ec}
     \inference
     {
-      \var{chainStability} \mapsto k \in  \var{pps} &
+      \var{stableAfter} \mapsto k \in  \var{pps} &
       {\begin{array}{l}
          k\\
          s_n
