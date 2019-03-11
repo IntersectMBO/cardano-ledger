@@ -15,7 +15,7 @@ import Formatting.Buildable (Buildable)
 import Cardano.Binary.Class (Bi(..))
 
 newtype BlockCount = BlockCount
-    { getBlockCount :: Word64
+    { getBlockCount :: Word64 -- TODO: rename to unBlockCount
     } deriving ( Eq
               , Ord
               , Num
