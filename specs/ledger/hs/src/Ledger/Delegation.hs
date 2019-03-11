@@ -34,7 +34,7 @@ module Ledger.Delegation
     , _dSEnvAllowedDelegators
     , _dSEnvEpoch
     , _dSEnvSlot
-    , _dSEnvLiveness
+    , _dSEnvStableAfter
     )
   , allowedDelegators
   , DState
@@ -51,9 +51,10 @@ module Ledger.Delegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
   , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
+  , liveAfter
   -- * State lens fields
   , slot
-  , liveness
+  , stableAfter
   , delegationMap
   -- * State lens type classes
   , HasScheduledDelegations
@@ -119,6 +120,8 @@ import Ledger.Core
   , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
+  , BlockCount(BlockCount)
+  , unBlockCount
   , VKey
   , VKeyGenesis(VKeyGenesis)
   , (⨃)
@@ -180,7 +183,7 @@ data DSEnv = DSEnv
   { _dSEnvAllowedDelegators :: Set VKeyGenesis
   , _dSEnvEpoch :: Epoch
   , _dSEnvSlot :: Slot
-  , _dSEnvLiveness :: SlotCount
+  , _dSEnvStableAfter :: BlockCount
   } deriving (Show, Eq)
 
 makeFields ''DSEnv
@@ -280,11 +283,12 @@ instance STS SDELEG where
         TRC (env, st, cert) <- judgmentContext
         verify cert ?! DoesNotVerify
         notAlreadyDelegated st cert ?! HasAlreadyDelegated
-        notAlreadyScheduled env st cert ?! IsAlreadyScheduled
+        let d = liveAfter (env ^. stableAfter)
+        notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
         env ^. epoch <= cert ^. depoch ?! IsPastEpoch
         return $ st
-          & scheduledDelegations <>~ [((env ^. slot) `addSlot` (env ^. liveness)
+          & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. dwho
                                       )]
           & keyEpochDelegations %~ Set.insert (epochDelegator cert)
@@ -292,6 +296,7 @@ instance STS SDELEG where
     where
       verify :: DCert -> Bool
       verify = const True
+
       -- Check that this delegator hasn't already delegated this epoch
       notAlreadyDelegated :: DSState -> DCert -> Bool
       notAlreadyDelegated st cert =
@@ -301,11 +306,16 @@ instance STS SDELEG where
       epochDelegator cert = (cert ^. depoch, cert ^. dwho . _1)
 
       -- Check whether there is a scheduled delegation from this key
-      notAlreadyScheduled :: DSEnv -> DSState -> DCert -> Bool
-      notAlreadyScheduled env st cert =
+      notAlreadyScheduled :: SlotCount -> DSEnv -> DSState -> DCert -> Bool
+      notAlreadyScheduled d env st cert =
         List.notElem
-          ((env ^. slot) `addSlot` (env ^. liveness), cert ^. dwho . _1)
+          ((env ^. slot) `addSlot` d, cert ^. dwho . _1)
           (st ^. scheduledDelegations . to (fmap $ fmap fst))
+
+-- | Compute after which slot the delegation certificate will become live,
+-- using the chain stability parameter.
+liveAfter :: BlockCount -> SlotCount
+liveAfter bc = SlotCount $ 2 * unBlockCount bc
 
 -- | Delegation rules
 data ADELEG
@@ -437,10 +447,11 @@ instance STS DELEG where
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
         as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
+        let d = liveAfter (env ^. stableAfter)
         return $ DIState
           (as ^. delegationMap)
           (as ^. lastDelegation)
-          (filter (aboutSlot (env ^. slot) (env ^. liveness) . fst)
+          (filter (aboutSlot (env ^. slot) d . fst)
             $ sds ^. scheduledDelegations)
           (Set.filter ((env ^. epoch <=) . fst)
             $ sds ^. keyEpochDelegations)
@@ -508,6 +519,6 @@ instance HasTrace DELEG where
     <$> Gen.set (linear 1 7) vkgenesisGen
     <*> (Epoch <$> Gen.integral (linear 0 100))
     <*> (Slot <$> Gen.integral (linear 0 10000))
-    <*> (SlotCount <$> Gen.integral (linear 0 10))
+    <*> (BlockCount <$> Gen.integral (linear 0 10))
 
   sigGen e _st = dcertsGen e

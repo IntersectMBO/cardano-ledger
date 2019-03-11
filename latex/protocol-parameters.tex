@@ -63,6 +63,8 @@ between epochs and slots.
         \var{a_0} & \posReals & \text{pool influence}\\
         \tau & \unitInterval & \text{treasury expansion}\\
         \rho & \unitInterval & \text{monetary expansion}\\
+        \var{maxBHSize} & \N & \text{max block header size}\\
+        \var{maxBBSize} & \N & \text{max block body size}\\
       \end{array}
     \right)
   \end{equation*}
@@ -81,9 +83,11 @@ between epochs and slots.
     \fun{movingAvgExp},
     \fun{emax},
     \fun{nopt},
-  \fun{influence},
-  \fun{tau},
-  \fun{rho}
+    \fun{influence},
+    \fun{tau},
+    \fun{rho},
+    \fun{maxBHSize},
+    \fun{maxBBSize},
   \end{center}
   %
   \emph{Abstract Functions}
