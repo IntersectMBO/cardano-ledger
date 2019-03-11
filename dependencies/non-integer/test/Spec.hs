@@ -119,11 +119,11 @@ prop_FPIdemPotent' (Positive a) (Positive b) =
 
 prop_FPIdemPotent'' :: Positive FixedPoint -> Property
 prop_FPIdemPotent'' (Positive a) =
-    a > 0 ==> (exp'' $ ln' a) - a < epsFP
+    a > 0 ==> (exp' $ ln' a) - a < epsFP
 
 prop_FPIdemPotent''' :: PosInt -> PosInt -> Property
 prop_FPIdemPotent''' (Positive a) (Positive b) =
-    b'' > 0 && a'' > 0 ==> (ln' $ exp'' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
+    b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
     where (a'', b'') = normalizeInts a b
 
 prop_FPfindD :: Positive FixedPoint -> Property
@@ -244,7 +244,7 @@ prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
 
 prop_ExpLaw'' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_ExpLaw'' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp'' (a'/b' + x'/y') - (exp'' (a'/b') * exp'' (x'/y'))) < eps) === True
+    (abs (exp' (a'/b' + x'/y') - (exp' (a'/b') * exp' (x'/y'))) < eps) === True
         where (b'', a'') = normalizeInts a b
               (y'', x'') = normalizeInts x y
               a' = fromIntegral a''
@@ -336,16 +336,6 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
-  putStrLn "-------------------------------------------------"
-  putStrLn "-- Testing Taylor Series Approximation for exp --"
-  putStrLn "-------------------------------------------------"
-  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
-  quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
-  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent'')
-  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent''')
-
   putStrLn ""
 
   putStrLn "------------------------------"
