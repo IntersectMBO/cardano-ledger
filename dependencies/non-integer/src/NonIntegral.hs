@@ -4,11 +4,8 @@ module NonIntegral
   , ln'
   , findE
   , splitLn
-  , fexp
   , scaleExp
   ) where
-
-import Debug.Trace
 
 scaleExp :: (RealFrac b) => b -> (Integer, b)
 scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
@@ -18,7 +15,7 @@ scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
 a *** b
   | a == 0 = if b == 0 then 1 else 0
   | a == 1 = 1
-  | otherwise = exp' $ l
+  | otherwise = exp' l
     where l = b * ln' a
 
 ipow' :: Num a => a -> Integer -> a
@@ -32,24 +29,6 @@ ipow x n
     | n < 0 = 1 / (ipow x (-n))
     | otherwise = ipow' x n
 
--- | compute e^x using continued fractions. For x < 0 compute 1/e^(-x). Scale to
--- x' \in [0,1] to reduce overflow risk in numerical types with limited values.
-exp' :: (RealFrac a, Enum a, Show a) => a -> a
-exp' x
-  | x < 0 = 1 / exp' (-x)
-  | x == 0 = 1
-  | x > 1  = let (n, euler) = scaleExp x in
-             let x' = exp' euler in
-             -- trace ("(n, euler) = (" ++ show n ++ ", " ++ show euler ++ ") [" ++ show x ++ "] = " ++ show (ipow x' n)) $
-             ipow x' n
-  | otherwise = fexp 1000 x
-
-
--- | Approximate exp(x) via continued fraction.
-fexp :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
-fexp maxN x =
-  cf maxN 0 eps Nothing 1 0 1 1 [x * a | a <- 1 : [-1,-2 ..]] (1 : [x + b | b <- [2,3 ..]])
-
 logAs :: (Num a) => a -> [a]
 logAs a = a' : a' : logAs (a + 1)
   where
@@ -62,7 +41,7 @@ fln maxN x = if x < 0
              else cf maxN 0 eps Nothing 1 0 0 1 (x : [a * x | a <- logAs 1]) [1,2 ..]
 
 eps :: (Fractional a) => a
-eps = 1 / 10.0^(24::Int)
+eps = 1 / 10^(24::Int)
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
 -- The 'maxN' parameter gives the maximum recursion depth, 'n' gives the current
@@ -158,11 +137,11 @@ contract factor x l u
     mid = l + ((u - l) `div` 2)
     x' = ipow factor mid
 
-e :: (RealFrac a, Enum a, Show a) => a
+e :: (RealFrac a, Show a) => a
 e = exp' 1
 
 -- | find n with `e^n<=x<e^(n+1)`
-findE :: (RealFrac a, Enum a, Show a) => a -> a -> Integer
+findE :: (RealFrac a) => a -> a -> Integer
 findE eone x = contract eone x lower upper
   where
     (lower, upper) = bound eone x (1 / eone) eone (-1) 1
@@ -177,9 +156,23 @@ ln' x = if x == 0
   where (n, x') = splitLn x
         approxln = fln 1000 x'
 
-splitLn :: (RealFrac b, Enum b, Show b) => b -> (Integer, b)
+splitLn :: (RealFrac b, Show b) => b -> (Integer, b)
 splitLn x = --trace ("(n, x', y') = (" ++ show n ++ ", " ++ show x' ++ ", " ++ show y' ++ ")") $
             (n, x')
     where n = findE e x
           y' = exp' (fromIntegral n)
           x' = (x / y') - 1 -- x / e^n > 1!
+
+exp' :: (RealFrac a, Show a) => a -> a
+exp' x
+    | x < 0     = 1 / exp' (-x)
+    | otherwise = ipow x' n
+    where (n, x_) = scaleExp x
+          x'      = taylorExp 1000 1 x_ 1 1 1
+
+taylorExp :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a
+taylorExp maxN currentN x lastX acc divisor
+    | maxN == currentN = acc
+    | abs nextX < eps  = acc
+    | otherwise = taylorExp maxN (currentN + 1) x nextX (acc + nextX) (divisor + 1)
+    where nextX = (lastX * x) / divisor
