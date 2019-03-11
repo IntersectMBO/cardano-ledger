@@ -32,5 +32,5 @@ main = do
     let base     = read (takeWhile (/= ' ') line)        :: FixedPoint
     let exponent = read (tail $ dropWhile (/= ' ') line) :: FixedPoint
     putStrLn $ show ((base / precision) *** (exponent / precision))
-            ++ " " ++ show (exp'' (base / precision))
+            ++ " " ++ show (exp' (base / precision))
     main
