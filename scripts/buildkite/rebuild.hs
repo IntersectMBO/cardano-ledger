@@ -40,6 +40,8 @@ main = do
 
   cacheUploadStep cacheConfig
 
+  when (buildResult == ExitSuccess) coverageUploadStep
+
   exitWith buildResult
  where
   buildSubdir :: Turtle.FilePath -> IO ExitCode
@@ -60,7 +62,25 @@ buildStep testArgs = do
   buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
   build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
   test =
-    stackBuild $ ["--test", "--jobs", "1"] ++ maybe [] ("--ta" :) testArgs
+    stackBuild
+      $  ["--test", "--coverage", "--jobs", "1"]
+      ++ maybe [] ("--ta" :) testArgs
+
+-- | Upload coverage information to coveralls
+coverageUploadStep :: IO ()
+coverageUploadStep = do
+  echo "--- Uploading Coverage Information"
+  need "COVERALLS_REPO_TOKEN" >>= \case
+    Nothing -> printf
+      "Missing coverall repo token. Not uploading coverage information.\n"
+    Just repoToken -> do
+      result <- proc
+        "shc"
+        ["--repo-token", repoToken, "cardano-chain", "cardano-chain-test"]
+        empty
+      case result of
+        ExitSuccess   -> printf "Coverage information upload successful.\n"
+        ExitFailure _ -> printf "Coverage information upload failed.\n"
 
 -- buildkite agents have S3 creds installed, but under different names
 awsCreds :: IO ()
