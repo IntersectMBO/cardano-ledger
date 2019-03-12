@@ -287,11 +287,11 @@ requests).
       \\
       ~
       \\
-      \var{refunded} = \keyRefunds{pp}{stkeys}~{tx}
+      \var{refunded} \leteq \keyRefunds{pp}{stkeys}~{tx}
       \\
-      \var{decayed} = \decayedTx{pp}{stkeys}~{tx}
+      \var{decayed} \leteq \decayedTx{pp}{stkeys}~{tx}
       \\
-      \var{depositChange} =
+      \var{depositChange} \leteq
         (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
     }
     {
@@ -559,7 +559,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
     \label{eq:utxo-witness-inductive-shelley}
     \inference[UTxO-wit]
     {
-      (utxo, \wcard, \wcard) = \var{utxoSt} \\~\\
+      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwits{tx},
         \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
       \fun{witsNeeded}~{utxo}~{tx} = \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
