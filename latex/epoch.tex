@@ -386,7 +386,7 @@ This transition has no preconditions and results in the following state change:
     \inference[Snapshot]
     {
       {
-      \begin{array}{r@{=}l}
+      \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees}) & \var{utxoSt}\\
         (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
@@ -507,7 +507,7 @@ This transition has no preconditions and results in the following state change:
     \inference[Pool-Reap]
     {
       {
-      \begin{array}{r@{=}l}
+      \begin{array}{r@{~\leteq~}l}
         \var{retired} & \var{retiring}^{-1}~\var{e_{new}} \\
         \var{pr} & \poolRefunds{pp}{retiring}{(\firstSlot{e_{new}})} \\
         \var{rewardAcnts}
@@ -667,15 +667,15 @@ for ease of reading.
     \inference[New-Proto-Param-Accepted]
     {
       {\begin{array}{rcl}
-          \var{slot} & = & \firstSlot{e_{new}} \\
-          \var{oblg_{cur}} & = & \obligation{pp}{stkeys}{stpools}{slot} \\
-          \var{oblg_{new}} & = & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
-          \var{diff} & = & \var{oblg_{cur}} - \var{oblg_{new}} \\
+          \var{slot} & \leteq & \firstSlot{e_{new}} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
           \\
           \var{reserves} + \var{diff} & \geq & 0\\
       \end{array}}\\
       ~\\
-      \var{utxoSt'} =
+      \var{utxoSt'} \leteq
       \left(
         {
           \begin{array}{r}
@@ -686,7 +686,7 @@ for ease of reading.
         }
       \right)
       &
-      \var{acnt'} =
+      \var{acnt'} \leteq
       \left(
         {
           \begin{array}{r}
@@ -730,10 +730,10 @@ for ease of reading.
     \inference[New-Proto-Param-Denied]
     {
       {\begin{array}{rcl}
-          \var{slot} & = & \firstSlot{e_{new}} \\
-          \var{oblg_{cur}} & = & \obligation{pp}{stkeys}{stpools}{slot} \\
-          \var{oblg_{new}} & = & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
-          \var{diff} & = & \var{oblg_{cur}} - \var{oblg_{new}} \\
+          \var{slot} & \leteq & \firstSlot{e_{new}} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
           \\
           \var{reserves} + \var{diff} & < & 0\\
       \end{array}}\\
@@ -1372,7 +1372,7 @@ smaller refunds for deposits than were paid upon depositing.
     \inference[Rewards]
     {
       {
-      \begin{array}{r@{=}l}
+      \begin{array}{r@{~\leteq~}l}
         \left(
           \begin{array}{c}
             \wcard \\

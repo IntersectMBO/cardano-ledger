@@ -324,7 +324,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-    \var{c}\in\DCertRegKey & hk = \cwitness{c} & hk \notin \dom \var{stkeys}
+    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stkeys}
     }
     {
       \begin{array}{r}
@@ -355,7 +355,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-dereg}
     \inference[Deleg-Dereg]
     {
-      \var{c}\in \DCertDeRegKey  & hk = \cwitness{c} \\
+      \var{c}\in \DCertDeRegKey  & hk \leteq \cwitness{c} \\
     hk \in \dom \var{stkeys} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
     }
     {
@@ -387,7 +387,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & hk = \cwitness{c} & hk \in \dom \var{stkeys}
+      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stkeys}
     }
     {
       \begin{array}{r}
@@ -482,7 +482,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \inference[Pool-Reg]
     {
       \var{c}\in\DCertRegPool
-      & \var{hk} = \cwitness{c}
+      & \var{hk} \leteq \cwitness{c}
       & hk \notin \dom \var{stpools}
     }
     {
@@ -517,7 +517,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \inference[Pool-reReg]
     {
       \var{c}\in\DCertRegPool
-      & \var{hk} = \cwitness{c}
+      & \var{hk} \leteq \cwitness{c}
       & hk \in \dom \var{stpools}
     }
     {
@@ -551,10 +551,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \inference[Pool-Retire]
     {
     \var{c} \in \DCertRetirePool
-    & hk = \cwitness{c}
+    & hk \leteq \cwitness{c}
     & \var{hk} \in \dom \var{stpools} \\
-    \var{e} = \retire{c}
-    & \var{cepoch} = \epoch{slot}
+    \var{e} \leteq \retire{c}
+    & \var{cepoch} \leteq \epoch{slot}
     & \var{cepoch} < \var{e} < \var{cepoch} + (\fun{emax}~{pp})
   }
   {
@@ -778,11 +778,11 @@ will be invalid.
     \label{eq:delegs-base}
     \inference[Seq-delg-base]
     {
-      \var{wdrls} = \txwdrls{tx}
+      \var{wdrls} \leteq \txwdrls{tx}
       &
       \var{wdrls} \subseteq \var{rewards}
       \\
-      \var{rewards'} = \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
+      \var{rewards'} \leteq \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
     }
     {
       \left(
@@ -828,7 +828,7 @@ will be invalid.
     \inference[Seq-delg-ind]
     {
       \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
-        ptr = (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma - 1) \\~\\
+        ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma - 1) \\~\\
         {
           \left(
             \begin{array}{r}
