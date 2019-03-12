@@ -44,6 +44,7 @@ localLib.nix-tools.release-nix {
     jobs.semanticsSpec
     jobs.shelleyLedgerSpec
     jobs.delegationDesignSpec
+    jobs.nonIntegerCalculations
 
     jobs.nix-tools.libs.cs-blockchain.x86_64-darwin
     jobs.nix-tools.libs.cs-blockchain.x86_64-linux
