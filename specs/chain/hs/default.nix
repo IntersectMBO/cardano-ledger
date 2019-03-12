@@ -1,4 +1,4 @@
 let
-  pkgs = import ../../../pkgs.nix;
+  pkgs = import ../../../default.nix {};
 in
-  pkgs.haskell.packages.ghc861.cs-blockchain
+  pkgs.nix-tools.libs.cs-blockchain

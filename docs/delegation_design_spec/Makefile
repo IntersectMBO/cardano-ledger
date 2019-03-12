@@ -18,7 +18,7 @@ all: $(DOCNAME).pdf
 
 ##
 ## CUSTOM BUILD RULES
-## 
+##
 
 ##
 ## MAIN LATEXMK RULE
@@ -39,3 +39,8 @@ watch: $(DOCNAME).tex
 
 clean:
 	latexmk -CA
+
+install:
+	mkdir -pv ${out}/nix-support/
+	cp $(DOCNAME).pdf ${out}/
+	echo "doc-pdf $(DOCNAME)" > ${out}/nix-support/hydra-build-products
