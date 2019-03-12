@@ -459,6 +459,7 @@ the end on an epoch.
         \begin{array}{l}
           k\\
           s_n\\
+          \var{dms}\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
@@ -555,7 +556,7 @@ epoch, the proposal can only be adopted in the next epoch.
 Figure~\ref{fig:up-confirmed-too-late} shows an example of a proposal being
 confirmed too late in an epoch, where it is not possible to get enough
 endorsements in the remaining window. In this Figure we take $k = 2$, and we
-assume $5$ endorsements are needed to consider a proposal as candidate for
+assume $4$ endorsements are needed to consider a proposal as candidate for
 adoption.
 %
 Note that, in the final state, we use union override to define the updated
@@ -776,7 +777,7 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     % Epoch end.
     \pgfmathsetmacro{\eend}{11}
     % Number of positive votes needed
-    \pgfmathsetmacro{\votes}{5}
+    \pgfmathsetmacro{\votes}{4}
 
     % Draw the horizontal line
     \draw[thick, -Triangle] (0,0) -- (\nrSlots,0)
