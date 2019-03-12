@@ -2,6 +2,23 @@
 
 Formal and executable specifications for the new features to be introduced by Shelley.
 
+## Build tools
+
+For building LaTeX documents we use
+[`nix`](https://nixos.org/nix/download.html). Haskell files can be built either
+with `nix` or [`stack`](https://docs.haskellstack.org/en/stable/README/).
+
+When using `nix` it is recommended that you setup the cache, so that it can
+reuse built artifacts, reducing the compilation times dramatically:
+
+Put the following in `/etc/nix/nix.conf` if you have a system-wide `nix`
+installation , or in `~/.config/nix/nix.conf` if you have a local installation:
+
+```nix
+substituters        = https://hydra.iohk.io https://cache.nixos.org/
+trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+```
+
 ## Building LaTeX documents
 
 Change to the latex directory `fm-ledger-rules/latex/`.
