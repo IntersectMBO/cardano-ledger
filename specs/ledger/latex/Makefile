@@ -42,5 +42,5 @@ clean:
 
 install:
 	mkdir -pv ${out}/nix-support/
-	cp ledger-spec.pdf ${out}/ledger-spec.pdf
+	cp ledger-spec.pdf ${out}/
 	echo "doc-pdf ledger-spec ${out}/ledger-spec.pdf" > ${out}/nix-support/hydra-build-products
