@@ -60,9 +60,9 @@ and then calls the $\mathsf{DELEGS}$ transition.
     \label{eq:ledger}
     \inference[ledger]
     {
-      (\var{dstate}, \var{pstate}) = \var{dpstate} \\
-    (\var{stkeys}, \_, \_, \_) = \var{dstate} \\
-    (\_, \_, \var{stpools}, \_) = \var{pstate} \\~\\
+      (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
+    (\var{stkeys}, \_, \_, \_) \leteq \var{dstate} \\
+    (\_, \_, \var{stpools}, \_) \leteq \var{pstate} \\~\\
       \left({
         \begin{array}{r}
         \var{slot} \\

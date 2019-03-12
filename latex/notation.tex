@@ -11,12 +11,6 @@ The transition system is explained in \cite{small_step_semantics}.
     denoted by $\epsilon$, and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
     the sequence that results from appending $\type{x} \in \type{X}$ to
     $\Lambda$.
-  \item[Dropping on sequences] Given a sequence $\Lambda$,
-    $\Lambda \shortdownarrow n$ is the sequence that is obtained after removing
-    (dropping) the first $n$ elements from $\Lambda$. If $n \leq 0$ then
-    $\Lambda \shortdownarrow n = \Lambda$.
-  \item[Appending with a moving window] Given a sequence $\Lambda$, we define
-    $$\Lambda ;_w x \leteq (\Lambda; x) \shortdownarrow (\size{\Lambda} + 1 - w)$$
   \item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
     Given a function $f$ we write $f~a$ for the application of $f$ to argument
     $a$.
