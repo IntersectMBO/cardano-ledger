@@ -34,4 +34,5 @@ localLib.nix-tools.default-nix ./nix/pkgs.nix args
   semanticsSpec = import ./specs/semantics/latex {};
   shelleyLedgerSpec = import ./latex {};
   delegationDesignSpec = import ./docs/delegation_design_spec {};
+  nonIntegerCalculations = import ./dependencies/non-integer/doc {};
 }
