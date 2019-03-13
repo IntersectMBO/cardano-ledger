@@ -384,11 +384,7 @@ updateBody env bs b = do
 
   -- Update the UTxO
   utxo' <-
-    UTxO.updateUTxO
-        protocolMagic
-        (UPI.adoptedProtocolParameters updateState)
-        utxo
-        txs
+    UTxO.updateUTxO utxoEnv utxo txs
       `wrapError` ChainValidationUTxOValidationError
 
   -- Validate the update payload proof
@@ -429,6 +425,11 @@ updateBody env bs b = do
     , DI.k           = k
     , DI.currentEpoch = currentEpoch
     , DI.currentSlot = currentSlot
+    }
+
+  utxoEnv = UTxO.Environment
+    { UTxO.protocolMagic = protocolMagic
+    , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
     }
 
   updateEnv = UPI.Environment
@@ -604,30 +605,28 @@ data Error
 
 -- | Fold transaction validation over a 'Stream' of 'Block's
 foldUTxO
-  :: ProtocolMagic
-  -> Update.ProtocolParameters
+  :: UTxO.Environment
   -> UTxO
   -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO UTxO
-foldUTxO pm pps utxo blocks = S.foldM_
-  (foldUTxOBlock pm pps)
+foldUTxO env utxo blocks = S.foldM_
+  (foldUTxOBlock env)
   (pure utxo)
   pure
   (hoist (withExceptT ErrorParseError) blocks)
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Block'
 foldUTxOBlock
-  :: ProtocolMagic
-  -> Update.ProtocolParameters
+  :: UTxO.Environment
   -> UTxO
   -> ABlock ByteString
   -> ExceptT Error ResIO UTxO
-foldUTxOBlock pm pps utxo block =
+foldUTxOBlock env utxo block =
   withExceptT
       (ErrorUTxOValidationError . unflattenSlotId mainnetEpochSlots $ blockSlot
         block
       )
-    $ UTxO.updateUTxO pm pps utxo (aUnTxPayload $ blockTxPayload block)
+    $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =

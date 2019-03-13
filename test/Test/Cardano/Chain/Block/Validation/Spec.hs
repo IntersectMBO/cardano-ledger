@@ -39,7 +39,6 @@ import Cardano.Chain.Block
   , initialChainValidationState
   , updateBlock
   )
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (trace)
@@ -47,9 +46,9 @@ import Control.State.Transition (State)
 import Control.State.Transition.Trace
   (TraceOrder(OldestFirst), Trace, preStatesAndSignals, traceEnv)
 
-import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg)
-import Test.Cardano.Crypto.Gen (genProtocolMagic)
+import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg, rcDCert)
 import Test.Options (TestScenario, TSProperty, withTestsTS)
+
 
 tests :: TestScenario -> IO Bool
 tests ts = checkParallel (($$discoverPropArg :: TestScenario -> Group) ts)
@@ -59,12 +58,11 @@ tests ts = checkParallel (($$discoverPropArg :: TestScenario -> Group) ts)
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 300 $ property $ do
-    pm <- forAll genProtocolMagic
     tr <- forAll trace
-    passConcreteValidation pm tr
+    passConcreteValidation tr
 
-passConcreteValidation :: MonadTest m => ProtocolMagic -> Trace CHAIN -> m ()
-passConcreteValidation pm tr = void $ evalEither res
+passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
+passConcreteValidation tr = void $ evalEither res
  where
   res = foldM elaborateAndUpdate initSt $ preStatesAndSignals OldestFirst tr
 
@@ -75,10 +73,12 @@ passConcreteValidation pm tr = void $ evalEither res
   elaborateAndUpdate cst (ast, ab) = updateBlock
     config
     cst
-    (elaborateBS config aenv ast cst ab)
-    where aenv = tr ^. traceEnv
+    (elaborateBS config aenv dCert cst ab)
+   where
+    aenv  = tr ^. traceEnv
+    dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) ast
 
   initSt =
     either (panic . show) identity $ initialChainValidationState config
 
-  config = abEnvToCfg pm (tr ^. traceEnv)
+  config = abEnvToCfg (tr ^. traceEnv)

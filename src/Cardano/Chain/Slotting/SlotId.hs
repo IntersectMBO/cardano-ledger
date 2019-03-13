@@ -40,13 +40,14 @@ import Cardano.Binary
 import Cardano.Chain.Common.BlockCount (BlockCount, unBlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
+import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
   ( LocalSlotIndex(..)
-  , unLocalSlotIndex
   , localSlotIndexMinBound
   , mkLocalSlotIndex
+  , unLocalSlotIndex
   )
-import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
+import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 
 
 -- | Slot is identified by index of epoch and index of slot in
@@ -166,13 +167,13 @@ unflattenSlotId (EpochSlots n) (FlatSlotId fsId)
                <> "Input slots-per-epoch: " <> show n <> "."
     else fromIntegral slot
 
--- | Increase a 'FlatSlotId' by 'EpochSlots'
-addSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
-addSlotNumber (EpochSlots a) (FlatSlotId b) = FlatSlotId $ a + b
+-- | Increase a 'FlatSlotId' by 'SlotCount'
+addSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
+addSlotNumber (SlotCount a) (FlatSlotId b) = FlatSlotId $ a + b
 
--- | Decrease a 'FlatSlotId' by 'EpochSlots', going no lower than 0
-subSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
-subSlotNumber (EpochSlots a) (FlatSlotId b) =
+-- | Decrease a 'FlatSlotId' by 'SlotCount', going no lower than 0
+subSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
+subSlotNumber (SlotCount a) (FlatSlotId b) =
   if a > b then FlatSlotId 0 else FlatSlotId (b - a)
 
 slotNumberEpoch :: EpochSlots -> FlatSlotId -> EpochIndex
@@ -189,7 +190,7 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
   idx =
     fromIntegral
       $ unEpochSlots epochSlots
-      - unEpochSlots (kSlotSecurityParam k)
+      - unSlotCount (kSlotSecurityParam k)
       - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->

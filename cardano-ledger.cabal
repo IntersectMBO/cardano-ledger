@@ -26,6 +26,7 @@ library
                        Cardano.Chain.Delegation
                        Cardano.Chain.Delegation.Validation.Activation
                        Cardano.Chain.Delegation.Validation.Interface
+                       Cardano.Chain.Delegation.Validation.Scheduling
                        Cardano.Chain.Epoch.File
                        Cardano.Chain.Epoch.Validation
                        Cardano.Chain.Genesis
@@ -33,6 +34,8 @@ library
                        Cardano.Chain.Slotting
                        Cardano.Chain.Ssc
                        Cardano.Chain.Txp
+                       Cardano.Chain.Txp.UTxO
+                       Cardano.Chain.Txp.Validation
                        Cardano.Chain.Update
 
   other-modules:
@@ -63,7 +66,6 @@ library
 
                        Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
-                       Cardano.Chain.Delegation.Validation.Scheduling
 
                        Cardano.Chain.Genesis.AvvmBalances
                        Cardano.Chain.Genesis.Config
@@ -79,6 +81,7 @@ library
                        Cardano.Chain.Slotting.EpochIndex
                        Cardano.Chain.Slotting.EpochSlots
                        Cardano.Chain.Slotting.LocalSlotIndex
+                       Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
 
                        Cardano.Chain.Txp.Compact
@@ -89,8 +92,6 @@ library
                        Cardano.Chain.Txp.TxpConfiguration
                        Cardano.Chain.Txp.TxProof
                        Cardano.Chain.Txp.TxWitness
-                       Cardano.Chain.Txp.UTxO
-                       Cardano.Chain.Txp.Validation
 
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.ProtocolVersion
@@ -161,6 +162,7 @@ test-suite cardano-ledger-test
 
                        Test.Cardano.Chain.Block.CBOR
                        Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Block.Model
                        Test.Cardano.Chain.Block.Validation
 
                        Test.Cardano.Chain.Block.Validation.Spec
@@ -182,6 +184,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Elaboration.Block
                        Test.Cardano.Chain.Elaboration.Delegation
                        Test.Cardano.Chain.Elaboration.Keys
+                       Test.Cardano.Chain.Elaboration.UTxO
 
                        Test.Cardano.Chain.Epoch.File
 
@@ -203,6 +206,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json
+                       Test.Cardano.Chain.Txp.Model
 
                        Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example
@@ -214,6 +218,7 @@ test-suite cardano-ledger-test
 
   build-depends:       base
                      , base16-bytestring
+                     , bimap
                      , bytestring
                      , cardano-binary
                      , cardano-binary-test

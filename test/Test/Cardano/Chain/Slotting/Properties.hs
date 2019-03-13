@@ -29,6 +29,7 @@ import Cardano.Chain.Slotting
   , EpochSlots(..)
   , LocalSlotIndex(..)
   , LocalSlotIndexError(..)
+  , SlotCount(..)
   , flattenSlotId
   , unflattenSlotId
   , localSlotIndexSucc
@@ -38,30 +39,26 @@ import Cardano.Chain.Slotting
   , subSlotNumber
   )
 import Test.Cardano.Chain.Slotting.Gen
-  ( genFlatSlotId
+  ( genEpochSlots
+  , genFlatSlotId
   , genLocalSlotIndex
-  , genLsiEpochSlots
+  , genSlotCount
   , genSlotId
   , genConsistentSlotIdEpochSlots
   )
 import Test.Options (TestScenario, TSProperty, withTestsTS)
 
--- NB: `genLsiEpochSlots` is used because `LocalSlotIndex` is restricted to
--- `Word16` and therefore the highest `EpochSlots` you can have currently
--- is `maxBound :: Word16`.
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex
 --------------------------------------------------------------------------------
 
--- Check that `genLocalSlotIndex` does not `panic` for
--- different values of `EpochSlots`. NB: we use `genLsiEpochSlots`
--- to generate values of `EpochSlots` restricted to a maximum boundary
--- of `Word16` because `LocalSlotIndex` is restricted to `Word16` values.
+-- Check that `genLocalSlotIndex` does not `panic` for different values of
+-- `EpochSlots`
 ts_prop_genLocalSlotIndex :: TSProperty
 ts_prop_genLocalSlotIndex = withTestsTS 100 . property $ do
-  sc  <- forAll genLsiEpochSlots
-  lsi <- forAll $ genLocalSlotIndex sc
+  es  <- forAll genEpochSlots
+  lsi <- forAll $ genLocalSlotIndex es
   case lsi of
     UnsafeLocalSlotIndex _ -> success
 
@@ -69,19 +66,19 @@ ts_prop_genLocalSlotIndex = withTestsTS 100 . property $ do
 -- `LocalSlotIndex` values that exceed `EpochSlots`
 ts_prop_localSlotIndexToEnumOverflow :: TSProperty
 ts_prop_localSlotIndexToEnumOverflow = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
-  let lsi = 1 + unEpochSlots sc
+  es <- forAll genEpochSlots
+  let lsi = 1 + unEpochSlots es
   assertIsLeftConstr
     dummyLocSlotIndEnumOverflow
-    (localSlotIndexToEnum sc (fromIntegral lsi))
+    (localSlotIndexToEnum es (fromIntegral lsi))
 
 -- Check that `localSlotIndexToEnum` fails for
 -- `LocalSlotIndex` values that are negative.
 ts_prop_localSlotIndexToEnumUnderflow :: TSProperty
 ts_prop_localSlotIndexToEnumUnderflow = withTestsTS 100 . property $ do
   tVal <- forAll (Gen.int (Range.constant (negate 1) minBound))
-  sc   <- forAll genLsiEpochSlots
-  assertIsLeftConstr dummyLocSlotIndEnumUnderflow (localSlotIndexToEnum sc tVal)
+  es   <- forAll genEpochSlots
+  assertIsLeftConstr dummyLocSlotIndEnumUnderflow (localSlotIndexToEnum es tVal)
 
 -- Check that `localSlotIndexPred` does not fail
 -- for allowed values of `LocalSlotIndex` and `EpochSlots`.
@@ -90,7 +87,7 @@ ts_prop_localSlotIndexPred =
   withTestsTS 100
     . property
     $ do
-        es  <- forAll $ Gen.filter (\x -> unEpochSlots x /= 1) genLsiEpochSlots
+        es  <- forAll $ Gen.filter (\x -> unEpochSlots x /= 1) genEpochSlots
         -- Filter out LocalSlotIndex = 0 and EpochSlots = 1
         -- because you can't find the predecessor of the 0th slot.
         lsi <- forAll
@@ -103,7 +100,7 @@ ts_prop_localSlotIndexPred =
 -- a predecessor.
 ts_prop_localSlotIndexPredMinbound :: TSProperty
 ts_prop_localSlotIndexPredMinbound = withTestsTS 100 . property $ do
-  eSlots <- forAll genLsiEpochSlots
+  eSlots <- forAll genEpochSlots
   assertIsLeftConstr
     dummyLocSlotIndEnumUnderflow
     (localSlotIndexPred eSlots (UnsafeLocalSlotIndex 0))
@@ -115,7 +112,7 @@ ts_prop_localSlotIndexSucc =
   withTestsTS 100
     . property
     $ do
-        es  <- forAll genLsiEpochSlots
+        es  <- forAll genEpochSlots
         -- Generate a `LocalSlotIndex` at least two less than the `EpochSlots`
         -- to avoid overflow errors as `LocalSlotIndex` starts
         -- from 0th slot.
@@ -130,28 +127,28 @@ ts_prop_localSlotIndexSucc =
 -- this would actually mean moving to the next epoch).
 ts_prop_localSlotIndexSuccMaxbound :: TSProperty
 ts_prop_localSlotIndexSuccMaxbound = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
+  es <- forAll genEpochSlots
   assertIsLeftConstr
     dummyLocSlotIndEnumOverflow
-    ( localSlotIndexSucc sc
+    ( localSlotIndexSucc es
     $ UnsafeLocalSlotIndex
     $ 1
-    + (fromIntegral $ unEpochSlots sc)
+    + (fromIntegral $ unEpochSlots es)
     )
 
 -- Check that `localSlotIndexSucc . localSlotIndexPred == id`.
 ts_prop_localSlotIndexSuccPredisId :: TSProperty
 ts_prop_localSlotIndexSuccPredisId = withTestsTS 100 . property $ do
-  sc  <- forAll genLsiEpochSlots
+  es  <- forAll genEpochSlots
   lsi <- forAll
-    $ Gen.filter (\x -> unLocalSlotIndex x /= 0) (genLocalSlotIndex sc)
-  let predSucc = localSlotIndexPred sc lsi >>= localSlotIndexSucc sc
+    $ Gen.filter (\x -> unLocalSlotIndex x /= 0) (genLocalSlotIndex es)
+  let predSucc = localSlotIndexPred es lsi >>= localSlotIndexSucc es
   compareValueRight lsi predSucc
 
 -- Check that `localSlotIndexPred . localSlotIndexSucc == id`.
 ts_prop_localSlotIndexPredSuccisId :: TSProperty
 ts_prop_localSlotIndexPredSuccisId = withTestsTS 100 . property $ do
-  es  <- forAll genLsiEpochSlots
+  es  <- forAll genEpochSlots
   lsi <- forAll $ genLocalSlotIndex es
   let
     esPlus2  = EpochSlots $ unEpochSlots es + 2
@@ -161,7 +158,7 @@ ts_prop_localSlotIndexPredSuccisId = withTestsTS 100 . property $ do
 -- Check that `localSlotIndexToEnum . localSlotIndexFromEnum == id`.
 ts_prop_localSlotIndexToEnumFromEnum :: TSProperty
 ts_prop_localSlotIndexToEnumFromEnum = withTestsTS 100 . property $ do
-  sc   <- forAll genLsiEpochSlots
+  sc   <- forAll genEpochSlots
   iLsi <- forAll $ genLocalSlotIndex sc
   let fLsi = localSlotIndexToEnum sc $ localSlotIndexFromEnum iLsi
   compareValueRight iLsi fLsi
@@ -169,7 +166,7 @@ ts_prop_localSlotIndexToEnumFromEnum = withTestsTS 100 . property $ do
 -- Check that `localSlotIndexFromEnum . localSlotIndexToEnum == id`.
 ts_prop_localSlotIndexFromEnumToEnum :: TSProperty
 ts_prop_localSlotIndexFromEnumToEnum = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
+  sc <- forAll genEpochSlots
   let sIndex = fromIntegral $ unEpochSlots sc - 1 :: Int
   let lsi    = localSlotIndexToEnum sc sIndex
   case lsi of
@@ -200,7 +197,7 @@ dummyLocSlotIndIndexOverflow =
 -- allowed values of `EpochSlots` and `FlatSlotId`.
 ts_prop_unflattenSlotId :: TSProperty
 ts_prop_unflattenSlotId = withTestsTS 100 . property $ do
-  sc   <- forAll genLsiEpochSlots
+  sc   <- forAll genEpochSlots
   fsId <- forAll $ genFlatSlotId
   _    <- pure $ unflattenSlotId sc fsId
   success
@@ -215,14 +212,14 @@ ts_prop_unflattenFlattenSlotId = withTestsTS 100 . property $ do
 -- allowed values of `EpochSlots`.
 ts_prop_genSlotId :: TSProperty
 ts_prop_genSlotId = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
+  sc <- forAll genEpochSlots
   _  <- forAll $ genSlotId sc
   success
 
 -- Check that `flattenSlotId . unflattenSlotId == id`.
 ts_prop_flattenUnflattenSlotId :: TSProperty
 ts_prop_flattenUnflattenSlotId = withTestsTS 100 . property $ do
-  sc   <- forAll genLsiEpochSlots
+  sc   <- forAll genEpochSlots
   fsId <- forAll genFlatSlotId
   let unflatFlat = flattenSlotId sc $ unflattenSlotId sc fsId
   fsId === unflatFlat
@@ -230,18 +227,20 @@ ts_prop_flattenUnflattenSlotId = withTestsTS 100 . property $ do
 -- Check that `addSlotNumber` actually adds.
 ts_prop_addSlotNumber :: TSProperty
 ts_prop_addSlotNumber = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
+  sc <- forAll genSlotCount
   fs <- forAll genFlatSlotId
-  let added = fs + (FlatSlotId $ unEpochSlots sc)
+  let added = fs + (FlatSlotId $ unSlotCount sc)
   addSlotNumber sc fs === added
 
 -- Check that `subSlotNumber` actually subtracts.
 ts_prop_subSlotNumber :: TSProperty
 ts_prop_subSlotNumber = withTestsTS 100 . property $ do
-  sc <- forAll genLsiEpochSlots
+  sc <- forAll genSlotCount
   fs <- forAll genFlatSlotId
-  let subtracted = fs - (FlatSlotId $ unEpochSlots sc)
-  (subSlotNumber sc fs) === subtracted
+  let
+    sc' = FlatSlotId $ unSlotCount sc
+    subtracted = fs - sc'
+  subSlotNumber sc fs === if fs > sc' then subtracted else FlatSlotId 0
 
 tests :: TestScenario -> IO Bool
 tests ts = checkSequential (($$discoverPropArg :: TestScenario -> Group) ts)

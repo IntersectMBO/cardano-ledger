@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -11,6 +12,7 @@ module Cardano.Chain.Txp.Validation
   , updateUTxOTxWitness
   , updateUTxOTx
   , TxValidationError
+  , Environment(..)
   , UTxOValidationError
   )
 where
@@ -80,19 +82,18 @@ data TxValidationError
 --   actually assume 3 by calculating the fee as output balance - input balance.
 validateTx
   :: MonadError TxValidationError m
-  => ProtocolMagic
-  -> ProtocolParameters
+  => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m ()
-validateTx pm pps utxo (Annotated tx txBytes) = do
+validateTx env utxo (Annotated tx txBytes) = do
 
   -- Check that the size of the transaction is less than the maximum
-  txSize <= ppMaxTxSize pps
-    `orThrowError` TxValidationTxTooLarge txSize (ppMaxTxSize pps)
+  txSize <= maxTxSize
+    `orThrowError` TxValidationTxTooLarge txSize maxTxSize
 
   -- Check that outputs have valid NetworkMagic
-  let nm = makeNetworkMagic pm
+  let nm = makeNetworkMagic protocolMagic
   txOutputs tx `forM_` validateTxOutNM nm
 
   -- Check that every input is in the domain of 'utxo'
@@ -118,8 +119,10 @@ validateTx pm pps utxo (Annotated tx txBytes) = do
   -- Check that the fee is greater than the minimum
   (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
  where
+  Environment { protocolMagic, protocolParameters } = env
 
-  feePolicy = ppTxFeePolicy pps
+  maxTxSize = ppMaxTxSize protocolParameters
+  feePolicy = ppTxFeePolicy protocolParameters
 
   txSize :: Natural
   txSize = fromIntegral $ BS.length txBytes
@@ -171,6 +174,11 @@ validateWitness pmi sigData addr witness = case witness of
       `orThrowError` TxValidationInvalidWitness witness
 
 
+data Environment = Environment
+  { protocolMagic      :: !ProtocolMagic
+  , protocolParameters :: !ProtocolParameters
+  } deriving (Eq, Show)
+
 data UTxOValidationError
   = UTxOValidationTxValidationError TxValidationError
   | UTxOValidationUTxOError UTxOError
@@ -180,14 +188,13 @@ data UTxOValidationError
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx
   :: MonadError UTxOValidationError m
-  => ProtocolMagic
-  -> ProtocolParameters
+  => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m UTxO
-updateUTxOTx pm pps utxo aTx@(Annotated tx _) = do
+updateUTxOTx env utxo aTx@(Annotated tx _) = do
 
-  validateTx pm pps utxo aTx
+  validateTx env utxo aTx
     `wrapError` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
@@ -197,17 +204,11 @@ updateUTxOTx pm pps utxo aTx@(Annotated tx _) = do
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
 updateUTxOTxWitness
   :: MonadError UTxOValidationError m
-  => ProtocolMagic
-  -> ProtocolParameters
+  => Environment
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO
-updateUTxOTxWitness pm pps utxo ta = do
-  let
-    aTx@(Annotated tx _) = aTaTx ta
-    witness = taWitness ta
-    sigData = recoverSigData aTx
-    pmi = getProtocolMagicId pm
+updateUTxOTxWitness env utxo ta = do
 
   -- Get the signing addresses for each transaction input from the 'UTxO'
   addresses <-
@@ -221,14 +222,21 @@ updateUTxOTxWitness pm pps utxo ta = do
     `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxOTx pm pps utxo aTx
+  updateUTxOTx env utxo aTx
+ where
+  Environment { protocolMagic } = env
+  pmi = getProtocolMagicId protocolMagic
+
+  aTx@(Annotated tx _) = aTaTx ta
+  witness = taWitness ta
+  sigData = recoverSigData aTx
+
 
 -- | Update UTxO with a list of transactions
 updateUTxO
   :: MonadError UTxOValidationError m
-  => ProtocolMagic
-  -> ProtocolParameters
+  => Environment
   -> UTxO
   -> [ATxAux ByteString]
   -> m UTxO
-updateUTxO pm = foldM . updateUTxOTxWitness pm
+updateUTxO = foldM . updateUTxOTxWitness
