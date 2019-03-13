@@ -1,0 +1,15 @@
+# code owners are automatically assigned to review PRs
+
+# The goal is to not have more than 2 people responsible to avoid having too
+# many reviewers which often leads to nobody feeling responsible to actually
+# perform the review.
+
+dependencies/non-integer/ @mgudemann
+docs/delegation_design_spec/ @JaredCorduan @kantp
+hs/ @mgudemann @JaredCorduan
+latex/ @JaredCorduan @mgudemann
+nix/ @nc6 @ruhatch
+scripts/ @nc6 @ruhatch
+specs/chain/ @nc6 @mdimjasevic
+specs/ledger/ @nc6 @dnadales
+specs/semantics/ @nc6 @dnadales
