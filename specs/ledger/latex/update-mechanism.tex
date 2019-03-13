@@ -983,6 +983,7 @@ blocks. Some clarifications are in order:
       \begin{array}{r@{~\in~}lr}
         \var{k} & \mathbb{N} & \text{chain stability parameter}\\
         \var{s_n} & \Slot & \text{current block number}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
                              & \text{current protocol parameters map}\\
         \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
@@ -998,7 +999,7 @@ blocks. Some clarifications are in order:
       \begin{array}{r@{~\in~}lr}
         \var{fads} & \seqof{(\Slot \times (\ProtVer \times \PPMMap))}
         & \text{future protocol-version adoptions}\\
-        \var{bvs} & \powerset{(\ProtVer \times \VKey)}
+        \var{bvs} & \powerset{(\ProtVer \times \VKeyGen)}
         & \text{endorsement-key pairs}
       \end{array}\right)
   \end{align*}
@@ -1017,13 +1018,20 @@ Rules in \cref{fig:rules:up-end} specify what happens when a block issuer
 signals that it is ready to upgrade to a new protocol version, given in the
 rule by $\var{bv}$:
 \begin{itemize}
-\item The set $\var{bvs}$, containing which block issuers are ready to adopt a
-  given protocol version, is updated to reflect that the block issuer
-  (identified by its verifying key $\var{vk}$) is ready to upgrade to
-  $\var{bv}$. Given a pair $(\var{pv}, ~\var{vk}) \in \var{bvs}$, we say that
-  (the owner of) key $\var{vk}$ endorses the (proposed) protocol version
-  $\var{pv}$.
-\item If there are a significant number of blocks signed with $\var{bv}$
+\item The set $\var{bvs}$, containing which genesis keys are (through their
+  delegates) ready to adopt a given protocol version, is updated to reflect
+  that the delegators of the block issuer (identified by its verifying key
+  $\var{vk}$) are ready to upgrade to $\var{bv}$. Given a pair
+  $(\var{pv}, ~\var{vk_s}) \in \var{bvs}$, we say that (the owner of) key
+  $\var{vk_s}$ endorses the (proposed) protocol version $\var{pv}$.
+  %
+  Note that before the decentralized era we do not count the total number nodes
+  that are ready to upgrade to a new protocol version, but we count only nodes
+  that are delegated by a genesis key. This allow us to implement a simple
+  update mechanism while we transition to the decentralized era, where we will
+  incorporate the results of ongoing research on a decentralized update
+  mechanism.
+\item If there are a significant number of genesis keys that endorse $\var{bv}$
   (condition formalized in \cref{eq:predicate:canadopt}), there is a registered
   proposal (which are contained in $\var{rpus}$) which proposes to upgrade the
   protocol to version $\var{bv}$, and this update proposal was confirmed at
@@ -1065,7 +1073,7 @@ rule by $\var{bv}$:
     \label{eq:rule:fads-add}
     \inference
     {
-      (\wcard ; (s_c, (\var{pv_c}, \wcard)) \leteq \var{fads}
+      (\wcard ; (\wcard, (\var{pv_c}, \wcard)) \leteq \var{fads}
       \wedge \var{pv_c} < bv) \vee \epsilon = fads
     }
     {
@@ -1125,6 +1133,7 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          \var{dms}\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
@@ -1156,7 +1165,8 @@ rule by $\var{bv}$:
     \label{eq:rule:up-cant-adopt}
     \inference
     {
-      \var{bvs'} \leteq \var{bvs} \cup \{(\var{bv}, \var{vk})\}
+      \var{bvs'} = \var{bvs} \cup
+      \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
       & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv}) \\
       \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])
@@ -1166,6 +1176,7 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          \var{dms}\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
@@ -1198,7 +1209,8 @@ rule by $\var{bv}$:
     \label{eq:rule:up-canadopt}
     \inference
     {
-      \var{bvs'} = \var{bvs} \cup \{(\var{bv}, \var{vk})\}
+      \var{bvs'} = \var{bvs} \cup
+      \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
       & \fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv} \\
       \var{pid} \mapsto (\var{bv}, \var{pps_c}) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])\\
@@ -1209,6 +1221,7 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          \var{dms}\\
           (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
@@ -1368,6 +1381,16 @@ A consequence of enforcing the update rules in \cref{fig:rules:up-end} is that
 a block that is endorsing an unconfirmed proposal gets accepted, although it
 will not have any effect on the update mechanism. It is not clear at this stage
 whether such block should be rejected, therefore we have chosen to be lenient.
+
+\subsubsection{Only genesis keys are counted for endorsement}
+\label{sec:only-genesis-keys-count-for-endorsement}
+
+The rules in \cref{fig:rules:up-end} take only into account the endorsements by
+delegates of genesis keys. The reason for this is that implementing a more
+complex update mechanism depends on research that is in progress at the time of
+writing this specification. We decided to keep the update mechanism as simple
+as possible in the centralized era and incorporate the research results for the
+decentralized era at a later stage.
 
 \subsection{Questions}
 \label{sec:up-questions}

@@ -1,4 +1,4 @@
 let
-  pkgs = import ../../../pkgs.nix;
+  pkgs = import ../../../default.nix {};
 in
-  pkgs.haskell.packages.ghc861.small-steps
+  pkgs.nix-tools.libs.small-steps

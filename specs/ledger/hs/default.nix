@@ -1,4 +1,4 @@
 let
-  pkgs = import ../../../pkgs.nix;
+  pkgs = import ../../../default.nix {};
 in
-  pkgs.haskell.packages.ghc861.cs-ledger
+  pkgs.nix-tools.libs.cs-ledger
