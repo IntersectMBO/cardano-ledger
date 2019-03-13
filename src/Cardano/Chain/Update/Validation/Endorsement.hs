@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
-  ()
+  (registerEndorsement)
 where
 
 import Cardano.Prelude hiding (State)
@@ -11,29 +11,35 @@ import qualified Data.Map as M
 import qualified Data.Set as Set
 
 import Cardano.Chain.Common
+import Cardano.Chain.Delegation.Validation
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolParameters
 import Cardano.Chain.Update.ProtocolVersion
 import Cardano.Chain.Update.Vote
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
-import Cardano.Crypto
-
 
 data Environment = Environment
-  { k                         :: BlockCount
-  , currentSlot               :: FlatSlotId
-  , adoptedProtocolParameters :: ProtocolParameters
-  , confirmedProposals        :: Map UpId FlatSlotId
-  , registeredUpdateProposals :: Registration.ProtocolUpdateProposals
-  , numGenesisKeys            :: Word8
+  { k                         :: !BlockCount
+  -- ^ Chain stability parameter.
+  , currentSlot               :: !FlatSlotId
+  , delegationMap             :: !(Map StakeholderId StakeholderId)
+  , adoptedProtocolParameters :: !ProtocolParameters
+  , confirmedProposals        :: !(Map UpId FlatSlotId)
+  , registeredUpdateProposals :: !Registration.ProtocolUpdateProposals
+  , numGenesisKeys            :: !Word8
+  -- ^ Number of genesis keys. This is used in combination with the
+  -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
+  -- genesis keys that need to endorse a new protocol version to considered for
+  -- adoption.
   }
 
 data State = State
-  { futureProtocolVersions :: [FutureProtocolVersion]
+  { futureProtocolVersions :: [CandidateProtocolVersion]
   , registeredEndorsements :: Set Endorsement
   }
 
-data FutureProtocolVersion = FutureProtocolVersion
+
+data CandidateProtocolVersion = CandidateProtocolVersion
   { fpvSlot               :: FlatSlotId
   , fpvProtocolVersion    :: ProtocolVersion
   , fpvProtocolParameters :: ProtocolParameters
@@ -41,42 +47,49 @@ data FutureProtocolVersion = FutureProtocolVersion
 
 data Endorsement = Endorsement
   { endorsementProtocolVersion :: ProtocolVersion
-  , endorsementPublicKey       :: PublicKey
+  , endorsementStakeholder     :: StakeholderId
   } deriving (Eq, Ord)
 
-data Error = MultipleProposalsForProtocolVersion ProtocolVersion
+data Error
+  = MultipleProposalsForProtocolVersion ProtocolVersion
+  -- ^ Multiple proposals were found, which propose an update to the same
+  -- protocol version.
 
-
+-- | Register an endorsement.
+--
+-- This corresponds to the @UPEND@ rule.
 registerEndorsement
   :: MonadError Error m => Environment -> State -> Endorsement -> m State
-registerEndorsement env state endorsement =
+registerEndorsement env st endorsement =
   case M.toList (M.filter ((== pv) . fst) registeredUpdateProposals) of
     -- We ignore endorsement of proposals that aren't registered
-    [] -> pure state
+    [] -> pure st
 
     -- Try to register the endorsement and check if we can adopt the proposal
-    [(upId, (_, pps'))] -> if isConfirmedAndStable upId
-      then if canAdopt numGenesisKeys pps registeredEndorsements' pv
+    [(upId, (_, pps'))] ->
+      if isConfirmedAndStable upId
+      then
 
+        if canAdopt numGenesisKeys pps registeredEndorsements' pv
         -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
-            fpv = FutureProtocolVersion
+            fpv = CandidateProtocolVersion
               { fpvSlot = currentSlot
               , fpvProtocolVersion = pv
               , fpvProtocolParameters = pps'
               }
-            fpvs' = updateFutureProtocolVersions futureProtocolVersions fpv
+            fpvs' = updateCandidateProtocolVersions futureProtocolVersions fpv
           pure $ State
             { futureProtocolVersions = fpvs'
             , registeredEndorsements = registeredEndorsements'
             }
 
         -- Just register the endorsement if we cannot adopt
-        else pure $ state { registeredEndorsements = registeredEndorsements' }
+        else pure $ st { registeredEndorsements = registeredEndorsements' }
 
       -- Ignore the endorsement if the registration isn't stable
-      else pure state
+      else pure st
 
     -- Throw an error if there are multiple proposals for this protocol version
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
@@ -84,9 +97,11 @@ registerEndorsement env state endorsement =
   Environment
     { k
     , currentSlot
+    , delegationMap
     , confirmedProposals
     , registeredUpdateProposals
-    , numGenesisKeys } = env
+    , numGenesisKeys
+    } = env
 
   isConfirmedAndStable upId =
     upId `M.member` scps
@@ -98,11 +113,21 @@ registerEndorsement env state endorsement =
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
 
-  State { futureProtocolVersions, registeredEndorsements } = state
-  registeredEndorsements' = Set.insert endorsement registeredEndorsements
+  State { futureProtocolVersions, registeredEndorsements } = st
 
--- TODO: Change this to take into account the number of genesis keys
--- TODO: what do we exactly need to change according to the comment above? :)
+  registeredEndorsements' =
+    case delegatorOf vk delegationMap of
+      Just vkS -> Set.insert (Endorsement epv vkS) registeredEndorsements
+      Nothing -> registeredEndorsements
+      -- Note that we do not throw an error if there is no corresponding
+      -- delegate for the given endorsement stakeholder. This is consistent
+      -- with the @UPEND@ rules. The check that there is a delegator should be
+      -- done in the rule that checks that the block issuer is a delegate of a
+      -- genesis key.
+    where
+      vk = endorsementStakeholder endorsement
+      epv = endorsementProtocolVersion endorsement
+
 canAdopt
   :: Word8
   -- ^ Number of genesis keys.
@@ -114,19 +139,23 @@ canAdopt n pps endorsements protocolVersion = t <= numberOfEndorsements
  where
   ProtocolParameters { ppUpdateProposalThd } = pps
 
+  t :: Double
   t = lovelacePortionToDouble ppUpdateProposalThd * fromIntegral n
 
+  numberOfEndorsements :: Double
   numberOfEndorsements = fromIntegral $ length $ Set.filter
     ((== protocolVersion) . endorsementProtocolVersion)
     endorsements
 
--- | Add a newly endorsed protocol version to the 'FutureProtocolVersion's
+-- | Add a newly endorsed protocol version to the 'CandidateProtocolVersion's
 --
 --   We only add it to the list if the 'ProtocolVersion' is strictly greater
---   than all other `FutureProtocolVersion`s
-updateFutureProtocolVersions
-  :: [FutureProtocolVersion] -> FutureProtocolVersion -> [FutureProtocolVersion]
-updateFutureProtocolVersions [] fpv = [fpv]
-updateFutureProtocolVersions fpvs@(fpv : _) fpv'
+--   than all other `CandidateProtocolVersion`s
+--
+-- This corresponds to the @FADS@ rule.
+updateCandidateProtocolVersions
+  :: [CandidateProtocolVersion] -> CandidateProtocolVersion -> [CandidateProtocolVersion]
+updateCandidateProtocolVersions [] fpv = [fpv]
+updateCandidateProtocolVersions fpvs@(fpv : _) fpv'
   | fpvProtocolVersion fpv < fpvProtocolVersion fpv' = fpv' : fpvs
   | otherwise = fpvs
