@@ -12,8 +12,16 @@ There are several restrictions on a certificate posted on the blockchain:
 \item Certificates must be properly signed by the delegator.
 \item Any given key can delegate at most once per-epoch.
 \item Any given key can issue at most one certificate in a given slot.
-\item The epochs in certificates cannot refer to past epochs. This mechanism
-  prevents replay attacks.
+\item The epochs in the certificates must refer to the current or to the next
+  epoch. We do not want to allow certificates from past epochs so that a
+  delegation certificate cannot be replayed. On the other hand if we allow
+  certificates with arbitrary future epochs, then a malicious key can issue a
+  delegation certificate per-slot, setting the epoch to a sufficiently large
+  value. This will cause a blow up in the size of the ledger state since we
+  will not be able to clean $\var{eks}$ (we only clean past epochs). Also note
+  that we do not check the relation between the certificate epoch and the slot
+  in which the certificate becomes active. This would bring additional
+  complexity without any obvious benefit.
 \item Certificates do not become active immediately, but they require a certain
   number of slots till they become stable in all the nodes.
 \end{enumerate}
@@ -128,7 +136,7 @@ $\trans{sdeleg}{\wcard}$ are presented in
       (\var{vk_s},~ \sigma) = \dwit{c}
       & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
       (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
-      & (e_d,~ \var{vk_s}) \notin \var{eks} & e \leq e_d \\ ~ \\
+      & (e_d,~ \var{vk_s}) \notin \var{eks} & 0 \leq e_d - e \leq 1 \\ ~ \\
       d \leteq 2 \cdot k & (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
     {
