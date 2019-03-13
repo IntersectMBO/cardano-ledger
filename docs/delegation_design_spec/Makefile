@@ -43,4 +43,4 @@ clean:
 install:
 	mkdir -pv ${out}/nix-support/
 	cp $(DOCNAME).pdf ${out}/
-	echo "doc-pdf $(DOCNAME)" > ${out}/nix-support/hydra-build-products
+	echo "doc-pdf $(DOCNAME) ${out}/$(DOCNAME).pdf" > ${out}/nix-support/hydra-build-products
