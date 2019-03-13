@@ -34,14 +34,12 @@ module LedgerState
   , Avgs(..)
   , Validity(..)
   , mkStakeShare
-  , AccountState(..)
   , emptyAccount
   , emptyPState
   , emptyDState
   , poolRAcnt
   , treasury
   , reserves
-  , rewardPool
   -- * state transitions
   , asStateTransition
   , asStateTransition'
@@ -115,15 +113,14 @@ import           Lens.Micro.TH           (makeLenses)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..), (-*),
-                                          slotsPerEpoch, slotFromEpoch,
-                                          firstSlot, epochFromSlot)
+                                          slotsPerEpoch, firstSlot, epochFromSlot)
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
-                                                 movingAvgExp, emptyPParams,
+                                                 movingAvgExp,
                                                  keyDeposit, minRefund,
-                                                 decayRate, UnitInterval, eMax)
+                                                 decayRate, UnitInterval)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
