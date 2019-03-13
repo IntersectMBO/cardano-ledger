@@ -39,5 +39,5 @@ delegationTransition = do
       validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
       pure $ applyDCert p c d
     _ -> do
-      False ?! WrongCertificateTypeDELEG -- this always fails
+      failBecause WrongCertificateTypeDELEG -- this always fails
       pure d

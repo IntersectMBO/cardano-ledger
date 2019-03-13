@@ -40,5 +40,5 @@ poolDelegationTransition = do
       cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
       pure $ applyDCert p c d
     _ -> do
-      False ?! WrongCertificateTypePOOL
+      failBecause WrongCertificateTypePOOL
       pure $ applyDCert p c d
