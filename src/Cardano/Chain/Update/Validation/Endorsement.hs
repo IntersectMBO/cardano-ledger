@@ -69,7 +69,7 @@ registerEndorsement env st endorsement =
     -- Try to register the endorsement and check if we can adopt the proposal
     [(upId, (_, pps'))] -> if isConfirmedAndStable upId
       then if canAdopt numGenesisKeys pps registeredEndorsements' pv
-    -- Register the endorsement and adopt the proposal in the next epoch
+-- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
             fpv = CandidateProtocolVersion
@@ -83,10 +83,10 @@ registerEndorsement env st endorsement =
             , registeredEndorsements = registeredEndorsements'
             }
 
-    -- Just register the endorsement if we cannot adopt
+-- Just register the endorsement if we cannot adopt
         else pure $ st { registeredEndorsements = registeredEndorsements' }
 
-    -- Ignore the endorsement if the registration isn't stable
+-- Ignore the endorsement if the registration isn't stable
       else pure st
 
     -- Throw an error if there are multiple proposals for this protocol version
