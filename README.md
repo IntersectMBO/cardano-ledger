@@ -21,7 +21,7 @@ with `nix` or [`stack`](https://docs.haskellstack.org/en/stable/README/).
 When using `nix` it is recommended that you setup the cache, so that it can
 reuse built artifacts, reducing the compilation times dramatically:
 
-If you are using [NixOS](https://nixos.org/) add the above to your
+If you are using [NixOS](https://nixos.org/) add the below to your
 `/etc/nixos/configuration.nix`:
 
 ```
