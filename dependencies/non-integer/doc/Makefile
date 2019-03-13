@@ -1,13 +1,8 @@
 ##
-## Makefile for a specification of the delegation rules, based on:
-##
-## https://tex.stackexchange.com/questions/40738/how-to-properly-make-a-latex-project
-##
+## Makefile for a specification of non-integer calculations
 
 # Document name
-ifndef DOCNAME
-	DOCNAME = ledger-spec
-endif
+DOCNAME = non-integer-calculations
 
 # You want latexmk to *always* run, because make does not have all the info.
 # Also, include non-file targets in .PHONY so they are run regardless of any
@@ -22,6 +17,7 @@ all: $(DOCNAME).pdf
 ## CUSTOM BUILD RULES
 ##
 
+
 ##
 ## MAIN LATEXMK RULE
 ##
@@ -34,15 +30,15 @@ all: $(DOCNAME).pdf
 # missing file reference and interactively asking you for an alternative.
 
 $(DOCNAME).pdf: $(DOCNAME).tex
-	latexmk -pdf -pdflatex="pdflatex -synctex=1 -interaction=nonstopmode" -use-make $(DOCNAME).tex
+	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make $(DOCNAME).tex
 
 watch: $(DOCNAME).tex
-	latexmk -pvc -pdf -pdflatex="pdflatex -synctex=1 -interaction=nonstopmode" -use-make $(DOCNAME).tex
+	latexmk -pvc -pdf -pdflatex="pdflatex -interaction=nonstopmode -synctex=1" -use-make $(DOCNAME).tex
 
 clean:
 	latexmk -CA
 
 install:
 	mkdir -pv ${out}/nix-support/
-	cp $(DOCNAME).pdf ${out}/
-	echo "doc-pdf $(DOCNAME) ${out}/$(DOCNAME).pdf" > ${out}/nix-support/hydra-build-products
+	cp non-integer-calculations.pdf ${out}/
+	echo "doc-pdf non-integer-calculations ${out}/non-integer-calculations.pdf" > ${out}/nix-support/hydra-build-products
