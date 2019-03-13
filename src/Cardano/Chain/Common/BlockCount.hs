@@ -15,7 +15,7 @@ import Formatting.Buildable (Buildable)
 import Cardano.Binary.Class (Bi(..))
 
 newtype BlockCount = BlockCount
-    { getBlockCount :: Word64 -- TODO: rename to unBlockCount
+    { unBlockCount :: Word64 -- TODO: rename to unBlockCount
     } deriving ( Eq
               , Ord
               , Num
@@ -30,8 +30,8 @@ newtype BlockCount = BlockCount
               )
 
 instance Bi BlockCount where
-    encode = encode . getBlockCount
+    encode = encode . unBlockCount
     decode = BlockCount <$> decode
-    encodedSizeExpr size pxy = size (getBlockCount <$> pxy)
+    encodedSizeExpr size pxy = size (unBlockCount <$> pxy)
 
 deriveJSON defaultOptions ''BlockCount
