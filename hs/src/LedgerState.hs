@@ -32,23 +32,46 @@ module LedgerState
   , UTxOState(..)
   , StakeShare(..)
   , Avgs(..)
+  , Validity(..)
   , mkStakeShare
+  , AccountState(..)
+  , emptyAccount
+  , emptyPState
+  , emptyDState
+  , poolRAcnt
+  , treasury
+  , reserves
+  , rewardPool
   -- * state transitions
   , asStateTransition
   , asStateTransition'
   , delegatedStake
   , retirePools
   , emptyDelegation
+  , applyDCert
+  , applyUTxOUpdate
   -- * Genesis State
   , genesisId
   , genesisState
   -- * Validation
   , ValidationError (..)
   , minfee
+  , validStakePoolRetire
+  , validInputs
+  , validNoReplay
+  , validFee
+  , validKeyRegistration
+  , validKeyDeregistration
+  , validStakeDelegation
+  , preserveBalance
+  , verifiedWits
+  , enoughWits
+  , noUnneededWits
   -- lenses
   , utxoState
   , delegationState
   , pcs
+  , current
   -- UTxOState
   , utxo
   , deposited
@@ -65,6 +88,7 @@ module LedgerState
   , keyRefund
   , decayedKey
   , decayedTx
+  , poolRefunds
   -- epoch boundary
   , movingAvg
   , poolRewards
@@ -809,89 +833,6 @@ poolDistr u ds ps = PooledStake $
 -- State transition system
 ---------------------------------------------------------------------------------
 
-data UTXO
-
-instance STS UTXO where
-    type State UTXO       = UTxOState
-    type Signal UTXO      = Tx
-    type Environment UTXO = (Slot, PParams, StakeKeys, StakePools)
-    data PredicateFailure UTXO = BadInputsUTxO
-                               | ExpiredUTxO Slot Slot
-                               | InputSetEmptyUTxO
-                               | FeeTooSmallUTxO Coin Coin
-                               | ValueNotConservedUTxO Coin Coin
-                               | UnexpectedFailureUTXO [ValidationError]
-                               | UnexpectedSuccessUTXO
-                   deriving (Eq, Show)
-
-    transitionRules = [ utxoInductive ]
-
-    initialRules = [ initialLedgerState ]
-
-initialLedgerState :: InitialRule UTXO
-initialLedgerState = do
-  IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
-
-utxoInductive :: TransitionRule UTXO
-utxoInductive = do
-  TRC ((slot, pp, stakeKeys, stakePools), u, tx) <- judgmentContext
-  validInputs tx u    == Valid ?! BadInputsUTxO
-  current tx slot     == Valid ?! ExpiredUTxO (tx ^. ttl) slot
-  validNoReplay tx    == Valid ?! InputSetEmptyUTxO
-  let validateFee      = validFee pp tx
-  validateFee         == Valid ?! unwrapFailureUTXO validateFee
-  let validateBalance  = preserveBalance stakePools stakeKeys pp tx u
-  validateBalance     == Valid ?! unwrapFailureUTXO validateBalance
-  let refunded         = keyRefunds pp stakeKeys tx
-  let decayed          = decayedTx pp stakeKeys tx
-  let depositChange    = deposits pp stakePools (tx ^. certs) - (refunded + decayed)
-  let u' = applyUTxOUpdate u tx
-  pure (u' & deposited %~ (+) depositChange
-           & fees %~ (+) ((tx ^. txfee) + decayed))
-
-unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
-unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
-unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
-unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
-
-unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
-unwrapFailureUTXO' BadInputs                = BadInputsUTxO
-unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
-unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
-unwrapFailureUTXO' (FeeTooSmall c c')       = FeeTooSmallUTxO c c'
-unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
-unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
-
-data UTXOW
-
-instance STS UTXOW where
-    type State UTXOW       = UTxOState
-    type Signal UTXOW      = TxWits
-    type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools)
-    data PredicateFailure UTXOW = InvalidWitnessesUTXOW
-                                | MissingWitnessesUTXOW
-                                | UnneededWitnessesUTXOW
-                                | UtxoFailure (PredicateFailure UTXO)
-                   deriving (Eq, Show)
-
-    transitionRules = [ utxoWitnessed ]
-
-    initialRules = [ initialLedgerStateUTXOW ]
-
-initialLedgerStateUTXOW :: InitialRule UTXOW
-initialLedgerStateUTXOW = do
-  IRC (slots, pp, stakeKeys, stakePools) <- judgmentContext
-  trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools)
-
-utxoWitnessed :: TransitionRule UTXOW
-utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools), u, txwits) <- judgmentContext
-  verifiedWits txwits     == Valid ?! InvalidWitnessesUTXOW
-  enoughWits txwits u     == Valid ?! MissingWitnessesUTXOW
-  noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools), u, txwits ^. body)
-
 data DELRWDS
 
 instance STS DELRWDS where
@@ -910,134 +851,6 @@ delrwdsTransition = do
   correctWithdrawals (d ^. dstate . rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
   pure $ d & dstate . rewards .~ reapRewards (d ^. dstate . rewards) withdrawals
 
-
-data DELEG
-
-instance STS DELEG where
-    type State DELEG            = DWState
-    type Signal DELEG           = DCert
-    type Environment DELEG      = Ptr
-    data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
-                                | StakeKeyNotRegisteredDELEG
-                                | StakeDelegationImpossibleDELEG
-                                | WrongCertificateTypeDELEG
-                   deriving (Show, Eq)
-
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delegationTransition ]
-
-delegationTransition :: TransitionRule DELEG
-delegationTransition = do
-  TRC(p, d, c) <- judgmentContext
-  case c of
-    RegKey _   -> do
-           validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
-           pure $ applyDCert p c d
-    DeRegKey _ -> do
-           validKeyDeregistration c d == Valid ?! StakeKeyNotRegisteredDELEG
-           pure $ applyDCert p c d
-    Delegate _ -> do
-           validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
-           pure $ applyDCert p c d
-    _         -> do
-           False ?! WrongCertificateTypeDELEG -- this always fails
-           pure d
-
-data POOL
-
-instance STS POOL where
-    type State POOL         = DWState
-    type Signal POOL        = DCert
-    type Environment POOL   = (Ptr, PParams)
-    data PredicateFailure POOL = StakePoolNotRegisteredOnKeyPOOL
-                               | StakePoolRetirementWrongEpochPOOL
-                               | WrongCertificateTypePOOL
-                  deriving (Show, Eq)
-
-    initialRules = [ pure emptyDelegation ]
-    transitionRules = [ poolDelegationTransition ]
-
-poolDelegationTransition :: TransitionRule POOL
-poolDelegationTransition = do
-  TRC((p@(Ptr slot _ _), pp), d, c) <- judgmentContext
-  case c of
-    RegPool _      -> pure $ applyDCert p c d
-    RetirePool _ (Epoch e) -> do
-           validStakePoolRetire c d == Valid ?! StakePoolNotRegisteredOnKeyPOOL
-           let Epoch cepoch   = epochFromSlot slot
-           let Epoch maxEpoch = pp ^. eMax
-           cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
-           pure $ applyDCert p c d
-    _   -> do
-           False ?! WrongCertificateTypePOOL
-           pure $ applyDCert p c d
-
-data DELPL
-instance STS DELPL where
-    type State DELPL       = DWState
-    type Signal DELPL      = DCert
-    type Environment DELPL = (Ptr, PParams)
-    data PredicateFailure DELPL = PoolFailure (PredicateFailure POOL)
-                                | DelegFailure (PredicateFailure DELEG)
-                   deriving (Show, Eq)
-
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delplTransition      ]
-
-delplTransition :: TransitionRule DELPL
-delplTransition = do
-  TRC((slotIx, pp), d, c) <- judgmentContext
-  case c of
-    RegPool    _   -> trans @POOL  $ TRC ((slotIx, pp), d, c)
-    RetirePool _ _ -> trans @POOL  $ TRC ((slotIx, pp), d, c)
-    RegKey _       -> trans @DELEG $ TRC (slotIx, d, c)
-    DeRegKey _     -> trans @DELEG $ TRC (slotIx, d, c)
-    Delegate _     -> trans @DELEG $ TRC (slotIx, d, c)
-
-data DELEGS
-instance STS DELEGS where
-    type State DELEGS       = DWState
-    type Signal DELEGS      = [DCert]
-    type Environment DELEGS = (Slot, Ix, PParams)
-    data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)
-                    deriving (Show, Eq)
-
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delegsTransition     ]
-
-delegsTransition :: TransitionRule DELEGS
-delegsTransition = do
-  TRC((slot, ix, pp), d, certificates) <- judgmentContext
-  foldM (\d' (clx, c) ->
-             trans @DELPL $
-                   TRC((Ptr slot ix clx, pp), d', c)) d $ zip [0..] certificates
-
-data LEDGER
-instance STS LEDGER where
-    type State LEDGER       = (UTxOState, DWState)
-    type Signal LEDGER      = TxWits
-    type Environment LEDGER = (PParams, Slot, Ix)
-    data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
-                                 | DelegsFailure (PredicateFailure DELEGS)
-                    deriving (Show, Eq)
-
-    initialRules    = [ initialLedgerStateLEDGER ]
-    transitionRules = [ ledgerTransition         ]
-
-initialLedgerStateLEDGER :: InitialRule LEDGER
-initialLedgerStateLEDGER = do
-  IRC (pp, slot, ix) <- judgmentContext
-  utxo' <- trans @UTXOW  $ IRC (slot, pp, StakeKeys Map.empty, StakePools Map.empty)
-  deleg <- trans @DELEGS $ IRC (slot, ix, pp)
-  pure (utxo', deleg)
-
-ledgerTransition :: TransitionRule LEDGER
-ledgerTransition = do
-  TRC ((pp, slot, ix), (u, d), txwits) <- judgmentContext
-  utxo'  <- trans @UTXOW  $ TRC ((slot, pp, d ^. dstate . stKeys, d ^. pstate . stPools), u, txwits)
-  deleg' <- trans @DELEGS $ TRC ((slot, ix, pp), d, txwits ^. body . certs)
-  pure (utxo', deleg')
-
 -- STS rules embeddings:
 -- +------------------------------------+
 -- |LEDGER                              |
@@ -1055,161 +868,7 @@ ledgerTransition = do
 -- |                                    |
 -- +------------------------------------+
 
-instance Embed UTXOW LEDGER where
-    wrapFailed = UtxowFailure
-
-instance Embed UTXO UTXOW where
-    wrapFailed = UtxoFailure
-
-instance Embed DELEGS LEDGER where
-    wrapFailed = DelegsFailure
-
-instance Embed DELPL DELEGS where
-    wrapFailed = DelplFailure
-
-instance Embed POOL DELPL where
-    wrapFailed = PoolFailure
-
-instance Embed DELEG DELPL where
-    wrapFailed = DelegFailure
 
 ----------------------------------
 -- STS rules for epoch boundary --
 ----------------------------------
-
-data POOLREAP
-instance STS POOLREAP where
-    type State POOLREAP = (AccountState, DState, PState)
-    type Signal POOLREAP = ()
-    type Environment POOLREAP = (Epoch, PParams)
-    data PredicateFailure POOLREAP = FailurePOOLREAP
-                       deriving (Show, Eq)
-
-    initialRules = [ pure (emptyAccount, emptyDState, emptyPState) ]
-    transitionRules = [ poolReapTransition ]
-
-poolReapTransition :: TransitionRule POOLREAP
-poolReapTransition = do
-  TRC((eNew, pp), (a, d, p), _) <- judgmentContext
-  let retired     = Map.keysSet $ Map.filter (== eNew) $ p ^. retiring
-  let pr          = poolRefunds pp (p ^. retiring) (firstSlot eNew)
-  let relevant    = Map.restrictKeys (p ^. pParams) retired
-  let rewardAcnts =
-          Map.mapMaybeWithKey
-                 (\k v -> case Map.lookup k relevant of
-                            Nothing -> Nothing
-                            Just _  -> Just (v ^. poolRAcnt)) (p ^. pParams)
-  let rewardAcnts' = Map.restrictKeys rewardAcnts (Map.keysSet pr)
-  let refunds'     = Map.foldlWithKey
-                      (\m k addr -> Map.insert addr (pr Map.! k) m)
-                      Map.empty
-                      rewardAcnts'  -- not yet restricted to a in dom(rewards)
-  let domRewards   = Map.keysSet (d ^. rewards)
-  let (refunds, unclaimed') =
-          Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
-  let unclaimed    = Map.foldl (+) (Coin 0) unclaimed'
-  let StakePools stakePools = p ^. stPools
-  let Avgs averages         = p ^. avgs
-  pure ( a & treasury    %~ (+) unclaimed
-       , d & rewards     %~ flip Map.union refunds
-           & delegations %~ flip Map.withoutKeys retired
-       , p & stPools     .~ (StakePools $ Map.withoutKeys stakePools retired)
-           & pParams     %~ flip Map.withoutKeys retired
-           & retiring    %~ flip Map.withoutKeys retired
-           & avgs        .~ (Avgs $ Map.withoutKeys averages retired))
-
-data NEWPP
-instance STS NEWPP where
-    type State NEWPP = (UTxOState, AccountState, PParams)
-    type Signal NEWPP = ()
-    type Environment NEWPP = (Epoch, PParams, DState, PState)
-    data PredicateFailure NEWPP = FailureNEWPP
-                   deriving (Show, Eq)
-
-    initialRules = [ initialNewPp ]
-    transitionRules = [ newPpTransition ]
-
-initialNewPp :: InitialRule NEWPP
-initialNewPp = pure ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
-                    , emptyAccount
-                    , emptyPParams)
-
-newPpTransition :: TransitionRule NEWPP
-newPpTransition = do
-  TRC((eNew, ppNew, ds, ps), (us, as, pp), _) <- judgmentContext
-  let oblgCurr =
-          obligation pp (ds ^. stKeys) (ps ^. stPools) (firstSlot eNew)
-  let oblgNew =
-          obligation ppNew (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
-  let (oblg', reserves', pp') =
-          if as ^. reserves + oblgCurr >= oblgNew  -- reserves are sufficient
-          then (oblgNew, (as ^. reserves + oblgCurr) - oblgNew, ppNew)
-          else (us ^. deposited, as ^. reserves, pp)
-  pure (us & deposited .~ oblg', as & reserves .~ reserves', pp')
-
-data SNAP
-instance STS SNAP where
-    type State SNAP = (SnapShots, UTxOState)
-    type Signal SNAP = ()
-    type Environment SNAP = (Epoch, PParams, DState, PState, BlocksMade)
-    data PredicateFailure SNAP = FailureSNAP
-                  deriving (Show, Eq)
-
-    initialRules = [ pure ( emptySnapShots
-                          , UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)) ]
-    transitionRules = [ snapTransition ]
-
-snapTransition :: TransitionRule SNAP
-snapTransition = do
-  TRC((eNew, pparams, d, p, blocks), (s, u), _) <- judgmentContext
-  let pooledStake = poolDistr (u ^. utxo) d p
-  let slot = firstSlot eNew
-  let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) slot
-  let decayed = (u ^. deposited) - oblg
-  pure ( s & pstakeMark .~ pooledStake
-           & pstakeSet  .~ (s ^. pstakeMark)
-           & pstakeGo   .~ (s ^. pstakeSet)
-           & poolsSS    .~ (p ^. pParams)
-           & blocksSS   .~ blocks
-           & feeSS      .~ (u ^. fees) + decayed
-       , u & deposited  .~ oblg
-           & fees       %~ (+) decayed)
-
-data EPOCH
-instance STS EPOCH where
-    type State EPOCH = (UTxOState, AccountState, DState, PState, PParams, SnapShots)
-    type Signal EPOCH = ()
-    type Environment EPOCH = (Epoch, PParams, BlocksMade)
-    data PredicateFailure EPOCH = PoolReapFailure (PredicateFailure POOLREAP)
-                                | SnapFailure (PredicateFailure SNAP)
-                                | NewPpFailure (PredicateFailure NEWPP)
-                   deriving (Show, Eq)
-
-    initialRules = [ initialEpoch ]
-    transitionRules = [ epochTransition ]
-
-initialEpoch :: InitialRule EPOCH
-initialEpoch = pure ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
-                    , emptyAccount
-                    , emptyDState
-                    , emptyPState
-                    , emptyPParams
-                    , emptySnapShots)
-
-epochTransition :: TransitionRule EPOCH
-epochTransition = do
-    TRC((eNew, ppNew, blocks), (us, as, ds, ps, pp, ss), _) <- judgmentContext
-    (ss', us') <- trans @SNAP $ TRC((eNew, pp, ds, ps, blocks), (ss, us), ())
-    (as', ds', ps') <- trans @POOLREAP $ TRC((eNew, pp), (as, ds, ps), ())
-    (us'', as'', pp')
-        <- trans @NEWPP $ TRC((eNew, ppNew, ds', ps'), (us', as', pp), ())
-    pure (us'', as'', ds', ps', pp', ss')
-
-instance Embed SNAP EPOCH where
-    wrapFailed = SnapFailure
-
-instance Embed POOLREAP EPOCH where
-    wrapFailed = PoolReapFailure
-
-instance Embed NEWPP EPOCH where
-    wrapFailed = NewPpFailure
