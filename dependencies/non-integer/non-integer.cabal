@@ -37,7 +37,8 @@ executable nonInt
       -O2
     build-depends:
       base,
-      non-integer
+      non-integer,
+      criterion
 
 test-suite non-integer-test
     type:                exitcode-stdio-1.0
