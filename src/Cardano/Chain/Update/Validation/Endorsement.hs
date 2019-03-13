@@ -25,6 +25,7 @@ data Environment = Environment
   , adoptedProtocolParameters :: ProtocolParameters
   , confirmedProposals        :: Map UpId FlatSlotId
   , registeredUpdateProposals :: Registration.ProtocolUpdateProposals
+  , numGenesisKeys            :: Word8
   }
 
 data State = State
@@ -55,7 +56,7 @@ registerEndorsement env state endorsement =
 
     -- Try to register the endorsement and check if we can adopt the proposal
     [(upId, (_, pps'))] -> if isConfirmedAndStable upId
-      then if canAdopt pps registeredEndorsements' pv
+      then if canAdopt numGenesisKeys pps registeredEndorsements' pv
 
         -- Register the endorsement and adopt the proposal in the next epoch
         then do
@@ -80,7 +81,12 @@ registerEndorsement env state endorsement =
     -- Throw an error if there are multiple proposals for this protocol version
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
  where
-  Environment { k, currentSlot, confirmedProposals, registeredUpdateProposals } = env
+  Environment
+    { k
+    , currentSlot
+    , confirmedProposals
+    , registeredUpdateProposals
+    , numGenesisKeys } = env
 
   isConfirmedAndStable upId =
     upId `M.member` scps
@@ -98,23 +104,21 @@ registerEndorsement env state endorsement =
 -- TODO: Change this to take into account the number of genesis keys
 -- TODO: what do we exactly need to change according to the comment above? :)
 canAdopt
-  :: ProtocolParameters
+  :: Word8
+  -- ^ Number of genesis keys.
+  -> ProtocolParameters
   -> Set Endorsement
   -> ProtocolVersion
   -> Bool
-canAdopt pps endorsements protocolVersion = t <= numberOfEndorsements
+canAdopt n pps endorsements protocolVersion = t <= numberOfEndorsements
  where
   ProtocolParameters { ppUpdateProposalThd } = pps
 
-  t = lovelacePortionToDouble ppUpdateProposalThd * totalNodes
+  t = lovelacePortionToDouble ppUpdateProposalThd * fromIntegral n
 
   numberOfEndorsements = fromIntegral $ length $ Set.filter
     ((== protocolVersion) . endorsementProtocolVersion)
     endorsements
-
-  -- TODO: it seems backwards what we would know the number of nodes present
-  -- when we evaluate 'canAdopt'.
-  totalNodes = undefined
 
 -- | Add a newly endorsed protocol version to the 'FutureProtocolVersion's
 --
