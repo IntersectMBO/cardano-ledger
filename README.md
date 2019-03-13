@@ -10,7 +10,7 @@ following links:
 - [Non-integer Calculations Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/nonIntegerCalculations/latest/download-by-type/doc-pdf/non-integer-calculations)
 - [Byron Chain Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec)
 - [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
-- [Small-step-semantics Framework Explanation](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
+- [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
 
 ## Build tools
 
@@ -21,7 +21,7 @@ with `nix` or [`stack`](https://docs.haskellstack.org/en/stable/README/).
 When using `nix` it is recommended that you setup the cache, so that it can
 reuse built artifacts, reducing the compilation times dramatically:
 
-If you are using [NixOS](https://nixos.org/) add snippet below to your
+If you are using [NixOS](https://nixos.org/) add the snippet below to your
 `/etc/nixos/configuration.nix`:
 
 ```
