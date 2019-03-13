@@ -2,7 +2,8 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
-  (registerEndorsement)
+  ( registerEndorsement
+  )
 where
 
 import Cardano.Prelude hiding (State)
@@ -66,12 +67,9 @@ registerEndorsement env st endorsement =
     [] -> pure st
 
     -- Try to register the endorsement and check if we can adopt the proposal
-    [(upId, (_, pps'))] ->
-      if isConfirmedAndStable upId
-      then
-
-        if canAdopt numGenesisKeys pps registeredEndorsements' pv
-        -- Register the endorsement and adopt the proposal in the next epoch
+    [(upId, (_, pps'))] -> if isConfirmedAndStable upId
+      then if canAdopt numGenesisKeys pps registeredEndorsements' pv
+    -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
             fpv = CandidateProtocolVersion
@@ -85,48 +83,40 @@ registerEndorsement env st endorsement =
             , registeredEndorsements = registeredEndorsements'
             }
 
-        -- Just register the endorsement if we cannot adopt
+    -- Just register the endorsement if we cannot adopt
         else pure $ st { registeredEndorsements = registeredEndorsements' }
 
-      -- Ignore the endorsement if the registration isn't stable
+    -- Ignore the endorsement if the registration isn't stable
       else pure st
 
     -- Throw an error if there are multiple proposals for this protocol version
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
  where
-  Environment
-    { k
-    , currentSlot
-    , delegationMap
-    , confirmedProposals
-    , registeredUpdateProposals
-    , numGenesisKeys
-    } = env
+  Environment { k, currentSlot, delegationMap, confirmedProposals, registeredUpdateProposals, numGenesisKeys }
+    = env
 
-  isConfirmedAndStable upId =
-    upId `M.member` scps
-    where
+  isConfirmedAndStable upId = upId `M.member` scps
+   where
       -- Stable and confirmed proposals.
-      scps = M.filter (currentSlot - _2 k <=) confirmedProposals
-      _2 x = 2 * unBlockCount x
+    scps = M.filter (currentSlot - _2 k <=) confirmedProposals
+    _2 x = 2 * unBlockCount x
 
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
 
   State { futureProtocolVersions, registeredEndorsements } = st
 
-  registeredEndorsements' =
-    case delegatorOf vk delegationMap of
-      Just vkS -> Set.insert (Endorsement epv vkS) registeredEndorsements
-      Nothing -> registeredEndorsements
+  registeredEndorsements' = case delegatorOf vk delegationMap of
+    Just vkS -> Set.insert (Endorsement epv vkS) registeredEndorsements
+    Nothing  -> registeredEndorsements
       -- Note that we do not throw an error if there is no corresponding
       -- delegate for the given endorsement stakeholder. This is consistent
       -- with the @UPEND@ rules. The check that there is a delegator should be
       -- done in the rule that checks that the block issuer is a delegate of a
       -- genesis key.
-    where
-      vk = endorsementStakeholder endorsement
-      epv = endorsementProtocolVersion endorsement
+   where
+    vk  = endorsementStakeholder endorsement
+    epv = endorsementProtocolVersion endorsement
 
 canAdopt
   :: Word8
@@ -154,7 +144,9 @@ canAdopt n pps endorsements protocolVersion = t <= numberOfEndorsements
 --
 -- This corresponds to the @FADS@ rule.
 updateCandidateProtocolVersions
-  :: [CandidateProtocolVersion] -> CandidateProtocolVersion -> [CandidateProtocolVersion]
+  :: [CandidateProtocolVersion]
+  -> CandidateProtocolVersion
+  -> [CandidateProtocolVersion]
 updateCandidateProtocolVersions [] fpv = [fpv]
 updateCandidateProtocolVersions fpvs@(fpv : _) fpv'
   | fpvProtocolVersion fpv < fpvProtocolVersion fpv' = fpv' : fpvs

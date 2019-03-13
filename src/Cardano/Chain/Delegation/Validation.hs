@@ -175,13 +175,10 @@ data ActivationState = ActivationState
 -- The function returns nothing if no delegator is found. This function does
 -- not check injectivity of the delegation map.
 delegatorOf
-  :: StakeholderId
-  -> Map StakeholderId StakeholderId
-  -> Maybe StakeholderId
-delegatorOf vk dms =
-  case M.keys $ M.filter (== vk) dms of
-    vkS:_ -> Just vkS
-    _     -> Nothing
+  :: StakeholderId -> Map StakeholderId StakeholderId -> Maybe StakeholderId
+delegatorOf vk dms = case M.keys $ M.filter (== vk) dms of
+  vkS : _ -> Just vkS
+  _       -> Nothing
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
 --   previous delegation slot for this delegate, otherwise discard it. This is
