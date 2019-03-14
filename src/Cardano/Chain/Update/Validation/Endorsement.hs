@@ -30,7 +30,7 @@ data Environment = Environment
   , numGenesisKeys            :: !Word8
   -- ^ Number of genesis keys. This is used in combination with the
   -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
-  -- genesis keys that need to endorse a new protocol version to considered for
+  -- genesis keys that need to endorse a new protocol version for it to be considered for
   -- adoption.
   }
 
