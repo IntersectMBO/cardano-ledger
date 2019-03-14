@@ -241,9 +241,9 @@
   \begin{equation}\label{eq:new-epoch}
     \inference[New-Epoch]
     {
-      e_\ell < e
+      e = e_\ell + 1
       &
-      \var{es}' \leteq \fun{appleRUpd}~\var{ru}~\var{es}
+      \var{es}' \leteq \fun{applyRUpd}~\var{ru}~\var{es}
       \\
       {
         \left(
@@ -256,8 +256,13 @@
         \vdash
         \var{es'}\trans{epoch}{\var{e}}\var{es''}
       }
-      \\
-      \var{pd'} \leteq \mathsf{TODO}\text{ (calculate the new pool distr from }es''\text{)}
+      \\~\\~\\
+      {\begin{array}{r@{~\leteq~}l}
+          (\wcard,~\wcard,~\var{ss},~\wcard) & \var{es} \\
+          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
+          \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ\var{stake}\
+      \end{array}}
     }
     {
       \left(
@@ -326,6 +331,12 @@
   \caption{New Epoch rules}
   \label{fig:rules:not-new-epoch}
 \end{figure}
+
+\begin{question}
+  Is $\var{pstake_{set}}$ definitely the correct snapshot to be
+  used for leader election in the new epoch?
+  See Equation~\ref{eq:new-epoch}
+\end{question}
 
 \subsection{Update Nonces Transition}
 \label{sec:update-nonces-trans}
@@ -429,6 +440,11 @@
   \caption{BHeader transition-system types}
   \label{fig:ts-types:bheader}
 \end{figure}
+
+\begin{question}
+  Is it okay to use wall-clock in the evironment in $\BHeaderEnv$?
+  See Figure~\ref{fig:ts-types:bheader}.
+\end{question}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:bheader}
@@ -670,8 +686,7 @@
       &
       ru = \Nothing
       \\~\\
-      \mathsf{TODO} \text{ turn the REWARD transition into} \\
-      \text{a function from }b\text{ and }es\text{ to }ru
+      ru' \leteq \createRUpd{ru}{es}
     }
     {
       \left(
@@ -816,7 +831,7 @@
         \end{array}\right)}
       }
       \\~\\
-      (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}') \leteq \var{es}'
+      (\var{acnt}',~\var{pp}',~\var{ss}',~\var{ls}') \leteq \var{es}'
       \\
       {
         \left(

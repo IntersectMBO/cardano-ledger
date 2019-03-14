@@ -3,10 +3,7 @@
 
 \newcommand{\UTxOEpState}{\type{UTxOEpState}}
 \newcommand{\Acnt}{\type{Acnt}}
-\newcommand{\RewardEnv}{\type{RewardEnv}}
-\newcommand{\RewardState}{\type{RewardState}}
 \newcommand{\PlReapState}{\type{PlReapState}}
-\newcommand{\PlReapEnv}{\type{PlReapEnv}}
 \newcommand{\NewPParamEnv}{\type{NewPParamEnv}}
 \newcommand{\Snapshots}{\type{Snapshots}}
 \newcommand{\SnapshotEnv}{\type{SnapshotEnv}}
@@ -34,17 +31,16 @@
 \newcommand{\poolReward}[6]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}}
 \newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\updateAvgs}[5]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
+\newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
 
-This chapter introduces two main transition systems.
-Neither transition is triggered by a transaction, and in fact have no signal.
+This chapter introduces the epoch boundary transition system and the related reward calculation.
 
-The first one, defined in Section~\ref{sec:total-epoch},
-involves calculations that occur at the epoch boundary.
-This includes taking stake distribution snapshots
-(Sections~\ref{sec:stake-dist-helpers} and~\ref{sec:snapshots}),
+The transition system is defined in Section~\ref{sec:total-epoch},
+and involves taking stake distribution snapshots
+(Sections~\ref{sec:stake-dist-calc} and~\ref{sec:snapshots}),
 retiring stake pools (Section~\ref{sec:pool-reap}),
 and performing protocol updates (Section~\ref{sec:pparam-update}).
-The second transition, defined in Sections ~\ref{sec:reward-dist} and ~\ref{sec:reward-trans},
+The reward calculation, defined in Sections~\ref{sec:reward-dist} and~\ref{sec:reward-calc},
 distributes the leader election rewards.
 
 \subsection{Overview of the Reward Calculation}
@@ -62,6 +58,8 @@ More concretely:
     A snapshot is taken of the stake pool performance during epoch $e_{i}$.
     A snapshot is also taken of the fee pot and the decayed deposit values.
   \item The snapshots from (D) are stable and the reward calculation can begin.
+  \item The reward calculation is finished and an update to the ledger state
+    is ready to be applied.
   \item Rewards are given out.
 \end{enumerate}
 
@@ -105,11 +103,11 @@ The two main transition systems in this section are:
   \item The transition system named $\mathsf{EPOCH}$, which is defined in
     Section~\ref{sec:total-epoch}, covering what happens at the epoch boundary,
     such as at (A), (C), (D), and (G).
-  \item The transition named $\mathsf{REWARD}$, which is defined in Section~\ref{sec:reward-trans},
+  \item The transition named $\mathsf{REWARD}$, which is defined in Section~\ref{sec:reward-calc},
     covering the reward calculation which happens between (E) and (F).
 \end{itemize}
 
-\subsection{Helper Functions}
+\subsection{Helper Functions and Accounting Fields}
 \label{sec:stake-dist-helpers}
 
 Figure~\ref{fig:funcs:epoch-helper} defines four helper functions needed
@@ -193,6 +191,40 @@ throughout the rest of the section.
   \caption{Helper Functions used in Rewards and Epoch Boundary}
   \label{fig:funcs:epoch-helper}
 \end{figure}
+
+
+The Figure~\ref{fig:defs:accounting} lists the accounting fields, denoted by $\Acnt$,
+which will be used throughout this section. It consists of:
+\begin{itemize}
+  \item The value $\var{treasury}$ tracks the amount of coin currently stored in the treasury.
+    Initially there will be no way to remove these funds.
+  \item The value $\var{reserves}$ tracks the amount of coin currently stored in the reserves.
+    This pot is used to pay rewards.
+  \item The value $\var{rewardPot}$ to tracks the rewards from the previous epoch that were not
+    paid out.
+\end{itemize}
+More will be said about the general accounting system in Section~\ref{sec:reward-calc}.
+
+%%
+%% Figure - Accounting fields
+%%
+\begin{figure}[htb]
+  \emph{Accounting Fields}
+  \begin{equation*}
+    \Acnt =
+    \left(
+      \begin{array}{r@{~\in~}ll}
+        \var{treasury} & \Coin & \text{treasury pot}\\
+        \var{reserves} & \Coin & \text{reserve pot}\\
+        \var{rewardPot} & \Coin & \text{reward pot}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \caption{Accounting fields}
+  \label{fig:defs:accounting}
+\end{figure}
+
 
 \subsection{Stake Distribution Calculation}
 \label{sec:stake-dist-calc}
@@ -312,7 +344,6 @@ The type $\type{\Snapshots}$ contains the information needing to be saved on the
     \SnapshotEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{e_{new}} & \Epoch & \text{the upcoming epoch}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
@@ -353,8 +384,8 @@ The type $\type{\Snapshots}$ contains the information needing to be saved on the
   \emph{Snapshot transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{snap}{} \var{\_}
-    \subseteq \powerset (\SnapshotEnv \times \SnapshotState \times \SnapshotState)
+    \var{\_} \trans{snap}{\_} \var{\_}
+    \subseteq \powerset (\SnapshotEnv \times \SnapshotState \times \Epoch \times \SnapshotState)
   \end{equation*}
   %
   \caption{Snapshot transition-system types}
@@ -373,7 +404,7 @@ This transition has no preconditions and results in the following state change:
   \item The fees and decayed deposits are stored in $\var{feeSS}$. Note that this value will not
     change between epochs, unlike the $\var{fees}$ and $\var{deposits}$ values in the UTxO state.
   \item In the UTxO state, the decayed deposit amounts are moved from the deposit pot
-    to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-trans}),
+    to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-calc}),
     the value $\var{feeSS}$ will be removed from the fee pot in the UTxO state.
     The decay is calculated based on \textit{the first slot in the upcoming epoch}.
 \end{itemize}
@@ -391,7 +422,7 @@ This transition has no preconditions and results in the following state change:
         (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
-        \var{slot} & \firstSlot{e_{new}} \\
+        \var{slot} & \firstSlot{e} \\
         \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{oblg} \\
       \end{array}
@@ -399,7 +430,6 @@ This transition has no preconditions and results in the following state change:
     }
     {
       \begin{array}{l}
-        \var{e_{new}} \\
         \var{pp} \\
         \var{dstate} \\
         \var{pstate} \\
@@ -420,7 +450,7 @@ This transition has no preconditions and results in the following state change:
           \var{fees} \\
         \end{array}
       \right)
-      \trans{snap}{}
+      \trans{snap}{e}
       \left(
         \begin{array}{r}
           \varUpdate{(\var{stake},~\var{delegations})} \\
@@ -453,17 +483,6 @@ which is responsible for removing pools slated for retirement in the given epoch
 %% Figure - Pool Reap Defs
 %%
 \begin{figure}[htb]
-  \emph{Pool Reap environment}
-  \begin{equation*}
-    \PlReapEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{e_{new}} & \Epoch & \text{the upcoming epoch}\\
-        \var{pp} & \PParams & \text{protocol parameters}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{Pool Reap State}
   \begin{equation*}
     \PlReapState =
@@ -478,8 +497,8 @@ which is responsible for removing pools slated for retirement in the given epoch
   %
   \emph{Pool Reap transitions}
   \begin{equation*}
-    \_ \vdash \_ \trans{poolreap}{} \_ \in
-    \powerset (\PlReapEnv \times \PlReapState \times \PlReapState)
+    \_ \vdash \_ \trans{poolreap}{\_} \_ \in
+    \powerset (\PParams \times \PlReapState \times \Epoch \times \PlReapState)
   \end{equation*}
   %
   \caption{Pool Reap Transition}
@@ -508,8 +527,8 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{~\leteq~}l}
-        \var{retired} & \var{retiring}^{-1}~\var{e_{new}} \\
-        \var{pr} & \poolRefunds{pp}{retiring}{(\firstSlot{e_{new}})} \\
+        \var{retired} & \var{retiring}^{-1}~\var{e} \\
+        \var{pr} & \poolRefunds{pp}{retiring}{(\firstSlot{e})} \\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
                    \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
@@ -531,10 +550,7 @@ This transition has no preconditions and results in the following state change:
       }
     }
     {
-      \begin{array}{l}
-        \var{e_{new}}\\
-        \var{pp}
-      \end{array}
+      \var{pp}
       \vdash
       \left(
         \begin{array}{r}
@@ -553,7 +569,7 @@ This transition has no preconditions and results in the following state change:
           \var{avgs} \\
         \end{array}
       \right)
-      \trans{poolreap}{}
+      \trans{poolreap}{e}
       \left(
         \begin{array}{rcl}
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
@@ -583,10 +599,9 @@ This transition has no preconditions and results in the following state change:
 \label{sec:pparam-update}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
-parameters. The protocol parameters environment consists of the upcoming epoch number, the new
-protocol parameters, and delegation and pool states.
-The state change is a change of the $\UTxOState$, the $\Acnt$ states, and the current
-$\PParams$.
+parameters. The protocol parameters environment consists of the new
+protocol parameters, and the delegation and pool states.
+The state change is a change of the $\UTxOState$, the $\Acnt$ states, and the current $\PParams$.
 The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-param}.
 
 %%
@@ -598,7 +613,6 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \NewPParamEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{e_{new}} & \Epoch & \text{upcoming epoch}\\
         \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
@@ -621,8 +635,8 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   \emph{New Proto Param transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{newpp}{} \var{\_}
-    \subseteq \powerset (\NewPParamEnv \times \NewPParamState \times \NewPParamState)
+    \var{\_} \trans{newpp}{\_} \var{\_}
+    \subseteq \powerset (\NewPParamEnv \times \NewPParamState \times \Epoch \times \NewPParamState)
   \end{equation*}
   %
   \caption{New Proto Param transition-system types}
@@ -667,7 +681,7 @@ for ease of reading.
     \inference[New-Proto-Param-Accepted]
     {
       {\begin{array}{rcl}
-          \var{slot} & \leteq & \firstSlot{e_{new}} \\
+          \var{slot} & \leteq & \firstSlot{e} \\
           \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
           \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
@@ -700,7 +714,6 @@ for ease of reading.
     }
     {
       \begin{array}{l}
-        \var{e_{new}}\\
         \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
@@ -713,7 +726,7 @@ for ease of reading.
           \var{pp}
         \end{array}
       \right)
-      \trans{newpp}{}
+      \trans{newpp}{e}
       \left(
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
@@ -730,7 +743,7 @@ for ease of reading.
     \inference[New-Proto-Param-Denied]
     {
       {\begin{array}{rcl}
-          \var{slot} & \leteq & \firstSlot{e_{new}} \\
+          \var{slot} & \leteq & \firstSlot{e} \\
           \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
           \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
@@ -740,7 +753,6 @@ for ease of reading.
     }
     {
       \begin{array}{l}
-        \var{e_{new}}\\
         \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
@@ -753,7 +765,7 @@ for ease of reading.
           \var{pp}
         \end{array}
       \right)
-      \trans{newpp}{}
+      \trans{newpp}{e}
       \left(
         \begin{array}{rcl}
           \var{utxoSt} \\
@@ -774,10 +786,9 @@ for ease of reading.
 
 Finally, it is possible to define the complete epoch boundary transition type,
 which is defined in Figure~\ref{fig:ts-types:epoch}.
-In the environment of this transition, we have the slot number, potentially new
-protocol parameters, and the blocks made this epoch.  The state is made up of the
-the UTxO state, the accounting state, the delegation state, the pool state,
-the current protocol parameters, and the snapshots.
+In the environment of this transition, we have the potentially new
+protocol parameters and the blocks made this epoch.  The state is made up of the
+the accounting state, the current protocol parameters, the snapshots, and the ledger state.
 
 %%
 %% Figure - Epoch Defs
@@ -788,7 +799,6 @@ the current protocol parameters, and the snapshots.
     \EpochEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{e_{new}} & \Epoch & \text{upcoming epoch}\\
         \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
         \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
       \end{array}
@@ -800,12 +810,10 @@ the current protocol parameters, and the snapshots.
     \EpochState =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
         \var{acnt} & \Acnt & \text{accounting}\\
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
         \var{pp} & \PParams & \text{current protocol parameters}\\
         \var{ss} & \Snapshots & \text{snapshots}\\
+        \var{ls} & \LState & \text{ledger state}\\
       \end{array}
     \right)
   \end{equation*}
@@ -813,8 +821,8 @@ the current protocol parameters, and the snapshots.
   \emph{Epoch transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{epoch}{} \var{\_}
-    \subseteq \powerset (\EpochEnv \times \EpochState \times \EpochState)
+    \var{\_} \trans{epoch}{\_} \var{\_}
+    \subseteq \powerset (\EpochEnv \times \EpochState \times \Epoch \times \EpochState)
   \end{equation*}
   %
   \caption{Epoch transition-system types}
@@ -832,9 +840,10 @@ in sequence.
   \begin{equation}\label{eq:epoch}
     \inference[Epoch]
     {
+      (\var{utxoSt},~(\var{dstate}~\var{pstate}))\leteq\var{ls}
+      \\
       {
         \begin{array}{l}
-          \var{e_{new}}\\
           \var{pp}\\
           \var{dstate} \\
           \var{pstate} \\
@@ -852,7 +861,7 @@ in sequence.
           }
         \right)
       }
-      \trans{snap}{}
+      \trans{snap}{e}
       {
         \left(
           {
@@ -864,12 +873,7 @@ in sequence.
         \right)
       }
       \\~\\~\\
-      {
-        \begin{array}{l}
-          \var{e_{new}}\\
-          \var{pp}
-        \end{array}
-      }
+      \var{pp}
       \vdash
       \left(
         {
@@ -880,7 +884,7 @@ in sequence.
           \end{array}
         }
       \right)
-      \trans{poolreap}{}
+      \trans{poolreap}{e}
       \left(
       {
         \begin{array}{rcl}
@@ -893,7 +897,6 @@ in sequence.
       \\~\\~\\
       {
         \begin{array}{l}
-          \var{e_{new}}\\
           \var{pp_{new}}\\
           \var{dstate'}\\
           \var{pstate''}\\
@@ -909,7 +912,7 @@ in sequence.
           \end{array}
         }
       \right)
-      \trans{newpp}{}
+      \trans{newpp}{e}
       \left(
       {
         \begin{array}{rcl}
@@ -919,33 +922,30 @@ in sequence.
         \end{array}
       }
       \right)
+      \\~\\
+      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'))
     }
     {
       \begin{array}{l}
-        \var{e_{new}}\\
         \var{pp_{new}}\\
         \var{blocks}\\
       \end{array}
       \vdash
       \left(
       \begin{array}{r}
-        \var{utxoSt} \\
         \var{acnt} \\
-        \var{dstate} \\
-        \var{pstate} \\
         \var{pp} \\
         \var{ss} \\
+        \var{ls} \\
       \end{array}
       \right)
-      \trans{epoch}{}
+      \trans{epoch}{e}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{utxoSt''}} \\
         \varUpdate{\var{acnt''}} \\
-        \varUpdate{\var{dstate'}} \\
-        \varUpdate{\var{pstate'}} \\
         \varUpdate{\var{pp'}} \\
         \varUpdate{\var{ss'}} \\
+        \varUpdate{\var{ls'}} \\
       \end{array}
       \right)
     }
@@ -1199,83 +1199,19 @@ The calculation is done pool-by-pool.
 
 \clearpage
 
-\subsection{Reward Transition}
-\label{sec:reward-trans}
+\subsection{Reward Update Calculation}
+\label{sec:reward-calc}
 
-Figure~\ref{fig:ts-types:reward} gives the definitions for the reward transition.
-The figure lists the accounting fields, denoted by $\Acnt$, which consists of:
-\begin{itemize}
-  \item The value $\var{treasury}$ tracks the amount of coin currently stored in the treasury.
-    Initially there will be no way to remove these funds.
-  \item The value $\var{reserves}$ tracks the amount of coin currently stored in the reserves.
-    This pot is used to pay rewards.
-  \item The value $\var{rewardPot}$ to tracks the rewards from the previous epoch that were not
-    payed out.
-\end{itemize}
-The figure also defines the reward environment, $\RewardEnv$, and the reward state,
-$\RewardState$, which combines the accounting fields described above with the UTxO State,
-the delegation state, and the pool state.
-The reward state transition type, like all the transition types in this section, has no signal.
-
-%%
-%% Figure - Rewards Defs
-%%
-\begin{figure}[htb]
-  \emph{Accounting Fields}
-  \begin{equation*}
-    \Acnt =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{treasury} & \Coin & \text{treasury pot}\\
-        \var{reserves} & \Coin & \text{reserve pot}\\
-        \var{rewardPot} & \Coin & \text{reward pot}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Rewards environment}
-  \begin{equation*}
-    \RewardEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
-        \var{ss} & \SnapshotState & \text{snapshots}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Rewards States}
-  \begin{equation*}
-    \RewardState =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{acnt} & \Acnt & \text{accounting}\\
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Rewards transitions}
-  \begin{equation*}
-    \_ \vdash
-    \var{\_} \trans{reward}{} \var{\_}
-    \subseteq \powerset (\RewardEnv \times \RewardState \times \RewardState)
-  \end{equation*}
-  %
-  \caption{Rewards transition-system types}
-  \label{fig:ts-types:reward}
-\end{figure}
-
-\clearpage
+This section defines calculation of a reward update.
+A reward update is the information needed to account for the movement of lovelace
+in the system due to paying out rewards.
 
 Figure~\ref{fig:fund-preservation} captures the potential movement of funds in the entire system,
 taking every transition system in this document into account.  Value is moved between
 accounting pots, but the total amount of value in the system remains constant.
 In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the reward calculation in Figure~\ref{fig:rules:reward}.
+the ``total pot'' used during the reward update calculation in
+Figure~\ref{fig:functions:reward-update-creation}.
 The blue arrows represent the movement of funds that pass through the ``total pot''.
 
 \begin{figure}[htb]
@@ -1326,35 +1262,69 @@ The blue arrows represent the movement of funds that pass through the ``total po
   \label{fig:fund-preservation}
 \end{figure}
 
-Figure~\ref{fig:rules:reward} defines the reward transition rule.
-The reward transition has no preconditions.
-
+Figure~\ref{fig:defs:reward-update} defines a reward update.
+It consists of four pots:
 \begin{itemize}
-  \item First we calculate $\var{totalPot}$, the total amount of coin avail for rewards this epoch,
-    , as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
+  \item The change to the treasury. This will be a positive value.
+  \item The change to the reserves. This will be a negative value.
+  \item The net reward pot.
+  \item The map of new individual rewards (to be added to the existing rewards).
+  \item The change to the fee pot. This will be a negative value.
+\end{itemize}
+
+%%
+%% Figure - Reward Update Defs
+%%
+\begin{figure}[htb]
+  \emph{Reward Update}
+  \begin{equation*}
+    \RewardUpdate =
+    \left(
+      \begin{array}{r@{~\in~}ll}
+        \Delta t & \Coin & \text{change to the treasury} \\
+        \Delta r & \Coin & \text{change to the reserves} \\
+        \var{rp} & \Coin & \text{new reward pot} \\
+        \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
+        \Delta f & \Coin & \text{change to the fee pot} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \caption{Rewards Update type}
+  \label{fig:defs:reward-update}
+\end{figure}
+
+\clearpage
+
+Figure~\ref{fig:functions:reward-update-creation} defines two functions,
+$\fun{createRUpd}$ to create a reward update, and $\fun{applyRUpd}$ to apply a reward update
+to an instance of $\EpochState$.
+
+The $\fun{createRUpd}$ function does the following:
+\begin{itemize}
+  \item First we calculate the change to the reserves,
+    as determined by the $\rho$ protocol parameter.
+  \item Next we calculate $\var{totalPot}$, the total amount of coin available for rewards this
+    epoch, as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
     \begin{itemize}
       \item The fee pot, containing the transaction fees from the epoch.
       \item The amount of coin in the deposit pot that is no longer needed, due to decay.
       \item The reward pot, which is the left-over rewards from the previous epoch.
-      \item Some amount of monetary expansion from the reserves, as determined by the
-        $\rho$ protocol parameter.
+      \item The amount of monetary expansion from the reserves, calculated above.
     \end{itemize}
     Note that the fee pot and the decayed amount are taken from the snapshot taken at the
     epoch boundary.  (See~Figure\ref{fig:rules:snapshot}).
-  \item Some proportion of the total pot is moved to the treasury,
+  \item Next we calculate the proportion of the total pot that will move to the treasury,
     as determined by the $\tau$ protocol parameter. The remaining pot is called the
     $\var{R}$, just as in section 6.5 of \cite{delegation_design}.
   \item The rewards are calculated, using the oldest stake distribution snapshot (the one
     labeled ``go'').
     As given by $\fun{maxPool}$, each pool can receive a maximal amount, determined by its
     performance.  The difference between the maximal amount and the actual amount received is
-    moved to the treasury.
-  \item The reward pot is now set to $\var{R}$ less the total amount of rewards
+    added to the amount moved to the treasury.
+  \item The new reward pot will be $\var{R}$ less the total amount of rewards
     actually paid out and the unrealized rewards given to the treasury.
-  \item The moving averages are updated.  Note the averages were already computed on the previous
-    epoch boundary, as a part of the stake distribution calculation, and could therefore
-    be cached in order to prevent calculating them twice.
-  \item The fee pot is reduced by $\var{feeSS}$.
+  \item The fee pot will be reduced by $\var{feeSS}$.
 \end{itemize}
 
 Note that fees are not explicitly removed from any account:
@@ -1362,51 +1332,68 @@ the fees come from transactions paying them, and are accounted for whenever
 transactions are processed, and the deposit decay value comes from returning
 smaller refunds for deposits than were paid upon depositing.
 
-\clearpage
+The $\fun{applyRUpd}$ function does the following:
+    \begin{itemize}
+      \item Adjust the treasury, reserves, and fee pots by the appropriate amounts.
+      \item Set the reward pot to the new value.
+      \item Add each individual reward to the global reward mapping.
+    \end{itemize}
+
+These two functions will be used in the blockchain transitions systems in Section~\ref{sec:chain}.
+In particular,
+$\fun{createRUpd}$ will be used in Equation~\ref{eq:reward-update},
+and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
 
 %%
-%% Figure - Rewards Rules
+%% Figure - The Reward Update Creation
 %%
 \begin{figure}[htb]
-  \begin{equation}\label{eq:acnt}
-    \inference[Rewards]
-    {
-      {
-      \begin{array}{r@{~\leteq~}l}
-        \left(
-          \begin{array}{c}
-            \wcard \\
-            \wcard \\
-            \var{pstate_{go}} \\
-            \var{poolsSS} \\
-            \var{blocksSS} \\
-            \var{feeSS} \\
-          \end{array}
-        \right) & \var{ss} \\
-        (\var{stake},~\var{delegs}) & \var{pstate_{go}} \\
-        \var{expansion} & \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
-        \var{totalPot} & \var{feeSS} + \var{rewardPot} + \var{expansion} \\
-        \var{newTreasury} & \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
-        \var{R} & \var{totalPot} - \var{newTreasury} \\
-        \var{rewards'},~\var{unrealized}
-          & \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{stake}{delegs} \\
-        \var{newTreasury'} & \var{newTreasury} + \var{unrealized} \\
-        \var{paidRewards} & \left(
-                            \sum\limits_{\_\mapsto c\in\var{rewards'}}c
-                            \right) + \var{unrealized} \\
-        \var{avgs'} & \updateAvgs{pp}{avgs}{blocks}{delegs}{stake} \\
-      \end{array}
-      }
-    }
-    {
-      \begin{array}{l}
-        \var{pp}\\
-        \var{blocks}\\
-        \var{ss}\\
-      \end{array}
-      \vdash
+  \emph{Calculation to create a reward update}
+  %
+  \begin{align*}
+      & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
+      & \createRUpd{b}{es} = \left(
+        \Delta t_1+\Delta t_2,-~\Delta r,~\var{rp},~\var{rs},~-\var{feeSS} \right) \\
+      & ~~~\where \\
+      &~~~~~~~~(\var{acnt},~\var{pp},~\var{ss},~\var{ls}) = \var{es} \\
+      & ~~~~~~~(\wcard,~\wcard,~\var{pstate_{go}},~\var{poolsSS},~\var{blocksSS},~\var{feeSS})
+        = \var{ss}\\
+      & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
+      & ~~~~~~~(\wcard,~\var{reserves},~\var{rewardPot}) = \var{acnt} \\
+      & ~~~~~~~\left(
+                 \wcard,~
+                 \left(
+                   \left(\wcard,~\var{rewards},~\wcard,~\wcard\right)~
+                   \wcard
+                 \right)
+               \right) = \var{ls} \\
+      & ~~~~~~~\Delta r = \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
+      & ~~~~~~~\var{totalPot} = \var{feeSS} + \var{rewardPot} + \Delta r \\
+      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
+      & ~~~~~~~\var{R} = \var{totalPot} - \Delta t_1 \\
+      & ~~~~~~~\var{rs},~\Delta t_2
+           = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{stake}{delegs} \\
+      & ~~~~~~~\var{rp} = R - \left(
+                              \sum\limits_{\_\mapsto c\in\var{rs}}c
+                              \right) - \Delta t_2 \\
+  \end{align*}
+  %
+  \emph{Applying a reward update}
+  %
+  \begin{align*}
+      & \fun{applyRUpd} \in \RewardUpdate \to \EpochState \to \EpochState \\
+      & \fun{applyRUpd}~
       \left(
-        \begin{array}{r}
+        \begin{array}{c}
+          \Delta t \\
+          \Delta r \\
+          \var{rp} \\
+          \var{rs} \\
+          \Delta f \\
+        \end{array}
+      \right)
+      \left(
+        \begin{array}{c}
           \var{treasury} \\
           \var{reserves} \\
           \var{rewardPot} \\
@@ -1426,32 +1413,32 @@ smaller refunds for deposits than were paid upon depositing.
           \var{fees} \\
         \end{array}
       \right)
-      \trans{reward}{}
+      =
       \left(
-        \begin{array}{rcl}
-          \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{newTreasury'}} \\
-          \varUpdate{\var{reserves}} & \varUpdate{-} & \varUpdate{\var{expansion}} \\
-          \varUpdate{\var{R}} & \varUpdate{-} & \varUpdate{\var{paidRewards}} \\
+        \begin{array}{c}
+          \varUpdate{\var{treasury} + \Delta t}\\
+          \varUpdate{\var{reserves} + \Delta r}\\
+          \varUpdate{\var{rp}} \\
           ~ \\
           \var{stkeys} \\
-          \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{rewards'}} \\
+          \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
           \var{delegations} \\
           \var{ptrs} \\
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \varUpdate{\var{avgs'}} \\
+          \var{avgs} \\
           ~ \\
           \var{utxo} \\
           \var{deposits} \\
-          \varUpdate{fees} & \varUpdate{-} & \varUpdate{feeSS} \\
+          \varUpdate{\var{fees}+\Delta f} \\
         \end{array}
       \right)
-    }
-  \end{equation}
-  \caption{Rewards inference rules}
-  \label{fig:rules:reward}
+  \end{align*}
+
+  \caption{Reward Update Creation}
+  \label{fig:functions:reward-update-creation}
 \end{figure}
 
 \clearpage
