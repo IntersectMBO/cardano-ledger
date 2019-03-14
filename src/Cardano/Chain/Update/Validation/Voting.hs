@@ -27,7 +27,7 @@ import Cardano.Crypto
 
 -- | Environment used to register votes and confirm proposals
 data VotingEnvironment = VotingEnvironment
-  { veCurrentSlot                   :: SlotId
+  { veCurrentSlot                   :: FlatSlotId
   , veProtocolParameters            :: ProtocolParameters
   , veVotingRegistrationEnvironment :: VoteRegistrationEnvironment
   }
@@ -41,7 +41,7 @@ data VoteRegistrationEnvironment = VoteRegistrationEnvironment
 -- | VotingState keeps track of registered votes and confirmed proposals
 data VotingState = VotingState
   { vsVotes              :: RegisteredVotes
-  , vsConfirmedProposals :: Map UpId SlotId
+  , vsConfirmedProposals :: Map UpId FlatSlotId
   }
 
 type RegisteredVotes = Map UpId (Set StakeholderId)
