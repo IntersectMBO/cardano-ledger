@@ -53,6 +53,7 @@ let
       # explicity here.
       (iohk-module { nixpkgs = pkgs;
                      inherit th-packages; })
+      (import ./config.nix)
     ];
   };
 in
