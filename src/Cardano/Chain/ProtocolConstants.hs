@@ -18,7 +18,7 @@ import Cardano.Chain.Slotting.SlotCount (SlotCount)
 -- | Security parameter expressed in number of slots. It uses chain quality
 --   property. It's basically @blkSecurityParam / chainQualityThreshold@.
 kSlotSecurityParam :: BlockCount -> SlotCount
-kSlotSecurityParam = fromIntegral . (*) 2 . unBlockCount
+kSlotSecurityParam = fromIntegral . (*) 2 . getBlockCount
 
 -- | Minimal chain quality (number of blocks divided by number of
 --   slots) necessary for security of the system.
@@ -27,4 +27,4 @@ kChainQualityThreshold k = realToFrac k / realToFrac (kSlotSecurityParam k)
 
 -- | Number of slots inside one epoch
 kEpochSlots :: BlockCount -> SlotCount
-kEpochSlots = fromIntegral . (*) 10 . unBlockCount
+kEpochSlots = fromIntegral . (*) 10 . getBlockCount

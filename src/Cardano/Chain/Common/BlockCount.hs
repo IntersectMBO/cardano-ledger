@@ -9,15 +9,13 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson.TH (defaultOptions, deriveJSON, fieldLabelModifier)
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Formatting.Buildable (Buildable)
 
 import Cardano.Binary.Class (Bi(..))
 
-import Cardano.Chain.Common.BlockCount.JSON (unToGet)
-
 newtype BlockCount = BlockCount
-    { unBlockCount :: Word64
+    { getBlockCount :: Word64
     } deriving ( Eq
               , Ord
               , Num
@@ -32,8 +30,8 @@ newtype BlockCount = BlockCount
               )
 
 instance Bi BlockCount where
-    encode = encode . unBlockCount
+    encode = encode . getBlockCount
     decode = BlockCount <$> decode
-    encodedSizeExpr size pxy = size (unBlockCount <$> pxy)
+    encodedSizeExpr size pxy = size (getBlockCount <$> pxy)
 
-deriveJSON (defaultOptions { fieldLabelModifier = unToGet }) ''BlockCount
+deriveJSON defaultOptions ''BlockCount

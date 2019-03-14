@@ -51,7 +51,6 @@ library
                        Cardano.Chain.Common.AddressHash
                        Cardano.Chain.Common.Attributes
                        Cardano.Chain.Common.BlockCount
-                       Cardano.Chain.Common.BlockCount.JSON
                        Cardano.Chain.Common.ChainDifficulty
                        Cardano.Chain.Common.Lovelace
                        Cardano.Chain.Common.LovelacePortion

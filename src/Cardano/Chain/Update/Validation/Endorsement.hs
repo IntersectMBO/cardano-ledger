@@ -98,8 +98,8 @@ registerEndorsement env st endorsement =
   isConfirmedAndStable upId = upId `M.member` scps
    where
       -- Stable and confirmed proposals.
-    scps = M.filter (currentSlot - _2 k <=) confirmedProposals
-    _2 x = 2 * unBlockCount x
+    scps = M.filter (stableAt <=) confirmedProposals
+    stableAt = currentSlot - FlatSlotId (2 * getBlockCount k)
 
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
