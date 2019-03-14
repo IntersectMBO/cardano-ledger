@@ -35,15 +35,21 @@ data Environment = Environment
   }
 
 data State = State
-  { futureProtocolVersions :: [CandidateProtocolVersion]
+  { candidateProtocolVersions :: [CandidateProtocolVersion]
   , registeredEndorsements :: Set Endorsement
   }
 
 
 data CandidateProtocolVersion = CandidateProtocolVersion
-  { fpvSlot               :: FlatSlotId
-  , fpvProtocolVersion    :: ProtocolVersion
-  , fpvProtocolParameters :: ProtocolParameters
+  { cpvSlot               :: FlatSlotId
+    -- ^ Slot at which this protocol version and parameters gathered enough
+    -- endorsements and became a candidate. This is used to check which
+    -- versions became candidates 2k slots before the end of an epoch (and only
+    -- those can be adopted at that epoch). Versions that became candidates
+    -- later than 2k slots before the end of an epoch can be adopted in
+    -- following epochs.
+  , cpvProtocolVersion    :: ProtocolVersion
+  , cpvProtocolParameters :: ProtocolParameters
   }
 
 data Endorsement = Endorsement
@@ -72,15 +78,16 @@ registerEndorsement env st endorsement =
 -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
-            fpv = CandidateProtocolVersion
-              { fpvSlot = currentSlot
-              , fpvProtocolVersion = pv
-              , fpvProtocolParameters = pps'
+            cpv = CandidateProtocolVersion
+              { cpvSlot = currentSlot
+              , cpvProtocolVersion = pv
+              , cpvProtocolParameters = pps'
               }
-            fpvs' = updateCandidateProtocolVersions futureProtocolVersions fpv
+            cpvs' =
+              updateCandidateProtocolVersions candidateProtocolVersions cpv
           pure $ State
-            { futureProtocolVersions = fpvs'
-            , registeredEndorsements = registeredEndorsements'
+            { candidateProtocolVersions = cpvs'
+            , registeredEndorsements    = registeredEndorsements'
             }
 
 -- Just register the endorsement if we cannot adopt
@@ -98,13 +105,13 @@ registerEndorsement env st endorsement =
   isConfirmedAndStable upId = upId `M.member` scps
    where
       -- Stable and confirmed proposals.
-    scps = M.filter (stableAt <=) confirmedProposals
+    scps     = M.filter (stableAt <=) confirmedProposals
     stableAt = currentSlot - FlatSlotId (2 * getBlockCount k)
 
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
 
-  State { futureProtocolVersions, registeredEndorsements } = st
+  State { candidateProtocolVersions, registeredEndorsements } = st
 
   registeredEndorsements' = case delegatorOf vk delegationMap of
     Just vkS -> Set.insert (Endorsement epv vkS) registeredEndorsements
@@ -150,7 +157,7 @@ updateCandidateProtocolVersions
   :: [CandidateProtocolVersion]
   -> CandidateProtocolVersion
   -> [CandidateProtocolVersion]
-updateCandidateProtocolVersions [] fpv = [fpv]
-updateCandidateProtocolVersions fpvs@(fpv : _) fpv'
-  | fpvProtocolVersion fpv < fpvProtocolVersion fpv' = fpv' : fpvs
-  | otherwise = fpvs
+updateCandidateProtocolVersions [] cpv = [cpv]
+updateCandidateProtocolVersions cpvs@(cpv : _) cpv'
+  | cpvProtocolVersion cpv < cpvProtocolVersion cpv' = cpv' : cpvs
+  | otherwise = cpvs
