@@ -1,7 +1,16 @@
 let
   localLib = import ./lib.nix;
+  # Path of nix-tools jobs that we want to evict from release.nix:
+  disabled = [
+    # FIXME: those tests freeze on darwin hydra agents:
+    ["nix-tools" "tests" "cardano-chain" "cardano-chain-test" "x86_64-darwin"]
+  ];
 in
-localLib.nix-tools.release-nix {
+{ ... }@args:
+localLib.pkgs.lib.mapAttrsRecursiveCond
+(as: !(as ? "type" && as.type == "derivation"))
+(path: v: if (builtins.elem path disabled) then null else v)
+(localLib.nix-tools.release-nix {
   package-set-path = ./.;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
@@ -50,4 +59,4 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-chain.cardano-chain-test.x86_64-linux
   ];
 
-}
+} args)
