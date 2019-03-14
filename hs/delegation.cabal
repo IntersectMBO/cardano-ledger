@@ -22,6 +22,17 @@ library
                      LedgerState
                      Delegation.PoolParams
                      Delegation.Certificates
+                     STS.Deleg
+                     STS.Delegs
+                     STS.Delpl
+                     STS.Epoch
+                     STS.Ledger
+                     STS.Newpp
+                     STS.Pool
+                     STS.PoolReap
+                     STS.Snap
+                     STS.Utxo
+                     STS.Utxow
   hs-source-dirs: src
   ghc-options:
     -Wall
