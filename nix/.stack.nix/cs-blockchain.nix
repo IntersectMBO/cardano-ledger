@@ -39,6 +39,7 @@
             (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
             (hsPkgs.cs-blockchain)
+            (hsPkgs.cs-ledger)
             (hsPkgs.small-steps)
             ];
           };
