@@ -16,6 +16,7 @@ import Cardano.Chain.Delegation.Validation
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolParameters
 import Cardano.Chain.Update.ProtocolVersion
+import Cardano.Chain.Update.SoftforkRule
 import Cardano.Chain.Update.Vote
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 
@@ -132,18 +133,23 @@ canAdopt
   -> Set Endorsement
   -> ProtocolVersion
   -> Bool
-canAdopt n pps endorsements protocolVersion = t <= numberOfEndorsements
+canAdopt ngk pps endorsements protocolVersion =
+  upAdptThd <= numberOfEndorsements
  where
-  ProtocolParameters { ppUpdateProposalThd } = pps
+  -- In Byron we do not have a @upAdptThd@ protocol parameter, so we have to
+  -- use the existing ones.
+  --
+  -- @lovelacePortionToDouble . srMinThd . ppSoftforkRule@ will give us the
+  -- ratio (in the interval @[0, 1]@) of the total stake that has to endorse a
+  -- protocol version to become adopted. In genesis configuration, this ratio
+  -- will evaluate to @0.6@, so if we have 7 genesis keys, @upAdptThd = 4@.
+  upAdptThd :: Int
+  upAdptThd = floor $ stakeRatio * fromIntegral ngk
+   where
+    stakeRatio = lovelacePortionToDouble . srMinThd . ppSoftforkRule $ pps
 
-  t :: Double
-  -- Here we assume that stake is evenly distributed among the Genesis Keys.
-  -- Thus, the LovelacePortion can be multiplied by the number of keys to yield
-  -- the endorsement threshold.
-  t = lovelacePortionToDouble ppUpdateProposalThd * fromIntegral n
-
-  numberOfEndorsements :: Double
-  numberOfEndorsements = fromIntegral $ length $ Set.filter
+  numberOfEndorsements :: Int
+  numberOfEndorsements = length $ Set.filter
     ((== protocolVersion) . endorsementProtocolVersion)
     endorsements
 
