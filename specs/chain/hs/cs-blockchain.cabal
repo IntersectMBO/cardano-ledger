@@ -40,7 +40,6 @@ library
                      , cs-ledger
                      , hedgehog
                      , lens
-                     , memory
                      , small-steps
   ghc-options:         -Wall
                        -Wcompat
@@ -61,7 +60,6 @@ test-suite chain-spec-test
                      , hedgehog
                      , lens
                      , tasty
-                     , tasty-hunit
                      , tasty-hedgehog
                      -- local deps
                      , cs-blockchain
