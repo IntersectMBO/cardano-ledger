@@ -36,7 +36,6 @@ library
                      , hedgehog
                      , lens
                      , memory
-                     , text
                      -- Local deps
                      , small-steps
   default-language:    Haskell2010
@@ -55,9 +54,6 @@ test-suite doctests
   default-language:    Haskell2010
   build-depends:       base
                      , doctest
-                     , doctest-discover
-                       --
-                     , cs-ledger
   ghc-options:        -Wall
                       -Wcompat
                       -Wincomplete-record-updates
