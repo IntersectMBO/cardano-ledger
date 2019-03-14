@@ -130,6 +130,9 @@ canAdopt n pps endorsements protocolVersion = t <= numberOfEndorsements
   ProtocolParameters { ppUpdateProposalThd } = pps
 
   t :: Double
+  -- Here we assume that stake is evenly distributed among the Genesis Keys.
+  -- Thus, the LovelacePortion can be multiplied by the number of keys to yield
+  -- the endorsement threshold.
   t = lovelacePortionToDouble ppUpdateProposalThd * fromIntegral n
 
   numberOfEndorsements :: Double
