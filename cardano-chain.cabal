@@ -105,6 +105,7 @@ library
                        Cardano.Chain.Update.SystemTag
                        Cardano.Chain.Update.Undo
                        Cardano.Chain.Update.Validation.Endorsement
+                       Cardano.Chain.Update.Validation.Interface
                        Cardano.Chain.Update.Validation.Registration
                        Cardano.Chain.Update.Validation.Voting
                        Cardano.Chain.Update.Vote
