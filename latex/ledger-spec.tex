@@ -51,6 +51,7 @@
 \newcommand{\PParams}{\type{PParams}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
+\newcommand{\SlotsPerCycle}{\mathsf{SlotsPerCycle}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
 \newcommand{\StakeKeys}{\type{StakeKeys}}
@@ -86,13 +87,17 @@
 \newcommand{\TxIn}{\type{TxIn}}
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
+\newcommand{\VKeyEv}{\type{VKey_{ev}}}
 \newcommand{\SKey}{\type{SKey}}
+\newcommand{\SKeyEv}{\type{SKey_{ev}}}
 \newcommand{\HashKey}{\type{HashKey}}
 \newcommand{\KeyPair}{\type{KeyPair}}
+\newcommand{\KeyPairEv}{\type{KeyPair_{ev}}}
 \newcommand{\Sig}{\type{Sig}}
 \newcommand{\Data}{\type{Data}}
 %% Adding delegation
 \newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\Cycle}{\type{Cycle}}
 \newcommand{\VKeyGen}{\type{VKeyGen}}
 %% Blockchain
 \newcommand{\Gkeys}{\var{G_{keys}}}
@@ -139,6 +144,7 @@
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
 \newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
+\newcommand{\cycle}[1]{\fun{cycle}~ \var{#1}}
 \newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
 
 %% UTxO witnesses
@@ -146,6 +152,8 @@
 \newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
+\newcommand{\verifyEv}[4]{\fun{verify_{ev}} ~ #1 ~ #2 ~ #3 ~ #4}
+\newcommand{\signEv}[3]{\fun{sign_{ev}} ~ #1 ~ #2 ~ #3}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 \newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
 \newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
