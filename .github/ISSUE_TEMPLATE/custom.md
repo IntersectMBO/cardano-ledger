@@ -12,6 +12,8 @@ assignees: ''
 
 ## Proposed Solution
 
+<!-- If you are not able to add a proposal, please add the `needs-planning` label -->
+
 
 <!-- Please add Next Actions in the comments with the following format:
 
@@ -19,3 +21,5 @@ assignees: ''
 - [ ] Action to complete
 
 -->
+
+<!-- If you could create a PR for the Next Action in 15 mins or less, please give it a go! -->
