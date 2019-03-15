@@ -33,11 +33,20 @@
         "doctests" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.containers)
+            (hsPkgs.data-default)
+            (hsPkgs.free)
+            (hsPkgs.hedgehog)
+            (hsPkgs.tasty-hunit)
+            (hsPkgs.lens)
+            (hsPkgs.mtl)
+            (hsPkgs.sequence)
+            (hsPkgs.transformers)
             (hsPkgs.doctest)
-            (hsPkgs.doctest-discover)
             (hsPkgs.small-steps)
             ];
+          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../specs/semantics/hs; }
+    } // rec { src = (pkgs.lib).mkDefault .././specs/semantics/hs; }
