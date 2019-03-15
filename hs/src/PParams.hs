@@ -52,9 +52,9 @@ interval1 = UnitInterval 1
 
 data PParams = PParams
   { -- |The linear factor for the minimum fee calculation
-    _minfeeA         :: Natural
+    _minfeeA         :: Integer
     -- |The constant factor for the minimum fee calculation
-  , _minfeeB         :: Natural
+  , _minfeeB         :: Integer
     -- |The amount of a key registration deposit
   , _keyDeposit      :: Coin
     -- |The amount of a pool registration deposit

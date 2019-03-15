@@ -89,9 +89,12 @@ genBool = Gen.enumBounded
 genNatural :: Natural -> Natural -> Gen Natural
 genNatural lower upper = Gen.integral $ Range.linear lower upper
 
+genInteger :: Integer -> Integer -> Gen Integer
+genInteger lower upper = Gen.integral $ Range.linear lower upper
+
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
-genCoinList :: Natural -> Natural -> Int -> Int -> Gen [Coin]
+genCoinList :: Integer -> Integer -> Int -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin lower upper = do
   xs <- Gen.list (Range.linear lower upper)
         $ Gen.integral (Range.exponential minCoin maxCoin)
@@ -203,7 +206,7 @@ repeatCollectTx n keyPairs (Slot slot) fees ls txs = do
   (txfee', tx, next) <- genLedgerStateTx keyPairs (Slot slot) ls
   case next of
     Left _    -> pure (fees, txs, next)
-    Right ls' -> repeatCollectTx (n - 1) keyPairs (Slot $ slot + 1) (txfee' <> fees) ls' (tx:txs)
+    Right ls' -> repeatCollectTx (n - 1) keyPairs (Slot $ slot + 1) (txfee' + fees) ls' (tx:txs)
 
 -- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
 -- exhausting the UTxO set to prevent calling 'head' on empty input list.
@@ -220,7 +223,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
  | otherwise = do
     (txfee', tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
-    repeatCollectTx' (n - 1) keyPairs (txfee' <> fees) ls' (tx:txs) (validationErrors ++ errors')
+    repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx:txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -307,8 +310,8 @@ genDCertRetirePool keys epoch = do
 genStakePool :: KeyPairs -> Gen PoolParams
 genStakePool keys = do
   poolKey       <- getAnyStakeKey keys
-  cost          <- Coin <$> genNatural 1 100
-  pledge        <- Coin <$> genNatural 1 100
+  cost          <- Coin <$> genInteger 1 100
+  pledge        <- Coin <$> genInteger 1 100
   marginPercent <- genNatural 0 100
   acntKey       <- getAnyStakeKey keys
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
