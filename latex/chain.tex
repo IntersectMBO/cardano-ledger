@@ -137,7 +137,7 @@
       \begin{array}{r@{~\in~}lr}
         \var{vk_{hot}} & \VKeyEv & \text{operational (hot) key}\\
         \var{n} & \N & \text{counter}\\
-        c_0 & \Cycle & \text{start cycle}\\
+        c_0 & \KESPeriod & \text{start KES period}\\
         \sigma & \Sig & \text{cold key signature}\\
       \end{array}
     \right)
@@ -447,7 +447,7 @@
       &
       \var{hk} \leteq \hashKey{vk_{cold}}
       \\~\\
-      c_0 \leq \cycle{\bslot{bhb}} < c_0 + 90
+      c_0 \leq \kesPeriod{\bslot{bhb}} < c_0 + 90
       \\
       \var{hk}\mapsto m\in\var{cs}
       &
@@ -532,7 +532,7 @@
       \\~\\
       \var{vk_{hot}}\mapsto s_0\in\var{stpools}
       &
-      t \leteq \cycle{slot} - \cycle{s_0}
+      t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
       \\~\\
       \var{s_{last}} < \var{slot} \leq \var{s_{now}}
       &
