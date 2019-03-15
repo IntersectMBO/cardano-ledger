@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeApplications  #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -43,7 +44,9 @@ import Ledger.Update (bkSgnCntW, bkSlotsPerEpoch, maxBkSz, maxHdrSz)
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , LovelacePortion(LovelacePortion)
-  , TxFeePolicy(TxFeePolicyUnknown)
+  , TxFeePolicy(TxFeePolicyTxSizeLinear)
+  , TxSizeLinear(TxSizeLinear)
+  , mkKnownLovelace
   , mkStakeholderId
   )
 
@@ -218,9 +221,8 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
       (LovelacePortion 0)
       (LovelacePortion 0)
       (LovelacePortion 0)
-    , Update.ppTxFeePolicy      = TxFeePolicyUnknown
-      0
-      "Fee policy unspecified at \"Test.Cardano.Chain.Block.Validation.Spec\""
+    , Update.ppTxFeePolicy      = TxFeePolicyTxSizeLinear
+      $ TxSizeLinear (mkKnownLovelace @0) (mkKnownLovelace @0)
     , Update.ppUnlockStakeEpoch = 0
     }
 

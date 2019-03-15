@@ -58,8 +58,6 @@ data TxValidationError
   | TxValidationMissingInput TxIn
   | TxValidationScriptWitness
   -- ^ TODO: Remove this once support for script witnesses is added
-  | TxValidationUnknownFeePolicy TxFeePolicy
-  | TxValidationUnknownWitnessType Word8
   deriving (Eq, Show)
 
 
@@ -111,8 +109,6 @@ validateTx feePolicy utxo tx = do
       calculateTxSizeLinear txSizeLinear txSize
         `wrapError` TxValidationLovelaceError "Minimum Fee"
 
-    policy -> throwError $ TxValidationUnknownFeePolicy policy
-
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'
 validateTxIn :: MonadError TxValidationError m => UTxO -> TxIn -> m ()
@@ -151,8 +147,6 @@ validateWitness pm sigData addr witness = case witness of
     (valVersion == redVersion && checkScriptAddress validator addr)
       `orThrowError` TxValidationInvalidWitness witness
     txScriptCheck sigData validator redeemer
-
-  UnknownWitnessType t _ -> throwError $ TxValidationUnknownWitnessType t
  where
 
   txScriptCheck

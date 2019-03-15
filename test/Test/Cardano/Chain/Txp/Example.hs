@@ -7,7 +7,6 @@
 module Test.Cardano.Chain.Txp.Example
   ( exampleTxId
   , exampleTxInList
-  , exampleTxInUnknown
   , exampleTxInUtxo
   , exampleTxPayload
   , exampleTxProof
@@ -30,13 +29,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Vector as V
 
 import Cardano.Chain.Common
-  ( IsBootstrapEraAddr(..)
-  , makePubKeyAddress
-  , mkAttributes
-  , mkKnownLovelace
-  , mkMerkleTree
-  , mtRoot
-  )
+  (makePubKeyAddress, mkAttributes, mkKnownLovelace, mkMerkleTree, mtRoot)
 import Cardano.Chain.Txp
   ( Tx(..)
   , TxAux
@@ -82,16 +75,11 @@ exampleTxId = exampleHashTx
 exampleTxInList :: (NonEmpty TxIn)
 exampleTxInList = fromList [exampleTxInUtxo]
 
-exampleTxInUnknown :: TxIn
-exampleTxInUnknown = TxInUnknown 47 ("forty seven" :: ByteString)
-
 exampleTxInUtxo :: TxIn
 exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
 
 exampleTxOut :: TxOut
-exampleTxOut = TxOut
-  (makePubKeyAddress (IsBootstrapEraAddr True) pkey)
-  (mkKnownLovelace @47)
+exampleTxOut = TxOut (makePubKeyAddress pkey) (mkKnownLovelace @47)
   where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)

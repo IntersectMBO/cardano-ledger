@@ -1,7 +1,7 @@
 {
     "memPoolLimitTx": 700,
     "assetLockedSrcAddrs": [
-        "2RhQhCGqYPDpFgTsnBTbnvPvCwpqAkjwLqQkWpkqXbLRmNxd4xNd262nGsr8JiynyKRUeMLSJ9Ntho9i76uvBTrVXdJJG5yiNLb8frmUe5qX7E",
-        "5FCjkr138i9xVenAi73mkmc6P7AqGLKiZMoQnvcGZsGHBASTWm5nAjx6V3QnLizSQE8cucq6cPmRwNfT25YtBX9ZAm3eKqMenvaZw8yfX9F"
+        "Ae2tdPwUPEZDYi2xS2faFTUmLoegEnFrfBtaBAjeg4Nsrk71yMcqdtPzuz4",
+        "2RhQhCGqYPDpFgTsnBTbnvPvCwpqAkjwLqQkWpkqXbLRmNxd4xNd262nGsr8JiynyKRUeMLSJ9Ntho9i76uvBTrVXdJJG5yiNLb8frmUe5qX7E"
     ]
 }

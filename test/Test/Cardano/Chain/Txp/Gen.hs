@@ -23,7 +23,6 @@ module Test.Cardano.Chain.Txp.Gen
   , genTxSigData
   , genTxUndo
   , genTxWitness
-  , genUnknownWitnessType
   )
 where
 
@@ -105,15 +104,7 @@ genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32
 
 genTxIn :: Gen TxIn
-genTxIn = Gen.choice gens
- where
-  gens =
-    [ TxInUtxo
-      <$> genTxId
-      <*> genWord32
-         -- 0 is reserved for TxInUtxo tag ----------+
-    , TxInUnknown <$> Gen.word8 (Range.constant 1 255) <*> gen32Bytes
-    ]
+genTxIn = TxInUtxo <$> genTxId <*> genWord32
 
 genTxInList :: Gen (NonEmpty TxIn)
 genTxInList = Gen.nonEmpty (Range.linear 1 20) genTxIn
@@ -152,13 +143,7 @@ genTxSigData = TxSigData <$> genTxHash
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice gens
- where
-  gens =
-    [ genPkWitness pm
-    , genRedeemWitness pm
-    , genScriptWitness
-    , genUnknownWitnessType
-    ]
+  where gens = [genPkWitness pm, genRedeemWitness pm, genScriptWitness]
 
 genTxUndo :: Gen TxUndo
 genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
@@ -167,6 +152,3 @@ genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
   V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
 
-genUnknownWitnessType :: Gen TxInWitness
-genUnknownWitnessType =
-  UnknownWitnessType <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes

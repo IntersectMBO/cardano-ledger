@@ -7,7 +7,6 @@ module Test.Cardano.Chain.Common.Gen
   , genAddress
   , genAddrType
   , genAddrSpendingData
-  , genAddrStakeDistribution
   , genBlockCount
   , genCanonicalTxFeePolicy
   , genChainDifficulty
@@ -27,7 +26,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import qualified Data.Map.Strict as Map
 import Formatting (build, sformat)
 
 import Hedgehog
@@ -38,7 +36,6 @@ import Cardano.Binary.Class (Bi)
 import Cardano.Chain.Common
   ( AddrAttributes(..)
   , AddrSpendingData(..)
-  , AddrStakeDistribution(..)
   , AddrType(..)
   , Address(..)
   , BlockCount(..)
@@ -66,7 +63,7 @@ import Test.Cardano.Crypto.Gen
 
 
 genAddrAttributes :: Gen AddrAttributes
-genAddrAttributes = AddrAttributes <$> hap <*> genAddrStakeDistribution
+genAddrAttributes = AddrAttributes <$> hap
   where hap = Gen.maybe genHDAddressPayload
 
 genAddress :: Gen Address
@@ -96,50 +93,9 @@ genAddrSpendingData = Gen.choice gens
     , UnknownASD <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes
     ]
 
-genAddrStakeDistribution :: Gen AddrStakeDistribution
-genAddrStakeDistribution = Gen.choice
-  [ pure BootstrapEraDistr
-  , SingleKeyDistr <$> genStakeholderId
-  , UnsafeMultiKeyDistr <$> genMultiKeyDistr
-  ]
- where
-    -- Lifted from `Pos.Arbitrary.Core`. There are very particular constraints
-    -- on the AddrStakeDistribution, which are mixed into encoding/decoding.
-  genMultiKeyDistr :: Gen (Map StakeholderId LovelacePortion)
-  -- We don't want to generate too much, hence 'scale'.
-  genMultiKeyDistr = Gen.scale (`mod` 16) $ do
-    holder0     <- genStakeholderId
-    holder1     <- Gen.filter (/= holder0) genStakeholderId
-    moreHolders <- Gen.list (Range.linear 0 100) genStakeholderId
-    -- Must be at least 2 non-repeating stakeholders.
-    let holders = ordNub (holder0 : holder1 : moreHolders)
-    portions <- genPortions (length holders) []
-    return $ Map.fromList $ holders `zip` portions
-  genPortions :: Int -> [LovelacePortion] -> Gen [LovelacePortion]
-  genPortions 0 res = pure res
-  genPortions n res = do
-    let
-      limit =
-        foldl' (-) lovelacePortionDenominator $ map getLovelacePortion res
-    case (n, limit) of
-        -- Limit is exhausted, can't create more.
-      (_, 0) -> return res
-      -- The last portion, we must ensure the sum is correct.
-      (1, _) -> return (LovelacePortion limit : res)
-      -- We intentionally don't generate 'limit', because we
-      -- want to generate at least 2 portions.  However, if
-      -- 'limit' is 1, we will generate 1, because we must
-      -- have already generated one portion.
-      _      -> do
-        portion <- LovelacePortion
-          <$> Gen.word64 (Range.linear 1 (max 1 (limit - 1)))
-        genPortions (n - 1) (portion : res)
-
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
 
--- | `TxFeePolicyUnknown` is not needed because this is a generator
--- used to generate `GenesisData`.
 genCanonicalTxFeePolicy :: Gen TxFeePolicy
 genCanonicalTxFeePolicy = TxFeePolicyTxSizeLinear <$> genCanonicalTxSizeLinear
 
@@ -200,17 +156,7 @@ genStakeholderId :: Gen StakeholderId
 genStakeholderId = mkStakeholderId <$> genPublicKey
 
 genTxFeePolicy :: Gen TxFeePolicy
-genTxFeePolicy = Gen.choice
-  [ TxFeePolicyTxSizeLinear <$> genTxSizeLinear
-  , TxFeePolicyUnknown <$> genUnknownPolicy <*> genUTF8Byte
-  ]
- where
-    -- 0 is a reserved policy, so we go from 1 to max.
-    -- The Bi instance decoder for TxFeePolicy consolidates the
-    -- tag and the policy number, so a 0 policy in TxFeePolicyUnknown
-    -- causes a decoder error.
-  genUnknownPolicy :: Gen Word8
-  genUnknownPolicy = Gen.word8 (Range.constant 1 maxBound)
+genTxFeePolicy = TxFeePolicyTxSizeLinear <$> genTxSizeLinear
 
 genTxSizeLinear :: Gen TxSizeLinear
 genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genLovelace

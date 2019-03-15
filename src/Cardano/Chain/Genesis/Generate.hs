@@ -31,14 +31,13 @@ import Data.Time (UTCTime)
 import Cardano.Binary.Class (serialize')
 import Cardano.Chain.Common
   ( Address
-  , IsBootstrapEraAddr(..)
   , Lovelace
   , LovelaceError
   , addLovelace
   , applyLovelacePortionDown
   , deriveFirstHDAddress
   , divLovelace
-  , makePubKeyAddressBoot
+  , makePubKeyAddress
   , mkKnownLovelace
   , mkStakeholderId
   , modLovelace
@@ -166,10 +165,10 @@ generateGenesisData startTime genesisSpec = do
       :: MonadError GenesisDataGenerationError m => PoorSecret -> m Address
     createAddressPoor (PoorEncryptedSecret hdwSk) =
       maybe (throwError GenesisDataGenerationPassPhraseMismatch) (pure . fst)
-        $ deriveFirstHDAddress (IsBootstrapEraAddr True) emptyPassphrase hdwSk
+        $ deriveFirstHDAddress emptyPassphrase hdwSk
     createAddressPoor (PoorSecret secret) =
-      pure $ makePubKeyAddressBoot (toPublic secret)
-  let richAddresses = map (makePubKeyAddressBoot . toPublic) richSecrets
+      pure $ makePubKeyAddress (toPublic secret)
+  let richAddresses = map (makePubKeyAddress . toPublic) richSecrets
 
   poorAddresses        <- mapM createAddressPoor poorSecrets
 

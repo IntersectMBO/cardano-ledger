@@ -16,7 +16,6 @@ import Data.Vector (Vector)
 
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
 
 import Cardano.Binary.Class (Bi, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common
@@ -33,7 +32,6 @@ import Test.Cardano.Chain.Txp.Example
   , exampleRedeemSignature
   , exampleTxId
   , exampleTxInList
-  , exampleTxInUnknown
   , exampleTxInUtxo
   , exampleTxOut
   , exampleTxOutList
@@ -112,10 +110,6 @@ roundTripHashTx = eachOf 50 genTxHash roundTripsBiBuildable
 goldenTxInUtxo :: Property
 goldenTxInUtxo = goldenTestBi exampleTxInUtxo "test/golden/bi/txp/TxIn_Utxo"
 
-goldenTxInUnknown :: Property
-goldenTxInUnknown =
-  goldenTestBi exampleTxInUnknown "test/golden/bi/txp/TxIn_Unknown"
-
 roundTripTxIn :: Property
 roundTripTxIn = eachOf 100 genTxIn roundTripsBiBuildable
 
@@ -165,12 +159,6 @@ goldenRedeemWitness = goldenTestBi
   "test/golden/bi/txp/TxInWitness_RedeemWitness"
  where
   redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
-
-goldenUnknownWitnessType :: Property
-goldenUnknownWitnessType = goldenTestBi
-  unkWitType
-  "test/golden/bi/txp/TxInWitness_UnknownWitnessType"
-  where unkWitType = UnknownWitnessType 47 "forty seven"
 
 roundTripTxInWitness :: Property
 roundTripTxInWitness = eachOf 50 (feedPM genTxInWitness) roundTripsBiBuildable
@@ -253,9 +241,7 @@ sizeEstimates
   = let
       sizeTestGen :: (Show a, Bi a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg { gen = g }
-      pm = ProtocolMagicId 0
-      knownTxIn (TxInUnknown _ _) = False
-      knownTxIn _ = True
+      pm           = ProtocolMagicId 0
 
       -- Explicit bounds for types, based on the generators from Gen.
       attrUnitSize = (typeRep (Proxy @(Attributes ())), SizeConstant 1)
@@ -285,7 +271,7 @@ sizeEstimates
             ]
           }
         )
-      , ("TxIn", sizeTestGen (Gen.filter knownTxIn genTxIn))
+      , ("TxIn", sizeTestGen genTxIn)
       , ( "TxOut"
         , sizeTest
           $ scfg { gen = genTxOut, addlCtx = M.fromList [attrAddrSize] }
