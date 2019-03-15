@@ -54,12 +54,26 @@ test-suite doctests
   default-language:    Haskell2010
   build-depends:       base
                      , doctest
+                       -- need these, when doctest-discover runs
+                       -- to ensure they are in scope.
+                     , bytestring
+                     , containers
+                     , cryptonite
+                     , hedgehog
+                     , lens
+                     , memory
+                     , text
+                     -- Local deps
+                     , small-steps
+                     , cs-ledger
+  build-tool-depends: doctest-discover:doctest-discover
   ghc-options:        -Wall
                       -Wcompat
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -threaded
+
 
   if (!flag(development))
     ghc-options:      -Werror

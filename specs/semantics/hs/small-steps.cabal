@@ -52,7 +52,20 @@ test-suite doctests
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
+                     , containers
+                     , data-default
+                     , free
+                     , hedgehog
+                     , tasty-hunit
+                     , lens
+                     , mtl
+                     , sequence
+                     , transformers >= 0.5
                      , doctest
+                       --
+                     , small-steps
+
+  build-tool-depends: doctest-discover:doctest-discover
   ghc-options:        -Wall
                       -Wcompat
                       -Wincomplete-record-updates
