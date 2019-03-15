@@ -325,7 +325,7 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
-txsize :: Tx -> Natural
+txsize :: Tx -> Integer
 txsize = toEnum . length . show
 
 -- |Minimum fee calculation
@@ -651,7 +651,7 @@ applyDCert _ (RetirePool key epoch) ds =
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith mappend delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do

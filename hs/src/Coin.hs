@@ -7,14 +7,12 @@ module Coin
     , splitCoin
     ) where
 
-import           Data.Monoid (Sum(..))
-import           Numeric.Natural (Natural)
-
 -- |The amount of value held by a transaction output.
-newtype Coin = Coin Natural
+newtype Coin = Coin Integer
   deriving (Show, Eq, Ord, Num, Integral, Real, Enum)
-  deriving (Semigroup, Monoid) via (Sum Natural)
 
-splitCoin :: Coin -> Natural -> (Coin, Coin)
+splitCoin :: Coin -> Integer -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)
-splitCoin (Coin n) m = (Coin $ n `div` m, Coin $ n `rem` m)
+splitCoin (Coin n) m
+ | m < 0     = error "cannot split into negative parts"
+ | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)

@@ -42,6 +42,9 @@ mutateId = pure
 mutateNatRange :: Natural -> Natural -> Natural -> Gen Natural
 mutateNatRange lower upper _ = Gen.integral $ Range.linear lower upper
 
+mutateIntegerRange :: Integer -> Integer -> Integer -> Gen Integer
+mutateIntegerRange lower upper _ = Gen.integral $ Range.linear lower upper
+
 -- | Mutator that adds or subtracts 1 from a given input value. In the case of
 -- underflow it returns 0.
 mutateNatSmall :: Natural -> Gen Natural
@@ -49,15 +52,24 @@ mutateNatSmall n = do
   b <- Gen.enumBounded :: Gen Bool
   pure $ if b then n + 1 else (if n > 0 then n - 1 else 0)
 
+mutateIntegerSmall :: Integer -> Gen Integer
+mutateIntegerSmall n = do
+  b <- Gen.enumBounded :: Gen Bool
+  pure $ if b then n + 1 else n - 1
+
 -- | Mutator that combines the identity, range selector and small change mutator
 -- in a random choice.
 mutateNat :: Natural -> Natural -> Natural -> Gen Natural
 mutateNat lower upper n =
   Gen.choice [mutateId n, mutateNatRange lower upper n, mutateNatSmall n]
 
+mutateInteger :: Integer -> Integer -> Integer -> Gen Integer
+mutateInteger lower upper n =
+  Gen.choice [mutateId n, mutateIntegerRange lower upper n, mutateIntegerSmall n]
+
 -- | Mutator for 'Coin' values, based on mutation of the contained value field.
-mutateCoin :: Natural -> Natural -> Coin -> Gen Coin
-mutateCoin lower upper (Coin val) = Coin <$> mutateNat lower upper val
+mutateCoin :: Integer -> Integer -> Coin -> Gen Coin
+mutateCoin lower upper (Coin val) = Coin <$> mutateInteger lower upper val
 
 -- | Mutator of 'TxWits' which mutates the contained transaction
 mutateTxWits :: TxWits -> Gen TxWits

@@ -183,8 +183,8 @@ union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO -> Coin
-balance (UTxO utxo) = foldr addCoins mempty utxo
-  where addCoins (TxOut _ a) b = a <> b
+balance (UTxO utxo) = foldr addCoins 0 utxo
+  where addCoins (TxOut _ a) b = a + b
 
 -- |Determine the total deposit amount needed
 deposits :: PParams -> StakePools -> [DCert] -> Coin

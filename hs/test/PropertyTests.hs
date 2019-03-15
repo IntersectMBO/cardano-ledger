@@ -31,7 +31,7 @@ import           UTxO
 insertOrUpdate :: TxOut -> Map.Map Addr Coin -> Map.Map Addr Coin
 insertOrUpdate (TxOut a c) m =
     Map.insert a (if Map.member a m
-                  then c <> (m Map.! a)
+                  then c + (m Map.! a)
                   else c) m
 
 -- | Return True if at least half of the keys have non-trivial coin values to
@@ -62,7 +62,7 @@ propPreserveBalanceInitTx =
         Left _    -> failure
         Right ls' -> do
               classify (isNotDustDist (ls ^. utxoState . utxo) (ls' ^. utxoState . utxo)) "non-trivial wealth dist"
-              balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) <> fee
+              balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) + fee
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Cover
@@ -72,7 +72,7 @@ propBalanceTxInTxOut = withCoverage $ do
   let inps                     = txins tx
   classify (steps > 1) "non-trivial valid ledger state"
   classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
-  (balance $ inps <| (l ^. utxoState . utxo)) === ((balance $ txouts tx) <> fee)
+  (balance $ inps <| (l ^. utxoState . utxo)) === ((balance $ txouts tx) + fee)
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Cover
@@ -196,7 +196,7 @@ propBalanceTxInTxOut' =
   let balanceTarget            = (balance $ txouts tx)
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
-  let balanceOk                = balanceSource == balanceTarget <> fee
+  let balanceOk                = balanceSource == balanceTarget + fee
   classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
   if valErrors /= [] && balanceOk && nonTrivial
   then label (pack (  "inputs: "       ++ (show $ Set.size $ tx ^. inputs)
@@ -259,9 +259,9 @@ propPreserveBalance = withCoverage $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
            (balance (l ^. utxoState . utxo))
-        <> (keyRefunds (l ^. pcs) (l ^. delegationState . dstate . stKeys) $ tx ^. body)
+        + (keyRefunds (l ^. pcs) (l ^. delegationState . dstate . stKeys) $ tx ^. body)
   let created =
            (balance (l' ^. utxoState . utxo))
-        <> fee
-        <> (deposits (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
+        + fee
+        + (deposits (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
   destroyed === created
