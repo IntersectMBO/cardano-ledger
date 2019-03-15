@@ -241,7 +241,7 @@ sizeEstimates
   = let
       sizeTestGen :: (Show a, Bi a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg { gen = g }
-      pm = ProtocolMagicId 0
+      pm           = ProtocolMagicId 0
 
       -- Explicit bounds for types, based on the generators from Gen.
       attrUnitSize = (typeRep (Proxy @(Attributes ())), SizeConstant 1)

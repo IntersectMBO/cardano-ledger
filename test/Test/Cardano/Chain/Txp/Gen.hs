@@ -143,12 +143,7 @@ genTxSigData = TxSigData <$> genTxHash
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice gens
- where
-  gens =
-    [ genPkWitness pm
-    , genRedeemWitness pm
-    , genScriptWitness
-    ]
+  where gens = [genPkWitness pm, genRedeemWitness pm, genScriptWitness]
 
 genTxUndo :: Gen TxUndo
 genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
