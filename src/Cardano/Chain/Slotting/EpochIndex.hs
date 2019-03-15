@@ -20,7 +20,6 @@ import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Ix (Ix)
 import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
-import Servant.API (FromHttpApiData)
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi(..))
@@ -48,8 +47,6 @@ instance Buildable EpochIndex where
 instance Bi EpochIndex where
   encode (EpochIndex epoch) = encode epoch
   decode = EpochIndex <$> decode
-
-deriving instance FromHttpApiData EpochIndex
 
 -- Note that it will be encoded as string, because 'EpochIndex' doesn't
 -- necessary fit into JS number.
