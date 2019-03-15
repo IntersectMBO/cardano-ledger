@@ -134,7 +134,6 @@ library
                      , memory
                      , mtl
                      , resourcet
-                     , servant
                      , streaming
                      , streaming-binary
                      , streaming-bytestring
