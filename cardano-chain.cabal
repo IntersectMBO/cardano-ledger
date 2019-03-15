@@ -46,7 +46,6 @@ library
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
-                       Cardano.Chain.Common.AddrStakeDistribution
                        Cardano.Chain.Common.Address
                        Cardano.Chain.Common.AddressHash
                        Cardano.Chain.Common.Attributes

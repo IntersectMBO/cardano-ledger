@@ -7,8 +7,6 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 -- | Functionality related to 'Address' data type and related types.
@@ -17,57 +15,50 @@ module Cardano.Chain.Common.Address
   ( Address(..)
   , Address'(..)
 
-       -- * Formatting
+  -- * Formatting
   , addressF
   , addressDetailedF
   , decodeTextAddress
 
-       -- * Spending data checks
+  -- * Spending data checks
   , checkAddrSpendingData
   , checkPubKeyAddress
   , checkScriptAddress
   , checkRedeemAddress
 
-       -- * Encoding
+  -- * Encoding
   , addrToBase58
   , encodeAddr
   , encodeAddrCRC32
 
-       -- * Utilities
+  -- * Utilities
   , addrAttributesUnwrapped
   , deriveLvl2KeyPair
   , deriveFirstHDAddress
 
-       -- * Pattern-matching helpers
+  -- * Pattern-matching helpers
   , isRedeemAddress
   , isUnknownAddressType
-  , isBootstrapEraDistrAddress
 
-       -- * Construction
-  , IsBootstrapEraAddr(..)
+  -- * Construction
   , makeAddress
   , makePubKeyAddress
-  , makePubKeyAddressBoot
-  , makeRootPubKeyAddress
   , makePubKeyHdwAddress
   , makeScriptAddress
   , makeRedeemAddress
   , createHDAddressNH
   , createHDAddressH
 
-       -- * Maximal sizes (needed for tx creation)
-  , largestPubKeyAddressBoot
-  , maxPubKeyAddressSizeBoot
-  , largestPubKeyAddressSingleKey
-  , maxPubKeyAddressSizeSingleKey
-  , largestHDAddressBoot
-  , maxHDAddressSizeBoot
+  -- * Maximal sizes (needed for tx creation)
+  , largestPubKeyAddress
+  , maxPubKeyAddressSize
+  , largestHDAddress
+  , maxHDAddressSize
   )
 where
 
 import Cardano.Prelude
 
-import Control.Lens (makePrisms)
 import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson
   ( FromJSON(..)
@@ -99,10 +90,8 @@ import Cardano.Chain.Common.AddrAttributes (AddrAttributes(..))
 import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData
   (AddrSpendingData(..), AddrType(..), addrSpendingDataToType)
-import Cardano.Chain.Common.AddrStakeDistribution (AddrStakeDistribution(..))
 import Cardano.Chain.Common.Attributes (Attributes(..), mkAttributes)
 import Cardano.Chain.Common.Script (Script)
-import Cardano.Chain.Common.StakeholderId (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Constants (accountGenesisIndex, wAddressGenesisIndex)
 import Cardano.Crypto.Hashing (hashHexF)
 import Cardano.Crypto.HD
@@ -128,70 +117,70 @@ import Cardano.Crypto.Signing
 
 
 -- | Hash of this data is stored in 'Address'. This type exists mostly
--- for internal usage.
+--   for internal usage.
 newtype Address' = Address'
-    { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
-    } deriving (Eq, Show, Generic)
-      deriving newtype Bi
+  { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
+  } deriving (Eq, Show, Generic)
+    deriving newtype Bi
 
--- | 'Address' is where you can send lovelace.
+-- | 'Address' is where you can send Lovelace
 data Address = Address
-    { addrRoot       :: !(AddressHash Address')
-    -- ^ Root of imaginary pseudo Merkle tree stored in this address.
-    , addrAttributes :: !(Attributes AddrAttributes)
-    -- ^ Attributes associated with this address.
-    , addrType       :: !AddrType
-    -- ^ The type of this address. Should correspond to
-    -- 'AddrSpendingData', but it can't be checked statically, because
-    -- spending data is hashed.
-    } deriving (Eq, Ord, Generic, Show)
-      deriving anyclass NFData
+  { addrRoot       :: !(AddressHash Address')
+  -- ^ Root of imaginary pseudo Merkle tree stored in this address.
+  , addrAttributes :: !(Attributes AddrAttributes)
+  -- ^ Attributes associated with this address.
+  , addrType       :: !AddrType
+  -- ^ The type of this address. Should correspond to
+  -- 'AddrSpendingData', but it can't be checked statically, because
+  -- spending data is hashed.
+  } deriving (Eq, Ord, Generic, Show)
+    deriving anyclass NFData
 
 instance Bi Address where
-    encode addr = Bi.encodeCrcProtected
-        (addrRoot addr, addrAttributes addr, addrType addr)
+  encode addr =
+    Bi.encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
 
-    decode = do
-        (root, attributes, addrType') <- Bi.decodeCrcProtected
-        pure $ Address
-            { addrRoot = root
-            , addrAttributes = attributes
-            , addrType = addrType'
-            }
+  decode = do
+    (root, attributes, addrType') <- Bi.decodeCrcProtected
+    pure $ Address
+      { addrRoot       = root
+      , addrAttributes = attributes
+      , addrType       = addrType'
+      }
 
-    encodedSizeExpr size pxy =
-        encodedCrcProtectedSizeExpr size
-            $   (,,)
-            <$> (addrRoot <$> pxy)
-            <*> (addrAttributes <$> pxy)
-            <*> (addrType <$> pxy)
+  encodedSizeExpr size pxy =
+    encodedCrcProtectedSizeExpr size
+      $   (,,)
+      <$> (addrRoot <$> pxy)
+      <*> (addrAttributes <$> pxy)
+      <*> (addrType <$> pxy)
 
 instance B.Buildable [Address] where
-    build = bprint listJson
+  build = bprint listJson
 
 instance Monad m => ToObjectKey m Address where
-    toObjectKey = pure . formatToString addressF
+  toObjectKey = pure . formatToString addressF
 
 instance MonadError SchemaError m => FromObjectKey m Address where
-    fromObjectKey = fmap Just . parseJSString decodeTextAddress . JSString
+  fromObjectKey = fmap Just . parseJSString decodeTextAddress . JSString
 
 instance Monad m => ToJSON m Address where
-    toJSON = fmap JSString . toObjectKey
+  toJSON = fmap JSString . toObjectKey
 
 instance MonadError SchemaError m => FromJSON m Address where
-    fromJSON = parseJSString decodeTextAddress
+  fromJSON = parseJSString decodeTextAddress
 
 instance Aeson.FromJSONKey Address where
-    fromJSONKey = Aeson.FromJSONKeyTextParser (toAesonError . decodeTextAddress)
+  fromJSONKey = Aeson.FromJSONKeyTextParser (toAesonError . decodeTextAddress)
 
 instance Aeson.ToJSONKey Address where
-    toJSONKey = Aeson.toJSONKeyText (sformat addressF)
+  toJSONKey = Aeson.toJSONKeyText (sformat addressF)
 
 instance Aeson.FromJSON Address where
-    parseJSON = toAesonError . decodeTextAddress <=< Aeson.parseJSON
+  parseJSON = toAesonError . decodeTextAddress <=< Aeson.parseJSON
 
 instance Aeson.ToJSON Address where
-    toJSON = Aeson.toJSON . sformat addressF
+  toJSON = Aeson.toJSON . sformat addressF
 
 instance HeapWords Address where
   heapWords (Address root attrs typ) = heapWords3 root attrs typ
@@ -201,7 +190,7 @@ instance HeapWords Address where
 -- Formatting, pretty-printing
 --------------------------------------------------------------------------------
 
--- | A formatter showing guts of an 'Address'.
+-- | A formatter showing guts of an 'Address'
 addressDetailedF :: Format r (Address -> r)
 addressDetailedF = later $ \addr -> bprint
   (builder . " address with root " . hashHexF . ", attributes: " . build)
@@ -215,8 +204,7 @@ addressDetailedF = later $ \addr -> bprint
     ATRedeem      -> "Redeem"
     ATUnknown tag -> "Unknown#" <> B.build tag
 
--- | Currently we gonna use Bitcoin alphabet for representing addresses in
--- base58
+-- | Currently we use Bitcoin alphabet for representing addresses in base58
 addrAlphabet :: Alphabet
 addrAlphabet = bitcoinAlphabet
 
@@ -224,9 +212,9 @@ addrToBase58 :: Address -> ByteString
 addrToBase58 = encodeBase58 addrAlphabet . Bi.serialize'
 
 instance B.Buildable Address where
-    build = B.build . decodeUtf8 . addrToBase58
+  build = B.build . decodeUtf8 . addrToBase58
 
--- | Specialized formatter for 'Address'.
+-- | Specialized formatter for 'Address'
 addressF :: Format r (Address -> r)
 addressF = build
 
@@ -259,111 +247,70 @@ makeAddress spendingData attributesUnwrapped = Address
   attributes = mkAttributes attributesUnwrapped
   address'   = Address' (addrType', spendingData, attributes)
 
--- | This newtype exists for clarity. It is used to tell pubkey
--- address creation functions whether an address is intended for
--- bootstrap era.
-newtype IsBootstrapEraAddr = IsBootstrapEraAddr Bool
-
--- | A function for making an address from 'PublicKey'.
-makePubKeyAddress :: IsBootstrapEraAddr -> PublicKey -> Address
+-- | A function for making an address from 'PublicKey'
+makePubKeyAddress :: PublicKey -> Address
 makePubKeyAddress = makePubKeyAddressImpl Nothing
 
--- | A function for making an address from 'PublicKey' for bootstrap era.
-makePubKeyAddressBoot :: PublicKey -> Address
-makePubKeyAddressBoot = makePubKeyAddress (IsBootstrapEraAddr True)
-
--- | This function creates a root public key address. Stake
--- distribution doesn't matter for root addresses because by design
--- nobody should even use these addresses as outputs, so we can put
--- arbitrary distribution there. We use bootstrap era distribution
--- because its representation is more compact.
-makeRootPubKeyAddress :: PublicKey -> Address
-makeRootPubKeyAddress = makePubKeyAddressBoot
-
--- | A function for making an HDW address.
+-- | A function for making an HDW address
 makePubKeyHdwAddress
-  :: IsBootstrapEraAddr
-  -> HDAddressPayload
-    -- ^ Derivation path
+  :: HDAddressPayload
+  -- ^ Derivation path
   -> PublicKey
   -> Address
-makePubKeyHdwAddress ibe path = makePubKeyAddressImpl (Just path) ibe
+makePubKeyHdwAddress path = makePubKeyAddressImpl (Just path)
 
-makePubKeyAddressImpl
-  :: Maybe HDAddressPayload -> IsBootstrapEraAddr -> PublicKey -> Address
-makePubKeyAddressImpl path (IsBootstrapEraAddr isBootstrapEra) key =
-  makeAddress spendingData attrs
+makePubKeyAddressImpl :: Maybe HDAddressPayload -> PublicKey -> Address
+makePubKeyAddressImpl path key = makeAddress spendingData attrs
  where
   spendingData = PubKeyASD key
-  distr
-    | isBootstrapEra = BootstrapEraDistr
-    | otherwise      = SingleKeyDistr (mkStakeholderId key)
-  attrs =
-    AddrAttributes {aaStakeDistribution = distr, aaPkDerivationPath = path}
+  attrs        = AddrAttributes {aaPkDerivationPath = path}
 
--- | A function for making an address from a validation 'Script'.  It
--- takes an optional 'StakeholderId'. If it's given, it will receive
--- the stake sent to the resulting 'Address'. Otherwise it's assumed
--- that an 'Address' is created for bootstrap era.
-makeScriptAddress :: Maybe StakeholderId -> Script -> Address
-makeScriptAddress stakeholder scr = makeAddress spendingData attrs
+-- | A function for making an address from a validation 'Script'
+makeScriptAddress :: Script -> Address
+makeScriptAddress scr = makeAddress spendingData attrs
  where
   spendingData = ScriptASD scr
-  stakeDistribution = maybe BootstrapEraDistr SingleKeyDistr stakeholder
-  attrs        = AddrAttributes
-    { aaPkDerivationPath  = Nothing
-    , aaStakeDistribution = stakeDistribution
-    }
+  attrs        = AddrAttributes {aaPkDerivationPath = Nothing}
 
--- | A function for making an address from 'RedeemPublicKey'.
+-- | A function for making an address from 'RedeemPublicKey'
 makeRedeemAddress :: RedeemPublicKey -> Address
 makeRedeemAddress key = makeAddress spendingData attrs
  where
   spendingData = RedeemASD key
-  attrs        = AddrAttributes
-    { aaStakeDistribution = BootstrapEraDistr
-    , aaPkDerivationPath  = Nothing
-    }
+  attrs        = AddrAttributes {aaPkDerivationPath = Nothing}
 
--- | Create address from secret key in hardened way.
+-- | Create address from secret key in hardened way
 createHDAddressH
-  :: IsBootstrapEraAddr
-  -> ShouldCheckPassphrase
+  :: ShouldCheckPassphrase
   -> PassPhrase
   -> HDPassphrase
   -> EncryptedSecretKey
   -> [Word32]
   -> Word32
   -> Maybe (Address, EncryptedSecretKey)
-createHDAddressH ibea scp passphrase hdPassphrase parent parentPath childIndex
-  = do
-    derivedSK <- deriveHDSecretKey scp passphrase parent childIndex
-    let
-      addressPayload =
-        packHDAddressAttr hdPassphrase $ parentPath ++ [childIndex]
-    let pk = encToPublic derivedSK
-    return (makePubKeyHdwAddress ibea addressPayload pk, derivedSK)
+createHDAddressH scp passphrase hdPassphrase parent parentPath childIndex = do
+  derivedSK <- deriveHDSecretKey scp passphrase parent childIndex
+  let
+    addressPayload =
+      packHDAddressAttr hdPassphrase $ parentPath ++ [childIndex]
+  let pk = encToPublic derivedSK
+  return (makePubKeyHdwAddress addressPayload pk, derivedSK)
 
--- | Create address from public key via non-hardened way.
+-- | Create address from public key via non-hardened way
 createHDAddressNH
-  :: IsBootstrapEraAddr
-  -> HDPassphrase
-  -> PublicKey
-  -> [Word32]
-  -> Word32
-  -> (Address, PublicKey)
-createHDAddressNH ibea passphrase parent parentPath childIndex = do
+  :: HDPassphrase -> PublicKey -> [Word32] -> Word32 -> (Address, PublicKey)
+createHDAddressNH passphrase parent parentPath childIndex = do
   let derivedPK = deriveHDPublicKey parent childIndex
   let
     addressPayload = packHDAddressAttr passphrase $ parentPath ++ [childIndex]
-  (makePubKeyHdwAddress ibea addressPayload derivedPK, derivedPK)
+  (makePubKeyHdwAddress addressPayload derivedPK, derivedPK)
+
 
 --------------------------------------------------------------------------------
 -- Checks
 --------------------------------------------------------------------------------
 
--- | Check whether given 'AddrSpendingData' corresponds to given
--- 'Address'.
+-- | Check whether given 'AddrSpendingData' corresponds to given 'Address'
 checkAddrSpendingData :: AddrSpendingData -> Address -> Bool
 checkAddrSpendingData asd addr =
   addrRoot addr
@@ -384,32 +331,31 @@ checkScriptAddress script = checkAddrSpendingData (ScriptASD script)
 checkRedeemAddress :: RedeemPublicKey -> Address -> Bool
 checkRedeemAddress rpk = checkAddrSpendingData (RedeemASD rpk)
 
+
 --------------------------------------------------------------------------------
 -- Utils
 --------------------------------------------------------------------------------
 
--- | Get 'AddrAttributes' from 'Address'.
+-- | Get 'AddrAttributes' from 'Address'
 addrAttributesUnwrapped :: Address -> AddrAttributes
 addrAttributesUnwrapped = attrData . addrAttributes
 
--- | Makes account secret key for given wallet set.
+-- | Makes account secret key for given wallet set
 deriveLvl2KeyPair
-  :: IsBootstrapEraAddr
-  -> ShouldCheckPassphrase
+  :: ShouldCheckPassphrase
   -> PassPhrase
   -> EncryptedSecretKey
-    -- ^ key of wallet
+  -- ^ key of wallet
   -> Word32
-    -- ^ account derivation index
+  -- ^ account derivation index
   -> Word32
-    -- ^ address derivation index
+  -- ^ address derivation index
   -> Maybe (Address, EncryptedSecretKey)
-deriveLvl2KeyPair ibea scp passphrase wsKey accountIndex addressIndex = do
+deriveLvl2KeyPair scp passphrase wsKey accountIndex addressIndex = do
   wKey <- deriveHDSecretKey scp passphrase wsKey accountIndex
   let hdPass = deriveHDPassphrase $ encToPublic wsKey
   -- We don't need to check passphrase twice
   createHDAddressH
-    ibea
     (ShouldCheckPassphrase False)
     passphrase
     hdPass
@@ -418,24 +364,23 @@ deriveLvl2KeyPair ibea scp passphrase wsKey accountIndex addressIndex = do
     addressIndex
 
 deriveFirstHDAddress
-  :: IsBootstrapEraAddr
-  -> PassPhrase
+  :: PassPhrase
   -> EncryptedSecretKey
-    -- ^ key of wallet set
+  -- ^ key of wallet set
   -> Maybe (Address, EncryptedSecretKey)
-deriveFirstHDAddress ibea passphrase wsKey = deriveLvl2KeyPair
-  ibea
+deriveFirstHDAddress passphrase wsKey = deriveLvl2KeyPair
   (ShouldCheckPassphrase False)
   passphrase
   wsKey
   accountGenesisIndex
   wAddressGenesisIndex
 
+
 --------------------------------------------------------------------------------
 -- Pattern-matching helpers
 --------------------------------------------------------------------------------
 
--- | Check whether an 'Address' is redeem address.
+-- | Check whether an 'Address' is redeem address
 isRedeemAddress :: Address -> Bool
 isRedeemAddress addr = case addrType addr of
   ATRedeem -> True
@@ -446,50 +391,28 @@ isUnknownAddressType addr = case addrType addr of
   ATUnknown{} -> True
   _           -> False
 
--- | Check whether an 'Address' has bootstrap era stake distribution.
-isBootstrapEraDistrAddress :: Address -> Bool
-isBootstrapEraDistrAddress addr = case aaStakeDistribution aa of
-  BootstrapEraDistr -> True
-  _ -> False
-  where aa = addrAttributesUnwrapped addr
 
 --------------------------------------------------------------------------------
 -- Maximal size
 --------------------------------------------------------------------------------
 
--- | Largest (considering size of serialized data) PubKey address with
--- BootstrapEra distribution. Actual size depends on CRC32 value which
--- is serialized using var-length encoding.
-largestPubKeyAddressBoot :: Address
-largestPubKeyAddressBoot = makePubKeyAddressBoot goodPk
+-- | Largest (considering size of serialized data) PubKey address. Actual size
+--   depends on CRC32 value which is serialized using var-length encoding.
+largestPubKeyAddress :: Address
+largestPubKeyAddress = makePubKeyAddress goodPk
 
--- | Maximal size of PubKey address with BootstrapEra
--- distribution (43).
-maxPubKeyAddressSizeBoot :: Natural
-maxPubKeyAddressSizeBoot = biSize largestPubKeyAddressBoot
+-- | Maximal size of PubKey address.
+maxPubKeyAddressSize :: Natural
+maxPubKeyAddressSize = biSize largestPubKeyAddress
 
--- | Largest (considering size of serialized data) PubKey address with
--- SingleKey distribution. Actual size depends on CRC32 value which
--- is serialized using var-length encoding.
-largestPubKeyAddressSingleKey :: Address
-largestPubKeyAddressSingleKey =
-  makePubKeyAddress (IsBootstrapEraAddr False) goodPk
-
--- | Maximal size of PubKey address with SingleKey
--- distribution (78).
-maxPubKeyAddressSizeSingleKey :: Natural
-maxPubKeyAddressSizeSingleKey = biSize largestPubKeyAddressSingleKey
-
--- | Largest (considering size of serialized data) HD address with
--- BootstrapEra distribution. Actual size depends on CRC32 value which
--- is serialized using var-length encoding.
-largestHDAddressBoot :: Address
-largestHDAddressBoot = case lvl2KeyPair of
+-- | Largest (considering size of serialized data) HD address with. Actual size
+--   depends on CRC32 value which is serialized using var-length encoding.
+largestHDAddress :: Address
+largestHDAddress = case lvl2KeyPair of
   Nothing        -> panic "largestHDAddressBoot failed"
   Just (addr, _) -> addr
  where
   lvl2KeyPair = deriveLvl2KeyPair
-    (IsBootstrapEraAddr True)
     (ShouldCheckPassphrase False)
     emptyPassphrase
     encSK
@@ -497,10 +420,9 @@ largestHDAddressBoot = case lvl2KeyPair of
     maxBound
   encSK = noPassEncrypt goodSk
 
--- | Maximal size of HD address with BootstrapEra
--- distribution (76).
-maxHDAddressSizeBoot :: Natural
-maxHDAddressSizeBoot = biSize largestHDAddressBoot
+-- | Maximal size of HD address
+maxHDAddressSize :: Natural
+maxHDAddressSize = biSize largestHDAddress
 
 -- Public key and secret key for which we know that they produce
 -- largest addresses in all cases we are interested in. It was checked
@@ -528,5 +450,3 @@ encodeAddr addr =
 encodeAddrCRC32 :: Address -> Encoding
 encodeAddrCRC32 addr =
   encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
-
-makePrisms ''Address
