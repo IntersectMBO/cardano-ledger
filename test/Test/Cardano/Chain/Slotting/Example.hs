@@ -14,6 +14,7 @@ import qualified Data.Map.Strict as M
 import Cardano.Chain.Slotting
   ( EpochIndex(..)
   , EpochSlottingData(..)
+  , EpochSlots(..)
   , SlotId(..)
   , SlottingData
   , mkLocalSlotIndex
@@ -30,7 +31,7 @@ exampleEpochSlottingData =
 
 exampleSlotId :: SlotId
 exampleSlotId = SlotId (EpochIndex 11) lsi
-  where Right lsi = mkLocalSlotIndex 50 47
+  where Right lsi = mkLocalSlotIndex (EpochSlots 50) 47
 
 exampleSlottingData :: SlottingData
 exampleSlottingData = slottingData

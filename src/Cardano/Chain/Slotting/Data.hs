@@ -38,7 +38,7 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary.Class
   (Bi(..), Decoder, DecoderError(..), encodeListLen, enforceSize)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
-import Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex)
+import Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex (..))
 
 
 --------------------------------------------------------------------------------
@@ -221,4 +221,4 @@ computeSlotStart systemStart slotIndex esd = addUTCTime timeToSlot systemStart
   timeToEpoch = esdStartDiff esd
 
   timeToLocalSlot :: NominalDiffTime
-  timeToLocalSlot = fromIntegral slotIndex * esdSlotDuration esd
+  timeToLocalSlot = fromIntegral (unLocalSlotIndex slotIndex) * esdSlotDuration esd

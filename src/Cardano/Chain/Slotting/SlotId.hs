@@ -43,7 +43,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
-  (LocalSlotIndex(..), getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
+  (LocalSlotIndex(..), unLocalSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 
 
@@ -58,7 +58,7 @@ data SlotId = SlotId
 instance B.Buildable SlotId where
   build si = bprint
     (ords . " slot of " . ords . " epoch")
-    (getSlotIndex $ siSlot si)
+    (unLocalSlotIndex $ siSlot si)
     (getEpochIndex $ siEpoch si)
 
 instance B.Buildable SlotIdError where
@@ -153,7 +153,7 @@ flattenSlotId sc si
   | otherwise = Right . FlatSlotId $ fromIntegral flattened
  where
   lsi :: Integer
-  lsi = fromIntegral . getSlotIndex $ siSlot si
+  lsi = fromIntegral . unLocalSlotIndex $ siSlot si
   pastSlots :: Integer
   pastSlots =
     fromIntegral . getFlatSlotId $ flattenEpochIndex sc (siEpoch si)
@@ -162,8 +162,8 @@ flattenSlotId sc si
 
 -- | Flattens 'EpochIndex' into a single number
 flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId
-flattenEpochIndex epochSlots (EpochIndex i) =
-  FlatSlotId $ fromIntegral (fromIntegral i * epochSlots)
+flattenEpochIndex es (EpochIndex i) =
+  FlatSlotId $ i * unEpochSlots es
 
 -- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
@@ -174,7 +174,7 @@ unflattenSlotId es (FlatSlotId fsId) = SlotId
   }
  where
   -- `slot` accounts for the `LocalSlotIndex`
-  (epoch, slot) = fsId `divMod` fromIntegral es
+  (epoch, slot) = fsId `divMod` unEpochSlots es
   lsi           = case mkLocalSlotIndex es (fromIntegral slot) of
     Left err -> panic
       $ sformat ("The impossible happened in unflattenSlotId: " . build) err
@@ -182,7 +182,7 @@ unflattenSlotId es (FlatSlotId fsId) = SlotId
 
 -- | Increase a 'FlatSlotId' by 'EpochSlots'
 addSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
-addSlotNumber a (FlatSlotId b) = FlatSlotId $ fromIntegral a + b
+addSlotNumber (EpochSlots a) (FlatSlotId b) = FlatSlotId $ a + b
 
 -- | Decrease a 'FlatSlotId' by 'EpochSlots', going no lower than 0
 subSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
@@ -200,7 +200,7 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
  where
   epochSlots = kEpochSlots k
   idx :: Word16
-  idx  = fromIntegral $ epochSlots - kSlotSecurityParam k - 1
+  idx  = fromIntegral $ unEpochSlots epochSlots - unEpochSlots (kSlotSecurityParam k) - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->
       panic $ sformat ("The impossible happened in crucialSlot: " . build) err

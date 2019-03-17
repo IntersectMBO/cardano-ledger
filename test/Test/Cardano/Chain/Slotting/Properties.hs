@@ -107,7 +107,7 @@ prop_genLocalSlotIndex = withTests 100 . property $ do
 prop_localSlotIndexToEnumOverflow :: Property
 prop_localSlotIndexToEnumOverflow = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
-  let lsi = 1 + getEpochSlots sc
+  let lsi = 1 + unEpochSlots sc
   assertEitherIsLeft (localSlotIndexToEnum sc) (fromIntegral lsi)
 
 -- Check that `localSlotIndexToEnum` fails for
@@ -122,15 +122,12 @@ prop_localSlotIndexToEnumUnderflow = withTests 100 . property $ do
 -- for allowed values of `LocalSlotIndex` and `EpochSlots`.
 prop_localSlotIndexPred :: Property
 prop_localSlotIndexPred =
-  withTests 100
-    . property
-    $ do
-        sc  <- forAll $ Gen.filter (/= 1) genLsiEpochSlots
-        -- Filter out LocalSlotIndex = 0 and EpochSlots = 1
-        -- because you can't find the predecessor of the 0th slot.
-        lsi <- forAll
-          $ Gen.filter (/= UnsafeLocalSlotIndex 0) (genLocalSlotIndex sc)
-        assertEitherIsRight (localSlotIndexPred sc) lsi
+  withTests 100 . property $ do
+    es <- forAll $ Gen.filter (\x -> unEpochSlots x /= 1) genLsiEpochSlots
+    -- Filter out LocalSlotIndex = 0 and EpochSlots = 1
+    -- because you can't find the predecessor of the 0th slot.
+    lsi <- forAll $ Gen.filter (/= UnsafeLocalSlotIndex 0) (genLocalSlotIndex es)
+    assertEitherIsRight (localSlotIndexPred es) lsi
 
 -- Check that `localSlotIndexPred` fails for
 -- the lower boundary of `LocalSlotIndex`. In
@@ -146,15 +143,14 @@ prop_localSlotIndexPredMinbound = eachOf
 -- for allowed values of `LocalSlotIndex` and `EpochSlots`.
 prop_localSlotIndexSucc :: Property
 prop_localSlotIndexSucc =
-  withTests 100
-    . property
-    $ do
-        sc  <- forAll genLsiEpochSlots
-        -- Generate a `LocalSlotIndex` at least two less than the `EpochSlots`
-        -- to avoid overflow errors as `LocalSlotIndex` starts
-        -- from 0th slot.
-        lsi <- forAll $ genLocalSlotIndex sc
-        assertEitherIsRight (localSlotIndexSucc (sc + 2)) lsi
+  withTests 100 . property $ do
+    es  <- forAll genLsiEpochSlots
+    -- Generate a `LocalSlotIndex` at least two less than the `EpochSlots`
+    -- to avoid overflow errors as `LocalSlotIndex` starts
+    -- from 0th slot.
+    lsi <- forAll $ genLocalSlotIndex es
+    let esPlus2 = EpochSlots $ unEpochSlots es + 2
+    assertEitherIsRight (localSlotIndexSucc esPlus2) lsi
 
 -- Check that `localSlotIndexSucc` fails for
 -- the upper boundary of `LocalSlotIndex`. In
@@ -166,23 +162,23 @@ prop_localSlotIndexSuccMaxbound = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
   assertEitherIsLeft
     (localSlotIndexSucc sc)
-    (UnsafeLocalSlotIndex $ 1 + (fromIntegral $ getEpochSlots sc))
+    (UnsafeLocalSlotIndex $ 1 + (fromIntegral $ unEpochSlots sc))
 
 -- Check that `localSlotIndexSucc . localSlotIndexPred == id`.
 prop_localSlotIndexSuccPredisId :: Property
 prop_localSlotIndexSuccPredisId = withTests 100 . property $ do
   sc  <- forAll genLsiEpochSlots
-  lsi <- forAll $ Gen.filter (\x -> getSlotIndex x /= 0) (genLocalSlotIndex sc)
+  lsi <- forAll $ Gen.filter (\x -> unLocalSlotIndex x /= 0) (genLocalSlotIndex sc)
   let predSucc = localSlotIndexPred sc lsi >>= localSlotIndexSucc sc
   compareValueRight lsi predSucc
 
 -- Check that `localSlotIndexPred . localSlotIndexSucc == id`.
 prop_localSlotIndexPredSuccisId :: Property
 prop_localSlotIndexPredSuccisId = withTests 100 . property $ do
-  sc  <- forAll genLsiEpochSlots
-  lsi <- forAll $ genLocalSlotIndex sc
-  let
-    succPred = localSlotIndexSucc (sc + 2) lsi >>= localSlotIndexPred (sc + 2)
+  es  <- forAll genLsiEpochSlots
+  lsi <- forAll $ genLocalSlotIndex es
+  let esPlus2 = EpochSlots $ unEpochSlots es + 2
+      succPred = localSlotIndexSucc esPlus2 lsi >>= localSlotIndexPred esPlus2
   compareValueRight lsi succPred
 
 -- Check that `localSlotIndexToEnum . localSlotIndexFromEnum == id`.
@@ -197,7 +193,7 @@ prop_localSlotIndexToEnumFromEnum = withTests 100 . property $ do
 prop_localSlotIndexFromEnumToEnum :: Property
 prop_localSlotIndexFromEnumToEnum = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
-  let sIndex = fromIntegral $ getEpochSlots sc - 1 :: Int
+  let sIndex = fromIntegral $ unEpochSlots sc - 1 :: Int
   let lsi    = localSlotIndexToEnum sc sIndex
   case lsi of
     Left  err  -> failWith Nothing (show $ sformat build err)
@@ -269,7 +265,7 @@ prop_addSlotNumber :: Property
 prop_addSlotNumber = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
   fs <- forAll genFlatSlotId
-  let added = fs + (FlatSlotId $ getEpochSlots sc)
+  let added = fs + (FlatSlotId $ unEpochSlots sc)
   addSlotNumber sc fs === added
 
 -- Check that `addSlotNumber` actually subtracts.
@@ -277,7 +273,7 @@ prop_subSlotNumber :: Property
 prop_subSlotNumber = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
   fs <- forAll genFlatSlotId
-  let subtracted = fs - (FlatSlotId $ getEpochSlots sc)
+  let subtracted = fs - (FlatSlotId $ unEpochSlots sc)
   (subSlotNumber sc fs) === subtracted
 
 tests :: IO Bool

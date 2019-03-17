@@ -54,7 +54,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
-  , EpochSlots
+  , EpochSlots (..)
   , addSlotNumber
   , slotNumberEpoch
   , subSlotNumber
@@ -217,7 +217,7 @@ initialInterfaceState
 initialInterfaceState config = updateDelegation
   config
   (FlatSlotId 0)
-  0
+  (EpochSlots 0)
   is
   certificates
  where

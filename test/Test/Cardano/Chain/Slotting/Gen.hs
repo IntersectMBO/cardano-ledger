@@ -35,7 +35,7 @@ import Cardano.Chain.Slotting
   , EpochSlots(..)
   , SlotId(..)
   , SlottingData
-  , getSlotIndex
+  , unLocalSlotIndex
   , localSlotIndexMaxBound
   , localSlotIndexMinBound
   , mkLocalSlotIndex
@@ -68,8 +68,8 @@ genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
 genLocalSlotIndex epochSlots = mkLocalSlotIndex'
   <$> Gen.word16 (Range.constant lb ub)
  where
-  lb = getSlotIndex localSlotIndexMinBound
-  ub = getSlotIndex (localSlotIndexMaxBound epochSlots)
+  lb = unLocalSlotIndex localSlotIndexMinBound
+  ub = unLocalSlotIndex (localSlotIndexMaxBound epochSlots)
   mkLocalSlotIndex' slot = case mkLocalSlotIndex epochSlots slot of
     Left err -> panic $ sformat
       ("The impossible happened in genLocalSlotIndex: " . build)
@@ -91,7 +91,7 @@ genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
 genConsistentSlotIdEpochSlots = do
   sc  <- genLsiEpochSlots
   lsi <- genLocalSlotIndex sc
-  eI  <- genRestrictedEpochIndex $ maxBound `div` getEpochSlots sc
+  eI  <- genRestrictedEpochIndex $ maxBound `div` unEpochSlots sc
   pure (SlotId eI lsi, sc)
  where
   genRestrictedEpochIndex :: Word64 -> Gen EpochIndex
