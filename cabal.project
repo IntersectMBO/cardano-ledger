@@ -1,7 +1,10 @@
 packages:
   binary
+  binary/test
   crypto
+  crypto/test
   ./
+  test
 
 source-repository-package
   type: git
@@ -12,7 +15,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: e1fb84b1a955b6e3e3e53d9022e8bc0f927417a2
+  tag: 2256fd727c5f92e6218afdcf8cddf6e01c4a9dcd
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-prelude
+  tag: 2256fd727c5f92e6218afdcf8cddf6e01c4a9dcd
+  subdir: test
 
 source-repository-package
   type: git
