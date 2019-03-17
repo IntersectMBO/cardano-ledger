@@ -14,7 +14,7 @@ import Cardano.Prelude
 import Formatting (Format, bprint, later)
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Slotting (FlatSlotId, SlotCount, slotIdF, unflattenSlotId)
+import Cardano.Chain.Slotting (FlatSlotId, EpochSlots, slotIdF, unflattenSlotId)
 
 
 -- | Undo data from Slog, i. e. data which is necessary do rollback a block
@@ -29,7 +29,7 @@ newtype SlogUndo = SlogUndo
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
-buildSlogUndo :: SlotCount -> Format r (SlogUndo -> r)
+buildSlogUndo :: EpochSlots -> Format r (SlogUndo -> r)
 buildSlogUndo epochSlots = later $ \(SlogUndo oldSlot) ->
   "SlogUndo: "
     <> maybe "<nothing>" (bprint slotIdF . unflattenSlotId epochSlots) oldSlot

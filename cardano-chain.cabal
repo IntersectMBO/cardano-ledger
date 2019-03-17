@@ -77,8 +77,8 @@ library
 
                        Cardano.Chain.Slotting.Data
                        Cardano.Chain.Slotting.EpochIndex
+                       Cardano.Chain.Slotting.EpochSlots
                        Cardano.Chain.Slotting.LocalSlotIndex
-                       Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
 
                        Cardano.Chain.Txp.GenesisUTxO

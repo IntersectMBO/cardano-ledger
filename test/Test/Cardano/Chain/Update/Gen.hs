@@ -32,7 +32,7 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block (HeaderHash)
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , ConfirmedProposalState(..)
@@ -180,7 +180,7 @@ genConfirmedProposalState pm =
     <*> genLovelace
 
 genDecidedProposalState
-  :: ProtocolMagicId -> SlotCount -> Gen DecidedProposalState
+  :: ProtocolMagicId -> EpochSlots -> Gen DecidedProposalState
 genDecidedProposalState pm epochSlots =
   DecidedProposalState
     <$> Gen.bool
@@ -194,7 +194,7 @@ genDpsExtra = DpsExtra <$> genHeaderHash <*> Gen.bool
 genPrevValue :: Gen a -> Gen (PrevValue a)
 genPrevValue = fmap maybeToPrev . Gen.maybe
 
-genProposalState :: ProtocolMagicId -> SlotCount -> Gen ProposalState
+genProposalState :: ProtocolMagicId -> EpochSlots -> Gen ProposalState
 genProposalState pm epochSlots = Gen.choice
   [ PSUndecided <$> genUndecidedProposalState pm epochSlots
   , PSDecided <$> genDecidedProposalState pm epochSlots
@@ -216,7 +216,7 @@ genSystemTag =
   SystemTag <$> Gen.text (Range.constant 0 systemTagMaxLength) Gen.alphaNum
 
 genUndecidedProposalState
-  :: ProtocolMagicId -> SlotCount -> Gen UndecidedProposalState
+  :: ProtocolMagicId -> EpochSlots -> Gen UndecidedProposalState
 genUndecidedProposalState pm epochSlots =
   UndecidedProposalState
     <$> Gen.map (Range.linear 0 10) ((,) <$> genPublicKey <*> genVoteState)
@@ -226,7 +226,7 @@ genUndecidedProposalState pm epochSlots =
     <*> genLovelace
     <*> Gen.maybe genUpsExtra
 
-genUndo :: ProtocolMagicId -> SlotCount -> Gen USUndo
+genUndo :: ProtocolMagicId -> EpochSlots -> Gen USUndo
 genUndo pm epochSlots =
   USUndo
     <$> Gen.map

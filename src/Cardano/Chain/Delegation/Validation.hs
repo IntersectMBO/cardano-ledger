@@ -54,7 +54,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
-  , SlotCount
+  , EpochSlots
   , addSlotNumber
   , slotNumberEpoch
   , subSlotNumber
@@ -105,7 +105,7 @@ scheduleCertificate
   :: MonadError SchedulingError m
   => Genesis.Config
   -> FlatSlotId
-  -> SlotCount
+  -> EpochSlots
   -> SchedulingState
   -> ACertificate ByteString
   -> m SchedulingState
@@ -266,7 +266,7 @@ updateDelegation
   :: MonadError SchedulingError m
   => Genesis.Config
   -> FlatSlotId
-  -> SlotCount
+  -> EpochSlots
   -> InterfaceState
   -> [ACertificate ByteString]
   -> m InterfaceState

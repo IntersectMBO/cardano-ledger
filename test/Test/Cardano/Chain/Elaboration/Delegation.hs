@@ -23,7 +23,7 @@ import Cardano.Crypto.Signing
   , validateProxyVerificationKey
   )
 import Ledger.Core
-  (Epoch(..), Owner(..), Slot(..), SlotCount(..), VKey(..), VKeyGenesis(..))
+  (Epoch(..), Owner(..), Slot(..), EpochSlots(..), VKey(..), VKeyGenesis(..))
 import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 
 import qualified Cardano.Chain.Genesis as Genesis
@@ -62,7 +62,7 @@ prop_elaboratedCertsValid =
       $ [0 .. 6]
     , _dSEnvEpoch    = Epoch 0
     , _dSEnvSlot     = Slot 0
-    , _dSEnvLiveness = SlotCount 20
+    , _dSEnvLiveness = EpochSlots 20
     }
 
 elaborateDCert :: Genesis.Config -> DCert -> Delegation.Certificate

@@ -44,7 +44,7 @@ import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
   (LocalSlotIndex(..), getSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
-import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
+import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 
 
 -- | Slot is identified by index of epoch and index of slot in
@@ -65,7 +65,7 @@ instance B.Buildable SlotIdError where
   build (SlotIdOverflow sId sc) = bprint
     ("SlotId: "
     . shown
-    . " and SlotCount: "
+    . " and EpochSlots: "
     . shown
     . " exceeds the maximum boundary when flattened."
     )
@@ -73,7 +73,7 @@ instance B.Buildable SlotIdError where
     sc
 
 data SlotIdError
-  = SlotIdOverflow SlotId SlotCount deriving (Eq, Show)
+  = SlotIdOverflow SlotId EpochSlots deriving (Eq, Show)
 
 instance NFData SlotId
 
@@ -92,17 +92,17 @@ makeLensesFor
     ]
     ''SlotId
 
-slotIdToEnum :: SlotCount -> FlatSlotId -> SlotId
+slotIdToEnum :: EpochSlots -> FlatSlotId -> SlotId
 slotIdToEnum = unflattenSlotId
 
-slotIdFromEnum :: SlotCount -> SlotId -> Either SlotIdError Int
+slotIdFromEnum :: EpochSlots -> SlotId -> Either SlotIdError Int
 slotIdFromEnum sc sId = fromIntegral . getFlatSlotId <$> flattenSlotId sc sId
 
-slotIdSucc :: SlotCount -> SlotId -> Either SlotIdError SlotId
+slotIdSucc :: EpochSlots -> SlotId -> Either SlotIdError SlotId
 slotIdSucc sc sId =
   slotIdToEnum sc . FlatSlotId . fromIntegral . (1 +) <$> slotIdFromEnum sc sId
 
-slotIdPred :: SlotCount -> SlotId -> Either SlotIdError SlotId
+slotIdPred :: EpochSlots -> SlotId -> Either SlotIdError SlotId
 slotIdPred epochSlots sId =
   slotIdToEnum epochSlots
     .   FlatSlotId
@@ -147,7 +147,7 @@ instance B.Buildable FlatSlotId where
 instance NFData FlatSlotId
 
 -- | Flatten 'SlotId' (which is basically pair of integers) into a single number.
-flattenSlotId :: SlotCount -> SlotId -> Either SlotIdError FlatSlotId
+flattenSlotId :: EpochSlots -> SlotId -> Either SlotIdError FlatSlotId
 flattenSlotId sc si
   | flattened > fromIntegral (maxBound :: Word64) = Left $ SlotIdOverflow si sc
   | otherwise = Right . FlatSlotId $ fromIntegral flattened
@@ -161,13 +161,13 @@ flattenSlotId sc si
   flattened = pastSlots + lsi
 
 -- | Flattens 'EpochIndex' into a single number
-flattenEpochIndex :: SlotCount -> EpochIndex -> FlatSlotId
+flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId
 flattenEpochIndex epochSlots (EpochIndex i) =
   FlatSlotId $ fromIntegral (fromIntegral i * epochSlots)
 
--- | Construct a 'SlotId' from a flattened variant, using a given 'SlotCount'
+-- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
-unflattenSlotId :: SlotCount -> FlatSlotId -> SlotId
+unflattenSlotId :: EpochSlots -> FlatSlotId -> SlotId
 unflattenSlotId es (FlatSlotId fsId) = SlotId
   { siEpoch = EpochIndex epoch
   , siSlot  = lsi
@@ -180,16 +180,16 @@ unflattenSlotId es (FlatSlotId fsId) = SlotId
       $ sformat ("The impossible happened in unflattenSlotId: " . build) err
     Right lsi' -> lsi'
 
--- | Increase a 'FlatSlotId' by 'SlotCount'
-addSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
+-- | Increase a 'FlatSlotId' by 'EpochSlots'
+addSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
 addSlotNumber a (FlatSlotId b) = FlatSlotId $ fromIntegral a + b
 
--- | Decrease a 'FlatSlotId' by 'SlotCount', going no lower than 0
-subSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
-subSlotNumber (SlotCount a) (FlatSlotId b) =
+-- | Decrease a 'FlatSlotId' by 'EpochSlots', going no lower than 0
+subSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId
+subSlotNumber (EpochSlots a) (FlatSlotId b) =
   if a > b then FlatSlotId 0 else FlatSlotId (b - a)
 
-slotNumberEpoch :: SlotCount -> FlatSlotId -> EpochIndex
+slotNumberEpoch :: EpochSlots -> FlatSlotId -> EpochIndex
 slotNumberEpoch epochSlots slot = siEpoch $ unflattenSlotId epochSlots slot
 
 -- | Slot such that at the beginning of epoch blocks with SlotId ≤ to this slot
