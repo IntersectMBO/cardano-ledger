@@ -11,12 +11,9 @@
 
 module Cardano.Chain.Slotting.SlotId
   ( SlotId(..)
-  , SlotIdError(..)
   , siEpochL
   , siSlotL
   , slotIdF
-  , slotIdToEnum
-  , slotIdFromEnum
   , slotIdSucc
   , slotIdPred
   , FlatSlotId(..)
@@ -34,7 +31,7 @@ import Cardano.Prelude
 import Control.Lens (makeLensesFor)
 import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Formatting (Format, bprint, build, int, ords, sformat, shown)
+import Formatting (Format, bprint, build, int, ords, sformat)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
@@ -61,20 +58,6 @@ instance B.Buildable SlotId where
     (unLocalSlotIndex $ siSlot si)
     (getEpochIndex $ siEpoch si)
 
-instance B.Buildable SlotIdError where
-  build (SlotIdOverflow sId sc) = bprint
-    ("SlotId: "
-    . shown
-    . " and EpochSlots: "
-    . shown
-    . " exceeds the maximum boundary when flattened."
-    )
-    sId
-    sc
-
-data SlotIdError
-  = SlotIdOverflow SlotId EpochSlots deriving (Eq, Show)
-
 instance NFData SlotId
 
 instance Bi SlotId where
@@ -95,20 +78,19 @@ makeLensesFor
 slotIdToEnum :: EpochSlots -> FlatSlotId -> SlotId
 slotIdToEnum = unflattenSlotId
 
-slotIdFromEnum :: EpochSlots -> SlotId -> Either SlotIdError Int
-slotIdFromEnum sc sId = fromIntegral . getFlatSlotId <$> flattenSlotId sc sId
+slotIdFromEnum :: EpochSlots -> SlotId -> Word64
+slotIdFromEnum sc sId = getFlatSlotId $ flattenSlotId sc sId
 
-slotIdSucc :: EpochSlots -> SlotId -> Either SlotIdError SlotId
+slotIdSucc :: EpochSlots -> SlotId -> SlotId
 slotIdSucc sc sId =
-  slotIdToEnum sc . FlatSlotId . fromIntegral . (1 +) <$> slotIdFromEnum sc sId
+  slotIdToEnum sc . FlatSlotId . (1 +) $ slotIdFromEnum sc sId
 
-slotIdPred :: EpochSlots -> SlotId -> Either SlotIdError SlotId
+slotIdPred :: EpochSlots -> SlotId -> SlotId
 slotIdPred epochSlots sId =
   slotIdToEnum epochSlots
     .   FlatSlotId
-    .   fromIntegral
     .   subtract 1
-    <$> slotIdFromEnum epochSlots sId
+    $ slotIdFromEnum epochSlots sId
 
 -- | Specialized formatter for 'SlotId'.
 slotIdF :: Format r (SlotId -> r)
@@ -147,18 +129,16 @@ instance B.Buildable FlatSlotId where
 instance NFData FlatSlotId
 
 -- | Flatten 'SlotId' (which is basically pair of integers) into a single number.
-flattenSlotId :: EpochSlots -> SlotId -> Either SlotIdError FlatSlotId
-flattenSlotId sc si
-  | flattened > fromIntegral (maxBound :: Word64) = Left $ SlotIdOverflow si sc
-  | otherwise = Right . FlatSlotId $ fromIntegral flattened
+-- 'FlatSlotId' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'
+-- is sufficient for slot indices for 10^13 years.
+flattenSlotId :: EpochSlots -> SlotId -> FlatSlotId
+flattenSlotId es si =
+  FlatSlotId $ pastSlots + lsi
  where
-  lsi :: Integer
+  lsi :: Word64
   lsi = fromIntegral . unLocalSlotIndex $ siSlot si
-  pastSlots :: Integer
-  pastSlots =
-    fromIntegral . getFlatSlotId $ flattenEpochIndex sc (siEpoch si)
-  flattened :: Integer
-  flattened = pastSlots + lsi
+  pastSlots :: Word64
+  pastSlots = getFlatSlotId (flattenEpochIndex es $ siEpoch si)
 
 -- | Flattens 'EpochIndex' into a single number
 flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId

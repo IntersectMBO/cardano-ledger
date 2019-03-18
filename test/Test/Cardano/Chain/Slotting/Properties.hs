@@ -38,8 +38,6 @@ import Cardano.Chain.Slotting
   , localSlotIndexToEnum
   , localSlotIndexFromEnum
   , validateSlottingDataMap
-  , slotIdToEnum
-  , slotIdFromEnum
   , subSlotNumber
   )
 import Test.Cardano.Chain.Slotting.Gen
@@ -203,30 +201,6 @@ prop_localSlotIndexFromEnumToEnum = withTests 100 . property $ do
 -- SlotId
 --------------------------------------------------------------------------------
 
--- Check that `slotIdFromEnum . slotIdToEnum == id`.
-prop_slotIdFromEnumToEnum :: Property
-prop_slotIdFromEnumToEnum = withTests 100 . property $ do
-  sc <- forAll genLsiEpochSlots
-  i  <- forAll $ Gen.word64 (Range.linear 0 maxBound)
-  let toFrom = slotIdFromEnum sc $ slotIdToEnum sc (FlatSlotId i)
-  compareValueRight (fromIntegral i) toFrom
-
--- Check that `slotIdToEnum . slotIdFromEnum == id`.
-prop_slotIdToEnumFromEnum :: Property
-prop_slotIdToEnumFromEnum = withTests 100 . property $ do
-  (sId, sc) <- forAll genConsistentSlotIdEpochSlots
-  case slotIdFromEnum sc sId of
-    Left  err -> failWith Nothing (show $ sformat build err)
-    Right int -> sId === slotIdToEnum sc (FlatSlotId $ fromIntegral int)
-
--- Check that `flattenSlotId` does not fail for
--- allowed values of `EpochSlots` and `SlotId`.
-prop_flattenSlotId :: Property
-prop_flattenSlotId = withTests 100 . property $ do
-  sc  <- forAll genLsiEpochSlots
-  sId <- forAll $ genSlotId sc
-  assertEitherIsRight (flattenSlotId sc) sId
-
 -- Check that `unflattenSlotId` does not panic for
 -- allowed values of `EpochSlots` and `FlatSlotId`.
 prop_unflattenSlotId :: Property
@@ -240,9 +214,7 @@ prop_unflattenSlotId = withTests 100 . property $ do
 prop_unflattenFlattenSlotId :: Property
 prop_unflattenFlattenSlotId = withTests 100 . property $ do
   (sId, sc) <- forAll genConsistentSlotIdEpochSlots
-  case flattenSlotId sc sId of
-    Left  err  -> failWith Nothing (show $ sformat build err)
-    Right fSid -> sId === unflattenSlotId sc fSid
+  sId === unflattenSlotId sc (flattenSlotId sc sId)
 
 -- Check that `genSlotId` does not panic for
 -- allowed values of `EpochSlots`.
@@ -258,7 +230,7 @@ prop_flattenUnflattenSlotId = withTests 100 . property $ do
   sc   <- forAll genLsiEpochSlots
   fsId <- forAll genFlatSlotId
   let unflatFlat = flattenSlotId sc $ unflattenSlotId sc fsId
-  compareValueRight fsId unflatFlat
+  fsId === unflatFlat
 
 -- Check that `addSlotNumber` actually adds.
 prop_addSlotNumber :: Property
