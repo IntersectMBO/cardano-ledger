@@ -26,18 +26,18 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/fm-ledger-rules
+  location: https://github.com/input-output-hk/cardano-ledger-specs
   tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
   subdir: specs/semantics/hs
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/fm-ledger-rules
+  location: https://github.com/input-output-hk/cardano-ledger-specs
   tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
   subdir: specs/ledger/hs
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/fm-ledger-rules
+  location: https://github.com/input-output-hk/cardano-ledger-specs
   tag: bf059d1d593e7ef9f3b983a0c904e7bb81362af9
   subdir: specs/chain/hs
