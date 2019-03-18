@@ -8,11 +8,12 @@ where
 
 import Cardano.Prelude
 
+import Cardano.Binary.Class (Raw)
 import Cardano.Crypto.Hashing (Hash)
 
 
 newtype GenesisHash = GenesisHash
-  { unGenesisHash :: forall a. Hash a
+  { unGenesisHash :: Hash Raw
   }
 
 deriving instance Show GenesisHash
