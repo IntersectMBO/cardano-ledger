@@ -6,8 +6,6 @@ module Test.Cardano.Chain.Common.Example
   ( exampleAddress
   , exampleAddress1
   , exampleAddress2
-  , exampleAddress3
-  , exampleAddress4
   , exampleAttributes
   , exampleChainDifficulty
   , exampleStakeholderId
@@ -23,7 +21,6 @@ import Cardano.Chain.Common
   , Attributes
   , BlockCount(..)
   , ChainDifficulty(..)
-  , Script(..)
   , StakeholderId
   , makeAddress
   , mkAttributes
@@ -63,24 +60,8 @@ exampleAddress2 = makeAddress easd attrs
   attrs = AddrAttributes hap
   hap   = Just (HDAddressPayload (getBytes 15 32))
 
-exampleAddress3 :: Address
-exampleAddress3 = makeAddress easd attrs
- where
-  easd  = ScriptASD exampleScript
-  attrs = AddrAttributes hap
-  hap   = Just (HDAddressPayload (getBytes 17 32))
-
-exampleAddress4 :: Address
-exampleAddress4 = makeAddress easd attrs
- where
-  easd  = UnknownASD 7 "test value"
-  attrs = AddrAttributes Nothing
-
 exampleChainDifficulty :: ChainDifficulty
 exampleChainDifficulty = ChainDifficulty (BlockCount 9999)
-
-exampleScript :: Script
-exampleScript = Script 601 (getBytes 4 32)
 
 exampleStakeholderId :: StakeholderId
 exampleStakeholderId = mkStakeholderId examplePublicKey

@@ -26,14 +26,14 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common (LovelacePortion, ScriptVersion, TxFeePolicy)
+import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
 
 -- | Data which is associated with 'BlockVersion'
 data ProtocolParameters = ProtocolParameters
-  { ppScriptVersion     :: !ScriptVersion
+  { ppScriptVersion     :: !Word16
   , ppSlotDuration      :: !NominalDiffTime
   , ppMaxBlockSize      :: !Natural
   , ppMaxHeaderSize     :: !Natural

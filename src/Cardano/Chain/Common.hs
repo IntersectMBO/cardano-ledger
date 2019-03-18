@@ -13,7 +13,6 @@ import Cardano.Chain.Common.ChainDifficulty as X
 import Cardano.Chain.Common.Lovelace as X
 import Cardano.Chain.Common.LovelacePortion as X
 import Cardano.Chain.Common.Merkle as X
-import Cardano.Chain.Common.Script as X
 import Cardano.Chain.Common.StakeholderId as X
 import Cardano.Chain.Common.TxFeePolicy as X
 import Cardano.Chain.Common.TxSizeLinear as X

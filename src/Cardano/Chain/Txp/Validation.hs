@@ -29,13 +29,11 @@ import Cardano.Chain.Common
   ( Address
   , Lovelace
   , LovelaceError
-  , Script(..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , calculateTxSizeLinear
   , checkPubKeyAddress
   , checkRedeemAddress
-  , checkScriptAddress
   , mkKnownLovelace
   , subLovelace
   )
@@ -56,8 +54,6 @@ data TxValidationError
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationInvalidWitness TxInWitness
   | TxValidationMissingInput TxIn
-  | TxValidationScriptWitness
-  -- ^ TODO: Remove this once support for script witnesses is added
   deriving (Eq, Show)
 
 
@@ -121,7 +117,7 @@ validateTxIn utxo txIn
 validateWitness
   :: MonadError TxValidationError m
   => ProtocolMagicId
-  -> (Annotated TxSigData ByteString)
+  -> Annotated TxSigData ByteString
   -> Address
   -> TxInWitness
   -> m ()
@@ -138,24 +134,6 @@ validateWitness pm sigData addr witness = case witness of
       && checkRedeemAddress pk addr
       )
       `orThrowError` TxValidationInvalidWitness witness
-
-  -- TODO: Support script witnesses for Shelley
-  ScriptWitness validator redeemer -> do
-    let
-      valVersion = scrVersion validator
-      redVersion = scrVersion redeemer
-    (valVersion == redVersion && checkScriptAddress validator addr)
-      `orThrowError` TxValidationInvalidWitness witness
-    txScriptCheck sigData validator redeemer
- where
-
-  txScriptCheck
-    :: MonadError TxValidationError m
-    => (Annotated TxSigData ByteString)
-    -> Script
-    -> Script
-    -> m ()
-  txScriptCheck _ _ _ = throwError TxValidationScriptWitness
 
 
 data UTxOValidationError

@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,6 +28,7 @@ import Cardano.Binary.Class
   ( Annotated(..)
   , Bi(..)
   , Case(..)
+  , DecoderError(DecoderErrorUnknownTag)
   , decodeKnownCborDataItem
   , decodeListLen
   , encodeKnownCborDataItem
@@ -34,9 +37,8 @@ import Cardano.Binary.Class
   , matchSize
   , serialize'
   , szCases
-  , DecoderError(DecoderErrorUnknownTag)
   )
-import Cardano.Chain.Common (Script, addressHash)
+import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Txp.Tx (Tx)
 import Cardano.Crypto
   ( Hash
@@ -44,7 +46,6 @@ import Cardano.Crypto
   , RedeemPublicKey
   , RedeemSignature
   , Signature
-  , hash
   , hashDecoded
   , shortHashF
   )
@@ -59,21 +60,15 @@ type TxWitness = Vector TxInWitness
 data TxInWitness
   = PkWitness !PublicKey !TxSig
   -- ^ PkWitness twKey twSig
-  | ScriptWitness !Script !Script
-  -- ^ ScriptWitness twValidator twRedeemer
   | RedeemWitness !RedeemPublicKey !(RedeemSignature TxSigData)
   -- ^ RedeemWitness twRedeemKey twRedeemSig
   deriving (Eq, Show, Generic)
+  deriving anyclass NFData
 
 instance ToJSON TxInWitness where
   toJSON = \case
     PkWitness twKey twSig ->
       object ["tag" .= ("PkWitness" :: Text), "key" .= twKey, "sig" .= twSig]
-    ScriptWitness twValidator twRedeemer -> object
-      [ "tag" .= ("ScriptWitness" :: Text)
-      , "validator" .= twValidator
-      , "redeemer" .= twRedeemer
-      ]
     RedeemWitness twRedeemKey twRedeemSig -> object
       [ "tag" .= ("RedeemWitness" :: Text)
       , "redeemKey" .= twRedeemKey
@@ -83,13 +78,11 @@ instance ToJSON TxInWitness where
 instance FromJSON TxInWitness where
   parseJSON = withObject "TxInWitness" $ \o -> (o .: "tag") >>= \case
     ("PkWitness" :: Text) -> PkWitness <$> (o .: "key") <*> (o .: "sig")
-    "ScriptWitness" -> ScriptWitness <$> (o .: "validator") <*> (o .: "redeemer")
     "RedeemWitness" ->
       RedeemWitness <$> (o .: "redeemKey") <*> (o .: "redeemSig")
     _ ->
       aesonError @Text
-        "expected 'tag' to be one of 'PkWitness', 'ScriptWitness', \
-                              \'RedeemWitness'"
+        "expected 'tag' to be one of 'PkWitness' or 'RedeemWitness'"
 
 instance B.Buildable TxInWitness where
   build (PkWitness key sig) = bprint
@@ -103,16 +96,6 @@ instance B.Buildable TxInWitness where
     key
     (addressHash key)
     sig
-  build (ScriptWitness val red) = bprint
-    ( "ScriptWitness: "
-    . "validator hash = "
-    . shortHashF
-    . ", "
-    . "redeemer hash = "
-    . shortHashF
-    )
-    (hash val)
-    (hash red)
   build (RedeemWitness key sig) =
     bprint ("PkWitness: key = " . build . ", sig = " . build) key sig
 
@@ -122,10 +105,6 @@ instance Bi TxInWitness where
       encodeListLen 2
         <> encode (0 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
-    ScriptWitness val red ->
-      encodeListLen 2
-        <> encode (1 :: Word8)
-        <> encodeKnownCborDataItem (val, red)
     RedeemWitness key sig ->
       encodeListLen 2
         <> encode (2 :: Word8)
@@ -133,31 +112,24 @@ instance Bi TxInWitness where
 
   decode = do
     len <- decodeListLen
-    tag <- decode @Word8
-    case tag of
+    decode @Word8 >>= \case
       0 -> do
         matchSize "TxInWitness.PkWitness" len 2
         uncurry PkWitness <$> decodeKnownCborDataItem
-      1 -> do
-        matchSize "TxInWitness.ScriptWitness" len 2
-        uncurry ScriptWitness <$> decodeKnownCborDataItem
       2 -> do
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem
-      _ -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
+      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
 
   encodedSizeExpr size _ = 2 + szCases
     (map
       (fmap knownCborDataItemSizeExpr)
       [ Case "PkWitness" $ size $ Proxy @(PublicKey, TxSig)
-      , Case "ScriptWitness" $ size $ Proxy @(Script, Script)
       , Case "RedeemWitness"
       $ size
       $ Proxy @(RedeemPublicKey, RedeemSignature TxSigData)
       ]
     )
-
-instance NFData TxInWitness
 
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData

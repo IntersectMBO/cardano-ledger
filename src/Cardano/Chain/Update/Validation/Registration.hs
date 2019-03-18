@@ -46,7 +46,7 @@ data Error
   | RegistrationDuplicateSoftwareVersion SoftwareVersion
   | RegistrationInvalidProposer StakeholderId
   | RegistrationInvalidProtocolVersion ProtocolVersion
-  | RegistrationInvalidScriptVersion ScriptVersion ScriptVersion
+  | RegistrationInvalidScriptVersion Word16 Word16
   | RegistrationInvalidSignature
   | RegistrationInvalidSoftwareVersion SoftwareVersion
   | RegistrationMaxBlockSizeTooLarge (TooLarge Natural)

@@ -63,7 +63,7 @@ import Cardano.Binary.Class
   (Bi(..), DecoderError(..), decodeListLen, encodeListLen, enforceSize)
 import Cardano.Chain.Block.Header (HeaderHash)
 import Cardano.Chain.Common
-  (ChainDifficulty, Lovelace, ScriptVersion, StakeholderId, mkKnownLovelace)
+  (ChainDifficulty, Lovelace, StakeholderId, mkKnownLovelace)
 import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -387,7 +387,7 @@ instance Bi ProtocolVersionState where
 bvsIsConfirmed :: ProtocolVersionState -> Bool
 bvsIsConfirmed = isJust . bvsConfirmedEpoch
 
-bvsScriptVersion :: ProtocolVersionState -> Maybe ScriptVersion
+bvsScriptVersion :: ProtocolVersionState -> Maybe Word16
 bvsScriptVersion = ppuScriptVersion . bvsModifier
 
 bvsSlotDuration :: ProtocolVersionState -> Maybe NominalDiffTime

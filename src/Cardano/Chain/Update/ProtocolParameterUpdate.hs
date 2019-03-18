@@ -20,7 +20,7 @@ import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common (LovelacePortion, ScriptVersion, TxFeePolicy)
+import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters(..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
@@ -28,7 +28,7 @@ import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
 -- | Data which represents modifications of block (aka protocol) version
 data ProtocolParameterUpdate = ProtocolParameterUpdate
-  { ppuScriptVersion     :: !(Maybe ScriptVersion)
+  { ppuScriptVersion     :: !(Maybe Word16)
   , ppuSlotDuration      :: !(Maybe NominalDiffTime)
   , ppuMaxBlockSize      :: !(Maybe Natural)
   , ppuMaxHeaderSize     :: !(Maybe Natural)

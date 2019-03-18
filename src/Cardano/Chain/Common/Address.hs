@@ -23,7 +23,6 @@ module Cardano.Chain.Common.Address
   -- * Spending data checks
   , checkAddrSpendingData
   , checkPubKeyAddress
-  , checkScriptAddress
   , checkRedeemAddress
 
   -- * Encoding
@@ -38,13 +37,11 @@ module Cardano.Chain.Common.Address
 
   -- * Pattern-matching helpers
   , isRedeemAddress
-  , isUnknownAddressType
 
   -- * Construction
   , makeAddress
   , makePubKeyAddress
   , makePubKeyHdwAddress
-  , makeScriptAddress
   , makeRedeemAddress
   , createHDAddressNH
   , createHDAddressH
@@ -71,6 +68,7 @@ import qualified Data.Aeson.Types as Aeson (toJSONKeyText)
 import qualified Data.ByteString as BS
 import Data.ByteString.Base58
   (Alphabet(..), bitcoinAlphabet, decodeBase58, encodeBase58)
+import Data.Text.Internal.Builder (Builder)
 import Formatting
   (Format, bprint, build, builder, formatToString, later, sformat)
 import qualified Formatting.Buildable as B
@@ -91,7 +89,6 @@ import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData
   (AddrSpendingData(..), AddrType(..), addrSpendingDataToType)
 import Cardano.Chain.Common.Attributes (Attributes(..), mkAttributes)
-import Cardano.Chain.Common.Script (Script)
 import Cardano.Chain.Constants (accountGenesisIndex, wAddressGenesisIndex)
 import Cardano.Crypto.Hashing (hashHexF)
 import Cardano.Crypto.HD
@@ -198,11 +195,10 @@ addressDetailedF = later $ \addr -> bprint
   (addrRoot addr)
   (addrAttributes addr)
  where
+  formattedType :: AddrType -> Builder
   formattedType = \case
-    ATPubKey      -> "PubKey"
-    ATScript      -> "Script"
-    ATRedeem      -> "Redeem"
-    ATUnknown tag -> "Unknown#" <> B.build tag
+    ATPubKey -> "PubKey"
+    ATRedeem -> "Redeem"
 
 -- | Currently we use Bitcoin alphabet for representing addresses in base58
 addrAlphabet :: Alphabet
@@ -265,13 +261,6 @@ makePubKeyAddressImpl path key = makeAddress spendingData attrs
   spendingData = PubKeyASD key
   attrs        = AddrAttributes {aaPkDerivationPath = path}
 
--- | A function for making an address from a validation 'Script'
-makeScriptAddress :: Script -> Address
-makeScriptAddress scr = makeAddress spendingData attrs
- where
-  spendingData = ScriptASD scr
-  attrs        = AddrAttributes {aaPkDerivationPath = Nothing}
-
 -- | A function for making an address from 'RedeemPublicKey'
 makeRedeemAddress :: RedeemPublicKey -> Address
 makeRedeemAddress key = makeAddress spendingData attrs
@@ -322,10 +311,6 @@ checkAddrSpendingData asd addr =
 -- | Check if given 'Address' is created from given 'PublicKey'
 checkPubKeyAddress :: PublicKey -> Address -> Bool
 checkPubKeyAddress pk = checkAddrSpendingData (PubKeyASD pk)
-
--- | Check if given 'Address' is created from given validation script
-checkScriptAddress :: Script -> Address -> Bool
-checkScriptAddress script = checkAddrSpendingData (ScriptASD script)
 
 -- | Check if given 'Address' is created from given 'RedeemPublicKey'
 checkRedeemAddress :: RedeemPublicKey -> Address -> Bool
@@ -385,11 +370,6 @@ isRedeemAddress :: Address -> Bool
 isRedeemAddress addr = case addrType addr of
   ATRedeem -> True
   _        -> False
-
-isUnknownAddressType :: Address -> Bool
-isUnknownAddressType addr = case addrType addr of
-  ATUnknown{} -> True
-  _           -> False
 
 
 --------------------------------------------------------------------------------
