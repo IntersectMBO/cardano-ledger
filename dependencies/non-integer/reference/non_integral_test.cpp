@@ -75,10 +75,15 @@ int main()
               maximal_pow = diff;
           }
 
+          // calculate exponentiation using pre-calculated `ln`. This is useful
+          // for example in the case that the base is constant
           {
+            mpz_class temp;
+            ref_ln(temp.get_mpz_t(), base.get_mpz_t());
             auto before = std::chrono::high_resolution_clock::now();
-
-            ref_exp(result.get_mpz_t(), base.get_mpz_t());
+            temp = temp * exponent;
+            scale(temp.get_mpz_t());
+            ref_exp(result.get_mpz_t(), temp.get_mpz_t());
             auto after = std::chrono::high_resolution_clock::now();
             diff = after - before;
             total_exp += diff;
@@ -96,7 +101,7 @@ int main()
         }
     }
 
-  std::cerr << "exp avg: " << (total_exp.count() / n)
+  std::cerr << "exp(x * const) avg: " << (total_exp.count() / n)
             << " maximal time: " << maximal_exp.count()
             << std::endl;
   std::cerr << "pow avg: " << (total_pow.count() / n)
@@ -106,3 +111,14 @@ int main()
   cleanup();
   return 0;
 }
+
+// bzcat testdata.huge.100.txt.bz2  | ./non_integral_test | zstd - -o reference.exponentiate.zstd
+
+// exp(x* const) avg: 1.7069e-05 maximal time: 0.00259635
+// pow avg: 7.11712e-05 maximal time: 0.00265881
+
+
+// Raspberry Pi
+
+// exp(x * const) avg: 0.000327015 maximal time: 0.00237936
+// pow avg: 0.00132969 maximal time: 0.00379055
