@@ -98,7 +98,6 @@ test-suite test
   type:                exitcode-stdio-1.0
 
   other-modules:
-                       Spec
                        Test.Cardano.Crypto.Bi
                        Test.Cardano.Crypto.Arbitrary
                        Test.Cardano.Crypto.Arbitrary.Unsafe
