@@ -20,6 +20,6 @@ let
 in
   writeScript "stack-rebuild-wrapped" ''
     #!${stdenv.shell}
-    export PATH=${lib.makeBinPath ([ cache-s3 stack gnused coreutils stack-hpc-coveralls ] ++ buildTools)}
+    export PATH=${lib.makeBinPath ([ cache-s3 stack gnused gnutar coreutils stack-hpc-coveralls ] ++ buildTools)}
     exec ${stackRebuild} "$@"
   ''
