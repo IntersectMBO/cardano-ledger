@@ -23,7 +23,7 @@ extra-deps:
       - crypto
       - crypto/test
 
-  - git: https://github.com/input-output-hk/fm-ledger-rules
+  - git: https://github.com/input-output-hk/cardano-ledger-specs
     commit: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
     subdirs:
       - specs/semantics/hs
