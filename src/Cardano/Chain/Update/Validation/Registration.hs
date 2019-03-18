@@ -5,14 +5,14 @@
 --   This is an implementation of the rules defined in the Byron ledger
 --   specification
 module Cardano.Chain.Update.Validation.Registration
-  ( RegistrationError
-  , RegistrationState(..)
+  ( Error
+  , State(..)
   , ProtocolUpdateProposals
   , registerProposal
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude hiding (State)
 
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
@@ -28,9 +28,9 @@ import Cardano.Chain.Update.Vote
 import Cardano.Crypto
 
 
--- | RegistrationState keeps track of registered protocol and software update
+-- | State keeps track of registered protocol and software update
 --   proposals
-data RegistrationState = RegistrationState
+data State = State
   { rsProtocolUpdateProposals :: !ProtocolUpdateProposals
   , rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
   }
@@ -38,10 +38,10 @@ data RegistrationState = RegistrationState
 type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameters)
 type SoftwareUpdateProposals = Map UpId SoftwareVersion
 
-type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, SlotId)
+type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, FlatSlotId)
 
--- | RegistrationError captures the ways in which registration could fail
-data RegistrationError
+-- | Error captures the ways in which registration could fail
+data Error
   = RegistrationDuplicateProtocolVersion ProtocolVersion
   | RegistrationDuplicateSoftwareVersion SoftwareVersion
   | RegistrationInvalidProposer StakeholderId
@@ -62,17 +62,17 @@ data TooLarge n = TooLarge
 
 
 -- | Register an update proposal after verifying its signature and validating
---   its contents. This corresponds to the `UPREG` rules in the spec.
+--   its contents. This corresponds to the @UPREG@ rules in the spec.
 registerProposal
-  :: MonadError RegistrationError m
+  :: MonadError Error m
   => ProtocolMagicId
   -> ProtocolVersion
   -> ProtocolParameters
   -> ApplicationVersions
   -> Map StakeholderId StakeholderId
-  -> RegistrationState
+  -> State
   -> AProposal ByteString
-  -> m RegistrationState
+  -> m State
 registerProposal pm adoptedPV adoptedPP appVersions delegation rs proposal = do
 
   -- Check that the proposer is delegated to by a genesis key
@@ -95,13 +95,13 @@ registerProposal pm adoptedPV adoptedPP appVersions delegation rs proposal = do
 --   The proposal may contain a protocol update, a software update, or both.
 --   This corresponds to the `UPV` rules in the spec.
 registerProposalComponents
-  :: MonadError RegistrationError m
+  :: MonadError Error m
   => ProtocolVersion
   -> ProtocolParameters
   -> ApplicationVersions
-  -> RegistrationState
+  -> State
   -> AProposal ByteString
-  -> m RegistrationState
+  -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
   (protocolVersionChanged || softwareVersionChanged)
@@ -117,7 +117,7 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
     then registerSoftwareUpdate appVersions registeredSUPs proposal
     else pure registeredSUPs
 
-  pure $ RegistrationState registeredPUPs' registeredSUPs'
+  pure $ State registeredPUPs' registeredSUPs'
  where
   ProposalBody protocolVersion ppu softwareVersion _ _ =
     proposalBody proposal
@@ -130,7 +130,7 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   protocolVersionChanged =
     not $ protocolVersion == adoptedPV && PPU.isEmpty ppu
 
-  RegistrationState registeredPUPs registeredSUPs = rs
+  State registeredPUPs registeredSUPs = rs
 
 
 -- | Validate a protocol update
@@ -143,7 +143,7 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 --
 --   This corresponds to the `UPPVV` rule in the spec.
 registerProtocolUpdate
-  :: MonadError RegistrationError m
+  :: MonadError Error m
   => ProtocolVersion
   -> ProtocolParameters
   -> ProtocolUpdateProposals
@@ -185,7 +185,7 @@ pvCanFollow newPV adoptedPV = adoptedPV < newPV && isNextVersion
 --
 --   This is where we enforce constraints on how the 'ProtocolParameters' change
 canUpdate
-  :: MonadError RegistrationError m
+  :: MonadError Error m
   => ProtocolParameters
   -> ProtocolParameters
   -> AProposal ByteString
@@ -234,7 +234,7 @@ canUpdate adoptedPP newPP proposal = do
 --
 --   This corresponds to the `UPSVV` rule in the spec.
 registerSoftwareUpdate
-  :: MonadError RegistrationError m
+  :: MonadError Error m
   => ApplicationVersions
   -> SoftwareUpdateProposals
   -> AProposal ByteString
