@@ -58,7 +58,13 @@ buildStep testArgs = do
  where
   cfg = ["--dump-logs", "--color", "always"]
   stackBuild args = run "stack" $ cfg ++ ["build", "--fast"] ++ args
-  buildArgs    = ["--bench", "--no-run-benchmarks", "--no-haddock-deps"]
+  buildArgs =
+    [ "--bench"
+    , "--no-run-benchmarks"
+    , "--haddock"
+    , "--haddock-internal"
+    , "--no-haddock-deps"
+    ]
   buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
   build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
   test =
