@@ -39,7 +39,6 @@ import Cardano.Chain.Block.Block
 import Cardano.Chain.Block.Header
   ( BlockSignature(..)
   , HeaderHash
-  , genesisHeaderHash
   , recoverSignedBytes
   , wrapBoundaryBytes
   )
@@ -53,6 +52,7 @@ import Cardano.Chain.Genesis as Genesis
   , GenesisWStakeholders(..)
   , configBootStakeholders
   , configEpochSlots
+  , configGenesisHeaderHash
   , configK
   , configProtocolMagicId
   , configSlotSecurityParam
@@ -198,7 +198,7 @@ updateChainBoundary
 updateChainBoundary config cvs bvd = do
   let
     prevHash =
-      fromMaybe (genesisHeaderHash $ configGenesisHash config) (cvsPreviousHash cvs)
+      fromMaybe (configGenesisHeaderHash config) (cvsPreviousHash cvs)
 
   -- Validate the previous block hash of 'b'
   (boundaryPrevHash bvd == prevHash)
@@ -232,7 +232,7 @@ updateChain
 updateChain config cvs b = do
   let
     prevHash =
-      fromMaybe (genesisHeaderHash $ configGenesisHash config) (cvsPreviousHash cvs)
+      fromMaybe (configGenesisHeaderHash config) (cvsPreviousHash cvs)
 
   -- Validate the previous block hash of 'b'
   (blockPrevHash b == prevHash)

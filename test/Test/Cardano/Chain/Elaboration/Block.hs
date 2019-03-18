@@ -95,7 +95,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
     }
 
   prevHash = fromMaybe
-    (Concrete.genesisHeaderHash $ Genesis.configGenesisHash config)
+    (Genesis.configGenesisHeaderHash config)
     (Concrete.cvsPreviousHash st)
 
   sid =
