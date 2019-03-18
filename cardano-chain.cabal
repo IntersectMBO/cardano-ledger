@@ -120,7 +120,7 @@ library
                      , binary
                      , bytestring
                      , canonical-json
-                     , cardano-binary
+                     , cardano-base
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cborg
@@ -210,8 +210,8 @@ test-suite cardano-chain-test
                      , base16-bytestring
                      , bytestring
                      , canonical-json
-                     , cardano-binary
-                     , cardano-binary-test
+                     , cardano-base
+                     , cardano-base-test
                      , cardano-chain
                      , cardano-crypto
                      , cardano-crypto-test

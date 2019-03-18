@@ -15,8 +15,8 @@
         cardano-chain-test = ./.stack.nix/cardano-chain-test.nix;
         cardano-prelude = ./.stack.nix/cardano-prelude.nix;
         cardano-prelude-test = ./.stack.nix/cardano-prelude-test.nix;
-        cardano-binary = ./.stack.nix/cardano-binary.nix;
-        cardano-binary-test = ./.stack.nix/cardano-binary-test.nix;
+        cardano-base = ./.stack.nix/cardano-base.nix;
+        cardano-base-test = ./.stack.nix/cardano-base-test.nix;
         cardano-crypto-wrapper = ./.stack.nix/cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./.stack.nix/cardano-crypto-test.nix;
         small-steps = ./.stack.nix/small-steps.nix;

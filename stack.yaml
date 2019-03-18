@@ -11,14 +11,14 @@ extra-deps:
       - .
       - test
 
-  - git: https://github.com/input-output-hk/cardano-chain
-    commit: 4d9eec080374179bf15bf9c4fca09cc7d73e5f53
+  - git: https://github.com/input-output-hk/cardano-base
+    commit: bd978263ab884c4b27c940fcfe2d1ee8604afc5f
     subdirs:
-      - binary
-      - binary/test
+      - .
+      - test
 
   - git: https://github.com/input-output-hk/cardano-chain
-    commit: f56742c74ca4b69f03185420e67990af50c2e596
+    commit: fa7d892c596ccd54e852236126fc30a6e5ff0a9b
     subdirs:
       - crypto
       - crypto/test

@@ -19,8 +19,8 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.bytestring)
-          (hsPkgs.cardano-binary)
-          (hsPkgs.cardano-binary-test)
+          (hsPkgs.cardano-base)
+          (hsPkgs.cardano-base-test)
           (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-prelude)
@@ -37,8 +37,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-chain";
-      rev = "f56742c74ca4b69f03185420e67990af50c2e596";
-      sha256 = "1g6x51mnqs0jpz6ppn6bz17a0h1h2x9nm5zsalcai8lmb0j6cff4";
+      rev = "f764b94c1363134fd8922337cb05a6f8fec46148";
+      sha256 = "19a1980nqbzb1166s9d7nlmkwxx0icn35jc4jlzg8g2qkfmqx1am";
       });
     postUnpack = "sourceRoot+=/crypto/test; echo source root reset to \$sourceRoot";
     }

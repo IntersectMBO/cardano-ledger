@@ -3,15 +3,15 @@
     flags = { development = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-binary"; version = "1.5.0"; };
+      identifier = { name = "cardano-base"; version = "1.5.0"; };
       license = "MIT";
-      copyright = "2018 IOHK";
+      copyright = "2019 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "";
       url = "";
-      synopsis = "Binary serialization for Cardano";
-      description = "This package defines a type class for binary serialization,\nhelpers and instances.";
+      synopsis = "Code used throughout the Cardano ecosystem";
+      description = "This package includes the binary serialization format for Cardano";
       buildType = "Simple";
       };
     components = {
@@ -40,7 +40,7 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.bytestring)
-            (hsPkgs.cardano-binary)
+            (hsPkgs.cardano-base)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.cborg)
@@ -62,9 +62,8 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "https://github.com/input-output-hk/cardano-chain";
-      rev = "4d9eec080374179bf15bf9c4fca09cc7d73e5f53";
-      sha256 = "15525inprrbapkvisnqgsxzn8vmcdm1inwv1r6nxnv9qczkb7ca5";
+      url = "https://github.com/input-output-hk/cardano-base";
+      rev = "bd978263ab884c4b27c940fcfe2d1ee8604afc5f";
+      sha256 = "1zng7f37a9cw9vi2kshyadakzmc1bcai5hj5x2309sj790q2ra54";
       });
-    postUnpack = "sourceRoot+=/binary; echo source root reset to \$sourceRoot";
     }
