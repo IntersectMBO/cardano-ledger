@@ -54,7 +54,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
-  , SlotCount
+  , EpochSlots (..)
   , addSlotNumber
   , slotNumberEpoch
   , subSlotNumber
@@ -105,7 +105,7 @@ scheduleCertificate
   :: MonadError SchedulingError m
   => Genesis.Config
   -> FlatSlotId
-  -> SlotCount
+  -> EpochSlots
   -> SchedulingState
   -> ACertificate ByteString
   -> m SchedulingState
@@ -186,7 +186,7 @@ delegatorOf vk dms = case M.keys $ M.filter (== vk) dms of
 --   specification.
 activateDelegation :: ActivationState -> ScheduledDelegation -> ActivationState
 activateDelegation as delegation
-  | prevDelegationSlot < slot || getFlatSlotId slot == 0 = ActivationState
+  | prevDelegationSlot < slot || unFlatSlotId slot == 0 = ActivationState
     { asDelegationMap   = M.insert delegator delegate delegationMap
     , asDelegationSlots = M.insert delegator slot delegationSlots
     }
@@ -217,7 +217,7 @@ initialInterfaceState
 initialInterfaceState config = updateDelegation
   config
   (FlatSlotId 0)
-  0
+  (EpochSlots 0)
   is
   certificates
  where
@@ -266,7 +266,7 @@ updateDelegation
   :: MonadError SchedulingError m
   => Genesis.Config
   -> FlatSlotId
-  -> SlotCount
+  -> EpochSlots
   -> InterfaceState
   -> [ACertificate ByteString]
   -> m InterfaceState

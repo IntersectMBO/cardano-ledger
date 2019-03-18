@@ -19,7 +19,7 @@ import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.Block (ABlock, Block)
 import Cardano.Chain.Block.SlogUndo (SlogUndo(..), buildSlogUndo)
 import qualified Cardano.Chain.Delegation as Delegation (Undo)
-import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Txp (TxpUndo)
 import Cardano.Chain.Update.Undo (USUndo)
 
@@ -37,7 +37,7 @@ data Undo = Undo
 type Blund = (Block, Undo)
 type ABlund a = (ABlock a, Undo)
 
-buildUndo :: SlotCount -> Format r (Undo -> r)
+buildUndo :: EpochSlots -> Format r (Undo -> r)
 buildUndo epochSlots = later $ \undo -> bprint
   ( "Undo:\n"
   . "  undoTx: "

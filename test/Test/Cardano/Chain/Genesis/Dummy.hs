@@ -52,7 +52,7 @@ import Cardano.Chain.Genesis
   , mkConfig
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
-import Cardano.Chain.Slotting (EpochIndex(..), SlotCount)
+import Cardano.Chain.Slotting (EpochIndex(..), EpochSlots)
 import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
 import Cardano.Crypto (SecretKey)
 
@@ -69,10 +69,10 @@ dummyConfigStartTime startTime =
 dummyK :: BlockCount
 dummyK = 10
 
-dummyEpochSlots :: SlotCount
+dummyEpochSlots :: EpochSlots
 dummyEpochSlots = kEpochSlots dummyK
 
-dummySlotSecurityParam :: SlotCount
+dummySlotSecurityParam :: EpochSlots
 dummySlotSecurityParam = kSlotSecurityParam dummyK
 
 dummyGeneratedSecrets :: GeneratedSecrets

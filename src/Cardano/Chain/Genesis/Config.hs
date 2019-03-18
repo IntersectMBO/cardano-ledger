@@ -50,7 +50,7 @@ import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Crypto (Hash, ProtocolMagic(..), ProtocolMagicId(..), hash)
 import Cardano.Chain.Common (BlockCount)
-import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Update (ProtocolParameters)
 import Cardano.Chain.ProtocolConstants
   (kEpochSlots, kSlotSecurityParam, kChainQualityThreshold)
@@ -138,13 +138,13 @@ data Config = Config
 configK :: Config -> BlockCount
 configK = gdK . configGenesisData
 
-configSlotSecurityParam :: Config -> SlotCount
+configSlotSecurityParam :: Config -> EpochSlots
 configSlotSecurityParam = kSlotSecurityParam . configK
 
 configChainQualityThreshold :: Fractional f => Config -> f
 configChainQualityThreshold = kChainQualityThreshold . configK
 
-configEpochSlots :: Config -> SlotCount
+configEpochSlots :: Config -> EpochSlots
 configEpochSlots = kEpochSlots . configK
 
 configProtocolMagic :: Config -> ProtocolMagic

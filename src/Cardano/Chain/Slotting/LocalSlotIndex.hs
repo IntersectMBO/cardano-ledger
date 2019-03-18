@@ -24,40 +24,28 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.Ix (Ix)
 import Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary.Class (Bi(..))
-import Cardano.Chain.Slotting.SlotCount (SlotCount)
+import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
 
 
 -- | Index of slot inside a concrete epoch.
 newtype LocalSlotIndex = UnsafeLocalSlotIndex
-  { getSlotIndex :: Word16
-  } deriving ( Show
-             , Eq
-             , Ord
-             , Ix
-             , Generic
-             , B.Buildable
-             , NFData
-             , Num
-             , Integral
-             , Real
-             , Enum
-             )
+  { unLocalSlotIndex :: Word16
+  } deriving (Eq, Ord, Generic, NFData, Show, B.Buildable)
 
 instance Bi LocalSlotIndex where
-  encode = encode . getSlotIndex
+  encode = encode . unLocalSlotIndex
   decode = UnsafeLocalSlotIndex <$> decode
 
 deriveJSON defaultOptions ''LocalSlotIndex
 
 data LocalSlotIndexError
-  = LocalSlotIndexEnumOverflow SlotCount Int
+  = LocalSlotIndexEnumOverflow EpochSlots Int
   | LocalSlotIndexEnumUnderflow Int
-  | LocalSlotIndexOverflow SlotCount Word64
+  | LocalSlotIndexOverflow EpochSlots Word64
 
 instance B.Buildable LocalSlotIndexError where
   build = \case
@@ -68,7 +56,7 @@ instance B.Buildable LocalSlotIndexError where
       . build
       )
       i
-      (epochSlots - 1)
+      (unEpochSlots epochSlots - 1)
     LocalSlotIndexEnumUnderflow i -> bprint
       ("localSlotIndexToEnum: " . build . " is less than the minBound, 0")
       i
@@ -82,57 +70,57 @@ instance B.Buildable LocalSlotIndexError where
       epochSlots
 
 localSlotIndexToEnum
-  :: SlotCount -> Int -> Either LocalSlotIndexError LocalSlotIndex
+  :: EpochSlots -> Int -> Either LocalSlotIndexError LocalSlotIndex
 localSlotIndexToEnum epochSlots i
-  | i >= fromIntegral epochSlots = Left
-  $ LocalSlotIndexEnumOverflow epochSlots i
+  | i >= fromIntegral (unEpochSlots epochSlots) =
+      Left $ LocalSlotIndexEnumOverflow epochSlots i
   | i < 0 = Left $ LocalSlotIndexEnumUnderflow i
   | otherwise = Right $ UnsafeLocalSlotIndex (fromIntegral i)
 
 localSlotIndexFromEnum :: LocalSlotIndex -> Int
-localSlotIndexFromEnum = fromIntegral . getSlotIndex
+localSlotIndexFromEnum = fromIntegral . unLocalSlotIndex
 
 localSlotIndexSucc
-  :: SlotCount -> LocalSlotIndex -> Either LocalSlotIndexError LocalSlotIndex
+  :: EpochSlots -> LocalSlotIndex -> Either LocalSlotIndexError LocalSlotIndex
 localSlotIndexSucc epochSlots =
   localSlotIndexToEnum epochSlots . (+ 1) . localSlotIndexFromEnum
 
 localSlotIndexPred
-  :: SlotCount -> LocalSlotIndex -> Either LocalSlotIndexError LocalSlotIndex
+  :: EpochSlots -> LocalSlotIndex -> Either LocalSlotIndexError LocalSlotIndex
 localSlotIndexPred epochSlots =
   localSlotIndexToEnum epochSlots . subtract 1 . localSlotIndexFromEnum
 
 localSlotIndexMinBound :: LocalSlotIndex
 localSlotIndexMinBound = UnsafeLocalSlotIndex 0
 
-localSlotIndexMaxBound :: SlotCount -> LocalSlotIndex
-localSlotIndexMaxBound epochSlots =
-  UnsafeLocalSlotIndex (fromIntegral epochSlots - 1)
+localSlotIndexMaxBound :: EpochSlots -> LocalSlotIndex
+localSlotIndexMaxBound (EpochSlots es) =
+  UnsafeLocalSlotIndex (fromIntegral $ es - 1)
 
 -- | All local slot indices for the given number of slots in epoch, in ascending
 --   order.
-localSlotIndices :: SlotCount -> [LocalSlotIndex]
+localSlotIndices :: EpochSlots -> [LocalSlotIndex]
 localSlotIndices slotsInEpoch = fmap UnsafeLocalSlotIndex [0 .. upperBound]
  where
   upperBound :: Word16
-  upperBound = fromIntegral slotsInEpoch - 1
+  upperBound = fromIntegral (unEpochSlots slotsInEpoch) - 1
 
 mkLocalSlotIndex
-  :: MonadError LocalSlotIndexError m => SlotCount -> Word16 -> m LocalSlotIndex
+  :: MonadError LocalSlotIndexError m => EpochSlots -> Word16 -> m LocalSlotIndex
 mkLocalSlotIndex es idx
-  | idx < fromIntegral es = pure (UnsafeLocalSlotIndex idx)
+  | idx < fromIntegral (unEpochSlots es) = pure (UnsafeLocalSlotIndex idx)
   | otherwise = throwError $ LocalSlotIndexOverflow es (fromIntegral idx)
 
 -- | Shift slot index by given amount, returning a 'LocalSlotIndexError' on
 --   overflow
 addLocalSlotIndex
-  :: SlotCount
-  -> SlotCount
+  :: EpochSlots
+  -> EpochSlots
   -> LocalSlotIndex
   -> Either LocalSlotIndexError LocalSlotIndex
 addLocalSlotIndex epochSlots x (UnsafeLocalSlotIndex i)
-  | s < fromIntegral epochSlots = Right $ UnsafeLocalSlotIndex (fromIntegral s)
+  | s < unEpochSlots epochSlots = Right $ UnsafeLocalSlotIndex (fromIntegral s)
   | otherwise = Left $ LocalSlotIndexOverflow epochSlots s
  where
   s :: Word64
-  s = fromIntegral x + fromIntegral i
+  s = unEpochSlots x + fromIntegral i

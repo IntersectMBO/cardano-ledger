@@ -39,7 +39,7 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Slotting (SlotCount)
+import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -58,7 +58,7 @@ import Test.Cardano.Crypto.Gen
   )
 
 
-genBlockSignature :: ProtocolMagicId -> SlotCount -> Gen BlockSignature
+genBlockSignature :: ProtocolMagicId -> EpochSlots -> Gen BlockSignature
 genBlockSignature pm epochSlots = Gen.choice
   [ BlockSignature <$> genSignature pm mts
   , BlockPSignatureHeavy <$> genProxySignature pm mts genEpochIndex
@@ -78,7 +78,7 @@ genBody pm =
 
 -- We use `Nothing` as the ProxyVKBlockInfo to avoid clashing key errors
 -- (since we use example keys which aren't related to each other)
-genHeader :: ProtocolMagicId -> SlotCount -> Gen Header
+genHeader :: ProtocolMagicId -> EpochSlots -> Gen Header
 genHeader pm epochSlots =
   mkHeaderExplicit pm
     <$> genHeaderHash
@@ -89,7 +89,7 @@ genHeader pm epochSlots =
     <*> genBody pm
     <*> genExtraHeaderData
 
-genConsensusData :: ProtocolMagicId -> SlotCount -> Gen ConsensusData
+genConsensusData :: ProtocolMagicId -> EpochSlots -> Gen ConsensusData
 genConsensusData pm epochSlots =
   consensusData
     <$> genSlotId epochSlots
@@ -116,7 +116,7 @@ genProof pm =
     <*> genAbstractHash (Delegation.genPayload pm)
     <*> Update.genProof pm
 
-genToSign :: ProtocolMagicId -> SlotCount -> Gen ToSign
+genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
     <$> genAbstractHash (genHeader pm epochSlots)
@@ -125,7 +125,7 @@ genToSign pm epochSlots =
     <*> genChainDifficulty
     <*> genExtraHeaderData
 
-genBlock :: ProtocolMagicId -> SlotCount -> Gen Block
+genBlock :: ProtocolMagicId -> EpochSlots -> Gen Block
 genBlock pm epochSlots =
   mkBlockExplicit pm
     <$> Update.genProtocolVersion
@@ -140,7 +140,7 @@ genBlock pm epochSlots =
 genSlogUndo :: Gen SlogUndo
 genSlogUndo = SlogUndo <$> Gen.maybe genFlatSlotId
 
-genUndo :: ProtocolMagicId -> SlotCount -> Gen Undo
+genUndo :: ProtocolMagicId -> EpochSlots -> Gen Undo
 genUndo pm epochSlots =
   Undo
     <$> genTxpUndo

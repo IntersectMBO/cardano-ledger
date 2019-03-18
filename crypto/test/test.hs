@@ -5,7 +5,8 @@ import System.Environment (withArgs)
 
 import Test.Hspec (hspec)
 
-import Spec (spec)
+import qualified Test.Cardano.Crypto.CryptoSpec
+import qualified Test.Cardano.Crypto.CryptoSpec2
 
 import qualified Test.Cardano.Crypto.Bi
 import qualified Test.Cardano.Crypto.Json
@@ -18,5 +19,8 @@ import qualified Test.Cardano.Crypto.Json
 --   `hspec`, which is interfering.
 main :: IO ()
 main = withArgs [] $ do
-  hspec spec
+  hspec $ do
+    Test.Cardano.Crypto.CryptoSpec.spec
+    Test.Cardano.Crypto.CryptoSpec2.spec
+
   runTests [Test.Cardano.Crypto.Bi.tests, Test.Cardano.Crypto.Json.tests]

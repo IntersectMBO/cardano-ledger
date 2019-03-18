@@ -8,10 +8,10 @@ module Test.Cardano.Chain.Slotting.Gen
   , genSlottingDataInvalidIndicies
   , genFlatSlotId
   , genLocalSlotIndex
-  , genLsiSlotCount
-  , genSlotCount
+  , genLsiEpochSlots
+  , genEpochSlots
   , genSlotId
-  , genConsistentSlotIdSlotCount
+  , genConsistentSlotIdEpochSlots
   , genSlottingData
   , feedPMEpochSlots
   )
@@ -32,10 +32,10 @@ import Cardano.Chain.Slotting
   , EpochSlottingData(..)
   , FlatSlotId(..)
   , LocalSlotIndex
-  , SlotCount(..)
+  , EpochSlots(..)
   , SlotId(..)
   , SlottingData
-  , getSlotIndex
+  , unLocalSlotIndex
   , localSlotIndexMaxBound
   , localSlotIndexMinBound
   , mkLocalSlotIndex
@@ -50,9 +50,9 @@ import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 genEpochIndex :: Gen EpochIndex
 genEpochIndex = EpochIndex <$> Gen.word64 Range.constantBounded
 
--- Generates a `SlotCount` based on `LocalSlotIndex`
-genLsiSlotCount :: Gen SlotCount
-genLsiSlotCount = SlotCount <$> Gen.word64 (Range.linear 1 w16Max)
+-- Generates a `EpochSlots` based on `LocalSlotIndex`
+genLsiEpochSlots :: Gen EpochSlots
+genLsiEpochSlots = EpochSlots <$> Gen.word64 (Range.linear 1 w16Max)
  where
   w16Max :: Word64
   w16Max = fromIntegral (maxBound :: Word16)
@@ -64,12 +64,12 @@ genEpochSlottingData =
 genFlatSlotId :: Gen FlatSlotId
 genFlatSlotId = FlatSlotId <$> Gen.word64 Range.constantBounded
 
-genLocalSlotIndex :: SlotCount -> Gen LocalSlotIndex
+genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
 genLocalSlotIndex epochSlots = mkLocalSlotIndex'
   <$> Gen.word16 (Range.constant lb ub)
  where
-  lb = getSlotIndex localSlotIndexMinBound
-  ub = getSlotIndex (localSlotIndexMaxBound epochSlots)
+  lb = unLocalSlotIndex localSlotIndexMinBound
+  ub = unLocalSlotIndex (localSlotIndexMaxBound epochSlots)
   mkLocalSlotIndex' slot = case mkLocalSlotIndex epochSlots slot of
     Left err -> panic $ sformat
       ("The impossible happened in genLocalSlotIndex: " . build)
@@ -78,20 +78,20 @@ genLocalSlotIndex epochSlots = mkLocalSlotIndex'
 
 -- Restricted to upper bound of `Word16` because `mkLocalSlotIndex`
 -- creates a `LocalSlotIndex` which is limited to a `Word16`.
-genSlotCount :: Gen SlotCount
-genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
+genEpochSlots :: Gen EpochSlots
+genEpochSlots = EpochSlots <$> Gen.word64 Range.constantBounded
 
-genSlotId :: SlotCount -> Gen SlotId
+genSlotId :: EpochSlots -> Gen SlotId
 genSlotId epochSlots =
   SlotId <$> genEpochIndex <*> genLocalSlotIndex epochSlots
 
--- Generates a `SlotId` and a `SlotCount` that does not exceed
+-- Generates a `SlotId` and a `EpochSlots` that does not exceed
 -- the `Word64` maximum boundary of `flattenSlotId` when flattened.
-genConsistentSlotIdSlotCount :: Gen (SlotId, SlotCount)
-genConsistentSlotIdSlotCount = do
-  sc  <- genLsiSlotCount
+genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
+genConsistentSlotIdEpochSlots = do
+  sc  <- genLsiEpochSlots
   lsi <- genLocalSlotIndex sc
-  eI  <- genRestrictedEpochIndex $ maxBound `div` getSlotCount sc
+  eI  <- genRestrictedEpochIndex $ maxBound `div` unEpochSlots sc
   pure (SlotId eI lsi, sc)
  where
   genRestrictedEpochIndex :: Word64 -> Gen EpochIndex
@@ -141,8 +141,8 @@ genSlottingDataInvalidIndicies = unsafeSlottingData <$> genSlottingDataMap
       genEpochSlottingData
     pure $ Map.fromAscList $ zip (map EpochIndex rList) epochSlottingDatas
 
-feedPMEpochSlots :: (ProtocolMagicId -> SlotCount -> Gen a) -> Gen a
+feedPMEpochSlots :: (ProtocolMagicId -> EpochSlots -> Gen a) -> Gen a
 feedPMEpochSlots genA = do
   pm         <- genProtocolMagicId
-  epochSlots <- SlotCount . fromIntegral <$> Gen.word16 Range.constantBounded
+  epochSlots <- EpochSlots . fromIntegral <$> Gen.word16 Range.constantBounded
   genA pm epochSlots
