@@ -51,7 +51,6 @@ localLib.pkgs.lib.mapAttrsRecursiveCond
 
     jobs.nix-tools.libs.cardano-chain.x86_64-darwin
     jobs.nix-tools.libs.cardano-chain.x86_64-linux
-    jobs.nix-tools.tests.cardano-chain.cardano-chain-test.x86_64-darwin
     jobs.nix-tools.tests.cardano-chain.cardano-chain-test.x86_64-linux
 
     # windows cross compilation targets
