@@ -37,7 +37,7 @@ localLib.nix-tools.release-nix {
   #   tests.cs-ledger.ledger-delegation-test.x86_64-linux -- will build and run the ledger-delegation-test from the
   #                                                          cs-ledger package on linux.
   #
-  required-name = "fm-ledger-rules-required-checks";
+  required-name = "cardano-ledger-specs-required-checks";
   required-targets = jobs: [
     jobs.byronLedgerSpec
     jobs.byronChainSpec
