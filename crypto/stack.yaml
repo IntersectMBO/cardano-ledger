@@ -11,8 +11,11 @@ extra-deps:
       - .
       - test
 
-  - ../binary
-  - ../binary/test
+  - git: https://github.com/input-output-hk/cardano-base
+    commit: bd978263ab884c4b27c940fcfe2d1ee8604afc5f
+    subdirs:
+      - .
+      - test
 
 nix:
   shell-file: ../scripts/nix/stack-shell.nix
