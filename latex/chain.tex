@@ -59,6 +59,15 @@
   See \cite{ouroboros_praos}.
 \end{note}
 
+This chapter introduces the view of the blockchain layer as required for the
+ledger. This includes in particular the information required for the epoch
+boundary and its rewards calculation as described in Section~\ref{sec:epoch}. It
+also covers the transitions that keep track of produced blocks in order to
+calculate rewards and penalties for stake pools.
+
+The main transition rule is $\mathsf{CHAIN}$ which calls the subrules
+$\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
+
 \subsection{Verifiable Random Functions (VRF)}
 \label{sec:defs-vrf}
 
@@ -218,6 +227,30 @@
 \subsection{New Epoch Transition}
 \label{sec:new-epoch-trans}
 
+For the transition to a new epoch ($\mathsf{NEWEPOCH}$), the environment is
+given in Figure~\ref{fig:ts-types:newepoch}, it consists of
+
+\begin{itemize}
+\item The epoch nonce.
+\item The new protocol parameters.
+\item An optional rewards update.
+\end{itemize}
+The new epoch state is given in Figure~\ref{fig:ts-types:newepoch}, it consists
+of
+
+\begin{itemize}
+\item The number of the last epoch.
+\item The old epoch nonce.
+\item The information about produced blocks for each stake pool.
+\item The old epoch state.
+\item An optional rewards update.
+\item The stake pool distribution of the epoch.
+\end{itemize}
+
+\begin{note}
+  Where is \PoolDistr defined?
+\end{note}
+
 \begin{figure}
   \emph{New Epoch environments}
   \begin{equation*}
@@ -254,6 +287,34 @@
   \caption{NewEpoch transition-system types}
   \label{fig:ts-types:newepoch}
 \end{figure}
+
+Figure~\ref{fig:rules:not-new-epoch} defines the new epoch state transition. It
+has two rules: the first one is the case of the epoch signal $e$ is before the
+current epoch \var{e_\ell}. This rule does not change the state. The second rule
+describes the change in the case of $e$ being equal to the next epoch
+$e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
+
+In the second case, the new epoch state is updated as follows:
+
+\begin{itemize}
+\item The epoch is set to the new epoch $e$.
+\item The epoch nonce is replaced with the new one from the new epoch
+  environment.
+\item The mapping for the blocks produced by each stake pool is set to the empty
+  map.
+\item The epoch state is updated first with the rewards update \var{ru} and then
+  via the call to $\mathsf{EPOCH}$.
+\item The rewards update to set to \Nothing.
+\item The pool distribution is updated according to the changes in the stake
+  pools.
+\end{itemize}
+
+The new pool distribution \var{pd}' is calculated from the delegation map and
+stake allocation of the previous epoch. It associates every stake pool key
+($\HashKey_{pool}$) to which a staking key ($\HashKey_{stake}$) delegates with
+the stake that $\HashKey_{stake}$ has. The sum of all stake the staking keys
+delegating to $\HashKey_{pool}$ then becomes the new entry of $\HashKey_{pool}$
+in the pool distribution.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:new-epoch}
@@ -304,7 +365,7 @@
             \varUpdate{\var{e}} \\
             \varUpdate{\eta_1} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}'} \\
+            \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
       \end{array}\right)}
@@ -1001,3 +1062,8 @@
   \caption{Chain rules}
   \label{fig:rules:chain}
 \end{figure}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "ledger-spec"
+%%% End:
