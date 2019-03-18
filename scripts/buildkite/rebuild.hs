@@ -35,7 +35,7 @@ main = do
   cacheConfig <- getCacheConfig bk
   cacheDownloadStep cacheConfig
 
-  buildResult <- buildSubdir "binary" .&&. buildSubdir "crypto" .&&. buildStep
+  buildResult <- buildSubdir "crypto" .&&. buildStep
     (Just ["--scenario=ContinuousIntegration"])
 
   cacheUploadStep cacheConfig
