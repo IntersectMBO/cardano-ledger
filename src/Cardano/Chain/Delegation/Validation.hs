@@ -186,7 +186,7 @@ delegatorOf vk dms = case M.keys $ M.filter (== vk) dms of
 --   specification.
 activateDelegation :: ActivationState -> ScheduledDelegation -> ActivationState
 activateDelegation as delegation
-  | prevDelegationSlot < slot || getFlatSlotId slot == 0 = ActivationState
+  | prevDelegationSlot < slot || unFlatSlotId slot == 0 = ActivationState
     { asDelegationMap   = M.insert delegator delegate delegationMap
     , asDelegationSlots = M.insert delegator slot delegationSlots
     }

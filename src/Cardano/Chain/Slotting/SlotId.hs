@@ -79,7 +79,7 @@ slotIdToEnum :: EpochSlots -> FlatSlotId -> SlotId
 slotIdToEnum = unflattenSlotId
 
 slotIdFromEnum :: EpochSlots -> SlotId -> Word64
-slotIdFromEnum sc sId = getFlatSlotId $ flattenSlotId sc sId
+slotIdFromEnum sc sId = unFlatSlotId $ flattenSlotId sc sId
 
 slotIdSucc :: EpochSlots -> SlotId -> SlotId
 slotIdSucc sc sId =
@@ -98,15 +98,15 @@ slotIdF = build
 
 -- | FlatSlotId is a flat version of SlotId
 newtype FlatSlotId = FlatSlotId
-      { getFlatSlotId :: Word64
+      { unFlatSlotId :: Word64
       } deriving (Eq, Generic, Num, Ord, Show)
 
 instance Bi FlatSlotId where
-  encode = encode . getFlatSlotId
+  encode = encode . unFlatSlotId
   decode = FlatSlotId <$> decode
 
 instance Monad m => ToJSON m FlatSlotId where
-  toJSON = toJSON . getFlatSlotId
+  toJSON = toJSON . unFlatSlotId
 
 instance MonadError SchemaError m => FromJSON m FlatSlotId where
   fromJSON val = do
@@ -119,10 +119,10 @@ instance Aeson.FromJSON FlatSlotId where
     pure $ FlatSlotId c
 
 instance Aeson.ToJSON FlatSlotId where
-  toJSON = Aeson.toJSON . getFlatSlotId
+  toJSON = Aeson.toJSON . unFlatSlotId
 
 instance B.Buildable FlatSlotId where
-  build (getFlatSlotId -> x) = bprint
+  build (unFlatSlotId -> x) = bprint
     int
     x
 
@@ -138,7 +138,7 @@ flattenSlotId es si =
   lsi :: Word64
   lsi = fromIntegral . unLocalSlotIndex $ siSlot si
   pastSlots :: Word64
-  pastSlots = getFlatSlotId (flattenEpochIndex es $ siEpoch si)
+  pastSlots = unFlatSlotId (flattenEpochIndex es $ siEpoch si)
 
 -- | Flattens 'EpochIndex' into a single number
 flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId
