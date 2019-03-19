@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Exception
@@ -11,34 +10,10 @@ import System.Exit (exitWith)
 import Turtle
 
 
-data BuildkiteEnv = BuildkiteEnv
-  { bkBuildNum :: Int
-  , bkPipeline :: Text
-  , bkBranch   :: Text
-  } deriving (Show)
-
-data CICacheConfig = CICacheConfig
-  { ccMaxSize :: Maybe Text
-  , ccBucket  :: Text
-  , ccRegion  :: Maybe Text
-  , ccPrefix  :: Text
-  , ccBranch  :: Text
-  } deriving (Show)
-
-mainlineBranch :: Text
-mainlineBranch = "master"
-
 main :: IO ()
 main = do
-  awsCreds
-  bk          <- getBuildkiteEnv
-  cacheConfig <- getCacheConfig bk
-  cacheDownloadStep cacheConfig
-
   buildResult <- buildSubdir "crypto" .&&. buildStep
     (Just ["--scenario=ContinuousIntegration"])
-
-  cacheUploadStep cacheConfig
 
   when (buildResult == ExitSuccess) coverageUploadStep
 
@@ -65,8 +40,8 @@ buildStep testArgs = do
     , "--haddock-internal"
     , "--no-haddock-deps"
     ]
-  buildAndTest = stackBuild $ ["--tests"] ++ buildArgs
-  build        = stackBuild $ ["--no-run-tests"] ++ buildArgs
+  buildAndTest = stackBuild $ "--tests" : buildArgs
+  build        = stackBuild $ "--no-run-tests" : buildArgs
   test =
     stackBuild
       $  ["--test", "--coverage", "--jobs", "1"]
@@ -87,91 +62,6 @@ coverageUploadStep = do
       case result of
         ExitSuccess   -> printf "Coverage information upload successful.\n"
         ExitFailure _ -> printf "Coverage information upload failed.\n"
-
--- buildkite agents have S3 creds installed, but under different names
-awsCreds :: IO ()
-awsCreds = mapM_ (uncurry copy) things
- where
-  copy src dst = need src >>= maybe (pure ()) (export dst)
-  things =
-    [ ("BUILDKITE_S3_ACCESS_KEY_ID"    , "AWS_ACCESS_KEY_ID")
-    , ("BUILDKITE_S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY")
-    , ("BUILDKITE_S3_DEFAULT_REGION"   , "AWS_DEFAULT_REGION")
-    ]
-
-getBuildkiteEnv :: IO (Maybe BuildkiteEnv)
-getBuildkiteEnv = runMaybeT $ do
-  bkBuildNum <- MaybeT $ needRead "BUILDKITE_BUILD_NUMBER"
-  bkPipeline <- MaybeT $ need "BUILDKITE_PIPELINE_SLUG"
-  bkBranch   <- MaybeT $ need "BUILDKITE_BRANCH"
-  pure BuildkiteEnv {..}
-
-needRead :: Read a => Text -> IO (Maybe a)
-needRead v = (>>= readMay) . fmap T.unpack <$> need v
-
-getCacheConfig :: Maybe BuildkiteEnv -> IO (Either Text CICacheConfig)
-getCacheConfig Nothing =
-  pure (Left "BUILDKITE_* environment variables are not set")
-getCacheConfig (Just BuildkiteEnv {..}) = do
-  ccMaxSize <- need "CACHE_S3_MAX_SIZE"
-  ccRegion  <- need "AWS_REGION"
-  need "S3_BUCKET" >>= \case
-    Just ccBucket -> pure
-      (Right CICacheConfig {ccBranch = bkBranch, ccPrefix = bkPipeline, ..})
-    Nothing -> pure (Left "S3_BUCKET environment variable is not set")
-
-cacheDownloadStep :: Either Text CICacheConfig -> IO ()
-cacheDownloadStep cacheConfig = do
-  echo "--- CI Cache Download"
-  case cacheConfig of
-    Right cfg -> restoreCICache cfg `catch` \(ex :: IOException) -> do
-      eprintf
-        ("Failed to download CI cache: " % w % "\nContinuing anyway...\n")
-        ex
-    Left ex -> eprintf ("Not using CI cache because " % s % "\n") ex
-
-cacheUploadStep :: Either Text CICacheConfig -> IO ()
-cacheUploadStep cacheConfig = do
-  echo "--- CI Cache Upload"
-  case cacheConfig of
-    Right cfg -> saveCICache cfg `catch` \(ex :: IOException) -> do
-      eprintf ("Failed to upload CI cache: " % w % "\n") ex
-    Left _ -> printf "CI cache not configured.\n"
-
-restoreCICache :: CICacheConfig -> IO ()
-restoreCICache cfg = do
-  -- cacheS3 cfg (Just mainlineBranch) "restore stack"
-  cacheS3 cfg (Just mainlineBranch) "restore stack work"
-
-saveCICache :: CICacheConfig -> IO ()
-saveCICache cfg = do
-  -- cacheS3 cfg Nothing "save stack"
-  cacheS3 cfg Nothing "save stack work"
-
--- Deletes the files from S3 that would have been put with "cache-s3 save".
-clearCICache :: CICacheConfig -> IO ()
-clearCICache cfg = cacheS3 cfg Nothing "clear"
-
-cacheS3 :: CICacheConfig -> Maybe Text -> Text -> IO ()
-cacheS3 CICacheConfig {..} baseBranch cmd = void $ run "cache-s3" args
- where
-  args =
-    ml maxSize
-      ++ ml regionArg
-      ++ [ format ("--bucket=" % s)     ccBucket
-         , format ("--prefix=" % s)     ccPrefix
-         , format ("--git-branch=" % s) ccBranch
-         , "--suffix=linux"
-         , "-v"
-         , "info"
-         ]
-      ++ cmds
-      ++ ml baseBranchArg
-  baseBranchArg = format ("--base-branch=" % s) <$> baseBranch
-  maxSize   = format ("--max-size=" % s) <$> ccMaxSize
-  regionArg = format ("--region=" % s) <$> ccRegion
-  cmds      = ("-c" : T.words cmd)
-  ml        = maybe [] pure
 
 run :: Text -> [Text] -> IO ExitCode
 run cmd args = do
