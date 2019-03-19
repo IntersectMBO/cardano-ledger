@@ -46,7 +46,7 @@ trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
 
 ## Building LaTeX documents
 
-Change to the latex directory `fm-ledger-rules/latex/`.
+Change to the latex directory `cardano-ledger-specs/latex/`.
 
 To build the latex document run:
 
@@ -62,7 +62,7 @@ nix-shell --pure --run "make watch"
 
 ## Testing the Haskell model
 
-Change to the haskell directory `fm-ledger-rules/hs/`.
+Change to the haskell directory `cardano-ledger-specs/hs/`.
 
 The tests can be run with stack:
 
@@ -84,7 +84,7 @@ make ghcid-test
 
 ---
 
-[![Build Status](https://travis-ci.org/input-output-hk/fm-ledger-rules.svg?branch=master)](https://travis-ci.org/input-output-hk/fm-ledger-rules)
+[![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
 
 
 # nix-build Infrastructure
