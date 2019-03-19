@@ -19,11 +19,22 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
-import Cardano.Chain.Common
-import Cardano.Chain.Slotting
-import Cardano.Chain.Update.ProtocolParameters
+import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.Vote
+  ( AVote
+  , UpId
+  , recoverSignedBytes
+  , uvKey
+  , uvProposalId
+  , uvSignature
+  )
 import Cardano.Crypto
+  ( ProtocolMagicId
+  , SignTag(SignUSVote)
+  , verifySignatureDecoded
+  )
 
 
 -- | Environment used to register votes and confirm proposals

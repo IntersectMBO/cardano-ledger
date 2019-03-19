@@ -21,6 +21,7 @@ module Cardano.Chain.Slotting.SlotId
   , subSlotNumber
   , slotNumberEpoch
   , crucialSlot
+  , twice
   )
 where
 
@@ -33,7 +34,7 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common.BlockCount (BlockCount)
+import Cardano.Chain.Common.BlockCount (BlockCount, unBlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
@@ -189,3 +190,10 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
     Left err ->
       panic $ sformat ("The impossible happened in crucialSlot: " . build) err
     Right lsi -> lsi
+
+-- | Compute the number of slots after which a block becomes stable as @2 * k@,
+-- where @k@ is the chain security parameter, which is expressed in number of
+-- blocks.
+--
+twice :: BlockCount -> FlatSlotId
+twice k = FlatSlotId (2 * unBlockCount k)

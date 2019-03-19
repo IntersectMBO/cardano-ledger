@@ -2,7 +2,12 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
-  ( registerEndorsement
+  ( Environment (..)
+  , State (..)
+  , Endorsement (..)
+  , CandidateProtocolUpdate (..)
+  , register
+  , Error
   )
 where
 
@@ -20,37 +25,37 @@ import Cardano.Chain.Update.SoftforkRule
 import Cardano.Chain.Update.Vote
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 
+
 data Environment = Environment
-  { k                         :: !BlockCount
+  { k                                 :: !BlockCount
   -- ^ Chain stability parameter.
-  , currentSlot               :: !FlatSlotId
-  , delegationMap             :: !(Map StakeholderId StakeholderId)
-  , adoptedProtocolParameters :: !ProtocolParameters
-  , confirmedProposals        :: !(Map UpId FlatSlotId)
-  , registeredUpdateProposals :: !Registration.ProtocolUpdateProposals
-  , numGenesisKeys            :: !Word8
+  , currentSlot                       :: !FlatSlotId
+  , delegationMap                     :: !(Map StakeholderId StakeholderId)
+  , adoptedProtocolParameters         :: !ProtocolParameters
+  , confirmedProposals                :: !(Map UpId FlatSlotId)
+  , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
+  , numGenesisKeys                    :: !Word8
   -- ^ Number of genesis keys. This is used in combination with the
   -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
-  -- genesis keys that need to endorse a new protocol version for it to be considered for
-  -- adoption.
+  -- genesis keys that need to endorse a new protocol version for it to be
+  -- considered for adoption.
   }
 
 data State = State
-  { candidateProtocolVersions :: [CandidateProtocolVersion]
+  { candidateProtocolVersions :: [CandidateProtocolUpdate]
   , registeredEndorsements :: Set Endorsement
   }
 
-
-data CandidateProtocolVersion = CandidateProtocolVersion
-  { cpvSlot               :: FlatSlotId
+data CandidateProtocolUpdate = CandidateProtocolUpdate
+  { cpuSlot               :: FlatSlotId
     -- ^ Slot at which this protocol version and parameters gathered enough
     -- endorsements and became a candidate. This is used to check which
     -- versions became candidates 2k slots before the end of an epoch (and only
     -- those can be adopted at that epoch). Versions that became candidates
     -- later than 2k slots before the end of an epoch can be adopted in
     -- following epochs.
-  , cpvProtocolVersion    :: ProtocolVersion
-  , cpvProtocolParameters :: ProtocolParameters
+  , cpuProtocolVersion    :: ProtocolVersion
+  , cpuProtocolParameters :: ProtocolParameters
   }
 
 data Endorsement = Endorsement
@@ -66,48 +71,54 @@ data Error
 -- | Register an endorsement.
 --
 -- This corresponds to the @UPEND@ rule.
-registerEndorsement
+register
   :: MonadError Error m => Environment -> State -> Endorsement -> m State
-registerEndorsement env st endorsement =
-  case M.toList (M.filter ((== pv) . fst) registeredUpdateProposals) of
+register env st endorsement =
+  case M.toList (M.filter ((== pv) . fst) registeredProtocolUpdateProposals) of
     -- We ignore endorsement of proposals that aren't registered
     [] -> pure st
 
     -- Try to register the endorsement and check if we can adopt the proposal
     [(upId, (_, pps'))] -> if isConfirmedAndStable upId
       then if canAdopt numGenesisKeys pps registeredEndorsements' pv
--- Register the endorsement and adopt the proposal in the next epoch
+        -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
-            cpv = CandidateProtocolVersion
-              { cpvSlot = currentSlot
-              , cpvProtocolVersion = pv
-              , cpvProtocolParameters = pps'
+            cpu = CandidateProtocolUpdate
+              { cpuSlot = currentSlot
+              , cpuProtocolVersion = pv
+              , cpuProtocolParameters = pps'
               }
-            cpvs' =
-              updateCandidateProtocolVersions candidateProtocolVersions cpv
+            cpus' =
+              updateCandidateProtocolUpdates candidateProtocolVersions cpu
           pure $ State
-            { candidateProtocolVersions = cpvs'
+            { candidateProtocolVersions = cpus'
             , registeredEndorsements    = registeredEndorsements'
             }
 
--- Just register the endorsement if we cannot adopt
+        -- Just register the endorsement if we cannot adopt
         else pure $ st { registeredEndorsements = registeredEndorsements' }
 
--- Ignore the endorsement if the registration isn't stable
+      -- Ignore the endorsement if the registration isn't stable
       else pure st
 
     -- Throw an error if there are multiple proposals for this protocol version
     _ -> throwError $ MultipleProposalsForProtocolVersion pv
  where
-  Environment { k, currentSlot, delegationMap, confirmedProposals, registeredUpdateProposals, numGenesisKeys }
-    = env
+  Environment
+    { k
+    , currentSlot
+    , delegationMap
+    , confirmedProposals
+    , registeredProtocolUpdateProposals
+    , numGenesisKeys
+    } = env
 
   isConfirmedAndStable upId = upId `M.member` scps
    where
-      -- Stable and confirmed proposals.
+    -- Stable and confirmed proposals.
     scps     = M.filter (stableAt <=) confirmedProposals
-    stableAt = currentSlot - FlatSlotId (2 * unBlockCount k)
+    stableAt = currentSlot - twice k
 
   pps = adoptedProtocolParameters env
   pv  = endorsementProtocolVersion endorsement
@@ -153,17 +164,17 @@ canAdopt ngk pps endorsements protocolVersion =
     ((== protocolVersion) . endorsementProtocolVersion)
     endorsements
 
--- | Add a newly endorsed protocol version to the 'CandidateProtocolVersion's
+-- | Add a newly endorsed protocol version to the 'CandidateProtocolUpdate's
 --
 --   We only add it to the list if the 'ProtocolVersion' is strictly greater
---   than all other `CandidateProtocolVersion`s
+--   than all other `CandidateProtocolUpdate`s
 --
 -- This corresponds to the @FADS@ rule.
-updateCandidateProtocolVersions
-  :: [CandidateProtocolVersion]
-  -> CandidateProtocolVersion
-  -> [CandidateProtocolVersion]
-updateCandidateProtocolVersions [] cpv = [cpv]
-updateCandidateProtocolVersions cpvs@(cpv : _) cpv'
-  | cpvProtocolVersion cpv < cpvProtocolVersion cpv' = cpv' : cpvs
-  | otherwise = cpvs
+updateCandidateProtocolUpdates
+  :: [CandidateProtocolUpdate]
+  -> CandidateProtocolUpdate
+  -> [CandidateProtocolUpdate]
+updateCandidateProtocolUpdates [] cpu = [cpu]
+updateCandidateProtocolUpdates cpus@(cpu : _) cpu'
+  | cpuProtocolVersion cpu < cpuProtocolVersion cpu' = cpu' : cpus
+  | otherwise = cpus

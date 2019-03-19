@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Validation rules for registering updates
 --
@@ -6,9 +7,11 @@
 --   specification
 module Cardano.Chain.Update.Validation.Registration
   ( Error
-  , State(..)
+  , Environment (..)
+  , State (..)
   , ProtocolUpdateProposals
   , registerProposal
+  , TooLarge (..)
   )
 where
 
@@ -17,16 +20,48 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common
-import Cardano.Chain.Slotting
-import Cardano.Chain.Update.ApplicationName
+import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolParameters
+  ( ProtocolParameters
+  , ppMaxBlockSize
+  , ppMaxProposalSize
+  , ppScriptVersion
+  , ppMaxTxSize
+  )
 import qualified Cardano.Chain.Update.ProtocolParametersUpdate as PPU
-import Cardano.Chain.Update.ProtocolVersion
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(ProtocolVersion))
 import Cardano.Chain.Update.SoftwareVersion
+  ( NumSoftwareVersion
+  , SoftwareVersion(SoftwareVersion)
+  )
 import Cardano.Chain.Update.Vote
+  ( AProposal(AProposal)
+  , ProposalBody(ProposalBody)
+  , UpId
+  , pbProtocolParametersUpdate
+  , pbSoftwareVersion
+  , proposalAnnotation
+  , proposalAnnotation
+  , proposalBody
+  , recoverUpId
+  , pbProtocolVersion
+  )
 import Cardano.Crypto
+  ( ProtocolMagicId
+  , SignTag(SignUSProposal)
+  , verifySignatureDecoded
+  )
 
+
+data Environment = Environment
+  { protocolMagic             :: ProtocolMagicId
+  , adoptedProtocolVersion    :: !ProtocolVersion
+  , adoptedProtocolParameters :: !ProtocolParameters
+  , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
+  , delegationMap             :: !(Map StakeholderId StakeholderId)
+  }
 
 -- | State keeps track of registered protocol and software update
 --   proposals
@@ -56,8 +91,8 @@ data Error
   deriving (Eq, Show)
 
 data TooLarge n = TooLarge
-  { tlExpected :: n
-  , tlActual   :: n
+  { tlActual   :: n
+  , tlMaxBound :: n
   } deriving (Eq, Show)
 
 
@@ -65,29 +100,34 @@ data TooLarge n = TooLarge
 --   its contents. This corresponds to the @UPREG@ rules in the spec.
 registerProposal
   :: MonadError Error m
-  => ProtocolMagicId
-  -> ProtocolVersion
-  -> ProtocolParameters
-  -> ApplicationVersions
-  -> Map StakeholderId StakeholderId
+  => Environment
   -> State
   -> AProposal ByteString
   -> m State
-registerProposal pm adoptedPV adoptedPP appVersions delegation rs proposal = do
-
+registerProposal env rs proposal = do
   -- Check that the proposer is delegated to by a genesis key
-  not (null $ M.filter (== proposer) delegation)
+  not (null $ M.filter (== proposer) delegationMap)
     `orThrowError` RegistrationInvalidProposer proposer
 
   -- Verify the proposal signature
-  verifySignatureDecoded pm SignUSProposal proposerPK body signature
+  verifySignatureDecoded protocolMagic SignUSProposal proposerPK body sig
     `orThrowError` RegistrationInvalidSignature
 
   -- Check that the proposal is valid
-  registerProposalComponents adoptedPV adoptedPP appVersions rs proposal
+  registerProposalComponents
+    adoptedProtocolVersion adoptedProtocolParameters appVersions rs proposal
  where
-  AProposal body proposerPK signature _ = proposal
+  AProposal body proposerPK sig _ = proposal
+
   proposer = mkStakeholderId proposerPK
+
+  Environment
+    { protocolMagic
+    , adoptedProtocolVersion
+    , adoptedProtocolParameters
+    , appVersions
+    , delegationMap
+    } = env
 
 
 -- | Register the individual components of an update proposal
@@ -168,8 +208,8 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
   ppu   = pbProtocolParametersUpdate body
   newPP = PPU.apply ppu adoptedPP
 
-
 -- | Check that the new 'ProtocolVersion' is a valid next version
+--
 pvCanFollow :: ProtocolVersion -> ProtocolVersion -> Bool
 pvCanFollow newPV adoptedPV = adoptedPV < newPV && isNextVersion
  where
@@ -183,14 +223,16 @@ pvCanFollow newPV adoptedPV = adoptedPV < newPV && isNextVersion
 
 -- | Check that the new 'ProtocolParameters' represent a valid update
 --
---   This is where we enforce constraints on how the 'ProtocolParameters' change
+--   This is where we enforce constraints on how the 'ProtocolParameters'
+--   change.
+--
 canUpdate
   :: MonadError Error m
   => ProtocolParameters
   -> ProtocolParameters
   -> AProposal ByteString
   -> m ()
-canUpdate adoptedPP newPP proposal = do
+canUpdate adoptedPP proposedPP proposal = do
 
   -- Check that the proposal size is less than the maximum
   (proposalSize <= maxProposalSize) `orThrowError` RegistrationProposalTooLarge
@@ -199,31 +241,30 @@ canUpdate adoptedPP newPP proposal = do
   -- Check that the new maximum block size is no more than twice the current one
   (newMaxBlockSize <= 2 * adoptedMaxBlockSize)
     `orThrowError` RegistrationMaxBlockSizeTooLarge
-                    (TooLarge adoptedMaxBlockSize newMaxBlockSize)
+                     (TooLarge adoptedMaxBlockSize newMaxBlockSize)
 
   -- Check that the new max transaction size is less than the new max block size
-  (newMaxTxSize <= newMaxBlockSize) `orThrowError` RegistrationMaxTxSizeTooLarge
-    (TooLarge newMaxBlockSize newMaxTxSize)
+  (newMaxTxSize <=  newMaxBlockSize)
+    `orThrowError` RegistrationMaxTxSizeTooLarge
+                     (TooLarge newMaxBlockSize newMaxTxSize)
 
   -- Check that the new script version is either the same or incremented
   (0 <= scriptVersionDiff && scriptVersionDiff <= 1)
     `orThrowError` RegistrationInvalidScriptVersion
-                    adoptedScriptVersion
-                    newScriptVersion
+                     adoptedScriptVersion newScriptVersion
  where
   proposalSize :: Natural
   proposalSize         = fromIntegral . BS.length $ proposalAnnotation proposal
   maxProposalSize      = ppMaxProposalSize adoptedPP
 
   adoptedMaxBlockSize  = ppMaxBlockSize adoptedPP
-  newMaxBlockSize      = ppMaxBlockSize newPP
+  newMaxBlockSize      = ppMaxBlockSize proposedPP
 
-  newMaxTxSize         = ppMaxTxSize newPP
+  newMaxTxSize         = ppMaxTxSize proposedPP
 
   adoptedScriptVersion = ppScriptVersion adoptedPP
-  newScriptVersion     = ppScriptVersion newPP
+  newScriptVersion     = ppScriptVersion proposedPP
   scriptVersionDiff    = newScriptVersion - adoptedScriptVersion
-
 
 -- | Check that a new 'SoftwareVersion' is valid
 --
