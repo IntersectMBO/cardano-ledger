@@ -2,15 +2,15 @@
   {
     flags = { development = false; };
     package = {
-      specVersion = "1.10";
-      identifier = { name = "cs-blockchain"; version = "0.1.0.0"; };
+      specVersion = "2.0";
+      identifier = { name = "cs-ledger"; version = "0.1.0.0"; };
       license = "MIT";
       copyright = "";
       maintainer = "formal.methods@iohk.io";
       author = "IOHK Formal Methods Team";
       homepage = "https://github.com/input-output-hk/cardano-chain";
       url = "";
-      synopsis = "Executable specification of the Cardano blockchain";
+      synopsis = "Executable specification of Cardano ledger";
       description = "";
       buildType = "Simple";
       };
@@ -21,27 +21,43 @@
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
-          (hsPkgs.cs-ledger)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
           (hsPkgs.memory)
+          (hsPkgs.text)
           (hsPkgs.small-steps)
           ];
         };
       tests = {
-        "chain-spec-test" = {
+        "doctests" = {
           depends = [
             (hsPkgs.base)
-            (hsPkgs.data-ordlist)
+            (hsPkgs.doctest)
+            (hsPkgs.bytestring)
+            (hsPkgs.containers)
+            (hsPkgs.cryptonite)
             (hsPkgs.hedgehog)
             (hsPkgs.lens)
+            (hsPkgs.memory)
+            (hsPkgs.text)
+            (hsPkgs.small-steps)
+            (hsPkgs.cs-ledger)
+            ];
+          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
+          };
+        "ledger-delegation-test" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.containers)
+            (hsPkgs.lens)
+            (hsPkgs.hedgehog)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
-            (hsPkgs.cs-blockchain)
+            (hsPkgs.cs-ledger)
             (hsPkgs.small-steps)
             ];
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../specs/chain/hs; }
+    } // rec { src = (pkgs.lib).mkDefault .././specs/ledger/hs; }
