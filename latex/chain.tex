@@ -488,6 +488,12 @@ in the pool distribution.
 \subsection{Block Header Transition}
 \label{sec:block-header-trans}
 
+The block header transition updates the block header state. The environment is
+given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
+wall-clock time) and the protocol parameters. The block header state is shown in
+Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
+the last slot.
+
 \begin{figure}
   \emph{Operational Certificate Transitions}
   \begin{equation*}
@@ -576,6 +582,36 @@ in the pool distribution.
   \label{fig:ts-types:bheader}
 \end{figure}
 
+The $\mathsf{BHEAD}$ transition rule is shown in
+Figure~\ref{fig:rules:bheader}. The signal is a new block header \var{bh}, from
+its body \var{bhb} we extract:
+
+\begin{itemize}
+\item The slot \var{slot} of the block.
+\item The hash of the block header \var{h} of the previous block.
+\item The verification key \var{vk} of the block issuer.
+\end{itemize}
+
+The transition rule is executed, if the following conditions are satisfied:
+
+\begin{itemize}
+\item The size of \var{bh} is less than or equal to the maximal size that the
+  protocol parameters allow for block headers.
+\item The \var{slot} of the block header is greater than the last slot and less
+  than or equal to the current slot \var{s_{now}}.
+\item The hash \var{h} of the previous block header in the block header state
+  matches the hash in the body of the block header.
+\item The verification key validates the signature \var{\sigma} for the block
+  header.
+\end{itemize}
+
+The state update finally sets \var{slot} as new block header slot and the hash
+of \var{bh} as the new block header hash in the block header state.
+
+This transition makes sure that the block can be applied at the current time,
+that the block header is in the right sequence and that the block header has
+been signed with the issuer key.
+
 \begin{question}
   Is it okay to use wall-clock in the evironment in $\BHeaderEnv$?
   See Figure~\ref{fig:ts-types:bheader}.
@@ -587,21 +623,22 @@ in the pool distribution.
     {
       (\var{bhb},~\sigma) \leteq \var{bh}
       &
-      \var{slot} \leteq \bslot{bh}
+      \var{slot} \leteq \bslot{bhb}
       \\
+
       (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{block}
       \\~\\
       \var{vk_{hot}}\mapsto s_0\in\var{stpools}
       &
       t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
       \\~\\
-      \var{s_{last}} < \var{slot} \leq \var{s_{now}}
+      \var{s_\ell} < \var{slot} \leq \var{s_{now}}
       &
-      \var{h} = \bprev{bh}
+      \var{h} = \bprev{bhb}
       \\
-      \mathcal{V}_{\var{vk_{hot}}}{\serialised{txs}}_{\sigma}^{t}
+      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bhb}}_{\sigma}^{t}
       &
-      \bHeaderSize{bh} < \fun{maxBHSize}~\var{pp}
+      \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
     }
     {
       \left(
