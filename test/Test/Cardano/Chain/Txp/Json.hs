@@ -14,7 +14,7 @@ import qualified Hedgehog as H
 
 import Cardano.Chain.Txp (TxpConfiguration(..))
 
-import Test.Cardano.Chain.Common.Example (exampleAddress, exampleAddress4)
+import Test.Cardano.Chain.Common.Example (exampleAddress)
 import Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
 import Test.Cardano.Prelude
   ( discoverGolden
@@ -44,13 +44,10 @@ goldenTxpConfiguration1 =
     goldenTestJSONPretty exampleTxpConfiguration1
         "test/golden/json/txp/TxpConfiguration1"
 -}
-goldenTxpConfiguration2 :: Property
-goldenTxpConfiguration2 = goldenTestJSONPretty
-  exampleTxpConfiguration2
-  "test/golden/json/txp/TxpConfiguration2"
 
 roundTripTxpConfiguration :: Property
 roundTripTxpConfiguration = eachOf 200 genTxpConfiguration roundTripsAesonShow
+
 
 -------------------------------------------------------------------------------
 -- Main test export
@@ -66,9 +63,7 @@ exampleTxpConfiguration1 = TxpConfiguration 9 talsa
   where
     talsa = S.fromList [exampleAddress1, exampleAddress2, exampleAddress3]
 -}
-exampleTxpConfiguration2 :: TxpConfiguration
-exampleTxpConfiguration2 = TxpConfiguration 700 talsa
-  where talsa = S.fromList [exampleAddress4, exampleAddress]
+
 
 -------------------------------------------------------------------------------
 -- Main test export

@@ -1,9 +1,6 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Test.Cardano.Chain.Txp.Gen
   ( genPkWitness
   , genRedeemWitness
-  , genScriptWitness
   , genTx
   , genTxAttributes
   , genTxAux
@@ -61,8 +58,7 @@ import Cardano.Chain.Txp
   )
 import Cardano.Crypto (Hash, ProtocolMagicId, decodeHash, sign)
 
-import Test.Cardano.Chain.Common.Gen
-  (genAddress, genLovelace, genMerkleRoot, genScript)
+import Test.Cardano.Chain.Common.Gen (genAddress, genLovelace, genMerkleRoot)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genPublicKey
@@ -80,9 +76,6 @@ genPkWitness pm = PkWitness <$> genPublicKey <*> genTxSig pm
 genRedeemWitness :: ProtocolMagicId -> Gen TxInWitness
 genRedeemWitness pm =
   RedeemWitness <$> genRedeemPublicKey <*> genRedeemSignature pm genTxSigData
-
-genScriptWitness :: Gen TxInWitness
-genScriptWitness = ScriptWitness <$> genScript <*> genScript
 
 genTx :: Gen Tx
 genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
@@ -142,8 +135,7 @@ genTxSigData :: Gen TxSigData
 genTxSigData = TxSigData <$> genTxHash
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
-genTxInWitness pm = Gen.choice gens
-  where gens = [genPkWitness pm, genRedeemWitness pm, genScriptWitness]
+genTxInWitness pm = Gen.choice [genPkWitness pm, genRedeemWitness pm]
 
 genTxUndo :: Gen TxUndo
 genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
@@ -151,4 +143,3 @@ genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
   V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
-

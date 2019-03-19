@@ -18,8 +18,7 @@ import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
 import Cardano.Binary.Class (Bi, Case(..), LengthOf, SizeOverride(..), szCases)
-import Cardano.Chain.Common
-  (AddrAttributes(..), Attributes(..), Script(..), mkAttributes)
+import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
 import Cardano.Chain.Txp
   (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
 import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
@@ -144,15 +143,6 @@ goldenPkWitness = goldenTestBi
   "test/golden/bi/txp/TxInWitness_PkWitness"
   where pkWitness = PkWitness examplePublicKey exampleTxSig
 
-goldenScriptWitness :: Property
-goldenScriptWitness = goldenTestBi
-  scriptWitness
-  "test/golden/bi/txp/TxInWitness_ScriptWitness"
- where
-  scriptWitness   = ScriptWitness validatorScript redeemerScript
-  validatorScript = Script 47 "serialized script"
-  redeemerScript  = Script 47 "serialized script"
-
 goldenRedeemWitness :: Property
 goldenRedeemWitness = goldenTestBi
   redeemWitness
@@ -250,10 +240,6 @@ sizeEstimates
         , SizeConstant (szCases [Case "min" 1, Case "max" 1024])
         )
       txSigSize = (typeRep (Proxy @(Signature TxSigData)), SizeConstant 66)
-      scriptSize =
-        ( typeRep (Proxy @Script)
-        , SizeConstant $ szCases [Case "loScript" 1, Case "hiScript" 255]
-        )
     in H.Group
       "Encoded size bounds for core types."
       [ ("TxId", sizeTestGen genTxId)
@@ -279,8 +265,7 @@ sizeEstimates
       , ( "TxAux"
         , sizeTest $ scfg
           { gen         = genTxAux pm
-          , addlCtx     = M.fromList
-            [attrUnitSize, attrAddrSize, scriptSize, txSigSize]
+          , addlCtx     = M.fromList [attrUnitSize, attrAddrSize, txSigSize]
           , computedCtx = \ta -> M.fromList
             [ ( typeRep (Proxy @(LengthOf [TxIn]))
               , SizeConstant (fromIntegral $ length $ _txInputs $ taTx ta)
@@ -295,10 +280,8 @@ sizeEstimates
           }
         )
       , ( "TxInWitness"
-        , sizeTest $ scfg
-          { gen     = genTxInWitness pm
-          , addlCtx = M.fromList [txSigSize, scriptSize]
-          }
+        , sizeTest
+          $ scfg { gen = genTxInWitness pm, addlCtx = M.fromList [txSigSize] }
         )
       , ("TxSigData", sizeTestGen genTxSigData)
       , ( "Signature TxSigData"

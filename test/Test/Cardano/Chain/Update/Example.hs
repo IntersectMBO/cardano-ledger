@@ -30,12 +30,7 @@ import Data.Time (NominalDiffTime)
 
 import Cardano.Binary.Class (Raw(..))
 import Cardano.Chain.Common
-  ( LovelacePortion(..)
-  , ScriptVersion
-  , TxFeePolicy(..)
-  , TxSizeLinear(..)
-  , mkKnownLovelace
-  )
+  (LovelacePortion(..), TxFeePolicy(..), TxSizeLinear(..), mkKnownLovelace)
 import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
@@ -76,7 +71,7 @@ exampleProtocolVersion = ProtocolVersion 1 1 1
 
 exampleProtocolParameters :: ProtocolParameters
 exampleProtocolParameters = ProtocolParameters
-  (999 :: ScriptVersion)
+  (999 :: Word16)
   (999e-6 :: NominalDiffTime)
   (999 :: Natural)
   (999 :: Natural)
@@ -101,7 +96,7 @@ exampleProtocolParameters = ProtocolParameters
 
 exampleProtocolParameterUpdate :: ProtocolParameterUpdate
 exampleProtocolParameterUpdate = ProtocolParameterUpdate
-  (Just (999 :: ScriptVersion))
+  (Just (999 :: Word16))
   (Just (999e-6 :: NominalDiffTime))
   (Just (999 :: Natural))
   (Just (999 :: Natural))

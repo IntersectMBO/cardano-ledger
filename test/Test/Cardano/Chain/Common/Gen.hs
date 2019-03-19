@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Common.Gen
   , genLovelacePortion
   , genMerkleRoot
   , genMerkleTree
-  , genScript
   , genScriptVersion
   , genStakeholderId
   , genTxFeePolicy
@@ -24,7 +23,6 @@ module Test.Cardano.Chain.Common.Gen
 where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
 
 import Formatting (build, sformat)
 
@@ -44,8 +42,6 @@ import Cardano.Chain.Common
   , LovelacePortion(..)
   , MerkleRoot(..)
   , MerkleTree
-  , Script(..)
-  , ScriptVersion
   , StakeholderId
   , TxFeePolicy(..)
   , TxSizeLinear(..)
@@ -70,28 +66,11 @@ genAddress :: Gen Address
 genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes
 
 genAddrType :: Gen AddrType
-genAddrType = Gen.choice
-  [ pure ATPubKey
-  , pure ATScript
-  , pure ATRedeem
-      -- Values 0,1,2 are reserved, as they are used to tag
-      -- the above 3 constructors ------------+
-      --                                      |
-  , ATUnknown <$> Gen.word8 (Range.constant 3 maxBound)
-  ]
+genAddrType = Gen.choice [pure ATPubKey, pure ATRedeem]
 
 genAddrSpendingData :: Gen AddrSpendingData
-genAddrSpendingData = Gen.choice gens
- where
-  gens =
-    [ PubKeyASD <$> genPublicKey
-    , ScriptASD <$> genScript
-    , RedeemASD <$> genRedeemPublicKey
-         -- Values 0,1,2 are reserved, as they are used to tag
-         -- the above 3 constructors ---------------+
-         --                                         |
-    , UnknownASD <$> Gen.word8 (Range.constant 3 maxBound) <*> gen32Bytes
-    ]
+genAddrSpendingData =
+  Gen.choice [PubKeyASD <$> genPublicKey, RedeemASD <$> genRedeemPublicKey]
 
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
@@ -146,10 +125,7 @@ genMerkleTree genA = mkMerkleTree <$> Gen.list (Range.linear 0 10) genA
 genMerkleRoot :: Bi a => Gen a -> Gen (MerkleRoot a)
 genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 
-genScript :: Gen Script
-genScript = Script <$> genScriptVersion <*> gen32Bytes
-
-genScriptVersion :: Gen ScriptVersion
+genScriptVersion :: Gen Word16
 genScriptVersion = Gen.word16 Range.constantBounded
 
 genStakeholderId :: Gen StakeholderId
