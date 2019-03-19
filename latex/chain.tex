@@ -85,7 +85,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \seedOp & \Seed \to \Seed \to \Seed & \text{monoidial seed operation} \\
+      \seedOp & \Seed \to \Seed \to \Seed & \text{binary seed operation} \\
       \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
                    & \text{verifiable random function} \\
                    %
@@ -210,9 +210,9 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bissuer} & \BHBody \to \VKey\\
       \fun{bslot} & \BHBody \to \Slot\\
       \fun{bnonce} & \BHBody \to \Seed\\
-      \fun{bprf}_\eta & \BHBody \to \Proof\\
+      \fun{\bprfn{}} & \BHBody \to \Proof\\
       \fun{bleader} & \BHBody \to \unitInterval\\
-      \fun{bprf}_\ell & \BHBody \to \Proof\\
+      \fun{\bprfl{}} & \BHBody \to \Proof\\
       \fun{bsig} & \BHBody \to \Sig \\
       \fun{bocert} & \BHBody \to \OCert \\
     \end{array}
@@ -484,15 +484,8 @@ in the pool distribution.
   \label{fig:rules:update-nonce}
 \end{figure}
 
-
-\subsection{Block Header Transition}
-\label{sec:block-header-trans}
-
-The block header transition updates the block header state. The environment is
-given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
-wall-clock time) and the protocol parameters. The block header state is shown in
-Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
-the last slot.
+\subsection{Operational Certificate Transition}
+\label{sec:oper-cert-trans}
 
 The operational certificate transition does not use any environment, its signal
 is a block header body, its state is shown in
@@ -588,6 +581,15 @@ of the key \var{hk} with the KES period \var{n}.
   \label{fig:rules:ocert}
 \end{figure}
 
+\subsection{Block Header Transition}
+\label{sec:block-header-trans}
+
+The block header transition updates the block header state. The environment is
+given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
+wall-clock time) and the protocol parameters. The block header state is shown in
+Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
+the last slot.
+
 \begin{figure}
   \emph{Block Header environments}
   \begin{equation*}
@@ -626,9 +628,12 @@ Figure~\ref{fig:rules:bheader}. The signal is a new block header \var{bh}, from
 its body \var{bhb} we extract:
 
 \begin{itemize}
-\item The slot \var{slot} of the block.
-\item The hash of the block header \var{h} of the previous block.
-\item The verification key \var{vk} of the block issuer.
+\item The slot \var{slot} of the block header.
+\item The hash of the block header \var{h} of the previous block header.
+\item The hot verification key \var{vk_{hot}} of the operational certificate of
+  the block header.
+\item The signature \var{\sigma} of the block header.
+\item The block header body \var{bhb}.
 \end{itemize}
 
 The transition rule is executed, if the following conditions are satisfied:
@@ -641,15 +646,17 @@ The transition rule is executed, if the following conditions are satisfied:
 \item The hash \var{h} of the previous block header in the block header state
   matches the hash in the body of the block header.
 \item The verification key validates the signature \var{\sigma} for the block
-  header.
+  header body.
+\item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
+  \var{stpools}.
 \end{itemize}
 
-The state update finally sets \var{slot} as new block header slot and the hash
-of \var{bh} as the new block header hash in the block header state.
+The state update finally sets \var{slot} as new block header slot and hash of
+\var{bh} as the new block header hash in the block header state.
 
 This transition makes sure that the block can be applied at the current time,
 that the block header is in the right sequence and that the block header has
-been signed with the issuer key.
+been signed with the correct signing key according to the KES.
 
 \begin{question}
   Is it okay to use wall-clock in the evironment in $\BHeaderEnv$?
@@ -664,8 +671,7 @@ been signed with the issuer key.
       &
       \var{slot} \leteq \bslot{bhb}
       \\
-
-      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{block}
+      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{bhb}
       \\~\\
       \var{vk_{hot}}\mapsto s_0\in\var{stpools}
       &
@@ -675,7 +681,7 @@ been signed with the issuer key.
       &
       \var{h} = \bprev{bhb}
       \\
-      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bhb}}_{\sigma}^{t}
+      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bh}}_{\sigma}^{t}
       &
       \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
     }
@@ -702,6 +708,31 @@ been signed with the issuer key.
   \caption{BHeader rules}
   \label{fig:rules:bheader}
 \end{figure}
+
+\subsection{Verifiable Random Function}
+\label{sec:verif-rand-funct}
+
+The verifiable random function (VRF) transition rule validates that a block
+header is correctly produced, i.e., the block issuer is a selected leader for
+that slot and has the right to produce the block.
+
+The verifiable random function transition used the environment shown in
+Figure~\ref{fig:ts-types:vrf} which consists of
+
+\begin{itemize}
+\item The current slot number \var{s_{now}}.
+\item The protocol parameters.
+\item The epoch nonce \var{\eta_0}.
+\item The pool stake distribution.
+\item The stake pool mapping \var{stpools}.
+\end{itemize}
+
+The VRF state is shown in Figure~\ref{fig:ts-types:vrf} and consists of
+
+\begin{itemize}
+\item The hash \var{h} of the previous block header hash.
+\item The slot \var{s_\ell} number of the last slot.
+\end{itemize}
 
 \begin{figure}
   \emph{VRF environments}
@@ -738,6 +769,31 @@ been signed with the issuer key.
   \label{fig:ts-types:vrf}
 \end{figure}
 
+The $\mathsf{VRF}$ rule calls $\mathsf{BHEAD}$ as a subrule, its signal is a
+block header \var{bh}. For the transition it extracts the following:
+
+\begin{itemize}
+\item The block header body \var{bhb} of the block header.
+\item The verification key \var{vk} of the block issuer.
+\item The slot seed \var{ss} of the slot of the block.
+\end{itemize}
+
+This is used to validate the preconditions of the transition rule via
+verification of the following:
+
+\begin{itemize}
+\item The verification key is associated to a non-zero relative stake
+  \var{\sigma} in \var{stpools}.
+\item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
+  this slot.
+\item The verification of the proofs for the seed leader constant \var{\Seedl}
+  and the nonce seed constant \var{\Seede} succeeds.
+\end{itemize}
+
+When these preconditions are fulfilled, the transition updates the VRF states by
+replacing he hash header with \var{h'} and the slot with \var{s_\ell}, as
+returned by the application of the $\mathsf{BHEAD}$ transition rule.
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:vrf}
     \inference[VRF]
@@ -750,9 +806,9 @@ been signed with the issuer key.
       &
       \var{ss} \leteq \slotToSeed{\bslot{bhb}}
       \\~\\
-      \verifyVrf{\Seed}{vk}{(\eta_0\seedOp ss\seedOp\Seede)}{(\bprfn{bhb})}
+      \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})}
       \\
-      \verifyVrf{\unitInterval}{vk}{(\eta_0\seedOp ss\seedOp\Seedl)}{(\bprfl{bhb})}
+      \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})}
       \\
       \var{vk}\mapsto \sigma\in\var{pd}
       &
