@@ -1,0 +1,11 @@
+# Code owners are automatically assigned to review PRs
+
+# The goal is to not have more than 2 people responsible to avoid having too
+# many reviewers which often leads to nobody feeling responsible to actually
+# perform the review.
+
+crypto/  @ruhatch @dnadales
+nix/     @ruhatch @nc6
+scripts/ @ruhatch @nc6
+src/     @ruhatch @dnadales
+test/    @ruhatch @dnadales
