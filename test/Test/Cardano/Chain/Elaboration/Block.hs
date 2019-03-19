@@ -67,6 +67,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   { Concrete.blockHeader     = bh0
   , Concrete.blockBody       = bb0
   , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
+  , Concrete.blockAnnotation = ()
   }
  where
   bh0 = Concrete.mkHeaderExplicit

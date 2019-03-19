@@ -4,10 +4,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumDecimals      #-}
 {-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE ViewPatterns     #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
   , updateChainBoundary
+  , updateHeader
+  , updateBlock
   , ChainValidationState
   , cvsPreviousHash
   , initialChainValidationState
@@ -30,6 +33,7 @@ import Cardano.Chain.Block.Block
   ( ABlock(..)
   , BoundaryValidationData(..)
   , blockDlgPayload
+  , blockHeader
   , blockLength
   , blockProof
   , blockSlot
@@ -37,6 +41,7 @@ import Cardano.Chain.Block.Block
 import Cardano.Chain.Block.Header
   ( BlockSignature(..)
   , HeaderHash
+  , headerLength
   , recoverSignedBytes
   , wrapBoundaryBytes
   )
@@ -147,6 +152,9 @@ data ChainValidationError
   = ChainValidationBoundaryTooLarge
   -- ^ The size of an epoch boundary block exceeds the limit
 
+  | ChainValidationHeaderTooLarge
+  -- ^ The size of a block header exceeds the limit
+
   | ChainValidationBlockTooLarge
   -- ^ The size of a regular block exceeds the limit
 
@@ -243,5 +251,35 @@ updateBody config cvs b = do
   d    = configSlotSecurityParam config
 
   delegationState = cvsDelegationState cvs
-
   certificates = DlgPayload.getPayload $ blockDlgPayload b
+
+-- | This is an implementation of the the BHEAD rule.
+--
+--   TODO When the update system is implemented, this should update protocol
+--   parameters as per the EPOCH rule
+updateHeader
+  :: MonadError ChainValidationError m
+  => Genesis.Config
+  -> ChainValidationState
+  -> ABlock ByteString
+  -> m ChainValidationState
+updateHeader _config cvs (blockHeader -> h) = do
+  -- Validate the header size
+  -- TODO Max header size should come from protocol params
+  let maxHeaderSize :: Int64
+      maxHeaderSize = 2e6
+   in headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
+
+  pure $! cvs
+
+-- | This represents the CHAIN rule. It is intended more for use in tests than
+--   in a real implementation, which will want to invoke its constituent rules
+--   directly.
+updateBlock
+  :: MonadError ChainValidationError m
+  => Genesis.Config
+  -> ChainValidationState
+  -> ABlock ByteString
+  -> m ChainValidationState
+updateBlock config cvs b = do
+  updateHeader config cvs b >>= \cvs' -> updateBody config cvs' b
