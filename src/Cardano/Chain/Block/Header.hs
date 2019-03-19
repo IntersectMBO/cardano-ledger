@@ -47,6 +47,9 @@ module Cardano.Chain.Block.Header
   , ConsensusData
   , consensusData
   , verifyConsensusData
+
+  -- * Utility functions
+  , genesisHeaderHash
   )
 where
 
@@ -54,6 +57,7 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
+import Data.Coerce (coerce)
 import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 
@@ -202,11 +206,15 @@ mkHeader
   -> Header
 mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
  where
-  prevHash   = either unGenesisHash hashHeader prevHeader
+  prevHash   = either genesisHeaderHash hashHeader prevHeader
   difficulty = either
     (const 0)
     (succ . consensusDifficulty . headerConsensusData)
     prevHeader
+
+-- | Extract the genesis hash and cast it into a header hash.
+genesisHeaderHash :: GenesisHash -> HeaderHash
+genesisHeaderHash = coerce . unGenesisHash
 
 -- | Make a 'Header' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.

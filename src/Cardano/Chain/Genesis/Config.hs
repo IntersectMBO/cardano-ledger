@@ -7,6 +7,7 @@
 module Cardano.Chain.Genesis.Config
   ( StaticConfig(..)
   , Config(..)
+  , configGenesisHeaderHash
   , configK
   , configSlotSecurityParam
   , configChainQualityThreshold
@@ -37,6 +38,7 @@ import System.FilePath ((</>))
 import System.IO.Error (userError)
 
 import Cardano.Binary.Class (Raw)
+import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
@@ -134,6 +136,9 @@ data Config = Config
     --
     --   TODO: Figure out how to split testing and mainnet needs
     }
+
+configGenesisHeaderHash :: Config -> HeaderHash
+configGenesisHeaderHash = genesisHeaderHash . configGenesisHash
 
 configK :: Config -> BlockCount
 configK = gdK . configGenesisData
