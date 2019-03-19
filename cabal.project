@@ -2,7 +2,7 @@ packages:
   crypto crypto/test
   ./     ./test
 
-package cardano-chain
+package cardano-ledger
   tests: True
 
 source-repository-package

@@ -1,4 +1,4 @@
-name:                cardano-chain
+name:                cardano-ledger
 version:             0.1.0.0
 synopsis:            The blockchain layer of Cardano
 description:         The blockchain layer of Cardano
@@ -152,7 +152,7 @@ library
   if (!flag(development))
     ghc-options:         -Werror
 
-test-suite cardano-chain-test
+test-suite cardano-ledger-test
   hs-source-dirs:      test
   main-is:             test.hs
   type:                exitcode-stdio-1.0
@@ -211,7 +211,7 @@ test-suite cardano-chain-test
                      , canonical-json
                      , cardano-base
                      , cardano-base-test
-                     , cardano-chain
+                     , cardano-ledger
                      , cardano-crypto
                      , cardano-crypto-test
                      , cardano-crypto-wrapper

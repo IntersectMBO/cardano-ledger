@@ -15,7 +15,7 @@ let
   # when cross compiling.
   th-packages = [
     "hedgehog" "cardano-crypto-wrapper"
-    "cardano-crypto-test" "cardano-chain"
+    "cardano-crypto-test" "cardano-ledger"
     "small-steps" "cs-ledger" "cs-blockchain"
   ];
 

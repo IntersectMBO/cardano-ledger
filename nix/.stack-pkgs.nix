@@ -11,8 +11,8 @@
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
         } // {
-        cardano-chain = ./.stack.nix/cardano-chain.nix;
-        cardano-chain-test = ./.stack.nix/cardano-chain-test.nix;
+        cardano-ledger = ./.stack.nix/cardano-ledger.nix;
+        cardano-ledger-test = ./.stack.nix/cardano-ledger-test.nix;
         cardano-prelude = ./.stack.nix/cardano-prelude.nix;
         cardano-prelude-test = ./.stack.nix/cardano-prelude-test.nix;
         cardano-base = ./.stack.nix/cardano-base.nix;

@@ -1,9 +1,9 @@
 status = [
 
   # Buildkite: stack build
-  "buildkite/cardano-chain",
+  "buildkite/cardano-ledger",
   # Hydra: build for required jobset
-  "ci/hydra:serokell:cardano-chain:required",
+  "ci/hydra:Cardano:cardano-ledger:required",
 ]
 timeout_sec = 3600
 required_approvals = 1
