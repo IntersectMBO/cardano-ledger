@@ -494,6 +494,18 @@ wall-clock time) and the protocol parameters. The block header state is shown in
 Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
 the last slot.
 
+The operational certificate transition does not use any environment, its signal
+is a block header body, its state is shown in
+Figure~\ref{fig:ts-types:ocert}. The state consists of
+
+\begin{itemize}
+\item The stake pools map \var{stpools}.
+\item The pool parameters \var{poolParams}.
+\item The map of retiring stake pools to epochs \var{retiring}.
+\item The moving averages of the stake pools \var{avg}.
+\item The mapping \var{cs} of operational certificate counters.
+\end{itemize}
+
 \begin{figure}
   \emph{Operational Certificate Transitions}
   \begin{equation*}
@@ -504,11 +516,38 @@ the last slot.
   \label{fig:ts-types:ocert}
 \end{figure}
 
+The transition rule is shown in Figure~\ref{fig:rules:ocert}. From the block
+header body \var{bhb} we first extract the following:
+
+\begin{itemize}
+\item The operational certificate, consisting of the hot key \var{vk_{hot}}, the
+  KES period number \var{n}, the KES period start \var{c_0} and the cold key
+  signature.
+\item The block header issuer verification key \var{vk_{cold}}.
+\item The hash \var{hk} of \var{vk_{cold}}.
+\end{itemize}
+
+Using this we verify the preconditions of the operational certificate state
+transition which are the following:
+
+\begin{itemize}
+\item The KES period start \var{c_0} is greater than or equal to the KES period of
+  the slot of the block header body and less than 90 KES periods after \var{c_0}.
+\item \var{hk} exists as key in the mapping of certificate counters to a KES
+  period \var{m} and that period is less than or equal to \var{n}.
+\item The signature \var{sigma} can be verified with the cold verification key
+  \var{vk_{cold}}.
+\end{itemize}
+
+After this, the transition systems updates the operational certificate state by
+updating the mapping of operational certificates where it overwrites the entry
+of the key \var{hk} with the KES period \var{n}.
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:ocert}
     \inference[OCert]
     {
-      (\var{vk_{hot}},~n,~d_{0},~\sigma) \leteq \bocert{bhb}
+      (\var{vk_{hot}},~n,~c_{0},~\sigma) \leteq \bocert{bhb}
       &
       \var{vk_{cold}} \leteq \bissuer{bhb}
       &
