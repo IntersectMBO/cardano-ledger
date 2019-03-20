@@ -16,26 +16,15 @@ import Formatting.Buildable (Buildable)
 
 import Cardano.Binary.Class
   (Bi(..), Dropper, dropWord64, encodeListLen, enforceSize)
-import Cardano.Chain.Common.BlockCount (BlockCount)
 
 -- | Chain difficulty represents necessary effort to generate a
 -- chain. In the simplest case it can be number of blocks in chain.
 newtype ChainDifficulty = ChainDifficulty
-  { getChainDifficulty :: BlockCount
-  } deriving ( Show
-             , Eq
-             , Ord
-             , Num
-             , Enum
-             , Real
-             , Integral
-             , Generic
-             , Buildable
-             , NFData
-             )
+  { unChainDifficulty :: Word64
+  } deriving ( Show, Eq, Ord, Enum, Generic, Buildable, NFData)
 
 instance Bi ChainDifficulty where
-    encode cd = encodeListLen 1 <> encode (getChainDifficulty cd)
+    encode cd = encodeListLen 1 <> encode (unChainDifficulty cd)
     decode = do
         enforceSize "ChainDifficulty" 1
         ChainDifficulty <$> decode

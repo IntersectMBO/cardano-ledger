@@ -98,7 +98,7 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
   maxCanonicalLovelaceVal = 9e6
 
 genChainDifficulty :: Gen ChainDifficulty
-genChainDifficulty = ChainDifficulty <$> genBlockCount
+genChainDifficulty = ChainDifficulty <$> Gen.word64 Range.constantBounded
 
 genCustomLovelace :: Word64 -> Gen Lovelace
 genCustomLovelace size =

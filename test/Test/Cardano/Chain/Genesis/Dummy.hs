@@ -29,7 +29,7 @@ import Cardano.Prelude
 import Data.Time (Day(..), UTCTime(..))
 
 import Cardano.Chain.Common
-  ( BlockCount
+  ( BlockCount (..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , mkKnownLovelace
@@ -67,7 +67,7 @@ dummyConfigStartTime startTime =
   either (panic . show) identity $ mkConfig startTime dummyGenesisSpec
 
 dummyK :: BlockCount
-dummyK = 10
+dummyK = BlockCount 10
 
 dummyEpochSlots :: EpochSlots
 dummyEpochSlots = kEpochSlots dummyK

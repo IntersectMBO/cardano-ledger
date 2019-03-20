@@ -43,6 +43,7 @@ import Ledger.Delegation (DCert, delegationMap, delegatorOf, mkDCert)
 import Ledger.Update (bkSgnCntW, bkSlotsPerEpoch, maxBkSz, maxHdrSz)
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
+  , ChainDifficulty(ChainDifficulty)
   , LovelacePortion(LovelacePortion)
   , TxFeePolicy(TxFeePolicyTxSizeLinear)
   , TxSizeLinear(TxSizeLinear)
@@ -73,7 +74,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   bh0 = Concrete.mkHeaderExplicit
     (Genesis.configProtocolMagicId config)
     prevHash
-    0
+    (ChainDifficulty 0)
     sid
     ssk
     cDCert

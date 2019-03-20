@@ -103,7 +103,7 @@ import Cardano.Chain.Block.Header
   , wrapHeaderBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..))
-import Cardano.Chain.Common (Attributes, ChainDifficulty, mkAttributes)
+import Cardano.Chain.Common (Attributes, ChainDifficulty (..), mkAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (SlotId(..))
@@ -247,7 +247,7 @@ mkBlock
 mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
  where
   prevHash   = either genesisHeaderHash hashHeader prevHeader
-  difficulty = either (const 0) (succ . headerDifficulty) prevHeader
+  difficulty = either (const $ ChainDifficulty 0) (succ . headerDifficulty) prevHeader
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.

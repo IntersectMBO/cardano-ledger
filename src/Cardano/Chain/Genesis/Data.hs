@@ -35,7 +35,7 @@ import Text.JSON.Canonical
   , parseCanonicalJSON
   )
 
-import Cardano.Chain.Common (BlockCount)
+import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
@@ -75,7 +75,7 @@ instance Monad m => ToJSON m GenesisData where
     --  mainnet genesis block
     , ( "protocolConsts"
       , mkObject
-        [ ("k"            , pure . JSNum . fromIntegral $ gdK gd)
+        [ ("k"            , pure . JSNum . fromIntegral . unBlockCount $ gdK gd)
         , ("protocolMagic", toJSON . getProtocolMagic $ gdProtocolMagic gd)
         ]
       )
@@ -97,7 +97,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> fromJSField obj "blockVersionData"
       -- The above is called blockVersionData for backwards compatibility with
       -- mainnet genesis block
-      <*> (fromIntegral @Int54 <$> fromJSField protocolConsts "k")
+      <*> (BlockCount . (fromIntegral @Int54) <$> fromJSField protocolConsts "k")
       <*> (ProtocolMagic . ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic") <*> pure RequiresMagic)
       <*> fromJSField obj "avvmDistr"
 
