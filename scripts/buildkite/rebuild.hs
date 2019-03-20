@@ -57,7 +57,7 @@ coverageUploadStep = do
     Just repoToken -> do
       result <- proc
         "shc"
-        ["--repo-token", repoToken, "cardano-chain", "cardano-chain-test"]
+        ["--repo-token", repoToken, "cardano-ledger", "cardano-ledger-test"]
         empty
       case result of
         ExitSuccess   -> printf "Coverage information upload successful.\n"

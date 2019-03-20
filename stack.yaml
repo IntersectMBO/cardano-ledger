@@ -17,7 +17,7 @@ extra-deps:
       - .
       - test
 
-  - git: https://github.com/input-output-hk/cardano-chain
+  - git: https://github.com/input-output-hk/cardano-ledger
     commit: fa7d892c596ccd54e852236126fc30a6e5ff0a9b
     subdirs:
       - crypto

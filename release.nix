@@ -3,7 +3,7 @@ let
   # Path of nix-tools jobs that we want to evict from release.nix:
   disabled = [
     # FIXME: those tests freeze on darwin hydra agents:
-    ["nix-tools" "tests" "cardano-chain" "cardano-chain-test" "x86_64-darwin"]
+    ["nix-tools" "tests" "cardano-ledger" "cardano-ledger-test" "x86_64-darwin"]
   ];
 in
 { ... }@args:
@@ -15,7 +15,7 @@ localLib.pkgs.lib.mapAttrsRecursiveCond
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
   # are intereted in building on CI via nix-tools.
-  packages = [ "cardano-chain" ];
+  packages = [ "cardano-ledger" ];
 
   # The set of jobs we consider crutial for each CI run.
   # if a single one of these fails, the build will be marked
@@ -40,22 +40,22 @@ localLib.pkgs.lib.mapAttrsRecursiveCond
   #
   # Example:
   #
-  #   libs.cardano-chain.x86_64-darwin -- will build the cardano-chain library on and for macOS
-  #   libs.cardano-chain.x86_64-linux -- will build the cardano-chain library on and for linux
-  #   libs.x86_64-pc-mingw32-cardano-chain.x86_64-linux -- will build the cardano-chain library on linux for windows.
+  #   libs.cardano-ledger.x86_64-darwin -- will build the cardano-ledger library on and for macOS
+  #   libs.cardano-ledger.x86_64-linux -- will build the cardano-ledger library on and for linux
+  #   libs.x86_64-pc-mingw32-cardano-ledger.x86_64-linux -- will build the cardano-ledger library on linux for windows.
   #   tests.cs-ledger.ledger-delegation-test.x86_64-linux -- will build and run the ledger-delegation-test from the
   #                                                          cs-ledger package on linux.
   #
-  required-name = "cardano-chain-required-checks";
+  required-name = "cardano-ledger-required-checks";
   required-targets = jobs: [
 
-    jobs.nix-tools.libs.cardano-chain.x86_64-darwin
-    jobs.nix-tools.libs.cardano-chain.x86_64-linux
-    jobs.nix-tools.tests.cardano-chain.cardano-chain-test.x86_64-linux
+    jobs.nix-tools.libs.cardano-ledger.x86_64-darwin
+    jobs.nix-tools.libs.cardano-ledger.x86_64-linux
+    jobs.nix-tools.tests.cardano-ledger.cardano-ledger-test.x86_64-linux
 
     # windows cross compilation targets
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-chain.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-chain.cardano-chain-test.x86_64-linux
+    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-ledger.x86_64-linux
+    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-ledger.cardano-ledger-test.x86_64-linux
   ];
 
 } args)

@@ -47,7 +47,7 @@
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "https://github.com/input-output-hk/fm-ledger-rules";
+      url = "https://github.com/input-output-hk/cardano-ledger-specs";
       rev = "965b32be3361b2ed404e1e58a6fb3cf525d3a26c";
       sha256 = "1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7";
       });

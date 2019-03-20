@@ -201,7 +201,7 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing
     }
 
   -- We shouldn't need to use 'coerce' after
-  -- https://github.com/input-output-hk/cardano-chain/issues/332 gets
+  -- https://github.com/input-output-hk/cardano-ledger/issues/332 gets
   -- implemented.
   genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
 

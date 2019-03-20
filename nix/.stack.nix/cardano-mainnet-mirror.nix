@@ -12,7 +12,7 @@
       url = "";
       synopsis = "A convenient wrapper for the mirror of Cardano mainnet";
       description = "This package provides a list of FilePaths to the Cardano mainnet data files";
-      buildType = "Custom";
+      buildType = "Simple";
       };
     components = {
       "library" = {
@@ -22,7 +22,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-mainnet-mirror";
-      rev = "74ca63f8ad6b47beba2f565c73592cede63ce4b5";
-      sha256 = "0kkgfdw6z2k7wrsjgcs1w3scm9d397nz5nacadw1jpan8l56xa5y";
+      rev = "0232971dddd5cd235c5a0c18d7b4f342a887276f";
+      sha256 = "16yqqwypl4y6hzagsxz0k1hbw1lkk2bdiyj0kl32g24ydwp12ggd";
       });
     }
