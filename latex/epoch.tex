@@ -304,7 +304,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
       & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs}) = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
@@ -420,7 +420,7 @@ This transition has no preconditions and results in the following state change:
       \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees}) & \var{utxoSt}\\
         (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
-        (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
+        (\var{stpools},~\var{poolParams},~\wcard,~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
         \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
@@ -567,6 +567,7 @@ This transition has no preconditions and results in the following state change:
           \var{poolParams} \\
           \var{retiring} \\
           \var{avgs} \\
+          \var{cs} \\
         \end{array}
       \right)
       \trans{poolreap}{e}
@@ -585,6 +586,7 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{avgs}} \\
+          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{cs}} \\
         \end{array}
       \right)
     }
@@ -1407,6 +1409,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{poolParams} \\
           \var{retiring} \\
           \var{avgs} \\
+          \var{cs} \\
           ~ \\
           \var{utxo} \\
           \var{deposits} \\
@@ -1429,6 +1432,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{poolParams} \\
           \var{retiring} \\
           \var{avgs} \\
+          \var{cs} \\
           ~ \\
           \var{utxo} \\
           \var{deposits} \\
