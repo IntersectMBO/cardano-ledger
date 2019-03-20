@@ -14,11 +14,13 @@ This value depends on the protocol parameters and the size of the transaction.
 Two time related types are introduced, $\Epoch$ and $\type{Duration}$.
 A $\type{Duration}$ is the difference between two slots, as given by $\slotminus{}{}$.
 
-One global constant is defined, $\SlotsPerEpoch$, representing the number of slots
-in an epoch. As a global constant, this value can only be changed by updating the software.
+Two global constants are defined,
+$\SlotsPerEpoch$ and $\SlotsPerCycle$, representing the number of slots in an epoch/cycle.
+Cycles will be used in the key evolving signatures.
+As global constants, these values can only be changed by updating the software.
 
 Lastly, there are two functions, $\fun{epoch}$ and $\fun{firstSlot}$ for converting
-between epochs and slots.
+between epochs and slots, and one function $\fun{cycle}$ for getting the cycle of a slot.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -28,6 +30,7 @@ between epochs and slots.
       \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
       \var{dur} & \Duration & \text{difference between slots}\\
       \var{epoch} & \Epoch & \text{epoch} \\
+      \var{cycle} & \Cycle & \text{cycle} \\
     \end{array}
   \end{equation*}
   %
@@ -107,6 +110,7 @@ between epochs and slots.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \SlotsPerEpoch & \N & \text{slots per epoch} \\
+      \SlotsPerCycle & \N & \text{slots per cycle} \\
     \end{array}
   \end{equation*}
   %
@@ -122,6 +126,11 @@ between epochs and slots.
                & \text{first slot of an epoch}
     \\
     \fun{firstSlot} & ~\var{e} = \var{e}~\cdot~\SlotsPerEpoch
+    \\
+    \\
+    \fun{cycle} & \in ~ \Slot \to \Cycle & \text{cycle of a slot}
+    \\
+    \fun{cycle} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerCycle
   \end{align*}
   %
   \caption{Definitions used in Protocol Parameters}

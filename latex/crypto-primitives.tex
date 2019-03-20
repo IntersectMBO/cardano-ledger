@@ -81,5 +81,54 @@ organization chosen for an implementation.
   \label{fig:crypto-defs-shelley}
 \end{figure}
 
+When we get to the blockchain layer validation, we will use
+key evolving signatures according to the MMM scheme \citep{cryptoeprint:2001:034}.
+Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
+needed for KES.
+
+
+\begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{sk} & \N \to \SKeyEv & \text{private signing keys}\\
+      \var{vk} & \VKeyEv & \text{public verifying key}\\
+    \end{array}
+  \end{equation*}
+  \emph{Notation for evolved signing key}
+  \begin{align*}
+    & \var{sk_n} = \var{sk}~n & n\text{-th evolution of }sk
+  \end{align*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk_n, vk) & \KeyPairEv & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Data \times \Sig\right)}
+                        & \text{verification relation}\\
+                        %
+      \fun{sign_{ev}} & \SKey \to \N \to \Data \to \Sig
+                      & \text{signing function}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall m,n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
+    & ~~~~~~~~m\leq n \land \signEv{sk}{n}{d} = \sigma \implies \verifyEv{vk}{m}{d}{\sigma}
+  \end{align*}
+  \emph{Notation for verified KES data}
+  \begin{align*}
+    & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma}^n = \verifyEv{vk}{n}{d}{\sigma}
+    & \text{shorthand notation for } \fun{verify_{ev}}
+  \end{align*}
+  \caption{KES Cryptographic definitions}
+  \label{fig:kes-defs-shelley}
+\end{figure}
 \clearpage
 

@@ -195,6 +195,8 @@ state transition types. We define two separate parts of the ledger state.
         the epoch in which it will retire.
       \item $\var{avgs}$ stores the latest value of the pool's performance moving average.  This
         value quantifies the desirability of delegating to a given pool, based on past performance.
+      \item $\var{cs}$ stores the latest operational certificate counter used for each pool.
+        The counters are used the operation certificate transition in Figure~\ref{fig:rules:ocert}.
     \end{itemize}
 \end{itemize}
 
@@ -227,6 +229,7 @@ and the protocol parameters.
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
       \var{avgs} & \HashKey_{pool} \mapsto \Rnn & \text{performance moving average}\\
+      \var{cs} & \HashKey_{pool} \mapsto \N & \text{operational certificate counters}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
@@ -439,6 +442,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     \begin{itemize}
       \item The key is added to the set of registered stake pools.
       \item The pool's parameters are stored.
+      \item The pool's operational certificate counter is set to zero.
     \end{itemize}
   \item Stake pool parameter updates are handled by \cref{eq:pool-rereg}.
     This rule, which also matches on the certificate type $\type{DCertRegPool}$,
@@ -496,7 +500,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
       \right)
       \trans{pool}{c}
@@ -507,7 +512,9 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \varUpdate{\var{poolParams}} & \varUpdate{\union}
                                     & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
        \var{retiring} \\
-       \var{avgs}
+       \var{avgs} \\
+       \varUpdate{\var{cs}} & \varUpdate{\union}
+                            & \varUpdate{\{\var{hk} \mapsto 0\}} \\
       \end{array}
       \right)
     }
@@ -531,7 +538,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
       \right)
       \trans{pool}{c}
@@ -541,7 +549,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \varUpdate{\var{poolParams}} & \varUpdate{\unionoverrideRight}
                                   & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
       \right)
     }
@@ -568,7 +577,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
     \right)
     \trans{pool}{c}
@@ -578,7 +588,8 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{poolParams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
     \right)
   }
@@ -802,7 +813,8 @@ will be invalid.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
       \right)
       \trans{delegs}{\epsilon}
@@ -815,7 +827,8 @@ will be invalid.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs}
+        \var{avgs} \\
+        \var{cs} \\
       \end{array}
       \right)
     }

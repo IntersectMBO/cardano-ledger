@@ -21,6 +21,7 @@
 \newcommand{\bHeaderSize}[1]{\fun{bHeaderSize}~ \var{#1}}
 \newcommand{\bSize}[1]{\fun{bSize}~ \var{#1}}
 \newcommand{\bBodySize}[1]{\fun{bBodySize}~ \var{#1}}
+\newcommand{\OCert}{\type{OCert}}
 \newcommand{\BHeader}{\type{BHeader}}
 \newcommand{\BHBody}{\type{BHBody}}
 
@@ -34,6 +35,7 @@
 \newcommand{\bprfn}[1]{\fun{bprf}_{n}~\var{#1}}
 \newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
 \newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
+\newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
 
 \newcommand{\PraosEnv}{\type{PraosEnv}}
 \newcommand{\PraosState}{\type{PraosState}}
@@ -127,6 +129,20 @@
     \end{array}
   \end{equation*}
   %
+  \emph{Operational Certificate}
+  %
+  \begin{equation*}
+    \OCert =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{vk_{hot}} & \VKeyEv & \text{operational (hot) key}\\
+        \var{n} & \N & \text{counter}\\
+        c_0 & \Cycle & \text{start cycle}\\
+        \sigma & \Sig & \text{cold key signature}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Block Header Body}
   %
   \begin{equation*}
@@ -141,6 +157,7 @@
         \ell & \unitInterval & \text{leader election value}\\
         \var{prf_{\ell}} & \Proof & \text{leader election proof}\\
         \var{sig} & \Sig & \text{block body signature}\\
+        \var{oc} & \OCert & \text{operational certificate}\\
       \end{array}
     \right)
   \end{equation*}
@@ -188,6 +205,7 @@
       \fun{bleader} & \BHBody \to \unitInterval\\
       \fun{bprf}_\ell & \BHBody \to \Proof\\
       \fun{bsig} & \BHBody \to \Sig \\
+      \fun{bocert} & \BHBody \to \OCert \\
     \end{array}
   \end{equation*}
   %
@@ -410,6 +428,61 @@
 \label{sec:block-header-trans}
 
 \begin{figure}
+  \emph{Operational Certificate Transitions}
+  \begin{equation*}
+    \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
+    \powerset (\PState \times \BHBody \times \PState)
+  \end{equation*}
+  \caption{OCert transition-system types}
+  \label{fig:ts-types:ocert}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:ocert}
+    \inference[OCert]
+    {
+      (\var{vk_{hot}},~n,~d_{0},~\sigma) \leteq \bocert{bhb}
+      &
+      \var{vk_{cold}} \leteq \bissuer{bhb}
+      &
+      \var{hk} \leteq \hashKey{vk_{cold}}
+      \\~\\
+      c_0 \leq \cycle{\bslot{bhb}} < c_0 + 90
+      \\
+      \var{hk}\mapsto m\in\var{cs}
+      &
+      m \leq n
+      &
+      \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
+    }
+    {
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{stpools} \\
+        \var{poolParams} \\
+        \var{retiring} \\
+        \var{avgs} \\
+        \var{cs} \\
+      \end{array}
+      \right)
+      \trans{ocert}{\var{bhb}}
+      \left(
+      \begin{array}{rcl}
+        \var{stpools} \\
+        \var{poolParams} \\
+        \var{retiring} \\
+        \var{avgs} \\
+        \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{OCert rules}
+  \label{fig:rules:ocert}
+\end{figure}
+
+\begin{figure}
   \emph{Block Header environments}
   \begin{equation*}
     \BHeaderEnv =
@@ -417,6 +490,7 @@
       \begin{array}{r@{~\in~}lr}
         \var{s_{now}} & \Slot & \text{current slot (wall-clock)} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
+        \var{stpools} & \StakePools & \text{stake pools} \\
       \end{array}
     \right)
   \end{equation*}
@@ -453,15 +527,19 @@
       (\var{bhb},~\sigma) \leteq \var{bh}
       &
       \var{slot} \leteq \bslot{bh}
-      &
-      \var{vk} \leteq \bissuer{block}
       \\
+      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{block}
+      \\~\\
+      \var{vk_{hot}}\mapsto s_0\in\var{stpools}
+      &
+      t \leteq \cycle{slot} - \cycle{s_0}
+      \\~\\
       \var{s_{last}} < \var{slot} \leq \var{s_{now}}
       &
       \var{h} = \bprev{bh}
-      &
-      \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\
+      \mathcal{V}_{\var{vk_{hot}}}{\serialised{txs}}_{\sigma}^{t}
+      &
       \bHeaderSize{bh} < \fun{maxBHSize}~\var{pp}
     }
     {
@@ -469,6 +547,7 @@
         {\begin{array}{c}
             \var{s_{now}} \\
             \var{pp} \\
+            \var{stpools} \\
         \end{array}}
       \right)
       \vdash
@@ -497,6 +576,7 @@
         \var{pp} & \PParams & \text{protocol parameters} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
+        \var{stpools} & \StakePools & \text{stake pools} \\
       \end{array}
     \right)
   \end{equation*}
@@ -546,6 +626,7 @@
           {\begin{array}{c}
              \var{s_{now}} \\
              \var{pp} \\
+             \var{stpools} \\
            \end{array}}
         \right)
         \vdash
@@ -832,6 +913,14 @@
       }
       \\~\\
       (\var{acnt}',~\var{pp}',~\var{ss}',~\var{ls}') \leteq \var{es}'
+      &
+      (\var{us}',~(\var{ds}',~\var{ps'})) \leteq \var{ls}'
+      \\
+      \vdash\var{ps}'\trans{ocert}{bhb}\var{ps}''
+      &
+      \var{ls}'' \leteq (\var{us}',~(\var{ds}',~\var{ps}''))
+      &
+      (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) \leteq \var{ps}''
       \\
       {
         \left(
@@ -840,6 +929,7 @@
               \var{pp}' \\
               \eta_0' \\
               \var{pd}' \\
+              \var{stpools} \\
           \end{array}}
         \right)
         \vdash
@@ -867,17 +957,17 @@
       {
         \var{pp}\vdash
         {\left(\begin{array}{c}
-              \var{ls'} \\
+              \var{ls}'' \\
               \var{b'} \\
         \end{array}\right)}
         \trans{bbody}{\var{block}}
         {\left(\begin{array}{c}
-              \var{ls}'' \\
+              \var{ls}''' \\
               b'' \\
         \end{array}\right)}
       }
       &
-      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}'')
+      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}''')
     }
     {
       \left(
