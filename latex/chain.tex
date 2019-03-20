@@ -810,6 +810,10 @@ been signed with the issuer key.
 \subsection{Block Body Transition}
 \label{sec:block-body-trans}
 
+The block body transition updates the block body state which comprises the
+ledger state and the map describing the produced blocks. The environment of the
+$\mathsf{BBODY}$ transition are the protocol parameters.
+
 \begin{figure}
   \emph{BBody Transitions}
 
@@ -822,6 +826,29 @@ been signed with the issuer key.
   \label{fig:ts-types:bbody}
 \end{figure}
 
+The $\mathsf{BBODY}$ transition rule is shown in Figure~\ref{fig:rules:bbody},
+its sub-rule is $\mathsf{LEDGERS}$ which does the update of the ledger
+state. The signal is a block from which we extract:
+
+\begin{itemize}
+\item The block header body \var{bhb}.
+\item The sequence of transactions \var{txs} of the block.
+\item The verification key \var{vk} of the issuer of the \var{block} and its
+  hash \var{hk}.
+\end{itemize}
+
+The transition is executed, if the following preconditions are met:
+
+\begin{itemize}
+\item The size of the block body is less than or equal to the maximal body size
+  described in the protocol parameters.
+\item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
+  \var{n} is equal to 0.
+\end{itemize}
+
+After this, the transition system updates the mapping of the hashed stake pool
+keys to the incremented value of produced blocks (\var{n} + 1).
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:bbody}
     \inference[Block-Body]
@@ -831,10 +858,12 @@ been signed with the issuer key.
       \var{txs} \leteq \bbody{block}
       &
       \var{vk} \leteq \bissuer{bhb}
-      \\
-      \bSize{bh} < \fun{maxBBSize}~\var{pp}
       &
-      \var{vk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      \var{hk} \leteq \hashKey{vk}
+      \\
+      \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
+      &
+      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
       \\~\\
       {
         \left(
@@ -863,7 +892,7 @@ been signed with the issuer key.
       \trans{bbody}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{ls}'} \\
-            \varUpdate{b \unionoverrideRight \{\var{vk}\mapsto n+1\}} \\
+            \varUpdate{b \unionoverrideRight \{\var{hk}\mapsto n+1\}} \\
       \end{array}\right)}
     }
   \end{equation}
