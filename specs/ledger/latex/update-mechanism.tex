@@ -55,10 +55,8 @@ partially documented in:
 \begin{itemize}
 \item \href{https://cardanodocs.com/technical/updater/}{Updater implementation}
 \item \href{https://cardanodocs.com/cardano/update-mechanism/}{Update mechanism}
-\item \href{https://github.com/input-output-hk/cardano-sl/blob/develop/wallet-new/docs/updates.md}{Updates technical documentation}
 \item
-  \href{https://github.com/input-output-hk/cardano-sl/blob/develop/docs/block-processing/us.md}{Update
-    system consensus rules}
+  \href{https://github.com/input-output-hk/cardano-sl/blob/2a19d8ce2941b8e60f0208a5198943ec2ada1fd4/docs/block-processing/us.md}{Update system consensus rules}
 \end{itemize}
 
 The reason for formalizing a simplified version of the current implementation
@@ -154,7 +152,17 @@ structure:
   `srInitThd` in `SoftForkRule`, if we set `srMinThd` to `srInitThd` and
   `srThdDecrement` to $0$.
 \item Chain stability parameter: $\var{stableAfter}$.
-\item Update proposal time-to-live: $\var{upropTTL}$.
+\item Update proposal time-to-live: $\var{upropTTL}$. This would correspond to
+  the number of slots specified by `bvdUpdateImplicit`. In `cardano-sl` the
+  rule was that after `bvdUpdateImplicit` slots, if a proposal did not reach a
+  majority of the votes, then if the proposal has more votes for than against
+  it, then it will become implicitly accepted, or rejected otherwise. In this
+  specification, we re-interpret the meaning of this parameter as the proposal
+  time-to-live: if after the number of slots specified by `bvdUpdateImplicit`
+  the proposal does not reach a majority of approvals, the proposal is simply
+  discarded. In the mainnet configuration (`mainnet-genesis.json` this value is
+  set to $10000$, which corresponds with almost half of the total number of
+  slots in an epoch).
 \end{itemize}
 In addition we make use of the $\var{cfmThd}$ key, which determines the portion
 of the stakeholders that have to vote for a proposal to consider it confirmed.
