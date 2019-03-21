@@ -6,7 +6,7 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\SlotsPrior}{\mathsf{SlotsPrior}}
+\newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
@@ -420,6 +420,12 @@ in the pool distribution.
 \subsection{Update Nonces Transition}
 \label{sec:update-nonces-trans}
 
+The update nonce transition updates the nonces until the randomness gets
+fixed. The environment is shown in Figure~\ref{fig:ts-types:updnonce} and
+consists of the epoch nonce \var{\eta}. The update nonce state is shown in
+Figure~\ref{fig:rules:update-nonce} and consists of the candidate nonce
+\var{\eta_c} and the evolving nonce \var{\eta_v}.
+
 \begin{figure}
   \emph{Update Nonce Transitions}
   \begin{equation*}
@@ -429,6 +435,11 @@ in the pool distribution.
   \caption{UpdNonce transition-system types}
   \label{fig:ts-types:updnonce}
 \end{figure}
+
+The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
+There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
+\SlotsPrior slots from the begin of the epoch, and one where \var{s} is at least
+\SlotsPrior slots after the first slot of the epoch.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:update-both}
@@ -1176,7 +1187,7 @@ preconditions, instead it calls all its subrules.
       }
       &
       {
-        \eta \vdash
+        \eta_{0} \vdash
         {\left(\begin{array}{c}
               \eta_v \\
               \eta_c \\
