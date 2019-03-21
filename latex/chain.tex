@@ -7,7 +7,7 @@
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\SlotsPrior}{\mathsf{SlotsPrior}}
-\newcommand{\StartRewards}{\mathsf{StartRewards}}
+\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
@@ -900,12 +900,17 @@ keys to the incremented value of produced blocks (\var{n} + 1).
   \label{fig:rules:bbody}
 \end{figure}
 
+\subsection{Reward Update Transition}
+\label{sec:reward-update-trans}
 
-\subsection{Chain Transition}
-\label{sec:chain-trans}
+The reward update transition calculates a new $\RewardUpdate$ to apply in a
+$\mathsf{NEWEPOCH}$ transition. The environment is shown in
+Figure~\ref{fig:ts-types:reward-update}, it consists of the produced blocks
+mapping \var{b} an the epoch state \var{es}. Its state is an optional reward
+update.
 
 \begin{figure}
-  \emph{Reward Upda environments}
+  \emph{Reward Update environments}
   \begin{equation*}
     \RUpdEnv =
     \left(
@@ -918,22 +923,42 @@ keys to the incremented value of produced blocks (\var{n} + 1).
   %
   \emph{Reward Update Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{ru}{\_} \var{\_} \subseteq
+    \_ \vdash \var{\_} \trans{rupd}{\_} \var{\_} \subseteq
     \powerset (\RUpdEnv \times \RewardUpdate^? \times \Slot \times \RewardUpdate^?)
   \end{equation*}
   \caption{Reward Update transition-system types}
   \label{fig:ts-types:reward-update}
 \end{figure}
 
+The transition rules are shown in Figure~\ref{fig:rules:reward-update}. There
+are three cases, one which computes a new reward update, one which leaves the
+rewards update unchanged as it has not yet been applied and finally one that
+leaves the reward update unchanged as the transition was started too early.
+
+The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
+execution of the transition role is as follows:
+
+\begin{itemize}
+\item If \var{s} is less than or equal to the sum of the first slot of its epoch
+  and the duration to start rewards \StartRewards, then the state is not
+  updated.
+\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
+  update has already been calculated but not yet applied, then the state is not
+  updated.
+\item If the current reward update \var{ru} is empty and \var{s} is greater than
+  the sum of the first slot of its epoch and the duration \StartRewards, then a
+  new rewards update is calculated and the state is updated.
+\end{itemize}
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:reward-update}
     \inference[Reward-Update]
     {
+      ru' \leteq \createRUpd{b}{es}
+      \\~\\
       s > (\firstSlot{\epoch{s}}) + \StartRewards
       &
       ru = \Nothing
-      \\~\\
-      ru' \leteq \createRUpd{ru}{es}
     }
     {
       \left(
@@ -943,7 +968,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\varUpdate{\var{ru}'}
+      \var{ru}\trans{rupd}{\var{s}}\varUpdate{\var{ru}'}
     }
   \end{equation}
 
@@ -962,7 +987,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
   \end{equation}
 
@@ -981,7 +1006,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
   \end{equation}
 
@@ -989,6 +1014,8 @@ keys to the incremented value of produced blocks (\var{n} + 1).
   \label{fig:rules:reward-update}
 \end{figure}
 
+\subsection{Chain Transition}
+\label{sec:chain-trans}
 
 \begin{figure}
   \emph{Chain environments}
@@ -1117,7 +1144,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
               \var{ru}' \\
           \end{array}}
         \right)
-        \vdash \var{ru}' \trans{ru}{\var{s}} \var{ru}''
+        \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
       }
       \\
       {
