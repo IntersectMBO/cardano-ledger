@@ -38,6 +38,6 @@ TAGS
 auto/
 
 # Nix artifacts
-specs/**/result
-result
+specs/**/result*
+result*
 specs/**/.ghc.environment.x86_64-linux-*
