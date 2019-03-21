@@ -1,8 +1,4 @@
-{ system ? builtins.currentSystem
-, config ? {}
-, pkgs ? import (import ./fetch-nixpkgs.nix) { inherit system config; }
-}:
-
+with import ../../lib.nix;
 with pkgs;
 
 haskell.lib.buildStackProject {

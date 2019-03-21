@@ -34,4 +34,4 @@
           ];
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../crypto/test; }
+    } // rec { src = (pkgs.lib).mkDefault ../.././crypto/test; }

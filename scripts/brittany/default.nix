@@ -1,9 +1,4 @@
-{ system ? builtins.currentSystem
-, config ? {}
-, pkgs ? import (import ../nix/fetch-nixpkgs.nix) { inherit system config; }
-}:
-
-with pkgs.lib;
+with import ../../lib.nix;
 with pkgs;
 
 writeScript "check-brittany" ''
