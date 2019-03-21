@@ -1017,6 +1017,27 @@ execution of the transition role is as follows:
 \subsection{Chain Transition}
 \label{sec:chain-trans}
 
+The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
+part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
+$\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
+
+The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
+it comprises the current slot number \var{s_{now}} and the new protocol
+parameters \var{pp_n}.
+
+The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
+following:
+
+\begin{itemize}
+\item The three nonces for the $\mathsf{VRF}$.
+\item The mapping of produced blocks.
+\item The last slot \var{s_\ell}.
+\item The last epoch \var{e_\ell}.
+\item The epoch state \var{es}.
+\item The reward update \var{ru}.
+\item The stake pool distribution \var{pd}.
+\end{itemize}
+
 \begin{figure}
   \emph{Chain environments}
   \begin{equation*}
@@ -1053,6 +1074,12 @@ execution of the transition role is as follows:
   \caption{Chain transition-system types}
   \label{fig:ts-types:chain}
 \end{figure}
+
+The $\mathsf{CHAIN}$ transition rule is shown in
+Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from the \var{block}
+we extract the block header body \var{bhb}. From \var{bhb} we extract the block
+nonce \var{\eta} and the block slot \var{s}. The transition rule itself has no
+preconditions, instead it calls all its subrules.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:chain}
