@@ -127,7 +127,7 @@ from [the Shelley ledger spec](./latex)).
 2. Modify the `DOCNAME` in the `Makefile`.
 3. Update `default.nix` to:
    1. Make sure that the relative path in the first line is pointing to
-      (fetch-nixpkgs.nix)[./nix/fetch-nixpkgs.nix]. This is used to pin the
+      (lib.nix)[./lib.nix]. This is used to pin the
       `nixpkgs` version used to build the LaTeX specifications.
    2. Update the `buildInputs` to add in any LaTeX packages you need in your
       document, and remove any unneeded ones.
