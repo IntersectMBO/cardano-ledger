@@ -25,6 +25,8 @@ import Hedgehog
   , withTests
   )
 
+import System.FilePath (takeFileName)
+
 import Cardano.Chain.Block (ABlund, blockSlot, blockTxPayload)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFile)
 import Cardano.Chain.Genesis (GenesisData(..), readGenesisData)
@@ -70,7 +72,7 @@ tests scenario = do
   -- check them all sequentially
   let
     properties :: [(PropertyName, Property)]
-    properties = zip (fromString <$> files) (epochValid pm utxoRef <$> files)
+    properties = zip (fromString . takeFileName <$> files) (epochValid pm utxoRef <$> files)
   checkSequential $ Group "Test.Cardano.Chain.Txp.Validation" properties
 
 
