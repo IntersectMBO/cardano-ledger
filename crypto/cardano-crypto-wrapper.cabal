@@ -64,7 +64,7 @@ library
                      , binary
                      , bytestring
                      , canonical-json
-                     , cardano-base
+                     , cardano-binary
                      , cardano-crypto
                      , cardano-prelude
                      , cborg
@@ -109,8 +109,8 @@ test-suite test
 
   build-depends:       base
                      , bytestring
-                     , cardano-base
-                     , cardano-base-test
+                     , cardano-binary
+                     , cardano-binary-test
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude

@@ -10,42 +10,34 @@ import System.Exit (exitWith)
 import Turtle
 
 
+-- | Run build and upload coverage information when successful
 main :: IO ()
 main = do
-  buildResult <- buildSubdir "crypto" .&&. buildStep
-    (Just ["--scenario=ContinuousIntegration"])
+  buildResult <- buildStep (Just ["--scenario=ContinuousIntegration"])
 
   when (buildResult == ExitSuccess) coverageUploadStep
 
   exitWith buildResult
- where
-  buildSubdir :: Turtle.FilePath -> IO ExitCode
-  buildSubdir dir = do
-    cd dir
-    res <- buildStep Nothing
-    cd ".."
-    pure res
 
+
+-- | Build and test all packages using stack
 buildStep :: Maybe [Text] -> IO ExitCode
 buildStep testArgs = do
   echo "+++ Build and test"
-  build .&&. test
+  run "stack" $ cfg ++ ["build", "--fast"] ++ buildArgs
  where
   cfg = ["--dump-logs", "--color", "always"]
-  stackBuild args = run "stack" $ cfg ++ ["build", "--fast"] ++ args
   buildArgs =
     [ "--bench"
-    , "--no-run-benchmarks"
-    , "--haddock"
-    , "--haddock-internal"
-    , "--no-haddock-deps"
-    ]
-  buildAndTest = stackBuild $ "--tests" : buildArgs
-  build        = stackBuild $ "--no-run-tests" : buildArgs
-  test =
-    stackBuild
-      $  ["--test", "--coverage", "--jobs", "1"]
+      , "--no-run-benchmarks"
+      , "--haddock"
+      , "--haddock-internal"
+      , "--no-haddock-deps"
+      , "--test"
+      , "--coverage"
+      ]
       ++ maybe [] ("--ta" :) testArgs
+
 
 -- | Upload coverage information to coveralls
 coverageUploadStep :: IO ()
@@ -62,6 +54,7 @@ coverageUploadStep = do
       case result of
         ExitSuccess   -> printf "Coverage information upload successful.\n"
         ExitFailure _ -> printf "Coverage information upload failed.\n"
+
 
 run :: Text -> [Text] -> IO ExitCode
 run cmd args = do
