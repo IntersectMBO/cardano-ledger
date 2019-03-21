@@ -95,6 +95,12 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     \end{array}
   \end{equation*}
   %
+  \emph{Derived Types}
+  \begin{align*}
+    \PoolDistr = \VKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
+  \end{align*}
+  %
+
   \emph{Constraints}
   \begin{align*}
     & \forall (sk, vk) \in \KeyPair,~ seed \in \Seed,~
@@ -246,10 +252,6 @@ of
 \item An optional rewards update.
 \item The stake pool distribution of the epoch.
 \end{itemize}
-
-\begin{note}
-  Where is \PoolDistr defined?
-\end{note}
 
 \begin{figure}
   \emph{New Epoch environments}
