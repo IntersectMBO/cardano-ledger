@@ -1,6 +1,6 @@
 # cardano-ledger
 
-A re-implementation of the Cardano blockchain layer, started in Q4 2018.
+A re-implementation of the Cardano ledger layer, designed to ease transition between the Byron and Shelley eras.
 
 The formal specifications and associated executable specifications can be found
 in the
@@ -9,6 +9,7 @@ repository.
 
 [![Build status](https://badge.buildkite.com/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0.svg?branch=master)](https://buildkite.com/input-output-hk/cardano-ledger)
 [![Coverage Status](https://coveralls.io/repos/github/input-output-hk/cardano-ledger/badge.svg?branch=master)](https://coveralls.io/github/input-output-hk/cardano-ledger?branch=master)
+
 
 ## Developing
 
