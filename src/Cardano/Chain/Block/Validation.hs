@@ -42,9 +42,9 @@ import Cardano.Chain.Block.Header
   ( BlockSignature(..)
   , HeaderHash
   , headerLength
-  , recoverSignedBytes
   , wrapBoundaryBytes
   )
+import Cardano.Chain.Block.Proof (proofDelegation)
 import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Delegation.Payload as DlgPayload
