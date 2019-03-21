@@ -33,6 +33,7 @@ import Cardano.Chain.Block.Block
   ( ABlock(..)
   , BoundaryValidationData(..)
   , blockDlgPayload
+  , blockHashAnnotated
   , blockHeader
   , blockLength
   , blockProof
@@ -275,6 +276,9 @@ updateHeader _config cvs (blockHeader -> h) = do
 -- | This represents the CHAIN rule. It is intended more for use in tests than
 --   in a real implementation, which will want to invoke its constituent rules
 --   directly.
+--
+--   Note that this also updates the previous block hash, which would usually be
+--   done as part of the PBFT rule.
 updateBlock
   :: MonadError ChainValidationError m
   => Genesis.Config
@@ -282,4 +286,6 @@ updateBlock
   -> ABlock ByteString
   -> m ChainValidationState
 updateBlock config cvs b = do
-  updateHeader config cvs b >>= \cvs' -> updateBody config cvs' b
+  updateHeader config cvs b
+    >>= (\cvs' -> return $ cvs' { cvsPreviousHash = Just $ blockHashAnnotated b })
+    >>= (\cvs' -> updateBody config cvs' b)
