@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -11,6 +12,7 @@
 module Cardano.Chain.Slotting.Data
   ( EpochSlottingData(..)
   , SlottingData
+  , SlottingDataError(..)
   , getSlottingDataMap
   , mkSlottingData
   , validateSlottingDataMap
@@ -29,6 +31,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Data (Data)
 import Data.Map.Strict as M
 import Data.Semigroup (Semigroup)
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
@@ -38,7 +41,7 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary.Class
   (Bi(..), Decoder, DecoderError(..), encodeListLen, enforceSize)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
-import Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex (..))
+import Cardano.Chain.Slotting.LocalSlotIndex (LocalSlotIndex(..))
 
 
 --------------------------------------------------------------------------------
@@ -99,6 +102,7 @@ instance Bi SlottingData where
 data SlottingDataError
   = SlottingDataTooFewIndices Int
   | SlottingDataInvalidIndices [EpochIndex] [EpochIndex]
+  deriving Data
 
 instance B.Buildable SlottingDataError where
   build = \case

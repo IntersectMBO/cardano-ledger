@@ -40,7 +40,11 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
-  (LocalSlotIndex(..), unLocalSlotIndex, localSlotIndexMinBound, mkLocalSlotIndex)
+  ( LocalSlotIndex(..)
+  , unLocalSlotIndex
+  , localSlotIndexMinBound
+  , mkLocalSlotIndex
+  )
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 
 
@@ -87,10 +91,9 @@ slotIdSucc sc sId =
 
 slotIdPred :: EpochSlots -> SlotId -> SlotId
 slotIdPred epochSlots sId =
-  slotIdToEnum epochSlots
-    .   FlatSlotId
-    .   subtract 1
-    $ slotIdFromEnum epochSlots sId
+  slotIdToEnum epochSlots . FlatSlotId . subtract 1 $ slotIdFromEnum
+    epochSlots
+    sId
 
 -- | Specialized formatter for 'SlotId'.
 slotIdF :: Format r (SlotId -> r)
@@ -132,8 +135,7 @@ instance NFData FlatSlotId
 -- 'FlatSlotId' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'
 -- is sufficient for slot indices for 10^13 years.
 flattenSlotId :: EpochSlots -> SlotId -> FlatSlotId
-flattenSlotId es si =
-  FlatSlotId $ pastSlots + lsi
+flattenSlotId es si = FlatSlotId $ pastSlots + lsi
  where
   lsi :: Word64
   lsi = fromIntegral . unLocalSlotIndex $ siSlot si
@@ -142,8 +144,7 @@ flattenSlotId es si =
 
 -- | Flattens 'EpochIndex' into a single number
 flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId
-flattenEpochIndex es (EpochIndex i) =
-  FlatSlotId $ i * unEpochSlots es
+flattenEpochIndex es (EpochIndex i) = FlatSlotId $ i * unEpochSlots es
 
 -- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
@@ -180,7 +181,11 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
  where
   epochSlots = kEpochSlots k
   idx :: Word16
-  idx  = fromIntegral $ unEpochSlots epochSlots - unEpochSlots (kSlotSecurityParam k) - 1
+  idx =
+    fromIntegral
+      $ unEpochSlots epochSlots
+      - unEpochSlots (kSlotSecurityParam k)
+      - 1
   slot = case mkLocalSlotIndex epochSlots idx of
     Left err ->
       panic $ sformat ("The impossible happened in crucialSlot: " . build) err

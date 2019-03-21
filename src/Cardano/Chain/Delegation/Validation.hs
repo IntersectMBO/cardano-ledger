@@ -54,7 +54,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
-  , EpochSlots (..)
+  , EpochSlots(..)
   , addSlotNumber
   , slotNumberEpoch
   , subSlotNumber

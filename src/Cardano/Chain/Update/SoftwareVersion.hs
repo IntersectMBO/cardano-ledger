@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
@@ -19,6 +20,7 @@ import qualified Prelude
 
 import Control.Monad.Except (MonadError, liftEither)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable(..))
 
@@ -52,7 +54,7 @@ instance Bi SoftwareVersion where
 
 data SoftwareVersionError =
   SoftwareVersionApplicationNameError ApplicationNameError
-  deriving (Eq, Show)
+  deriving (Data, Eq, Show)
 
 instance B.Buildable SoftwareVersionError where
   build = \case
