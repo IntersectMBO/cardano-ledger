@@ -1,5 +1,9 @@
 # Changelog
 
+## 2019-03-22
+- The blockchain layer for the spec has been completed and polished.
+- There are now operational certificates and key evolving signatures.
+
 ## 2019-03-01
 - Added the blockchain layer to the spec for Praos, including a new top-level transition CHAIN.
 

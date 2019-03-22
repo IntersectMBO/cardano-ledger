@@ -68,6 +68,7 @@ between epochs and slots, and one function $\fun{kesPeriod}$ for getting the cyc
         \rho & \unitInterval & \text{monetary expansion}\\
         \var{maxBHSize} & \N & \text{max block header size}\\
         \var{maxBBSize} & \N & \text{max block body size}\\
+        \var{activeSlotCoeff} & \unitInterval & f\text{ in \cite{ouroboros_praos}}\\
       \end{array}
     \right)
   \end{equation*}
@@ -91,6 +92,7 @@ between epochs and slots, and one function $\fun{kesPeriod}$ for getting the cyc
     \fun{rho},
     \fun{maxBHSize},
     \fun{maxBBSize},
+    \fun{activeSlotCoeff},
   \end{center}
   %
   \emph{Abstract Functions}
