@@ -524,7 +524,7 @@ transition which are the following:
   the slot of the block header body and less than 90 KES periods after \var{c_0}.
 \item \var{hk} exists as key in the mapping of certificate counters to a KES
   period \var{m} and that period is less than or equal to \var{n}.
-\item The signature \var{sigma} can be verified with the cold verification key
+\item The signature $sigma$ can be verified with the cold verification key
   \var{vk_{cold}}.
 \end{itemize}
 
@@ -628,7 +628,7 @@ its body \var{bhb} we extract:
 \item The hash of the block header \var{h} of the previous block header.
 \item The hot verification key \var{vk_{hot}} of the operational certificate of
   the block header.
-\item The signature \var{\sigma} of the block header.
+\item The signature $\sigma$ of the block header.
 \item The block header body \var{bhb}.
 \end{itemize}
 
@@ -641,7 +641,7 @@ The transition rule is executed, if the following conditions are satisfied:
   than or equal to the current slot \var{s_{now}}.
 \item The hash \var{h} of the previous block header in the block header state
   matches the hash in the body of the block header.
-\item The verification key validates the signature \var{\sigma} for the block
+\item The verification key validates the signature $\sigma$ for the block
   header body.
 \item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
   \var{stpools}.
@@ -713,7 +713,7 @@ Figure~\ref{fig:ts-types:vrf} which consists of
 \begin{itemize}
 \item The current slot number \var{s_{now}}.
 \item The protocol parameters.
-\item The epoch nonce \var{\eta_0}.
+\item The epoch nonce $\eta_0$.
 \item The pool stake distribution.
 \item The stake pool mapping \var{stpools}.
 \end{itemize}
@@ -774,7 +774,7 @@ verification of the following:
 
 \begin{itemize}
 \item The verification key is associated to a non-zero relative stake
-  \var{\sigma} in \var{stpools}.
+  $\sigma$ in \var{stpools}.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
 \item The verification of the proofs for the seed leader constant \var{\Seedl}
@@ -892,7 +892,7 @@ The transition is executed, if the following preconditions are met:
 \item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
   \var{n} is equal to 0.
 \item The transactions \var{txs} were correctly signed by \var{vk}, producing
-  the signature \var{\sigma}.
+  the signature $\sigma$.
 \end{itemize}
 
 After this, the transition system updates the mapping of the hashed stake pool
@@ -908,7 +908,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       &
       \var{hk} \leteq \hashKey{vk}
       \\
-      \var{\sigma} \leteq \bsig{bhb}
+      \sigma \leteq \bsig{bhb}
       &
       \var{bhb} \leteq \bhbody{block}
       &
@@ -1132,7 +1132,7 @@ following:
 The $\mathsf{CHAIN}$ transition rule is shown in
 Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from the \var{block}
 we extract the block header body \var{bhb}. From \var{bhb} we extract the block
-nonce \var{\eta} and the block slot \var{s}. The transition rule itself has no
+nonce $\eta$ and the block slot \var{s}. The transition rule itself has no
 preconditions, instead it calls all its subrules.
 
 \begin{figure}[ht]
