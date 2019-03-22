@@ -119,8 +119,8 @@ needed for KES.
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall m,n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
-    & ~~~~~~~~m\leq n \land \signEv{sk}{n}{d} = \sigma \implies \verifyEv{vk}{m}{d}{\sigma}
+    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
+    & ~~~~~~~~\signEv{sk}{n}{d} = \sigma \implies \verifyEv{vk}{m}{d}{\sigma}
   \end{align*}
   \emph{Notation for verified KES data}
   \begin{align*}
