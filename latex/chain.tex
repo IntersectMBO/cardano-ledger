@@ -8,7 +8,7 @@
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
-\newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
+\newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
 \newcommand{\Bool}{\type{Bool}}
@@ -113,22 +113,11 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     & \Seede \in \Seed & \text{nonce seed constant}\\
     & \SlotsPrior \in \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
     & \StartRewards \in \Duration & \text{duration to start reward calculations}\\
-    & \ActiveSlotCoeff \in \unitInterval & f\text{ in \cite{ouroboros_praos}}\\
   \end{align*}
 
   \caption{VRF definitions}
   \label{fig:defs-vrf}
 \end{figure}
-
-\begin{question}
-  Are there any constraints on $\seedOp$?
-\end{question}
-
-\begin{question}
-  What are good values for $\SlotsPrior$, $\StartRewards$, and $\ActiveSlotCoeff$?
-  Which are better as a constant or a protocol parameter?
-  % $2\cdot\fun{stableAfter}$?
-\end{question}
 
 \clearpage
 
@@ -413,20 +402,14 @@ in the pool distribution.
   \label{fig:rules:not-new-epoch}
 \end{figure}
 
-\begin{question}
-  Is $\var{pstake_{set}}$ definitely the correct snapshot to be
-  used for leader election in the new epoch?
-  See Equation~\ref{eq:new-epoch}
-\end{question}
-
 \subsection{Update Nonces Transition}
 \label{sec:update-nonces-trans}
 
 The update nonce transition updates the nonces until the randomness gets
 fixed. The environment is shown in Figure~\ref{fig:ts-types:updnonce} and
-consists of the epoch nonce \var{\eta}. The update nonce state is shown in
+consists of the epoch nonce $\eta$. The update nonce state is shown in
 Figure~\ref{fig:rules:update-nonce} and consists of the candidate nonce
-\var{\eta_c} and the evolving nonce \var{\eta_v}.
+$\eta_c$ and the evolving nonce $\eta_v$.
 
 \begin{figure}
   \emph{Update Nonce Transitions}
@@ -671,11 +654,6 @@ This transition makes sure that the block can be applied at the current time,
 that the block header is in the right sequence and that the block header has
 been signed with the correct signing key according to the KES.
 
-\begin{question}
-  Is it okay to use wall-clock in the evironment in $\BHeaderEnv$?
-  See Figure~\ref{fig:ts-types:bheader}.
-\end{question}
-
 \begin{figure}[ht]
   \begin{equation}\label{eq:bheader}
     \inference[BHead]
@@ -813,7 +791,7 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
     {
       \var{bhb} \leteq \fun{bhbody}~{\var{bh}}
       &
-      f \leteq \ActiveSlotCoeff
+      f \leteq \activeSlotCoeff{pp}
       \\
       \var{vk} \leteq \bissuer bhb
       &
