@@ -6,8 +6,8 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\SlotsPrior}{\mathsf{SlotsPrior}}
-\newcommand{\StartRewards}{\mathsf{StartRewards}}
+\newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
+\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
@@ -59,6 +59,15 @@
   See \cite{ouroboros_praos}.
 \end{note}
 
+This chapter introduces the view of the blockchain layer as required for the
+ledger. This includes in particular the information required for the epoch
+boundary and its rewards calculation as described in Section~\ref{sec:epoch}. It
+also covers the transitions that keep track of produced blocks in order to
+calculate rewards and penalties for stake pools.
+
+The main transition rule is $\mathsf{CHAIN}$ which calls the subrules
+$\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
+
 \subsection{Verifiable Random Functions (VRF)}
 \label{sec:defs-vrf}
 
@@ -76,7 +85,7 @@
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \seedOp & \Seed \to \Seed \to \Seed & \text{monoidial seed operation} \\
+      \seedOp & \Seed \to \Seed \to \Seed & \text{binary seed operation} \\
       \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
                    & \text{verifiable random function} \\
                    %
@@ -86,6 +95,12 @@
     \end{array}
   \end{equation*}
   %
+  \emph{Derived Types}
+  \begin{align*}
+    \PoolDistr = \VKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
+  \end{align*}
+  %
+
   \emph{Constraints}
   \begin{align*}
     & \forall (sk, vk) \in \KeyPair,~ seed \in \Seed,~
@@ -137,7 +152,7 @@
       \begin{array}{r@{~\in~}lr}
         \var{vk_{hot}} & \VKeyEv & \text{operational (hot) key}\\
         \var{n} & \N & \text{counter}\\
-        c_0 & \Cycle & \text{start cycle}\\
+        c_0 & \KESPeriod & \text{start KES period}\\
         \sigma & \Sig & \text{cold key signature}\\
       \end{array}
     \right)
@@ -201,9 +216,9 @@
       \fun{bissuer} & \BHBody \to \VKey\\
       \fun{bslot} & \BHBody \to \Slot\\
       \fun{bnonce} & \BHBody \to \Seed\\
-      \fun{bprf}_\eta & \BHBody \to \Proof\\
+      \fun{\bprfn{}} & \BHBody \to \Proof\\
       \fun{bleader} & \BHBody \to \unitInterval\\
-      \fun{bprf}_\ell & \BHBody \to \Proof\\
+      \fun{\bprfl{}} & \BHBody \to \Proof\\
       \fun{bsig} & \BHBody \to \Sig \\
       \fun{bocert} & \BHBody \to \OCert \\
     \end{array}
@@ -217,6 +232,26 @@
 
 \subsection{New Epoch Transition}
 \label{sec:new-epoch-trans}
+
+For the transition to a new epoch ($\mathsf{NEWEPOCH}$), the environment is
+given in Figure~\ref{fig:ts-types:newepoch}, it consists of
+
+\begin{itemize}
+\item The epoch nonce.
+\item The new protocol parameters.
+\item An optional rewards update.
+\end{itemize}
+The new epoch state is given in Figure~\ref{fig:ts-types:newepoch}, it consists
+of
+
+\begin{itemize}
+\item The number of the last epoch.
+\item The old epoch nonce.
+\item The information about produced blocks for each stake pool.
+\item The old epoch state.
+\item An optional rewards update.
+\item The stake pool distribution of the epoch.
+\end{itemize}
 
 \begin{figure}
   \emph{New Epoch environments}
@@ -254,6 +289,34 @@
   \caption{NewEpoch transition-system types}
   \label{fig:ts-types:newepoch}
 \end{figure}
+
+Figure~\ref{fig:rules:not-new-epoch} defines the new epoch state transition. It
+has two rules: the first one is the case of the epoch signal $e$ is before the
+current epoch \var{e_\ell}. This rule does not change the state. The second rule
+describes the change in the case of $e$ being equal to the next epoch
+$e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
+
+In the second case, the new epoch state is updated as follows:
+
+\begin{itemize}
+\item The epoch is set to the new epoch $e$.
+\item The epoch nonce is replaced with the new one from the new epoch
+  environment.
+\item The mapping for the blocks produced by each stake pool is set to the empty
+  map.
+\item The epoch state is updated first with the rewards update \var{ru} and then
+  via the call to $\mathsf{EPOCH}$.
+\item The rewards update to set to \Nothing.
+\item The pool distribution is updated according to the changes in the stake
+  pools.
+\end{itemize}
+
+The new pool distribution \var{pd}' is calculated from the delegation map and
+stake allocation of the previous epoch. It associates every stake pool key
+($\HashKey_{pool}$) to which a staking key ($\HashKey_{stake}$) delegates with
+the stake that $\HashKey_{stake}$ has. The sum of all stake the staking keys
+delegating to $\HashKey_{pool}$ then becomes the new entry of $\HashKey_{pool}$
+in the pool distribution.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:new-epoch}
@@ -304,7 +367,7 @@
             \varUpdate{\var{e}} \\
             \varUpdate{\eta_1} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}'} \\
+            \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
       \end{array}\right)}
@@ -316,7 +379,7 @@
   \begin{equation}\label{eq:not-new-epoch}
     \inference[Not-New-Epoch]
     {
-      e_\ell \geq e
+      e_\ell \neq e + 1
     }
     {
       \left(
@@ -359,6 +422,12 @@
 \subsection{Update Nonces Transition}
 \label{sec:update-nonces-trans}
 
+The update nonce transition updates the nonces until the randomness gets
+fixed. The environment is shown in Figure~\ref{fig:ts-types:updnonce} and
+consists of the epoch nonce \var{\eta}. The update nonce state is shown in
+Figure~\ref{fig:rules:update-nonce} and consists of the candidate nonce
+\var{\eta_c} and the evolving nonce \var{\eta_v}.
+
 \begin{figure}
   \emph{Update Nonce Transitions}
   \begin{equation*}
@@ -368,6 +437,11 @@
   \caption{UpdNonce transition-system types}
   \label{fig:ts-types:updnonce}
 \end{figure}
+
+The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
+There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
+\SlotsPrior slots from the begin of the epoch, and one where \var{s} is at least
+\SlotsPrior slots after the first slot of the epoch.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:update-both}
@@ -423,9 +497,20 @@
   \label{fig:rules:update-nonce}
 \end{figure}
 
+\subsection{Operational Certificate Transition}
+\label{sec:oper-cert-trans}
 
-\subsection{Block Header Transition}
-\label{sec:block-header-trans}
+The operational certificate transition does not use any environment, its signal
+is a block header body, its state is shown in
+Figure~\ref{fig:ts-types:ocert}. The state consists of
+
+\begin{itemize}
+\item The stake pools map \var{stpools}.
+\item The pool parameters \var{poolParams}.
+\item The map of retiring stake pools to epochs \var{retiring}.
+\item The moving averages of the stake pools \var{avg}.
+\item The mapping \var{cs} of operational certificate counters.
+\end{itemize}
 
 \begin{figure}
   \emph{Operational Certificate Transitions}
@@ -437,17 +522,44 @@
   \label{fig:ts-types:ocert}
 \end{figure}
 
+The transition rule is shown in Figure~\ref{fig:rules:ocert}. From the block
+header body \var{bhb} we first extract the following:
+
+\begin{itemize}
+\item The operational certificate, consisting of the hot key \var{vk_{hot}}, the
+  KES period number \var{n}, the KES period start \var{c_0} and the cold key
+  signature.
+\item The block header issuer verification key \var{vk_{cold}}.
+\item The hash \var{hk} of \var{vk_{cold}}.
+\end{itemize}
+
+Using this we verify the preconditions of the operational certificate state
+transition which are the following:
+
+\begin{itemize}
+\item The KES period start \var{c_0} is greater than or equal to the KES period of
+  the slot of the block header body and less than 90 KES periods after \var{c_0}.
+\item \var{hk} exists as key in the mapping of certificate counters to a KES
+  period \var{m} and that period is less than or equal to \var{n}.
+\item The signature \var{sigma} can be verified with the cold verification key
+  \var{vk_{cold}}.
+\end{itemize}
+
+After this, the transition systems updates the operational certificate state by
+updating the mapping of operational certificates where it overwrites the entry
+of the key \var{hk} with the KES period \var{n}.
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:ocert}
     \inference[OCert]
     {
-      (\var{vk_{hot}},~n,~d_{0},~\sigma) \leteq \bocert{bhb}
+      (\var{vk_{hot}},~n,~c_{0},~\sigma) \leteq \bocert{bhb}
       &
       \var{vk_{cold}} \leteq \bissuer{bhb}
       &
       \var{hk} \leteq \hashKey{vk_{cold}}
       \\~\\
-      c_0 \leq \cycle{\bslot{bhb}} < c_0 + 90
+      c_0 \leq \kesPeriod{\bslot{bhb}} < c_0 + 90
       \\
       \var{hk}\mapsto m\in\var{cs}
       &
@@ -482,6 +594,15 @@
   \label{fig:rules:ocert}
 \end{figure}
 
+\subsection{Block Header Transition}
+\label{sec:block-header-trans}
+
+The block header transition updates the block header state. The environment is
+given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
+wall-clock time) and the protocol parameters. The block header state is shown in
+Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
+the last slot.
+
 \begin{figure}
   \emph{Block Header environments}
   \begin{equation*}
@@ -515,6 +636,41 @@
   \label{fig:ts-types:bheader}
 \end{figure}
 
+The $\mathsf{BHEAD}$ transition rule is shown in
+Figure~\ref{fig:rules:bheader}. The signal is a new block header \var{bh}, from
+its body \var{bhb} we extract:
+
+\begin{itemize}
+\item The slot \var{slot} of the block header.
+\item The hash of the block header \var{h} of the previous block header.
+\item The hot verification key \var{vk_{hot}} of the operational certificate of
+  the block header.
+\item The signature \var{\sigma} of the block header.
+\item The block header body \var{bhb}.
+\end{itemize}
+
+The transition rule is executed, if the following conditions are satisfied:
+
+\begin{itemize}
+\item The size of \var{bh} is less than or equal to the maximal size that the
+  protocol parameters allow for block headers.
+\item The \var{slot} of the block header is greater than the last slot and less
+  than or equal to the current slot \var{s_{now}}.
+\item The hash \var{h} of the previous block header in the block header state
+  matches the hash in the body of the block header.
+\item The verification key validates the signature \var{\sigma} for the block
+  header body.
+\item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
+  \var{stpools}.
+\end{itemize}
+
+The state update finally sets \var{slot} as new block header slot and hash of
+\var{bh} as the new block header hash in the block header state.
+
+This transition makes sure that the block can be applied at the current time,
+that the block header is in the right sequence and that the block header has
+been signed with the correct signing key according to the KES.
+
 \begin{question}
   Is it okay to use wall-clock in the evironment in $\BHeaderEnv$?
   See Figure~\ref{fig:ts-types:bheader}.
@@ -526,21 +682,21 @@
     {
       (\var{bhb},~\sigma) \leteq \var{bh}
       &
-      \var{slot} \leteq \bslot{bh}
+      \var{slot} \leteq \bslot{bhb}
       \\
-      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{block}
+      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{bhb}
       \\~\\
       \var{vk_{hot}}\mapsto s_0\in\var{stpools}
       &
-      t \leteq \cycle{slot} - \cycle{s_0}
+      t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
       \\~\\
-      \var{s_{last}} < \var{slot} \leq \var{s_{now}}
+      \var{s_\ell} < \var{slot} \leq \var{s_{now}}
       &
-      \var{h} = \bprev{bh}
+      \var{h} = \bprev{bhb}
       \\
-      \mathcal{V}_{\var{vk_{hot}}}{\serialised{txs}}_{\sigma}^{t}
+      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bh}}_{\sigma}^{t}
       &
-      \bHeaderSize{bh} < \fun{maxBHSize}~\var{pp}
+      \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
     }
     {
       \left(
@@ -565,6 +721,31 @@
   \caption{BHeader rules}
   \label{fig:rules:bheader}
 \end{figure}
+
+\subsection{Verifiable Random Function}
+\label{sec:verif-rand-funct}
+
+The verifiable random function (VRF) transition rule validates that a block
+header is correctly produced, i.e., the block issuer is a selected leader for
+that slot and has the right to produce the block.
+
+The verifiable random function transition used the environment shown in
+Figure~\ref{fig:ts-types:vrf} which consists of
+
+\begin{itemize}
+\item The current slot number \var{s_{now}}.
+\item The protocol parameters.
+\item The epoch nonce \var{\eta_0}.
+\item The pool stake distribution.
+\item The stake pool mapping \var{stpools}.
+\end{itemize}
+
+The VRF state is shown in Figure~\ref{fig:ts-types:vrf} and consists of
+
+\begin{itemize}
+\item The hash \var{h} of the previous block header hash.
+\item The slot \var{s_\ell} number of the last slot.
+\end{itemize}
 
 \begin{figure}
   \emph{VRF environments}
@@ -601,6 +782,31 @@
   \label{fig:ts-types:vrf}
 \end{figure}
 
+The $\mathsf{VRF}$ rule calls $\mathsf{BHEAD}$ as a subrule, its signal is a
+block header \var{bh}. For the transition it extracts the following:
+
+\begin{itemize}
+\item The block header body \var{bhb} of the block header.
+\item The verification key \var{vk} of the block issuer.
+\item The slot seed \var{ss} of the slot of the block.
+\end{itemize}
+
+This is used to validate the preconditions of the transition rule via
+verification of the following:
+
+\begin{itemize}
+\item The verification key is associated to a non-zero relative stake
+  \var{\sigma} in \var{stpools}.
+\item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
+  this slot.
+\item The verification of the proofs for the seed leader constant \var{\Seedl}
+  and the nonce seed constant \var{\Seede} succeeds.
+\end{itemize}
+
+When these preconditions are fulfilled, the transition updates the VRF states by
+replacing he hash header with \var{h'} and the slot with \var{s_\ell}, as
+returned by the application of the $\mathsf{BHEAD}$ transition rule.
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:vrf}
     \inference[VRF]
@@ -613,9 +819,9 @@
       &
       \var{ss} \leteq \slotToSeed{\bslot{bhb}}
       \\~\\
-      \verifyVrf{\Seed}{vk}{(\eta_0\seedOp ss\seedOp\Seede)}{(\bprfn{bhb})}
+      \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})}
       \\
-      \verifyVrf{\unitInterval}{vk}{(\eta_0\seedOp ss\seedOp\Seedl)}{(\bprfl{bhb})}
+      \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})}
       \\
       \var{vk}\mapsto \sigma\in\var{pd}
       &
@@ -673,6 +879,10 @@
 \subsection{Block Body Transition}
 \label{sec:block-body-trans}
 
+The block body transition updates the block body state which comprises the
+ledger state and the map describing the produced blocks. The environment of the
+$\mathsf{BBODY}$ transition are the protocol parameters.
+
 \begin{figure}
   \emph{BBody Transitions}
 
@@ -685,19 +895,51 @@
   \label{fig:ts-types:bbody}
 \end{figure}
 
+The $\mathsf{BBODY}$ transition rule is shown in Figure~\ref{fig:rules:bbody},
+its sub-rule is $\mathsf{LEDGERS}$ which does the update of the ledger
+state. The signal is a block from which we extract:
+
+\begin{itemize}
+\item The block header body \var{bhb}.
+\item The sequence of transactions \var{txs} of the block.
+\item The verification key \var{vk} of the issuer of the \var{block} and its
+  hash \var{hk}.
+\end{itemize}
+
+The transition is executed, if the following preconditions are met:
+
+\begin{itemize}
+\item The size of the block body is less than or equal to the maximal body size
+  described in the protocol parameters.
+\item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
+  \var{n} is equal to 0.
+\item The transactions \var{txs} were correctly signed by \var{vk}, producing
+  the signature \var{\sigma}.
+\end{itemize}
+
+After this, the transition system updates the mapping of the hashed stake pool
+keys to the incremented value of produced blocks (\var{n} + 1).
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:bbody}
     \inference[Block-Body]
     {
-      \var{bhb} \leteq \bhbody{block}
-      &
       \var{txs} \leteq \bbody{block}
       &
       \var{vk} \leteq \bissuer{bhb}
-      \\
-      \bSize{bh} < \fun{maxBBSize}~\var{pp}
       &
-      \var{vk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      \var{hk} \leteq \hashKey{vk}
+      \\
+      \var{\sigma} \leteq \bsig{bhb}
+      &
+      \var{bhb} \leteq \bhbody{block}
+      &
+      \\~\\
+      \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
+      &
+      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      &
+      \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\~\\
       {
         \left(
@@ -726,7 +968,7 @@
       \trans{bbody}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{ls}'} \\
-            \varUpdate{b \unionoverrideRight \{\var{vk}\mapsto n+1\}} \\
+            \varUpdate{b \unionoverrideRight \{\var{hk}\mapsto n+1\}} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -734,12 +976,17 @@
   \label{fig:rules:bbody}
 \end{figure}
 
+\subsection{Reward Update Transition}
+\label{sec:reward-update-trans}
 
-\subsection{Chain Transition}
-\label{sec:chain-trans}
+The reward update transition calculates a new $\RewardUpdate$ to apply in a
+$\mathsf{NEWEPOCH}$ transition. The environment is shown in
+Figure~\ref{fig:ts-types:reward-update}, it consists of the produced blocks
+mapping \var{b} an the epoch state \var{es}. Its state is an optional reward
+update.
 
 \begin{figure}
-  \emph{Reward Upda environments}
+  \emph{Reward Update environments}
   \begin{equation*}
     \RUpdEnv =
     \left(
@@ -752,22 +999,42 @@
   %
   \emph{Reward Update Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{ru}{\_} \var{\_} \subseteq
+    \_ \vdash \var{\_} \trans{rupd}{\_} \var{\_} \subseteq
     \powerset (\RUpdEnv \times \RewardUpdate^? \times \Slot \times \RewardUpdate^?)
   \end{equation*}
   \caption{Reward Update transition-system types}
   \label{fig:ts-types:reward-update}
 \end{figure}
 
+The transition rules are shown in Figure~\ref{fig:rules:reward-update}. There
+are three cases, one which computes a new reward update, one which leaves the
+rewards update unchanged as it has not yet been applied and finally one that
+leaves the reward update unchanged as the transition was started too early.
+
+The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
+execution of the transition role is as follows:
+
+\begin{itemize}
+\item If \var{s} is less than or equal to the sum of the first slot of its epoch
+  and the duration to start rewards \StartRewards, then the state is not
+  updated.
+\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
+  update has already been calculated but not yet applied, then the state is not
+  updated.
+\item If the current reward update \var{ru} is empty and \var{s} is greater than
+  the sum of the first slot of its epoch and the duration \StartRewards, then a
+  new rewards update is calculated and the state is updated.
+\end{itemize}
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:reward-update}
     \inference[Reward-Update]
     {
+      ru' \leteq \createRUpd{b}{es}
+      \\~\\
       s > (\firstSlot{\epoch{s}}) + \StartRewards
       &
       ru = \Nothing
-      \\~\\
-      ru' \leteq \createRUpd{ru}{es}
     }
     {
       \left(
@@ -777,7 +1044,7 @@
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\varUpdate{\var{ru}'}
+      \var{ru}\trans{rupd}{\var{s}}\varUpdate{\var{ru}'}
     }
   \end{equation}
 
@@ -796,7 +1063,7 @@
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
   \end{equation}
 
@@ -815,7 +1082,7 @@
         \end{array}}
       \right)
       \vdash
-      \var{ru}\trans{rupd}{\var{slot}}\var{ru}
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
   \end{equation}
 
@@ -823,6 +1090,29 @@
   \label{fig:rules:reward-update}
 \end{figure}
 
+\subsection{Chain Transition}
+\label{sec:chain-trans}
+
+The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
+part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
+$\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
+
+The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
+it comprises the current slot number \var{s_{now}} and the new protocol
+parameters \var{pp_n}.
+
+The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
+following:
+
+\begin{itemize}
+\item The three nonces for the $\mathsf{VRF}$.
+\item The mapping of produced blocks.
+\item The last slot \var{s_\ell}.
+\item The last epoch \var{e_\ell}.
+\item The epoch state \var{es}.
+\item The reward update \var{ru}.
+\item The stake pool distribution \var{pd}.
+\end{itemize}
 
 \begin{figure}
   \emph{Chain environments}
@@ -861,6 +1151,12 @@
   \label{fig:ts-types:chain}
 \end{figure}
 
+The $\mathsf{CHAIN}$ transition rule is shown in
+Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from the \var{block}
+we extract the block header body \var{bhb}. From \var{bhb} we extract the block
+nonce \var{\eta} and the block slot \var{s}. The transition rule itself has no
+preconditions, instead it calls all its subrules.
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:chain}
     \inference[Chain]
@@ -893,14 +1189,14 @@
               \var{e_\ell}' \\
               \eta_0' \\
               \var{b}' \\
-              \var{es}' \\
+              \var{es}'' \\
               \var{ru}' \\
               \var{pd}' \\
         \end{array}\right)}
       }
       &
       {
-        \eta \vdash
+        \eta_{0} \vdash
         {\left(\begin{array}{c}
               \eta_v \\
               \eta_c \\
@@ -951,7 +1247,7 @@
               \var{ru}' \\
           \end{array}}
         \right)
-        \vdash \var{ru}' \trans{ru}{\var{s}} \var{ru}''
+        \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
       }
       \\
       {
@@ -1001,3 +1297,8 @@
   \caption{Chain rules}
   \label{fig:rules:chain}
 \end{figure}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "ledger-spec"
+%%% End:
