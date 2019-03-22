@@ -5,12 +5,12 @@ Formal and executable specifications for the new features to be introduced by Sh
 The documents are built in our CI and can be readily accessed using the
 following links:
 
-- [Delegation Design Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec)
-- [Shelley specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
-- [Non-integer Calculations Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/nonIntegerCalculations/latest/download-by-type/doc-pdf/non-integer-calculations)
-- [Byron Chain Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec)
-- [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
-- [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/fm-ledger-rules/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
+- [Delegation Design Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec)
+- [Shelley specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
+- [Non-integer Calculations Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/nonIntegerCalculations/latest/download-by-type/doc-pdf/non-integer-calculations)
+- [Byron Chain Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec)
+- [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
+- [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
 
 ## Build tools
 
