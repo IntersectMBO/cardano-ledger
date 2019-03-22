@@ -913,6 +913,8 @@ The transition is executed, if the following preconditions are met:
   described in the protocol parameters.
 \item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
   \var{n} is equal to 0.
+\item The transactions \var{txs} were correctly signed by \var{vk}, producing
+  the signature \var{\sigma}.
 \end{itemize}
 
 After this, the transition system updates the mapping of the hashed stake pool
@@ -922,17 +924,22 @@ keys to the incremented value of produced blocks (\var{n} + 1).
   \begin{equation}\label{eq:bbody}
     \inference[Block-Body]
     {
-      \var{bhb} \leteq \bhbody{block}
-      &
       \var{txs} \leteq \bbody{block}
       &
       \var{vk} \leteq \bissuer{bhb}
       &
       \var{hk} \leteq \hashKey{vk}
       \\
+      \var{\sigma} \leteq \bsig{bhb}
+      &
+      \var{bhb} \leteq \bhbody{block}
+      &
+      \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
       \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      &
+      \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\~\\
       {
         \left(
