@@ -292,8 +292,16 @@ information in the confirmed proposal. Note that, unlike protocol updates,
 software updates take effect as soon as a proposal is confirmed. In this rule,
 we also delete the confirmed proposal id's from the set of registered
 application update proposals ($\var{raus}$), since this information is no
-longer needed once the application-name to software-version map ($\var{avs}$) is
-updated.
+longer needed once the application-name to software-version map ($\var{avs}$)
+is updated.
+
+Also note that, unlike the rules of \cref{fig:rules:upi-ec}, we need not remove
+other update proposals that refer to the software names whose versions were
+changed in $\var{avs_{new}}$. The reason for this is that the map $\var{raus}$
+can contain only one pair of the form $(\var{an}, \wcard)$ for any given
+application name $\var{an}$: in Rule~\ref{eq:rule:up-av-validity} function
+$\fun{svCanFollow}$ ensures that there is only one allowed version for any
+given application name $\var{an}$.
 
 \begin{figure}[htb]
   \begin{equation}
