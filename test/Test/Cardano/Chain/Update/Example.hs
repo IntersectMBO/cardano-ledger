@@ -6,7 +6,7 @@ module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
   , exampleProtocolVersion
   , exampleProtocolParameters
-  , exampleProtocolParameterUpdate
+  , exampleProtocolParametersUpdate
   , exampleSoftwareVersion
   , exampleSystemTag
   , exampleUpdateData
@@ -39,7 +39,7 @@ import Cardano.Chain.Update
   , Proof
   , Proposal
   , ProposalBody(..)
-  , ProtocolParameterUpdate(..)
+  , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
   , SoftforkRule(..)
@@ -94,8 +94,8 @@ exampleProtocolParameters = ProtocolParameters
     (LovelacePortion 99)
     (LovelacePortion 99)
 
-exampleProtocolParameterUpdate :: ProtocolParameterUpdate
-exampleProtocolParameterUpdate = ProtocolParameterUpdate
+exampleProtocolParametersUpdate :: ProtocolParametersUpdate
+exampleProtocolParametersUpdate = ProtocolParametersUpdate
   (Just (999 :: Word16))
   (Just (999e-6 :: NominalDiffTime))
   (Just (999 :: Natural))
@@ -173,7 +173,7 @@ exampleProposalBody :: ProposalBody
 exampleProposalBody = ProposalBody bv bvm sv hm ua
  where
   bv  = exampleProtocolVersion
-  bvm = exampleProtocolParameterUpdate
+  bvm = exampleProtocolParametersUpdate
   sv  = exampleSoftwareVersion
   hm  = Map.fromList $ zip (exampleSystemTags 10 5) (exampleUpdateDatas 10 5)
   ua  = exampleAttributes

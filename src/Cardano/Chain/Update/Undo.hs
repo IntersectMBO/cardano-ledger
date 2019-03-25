@@ -67,8 +67,8 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting (EpochIndex, SlotId, SlottingData)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
-import Cardano.Chain.Update.ProtocolParameterUpdate
-  (ProtocolParameterUpdate(..))
+import Cardano.Chain.Update.ProtocolParametersUpdate
+  (ProtocolParametersUpdate(..))
 import Cardano.Chain.Update.SoftwareVersion
   (NumSoftwareVersion, SoftwareVersion)
 import Cardano.Chain.Update.Vote
@@ -343,8 +343,8 @@ mkUProposalState slot proposal = UndecidedProposalState
 
 -- | State of ProtocolVersion from update proposal
 data ProtocolVersionState = ProtocolVersionState
-  { bvsModifier          :: !ProtocolParameterUpdate
-  -- ^ 'ProtocolParameterUpdate' associated with this block version
+  { bvsModifier          :: !ProtocolParametersUpdate
+  -- ^ 'ProtocolParametersUpdate' associated with this block version
   , bvsConfirmedEpoch    :: !(Maybe EpochIndex)
   -- ^ Epoch when proposal which generated this block version was confirmed
   , bvsIssuersStable     :: !(Set StakeholderId)

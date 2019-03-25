@@ -22,7 +22,7 @@ import Cardano.Crypto (Hash, abstractHash)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
 import Test.Cardano.Chain.Update.Example
-  ( exampleProtocolParameterUpdate
+  ( exampleProtocolParametersUpdate
   , examplePayload
   , exampleProof
   , exampleProposal
@@ -38,7 +38,7 @@ import Test.Cardano.Chain.Update.Example
   )
 import Test.Cardano.Chain.Update.Gen
   ( genApplicationName
-  , genProtocolParameterUpdate
+  , genProtocolParametersUpdate
   , genPayload
   , genProof
   , genProposal
@@ -95,18 +95,18 @@ roundTripProtocolParameters =
   eachOf 50 genProtocolParameters roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
--- ProtocolParameterUpdate
+-- ProtocolParametersUpdate
 --------------------------------------------------------------------------------
 
-goldenProtocolParameterUpdate :: Property
-goldenProtocolParameterUpdate = goldenTestBi
+goldenProtocolParametersUpdate :: Property
+goldenProtocolParametersUpdate = goldenTestBi
   ppu
-  "test/golden/bi/update/ProtocolParameterUpdate"
-  where ppu = exampleProtocolParameterUpdate
+  "test/golden/bi/update/ProtocolParametersUpdate"
+  where ppu = exampleProtocolParametersUpdate
 
-roundTripProtocolParameterUpdate :: Property
-roundTripProtocolParameterUpdate =
-  eachOf 50 genProtocolParameterUpdate roundTripsBiBuildable
+roundTripProtocolParametersUpdate :: Property
+roundTripProtocolParametersUpdate =
+  eachOf 50 genProtocolParametersUpdate roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- HashRaw
