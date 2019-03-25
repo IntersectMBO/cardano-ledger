@@ -30,6 +30,7 @@ library
                      STS.Epoch
                      STS.Ledger
                      STS.Newpp
+                     STS.Ocert
                      STS.Pool
                      STS.PoolReap
                      STS.Snap
