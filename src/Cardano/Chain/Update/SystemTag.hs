@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -23,6 +24,7 @@ import Data.Aeson (FromJSON(..))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveToJSON)
 import Data.Char (isAscii)
+import Data.Data (Data)
 import qualified Data.Text as T
 import Distribution.System (Arch(..), OS(..))
 import Distribution.Text (display)
@@ -54,6 +56,7 @@ systemTagMaxLength = 10
 data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text
+  deriving Data
 
 instance B.Buildable SystemTagError where
   build = \case

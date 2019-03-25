@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving         #-}
@@ -10,6 +11,7 @@ where
 import Cardano.Prelude
 
 import Data.Aeson (ToJSON(..))
+import Data.Data (Data)
 import Formatting.Buildable (Buildable)
 
 import Cardano.Binary.Class (Bi(..))
@@ -17,7 +19,7 @@ import Cardano.Binary.Class (Bi(..))
 -- | The number of slots per epoch.
 newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
-  } deriving (Eq, Ord, Read, Show, Buildable, Generic)
+  } deriving (Data, Eq, Ord, Read, Show, Buildable, Generic)
 
 instance Bi EpochSlots where
   encode = encode . unEpochSlots

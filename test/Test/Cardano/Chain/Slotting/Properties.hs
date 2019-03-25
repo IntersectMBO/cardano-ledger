@@ -8,6 +8,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
+import Data.Data (Constr, toConstr)
 import Formatting (build, sformat)
 
 import Hedgehog
@@ -29,6 +30,8 @@ import Cardano.Chain.Slotting
   , FlatSlotId(..)
   , EpochSlots(..)
   , LocalSlotIndex(..)
+  , LocalSlotIndexError(..)
+  , SlottingDataError(..)
   , flattenSlotId
   , unflattenSlotId
   , mkSlottingData
@@ -62,28 +65,40 @@ import Test.Cardano.Chain.Slotting.Gen
 -- Check that `mkSlottingData` does not fail for
 -- allowed values of `SlottingData`.
 prop_mkSlottingData :: Property
-prop_mkSlottingData = eachOf
-  100
-  (getSlottingDataMap <$> genSlottingData)
-  (assertEitherIsRight mkSlottingData)
+prop_mkSlottingData = withTests 100 . property $ do
+  sD <- forAll genSlottingData
+  (assertIsRight . mkSlottingData $ getSlottingDataMap sD)
 
 -- Check that `mkSlottingData` fails for
 -- `SlottingData` maps with too few indicies
 -- i.e less than to 2.
 prop_mkSlottingDataTooFewIndices :: Property
-prop_mkSlottingDataTooFewIndices = eachOf
-  10
-  (getSlottingDataMap <$> genSlottingDataTooFewIndicies)
-  (assertEitherIsLeft validateSlottingDataMap)
+prop_mkSlottingDataTooFewIndices = withTests 10 . property $ do
+  slotDataMap <- forAll genSlottingDataTooFewIndicies
+  assertIsLeftConstr
+    dummySlotDataTooFewIndicies
+    (validateSlottingDataMap $ getSlottingDataMap slotDataMap)
+
 
 -- Check that `mkSlottingData` fails for
 -- `SlottingData` maps with invalid indicies
 -- i.e indicies are not ascending order.
 prop_mkSlottingDataInvalidIndices :: Property
-prop_mkSlottingDataInvalidIndices = eachOf
-  100
-  (getSlottingDataMap <$> genSlottingDataInvalidIndicies)
-  (assertEitherIsLeft validateSlottingDataMap)
+prop_mkSlottingDataInvalidIndices = withTests 100 . property $ do
+  slotDataMap <- forAll genSlottingDataInvalidIndicies
+  assertIsLeftConstr
+    dummySlotDataInvalidIndicies
+    (validateSlottingDataMap $ getSlottingDataMap slotDataMap)
+
+--------------------------------------------------------------------------------
+-- Dummy values for constructor comparison in assertIsLeftConstr tests
+--------------------------------------------------------------------------------
+
+dummySlotDataInvalidIndicies :: Constr
+dummySlotDataInvalidIndicies = toConstr $ SlottingDataInvalidIndices [] []
+
+dummySlotDataTooFewIndicies :: Constr
+dummySlotDataTooFewIndicies = toConstr $ SlottingDataTooFewIndices 1
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex
@@ -106,7 +121,9 @@ prop_localSlotIndexToEnumOverflow :: Property
 prop_localSlotIndexToEnumOverflow = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
   let lsi = 1 + unEpochSlots sc
-  assertEitherIsLeft (localSlotIndexToEnum sc) (fromIntegral lsi)
+  assertIsLeftConstr
+    dummyLocSlotIndEnumOverflow
+    (localSlotIndexToEnum sc (fromIntegral lsi))
 
 -- Check that `localSlotIndexToEnum` fails for
 -- `LocalSlotIndex` values that are negative.
@@ -114,41 +131,47 @@ prop_localSlotIndexToEnumUnderflow :: Property
 prop_localSlotIndexToEnumUnderflow = withTests 100 . property $ do
   tVal <- forAll (Gen.int (Range.constant (negate 1) minBound))
   sc   <- forAll genLsiEpochSlots
-  assertEitherIsLeft (localSlotIndexToEnum sc) tVal
+  assertIsLeftConstr dummyLocSlotIndEnumUnderflow (localSlotIndexToEnum sc tVal)
 
 -- Check that `localSlotIndexPred` does not fail
 -- for allowed values of `LocalSlotIndex` and `EpochSlots`.
 prop_localSlotIndexPred :: Property
 prop_localSlotIndexPred =
-  withTests 100 . property $ do
-    es <- forAll $ Gen.filter (\x -> unEpochSlots x /= 1) genLsiEpochSlots
-    -- Filter out LocalSlotIndex = 0 and EpochSlots = 1
-    -- because you can't find the predecessor of the 0th slot.
-    lsi <- forAll $ Gen.filter (/= UnsafeLocalSlotIndex 0) (genLocalSlotIndex es)
-    assertEitherIsRight (localSlotIndexPred es) lsi
+  withTests 100
+    . property
+    $ do
+        es  <- forAll $ Gen.filter (\x -> unEpochSlots x /= 1) genLsiEpochSlots
+        -- Filter out LocalSlotIndex = 0 and EpochSlots = 1
+        -- because you can't find the predecessor of the 0th slot.
+        lsi <- forAll
+          $ Gen.filter (/= UnsafeLocalSlotIndex 0) (genLocalSlotIndex es)
+        assertIsRight $ localSlotIndexPred es lsi
 
 -- Check that `localSlotIndexPred` fails for
 -- the lower boundary of `LocalSlotIndex`. In
 -- other words, the 0th slot does not have
 -- a predecessor.
 prop_localSlotIndexPredMinbound :: Property
-prop_localSlotIndexPredMinbound = eachOf
-  100
-  genLsiEpochSlots
-  (assertEitherIsLeft $ flip localSlotIndexPred (UnsafeLocalSlotIndex 0))
+prop_localSlotIndexPredMinbound = withTests 100 . property $ do
+  eSlots <- forAll genLsiEpochSlots
+  assertIsLeftConstr
+    dummyLocSlotIndEnumUnderflow
+    (localSlotIndexPred eSlots (UnsafeLocalSlotIndex 0))
 
 -- Check that `localSlotIndexSucc` does not fail
 -- for allowed values of `LocalSlotIndex` and `EpochSlots`.
 prop_localSlotIndexSucc :: Property
 prop_localSlotIndexSucc =
-  withTests 100 . property $ do
-    es  <- forAll genLsiEpochSlots
-    -- Generate a `LocalSlotIndex` at least two less than the `EpochSlots`
-    -- to avoid overflow errors as `LocalSlotIndex` starts
-    -- from 0th slot.
-    lsi <- forAll $ genLocalSlotIndex es
-    let esPlus2 = EpochSlots $ unEpochSlots es + 2
-    assertEitherIsRight (localSlotIndexSucc esPlus2) lsi
+  withTests 100
+    . property
+    $ do
+        es  <- forAll genLsiEpochSlots
+        -- Generate a `LocalSlotIndex` at least two less than the `EpochSlots`
+        -- to avoid overflow errors as `LocalSlotIndex` starts
+        -- from 0th slot.
+        lsi <- forAll $ genLocalSlotIndex es
+        let esPlus2 = EpochSlots $ unEpochSlots es + 2
+        assertIsRight $ localSlotIndexSucc esPlus2 lsi
 
 -- Check that `localSlotIndexSucc` fails for
 -- the upper boundary of `LocalSlotIndex`. In
@@ -158,15 +181,20 @@ prop_localSlotIndexSucc =
 prop_localSlotIndexSuccMaxbound :: Property
 prop_localSlotIndexSuccMaxbound = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots
-  assertEitherIsLeft
-    (localSlotIndexSucc sc)
-    (UnsafeLocalSlotIndex $ 1 + (fromIntegral $ unEpochSlots sc))
+  assertIsLeftConstr
+    dummyLocSlotIndEnumOverflow
+    ( localSlotIndexSucc sc
+    $ UnsafeLocalSlotIndex
+    $ 1
+    + (fromIntegral $ unEpochSlots sc)
+    )
 
 -- Check that `localSlotIndexSucc . localSlotIndexPred == id`.
 prop_localSlotIndexSuccPredisId :: Property
 prop_localSlotIndexSuccPredisId = withTests 100 . property $ do
   sc  <- forAll genLsiEpochSlots
-  lsi <- forAll $ Gen.filter (\x -> unLocalSlotIndex x /= 0) (genLocalSlotIndex sc)
+  lsi <- forAll
+    $ Gen.filter (\x -> unLocalSlotIndex x /= 0) (genLocalSlotIndex sc)
   let predSucc = localSlotIndexPred sc lsi >>= localSlotIndexSucc sc
   compareValueRight lsi predSucc
 
@@ -175,8 +203,9 @@ prop_localSlotIndexPredSuccisId :: Property
 prop_localSlotIndexPredSuccisId = withTests 100 . property $ do
   es  <- forAll genLsiEpochSlots
   lsi <- forAll $ genLocalSlotIndex es
-  let esPlus2 = EpochSlots $ unEpochSlots es + 2
-      succPred = localSlotIndexSucc esPlus2 lsi >>= localSlotIndexPred esPlus2
+  let
+    esPlus2  = EpochSlots $ unEpochSlots es + 2
+    succPred = localSlotIndexSucc esPlus2 lsi >>= localSlotIndexPred esPlus2
   compareValueRight lsi succPred
 
 -- Check that `localSlotIndexToEnum . localSlotIndexFromEnum == id`.
@@ -194,8 +223,24 @@ prop_localSlotIndexFromEnumToEnum = withTests 100 . property $ do
   let sIndex = fromIntegral $ unEpochSlots sc - 1 :: Int
   let lsi    = localSlotIndexToEnum sc sIndex
   case lsi of
-    Left  err  -> failWith Nothing (show $ sformat build err)
+    Left err ->
+      withFrozenCallStack $ failWith Nothing (show $ sformat build err)
     Right lsi' -> localSlotIndexFromEnum lsi' === sIndex
+
+--------------------------------------------------------------------------------
+-- Dummy values for constructor comparison in assertIsLeftConstr tests
+--------------------------------------------------------------------------------
+
+dummyLocSlotIndEnumOverflow :: Constr
+dummyLocSlotIndEnumOverflow =
+  toConstr $ LocalSlotIndexEnumOverflow (EpochSlots 1) 1
+
+dummyLocSlotIndEnumUnderflow :: Constr
+dummyLocSlotIndEnumUnderflow = toConstr $ LocalSlotIndexEnumUnderflow 1
+
+dummyLocSlotIndIndexOverflow :: Constr
+dummyLocSlotIndIndexOverflow =
+  toConstr $ LocalSlotIndexOverflow (EpochSlots 1) 1
 
 --------------------------------------------------------------------------------
 -- SlotId

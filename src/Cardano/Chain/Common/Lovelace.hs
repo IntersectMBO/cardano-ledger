@@ -22,7 +22,7 @@
 
 module Cardano.Chain.Common.Lovelace
   ( Lovelace
-  , LovelaceError
+  , LovelaceError(..)
   , mkLovelace
   , mkKnownLovelace
   , lovelaceF
@@ -96,7 +96,7 @@ data LovelaceError
   | LovelaceTooLarge Integer
   | LovelaceTooSmall Integer
   | LovelaceUnderflow Word64 Word64
-  deriving (Eq, Show)
+  deriving (Data, Eq, Show)
 
 instance B.Buildable LovelaceError where
   build = \case

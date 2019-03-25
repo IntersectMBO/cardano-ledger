@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -17,6 +18,7 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
 import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
+import Data.Data (Data)
 import Data.Ix (Ix)
 import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
@@ -29,6 +31,7 @@ import Cardano.Binary.Class (Bi(..))
 newtype EpochIndex = EpochIndex
   { getEpochIndex :: Word64
   } deriving ( Show
+             , Data
              , Eq
              , Ord
              , Num

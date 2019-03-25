@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -19,6 +20,7 @@ import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson (FromJSON(..))
 import Data.Aeson.TH (defaultOptions, deriveToJSON)
 import Data.Char (isAscii)
+import Data.Data (Data)
 import qualified Data.Text as T
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
@@ -42,7 +44,7 @@ instance FromJSON ApplicationName where
 data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text
-  deriving (Eq, Show)
+  deriving (Data, Eq, Show)
 
 instance B.Buildable ApplicationNameError where
   build = \case

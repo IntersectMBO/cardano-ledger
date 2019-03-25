@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -24,11 +25,12 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Data (Data)
 import Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary.Class (Bi(..))
-import Cardano.Chain.Slotting.EpochSlots (EpochSlots (..))
+import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 
 
 -- | Index of slot inside a concrete epoch.
@@ -46,6 +48,7 @@ data LocalSlotIndexError
   = LocalSlotIndexEnumOverflow EpochSlots Int
   | LocalSlotIndexEnumUnderflow Int
   | LocalSlotIndexOverflow EpochSlots Word64
+  deriving Data
 
 instance B.Buildable LocalSlotIndexError where
   build = \case
