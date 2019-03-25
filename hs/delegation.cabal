@@ -13,6 +13,7 @@ source-repository head
 
 library
   exposed-modules:   BaseTypes
+                     BlockChain
                      Coin
                      Keys
                      UTxO
@@ -22,6 +23,7 @@ library
                      LedgerState
                      Delegation.PoolParams
                      Delegation.Certificates
+                     OCert
                      STS.Deleg
                      STS.Delegs
                      STS.Delpl
