@@ -6,6 +6,14 @@ module BlockChain
   , BHeader(..)
   , Block(..)
   , bhHash
+  , bHeaderSize
+  , bBodySize
+  , slotToSeed
+    -- accessor functions
+  , bheader
+  , bhbody
+  , bbody
+  , hsig
   ) where
 
 import           Crypto.Hash           (Digest, SHA256, hash)
@@ -76,3 +84,24 @@ data Block =
   Block BHeader
         [U.Tx]
   deriving (Show, Eq)
+
+bHeaderSize :: BHeader -> Int
+bHeaderSize = BA.length . BS.pack . show
+
+bBodySize :: [U.Tx] -> Int
+bBodySize txs = foldl (+) 0 (map (BA.length . BS.pack . show) txs)
+
+slotToSeed :: Slot.Slot -> Seed
+slotToSeed (Slot.Slot s) = Nonce (fromIntegral s)
+
+bheader :: Block -> BHeader
+bheader (Block bh _) = bh
+
+bbody :: Block -> [U.Tx]
+bbody (Block _ txs) = txs
+
+bhbody :: BHeader -> BHBody
+bhbody (BHeader b _) = b
+
+hsig :: BHeader -> Keys.Sig BHBody
+hsig (BHeader _ s) = s
