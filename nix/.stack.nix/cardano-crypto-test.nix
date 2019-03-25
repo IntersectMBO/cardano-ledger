@@ -19,8 +19,8 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.bytestring)
-          (hsPkgs.cardano-base)
-          (hsPkgs.cardano-base-test)
+          (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-binary-test)
           (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-prelude)
@@ -34,11 +34,4 @@
           ];
         };
       };
-    } // {
-    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "https://github.com/input-output-hk/cardano-ledger";
-      rev = "fa7d892c596ccd54e852236126fc30a6e5ff0a9b";
-      sha256 = "0v6wd3l9n42ca2czq09i5z0ff7fq9dq7337hh67xvb2q058mvn21";
-      });
-    postUnpack = "sourceRoot+=/crypto/test; echo source root reset to \$sourceRoot";
-    }
+    } // rec { src = (pkgs.lib).mkDefault .././../crypto/test; }
