@@ -17,8 +17,6 @@ module PParams
   , poolDecayRate
   , rho
   , tau
-  , UnitInterval
-  , mkUnitInterval
   , intervalValue
   , interval0
   , interval1
@@ -27,28 +25,11 @@ module PParams
 
 import           Numeric.Natural (Natural)
 
+import           BaseTypes
 import           Coin            (Coin (..))
 import           Slot            (Epoch(..))
 
 import           Lens.Micro.TH   (makeLenses)
-
--- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnitInterval Rational
-    deriving(Show, Ord, Eq)
-
--- | Return a `UnitInterval` type if `r` is in [0; 1].
-mkUnitInterval :: Rational -> Maybe UnitInterval
-mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnitInterval r else Nothing
-
--- | Get rational value of `UnitInterval` type
-intervalValue :: UnitInterval -> Rational
-intervalValue (UnitInterval v) = v
-
-interval0 :: UnitInterval
-interval0 = UnitInterval 0
-
-interval1 :: UnitInterval
-interval1 = UnitInterval 1
 
 data PParams = PParams
   { -- |The linear factor for the minimum fee calculation

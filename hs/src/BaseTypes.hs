@@ -4,6 +4,11 @@ module BaseTypes
   ( FixedPoint
   , fpPrecision
   , fpEpsilon
+  , UnitInterval
+  , mkUnitInterval
+  , intervalValue
+  , interval0
+  , interval1
   ) where
 
 import qualified Data.Fixed as FP
@@ -22,3 +27,21 @@ fpPrecision = (10::FixedPoint)^(34::Integer)
 
 fpEpsilon :: FixedPoint
 fpEpsilon = (10::FixedPoint)^(17::Integer)
+
+-- | Type to represent a value in the unit interval [0; 1]
+newtype UnitInterval = UnitInterval Rational
+    deriving(Show, Ord, Eq)
+
+-- | Return a `UnitInterval` type if `r` is in [0; 1].
+mkUnitInterval :: Rational -> Maybe UnitInterval
+mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnitInterval r else Nothing
+
+-- | Get rational value of `UnitInterval` type
+intervalValue :: UnitInterval -> Rational
+intervalValue (UnitInterval v) = v
+
+interval0 :: UnitInterval
+interval0 = UnitInterval 0
+
+interval1 :: UnitInterval
+interval1 = UnitInterval 1

@@ -120,7 +120,7 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
                                                  movingAvgExp,
                                                  keyDeposit, minRefund,
-                                                 decayRate, UnitInterval)
+                                                 decayRate)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)

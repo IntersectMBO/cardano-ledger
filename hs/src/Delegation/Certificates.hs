@@ -20,7 +20,7 @@ import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..))
 import           PParams (PParams(..), decayRate, minRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
-                                 poolDecayRate, intervalValue, UnitInterval)
+                                 poolDecayRate)
 
 import           Delegation.PoolParams
 

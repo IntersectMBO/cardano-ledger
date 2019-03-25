@@ -14,6 +14,7 @@ import           Lens.Micro              ((^.), (&), (.~))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import           BaseTypes
 import           Coin
 import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(..))
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
