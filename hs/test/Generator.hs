@@ -32,6 +32,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
+import           BaseTypes
 import           Coin
 import           Keys
 import           LedgerState     (LedgerState (..),
@@ -44,7 +45,7 @@ import           LedgerState     (LedgerState (..),
                                  )
 import           Slot
 import           UTxO
-import           PParams              (PParams(..), interval0, mkUnitInterval)
+import           PParams              (PParams(..))
 import           Delegation.Certificates  (DCert(..), StakeKeys(..))
 import           Delegation.PoolParams (PoolParams(..), Delegation(..), RewardAcnt(..))
 

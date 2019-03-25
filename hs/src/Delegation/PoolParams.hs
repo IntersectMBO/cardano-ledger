@@ -25,9 +25,9 @@ import           Data.Set      (Set)
 import           Lens.Micro    ((^.))
 import           Lens.Micro.TH (makeLenses)
 
+import           BaseTypes
 import           Coin          (Coin)
 import           Keys
-import           PParams
 
 -- |An account based address for a rewards
 newtype RewardAcnt = RewardAcnt
