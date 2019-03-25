@@ -198,7 +198,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{bheader} & \Block \to \BHeader \\
-      \fun{bhbody} & \Block \to \BHBody \\
+      \fun{bhbody} & \BHeader \to \BHBody \\
       \fun{hsig} & \BHeader \to \Sig\\
       \fun{bbody} & \Block \to \seqof{\Tx} \\
       \fun{bprev} & \BHBody \to \HashHeader\\
