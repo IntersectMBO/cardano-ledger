@@ -45,8 +45,8 @@ library
                      , binary
                      , bytestring
                      , canonical-json
-                     , cardano-base
-                     , cardano-base-test
+                     , cardano-binary
+                     , cardano-binary-test
                      , cardano-ledger
                      , cardano-crypto
                      , cardano-crypto-test

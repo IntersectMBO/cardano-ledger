@@ -10,8 +10,6 @@
 module Cardano.Chain.Delegation.Payload
   ( APayload(..)
   , Payload
-  , PayloadError(..)
-  , checkPayload
   , decodeAPayload
   , unsafePayload
   )
@@ -19,9 +17,7 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
-import Data.List (nub)
-import Formatting (bprint, int, stext)
+import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
 
 import Cardano.Binary.Class
@@ -35,11 +31,7 @@ import Cardano.Binary.Class
   )
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Crypto
-  ( ProtocolMagicId
-  , decodeAProxyVerificationKey
-  , validateProxyVerificationKey
-  , AProxyVerificationKey(..)
-  )
+  ( decodeAProxyVerificationKey )
 
 
 -- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing
@@ -75,30 +67,3 @@ decodeAPayload = do
   (Annotated p a) <- annotatedDecoder
     (decodeListWith decodeAProxyVerificationKey)
   pure (UnsafeAPayload p a)
-
-data PayloadError
-  = PayloadDuplicateIssuer
-  | PayloadPSKError Text
-
-instance Buildable PayloadError where
-  build = \case
-    PayloadDuplicateIssuer -> bprint
-      "Encountered multiple delegation certificates from the same issuer."
-    PayloadPSKError err -> bprint
-      ( "ProxyVerificationKey invalid when checking Delegation.Payload.\n Error: "
-      . stext
-      )
-      err
-
-checkPayload
-  :: MonadError PayloadError m => ProtocolMagicId -> APayload ByteString -> m ()
-checkPayload protocolMagicId (UnsafeAPayload payload _) = do
-  let issuers = pskIssuerPk <$> payload
-  (length issuers == length (nub issuers)) `orThrowError` PayloadDuplicateIssuer
-
-  forM_
-    payload
-    ( liftEither
-    . first PayloadPSKError
-    . validateProxyVerificationKey protocolMagicId
-    )

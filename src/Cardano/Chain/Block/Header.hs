@@ -22,6 +22,7 @@ module Cardano.Chain.Block.Header
   -- * Accessors
   , headerSlot
   , headerLeaderKey
+  , headerLength
   , headerDifficulty
   , headerSignature
   , headerProtocolVersion
@@ -284,6 +285,9 @@ headerToSign h = ToSign
   (headerSlot h)
   (headerDifficulty h)
   (headerExtraData h)
+
+headerLength :: AHeader ByteString -> Int64
+headerLength = fromIntegral . BS.length . headerAnnotation
 
 data HeaderError
   = HeaderConsensusError ConsensusError

@@ -38,7 +38,7 @@ import Cardano.Chain.Block
   ( ChainValidationError
   , ChainValidationState
   , initialChainValidationState
-  , updateChain
+  , updateBlock
   )
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
@@ -70,7 +70,7 @@ passConcreteValidation tr = void $ evalEither res
     :: ChainValidationState
     -> (State CHAIN, Abstract.Block)
     -> Either ChainValidationError ChainValidationState
-  elaborateAndUpdate cst (ast, ab) = updateChain
+  elaborateAndUpdate cst (ast, ab) = updateBlock
     config
     cst
     (elaborateBS config aenv ast cst ab)

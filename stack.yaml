@@ -3,6 +3,8 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/2256
 packages:
   - .
   - test
+  - crypto
+  - crypto/test
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
@@ -12,16 +14,10 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: bd978263ab884c4b27c940fcfe2d1ee8604afc5f
+    commit: 2f33cbf9101dfee1cb488271ec96e210329eec96
     subdirs:
-      - .
-      - test
-
-  - git: https://github.com/input-output-hk/cardano-ledger
-    commit: fa7d892c596ccd54e852236126fc30a6e5ff0a9b
-    subdirs:
-      - crypto
-      - crypto/test
+      - binary
+      - binary/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
     commit: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c

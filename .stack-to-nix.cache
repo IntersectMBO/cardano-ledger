@@ -34,3 +34,5 @@ https://github.com/input-output-hk/cardano-ledger-specs 965b32be3361b2ed404e1e58
 https://github.com/input-output-hk/cardano-ledger-specs 965b32be3361b2ed404e1e58a6fb3cf525d3a26c specs/chain/hs 1bg72ac099vx8xrkslm3nrqvgcvbaddlb43c36bn3bz4ssai7gd7 cs-blockchain .stack.nix/cs-blockchain.nix
 https://github.com/input-output-hk/cardano-mainnet-mirror 0232971dddd5cd235c5a0c18d7b4f342a887276f . 16yqqwypl4y6hzagsxz0k1hbw1lkk2bdiyj0kl32g24ydwp12ggd cardano-mainnet-mirror .stack.nix/cardano-mainnet-mirror.nix
 https://github.com/hedgehogqa/haskell-hedgehog 2505055760d06ba6343f803783ed023fb0ed6c48 hedgehog 0m29y881kbqvs12vjcbaaqrpbqbc2rvg3ffwx5wfaymbn1djyz9q hedgehog .stack.nix/hedgehog.nix
+https://github.com/input-output-hk/cardano-base 2f33cbf9101dfee1cb488271ec96e210329eec96 binary 0ar9pwf1ibbla60pns6dqcmc6wc705j4nqfd6752xbij8ra144mi cardano-binary .stack.nix/cardano-binary.nix
+https://github.com/input-output-hk/cardano-base 2f33cbf9101dfee1cb488271ec96e210329eec96 binary/test 0ar9pwf1ibbla60pns6dqcmc6wc705j4nqfd6752xbij8ra144mi cardano-binary-test .stack.nix/cardano-binary-test.nix

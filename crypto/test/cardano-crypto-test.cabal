@@ -30,8 +30,8 @@ library
 
   build-depends:       base
                      , bytestring
-                     , cardano-base
-                     , cardano-base-test
+                     , cardano-binary
+                     , cardano-binary-test
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude
