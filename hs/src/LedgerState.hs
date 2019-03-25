@@ -27,6 +27,7 @@ module LedgerState
   , rewardPool
   , PState(..)
   , avgs
+  , cCounters
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
@@ -226,6 +227,8 @@ data PState = PState
     , _retiring    :: Map.Map HashKey Epoch
       -- |Moving average for key in epoch.
     , _avgs        :: Avgs
+      -- | Operational Certificate Counters.
+    , _cCounters   :: Map.Map HashKey Natural
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -253,7 +256,8 @@ emptyDState :: DState
 emptyDState = DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty
 
 emptyPState :: PState
-emptyPState = PState (StakePools Map.empty) Map.empty Map.empty (Avgs Map.empty)
+emptyPState =
+  PState (StakePools Map.empty) Map.empty Map.empty (Avgs Map.empty) Map.empty
 
 data UTxOState =
     UTxOState
@@ -805,7 +809,7 @@ stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' = ds
-      PState (StakePools stpools) _ _ _              = ps
+      PState (StakePools stpools) _ _ _ _             = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
       Stake baseStake'   = baseStake outs
