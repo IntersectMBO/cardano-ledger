@@ -34,6 +34,7 @@ library
                      STS.Pool
                      STS.PoolReap
                      STS.Snap
+                     STS.Updn
                      STS.Utxo
                      STS.Utxow
   hs-source-dirs: src

@@ -1,6 +1,7 @@
 module BlockChain
   ( Seed
   , seedOp
+  , mkNonce
   , HashHeader(..)
   , BHBody(..)
   , BHeader(..)
@@ -14,6 +15,8 @@ module BlockChain
   , bhbody
   , bbody
   , hsig
+    --
+  , slotsPrior
   ) where
 
 import           Crypto.Hash           (Digest, SHA256, hash)
@@ -49,6 +52,9 @@ data Seed
 
 seedOp :: Seed -> Seed -> Seed
 seedOp = SeedOp
+
+mkNonce :: Integer -> Seed
+mkNonce = Nonce
 
 data Proof a =
   Proof a
@@ -105,3 +111,6 @@ bhbody (BHeader b _) = b
 
 hsig :: BHeader -> Keys.Sig BHBody
 hsig (BHeader _ s) = s
+
+slotsPrior :: Slot.Duration
+slotsPrior = 10 -- TODO: what is a realistic value for this?
