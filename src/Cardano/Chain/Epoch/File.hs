@@ -30,6 +30,7 @@ import System.FilePath ((-<.>))
 import Cardano.Binary.Class (DecoderError, decodeFull, decodeFullDecoder, slice)
 import Cardano.Chain.Block.Block (ABlockOrBoundary(..), decodeABlockOrBoundary)
 import Cardano.Chain.Block.Undo (ABlund, Undo)
+import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Prelude
 
 -- Epoch file format:
@@ -67,8 +68,11 @@ loadFileWithHeader file header =
       else lift $ throwError (ParseErrorMissingHeader file)
 
 parseEpochFile
-  :: FilePath -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
-parseEpochFile = S.mapMaybe eitherToMaybe . parseEpochFileWithBoundary
+  :: EpochSlots
+  -> FilePath
+  -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
+parseEpochFile epochSlots =
+  S.mapMaybe eitherToMaybe . parseEpochFileWithBoundary epochSlots
  where
   eitherToMaybe
     :: (ABlockOrBoundary ByteString, Undo) -> Maybe (ABlund ByteString)
@@ -77,14 +81,15 @@ parseEpochFile = S.mapMaybe eitherToMaybe . parseEpochFileWithBoundary
     (ABOBBlock    aBlock, undo) -> Just (aBlock, undo)
 
 parseEpochFileWithBoundary
-  :: FilePath
+  :: EpochSlots
+  -> FilePath
   -> Stream
        (Of (ABlockOrBoundary ByteString, Undo))
        (ExceptT ParseError ResIO)
        ()
-parseEpochFileWithBoundary file = do
+parseEpochFileWithBoundary epochSlots file = do
   s <- S.mapM liftDecoderError
-    $ decodedWith getSlotData (boundaryBytes <> bytes)
+    $ decodedWith (getSlotData epochSlots) (boundaryBytes <> bytes)
   liftBinaryError s
  where
   boundaryBytes :: SBS.ByteString (ExceptT ParseError ResIO) ()
@@ -112,23 +117,27 @@ parseEpochFileWithBoundary file = do
       throwError (ParseErrorBinary file offset (toS message))
 
 parseEpochFilesWithBoundary
-  :: [FilePath]
+  :: EpochSlots
+  -> [FilePath]
   -> Stream
        (Of (ABlockOrBoundary ByteString, Undo))
        (ExceptT ParseError ResIO)
        ()
-parseEpochFilesWithBoundary fs =
-  foldr (<>) mempty (parseEpochFileWithBoundary <$> fs)
+parseEpochFilesWithBoundary epochSlots fs =
+  foldr (<>) mempty (parseEpochFileWithBoundary epochSlots <$> fs)
 
 parseEpochFiles
-  :: [FilePath] -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
-parseEpochFiles fs = foldr (<>) mempty (parseEpochFile <$> fs)
+  :: EpochSlots
+  -> [FilePath]
+  -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
+parseEpochFiles epochSlots fs =
+  foldr (<>) mempty (parseEpochFile epochSlots <$> fs)
 
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
 
-getSlotData :: B.Get (Either DecoderError (ABlockOrBoundary ByteString, Undo))
-getSlotData = runExceptT $ do
+getSlotData :: EpochSlots -> B.Get (Either DecoderError (ABlockOrBoundary ByteString, Undo))
+getSlotData epochSlots = runExceptT $ do
   header <- lift $ B.getLazyByteString (LBS.length slotDataHeader)
   lift $ guard (header == slotDataHeader)
   blockSize <- lift getWord32be
@@ -137,7 +146,7 @@ getSlotData = runExceptT $ do
     blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
     bb         <- ExceptT . pure $ decodeFullDecoder
       "ABlockOrBoundary"
-      decodeABlockOrBoundary
+      (decodeABlockOrBoundary epochSlots)
       blockBytes
     pure $ map (LBS.toStrict . slice blockBytes) bb
   undo <- ExceptT $ decodeFull <$> B.getLazyByteString (fromIntegral undoSize)

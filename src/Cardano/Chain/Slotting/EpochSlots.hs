@@ -5,6 +5,7 @@
 
 module Cardano.Chain.Slotting.EpochSlots
   ( EpochSlots(..)
+  , WithEpochSlots (..)
   )
 where
 
@@ -26,3 +27,10 @@ instance Bi EpochSlots where
   decode = EpochSlots <$> decode
 
 deriving instance ToJSON EpochSlots
+
+-- | Data with an accompanying slots per epoch context.
+data WithEpochSlots a = WithEpochSlots
+  { epochSlots       :: EpochSlots
+  , unWithEpochSlots :: a
+  }
+  deriving (Show, Eq)

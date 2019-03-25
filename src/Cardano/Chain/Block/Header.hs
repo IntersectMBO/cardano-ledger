@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -36,7 +37,9 @@ module Cardano.Chain.Block.Header
   , dropBoundaryHeader
   , wrapBoundaryBytes
   , encodeHeader
+  , encodeHeader'
   , decodeHeader
+  , decodeHeader'
   , decodeAHeader
   , HeaderError(..)
   , verifyHeader
@@ -49,8 +52,13 @@ module Cardano.Chain.Block.Header
   , consensusData
   , verifyConsensusData
 
+  -- * 'ConsensusData' encoding and decoding
+  , encodeConsensusData
+  , decodeConsensusData
+
   -- * Utility functions
   , genesisHeaderHash
+  , renderHeader
   )
 where
 
@@ -59,6 +67,7 @@ import Cardano.Prelude
 import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
+import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 
@@ -88,7 +97,15 @@ import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty (..))
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
-import Cardano.Chain.Slotting (EpochIndex, SlotId(..), slotIdF)
+import Cardano.Chain.Slotting
+  ( EpochIndex
+  , EpochSlots
+  , FlatSlotId(..)
+  , SlotId(..)
+  , WithEpochSlots(WithEpochSlots)
+  , flattenSlotId
+  , unflattenSlotId
+  )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
@@ -140,12 +157,16 @@ headerProof = unAnnotated . aHeaderProof
 headerExtraData :: AHeader a -> ExtraHeaderData
 headerExtraData = unAnnotated . aHeaderExtraData
 
-instance B.Buildable Header where
-  build header = bprint
+instance B.Buildable (WithEpochSlots Header) where
+  build (WithEpochSlots es header) = renderHeader es header
+
+renderHeader :: EpochSlots -> Header -> Builder
+renderHeader es header =
+  bprint
     ( "Header:\n"
     . "    hash: " . hashHexF . "\n"
     . "    previous block: " . hashHexF . "\n"
-    . "    slot: " . slotIdF . "\n"
+    . "    slot: " . build . "\n"
     . "    difficulty: " . int . "\n"
     . "    leader: " . build . "\n"
     . "    signature: " . build . "\n"
@@ -158,24 +179,28 @@ instance B.Buildable Header where
     (consensusLeaderKey consensus)
     (consensusSignature consensus)
     (headerExtraData header)
-   where
+  where
     headerHash :: HeaderHash
-    headerHash = hashHeader header
+    headerHash = hashHeader es header
     consensus  = headerConsensusData header
 
-instance Bi Header where
-  encode h =
-    encodeListLen 5
-      <> encode (headerProtocolMagicId h)
-      <> encode (headerPrevHash h)
-      <> encode (headerProof h)
-      <> encode (headerConsensusData h)
-      <> encode (headerExtraData h)
+-- | Encode a header, without taking in to account deprecated epoch boundary
+-- blocks.
+encodeHeader' :: EpochSlots -> Header -> Encoding
+encodeHeader' es h
+  =  encodeListLen 5
+  <> encode (headerProtocolMagicId h)
+  <> encode (headerPrevHash h)
+  <> encode (headerProof h)
+  <> encodeConsensusData es (headerConsensusData h)
+  <> encode (headerExtraData h)
 
-  decode = void <$> decodeAHeader
+decodeHeader' :: EpochSlots -> Decoder s Header
+decodeHeader' epochSlots =
+  void <$> decodeAHeader epochSlots
 
-decodeAHeader :: Decoder s (AHeader ByteSpan)
-decodeAHeader = do
+decodeAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
+decodeAHeader epochSlots = do
   Annotated (pm, prevHash, proof, cd, extraData) byteSpan <-
     annotatedDecoder $ do
       enforceSize "Header" 5
@@ -183,7 +208,7 @@ decodeAHeader = do
         <$> decode
         <*> decodeAnnotated
         <*> decodeAnnotated
-        <*> decodeAConsensus
+        <*> decodeAConsensus epochSlots
         <*> decodeAnnotated
   pure $ AHeader pm prevHash proof cd extraData byteSpan
 
@@ -196,7 +221,12 @@ instance Decoded (AHeader ByteString) where
 mkHeader
   :: ProtocolMagicId
   -> Either GenesisHash Header
-  -> SlotId
+  -> EpochSlots
+  -- ^ Number of slots per epoch. This is needed to convert the slot number to
+  -- the legacy format used in 'ToSign', where a slot is identified by the
+  -- epoch to which it belongs and the offset within that epoch (counted in
+  -- number of slots).
+  -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
@@ -205,9 +235,10 @@ mkHeader
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
+mkHeader pm prevHeader epochSlots =
+  mkHeaderExplicit pm prevHash difficulty epochSlots
  where
-  prevHash   = either genesisHeaderHash hashHeader prevHeader
+  prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
   difficulty = either
     (const $ ChainDifficulty 0)
     (succ . consensusDifficulty . headerConsensusData)
@@ -224,7 +255,9 @@ mkHeaderExplicit
   -> HeaderHash
   -- ^ Parent
   -> ChainDifficulty
-  -> SlotId
+  -> EpochSlots
+  -- ^ See 'mkHeader'.
+  -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
@@ -233,7 +266,7 @@ mkHeaderExplicit
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extra = AHeader
+mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk mDlgCert body extra = AHeader
   pm
   (Annotated prevHash ())
   (Annotated proof ())
@@ -241,20 +274,22 @@ mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extra = AHeader
   (Annotated extra ())
   ()
  where
-  proof     = mkProof body
+  proof = mkProof body
 
-  toSign    = ToSign prevHash proof slotId difficulty extra
+  toSign = ToSign prevHash proof epochAndSlotCount difficulty extra
+
+  epochAndSlotCount = unflattenSlotId epochSlots slotId
 
   signature = case mDlgCert of
     Nothing -> BlockSignature $ sign pm SignMainBlock sk toSign
     Just dlgCert ->
       BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
 
-  leaderPk  = maybe (toPublic sk) pskIssuerPk mDlgCert
+  leaderPk = maybe (toPublic sk) pskIssuerPk mDlgCert
 
   consensus = consensusData slotId leaderPk difficulty signature
 
-headerSlot :: AHeader a -> SlotId
+headerSlot :: AHeader a -> FlatSlotId
 headerSlot = consensusSlot . headerConsensusData
 
 headerLeaderKey :: AHeader a -> PublicKey
@@ -278,11 +313,11 @@ headerAttributes = ehdAttributes . headerExtraData
 headerEBDataProof :: AHeader a -> Hash ExtraBodyData
 headerEBDataProof = ehdEBDataProof . headerExtraData
 
-headerToSign :: AHeader a -> ToSign
-headerToSign h = ToSign
+headerToSign :: EpochSlots -> AHeader a -> ToSign
+headerToSign epochSlots h = ToSign
   (headerPrevHash h)
   (headerProof h)
-  (headerSlot h)
+  (unflattenSlotId epochSlots $ headerSlot h)
   (headerDifficulty h)
   (headerExtraData h)
 
@@ -309,8 +344,12 @@ instance B.Buildable HeaderError where
 
 -- | Verify a main block header in isolation
 verifyHeader
-  :: MonadError HeaderError m => ProtocolMagicId -> AHeader ByteString -> m ()
-verifyHeader pm header = do
+  :: MonadError HeaderError m
+  => ProtocolMagicId
+  -> EpochSlots
+  -> AHeader ByteString
+  -> m ()
+verifyHeader pm epochSlots header = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although must
   -- be checked against the actual body, in verifyBlock. Consensus data and
@@ -331,20 +370,22 @@ verifyHeader pm header = do
     sig
   verifyBlockSignature (BlockPSignatureHeavy proxySig) =
     proxyVerifyDecoded pm SignMainBlockHeavy proxySig (const True) signed
-  signed    = recoverSignedBytes header
+  signed    = recoverSignedBytes epochSlots header
   consensus = headerConsensusData header
 
-encodeHeader :: Header -> Encoding
-encodeHeader h = encodeListLen 2 <> encode (1 :: Word) <> encode h
+-- | Encode a 'Header' accounting for deprecated epoch boundary blocks
+encodeHeader :: EpochSlots -> Header -> Encoding
+encodeHeader epochSlots h =
+  encodeListLen 2 <> encode (1 :: Word) <> encodeHeader' epochSlots h
 
-decodeHeader :: Decoder s (Maybe Header)
-decodeHeader = do
+decodeHeader :: EpochSlots -> Decoder s (Maybe Header)
+decodeHeader epochSlots = do
   enforceSize "Header" 2
   decode @Word >>= \case
     0 -> do
       void dropBoundaryHeader
       pure Nothing
-    1 -> Just <$!> decode
+    1 -> Just <$!> decodeHeader' epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
 
 --------------------------------------------------------------------------------
@@ -372,9 +413,8 @@ wrapHeaderBytes = mappend "\130\SOH"
 --
 --   For backwards compatibility we have to take the hash of the header
 --   serialised with 'encodeHeader'
-hashHeader :: Header -> HeaderHash
-hashHeader = unsafeAbstractHash . serializeEncoding . encodeHeader
-
+hashHeader :: EpochSlots -> Header -> HeaderHash
+hashHeader es = unsafeAbstractHash . serializeEncoding . encodeHeader es
 
 --------------------------------------------------------------------------------
 -- BoundaryHeader
@@ -439,8 +479,11 @@ instance Bi BlockSignature where
 --------------------------------------------------------------------------------
 
 -- | Produces the ByteString that was signed in the block
-recoverSignedBytes :: AHeader ByteString -> Annotated ToSign ByteString
-recoverSignedBytes h = Annotated toSign bytes
+recoverSignedBytes
+  :: EpochSlots
+  -> AHeader ByteString
+  -> Annotated ToSign ByteString
+recoverSignedBytes es h = Annotated toSign bytes
  where
   bytes = BS.concat
     [ "\133"
@@ -455,7 +498,7 @@ recoverSignedBytes h = Annotated toSign bytes
   toSign = ToSign
     (headerPrevHash h)
     (headerProof h)
-    (headerSlot h)
+    (unflattenSlotId es $ headerSlot h)
     (headerDifficulty h)
     (headerExtraData h)
 
@@ -490,12 +533,12 @@ instance Bi ToSign where
 type ConsensusData = AConsensusData ()
 
 consensusData
-  :: SlotId -> PublicKey -> ChainDifficulty -> BlockSignature -> ConsensusData
-consensusData sid pk cd bs =
-  AConsensusData (Annotated sid ()) pk (Annotated cd ()) bs
+  :: FlatSlotId -> PublicKey -> ChainDifficulty -> BlockSignature -> ConsensusData
+consensusData slotNo pk cd bs =
+  AConsensusData (Annotated slotNo ()) pk (Annotated cd ()) bs
 
 data AConsensusData a = AConsensusData
-  { aConsensusSlot       :: !(Annotated SlotId a)
+  { aConsensusSlot       :: !(Annotated FlatSlotId a)
   -- ^ Id of the slot for which this block was generated
   , consensusLeaderKey   :: !PublicKey
   -- ^ Public key of the slot leader. It's essential to have it here, because
@@ -507,26 +550,35 @@ data AConsensusData a = AConsensusData
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
 
-decodeAConsensus :: Decoder s (AConsensusData ByteSpan)
-decodeAConsensus = do
+decodeAConsensus :: EpochSlots -> Decoder s (AConsensusData ByteSpan)
+decodeAConsensus epochSlots = do
   enforceSize "ConsensusData" 4
-  AConsensusData <$> decodeAnnotated <*> decode <*> decodeAnnotated <*> decode
+  -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId` used in
+  -- 'AConsensusData' is encoded as a epoch and slot-count pair.
+  epochAndSlotCount :: Annotated SlotId ByteSpan <- decodeAnnotated
+  pk <- decode
+  annChaiDifficulty <- decodeAnnotated
+  consensusSig <- decode
+  let slotNo = first (flattenSlotId epochSlots) epochAndSlotCount
+  pure $! AConsensusData slotNo pk annChaiDifficulty consensusSig
 
-consensusSlot :: AConsensusData a -> SlotId
+consensusSlot :: AConsensusData a -> FlatSlotId
 consensusSlot = unAnnotated . aConsensusSlot
 
 consensusDifficulty :: AConsensusData a -> ChainDifficulty
 consensusDifficulty = unAnnotated . aConsensusDifficulty
 
-instance Bi ConsensusData where
-  encode cd =
-    encodeListLen 4
-      <> encode (consensusSlot cd)
-      <> encode (consensusLeaderKey cd)
-      <> encode (consensusDifficulty cd)
-      <> encode (consensusSignature cd)
+encodeConsensusData :: EpochSlots -> ConsensusData -> Encoding
+encodeConsensusData es cd
+  =  encodeListLen 4
+  <> encode (unflattenSlotId es $ consensusSlot cd)
+  <> encode (consensusLeaderKey cd)
+  <> encode (consensusDifficulty cd)
+  <> encode (consensusSignature cd)
 
-  decode = (fmap.fmap) (const ()) decodeAConsensus
+decodeConsensusData :: EpochSlots -> Decoder s ConsensusData
+decodeConsensusData epochSlots =
+  (fmap . fmap) (const ()) (decodeAConsensus epochSlots)
 
 data ConsensusError = ConsensusSelfSignedPSK
   deriving (Show, Eq)

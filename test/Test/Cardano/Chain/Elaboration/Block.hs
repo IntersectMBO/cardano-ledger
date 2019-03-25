@@ -41,7 +41,7 @@ import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL, epochL)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation (DCert, delegationMap, delegatorOf, mkDCert)
-import Ledger.Update (bkSgnCntW, bkSlotsPerEpoch, maxBkSz, maxHdrSz)
+import Ledger.Update (bkSgnCntW, bkSlotsPerEpoch, maxBkSz, maxHdrSz, PParams)
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , ChainDifficulty(ChainDifficulty)
@@ -75,6 +75,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
     (Genesis.configProtocolMagicId config)
     prevHash
     (ChainDifficulty 0)
+    (ppsEpochSlots pps)
     sid
     ssk
     cDCert
@@ -101,8 +102,9 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
     (Concrete.cvsPreviousHash st)
 
   sid =
-    Slotting.unflattenSlotId (coerce (pps ^. bkSlotsPerEpoch))
-      $ Slotting.FlatSlotId
+--    Slotting.unflattenSlotId (coerce (pps ^. bkSlotsPerEpoch))
+--      $
+      Slotting.FlatSlotId
           (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
 
   issuer   = ab ^. Abstract.bHeader . Abstract.bIssuer
@@ -125,6 +127,11 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
             (elaborateDCert config)
           )
 
+ppsEpochSlots :: PParams -> Slotting.EpochSlots
+ppsEpochSlots pps = Slotting.EpochSlots epochSlots
+  where
+    Abstract.SlotCount epochSlots = pps ^. bkSlotsPerEpoch
+
 elaborateBS
   :: Genesis.Config -- TODO: Do we want this to come from the abstract
                     -- environment? (in such case we wouldn't need this
@@ -134,15 +141,17 @@ elaborateBS
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ByteString
-elaborateBS config aenv ast st ab =
-  annotateBlock $ elaborate config aenv ast st ab
+elaborateBS config aenv ast@(_, _, _, _, _, pps) st ab =
+  annotateBlock (ppsEpochSlots pps) $ elaborate config aenv ast st ab
 
-annotateBlock :: Concrete.Block -> Concrete.ABlock ByteString
-annotateBlock block =
+annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
+annotateBlock epochSlots block =
   let
     decodedABlockOrBoundary =
       case
-          Binary.decodeFullDecoder "Block" Concrete.decodeABlockOrBoundary bytes
+          Binary.decodeFullDecoder
+            "Block"
+            (Concrete.decodeABlockOrBoundary epochSlots) bytes
         of
           Left err ->
             panic
@@ -155,7 +164,7 @@ annotateBlock block =
       Concrete.ABOBBlock bk -> bk
       Concrete.ABOBBoundary _ ->
         panic "This function should have decoded a block."
-  where bytes = Binary.serializeEncoding (Concrete.encodeBlock block)
+  where bytes = Binary.serializeEncoding (Concrete.encodeBlock epochSlots block)
 
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --

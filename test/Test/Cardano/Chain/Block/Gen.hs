@@ -9,6 +9,7 @@ module Test.Cardano.Chain.Block.Gen
   , genProof
   , genToSign
   , genBlock
+  , genBlockWithEpochSlots
   , genSlogUndo
   , genUndo
   )
@@ -25,6 +26,7 @@ import Cardano.Chain.Block
   , BlockSignature(..)
   , Body
   , ConsensusData
+  , hashHeader
   , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
@@ -39,13 +41,18 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Slotting (EpochSlots)
+import Cardano.Chain.Slotting (EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import Test.Cardano.Chain.Slotting.Gen (genEpochIndex, genFlatSlotId, genSlotId)
+import Test.Cardano.Chain.Slotting.Gen
+  ( genEpochIndex
+  , genEpochSlots
+  , genFlatSlotId
+  , genSlotId
+  )
 import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof, genTxpUndo)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -83,7 +90,8 @@ genHeader pm epochSlots =
   mkHeaderExplicit pm
     <$> genHeaderHash
     <*> genChainDifficulty
-    <*> genSlotId epochSlots
+    <*> pure epochSlots
+    <*> genFlatSlotId
     <*> genSecretKey
     <*> pure Nothing
     <*> genBody pm
@@ -92,7 +100,7 @@ genHeader pm epochSlots =
 genConsensusData :: ProtocolMagicId -> EpochSlots -> Gen ConsensusData
 genConsensusData pm epochSlots =
   consensusData
-    <$> genSlotId epochSlots
+    <$> genFlatSlotId
     <*> genPublicKey
     <*> genChainDifficulty
     <*> genBlockSignature pm epochSlots
@@ -119,11 +127,20 @@ genProof pm =
 genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
-    <$> genAbstractHash (genHeader pm epochSlots)
+    <$> (mkAbstractHash <$> genHeader pm epochSlots)
     <*> genProof pm
     <*> genSlotId epochSlots
     <*> genChainDifficulty
     <*> genExtraHeaderData
+  where
+    mkAbstractHash :: Header -> HeaderHash
+    mkAbstractHash = hashHeader epochSlots
+
+genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
+genBlockWithEpochSlots pm = do
+  epochSlots <- genEpochSlots
+  b  <- genBlock pm epochSlots
+  pure $! WithEpochSlots epochSlots b
 
 genBlock :: ProtocolMagicId -> EpochSlots -> Gen Block
 genBlock pm epochSlots =
@@ -132,7 +149,8 @@ genBlock pm epochSlots =
     <*> Update.genSoftwareVersion
     <*> genHeaderHash
     <*> genChainDifficulty
-    <*> genSlotId epochSlots
+    <*> pure epochSlots
+    <*> genFlatSlotId
     <*> genSecretKey
     <*> pure Nothing
     <*> genBody pm

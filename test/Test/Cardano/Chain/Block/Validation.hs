@@ -51,8 +51,8 @@ import Cardano.Chain.Block
   )
 import Cardano.Chain.Common (BlockCount(..), mkStakeholderId)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
-import Cardano.Chain.Genesis as Genesis (Config(..))
-import Cardano.Chain.Slotting (SlotId)
+import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
+import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Crypto (PublicKey)
 import Cardano.Mirror (mainnetEpochFiles)
 
@@ -100,7 +100,7 @@ tests scenario = do
 
 data Error
   = ErrorParseError ParseError
-  | ErrorChainValidationError (Maybe SlotId) ChainValidationError
+  | ErrorChainValidationError (Maybe FlatSlotId) ChainValidationError
   deriving (Eq, Show)
 
 
@@ -109,7 +109,7 @@ epochValid
   :: Genesis.Config -> IORef ChainValidationState -> FilePath -> Property
 epochValid config cvsRef fp = withTests 1 . property $ do
   cvs <- liftIO $ readIORef cvsRef
-  let stream = parseEpochFileWithBoundary fp
+  let stream = parseEpochFileWithBoundary (configEpochSlots config) fp
   result <- (liftIO . runResourceT . runExceptT)
     (foldChainValidationState config cvs $ S.map fst stream)
   newCvs <- evalEither result
@@ -132,7 +132,7 @@ foldChainValidationState config cvs blocks = S.foldM_
   pure
   (hoist (withExceptT ErrorParseError) blocks)
  where
-  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotId
+  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe FlatSlotId
   blockOrBoundarySlot = \case
     ABOBBoundary _     -> Nothing
     ABOBBlock    block -> Just $ blockSlot block

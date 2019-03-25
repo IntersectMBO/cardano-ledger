@@ -10,3 +10,5 @@ https://github.com/well-typed/cborg 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d cbo
 https://github.com/input-output-hk/cardano-crypto 3c707936ba0a665375acf5bd240dc4b6eaa6c0bc . 0g8ln8k8wx4csdv92bz09pr7v9dp4lcyv1334b09c9rgwdwhqg1b cardano-crypto cardano-crypto.nix
 https://github.com/hedgehogqa/haskell-hedgehog 2505055760d06ba6343f803783ed023fb0ed6c48 hedgehog 0m29y881kbqvs12vjcbaaqrpbqbc2rvg3ffwx5wfaymbn1djyz9q hedgehog hedgehog.nix
 http://github.com/nc6/canonical-json a9dc9b893649bc2e2a770ab22d278a780f7e3a3c . 0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr canonical-json canonical-json.nix
+https://github.com/input-output-hk/cardano-base c719857de4a2f18fa13bc5cdb85d74ae3841f50f binary 1p2g026xxc60xiqw7891cry2lwzjavbzdqbqx9mk7x7wlhcsb6jv cardano-binary cardano-binary.nix
+https://github.com/input-output-hk/cardano-base c719857de4a2f18fa13bc5cdb85d74ae3841f50f binary/test 1p2g026xxc60xiqw7891cry2lwzjavbzdqbqx9mk7x7wlhcsb6jv cardano-binary-test cardano-binary-test.nix
