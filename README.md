@@ -46,13 +46,13 @@ substituters        = https://hydra.iohk.io https://cache.nixos.org/
 trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 ```
 
-## Building the LaTex documents and executable specifications
+## Building the LaTeX documents and executable specifications
 
 When using `nix` the documents and executable specifications can be readily
 built by running:
 
 ```shell
-nix-build
+nix build
 ```
 
 The LaTeX documents will be places inside directories named `result*`, e.g.:
