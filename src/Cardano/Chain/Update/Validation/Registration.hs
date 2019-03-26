@@ -21,7 +21,7 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ApplicationName
 import Cardano.Chain.Update.ProtocolParameters
-import qualified Cardano.Chain.Update.ProtocolParameterUpdate as PPU
+import qualified Cardano.Chain.Update.ProtocolParametersUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion
 import Cardano.Chain.Update.SoftwareVersion
 import Cardano.Chain.Update.Vote
@@ -165,7 +165,7 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
  where
   body  = proposalBody proposal
   newPV = pbProtocolVersion body
-  ppu   = pbProtocolParameterUpdate body
+  ppu   = pbProtocolParametersUpdate body
   newPP = PPU.apply ppu adoptedPP
 
 

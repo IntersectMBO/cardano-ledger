@@ -95,7 +95,7 @@ library
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.ProtocolVersion
                        Cardano.Chain.Update.ProtocolParameters
-                       Cardano.Chain.Update.ProtocolParameterUpdate
+                       Cardano.Chain.Update.ProtocolParametersUpdate
                        Cardano.Chain.Update.Data
                        Cardano.Chain.Update.Payload
                        Cardano.Chain.Update.Proof

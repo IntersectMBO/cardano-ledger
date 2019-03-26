@@ -3,7 +3,7 @@ module Test.Cardano.Chain.Update.Gen
   , genApplicationName
   , genProtocolVersion
   , genProtocolParameters
-  , genProtocolParameterUpdate
+  , genProtocolParametersUpdate
   , genSoftforkRule
   , genSoftwareVersion
   , genSystemTag
@@ -45,7 +45,7 @@ import Cardano.Chain.Update
   , ProposalBody(..)
   , ProposalState(..)
   , Proposals
-  , ProtocolParameterUpdate(..)
+  , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
   , ProtocolVersionState(..)
@@ -138,9 +138,9 @@ genProtocolParameters =
     <*> genTxFeePolicy
     <*> genEpochIndex
 
-genProtocolParameterUpdate :: Gen ProtocolParameterUpdate
-genProtocolParameterUpdate =
-  ProtocolParameterUpdate
+genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
+genProtocolParametersUpdate =
+  ProtocolParametersUpdate
     <$> Gen.maybe genScriptVersion
     <*> Gen.maybe genNominalDiffTime
     <*> Gen.maybe genNatural
@@ -159,7 +159,7 @@ genProtocolParameterUpdate =
 genProtocolVersionState :: Gen ProtocolVersionState
 genProtocolVersionState =
   ProtocolVersionState
-    <$> genProtocolParameterUpdate
+    <$> genProtocolParametersUpdate
     <*> Gen.maybe genEpochIndex
     <*> Gen.set (Range.linear 0 10) genStakeholderId
     <*> Gen.set (Range.linear 0 10) genStakeholderId
@@ -279,7 +279,7 @@ genProposalBody :: Gen ProposalBody
 genProposalBody =
   ProposalBody
     <$> genProtocolVersion
-    <*> genProtocolParameterUpdate
+    <*> genProtocolParametersUpdate
     <*> genSoftwareVersion
     <*> genUpsData
     <*> pure (mkAttributes ())

@@ -8,7 +8,7 @@ import Cardano.Chain.Update.Data as X
 import Cardano.Chain.Update.Payload as X
 import Cardano.Chain.Update.Proof as X
 import Cardano.Chain.Update.ProtocolParameters as X
-import Cardano.Chain.Update.ProtocolParameterUpdate as X
+import Cardano.Chain.Update.ProtocolParametersUpdate as X
 import Cardano.Chain.Update.ProtocolVersion as X
 import Cardano.Chain.Update.SoftforkRule as X
 import Cardano.Chain.Update.SoftwareVersion as X

@@ -64,7 +64,7 @@ import Cardano.Binary.Class
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
 import Cardano.Chain.Update.Data (UpdateData)
-import Cardano.Chain.Update.ProtocolParameterUpdate (ProtocolParameterUpdate)
+import Cardano.Chain.Update.ProtocolParametersUpdate (ProtocolParametersUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
@@ -98,7 +98,7 @@ type UpId = Hash Proposal
 
 data ProposalBody = ProposalBody
   { pbProtocolVersion         :: !ProtocolVersion
-  , pbProtocolParameterUpdate :: !ProtocolParameterUpdate
+  , pbProtocolParametersUpdate :: !ProtocolParametersUpdate
   , pbSoftwareVersion         :: !SoftwareVersion
   , pbData                    :: !(Map SystemTag UpdateData)
   -- ^ UpdateData for each system which this update affects. It must be
@@ -112,7 +112,7 @@ instance Bi ProposalBody where
   encode pb =
     encodeListLen 5
       <> encode (pbProtocolVersion pb)
-      <> encode (pbProtocolParameterUpdate pb)
+      <> encode (pbProtocolParametersUpdate pb)
       <> encode (pbSoftwareVersion pb)
       <> encode (pbData pb)
       <> encode (pbAttributes pb)
@@ -170,7 +170,7 @@ instance B.Buildable (AProposal ()) where
     (pbSoftwareVersion body)
     (pbProtocolVersion body)
     (upId proposal)
-    (pbProtocolParameterUpdate body)
+    (pbProtocolParametersUpdate body)
     (Map.keys $ pbData body)
     attrsBuilder
    where
@@ -185,7 +185,7 @@ instance Bi Proposal where
   encode proposal =
     encodeListLen 7
       <> encode (pbProtocolVersion body)
-      <> encode (pbProtocolParameterUpdate body)
+      <> encode (pbProtocolParametersUpdate body)
       <> encode (pbSoftwareVersion body)
       <> encode (pbData body)
       <> encode (pbAttributes body)

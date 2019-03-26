@@ -5,8 +5,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Cardano.Chain.Update.ProtocolParameterUpdate
-  ( ProtocolParameterUpdate(..)
+module Cardano.Chain.Update.ProtocolParametersUpdate
+  ( ProtocolParametersUpdate(..)
   , isEmpty
   , apply
   )
@@ -27,7 +27,7 @@ import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
 
 -- | Data which represents modifications of block (aka protocol) version
-data ProtocolParameterUpdate = ProtocolParameterUpdate
+data ProtocolParametersUpdate = ProtocolParametersUpdate
   { ppuScriptVersion     :: !(Maybe Word16)
   , ppuSlotDuration      :: !(Maybe NominalDiffTime)
   , ppuMaxBlockSize      :: !(Maybe Natural)
@@ -45,7 +45,7 @@ data ProtocolParameterUpdate = ProtocolParameterUpdate
   } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
 
-instance B.Buildable ProtocolParameterUpdate where
+instance B.Buildable ProtocolParametersUpdate where
   build ppu = bprint
     ( "{ script version: " . bmodifier build
     . ", slot duration: " . bmodifier build
@@ -84,7 +84,7 @@ instance B.Buildable ProtocolParameterUpdate where
     bytes' :: Format r (Natural -> r)
     bytes' = bytes (shortest @Double)
 
-instance Bi ProtocolParameterUpdate where
+instance Bi ProtocolParametersUpdate where
   encode ppu =
     encodeListLen 14
       <> encode (ppuScriptVersion ppu)
@@ -103,8 +103,8 @@ instance Bi ProtocolParameterUpdate where
       <> encode (ppuUnlockStakeEpoch ppu)
 
   decode = do
-    enforceSize "ProtocolParameterUpdate" 14
-    ProtocolParameterUpdate
+    enforceSize "ProtocolParametersUpdate" 14
+    ProtocolParametersUpdate
       <$> decode
       <*> decode
       <*> decode
@@ -120,8 +120,8 @@ instance Bi ProtocolParameterUpdate where
       <*> decode
       <*> decode
 
-empty :: ProtocolParameterUpdate
-empty = ProtocolParameterUpdate
+empty :: ProtocolParametersUpdate
+empty = ProtocolParametersUpdate
   { ppuScriptVersion    = Nothing
   , ppuSlotDuration     = Nothing
   , ppuMaxBlockSize     = Nothing
@@ -138,11 +138,11 @@ empty = ProtocolParameterUpdate
   , ppuUnlockStakeEpoch = Nothing
   }
 
-isEmpty :: ProtocolParameterUpdate -> Bool
+isEmpty :: ProtocolParametersUpdate -> Bool
 isEmpty = (== empty)
 
--- | Apply 'ProtocolParameterUpdate' to 'ProtocolParameters'
-apply :: ProtocolParameterUpdate -> ProtocolParameters -> ProtocolParameters
+-- | Apply 'ProtocolParametersUpdate' to 'ProtocolParameters'
+apply :: ProtocolParametersUpdate -> ProtocolParameters -> ProtocolParameters
 apply ppu pp = ProtocolParameters
   { ppScriptVersion    = fromMaybe (ppScriptVersion pp) (ppuScriptVersion ppu)
   , ppSlotDuration     = fromMaybe (ppSlotDuration pp) (ppuSlotDuration ppu)
