@@ -12,6 +12,8 @@ following links:
 - [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
 - [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
 
+[![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
+
 ## Build tools
 
 For building LaTeX documents we use
@@ -44,11 +46,34 @@ substituters        = https://hydra.iohk.io https://cache.nixos.org/
 trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 ```
 
-## Building LaTeX documents
+## Building the LaTex documents and executable specifications
 
-Change to the latex directory `cardano-ledger-specs/latex/`.
+When using `nix` the documents and executable specifications can be readily
+built by running:
 
-To build the latex document run:
+```shell
+nix-build
+```
+
+The LaTeX documents will be places inside directories named `result*`, e.g.:
+
+```shell
+result-2/ledger-spec.pdf
+result-3/delegation_design_spec.pdf
+result-4/non-integer-calculations.pdf
+result-5/small-step-semantics.pdf
+result-6/ledger-spec.pdf
+result/blockchain-spec.pdf
+```
+
+
+## Building individual LaTeX documents
+
+
+Change to the latex directory where the latex document is (e.g. `latex` for the
+ledger specification corresponding to the Shelley release, or
+`specs/ledger/latex` for the ledger specification corresponding to the Byron
+release). Then, build the latex document by running:
 
 ```shell
 nix-shell --pure --run make
@@ -62,12 +87,20 @@ nix-shell --pure --run "make watch"
 
 ## Testing the Haskell model
 
-Change to the haskell directory `cardano-ledger-specs/hs/`.
-
-The tests can be run with stack:
+Change to the directory where the executable specifications are (e.g.
+`cardano-ledger-specs/hs/` for the executable ledger specifications
+corresponding to the Shelley release, or `specs/ledger/hs` for the executable
+ledger specifications corresponding to the Byron release). Then run build the
+specs by running:
 
 ```shell
-stack test --pedantic
+stack build
+```
+
+The tests can be run by executing:
+
+```shell
+stack test
 ```
 
 While developing the models, it can be helpful to run ghcid in a separate shell:
@@ -83,9 +116,6 @@ make ghcid-test
 ```
 
 ---
-
-[![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
-
 
 # nix-build Infrastructure
 
@@ -143,9 +173,9 @@ from [the Shelley ledger spec](./latex)).
 You can find additional documentation on the nix infrastructure used in this
 repo in the following places:
 
-[The haskell.nix user guide](https://github.com/input-output-hk/haskell.nix/blob/documentation/docs/user-guide.md)
-[The nix-tools repository](https://github.com/input-output-hk/nix-tools)
-[The iohk-nix repository](https://github.com/input-output-hk/iohk-nix)
+- [The haskell.nix user guide](https://github.com/input-output-hk/haskell.nix/blob/documentation/docs/user-guide.md)
+- [The nix-tools repository](https://github.com/input-output-hk/nix-tools)
+- [The iohk-nix repository](https://github.com/input-output-hk/iohk-nix)
 
 Note that the user guide linked above is incomplete and does not correctly refer
 to projects built using `iohk-nix`, as this one is. A certain amount of trial
