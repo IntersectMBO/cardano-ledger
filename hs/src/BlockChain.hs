@@ -62,7 +62,7 @@ data Proof a =
 
 data BHeader =
   BHeader BHBody
-          (Keys.Sig BHBody)
+          (Keys.KESig BHBody)
   deriving (Show, Eq)
 
 data BHBody = BHBody
@@ -109,7 +109,7 @@ bbody (Block _ txs) = txs
 bhbody :: BHeader -> BHBody
 bhbody (BHeader b _) = b
 
-hsig :: BHeader -> Keys.Sig BHBody
+hsig :: BHeader -> Keys.KESig BHBody
 hsig (BHeader _ s) = s
 
 slotsPrior :: Slot.Duration
