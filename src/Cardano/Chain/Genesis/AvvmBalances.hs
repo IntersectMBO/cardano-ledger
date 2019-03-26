@@ -19,7 +19,9 @@ import Cardano.Chain.Common (Lovelace)
 import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
 
 
--- | Predefined balances of avvm entries.
+-- | Predefined balances of AVVM (Ada Voucher Vending Machine) entries.
+-- People who purchased Ada at a pre-sale were issued a certificate during
+-- the pre-sale period. These certificates allow customers to redeem ADA.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { getGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
   } deriving (Show, Eq, Semigroup)
