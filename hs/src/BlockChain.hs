@@ -17,6 +17,9 @@ module BlockChain
   , hsig
     --
   , slotsPrior
+  , verifyVrf
+  , seedEta
+  , seedL
   ) where
 
 import           Crypto.Hash           (Digest, SHA256, hash)
@@ -57,7 +60,7 @@ mkNonce :: Integer -> Seed
 mkNonce = Nonce
 
 data Proof a =
-  Proof a
+  Proof Keys.VKey Seed
   deriving (Show, Eq)
 
 data BHeader =
@@ -79,7 +82,7 @@ data BHBody = BHBody
     -- | leader election value
   , bheaderL              :: UnitInterval
     -- | proof of leader election
-  , bheaderPrfUnit        :: Proof UnitInterval
+  , bheaderPrfL           :: Proof UnitInterval
     -- | signature of block body
   , bheaderBlockSignature :: Keys.Sig [U.Tx]
     -- | operational certificate
@@ -114,3 +117,12 @@ hsig (BHeader _ s) = s
 
 slotsPrior :: Slot.Duration
 slotsPrior = 10 -- TODO: what is a realistic value for this?
+
+verifyVrf :: Keys.VKey -> Seed -> Proof a -> Bool
+verifyVrf vk seed (Proof k s) = vk == k && seed == s
+
+seedEta :: Seed
+seedEta = Nonce 0
+
+seedL :: Seed
+seedL = Nonce 1

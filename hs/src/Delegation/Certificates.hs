@@ -3,6 +3,7 @@ module Delegation.Certificates
     DCert(..)
   , StakeKeys(..)
   , StakePools(..)
+  , PoolDistr(..)
   , authDCert
   , getRequiredSigningKey
   , dvalue
@@ -108,3 +109,6 @@ decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
+
+newtype PoolDistr = PoolDistr (Map.Map VKey UnitInterval)
+  deriving (Show, Eq)
