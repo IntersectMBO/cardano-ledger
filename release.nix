@@ -6,11 +6,12 @@ let
     ["nix-tools" "tests" "cardano-ledger" "cardano-ledger-test" "x86_64-darwin"]
   ];
 in
-{ ... }@args:
+{ cardano-ledger ? { outPath = ./.; rev = "abcdef"; } ,... }@args:
 localLib.pkgs.lib.mapAttrsRecursiveCond
 (as: !(as ? "type" && as.type == "derivation"))
 (path: v: if (builtins.elem path disabled) then null else v)
 (localLib.nix-tools.release-nix {
+  _this = cardano-ledger;
   package-set-path = ./.;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
@@ -58,4 +59,4 @@ localLib.pkgs.lib.mapAttrsRecursiveCond
     jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-ledger.cardano-ledger-test.x86_64-linux
   ];
 
-} args)
+} (builtins.removeAttrs args ["cardano-ledger"]))
