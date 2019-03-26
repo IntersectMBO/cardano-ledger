@@ -25,9 +25,9 @@ import           STS.Snap
 data EPOCH
 
 instance STS EPOCH where
-    type State EPOCH = (UTxOState, AccountState, DState, PState, PParams, SnapShots)
-    type Signal EPOCH = ()
-    type Environment EPOCH = (Epoch, PParams, BlocksMade)
+    type State EPOCH = (AccountState, PParams, SnapShots, LedgerState)
+    type Signal EPOCH = Epoch
+    type Environment EPOCH = (PParams, BlocksMade)
     data PredicateFailure EPOCH = PoolReapFailure (PredicateFailure POOLREAP)
                                 | SnapFailure (PredicateFailure SNAP)
                                 | NewPpFailure (PredicateFailure NEWPP)
@@ -37,21 +37,26 @@ instance STS EPOCH where
     transitionRules = [ epochTransition ]
 
 initialEpoch :: InitialRule EPOCH
-initialEpoch = pure ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0)
-                    , emptyAccount
-                    , emptyDState
-                    , emptyPState
+initialEpoch = pure ( emptyAccount
                     , emptyPParams
-                    , emptySnapShots)
+                    , emptySnapShots
+                    , LedgerState
+                       (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
+                       emptyDelegation
+                       emptyPParams
+                       0
+                       (Slot 0))
 
 epochTransition :: TransitionRule EPOCH
 epochTransition = do
-    TRC((eNew, ppNew, blocks), (us, as, ds, ps, pp, ss), _) <- judgmentContext
-    (ss', us') <- trans @SNAP $ TRC((eNew, pp, ds, ps, blocks), (ss, us), ())
-    (as', ds', ps') <- trans @POOLREAP $ TRC((eNew, pp), (as, ds, ps), ())
+    TRC((ppNew, blocks), (as, pp, ss, ls), eNew) <- judgmentContext
+    let us = _utxoState ls
+    let DWState ds ps = _delegationState ls
+    (ss', us') <- trans @SNAP $ TRC((pp, ds, ps, blocks), (ss, us), eNew)
+    (as', ds', ps') <- trans @POOLREAP $ TRC(pp, (as, ds, ps), eNew)
     (us'', as'', pp')
-        <- trans @NEWPP $ TRC((eNew, ppNew, ds', ps'), (us', as', pp), ())
-    pure (us'', as'', ds', ps', pp', ss')
+        <- trans @NEWPP $ TRC((ppNew, ds', ps'), (us', as', pp), eNew)
+    pure (as'', pp', ss', ls { _utxoState = us'', _delegationState = DWState ds' ps'})
 
 instance Embed SNAP EPOCH where
     wrapFailed = SnapFailure

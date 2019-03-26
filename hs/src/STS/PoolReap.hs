@@ -22,8 +22,8 @@ data POOLREAP
 
 instance STS POOLREAP where
   type State POOLREAP = (AccountState, DState, PState)
-  type Signal POOLREAP = ()
-  type Environment POOLREAP = (Epoch, PParams)
+  type Signal POOLREAP = Epoch
+  type Environment POOLREAP = PParams
   data PredicateFailure POOLREAP = FailurePOOLREAP
                                    deriving (Show, Eq)
   initialRules = [pure (emptyAccount, emptyDState, emptyPState)]
@@ -31,7 +31,7 @@ instance STS POOLREAP where
 
 poolReapTransition :: TransitionRule POOLREAP
 poolReapTransition = do
-  TRC ((eNew, pp), (a, d, p), _) <- judgmentContext
+  TRC (pp, (a, d, p), eNew) <- judgmentContext
   let retired = Map.keysSet $ Map.filter (== eNew) $ p ^. retiring
   let pr = poolRefunds pp (p ^. retiring) (firstSlot eNew)
   let relevant = Map.restrictKeys (p ^. pParams) retired
