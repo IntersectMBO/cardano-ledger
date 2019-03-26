@@ -24,6 +24,7 @@ library
                      Delegation.PoolParams
                      Delegation.Certificates
                      OCert
+                     STS.Bhead
                      STS.Deleg
                      STS.Delegs
                      STS.Delpl
