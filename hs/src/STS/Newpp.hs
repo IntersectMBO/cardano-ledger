@@ -22,8 +22,8 @@ data NEWPP
 
 instance STS NEWPP where
   type State NEWPP = (UTxOState, AccountState, PParams)
-  type Signal NEWPP = ()
-  type Environment NEWPP = (Epoch, PParams, DState, PState)
+  type Signal NEWPP = Epoch
+  type Environment NEWPP = (PParams, DState, PState)
   data PredicateFailure NEWPP = FailureNEWPP
                                 deriving (Show, Eq)
   initialRules = [initialNewPp]
@@ -36,7 +36,7 @@ initialNewPp =
 
 newPpTransition :: TransitionRule NEWPP
 newPpTransition = do
-  TRC ((eNew, ppNew, ds, ps), (us, as, pp), _) <- judgmentContext
+  TRC ((ppNew, ds, ps), (us, as, pp), eNew) <- judgmentContext
   let oblgCurr = obligation pp (ds ^. stKeys) (ps ^. stPools) (firstSlot eNew)
   let oblgNew =
         obligation ppNew (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch eNew)
