@@ -85,7 +85,7 @@ import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Block.ExtraHeaderData
   (ExtraHeaderData(..), ExtraHeaderDataError, verifyExtraHeaderData)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
-import Cardano.Chain.Common (Attributes, ChainDifficulty)
+import Cardano.Chain.Common (Attributes, ChainDifficulty (..))
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting (EpochIndex, SlotId(..), slotIdF)
@@ -154,7 +154,7 @@ instance B.Buildable Header where
     headerHash
     (headerPrevHash header)
     (consensusSlot consensus)
-    (consensusDifficulty consensus)
+    (unChainDifficulty $ consensusDifficulty consensus)
     (consensusLeaderKey consensus)
     (consensusSignature consensus)
     (headerExtraData header)
@@ -209,7 +209,7 @@ mkHeader pm prevHeader = mkHeaderExplicit pm prevHash difficulty
  where
   prevHash   = either genesisHeaderHash hashHeader prevHeader
   difficulty = either
-    (const 0)
+    (const $ ChainDifficulty 0)
     (succ . consensusDifficulty . headerConsensusData)
     prevHeader
 

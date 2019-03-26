@@ -165,12 +165,12 @@ prop_signingHistoryUpdatesPreserveInvariants =
           initialSigningHistory = SigningHistory
             { shK = k
             , shSigningQueue = Seq.Empty
-            , shStakeholderCounts = M.fromList $ fmap (, 0) stakeholders
+            , shStakeholderCounts = M.fromList $ fmap (, BlockCount 0) stakeholders
             }
 
         -- Generate a list of signers with which to update the 'SigningHistory'
         signers <- forAll $ Gen.list
-          (Range.constant 0 (2 * fromIntegral k))
+          (Range.constant 0 (fromIntegral $ 2 * unBlockCount k))
           (Gen.element publicKeys)
 
         let
@@ -185,7 +185,7 @@ prop_signingHistoryUpdatesPreserveInvariants =
             stakeholders `forM_` \s' -> do
               let
                 stakeholderCount :: Int
-                stakeholderCount = fromIntegral $ fromMaybe 0 $ M.lookup
+                stakeholderCount = maybe 0 (fromIntegral . unBlockCount) $ M.lookup
                   s'
                   (shStakeholderCounts sh')
                 stakeholderCount' =
@@ -193,7 +193,7 @@ prop_signingHistoryUpdatesPreserveInvariants =
               stakeholderCount === stakeholderCount'
 
             -- The length of the overall sequence is less than or equal to 'k'
-            assert $ length (shSigningQueue sh') <= fromIntegral (shK sh')
+            assert $ length (shSigningQueue sh') <= fromIntegral (unBlockCount $ shK sh')
 
             pure sh'
 

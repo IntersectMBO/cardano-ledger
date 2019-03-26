@@ -75,7 +75,7 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisAvvmBalances
   exampleGenesisDelegation
   exampleProtocolParameters
-  37
+  (BlockCount 37)
   (ProtocolMagic (ProtocolMagicId 1783847074) RequiresMagic)
   exampleGenesisInitializer
 

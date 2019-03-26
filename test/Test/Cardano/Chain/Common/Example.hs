@@ -19,7 +19,6 @@ import Cardano.Chain.Common
   , AddrSpendingData(..)
   , Address
   , Attributes
-  , BlockCount(..)
   , ChainDifficulty(..)
   , StakeholderId
   , makeAddress
@@ -61,7 +60,7 @@ exampleAddress2 = makeAddress easd attrs
   hap   = Just (HDAddressPayload (getBytes 15 32))
 
 exampleChainDifficulty :: ChainDifficulty
-exampleChainDifficulty = ChainDifficulty (BlockCount 9999)
+exampleChainDifficulty = ChainDifficulty 9999
 
 exampleStakeholderId :: StakeholderId
 exampleStakeholderId = mkStakeholderId examplePublicKey

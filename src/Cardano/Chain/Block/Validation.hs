@@ -87,7 +87,7 @@ data SigningHistory = SigningHistory
 --   the sequence is @K@ blocks long
 updateSigningHistory :: PublicKey -> SigningHistory -> SigningHistory
 updateSigningHistory pk sh
-  | length (shSigningQueue sh) < fromIntegral (shK sh) = sh & addStakeholderIn
+  | length (shSigningQueue sh) < fromIntegral (unBlockCount $ shK sh) = sh & addStakeholderIn
   | otherwise = sh & addStakeholderIn & removeStakeholderOut
  where
   stakeholderIn = mkStakeholderId pk
@@ -96,7 +96,7 @@ updateSigningHistory pk sh
   addStakeholderIn sh' = sh'
     { shSigningQueue      = stakeholderIn <| shSigningQueue sh'
     , shStakeholderCounts = M.adjust
-      (+ 1)
+      succ
       stakeholderIn
       (shStakeholderCounts sh')
     }
@@ -107,7 +107,7 @@ updateSigningHistory pk sh
     rest :|> stakeholderOut -> sh'
       { shSigningQueue      = rest
       , shStakeholderCounts = M.adjust
-        (subtract 1)
+        pred
         stakeholderOut
         (shStakeholderCounts sh')
       }
@@ -133,7 +133,7 @@ initialChainValidationState config = do
     { cvsSigningHistory  = SigningHistory
       { shK = configK config
       , shStakeholderCounts = M.fromList
-        . map (, 0)
+        . map (, BlockCount 0)
         . M.keys
         . getGenesisWStakeholders
         $ configBootStakeholders config
