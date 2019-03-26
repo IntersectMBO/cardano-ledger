@@ -21,6 +21,7 @@ module PParams
   , interval0
   , interval1
   , emptyPParams
+  , maxBHSize
   ) where
 
 import           Numeric.Natural (Natural)
@@ -59,6 +60,8 @@ data PParams = PParams
     -- | Account transition parameter
   , _rho             :: UnitInterval
   , _tau             :: UnitInterval
+    -- | Maximal block header size
+  , _maxBHSize       :: Integer
   } deriving (Show, Eq)
 
 makeLenses ''PParams
@@ -66,4 +69,4 @@ makeLenses ''PParams
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
 emptyPParams =
-    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0
+    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0 0

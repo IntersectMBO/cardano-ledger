@@ -663,8 +663,9 @@ been signed with the correct signing key according to the KES.
       \var{slot} \leteq \bslot{bhb}
       \\
       (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{bhb}
+      & \var{hk} \leteq \hashKey{vk_{hot}}
       \\~\\
-      \var{vk_{hot}}\mapsto s_0\in\var{stpools}
+      \var{hk}\mapsto s_0\in\var{stpools}
       &
       t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
       \\~\\
@@ -672,7 +673,7 @@ been signed with the correct signing key according to the KES.
       &
       \var{h} = \bprev{bhb}
       \\
-      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bh}}_{\sigma}^{t}
+      \mathcal{V}_{\var{hk}}{\serialised{bhb}}_{\sigma}^{t}
       &
       \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
     }
