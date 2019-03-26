@@ -30,6 +30,7 @@ library
                      STS.Delpl
                      STS.Epoch
                      STS.Ledger
+                     STS.NewEpoch
                      STS.Newpp
                      STS.Ocert
                      STS.Pool
