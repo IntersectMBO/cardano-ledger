@@ -49,7 +49,7 @@ oneFourth =
 
 testPCs :: PParams
 testPCs =
-    PParams 1 1 100 250 oneFourth 0.001 interval0 0 (Epoch 0) (0%1, 0) oneFourth 0.001 interval0 interval0
+    PParams 1 1 100 250 oneFourth 0.001 interval0 0 (Epoch 0) (0%1, 0) oneFourth 0.001 interval0 interval0 0 interval0
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000

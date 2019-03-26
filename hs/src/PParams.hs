@@ -22,6 +22,7 @@ module PParams
   , interval1
   , emptyPParams
   , maxBHSize
+  , activeSlotCoeff
   ) where
 
 import           Numeric.Natural (Natural)
@@ -62,6 +63,8 @@ data PParams = PParams
   , _tau             :: UnitInterval
     -- | Maximal block header size
   , _maxBHSize       :: Integer
+    -- | Active slot coefficient
+  , _activeSlotCoeff :: UnitInterval
   } deriving (Show, Eq)
 
 makeLenses ''PParams
@@ -69,4 +72,4 @@ makeLenses ''PParams
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
 emptyPParams =
-    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0 0
+    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0 0 interval0
