@@ -29,6 +29,7 @@ where
 
 import Cardano.Prelude
 
+import Control.Monad (fail)
 import Control.Monad.Except (MonadError(..), liftEither)
 import Data.Aeson
   (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
@@ -46,7 +47,7 @@ import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
 import Cardano.Chain.Genesis.Generate
   (GeneratedSecrets, GenesisDataGenerationError, generateGenesisData)
-import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
+import Cardano.Chain.Genesis.Spec (GenesisSpec(..), mkGenesisSpec)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
@@ -113,14 +114,13 @@ instance FromJSON StaticConfig where
         -- GenesisInitializer
         initializerV <- specO .: "initializer"
 
-        return . GCSpec $
-          UnsafeGenesisSpec
-            avvmDistrV
-            heavyDelegationV
-            protocolParametersV
-            kV
-            protocolMagicV
-            initializerV
+        either fail (pure . GCSpec) $ mkGenesisSpec
+          avvmDistrV
+          heavyDelegationV
+          protocolParametersV
+          kV
+          protocolMagicV
+          initializerV
 
 --------------------------------------------------------------------------------
 -- Config
