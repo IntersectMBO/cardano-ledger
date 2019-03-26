@@ -21,6 +21,10 @@ module LedgerState
   , DWState(..)
   , DState(..)
   , AccountState(..)
+  , RewardUpdate(..)
+  , EpochState(..)
+  , emptyEpochState
+  , emptyLedgerState
   , dstate
   , pstate
   , ptrs
@@ -98,6 +102,7 @@ module LedgerState
   , updateAvgs
   , stakeDistr
   , poolDistr
+  , applyRUpd
   ) where
 
 import           Control.Monad           (foldM)
@@ -121,7 +126,7 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
                                                  movingAvgExp,
                                                  keyDeposit, minRefund,
-                                                 decayRate)
+                                                 decayRate, emptyPParams)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -239,11 +244,35 @@ data DWState =
     , _pstate :: PState
     } deriving (Show, Eq)
 
+data RewardUpdate = RewardUpdate
+  { deltaT :: Coin
+  , deltaR :: Coin
+  , rp     :: Coin
+  , rs     :: Map.Map RewardAcnt Coin
+  , deltaF :: Coin
+  } deriving (Show, Eq)
+
 data AccountState = AccountState
   { _treasury   :: Coin
   , _reserves   :: Coin
   , _rewardPool :: Coin
   } deriving (Show, Eq)
+
+data EpochState = EpochState AccountState PParams SnapShots LedgerState
+  deriving (Show, Eq)
+
+emptyEpochState :: EpochState
+emptyEpochState =
+  EpochState emptyAccount emptyPParams emptySnapShots emptyLedgerState
+
+emptyLedgerState :: LedgerState
+emptyLedgerState = LedgerState
+                   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
+                   emptyDelegation
+                   emptyPParams
+                   0
+                   (Slot 0)
+
 
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0) (Coin 0)
@@ -829,6 +858,26 @@ poolDistr u ds ps = PooledStake $
       delegs     = ds ^. delegations
       poolParams = ps ^. pParams
       stake      = stakeDistr u ds ps
+
+-- | Apply a reward update
+applyRUpd :: RewardUpdate -> EpochState -> EpochState
+applyRUpd ru (EpochState as pp ss ls) = es'
+  where treasury' = _treasury as + deltaT ru
+        reserves' = _reserves as + deltaR ru
+        rew       = _rewards $ _dstate $ _delegationState ls
+        rewards'  = Map.union (rs ru) rew  -- prefer rs
+        fees'     = (_fees $ _utxoState ls) + deltaF ru
+        dstate'   = _dstate $ _delegationState ls
+        utxo'     = _utxoState ls
+        ls'       =
+          ls { _utxoState = utxo' { _fees = fees' }
+             , _delegationState = DWState
+                  (dstate' { _rewards = rewards'})
+                  (_pstate $ _delegationState ls)}
+        es' = EpochState (AccountState treasury' reserves' (rp ru)) pp ss ls'
+
+
+
 
 ---------------------------------------------------------------------------------
 -- State transition system

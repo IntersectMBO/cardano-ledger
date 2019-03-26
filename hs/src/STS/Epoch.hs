@@ -13,8 +13,6 @@ import           LedgerState
 import           PParams
 import           EpochBoundary
 import           Slot
-import           UTxO
-import           Coin
 
 import           Control.State.Transition
 
@@ -25,7 +23,7 @@ import           STS.Snap
 data EPOCH
 
 instance STS EPOCH where
-    type State EPOCH = (AccountState, PParams, SnapShots, LedgerState)
+    type State EPOCH = EpochState
     type Signal EPOCH = Epoch
     type Environment EPOCH = (PParams, BlocksMade)
     data PredicateFailure EPOCH = PoolReapFailure (PredicateFailure POOLREAP)
@@ -37,26 +35,22 @@ instance STS EPOCH where
     transitionRules = [ epochTransition ]
 
 initialEpoch :: InitialRule EPOCH
-initialEpoch = pure ( emptyAccount
-                    , emptyPParams
-                    , emptySnapShots
-                    , LedgerState
-                       (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
-                       emptyDelegation
-                       emptyPParams
-                       0
-                       (Slot 0))
+initialEpoch = pure $ EpochState
+                        emptyAccount
+                        emptyPParams
+                        emptySnapShots
+                        emptyLedgerState
 
 epochTransition :: TransitionRule EPOCH
 epochTransition = do
-    TRC((ppNew, blocks), (as, pp, ss, ls), eNew) <- judgmentContext
+    TRC((ppNew, blocks), EpochState as pp ss ls, eNew) <- judgmentContext
     let us = _utxoState ls
     let DWState ds ps = _delegationState ls
     (ss', us') <- trans @SNAP $ TRC((pp, ds, ps, blocks), (ss, us), eNew)
     (as', ds', ps') <- trans @POOLREAP $ TRC(pp, (as, ds, ps), eNew)
     (us'', as'', pp')
         <- trans @NEWPP $ TRC((ppNew, ds', ps'), (us', as', pp), eNew)
-    pure (as'', pp', ss', ls { _utxoState = us'', _delegationState = DWState ds' ps'})
+    pure $ EpochState as'' pp' ss' (ls { _utxoState = us'', _delegationState = DWState ds' ps'})
 
 instance Embed SNAP EPOCH where
     wrapFailed = SnapFailure
