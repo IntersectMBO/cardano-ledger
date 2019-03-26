@@ -38,6 +38,7 @@ library
                      STS.Updn
                      STS.Utxo
                      STS.Utxow
+                     STS.Vrf
   hs-source-dirs: src
   ghc-options:
     -Wall
