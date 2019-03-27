@@ -22,6 +22,7 @@ module PParams
   , interval1
   , emptyPParams
   , maxBHSize
+  , maxBBSize
   , activeSlotCoeff
   ) where
 
@@ -63,6 +64,8 @@ data PParams = PParams
   , _tau             :: UnitInterval
     -- | Maximal block header size
   , _maxBHSize       :: Integer
+    -- | Maximal block body size
+  , _maxBBSize       :: Integer
     -- | Active slot coefficient
   , _activeSlotCoeff :: UnitInterval
   } deriving (Show, Eq)
@@ -72,4 +75,4 @@ makeLenses ''PParams
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
 emptyPParams =
-    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0 0 interval0
+    PParams 0 0 (Coin 0) (Coin 0) interval0 0 interval0 0 (Epoch 0) (0, 0) interval0 0 interval0 interval0 0 0 interval0
