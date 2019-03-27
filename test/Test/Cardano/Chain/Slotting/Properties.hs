@@ -285,7 +285,7 @@ prop_addSlotNumber = withTests 100 . property $ do
   let added = fs + (FlatSlotId $ unEpochSlots sc)
   addSlotNumber sc fs === added
 
--- Check that `addSlotNumber` actually subtracts.
+-- Check that `subSlotNumber` actually subtracts.
 prop_subSlotNumber :: Property
 prop_subSlotNumber = withTests 100 . property $ do
   sc <- forAll genLsiEpochSlots

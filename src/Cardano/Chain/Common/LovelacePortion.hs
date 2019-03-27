@@ -70,6 +70,9 @@ instance Bi LovelacePortion where
   encode = encode . getLovelacePortion
   decode = LovelacePortion <$> decode
 
+-- The Canonical and Aeson instances for LovelacePortion are inconsistent -
+-- Canonical reads/writes an integer, but Aeson reads/write a Real in range [0,1]
+-- This is because 'canonical-json' only supports numbers of type @Int54@.
 instance Monad m => ToJSON m LovelacePortion where
   toJSON = toJSON . getLovelacePortion
 
