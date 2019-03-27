@@ -223,7 +223,7 @@ generateGenesisData startTime genesisSpec = do
       , gdNonAvvmBalances = nonAvvmDistr
       , gdProtocolParameters = gsProtocolParameters genesisSpec
       , gdK         = gsK genesisSpec
-      , gdProtocolMagic = pm
+      , gdProtocolMagicId = getProtocolMagicId pm
       , gdAvvmDistr = fakeAvvmDistr <> realAvvmMultiplied
       }
 

@@ -33,7 +33,7 @@ import Cardano.Chain.Genesis (GenesisData(..), readGenesisData)
 import Cardano.Chain.Slotting (SlotId)
 import Cardano.Chain.Txp
   (UTxO, UTxOValidationError, aUnTxPayload, genesisUtxo, updateUTxOWitness)
-import Cardano.Crypto (ProtocolMagicId, getProtocolMagicId)
+import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Mirror (mainnetEpochFiles)
 
 import Test.Options (TestScenario(..))
@@ -53,7 +53,7 @@ tests scenario = do
     <$> runExceptT (readGenesisData "test/mainnet-genesis.json")
 
   -- Extract mainnet 'ProtocolMagic'
-  let pm = getProtocolMagicId $ gdProtocolMagic genesisData
+  let pm = gdProtocolMagicId genesisData
 
   -- Create an 'IORef' containing the genesis 'UTxO'
   utxoRef <- newIORef $ genesisUtxo genesisData

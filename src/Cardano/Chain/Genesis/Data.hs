@@ -43,10 +43,7 @@ import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto
-  ( getProtocolMagic
-  , ProtocolMagic(..)
-  , ProtocolMagicId(..)
-  , RequiresNetworkMagic(..)
+  ( ProtocolMagicId(..)
   , hashRaw
   )
 
@@ -60,7 +57,7 @@ data GenesisData = GenesisData
     , gdNonAvvmBalances  :: !GenesisNonAvvmBalances
     , gdProtocolParameters :: !ProtocolParameters
     , gdK                :: !BlockCount
-    , gdProtocolMagic    :: !ProtocolMagic
+    , gdProtocolMagicId  :: !ProtocolMagicId
     , gdAvvmDistr        :: !GenesisAvvmBalances
     } deriving (Show, Eq)
 
@@ -76,7 +73,7 @@ instance Monad m => ToJSON m GenesisData where
     , ( "protocolConsts"
       , mkObject
         [ ("k"            , pure . JSNum . fromIntegral . unBlockCount $ gdK gd)
-        , ("protocolMagic", toJSON . getProtocolMagic $ gdProtocolMagic gd)
+        , ("protocolMagic", toJSON $ gdProtocolMagicId gd)
         ]
       )
     , ("avvmDistr", toJSON $ gdAvvmDistr gd)
@@ -98,7 +95,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       -- The above is called blockVersionData for backwards compatibility with
       -- mainnet genesis block
       <*> (BlockCount . (fromIntegral @Int54) <$> fromJSField protocolConsts "k")
-      <*> (ProtocolMagic . ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic") <*> pure RequiresMagic)
+      <*> (ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic"))
       <*> fromJSField obj "avvmDistr"
 
 data GenesisDataError

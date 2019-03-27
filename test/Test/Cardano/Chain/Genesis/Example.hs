@@ -61,7 +61,7 @@ import Test.Cardano.Chain.Common.Example
   (exampleAddress, exampleAddress1, exampleStakeholderId)
 import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.Bi (getBytes)
-import Test.Cardano.Crypto.Example (exampleProtocolMagic0)
+import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
 
 exampleBlockCount :: BlockCount
 exampleBlockCount = BlockCount 12344
@@ -99,7 +99,7 @@ exampleGenesisData0 = GenesisData
   , gdNonAvvmBalances = exampleGenesisNonAvvmBalances0
   , gdProtocolParameters = exampleProtocolParameters
   , gdK         = exampleBlockCount
-  , gdProtocolMagic = exampleProtocolMagic0
+  , gdProtocolMagicId = exampleProtocolMagicId0
   , gdAvvmDistr = exampleGenesisAvvmBalances
   }
 

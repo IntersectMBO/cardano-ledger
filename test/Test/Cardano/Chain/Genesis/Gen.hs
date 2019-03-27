@@ -47,10 +47,8 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Chain.Slotting (EpochIndex)
 import Cardano.Crypto
-  ( ProtocolMagic(..)
-  , ProtocolMagicId
+  ( ProtocolMagicId
   , ProxyCert(..)
-  , RequiresNetworkMagic(..)
   , Signature(..)
   , noPassSafeSigner
   , safeCreateProxyCert
@@ -83,13 +81,9 @@ genCanonicalGenesisData pm =
     <*> genGenesisNonAvvmBalances
     <*> genCanonicalProtocolParameters
     <*> genBlockCount'
-    <*> genProtocolMagicUniform
+    <*> genProtocolMagicId
     <*> genGenesisAvvmBalances
  where
-  genProtocolMagicUniform :: Gen ProtocolMagic
-  genProtocolMagicUniform =
-    (ProtocolMagic <$> genProtocolMagicId <*> pure RequiresMagic)
-
   genBlockCount' :: Gen BlockCount
   genBlockCount' = BlockCount <$> (Gen.word64 $ Range.linear 0 1000000000)
 
@@ -109,7 +103,7 @@ genGenesisData pm =
     <*> genGenesisNonAvvmBalances
     <*> genProtocolParameters
     <*> genBlockCount
-    <*> genProtocolMagic
+    <*> genProtocolMagicId
     <*> genGenesisAvvmBalances
 
 genGenesisHash :: Gen GenesisHash
