@@ -7,12 +7,15 @@ module STS.Vrf
   ( VRF
   ) where
 
+import           Data.Ratio               ((%))
 import qualified Data.Map                 as Map
 
 import           Crypto.Hash              (hash)
 import qualified Data.ByteString.Char8    as BS
 
 import           BlockChain
+import           Coin
+import           Keys
 import           PParams
 import           Slot
 
@@ -47,13 +50,14 @@ vrfTransition = do
   let ss = slotToSeed $ bheaderSlot bhb
   let f = _activeSlotCoeff pp
   let bhl = intervalValue $ bheaderL bhb
-  let vkEntry = Map.lookup vk pd
-  case vkEntry of
+  let hkEntry = Map.lookup (hashKey vk) pd
+  let Coin allStake = Map.foldr (+) (Coin 0) pd
+  case hkEntry of
     Nothing -> do
       failBecause KeyNotInPoolDistributionVRF
       pure (h, sL)
-    Just relStake -> do
-      let relStake' = intervalValue relStake
+    Just (Coin relStake) -> do
+      let relStake' = relStake % allStake
       fromRational bhl >= 1 - (1 - fromRational (intervalValue f)) *** relStake'
         ?! NotSlotLeaderVRF
       verifyVrf vk (seedOp (seedOp eta0 ss) seedEta) (bheaderPrfEta bhb)

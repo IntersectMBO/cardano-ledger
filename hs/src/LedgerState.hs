@@ -853,7 +853,6 @@ poolDistr :: UTxO -> DState -> PState -> (Stake, Map.Map HashKey HashKey)
 poolDistr u ds ps = (stake, delegs)
     where
       delegs     = ds ^. delegations
-      poolParams = ps ^. pParams
       stake      = stakeDistr u ds ps
 
 -- | Apply a reward update
