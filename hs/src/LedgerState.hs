@@ -849,11 +849,8 @@ stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
                  (Map.restrictKeys delegs (Map.keysSet stkeys))
 
 -- | Pool distribution
-poolDistr :: UTxO -> DState -> PState -> PooledStake
-poolDistr u ds ps = PooledStake $
-    Map.mapWithKey
-           (\hk pool -> poolStake hk (pool ^. poolOwners) delegs stake)
-           poolParams
+poolDistr :: UTxO -> DState -> PState -> (Stake, Map.Map HashKey HashKey)
+poolDistr u ds ps = (stake, delegs)
     where
       delegs     = ds ^. delegations
       poolParams = ps ^. pParams

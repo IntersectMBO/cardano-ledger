@@ -9,7 +9,6 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake(..)
-  , PooledStake(..)
   , BlocksMade(..)
   , SnapShots(..)
   , pstakeMark
@@ -57,11 +56,6 @@ newtype BlocksMade =
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake =
   Stake (Map.Map HashKey Coin)
-  deriving (Show, Eq, Ord)
-
--- | Type of pooled stake as map from pool hash key to Stake.
-newtype PooledStake =
-  PooledStake (Map.Map HashKey Stake)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
@@ -165,9 +159,9 @@ groupByPool active delegs =
 
 data SnapShots =
     SnapShots
-    { _pstakeMark :: PooledStake
-    , _pstakeSet  :: PooledStake
-    , _pstakeGo   :: PooledStake
+    { _pstakeMark :: (Stake, Map.Map HashKey HashKey)
+    , _pstakeSet  :: (Stake, Map.Map HashKey HashKey)
+    , _pstakeGo   :: (Stake, Map.Map HashKey HashKey)
     , _poolsSS    :: Map.Map HashKey PoolParams
     , _blocksSS   :: BlocksMade
     , _feeSS      :: Coin
@@ -177,6 +171,8 @@ makeLenses ''SnapShots
 
 emptySnapShots :: SnapShots
 emptySnapShots =
-    SnapShots pooledEmpty pooledEmpty pooledEmpty Map.empty blocksEmpty (Coin 0)
-    where pooledEmpty = PooledStake Map.empty
+    SnapShots snapEmpty snapEmpty snapEmpty Map.empty blocksEmpty (Coin 0)
+    where pooledEmpty = Map.empty
           blocksEmpty = BlocksMade Map.empty
+          stakeEmpty  = Stake Map.empty
+          snapEmpty   = (stakeEmpty, pooledEmpty)
