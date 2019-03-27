@@ -226,8 +226,11 @@ The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal
     then the proposed minor version must be zero.
   \item must be consistent with the current protocol parameters:
     \begin{itemize}
-    \item the proposal size must not exceed the maximum size specified by
-      the current protocol parameters,
+    \item the proposal size must not exceed the maximum size specified by the
+      current protocol parameters, (note that here we use function application
+      to extract the value of the different protocol parameters, and a rule
+      that uses a value of the map can be applied only if the function -e.g.
+      $\var{pps}$- is defined for that value)
     \item the proposed new maximum block size should be not greater than twice
       current maximum block size,
     \item the maximum transaction size must be smaller than the maximum block
@@ -259,7 +262,7 @@ cause a soft-fork we might use the alt version for that purpose.
   \begin{equation}
     \label{eq:func:pv-can-follow}
     \begin{array}{r c l}
-      \fun{pvCanFollow}~(\var{mj_n}, \var{mi_n}, \var{a_n})~(\var{mj_p}, \var{mi_p}, \var{a_p})
+      \fun{pvCanFollow}~(\var{mj_p}, \var{mi_p}, \var{a_p})~(\var{mj_n}, \var{mi_n}, \var{a_n})
       & = & (\var{mj_p}, \var{mi_p}, \var{a_p}) < (\var{mj_n}, \var{mi_n}, \var{a_n})\\
       & \wedge & 0 \leq \var{mj_n} - \var{mj_p} \leq 1\\
       & \wedge & (\var{mj_p} = \var{mj_n} \Rightarrow \var{mi_p} + 1 = \var{mi_n}))\\
@@ -270,19 +273,14 @@ cause a soft-fork we might use the alt version for that purpose.
   \begin{equation}
     \label{eq:func:can-update}
     \begin{array}{l}
-      \fun{canUpdate}~\var{pps}~\var{up}\\
+      \fun{canUpdate}~\var{pps}~\var{pps'}\\
       {\begin{array}{r c l}
-         & = & \var{maxProposalSize} \mapsto \var{mus} \in \var{pps}\\
-         & \wedge & \upSize{up} \leq \var{mus}\\
-         & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})\\
-         & & \Rightarrow \var{maxBlockSize} \mapsto \var{bszm} \in \var{pps}
-             \wedge  \var{bszm_{up}} \leq 2*\var{bszm})\\
-         & \wedge & (\var{maxBlockSize} \mapsto \var{bszm_{up}} \in (\upParams{up})
-         \wedge \var{maxTxSize} \mapsto \var{txzm_{up}} \in (\upParams{up})\\
-         & & \Rightarrow \var{txzm_{up}} < \var{bszm_{up}})\\
-         & \wedge & (\var{scriptVersion} \mapsto \var{sv_{up}} \in (\upParams{up}) \\
-         & & \Rightarrow \var{scriptVersion} \mapsto \var{sv} \in \var{pps}
-             \wedge  0 \leq \var{sv_{up}} - \var{sv} \leq 1)
+         & = & \var{pps'}~\var{maxBlockSize} \leq 2\cdot\var{pps}~\var{maxBlockSize}\\
+         & \wedge & \var{pps'}~\var{maxBlockSize} <  \var{pps'}~\var{maxTxSize}\\
+         & \wedge
+             & 0 \leq
+               \var{pps'}~\var{scriptVersion} - \var{pps}~\var{scriptVersion}
+               \leq 1
        \end{array}}
     \end{array}
   \end{equation}
@@ -337,11 +335,11 @@ cause a soft-fork we might use the alt version for that purpose.
     \label{eq:rule:up-pv-validity}
     \inference
     {
-      \var{pid} = \upId{up}
+      \var{pps'} = \var{pps} \unionoverrideRight \upParams{up}
+      & \fun{canUpdate}~\var{pps}~\var{pps'}\\
       & \var{nv} = \upPV{up}
-      & \var{pps_n} = \upParams{up}\\
-      & \fun{pvCanFollow}~\var{nv}~\var{pv}
-      & \fun{canUpdate}~\var{pps}~\var{up}
+      & \fun{pvCanFollow}~\var{nv}~\var{pv}\\
+      & \upSize{up} \leq \var{pps}~\var{maxProposalSize}
       & \var{nv} \notin \dom~(\range~\var{rpus})
     }
     {
@@ -363,7 +361,8 @@ cause a soft-fork we might use the alt version for that purpose.
       {
         \left(
           \begin{array}{l}
-            \var{rpus} \unionoverrideRight \{ \var{pid} \mapsto (\var{nv}, \var{pps_n}) \}
+            \var{rpus} \unionoverrideRight
+            \{ \upId{up} \mapsto (\var{nv}, \var{pps'}) \}
           \end{array}
         \right)
       }
