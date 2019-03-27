@@ -1,7 +1,9 @@
 let
   localLib = import ./lib.nix;
 in
+{ cardano-ledger-specs ? { outPath = ./.; rev = "abcdef"; } ,... }@args:
 localLib.nix-tools.release-nix {
+  _this = cardano-ledger-specs;
   package-set-path = ./.;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
@@ -65,4 +67,4 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-delegation-test.x86_64-linux
     ];
 
-}
+} (builtins.removeAttrs args ["cardano-ledger-specs"])

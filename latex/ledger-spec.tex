@@ -33,7 +33,7 @@
 %%
 %% Types
 %%
-\newcommand{\Nothing}{\Diamond}
+\newcommand{\Nothing}{\ensuremath{\Diamond}}
 \newcommand{\N}{\ensuremath{\mathbb{N}}}
 \newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
 \newcommand{\Z}{\ensuremath{\mathbb{Z}}}
@@ -51,7 +51,7 @@
 \newcommand{\PParams}{\type{PParams}}
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
-\newcommand{\SlotsPerCycle}{\mathsf{SlotsPerCycle}}
+\newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
 \newcommand{\StakeKeys}{\type{StakeKeys}}
@@ -97,7 +97,7 @@
 \newcommand{\Data}{\type{Data}}
 %% Adding delegation
 \newcommand{\Epoch}{\type{Epoch}}
-\newcommand{\Cycle}{\type{Cycle}}
+\newcommand{\KESPeriod}{\type{KESPeriod}}
 \newcommand{\VKeyGen}{\type{VKeyGen}}
 %% Blockchain
 \newcommand{\Gkeys}{\var{G_{keys}}}
@@ -143,8 +143,8 @@
 \newcommand{\poolParam}[1]{\fun{poolParam}~ \var{#1}}
 \newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
 \newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
-\newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
-\newcommand{\cycle}[1]{\fun{cycle}~ \var{#1}}
+\newcommand{\epoch}[1]{\fun{epoch}~\var{#1}}
+\newcommand{\kesPeriod}[1]{\fun{kesPeriod}~\var{#1}}
 \newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
 
 %% UTxO witnesses

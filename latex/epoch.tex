@@ -107,6 +107,14 @@ The two main transition systems in this section are:
     covering the reward calculation which happens between (E) and (F).
 \end{itemize}
 
+
+\begin{note}
+  Between time D and E we are concerned with chain growth and stability.
+  Therefore this duration can be stated as 2k blocks (to state it in slots requires details about
+  particular version of ouroboros). The duration between F and G is the same, 2k blocks.
+  Between E and F a single honest block is enough to ensure a random nonce.
+\end{note}
+
 \subsection{Helper Functions and Accounting Fields}
 \label{sec:stake-dist-helpers}
 
@@ -268,9 +276,10 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
 The stake distribution calculation is given in Figure~\ref{fig:functions:stake-distribution}.
 
 \begin{itemize}
-  \item $\fun{aggregate_{+}}$ takes a relation on $A\times B$, where $B$ is any monoid,
-    and returns a map from each $a\in A$ to the sum of all $b\in B$ such that $(a, b)\in B$.
-  \item $\fun{stakeDistr}$ uses the $\fun{aggregate_{+}}$ function and several relations to
+\item $\fun{aggregate_{+}}$ takes a relation on $A\times B$, where $B$ is any
+  monoid $(B,+,e)$, and returns a map from each $a\in A$ to the ``sum'' (using
+  the monoidal $+$ operation) of all $b\in B$ such that $(a, b)\in A\times B$.
+\item $\fun{stakeDistr}$ uses the $\fun{aggregate_{+}}$ function and several relations to
     compute the stake distribution, mapping each hashkey to the total coin under its control.
     Keys that are not both registered and delegated are filtered out.
     The relation passed to $\fun{aggregate_{+}}$ is made up of:
