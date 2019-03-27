@@ -32,6 +32,7 @@ module Cardano.Chain.Common.Address
 
   -- * Utilities
   , addrAttributesUnwrapped
+  , addrNetworkMagic
   , deriveLvl2KeyPair
   , deriveFirstHDAddress
 
@@ -89,6 +90,7 @@ import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData
   (AddrSpendingData(..), AddrType(..), addrSpendingDataToType)
 import Cardano.Chain.Common.Attributes (Attributes(..), mkAttributes)
+import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
 import Cardano.Chain.Constants (accountGenesisIndex, wAddressGenesisIndex)
 import Cardano.Crypto.Hashing (hashHexF)
 import Cardano.Crypto.HD
@@ -244,55 +246,59 @@ makeAddress spendingData attributesUnwrapped = Address
   address'   = Address' (addrType', spendingData, attributes)
 
 -- | A function for making an address from 'PublicKey'
-makePubKeyAddress :: PublicKey -> Address
-makePubKeyAddress = makePubKeyAddressImpl Nothing
+makePubKeyAddress :: NetworkMagic -> PublicKey -> Address
+makePubKeyAddress nm = makePubKeyAddressImpl nm Nothing
 
 -- | A function for making an HDW address
 makePubKeyHdwAddress
-  :: HDAddressPayload
+  :: NetworkMagic
+  -> HDAddressPayload
   -- ^ Derivation path
   -> PublicKey
   -> Address
-makePubKeyHdwAddress path = makePubKeyAddressImpl (Just path)
+makePubKeyHdwAddress nm path = makePubKeyAddressImpl nm (Just path)
 
-makePubKeyAddressImpl :: Maybe HDAddressPayload -> PublicKey -> Address
-makePubKeyAddressImpl path key = makeAddress spendingData attrs
+makePubKeyAddressImpl :: NetworkMagic -> Maybe HDAddressPayload -> PublicKey -> Address
+makePubKeyAddressImpl nm path key = makeAddress spendingData attrs
  where
   spendingData = PubKeyASD key
-  attrs        = AddrAttributes {aaPkDerivationPath = path}
+  attrs        = AddrAttributes { aaPkDerivationPath = path
+                                , aaNetworkMagic = nm }
 
 -- | A function for making an address from 'RedeemPublicKey'
-makeRedeemAddress :: RedeemPublicKey -> Address
-makeRedeemAddress key = makeAddress spendingData attrs
+makeRedeemAddress :: NetworkMagic -> RedeemPublicKey -> Address
+makeRedeemAddress nm key = makeAddress spendingData attrs
  where
   spendingData = RedeemASD key
-  attrs        = AddrAttributes {aaPkDerivationPath = Nothing}
+  attrs        = AddrAttributes { aaPkDerivationPath = Nothing
+                                , aaNetworkMagic = nm }
 
 -- | Create address from secret key in hardened way
 createHDAddressH
-  :: ShouldCheckPassphrase
+  :: NetworkMagic
+  -> ShouldCheckPassphrase
   -> PassPhrase
   -> HDPassphrase
   -> EncryptedSecretKey
   -> [Word32]
   -> Word32
   -> Maybe (Address, EncryptedSecretKey)
-createHDAddressH scp passphrase hdPassphrase parent parentPath childIndex = do
+createHDAddressH nm scp passphrase hdPassphrase parent parentPath childIndex = do
   derivedSK <- deriveHDSecretKey scp passphrase parent childIndex
   let
     addressPayload =
       packHDAddressAttr hdPassphrase $ parentPath ++ [childIndex]
   let pk = encToPublic derivedSK
-  return (makePubKeyHdwAddress addressPayload pk, derivedSK)
+  return (makePubKeyHdwAddress nm addressPayload pk, derivedSK)
 
 -- | Create address from public key via non-hardened way
 createHDAddressNH
-  :: HDPassphrase -> PublicKey -> [Word32] -> Word32 -> (Address, PublicKey)
-createHDAddressNH passphrase parent parentPath childIndex = do
+  :: NetworkMagic -> HDPassphrase -> PublicKey -> [Word32] -> Word32 -> (Address, PublicKey)
+createHDAddressNH nm passphrase parent parentPath childIndex = do
   let derivedPK = deriveHDPublicKey parent childIndex
   let
     addressPayload = packHDAddressAttr passphrase $ parentPath ++ [childIndex]
-  (makePubKeyHdwAddress addressPayload derivedPK, derivedPK)
+  (makePubKeyHdwAddress nm addressPayload derivedPK, derivedPK)
 
 
 --------------------------------------------------------------------------------
@@ -325,9 +331,14 @@ checkRedeemAddress rpk = checkAddrSpendingData (RedeemASD rpk)
 addrAttributesUnwrapped :: Address -> AddrAttributes
 addrAttributesUnwrapped = attrData . addrAttributes
 
+-- | Get 'NetworkMagic' from 'Address'
+addrNetworkMagic :: Address -> NetworkMagic
+addrNetworkMagic = aaNetworkMagic . addrAttributesUnwrapped
+
 -- | Makes account secret key for given wallet set
 deriveLvl2KeyPair
-  :: ShouldCheckPassphrase
+  :: NetworkMagic
+  -> ShouldCheckPassphrase
   -> PassPhrase
   -> EncryptedSecretKey
   -- ^ key of wallet
@@ -336,11 +347,12 @@ deriveLvl2KeyPair
   -> Word32
   -- ^ address derivation index
   -> Maybe (Address, EncryptedSecretKey)
-deriveLvl2KeyPair scp passphrase wsKey accountIndex addressIndex = do
+deriveLvl2KeyPair nm scp passphrase wsKey accountIndex addressIndex = do
   wKey <- deriveHDSecretKey scp passphrase wsKey accountIndex
   let hdPass = deriveHDPassphrase $ encToPublic wsKey
   -- We don't need to check passphrase twice
   createHDAddressH
+    nm
     (ShouldCheckPassphrase False)
     passphrase
     hdPass
@@ -349,11 +361,13 @@ deriveLvl2KeyPair scp passphrase wsKey accountIndex addressIndex = do
     addressIndex
 
 deriveFirstHDAddress
-  :: PassPhrase
+  :: NetworkMagic
+  -> PassPhrase
   -> EncryptedSecretKey
   -- ^ key of wallet set
   -> Maybe (Address, EncryptedSecretKey)
-deriveFirstHDAddress passphrase wsKey = deriveLvl2KeyPair
+deriveFirstHDAddress nm passphrase wsKey = deriveLvl2KeyPair
+  nm
   (ShouldCheckPassphrase False)
   passphrase
   wsKey
@@ -379,7 +393,7 @@ isRedeemAddress addr = case addrType addr of
 -- | Largest (considering size of serialized data) PubKey address. Actual size
 --   depends on CRC32 value which is serialized using var-length encoding.
 largestPubKeyAddress :: Address
-largestPubKeyAddress = makePubKeyAddress goodPk
+largestPubKeyAddress = makePubKeyAddress (NetworkTestnet maxBound) goodPk
 
 -- | Maximal size of PubKey address.
 maxPubKeyAddressSize :: Natural
@@ -393,6 +407,7 @@ largestHDAddress = case lvl2KeyPair of
   Just (addr, _) -> addr
  where
   lvl2KeyPair = deriveLvl2KeyPair
+    (NetworkTestnet maxBound)
     (ShouldCheckPassphrase False)
     emptyPassphrase
     encSK

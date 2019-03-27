@@ -40,6 +40,7 @@ import Cardano.Chain.Block
   , initialChainValidationState
   , updateBlock
   )
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (trace)
@@ -48,6 +49,7 @@ import Control.State.Transition.Trace
   (TraceOrder(OldestFirst), Trace, preStatesAndSignals, traceEnv)
 
 import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg)
+import Test.Cardano.Crypto.Gen (genProtocolMagic)
 
 tests :: IO Bool
 tests = checkParallel $$discover
@@ -59,10 +61,13 @@ prop_generatedChainsAreValidated =
   -- TODO: we might want to make this configurable, so that we run a smaller
   -- number of tests when developing, and use a higher number when on CI (or in
   -- nightly builds?).
-  withTests 300 $ property $ forAll trace >>= passConcreteValidation
+  withTests 300 $ property $ do
+    pm <- forAll genProtocolMagic
+    tr <- forAll trace
+    passConcreteValidation pm tr
 
-passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
-passConcreteValidation tr = void $ evalEither res
+passConcreteValidation :: MonadTest m => ProtocolMagic -> Trace CHAIN -> m ()
+passConcreteValidation pm tr = void $ evalEither res
  where
   res = foldM elaborateAndUpdate initSt $ preStatesAndSignals OldestFirst tr
 
@@ -79,4 +84,4 @@ passConcreteValidation tr = void $ evalEither res
   initSt =
     either (panic . show) identity $ initialChainValidationState config
 
-  config = abEnvToCfg (tr ^. traceEnv)
+  config = abEnvToCfg pm (tr ^. traceEnv)

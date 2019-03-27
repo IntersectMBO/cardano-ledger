@@ -29,15 +29,18 @@ import Cardano.Chain.Common
   ( Address
   , Lovelace
   , LovelaceError
+  , NetworkMagic
   , TxFeePolicy(..)
   , TxSizeLinear(..)
+  , addrNetworkMagic
   , calculateTxSizeLinear
   , checkPubKeyAddress
   , checkRedeemAddress
+  , makeNetworkMagic
   , mkKnownLovelace
   , subLovelace
   )
-import Cardano.Chain.Txp.Tx (Tx(..), TxIn)
+import Cardano.Chain.Txp.Tx (Tx(..), TxIn, TxOut(..))
 import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taTx, taWitness)
 import Cardano.Chain.Txp.TxWitness
   (TxInWitness(..), TxSigData(..), recoverSigData)
@@ -45,7 +48,12 @@ import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Crypto
-  (ProtocolMagicId, SignTag(..), verifySignatureDecoded, verifyRedeemSigDecoded)
+  ( ProtocolMagic(..)
+  , ProtocolMagicId
+  , SignTag(..)
+  , verifySignatureDecoded
+  , verifyRedeemSigDecoded
+  )
 
 
 -- | A representation of all the ways a transaction might be invalid
@@ -54,6 +62,8 @@ data TxValidationError
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
   | TxValidationInvalidWitness TxInWitness
   | TxValidationMissingInput TxIn
+  | TxValidationNetworkMagicMismatch NetworkMagic NetworkMagic
+  -- ^ Fields are <expected> <actual>
   deriving (Eq, Show)
 
 
@@ -66,8 +76,13 @@ data TxValidationError
 --   These are the conditions of the UTxO inference rule in the spec. We
 --   actually assume 3 by calculating the fee as output balance - input balance.
 validateTx
-  :: MonadError TxValidationError m => TxFeePolicy -> UTxO -> Tx -> m ()
-validateTx feePolicy utxo tx = do
+  :: MonadError TxValidationError m
+  => ProtocolMagic -> TxFeePolicy -> UTxO -> Tx -> m ()
+validateTx pm feePolicy utxo tx = do
+
+  -- Check that outputs have valid NetworkMagic
+  let nm = makeNetworkMagic pm
+  _txOutputs tx `forM_` validateTxOutNM nm
 
   -- Check that every input is in the domain of 'utxo'
   _txInputs tx `forM_` validateTxIn utxo
@@ -112,6 +127,12 @@ validateTxIn utxo txIn
   | txIn `UTxO.member` utxo = pure ()
   | otherwise = throwError $ TxValidationMissingInput txIn
 
+-- | Validate the NetworkMagic of a TxOut
+validateTxOutNM :: MonadError TxValidationError m => NetworkMagic -> TxOut -> m ()
+validateTxOutNM nm txOut =
+  let addrNm = addrNetworkMagic . txOutAddress $ txOut
+   in (nm == addrNm)
+        `orThrowError` TxValidationNetworkMagicMismatch nm addrNm
 
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
@@ -121,16 +142,16 @@ validateWitness
   -> Address
   -> TxInWitness
   -> m ()
-validateWitness pm sigData addr witness = case witness of
+validateWitness pmi sigData addr witness = case witness of
 
   PkWitness pk sig ->
-    (  verifySignatureDecoded pm SignTx pk sigData sig
+    (  verifySignatureDecoded pmi SignTx pk sigData sig
       && checkPubKeyAddress pk addr
       )
       `orThrowError` TxValidationInvalidWitness witness
 
   RedeemWitness pk sig ->
-    (  verifyRedeemSigDecoded pm SignRedeemTx pk sigData sig
+    (  verifyRedeemSigDecoded pmi SignRedeemTx pk sigData sig
       && checkRedeemAddress pk addr
       )
       `orThrowError` TxValidationInvalidWitness witness
@@ -143,10 +164,11 @@ data UTxOValidationError
 
 
 -- | Validate a transaction and use it to update the 'UTxO'
-updateUTxO :: MonadError UTxOValidationError m => UTxO -> Tx -> m UTxO
-updateUTxO utxo tx = do
+updateUTxO :: MonadError UTxOValidationError m
+           => ProtocolMagic -> UTxO -> Tx -> m UTxO
+updateUTxO pm utxo tx = do
 
-  validateTx hardcodedTxFeePolicy utxo tx
+  validateTx pm hardcodedTxFeePolicy utxo tx
     `wrapError` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (_txInputs tx)) </| utxo) (txOutputUTxO tx)
@@ -160,7 +182,7 @@ updateUTxO utxo tx = do
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
 updateUTxOWitness
   :: MonadError UTxOValidationError m
-  => ProtocolMagicId
+  => ProtocolMagic
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO
@@ -170,6 +192,7 @@ updateUTxOWitness pm utxo ta = do
     witness = taWitness ta
     --TODO:  after rebase: hashAnnotated fix
     sigData = recoverSigData $ aTaTx ta
+    pmi = getProtocolMagicId pm
 
   -- Get the signing addresses for each transaction input from the 'UTxO'
   addresses <-
@@ -178,9 +201,9 @@ updateUTxOWitness pm utxo ta = do
 
   -- Validate witnesses and their signing addresses
   mapM_
-      (uncurry $ validateWitness pm sigData)
+      (uncurry $ validateWitness pmi sigData)
       (zip addresses (V.toList witness))
     `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxO utxo tx
+  updateUTxO pm utxo tx

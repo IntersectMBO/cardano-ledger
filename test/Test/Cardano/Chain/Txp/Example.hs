@@ -29,7 +29,13 @@ import Data.Maybe (fromJust)
 import qualified Data.Vector as V
 
 import Cardano.Chain.Common
-  (makePubKeyAddress, mkAttributes, mkKnownLovelace, mkMerkleTree, mtRoot)
+  ( NetworkMagic(..)
+  , makePubKeyAddress
+  , mkAttributes
+  , mkKnownLovelace
+  , mkMerkleTree
+  , mtRoot
+  )
 import Cardano.Chain.Txp
   ( Tx(..)
   , TxAux
@@ -79,7 +85,8 @@ exampleTxInUtxo :: TxIn
 exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
 
 exampleTxOut :: TxOut
-exampleTxOut = TxOut (makePubKeyAddress pkey) (mkKnownLovelace @47)
+exampleTxOut = TxOut (makePubKeyAddress NetworkMainOrStage pkey)
+                     (mkKnownLovelace @47)
   where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)

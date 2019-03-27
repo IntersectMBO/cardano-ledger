@@ -42,6 +42,7 @@ import Cardano.Chain.Common
   , LovelacePortion(..)
   , MerkleRoot(..)
   , MerkleTree
+  , NetworkMagic(..)
   , StakeholderId
   , TxFeePolicy(..)
   , TxSizeLinear(..)
@@ -59,7 +60,7 @@ import Test.Cardano.Crypto.Gen
 
 
 genAddrAttributes :: Gen AddrAttributes
-genAddrAttributes = AddrAttributes <$> hap
+genAddrAttributes = AddrAttributes <$> hap <*> genNetworkMagic
   where hap = Gen.maybe genHDAddressPayload
 
 genAddress :: Gen Address
@@ -124,6 +125,12 @@ genMerkleTree genA = mkMerkleTree <$> Gen.list (Range.linear 0 10) genA
 -- slow
 genMerkleRoot :: Bi a => Gen a -> Gen (MerkleRoot a)
 genMerkleRoot genA = mtRoot <$> genMerkleTree genA
+
+genNetworkMagic :: Gen NetworkMagic
+genNetworkMagic = Gen.choice
+  [ pure NetworkMainOrStage
+  , NetworkTestnet <$> Gen.int32 Range.constantBounded
+  ]
 
 genScriptVersion :: Gen Word16
 genScriptVersion = Gen.word16 Range.constantBounded
