@@ -292,8 +292,16 @@ information in the confirmed proposal. Note that, unlike protocol updates,
 software updates take effect as soon as a proposal is confirmed. In this rule,
 we also delete the confirmed proposal id's from the set of registered
 application update proposals ($\var{raus}$), since this information is no
-longer needed once the application-name to software-version map ($\var{avs}$) is
-updated.
+longer needed once the application-name to software-version map ($\var{avs}$)
+is updated.
+
+Also note that, unlike the rules of \cref{fig:rules:upi-ec}, we need not remove
+other update proposals that refer to the software names whose versions were
+changed in $\var{avs_{new}}$. The reason for this is that the map $\var{raus}$
+can contain only one pair of the form $(\var{an}, \wcard)$ for any given
+application name $\var{an}$: in Rule~\ref{eq:rule:up-av-validity} function
+$\fun{svCanFollow}$ ensures that there is only one allowed version for any
+given application name $\var{an}$.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -441,12 +449,11 @@ are removed from the parts of the state that hold:
 In Rule~\ref{eq:rule:upi-pend}, the set of proposal id's $\var{pid_{keep}}$
 contains only those proposals that haven't expired yet or that are confirmed.
 Once a proposal $\var{up}$ is confirmed, it is removed from the set of
-confirmed proposals ($\var{cps}$) either when it is adopted or when a protocol
-version higher than that of $\var{up}$ gets adopted (see
-Rule~\ref{eq:rule:upi-ec}).
+confirmed proposals ($\var{cps}$) when a new a protocol version gets adopted
+(see Rule~\ref{eq:rule:upi-ec-pv-change}).
 %
 The set of endorsement-key pairs is cleaned here as well as in the epoch change
-rule (Rule~\ref{eq:rule:upi-ec}). The reason for this is that this set grows at
+rule (Rule~\ref{eq:rule:upi-ec-pv-change}). The reason for this is that this set grows at
 each block, and it can get considerably large if no proposal gets adopted at
 the end on an epoch.
 
@@ -543,7 +550,7 @@ the end on an epoch.
 
 \clearpage
 
-Rule~\ref{eq:rule:upi-ec} models how the epoch, protocol-version and its
+Rule~\ref{eq:rule:upi-ec-pv-change} models how the epoch, protocol-version and its
 parameters are changed depending on the epoch in the signal ($e_n$ in this
 case). A change in the epoch only occurs if the new epoch is greater than the
 previously seen epoch ($e_p$).
@@ -563,18 +570,25 @@ Note that, in the final state, we use union override to define the updated
 parameters ($\var{pps} \unionoverrideRight \var{pps'}$). This is because candidate
 proposal might only update some parameters of the protocol.
 
-Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
-\begin{itemize}
-\item We keep only the information of proposals whose proposed
-  protocol-versions are greater than the newly adopted protocol version
-  ($\var{pv'}$). This means that active proposals will be discarded even if the
-  voting period is not over (it makes no sense to vote on a proposal that
-  proposes to upgrade to an older version of the protocol).
-\item The registered software-update proposals need not be cleaned here, since
-  this is done either when a proposal gets confirmed or when it expires.
-\item Rule~\ref{eq:rule:pvbump-change} keeps only those candidates that can be
-  adopted in future epochs.
-\end{itemize}
+In Rule~\ref{eq:rule:upi-ec-pv-change}, when a new proposal gets adopted, all
+the state components that refer to protocol update proposals get emptied. The
+reason for this is that at the moment of registering a proposal, we evaluated
+it in a state where the protocol parameters that we used for this are no longer
+up to date (see for instance \cref{eq:func:can-update}). For instance, assume
+we register a proposal $\var{up}$ which only changes the maximum transaction
+size to $x$, and the current block size is set to $x + 1$. Then,
+$\fun{canUpdate}$ holds, since the maximum transaction size is less than the
+maximum block size. If now a new proposal gets adopted that changes the maximum
+block size to $x - 1$, then this invalidates $\var{up}$ since $\fun{canUpdate}$
+no longer holds.
+%
+
+If there are no candidates for adoption, then the state variables remain
+unaltered (Rule~\ref{eq:rule:upi-ec-pv-unchanged}).
+
+Also note that the registered software-update proposals need not be cleaned
+here, since this is done either when a proposal gets confirmed or when it
+expires.
 
 \begin{figure}[htb]
   \begin{equation}
@@ -586,15 +600,15 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     {
       {\begin{array}{l}
          k\\
-         s_n
+         s_n\\
+         \var{fads}
        \end{array}}
       \vdash
       {
         \left(
           \begin{array}{l}
             \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
+            \var{(\var{pv}, \var{pps})}
           \end{array}
         \right)
       }
@@ -603,8 +617,7 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
         \left(
           \begin{array}{l}
             \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
+            \var{(\var{pv}, \var{pps})}
           \end{array}
         \right)
       }
@@ -620,7 +633,8 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     {
       {\begin{array}{l}
          k\\
-         s_n
+         s_n\\
+         \var{fads}
        \end{array}}
       \vdash
       {
@@ -628,7 +642,6 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           \begin{array}{l}
             \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
           \end{array}
         \right)
       }
@@ -638,7 +651,6 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           \begin{array}{l}
             \var{e_n}\\
             \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
           \end{array}
         \right)
       }
@@ -655,7 +667,8 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
     {
       {\begin{array}{l}
          k\\
-         s_n
+         s_n\\
+         \var{fads}
        \end{array}}
       \vdash
       {
@@ -663,7 +676,6 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           \begin{array}{l}
             \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
           \end{array}
         \right)
       }
@@ -673,29 +685,32 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           \begin{array}{l}
             \var{e_n}\\
             \var{(\var{pv_c}, \var{pps_c})}\\
-            {[s_n - 2 \cdot k + 1, ..]} \restrictdom fads
           \end{array}
         \right)
       }
     }
   \end{equation}
-  \nextdef
+  \caption{Protocol version bump rules}
+  \label{fig:rules:fads}
+\end{figure}
+
+\begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:upi-ec}
+    \label{eq:rule:upi-ec-pv-unchanged}
     \inference
     {
       \var{stableAfter} \mapsto k \in  \var{pps} &
       {\begin{array}{l}
          k\\
-         s_n
+         s_n\\
+         \var{fads}
        \end{array}}
       \vdash
       {
         \left(
           \begin{array}{l}
             \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
-            \var{fads}
+            \var{(\var{pv}, \var{pps})}
           \end{array}
         \right)
       }
@@ -705,20 +720,16 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
           \begin{array}{l}
             \var{e'}\\
             \var{(\var{pv'}, \var{pps'})}\\
-            \var{fads'}
           \end{array}
         \right)
-      }\\ ~ \\
-      \var{pids_{keep}} = \{ \var{pid} \mid
-      \var{pid} \mapsto (\var{pv_i}, \wcard) \in \var{rpus}
-      ,~ \var{pv'} < \var{pv_i}\}
+      }\\ ~ \\ \var{pv} = \var{pv'}
     }
     {
       {
         \begin{array}{l}
           e_c\\
           s_n\\
-          \var{dms}\\
+          \var{dms}
         \end{array}
       }
       \vdash
@@ -743,15 +754,89 @@ Rule~\ref{eq:rule:upi-ec} performs cleanup of several state variables:
         \left(
           \begin{array}{l}
             \var{e'}\\
-            \var{(\var{pv'}, \var{pps} \unionoverrideRight \var{pps'})}\\
-            \var{fads'}\\
+            \var{(\var{pv}, \var{pps})}\\
+            \var{fads}\\
             \var{avs}\\
-            \var{pids_{keep}} \restrictdom \var{rpus}\\
+            \var{rpus}\\
             \var{raus}\\
-            \var{pids_{keep}} \restrictdom \var{cps}\\
-            \var{pids_{keep}} \restrictdom \var{vts}\\
-            {[\var{pv'}, ..]} \restrictdom \var{bvs}\\
-            \var{pids_{keep}} \restrictdom \var{pws}
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:upi-ec-pv-change}
+    \inference
+    {
+      \var{stableAfter} \mapsto k \in  \var{pps} &
+      {\begin{array}{l}
+         k\\
+         s_n\\
+         \var{fads}
+       \end{array}}
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}
+          \end{array}
+        \right)
+      }
+      \trans{pvbump}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps'})}\\
+          \end{array}
+        \right)
+      }\\ ~ \\ \var{pv} \neq \var{pv'}
+    }
+    {
+      {
+        \begin{array}{l}
+          e_c\\
+          s_n\\
+          \var{dms}
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{l}
+            \var{e_p}\\
+            \var{(\var{pv}, \var{pps})}\\
+            \var{fads}\\
+            \var{avs}\\
+            \var{rpus}\\
+            \var{raus}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)
+      }
+      \trans{upiec}{\var{e_n}}
+      {
+        \left(
+          \begin{array}{l}
+            \var{e'}\\
+            \var{(\var{pv'}, \var{pps'})}\\
+            \epsilon\\
+            \var{avs}\\
+            \emptyset\\
+            \var{raus}\\
+            \emptyset\\
+            \emptyset\\
+            \emptyset\\
+            \emptyset\\
           \end{array}
         \right)
       }
