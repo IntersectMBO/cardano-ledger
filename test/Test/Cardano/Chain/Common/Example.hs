@@ -6,6 +6,8 @@ module Test.Cardano.Chain.Common.Example
   ( exampleAddress
   , exampleAddress1
   , exampleAddress2
+  , exampleAddress3
+  , exampleAddress4
   , exampleAttributes
   , exampleChainDifficulty
   , exampleStakeholderId
@@ -62,6 +64,22 @@ exampleAddress2 = makeAddress easd attrs
   attrs = AddrAttributes hap nm
   hap   = Just (HDAddressPayload (getBytes 15 32))
   nm    = NetworkMainOrStage
+
+exampleAddress3 :: Address
+exampleAddress3 = makeAddress easd attrs
+ where
+  easd  = PubKeyASD pk
+  [pk]  = examplePublicKeys 20 1
+  attrs = AddrAttributes hap nm
+  hap   = Just (HDAddressPayload (getBytes 17 32))
+  nm    = NetworkTestnet 9973261
+
+exampleAddress4 :: Address
+exampleAddress4 = makeAddress easd attrs
+ where
+  easd  = exampleAddrSpendingData_PubKey
+  attrs = AddrAttributes Nothing nm
+  nm    = NetworkTestnet 11111911
 
 exampleChainDifficulty :: ChainDifficulty
 exampleChainDifficulty = ChainDifficulty 9999

@@ -166,6 +166,7 @@ test-suite cardano-ledger-test
 
                        Test.Cardano.Chain.Block.Validation.Spec
 
+                       Test.Cardano.Chain.Common.Address
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Common.Lovelace
