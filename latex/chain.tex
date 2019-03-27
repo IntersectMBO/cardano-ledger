@@ -775,7 +775,7 @@ verification of the following:
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
 \item The verification of the proofs for the seed leader constant \var{\Seedl}
-  and the nonce seed constant \var{\Seede} succeeds.
+  and the nonce seed constant $\Seede$ succeeds.
 \end{itemize}
 
 When these preconditions are fulfilled, the transition updates the VRF states by
@@ -908,11 +908,10 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \sigma \leteq \bsig{bhb}
       &
       \var{bhb} \leteq \bhbody{block}
-      &
       \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
-      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{kh}\mapsto 0\})
       &
       \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\~\\
