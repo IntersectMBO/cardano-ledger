@@ -54,7 +54,6 @@ import Cardano.Crypto.Signing.Redeem
   (RedeemPublicKey, RedeemSecretKey, RedeemSignature, redeemKeyGen, redeemSign)
 
 import Test.Cardano.Crypto.Arbitrary.Unsafe ()
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
 
 
 instance Arbitrary ProtocolMagic where
@@ -144,27 +143,34 @@ genRedeemSignature
 genRedeemSignature pm genA = redeemSign pm <$> arbitrary <*> arbitrary <*> genA
 
 instance (Bi a, Arbitrary a) => Arbitrary (Signature a) where
-    arbitrary = genSignature dummyProtocolMagicId arbitrary
+  arbitrary = do
+    pm <- arbitrary
+    genSignature pm arbitrary
 
 instance (Bi a, Arbitrary a) => Arbitrary (RedeemSignature a) where
-    arbitrary = genRedeemSignature dummyProtocolMagicId arbitrary
+  arbitrary = do
+    pm <- arbitrary
+    genRedeemSignature pm arbitrary
 
 instance (Bi w, Arbitrary w) => Arbitrary (ProxyCert w) where
-    arbitrary = liftA3 (safeCreateProxyCert dummyProtocolMagicId) arbitrary arbitrary arbitrary
+    arbitrary = safeCreateProxyCert <$> arbitrary <*> arbitrary
+                                    <*> arbitrary <*> arbitrary
 
 instance (Bi w, Arbitrary w) => Arbitrary (ProxyVerificationKey w) where
-    arbitrary = liftA3 (createPsk dummyProtocolMagicId) arbitrary arbitrary arbitrary
+    arbitrary = createPsk <$> arbitrary <*> arbitrary
+                          <*> arbitrary <*> arbitrary
 
 instance (Bi w, Arbitrary w, Bi a, Arbitrary a) =>
          Arbitrary (ProxySignature w a) where
   arbitrary = do
     delegateSk <- arbitrary
+    pm <- arbitrary
     psk        <-
-      createPsk dummyProtocolMagicId
+      createPsk pm
       <$> arbitrary
       <*> pure (toPublic delegateSk)
       <*> arbitrary
-    proxySign dummyProtocolMagicId SignProxyVK delegateSk psk <$> arbitrary
+    proxySign pm SignProxyVK delegateSk psk <$> arbitrary
 
 
 --------------------------------------------------------------------------------

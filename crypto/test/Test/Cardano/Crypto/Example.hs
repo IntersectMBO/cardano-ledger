@@ -6,6 +6,7 @@ module Test.Cardano.Crypto.Example
   , exampleProtocolMagic2
   , exampleProtocolMagic3
   , exampleProtocolMagic4
+  , exampleProtocolMagicId0
   , examplePublicKey
   , examplePublicKeys
   , exampleRedeemPublicKey
@@ -36,8 +37,11 @@ import Cardano.Crypto
 
 import Test.Cardano.Crypto.Bi (getBytes)
 
+exampleProtocolMagicId0 :: ProtocolMagicId
+exampleProtocolMagicId0 = ProtocolMagicId 31337
+
 exampleProtocolMagic0 :: ProtocolMagic
-exampleProtocolMagic0 = ProtocolMagic (ProtocolMagicId 31337) RequiresMagic
+exampleProtocolMagic0 = ProtocolMagic exampleProtocolMagicId0 RequiresMagic
 
 exampleProtocolMagic1 :: ProtocolMagic
 exampleProtocolMagic1 =

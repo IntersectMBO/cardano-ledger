@@ -51,7 +51,7 @@ import Cardano.Chain.Genesis.Spec (GenesisSpec(..), mkGenesisSpec)
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Crypto (Hash, ProtocolMagic(..), ProtocolMagicId(..), hash)
+import Cardano.Crypto (Hash, ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic, hash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Update (ProtocolParameters)
@@ -133,6 +133,8 @@ data Config = Config
     -- ^ The hash of the canonical JSON representation of the 'GenesisData'
     , configGeneratedSecrets  :: Maybe GeneratedSecrets
     -- ^ Secrets needed to access 'GenesisData' in testing
+    , configReqNetMagic       :: RequiresNetworkMagic
+    -- ^ Differentiates between Testnet and Mainet/Staging
     --
     --   TODO: Figure out how to split testing and mainnet needs
     }
@@ -152,12 +154,17 @@ configChainQualityThreshold = kChainQualityThreshold . configK
 configEpochSlots :: Config -> EpochSlots
 configEpochSlots = kEpochSlots . configK
 
+-- | There isn't a full @ProtocolMagic@ in @Config@, but the requisite
+-- @ProtocolMagicId@ and @RequiresNetworkMagic@ are stored separately.
+-- We use them to construct and return a @ProtocolMagic@.
 configProtocolMagic :: Config -> ProtocolMagic
-configProtocolMagic = gdProtocolMagic . configGenesisData
+configProtocolMagic config = ProtocolMagic pmi rnm
+ where
+  pmi = configProtocolMagicId config
+  rnm = configReqNetMagic config
 
 configProtocolMagicId :: Config -> ProtocolMagicId
-configProtocolMagicId =
-  getProtocolMagicId . gdProtocolMagic . configGenesisData
+configProtocolMagicId = gdProtocolMagicId . configGenesisData
 
 
 configGeneratedSecretsThrow :: MonadIO m => Config -> m GeneratedSecrets
@@ -196,7 +203,8 @@ configAvvmDistr = gdAvvmDistr . configGenesisData
 --   will be generated. In this case a start time must be provided.
 mkConfigFromStaticConfig
   :: (MonadError ConfigurationError m, MonadIO m)
-  => FilePath
+  => RequiresNetworkMagic
+  -> FilePath
   -- ^ Directory where 'configuration.yaml' is stored
   -> Maybe UTCTime
   -- ^ Optional system start time.
@@ -205,7 +213,7 @@ mkConfigFromStaticConfig
   -- ^ Optional seed which overrides one from testnet initializer if provided
   -> StaticConfig
   -> m Config
-mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
+mkConfigFromStaticConfig rnm confDir mSystemStart mSeed = \case
   -- If a 'GenesisData' source file is given, we check its hash against the
   -- given expected hash, parse it, and use the GenesisData to fill in all of
   -- the obligations.
@@ -215,7 +223,7 @@ mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
 
     isNothing mSeed `orThrowError` MeaninglessSeed
 
-    mkConfigFromFile (confDir </> fp) (Just expectedHash)
+    mkConfigFromFile rnm (confDir </> fp) (Just expectedHash)
 
 
   -- If a 'GenesisSpec' is given, we ensure we have a start time (needed if it's
@@ -239,10 +247,11 @@ mkConfigFromStaticConfig confDir mSystemStart mSeed = \case
 
 mkConfigFromFile
   :: (MonadError ConfigurationError m, MonadIO m)
-  => FilePath
+  => RequiresNetworkMagic
+  -> FilePath
   -> Maybe (Hash Raw)
   -> m Config
-mkConfigFromFile fp mGenesisHash = do
+mkConfigFromFile rnm fp mGenesisHash = do
   (genesisData, genesisHash) <-
     liftEither . first ConfigurationGenesisDataError =<< runExceptT
       (readGenesisData fp)
@@ -257,6 +266,7 @@ mkConfigFromFile fp mGenesisHash = do
     { configGenesisData      = genesisData
     , configGenesisHash      = genesisHash
     , configGeneratedSecrets = Nothing
+    , configReqNetMagic      = rnm
     }
 
 mkConfig
@@ -271,6 +281,8 @@ mkConfig startTime genesisSpec = do
     { configGenesisData      = genesisData
     , configGenesisHash      = genesisHash
     , configGeneratedSecrets = Just generatedSecrets
+    , configReqNetMagic      = getRequiresNetworkMagic
+                                 (gsProtocolMagic genesisSpec)
     }
   where
     -- Anything will do for the genesis hash. A hash of "patak" was used before,

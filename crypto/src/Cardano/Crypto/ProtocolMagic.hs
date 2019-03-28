@@ -23,9 +23,6 @@ import Cardano.Prelude
 
 import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
-import Data.Aeson.Types (typeMismatch)
-import Data.List (lookup)
-import Data.String (String)
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
 import Cardano.Binary.Class (Bi)
@@ -47,6 +44,12 @@ newtype ProtocolMagicId = ProtocolMagicId
     deriving newtype Bi
     deriving anyclass NFData
 
+instance A.ToJSON ProtocolMagicId where
+  toJSON = A.toJSON . unProtocolMagicId
+
+instance A.FromJSON ProtocolMagicId where
+  parseJSON v = ProtocolMagicId <$> A.parseJSON v
+
 -- mhueschen: For backwards-compatibility reasons, I redefine this function
 -- in terms of the two record accessors.
 getProtocolMagic :: ProtocolMagic -> Int32
@@ -56,79 +59,19 @@ instance A.ToJSON ProtocolMagic where
   toJSON (ProtocolMagic (ProtocolMagicId ident) rnm) =
     A.object ["pm" .= ident, "requiresNetworkMagic" .= rnm]
 
--- Here we default to `RequiresMagic` (what testnets use) if only
--- a ProtocolMagic identifier is provided.
 instance A.FromJSON ProtocolMagic where
-  parseJSON v@(A.Number _) = ProtocolMagic
-    <$> (ProtocolMagicId <$> A.parseJSON v)
-    <*> pure RequiresMagic
-  parseJSON (A.Object o) = ProtocolMagic
-    <$> (ProtocolMagicId <$> o .: "pm")
-    <*> o .: "requiresNetworkMagic"
-  parseJSON invalid = typeMismatch "ProtocolMagic" invalid
+  parseJSON = A.withObject "ProtocolMagic" $ \o ->
+    ProtocolMagic
+      <$> o .: "pm"
+      <*> o .: "requiresNetworkMagic"
 
 -- Canonical JSON instances
-instance Monad m => ToJSON m ProtocolMagic where
-  -- | We only output the `ProtocolMagicId` such that we don't alter the
-  -- resulting hash digest of the genesis block.
-  --
-  -- In the function, `withCoreConfigurations`, we compare the hash of the
-  -- canonical JSON representation of a hardcoded genesis block with an
-  -- accompanying hardcoded hash of that same genesis block at its inception
-  -- (both of which can be found in lib/configuration.yaml). This allows us
-  -- to verify the integrity of the genesis block and ensure that it hasn't
-  -- been altered.
-  --
-  -- As a result of this addition of the `RequiresNetworkMagic` field to
-  -- `ProtocolMagic`, we cannot include the newly introduced
-  -- `RequiresNetworkMagic` field of `ProtocolMagic` as it would produce
-  -- invalid hashes for previously existing genesis blocks.
-  --
-  -- See the implementation of `withCoreConfigurations` for more detail on
-  -- how this works.
-  toJSON (ProtocolMagic (ProtocolMagicId ident) _rnm) = toJSON ident
+instance Monad m => ToJSON m ProtocolMagicId where
+  toJSON (ProtocolMagicId ident) = toJSON ident
 
--- Here we default to `RequiresMagic` (what testnets use) if only
--- a ProtocolMagic identifier is provided.
-instance MonadError SchemaError m => FromJSON m ProtocolMagic where
-  fromJSON = \case
-    JSNum n ->
-      pure (ProtocolMagic (ProtocolMagicId (fromIntegral n)) RequiresMagic)
-    JSObject dict -> ProtocolMagic
-      <$> (ProtocolMagicId <$> expectLookup "pm: <int>" "pm" dict)
-      <*> expectLookup
-            "requiresNetworkMagic: <RequiresNoMagic | \
-            \RequiresMagic>"
-            "requiresNetworkMagic"
-            dict
-    other ->
-      expected "RequiresNoMagic | RequiresMagic" (Just (show other))
+instance MonadError SchemaError m => FromJSON m ProtocolMagicId where
+  fromJSON v = ProtocolMagicId <$> fromJSON v
 
-expectLookup
-  :: (MonadError SchemaError m, FromJSON m a)
-  => String
-  -> String
-  -> [(String, JSValue)]
-  -> m a
-expectLookup msg key dict = case lookup key dict of
-  Nothing -> expected msg Nothing
-  Just x  -> fromJSON x
-
-{-
-We need to handle the old format (YAML example):
-
-```
-protocolMagic: 12345678
-```
-
-and the new format
-
-```
-protocolMagic:
-  pm: 12345678
-  requiresNetworkMagic: RequiresNoMagic
-```
--}
 
 --------------------------------------------------------------------------------
 -- RequiresNetworkMagic
