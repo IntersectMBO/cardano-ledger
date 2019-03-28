@@ -13,9 +13,8 @@ import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
 import GHC.Generics (Generic)
 import Control.State.Transition.Generator
-import Ledger.Core
+import Ledger.Core hiding ((<|))
 import Ledger.Delegation
-import Ledger.Signatures
 
 data BlockHeader
   = MkBlockHeader

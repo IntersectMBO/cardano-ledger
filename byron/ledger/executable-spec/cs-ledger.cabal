@@ -27,7 +27,6 @@ library
                      , Ledger.Core.Generator
                      , Ledger.Delegation
                      , Ledger.Update
-                     , Ledger.Signatures
                      , Ledger.UTxO
   build-depends:       base >=4.11 && <5
                      , bytestring
