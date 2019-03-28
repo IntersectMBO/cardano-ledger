@@ -115,7 +115,31 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => Bi (AbstractHash alg
     in fromInteger (toInteger (withWordSize realSz + realSz))
 
 instance HeapWords (AbstractHash algo a) where
-  heapWords _ = 12 -- Hardcoded as 8 word overhead of Digest + 4 words for hash
+  heapWords _
+    -- We have
+    --
+    -- > newtype AbstractHash algo a = AbstractHash (Digest algo)
+    -- > newtype Digest a = Digest (Block Word8)
+    -- > data Block ty = Block ByteArray#
+    --
+    -- so @AbstractHash algo a@ requires:
+    --
+    -- - 1 word for the 'Block' object header
+    -- - 1 word for the pointer to the byte array object
+    -- - 1 word for the byte array object header
+    -- - 1 word for the size of the byte array payload in bytes
+    -- - 4 words (on a 64-bit arch) for the byte array payload containing the digest
+    --
+    -- +---------+
+    -- │Block│ * │
+    -- +-------+-+
+    --         |
+    --         v
+    --         +--------------+
+    --         │BA#│sz│payload│
+    --         +--------------+
+    --
+    = 8
 
 hashDigestSize' :: forall algo . HashAlgorithm algo => Int
 hashDigestSize' = hashDigestSize @algo
