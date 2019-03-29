@@ -8,20 +8,12 @@ module STS.Chain
   ) where
 
 import qualified Data.Map                 as Map
-import           Data.Ratio               ((%))
-
-import           Crypto.Hash              (hash)
-import qualified Data.ByteString.Char8    as BS
 
 import           BlockChain
-import           Coin
 import           EpochBoundary
-import           Keys
 import           LedgerState
 import           PParams
 import           Slot
-
-import           NonIntegral              ((***))
 
 import           Delegation.Certificates
 
@@ -33,8 +25,6 @@ import           STS.Ocert
 import           STS.Rupd
 import           STS.Updn
 import           STS.Vrf
-
-import           Delegation.Certificates
 
 data CHAIN
 
@@ -84,7 +74,7 @@ chainTransition = do
   ps'' <- trans @OCERT $ TRC ((), ps', bhb)
   let ls'' = ls' {_delegationState = delegationState' {_pstate = ps''}}
   let h = bheaderPrev bhb
-  (h', sL') <-
+  (_, sL') <-
     trans @VRF $ TRC ((sNow, pp', eta0', pd', _stPools ps''), (h, sL), bh)
   -- TODO h' is not used, should it be part of the environment of VRF instead of
   -- its state?

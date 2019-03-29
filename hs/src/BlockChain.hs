@@ -70,8 +70,8 @@ data BHeader =
   deriving (Show, Eq)
 
 data BHBody = BHBody
-    -- | Hash of the previous block header
-  { bheaderPrev           :: HashHeader
+  { -- | Hash of the previous block header
+    bheaderPrev           :: HashHeader
     -- | verification key of block issuer
   , bheaderVk             :: Keys.VKey
     -- | block slo

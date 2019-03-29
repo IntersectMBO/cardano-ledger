@@ -32,7 +32,6 @@ import Keys
 import LedgerState (DWState(..), KeyPairs)
 import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
 import           Slot
-import           PParams
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
