@@ -1134,6 +1134,8 @@ preconditions, instead it calls all its subrules.
       \var{bhb} \leteq \bhbody{block}
       &
       \eta \leteq \fun{bnonce}~\var{bhb}
+      \\
+      \var{h} \leteq \fun{bprev}~\var{bhb}
       &
       \var{s} \leteq \bslot{bhb}
       \\~\\
@@ -1142,7 +1144,6 @@ preconditions, instead it calls all its subrules.
           {\begin{array}{c}
               \eta_c \\
               \var{pp_n} \\
-              \var{ru} \\
           \end{array}}
         \right)
         \vdash
@@ -1159,7 +1160,7 @@ preconditions, instead it calls all its subrules.
               \var{e_\ell}' \\
               \eta_0' \\
               \var{b}' \\
-              \var{es}'' \\
+              \var{es}' \\
               \var{ru}' \\
               \var{pd}' \\
         \end{array}\right)}
@@ -1214,14 +1215,14 @@ preconditions, instead it calls all its subrules.
         \left(
           {\begin{array}{c}
               \var{b} \\
-              \var{ru}' \\
+              \var{ru}' \\  % TODO: Which variable here? es/es' ?
           \end{array}}
         \right)
         \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
       }
       \\
       {
-        \var{pp}\vdash
+        \var{pp}\vdash  % TODO which pp are these? pp_{n}?
         {\left(\begin{array}{c}
               \var{ls}'' \\
               \var{b'} \\
@@ -1233,7 +1234,7 @@ preconditions, instead it calls all its subrules.
         \end{array}\right)}
       }
       &
-      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}''')
+      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}',~\var{ls}''')
     }
     {
       \left(
