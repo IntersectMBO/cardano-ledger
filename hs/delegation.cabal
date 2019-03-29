@@ -26,6 +26,7 @@ library
                      OCert
                      STS.Bbody
                      STS.Bhead
+                     STS.Chain
                      STS.Deleg
                      STS.Delegs
                      STS.Delpl
