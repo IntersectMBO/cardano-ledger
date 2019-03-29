@@ -54,6 +54,7 @@ library
                        Cardano.Chain.Common.Lovelace
                        Cardano.Chain.Common.LovelacePortion
                        Cardano.Chain.Common.Merkle
+                       Cardano.Chain.Common.NetworkMagic
                        Cardano.Chain.Common.StakeholderId
                        Cardano.Chain.Common.TxFeePolicy
                        Cardano.Chain.Common.TxSizeLinear

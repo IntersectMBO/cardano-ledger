@@ -45,6 +45,7 @@ import Cardano.Chain.Common
   , subLovelace
   , sumLovelace
   )
+import Cardano.Chain.Common.NetworkMagic (makeNetworkMagic)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Data (GenesisData(..))
@@ -165,10 +166,10 @@ generateGenesisData startTime genesisSpec = do
       :: MonadError GenesisDataGenerationError m => PoorSecret -> m Address
     createAddressPoor (PoorEncryptedSecret hdwSk) =
       maybe (throwError GenesisDataGenerationPassPhraseMismatch) (pure . fst)
-        $ deriveFirstHDAddress emptyPassphrase hdwSk
+        $ deriveFirstHDAddress nm emptyPassphrase hdwSk
     createAddressPoor (PoorSecret secret) =
-      pure $ makePubKeyAddress (toPublic secret)
-  let richAddresses = map (makePubKeyAddress . toPublic) richSecrets
+      pure $ makePubKeyAddress nm (toPublic secret)
+  let richAddresses = map (makePubKeyAddress nm . toPublic) richSecrets
 
   poorAddresses        <- mapM createAddressPoor poorSecrets
 
@@ -230,6 +231,7 @@ generateGenesisData startTime genesisSpec = do
   pure (genesisData, generatedSecrets)
  where
   pm          = gsProtocolMagic genesisSpec
+  nm          = makeNetworkMagic pm
   realAvvmBalances = gsAvvmDistr genesisSpec
 
   gi          = gsInitializer genesisSpec

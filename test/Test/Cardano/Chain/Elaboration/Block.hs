@@ -25,7 +25,7 @@ import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
 import qualified Cardano.Binary.Class as Binary
 import qualified Cardano.Crypto.Hashing as H
-import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
 
 import qualified Cardano.Chain.Block as Concrete
 import qualified Cardano.Chain.Common as Common
@@ -54,7 +54,6 @@ import Cardano.Chain.Common
 
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
@@ -184,9 +183,11 @@ rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
 --  | Make a genesis configuration from an initial abstract environment of the
 --  | trace.
 --
-abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
-abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing RequiresNoMagic
+abEnvToCfg :: ProtocolMagic -> Transition.Environment CHAIN -> Genesis.Config
+abEnvToCfg pm (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
  where
+  rnm = getRequiresNetworkMagic pm
+
   genesisData = Genesis.GenesisData
     { Genesis.gdBootStakeholders = Genesis.GenesisWStakeholders
       genesisStakeHolders
@@ -199,7 +200,7 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing Requi
         -- an abstract protocol parameter for k. Then we need to solve the
         -- problem that in the concrete implementation k and w are the same.
                             BlockCount (fromIntegral $ pps ^. bkSgnCntW)
-    , Genesis.gdProtocolMagicId = dummyProtocolMagicId
+    , Genesis.gdProtocolMagicId = getProtocolMagicId pm
     , Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
     }
 

@@ -135,8 +135,6 @@ data Config = Config
     -- ^ Secrets needed to access 'GenesisData' in testing
     , configReqNetMagic       :: RequiresNetworkMagic
     -- ^ Differentiates between Testnet and Mainet/Staging
-    --
-    --   TODO: Figure out how to split testing and mainnet needs
     }
 
 configGenesisHeaderHash :: Config -> HeaderHash
