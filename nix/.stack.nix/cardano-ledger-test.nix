@@ -41,4 +41,4 @@
           ];
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../test; }
+    } // rec { src = (pkgs.lib).mkDefault ../.././test; }

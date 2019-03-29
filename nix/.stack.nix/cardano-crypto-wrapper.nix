@@ -65,4 +65,4 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../crypto; }
+    } // rec { src = (pkgs.lib).mkDefault ../.././crypto; }

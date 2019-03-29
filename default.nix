@@ -1,5 +1,5 @@
 #
-# The defaul.nix file. This will generate targets for all
+# The default.nix file. This will generate targets for all
 # buildables.  These include anything from stack.yaml
 # (via nix-tools:stack-to-nix) or cabal.project (via
 # nix-tools:plan-to-nix). As well as custom definitions
@@ -24,6 +24,6 @@ in
 # parameterize this file when targetting different
 # hosts.
 { ... }@args:
-# We will instantiate the defaul-nix template with the
+# We will instantiate the default-nix template with the
 # nix/pkgs.nix file...
-localLib.nix-tools.default-nix ./nix/pkgs.nix args
+localLib.nix-tools.default-nix ./nix args
