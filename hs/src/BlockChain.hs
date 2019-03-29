@@ -17,6 +17,7 @@ module BlockChain
   , hsig
     --
   , slotsPrior
+  , startRewards
   , verifyVrf
   , seedEta
   , seedL
@@ -117,6 +118,9 @@ hsig (BHeader _ s) = s
 
 slotsPrior :: Slot.Duration
 slotsPrior = 10 -- TODO: what is a realistic value for this?
+
+startRewards :: Slot.Duration
+startRewards = 10 -- TODO: what is a realistic value for this?
 
 verifyVrf :: Keys.VKey -> Seed -> Proof a -> Bool
 verifyVrf vk seed (Proof k s) = vk == k && seed == s

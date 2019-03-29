@@ -37,6 +37,7 @@ library
                      STS.Ocert
                      STS.Pool
                      STS.PoolReap
+                     STS.Rupd
                      STS.Snap
                      STS.Updn
                      STS.Utxo

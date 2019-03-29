@@ -22,13 +22,14 @@ module LedgerState
   , DState(..)
   , AccountState(..)
   , RewardUpdate(..)
+  , emptyRewardUpdate
   , EpochState(..)
   , emptyEpochState
   , emptyLedgerState
   , dstate
   , pstate
   , ptrs
-  , rewardPool
+  , rewardPot
   , PState(..)
   , avgs
   , cCounters
@@ -103,6 +104,7 @@ module LedgerState
   , stakeDistr
   , poolDistr
   , applyRUpd
+  , createRUpd
   ) where
 
 import           Control.Monad           (foldM)
@@ -252,10 +254,13 @@ data RewardUpdate = RewardUpdate
   , deltaF :: Coin
   } deriving (Show, Eq)
 
+emptyRewardUpdate :: RewardUpdate
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) (Coin 0) Map.empty (Coin 0)
+
 data AccountState = AccountState
-  { _treasury   :: Coin
-  , _reserves   :: Coin
-  , _rewardPool :: Coin
+  { _treasury  :: Coin
+  , _reserves  :: Coin
+  , _rewardPot :: Coin
   } deriving (Show, Eq)
 
 data EpochState = EpochState AccountState PParams SnapShots LedgerState
@@ -789,22 +794,20 @@ reward ::
   -> Set.Set RewardAcnt
   -> Map.Map HashKey PoolParams
   -> Avgs
-  -> Map.Map HashKey Stake
+  -> Stake
+  -> Map.Map HashKey HashKey
   -> (Map.Map RewardAcnt Coin, Coin)
-reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
+reward pp (BlocksMade b) r addrsRew poolParams avgs' stake@(Stake stake') delegs =
   (rewards', unrealized)
   where
-    total = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-    sumStake (Stake s) = Map.foldl (+) (Coin 0) s
+    total = Map.foldl (+) (Coin 0) stake'
     pdata =
-      [ ( key
-        , ( poolParams Map.! key
-          , b Map.! key
-          , pooledStake Map.! key))
-      | key <-
-          Set.toList $ Map.keysSet poolParams `Set.intersection`
-          Map.keysSet b `Set.intersection`
-          Map.keysSet pooledStake
+      [ ( hk
+        , ( poolParams Map.! hk
+          , b Map.! hk
+          , poolStake hk delegs stake))
+      | hk <-
+          Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
       ]
     results =
       [ ( hk
@@ -872,7 +875,22 @@ applyRUpd ru (EpochState as pp ss ls) = es'
                   (_pstate $ _delegationState ls)}
         es' = EpochState (AccountState treasury' reserves' (rp ru)) pp ss ls'
 
-
+-- | Create a reward update
+createRUpd :: BlocksMade -> EpochState -> RewardUpdate
+createRUpd b (EpochState acnt pp ss ls) = -- TODO where should `b` be used?
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') (Coin rp') rs' (-(_feeSS ss))
+  where Coin reserves' = _reserves acnt
+        deltaR' = floor $ (intervalValue $ _rho pp) * fromIntegral reserves'
+        Coin totalPot = (_feeSS ss) + (_rewardPot acnt) + deltaR'
+        deltaT1 = floor $ (intervalValue $ _tau pp) * fromIntegral totalPot
+        r@(Coin r') = Coin $ totalPot - deltaT1
+        rewards' = _rewards $ _dstate $ _delegationState ls
+        avgs' = _avgs $ _pstate $ _delegationState ls
+        (stake', delegs') = _pstakeGo ss
+        poolsSS' = _poolsSS ss
+        (rs', Coin deltaT2) = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' avgs' stake' delegs'
+        Coin c' = Map.foldr (+) (Coin 0) rs'
+        rp' = (r' - deltaT2) - c'
 
 
 ---------------------------------------------------------------------------------
