@@ -136,8 +136,6 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          poolPubKey, poolSpec, poolPledge,
                                          RewardAcnt(..), poolRAcnt, poolOwners)
 
-import Control.State.Transition
-
 import           NonIntegral ((***))
 import           BaseTypes
 
@@ -877,7 +875,7 @@ applyRUpd ru (EpochState as pp ss ls) = es'
 
 -- | Create a reward update
 createRUpd :: BlocksMade -> EpochState -> RewardUpdate
-createRUpd b (EpochState acnt pp ss ls) = -- TODO where should `b` be used?
+createRUpd _ (EpochState acnt pp ss ls) = -- TODO where should `b` be used?
   RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') (Coin rp') rs' (-(_feeSS ss))
   where Coin reserves' = _reserves acnt
         deltaR' = floor $ (intervalValue $ _rho pp) * fromIntegral reserves'

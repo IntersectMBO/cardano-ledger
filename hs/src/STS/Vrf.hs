@@ -7,7 +7,6 @@ module STS.Vrf
   ( VRF
   ) where
 
-import           Data.Ratio               ((%))
 import qualified Data.Map                 as Map
 
 import           Crypto.Hash              (hash)
@@ -19,6 +18,7 @@ import           Keys
 import           PParams
 import           Slot
 
+import           BaseTypes
 import           NonIntegral              ((***))
 
 import           Delegation.Certificates
@@ -57,7 +57,7 @@ vrfTransition = do
       failBecause KeyNotInPoolDistributionVRF
       pure (h, sL)
     Just (Coin relStake) -> do
-      let relStake' = relStake % allStake
+      let relStake' = ((fromIntegral relStake)::FixedPoint) / fromIntegral allStake
       fromRational bhl >= 1 - (1 - fromRational (intervalValue f)) *** relStake'
         ?! NotSlotLeaderVRF
       verifyVrf vk (seedOp (seedOp eta0 ss) seedEta) (bheaderPrfEta bhb)
