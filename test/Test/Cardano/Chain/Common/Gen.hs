@@ -12,6 +12,7 @@ module Test.Cardano.Chain.Common.Gen
   , genBlockCount
   , genCanonicalTxFeePolicy
   , genChainDifficulty
+  , genCompactAddress
   , genCustomLovelace
   , genLovelace
   , genLovelacePortion
@@ -41,6 +42,7 @@ import Cardano.Chain.Common
   , Address(..)
   , BlockCount(..)
   , ChainDifficulty(..)
+  , CompactAddress
   , Lovelace
   , LovelacePortion(..)
   , MerkleRoot(..)
@@ -56,6 +58,7 @@ import Cardano.Chain.Common
   , mkMerkleTree
   , mkStakeholderId
   , mtRoot
+  , toCompactAddress
   )
 
 import Test.Cardano.Crypto.Gen
@@ -110,6 +113,9 @@ genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
 
 genChainDifficulty :: Gen ChainDifficulty
 genChainDifficulty = ChainDifficulty <$> Gen.word64 Range.constantBounded
+
+genCompactAddress :: Gen CompactAddress
+genCompactAddress = toCompactAddress <$> genAddress
 
 genCustomLovelace :: Word64 -> Gen Lovelace
 genCustomLovelace size =

@@ -1,5 +1,8 @@
 module Test.Cardano.Chain.Txp.Gen
-  ( genPkWitness
+  ( genCompactTxId
+  , genCompactTxIn
+  , genCompactTxOut
+  , genPkWitness
   , genRedeemWitness
   , genTx
   , genTxAttributes
@@ -37,7 +40,10 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Txp
-  ( Tx(..)
+  ( CompactTxId
+  , CompactTxIn
+  , CompactTxOut
+  , Tx(..)
   , TxAttributes
   , TxAux
   , TxId
@@ -55,6 +61,9 @@ import Cardano.Chain.Txp
   , TxpUndo
   , mkTxAux
   , mkTxPayload
+  , toCompactTxId
+  , toCompactTxIn
+  , toCompactTxOut
   )
 import Cardano.Crypto (Hash, ProtocolMagicId, decodeHash, sign)
 
@@ -69,6 +78,14 @@ import Test.Cardano.Crypto.Gen
   , genTextHash
   )
 
+genCompactTxId :: Gen CompactTxId
+genCompactTxId = toCompactTxId <$> genTxId
+
+genCompactTxIn :: Gen CompactTxIn
+genCompactTxIn = toCompactTxIn <$> genTxIn
+
+genCompactTxOut :: Gen CompactTxOut
+genCompactTxOut = toCompactTxOut <$> genTxOut
 
 genPkWitness :: ProtocolMagicId -> Gen TxInWitness
 genPkWitness pm = PkWitness <$> genPublicKey <*> genTxSig pm
