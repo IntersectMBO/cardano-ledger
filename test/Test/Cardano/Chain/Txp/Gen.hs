@@ -20,6 +20,7 @@ module Test.Cardano.Chain.Txp.Gen
   , genTxSig
   , genTxSigData
   , genTxWitness
+  , genUTxO
   )
 where
 
@@ -53,6 +54,8 @@ import Cardano.Chain.Txp
   , TxSigData(..)
   , TxWitness
   , TxpConfiguration(..)
+  , UTxO
+  , fromList
   , mkTxAux
   , mkTxPayload
   , toCompactTxId
@@ -145,3 +148,9 @@ genTxInWitness pm = Gen.choice [genPkWitness pm, genRedeemWitness pm]
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
   V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
+
+genUTxO :: Gen UTxO
+genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut
+  where
+    genTxInTxOut :: Gen (TxIn, TxOut)
+    genTxInTxOut = (,) <$> genTxIn <*> genTxOut

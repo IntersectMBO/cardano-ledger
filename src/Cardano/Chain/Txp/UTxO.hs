@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 
 module Cardano.Chain.Txp.UTxO
   ( UTxO
@@ -20,16 +23,26 @@ import Cardano.Prelude
 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 
 import Cardano.Chain.Common
   (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
 import Cardano.Chain.Txp.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
+import Cardano.Chain.Txp.Compact
+  ( CompactTxIn
+  , CompactTxOut
+  , fromCompactTxOut
+  , toCompactTxIn
+  , toCompactTxOut
+  )
 import Cardano.Crypto (hash)
 
 
 newtype UTxO = UTxO
-  { unUTxO :: Map TxIn TxOut
-  } deriving HeapWords
+  { unUTxO :: Map CompactTxIn CompactTxOut
+  } deriving (Generic, Show)
+    deriving newtype HeapWords
+    deriving anyclass NFData
 
 data UTxOError
   = UTxOMissingInput TxIn
@@ -37,15 +50,18 @@ data UTxOError
   deriving (Eq, Show)
 
 fromList :: [(TxIn, TxOut)] -> UTxO
-fromList = UTxO . M.fromList
+fromList = UTxO . M.fromList . toCompactTxInTxOutList
+ where
+  toCompactTxInTxOutList :: [(TxIn, TxOut)] -> [(CompactTxIn, CompactTxOut)]
+  toCompactTxInTxOutList = map (bimap toCompactTxIn toCompactTxOut)
 
 member :: TxIn -> UTxO -> Bool
-member txIn = M.member txIn . unUTxO
+member txIn = M.member (toCompactTxIn txIn) . unUTxO
 
 lookupAddress :: TxIn -> UTxO -> Either UTxOError Address
 lookupAddress txIn =
-  maybe (Left $ UTxOMissingInput txIn) (Right . txOutAddress)
-    . M.lookup txIn
+  maybe (Left $ UTxOMissingInput txIn) (Right . txOutAddress . fromCompactTxOut)
+    . M.lookup (toCompactTxIn txIn)
     . unUTxO
 
 union :: MonadError UTxOError m => UTxO -> UTxO -> m UTxO
@@ -55,17 +71,25 @@ union (UTxO m) (UTxO m') = do
   pure $ UTxO m''
 
 balance :: UTxO -> Either LovelaceError Lovelace
-balance = sumLovelace . fmap txOutValue . M.elems . unUTxO
+balance = sumLovelace . fmap compactTxOutValue . M.elems . unUTxO
+ where
+  compactTxOutValue :: CompactTxOut -> Lovelace
+  compactTxOutValue = txOutValue . fromCompactTxOut
 
 (<|) :: Set TxIn -> UTxO -> UTxO
-(<|) inputs = UTxO . flip M.restrictKeys inputs . unUTxO
+(<|) inputs = UTxO . flip M.restrictKeys compactInputs . unUTxO
+ where
+  compactInputs = S.map toCompactTxIn inputs
 
 (</|) :: Set TxIn -> UTxO -> UTxO
-(</|) inputs = UTxO . flip M.withoutKeys inputs . unUTxO
+(</|) inputs = UTxO . flip M.withoutKeys compactInputs . unUTxO
+ where
+  compactInputs = S.map toCompactTxIn inputs
 
 txOutputUTxO :: Tx -> UTxO
 txOutputUTxO tx = UTxO $ M.fromList
-  [ (TxInUtxo (txId tx) ix, txOut) | (ix, txOut) <- indexedOutputs ]
+  [ (toCompactTxIn (TxInUtxo (txId tx) ix), (toCompactTxOut txOut))
+    | (ix, txOut) <- indexedOutputs ]
  where
   indexedOutputs :: [(Word32, TxOut)]
   indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
@@ -74,4 +98,7 @@ txOutputUTxO tx = UTxO $ M.fromList
   txId = hash
 
 isRedeemUTxO :: UTxO -> Bool
-isRedeemUTxO = all (isRedeemAddress . txOutAddress) . M.elems . unUTxO
+isRedeemUTxO =
+  all (isRedeemAddress . txOutAddress . fromCompactTxOut)
+    . M.elems
+    . unUTxO
