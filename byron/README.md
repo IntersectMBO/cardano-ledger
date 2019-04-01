@@ -2,13 +2,13 @@
 
 This directory is organized as follows:
 
-- [`ledger/latex`](ledger/latex) contains the LaTeX specification of Cardano
+- [`ledger/formal-spec`](ledger/formal-spec) contains the LaTeX specification of Cardano
   ledger semantics.
-- [`ledger/hs`](ledger/hs) contains an executable specification of Cardano
+- [`ledger/executable-spec`](ledger/executable-spec) contains an executable specification of Cardano
   ledger semantics.
-- [`chain/latex`](chain/latex) contains the LaTeX specification of Cardano
+- [`chain/formal-spec`](chain/formal-spec) contains the LaTeX specification of Cardano
   chain semantics.
-- [`chain/hs`](chain/hs) contains an executable specification of Cardano chain
+- [`chain/executable-spec`](chain/executable-spec) contains an executable specification of Cardano chain
   semantics.
 
 ## Building the documents
@@ -31,7 +31,7 @@ The executable specifications can be built and tested using
 [Nix](https://nixos.org/nix/).
 
 To build to go to the directory in which the executable specifications are
-(e.g. [`ledger/hs`](ledger/hs)) and then run:
+(e.g. [`ledger/executable-spec`](ledger/executable-spec)) and then run:
 
 ```sh
 nix-build
@@ -63,7 +63,7 @@ For running the tests you can use:
 nix-shell --pure --command "cabal new-test <target>"
 ```
 
-Example, while on the `specs/ledger/hs` directory one can run:
+Example, while in the `byron/ledger/executable-spec` directory one can run:
 
 ```sh
 nix-shell --pure --run "cabal new-test ledger-delegation-test"
