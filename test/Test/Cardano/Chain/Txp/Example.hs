@@ -9,8 +9,10 @@ module Test.Cardano.Chain.Txp.Example
   , exampleTxInList
   , exampleTxInUtxo
   , exampleTxPayload
+  , exampleTxPayload1
   , exampleTxProof
   , exampleTxOut
+  , exampleTxOut1
   , exampleTxOutList
   , exampleTxSig
   , exampleTxSigData
@@ -75,25 +77,45 @@ exampleTxAux :: TxAux
 exampleTxAux = mkTxAux tx exampleTxWitness
   where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
+exampleTxAux1 :: TxAux
+exampleTxAux1 = mkTxAux tx exampleTxWitness
+  where tx = UnsafeTx exampleTxInList1 exampleTxOutList1 (mkAttributes ())
+
 exampleTxId :: TxId
 exampleTxId = exampleHashTx
 
 exampleTxInList :: (NonEmpty TxIn)
 exampleTxInList = fromList [exampleTxInUtxo]
 
+exampleTxInList1 :: (NonEmpty TxIn)
+exampleTxInList1 = fromList [exampleTxInUtxo, exampleTxInUtxo1]
+
 exampleTxInUtxo :: TxIn
 exampleTxInUtxo = TxInUtxo exampleHashTx 47 -- TODO: loop here
+
+exampleTxInUtxo1 :: TxIn
+exampleTxInUtxo1 = TxInUtxo exampleHashTx 74
 
 exampleTxOut :: TxOut
 exampleTxOut = TxOut (makePubKeyAddress NetworkMainOrStage pkey)
                      (mkKnownLovelace @47)
   where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
 
+exampleTxOut1 :: TxOut
+exampleTxOut1 = TxOut (makePubKeyAddress (NetworkTestnet 74) pkey) (mkKnownLovelace @47)
+  where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
+
 exampleTxOutList :: (NonEmpty TxOut)
 exampleTxOutList = fromList [exampleTxOut]
 
+exampleTxOutList1 :: (NonEmpty TxOut)
+exampleTxOutList1 = fromList [exampleTxOut, exampleTxOut1]
+
 exampleTxPayload :: TxPayload
 exampleTxPayload = mkTxPayload [exampleTxAux]
+
+exampleTxPayload1 :: TxPayload
+exampleTxPayload1 = mkTxPayload [exampleTxAux, exampleTxAux1]
 
 exampleTxProof :: TxProof
 exampleTxProof = TxProof 32 mroot hashWit

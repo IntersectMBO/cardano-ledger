@@ -4,7 +4,9 @@
 
 module Test.Cardano.Chain.Common.Gen
   ( genAddrAttributes
+  , genAddrAttributesWithNM
   , genAddress
+  , genAddressWithNM
   , genAddrType
   , genAddrSpendingData
   , genBlockCount
@@ -15,6 +17,7 @@ module Test.Cardano.Chain.Common.Gen
   , genLovelacePortion
   , genMerkleRoot
   , genMerkleTree
+  , genNetworkMagic
   , genScriptVersion
   , genStakeholderId
   , genTxFeePolicy
@@ -60,11 +63,18 @@ import Test.Cardano.Crypto.Gen
 
 
 genAddrAttributes :: Gen AddrAttributes
-genAddrAttributes = AddrAttributes <$> hap <*> genNetworkMagic
+genAddrAttributes = genAddrAttributesWithNM =<< genNetworkMagic
+
+genAddrAttributesWithNM :: NetworkMagic -> Gen AddrAttributes
+genAddrAttributesWithNM nm = AddrAttributes <$> hap <*> pure nm
   where hap = Gen.maybe genHDAddressPayload
 
 genAddress :: Gen Address
 genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes
+
+genAddressWithNM :: NetworkMagic -> Gen Address
+genAddressWithNM nm = makeAddress <$> genAddrSpendingData
+                                  <*> genAddrAttributesWithNM nm
 
 genAddrType :: Gen AddrType
 genAddrType = Gen.choice [pure ATPubKey, pure ATRedeem]

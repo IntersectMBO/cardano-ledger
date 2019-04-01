@@ -14,7 +14,13 @@ import qualified Hedgehog as H
 
 import Cardano.Chain.Txp (TxpConfiguration(..))
 
-import Test.Cardano.Chain.Common.Example (exampleAddress)
+import Test.Cardano.Chain.Common.Example
+  ( exampleAddress
+  , exampleAddress1
+  , exampleAddress2
+  , exampleAddress3
+  , exampleAddress4
+  )
 import Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
 import Test.Cardano.Prelude
   ( discoverGolden
@@ -33,17 +39,15 @@ goldenTxpConfiguration0 = goldenTestJSONPretty
   exampleTxpConfiguration0
   "test/golden/json/txp/TxpConfiguration0"
 
--- TODO: This test likely fails due to the `NetworkMagic` field that exists
--- in `AddrAttributes` in the Byron release. As a result there are
--- serialization differences in the example addresses. When it has been
--- decided how we are differentiating between the different networks,
--- this should be fixed.
-{-
 goldenTxpConfiguration1 :: Property
 goldenTxpConfiguration1 =
     goldenTestJSONPretty exampleTxpConfiguration1
         "test/golden/json/txp/TxpConfiguration1"
--}
+
+goldenTxpConfiguration2 :: Property
+goldenTxpConfiguration2 =
+    goldenTestJSONPretty exampleTxpConfiguration2
+        "test/golden/json/txp/TxpConfiguration2"
 
 roundTripTxpConfiguration :: Property
 roundTripTxpConfiguration = eachOf 200 genTxpConfiguration roundTripsAesonShow
@@ -57,13 +61,15 @@ exampleTxpConfiguration0 :: TxpConfiguration
 exampleTxpConfiguration0 = TxpConfiguration 99 talsa
   where talsa = S.fromList [exampleAddress]
 
-{-
 exampleTxpConfiguration1 :: TxpConfiguration
 exampleTxpConfiguration1 = TxpConfiguration 9 talsa
   where
     talsa = S.fromList [exampleAddress1, exampleAddress2, exampleAddress3]
--}
 
+exampleTxpConfiguration2 :: TxpConfiguration
+exampleTxpConfiguration2 = TxpConfiguration 700 talsa
+  where
+    talsa = S.fromList [exampleAddress4, exampleAddress]
 
 -------------------------------------------------------------------------------
 -- Main test export

@@ -33,7 +33,9 @@ import Test.Cardano.Chain.Txp.Example
   , exampleTxInList
   , exampleTxInUtxo
   , exampleTxOut
+  , exampleTxOut1
   , exampleTxOutList
+  , exampleTxPayload1
   , exampleTxProof
   , exampleTxSig
   , exampleTxSigData
@@ -170,12 +172,18 @@ roundTripTxOutList = eachOf 50 genTxOutList roundTripsBiShow
 goldenTxOut :: Property
 goldenTxOut = goldenTestBi exampleTxOut "test/golden/bi/txp/TxOut"
 
+goldenTxOut1 :: Property
+goldenTxOut1 = goldenTestBi exampleTxOut1 "test/golden/bi/txp/TxOut1"
+
 roundTripTxOut :: Property
 roundTripTxOut = eachOf 50 genTxOut roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxPayload
 --------------------------------------------------------------------------------
+
+goldenTxPayload1 :: Property
+goldenTxPayload1 = goldenTestBi exampleTxPayload1 "test/golden/bi/txp/TxPayload1"
 
 roundTripTxPayload :: Property
 roundTripTxPayload = eachOf 50 (feedPM genTxPayload) roundTripsBiShow
