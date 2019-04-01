@@ -14,6 +14,26 @@ following links:
 
 [![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
 
+# Repository structure
+
+This repo contains formal (LaTeX) and executable (Haskell model) specs for both
+the Byron and Shelley eras of Cardano. The outline of the repo is as follows:
+
+- byron
+  - ledger
+    - formal-spec
+    - executable-spec
+  - chain
+    - formal-spec
+    - executable-spec
+- shelley
+  - design-spec
+  - ledger
+    - formal-spec
+    - executable-spec
+    - dependencies
+  - chain (for future work on the chain spec)
+
 ## Build tools
 
 For building LaTeX documents we use
@@ -70,10 +90,10 @@ result/blockchain-spec.pdf
 ## Building individual LaTeX documents
 
 
-Change to the latex directory where the latex document is (e.g. `latex` for the
-ledger specification corresponding to the Shelley release, or
-`specs/ledger/latex` for the ledger specification corresponding to the Byron
-release). Then, build the latex document by running:
+Change to the latex directory where the latex document is (e.g. `shelley/chain-and-ledger/formal-spec`
+for the ledger specification corresponding to the Shelley release, or
+`byron/ledger/formal-spec` for the ledger specification corresponding to
+the Byron release). Then, build the latex document by running:
 
 ```shell
 nix-shell --pure --run make
@@ -88,10 +108,10 @@ nix-shell --pure --run "make watch"
 ## Testing the Haskell model
 
 Change to the directory where the executable specifications are (e.g.
-`cardano-ledger-specs/hs/` for the executable ledger specifications
-corresponding to the Shelley release, or `specs/ledger/hs` for the executable
-ledger specifications corresponding to the Byron release). Then run build the
-specs by running:
+`shelley/chain-and-ledger/executable-spec` for the executable ledger specifications
+corresponding to the Shelley release, or `byron/ledger/executable-spec` for
+the executable ledger specifications corresponding to the Byron release). Then
+run build the specs by running:
 
 ```shell
 stack build
@@ -151,7 +171,7 @@ To add a new Haskell project, you should do the following:
 
 To add a new LaTeX specification, the easiest way is to copy from one of the
 existing specifications. You will want the `Makefile` and `default.nix` (say
-from [the Shelley ledger spec](./latex)).
+from [the Shelley ledger spec](./shelley/chain-and-ledger/formal-spec)).
 
 1. Copy these files into the root of your new LaTeX specification.
 2. Modify the `DOCNAME` in the `Makefile`.
