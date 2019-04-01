@@ -39,6 +39,8 @@
 \newcommand*\ema[2]{\left\langle {#1} \right\rangle_{{#2}}}
 \newcommand*\mean[1]{\overline{#1}}
 
+\newcommand\pbar{\overline{p}}
+
 \begin{document}
 
 \title{Engineering Design Specification \\
@@ -2501,19 +2503,19 @@ feature for the initial release.
 \subsection{Overview of Incentives}
 \label{overview-of-incentives}
 
-On a high level, goal of the incentives mechanism is to incentivise
-stakeholders to follow the protocol and thereby guaranteeing secure and
+On a high level, the goal of the incentives mechanism is to incentivise
+stakeholders to follow the protocol and thereby to guarantee the secure and
 efficient operation of Cardano.
 
-More specifically, we want a majority of stake to
-delegate to a number of \(k\) \emph{stake pools} (where \(k\) is a
+More specifically, we want a majority of stake holders to
+delegate to a number \(k\) of \emph{stake pools} (where \(k\) is a
 parameter of the system -- see \cref{parameters}). The
-\emph{pool leaders} of those stake pools are supposed to
+\emph{pool operators} of those stake pools are supposed to
 
 \begin{itemize}
 \item
   fulfill their Ouroboros protocol participation responsibilities,
-  such as being online during slots for which they are slot leader and
+  such as being online during slots for which they are a slot leader and
   then creating a block containing as many transactions as possible.
 \item
   provide additional network infrastructure.
@@ -2525,7 +2527,7 @@ pools, or not take part in the protocol at all. In the latter case,
 their stake is ignored, and they will not receive any rewards.
 
 Incentives are provided in the form of \emph{social pressure} (by making
-pool leader performance and adherence to the protocol public), but
+pool operator performance and adherence to the protocol public), but
 mostly by \emph{monetary incentives} in the form of ada.
 
 A design goal of the mechanism is to align monetary incentives as
@@ -2534,17 +2536,22 @@ follows their own financial interests, the system should settle into a
 desirable state. If possible, there should never be a conflict of
 interest between maximizing rewards and ``doing the right thing''.
 
-Rewards will be paid for each epoch and will be drawn from two sources,
+Rewards will be paid for each epoch and will be drawn from the following
+sources:
 
 \begin{itemize}
 \item
-  monetary expansion and
+  monetary expansion
 \item
-  transaction fees.
+  transaction fees
+\item
+  decayed deposits.
 \end{itemize}
 
-Rewards for one epoch will roughly be split proportional to stake.
-However, there will be several refinements to this general principle:
+All rewards will be collected in a (virtual) pot, and then shared amongst stake
+pools depending on their contribution to the operation of the system. The main
+factor will be the relative stake that a pool controls. However, there will be
+several refinements to this general principle:
 
 \begin{itemize}
 \item
@@ -2552,41 +2559,45 @@ However, there will be several refinements to this general principle:
   (otherwise, the system would converge towards a state with all stake
   being delegated to one giant stake pool).
 \item
-  Rewards will decrease if a pool leader does not create the blocks they
+  Rewards will decrease if a pool operator does not create the blocks they
   are supposed to create.
 \item
-  Pool leaders will be compensated for their trouble and risk by
+  Pool operators will be compensated for their trouble and risk by
+  \begin{itemize}
+  \item
+    reimbursing their costs and
+  \item
+    giving them a \emph{margin} before distributing pool rewards proportionally
+    amongst pool operator and pool members. (Pool operators publicly declare their
+    cost and margin, which they can freely choose.)
+  \end{itemize}
 \item
-  reimbursing their costs and
-\item
-  giving them a \emph{margin} before distributing pool rewards
-  proportionally amongst pool leader and pool members. (Pool leaders
-  publicly declare their margin, which they can freely choose.)
-\item
-  Pool rewards will slightly increase with the stake of their leader.
-  There is no minimal stake required to create a pool -- anybody can do
-  this. However, pools led by leaders with high stake will get higher
-  rewards. (This will discourage pool leaders from splitting their stake
-  to operate several pools. It will also help preventing Sybil attacks,
-  where an attacker with low stake tries to gain control over a majority
-  of stake by creating a lot of pools with low costs.)
+  Pool rewards will slightly increase with the stake their operator contributes to
+  the pool. There is no minimal stake required to create a pool -- anybody can
+  do this. However, pools led by operators with high stake will get higher
+  rewards. (This will discourage pool operators from splitting their stake to
+  operate several pools. It will also help preventing Sybil attacks, where an
+  attacker with low stake tries to gain control over a majority of stake by
+  creating a lot of pools with low costs.)
 \end{itemize}
 
 Our game theoretic analysis has shown that if stakeholders try to
 maximize their rewards in a ``short-sighted'' (\emph{myopic}) way (pool
 members joining the pool with the highest rewards \emph{at this moment},
-pool leaders raising their margins to get higher rewards \emph{at this
+pool operators raising their margins to get higher rewards \emph{at this
 moment}), chaotic behaviour will ensue.
 
-Therefore we will calculate \emph{non-myopic} rewards and make them
-public, thus guiding stakeholders to behave in a way that will benefit
-them in the long run. Our analysis shows that if everybody follows this
-advice, the system will stabilize in a \emph{Nash Equilibrium}, meaning
-that no stakeholder will have incentive to act differently.
+Therefore we will calculate \emph{non-myopic} rewards. Wallets will display
+pools ranked by those non-myopic rewards, thus guiding stakeholders to behave in
+a way that will benefit them in the long run. Our analysis shows that if
+everybody follows this advice, the system will stabilize in a \emph{Nash
+  Equilibrium}, meaning that no stakeholder will have incentive to act
+differently.
 
-Rewards to both the pool leaders and the pool members will be calculated
-by the system and will be available to all stakeholders after each
-epoch. No manual intervention (transfer of funds) will be necessary.
+Rewards to both the pool operators and the pool members will be calculated and
+distributed by the system some time after the end of an epoch. No manual
+intervention (transfer of funds) will be necessary. In particular, a pool
+operator cannot simply refuse to share rewards with the stake pool members.
 
 \subsection{Parameters}
 \label{parameters}
@@ -2598,7 +2609,7 @@ advance:
 \item
   The desired number of pools \(k\in\mathbb{N}_+\).
 \item
-  The influence \(a_0\in[0,\infty)\) a pool leader's stake should have
+  The influence \(a_0\in[0,\infty)\) a pool operator's stake should have
   on the desirability of the pool. Small values of \(a_0\) indicate
   little influence.
 \item
@@ -2606,8 +2617,8 @@ advance:
   of still available ada that will be created per epoch.
 \item
   The fraction \(\tau\in[0,1]\) of rewards going to the treasury.
-\item
-  An exponent \(\gamma\in(0,\infty)\) for penalty calculation.
+%% \item
+%%   An exponent \(\gamma\in(0,\infty)\) for penalty calculation.
 \end{itemize}
 
 We will discuss
@@ -2618,8 +2629,8 @@ could approach choosing reasonable values for these.
 \label{reminder-stakepool-registration}
 
 Recall from \cref{stakepool-registration} that stakeholders
-who wish to operate and lead a stake pool have to \emph{register} their
-pool on the blockchain. From the point of view of reward-calculation
+who wish to operate a stake pool have to \emph{register} their
+pool on the blockchain. From the point of view of reward calculation
 (see \cref{epoch-rewards}), the following information has to
 be included in the registration:
 
@@ -2627,10 +2638,10 @@ be included in the registration:
 \item
   The \emph{costs} of operating the pool (in ada/epoch).
 \item
-  The pool leader \emph{margin} (in \([0,1]\)), indicating the
-  additional share the pool leader will take from pool rewards before
+  The pool operator \emph{margin} (in \([0,1]\)), indicating the
+  additional share the pool operator will take from pool rewards before
   splitting rewards amongst members (see
-  \cref{pool-leader-reward}).
+  \cref{pool-operator-reward}).
 \item
   Proof of \emph{ada pledged to the pool}, as a list of public stake
   key hashes that belong to the owner(s) of the pool.
@@ -2654,23 +2665,47 @@ There will be four sources of rewards for an epoch: \emph{transaction
 \label{transaction-fees-1}
 
 All transaction fees from all transactions from all blocks created
-during the epoch will be used as rewards.
+during the epoch will be added to the rewards pot of that epoch.
 
 \subsubsection{Deposits}
 \label{deposits-1}
 
 As explained in \cref{fees-deposits}, a part of the deposits for
 certificates and UTxO entries are non-refundable, and contribute to
-the rewards pool instead.
+the rewards pot instead.
 
 \subsubsection{Monetary Expansion}
 \label{monetary-expansion}
 
-Let \(T\) be the total amount of ada in existence during a specific
-epoch, and let \(T_\infty\) be the maximal possible amount of ada in the
-future. At this moment, \(T=31,000,000,000\) and
-\(T_\infty=45,000,000,000\). Then the amount of
-\(\rho\cdot(T_\infty - T)\) ada will be newly created.
+Every epoch, the total amount of ada in circulation \(T\) will be increased by
+adding ada to the rewards pot. To ensure the amount of ada never exceeds a
+finite, specified limit \(T_\infty\), the increase will reduce exponentially.
+Also, the increase will depend on the number of blocks that have been produced
+during the epoch. Specifically, each epoch, the contribution from monetary
+expansion to the rewards pot is given by
+\[\min(\eta, 1) \rho \left(T_\infty - T\right)\,,\]
+where
+\begin{itemize}
+\item[\(\eta\)] is the ratio between the number of blocks that have been produced
+  during the epoch, and the expectation value\footnote{Note that in Ouroboros
+    Classic, this is just the number of slots in an epoch, but for instance in
+    Praos, where we do not always have one leader per slot, we only have a
+    notion of how many blocks we expect per epoch \emph{on average}.} of blocks
+  that should have been produced during the epoch under ideal conditions (i.e.,
+  no forks, no missed blocks),
+\item[\(\rho\)] is the monetary expansion parameter,
+\item[\(T_\infty\)] is the maximal amount of ada to ever be in circulation
+  (i.e., \(45\cdot10^{9}\) ada), and
+\item[T] is the amount of ada in circulation at the beginning of the epoch for
+  which we want to calculate the rewards pot.
+\end{itemize}
+
+The dependece on \(\eta\) incentivises cooperative behaviour, and in particular
+discourages the pools sabotaging each others blocks. Note that \(\eta\) can
+exceed \(1\) when there are more blocks produced in an epoch than would be
+expected on average. But the product \(\min(\eta, 1)\rho\) is always bounded by
+\(1\), which is necessary to ensure we never exceed \(T_\infty\) ada in
+circulation.
 
 Since \(T_\infty\) is finite, rewards from monetary expansion will
 decrease over time. This has to be compensated by
@@ -2690,27 +2725,24 @@ of ada currently in existence, but they did not change
 \(T_\infty\). Effectively, those fees will be distributed amongst
 future stakeholders via monetary expansion.
 
-\todo{It seems to be advantageous to have the monetary expansion depend on the
-  number of blocks in an epoch (for instance, by just having an exponential
-  decay \emph{per block} of the reserves. This discourages block withholding
-  attacks.}
-
 \subsubsection{Rewards from the Previous Epoch}
 \label{rewards-from-the-previous-epoch}
 
 As we will see in \cref{pool-rewards}, not all available rewards
-from an epoch will actually be distributed during that epoch. The rest
-will be added to the rewards of the following epoch.
+from an epoch will actually be distributed during that epoch. The remainder of
+an epoch's rewards pot will be moved over to the next epoch's rewards pot.
 
 \subsubsection{Treasury}
 \label{treasury}
 
-A fraction \(\tau\) of the rewards for one epoch will go to the
-\emph{treasury}\footnote{We do not have a full treasury system yet, and
-  implementing it requires further research. Nevertheless, we start collecting
-  funds for the treasury already, in a pot called the \(T\) pot. Once the
-  treasury is imnplemented, funds in the \(T\) pot will be made available for
-  decentralised development of the system.}.
+A fraction \(\tau\) of the rewards pot for each epoch will go to the
+\emph{treasury}.
+
+Note that we do not have a full treasury system yet, and implementing it
+requires further research. Nevertheless, we start collecting funds for the
+treasury already, in a pot called the \(T\) pot. Once the treasury is
+implemented, funds in the \(T\) pot will be made available for decentralised
+development of the system.
 
 \subsection{Reward Splitting}
 \label{reward-splitting}
@@ -2720,23 +2752,99 @@ are split amongst stakeholders.
 
 These calculations proceed in two steps: First, rewards are split
 amongst \emph{pools}. Next, each pool splits its share of \(R\) amongst
-its leader and its members.
+its operator and its members.
+
+\subsubsection{Stake, Performance, and Block Production}
+\label{stake-performance-and-block-production}
+
+The incentives scheme developed in~\citep{bkks2018} distributes rewards solely
+on the basis of the size of pools in terms of the stake that they control. This
+does eliminate any incentive for a pool to try to sabotage another pool (be it
+through ignoring their blocks, or even by mounting DoS attacks on their nodes).
+However, it does not incentivise pool operators to ensure that their pool
+performs well (i.e., produces most of the blocks it is eligible to create). This
+invites freeriders, pools that rely on other pools to maintain the system, and
+collect rewards without doing any work.
+
+For Cardano, we will stay close to the scheme of~\citep{bkks2018}, but we will
+also take into account the \emph{performance} of a pool. Unfortunately, tracking
+the performance of a pool is not trivial in protocols without a public leader
+schedule, like Ouroboros Praos.
+
+In order to get a handle on the performance of a pool, let us consider the
+fraction \(\beta\) of all blocks within a given epoch that the pool created.
+
+There are multiple factors that influence \(\beta\): the stake of the pool, how
+well it performs, and some randomness due to the leader election and the overall
+performance of the other pools and the network. We can write\footnote{We assume
+  a linear relation between stake and the number of blocks that a pool is
+  eligible to create. Strictly speaking, this is not the case for Ouroboros
+  Praos. However, the error when linearising the leader election function is
+  small, particularly for the range of parameters we are considering for
+  Cardano.}
+\[\beta = \sigma p r_e \,,\]
+where
+\begin{enumerate}
+\item[\(\sigma\)] is the relative stake \(\sigma\) of the pool (the fraction of
+  the absolute stake that the pool controls),
+\item[\(p\)] is the performance \(p\) of the pool, i.e. the fraction
+  \[
+  p = \frac{n}{\max(N,1)}
+  \]
+  of the number \(n\) blocks it successfully added to the chain and the number
+  \(N\) of slots it was elected as a leader, and
+\item[\(r_e\)] is a factor that captures the relation between the relative stake
+  \(\sigma\) of the pool, the number \(N\) of slots it is elected as a leader,
+  and the total number \(\overline{N}\) of blocks that were added to the chain during
+  the epoch. To be precise, we have
+  \[r_e = \frac{N}{\sigma \overline{N}}\,.\]
+  The factor \(r_e\) captures all the random influences on \(\beta\): the
+  randomness in the leader election that influences \(n\), and the randomness
+  both from the leader election and the bunch of random influences on
+  \(\overline{N}\) (leader election, forks, performance of the network and other
+  pools).
+\end{enumerate}
+
+If we insert the definitions of \(p\) and \(r_e\) into \(\beta\), we find that
+\[
+\beta = \sigma \frac{n}{\max(N,1)} \frac{N}{\sigma \overline{N}}
+= \frac{n}{\overline{N}}\,,
+\]
+which is indeed the fraction of blocks produced by the pool\footnote{When
+  cancelling \(N\) and \(\max(N,1)\), note that for \(N=0\), also \(n=0\), and
+  the equation trivially holds.}.
+
+In Ouroboros Praos, we can observe \(\sigma\), \(n\), and \(\overline{N}\), but
+we do not have a direct handle on any of \(N\), \(r_e\), or \(p\). From the
+observables, we can extract
+\[ \beta = \frac{n}{\overline{N}}\,. \]
+While the true performance \(p\) is not accessible, we can define and measure
+the \emph{apparent performance}
+\[
+\pbar := p r_e = \frac{\beta}{\sigma}\,.
+\]
+We will use the apparent performance \(\pbar\) as a proxy for the performance
+when determining the rewards for pools.
 
 \subsubsection{Pool Rewards}
 \label{pool-rewards}
 
-For a given epoch, the \emph{maximal} rewards for a pool are \[
-    f(s,\sigma) :=
-    \frac{R}{1 + a_0}
-    \cdot
-    \left(\sigma' + s'\cdot a_0\cdot\frac{\sigma' - s'\frac{z_0-\sigma'}{z_0}}{z_0}\right).
-\] Here
+For a given epoch, the \emph{optimal} rewards for a pool are
+\begin{equation}
+  f(s,\sigma) :=
+  \frac{R}{1 + a_0}
+  \cdot
+  \left(\sigma' + s'\cdot a_0\cdot\frac{\sigma' -
+    s'\frac{z_0-\sigma'}{z_0}}{z_0}\right)\,.
+  \label{eq:optimal-rewards}
+\end{equation}
+Here
 
 \begin{itemize}
 \item
   \(R\) are the total available rewards for the epoch (in ada).
 \item
-  \(a_0\in[0,\infty)\) is a parameter determining leader-stake influence
+  \(a_0\in[0,\infty)\) is a parameter determining operator-stake influence
   on pool rewards.
 \item
   \(z_0:=1/k\) is the size of a saturated pool.
@@ -2745,7 +2853,7 @@ For a given epoch, the \emph{maximal} rewards for a pool are \[
   of the pool.
 \item
   \(s':=\min(s, z_0)\), where \(s\) is the relative stake of the pool
-  leader (the amount of ada pledged during pool registration,
+  operator (the amount of ada pledged during pool registration,
   see \cref{stakepool-registration}).
 \end{itemize}
 
@@ -2754,8 +2862,8 @@ where the owner(s) fail to honour their pledge of stake will receive
 zero rewards, and so will have $f=0$.
 
 \emph{Note that \(\sigma\) includes the stake \(s\) pledged by the pool
-leader.} For example, let us assume that the total existing supply of
-ada is \(T=31,000,000,000\), and consider a pool whose pool leader
+operator.} For example, let us assume that the total existing supply of
+ada is \(T=31,000,000,000\), and consider a pool whose pool operator
 pledged ada 15,500,000 and who attracted another ada 15,500,000 from their
 pool members. Then \[
 \begin{array}{rcccl}
@@ -2764,92 +2872,48 @@ pool members. Then \[
 \end{array}
 \]
 
-The \emph{actual} rewards for a pool \(j\) will take into account the
-\emph{performance} \(p_j\) of that pool, i.e., the ratio of the number \(n_j\)
-of blocks the pool created and the number \(N_j\) of slots for which it was
-elected as a leader,
+The \emph{actual} rewards take the apparent performance into account, and are
+given by
+\footnote{
+  Note that since
+  \( \pbar\sigma' = \beta\tfrac{\sigma'}{\sigma}\), this nearly amounts to replacing
+  \(\sigma'\) by \(\beta\tfrac{\sigma'}{\sigma}\) in \cref{eq:optimal-rewards}, i.e.
+  to rewarding pools based on the number of blocks that they produced, rescaled
+  by a punishing factor \(\sigma'/\sigma\) for pools that grow beyond \(z_0\).
+}
 \[
-p_j = \frac{n_j}{\max(N_j,1)}\,.
+\hat{f}(s,\sigma,\pbar) := \pbar f(s, \sigma)
+\,.
 \]
 
-The idea is to multiply the maximal rewards \(f(s,\sigma)\) by a factor of
-\(p_j^\gamma\). Thus, if the pool faithfully creates all blocks in slots for
-which it was elected slot leader, \(p_j=1\), and the pool gets maximal rewards.
-If, on the other hand, the pool does not create even a single block,
-\(p_j=0\), and the pool will get no rewards whatsoever for that epoch.
-
-What happens in between these two extremes is controlled by the parameter
-\(\gamma\in(0,\infty)\): for \(\gamma=1\), the penalty will be proportional to
-the number of missed blocks. For \(0<\gamma<1\), penalties for missing the first
-few blocks will be relatively light, whereas for \(\gamma>1\), penalties will be
-over-proportionally harsh in the beginning.
-
-One complication with this is that the number \(N_j\) will not be publicly known
-for all protocols. For instance, Ouroboros Praos has private leader elections.
-Still, even for Praos, it is straightforward to calculate the \emph{expectation
-  value} \(\mean{N_j}\) of the number of slots that pool \(j\) will be elected
-as leader on average. Directly substitung \(\mean{N_j}\) for the unknown \(N_j\)
-to get
-\[
-\mean{p_j} = \frac{n_j}{\max(\mean{N_j},1)}\,,
-\]
-and multiplying the rewards by a factor of \(\mean{p_j}^\gamma\) is problematic,
-as it leads to two issues:
+Note that
 \begin{itemize}
-\item Stake pools will regularly be punished despite operating
-  perfectly well and producing a block in each slot they were elected,
-  whenever \(N_j < \mean{N_j}\).
-\item We will also regularly have stake pools where
-  \(N_j > \mean{N_j}\).
-  The rational behaviour for those pools would be to switch off their
-  nodes once they have successfully produced \(\mean{N_j}\)
-  blocks, leading to a period of slow chain growth at the end of each
-  epoch. This would be a hazard for the system.
+\item
+  Even when a pool's true performance is \(1\), its actual rewards might be less
+  than its optimal rewards, because of the randomness in \(r_e\). Likewise,
+  sometimes a pool's actual rewards will be \emph{higher} than their optimal
+  rewards, if they are lucky in the leader election process.
+
+  These effects will balance each other, so that a well performing pool will get
+  their optimal rewards \emph{on average over multiple epochs}.
+
+\item
+  We will always have
+  \[ \sum_{\text{pools}} \hat{f}(s,\sigma,\pbar) \leq R \,, \]
+  so that all actual rewards can be paid from the rewards pot\footnote{ To prove
+    this, use that \(s' \leq \sigma' \leq z_0\), and
+    \(\sum_{\text{pools}}\beta=1\).}.
+
+  The difference \(R - \sum_{\text{pools}} \hat{f}(s,\sigma,\pbar)\) will be
+  sent to the treasury.
 \end{itemize}
-
-\todo{We might switch to determining the rewards directly by the number of
-  blocks produced, instead of the stake. The document will be updated once we
-  have decided on this.}
-We can lessen the first issue, and eliminate the second (which is the
-more dangerous), by using a moving average of \(\mean{p_j}\).
-We will use the exponential moving average
-\[
-  \ema{x}{e} =
-  \begin{cases}
-    x_{e_0} & e = e_0\\
-    \alpha x_e + (1-\alpha) \ema{x}{e-1} & e > e_0
-  \end{cases}
-\]
-where \(\alpha\) is a decay constant determining the relative influence of
-recent epochs, \(e\) is the current epoch, \(x_e\) is the value of \(x\) in
-epoch \(e\), and \(e_0\) is the epoch in which we start taking the average (in
-the case of the performance of stake pools, this will be the epoch in which the
-pool was created).
-
-The actual rewards for pool \(j\) (with relative stake \(\sigma_j\) and relative
-leader-stake \(s_j\)) in epoch \(e\) are then computed as
-\[
-    \hat{f}_j := \ema{\left(\frac{n_j}{\max(\mean{N_j}, 1)}\right)}{e}^\gamma\cdot f(s_j,\sigma_j).
-\]
-The difference \(f(s_j,\sigma_j)-\hat{f}_j\) will be sent to the
-treasury. In particular, this means that \emph{no pool can increase its
-own rewards by somehow preventing another pool from producing
-blocks}. In the initial release, we will track the amount of funds in
-the treasury, but there will be no mechanism for withdrawing from the
-treasury. A proper treasury will be added in a later release.
-
-Note that the sum of all maximal pool rewards never exceeds the size of the
-rewards pool, \(\sum_jf(s_j,\sigma_j)\leq R\), and that the difference
-\(R-\sum_jf(s_j,\sigma_j)\) will normally be strictly positive. This difference
-will be added to the following epoch's rewards. It is safe to do so, since it
-does \emph{not} depend on the performance of any pool.
 
 \subsubsection{Reward Splitting inside a pool}
 \label{reward-splitting-inside-a-pool}
 
 After the rewards for a pool have been determined according to
 \cref{pool-rewards}, those rewards are then split
-amongst the \emph{pool leader} and the \emph{pool members}.
+amongst the \emph{pool operator} and the \emph{pool members}.
 
 Consider
 
@@ -2867,13 +2931,13 @@ Consider
 Note that the values \(c\) and \(m\) for registered pools are available
 from the pool registration, see \cref{stakepool-registration}.
 
-\paragraph{Pool Leader Reward}
-\label{pool-leader-reward}
+\paragraph{Pool Operator Reward}
+\label{pool-operator-reward}
 
-The \emph{pool leader reward \(r_\mathrm{leader}\)} (in ada) is
+The \emph{pool operator reward \(r_\mathrm{operator}\)} (in ada) is
 calculated as follows (where \(s\in[0,1]\) is the stake of the pool
-leader): \[
-    r_\mathrm{leader}(\hat{f}, c, m, s, \sigma) :=
+operator): \[
+    r_\mathrm{operator}(\hat{f}, c, m, s, \sigma) :=
     \left\{
     \begin{array}{ll}
         \displaystyle\hat{f} &
@@ -2904,12 +2968,12 @@ member): \[
 \subsection{Non-Myopic Utility}
 \label{non-myopic-utility}
 
-It would be short-sighted (``myopic'') for stakeholders to directly use
-the reward splitting formulas from \cref{reward-splitting}.
-They should instead take the long-term (``non-myopic'') view. To this
-end, the system will calculate and display the ``non-myopic'' rewards
-that pool leaders and pool members can expect, thus supporting
-stakeholders in their decision whether to create a pool and to which
+It would be short-sighted (``myopic'') for stakeholders to directly use the
+reward splitting formulas from \cref{reward-splitting}, and base their
+delegation choice on those. They should instead take the long-term
+(``non-myopic'') view. To this end, the system will calculate and display the
+``non-myopic'' rewards that pool operators and pool members can expect, thus
+supporting stakeholders in their decision whether to create a pool and to which
 pool to delegate their stake.
 
 The idea is to first rank all pools by ``desirability'', to then assume
@@ -2920,25 +2984,25 @@ base all reward calculations on these assumptions.
 \subsubsection{Pool Desirability and Ranking}
 \label{pool-desirability-and-ranking}
 
-First we define the \emph{desirability} of a pool whose leader has stake
+First we define the \emph{desirability} of a pool whose operator has stake
 \(s\), costs \(c\) and margin \(m\). Simply put, this number indicates
 how ``desirable'' or ``attractive'' this pool is to (potential) members.
 
 If the pool is \emph{saturated}, the pool rewards are \[
-    \tilde{f}(s) :=
-    \hat{f}(s,z_0)=
-    \frac{R}{1 + a_0}
+    \tilde{f}(s, \pbar) :=
+    \hat{f}(s,z_0,\pbar)=
+    \frac{\pbar R}{1 + a_0}
     \cdot
     \left(z_0 + \min(s,z_0)\cdot a_0\right).
 \]
 
 The \emph{desirability} is then defined as \[
-    d(c, m, s) :=
+    d(c, m, s, \pbar) :=
     \left\{
     \begin{array}{ll}
         \displaystyle 0 &
-        \text{if $\tilde{f}(s)\leq c$,} \\
-        \displaystyle\left(\tilde{f}(s) - c\right)\cdot(1-m) &
+        \text{if $\tilde{f}(s,\pbar)\leq c$,} \\
+        \displaystyle\left(\tilde{f}(s,\pbar) - c\right)\cdot(1-m) &
         \text{otherwise.}
     \end{array}
     \right.
@@ -2948,12 +3012,12 @@ desirable pool gets rank 2 and so on.
 
 We predict that pools with rank \(\leq k\) will eventually be saturated,
 whereas pools with rank \(>k\) will lose all members and only consist of
-the leader.
+the operator.
 
 \subsubsection{Non-Myopic Pool Stake}
 \label{non-myopic-pool-stake}
 
-Consider a pool with leader stake \(s\), total stake \(\sigma\) and rank
+Consider a pool with operator stake \(s\), total stake \(\sigma\) and rank
 \(r\). We define its \emph{non-myopic stake} \(\sigma_\mathrm{nm}\) as
 \[
     \sigma_\mathrm{nm}(s,\sigma,r) :=
@@ -2967,31 +3031,60 @@ Consider a pool with leader stake \(s\), total stake \(\sigma\) and rank
     \right.
 \]
 
-\subsubsection{Non-Myopic Pool Leader Rewards}
-\label{non-myopic-pool-leader-rewards}
+\subsubsection{Non-Myopic Pool Operator Rewards}
+\label{non-myopic-pool-operator-rewards}
 
-The non-myopic pool leader rewards of a pool with costs \(c\), margin
-\(m\), leader stake \(s\), stake \(\sigma\) and rank \(r\) are \[
-    r_\mathrm{leader, nm}(c, m, s, \sigma, r) :=
-    r_\mathrm{leader}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, s, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+The non-myopic pool operator rewards of a pool with costs \(c\), margin
+\(m\), operator stake \(s\), stake \(\sigma\), rank \(r\), and apparent
+performance \(\pbar\) are \[
+    r_\mathrm{operator, nm}(c, m, s, \sigma, r, \pbar) :=
+    r_\mathrm{operator}\Bigl(
+    \hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r), \pbar\bigr),
+    c, m, s, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
 \]
 
 \subsubsection{Non-Myopic Pool Member Rewards}
 \label{non-myopic-pool-member-rewards}
 
-The non-myopic pool member rewards of a pool with costs \(c\), margin
-\(m\), leader stake \(s\), stake \(\sigma\), member stake \(t\) and rank
-\(r\) are
+The non-myopic pool member rewards of a pool with costs \(c\), margin \(m\),
+operator stake \(s\), stake \(\sigma\), rank \(r\), and apparent performance
+\(\pbar\), for a member contributing member stake \(t\), are
 \begin{equation}
-    r_\mathrm{member, nm}(c, m, s, \sigma, t, r) :=
-    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r)\bigr), c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
+    r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
+    r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
+    \pbar\bigr),
+    c, m, t, \sigma_\mathrm{nm}(s,\sigma,r)\Bigr).
 \label{eq:non-myopic-member-rewards}
 \end{equation}
 This formula holds if the pool is amongst the top \(k\) rated pools. If it is
 not, we should expect no rational player to delegate to it, and accordingly we
 will have to replace \(\sigma_\mathrm{nm}\) by \(s + t\) in
 \cref{eq:non-myopic-member-rewards} -- the pool's stake will be entirely made up
-of the leader's stake and the stake that this member chooses to delegate.
+of the operator's stake and the stake that this member chooses to delegate.
+
+\subsubsection{Average Apparent Performance}
+
+Using the apparent performance of a pool \emph{within the last epoch} is not
+suitable for determining the long-term expected rewards for delegating to a
+pool. Rather, one should use the average apparent performance over several
+epochs. This avoids prefering or discarding a pool just because it performed
+exceptionally well or bad in one particular epoch. If the ratio of the number of
+stake pools and the number of expected blocks per epoch is large, this becomes
+even more important, since the apparent performance in a single epoch would be
+bound to fluctuate quite a bit.
+
+In order to decrease the influence of these fluctuations, and to get a long-term
+picture, when evaluating the desirability and non-myopic rewards, one should
+insert the apparent performance averaged over several epochs as \(\pbar\), not
+the value of \(\pbar\) from just the last epoch.
+
+Averaging can be done efficiently via an exponential moving average, or by using
+a moving window and keeping track of the apparent performance during the last
+couple of epochs. Note that since we perform averaging only when predicting the
+rewards to allow stakeholders to make an informed decision, but not when
+actually dealing out the rewards, it will be fine if different wallets will
+choose different methods of calculating the averages, since it does not affect
+the consensus.
 
 \subsection{Utility}
 \label{utility}
@@ -3019,10 +3112,11 @@ mechanism.
 However, there is the challenge to avoid ``bloat'' caused by thousands
 of ``micro payments'' from rewards after each epoch.
 
-We have considered multiple solutions to this problem. They are summarised in
-\cref{assessment-of-rewards-sharing-mechanisms}. Considering all the tradeoffs,
-we have chosen to introduce reward accounts, as described in
-\cref{reward-accounts-per-stake-key}, and also in \cref{distributing-rewards}.
+This proved to be quite a challenge. In the end, we have converged to the
+mechanism described in \cref{distributing-rewards}. Alternative approaches that
+we considered are described in \cref{assessment-of-rewards-sharing-mechanisms}
+(therein, \cref{reward-accounts-per-stake-key} is the option that we have
+picked).
 
 \subsection{Information in Daedalus}
 \label{information-in-daedalus}
@@ -3030,10 +3124,10 @@ we have chosen to introduce reward accounts, as described in
 Our game theoretic analysis assumes that every stakeholder has all
 relevant information available at any time.
 
-This means that pool \emph{costs} and \emph{margins} and pool (leader)
-\emph{stakes}, as well as the (non-myopic) utilities derived from these
-figures, have to be easily accessible, so that stakeholders can quickly
-react to changes and always choose the strategy that maximizes their own
+This means that pool \emph{costs}, \emph{margins}, average apparent performance,
+and pool operator \emph{stakes}, as well as the (non-myopic) utilities derived
+from these figures, have to be easily accessible, so that stakeholders can
+quickly react to changes and always choose the strategy that maximizes their own
 rewards.
 
 Daedalus will make this information readily available, as detailed in
@@ -3047,20 +3141,20 @@ We need to decide on reasonable values for the parameters \(k\),
 
 \subsubsection{\texorpdfstring{\(k\)}{k}}
 
-The desired number of pools \(k\) depends on the level of
-decentralization we want on the one hand and network efficiency of the
-Cardano protocol on the other hand. A value of \(k=100\) seems to be
+The desired number of pools \(k\) depends on the level of decentralization we
+want on the one hand and network efficiency and overall costs of the Cardano
+system on the other hand. A value of \(k=100\) or \(k=1000\) seems to be
 reasonable.
 
 \subsubsection{\texorpdfstring{\(a_0\)}{a\_0}}
 
 As explained above, parameter \(a_0\) determines the influence that a
-pool leader's stake has on pool rewards.
+pool operator's stake has on pool rewards.
 
 Our game theoretic analysis predicts that the \(k\) pools with the
 highest \emph{potential}, the highest value of \[
     P(\lambda,c):=\left(z_0+a_0\cdot\lambda\right)\cdot\frac{R}{1+a_0}-c
-\] (where \(\lambda\) is the stake committed by the pool leader and \(c\)
+\] (where \(\lambda\) is the stake committed by the pool operator and \(c\)
 are the pool costs) will create the saturated pools.
 
 Let us consider an attacker with stake \(S < \frac{1}{2}\), who wants to
