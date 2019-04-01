@@ -51,6 +51,7 @@ library
                        Cardano.Chain.Common.Attributes
                        Cardano.Chain.Common.BlockCount
                        Cardano.Chain.Common.ChainDifficulty
+                       Cardano.Chain.Common.Compact
                        Cardano.Chain.Common.Lovelace
                        Cardano.Chain.Common.LovelacePortion
                        Cardano.Chain.Common.Merkle
@@ -81,6 +82,7 @@ library
                        Cardano.Chain.Slotting.LocalSlotIndex
                        Cardano.Chain.Slotting.SlotId
 
+                       Cardano.Chain.Txp.Compact
                        Cardano.Chain.Txp.GenesisUTxO
                        Cardano.Chain.Txp.Tx
                        Cardano.Chain.Txp.TxAux
