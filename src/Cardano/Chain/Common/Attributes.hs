@@ -32,7 +32,7 @@ import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Formatting (bprint, build, int)
 import Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
