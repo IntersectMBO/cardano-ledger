@@ -9,21 +9,23 @@ where
 
 import Cardano.Prelude
 
-import Hedgehog (Property)
-import qualified Hedgehog as H
-import Hedgehog (MonadTest, tripping)
-
-import Cardano.Chain.Common
-  ( fromCompactAddress
-  , toCompactAddress
+import Hedgehog
+  ( Property
+  , MonadTest
+  , assert
+  , property
+  , discover
+  , withTests
+  , forAll
+  , property
+  , tripping
   )
+import qualified Hedgehog as H
+
+import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)
 
 import Test.Cardano.Chain.Common.Gen (genAddress)
-import Test.Cardano.Prelude
-  ( discoverGolden
-  , discoverRoundTrip
-  , eachOf
-  )
+import Test.Cardano.Prelude (discoverRoundTrip, eachOf)
 
 --------------------------------------------------------------------------------
 -- Compact Address
@@ -32,6 +34,12 @@ import Test.Cardano.Prelude
 roundTripCompactAddress :: Property
 roundTripCompactAddress =
   eachOf 1000 genAddress (trippingCompact toCompactAddress fromCompactAddress)
+
+prop_heapWordsSavingsCompactAddress :: Property
+prop_heapWordsSavingsCompactAddress = withTests 1000 $ property $ do
+  addr <- forAll genAddress
+  let compactAddr = toCompactAddress addr
+  assert $ heapWords compactAddr < heapWords addr
 
 -------------------------------------------------------------------------------
 -- Tripping util
@@ -48,5 +56,5 @@ trippingCompact toCompact fromCompact x =
 -------------------------------------------------------------------------------
 
 tests :: IO Bool
-tests = (&&) <$> H.checkSequential $$discoverGolden <*> H.checkParallel
+tests = (&&) <$> H.checkParallel $$discover <*> H.checkParallel
   $$discoverRoundTrip

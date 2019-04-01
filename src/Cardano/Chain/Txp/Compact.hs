@@ -34,19 +34,16 @@ where
 import Cardano.Prelude
 
 import Crypto.Hash (digestFromByteString)
-import Cardano.Crypto.Hashing (AbstractHash (..))
+import Cardano.Crypto.Hashing (AbstractHash(..))
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteArray as BA (convert)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 
 import Cardano.Chain.Common.Compact
-  ( CompactAddress
-  , fromCompactAddress
-  , toCompactAddress
-  )
+  (CompactAddress, fromCompactAddress, toCompactAddress)
 import Cardano.Chain.Common.Lovelace (Lovelace)
-import Cardano.Chain.Txp.Tx (TxId, TxIn (..), TxOut (..))
+import Cardano.Chain.Txp.Tx (TxId, TxIn(..), TxOut(..))
 
 --------------------------------------------------------------------------------
 -- Compact TxIn
