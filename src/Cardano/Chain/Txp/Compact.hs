@@ -59,7 +59,23 @@ data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId
   deriving anyclass NFData
 
 instance HeapWords CompactTxIn where
-  heapWords _ = 6
+  heapWords _
+    -- We have
+    --
+    -- > data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId
+    -- >                                    {-# UNPACK #-} !Word32
+    --
+    -- so 'CompactTxInUtxo' requires:
+    --
+    -- - 1 word for the 'CompactTxInUtxo' object header
+    -- - 4 words (on a 64-bit arch) for the unpacked 'CompactTxId'
+    -- - 1 word for the unpacked 'Word32'
+    --
+    -- +---------------------------------------------+
+    -- │CompactTxInUtxo│Word#|Word#│Word#│Word#│Word#│
+    -- +---------------------------------------------+
+    --
+    = 6
 
 toCompactTxIn :: TxIn -> CompactTxIn
 toCompactTxIn (TxInUtxo txId txIndex) =
@@ -87,7 +103,27 @@ data CompactTxId = CompactTxId {-# UNPACK #-} !Word64
   deriving anyclass NFData
 
 instance HeapWords CompactTxId where
-  heapWords _ = 5
+  heapWords _
+    -- We have
+    --
+    -- > data CompactTxId = CompactTxId {-# UNPACK #-} !Word64
+    -- >                                {-# UNPACK #-} !Word64
+    -- >                                {-# UNPACK #-} !Word64
+    -- >                                {-# UNPACK #-} !Word64
+    --
+    -- so 'CompactTxId' requires:
+    --
+    -- - 1 word for the 'CompactTxId' object header
+    -- - 1 word (on a 64-bit arch) for the unpacked 'Word64'
+    -- - 1 word (on a 64-bit arch) for the unpacked 'Word64'
+    -- - 1 word (on a 64-bit arch) for the unpacked 'Word64'
+    -- - 1 word (on a 64-bit arch) for the unpacked 'Word64'
+    --
+    -- +-----------------------------------+
+    -- │CompactTxId│Word#│Word#│Word#│Word#│
+    -- +-----------------------------------+
+    --
+    = 5
 
 getCompactTxId :: Get CompactTxId
 getCompactTxId =
@@ -128,8 +164,35 @@ data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
   deriving anyclass NFData
 
 instance HeapWords CompactTxOut where
-  heapWords (CompactTxOut compactAddr _) =
-    3 + heapWordsUnpacked compactAddr
+  heapWords (CompactTxOut compactAddr _)
+    -- We have
+    --
+    -- > data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
+    -- >                                  {-# UNPACK #-} !Lovelace
+    -- > newtype CompactAddress = CompactAddress ShortByteString
+    -- > newtype Lovelace = Lovelace { getLovelace :: Word64 }
+    --
+    -- so @CompactTxOut {-# UNPACK #-} !CompactAddress {-# UNPACK #-} !Lovelace@
+    -- requires:
+    --
+    -- - 1 word for the 'CompactTxOut' object header
+    -- - 1 word for the pointer to the byte array object
+    -- - 1 word (on a 64-bit arch) for the unpacked 'Word64' ('Lovelace')
+    -- - the heap words required by the byte array object
+    --
+    -- Note that for the sake of uniformity, we use 'heapWordsUnpacked' to
+    -- account for the level of indirection removed by the @UNPACK@ pragma.
+    --
+    -- +----------------------+
+    -- │CompactTxOut│ * │Word#│
+    -- +--------------+-------+
+    --                |
+    --                v
+    --                +--------------+
+    --                │BA#│sz│payload│
+    --                +--------------+
+    --
+    = 3 + heapWordsUnpacked compactAddr
 
 toCompactTxOut :: TxOut -> CompactTxOut
 toCompactTxOut (TxOut addr lovelace) =
