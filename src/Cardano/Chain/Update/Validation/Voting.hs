@@ -16,7 +16,7 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Cardano.Chain.Common

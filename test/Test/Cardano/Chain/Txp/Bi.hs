@@ -10,7 +10,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Typeable (typeRep)
 import Data.Vector (Vector)
 

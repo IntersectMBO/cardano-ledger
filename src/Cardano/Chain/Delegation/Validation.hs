@@ -34,7 +34,7 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
