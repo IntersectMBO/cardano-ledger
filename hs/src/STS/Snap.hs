@@ -22,8 +22,8 @@ data SNAP
 
 instance STS SNAP where
   type State SNAP = (SnapShots, UTxOState)
-  type Signal SNAP = ()
-  type Environment SNAP = (Epoch, PParams, DState, PState, BlocksMade)
+  type Signal SNAP = Epoch
+  type Environment SNAP = (PParams, DState, PState, BlocksMade)
   data PredicateFailure SNAP = FailureSNAP
                                deriving (Show, Eq)
   initialRules =
@@ -32,7 +32,7 @@ instance STS SNAP where
 
 snapTransition :: TransitionRule SNAP
 snapTransition = do
-  TRC ((eNew, pparams, d, p, blocks), (s, u), _) <- judgmentContext
+  TRC ((pparams, d, p, blocks), (s, u), eNew) <- judgmentContext
   let pooledStake = poolDistr (u ^. utxo) d p
   let slot = firstSlot eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) slot

@@ -97,7 +97,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \emph{Derived Types}
   \begin{align*}
-    \PoolDistr = \VKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
+    \PoolDistr = \HashKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
   \end{align*}
   %
 
@@ -198,7 +198,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{bheader} & \Block \to \BHeader \\
-      \fun{bhbody} & \Block \to \BHBody \\
+      \fun{bhbody} & \BHeader \to \BHBody \\
       \fun{hsig} & \BHeader \to \Sig\\
       \fun{bbody} & \Block \to \seqof{\Tx} \\
       \fun{bprev} & \BHBody \to \HashHeader\\
@@ -249,8 +249,7 @@ of
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta_1 & \Seed & \text{epoch nonce} \\
-        \var{pp_n} & \PParams & \text{new protocol parameters} \\
-        \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
+        \var{pp_n} & \PParams & \text{new protocol parameters}
       \end{array}
     \right)
   \end{equation*}
@@ -318,20 +317,24 @@ in the pool distribution.
       {
         \left(
           {\begin{array}{c}
-              \var{e} \\
               \var{pp}_n \\
               \var{b} \\
-          \end{array}}
-        \right)
-        \vdash
-        \var{es'}\trans{epoch}{\var{e}}\var{es''}
-      }
-      \\~\\~\\
-      {\begin{array}{r@{~\leteq~}l}
-          (\wcard,~\wcard,~\var{ss},~\wcard) & \var{es} \\
-          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
-          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
-          \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ\var{stake}\
+           \end{array}}
+       \right)
+       \vdash
+       \var{es'}\trans{epoch}{\var{e}}\var{es''}
+     }
+     \\~\\~\\
+     {\begin{array}{r@{~\leteq~}l}
+        (\wcard,~\wcard,~\var{ss},~\wcard) & \var{es} \\
+        (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+        (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
+        total & \sum_{\_ \mapsto c\in\var{stake}} c \\
+        \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ
+                    \left\{
+                    (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
+                    \var{c}) \in \var{stake}
+                    \right\}
       \end{array}}
     }
     {
@@ -339,7 +342,6 @@ in the pool distribution.
         {\begin{array}{c}
             \eta_1 \\
             \var{pp_n} \\
-            \var{ru} \\
         \end{array}}
       \right)
       \vdash
@@ -375,7 +377,6 @@ in the pool distribution.
         {\begin{array}{c}
             \eta_1 \\
             \var{pp_n} \\
-            \var{ru} \\
         \end{array}}
       \right)
       \vdash
@@ -663,8 +664,9 @@ been signed with the correct signing key according to the KES.
       \var{slot} \leteq \bslot{bhb}
       \\
       (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{bhb}
+      & \var{hk} \leteq \hashKey{vk_{hot}}
       \\~\\
-      \var{vk_{hot}}\mapsto s_0\in\var{stpools}
+      \var{hk}\mapsto s_0\in\var{stpools}
       &
       t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
       \\~\\
@@ -672,7 +674,7 @@ been signed with the correct signing key according to the KES.
       &
       \var{h} = \bprev{bhb}
       \\
-      \mathcal{V}_{\var{vk_{hot}}}{\serialised{bh}}_{\sigma}^{t}
+      \mathcal{V}_{\var{hk}}{\serialised{bhb}}_{\sigma}^{t}
       &
       \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
     }
@@ -778,7 +780,7 @@ verification of the following:
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
 \item The verification of the proofs for the seed leader constant \var{\Seedl}
-  and the nonce seed constant \var{\Seede} succeeds.
+  and the nonce seed constant $\Seede$ succeeds.
 \end{itemize}
 
 When these preconditions are fulfilled, the transition updates the VRF states by
@@ -796,12 +798,14 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
       \var{vk} \leteq \bissuer bhb
       &
       \var{ss} \leteq \slotToSeed{\bslot{bhb}}
+      &
+      \var{hk} \leteq \hashKey{vk}
       \\~\\
       \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})}
       \\
       \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})}
       \\
-      \var{vk}\mapsto \sigma\in\var{pd}
+      \var{hk}\mapsto \sigma\in\var{pd}
       &
       \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma}
       \\~\\
@@ -910,12 +914,13 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \\
       \sigma \leteq \bsig{bhb}
       &
-      \var{bhb} \leteq \bhbody{block}
+      \var{bh} \leteq \bheader{block}
       &
+      \var{bhb} \leteq \bhbody{bh}
       \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
-      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{vk}\mapsto 0\})
+      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{kh}\mapsto 0\})
       &
       \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\~\\
@@ -933,11 +938,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       }
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{pp} \\
-        \end{array}}
-      \right)
+      \var{pp} \\
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1139,9 +1140,13 @@ preconditions, instead it calls all its subrules.
   \begin{equation}\label{eq:chain}
     \inference[Chain]
     {
-      \var{bhb} \leteq \bhbody{block}
+      \var{bh} \leteq \bheader{block}
+      &
+      \var{bhb} \leteq \bhbody{bh}
       &
       \eta \leteq \fun{bnonce}~\var{bhb}
+      \\
+      \var{h} \leteq \fun{bprev}~\var{bhb}
       &
       \var{s} \leteq \bslot{bhb}
       \\~\\
@@ -1150,7 +1155,6 @@ preconditions, instead it calls all its subrules.
           {\begin{array}{c}
               \eta_c \\
               \var{pp_n} \\
-              \var{ru} \\
           \end{array}}
         \right)
         \vdash
@@ -1167,7 +1171,7 @@ preconditions, instead it calls all its subrules.
               \var{e_\ell}' \\
               \eta_0' \\
               \var{b}' \\
-              \var{es}'' \\
+              \var{es}' \\
               \var{ru}' \\
               \var{pd}' \\
         \end{array}\right)}
@@ -1222,14 +1226,14 @@ preconditions, instead it calls all its subrules.
         \left(
           {\begin{array}{c}
               \var{b} \\
-              \var{ru}' \\
+              \var{es}' \\
           \end{array}}
         \right)
         \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
       }
       \\
       {
-        \var{pp}\vdash
+        \var{pp'}\vdash
         {\left(\begin{array}{c}
               \var{ls}'' \\
               \var{b'} \\
@@ -1241,7 +1245,7 @@ preconditions, instead it calls all its subrules.
         \end{array}\right)}
       }
       &
-      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}'~\var{ls}''')
+      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}',~\var{ls}''')
     }
     {
       \left(

@@ -9,7 +9,6 @@ This modules implements the necessary functions for the changes that can happen 
 -}
 module EpochBoundary
   ( Stake(..)
-  , PooledStake(..)
   , BlocksMade(..)
   , SnapShots(..)
   , pstakeMark
@@ -59,11 +58,6 @@ newtype Stake =
   Stake (Map.Map HashKey Coin)
   deriving (Show, Eq, Ord)
 
--- | Type of pooled stake as map from pool hash key to Stake.
-newtype PooledStake =
-  PooledStake (Map.Map HashKey Stake)
-  deriving (Show, Eq, Ord)
-
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr -> Maybe HashKey
 getStakeHK (AddrTxin _ hk) = Just hk
@@ -106,18 +100,15 @@ rewardStake rewards =
     Map.empty
     rewards
 
+-- | Get stake of one pool
 poolStake ::
      HashKey
-  -> Set.Set HashKey
   -> Map.Map HashKey HashKey
   -> Stake
   -> Stake
-poolStake operator owners delegations (Stake stake) =
-    Stake $ Map.insert operator pstake (Map.withoutKeys poolStake' owners)
-    where
-      poolStake' = Map.mapMaybeWithKey (\k _ -> Map.lookup k stake) delegations
-      pstake     = Map.foldl (+) (Coin 0) $ Map.restrictKeys poolStake' owners
-
+poolStake hk delegs (Stake stake) =
+  Stake $ Map.restrictKeys stake (Map.keysSet restricted)
+  where restricted = Map.filter (== hk) delegs
 
 -- | Calculate pool refunds
 poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
@@ -165,9 +156,9 @@ groupByPool active delegs =
 
 data SnapShots =
     SnapShots
-    { _pstakeMark :: PooledStake
-    , _pstakeSet  :: PooledStake
-    , _pstakeGo   :: PooledStake
+    { _pstakeMark :: (Stake, Map.Map HashKey HashKey)
+    , _pstakeSet  :: (Stake, Map.Map HashKey HashKey)
+    , _pstakeGo   :: (Stake, Map.Map HashKey HashKey)
     , _poolsSS    :: Map.Map HashKey PoolParams
     , _blocksSS   :: BlocksMade
     , _feeSS      :: Coin
@@ -177,6 +168,8 @@ makeLenses ''SnapShots
 
 emptySnapShots :: SnapShots
 emptySnapShots =
-    SnapShots pooledEmpty pooledEmpty pooledEmpty Map.empty blocksEmpty (Coin 0)
-    where pooledEmpty = PooledStake Map.empty
+    SnapShots snapEmpty snapEmpty snapEmpty Map.empty blocksEmpty (Coin 0)
+    where pooledEmpty = Map.empty
           blocksEmpty = BlocksMade Map.empty
+          stakeEmpty  = Stake Map.empty
+          snapEmpty   = (stakeEmpty, pooledEmpty)

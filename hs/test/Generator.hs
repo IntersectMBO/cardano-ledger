@@ -32,6 +32,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
+import           BaseTypes
 import           Coin
 import           Keys
 import           LedgerState     (LedgerState (..),
@@ -44,7 +45,7 @@ import           LedgerState     (LedgerState (..),
                                  )
 import           Slot
 import           UTxO
-import           PParams              (PParams(..), interval0, mkUnitInterval)
+import           PParams              (PParams(..))
 import           Delegation.Certificates  (DCert(..), StakeKeys(..))
 import           Delegation.PoolParams (PoolParams(..), Delegation(..), RewardAcnt(..))
 
@@ -110,7 +111,7 @@ genTxOut addrs = do
 -- TODO generate sensible protocol constants
 defPCs :: PParams
 defPCs =
-    PParams 0 0 100 100 interval0 0 interval0 0 (Epoch 0) (0%1, 0) interval0 0 interval0 interval0
+    PParams 0 0 100 100 interval0 0 interval0 0 (Epoch 0) (0%1, 0) interval0 0 interval0 interval0 0 0 interval0
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.

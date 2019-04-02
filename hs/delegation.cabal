@@ -13,6 +13,7 @@ source-repository head
 
 library
   exposed-modules:   BaseTypes
+                     BlockChain
                      Coin
                      Keys
                      UTxO
@@ -22,17 +23,27 @@ library
                      LedgerState
                      Delegation.PoolParams
                      Delegation.Certificates
+                     OCert
+                     STS.Bbody
+                     STS.Bhead
+                     STS.Chain
                      STS.Deleg
                      STS.Delegs
                      STS.Delpl
                      STS.Epoch
                      STS.Ledger
+                     STS.Ledgers
+                     STS.NewEpoch
                      STS.Newpp
+                     STS.Ocert
                      STS.Pool
                      STS.PoolReap
+                     STS.Rupd
                      STS.Snap
+                     STS.Updn
                      STS.Utxo
                      STS.Utxow
+                     STS.Vrf
   hs-source-dirs: src
   ghc-options:
     -Wall

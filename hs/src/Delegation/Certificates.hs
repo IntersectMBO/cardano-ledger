@@ -3,6 +3,7 @@ module Delegation.Certificates
     DCert(..)
   , StakeKeys(..)
   , StakePools(..)
+  , PoolDistr(..)
   , authDCert
   , getRequiredSigningKey
   , dvalue
@@ -20,7 +21,7 @@ import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..))
 import           PParams (PParams(..), decayRate, minRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
-                                 poolDecayRate, intervalValue, UnitInterval)
+                                 poolDecayRate)
 
 import           Delegation.PoolParams
 
@@ -108,3 +109,6 @@ decayPool pc = (pval, pmin, lambdap)
     where pval    = fromIntegral $ pc ^. poolDeposit
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
+
+newtype PoolDistr = PoolDistr (Map.Map HashKey Coin)
+  deriving (Show, Eq)

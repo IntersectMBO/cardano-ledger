@@ -21,12 +21,18 @@ module LedgerState
   , DWState(..)
   , DState(..)
   , AccountState(..)
+  , RewardUpdate(..)
+  , emptyRewardUpdate
+  , EpochState(..)
+  , emptyEpochState
+  , emptyLedgerState
   , dstate
   , pstate
   , ptrs
-  , rewardPool
+  , rewardPot
   , PState(..)
   , avgs
+  , cCounters
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
@@ -97,6 +103,8 @@ module LedgerState
   , updateAvgs
   , stakeDistr
   , poolDistr
+  , applyRUpd
+  , createRUpd
   ) where
 
 import           Control.Monad           (foldM)
@@ -120,15 +128,13 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  intervalValue, movingAvgWeight,
                                                  movingAvgExp,
                                                  keyDeposit, minRefund,
-                                                 decayRate, UnitInterval)
+                                                 decayRate, emptyPParams)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          poolPubKey, poolSpec, poolPledge,
                                          RewardAcnt(..), poolRAcnt, poolOwners)
-
-import Control.State.Transition
 
 import           NonIntegral ((***))
 import           BaseTypes
@@ -226,6 +232,8 @@ data PState = PState
     , _retiring    :: Map.Map HashKey Epoch
       -- |Moving average for key in epoch.
     , _avgs        :: Avgs
+      -- | Operational Certificate Counters.
+    , _cCounters   :: Map.Map HashKey Natural
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -236,11 +244,38 @@ data DWState =
     , _pstate :: PState
     } deriving (Show, Eq)
 
-data AccountState = AccountState
-  { _treasury   :: Coin
-  , _reserves   :: Coin
-  , _rewardPool :: Coin
+data RewardUpdate = RewardUpdate
+  { deltaT :: Coin
+  , deltaR :: Coin
+  , rp     :: Coin
+  , rs     :: Map.Map RewardAcnt Coin
+  , deltaF :: Coin
   } deriving (Show, Eq)
+
+emptyRewardUpdate :: RewardUpdate
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) (Coin 0) Map.empty (Coin 0)
+
+data AccountState = AccountState
+  { _treasury  :: Coin
+  , _reserves  :: Coin
+  , _rewardPot :: Coin
+  } deriving (Show, Eq)
+
+data EpochState = EpochState AccountState PParams SnapShots LedgerState
+  deriving (Show, Eq)
+
+emptyEpochState :: EpochState
+emptyEpochState =
+  EpochState emptyAccount emptyPParams emptySnapShots emptyLedgerState
+
+emptyLedgerState :: LedgerState
+emptyLedgerState = LedgerState
+                   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
+                   emptyDelegation
+                   emptyPParams
+                   0
+                   (Slot 0)
+
 
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0) (Coin 0)
@@ -253,7 +288,8 @@ emptyDState :: DState
 emptyDState = DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty
 
 emptyPState :: PState
-emptyPState = PState (StakePools Map.empty) Map.empty Map.empty (Avgs Map.empty)
+emptyPState =
+  PState (StakePools Map.empty) Map.empty Map.empty (Avgs Map.empty) Map.empty
 
 data UTxOState =
     UTxOState
@@ -756,22 +792,20 @@ reward ::
   -> Set.Set RewardAcnt
   -> Map.Map HashKey PoolParams
   -> Avgs
-  -> Map.Map HashKey Stake
+  -> Stake
+  -> Map.Map HashKey HashKey
   -> (Map.Map RewardAcnt Coin, Coin)
-reward pp (BlocksMade b) r addrsRew poolParams avgs' pooledStake =
+reward pp (BlocksMade b) r addrsRew poolParams avgs' stake@(Stake stake') delegs =
   (rewards', unrealized)
   where
-    total = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-    sumStake (Stake s) = Map.foldl (+) (Coin 0) s
+    total = Map.foldl (+) (Coin 0) stake'
     pdata =
-      [ ( key
-        , ( poolParams Map.! key
-          , b Map.! key
-          , pooledStake Map.! key))
-      | key <-
-          Set.toList $ Map.keysSet poolParams `Set.intersection`
-          Map.keysSet b `Set.intersection`
-          Map.keysSet pooledStake
+      [ ( hk
+        , ( poolParams Map.! hk
+          , b Map.! hk
+          , poolStake hk delegs stake))
+      | hk <-
+          Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
       ]
     results =
       [ ( hk
@@ -805,7 +839,7 @@ stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' = ds
-      PState (StakePools stpools) _ _ _              = ps
+      PState (StakePools stpools) _ _ _ _             = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
       Stake baseStake'   = baseStake outs
@@ -816,56 +850,42 @@ stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
                  (Map.restrictKeys delegs (Map.keysSet stkeys))
 
 -- | Pool distribution
-poolDistr :: UTxO -> DState -> PState -> PooledStake
-poolDistr u ds ps = PooledStake $
-    Map.mapWithKey
-           (\hk pool -> poolStake hk (pool ^. poolOwners) delegs stake)
-           poolParams
+poolDistr :: UTxO -> DState -> PState -> (Stake, Map.Map HashKey HashKey)
+poolDistr u ds ps = (stake, delegs)
     where
       delegs     = ds ^. delegations
-      poolParams = ps ^. pParams
       stake      = stakeDistr u ds ps
 
----------------------------------------------------------------------------------
--- State transition system
----------------------------------------------------------------------------------
+-- | Apply a reward update
+applyRUpd :: RewardUpdate -> EpochState -> EpochState
+applyRUpd ru (EpochState as pp ss ls) = es'
+  where treasury' = _treasury as + deltaT ru
+        reserves' = _reserves as + deltaR ru
+        rew       = _rewards $ _dstate $ _delegationState ls
+        rewards'  = Map.union (rs ru) rew  -- prefer rs
+        fees'     = (_fees $ _utxoState ls) + deltaF ru
+        dstate'   = _dstate $ _delegationState ls
+        utxo'     = _utxoState ls
+        ls'       =
+          ls { _utxoState = utxo' { _fees = fees' }
+             , _delegationState = DWState
+                  (dstate' { _rewards = rewards'})
+                  (_pstate $ _delegationState ls)}
+        es' = EpochState (AccountState treasury' reserves' (rp ru)) pp ss ls'
 
-data DELRWDS
-
-instance STS DELRWDS where
-    type State DELRWDS            = DWState
-    type Signal DELRWDS           = RewardAccounts
-    type Environment DELRWDS      = Slot
-    data PredicateFailure DELRWDS = IncorrectWithdrawalDELRWDS
-                     deriving (Show, Eq)
-
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delrwdsTransition    ]
-
-delrwdsTransition :: TransitionRule DELRWDS
-delrwdsTransition = do
-  TRC (_, d, withdrawals) <- judgmentContext
-  correctWithdrawals (d ^. dstate . rewards) withdrawals == Valid ?! IncorrectWithdrawalDELRWDS
-  pure $ d & dstate . rewards .~ reapRewards (d ^. dstate . rewards) withdrawals
-
--- STS rules embeddings:
--- +------------------------------------+
--- |LEDGER                              |
--- |                            +------+|
--- |                            |UTXOW ||
--- | +---------------+          |+----+||
--- | |DELEGS         |          ||UTXO|||
--- | |+-------------+|          |+----+||
--- | ||DELPL        ||          +------+|
--- | ||+-----++----+||                  |
--- | |||DELEG||POOL|||                  |
--- | ||+-----++----+||                  |
--- | |+-------------+|                  |
--- | +---------------+                  |
--- |                                    |
--- +------------------------------------+
-
-
-----------------------------------
--- STS rules for epoch boundary --
-----------------------------------
+-- | Create a reward update
+createRUpd :: BlocksMade -> EpochState -> RewardUpdate
+createRUpd _ (EpochState acnt pp ss ls) = -- TODO where should `b` be used?
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') (Coin rp') rs' (-(_feeSS ss))
+  where Coin reserves' = _reserves acnt
+        deltaR' = floor $ (intervalValue $ _rho pp) * fromIntegral reserves'
+        Coin totalPot = (_feeSS ss) + (_rewardPot acnt) + deltaR'
+        deltaT1 = floor $ (intervalValue $ _tau pp) * fromIntegral totalPot
+        r@(Coin r') = Coin $ totalPot - deltaT1
+        rewards' = _rewards $ _dstate $ _delegationState ls
+        avgs' = _avgs $ _pstate $ _delegationState ls
+        (stake', delegs') = _pstakeGo ss
+        poolsSS' = _poolsSS ss
+        (rs', Coin deltaT2) = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' avgs' stake' delegs'
+        Coin c' = Map.foldr (+) (Coin 0) rs'
+        rp' = (r' - deltaT2) - c'
