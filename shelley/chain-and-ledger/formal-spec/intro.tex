@@ -41,7 +41,7 @@ static description of what a \textit{valid ledger} is. The specifics of the
 semantics we use to define and apply
 the rules we present in this document are explained in detail in
 \cite{small_step_semantics}. A valid ledger state can only
-reached by applying a sequence of inference rules, and any valid ledger state
+reached by applying a sequence of inference rules and any valid ledger state
 is reachable by applying some sequence of these rules.
 
 The structure of the rules we give here is such that their application is
@@ -50,5 +50,5 @@ constants, there is no ambiguity
 about which rule should be applied at any given time (i.e.~which state
 transition is allowed take place). This is an important property which reflects
 the reality of the implementation --- the blockchain evolves in a particular way
-given some user activity and the passage of time, and its behaviour is
+given some user activity and the passage of time --- its behaviour is
 never unexpected.

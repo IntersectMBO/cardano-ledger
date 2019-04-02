@@ -12,11 +12,11 @@ and its staking rights must be delegated to an active stake pool.
 Individuals who wish to participate in the protocol can
 register themselves as a stake pool.
 
-Stake keys are registered (deregistered) through the use of
-registration (deregistration) certificates.
+Stake keys are registered (or deregistered) through the use of
+registration (or deregistration) certificates.
 Registered stake keys are delegated through the use of delegation certificates.
-Finally, stake pools are registered (retired) through the use of
-registration (retirement) certificates.
+Finally, stake pools are registered (or retired) through the use of
+registration (or retirement) certificates.
 
 Stake pool retirement is handled a bit differently than stake key deregistration.
 Stake keys are considered inactive as soon as a deregistration certificate
@@ -27,8 +27,8 @@ which it will retire.
 Delegation requires the following to be tracked by the ledger state:
 the registered stake keys, the delegation map from registered stake keys to stake
 pools, pointers associated with stake keys,
-the registered stake pools, and upcoming stake pool retirements.
-Additionally, the blockchain protocol rewards eligible stake, and so we must
+the registered stake pools and upcoming stake pool retirements.
+Additionally, the blockchain protocol rewards eligible stake and so we must
 also include a mapping from active stake keys to rewards.
 
 \subsection{Delegation Definitions}
@@ -47,9 +47,9 @@ Here we introduce the following primitive datatypes used in delegation:
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
-  \item $\type{StakeKeys}$ represents registered stake keys, and is represented by a finite
+  \item $\type{StakeKeys}$ represents registered stake keys and is represented by a finite
     map from hashkeys to slot when it was registered.
-  \item$\type{StakePools}$ represents registered stake pools, and has the same type as
+  \item$\type{StakePools}$ represents registered stake pools and has the same type as
     $\type{StakeKeys}$.
 \item $\PoolParam$ represents the parameters found in a stake pool registration certificate
   that must be tracked:
@@ -298,7 +298,7 @@ a stake pool, though these concerns are independent of the ledger rules.
     \end{itemize}
 
   \item Stake key deregistration is handled by \cref{eq:deleg-dereg}.
-    There is a precondition that the key has been registered, and that the reward balance is zero.
+    There is a precondition that the key has been registered and that the reward balance is zero.
     Deregistration causes the following state transformation:
     \begin{itemize}
       \item The key is removed from the collection of registered keys.
@@ -458,7 +458,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
   \item Stake pool retirements are handled by \cref{eq:pool-ret}.
     Given a slot number $\var{slot}$, the application of this rule requires that the
     planned retirement epoch $\var{e}$ stated in the certificate is in the future,
-    i.e.~after $\var{cepoch}$, the epoch of the current slot number in this context, as well as
+    i.e.~after $\var{cepoch}$ (the epoch of the current slot number in this context) and
     that it is less than $\emax$ epochs after the current one.
     It is also required that the pool be registered.
     Note that imposing the $\emax$ constraint on the system is not strictly necessary.
@@ -606,7 +606,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
 \label{sec:del-pool-rules}
 
 We now combine the delegation and pool transition systems.
-Figure~\ref{fig:defs:delpl} gives the state, environment, and transition type for the
+Figure~\ref{fig:defs:delpl} gives the state, environment and transition type for the
 combined transition.
 
 \begin{figure}[hbt]
@@ -764,10 +764,10 @@ will be invalid.
 
 \begin{itemize}
   \item The base case, when the list is empty, is captured by \cref{eq:delegs-base}.
-    In the base case, we address one final accounting detail not yet covered by the UTxO
+    In the base case we address one final accounting detail not yet covered by the UTxO
     transition, namely setting the reward account balance to zero for any account that made a
     withdrawal.  There is therefore a precondition that all withdrawals are correct, where
-    correct means that there is a reward account for each stake key, and that the balance
+    correct means that there is a reward account for each stake key and that the balance
     matches that of the reward being withdrawn.
     The base case triggers the following state transformation:
     \begin{itemize}
@@ -775,7 +775,7 @@ will be invalid.
     \end{itemize}
   \item The inductive case, when the list is non-empty, is captured by \cref{eq:delegs-induct}.
     It constructs a certificate pointer given the current slot and transaction index,
-    calls $\mathsf{DELPL}$ on the next certificate in the list, and inductively
+    calls $\mathsf{DELPL}$ on the next certificate in the list and inductively
     calls $\mathsf{DELEGS}$ on the rest of the list.
     The inductive case triggers the following state transformation:
     \begin{itemize}

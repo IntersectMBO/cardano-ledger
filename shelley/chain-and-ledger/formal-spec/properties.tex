@@ -118,7 +118,7 @@ minus the transaction fees.
   \label{prop:ledger-properties-3}
 \end{property}
 
-Property~\ref{prop:ledger-properties-3} states that for every ledger states
+Property~\ref{prop:ledger-properties-3} states that for all ledger states
 $l, l'$ and transaction $tx$ as above, all output UTxOs of $tx$ are in the UTxO
 set of $l'$, i.e., they are now available as unspent transaction output.
 
@@ -132,7 +132,7 @@ set of $l'$, i.e., they are now available as unspent transaction output.
   \label{prop:ledger-properties-4}
 \end{property}
 
-Property~\ref{prop:ledger-properties-4} states that for every ledger states
+Property~\ref{prop:ledger-properties-4} states that for all ledger states
 $l, l'$ and transaction $tx$ as above, all transaction inputs $in$ of $tx$ are
 not in the domain of the UTxO set of $l'$, i.e., these are no longer available
 to spend.
@@ -248,7 +248,7 @@ is set to 0 in $l'$.
 Property~\ref{prop:ledger-properties-7} states that for $l, l'$ as above but
 with a delegation transition of type $\DCertDeRegKey$, the staking key $hk$
 associated with the deregistration certificate is not in the set of staking keys
-of $l'$ and is not in the domain of neither the rewards nor the delegation map
+of $l'$ and is not in the domain of either the rewards or the delegation map
 of $l'$.
 
 \begin{property}[\textbf{Delegated Stake}]
@@ -330,12 +330,12 @@ stake pools are removed from the maps $stpools$ and $retiring$.
 \subsection{Properties of Numerical Calculations}
 \label{sec:prop-numer-calc}
 
-The numerical calculations for refunds and rewards calculation in
+The numerical calculations for refunds and rewards in
 (see Section~\ref{sec:epoch}) are also required to have certain properties. In
 particular we need to make sure that the functions that use non-integral
 arithmetic have properties which guarantee consistency of the system. Here, we
-state those properties and formulate them in a way that makes them possible to
-use properties-based testing for validation in the executable spec.
+state those properties and formulate them in a way that makes them usable in
+properties-based testing for validation in the executable spec.
 
 \begin{property}[\textbf{Minimal Refund}]
   \label{prop:minimal-refund}
@@ -357,7 +357,7 @@ use properties-based testing for validation in the executable spec.
 
   The function $\fun{movingAvg}$ calculates the exponential moving average,
   dividing the number of blocks created by the pool by the expected number of
-  slots the pool is elected leader (or 1 if the expected number is below 1). It
+  slots for which the pool is elected leader (or 1 if the expected number is below 1). It
   guarantees that the result is (i) non-negative and (ii) if a previous moving
   average has already been calculated, the new moving average lies between the
   minimum and maximum of the old and new calculated value. With
@@ -395,7 +395,7 @@ use properties-based testing for validation in the executable spec.
   $\fun{poolReward}$. The actual reward per stake pool is non-negative and
   bounded by the maximal reward for the stake pool, with $avg$ being the
   calculated moving average of the stake pool and $maxP$ being the maximal
-  reward for the stake pool, we get:
+  reward for the stake pool. This gives us:
 
   \begin{equation*}
     \forall \gamma \in [0,1] \implies 0\leq \floor*{avg^{\gamma}\cdot maxP} \leq maxP
@@ -410,7 +410,7 @@ use properties-based testing for validation in the executable spec.
 
 
 The two functions $\fun{r_{leader}}$ and $\fun{r_{member}}$ are closely related as
-they do split the reward between the pool leader and the members.
+they both split the reward between the pool leader and the members.
 
 \begin{property}[\textbf{Reward Splitting}]
   \label{prop:reward-splitting}

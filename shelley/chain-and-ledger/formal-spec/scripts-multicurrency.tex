@@ -131,7 +131,7 @@ The model described in \cite{utxo_scripts} was further generalized in
 
 In what follows, we describe the multi-currency UTxO ledger model using
 mostly set theory, we state validation rules that determine whether a transaction
-is valid for a given ledger state, and finally we define the state transformation
+is valid for a given ledger state and finally we define the state transformation
 that a valid transaction has on the state.
 
 \section{Scripts}
@@ -142,7 +142,7 @@ In pay-to-pubkey-hash, an address is the hash of a public key.
 UTxO held by that address are authorized by providing the public key
 and a digital signature.
 Similarly, in the generalized script model, an address
-is the hash of a verification script, and the redeemer script
+is the hash of a verification script and the redeemer script
 plays the role of the digital signature.
 UTxO held by script addresses are authorized by providing both the validator
 and redeemer script.  Analogously to checking a digital signature,
@@ -363,11 +363,11 @@ Other needed operations on transactions and UTxO are given in
 \section{Validation and Ledger State}
 
 Validation is the determination that a transaction is permitted to be appended
-to the ledger, and hence manipulate the state of the ledger.
+to the ledger and hence manipulate the state of the ledger.
 The data in the ledger state is given by \cref{fig:ledger_state}.
 Though $\var{totalMinted}$ and $\var{slot}$ do not appear to be used in this specification,
 they are important since they are used by the validator scripts.
-For example, expirations can be implemented using $\var{slot}$, and a currency's
+For example, expirations can be implemented using $\var{slot}$ and a currency's
 policy may depend on $\var{totalMinted}$.
 
 The ledger state is defined inductively.
@@ -528,7 +528,7 @@ add \cref{fig:only_ada_rule}
 \end{figure}
 
 \todo[inline]{We need to think carefully about how to handle similar names,
-like ``ada", ``Ada", and ``ADA". Allow only uppercase (lowercase)? No unicode?}
+like ``ada", ``Ada" and ``ADA". Allow only uppercase (lowercase)? No unicode?}
 
 \section{Disabling Scripts}
 
