@@ -29,8 +29,8 @@ import System.FilePath (takeFileName)
 import Cardano.Chain.Block (ABlund, blockSlot, blockTxPayload)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFile)
 import Cardano.Chain.Genesis
-  (configProtocolMagic)
-import Cardano.Chain.Slotting (SlotId)
+  (configProtocolMagic, configEpochSlots)
+import Cardano.Chain.Slotting (EpochSlots, FlatSlotId)
 import Cardano.Chain.Txp
   (UTxO, UTxOValidationError, aUnTxPayload, genesisUtxo, updateUTxOWitness)
 import Cardano.Crypto (ProtocolMagic(..))
@@ -71,22 +71,24 @@ tests scenario = do
   -- Validate the transactions of each epoch file in a single 'Property' and
   -- check them all sequentially
   let
+    es = configEpochSlots genesisConfig
+
     properties :: [(PropertyName, Property)]
-    properties = zip (fromString . takeFileName <$> files) (epochValid pm utxoRef <$> files)
+    properties = zip (fromString . takeFileName <$> files) (epochValid pm es utxoRef <$> files)
   checkSequential $ Group "Test.Cardano.Chain.Txp.Validation" properties
 
 
 data Error
   = ErrorParseError ParseError
-  | ErrorUTxOValidationError SlotId UTxOValidationError
+  | ErrorUTxOValidationError FlatSlotId UTxOValidationError
   deriving (Eq, Show)
 
 
 -- | Check that a single epoch's transactions are valid by folding over 'Blund's
-epochValid :: ProtocolMagic -> IORef UTxO -> FilePath -> Property
-epochValid pm utxoRef fp = withTests 1 . property $ do
+epochValid :: ProtocolMagic -> EpochSlots -> IORef UTxO -> FilePath -> Property
+epochValid pm es utxoRef fp = withTests 1 . property $ do
   utxo <- liftIO $ readIORef utxoRef
-  let stream = parseEpochFile fp
+  let stream = parseEpochFile es fp
   result  <- (liftIO . runResourceT . runExceptT) (foldUTxO pm utxo stream)
   newUtxo <- evalEither result
   liftIO $ writeIORef utxoRef newUtxo

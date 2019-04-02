@@ -55,12 +55,10 @@ import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
   , configBootStakeholders
-  , configEpochSlots
   , configGenesisHeaderHash
   , configK
   , configSlotSecurityParam
   )
-import Cardano.Chain.Slotting (flattenSlotId)
 import Cardano.Crypto
   ( PublicKey
   , hash
@@ -248,7 +246,7 @@ updateBody config cvs b = do
   pure $ cvs
     {cvsDelegationState = delegationState'}
  where
-  slot = flattenSlotId (configEpochSlots config) $ blockSlot b
+  slot = blockSlot b
   d    = configSlotSecurityParam config
 
   delegationState = cvsDelegationState cvs

@@ -2,6 +2,7 @@
 
 module Test.Cardano.Chain.Config
   ( readMainetCfg
+  , mainnetEpochSlots
   )
 where
 
@@ -9,6 +10,7 @@ import Cardano.Prelude
 
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic(..))
+import Cardano.Chain.Slotting (EpochSlots(EpochSlots))
 
 -- | Read the test mainnet configuration file from the @test@ directory.
 --
@@ -23,3 +25,9 @@ readMainetCfg =
       identity
     <$> runExceptT
           (Genesis.mkConfigFromFile RequiresNoMagic "test/mainnet-genesis.json" Nothing)
+
+-- | Slots per epoch used in mainnet
+--
+-- This number has been fixed throughout the Byron era.
+mainnetEpochSlots :: EpochSlots
+mainnetEpochSlots = EpochSlots 21600

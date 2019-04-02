@@ -149,17 +149,25 @@ flattenEpochIndex es (EpochIndex i) = FlatSlotId $ i * unEpochSlots es
 -- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
 unflattenSlotId :: EpochSlots -> FlatSlotId -> SlotId
-unflattenSlotId es (FlatSlotId fsId) = SlotId
-  { siEpoch = EpochIndex epoch
-  , siSlot  = lsi
-  }
+unflattenSlotId (EpochSlots n) (FlatSlotId fsId)
+  | n == 0    =  panic $  "'unflattenSlotId': The number of slots-per-epoch "
+                       <> "passed to this function must be positive"
+  | otherwise =
+    SlotId
+      { siEpoch = EpochIndex epoch
+      , siSlot  = UnsafeLocalSlotIndex slotCount
+      }
  where
   -- `slot` accounts for the `LocalSlotIndex`
-  (epoch, slot) = fsId `divMod` unEpochSlots es
-  lsi           = case mkLocalSlotIndex es (fromIntegral slot) of
-    Left err -> panic
-      $ sformat ("The impossible happened in unflattenSlotId: " . build) err
-    Right lsi' -> lsi'
+  (epoch, slot) = fsId `divMod` n
+
+  slotCount :: Word16
+  slotCount =
+    if fromIntegral (maxBound :: Word16) < slot
+    then panic $ "unflattenSlotId: The slot count exceeded its maximum bound. \n"
+               <> "Input slot number: " <> show fsId <> ". \n"
+               <> "Input slots-per-epoch: " <> show n <> "."
+    else fromIntegral slot
 
 -- | Increase a 'FlatSlotId' by 'EpochSlots'
 addSlotNumber :: EpochSlots -> FlatSlotId -> FlatSlotId

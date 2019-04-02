@@ -49,6 +49,7 @@ where
 import Cardano.Prelude
 
 import qualified Data.ByteString as BS
+import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
@@ -86,6 +87,7 @@ import Cardano.Chain.Block.Header
   , ToSign
   , decodeAHeader
   , dropBoundaryHeader
+  , encodeHeader'
   , genesisHeaderHash
   , hashHeader
   , headerAttributes
@@ -106,7 +108,11 @@ import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (Attributes, ChainDifficulty (..), mkAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
-import Cardano.Chain.Slotting (SlotId(..))
+import Cardano.Chain.Slotting
+  ( EpochSlots
+  , FlatSlotId
+  , WithEpochSlots(WithEpochSlots)
+  )
 import Cardano.Chain.Ssc (SscPayload)
 import Cardano.Chain.Txp.TxPayload (ATxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -130,8 +136,13 @@ data ABlock a = ABlock
   , blockAnnotation :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
 
-instance B.Buildable Block where
-  build block = bprint
+instance B.Buildable (WithEpochSlots Block) where
+  build (WithEpochSlots es block) = renderBlock es block
+
+
+renderBlock :: EpochSlots -> Block -> Builder
+renderBlock es block =
+  bprint
     ( "Block:\n"
     . "  " . build . "  transactions (" . int . " items): " . listJson . "\n"
     . "  " . build . "\n"
@@ -139,37 +150,41 @@ instance B.Buildable Block where
     . "  update payload: " . build . "\n"
     . "  " . build
     )
-    (blockHeader block)
+    (WithEpochSlots es $ blockHeader block)
     (length txs)
     txs
     (blockDlgPayload block)
     (blockSscPayload block)
     (blockUpdatePayload block)
     (blockExtraData block)
-    where txs = bodyTxs $ blockBody block
+  where txs = bodyTxs $ blockBody block
 
-instance Bi Block where
-  encode block =
-    encodeListLen 3
-      <> encode (blockHeader block)
-      <> encode (blockBody block)
-      <> encode (blockExtraData block)
 
-  decode = void <$> decodeABlock
+-- | Encode a block, given a number of slots-per-epoch.
+--
+-- Unlike 'encodeBlock', this function does not take the deprecated epoch
+-- boundary blocks into account.
+--
+encodeBlockWithoutBoundary :: EpochSlots -> Block -> Encoding
+encodeBlockWithoutBoundary epochSlots block
+  =  encodeListLen 3
+  <> encodeHeader' epochSlots (blockHeader block)
+  <> encode (blockBody block)
+  <> encode (blockExtraData block)
 
-decodeABlock :: Decoder s (ABlock ByteSpan)
-decodeABlock = do
+decodeABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
+decodeABlock epochSlots = do
   Annotated (header, body, ed) byteSpan <-
     annotatedDecoder $ do
       enforceSize "Block" 3
-      (,,) <$> decodeAHeader <*> decodeABody <*> decodeAnnotated
+      (,,) <$> decodeAHeader epochSlots <*> decodeABody <*> decodeAnnotated
   pure $ ABlock header body ed byteSpan
 
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-encodeBlock :: Block -> Encoding
-encodeBlock block = encodeListLen 2 <> encode (1 :: Word) <> encode block
-
+encodeBlock :: EpochSlots -> Block -> Encoding
+encodeBlock epochSlots block =
+  encodeListLen 2 <> encode (1 :: Word) <> encodeBlockWithoutBoundary epochSlots block
 
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
@@ -183,18 +198,19 @@ data ABlockOrBoundary a
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeABlockOrBoundary :: Decoder s (ABlockOrBoundary ByteSpan)
-decodeABlockOrBoundary = do
+decodeABlockOrBoundary :: EpochSlots -> Decoder s (ABlockOrBoundary ByteSpan)
+decodeABlockOrBoundary epochSlots = do
   enforceSize "Block" 2
   decode @Word >>= \case
     0 -> ABOBBoundary <$> dropBoundaryBlock
-    1 -> ABOBBlock <$> decodeABlock
+    1 -> ABOBBlock <$> decodeABlock epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-decodeBlockOrBoundary :: Decoder s (Maybe Block)
-decodeBlockOrBoundary = decodeABlockOrBoundary >>= \case
-  ABOBBoundary _ -> pure Nothing
-  ABOBBlock    b -> pure . Just $ void b
+decodeBlockOrBoundary :: EpochSlots -> Decoder s (Maybe Block)
+decodeBlockOrBoundary epochSlots =
+  decodeABlockOrBoundary epochSlots >>= \case
+    ABOBBoundary _ -> pure Nothing
+    ABOBBlock    b -> pure . Just $ void b
 
 --------------------------------------------------------------------------------
 -- BoundaryBlock
@@ -236,7 +252,8 @@ mkBlock
   -> ProtocolVersion
   -> SoftwareVersion
   -> Either GenesisHash Header
-  -> SlotId
+  -> EpochSlots
+  -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
@@ -244,9 +261,10 @@ mkBlock
   --   right to sign this block
   -> Body
   -> Block
-mkBlock pm bv sv prevHeader = mkBlockExplicit pm bv sv prevHash difficulty
+mkBlock pm bv sv prevHeader epochSlots =
+  mkBlockExplicit pm bv sv prevHash difficulty epochSlots
  where
-  prevHash   = either genesisHeaderHash hashHeader prevHeader
+  prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
   difficulty = either (const $ ChainDifficulty 0) (succ . headerDifficulty) prevHeader
 
 -- | Smart constructor for 'Block', without requiring the entire previous
@@ -259,7 +277,8 @@ mkBlockExplicit
   -> SoftwareVersion
   -> HeaderHash
   -> ChainDifficulty
-  -> SlotId
+  -> EpochSlots
+  -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
   -> Maybe Delegation.Certificate
@@ -267,11 +286,12 @@ mkBlockExplicit
   --   right to sign this block
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty slotId sk mDlgCert body = ABlock
-  (mkHeaderExplicit pm prevHash difficulty slotId sk mDlgCert body extraH)
-  body
-  (Annotated extraB ())
-  ()
+mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk mDlgCert body =
+  ABlock
+    (mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk mDlgCert body extraH)
+    body
+    (Annotated extraB ())
+    ()
  where
   extraB :: ExtraBodyData
   extraB = ExtraBodyData (mkAttributes ())
@@ -282,8 +302,8 @@ mkBlockExplicit pm bv sv prevHash difficulty slotId sk mDlgCert body = ABlock
 -- Block accessors
 --------------------------------------------------------------------------------
 
-blockHash :: Block -> HeaderHash
-blockHash = hashHeader . blockHeader
+blockHash :: EpochSlots -> Block -> HeaderHash
+blockHash epochSlots = hashHeader epochSlots . blockHeader
 
 blockHashAnnotated :: ABlock ByteString -> HeaderHash
 blockHashAnnotated = hashDecoded . fmap wrapHeaderBytes . blockHeader
@@ -297,7 +317,7 @@ blockPrevHash = headerPrevHash . blockHeader
 blockProof :: ABlock a -> Proof
 blockProof = headerProof . blockHeader
 
-blockSlot :: ABlock a -> SlotId
+blockSlot :: ABlock a -> FlatSlotId
 blockSlot = headerSlot . blockHeader
 
 blockLeaderKey :: ABlock a -> PublicKey
@@ -306,8 +326,8 @@ blockLeaderKey = headerLeaderKey . blockHeader
 blockDifficulty :: ABlock a -> ChainDifficulty
 blockDifficulty = headerDifficulty . blockHeader
 
-blockToSign :: ABlock a -> ToSign
-blockToSign = headerToSign . blockHeader
+blockToSign :: EpochSlots -> ABlock a -> ToSign
+blockToSign epochSlots = headerToSign epochSlots . blockHeader
 
 blockSignature :: ABlock a -> BlockSignature
 blockSignature = headerSignature . blockHeader
