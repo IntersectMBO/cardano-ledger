@@ -7,7 +7,7 @@ module STS.Vrf
   ( VRF
   ) where
 
-import qualified Data.Map                 as Map
+import qualified Data.Map.Strict          as Map
 
 import           Crypto.Hash              (hash)
 import qualified Data.ByteString.Char8    as BS

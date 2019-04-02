@@ -5,7 +5,7 @@ module STS.Ocert
   ( OCERT
   ) where
 
-import qualified Data.Map                 as Map
+import qualified Data.Map.Strict          as Map
 
 import           BlockChain
 import           Keys
