@@ -9,7 +9,7 @@
 void initialize(const mpz_t, const mpz_t);
 void cleanup();
 bool ref_ln(mpz_t, const mpz_t);
-void ref_exp(mpz_t, const mpz_t);
+int ref_exp(mpz_t, const mpz_t);
 void ref_pow(mpz_t, const mpz_t, const mpz_t);
 void scale(mpz_t);
 

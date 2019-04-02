@@ -53,6 +53,8 @@ int main()
 
   // format is "base exponent"
   size_t n = 0;
+  int iterations = 0;
+  int max_iters = 0;
   for (std::string s; std::getline(std::cin, s); )
     {
       size_t split = s.find(' ');
@@ -83,8 +85,11 @@ int main()
             auto before = std::chrono::high_resolution_clock::now();
             temp = temp * exponent;
             scale(temp.get_mpz_t());
-            ref_exp(result.get_mpz_t(), temp.get_mpz_t());
+            int iters = ref_exp(result.get_mpz_t(), temp.get_mpz_t());
             auto after = std::chrono::high_resolution_clock::now();
+            iterations += iters;
+            if(iters > max_iters)
+              max_iters = iters;
             diff = after - before;
             total_exp += diff;
             if(maximal_exp < diff)
@@ -103,6 +108,8 @@ int main()
 
   std::cerr << "exp(x * const) avg: " << (total_exp.count() / n)
             << " maximal time: " << maximal_exp.count()
+            << " iterations avg " << (iterations * 1.0) / n
+            << " maximal iterations " << max_iters
             << std::endl;
   std::cerr << "pow avg: " << (total_pow.count() / n)
             << " maximal time: " << maximal_pow.count()
