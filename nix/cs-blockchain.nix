@@ -45,4 +45,4 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././specs/chain/hs; }
+    } // rec { src = (pkgs.lib).mkDefault .././byron/chain/executable-spec; }

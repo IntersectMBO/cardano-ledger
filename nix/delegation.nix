@@ -54,4 +54,4 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././hs; }
+    } // rec { src = (pkgs.lib).mkDefault .././shelley/chain-and-ledger/executable-spec; }
