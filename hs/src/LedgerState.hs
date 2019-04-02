@@ -101,7 +101,7 @@ module LedgerState
 
 import           Control.Monad           (foldM)
 import           Crypto.Hash             (hash)
-import qualified Data.Map                as Map
+import qualified Data.Map.Strict         as Map
 import           Data.Maybe              (mapMaybe, fromMaybe)
 import           Numeric.Natural         (Natural)
 import           Data.Set                (Set)

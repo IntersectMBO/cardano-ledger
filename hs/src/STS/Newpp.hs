@@ -5,7 +5,7 @@ module STS.Newpp
   ( NEWPP
   ) where
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 import           Lens.Micro              ((^.), (&), (.~))
 
