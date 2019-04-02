@@ -19,7 +19,7 @@ module Delegation.PoolParams
   , delegatee
   ) where
 
-import           Data.Map      (Map)
+import           Data.Map.Strict (Map)
 import           Data.Set      (Set)
 
 import           Lens.Micro    ((^.))
