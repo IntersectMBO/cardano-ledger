@@ -7,8 +7,6 @@ module STS.Epoch
   ( EPOCH
   ) where
 
-import qualified Data.Map.Strict as Map
-
 import           LedgerState
 import           PParams
 import           EpochBoundary
