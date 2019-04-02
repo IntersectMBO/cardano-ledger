@@ -27,7 +27,7 @@ before_install:
 
 install:
 # Build dependencies
-- cd hs
+- cd shelley/chain-and-ledger/executable-spec
 - stack --no-terminal --install-ghc test --only-dependencies
 
 script:

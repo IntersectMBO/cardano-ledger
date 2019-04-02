@@ -29,10 +29,10 @@ in
 localLib.nix-tools.default-nix ./nix args
 # ... and add a few custom packages as well.
 // {
-  byronLedgerSpec = import ./specs/ledger/latex {};
-  byronChainSpec = import ./specs/chain/latex {};
-  semanticsSpec = import ./specs/semantics/latex {};
-  shelleyLedgerSpec = import ./latex {};
-  delegationDesignSpec = import ./docs/delegation_design_spec {};
-  nonIntegerCalculations = import ./dependencies/non-integer/doc {};
+  byronLedgerSpec = import ./byron/ledger/formal-spec {};
+  byronChainSpec = import ./byron/chain/formal-spec {};
+  semanticsSpec = import ./byron/semantics/formal-spec {};
+  shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec {};
+  delegationDesignSpec = import ./shelley/design-spec {};
+  nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
 }
