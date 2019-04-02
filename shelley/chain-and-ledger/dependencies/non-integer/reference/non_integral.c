@@ -9,7 +9,7 @@ mpz_t precision;
 mpz_t e;
 mpz_t eps;
 
-void mp_exp_taylor(mpz_t, const int, const mpz_t, const mpz_t);
+int mp_exp_taylor(mpz_t, const int, const mpz_t, const mpz_t);
 
 void initialize(const mpz_t _precision, const mpz_t epsilon)
 {
@@ -190,10 +190,11 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 
 /* Entry point for 'exp' approximation. First does the scaling of 'x' to [0,1]
    and then calls the continued fraction approximation function. */
-void ref_exp_(mpz_t rop, const mpz_t x)
+int ref_exp_(mpz_t rop, const mpz_t x)
 {
   mpz_t temp_q, temp_r;
   mpz_init(temp_q); mpz_init(temp_r);
+  int iterations = 0;
 
   if(mpz_cmp(x, zero) == 0)
     mpz_set(rop, one);
@@ -203,7 +204,7 @@ void ref_exp_(mpz_t rop, const mpz_t x)
       mpz_init(temp); mpz_init(x_);
       mpz_neg(x_, x);
 
-      ref_exp_(temp, x_);
+      iterations = ref_exp_(temp, x_);
 
       div(rop, one, temp);
 
@@ -220,18 +221,19 @@ void ref_exp_(mpz_t rop, const mpz_t x)
       mpz_mul(n_exponent, n_exponent, precision); /* ceil(x) */
 
       mpz_tdiv_q_ui(x_, x, n);
-      mp_exp_taylor(rop, 1000, x_, eps);
+      iterations = mp_exp_taylor(rop, 1000, x_, eps);
 
       ipow(rop, rop, n);
       mpz_clear(n_exponent); mpz_clear(x_); mpz_clear(temp_r); mpz_clear(temp_q);
     }
 
   mpz_clear(temp_r); mpz_clear(temp_q);
+  return iterations;
 }
 
-void ref_exp(mpz_t rop, const mpz_t x)
+int ref_exp(mpz_t rop, const mpz_t x)
 {
-  ref_exp_(rop, x);
+  return ref_exp_(rop, x);
 }
 
 int findE(const mpz_t x)
@@ -319,7 +321,7 @@ void ref_pow(mpz_t rop, const mpz_t base, const mpz_t exponent)
 
 /* Taylor / MacLaurin series approximation */
 
-void mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
+int mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 {
   mpz_set(rop, one);
   int n = 0;
@@ -344,10 +346,12 @@ void mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon
 
       mpz_set(lastX, nextX);
       n++;
+      gmp_printf("%Zd\n", rop);
     }
 
   mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
   mpz_clear(diff);
+  return n;
 }
 
 /* Raspberry Pi
