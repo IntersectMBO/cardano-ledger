@@ -13,6 +13,7 @@ import Test.Options (Opts(..), optsParser)
 import qualified Test.Cardano.Chain.Block.Bi
 import qualified Test.Cardano.Chain.Block.Validation
 import qualified Test.Cardano.Chain.Common.Address
+import qualified Test.Cardano.Chain.Common.Compact
 import qualified Test.Cardano.Chain.Common.Lovelace
 import qualified Test.Cardano.Chain.Block.Validation.Spec
 import qualified Test.Cardano.Chain.Delegation.Bi
@@ -21,6 +22,7 @@ import qualified Test.Cardano.Chain.Genesis.Json
 import qualified Test.Cardano.Chain.Slotting.Properties
 import qualified Test.Cardano.Chain.Ssc.Bi
 import qualified Test.Cardano.Chain.Txp.Bi
+import qualified Test.Cardano.Chain.Txp.Compact
 import qualified Test.Cardano.Chain.Txp.Json
 import qualified Test.Cardano.Chain.Txp.Validation
 import qualified Test.Cardano.Chain.Update.Bi
@@ -35,6 +37,7 @@ main = do
   runTests
     [ Test.Cardano.Chain.Block.Bi.tests
     , Test.Cardano.Chain.Block.Validation.tests scenario
+    , Test.Cardano.Chain.Common.Compact.tests
     , Test.Cardano.Chain.Common.Lovelace.tests
     , Test.Cardano.Chain.Common.Address.tests
     , Test.Cardano.Chain.Delegation.Bi.tests
@@ -44,6 +47,7 @@ main = do
     , Test.Cardano.Chain.Slotting.Properties.tests
     , Test.Cardano.Chain.Ssc.Bi.tests
     , Test.Cardano.Chain.Txp.Bi.tests
+    , Test.Cardano.Chain.Txp.Compact.tests
     , Test.Cardano.Chain.Txp.Json.tests
     , Test.Cardano.Chain.Txp.Validation.tests scenario
     , Test.Cardano.Chain.Update.Bi.tests

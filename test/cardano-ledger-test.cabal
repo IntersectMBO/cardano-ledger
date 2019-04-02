@@ -21,6 +21,7 @@ library
                        Test.Cardano.Chain.Block.Bi
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Common.Address
+                       Test.Cardano.Chain.Common.Compact
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
                        Test.Cardano.Chain.Common.Lovelace
@@ -34,6 +35,7 @@ library
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Slotting.Properties
                        Test.Cardano.Chain.Txp.Bi
+                       Test.Cardano.Chain.Txp.Compact
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json

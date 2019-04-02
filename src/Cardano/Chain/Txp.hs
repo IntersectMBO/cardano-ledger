@@ -3,6 +3,7 @@ module Cardano.Chain.Txp
   )
 where
 
+import Cardano.Chain.Txp.Compact as X
 import Cardano.Chain.Txp.GenesisUTxO as X
 import Cardano.Chain.Txp.Tx as X
 import Cardano.Chain.Txp.TxAux as X
