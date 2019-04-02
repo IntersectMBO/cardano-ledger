@@ -907,7 +907,9 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \\
       \sigma \leteq \bsig{bhb}
       &
-      \var{bhb} \leteq \bhbody{block}
+      \var{bh} \leteq \bheader{block}
+      &
+      \var{bhb} \leteq \bhbody{bh}
       \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
@@ -1131,7 +1133,9 @@ preconditions, instead it calls all its subrules.
   \begin{equation}\label{eq:chain}
     \inference[Chain]
     {
-      \var{bhb} \leteq \bhbody{block}
+      \var{bh} \leteq \bheader{block}
+      &
+      \var{bhb} \leteq \bhbody{bh}
       &
       \eta \leteq \fun{bnonce}~\var{bhb}
       \\
