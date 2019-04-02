@@ -97,7 +97,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \emph{Derived Types}
   \begin{align*}
-    \PoolDistr = \HashKey \mapsto Coin \text{ \hspace{3cm}stake pool distribution}
+    \PoolDistr = \HashKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
   \end{align*}
   %
 
@@ -319,17 +319,22 @@ in the pool distribution.
           {\begin{array}{c}
               \var{pp}_n \\
               \var{b} \\
-          \end{array}}
-        \right)
-        \vdash
-        \var{es'}\trans{epoch}{\var{e}}\var{es''}
-      }
-      \\~\\~\\
-      {\begin{array}{r@{~\leteq~}l}
-          (\wcard,~\wcard,~\var{ss},~\wcard) & \var{es} \\
-          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
-          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
-          \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ\var{stake}\
+           \end{array}}
+       \right)
+       \vdash
+       \var{es'}\trans{epoch}{\var{e}}\var{es''}
+     }
+     \\~\\~\\
+     {\begin{array}{r@{~\leteq~}l}
+        (\wcard,~\wcard,~\var{ss},~\wcard) & \var{es} \\
+        (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+        (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
+        total & \sum_{\_ \mapsto c\in\var{stake}} c \\
+        \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ
+                    \left\{
+                    (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
+                    \var{c}) \in \var{stake}
+                    \right\}
       \end{array}}
     }
     {
@@ -793,12 +798,14 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
       \var{vk} \leteq \bissuer bhb
       &
       \var{ss} \leteq \slotToSeed{\bslot{bhb}}
+      &
+      \var{hk} \leteq \hashKey{vk}
       \\~\\
       \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})}
       \\
       \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})}
       \\
-      \var{vk}\mapsto \sigma\in\var{pd}
+      \var{hk}\mapsto \sigma\in\var{pd}
       &
       \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma}
       \\~\\
