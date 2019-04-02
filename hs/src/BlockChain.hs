@@ -117,10 +117,10 @@ hsig :: BHeader -> Keys.KESig BHBody
 hsig (BHeader _ s) = s
 
 slotsPrior :: Slot.Duration
-slotsPrior = 10 -- TODO: what is a realistic value for this?
+slotsPrior = 33 -- one third of slots per epoch
 
 startRewards :: Slot.Duration
-startRewards = 10 -- TODO: what is a realistic value for this?
+startRewards = 33 -- see above
 
 verifyVrf :: Keys.VKey -> Seed -> Proof a -> Bool
 verifyVrf vk seed (Proof k s) = vk == k && seed == s

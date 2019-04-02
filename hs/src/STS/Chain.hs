@@ -67,7 +67,6 @@ chainTransition = do
   (etaV', etaC') <- trans @UPDN $ TRC (eta0, (etaV, etaC), s)
   (eL', eta0', b', es'@(EpochState acnt' pp' ss' ls'), ru', pd') <-
     trans @NEWEPOCH $ TRC ((etaC, ppN), (eL, eta0, b, es, ru, pd), e)
-   -- TODO is this right for es'?
   ru'' <- trans @RUPD $ TRC ((b, es'), ru', s)
   let delegationState' = _delegationState ls'
   let ps' = _pstate delegationState'
@@ -78,7 +77,7 @@ chainTransition = do
     trans @VRF $ TRC ((sNow, pp', eta0', pd', _stPools ps''), (h, sL), bh)
   -- TODO h' is not used, should it be part of the environment of VRF instead of
   -- its state?
-  (ls''', b'') <- trans @BBODY $ TRC (ppN, (ls'', b'), block)
+  (ls''', b'') <- trans @BBODY $ TRC (pp', (ls'', b'), block)
   let es'' = EpochState acnt' pp' ss' ls'''
   pure $ ((eta0', etaC', etaV'), b'', sL', eL', es'', ru'', pd')
 
