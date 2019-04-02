@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TupleSections         #-}
 
 {-|
 Module      : EpochBoundary
@@ -39,7 +40,7 @@ import           Slot
 import           UTxO
 
 import qualified Data.Map.Strict         as Map
-import           Data.Maybe              (fromJust, isJust)
+import           Data.Maybe              (mapMaybe)
 import           Data.Ratio
 import qualified Data.Set                as Set
 
@@ -75,10 +76,11 @@ consolidate (UTxO u) =
 -- | Get Stake of base addresses in TxOut set.
 baseStake :: Map.Map Addr Coin -> Stake
 baseStake vals =
-  Stake $
-  Map.fromListWith
-    (+)
-    [(fromJust $ getStakeHK a, c) | (a, c) <- Map.toList vals, isJust $ getStakeHK a]
+  Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
+ where
+   convert :: (Addr, Coin) -> Maybe (HashKey, Coin)
+   convert (a, c) =
+     (,c) <$> getStakeHK a
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr -> Maybe Ptr
@@ -88,14 +90,13 @@ getStakePtr _             = Nothing
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake :: Map.Map Addr Coin -> Map.Map Ptr HashKey -> Stake
 ptrStake vals pointers =
-  Stake $
-  Map.fromListWith
-    (+)
-    [ (fromJust $ Map.lookup (fromJust $ getStakePtr a) pointers, c)
-    | (a, c) <- Map.toList vals
-    , isJust $ getStakePtr a
-    , isJust $ Map.lookup (fromJust $ getStakePtr a) pointers
-    ]
+  Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
+  where
+    convert :: (Addr, Coin) -> Maybe (HashKey, Coin)
+    convert (a, c) =
+      case getStakePtr a of
+        Nothing -> Nothing
+        Just s -> (,c) <$> Map.lookup s pointers
 
 rewardStake :: Map.Map RewardAcnt Coin -> Stake
 rewardStake rewards =
