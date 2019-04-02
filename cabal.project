@@ -1,8 +1,8 @@
-packages: hs/
-          specs/semantics/hs
-          specs/ledger/hs
-          specs/chain/hs
-          dependencies/non-integer
+packages: shelley/chain-and-ledger/executable-spec
+          byron/semantics/executable-spec
+          byron/ledger/executable-spec
+          byron/chain/executable-spec
+          shelley/chain-and-ledger/dependencies/non-integer
 
 constraints:
   tasty-hedgehog-coverage == 0.1.0.0

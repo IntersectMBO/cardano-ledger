@@ -1,11 +1,11 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ff5fd5f33849be8a826506c34e5b0278f267f804/snapshot.yaml
 
 packages:
-- hs
-- specs/chain/hs
-- specs/ledger/hs
-- specs/semantics/hs
-- dependencies/non-integer
+- shelley/chain-and-ledger/executable-spec
+- byron/chain/executable-spec
+- byron/ledger/executable-spec
+- byron/semantics/executable-spec
+- shelley/chain-and-ledger/dependencies/non-integer
 
 extra-deps:
 - sequence-0.9.8

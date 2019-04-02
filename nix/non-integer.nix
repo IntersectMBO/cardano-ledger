@@ -25,4 +25,4 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././dependencies/non-integer; }
+    } // rec { src = (pkgs.lib).mkDefault .././shelley/chain-and-ledger/dependencies/non-integer; }

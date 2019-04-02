@@ -4,12 +4,12 @@
 # many reviewers which often leads to nobody feeling responsible to actually
 # perform the review.
 
-dependencies/non-integer/ @mgudemann
-docs/delegation_design_spec/ @JaredCorduan @kantp
-hs/ @mgudemann @JaredCorduan
-latex/ @JaredCorduan @mgudemann
+shelley/chain-and-ledger/dependencies/non-integer/ @mgudemann
+shelley/design_spec/ @JaredCorduan @kantp
+shelley/chain-and-ledger/executable-spec/ @mgudemann @JaredCorduan
+shelley/chain-and-ledger/formal-spec/ @JaredCorduan @mgudemann
 nix/ @nc6 @ruhatch
 scripts/ @nc6 @ruhatch
-specs/chain/ @nc6 @mdimjasevic
-specs/ledger/ @nc6 @dnadales
-specs/semantics/ @nc6 @dnadales
+byron/chain/ @nc6 @mdimjasevic
+byron/ledger/ @nc6 @dnadales
+byron/semantics/ @nc6 @dnadales
