@@ -27,7 +27,7 @@ import           Delegation.PoolParams
 import           NonIntegral (exp')
 import           BaseTypes
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Ratio (approxRational)
 
 import Lens.Micro ((^.))

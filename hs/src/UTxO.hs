@@ -56,8 +56,8 @@ module UTxO
 import           Crypto.Hash             (Digest, SHA256, hash)
 import qualified Data.ByteArray          as BA
 import qualified Data.ByteString.Char8   as BS
-import           Data.Map                (Map)
-import qualified Data.Map                as Map
+import           Data.Map.Strict         (Map)
+import qualified Data.Map.Strict         as Map
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
