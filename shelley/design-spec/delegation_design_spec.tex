@@ -2572,13 +2572,15 @@ several refinements to this general principle:
     cost and margin, which they can freely choose.)
   \end{itemize}
 \item
-  Pool rewards will slightly increase with the stake their operator contributes to
-  the pool. There is no minimal stake required to create a pool -- anybody can
-  do this. However, pools led by operators with high stake will get higher
-  rewards. (This will discourage pool operators from splitting their stake to
-  operate several pools. It will also help preventing Sybil attacks, where an
-  attacker with low stake tries to gain control over a majority of stake by
-  creating a lot of pools with low costs.)
+  Pool rewards will slightly increase with the stake their owner(s)\footnote{For
+    a discussion of stake pool owners vs stake pool operators see
+    \cref{multiple-owners}.} pledge to delegate to the pool. There is no minimal
+  stake required to create a pool -- anybody can do this. However, pools where
+  the owners contribute more stake will get slightly higher rewards. (This will
+  discourage pool owners from splitting their stake to operate several pools. It
+  will also help preventing Sybil attacks, where an attacker with low stake
+  tries to gain control over a majority of stake by creating a lot of pools with
+  low costs.)
 \end{itemize}
 
 Our game theoretic analysis has shown that if stakeholders try to
@@ -2609,9 +2611,9 @@ advance:
 \item
   The desired number of pools \(k\in\mathbb{N}_+\).
 \item
-  The influence \(a_0\in[0,\infty)\) a pool operator's stake should have
-  on the desirability of the pool. Small values of \(a_0\) indicate
-  little influence.
+  The influence \(a_0\in[0,\infty)\) the stake pledged by the owners should have
+    on the desirability of the pool. Small values of \(a_0\) indicate little
+    influence.
 \item
   The \emph{expansion rate} \(\rho\in[0,1]\), determining the fraction
   of still available ada that will be created per epoch.
@@ -2844,8 +2846,8 @@ Here
 \item
   \(R\) are the total available rewards for the epoch (in ada).
 \item
-  \(a_0\in[0,\infty)\) is a parameter determining operator-stake influence
-  on pool rewards.
+  \(a_0\in[0,\infty)\) is a parameter determining owner-stake influence on pool
+    rewards.
 \item
   \(z_0:=1/k\) is the size of a saturated pool.
 \item
@@ -2853,7 +2855,7 @@ Here
   of the pool.
 \item
   \(s':=\min(s, z_0)\), where \(s\) is the relative stake of the pool
-  operator (the amount of ada pledged during pool registration,
+  owner(s) (the amount of ada pledged during pool registration,
   see \cref{stakepool-registration}).
 \end{itemize}
 
@@ -2862,8 +2864,8 @@ where the owner(s) fail to honour their pledge of stake will receive
 zero rewards, and so will have $f=0$.
 
 \emph{Note that \(\sigma\) includes the stake \(s\) pledged by the pool
-operator.} For example, let us assume that the total existing supply of
-ada is \(T=31,000,000,000\), and consider a pool whose pool operator
+owner(s).} For example, let us assume that the total existing supply of
+ada is \(T=31,000,000,000\), and consider a pool whose owners
 pledged ada 15,500,000 and who attracted another ada 15,500,000 from their
 pool members. Then \[
 \begin{array}{rcccl}
@@ -2934,11 +2936,10 @@ from the pool registration, see \cref{stakepool-registration}.
 \paragraph{Pool Operator Reward}
 \label{pool-operator-reward}
 
-The \emph{pool operator reward \(r_\mathrm{operator}\)} (in ada) is
-calculated as follows (where \(s\in[0,1]\) is the stake of the pool
-operator): \[
-    r_\mathrm{operator}(\hat{f}, c, m, s, \sigma) :=
-    \left\{
+The \emph{pool operator reward \(r_\mathrm{operator}\)} (in ada) is calculated
+as follows (where \(s\in[0,1]\) is the stake delegated to the pool by its
+owner(s)):
+\[ r_\mathrm{operator}(\hat{f}, c, m, s, \sigma) := \left\{
     \begin{array}{ll}
         \displaystyle\hat{f} &
         \text{if $\hat{f}\leq c$,} \\
@@ -2984,9 +2985,9 @@ base all reward calculations on these assumptions.
 \subsubsection{Pool Desirability and Ranking}
 \label{pool-desirability-and-ranking}
 
-First we define the \emph{desirability} of a pool whose operator has stake
-\(s\), costs \(c\) and margin \(m\). Simply put, this number indicates
-how ``desirable'' or ``attractive'' this pool is to (potential) members.
+First we define the \emph{desirability} of a pool with pledged owner stake
+\(s\), costs \(c\) and margin \(m\). Simply put, this number indicates how
+``desirable'' or ``attractive'' this pool is to (potential) members.
 
 If the pool is \emph{saturated}, the pool rewards are \[
     \tilde{f}(s, \pbar) :=
@@ -3012,12 +3013,12 @@ desirable pool gets rank 2 and so on.
 
 We predict that pools with rank \(\leq k\) will eventually be saturated,
 whereas pools with rank \(>k\) will lose all members and only consist of
-the operator.
+the owner(s).
 
 \subsubsection{Non-Myopic Pool Stake}
 \label{non-myopic-pool-stake}
 
-Consider a pool with operator stake \(s\), total stake \(\sigma\) and rank
+Consider a pool with pleded owner stake \(s\), total stake \(\sigma\) and rank
 \(r\). We define its \emph{non-myopic stake} \(\sigma_\mathrm{nm}\) as
 \[
     \sigma_\mathrm{nm}(s,\sigma,r) :=
@@ -3034,9 +3035,10 @@ Consider a pool with operator stake \(s\), total stake \(\sigma\) and rank
 \subsubsection{Non-Myopic Pool Operator Rewards}
 \label{non-myopic-pool-operator-rewards}
 
-The non-myopic pool operator rewards of a pool with costs \(c\), margin
-\(m\), operator stake \(s\), stake \(\sigma\), rank \(r\), and apparent
-performance \(\pbar\) are \[
+The non-myopic pool operator rewards of a pool with costs \(c\), margin \(m\),
+pledged owner stake \(s\), stake \(\sigma\), rank \(r\), and apparent
+performance \(\pbar\) are
+\[
     r_\mathrm{operator, nm}(c, m, s, \sigma, r, \pbar) :=
     r_\mathrm{operator}\Bigl(
     \hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r), \pbar\bigr),
@@ -3047,8 +3049,8 @@ performance \(\pbar\) are \[
 \label{non-myopic-pool-member-rewards}
 
 The non-myopic pool member rewards of a pool with costs \(c\), margin \(m\),
-operator stake \(s\), stake \(\sigma\), rank \(r\), and apparent performance
-\(\pbar\), for a member contributing member stake \(t\), are
+pledged owner stake \(s\), stake \(\sigma\), rank \(r\), and apparent
+performance \(\pbar\), for a member contributing member stake \(t\), are
 \begin{equation}
     r_\mathrm{member, nm}(c, m, s, \sigma, t, r, \pbar) :=
     r_\mathrm{member}\Bigl(\hat{f}\bigl(s,\sigma_\mathrm{nm}(s,\sigma, r),
@@ -3060,7 +3062,7 @@ This formula holds if the pool is amongst the top \(k\) rated pools. If it is
 not, we should expect no rational player to delegate to it, and accordingly we
 will have to replace \(\sigma_\mathrm{nm}\) by \(s + t\) in
 \cref{eq:non-myopic-member-rewards} -- the pool's stake will be entirely made up
-of the operator's stake and the stake that this member chooses to delegate.
+of the owners' stake and the stake that this member chooses to delegate.
 
 \subsubsection{Average Apparent Performance}
 
@@ -3125,7 +3127,7 @@ Our game theoretic analysis assumes that every stakeholder has all
 relevant information available at any time.
 
 This means that pool \emph{costs}, \emph{margins}, average apparent performance,
-and pool operator \emph{stakes}, as well as the (non-myopic) utilities derived
+and pool owners \emph{stakes}, as well as the (non-myopic) utilities derived
 from these figures, have to be easily accessible, so that stakeholders can
 quickly react to changes and always choose the strategy that maximizes their own
 rewards.
@@ -3148,13 +3150,13 @@ reasonable.
 
 \subsubsection{\texorpdfstring{\(a_0\)}{a\_0}}
 
-As explained above, parameter \(a_0\) determines the influence that a
-pool operator's stake has on pool rewards.
+As explained above, parameter \(a_0\) determines the influence that the stake
+pledged by the pool owner(s) has on pool rewards.
 
 Our game theoretic analysis predicts that the \(k\) pools with the
 highest \emph{potential}, the highest value of \[
     P(\lambda,c):=\left(z_0+a_0\cdot\lambda\right)\cdot\frac{R}{1+a_0}-c
-\] (where \(\lambda\) is the stake committed by the pool operator and \(c\)
+\] (where \(\lambda\) is the stake pledged by the pool owner(s) and \(c\)
 are the pool costs) will create the saturated pools.
 
 Let us consider an attacker with stake \(S < \frac{1}{2}\), who wants to
