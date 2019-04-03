@@ -28,7 +28,7 @@ import Cardano.Chain.Common (StakeholderId)
 --   stakeholder B has weight "3", during the bootstrap era all stake in the
 --   system will be divided between A and B in proportion of 1:3.
 newtype GenesisWStakeholders = GenesisWStakeholders
-  { getGenesisWStakeholders :: Map StakeholderId Word16
+  { unGenesisWStakeholders :: Map StakeholderId Word16
   } deriving (Show, Eq, Semigroup, Monoid)
 
 instance Buildable GenesisWStakeholders where

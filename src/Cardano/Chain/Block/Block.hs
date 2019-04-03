@@ -256,16 +256,21 @@ mkBlock
   -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
-  -> Maybe Delegation.Certificate
-  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
-  --   right to sign this block
+  -> Delegation.Certificate
+  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
   -> Body
   -> Block
-mkBlock pm bv sv prevHeader epochSlots =
-  mkBlockExplicit pm bv sv prevHash difficulty epochSlots
+mkBlock pm bv sv prevHeader epochSlots = mkBlockExplicit
+  pm
+  bv
+  sv
+  prevHash
+  difficulty
+  epochSlots
  where
-  prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
-  difficulty = either (const $ ChainDifficulty 0) (succ . headerDifficulty) prevHeader
+  prevHash = either genesisHeaderHash (hashHeader epochSlots) prevHeader
+  difficulty =
+    either (const $ ChainDifficulty 0) (succ . headerDifficulty) prevHeader
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
@@ -281,14 +286,23 @@ mkBlockExplicit
   -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
-  -> Maybe Delegation.Certificate
-  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
-  --   right to sign this block
+  -> Delegation.Certificate
+  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk mDlgCert body =
-  ABlock
-    (mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk mDlgCert body extraH)
+mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk dlgCert body
+  = ABlock
+    (mkHeaderExplicit
+      pm
+      prevHash
+      difficulty
+      epochSlots
+      slotId
+      sk
+      dlgCert
+      body
+      extraH
+    )
     body
     (Annotated extraB ())
     ()

@@ -2,14 +2,12 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.Block.Bi
   ( tests
   , exampleBlockSignature
-  , exampleBlockPSignatureHeavy
   , exampleBody
   , exampleConsensusData
   , exampleHeader
@@ -75,7 +73,6 @@ import Cardano.Crypto
   , hash
   , noPassSafeSigner
   , proxySign
-  , sign
   , toPublic
   )
 
@@ -97,8 +94,7 @@ import Test.Cardano.Chain.Slotting.Gen
 import Test.Cardano.Chain.Txp.Example
   (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
-import Test.Cardano.Crypto.Example
-  (examplePublicKey, exampleSecretKey, exampleSecretKeys)
+import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
 
 
@@ -156,11 +152,6 @@ roundTripBlockCompat =
 goldenBlockSignature :: Property
 goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
-
-goldenBlockSignature_Heavy :: Property
-goldenBlockSignature_Heavy = goldenTestBi
-  exampleBlockPSignatureHeavy
-  "test/golden/bi/block/BlockSignature_Heavy"
 
 roundTripBlockSignatureBi :: Property
 roundTripBlockSignatureBi =
@@ -323,17 +314,21 @@ exampleHeader = mkHeaderExplicit
   exampleChainDifficulty
   exampleEs
   (exampleFlatSlotId exampleEs)
-  exampleSecretKey
-  Nothing
+  delegateSk
+  certificate
   exampleBody
   exampleExtraHeaderData
+ where
+  pm = ProtocolMagicId 7
+  [delegateSk, issuerSk] = exampleSecretKeys 5 2
+  certificate = createPsk
+    pm
+    (noPassSafeSigner issuerSk)
+    (toPublic delegateSk)
+    (EpochIndex 5)
 
 exampleBlockSignature :: BlockSignature
-exampleBlockSignature = BlockSignature
-  (sign (ProtocolMagicId 7) SignMainBlock exampleSecretKey exampleToSign)
-
-exampleBlockPSignatureHeavy :: BlockSignature
-exampleBlockPSignatureHeavy = BlockPSignatureHeavy sig
+exampleBlockSignature = BlockSignature sig
  where
   sig = proxySign pm SignProxyVK delegateSk psk exampleToSign
   [delegateSk, issuerSk] = exampleSecretKeys 5 2

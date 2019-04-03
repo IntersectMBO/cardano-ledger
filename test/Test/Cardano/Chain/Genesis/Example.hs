@@ -80,12 +80,10 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
-exampleGenesisAvvmBalances = GenesisAvvmBalances
-  { getGenesisAvvmBalances = M.fromList
-    [ (exampleRedeemPublicKey' (0, 32) , mkKnownLovelace @36524597913081152)
-    , (exampleRedeemPublicKey' (32, 32), mkKnownLovelace @37343863242999412)
-    ]
-  }
+exampleGenesisAvvmBalances = GenesisAvvmBalances $ M.fromList
+  [ (exampleRedeemPublicKey' (0, 32) , mkKnownLovelace @36524597913081152)
+  , (exampleRedeemPublicKey' (32, 32), mkKnownLovelace @37343863242999412)
+  ]
  where
   exampleRedeemPublicKey' :: (Int, Int) -> RedeemPublicKey
   exampleRedeemPublicKey' (m, n) =
@@ -170,12 +168,7 @@ exampleGenesisInitializer = GenesisInitializer
 
 exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances
 exampleGenesisNonAvvmBalances0 = GenesisNonAvvmBalances
-  { getGenesisNonAvvmBalances = (M.fromList
-                                  [ (exampleAddress , coin)
-                                  , (exampleAddress1, coin1)
-                                  ]
-                                )
-  }
+  $ M.fromList [(exampleAddress, coin), (exampleAddress1, coin1)]
  where
   coin  = mkKnownLovelace @36524597913081152
   coin1 = mkKnownLovelace @37343863242999412
@@ -190,7 +183,7 @@ exampleGenesisWStakeholders =
     word16s :: [Word16]
     word16s = [1337]
   in GenesisWStakeholders
-    { getGenesisWStakeholders = M.fromList $ zip stakeholderIds word16s
+    { unGenesisWStakeholders = M.fromList $ zip stakeholderIds word16s
     }
 
 exampleUTCTime0 :: UTCTime

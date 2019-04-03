@@ -18,7 +18,7 @@ where
 import Cardano.Prelude
 import qualified Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
+import Control.Monad.Except (MonadError)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
@@ -40,7 +40,7 @@ data SoftwareVersion = SoftwareVersion
 
 instance B.Buildable SoftwareVersion where
   build sv =
-    bprint (stext . ":" . int) (getApplicationName $ svAppName sv) (svNumber sv)
+    bprint (stext . ":" . int) (unApplicationName $ svAppName sv) (svNumber sv)
 
 instance Show SoftwareVersion where
   show = formatToString build
@@ -68,7 +68,7 @@ instance B.Buildable SoftwareVersionError where
 checkSoftwareVersion
   :: MonadError SoftwareVersionError m => SoftwareVersion -> m ()
 checkSoftwareVersion sv =
-  liftEither . first SoftwareVersionApplicationNameError $ checkApplicationName
-    (svAppName sv)
+  checkApplicationName (svAppName sv)
+    `wrapError` SoftwareVersionApplicationNameError
 
 deriveJSON defaultOptions ''SoftwareVersion

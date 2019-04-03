@@ -54,7 +54,7 @@ mkGenesisSpec
   -> GenesisInitializer
   -> Either String GenesisSpec
 mkGenesisSpec avvmDistr delega bvd k pm specType = do
-  let avvmKeys = M.keys $ getGenesisAvvmBalances avvmDistr
+  let avvmKeys = M.keys $ unGenesisAvvmBalances avvmDistr
   (length (nub avvmKeys) == length avvmKeys)
     `orThrowError` "mkGenesisSpec: there are duplicates in avvm balances"
   -- All checks passed

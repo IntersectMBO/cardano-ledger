@@ -145,7 +145,7 @@ scheduleCertificate config slot d ss cert = do
   delegate  = mkStakeholderId $ pskDelegatePk cert
 
   genesisStakeholders =
-    getGenesisWStakeholders $ configBootStakeholders config
+    unGenesisWStakeholders $ configBootStakeholders config
 
   epoch           = slotNumberEpoch (configEpochSlots config) slot
   delegationEpoch = pskOmega cert
@@ -233,7 +233,7 @@ initialInterfaceState config = updateDelegation
     }
 
   genesisKeys =
-    M.keys . getGenesisWStakeholders $ configBootStakeholders config
+    M.keys . unGenesisWStakeholders $ configBootStakeholders config
 
   certificates =
     fmap annotateCertificate

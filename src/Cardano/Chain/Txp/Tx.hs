@@ -8,21 +8,16 @@
 
 module Cardano.Chain.Txp.Tx
   ( Tx(..)
-  , txInputs
-  , txOutputs
-  , txAttributes
   , txF
   , TxId
   , TxAttributes
   , TxIn(..)
   , TxOut(..)
-  , _TxOut
   )
 where
 
 import Cardano.Prelude
 
-import Control.Lens (makeLenses, makePrisms)
 import Data.Aeson
   ( FromJSON(..)
   , FromJSONKey(..)
@@ -71,11 +66,11 @@ import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 --
 --   NB: transaction witnesses are stored separately
 data Tx = UnsafeTx
-  { _txInputs     :: !(NonEmpty TxIn)
+  { txInputs     :: !(NonEmpty TxIn)
   -- ^ Inputs of transaction.
-  , _txOutputs    :: !(NonEmpty TxOut)
+  , txOutputs    :: !(NonEmpty TxOut)
   -- ^ Outputs of transaction.
-  , _txAttributes :: !TxAttributes
+  , txAttributes :: !TxAttributes
   -- ^ Attributes of transaction
   } deriving (Eq, Ord, Generic, Show)
 
@@ -90,27 +85,27 @@ instance B.Buildable Tx where
     . builder
     )
     (hash tx)
-    (_txInputs tx)
-    (_txOutputs tx)
+    (txInputs tx)
+    (txOutputs tx)
     attrsBuilder
    where
-    attrs = _txAttributes tx
+    attrs = txAttributes tx
     attrsBuilder
       | areAttributesKnown attrs = mempty
       | otherwise                = bprint (", attributes: " . build) attrs
 
 instance Bi Tx where
   encode tx =
-    encodeListLen 3 <> encode (_txInputs tx) <> encode (_txOutputs tx) <> encode
-      (_txAttributes tx)
+    encodeListLen 3 <> encode (txInputs tx) <> encode (txOutputs tx) <> encode
+      (txAttributes tx)
 
   decode = do
     enforceSize "Tx" 3
     UnsafeTx <$> decode <*> decode <*> decode
 
   encodedSizeExpr size pxy =
-    1 + size (_txInputs <$> pxy) + size (_txOutputs <$> pxy) + size
-      (_txAttributes <$> pxy)
+    1 + size (txInputs <$> pxy) + size (txOutputs <$> pxy) + size
+      (txAttributes <$> pxy)
 
 instance NFData Tx
 
@@ -236,9 +231,5 @@ instance Bi TxOut where
 
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address
-
-makePrisms ''TxOut
-
-makeLenses ''Tx
 
 deriveJSON defaultOptions ''Tx

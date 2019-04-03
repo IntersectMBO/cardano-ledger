@@ -23,11 +23,11 @@ import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
 -- People who purchased Ada at a pre-sale were issued a certificate during
 -- the pre-sale period. These certificates allow customers to redeem ADA.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
-  { getGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
+  { unGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
   } deriving (Show, Eq, Semigroup)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where
-    toJSON = toJSON . getGenesisAvvmBalances
+    toJSON = toJSON . unGenesisAvvmBalances
 
 instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
     fromJSON = fmap GenesisAvvmBalances . fromJSON

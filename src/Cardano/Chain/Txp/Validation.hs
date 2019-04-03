@@ -82,10 +82,10 @@ validateTx pm feePolicy utxo tx = do
 
   -- Check that outputs have valid NetworkMagic
   let nm = makeNetworkMagic pm
-  _txOutputs tx `forM_` validateTxOutNM nm
+  txOutputs tx `forM_` validateTxOutNM nm
 
   -- Check that every input is in the domain of 'utxo'
-  _txInputs tx `forM_` validateTxIn utxo
+  txInputs tx `forM_` validateTxIn utxo
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
   minFee <- if isRedeemUTxO inputUTxO
@@ -110,7 +110,7 @@ validateTx pm feePolicy utxo tx = do
 
   txSize    = biSize tx
 
-  inputUTxO = S.fromList (NE.toList (_txInputs tx)) <| utxo
+  inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
   calculateMinimumFee
     :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
@@ -171,7 +171,7 @@ updateUTxO pm utxo tx = do
   validateTx pm hardcodedTxFeePolicy utxo tx
     `wrapError` UTxOValidationTxValidationError
 
-  UTxO.union (S.fromList (NE.toList (_txInputs tx)) </| utxo) (txOutputUTxO tx)
+  UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
     `wrapError` UTxOValidationUTxOError
  where
 
@@ -196,7 +196,7 @@ updateUTxOWitness pm utxo ta = do
 
   -- Get the signing addresses for each transaction input from the 'UTxO'
   addresses <-
-    mapM (`UTxO.lookupAddress` utxo) (NE.toList $ _txInputs tx)
+    mapM (`UTxO.lookupAddress` utxo) (NE.toList $ txInputs tx)
       `wrapError` UTxOValidationUTxOError
 
   -- Validate witnesses and their signing addresses
