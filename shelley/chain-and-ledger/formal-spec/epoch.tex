@@ -47,7 +47,7 @@ distributes the leader election rewards.
 \label{sec:reward-overview}
 
 The rewards for a given epoch $e_i$ involve the two epochs surrounding it.
-In particular, the stake distribution will come from the previous epoch,
+In particular, the stake distribution will come from the previous epoch
 and the rewards will be calculated in the following epoch.
 More concretely:
 \begin{enumerate}[(A)]%for small alpha-characters within brackets.
@@ -95,23 +95,23 @@ The mnemonic ``mark, set, go'' will be used to keep
 track of the snapshots, where the label ``mark'' refers to the most recent snapshot,
 and ``go'' refers to the snapshot that is ready to be used in the reward calculation.
 In the above diagram, the snapshot taken at (A) is labeled ``mark'' during epoch $e_{i-1}$,
-``set'' during epoch $e_i$, and ``go'' during epoch $e_{i+1}$. At (G) the snapshot
+``set'' during epoch $e_i$ and ``go'' during epoch $e_{i+1}$. At (G) the snapshot
 taken at (A) is no longer needed and will be discarded.
 
 The two main transition systems in this section are:
 \begin{itemize}
   \item The transition system named $\mathsf{EPOCH}$, which is defined in
-    Section~\ref{sec:total-epoch}, covering what happens at the epoch boundary,
-    such as at (A), (C), (D), and (G).
+    Section~\ref{sec:total-epoch}, covers what happens at the epoch boundary,
+    such as at (A), (C), (D) and (G).
   \item The transition named $\mathsf{REWARD}$, which is defined in Section~\ref{sec:reward-calc},
-    covering the reward calculation which happens between (E) and (F).
+    covers the reward calculation that happens between (E) and (F).
 \end{itemize}
 
 
 \begin{note}
   Between time D and E we are concerned with chain growth and stability.
   Therefore this duration can be stated as 2k blocks (to state it in slots requires details about
-  particular version of ouroboros). The duration between F and G is the same, 2k blocks.
+  the particular version of the Ouroboros protocol). The duration between F and G is also 2k blocks.
   Between E and F a single honest block is enough to ensure a random nonce.
 \end{note}
 
@@ -277,7 +277,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
 
 \begin{itemize}
 \item $\fun{aggregate_{+}}$ takes a relation on $A\times B$, where $B$ is any
-  monoid $(B,+,e)$, and returns a map from each $a\in A$ to the ``sum'' (using
+  monoid $(B,+,e)$ and returns a map from each $a\in A$ to the ``sum'' (using
   the monoidal $+$ operation) of all $b\in B$ such that $(a, b)\in A\times B$.
 \item $\fun{stakeDistr}$ uses the $\fun{aggregate_{+}}$ function and several relations to
     compute the stake distribution, mapping each hashkey to the total coin under its control.
@@ -336,7 +336,7 @@ The state transition types for stake distribution snapshots are given in
 Figure~\ref{fig:ts-types:snapshot}.
 The type $\type{\Snapshots}$ contains the information needing to be saved on the epoch boundary:
 \begin{itemize}
-  \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$, and $\var{pstake_{go}}$ are the three
+  \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$ and $\var{pstake_{go}}$ are the three
     stake distribution snapshots (paired with the corresponding delegation map),
     as explained in Section~\ref{sec:reward-overview}.
   \item $\var{poolsSS}$ stores the pool parameters from the epoch boundary.
@@ -611,8 +611,8 @@ This transition has no preconditions and results in the following state change:
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
 parameters. The protocol parameters environment consists of the new
-protocol parameters, and the delegation and pool states.
-The state change is a change of the $\UTxOState$, the $\Acnt$ states, and the current $\PParams$.
+protocol parameters and the delegation and pool states.
+The state change is a change of the $\UTxOState$, the $\Acnt$ states and the current $\PParams$.
 The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-param}.
 
 %%
@@ -668,13 +668,13 @@ This transition results in the following state change:
     the precondition. The excess is moved to the reserves and the protocol parameters are updated.
 
   \item If the new protocol parameters mean that \textbf{more} funds are required in the
-    deposit pot to cover all possible refunds, and the difference is \textbf{less} than
+    deposit pot to cover all possible refunds and the difference is \textbf{less} than
     the reserve pot, then Rule~\ref{eq:new-pc-accepted} meets the precondition.  Funds are moved
     from the reserve pot to cover the difference and the protocol parameters are updated.
 
   \item If the new protocol parameters mean that \textbf{more} funds are required in the
-    deposit pot to cover all possible refunds, and the difference is \textbf{more} than
-    the reserve pot, then Rule~\ref{eq:new-pc-denied} meets the precondition and no state changes.
+    deposit pot to cover all possible refunds and the difference is \textbf{more} than
+    the reserve pot, then Rule~\ref{eq:new-pc-denied} meets the precondition and there is no change of state.
 \end{itemize}
 
 Note that here, unlike most of the inference rules in this document,
@@ -798,8 +798,8 @@ for ease of reading.
 Finally, it is possible to define the complete epoch boundary transition type,
 which is defined in Figure~\ref{fig:ts-types:epoch}.
 In the environment of this transition, we have the potentially new
-protocol parameters and the blocks made this epoch.  The state is made up of the
-the accounting state, the current protocol parameters, the snapshots, and the ledger state.
+protocol parameters and the blocks made during this epoch.  The state is made up of the
+the accounting state, the current protocol parameters, the snapshots and the ledger state.
 
 %%
 %% Figure - Epoch Defs
@@ -841,7 +841,7 @@ the accounting state, the current protocol parameters, the snapshots, and the le
 \end{figure}
 
 
-The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$, and $\mathsf{NEWPP}$
+The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
 in sequence.
 
 %%
@@ -977,7 +977,7 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
 \begin{itemize}
   \item The function $\fun{maxPool}$ gives the maximum reward a stake pool can receive in an epoch.
     This is a fraction of the total available rewards for the epoch.
-    The result depends on the pool's relative stake, the pool's pledge, and the following
+    The result depends on the pool's relative stake, the pool's pledge and the following
     protocol parameters:
     \begin{itemize}
       \item $\var{a_0}$, the leader-stake influence
@@ -1052,13 +1052,13 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
 \clearpage
 
 Figure~\ref{fig:functions:reward-splitting} gives the calculation for
-splitting the pool rewards with its members, as described 6.5.2 of \cite{delegation_design}.
+splitting the pool rewards with its members, as described in 6.5.2 of \cite{delegation_design}.
 The portion of rewards allocated to the pool operator and owners is different
 than that of the members.
 
 \begin{itemize}
   \item The $\fun{r_{leader}}$ function calculates the leader reward, based on the pool cost,
-    margin, and proportion of the pool's total stake.  Note that this reward will go to the
+    margin and the proportion of the pool's total stake.  Note that this reward will go to the
     reward account specified in the pool registration certificate.
   \item The $\fun{r_{member}}$ function calculates the member reward, proportionally to their
     stake after the cost and margin are removed.
@@ -1112,7 +1112,7 @@ The calculation is done pool-by-pool.
     difference beween the max reward $R$ and what was actually paid out).  The unrealized
     amount will go to the treasury. Note that rewards attached to unregistered reward accounts
     will end up in the unrealized amount.
-    Involved in the calculation is:
+    The calculation involves the following:
     \begin{itemize}
       \item $\var{pstake}$, the total amount of stake controlled by the stake pool.
       \item $\var{ostake}$, the total amount of stake controlled by the stake pool operator
@@ -1213,7 +1213,7 @@ The calculation is done pool-by-pool.
 \subsection{Reward Update Calculation}
 \label{sec:reward-calc}
 
-This section defines calculation of a reward update.
+This section defines the calculation of a reward update.
 A reward update is the information needed to account for the movement of lovelace
 in the system due to paying out rewards.
 
@@ -1278,7 +1278,7 @@ It consists of four pots:
 \begin{itemize}
   \item The change to the treasury. This will be a positive value.
   \item The change to the reserves. This will be a negative value.
-  \item The net reward pot.
+  \item The new reward pot.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
 \end{itemize}
@@ -1308,7 +1308,7 @@ It consists of four pots:
 \clearpage
 
 Figure~\ref{fig:functions:reward-update-creation} defines two functions,
-$\fun{createRUpd}$ to create a reward update, and $\fun{applyRUpd}$ to apply a reward update
+$\fun{createRUpd}$ to create a reward update and $\fun{applyRUpd}$ to apply a reward update
 to an instance of $\EpochState$.
 
 The $\fun{createRUpd}$ function does the following:
@@ -1339,13 +1339,13 @@ The $\fun{createRUpd}$ function does the following:
 \end{itemize}
 
 Note that fees are not explicitly removed from any account:
-the fees come from transactions paying them, and are accounted for whenever
-transactions are processed, and the deposit decay value comes from returning
+the fees come from transactions paying them and are accounted for whenever
+transactions are processed and when the deposit decay value comes from returning
 smaller refunds for deposits than were paid upon depositing.
 
 The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
-      \item Adjust the treasury, reserves, and fee pots by the appropriate amounts.
+      \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Set the reward pot to the new value.
       \item Add each individual reward to the global reward mapping.
     \end{itemize}
