@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Block.Bi
   , exampleHeader
   , exampleProof
   , exampleToSign
-  , exampleUndo
   )
 where
 
@@ -43,9 +42,7 @@ import Cardano.Chain.Block
   , Header
   , HeaderHash
   , Proof(..)
-  , SlogUndo(..)
   , ToSign(..)
-  , Undo(..)
   , body
   , consensusData
   , decodeBlockOrBoundary
@@ -92,14 +89,13 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
-import qualified Test.Cardano.Chain.Delegation.Example as Delegation
 import Test.Cardano.Chain.Slotting.Example (exampleSlotId, exampleFlatSlotId)
 import Test.Cardano.Chain.Slotting.Gen
   ( feedPMEpochSlots
   , genWithEpochSlots
   )
 import Test.Cardano.Chain.Txp.Example
-  (exampleTxPayload, exampleTxProof, exampleTxpUndo)
+  (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example
   (examplePublicKey, exampleSecretKey, exampleSecretKeys)
@@ -317,17 +313,6 @@ roundTripToSignBi = eachOf 20 (feedPMEpochSlots genToSign) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
--- Undo
---------------------------------------------------------------------------------
-
-goldenUndo :: Property
-goldenUndo = goldenTestBi exampleUndo "test/golden/bi/block/Undo"
-
-roundTripUndo :: Property
-roundTripUndo = eachOf 20 (feedPMEpochSlots genUndo) roundTripsBiShow
-
-
---------------------------------------------------------------------------------
 -- Example golden datatypes
 --------------------------------------------------------------------------------
 
@@ -395,17 +380,6 @@ exampleToSign = ToSign
   (exampleSlotId exampleEs)
   exampleChainDifficulty
   exampleExtraHeaderData
-
-exampleSlogUndo :: SlogUndo
-exampleSlogUndo = SlogUndo $ Just 999
-
-exampleUndo :: Undo
-exampleUndo = Undo
-  { undoTx   = exampleTxpUndo
-  , undoDlg  = Delegation.exampleUndo
-  , undoUS   = Update.exampleUndo
-  , undoSlog = exampleSlogUndo
-  }
 
 
 -----------------------------------------------------------------------

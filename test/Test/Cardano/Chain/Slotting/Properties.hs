@@ -31,16 +31,12 @@ import Cardano.Chain.Slotting
   , EpochSlots(..)
   , LocalSlotIndex(..)
   , LocalSlotIndexError(..)
-  , SlottingDataError(..)
   , flattenSlotId
   , unflattenSlotId
-  , mkSlottingData
   , localSlotIndexSucc
   , localSlotIndexPred
-  , getSlottingDataMap
   , localSlotIndexToEnum
   , localSlotIndexFromEnum
-  , validateSlottingDataMap
   , subSlotNumber
   )
 import Test.Cardano.Chain.Slotting.Gen
@@ -49,56 +45,11 @@ import Test.Cardano.Chain.Slotting.Gen
   , genLsiEpochSlots
   , genSlotId
   , genConsistentSlotIdEpochSlots
-  , genSlottingData
-  , genSlottingDataInvalidIndicies
-  , genSlottingDataTooFewIndicies
   )
 
 -- NB: `genLsiEpochSlots` is used because `LocalSlotIndex` is restricted to
 -- `Word16` and therefore the highest `EpochSlots` you can have currently
 -- is `maxBound :: Word16`.
-
---------------------------------------------------------------------------------
--- SlottingData
---------------------------------------------------------------------------------
-
--- Check that `mkSlottingData` does not fail for
--- allowed values of `SlottingData`.
-prop_mkSlottingData :: Property
-prop_mkSlottingData = withTests 100 . property $ do
-  sD <- forAll genSlottingData
-  (assertIsRight . mkSlottingData $ getSlottingDataMap sD)
-
--- Check that `mkSlottingData` fails for
--- `SlottingData` maps with too few indicies
--- i.e less than to 2.
-prop_mkSlottingDataTooFewIndices :: Property
-prop_mkSlottingDataTooFewIndices = withTests 10 . property $ do
-  slotDataMap <- forAll genSlottingDataTooFewIndicies
-  assertIsLeftConstr
-    dummySlotDataTooFewIndicies
-    (validateSlottingDataMap $ getSlottingDataMap slotDataMap)
-
-
--- Check that `mkSlottingData` fails for
--- `SlottingData` maps with invalid indicies
--- i.e indicies are not ascending order.
-prop_mkSlottingDataInvalidIndices :: Property
-prop_mkSlottingDataInvalidIndices = withTests 100 . property $ do
-  slotDataMap <- forAll genSlottingDataInvalidIndicies
-  assertIsLeftConstr
-    dummySlotDataInvalidIndicies
-    (validateSlottingDataMap $ getSlottingDataMap slotDataMap)
-
---------------------------------------------------------------------------------
--- Dummy values for constructor comparison in assertIsLeftConstr tests
---------------------------------------------------------------------------------
-
-dummySlotDataInvalidIndicies :: Constr
-dummySlotDataInvalidIndicies = toConstr $ SlottingDataInvalidIndices [] []
-
-dummySlotDataTooFewIndicies :: Constr
-dummySlotDataTooFewIndicies = toConstr $ SlottingDataTooFewIndices 1
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex

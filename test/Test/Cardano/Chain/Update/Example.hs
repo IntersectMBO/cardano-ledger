@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Update.Example
   , exampleProposal
   , exampleProposalBody
   , exampleVote
-  , exampleUndo
   , exampleUpId
   , exampleVoteId
   )
@@ -35,7 +34,6 @@ import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
-  , PrevValue(..)
   , Proof
   , Proposal
   , ProposalBody(..)
@@ -45,7 +43,6 @@ import Cardano.Chain.Update
   , SoftforkRule(..)
   , SoftwareVersion(..)
   , SystemTag(..)
-  , USUndo(..)
   , UpId
   , UpdateData(..)
   , Vote
@@ -58,7 +55,6 @@ import Cardano.Chain.Update
 import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Chain.Common.Example (exampleAttributes)
-import Test.Cardano.Chain.Slotting.Example (exampleSlottingData)
 import Test.Cardano.Crypto.Bi (getBytes)
 import Test.Cardano.Crypto.Example (examplePublicKey, exampleSafeSigner)
 
@@ -127,17 +123,6 @@ exampleSystemTags offset count = map
   (toSystemTag . (* offset))
   [0 .. count - 1]
   where toSystemTag start = SystemTag (getText start 16)
-
-exampleUndo :: USUndo
-exampleUndo = USUndo
-  { unChangedBV        = Map.singleton exampleProtocolVersion NoExist
-  , unLastAdoptedBV    = Just exampleProtocolVersion
-  , unChangedProps     = Map.singleton exampleUpId NoExist
-  , unChangedSV        = Map.singleton exampleApplicationName NoExist
-  , unChangedConfProps = Map.singleton exampleSoftwareVersion NoExist
-  , unPrevProposers    = Nothing
-  , unSlottingData     = Just exampleSlottingData
-  }
 
 exampleUpdateData :: UpdateData
 exampleUpdateData = exampleUpdateDatas 10 2 !! 1

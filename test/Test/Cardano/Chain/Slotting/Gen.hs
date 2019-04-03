@@ -3,9 +3,6 @@
 
 module Test.Cardano.Chain.Slotting.Gen
   ( genEpochIndex
-  , genEpochSlottingData
-  , genSlottingDataTooFewIndicies
-  , genSlottingDataInvalidIndicies
   , genFlatSlotId
   , genLocalSlotIndex
   , genLsiEpochSlots
@@ -13,15 +10,12 @@ module Test.Cardano.Chain.Slotting.Gen
   , genWithEpochSlots
   , genSlotId
   , genConsistentSlotIdEpochSlots
-  , genSlottingData
   , feedPMEpochSlots
   )
 where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
 
-import qualified Data.Map.Strict as Map
 import Formatting (build, sformat)
 
 import Hedgehog
@@ -31,18 +25,14 @@ import qualified Hedgehog.Range as Range
 import Cardano.Chain.Slotting
   ( EpochIndex(..)
   , EpochSlots(..)
-  , EpochSlottingData(..)
   , FlatSlotId(..)
   , LocalSlotIndex
   , SlotId(..)
-  , SlottingData
   , WithEpochSlots(WithEpochSlots)
   , localSlotIndexMaxBound
   , localSlotIndexMinBound
   , mkLocalSlotIndex
-  , mkSlottingData
   , unLocalSlotIndex
-  , unsafeSlottingData
   )
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -58,10 +48,6 @@ genLsiEpochSlots = EpochSlots <$> Gen.word64 (Range.linear 1 w16Max)
  where
   w16Max :: Word64
   w16Max = fromIntegral (maxBound :: Word16)
-
-genEpochSlottingData :: Gen EpochSlottingData
-genEpochSlottingData =
-  EpochSlottingData <$> genNominalDiffTime <*> genNominalDiffTime
 
 genFlatSlotId :: Gen FlatSlotId
 genFlatSlotId = FlatSlotId <$> Gen.word64 Range.constantBounded
@@ -117,49 +103,6 @@ genConsistentSlotIdEpochSlots = do
   genRestrictedEpochIndex :: Word64 -> Gen EpochIndex
   genRestrictedEpochIndex bound =
     EpochIndex <$> Gen.word64 (Range.linear 0 bound)
-
-genSlottingData :: Gen SlottingData
-genSlottingData = mkSlottingData <$> genSlottingDataMap >>= \case
-  Left err ->
-    panic $ sformat ("The impossible happened in genSlottingData: " . build) err
-  Right slottingData -> pure slottingData
- where
-  genSlottingDataMap :: Gen (Map EpochIndex EpochSlottingData)
-  genSlottingDataMap = do
-    mapSize <- Gen.int $ Range.linear 2 10
-    epochSlottingDatas <- Gen.list
-      (Range.singleton mapSize)
-      genEpochSlottingData
-    pure $ Map.fromList $ zip
-      [0 .. fromIntegral mapSize - 1]
-      epochSlottingDatas
-
-genSlottingDataTooFewIndicies :: Gen SlottingData
-genSlottingDataTooFewIndicies = unsafeSlottingData <$> genSlottingDataMap
- where
-  genSlottingDataMap :: Gen (Map EpochIndex EpochSlottingData)
-  genSlottingDataMap = do
-    mapSize <- Gen.int $ Range.linear 0 1
-    epochSlottingDatas <- Gen.list
-      (Range.singleton mapSize)
-      genEpochSlottingData
-    pure $ Map.fromList $ zip
-      [0 .. fromIntegral mapSize - 1]
-      epochSlottingDatas
-
-genSlottingDataInvalidIndicies :: Gen SlottingData
-genSlottingDataInvalidIndicies = unsafeSlottingData <$> genSlottingDataMap
- where
-  genSlottingDataMap :: Gen (Map EpochIndex EpochSlottingData)
-  genSlottingDataMap = do
-    mapSize <- Gen.int $ Range.singleton 10
-    rList   <- Gen.filter (\x -> x /= sort x) $ Gen.list
-      (Range.singleton mapSize)
-      (Gen.word64 (Range.linear 0 (fromIntegral mapSize - 1)))
-    epochSlottingDatas <- Gen.list
-      (Range.singleton mapSize)
-      genEpochSlottingData
-    pure $ Map.fromAscList $ zip (map EpochIndex rList) epochSlottingDatas
 
 feedPMEpochSlots :: (ProtocolMagicId -> EpochSlots -> Gen a) -> Gen a
 feedPMEpochSlots genA = do

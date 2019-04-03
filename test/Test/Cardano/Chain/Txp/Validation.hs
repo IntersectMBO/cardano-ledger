@@ -26,7 +26,7 @@ import Hedgehog
 
 import System.FilePath (takeFileName)
 
-import Cardano.Chain.Block (ABlund, blockSlot, blockTxPayload)
+import Cardano.Chain.Block (ABlock, blockSlot, blockTxPayload)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFile)
 import Cardano.Chain.Genesis
   (configProtocolMagic, configEpochSlots)
@@ -98,18 +98,18 @@ epochValid pm es utxoRef fp = withTests 1 . property $ do
 foldUTxO
   :: ProtocolMagic
   -> UTxO
-  -> Stream (Of (ABlund ByteString)) (ExceptT ParseError ResIO) ()
+  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO UTxO
-foldUTxO pm utxo blunds = S.foldM_
+foldUTxO pm utxo blocks = S.foldM_
   (foldUTxOBlund pm)
   (pure utxo)
   pure
-  (hoist (withExceptT ErrorParseError) blunds)
+  (hoist (withExceptT ErrorParseError) blocks)
 
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Blund'
 foldUTxOBlund
-  :: ProtocolMagic -> UTxO -> ABlund ByteString -> ExceptT Error ResIO UTxO
-foldUTxOBlund pm utxo (block, _) =
+  :: ProtocolMagic -> UTxO -> ABlock ByteString -> ExceptT Error ResIO UTxO
+foldUTxOBlund pm utxo block =
   withExceptT (ErrorUTxOValidationError $ blockSlot block)
     $ foldM (updateUTxOWitness pm) utxo (aUnTxPayload $ blockTxPayload block)

@@ -40,8 +40,6 @@ library
                        Cardano.Chain.Block.ExtraHeaderData
                        Cardano.Chain.Block.Header
                        Cardano.Chain.Block.Proof
-                       Cardano.Chain.Block.SlogUndo
-                       Cardano.Chain.Block.Undo
                        Cardano.Chain.Block.Validation
 
                        Cardano.Chain.Common.AddrAttributes
@@ -62,7 +60,6 @@ library
 
                        Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
-                       Cardano.Chain.Delegation.Undo
                        Cardano.Chain.Delegation.Validation
 
                        Cardano.Chain.Genesis.AvvmBalances
@@ -76,7 +73,6 @@ library
                        Cardano.Chain.Genesis.Spec
                        Cardano.Chain.Genesis.WStakeholders
 
-                       Cardano.Chain.Slotting.Data
                        Cardano.Chain.Slotting.EpochIndex
                        Cardano.Chain.Slotting.EpochSlots
                        Cardano.Chain.Slotting.LocalSlotIndex
@@ -86,12 +82,10 @@ library
                        Cardano.Chain.Txp.GenesisUTxO
                        Cardano.Chain.Txp.Tx
                        Cardano.Chain.Txp.TxAux
-                       Cardano.Chain.Txp.TxOutAux
                        Cardano.Chain.Txp.TxPayload
                        Cardano.Chain.Txp.TxpConfiguration
                        Cardano.Chain.Txp.TxProof
                        Cardano.Chain.Txp.TxWitness
-                       Cardano.Chain.Txp.Undo
                        Cardano.Chain.Txp.UTxO
                        Cardano.Chain.Txp.Validation
 
@@ -105,7 +99,6 @@ library
                        Cardano.Chain.Update.SoftforkRule
                        Cardano.Chain.Update.SoftwareVersion
                        Cardano.Chain.Update.SystemTag
-                       Cardano.Chain.Update.Undo
                        Cardano.Chain.Update.Validation.Endorsement
                        Cardano.Chain.Update.Validation.Interface
                        Cardano.Chain.Update.Validation.Registration

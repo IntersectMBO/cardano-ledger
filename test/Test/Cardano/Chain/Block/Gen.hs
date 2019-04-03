@@ -10,8 +10,6 @@ module Test.Cardano.Chain.Block.Gen
   , genToSign
   , genBlock
   , genBlockWithEpochSlots
-  , genSlogUndo
-  , genUndo
   )
 where
 
@@ -32,9 +30,7 @@ import Cardano.Chain.Block
   , Header
   , HeaderHash
   , Proof(..)
-  , SlogUndo(..)
   , ToSign(..)
-  , Undo(..)
   , body
   , consensusData
   , mkBlockExplicit
@@ -53,7 +49,7 @@ import Test.Cardano.Chain.Slotting.Gen
   , genFlatSlotId
   , genSlotId
   )
-import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof, genTxpUndo)
+import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
@@ -154,14 +150,3 @@ genBlock pm epochSlots =
     <*> genSecretKey
     <*> pure Nothing
     <*> genBody pm
-
-genSlogUndo :: Gen SlogUndo
-genSlogUndo = SlogUndo <$> Gen.maybe genFlatSlotId
-
-genUndo :: ProtocolMagicId -> EpochSlots -> Gen Undo
-genUndo pm epochSlots =
-  Undo
-    <$> genTxpUndo
-    <*> Delegation.genUndo pm
-    <*> Update.genUndo pm epochSlots
-    <*> genSlogUndo

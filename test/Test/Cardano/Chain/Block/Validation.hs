@@ -111,12 +111,12 @@ epochValid config cvsRef fp = withTests 1 . property $ do
   cvs <- liftIO $ readIORef cvsRef
   let stream = parseEpochFileWithBoundary (configEpochSlots config) fp
   result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState config cvs $ S.map fst stream)
+    (foldChainValidationState config cvs stream)
   newCvs <- evalEither result
   liftIO $ writeIORef cvsRef newCvs
 
 
--- | Fold chain validation over a 'Stream' of 'Blund's
+-- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
   :: Genesis.Config
   -> ChainValidationState

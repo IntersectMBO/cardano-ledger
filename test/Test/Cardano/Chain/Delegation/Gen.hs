@@ -4,7 +4,6 @@ module Test.Cardano.Chain.Delegation.Gen
   , genCanonicalCertificateDistinctList
   , genCertificateDistinctList
   , genPayload
-  , genUndo
   )
 where
 
@@ -14,12 +13,11 @@ import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Delegation (Certificate, Payload, Undo(..), unsafePayload)
+import Cardano.Chain.Delegation (Certificate, Payload, unsafePayload)
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto (AProxyVerificationKey(..), ProtocolMagicId, createPsk)
 import Data.List (nub)
 
-import Test.Cardano.Chain.Common.Gen (genStakeholderId)
 import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
 import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner)
 
@@ -60,9 +58,3 @@ genCertificateDistinctList pm = do
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =
   unsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)
-
-genUndo :: ProtocolMagicId -> Gen Undo
-genUndo pm =
-  Undo
-    <$> Gen.list (Range.linear 1 10) (genCertificate pm)
-    <*> Gen.set (Range.linear 0 10) genStakeholderId

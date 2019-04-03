@@ -13,15 +13,12 @@ module Test.Cardano.Chain.Txp.Gen
   , genTxInList
   , genTxInWitness
   , genTxOut
-  , genTxOutAux
   , genTxOutList
-  , genTxpUndo
   , genTxPayload
   , genTxpConfiguration
   , genTxProof
   , genTxSig
   , genTxSigData
-  , genTxUndo
   , genTxWitness
   )
 where
@@ -50,15 +47,12 @@ import Cardano.Chain.Txp
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
-  , TxOutAux(..)
   , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
-  , TxUndo
   , TxWitness
   , TxpConfiguration(..)
-  , TxpUndo
   , mkTxAux
   , mkTxPayload
   , toCompactTxId
@@ -122,9 +116,6 @@ genTxInList = Gen.nonEmpty (Range.linear 1 20) genTxIn
 genTxOut :: Gen TxOut
 genTxOut = TxOut <$> genAddress <*> genLovelace
 
-genTxOutAux :: Gen TxOutAux
-genTxOutAux = TxOutAux <$> genTxOut
-
 genTxOutList :: Gen (NonEmpty TxOut)
 genTxOutList = Gen.nonEmpty (Range.linear 1 100) genTxOut
 
@@ -133,9 +124,6 @@ genTxpConfiguration = do
   limit <- Gen.int (Range.constant 0 200)
   addrs <- Gen.list (Range.linear 0 50) genAddress
   return (TxpConfiguration limit (S.fromList addrs))
-
-genTxpUndo :: Gen TxpUndo
-genTxpUndo = Gen.list (Range.linear 1 50) genTxUndo
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
 genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
@@ -153,9 +141,6 @@ genTxSigData = TxSigData <$> genTxHash
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice [genPkWitness pm, genRedeemWitness pm]
-
-genTxUndo :: Gen TxUndo
-genTxUndo = Gen.nonEmpty (Range.linear 1 10) $ Gen.maybe genTxOutAux
 
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
