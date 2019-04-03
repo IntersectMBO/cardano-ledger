@@ -3,7 +3,6 @@ module Cardano.Chain.Slotting
   )
 where
 
-import Cardano.Chain.Slotting.Data as X
 import Cardano.Chain.Slotting.EpochIndex as X
 import Cardano.Chain.Slotting.LocalSlotIndex as X
 import Cardano.Chain.Slotting.EpochSlots as X

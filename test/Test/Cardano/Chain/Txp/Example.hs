@@ -16,7 +16,6 @@ module Test.Cardano.Chain.Txp.Example
   , exampleTxOutList
   , exampleTxSig
   , exampleTxSigData
-  , exampleTxpUndo
   , exampleTxWitness
   , exampleRedeemSignature
   , exampleHashTx
@@ -45,13 +44,11 @@ import Cardano.Chain.Txp
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
-  , TxOutAux(..)
   , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
   , TxWitness
-  , TxpUndo
   , mkTxAux
   , mkTxPayload
   )
@@ -130,9 +127,6 @@ exampleTxSig =
 
 exampleTxSigData :: TxSigData
 exampleTxSigData = TxSigData exampleHashTx
-
-exampleTxpUndo :: TxpUndo
-exampleTxpUndo = [Just . TxOutAux <$> exampleTxOutList]
 
 exampleTxWitness :: TxWitness
 exampleTxWitness = V.fromList [(PkWitness examplePublicKey exampleTxSig)]

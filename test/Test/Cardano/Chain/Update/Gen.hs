@@ -13,7 +13,6 @@ module Test.Cardano.Chain.Update.Gen
   , genProposal
   , genProposalBody
   , genProposals
-  , genUndo
   , genUpId
   , genUpsData
   , genVote
@@ -24,44 +23,29 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Data.Coerce (coerce)
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Block (HeaderHash)
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Slotting (EpochSlots)
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , ConfirmedProposalState(..)
-  , DecidedProposalState(..)
-  , DpsExtra(..)
   , Payload
-  , PrevValue(..)
   , Proof
   , Proposal
   , ProposalBody(..)
-  , ProposalState(..)
   , Proposals
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
-  , ProtocolVersionState(..)
   , SoftforkRule(..)
   , SoftwareVersion(..)
   , SystemTag(..)
-  , USUndo(..)
-  , UndecidedProposalState(..)
   , UpId
   , UpdateData(..)
-  , UpsExtra(..)
   , Vote
   , VoteId
-  , VoteState(..)
   , applicationNameMaxLength
-  , maybeToPrev
   , mkProposal
   , mkVote
   , payload
@@ -71,22 +55,18 @@ import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen
   ( genCanonicalTxFeePolicy
-  , genChainDifficulty
-  , genLovelace
   , genLovelacePortion
   , genScriptVersion
-  , genStakeholderId
   , genTxFeePolicy
   )
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochIndex, genFlatSlotId, genSlotId, genSlottingData)
+  (genEpochIndex, genFlatSlotId)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genHashRaw
   , genPublicKey
   , genSecretKey
   , genSignature
-  , genTextHash
   )
 
 
@@ -156,50 +136,6 @@ genProtocolParametersUpdate =
     <*> Gen.maybe genTxFeePolicy
     <*> Gen.maybe genEpochIndex
 
-genProtocolVersionState :: Gen ProtocolVersionState
-genProtocolVersionState =
-  ProtocolVersionState
-    <$> genProtocolParametersUpdate
-    <*> Gen.maybe genEpochIndex
-    <*> Gen.set (Range.linear 0 10) genStakeholderId
-    <*> Gen.set (Range.linear 0 10) genStakeholderId
-    <*> Gen.maybe genHeaderHash
-    <*> Gen.maybe genHeaderHash
-
-genConfirmedProposalState :: ProtocolMagicId -> Gen ConfirmedProposalState
-genConfirmedProposalState pm =
-  ConfirmedProposalState
-    <$> genProposal pm
-    <*> Gen.bool
-    <*> genHeaderHash
-    <*> genHeaderHash
-    <*> genHeaderHash
-    <*> Gen.maybe genHeaderHash
-    <*> Gen.map (Range.linear 1 10) ((,) <$> genPublicKey <*> genVoteState)
-    <*> genLovelace
-    <*> genLovelace
-
-genDecidedProposalState
-  :: ProtocolMagicId -> EpochSlots -> Gen DecidedProposalState
-genDecidedProposalState pm epochSlots =
-  DecidedProposalState
-    <$> Gen.bool
-    <*> genUndecidedProposalState pm epochSlots
-    <*> Gen.maybe genChainDifficulty
-    <*> Gen.maybe genDpsExtra
-
-genDpsExtra :: Gen DpsExtra
-genDpsExtra = DpsExtra <$> genHeaderHash <*> Gen.bool
-
-genPrevValue :: Gen a -> Gen (PrevValue a)
-genPrevValue = fmap maybeToPrev . Gen.maybe
-
-genProposalState :: ProtocolMagicId -> EpochSlots -> Gen ProposalState
-genProposalState pm epochSlots = Gen.choice
-  [ PSUndecided <$> genUndecidedProposalState pm epochSlots
-  , PSDecided <$> genDecidedProposalState pm epochSlots
-  ]
-
 genSoftforkRule :: Gen SoftforkRule
 genSoftforkRule =
   SoftforkRule
@@ -214,43 +150,6 @@ genSoftwareVersion =
 genSystemTag :: Gen SystemTag
 genSystemTag =
   SystemTag <$> Gen.text (Range.constant 0 systemTagMaxLength) Gen.alphaNum
-
-genUndecidedProposalState
-  :: ProtocolMagicId -> EpochSlots -> Gen UndecidedProposalState
-genUndecidedProposalState pm epochSlots =
-  UndecidedProposalState
-    <$> Gen.map (Range.linear 0 10) ((,) <$> genPublicKey <*> genVoteState)
-    <*> genProposal pm
-    <*> genSlotId epochSlots
-    <*> genLovelace
-    <*> genLovelace
-    <*> Gen.maybe genUpsExtra
-
-genUndo :: ProtocolMagicId -> EpochSlots -> Gen USUndo
-genUndo pm epochSlots =
-  USUndo
-    <$> Gen.map
-          hmRange
-          ((,) <$> genProtocolVersion <*> genPrevValue genProtocolVersionState)
-    <*> Gen.maybe genProtocolVersion
-    <*> Gen.map
-          hmRange
-          ((,) <$> genUpId pm <*> genPrevValue (genProposalState pm epochSlots))
-    <*> Gen.map
-          hmRange
-          ((,) <$> genApplicationName <*> genPrevValue
-            (Gen.word32 Range.constantBounded)
-          )
-    <*> Gen.map
-          hmRange
-          ((,) <$> genSoftwareVersion <*> genPrevValue
-            (genConfirmedProposalState pm)
-          )
-    <*> Gen.maybe (Gen.set (Range.linear 0 10) genStakeholderId)
-    <*> Gen.maybe genSlottingData
- where
-  hmRange :: Range Int
-  hmRange = Range.linear 0 10
 
 genUpdateData :: Gen UpdateData
 genUpdateData =
@@ -291,19 +190,8 @@ genUpsData :: Gen (Map SystemTag UpdateData)
 genUpsData =
   Gen.map (Range.linear 0 20) ((,) <$> genSystemTag <*> genUpdateData)
 
-genUpsExtra :: Gen UpsExtra
-genUpsExtra = UpsExtra <$> genHeaderHash
-
 genVote :: ProtocolMagicId -> Gen Vote
 genVote pm = mkVote pm <$> genSecretKey <*> genUpId pm <*> Gen.bool
 
 genVoteId :: ProtocolMagicId -> Gen VoteId
 genVoteId pm = (,,) <$> genUpId pm <*> genPublicKey <*> Gen.bool
-
-genVoteState :: Gen VoteState
-genVoteState =
-  Gen.element [PositiveVote, NegativeVote, PositiveRevote, NegativeRevote]
-
--- | Copied here from "Cardano.Chain.Block.Gen" to avoid module cycle
-genHeaderHash :: Gen HeaderHash
-genHeaderHash = coerce <$> genTextHash

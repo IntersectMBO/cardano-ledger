@@ -13,5 +13,4 @@ import Cardano.Chain.Update.ProtocolVersion as X
 import Cardano.Chain.Update.SoftforkRule as X
 import Cardano.Chain.Update.SoftwareVersion as X
 import Cardano.Chain.Update.SystemTag as X
-import Cardano.Chain.Update.Undo as X
 import Cardano.Chain.Update.Vote as X

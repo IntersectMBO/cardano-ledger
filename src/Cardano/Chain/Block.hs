@@ -10,6 +10,4 @@ import Cardano.Chain.Block.ExtraBodyData as X
 import Cardano.Chain.Block.ExtraHeaderData as X
 import Cardano.Chain.Block.Header as X
 import Cardano.Chain.Block.Proof as X
-import Cardano.Chain.Block.SlogUndo as X
-import Cardano.Chain.Block.Undo as X
 import Cardano.Chain.Block.Validation as X
