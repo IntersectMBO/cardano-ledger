@@ -21,15 +21,14 @@ this property.
 
 In this section, we discuss the relevant accounting that needs to be done
 as a result of processing a transaction, i.e.~the deposits for all certificates,
-transaction fees, transaction withdrawals, and refunds for individual
+transaction fees, transaction withdrawals and refunds for individual
 deregistration, so that we may keep track of whether the preservation of
 value is satisfied. Stake pool retirement refunds are not triggered by a
-transaction (but rather, happen at the epoch boundary), and are therefore
+transaction (but rather, happen at the epoch boundary) and are therefore
 not considered in our state change rules invoked due to a signal transaction.
 
-Note, that when a transaction is issued by a wallet to be applied to the ledger
-state (i.e.~processed),
-we define the rules in this section in such a way that it is impossible to
+Note that when a transaction is issued by a wallet to be applied to the ledger
+state (i.e.~processed), the rules in this section are defined in such a way that it is impossible to
 apply only some parts of a transaction (e.g.~only certain certificates).
 Every part of the transaction must be valid and it must be live, otherwise
 it is ignored entirely. It is the wallet's responsibility to inform the user
@@ -54,9 +53,9 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
     transaction.
 
   \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
-    in the context of the protocol parameters, the current UTxO on the ledger, and the registered
+    in the context of the protocol parameters, the current UTxO on the ledger and the registered
     stake keys.  This calculation is a sum of all coin in the inputs of $\var{tx}$,
-    reward withdrawals, and stake key deposit refunds.
+    reward withdrawals and stake key deposit refunds.
     Some of the definitions used in this function will be defined in
     Section~\ref{sec:deps-refunds}.
     In particular, $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
@@ -65,17 +64,17 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
     in the context of the protocol parameters and the registered stake pools.
     This calculation is a sum of all coin in the outputs of $\var{tx}$,
-    the transaction fee, and all needed deposits.
+    the transaction fee and all needed deposits.
     Some of the definitions used in this function will be defined in
     Section~\ref{sec:deps-refunds}.
     In particular, $\fun{deposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
     and $\StakePools$ is defined in Figure~\ref{fig:delegation-defs}.
 \end{itemize}
 
-The preservation of value property holds for a transaction, for a given ledger state,
+For a transaction and a given ledger state, the preservation of value property holds
 exactly when the results of $\fun{consumed}$ equal the results of $\fun{produced}$.
 Moreover, when the property holds, value is only moved between transaction outputs,
-the reward accounts, the fee pot, and the deposit pot.
+the reward accounts, the fee pot and the deposit pot.
 
 Note that the $\fun{consumed}$ function takes the registered stake pools ($\var{stpools}$)
 as a parameter only in order to determine which pool registration certificates are
@@ -133,10 +132,10 @@ The environment, $\UTxOEnv$, consists of:
     (also explained in Section~\ref{sec:delegation-shelley},
     Figure~\ref{fig:delegation-defs}).
 \end{itemize}
-The current slot and the registrations are need for the refund calculations
+The current slot and registrations are needed for the refund calculations
 described in Section~\ref{sec:deps-refunds}.
 
-The state needed for the UTxO transition, $\UTxOState$, consists of:
+The state needed for the UTxO transition $\UTxOState$, consists of:
 
 \begin{itemize}
   \item The current UTxO.
@@ -238,7 +237,7 @@ Note here that output entries for both the deposit refunds and the rewards
 withdrawals must be included in the body of the transaction
 carrying the deregistration certificates (requesting these refunds) and the
 reward requests. It is the job
-of the wallet to calculate the value of these refunds and withdrawals, and
+of the wallet to calculate the value of these refunds and withdrawals and
 generate the correct outputs to include in the outputs list of $\var{tx}$ such
 that applying this transaction results in a
 valid ledger update adding correct amounts of coin to the right addresses.
@@ -246,7 +245,7 @@ valid ledger update adding correct amounts of coin to the right addresses.
 The approach of including refunds and rewards directly in the $outputs$ gives
 great flexibility to the management of the coin value obtained from these
 accounts, i.e.~it can be directed to any address. However, it means there is no
-direct link between the $wdrls$ requests (similarly, the key deregistration
+direct link between the $wdrls$ requests (similarly for the key deregistration
 certificate addresses and refund amounts) and the $outputs$. We verify that
 the included outputs are correct and authorized through the preservation of value condition
 and witnessing the transaction. The combination of the
@@ -260,9 +259,9 @@ accounts where a reward is accumulated to a specific address.
 
 Note that the $\var{refunded}$ and $\var{decayed}$ values added together give what the
 full, non-decayed refund for all the key deregistration certificates in $\var{tx}$
-would be, and this total value is always removed from the $\var{deposits}$
+would be and this total value is always removed from the $\var{deposits}$
 amount on the ledger. The $\var{refunded}$ amount is returned to the certificate
-author, and the $\var{decayed}$ amount is transferred over to $\var{fees}$
+author and the $\var{decayed}$ amount is transferred over to $\var{fees}$
 (this allows the ledger to adhere to the preservation of value).
 
 Note also that the reason only the decayed value of requested refunds
@@ -330,7 +329,7 @@ requests).
 
 Deposits are described in appendix B.2 of the delegation design document \cite{delegation_design}.
 These deposit functions were used above in the UTxO transition,~\ref{sec:utxo-trans}.
-Deposits are used for stake key registration certificate and pool
+Deposits are used for stake key registration and pool
 registration certificates, which will be explained in Section~\ref{sec:delegation-shelley}.
 In particular, the function $\cwitness{}$, which gets the certificate witness
 from a certificate, will be defined later.
@@ -346,7 +345,7 @@ Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund funct
   \item The function $\fun{keyRefund}$, calculates the refund for an individual
     stake key registration deposit, based on the slot when it was created and
     the slot passed to the function. The creation slot should always exist in the map
-    $\var{stkeys}$ passed to the function, and this would be a good property
+    $\var{stkeys}$ passed to the function and this would be a good property
     to prove about the transition system.
   \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
     the total value to be refunded to all individual key deregistration certificate authors
@@ -359,7 +358,7 @@ Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund funct
     the $\var{tx}$ itself --- meaning that the coin value of the refund must be
     explicitly specified in the outputs of the transaction. So,
     the value of the included refund must be calculated before this transaction
-    is ever processed, and be the same \textit{no matter when} the $\var{tx}$
+    is ever processed and be the same \textit{no matter when} the $\var{tx}$
     \textit{is actually processed} in order to allow the system to continue to
     satisfy the general accounting property.
 
@@ -373,13 +372,13 @@ Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund funct
     based on \textit{current} protocol parameters. This means that any deposits
     made prior to a change will be different from their corresponding
     (decayed) refunds in the case of key deregistration after a change in
-    protocol parameters. Constants may only change at the epoch boundary, and
+    protocol parameters. Constants may only change at the epoch boundary and
     ensuring there are always sufficient funds for all
     refunds in the $\var{deposits}$ pool is part of the protocol constant
     change transition, described in Section~\ref{sec:epoch}.
 
     The protocol parameters are not
-    expected to change often, and using the current ones for the calculation
+    expected to change often and using the current ones for the calculation
     is a deliberate simplification choice, which does not introduce any inconsistencies
     into the system rules or properties. In particular, the general accounting
     property is not violated.
@@ -496,7 +495,7 @@ Section~\ref{sec:epoch}.
 The purpose of witnessing is make sure that the intended action is authorized by
 the holder of the signing key, providing replay protection as a consequence.
 Replay prevention is an inherent property of UTxO type accounting
-since transaction IDs are unique, and we require all transaction to
+since transaction IDs are unique and we require all transaction to
 consume at least one input.
 
 A transaction is witnessed by a signature and a verification key corresponding to this signature.

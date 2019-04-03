@@ -279,7 +279,7 @@ of
 \end{figure}
 
 Figure~\ref{fig:rules:not-new-epoch} defines the new epoch state transition. It
-has two rules: the first one is the case of the epoch signal $e$ is before the
+has two rules: the first one deals with the case when the epoch signal $e$ is before the
 current epoch \var{e_\ell}. This rule does not change the state. The second rule
 describes the change in the case of $e$ being equal to the next epoch
 $e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
@@ -294,7 +294,7 @@ In the second case, the new epoch state is updated as follows:
   map.
 \item The epoch state is updated first with the rewards update \var{ru} and then
   via the call to $\mathsf{EPOCH}$.
-\item The rewards update to set to \Nothing.
+\item The rewards update is set to \Nothing.
 \item The pool distribution is updated according to the changes in the stake
   pools.
 \end{itemize}
@@ -302,7 +302,7 @@ In the second case, the new epoch state is updated as follows:
 The new pool distribution \var{pd}' is calculated from the delegation map and
 stake allocation of the previous epoch. It associates every stake pool key
 ($\HashKey_{pool}$) to which a staking key ($\HashKey_{stake}$) delegates with
-the stake that $\HashKey_{stake}$ has. The sum of all stake the staking keys
+the stake that $\HashKey_{stake}$ has. The sum of stake for all staking keys
 delegating to $\HashKey_{pool}$ then becomes the new entry of $\HashKey_{pool}$
 in the pool distribution.
 
@@ -403,10 +403,10 @@ in the pool distribution.
   \label{fig:rules:not-new-epoch}
 \end{figure}
 
-\subsection{Update Nonces Transition}
+\subsection{Update Nonce Transition}
 \label{sec:update-nonces-trans}
 
-The update nonce transition updates the nonces until the randomness gets
+The Update Nonce Transition updates the nonces until the randomness gets
 fixed. The environment is shown in Figure~\ref{fig:ts-types:updnonce} and
 consists of the epoch nonce $\eta$. The update nonce state is shown in
 Figure~\ref{fig:rules:update-nonce} and consists of the candidate nonce
@@ -424,8 +424,8 @@ $\eta_c$ and the evolving nonce $\eta_v$.
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
 There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
-\SlotsPrior slots from the begin of the epoch, and one where \var{s} is at least
-\SlotsPrior slots after the first slot of the epoch.
+\SlotsPrior{} slots from the beginning of the epoch and one where \var{s} is at least
+\SlotsPrior{} slots after the first slot of the epoch.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:update-both}
@@ -484,7 +484,7 @@ There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
 \subsection{Operational Certificate Transition}
 \label{sec:oper-cert-trans}
 
-The operational certificate transition does not use any environment, its signal
+The Operational Certificate Transition does not use any environment, its signal
 is a block header body, its state is shown in
 Figure~\ref{fig:ts-types:ocert}. The state consists of
 
@@ -529,7 +529,7 @@ transition which are the following:
   \var{vk_{cold}}.
 \end{itemize}
 
-After this, the transition systems updates the operational certificate state by
+After this, the transition system updates the operational certificate state by
 updating the mapping of operational certificates where it overwrites the entry
 of the key \var{hk} with the KES period \var{n}.
 
@@ -581,7 +581,7 @@ of the key \var{hk} with the KES period \var{n}.
 \subsection{Block Header Transition}
 \label{sec:block-header-trans}
 
-The block header transition updates the block header state. The environment is
+The Block Header Transition updates the block header state. The environment is
 given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
 wall-clock time) and the protocol parameters. The block header state is shown in
 Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
@@ -709,7 +709,7 @@ The verifiable random function (VRF) transition rule validates that a block
 header is correctly produced, i.e., the block issuer is a selected leader for
 that slot and has the right to produce the block.
 
-The verifiable random function transition used the environment shown in
+The verifiable random function transition uses the environment shown in
 Figure~\ref{fig:ts-types:vrf} which consists of
 
 \begin{itemize}
@@ -784,7 +784,7 @@ verification of the following:
 \end{itemize}
 
 When these preconditions are fulfilled, the transition updates the VRF states by
-replacing he hash header with \var{h'} and the slot with \var{s_\ell}, as
+replacing the hash header with \var{h'} and the slot with \var{s_\ell}, as
 returned by the application of the $\mathsf{BHEAD}$ transition rule.
 
 \begin{figure}[ht]
@@ -861,7 +861,7 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
 \subsection{Block Body Transition}
 \label{sec:block-body-trans}
 
-The block body transition updates the block body state which comprises the
+The Block Body Transition updates the block body state which comprises the
 ledger state and the map describing the produced blocks. The environment of the
 $\mathsf{BBODY}$ transition are the protocol parameters.
 
@@ -888,7 +888,7 @@ state. The signal is a block from which we extract:
   hash \var{hk}.
 \end{itemize}
 
-The transition is executed, if the following preconditions are met:
+The transition is executed if the following preconditions are met:
 
 \begin{itemize}
 \item The size of the block body is less than or equal to the maximal body size
@@ -958,10 +958,10 @@ keys to the incremented value of produced blocks (\var{n} + 1).
 \subsection{Reward Update Transition}
 \label{sec:reward-update-trans}
 
-The reward update transition calculates a new $\RewardUpdate$ to apply in a
+The Reward Update Transition calculates a new $\RewardUpdate$ to apply in a
 $\mathsf{NEWEPOCH}$ transition. The environment is shown in
 Figure~\ref{fig:ts-types:reward-update}, it consists of the produced blocks
-mapping \var{b} an the epoch state \var{es}. Its state is an optional reward
+mapping \var{b} and the epoch state \var{es}. Its state is an optional reward
 update.
 
 \begin{figure}
@@ -1077,7 +1077,7 @@ part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
 $\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
 
 The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
-it comprises the current slot number \var{s_{now}} and the new protocol
+it is comprised of the current slot number \var{s_{now}} and the new protocol
 parameters \var{pp_n}.
 
 The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
@@ -1131,7 +1131,7 @@ following:
 \end{figure}
 
 The $\mathsf{CHAIN}$ transition rule is shown in
-Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from the \var{block}
+Figure~\ref{fig:rules:chain}. Its signal is a \var{block} from the \var{block}
 we extract the block header body \var{bhb}. From \var{bhb} we extract the block
 nonce $\eta$ and the block slot \var{s}. The transition rule itself has no
 preconditions, instead it calls all its subrules.

@@ -15,7 +15,7 @@ There are three types of UTxO addresses:
 Together, these three address types make up the $\Addr$ type, which will be used
 in transaction outputs in Section~\ref{sec:utxo}.
 
-Note that for security, privacy, and usability reasons, the staking (delegating)
+Note that for security, privacy and usability reasons, the staking (delegating)
 key pair associated with an address should be different from its payment key pair.
 Before the stake key is registered and delegated to an existing stake pool,
 the payment key can be used for transactions, though it will not receive rewards from staking.
@@ -25,7 +25,7 @@ Finally, there is an account style address $\AddrRWD$ which contains the hash of
 These account addresses will only be used for receiving rewards from the proof of
 stake leader election.  Apendix A of \cite{delegation_design} explains this design choice.
 The mechanism for transferring rewards from these accounts will be explained in
-Section~\ref{sec:utxo}, and follows \cite{chimeric}.
+Section~\ref{sec:utxo} and follows \cite{chimeric}.
 
 \begin{figure*}[hbt]
   \emph{Abstract types}
@@ -110,4 +110,3 @@ Section~\ref{sec:utxo}, and follows \cite{chimeric}.
 \end{figure*}
 
 \clearpage
-
