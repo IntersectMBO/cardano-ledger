@@ -3088,6 +3088,19 @@ actually dealing out the rewards, it will be fine if different wallets will
 choose different methods of calculating the averages, since it does not affect
 the consensus.
 
+\subsubsection{Apparent Performance of New Pools}
+\label{apparent-performance-of-new-pools}
+
+When a new pool is created, there will be no data to determine its apparent
+performance, which is needed to calculate its desirability and non-myopic
+rewards. In order to include a new pool in the ranked display of pools, a wallet
+will have to pick a default value for the apparent performance.
+
+In order to neither advantage nor disadvantage new pools, we recommend
+initialising the moving average of the apparent performance with the median of
+the averged apparent performance of the top \(k\) stake pools (i.e., those that
+we expect to attract members).
+
 \subsection{Utility}
 \label{utility}
 
