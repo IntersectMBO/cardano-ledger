@@ -143,7 +143,7 @@ ts_roundTripBlockCompat =
       trippingBuildable
         esb
         (serializeEncoding . encodeBlock es . unWithEpochSlots)
-        (fmap (WithEpochSlots es . fromJust) . decodeFullDecoder "Block" (decodeBlockOrBoundary es))
+        (fmap (WithEpochSlots es . fromJust) . decodeFullDecoder "Block" (decodeBlockOrBoundary es False))
 
 
 --------------------------------------------------------------------------------

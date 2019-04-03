@@ -124,6 +124,7 @@ library
                      , concurrency
                      , cryptonite
                      , Cabal
+                     , deepseq
                      , directory
                      , filepath
                      , formatting
