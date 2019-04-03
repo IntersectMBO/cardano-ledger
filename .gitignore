@@ -56,3 +56,6 @@ gitHeadLocal.gin
 
 # Local development
 stack-local.yaml
+
+# Mac
+.DS_Store
