@@ -67,7 +67,7 @@ Nix building is handled by `nix-tools`, which will generate a file with the GHC 
 2. Updating `stack.yaml` `resolver` in `cardano-ledger`
 3. Running `scripts/nix-tools-generate.sh`
 
-This may require updating the version of `iohk-nix` if the compiler version you're switching to isn't supported in the current version of `iohk-nix`.
+This may require updating the version of `iohk-nix` if the compiler version you're switching to isn't supported in the current version of `iohk-nix`. This will result in an error like `missing attribute 'ghc864'`. To update `iohk-nix`, simply change the git revision in `iohk-nix.json`.
 
 
 ## Formatting
