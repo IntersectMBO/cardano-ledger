@@ -424,7 +424,7 @@ $\eta_c$ and the evolving nonce $\eta_v$.
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
 There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
-\SlotsPrior{} slots from the begin of the epoch and one where \var{s} is at least
+\SlotsPrior{} slots from the beginning of the epoch and one where \var{s} is at least
 \SlotsPrior{} slots after the first slot of the epoch.
 
 \begin{figure}[ht]
@@ -1077,7 +1077,7 @@ part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
 $\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
 
 The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
-it comprises of the current slot number \var{s_{now}} and the new protocol
+it is comprised of the current slot number \var{s_{now}} and the new protocol
 parameters \var{pp_n}.
 
 The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
