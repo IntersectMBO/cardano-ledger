@@ -17,14 +17,12 @@ import Cardano.Prelude
 
 import Data.Coerce (coerce)
 import Hedgehog (Gen)
-import qualified Hedgehog.Gen as Gen
 
 import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
   , Body
   , ConsensusData
-  , hashHeader
   , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
@@ -33,22 +31,20 @@ import Cardano.Chain.Block
   , ToSign(..)
   , body
   , consensusData
+  , hashHeader
   , mkBlockExplicit
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Slotting (EpochSlots, WithEpochSlots(WithEpochSlots))
+import Cardano.Chain.Slotting
+  (EpochIndex(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
-import Cardano.Crypto (ProtocolMagicId)
+import Cardano.Crypto (ProtocolMagicId, createPsk, noPassSafeSigner, toPublic)
 
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochIndex
-  , genEpochSlots
-  , genFlatSlotId
-  , genSlotId
-  )
+  (genEpochIndex, genEpochSlots, genFlatSlotId, genSlotId)
 import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -56,16 +52,13 @@ import Test.Cardano.Crypto.Gen
   , genProxySignature
   , genPublicKey
   , genSecretKey
-  , genSignature
   , genTextHash
   )
 
 
 genBlockSignature :: ProtocolMagicId -> EpochSlots -> Gen BlockSignature
-genBlockSignature pm epochSlots = Gen.choice
-  [ BlockSignature <$> genSignature pm mts
-  , BlockPSignatureHeavy <$> genProxySignature pm mts genEpochIndex
-  ]
+genBlockSignature pm epochSlots =
+  BlockSignature <$> genProxySignature pm mts genEpochIndex
   where mts = genToSign pm epochSlots
 
 genHeaderHash :: Gen HeaderHash
@@ -79,17 +72,17 @@ genBody pm =
     <*> Delegation.genPayload pm
     <*> Update.genPayload pm
 
--- We use `Nothing` as the ProxyVKBlockInfo to avoid clashing key errors
--- (since we use example keys which aren't related to each other)
 genHeader :: ProtocolMagicId -> EpochSlots -> Gen Header
-genHeader pm epochSlots =
+genHeader pm epochSlots = do
+  sk <- genSecretKey
+  let cert = createPsk pm (noPassSafeSigner sk) (toPublic sk) (EpochIndex 0)
   mkHeaderExplicit pm
     <$> genHeaderHash
     <*> genChainDifficulty
     <*> pure epochSlots
     <*> genFlatSlotId
-    <*> genSecretKey
-    <*> pure Nothing
+    <*> pure sk
+    <*> pure cert
     <*> genBody pm
     <*> genExtraHeaderData
 
@@ -128,18 +121,20 @@ genToSign pm epochSlots =
     <*> genSlotId epochSlots
     <*> genChainDifficulty
     <*> genExtraHeaderData
-  where
-    mkAbstractHash :: Header -> HeaderHash
-    mkAbstractHash = hashHeader epochSlots
+ where
+  mkAbstractHash :: Header -> HeaderHash
+  mkAbstractHash = hashHeader epochSlots
 
 genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
 genBlockWithEpochSlots pm = do
   epochSlots <- genEpochSlots
-  b  <- genBlock pm epochSlots
+  b          <- genBlock pm epochSlots
   pure $! WithEpochSlots epochSlots b
 
 genBlock :: ProtocolMagicId -> EpochSlots -> Gen Block
-genBlock pm epochSlots =
+genBlock pm epochSlots = do
+  sk <- genSecretKey
+  let cert = createPsk pm (noPassSafeSigner sk) (toPublic sk) (EpochIndex 0)
   mkBlockExplicit pm
     <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
@@ -147,6 +142,6 @@ genBlock pm epochSlots =
     <*> genChainDifficulty
     <*> pure epochSlots
     <*> genFlatSlotId
-    <*> genSecretKey
-    <*> pure Nothing
+    <*> pure sk
+    <*> pure cert
     <*> genBody pm

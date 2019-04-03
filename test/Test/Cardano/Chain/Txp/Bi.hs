@@ -257,10 +257,10 @@ sizeEstimates
           , addlCtx     = M.fromList [attrUnitSize, attrAddrSize]
           , computedCtx = \tx -> M.fromList
             [ ( typeRep (Proxy @(LengthOf [TxIn]))
-              , SizeConstant (fromIntegral $ length $ _txInputs tx)
+              , SizeConstant (fromIntegral $ length $ txInputs tx)
               )
             , ( typeRep (Proxy @(LengthOf [TxOut]))
-              , SizeConstant (fromIntegral $ length $ _txOutputs tx)
+              , SizeConstant (fromIntegral $ length $ txOutputs tx)
               )
             ]
           }
@@ -276,13 +276,13 @@ sizeEstimates
           , addlCtx     = M.fromList [attrUnitSize, attrAddrSize, txSigSize]
           , computedCtx = \ta -> M.fromList
             [ ( typeRep (Proxy @(LengthOf [TxIn]))
-              , SizeConstant (fromIntegral $ length $ _txInputs $ taTx ta)
+              , SizeConstant (fromIntegral $ length $ txInputs $ taTx ta)
               )
             , ( typeRep (Proxy @(LengthOf (Vector TxInWitness)))
               , SizeConstant (fromIntegral $ length $ taWitness ta)
               )
             , ( typeRep (Proxy @(LengthOf [TxOut]))
-              , SizeConstant (fromIntegral $ length $ _txOutputs $ taTx ta)
+              , SizeConstant (fromIntegral $ length $ txOutputs $ taTx ta)
               )
             ]
           }

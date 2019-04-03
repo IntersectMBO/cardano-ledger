@@ -22,7 +22,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Lens (coerced, (%~))
 import Control.Monad.Except (liftEither)
 import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
@@ -135,11 +134,11 @@ generateGenesisData startTime genesisSpec = do
         <$> zip dlgIssuersSecrets richSecrets
 
   genesisDlg <-
-    liftEither
-    .  first GenesisDataGenerationDelegationError
-    $  mkGenesisDelegation
-    $  M.elems (unGenesisDelegation $ gsHeavyDelegation genesisSpec)
-    <> genesisDlgList
+    mkGenesisDelegation
+        (  M.elems (unGenesisDelegation $ gsHeavyDelegation genesisSpec)
+        <> genesisDlgList
+        )
+      `wrapError` GenesisDataGenerationDelegationError
 
   -- Real AVVM Balances
   let
@@ -148,7 +147,9 @@ generateGenesisData startTime genesisSpec = do
       map (applyLovelacePortionDown $ giAvvmBalanceFactor gi)
 
     realAvvmMultiplied :: GenesisAvvmBalances
-    realAvvmMultiplied = realAvvmBalances & coerced %~ applyAvvmBalanceFactor
+    realAvvmMultiplied =
+      GenesisAvvmBalances . applyAvvmBalanceFactor $ unGenesisAvvmBalances
+        realAvvmBalances
 
   -- Fake AVVM Balances
   fakeAvvmPublicKeys <-
@@ -175,20 +176,15 @@ generateGenesisData startTime genesisSpec = do
 
   ---- Balances
   totalFakeAvvmBalance <-
-    liftEither . first GenesisDataGenerationLovelaceError $ scaleLovelace
-      (faoOneBalance fao)
-      (faoCount fao)
+    scaleLovelace (faoOneBalance fao) (faoCount fao)
+      `wrapError` GenesisDataGenerationLovelaceError
 
   -- Compute total balance to generate
   avvmSum <-
-    liftEither
-    . first GenesisDataGenerationLovelaceError
-    $ sumLovelace
-    $ getGenesisAvvmBalances realAvvmMultiplied
+    sumLovelace (unGenesisAvvmBalances realAvvmMultiplied)
+      `wrapError` GenesisDataGenerationLovelaceError
   maxTnBalance <-
-    liftEither . first GenesisDataGenerationLovelaceError $ subLovelace
-      maxBound
-      avvmSum
+    subLovelace maxBound avvmSum `wrapError` GenesisDataGenerationLovelaceError
   let tnBalance = min maxTnBalance (tboTotalBalance tbo)
 
   let
@@ -204,9 +200,8 @@ generateGenesisData startTime genesisSpec = do
       else pure $ zip a b
 
   nonAvvmBalance <-
-    liftEither . first GenesisDataGenerationLovelaceError $ subLovelace
-      tnBalance
-      totalFakeAvvmBalance
+    subLovelace tnBalance totalFakeAvvmBalance
+      `wrapError` GenesisDataGenerationLovelaceError
 
   (richBals, poorBals) <- genTestnetDistribution tbo nonAvvmBalance
 

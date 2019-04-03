@@ -50,7 +50,6 @@ module Cardano.Chain.Block.Header
   , ToSign(..)
   , ConsensusData
   , consensusData
-  , verifyConsensusData
 
   -- * 'ConsensusData' encoding and decoding
   , encodeConsensusData
@@ -94,7 +93,7 @@ import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Block.ExtraHeaderData
   (ExtraHeaderData(..), ExtraHeaderDataError, verifyExtraHeaderData)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
-import Cardano.Chain.Common (Attributes, ChainDifficulty (..))
+import Cardano.Chain.Common (Attributes, ChainDifficulty(..))
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -115,17 +114,11 @@ import Cardano.Crypto
   , PublicKey
   , SecretKey
   , SignTag(..)
-  , Signature
   , hashHexF
-  , isSelfSignedPsk
   , proxySign
   , proxyVerifyDecoded
-  , psigPsk
   , pskIssuerPk
-  , sign
-  , toPublic
   , unsafeAbstractHash
-  , verifySignatureDecoded
   )
 
 
@@ -161,43 +154,53 @@ instance B.Buildable (WithEpochSlots Header) where
   build (WithEpochSlots es header) = renderHeader es header
 
 renderHeader :: EpochSlots -> Header -> Builder
-renderHeader es header =
-  bprint
-    ( "Header:\n"
-    . "    hash: " . hashHexF . "\n"
-    . "    previous block: " . hashHexF . "\n"
-    . "    slot: " . build . "\n"
-    . "    difficulty: " . int . "\n"
-    . "    leader: " . build . "\n"
-    . "    signature: " . build . "\n"
-    . build
-    )
-    headerHash
-    (headerPrevHash header)
-    (consensusSlot consensus)
-    (unChainDifficulty $ consensusDifficulty consensus)
-    (consensusLeaderKey consensus)
-    (consensusSignature consensus)
-    (headerExtraData header)
-  where
-    headerHash :: HeaderHash
-    headerHash = hashHeader es header
-    consensus  = headerConsensusData header
+renderHeader es header = bprint
+  ( "Header:\n"
+  . "    hash: "
+  . hashHexF
+  . "\n"
+  . "    previous block: "
+  . hashHexF
+  . "\n"
+  . "    slot: "
+  . build
+  . "\n"
+  . "    difficulty: "
+  . int
+  . "\n"
+  . "    leader: "
+  . build
+  . "\n"
+  . "    signature: "
+  . build
+  . "\n"
+  . build
+  )
+  headerHash
+  (headerPrevHash header)
+  (consensusSlot consensus)
+  (unChainDifficulty $ consensusDifficulty consensus)
+  (consensusLeaderKey consensus)
+  (consensusSignature consensus)
+  (headerExtraData header)
+ where
+  headerHash :: HeaderHash
+  headerHash = hashHeader es header
+  consensus  = headerConsensusData header
 
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
 encodeHeader' :: EpochSlots -> Header -> Encoding
-encodeHeader' es h
-  =  encodeListLen 5
-  <> encode (headerProtocolMagicId h)
-  <> encode (headerPrevHash h)
-  <> encode (headerProof h)
-  <> encodeConsensusData es (headerConsensusData h)
-  <> encode (headerExtraData h)
+encodeHeader' es h =
+  encodeListLen 5
+    <> encode (headerProtocolMagicId h)
+    <> encode (headerPrevHash h)
+    <> encode (headerProof h)
+    <> encodeConsensusData es (headerConsensusData h)
+    <> encode (headerExtraData h)
 
 decodeHeader' :: EpochSlots -> Decoder s Header
-decodeHeader' epochSlots =
-  void <$> decodeAHeader epochSlots
+decodeHeader' epochSlots = void <$> decodeAHeader epochSlots
 
 decodeAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
 decodeAHeader epochSlots = do
@@ -229,14 +232,16 @@ mkHeader
   -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
-  -> Maybe Delegation.Certificate
-  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
-  --   right to sign this block
+  -> Delegation.Certificate
+  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeader pm prevHeader epochSlots =
-  mkHeaderExplicit pm prevHash difficulty epochSlots
+mkHeader pm prevHeader epochSlots = mkHeaderExplicit
+  pm
+  prevHash
+  difficulty
+  epochSlots
  where
   prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
   difficulty = either
@@ -260,32 +265,30 @@ mkHeaderExplicit
   -> FlatSlotId
   -> SecretKey
   -- ^ The 'SecretKey' used for signing the block
-  -> Maybe Delegation.Certificate
-  -- ^ A certificate of delegation in case the 'SecretKey' does not have the
-  --   right to sign this block
+  -> Delegation.Certificate
+  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
   -> Body
   -> ExtraHeaderData
   -> Header
-mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk mDlgCert body extra = AHeader
-  pm
-  (Annotated prevHash ())
-  (Annotated proof ())
-  consensus
-  (Annotated extra ())
-  ()
+mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body extra
+  = AHeader
+    pm
+    (Annotated prevHash ())
+    (Annotated proof ())
+    consensus
+    (Annotated extra ())
+    ()
  where
-  proof = mkProof body
+  proof  = mkProof body
 
   toSign = ToSign prevHash proof epochAndSlotCount difficulty extra
 
   epochAndSlotCount = unflattenSlotId epochSlots slotId
 
-  signature = case mDlgCert of
-    Nothing -> BlockSignature $ sign pm SignMainBlock sk toSign
-    Just dlgCert ->
-      BlockPSignatureHeavy $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
+  signature =
+    BlockSignature $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
 
-  leaderPk = maybe (toPublic sk) pskIssuerPk mDlgCert
+  leaderPk  = pskIssuerPk dlgCert
 
   consensus = consensusData slotId leaderPk difficulty signature
 
@@ -325,16 +328,12 @@ headerLength :: AHeader ByteString -> Int64
 headerLength = fromIntegral . BS.length . headerAnnotation
 
 data HeaderError
-  = HeaderConsensusError ConsensusError
-  | HeaderExtraDataError ExtraHeaderDataError
+  = HeaderExtraDataError ExtraHeaderDataError
   | HeaderInvalidSignature BlockSignature
   deriving (Eq, Show)
 
 instance B.Buildable HeaderError where
   build = \case
-    HeaderConsensusError err -> bprint
-      ("ConsensusData was invalid while checking Header.\n Error: " . build)
-      err
     HeaderExtraDataError err -> bprint
       ("ExtraHeaderData was invalid while checking Header.\n Error: " . build)
       err
@@ -352,9 +351,8 @@ verifyHeader
 verifyHeader pm epochSlots header = do
   -- Previous header hash is always valid.
   -- Body proof is just a bunch of hashes, which is always valid (although must
-  -- be checked against the actual body, in verifyBlock. Consensus data and
-  -- extra header data require validation.
-  liftEither . first HeaderConsensusError $ verifyConsensusData consensus
+  -- be checked against the actual body, in verifyBlock. Extra header data
+  -- requires validation.
   liftEither . first HeaderExtraDataError $ verifyExtraHeaderData
     (headerExtraData header)
   -- Internal consistency: is the signature in the consensus data really for
@@ -362,13 +360,7 @@ verifyHeader pm epochSlots header = do
   verifyBlockSignature (consensusSignature consensus)
     `orThrowError` HeaderInvalidSignature (consensusSignature consensus)
  where
-  verifyBlockSignature (BlockSignature sig) = verifySignatureDecoded
-    pm
-    SignMainBlock
-    (consensusLeaderKey consensus)
-    signed
-    sig
-  verifyBlockSignature (BlockPSignatureHeavy proxySig) =
+  verifyBlockSignature (BlockSignature proxySig) =
     proxyVerifyDecoded pm SignMainBlockHeavy proxySig (const True) signed
   signed    = recoverSignedBytes epochSlots header
   consensus = headerConsensusData header
@@ -445,34 +437,32 @@ wrapBoundaryBytes = mappend "\130\NUL"
 -- BlockSignature
 --------------------------------------------------------------------------------
 
--- | Signature of the block. Can be either regular signature from the issuer or
---   delegated signature having a constraint on epoch indices (it means the
---   signature is valid only if block's slot id has epoch inside the constrained
---   interval).
-data BlockSignature
-  = BlockSignature (Signature ToSign)
-  | BlockPSignatureHeavy (ProxySignature EpochIndex ToSign)
-  deriving (Show, Eq, Generic)
-
-instance NFData BlockSignature
+-- | Signature of the 'Block'
+--
+--   We use a heavyweight delegation scheme, so the signature has two parts:
+--
+--   1. A delegation certificate from a genesis key to the block signer
+--   2. The actual signature over `ToSign`
+newtype BlockSignature = BlockSignature
+  { unBlockSignature :: ProxySignature EpochIndex ToSign
+  } deriving (Show, Eq, Generic)
+    deriving anyclass NFData
 
 instance B.Buildable BlockSignature where
-  build (BlockSignature s)       = bprint ("BlockSignature: ".build) s
-  build (BlockPSignatureHeavy s) = bprint ("BlockPSignatureHeavy: ".build) s
+  build (BlockSignature s) = bprint ("BlockSignature: ".build) s
 
 instance Bi BlockSignature where
-  encode input = case input of
-    BlockSignature sig -> encodeListLen 2 <> encode (0 :: Word8) <> encode sig
+  encode (BlockSignature pxy) =
+    -- Tag 0 was previously used for BlockSignature (no delegation)
     -- Tag 1 was previously used for BlockPSignatureLight
-    BlockPSignatureHeavy pxy ->
-      encodeListLen 2 <> encode (2 :: Word8) <> encode pxy
+    encodeListLen 2 <> encode (2 :: Word8) <> encode pxy
 
   decode = do
     enforceSize "BlockSignature" 2
     decode >>= \case
-      0 -> BlockSignature <$> decode
-      2 -> BlockPSignatureHeavy <$> decode
+      2 -> BlockSignature <$> decode
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
+
 
 --------------------------------------------------------------------------------
 -- ToSign
@@ -480,9 +470,7 @@ instance Bi BlockSignature where
 
 -- | Produces the ByteString that was signed in the block
 recoverSignedBytes
-  :: EpochSlots
-  -> AHeader ByteString
-  -> Annotated ToSign ByteString
+  :: EpochSlots -> AHeader ByteString -> Annotated ToSign ByteString
 recoverSignedBytes es h = Annotated toSign bytes
  where
   bytes = BS.concat
@@ -533,7 +521,11 @@ instance Bi ToSign where
 type ConsensusData = AConsensusData ()
 
 consensusData
-  :: FlatSlotId -> PublicKey -> ChainDifficulty -> BlockSignature -> ConsensusData
+  :: FlatSlotId
+  -> PublicKey
+  -> ChainDifficulty
+  -> BlockSignature
+  -> ConsensusData
 consensusData slotNo pk cd bs =
   AConsensusData (Annotated slotNo ()) pk (Annotated cd ()) bs
 
@@ -556,7 +548,7 @@ decodeAConsensus epochSlots = do
   -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId` used in
   -- 'AConsensusData' is encoded as a epoch and slot-count pair.
   epochAndSlotCount :: Annotated SlotId ByteSpan <- decodeAnnotated
-  pk <- decode
+  pk           <- decode
   annChaiDifficulty <- decodeAnnotated
   consensusSig <- decode
   let slotNo = first (flattenSlotId epochSlots) epochAndSlotCount
@@ -569,30 +561,13 @@ consensusDifficulty :: AConsensusData a -> ChainDifficulty
 consensusDifficulty = unAnnotated . aConsensusDifficulty
 
 encodeConsensusData :: EpochSlots -> ConsensusData -> Encoding
-encodeConsensusData es cd
-  =  encodeListLen 4
-  <> encode (unflattenSlotId es $ consensusSlot cd)
-  <> encode (consensusLeaderKey cd)
-  <> encode (consensusDifficulty cd)
-  <> encode (consensusSignature cd)
+encodeConsensusData es cd =
+  encodeListLen 4
+    <> encode (unflattenSlotId es $ consensusSlot cd)
+    <> encode (consensusLeaderKey cd)
+    <> encode (consensusDifficulty cd)
+    <> encode (consensusSignature cd)
 
 decodeConsensusData :: EpochSlots -> Decoder s ConsensusData
 decodeConsensusData epochSlots =
   (fmap . fmap) (const ()) (decodeAConsensus epochSlots)
-
-data ConsensusError = ConsensusSelfSignedPSK
-  deriving (Show, Eq)
-
-instance B.Buildable ConsensusError where
-  build = \case
-    ConsensusSelfSignedPSK ->
-      bprint "Self-signed ProxyVerificationKey in ConsensusData"
-
--- | Verify the consensus data in isolation
-verifyConsensusData :: MonadError ConsensusError m => AConsensusData a -> m ()
-verifyConsensusData mcd =
-  not (selfSignedProxy $ consensusSignature mcd)
-    `orThrowError` ConsensusSelfSignedPSK
- where
-  selfSignedProxy (BlockSignature       _  ) = False
-  selfSignedProxy (BlockPSignatureHeavy sig) = isSelfSignedPsk $ psigPsk sig

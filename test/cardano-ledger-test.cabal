@@ -45,9 +45,7 @@ library
 
   build-depends:       base
                      , base16-bytestring
-                     , binary
                      , bytestring
-                     , canonical-json
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-ledger
@@ -57,10 +55,8 @@ library
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
-                     , cryptonite
                      , formatting
                      , hedgehog
-                     , streaming
                      , text
                      , time
                      , vector

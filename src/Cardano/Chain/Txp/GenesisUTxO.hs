@@ -11,7 +11,7 @@ import qualified Data.Map.Strict as M
 import Cardano.Chain.Common (Address, Lovelace, makeRedeemAddress)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic, makeNetworkMagic)
 import Cardano.Chain.Genesis
-  (GenesisData(..), getGenesisAvvmBalances, getGenesisNonAvvmBalances)
+  (GenesisData(..), unGenesisAvvmBalances, unGenesisNonAvvmBalances)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Txp.Tx (TxIn(..), TxOut(..))
 import Cardano.Chain.Txp.UTxO (UTxO)
@@ -33,11 +33,11 @@ genesisUtxo genesisConfig = UTxO.fromList $ utxoEntry <$> preUtxo
 
   avvmBalances :: [(Address, Lovelace)]
   avvmBalances = first (makeRedeemAddress networkMagic)
-    <$> M.toList (getGenesisAvvmBalances $ gdAvvmDistr genesisData)
+    <$> M.toList (unGenesisAvvmBalances $ gdAvvmDistr genesisData)
 
   nonAvvmBalances :: [(Address, Lovelace)]
   nonAvvmBalances =
-    M.toList $ getGenesisNonAvvmBalances $ gdNonAvvmBalances genesisData
+    M.toList $ unGenesisNonAvvmBalances $ gdNonAvvmBalances genesisData
 
   utxoEntry :: (Address, Lovelace) -> (TxIn, TxOut)
   utxoEntry (addr, lovelace) =

@@ -45,7 +45,7 @@ prop_checkApplicationName = withTests 100 . property $ do
 prop_checkApplicationNameTooLong :: Property
 prop_checkApplicationNameTooLong = withTests 100 . property $ do
   (ApplicationName aName) <- forAll $ Gen.filter
-    (\name -> T.length (getApplicationName name) >= applicationNameMaxLength)
+    (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
     genApplicationName
   moreText <- forAll $ Gen.text (Range.linear 1 20) Gen.ascii
   assertIsLeftConstr
@@ -72,7 +72,7 @@ prop_checkSoftwareVersion = withTests 100 . property $ do
 prop_checkSoftwareVersionTooLong :: Property
 prop_checkSoftwareVersionTooLong = withTests 100 . property $ do
   (ApplicationName aName) <- forAll $ Gen.filter
-    (\name -> T.length (getApplicationName name) >= applicationNameMaxLength)
+    (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
     genApplicationName
   moreText <- forAll $ Gen.text (Range.linear 1 20) Gen.ascii
   let appNameTooLong = ApplicationName $ aName `T.append` moreText

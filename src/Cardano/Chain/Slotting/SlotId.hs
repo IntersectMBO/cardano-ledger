@@ -11,8 +11,6 @@
 
 module Cardano.Chain.Slotting.SlotId
   ( SlotId(..)
-  , siEpochL
-  , siSlotL
   , slotIdF
   , slotIdSucc
   , slotIdPred
@@ -28,7 +26,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Lens (makeLensesFor)
 import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Formatting (Format, bprint, build, int, ords, sformat)
@@ -72,12 +69,6 @@ instance Bi SlotId where
     SlotId <$> decode <*> decode
 
 deriveJSON defaultOptions ''SlotId
-
-makeLensesFor
-    [ ("siEpoch", "siEpochL")
-    , ("siSlot" , "siSlotL")
-    ]
-    ''SlotId
 
 slotIdToEnum :: EpochSlots -> FlatSlotId -> SlotId
 slotIdToEnum = unflattenSlotId

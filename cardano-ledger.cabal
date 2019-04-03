@@ -109,7 +109,6 @@ library
 
   build-depends:       base >=4.11 && <5
                      , aeson
-                     , base16-bytestring
                      , base58-bytestring
                      , base64-bytestring-type
                      , binary
@@ -125,7 +124,6 @@ library
                      , directory
                      , filepath
                      , formatting
-                     , lens
                      , memory
                      , mtl
                      , resourcet
@@ -207,7 +205,6 @@ test-suite cardano-ledger-test
   build-depends:       base
                      , base16-bytestring
                      , bytestring
-                     , canonical-json
                      , cardano-binary
                      , cardano-binary-test
                      , cardano-ledger
@@ -218,10 +215,8 @@ test-suite cardano-ledger-test
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
-                     , cryptonite
                      , cs-blockchain
                      , cs-ledger
-                     , directory
                      , filepath
                      , formatting
                      , hedgehog

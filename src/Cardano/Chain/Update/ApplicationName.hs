@@ -29,11 +29,11 @@ import Cardano.Binary.Class (Bi(..))
 
 
 newtype ApplicationName = ApplicationName
-  { getApplicationName :: Text
+  { unApplicationName :: Text
   } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData)
 
 instance Bi ApplicationName where
-  encode appName = encode (getApplicationName appName)
+  encode appName = encode (unApplicationName appName)
   decode = ApplicationName <$> decode
 
 instance FromJSON ApplicationName where

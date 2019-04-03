@@ -37,7 +37,7 @@ import Cardano.Chain.Common
 
 -- | Predefined balances of non avvm entries.
 newtype GenesisNonAvvmBalances = GenesisNonAvvmBalances
-  { getGenesisNonAvvmBalances :: Map Address Lovelace
+  { unGenesisNonAvvmBalances :: Map Address Lovelace
   } deriving (Show, Eq)
 
 instance B.Buildable GenesisNonAvvmBalances where
@@ -48,13 +48,13 @@ deriving instance Semigroup GenesisNonAvvmBalances
 deriving instance Monoid GenesisNonAvvmBalances
 
 instance Monad m => ToJSON m GenesisNonAvvmBalances where
-  toJSON = toJSON . getGenesisNonAvvmBalances
+  toJSON = toJSON . unGenesisNonAvvmBalances
 
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
 
 instance Aeson.ToJSON GenesisNonAvvmBalances where
-  toJSON = Aeson.toJSON . convert . getGenesisNonAvvmBalances
+  toJSON = Aeson.toJSON . convert . unGenesisNonAvvmBalances
    where
     convert :: Map Address Lovelace -> Map Text Integer
     convert = M.fromList . map f . M.toList

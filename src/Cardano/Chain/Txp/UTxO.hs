@@ -68,7 +68,7 @@ txOutputUTxO tx = UTxO $ M.fromList
   [ (TxInUtxo (txId tx) ix, txOut) | (ix, txOut) <- indexedOutputs ]
  where
   indexedOutputs :: [(Word32, TxOut)]
-  indexedOutputs = zip [0 ..] (NE.toList $ _txOutputs tx)
+  indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
 
   txId :: Tx -> TxId
   txId = hash

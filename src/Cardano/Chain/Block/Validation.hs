@@ -133,7 +133,7 @@ initialChainValidationState config = do
       , shStakeholderCounts = M.fromList
         . map (, BlockCount 0)
         . M.keys
-        . getGenesisWStakeholders
+        . unGenesisWStakeholders
         $ configBootStakeholders config
       , shSigningQueue = Empty
       }

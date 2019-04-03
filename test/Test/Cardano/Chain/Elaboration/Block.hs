@@ -111,8 +111,8 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
 
   (_, ssk) = elaborateKeyPair $ vKeyPair issuer
 
-  cDCert :: Maybe Delegation.Certificate
-  cDCert = Just $ elaborateDCert config $ rcDCert issuer ast
+  cDCert :: Delegation.Certificate
+  cDCert = elaborateDCert config $ rcDCert issuer ast
 
   bb0    = Concrete.ABody
     { Concrete.bodyTxPayload     = Txp.ATxPayload []
