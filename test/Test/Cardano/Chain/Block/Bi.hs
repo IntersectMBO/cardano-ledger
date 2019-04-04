@@ -118,9 +118,9 @@ goldenHeader =
     "test/golden/bi/block/Header"
 
 -- | Round-trip test the backwards compatible header encoding/decoding functions
-roundTripHeaderCompat :: TSProperty
-roundTripHeaderCompat =
-  eachOfTS (1%5) (feedPMEpochSlots $ genWithEpochSlots genHeader) roundTripsHeaderCompat
+ts_roundTripHeaderCompat :: TSProperty
+ts_roundTripHeaderCompat =
+  eachOfTS 10 (feedPMEpochSlots $ genWithEpochSlots genHeader) roundTripsHeaderCompat
   where
     roundTripsHeaderCompat :: WithEpochSlots Header -> H.PropertyT IO ()
     roundTripsHeaderCompat esh@(WithEpochSlots es _) =
@@ -134,9 +134,9 @@ roundTripHeaderCompat =
 --------------------------------------------------------------------------------
 
 -- | Round-trip test the backwards compatible block encoding/decoding functions
-roundTripBlockCompat :: TSProperty
-roundTripBlockCompat =
-  eachOfTS (1%5) (feedPM genBlockWithEpochSlots) roundTripsBlockCompat
+ts_roundTripBlockCompat :: TSProperty
+ts_roundTripBlockCompat =
+  eachOfTS 10 (feedPM genBlockWithEpochSlots) roundTripsBlockCompat
   where
     roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
     roundTripsBlockCompat esb@(WithEpochSlots es _) =
@@ -154,9 +154,9 @@ goldenBlockSignature :: Property
 goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
 
-roundTripBlockSignatureBi :: TSProperty
-roundTripBlockSignatureBi =
-  eachOfTS (1%5) (feedPMEpochSlots genBlockSignature) roundTripsBiBuildable
+ts_roundTripBlockSignatureBi :: TSProperty
+ts_roundTripBlockSignatureBi =
+  eachOfTS 10 (feedPMEpochSlots genBlockSignature) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -200,8 +200,8 @@ goldenHeaderHash :: Property
 goldenHeaderHash =
   goldenTestBi exampleHeaderHash "test/golden/bi/block/HeaderHash"
 
-roundTripHeaderHashBi :: TSProperty
-roundTripHeaderHashBi = eachOfTS 10 genHeaderHash roundTripsBiBuildable
+ts_roundTripHeaderHashBi :: TSProperty
+ts_roundTripHeaderHashBi = eachOfTS 1000 genHeaderHash roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -222,8 +222,8 @@ goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
 goldenBody :: Property
 goldenBody = goldenTestBi exampleBody "test/golden/bi/block/Body"
 
-roundTripBodyBi :: TSProperty
-roundTripBodyBi = eachOfTS (1%4) (feedPM genBody) roundTripsBiShow
+ts_roundTripBodyBi :: TSProperty
+ts_roundTripBodyBi = eachOfTS 20 (feedPM genBody) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -246,9 +246,9 @@ goldenConsensusData =
       exampleChainDifficulty
       exampleBlockSignature
 
-roundTripConsensusData :: TSProperty
-roundTripConsensusData =
-  eachOfTS (1%5) (feedPMEpochSlots $ genWithEpochSlots genConsensusData) roundTripConsensusData'
+ts_roundTripConsensusData :: TSProperty
+ts_roundTripConsensusData =
+  eachOfTS 20 (feedPMEpochSlots $ genWithEpochSlots genConsensusData) roundTripConsensusData'
   where
     roundTripConsensusData' :: WithEpochSlots ConsensusData -> H.PropertyT IO ()
     roundTripConsensusData' (WithEpochSlots es cd) =
@@ -265,8 +265,8 @@ goldenExtraBodyData :: Property
 goldenExtraBodyData = goldenTestBi mebd "test/golden/bi/block/ExtraBodyData"
   where mebd = ExtraBodyData (mkAttributes ())
 
-roundTripExtraBodyDataBi :: TSProperty
-roundTripExtraBodyDataBi = eachOfTS 10 genExtraBodyData roundTripsBiBuildable
+ts_roundTripExtraBodyDataBi :: TSProperty
+ts_roundTripExtraBodyDataBi = eachOfTS 1000 genExtraBodyData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -277,9 +277,9 @@ goldenExtraHeaderData :: Property
 goldenExtraHeaderData =
   goldenTestBi exampleExtraHeaderData "test/golden/bi/block/ExtraHeaderData"
 
-roundTripExtraHeaderDataBi :: TSProperty
-roundTripExtraHeaderDataBi =
-  eachOfTS 10 genExtraHeaderData roundTripsBiBuildable
+ts_roundTripExtraHeaderDataBi :: TSProperty
+ts_roundTripExtraHeaderDataBi =
+  eachOfTS 1000 genExtraHeaderData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -289,8 +289,8 @@ roundTripExtraHeaderDataBi =
 goldenProof :: Property
 goldenProof = goldenTestBi exampleProof "test/golden/bi/block/Proof"
 
-roundTripProofBi :: TSProperty
-roundTripProofBi = eachOfTS (1%5) (feedPM genProof) roundTripsBiBuildable
+ts_roundTripProofBi :: TSProperty
+ts_roundTripProofBi = eachOfTS 20 (feedPM genProof) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -300,8 +300,8 @@ roundTripProofBi = eachOfTS (1%5) (feedPM genProof) roundTripsBiBuildable
 goldenToSign :: Property
 goldenToSign = goldenTestBi exampleToSign "test/golden/bi/block/ToSign"
 
-roundTripToSignBi :: TSProperty
-roundTripToSignBi = eachOfTS (1%5) (feedPMEpochSlots genToSign) roundTripsBiShow
+ts_roundTripToSignBi :: TSProperty
+ts_roundTripToSignBi = eachOfTS 20 (feedPMEpochSlots genToSign) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------

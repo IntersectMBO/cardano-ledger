@@ -38,7 +38,7 @@ main = do
   runTests
     [ Test.Cardano.Chain.Block.Bi.tests scenario
     , Test.Cardano.Chain.Block.Validation.tests scenario
-    , Test.Cardano.Chain.Common.Compact.tests
+    , Test.Cardano.Chain.Common.Compact.tests scenario
     , Test.Cardano.Chain.Common.Lovelace.tests
     , Test.Cardano.Chain.Common.Address.tests
     , Test.Cardano.Chain.Delegation.Bi.tests
