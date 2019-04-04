@@ -66,7 +66,7 @@ import Cardano.Crypto
   )
 import qualified Cardano.Crypto.Wallet as CC
 
-import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKey)
 
 

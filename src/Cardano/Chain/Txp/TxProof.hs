@@ -1,5 +1,7 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Txp.TxProof
   ( TxProof(..)
@@ -13,7 +15,7 @@ import Cardano.Prelude
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
 import Cardano.Chain.Txp.Tx (Tx)
 import Cardano.Chain.Txp.TxPayload
@@ -27,6 +29,7 @@ data TxProof = TxProof
   , txpRoot          :: !(MerkleRoot Tx)
   , txpWitnessesHash :: !(Hash [TxWitness])
   } deriving (Show, Eq, Generic)
+    deriving anyclass NFData
 
 instance B.Buildable TxProof where
   build proof = bprint
@@ -35,23 +38,22 @@ instance B.Buildable TxProof where
     (txpRoot proof)
     (txpWitnessesHash proof)
 
-instance Bi TxProof where
-  encode proof =
+instance ToCBOR TxProof where
+  toCBOR proof =
     encodeListLen 3
-      <> encode (txpNumber proof)
-      <> encode (txpRoot proof)
-      <> encode (txpWitnessesHash proof)
+      <> toCBOR (txpNumber proof)
+      <> toCBOR (txpRoot proof)
+      <> toCBOR (txpWitnessesHash proof)
 
-  decode = do
+instance FromCBOR TxProof where
+  fromCBOR = do
     enforceSize "TxProof" 3
-    TxProof <$> decode <*> decode <*> decode
-
-instance NFData TxProof
+    TxProof <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | Construct 'TxProof' which proves given 'TxPayload'
 --
---   This will construct a merkle tree, which can be very expensive. Use with
---   care. Bi constraints arise because we need to hash these things.
+--   This will construct a Merkle tree, which can be very expensive. Use with
+--   care.
 mkTxProof :: TxPayload -> TxProof
 mkTxProof payload = TxProof
   { txpNumber        = fromIntegral (length $ txpTxs payload)

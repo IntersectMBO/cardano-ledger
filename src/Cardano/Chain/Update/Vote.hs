@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Vote
@@ -18,7 +19,6 @@ module Cardano.Chain.Update.Vote
   , UpId
   , ProposalBody(..)
   , checkProposal
-  , decodeAProposal
   , formatMaybeProposal
   , mkProposal
   , proposalBody
@@ -29,14 +29,11 @@ module Cardano.Chain.Update.Vote
   , AVote(..)
   , VoteId
   , Vote
-  , VoteError(..)
   , uvProposalId
   , mkVote
   , mkVoteSafe
   , formatVoteShort
   , shortVoteF
-  , checkVote
-  , decodeAVote
   , mkVoteId
   , recoverSignedBytes
   )
@@ -50,14 +47,14 @@ import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, builder, later)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
   , Decoded(..)
-  , Decoder
+  , FromCBOR(..)
+  , ToCBOR(..)
   , annotatedDecoder
-  , decodeAnnotated
+  , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
@@ -108,18 +105,19 @@ data ProposalBody = ProposalBody
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
-instance Bi ProposalBody where
-  encode pb =
+instance ToCBOR ProposalBody where
+  toCBOR pb =
     encodeListLen 5
-      <> encode (pbProtocolVersion pb)
-      <> encode (pbProtocolParametersUpdate pb)
-      <> encode (pbSoftwareVersion pb)
-      <> encode (pbData pb)
-      <> encode (pbAttributes pb)
+      <> toCBOR (pbProtocolVersion pb)
+      <> toCBOR (pbProtocolParametersUpdate pb)
+      <> toCBOR (pbSoftwareVersion pb)
+      <> toCBOR (pbData pb)
+      <> toCBOR (pbAttributes pb)
 
-  decode = do
+instance FromCBOR ProposalBody where
+  fromCBOR = do
     enforceSize "ProposalBody" 5
-    ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode
+    ProposalBody <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | Proposal for software update
 data AProposal a = AProposal
@@ -181,30 +179,31 @@ instance B.Buildable (AProposal ()) where
       | otherwise                = bprint ("attributes: " . build) attrs
 
 
-instance Bi Proposal where
-  encode proposal =
+instance ToCBOR Proposal where
+  toCBOR proposal =
     encodeListLen 7
-      <> encode (pbProtocolVersion body)
-      <> encode (pbProtocolParametersUpdate body)
-      <> encode (pbSoftwareVersion body)
-      <> encode (pbData body)
-      <> encode (pbAttributes body)
-      <> encode (proposalIssuer proposal)
-      <> encode (proposalSignature proposal)
+      <> toCBOR (pbProtocolVersion body)
+      <> toCBOR (pbProtocolParametersUpdate body)
+      <> toCBOR (pbSoftwareVersion body)
+      <> toCBOR (pbData body)
+      <> toCBOR (pbAttributes body)
+      <> toCBOR (proposalIssuer proposal)
+      <> toCBOR (proposalSignature proposal)
     where body = proposalBody proposal
 
-  decode = void <$> decodeAProposal
+instance FromCBOR Proposal where
+  fromCBOR = void <$> fromCBOR @(AProposal ByteSpan)
 
-decodeAProposal :: Decoder s (AProposal ByteSpan)
-decodeAProposal = do
-  Annotated (body, pk, signature) byteSpan <- annotatedDecoder $ do
-    enforceSize "Proposal" 7
-    body <- annotatedDecoder
-      (ProposalBody <$> decode <*> decode <*> decode <*> decode <*> decode)
-    pk        <- decode
-    signature <- decode
-    pure (body, pk, signature)
-  pure $ AProposal body pk signature byteSpan
+instance FromCBOR (AProposal ByteSpan) where
+  fromCBOR = do
+    Annotated (body, pk, signature) byteSpan <- annotatedDecoder $ do
+      enforceSize "Proposal" 7
+      body <- annotatedDecoder
+        (ProposalBody <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR)
+      pk        <- fromCBOR
+      signature <- fromCBOR
+      pure (body, pk, signature)
+    pure $ AProposal body pk signature byteSpan
 
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
@@ -231,6 +230,7 @@ instance B.Buildable ProposalError where
       ("SystemTag was invalid while checking Proposal.\n Error: " . build)
       err
 
+-- TODO: See if we need to use any of these internal checks
 checkProposal
   :: MonadError ProposalError m
   => ProtocolMagicId
@@ -333,21 +333,25 @@ instance B.Buildable (Proposal, [Vote]) where
   build (up, votes) =
     bprint (build . " with votes: " . listJson) up (map formatVoteShort votes)
 
-instance Bi Vote where
-  encode uv =
+instance ToCBOR Vote where
+  toCBOR uv =
     encodeListLen 4
-      <> encode (uvKey uv)
-      <> encode (uvProposalId uv)
-      <> encode (uvDecision uv)
-      <> encode (uvSignature uv)
+      <> toCBOR (uvKey uv)
+      <> toCBOR (uvProposalId uv)
+      <> toCBOR (uvDecision uv)
+      <> toCBOR (uvSignature uv)
 
-  decode = void <$> decodeAVote
+instance FromCBOR Vote where
+  fromCBOR = void <$> fromCBOR @(AVote ByteSpan)
 
-decodeAVote :: Decoder s (AVote ByteSpan)
-decodeAVote = do
-  enforceSize "Vote" 4
-  UnsafeVote <$> decode <*> decodeAnnotated <*> decodeAnnotated <*> decode
-
+instance FromCBOR (AVote ByteSpan) where
+  fromCBOR = do
+    enforceSize "Vote" 4
+    UnsafeVote
+      <$> fromCBOR
+      <*> fromCBORAnnotated
+      <*> fromCBORAnnotated
+      <*> fromCBOR
 
 -- | A safe constructor for 'UnsafeVote'
 mkVote
@@ -392,25 +396,6 @@ formatVoteShort uv = bprint
 -- | Formatter for 'Vote' which displays it compactly
 shortVoteF :: Format r (Vote -> r)
 shortVoteF = later formatVoteShort
-
-data VoteError =
-  VoteInvalidSignature (Signature (UpId, Bool))
-
-instance B.Buildable VoteError where
-  build = \case
-    VoteInvalidSignature sig ->
-      bprint ("Invalid signature, " . build . ", in Vote") sig
-
-checkVote
-  :: MonadError VoteError m => ProtocolMagicId -> AVote ByteString -> m ()
-checkVote pm uv = sigValid `orThrowError` VoteInvalidSignature (uvSignature uv)
- where
-  sigValid = verifySignatureDecoded
-    pm
-    SignUSVote
-    (uvKey uv)
-    (recoverSignedBytes uv)
-    (uvSignature uv)
 
 mkVoteId :: Vote -> VoteId
 mkVoteId vote = (uvProposalId vote, uvKey vote, uvDecision vote)

@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Crypto.Signing.Proxy.Signature
@@ -24,11 +26,11 @@ import Data.ByteArray (ScrubbedBytes)
 import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  ( Bi(..)
-  , ByteSpan
+import Cardano.Binary
+  ( ByteSpan
   , Decoded(..)
-  , Decoder
+  , FromCBOR(..)
+  , ToCBOR(..)
   , encodeListLen
   , enforceSize
   , serialize'
@@ -37,13 +39,12 @@ import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Proxy.VerificationKey
   ( AProxyVerificationKey(..)
   , ProxyVerificationKey
-  , decodeAProxyVerificationKey
   , pskOmega
   , validateProxyVerificationKey
   )
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..), toPublic)
-import Cardano.Crypto.Signing.Signature (decodeXSignature, encodeXSignature)
+import Cardano.Crypto.Signing.Signature (fromCBORXSignature, toCBORXSignature)
 import Cardano.Crypto.Signing.Tag (SignTag, signTag)
 
 
@@ -66,20 +67,19 @@ data AProxySignature w s a = AProxySignature
 instance B.Buildable w => B.Buildable (AProxySignature w s a) where
   build psig = bprint ("Proxy signature { psk = " . build . " }") (psigPsk psig)
 
-instance (Typeable s, Bi w) => Bi (ProxySignature w s) where
-  encode psig =
-    encodeListLen 2 <> encode (psigPsk psig) <> encodeXSignature (psigSig psig)
+instance (Typeable s, ToCBOR w) => ToCBOR (ProxySignature w s) where
+  toCBOR psig =
+    encodeListLen 2 <> toCBOR (psigPsk psig) <> toCBORXSignature (psigSig psig)
 
-  decode = void <$> decodeAProxySignature
+instance (Typeable s, FromCBOR w) => FromCBOR (ProxySignature w s) where
+  fromCBOR = void <$> fromCBOR @(AProxySignature w s ByteSpan)
 
-
-decodeAProxySignature :: Bi w => Decoder s (AProxySignature w a ByteSpan)
-decodeAProxySignature =
-  AProxySignature
-    <$  enforceSize "ProxySignature" 2
-    <*> decodeAProxyVerificationKey
-    <*> decodeXSignature
-
+instance (Typeable s, FromCBOR w) => FromCBOR (AProxySignature w s ByteSpan) where
+  fromCBOR =
+    AProxySignature
+      <$  enforceSize "ProxySignature" 2
+      <*> fromCBOR
+      <*> fromCBORXSignature
 
 validateProxySignature
   :: (MonadError Text m)
@@ -93,7 +93,7 @@ validateProxySignature pm psig = validateProxyVerificationKey pm (psigPsk psig)
 --   secret key passed doesn't pair with delegate public key in certificate
 --   inside, we panic. Please check this condition outside of this function.
 proxySign
-  :: Bi a
+  :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
   -> SecretKey
@@ -143,7 +143,7 @@ proxyVerifyDecoded pm t omegaPred m psig = predCorrect && sigValid
 -- | Verify delegated signature given issuer's pk, signature, message space
 --   predicate and message
 proxyVerify
-  :: Bi a
+  :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
   -> (w -> Bool)

@@ -13,7 +13,7 @@ import qualified Data.Set as Set
 import Hedgehog
   (Group, checkSequential, evalEither, forAll, property)
 
-import Cardano.Binary.Class (Annotated(..), serialize')
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Delegation as Delegation (Certificate)
 import Cardano.Chain.Slotting (EpochIndex)
 import Cardano.Crypto.Signing

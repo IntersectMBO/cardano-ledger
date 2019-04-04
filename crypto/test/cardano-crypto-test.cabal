@@ -18,7 +18,7 @@ flag development
 
 library
   exposed-modules:
-                       Test.Cardano.Crypto.Bi
+                       Test.Cardano.Crypto.CBOR
                        Test.Cardano.Crypto.Dummy
                        Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen

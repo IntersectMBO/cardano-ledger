@@ -1,7 +1,9 @@
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE BangPatterns       #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Common.TxSizeLinear
   ( TxSizeLinear(..)
@@ -18,13 +20,19 @@ import Data.Fixed (Nano)
 import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  (Bi(..), encodeListLen, enforceSize, DecoderError(..), Decoder)
+import Cardano.Binary
+  ( Decoder
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common.Lovelace
   ( Lovelace
-  , mkLovelace
   , LovelaceError
   , addLovelace
+  , mkLovelace
   , scaleLovelace
   , unsafeGetLovelace
   )
@@ -36,23 +44,23 @@ import Cardano.Chain.Common.Lovelace
 data TxSizeLinear =
   TxSizeLinear !Lovelace !Lovelace
   deriving (Eq, Ord, Show, Generic)
-
-instance NFData TxSizeLinear
+  deriving anyclass NFData
 
 instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b
 
-instance Bi TxSizeLinear where
+instance ToCBOR TxSizeLinear where
   -- We encode as 'Nano' for backwards compatibility
-  encode (TxSizeLinear a b) =
+  toCBOR (TxSizeLinear a b) =
     encodeListLen 2
-      <> encode (fromIntegral (unsafeGetLovelace a) :: Nano)
-      <> encode (fromIntegral (unsafeGetLovelace b) :: Nano)
+      <> toCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
+      <> toCBOR (fromIntegral (unsafeGetLovelace b) :: Nano)
 
-  decode = do
+instance FromCBOR TxSizeLinear where
+  fromCBOR = do
     enforceSize "TxSizeLinear" 2
-    !a <- wrapLovelaceError . mkLovelace . round =<< decode @Nano
-    !b <- wrapLovelaceError . mkLovelace . round =<< decode @Nano
+    !a <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
+    !b <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
     return $ TxSizeLinear a b
    where
     wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace

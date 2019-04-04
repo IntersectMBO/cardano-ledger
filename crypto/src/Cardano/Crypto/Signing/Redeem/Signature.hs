@@ -20,7 +20,7 @@ import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Coerce (coerce)
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class (Bi, Decoded(..), Raw, serialize')
+import Cardano.Binary (Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Redeem.PublicKey (RedeemPublicKey(..))
@@ -31,16 +31,16 @@ import Cardano.Crypto.Signing.Tag (SignTag, signTag)
 -- | Wrapper around 'Ed25519.Signature'
 newtype RedeemSignature a =
   RedeemSignature Ed25519.Signature
-  deriving (Eq, Ord, Show, Generic, NFData, Bi)
+  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
 
 instance B.Buildable (RedeemSignature a) where
   build _ = "<redeem signature>"
 
 deriveJSON defaultOptions ''RedeemSignature
 
--- | Encode something with 'Bi' and sign it
+-- | Encode something with 'ToCBOR' and sign it
 redeemSign
-  :: Bi a
+  :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
   -> RedeemSecretKey
@@ -61,7 +61,7 @@ redeemSignRaw pm mbTag (RedeemSecretKey k) x =
 
 -- | Verify a redeem signature
 verifyRedeemSig
-  :: Bi a
+  :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
   -> RedeemPublicKey

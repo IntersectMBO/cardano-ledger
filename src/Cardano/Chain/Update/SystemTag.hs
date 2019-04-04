@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveLift                 #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
@@ -31,24 +33,26 @@ import Distribution.Text (display)
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 -- | Tag of system for which update data is purposed, e.g. win64, mac32
 newtype SystemTag = SystemTag
   { getSystemTag :: Text
-  } deriving (Eq, Ord, Show, Generic, B.Buildable)
-
-instance NFData SystemTag
+  } deriving (Eq, Ord, Show, Generic)
+    deriving newtype B.Buildable
+    deriving anyclass NFData
 
 instance FromJSON SystemTag where
   parseJSON v = SystemTag <$> parseJSON v
 
 deriveToJSON defaultOptions ''SystemTag
 
-instance Bi SystemTag where
-  encode = encode . getSystemTag
-  decode = SystemTag <$> decode
+instance ToCBOR SystemTag where
+  toCBOR = toCBOR . getSystemTag
+
+instance FromCBOR SystemTag where
+  fromCBOR = SystemTag <$> fromCBOR
 
 systemTagMaxLength :: Integral i => i
 systemTagMaxLength = 10

@@ -18,7 +18,7 @@ flag development
 
 library
   exposed-modules:
-                       Test.Cardano.Chain.Block.Bi
+                       Test.Cardano.Chain.Block.CBOR
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Common.Address
                        Test.Cardano.Chain.Common.Compact
@@ -34,7 +34,7 @@ library
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Slotting.Properties
-                       Test.Cardano.Chain.Txp.Bi
+                       Test.Cardano.Chain.Txp.CBOR
                        Test.Cardano.Chain.Txp.Compact
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen

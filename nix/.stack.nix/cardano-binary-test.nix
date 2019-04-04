@@ -10,8 +10,8 @@
       author = "IOHK";
       homepage = "";
       url = "";
-      synopsis = "Test helpers from cardano-base exposed to other packages";
-      description = "Test helpers from cardano-base exposed to other packages";
+      synopsis = "Test helpers from cardano-binary exposed to other packages";
+      description = "Test helpers from cardano-binary exposed to other packages";
       buildType = "Simple";
       };
     components = {
@@ -23,14 +23,10 @@
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-prelude-test)
           (hsPkgs.cborg)
-          (hsPkgs.cereal)
           (hsPkgs.containers)
-          (hsPkgs.cryptonite)
           (hsPkgs.formatting)
-          (hsPkgs.half)
           (hsPkgs.hedgehog)
           (hsPkgs.hspec)
-          (hsPkgs.mtl)
           (hsPkgs.pretty-show)
           (hsPkgs.QuickCheck)
           (hsPkgs.quickcheck-instances)
@@ -41,8 +37,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "c719857de4a2f18fa13bc5cdb85d74ae3841f50f";
-      sha256 = "1p2g026xxc60xiqw7891cry2lwzjavbzdqbqx9mk7x7wlhcsb6jv";
+      rev = "5bca69f048c4d599c362d797ee8b036c118f77f4";
+      sha256 = "1xhazql8ybn7pprgn2zqgd4waf89z1xicdiwmpsizp97s1k0paki";
       });
     postUnpack = "sourceRoot+=/binary/test; echo source root reset to \$sourceRoot";
     }

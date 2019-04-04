@@ -54,9 +54,15 @@ import qualified Data.ByteString.Lazy as LBS
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class
-  (Bi(..), Decoded(..), DecoderError(..), Raw, withWordSize)
-import qualified Cardano.Binary.Class as Bi
+import Cardano.Binary
+  ( Decoded(..)
+  , DecoderError(..)
+  , FromCBOR(..)
+  , Raw
+  , ToCBOR(..)
+  , serialize
+  , withWordSize
+  )
 
 
 --------------------------------------------------------------------------------
@@ -93,15 +99,20 @@ instance (HashAlgorithm algo, FromJSON (AbstractHash algo a))
 instance ToJSONKey (AbstractHash algo a) where
   toJSONKey = toJSONKeyText (sformat hashHexF)
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => Bi (AbstractHash algo a) where
-  encode (AbstractHash digest) =
-    encode (ByteArray.convert digest :: BS.ByteString)
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
+  toCBOR (AbstractHash digest) =
+    toCBOR (ByteArray.convert digest :: BS.ByteString)
 
+  encodedSizeExpr _ _ =
+    let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
+    in fromInteger (toInteger (withWordSize realSz + realSz))
+
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
   -- FIXME bad decode: it reads an arbitrary-length byte string.
   -- Better instance: know the hash algorithm up front, read exactly that
   -- many bytes, fail otherwise. Then convert to a digest.
-  decode = do
-    bs <- decode @ByteString
+  fromCBOR = do
+    bs <- fromCBOR @ByteString
     maybe
       (cborError $ DecoderErrorCustom
         "AbstractHash"
@@ -109,10 +120,6 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => Bi (AbstractHash alg
       )
       (pure . AbstractHash)
       (Hash.digestFromByteString bs)
-
-  encodedSizeExpr _ _ =
-    let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
-    in fromInteger (toInteger (withWordSize realSz + realSz))
 
 instance HeapWords (AbstractHash algo a) where
   heapWords _
@@ -165,19 +172,15 @@ decodeAbstractHash prettyHash = do
 decodeHash :: Text -> Either Text (Hash a)
 decodeHash = decodeAbstractHash @Blake2b_256
 
--- | Hash the 'Bi'-serialised version of a value
-abstractHash :: (HashAlgorithm algo, Bi a) => a -> AbstractHash algo a
-abstractHash = unsafeAbstractHash . Bi.serialize
-
--- -- | Unsafe version of abstractHash.
--- unsafeAbstractHash :: (HashAlgorithm algo, Bi a) => a -> AbstractHash algo b
--- unsafeAbstractHash = AbstractHash . Hash.hashlazy . Bi.serialize
+-- | Hash the 'ToCBOR'-serialised version of a value
+abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
+abstractHash = unsafeAbstractHash . serialize
 
 -- | Make an 'AbstractHash' from a lazy 'ByteString'
 --
 --   You can choose the phantom type, hence the "unsafe"
 unsafeAbstractHash
-  :: HashAlgorithm algo => LBS.ByteString -> AbstractHash algo anything
+  :: HashAlgorithm algo => LByteString -> AbstractHash algo anything
 unsafeAbstractHash = AbstractHash . Hash.hashlazy
 
 
@@ -189,7 +192,7 @@ unsafeAbstractHash = AbstractHash . Hash.hashlazy
 type Hash = AbstractHash Blake2b_256
 
 -- | Short version of 'unsafeHash'.
-hash :: Bi a => a -> Hash a
+hash :: ToCBOR a => a -> Hash a
 hash = abstractHash
 
 -- | Hashes the annotation

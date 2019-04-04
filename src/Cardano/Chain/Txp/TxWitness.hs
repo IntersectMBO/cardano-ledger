@@ -24,11 +24,12 @@ import Data.Vector (Vector)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , Case(..)
   , DecoderError(DecoderErrorUnknownTag)
+  , FromCBOR(..)
+  , ToCBOR(..)
   , decodeKnownCborDataItem
   , decodeListLen
   , encodeKnownCborDataItem
@@ -99,27 +100,16 @@ instance B.Buildable TxInWitness where
   build (RedeemWitness key sig) =
     bprint ("PkWitness: key = " . build . ", sig = " . build) key sig
 
-instance Bi TxInWitness where
-  encode input = case input of
+instance ToCBOR TxInWitness where
+  toCBOR input = case input of
     PkWitness key sig ->
       encodeListLen 2
-        <> encode (0 :: Word8)
+        <> toCBOR (0 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
     RedeemWitness key sig ->
       encodeListLen 2
-        <> encode (2 :: Word8)
+        <> toCBOR (2 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
-
-  decode = do
-    len <- decodeListLen
-    decode @Word8 >>= \case
-      0 -> do
-        matchSize "TxInWitness.PkWitness" len 2
-        uncurry PkWitness <$> decodeKnownCborDataItem
-      2 -> do
-        matchSize "TxInWitness.RedeemWitness" len 2
-        uncurry RedeemWitness <$> decodeKnownCborDataItem
-      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
 
   encodedSizeExpr size _ = 2 + szCases
     (map
@@ -130,6 +120,18 @@ instance Bi TxInWitness where
       $ Proxy @(RedeemPublicKey, RedeemSignature TxSigData)
       ]
     )
+
+instance FromCBOR TxInWitness where
+  fromCBOR = do
+    len <- decodeListLen
+    fromCBOR @Word8 >>= \case
+      0 -> do
+        matchSize "TxInWitness.PkWitness" len 2
+        uncurry PkWitness <$> decodeKnownCborDataItem
+      2 -> do
+        matchSize "TxInWitness.RedeemWitness" len 2
+        uncurry RedeemWitness <$> decodeKnownCborDataItem
+      tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
 
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData
@@ -143,10 +145,12 @@ recoverSigData atx =
     signedBytes = serialize' txHash --TODO: make the prefix bytes explicit
   in Annotated (TxSigData txHash) signedBytes
 
-instance Bi TxSigData where
-  encode txSigData = encode (txSigTxHash txSigData)
-  decode = TxSigData <$> decode
+instance ToCBOR TxSigData where
+  toCBOR txSigData = toCBOR (txSigTxHash txSigData)
   encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
+
+instance FromCBOR TxSigData where
+  fromCBOR = TxSigData <$> fromCBOR
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData

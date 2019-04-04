@@ -23,13 +23,13 @@ import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (DecoderError)
+import Cardano.Binary (DecoderError)
 import Cardano.Chain.Common
   ( Address
   , Lovelace
   , LovelaceError
   , addLovelace
-  , decodeTextAddress
+  , fromCBORTextAddress
   , integerToLovelace
   , unsafeGetLovelace
   )
@@ -104,7 +104,7 @@ convertNonAvvmDataToBalances balances = fmap GenesisNonAvvmBalances $ do
 
   convert :: (Text, Integer) -> m (Address, Lovelace)
   convert (txt, i) = do
-    addr <- liftEither . first NonAvvmBalancesDecoderError $ decodeTextAddress
+    addr <- liftEither . first NonAvvmBalancesDecoderError $ fromCBORTextAddress
       txt
     lovelace <-
       liftEither . first NonAvvmBalancesLovelaceError $ integerToLovelace i

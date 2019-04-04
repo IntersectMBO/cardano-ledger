@@ -14,7 +14,7 @@ import Cardano.Prelude
 import qualified Cardano.Crypto.Wallet as CC
 import Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
 
-import Cardano.Binary.Limit (Limit)
+import Cardano.Binary (Limit)
 import Cardano.Crypto (AbstractHash, PublicKey, Signature(..))
 
 

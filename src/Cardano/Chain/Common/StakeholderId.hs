@@ -20,7 +20,7 @@ import Formatting (Format, formatToString, mapf)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common.AddressHash
 import Cardano.Crypto (decodeAbstractHash, hashHexF, shortHashF)
 import Cardano.Crypto.Signing (PublicKey)
@@ -36,7 +36,8 @@ newtype StakeholderId = StakeholderId
              , Buildable
              , FromJSONKey
              , ToJSONKey
-             , Bi
+             , FromCBOR
+             , ToCBOR
              , HeapWords
              )
 

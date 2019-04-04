@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Crypto.Signing.Proxy.VerificationKey
@@ -17,9 +19,6 @@ module Cardano.Crypto.Signing.Proxy.VerificationKey
 
   -- * Accessors
   , pskOmega
-
-  -- * Decoder
-  , decodeAProxyVerificationKey
 
   -- * Predicates
   , isSelfSignedPsk
@@ -35,12 +34,12 @@ import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.=))
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
-  , Decoder
-  , decodeAnnotated
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
@@ -77,25 +76,25 @@ instance B.Buildable w => B.Buildable (AProxyVerificationKey w a) where
     iPk
     dPk
 
-instance Bi w => Bi (ProxyVerificationKey w) where
-  encode psk =
+instance ToCBOR w => ToCBOR (ProxyVerificationKey w) where
+  toCBOR psk =
     encodeListLen 4
-      <> encode (pskOmega psk)
-      <> encode (pskIssuerPk psk)
-      <> encode (pskDelegatePk psk)
-      <> encode (pskCert psk)
+      <> toCBOR (pskOmega psk)
+      <> toCBOR (pskIssuerPk psk)
+      <> toCBOR (pskDelegatePk psk)
+      <> toCBOR (pskCert psk)
 
-  decode =  void <$> decodeAProxyVerificationKey
+instance FromCBOR w => FromCBOR (ProxyVerificationKey w) where
+  fromCBOR = void <$> fromCBOR @(AProxyVerificationKey w ByteSpan)
 
-decodeAProxyVerificationKey
-  :: Bi w => Decoder s (AProxyVerificationKey w ByteSpan)
-decodeAProxyVerificationKey = do
-  enforceSize "ProxyVerificationKey" 4
-  UnsafeAProxyVerificationKey
-    <$> decodeAnnotated
-    <*> decode
-    <*> decode
-    <*> decode
+instance FromCBOR w => FromCBOR (AProxyVerificationKey w ByteSpan) where
+  fromCBOR = do
+    enforceSize "ProxyVerificationKey" 4
+    UnsafeAProxyVerificationKey
+      <$> fromCBORAnnotated
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 instance ToJSON w => ToJSON (AProxyVerificationKey w ()) where
   toJSON psk = object
@@ -114,7 +113,7 @@ instance FromJSON w => FromJSON (AProxyVerificationKey w ()) where
 
 -- | Creates proxy secret key
 createPsk
-  :: Bi w
+  :: ToCBOR w
   => ProtocolMagicId
   -> SafeSigner
   -> PublicKey
@@ -132,8 +131,6 @@ isSelfSignedPsk :: ProxyVerificationKey w -> Bool
 isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 
 -- | Return the key if it's valid, and throw an error otherwise
---
---   TODO: Make this unnecessary by performing validation in the decoder
 validateProxyVerificationKey
   :: MonadError Text m
   => ProtocolMagicId

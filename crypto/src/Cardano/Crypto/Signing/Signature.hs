@@ -10,8 +10,8 @@ module Cardano.Crypto.Signing.Signature
   (
   -- * Signature
     Signature(..)
-  , encodeXSignature
-  , decodeXSignature
+  , toCBORXSignature
+  , fromCBORXSignature
   , fullSignatureHexF
   , parseFullSignature
 
@@ -32,8 +32,6 @@ where
 import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Encoding as E
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.ByteArray (ScrubbedBytes)
 import Data.Coerce (coerce)
@@ -42,7 +40,15 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..), Decoded(..), Raw, serialize')
+import Cardano.Binary
+  ( Decoded(..)
+  , Decoder
+  , Encoding
+  , FromCBOR(..)
+  , Raw
+  , ToCBOR(..)
+  , serialize'
+  )
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..))
@@ -102,24 +108,26 @@ parseFullSignature s = do
   b <- first SignatureParseBase16Error $ parseBase16 s
   Signature <$> first (SignatureParseXSignatureError . toS) (CC.xsignature b)
 
-encodeXSignature :: CC.XSignature -> E.Encoding
-encodeXSignature a = encode $ CC.unXSignature a
+toCBORXSignature :: CC.XSignature -> Encoding
+toCBORXSignature a = toCBOR $ CC.unXSignature a
 
-decodeXSignature :: D.Decoder s CC.XSignature
-decodeXSignature = toCborError . CC.xsignature =<< decode
+fromCBORXSignature :: Decoder s CC.XSignature
+fromCBORXSignature = toCborError . CC.xsignature =<< fromCBOR
 
-instance Typeable a => Bi (Signature a) where
-  encode (Signature a) = encodeXSignature a
-  decode = fmap Signature decodeXSignature
+instance Typeable a => ToCBOR (Signature a) where
+  toCBOR (Signature a) = toCBORXSignature a
+
+instance Typeable a => FromCBOR (Signature a) where
+  fromCBOR = fmap Signature fromCBORXSignature
 
 
 --------------------------------------------------------------------------------
 -- Signing
 --------------------------------------------------------------------------------
 
--- | Encode something with 'Bi' and sign it
+-- | Encode something with 'ToCBOR' and sign it
 sign
-  :: Bi a
+  :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
   -- ^ See docs for 'SignTag'
@@ -128,7 +136,7 @@ sign
   -> Signature a
 sign pm tag sk = signEncoded pm tag sk . serialize'
 
--- | Like 'sign' but without the 'Bi' constraint
+-- | Like 'sign' but without the 'ToCBOR' constraint
 signEncoded
   :: ProtocolMagicId -> SignTag -> SecretKey -> ByteString -> Signature a
 signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk
@@ -146,7 +154,8 @@ signRaw pm mTag (SecretKey sk) x = Signature
   (CC.sign (mempty :: ScrubbedBytes) sk (tag <> x))
   where tag = maybe mempty (signTag pm) mTag
 
-safeSign :: Bi a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
+safeSign
+  :: ToCBOR a => ProtocolMagicId -> SignTag -> SafeSigner -> a -> Signature a
 safeSign pm t ss = coerce . safeSignRaw pm (Just t) ss . serialize'
 
 safeSignRaw
@@ -166,7 +175,13 @@ safeSignRaw pm mbTag (SafeSigner (EncryptedSecretKey sk _) (PassPhrase pp)) x =
 
 -- | Verify a signature
 verifySignature
-  :: Bi a => ProtocolMagicId -> SignTag -> PublicKey -> a -> Signature a -> Bool
+  :: ToCBOR a
+  => ProtocolMagicId
+  -> SignTag
+  -> PublicKey
+  -> a
+  -> Signature a
+  -> Bool
 verifySignature pm tag pk x sig =
   verifySignatureRaw pm (Just tag) pk (serialize' x) (coerce sig)
 

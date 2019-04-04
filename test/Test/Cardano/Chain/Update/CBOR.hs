@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Test.Cardano.Chain.Update.Bi
+module Test.Cardano.Chain.Update.CBOR
   ( tests
   )
 where
@@ -14,13 +14,13 @@ import qualified Data.Map.Strict as Map
 import Hedgehog (Group, Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary.Class (Raw(..))
+import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common (LovelacePortion(..))
 import Cardano.Chain.Update (ApplicationName(..), SoftforkRule(..))
 import Cardano.Crypto (Hash, abstractHash)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestBi, roundTripsBiBuildable, roundTripsBiShow)
+  (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.Update.Example
   ( exampleProtocolParametersUpdate
   , examplePayload
@@ -64,68 +64,78 @@ import Test.Options (TestScenario, TSProperty, eachOfTS)
 --------------------------------------------------------------------------------
 
 goldenApplicationName :: Property
-goldenApplicationName = goldenTestBi aN "test/golden/bi/update/ApplicationName"
+goldenApplicationName = goldenTestCBOR
+  aN
+  "test/golden/cbor/update/ApplicationName"
   where aN = ApplicationName "Golden"
 
 ts_roundTripApplicationName :: TSProperty
-ts_roundTripApplicationName = eachOfTS 50 genApplicationName roundTripsBiBuildable
+ts_roundTripApplicationName =
+  eachOfTS 50 genApplicationName roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- ProtocolVersion
 --------------------------------------------------------------------------------
 
 goldenProtocolVersion :: Property
-goldenProtocolVersion =
-  goldenTestBi exampleProtocolVersion "test/golden/bi/update/ProtocolVersion"
+goldenProtocolVersion = goldenTestCBOR
+  exampleProtocolVersion
+  "test/golden/cbor/update/ProtocolVersion"
 
 ts_roundTripProtocolVersion :: TSProperty
-ts_roundTripProtocolVersion = eachOfTS 50 genProtocolVersion roundTripsBiBuildable
+ts_roundTripProtocolVersion =
+  eachOfTS 50 genProtocolVersion roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- ProtocolParameters
 --------------------------------------------------------------------------------
 
 goldenProtocolParameters :: Property
-goldenProtocolParameters = goldenTestBi
+goldenProtocolParameters = goldenTestCBOR
   bVerDat
-  "test/golden/bi/update/ProtocolParameters"
+  "test/golden/cbor/update/ProtocolParameters"
   where bVerDat = exampleProtocolParameters
 
 ts_roundTripProtocolParameters :: TSProperty
 ts_roundTripProtocolParameters =
-  eachOfTS 50 genProtocolParameters roundTripsBiBuildable
+  eachOfTS 50 genProtocolParameters roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- ProtocolParametersUpdate
 --------------------------------------------------------------------------------
 
 goldenProtocolParametersUpdate :: Property
-goldenProtocolParametersUpdate = goldenTestBi
+goldenProtocolParametersUpdate = goldenTestCBOR
   ppu
-  "test/golden/bi/update/ProtocolParametersUpdate"
+  "test/golden/cbor/update/ProtocolParametersUpdate"
   where ppu = exampleProtocolParametersUpdate
 
 ts_roundTripProtocolParametersUpdate :: TSProperty
 ts_roundTripProtocolParametersUpdate =
-  eachOfTS 50 genProtocolParametersUpdate roundTripsBiBuildable
+  eachOfTS 50 genProtocolParametersUpdate roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- HashRaw
 --------------------------------------------------------------------------------
 
 goldenBlockHashRaw :: Property
-goldenBlockHashRaw = goldenTestBi hRaw "test/golden/bi/update/HashRaw"
+goldenBlockHashRaw = goldenTestCBOR hRaw "test/golden/cbor/update/HashRaw"
   where hRaw = (abstractHash $ Raw ("9") :: Hash Raw)
 
 ts_roundTripHashRaw :: TSProperty
-ts_roundTripHashRaw = eachOfTS 50 genHashRaw roundTripsBiBuildable
+ts_roundTripHashRaw = eachOfTS 50 genHashRaw roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- SoftforkRule
 --------------------------------------------------------------------------------
 
 goldenSoftforkRule :: Property
-goldenSoftforkRule = goldenTestBi sfR "test/golden/bi/update/SoftforkRule"
+goldenSoftforkRule = goldenTestCBOR sfR "test/golden/cbor/update/SoftforkRule"
  where
   sfR = SoftforkRule
     (LovelacePortion 99)
@@ -133,18 +143,22 @@ goldenSoftforkRule = goldenTestBi sfR "test/golden/bi/update/SoftforkRule"
     (LovelacePortion 99)
 
 ts_roundTripSoftforkRule :: TSProperty
-ts_roundTripSoftforkRule = eachOfTS 10 genSoftforkRule roundTripsBiBuildable
+ts_roundTripSoftforkRule = eachOfTS 10 genSoftforkRule roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- SoftwareVersion
 --------------------------------------------------------------------------------
 
 goldenSoftwareVersion :: Property
-goldenSoftwareVersion =
-  goldenTestBi exampleSoftwareVersion "test/golden/bi/update/SoftwareVersion"
+goldenSoftwareVersion = goldenTestCBOR
+  exampleSoftwareVersion
+  "test/golden/cbor/update/SoftwareVersion"
 
 ts_roundTripSoftwareVersion :: TSProperty
-ts_roundTripSoftwareVersion = eachOfTS 10 genSoftwareVersion roundTripsBiBuildable
+ts_roundTripSoftwareVersion =
+  eachOfTS 10 genSoftwareVersion roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- SystemTag
@@ -152,10 +166,11 @@ ts_roundTripSoftwareVersion = eachOfTS 10 genSoftwareVersion roundTripsBiBuildab
 
 goldenSystemTag :: Property
 goldenSystemTag =
-  goldenTestBi exampleSystemTag "test/golden/bi/update/SystemTag"
+  goldenTestCBOR exampleSystemTag "test/golden/cbor/update/SystemTag"
 
 ts_roundTripSystemTag :: TSProperty
-ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsBiBuildable
+ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpdateData
@@ -163,10 +178,11 @@ ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsBiBuildable
 
 goldenUpdateData :: Property
 goldenUpdateData =
-  goldenTestBi exampleUpdateData "test/golden/bi/update/UpdateData"
+  goldenTestCBOR exampleUpdateData "test/golden/cbor/update/UpdateData"
 
 ts_roundTripUpdateData :: TSProperty
-ts_roundTripUpdateData = eachOfTS 20 genUpdateData roundTripsBiBuildable
+ts_roundTripUpdateData = eachOfTS 20 genUpdateData roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpdatePayload
@@ -174,20 +190,23 @@ ts_roundTripUpdateData = eachOfTS 20 genUpdateData roundTripsBiBuildable
 
 goldenUpdatePayload :: Property
 goldenUpdatePayload =
-  goldenTestBi examplePayload "test/golden/bi/update/Payload"
+  goldenTestCBOR examplePayload "test/golden/cbor/update/Payload"
 
 ts_roundTripUpdatePayload :: TSProperty
-ts_roundTripUpdatePayload = eachOfTS 20 (feedPM genPayload) roundTripsBiBuildable
+ts_roundTripUpdatePayload =
+  eachOfTS 20 (feedPM genPayload) roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpdateProof
 --------------------------------------------------------------------------------
 
 goldenUpdateProof :: Property
-goldenUpdateProof = goldenTestBi exampleProof "test/golden/bi/update/Proof"
+goldenUpdateProof = goldenTestCBOR exampleProof "test/golden/cbor/update/Proof"
 
 ts_roundTripUpdateProof :: TSProperty
-ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsBiBuildable
+ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpdateProposal
@@ -195,23 +214,27 @@ ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsBiBuildable
 
 goldenUpdateProposal :: Property
 goldenUpdateProposal =
-  goldenTestBi exampleProposal "test/golden/bi/update/Proposal"
+  goldenTestCBOR exampleProposal "test/golden/cbor/update/Proposal"
 
 ts_roundTripUpdateProposal :: TSProperty
-ts_roundTripUpdateProposal = eachOfTS 20 (feedPM genProposal) roundTripsBiBuildable
+ts_roundTripUpdateProposal =
+  eachOfTS 20 (feedPM genProposal) roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpdateProposals
 --------------------------------------------------------------------------------
 
 goldenUpdateProposals :: Property
-goldenUpdateProposals = goldenTestBi ups "test/golden/bi/update/Proposals"
+goldenUpdateProposals = goldenTestCBOR ups "test/golden/cbor/update/Proposals"
   where
     -- Need to revisit this.
         ups = Map.fromList [(exampleUpId, exampleProposal)]
 
 ts_roundTripUpdateProposals :: TSProperty
-ts_roundTripUpdateProposals = eachOfTS 20 (feedPM genProposals) roundTripsBiShow
+ts_roundTripUpdateProposals =
+  eachOfTS 20 (feedPM genProposals) roundTripsCBORShow
+
 
 --------------------------------------------------------------------------------
 -- ProposalBody
@@ -219,51 +242,56 @@ ts_roundTripUpdateProposals = eachOfTS 20 (feedPM genProposals) roundTripsBiShow
 
 goldenProposalBody :: Property
 goldenProposalBody =
-  goldenTestBi exampleProposalBody "test/golden/bi/update/ProposalBody"
+  goldenTestCBOR exampleProposalBody "test/golden/cbor/update/ProposalBody"
 
 ts_roundTripProposalBody :: TSProperty
-ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsBiShow
+ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORShow
+
 
 --------------------------------------------------------------------------------
 -- UpdateVote
 --------------------------------------------------------------------------------
 
 goldenUpdateVote :: Property
-goldenUpdateVote = goldenTestBi exampleVote "test/golden/bi/update/Vote"
+goldenUpdateVote = goldenTestCBOR exampleVote "test/golden/cbor/update/Vote"
 
 ts_roundTripUpdateVote :: TSProperty
-ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsBiBuildable
+ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpId
 --------------------------------------------------------------------------------
 
 goldenUpId :: Property
-goldenUpId = goldenTestBi exampleUpId "test/golden/bi/update/UpId"
+goldenUpId = goldenTestCBOR exampleUpId "test/golden/cbor/update/UpId"
 
 ts_roundTripUpId :: TSProperty
-ts_roundTripUpId = eachOfTS 20 (feedPM genUpId) roundTripsBiBuildable
+ts_roundTripUpId = eachOfTS 20 (feedPM genUpId) roundTripsCBORBuildable
+
 
 --------------------------------------------------------------------------------
 -- UpsData NB: UpsData is not a type it is a record accessor of `ProposalBody`
 --------------------------------------------------------------------------------
 
 ts_roundTripUpsData :: TSProperty
-ts_roundTripUpsData = eachOfTS 20 genUpsData roundTripsBiShow
+ts_roundTripUpsData = eachOfTS 20 genUpsData roundTripsCBORShow
+
 
 --------------------------------------------------------------------------------
 -- VoteId
 --------------------------------------------------------------------------------
 
 goldenVoteId :: Property
-goldenVoteId = goldenTestBi exampleVoteId "test/golden/bi/update/VoteId"
+goldenVoteId = goldenTestCBOR exampleVoteId "test/golden/cbor/update/VoteId"
 
 ts_roundTripVoteId :: TSProperty
-ts_roundTripVoteId = eachOfTS 20 (feedPM genVoteId) roundTripsBiBuildable
+ts_roundTripVoteId = eachOfTS 20 (feedPM genVoteId) roundTripsCBORBuildable
 
------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
 -- Main test export
------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 tests :: TestScenario -> IO Bool
 tests ts = and <$> sequence

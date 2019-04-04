@@ -18,7 +18,7 @@ import Control.Monad.Except (MonadError, liftEither)
 import Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Common (Attributes, areAttributesKnown)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -53,19 +53,20 @@ instance B.Buildable ExtraHeaderData where
         ("    attributes: " . build . "\n")
         (ehdAttributes mehd)
 
-instance Bi ExtraHeaderData where
-  encode ehd =
+instance ToCBOR ExtraHeaderData where
+  toCBOR ehd =
     encodeListLen 4
-      <> encode (ehdProtocolVersion ehd)
-      <> encode (ehdSoftwareVersion ehd)
-      <> encode (ehdAttributes ehd)
-      <> encode (ehdEBDataProof ehd)
+      <> toCBOR (ehdProtocolVersion ehd)
+      <> toCBOR (ehdSoftwareVersion ehd)
+      <> toCBOR (ehdAttributes ehd)
+      <> toCBOR (ehdEBDataProof ehd)
 
-  decode = do
+instance FromCBOR ExtraHeaderData where
+  fromCBOR = do
     enforceSize "ExtraHeaderData" 4
-    ExtraHeaderData <$> decode <*> decode <*> decode <*> decode
+    ExtraHeaderData <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
-data ExtraHeaderDataError =
+newtype ExtraHeaderDataError =
   ExtraHeaderDataSoftwareVersionError SoftwareVersionError
   deriving (Eq, Show)
 

@@ -5,8 +5,8 @@
 module Cardano.Crypto.Signing.SecretKey
   ( SecretKey(..)
   , toPublic
-  , encodeXPrv
-  , decodeXPrv
+  , toCBORXPrv
+  , fromCBORXPrv
   )
 where
 
@@ -15,11 +15,9 @@ import Cardano.Prelude
 import Formatting.Buildable
 import qualified Cardano.Crypto.Wallet as CC
 import qualified GHC.Show
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Encoding as E
 import Formatting (bprint)
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..), shortPublicKeyHexF)
 import Cardano.Crypto.Hashing (hash)
 
@@ -43,12 +41,14 @@ instance Show SecretKey where
 instance Buildable SecretKey where
   build = bprint ("sec:" . shortPublicKeyHexF) . toPublic
 
-encodeXPrv :: CC.XPrv -> E.Encoding
-encodeXPrv a = encode $ CC.unXPrv a
+toCBORXPrv :: CC.XPrv -> Encoding
+toCBORXPrv a = toCBOR $ CC.unXPrv a
 
-decodeXPrv :: D.Decoder s CC.XPrv
-decodeXPrv = toCborError . CC.xprv =<< decode @ByteString
+fromCBORXPrv :: Decoder s CC.XPrv
+fromCBORXPrv = toCborError . CC.xprv =<< fromCBOR @ByteString
 
-instance Bi SecretKey where
-  encode (SecretKey a) = encodeXPrv a
-  decode = fmap SecretKey decodeXPrv
+instance ToCBOR SecretKey where
+  toCBOR (SecretKey a) = toCBORXPrv a
+
+instance FromCBOR SecretKey where
+  fromCBOR = fmap SecretKey fromCBORXPrv

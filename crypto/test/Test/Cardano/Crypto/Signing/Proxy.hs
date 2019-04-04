@@ -15,14 +15,13 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Binary.Class (decodeFullDecoder, serialize, slice)
+import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Crypto.Signing
   ( AProxySignature(..)
   , AProxyVerificationKey(..)
   , ProxySignature
   , SignTag(..)
   , createPsk
-  , decodeAProxyVerificationKey
   , proxySign
   , proxyVerify
   , safeToPublic
@@ -152,10 +151,7 @@ prop_proxyVerificationKeyCorrect = property $ do
             (panic
               "prop_proxyVerificationKeyCorrect: Round trip broken for ProxyVerificationKey"
             )
-        $ decodeFullDecoder
-            "ProxyVerificationKey"
-            decodeAProxyVerificationKey
-            bytes
+        $ decodeFull bytes
 
   assert . isRight $ validateProxyVerificationKey
     dummyProtocolMagicId
@@ -182,10 +178,7 @@ prop_proxyVerificationKeyIncorrect = property $ do
             (panic
               "prop_proxyVerificationKeyCorrect: Round trip broken for ProxyVerificationKey"
             )
-        $ decodeFullDecoder
-            "ProxyVerificationKey"
-            decodeAProxyVerificationKey
-            bytes
+        $ decodeFull bytes
 
   assert . isLeft $ validateProxyVerificationKey
     dummyProtocolMagicId

@@ -53,7 +53,7 @@ import GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..), DecoderError (..))
+import Cardano.Binary (DecoderError(..), FromCBOR(..), ToCBOR(..))
 
 
 -- | Lovelace is the least possible unit of currency
@@ -68,14 +68,16 @@ instance Bounded Lovelace where
   minBound = Lovelace 0
   maxBound = Lovelace maxLovelaceVal
 
-instance Bi Lovelace where
-  encode = encode . unsafeGetLovelace
-  decode = do
-    l <- decode
+instance ToCBOR Lovelace where
+  toCBOR = toCBOR . unsafeGetLovelace
+  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
+
+instance FromCBOR Lovelace where
+  fromCBOR = do
+    l <- fromCBOR
     toCborError
       . first (DecoderErrorCustom "Lovelace" . sformat build)
       $ mkLovelace l
-  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance Monad m => Canonical.ToJSON m Lovelace where
   toJSON = Canonical.toJSON . unsafeGetLovelace

@@ -24,7 +24,7 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 
 
-import Cardano.Binary.Class (Annotated(..), biSize)
+import Cardano.Binary (Annotated(..), biSize)
 import Cardano.Chain.Common
   ( Address
   , Lovelace

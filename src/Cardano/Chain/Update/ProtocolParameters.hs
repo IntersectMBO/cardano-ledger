@@ -25,7 +25,7 @@ import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
@@ -132,41 +132,42 @@ instance MonadError SchemaError m => FromJSON m ProtocolParameters where
       <*> fromJSField obj "txFeePolicy"
       <*> fromJSField obj "unlockStakeEpoch"
 
-instance Bi ProtocolParameters where
-  encode pp =
+instance ToCBOR ProtocolParameters where
+  toCBOR pp =
     encodeListLen 14
-      <> encode (ppScriptVersion pp)
-      <> encode (ppSlotDuration pp)
-      <> encode (ppMaxBlockSize pp)
-      <> encode (ppMaxHeaderSize pp)
-      <> encode (ppMaxTxSize pp)
-      <> encode (ppMaxProposalSize pp)
-      <> encode (ppMpcThd pp)
-      <> encode (ppHeavyDelThd pp)
-      <> encode (ppUpdateVoteThd pp)
-      <> encode (ppUpdateProposalThd pp)
-      <> encode (ppUpdateImplicit pp)
-      <> encode (ppSoftforkRule pp)
-      <> encode (ppTxFeePolicy pp)
-      <> encode (ppUnlockStakeEpoch pp)
+      <> toCBOR (ppScriptVersion pp)
+      <> toCBOR (ppSlotDuration pp)
+      <> toCBOR (ppMaxBlockSize pp)
+      <> toCBOR (ppMaxHeaderSize pp)
+      <> toCBOR (ppMaxTxSize pp)
+      <> toCBOR (ppMaxProposalSize pp)
+      <> toCBOR (ppMpcThd pp)
+      <> toCBOR (ppHeavyDelThd pp)
+      <> toCBOR (ppUpdateVoteThd pp)
+      <> toCBOR (ppUpdateProposalThd pp)
+      <> toCBOR (ppUpdateImplicit pp)
+      <> toCBOR (ppSoftforkRule pp)
+      <> toCBOR (ppTxFeePolicy pp)
+      <> toCBOR (ppUnlockStakeEpoch pp)
 
-  decode = do
+instance FromCBOR ProtocolParameters where
+  fromCBOR = do
     enforceSize "ProtocolParameters" 14
     ProtocolParameters
-      <$> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 deriveJSON S.defaultOptions ''ProtocolParameters
 

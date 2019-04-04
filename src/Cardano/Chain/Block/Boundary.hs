@@ -10,7 +10,7 @@ module Cardano.Chain.Block.Boundary
   )
 where
 
-import Cardano.Binary.Class
+import Cardano.Binary
   (Dropper, dropBytes, dropList, dropWord64, enforceSize)
 import Cardano.Chain.Common (dropAttributes, dropChainDifficulty)
 

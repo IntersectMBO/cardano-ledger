@@ -41,7 +41,7 @@ import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Common.Lovelace
 
 
@@ -66,9 +66,11 @@ instance B.Buildable LovelacePortion where
     lovelacePortionDenominator
     (lovelacePortionToDouble cp)
 
-instance Bi LovelacePortion where
-  encode = encode . getLovelacePortion
-  decode = LovelacePortion <$> decode
+instance ToCBOR LovelacePortion where
+  toCBOR = toCBOR . getLovelacePortion
+
+instance FromCBOR LovelacePortion where
+  fromCBOR = LovelacePortion <$> fromCBOR
 
 -- The Canonical and Aeson instances for LovelacePortion are inconsistent -
 -- Canonical reads/writes an integer, but Aeson reads/write a Real in range [0,1]

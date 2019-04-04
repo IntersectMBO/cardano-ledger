@@ -1,16 +1,16 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 
 module Cardano.Chain.Delegation.Payload
   ( APayload(..)
   , Payload
-  , decodeAPayload
   , unsafePayload
   )
 where
@@ -20,18 +20,15 @@ import Cardano.Prelude
 import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
   , Decoded(..)
-  , Decoder
+  , FromCBOR(..)
+  , ToCBOR(..)
   , annotatedDecoder
-  , decodeListWith
   )
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
-import Cardano.Crypto
-  ( decodeAProxyVerificationKey )
 
 
 -- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing
@@ -40,8 +37,7 @@ data APayload a = UnsafeAPayload
   { getPayload    :: [Delegation.ACertificate a]
   , getAnnotation :: a
   } deriving (Show, Eq, Generic, Functor)
-
-instance (NFData a) => NFData (APayload a) where
+    deriving anyclass NFData
 
 type Payload = APayload ()
 
@@ -58,12 +54,13 @@ instance Buildable (APayload a) where
     (length psks)
     psks
 
-instance Bi (APayload ()) where
-  encode = encode . getPayload
-  decode = void <$> decodeAPayload
+instance ToCBOR Payload where
+  toCBOR = toCBOR . getPayload
 
-decodeAPayload :: Decoder s (APayload ByteSpan)
-decodeAPayload = do
-  (Annotated p a) <- annotatedDecoder
-    (decodeListWith decodeAProxyVerificationKey)
-  pure (UnsafeAPayload p a)
+instance FromCBOR Payload where
+  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
+
+instance FromCBOR (APayload ByteSpan) where
+  fromCBOR = do
+    (Annotated p a) <- annotatedDecoder fromCBOR
+    pure (UnsafeAPayload p a)

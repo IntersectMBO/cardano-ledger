@@ -15,7 +15,7 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Signing.Redeem.PublicKey
   (RedeemPublicKey(..), redeemPkB64F)
 
@@ -23,9 +23,7 @@ import Cardano.Crypto.Signing.Redeem.PublicKey
 -- | Wrapper around 'Ed25519.SecretKey'.
 newtype RedeemSecretKey =
   RedeemSecretKey Ed25519.SecretKey
-  deriving (Eq, Ord, Show, Generic, NFData)
-
-deriving instance Bi RedeemSecretKey
+  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
 
 instance B.Buildable RedeemSecretKey where
   build = bprint ("redeem_sec_of_pk:" . redeemPkB64F) . redeemToPublic

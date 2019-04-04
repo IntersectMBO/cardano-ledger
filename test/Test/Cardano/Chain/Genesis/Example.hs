@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
-import Cardano.Binary.Class (Raw(..))
+import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
@@ -60,8 +60,9 @@ import qualified Cardano.Crypto.Wallet as CC
 import Test.Cardano.Chain.Common.Example
   (exampleAddress, exampleAddress1, exampleStakeholderId)
 import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
-import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
+
 
 exampleBlockCount :: BlockCount
 exampleBlockCount = BlockCount 12344

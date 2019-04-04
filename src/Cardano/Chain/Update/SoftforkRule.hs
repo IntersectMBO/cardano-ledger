@@ -22,7 +22,7 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion)
 
 
@@ -52,14 +52,15 @@ instance B.Buildable SoftforkRule where
     (srMinThd sr)
     (srThdDecrement sr)
 
-instance Bi SoftforkRule where
-  encode sr =
-    encodeListLen 3 <> encode (srInitThd sr) <> encode (srMinThd sr) <> encode
+instance ToCBOR SoftforkRule where
+  toCBOR sr =
+    encodeListLen 3 <> toCBOR (srInitThd sr) <> toCBOR (srMinThd sr) <> toCBOR
       (srThdDecrement sr)
 
-  decode = do
+instance FromCBOR SoftforkRule where
+  fromCBOR = do
     enforceSize "SoftforkRule" 3
-    SoftforkRule <$> decode <*> decode <*> decode
+    SoftforkRule <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 instance Monad m => ToJSON m SoftforkRule where
   toJSON sr = mkObject

@@ -22,15 +22,15 @@ import Cardano.Chain.Common
   , Address
   , Attributes
   , ChainDifficulty(..)
+  , NetworkMagic(..)
   , StakeholderId
   , makeAddress
   , mkAttributes
   , mkStakeholderId
   )
-import Cardano.Chain.Common (NetworkMagic(..))
 import Cardano.Crypto.HD (HDAddressPayload(..))
 
-import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example
   (examplePublicKey, examplePublicKeys, exampleRedeemPublicKey)
 

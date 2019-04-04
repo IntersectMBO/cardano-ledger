@@ -36,11 +36,11 @@ module Cardano.Chain.Block.Header
   -- * Boundary Header
   , dropBoundaryHeader
   , wrapBoundaryBytes
-  , encodeHeader
-  , encodeHeader'
-  , decodeHeader
-  , decodeHeader'
-  , decodeAHeader
+  , toCBORHeader
+  , toCBORHeader'
+  , fromCBORHeader
+  , fromCBORHeader'
+  , fromCBORAHeader
   , HeaderError(..)
   , verifyHeader
   , HeaderHash
@@ -52,8 +52,8 @@ module Cardano.Chain.Block.Header
   , consensusData
 
   -- * 'ConsensusData' encoding and decoding
-  , encodeConsensusData
-  , decodeConsensusData
+  , toCBORConsensusData
+  , fromCBORConsensusData
 
   -- * Utility functions
   , genesisHeaderHash
@@ -70,16 +70,17 @@ import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
   , Decoded(..)
   , Decoder
   , DecoderError(..)
   , Encoding
+  , FromCBOR(..)
+  , ToCBOR(..)
   , annotatedDecoder
-  , decodeAnnotated
+  , fromCBORAnnotated
   , dropBytes
   , dropInt32
   , encodeListLen
@@ -190,29 +191,29 @@ renderHeader es header = bprint
 
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
-encodeHeader' :: EpochSlots -> Header -> Encoding
-encodeHeader' es h =
+toCBORHeader' :: EpochSlots -> Header -> Encoding
+toCBORHeader' es h =
   encodeListLen 5
-    <> encode (headerProtocolMagicId h)
-    <> encode (headerPrevHash h)
-    <> encode (headerProof h)
-    <> encodeConsensusData es (headerConsensusData h)
-    <> encode (headerExtraData h)
+    <> toCBOR (headerProtocolMagicId h)
+    <> toCBOR (headerPrevHash h)
+    <> toCBOR (headerProof h)
+    <> toCBORConsensusData es (headerConsensusData h)
+    <> toCBOR (headerExtraData h)
 
-decodeHeader' :: EpochSlots -> Decoder s Header
-decodeHeader' epochSlots = void <$> decodeAHeader epochSlots
+fromCBORHeader' :: EpochSlots -> Decoder s Header
+fromCBORHeader' epochSlots = void <$> fromCBORAHeader epochSlots
 
-decodeAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
-decodeAHeader epochSlots = do
+fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
+fromCBORAHeader epochSlots = do
   Annotated (pm, prevHash, proof, cd, extraData) byteSpan <-
     annotatedDecoder $ do
       enforceSize "Header" 5
       (,,,,)
-        <$> decode
-        <*> decodeAnnotated
-        <*> decodeAnnotated
-        <*> decodeAConsensus epochSlots
-        <*> decodeAnnotated
+        <$> fromCBOR
+        <*> fromCBORAnnotated
+        <*> fromCBORAnnotated
+        <*> fromCBORAConsensus epochSlots
+        <*> fromCBORAnnotated
   pure $ AHeader pm prevHash proof cd extraData byteSpan
 
 instance Decoded (AHeader ByteString) where
@@ -366,18 +367,18 @@ verifyHeader pm epochSlots header = do
   consensus = headerConsensusData header
 
 -- | Encode a 'Header' accounting for deprecated epoch boundary blocks
-encodeHeader :: EpochSlots -> Header -> Encoding
-encodeHeader epochSlots h =
-  encodeListLen 2 <> encode (1 :: Word) <> encodeHeader' epochSlots h
+toCBORHeader :: EpochSlots -> Header -> Encoding
+toCBORHeader epochSlots h =
+  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBORHeader' epochSlots h
 
-decodeHeader :: EpochSlots -> Decoder s (Maybe Header)
-decodeHeader epochSlots = do
+fromCBORHeader :: EpochSlots -> Decoder s (Maybe Header)
+fromCBORHeader epochSlots = do
   enforceSize "Header" 2
-  decode @Word >>= \case
+  fromCBOR @Word >>= \case
     0 -> do
       void dropBoundaryHeader
       pure Nothing
-    1 -> Just <$!> decodeHeader' epochSlots
+    1 -> Just <$!> fromCBORHeader' epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
 
 --------------------------------------------------------------------------------
@@ -397,16 +398,16 @@ headerHashF = build
 --   directly serialized to the blockchain, so these magic bytes cannot be
 --   determined from the raw header data.
 --
---   These bytes are from `encodeListLen 2 <> encode (1 :: Word8)`
+--   These bytes are from `encodeListLen 2 <> toCBOR (1 :: Word8)`
 wrapHeaderBytes :: ByteString -> ByteString
 wrapHeaderBytes = mappend "\130\SOH"
 
 -- | Hash the serialised representation of a `Header`
 --
 --   For backwards compatibility we have to take the hash of the header
---   serialised with 'encodeHeader'
+--   serialised with 'toCBORHeader'
 hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serializeEncoding . encodeHeader es
+hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeader es
 
 --------------------------------------------------------------------------------
 -- BoundaryHeader
@@ -417,7 +418,7 @@ dropBoundaryHeader = do
   enforceSize "BoundaryHeader" 5
   dropInt32
   -- HeaderHash
-  hh <- decode
+  hh <- fromCBOR
   -- BoundaryBodyProof
   dropBytes
   dropBoundaryConsensusData
@@ -451,16 +452,17 @@ newtype BlockSignature = BlockSignature
 instance B.Buildable BlockSignature where
   build (BlockSignature s) = bprint ("BlockSignature: ".build) s
 
-instance Bi BlockSignature where
-  encode (BlockSignature pxy) =
+instance ToCBOR BlockSignature where
+  toCBOR (BlockSignature pxy) =
     -- Tag 0 was previously used for BlockSignature (no delegation)
     -- Tag 1 was previously used for BlockPSignatureLight
-    encodeListLen 2 <> encode (2 :: Word8) <> encode pxy
+    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR pxy
 
-  decode = do
+instance FromCBOR BlockSignature where
+  fromCBOR = do
     enforceSize "BlockSignature" 2
-    decode >>= \case
-      2 -> BlockSignature <$> decode
+    fromCBOR >>= \case
+      2 -> BlockSignature <$> fromCBOR
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
 
@@ -500,18 +502,19 @@ data ToSign = ToSign
   , _msExtraHeader :: !ExtraHeaderData
   } deriving (Eq, Show, Generic)
 
-instance Bi ToSign where
-  encode mts =
+instance ToCBOR ToSign where
+  toCBOR mts =
     encodeListLen 5
-      <> encode (_msHeaderHash mts)
-      <> encode (_msBodyProof mts)
-      <> encode (_msSlot mts)
-      <> encode (_msChainDiff mts)
-      <> encode (_msExtraHeader mts)
+      <> toCBOR (_msHeaderHash mts)
+      <> toCBOR (_msBodyProof mts)
+      <> toCBOR (_msSlot mts)
+      <> toCBOR (_msChainDiff mts)
+      <> toCBOR (_msExtraHeader mts)
 
-  decode = do
+instance FromCBOR ToSign where
+  fromCBOR = do
     enforceSize "ToSign" 5
-    ToSign <$> decode <*> decode <*> decode <*> decode <*> decode
+    ToSign <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
 
 --------------------------------------------------------------------------------
@@ -542,15 +545,15 @@ data AConsensusData a = AConsensusData
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
 
-decodeAConsensus :: EpochSlots -> Decoder s (AConsensusData ByteSpan)
-decodeAConsensus epochSlots = do
+fromCBORAConsensus :: EpochSlots -> Decoder s (AConsensusData ByteSpan)
+fromCBORAConsensus epochSlots = do
   enforceSize "ConsensusData" 4
   -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId` used in
   -- 'AConsensusData' is encoded as a epoch and slot-count pair.
-  epochAndSlotCount :: Annotated SlotId ByteSpan <- decodeAnnotated
-  pk           <- decode
-  annChaiDifficulty <- decodeAnnotated
-  consensusSig <- decode
+  epochAndSlotCount :: Annotated SlotId ByteSpan <- fromCBORAnnotated
+  pk           <- fromCBOR
+  annChaiDifficulty <- fromCBORAnnotated
+  consensusSig <- fromCBOR
   let slotNo = first (flattenSlotId epochSlots) epochAndSlotCount
   pure $! AConsensusData slotNo pk annChaiDifficulty consensusSig
 
@@ -560,14 +563,14 @@ consensusSlot = unAnnotated . aConsensusSlot
 consensusDifficulty :: AConsensusData a -> ChainDifficulty
 consensusDifficulty = unAnnotated . aConsensusDifficulty
 
-encodeConsensusData :: EpochSlots -> ConsensusData -> Encoding
-encodeConsensusData es cd =
+toCBORConsensusData :: EpochSlots -> ConsensusData -> Encoding
+toCBORConsensusData es cd =
   encodeListLen 4
-    <> encode (unflattenSlotId es $ consensusSlot cd)
-    <> encode (consensusLeaderKey cd)
-    <> encode (consensusDifficulty cd)
-    <> encode (consensusSignature cd)
+    <> toCBOR (unflattenSlotId es $ consensusSlot cd)
+    <> toCBOR (consensusLeaderKey cd)
+    <> toCBOR (consensusDifficulty cd)
+    <> toCBOR (consensusSignature cd)
 
-decodeConsensusData :: EpochSlots -> Decoder s ConsensusData
-decodeConsensusData epochSlots =
-  (fmap . fmap) (const ()) (decodeAConsensus epochSlots)
+fromCBORConsensusData :: EpochSlots -> Decoder s ConsensusData
+fromCBORConsensusData epochSlots =
+  (fmap . fmap) (const ()) (fromCBORAConsensus epochSlots)

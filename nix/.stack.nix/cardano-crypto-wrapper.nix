@@ -26,7 +26,6 @@
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-prelude)
-          (hsPkgs.cborg)
           (hsPkgs.cryptonite)
           (hsPkgs.cryptonite-openssl)
           (hsPkgs.data-default)

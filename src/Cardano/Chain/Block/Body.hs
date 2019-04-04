@@ -3,8 +3,8 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Block.Body
   ( Body
@@ -12,19 +12,17 @@ module Cardano.Chain.Block.Body
   , ABody(..)
   , bodyTxs
   , bodyWitnesses
-  , decodeABody
   )
 where
 
 import Cardano.Prelude
 
-import Cardano.Binary.Class
-  (Bi(..), ByteSpan, Decoder, encodeListLen, enforceSize)
+import Cardano.Binary
+  (ByteSpan, FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxPayload
-  (ATxPayload, TxPayload, decodeATxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.Txp.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 
@@ -47,24 +45,25 @@ data ABody a = ABody
   -- ^ Additional update information for the update system
   } deriving (Eq, Show, Generic, Functor, NFData)
 
-instance Bi (ABody ()) where
-  encode bc =
+instance ToCBOR Body where
+  toCBOR bc =
     encodeListLen 4
-      <> encode (bodyTxPayload bc)
-      <> encode (bodySscPayload bc)
-      <> encode (bodyDlgPayload bc)
-      <> encode (bodyUpdatePayload bc)
+      <> toCBOR (bodyTxPayload bc)
+      <> toCBOR (bodySscPayload bc)
+      <> toCBOR (bodyDlgPayload bc)
+      <> toCBOR (bodyUpdatePayload bc)
 
-  decode = void <$> decodeABody
+instance FromCBOR Body where
+  fromCBOR = void <$> fromCBOR @(ABody ByteSpan)
 
-decodeABody :: Decoder s (ABody ByteSpan)
-decodeABody = do
-  enforceSize "Body" 4
-  ABody
-    <$> decodeATxPayload
-    <*> decode
-    <*> Delegation.decodeAPayload
-    <*> Update.decodeAPayload
+instance FromCBOR (ABody ByteSpan) where
+  fromCBOR = do
+    enforceSize "Body" 4
+    ABody
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
@@ -38,20 +40,24 @@ import qualified Data.Foldable as Foldable
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import Cardano.Binary.Class (Bi(..), Raw, serializeBuilder)
+import Cardano.Binary (FromCBOR(..), Raw, ToCBOR(..), serializeBuilder)
 import Cardano.Crypto (AbstractHash(..), Hash, hashRaw)
 
 -- | Data type for root of merkle tree.
 newtype MerkleRoot a = MerkleRoot
-    { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
-    } deriving (Show, Eq, Ord, Generic, ByteArrayAccess, NFData)
+  { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
+  } deriving (Show, Eq, Ord, Generic)
+    deriving newtype ByteArrayAccess
+    deriving anyclass NFData
 
 instance Buildable (MerkleRoot a) where
     build (MerkleRoot h) = "MerkleRoot|" <> build h
 
-instance Bi a => Bi (MerkleRoot a) where
-    encode = encode . getMerkleRoot
-    decode = MerkleRoot <$> decode
+instance ToCBOR a => ToCBOR (MerkleRoot a) where
+    toCBOR = toCBOR . getMerkleRoot
+
+instance FromCBOR a => FromCBOR (MerkleRoot a) where
+    fromCBOR = MerkleRoot <$> fromCBOR
 
 -- | Straightforward merkle tree representation in Haskell.
 data MerkleTree a = MerkleEmpty | MerkleTree !Word32 !(MerkleNode a)
@@ -74,30 +80,31 @@ instance Show a => Show (MerkleTree a) where
 
 -- This instance is both faster and more space-efficient (as confirmed by a
 -- benchmark). Hashing turns out to be faster than decoding extra data.
-instance Bi a => Bi (MerkleTree a) where
-    encode = encode . Foldable.toList
-    decode = mkMerkleTree <$> decode
+instance ToCBOR a => ToCBOR (MerkleTree a) where
+  toCBOR = toCBOR . Foldable.toList
+
+instance (FromCBOR a, ToCBOR a) => FromCBOR (MerkleTree a) where
+  fromCBOR = mkMerkleTree <$> fromCBOR
 
 data MerkleNode a
-    -- | MerkleBranch mRoot mLeft mRight
-    = MerkleBranch !(MerkleRoot a) !(MerkleNode a) !(MerkleNode a)
-    -- | MerkleLeaf mRoot mVal
-    | MerkleLeaf !(MerkleRoot a) a
-    deriving (Eq, Show, Generic)
-
-instance NFData a => NFData (MerkleNode a)
+  -- | MerkleBranch mRoot mLeft mRight
+  = MerkleBranch !(MerkleRoot a) !(MerkleNode a) !(MerkleNode a)
+  -- | MerkleLeaf mRoot mVal
+  | MerkleLeaf !(MerkleRoot a) a
+  deriving (Eq, Show, Generic)
+  deriving anyclass NFData
 
 instance Foldable MerkleNode where
-    foldMap f x = case x of
-        MerkleLeaf _ mVal             -> f mVal
-        MerkleBranch _ mLeft mRight   ->
-            Foldable.foldMap f mLeft `mappend` Foldable.foldMap f mRight
+  foldMap f x = case x of
+    MerkleLeaf _ mVal -> f mVal
+    MerkleBranch _ mLeft mRight ->
+      Foldable.foldMap f mLeft `mappend` Foldable.foldMap f mRight
 
 toLazyByteString :: Builder -> LBS.ByteString
 toLazyByteString =
   Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
 
-mkLeaf :: forall a . Bi a => a -> MerkleNode a
+mkLeaf :: forall a . ToCBOR a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
  where
   mRoot :: MerkleRoot a
@@ -120,7 +127,7 @@ mkRoot a b = MerkleRoot $ coerce $ hashRaw $ toLazyByteString $ mconcat
   [word8 1, merkleRootToBuilder a, merkleRootToBuilder b]
 
 -- | Smart constructor for 'MerkleTree'.
-mkMerkleTree :: forall a . Bi a => [a] -> MerkleTree a
+mkMerkleTree :: forall a . ToCBOR a => [a] -> MerkleTree a
 mkMerkleTree [] = MerkleEmpty
 mkMerkleTree ls = MerkleTree (fromIntegral lsLen) (go lsLen ls)
  where

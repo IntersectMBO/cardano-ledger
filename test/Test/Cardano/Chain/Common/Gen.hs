@@ -34,7 +34,7 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (ToCBOR)
 import Cardano.Chain.Common
   ( AddrAttributes(..)
   , AddrSpendingData(..)
@@ -135,11 +135,11 @@ genLovelacePortion =
   LovelacePortion <$> Gen.word64 (Range.constant 0 lovelacePortionDenominator)
 
 -- slow
-genMerkleTree :: Bi a => Gen a -> Gen (MerkleTree a)
+genMerkleTree :: ToCBOR a => Gen a -> Gen (MerkleTree a)
 genMerkleTree genA = mkMerkleTree <$> Gen.list (Range.linear 0 10) genA
 
 -- slow
-genMerkleRoot :: Bi a => Gen a -> Gen (MerkleRoot a)
+genMerkleRoot :: ToCBOR a => Gen a -> Gen (MerkleRoot a)
 genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 
 genNetworkMagic :: Gen NetworkMagic

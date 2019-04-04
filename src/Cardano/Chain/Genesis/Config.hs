@@ -40,7 +40,7 @@ import qualified Formatting.Buildable as B
 import System.FilePath ((</>))
 import System.IO.Error (userError)
 
-import Cardano.Binary.Class (Raw)
+import Cardano.Binary (Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)

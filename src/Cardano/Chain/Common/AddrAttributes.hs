@@ -14,10 +14,15 @@ import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, builder)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi, decode, encode)
-import qualified Cardano.Binary.Class as Bi
+import Cardano.Binary
+  ( Decoder
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeFull
+  , serialize
+  )
 import Cardano.Chain.Common.Attributes
-  (Attributes(..), decodeAttributes, encodeAttributes)
+  (Attributes(..), fromCBORAttributes, toCBORAttributes)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
 import Cardano.Crypto.HD (HDAddressPayload)
 
@@ -54,15 +59,15 @@ For address there are two attributes:
 
 -}
 
-instance Bi (Attributes AddrAttributes) where
+instance ToCBOR (Attributes AddrAttributes) where
   -- FIXME @avieth it was observed that for a 150kb block, this call to
-  -- encodeAttributes allocated 3.685mb
+  -- toCBORAttributes allocated 3.685mb
   -- Try using serialize rather than serialize', to avoid the
   -- toStrict call.
   -- Also consider using a custom builder strategy; serialized attributes are
   -- probably small, right?
-  encode attrs@Attributes { attrData = AddrAttributes derivationPath networkMagic } =
-    encodeAttributes listWithIndices attrs
+  toCBOR attrs@Attributes { attrData = AddrAttributes derivationPath networkMagic } =
+    toCBORAttributes listWithIndices attrs
    where
     listWithIndices :: [(Word8, AddrAttributes -> LByteString)]
     listWithIndices = derivationPathListWithIndices
@@ -73,19 +78,20 @@ instance Bi (Attributes AddrAttributes) where
       Nothing -> []
       -- 'unsafeFromJust' is safe, because 'case' ensures
       -- that derivation path is 'Just'.
-      Just _  -> [(1, Bi.serialize . unsafeFromJust . aaPkDerivationPath)]
+      Just _  -> [(1, serialize . unsafeFromJust . aaPkDerivationPath)]
     unsafeFromJust :: Maybe a -> a
     unsafeFromJust =
-      fromMaybe (panic "Maybe was Nothing in Bi (Attributes AddrAttributes)")
+      fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
 
     networkMagicListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
     networkMagicListWithIndices =
       case networkMagic of
         NetworkMainOrStage -> []
         NetworkTestnet x  ->
-          [(2, \_ -> Bi.serialize x)]
+          [(2, \_ -> serialize x)]
 
-  decode = decodeAttributes initValue go
+instance FromCBOR (Attributes AddrAttributes) where
+  fromCBOR = fromCBORAttributes initValue go
    where
     initValue = AddrAttributes { aaPkDerivationPath = Nothing
                                , aaNetworkMagic = NetworkMainOrStage }
@@ -93,10 +99,10 @@ instance Bi (Attributes AddrAttributes) where
       :: Word8
       -> LByteString
       -> AddrAttributes
-      -> Bi.Decoder s (Maybe AddrAttributes)
+      -> Decoder s (Maybe AddrAttributes)
     go n v acc = case n of
       1 -> (\deriv -> Just $ acc { aaPkDerivationPath = Just deriv })
-        <$> Bi.deserialize v
+        <$> toCborError (decodeFull v)
       2 -> (\deriv -> Just $ acc {aaNetworkMagic = NetworkTestnet deriv })
-        <$> Bi.deserialize v
+        <$> toCborError (decodeFull v)
       _ -> pure Nothing

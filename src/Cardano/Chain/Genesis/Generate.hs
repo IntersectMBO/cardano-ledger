@@ -30,7 +30,7 @@ import Data.Time (UTCTime)
 import Formatting (build, bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (serialize')
+import Cardano.Binary (serialize')
 import Cardano.Chain.Common
   ( Address
   , Lovelace

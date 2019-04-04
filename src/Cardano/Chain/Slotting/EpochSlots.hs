@@ -15,16 +15,18 @@ import Data.Aeson (ToJSON(..))
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 -- | The number of slots per epoch.
 newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
   } deriving (Data, Eq, Ord, Read, Show, Buildable, Generic)
 
-instance Bi EpochSlots where
-  encode = encode . unEpochSlots
-  decode = EpochSlots <$> decode
+instance ToCBOR EpochSlots where
+  toCBOR = toCBOR . unEpochSlots
+
+instance FromCBOR EpochSlots where
+  fromCBOR = EpochSlots <$> fromCBOR
 
 deriving instance ToJSON EpochSlots
 

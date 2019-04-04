@@ -24,7 +24,7 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (ToCBOR)
 import Cardano.Crypto (decodeAbstractHash, hash, hashHexF)
 
 
@@ -74,7 +74,7 @@ prop_decodeAbstractHash = property $ do
 --------------------------------------------------------------------------------
 
 -- | Check that hashing two different @a@ values gives different hashes
-hashInequality :: (Eq a, Show a, Bi a) => Gen a -> Property
+hashInequality :: (Eq a, Show a, ToCBOR a) => Gen a -> Property
 hashInequality genA = property $ do
   a <- forAll genA
   b <- forAll $ Gen.filter (/= a) genA

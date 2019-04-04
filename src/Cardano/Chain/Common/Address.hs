@@ -18,7 +18,7 @@ module Cardano.Chain.Common.Address
   -- * Formatting
   , addressF
   , addressDetailedF
-  , decodeTextAddress
+  , fromCBORTextAddress
 
   -- * Spending data checks
   , checkAddrSpendingData
@@ -27,8 +27,8 @@ module Cardano.Chain.Common.Address
 
   -- * Encoding
   , addrToBase58
-  , encodeAddr
-  , encodeAddrCRC32
+  , toCBORAddr
+  , toCBORAddrCRC32
 
   -- * Utilities
   , addrAttributesUnwrapped
@@ -76,15 +76,18 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
   (FromJSON(..), FromObjectKey(..), JSValue(..), ToJSON(..), ToObjectKey(..))
 
-import Cardano.Binary.Class
-  ( Bi(..)
-  , DecoderError(..)
+import Cardano.Binary
+  ( DecoderError(..)
   , Encoding
+  , FromCBOR(..)
+  , ToCBOR(..)
   , biSize
+  , decodeCrcProtected
+  , decodeFull'
   , encodeCrcProtected
   , encodedCrcProtectedSizeExpr
+  , serialize'
   )
-import qualified Cardano.Binary.Class as Bi
 import Cardano.Chain.Common.AddrAttributes (AddrAttributes(..))
 import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData
@@ -120,7 +123,7 @@ import Cardano.Crypto.Signing
 newtype Address' = Address'
   { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
   } deriving (Eq, Show, Generic)
-    deriving newtype Bi
+    deriving newtype (FromCBOR, ToCBOR)
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address
@@ -135,17 +138,9 @@ data Address = Address
   } deriving (Eq, Ord, Generic, Show)
     deriving anyclass NFData
 
-instance Bi Address where
-  encode addr =
-    Bi.encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
-
-  decode = do
-    (root, attributes, addrType') <- Bi.decodeCrcProtected
-    pure $ Address
-      { addrRoot       = root
-      , addrAttributes = attributes
-      , addrType       = addrType'
-      }
+instance ToCBOR Address where
+  toCBOR addr =
+    encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
 
   encodedSizeExpr size pxy =
     encodedCrcProtectedSizeExpr size
@@ -154,6 +149,15 @@ instance Bi Address where
       <*> (addrAttributes <$> pxy)
       <*> (addrType <$> pxy)
 
+instance FromCBOR Address where
+  fromCBOR = do
+    (root, attributes, addrType') <- decodeCrcProtected
+    pure $ Address
+      { addrRoot       = root
+      , addrAttributes = attributes
+      , addrType       = addrType'
+      }
+
 instance B.Buildable [Address] where
   build = bprint listJson
 
@@ -161,22 +165,22 @@ instance Monad m => ToObjectKey m Address where
   toObjectKey = pure . formatToString addressF
 
 instance MonadError SchemaError m => FromObjectKey m Address where
-  fromObjectKey = fmap Just . parseJSString decodeTextAddress . JSString
+  fromObjectKey = fmap Just . parseJSString fromCBORTextAddress . JSString
 
 instance Monad m => ToJSON m Address where
   toJSON = fmap JSString . toObjectKey
 
 instance MonadError SchemaError m => FromJSON m Address where
-  fromJSON = parseJSString decodeTextAddress
+  fromJSON = parseJSString fromCBORTextAddress
 
 instance Aeson.FromJSONKey Address where
-  fromJSONKey = Aeson.FromJSONKeyTextParser (toAesonError . decodeTextAddress)
+  fromJSONKey = Aeson.FromJSONKeyTextParser (toAesonError . fromCBORTextAddress)
 
 instance Aeson.ToJSONKey Address where
   toJSONKey = Aeson.toJSONKeyText (sformat addressF)
 
 instance Aeson.FromJSON Address where
-  parseJSON = toAesonError . decodeTextAddress <=< Aeson.parseJSON
+  parseJSON = toAesonError . fromCBORTextAddress <=< Aeson.parseJSON
 
 instance Aeson.ToJSON Address where
   toJSON = Aeson.toJSON . sformat addressF
@@ -207,7 +211,7 @@ addrAlphabet :: Alphabet
 addrAlphabet = bitcoinAlphabet
 
 addrToBase58 :: Address -> ByteString
-addrToBase58 = encodeBase58 addrAlphabet . Bi.serialize'
+addrToBase58 = encodeBase58 addrAlphabet . serialize'
 
 instance B.Buildable Address where
   build = B.build . decodeUtf8 . addrToBase58
@@ -217,17 +221,17 @@ addressF :: Format r (Address -> r)
 addressF = build
 
 -- | A function which decodes base58-encoded 'Address'
-decodeTextAddress :: Text -> Either DecoderError Address
-decodeTextAddress = decodeAddress . encodeUtf8
+fromCBORTextAddress :: Text -> Either DecoderError Address
+fromCBORTextAddress = fromCBORAddress . encodeUtf8
  where
-  decodeAddress :: ByteString -> Either DecoderError Address
-  decodeAddress bs = do
+  fromCBORAddress :: ByteString -> Either DecoderError Address
+  fromCBORAddress bs = do
     let
       base58Err = DecoderErrorCustom
         "Address"
         "Invalid base58 representation of address"
     dbs <- maybeToRight base58Err $ decodeBase58 addrAlphabet bs
-    Bi.decodeFull' dbs
+    decodeFull' dbs
 
 --------------------------------------------------------------------------------
 -- Constructors
@@ -433,15 +437,15 @@ goodSk = snd goodSkAndPk
 
 
 -- Encodes the `Address` __without__ the CRC32.
--- It's important to keep this function separated from the `encode`
--- definition to avoid that `encode` would call `crc32` and
--- the latter invoke `crc32Update`, which would then try to call `encode`
+-- It's important to keep this function separated from the `toCBOR`
+-- definition to avoid that `toCBOR` would call `crc32` and
+-- the latter invoke `crc32Update`, which would then try to call `toCBOR`
 -- indirectly once again, in an infinite loop.
-encodeAddr :: Address -> Encoding
-encodeAddr addr =
-  encode (addrRoot addr) <> encode (addrAttributes addr) <> encode
+toCBORAddr :: Address -> Encoding
+toCBORAddr addr =
+  toCBOR (addrRoot addr) <> toCBOR (addrAttributes addr) <> toCBOR
     (addrType addr)
 
-encodeAddrCRC32 :: Address -> Encoding
-encodeAddrCRC32 addr =
+toCBORAddrCRC32 :: Address -> Encoding
+toCBORAddrCRC32 addr =
   encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)

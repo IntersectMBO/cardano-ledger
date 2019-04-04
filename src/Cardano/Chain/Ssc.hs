@@ -21,10 +21,11 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Binary.Class
-  ( Bi(..)
-  , DecoderError(..)
+import Cardano.Binary
+  ( DecoderError(..)
   , Dropper
+  , FromCBOR(..)
+  , ToCBOR(..)
   , decodeListLen
   , dropBytes
   , dropList
@@ -46,19 +47,20 @@ data SscPayload =
   SscPayload
   deriving (Eq, Show, Generic, NFData)
 
-instance Bi SscPayload where
-  encode _ = encodeListLen 2
-    <> encode (3 :: Word8)
-    <> encode (mempty :: Set ())
+instance ToCBOR SscPayload where
+  toCBOR _ = encodeListLen 2
+    <> toCBOR (3 :: Word8)
+    <> toCBOR (mempty :: Set ())
 
-  decode = do
+instance FromCBOR SscPayload where
+  fromCBOR = do
     dropSscPayload
     pure SscPayload
 
 dropSscPayload :: Dropper s
 dropSscPayload = do
   actualLen <- decodeListLen
-  decode >>= \case
+  fromCBOR >>= \case
     0 -> do
       matchSize "CommitmentsPayload" 3 actualLen
       dropCommitmentsMap
@@ -85,18 +87,19 @@ data SscProof =
   SscProof
   deriving (Eq, Show, Generic, NFData)
 
-instance Bi SscProof where
-  encode _ =
-    encodeListLen 2 <> encode (3 :: Word8) <> encode (mempty :: ByteString)
+instance ToCBOR SscProof where
+  toCBOR _ =
+    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR (mempty :: ByteString)
 
-  decode = do
+instance FromCBOR SscProof where
+  fromCBOR = do
     dropSscProof
     pure SscProof
 
 dropSscProof :: Dropper s
 dropSscProof = do
   actualLen <- decodeListLen
-  decode >>= \case
+  fromCBOR >>= \case
     0 -> do
       matchSize "CommitmentsProof" 3 actualLen
       dropBytes

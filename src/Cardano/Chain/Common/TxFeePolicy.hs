@@ -26,13 +26,14 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
   (FromJSON(..), ToJSON(..), expected, fromJSField, mkObject)
 
-import Cardano.Binary.Class
-  ( Bi(..)
+import Cardano.Binary
+  ( DecoderError(DecoderErrorUnknownTag)
+  , FromCBOR(..)
+  , ToCBOR(..)
   , decodeKnownCborDataItem
   , encodeKnownCborDataItem
   , encodeListLen
   , enforceSize
-  , DecoderError(DecoderErrorUnknownTag)
   )
 import Cardano.Chain.Common.Lovelace
   (Lovelace, LovelaceError, lovelaceToInteger, mkLovelace)
@@ -63,16 +64,17 @@ instance B.Buildable TxFeePolicy where
     build (TxFeePolicyTxSizeLinear tsp) =
         bprint ("policy(tx-size-linear): ".build) tsp
 
-instance Bi TxFeePolicy where
-    encode policy = case policy of
+instance ToCBOR TxFeePolicy where
+    toCBOR policy = case policy of
         TxFeePolicyTxSizeLinear txSizeLinear ->
             encodeListLen 2
-                <> encode (0 :: Word8)
+                <> toCBOR (0 :: Word8)
                 <> encodeKnownCborDataItem txSizeLinear
 
-    decode = do
+instance FromCBOR TxFeePolicy where
+    fromCBOR = do
         enforceSize "TxFeePolicy" 2
-        tag <- decode @Word8
+        tag <- fromCBOR @Word8
         case tag of
             0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
             _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag
