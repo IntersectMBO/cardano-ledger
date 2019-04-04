@@ -61,7 +61,7 @@ tests scenario = do
   let
     takeFiles :: [FilePath] -> [FilePath]
     takeFiles = case scenario of
-      ContinuousIntegration -> take 10
+      ContinuousIntegration -> identity
       Development           -> take 15
       QualityAssurance      -> identity
 
