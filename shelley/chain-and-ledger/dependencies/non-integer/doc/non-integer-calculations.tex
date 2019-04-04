@@ -394,6 +394,64 @@ results were exactly the same for all 34 decimal digits.
 The important aspect to get equivalent results is using the same approach to
 rounding after a division. In particular we use rounding to $-\infty$.
 
+\section{Optimisations for Specific Use-Cases}
+\label{sec:optim-spec-use}
+
+One use case for non-integral calculations in Shelley is the calculation of the
+probability of being a slot leader. This calculation has to be done every 2s
+locally for each potential slot leader. It also needs to be done in order to
+validate a block (to make sure that the block producer actually had the right to
+do so).
+
+More precisely, one has to check whether for a given $p$, $\sigma$ and a
+constant (at least for one epoch) $f$ the following inequality holds:
+
+\begin{equation*}
+  p < 1 - {(1 - f)}^{\sigma}
+\end{equation*}
+
+As $1-f$ is considered to be constant, and because ${(1-f)}^{\sigma}$ is equal
+to $\exp(\sigma\cdot\ln(1-f))$, we can pre-compute the value of $\ln(1-f)$ once
+and use it for every following computation.
+
+Setting $c:= \ln(1 - f)$ and using $q := 1 - p$ we get the following:
+
+\begin{equation*}
+  \begin{array}[h]{ccc}
+    & p < 1 - \exp(\sigma \cdot c) & \\
+    \Leftrightarrow & \exp(\sigma \cdot c) < 1 - p & (\textrm{c is negative})\\
+    \Leftrightarrow & \frac{1}{\exp(-\sigma \cdot c)} < q & \\
+    \Leftrightarrow & \frac{1}{q} < \exp(-\sigma \cdot c) &
+  \end{array}
+\end{equation*}
+
+The term $\exp{-\sigma \cdot c}$ can be computed using the Taylor series as
+described in Section~\ref{sec:taylor-series}.
+
+As the relevant information is not the result of the calculation, but whether
+the given $p$ is less than or greater than this value, one can also optimize
+further. Using the Lagrange remainder to estimate the error, it is possible to
+only compute as many iterations as necessary to get the desired information.
+
+\begin{equation*}
+    T \exp(x; a) := \sum_{n=0}^{\infty}\frac{x^{n}}{n!} =
+    \sum_{n=0}^k\frac{x^{n}}{n!} + R_{k}(x)
+\end{equation*}
+
+Where using an upper bound $M$ on the domain of $x$, the remainder (or error
+term) $R_{k}(x)$ can be estimated as follows:
+
+\begin{equation*}
+  R_{k}(x) \leq \vert M \cdot \frac{x^{k+1}}{(k+1)!}\vert
+\end{equation*}
+
+In general, for this use case one can easily estimate $M$, as the smallest
+integer larger than the exponential function evaluated at the upper bound of the
+interval of the domain of $x$. For each partial sum $\Sigma_{k}$, one can then
+test whether $p$ is greater than $\Sigma_k + \vert R_{k}(x) \vert$ or less than
+$\Sigma_k - \vert R_{k}(x)\vert$ to decide whether one can stop at an early
+iteration.
+
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
 \bibliography{references}
