@@ -34,6 +34,7 @@ main :: IO ()
 main = do
   opts <- execParser optsParser
   let scenario = optsTestScenario opts
+  putStrLn $ "\nRunning in scenario: " <> show scenario
   runTests
     [ Test.Cardano.Chain.Block.Bi.tests scenario
     , Test.Cardano.Chain.Block.Validation.tests scenario

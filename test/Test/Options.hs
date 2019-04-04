@@ -52,7 +52,7 @@ data TestScenario
   = ContinuousIntegration
   | Development
   | QualityAssurance
-  deriving (Read)
+  deriving (Read, Show)
 
 testScenarioParser :: Parser TestScenario
 testScenarioParser = Opts.option
