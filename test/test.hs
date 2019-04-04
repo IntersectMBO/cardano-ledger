@@ -35,7 +35,7 @@ main = do
   opts <- execParser optsParser
   let scenario = optsTestScenario opts
   runTests
-    [ Test.Cardano.Chain.Block.Bi.tests
+    [ Test.Cardano.Chain.Block.Bi.tests scenario
     , Test.Cardano.Chain.Block.Validation.tests scenario
     , Test.Cardano.Chain.Common.Compact.tests
     , Test.Cardano.Chain.Common.Lovelace.tests

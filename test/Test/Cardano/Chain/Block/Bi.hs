@@ -22,7 +22,7 @@ import Test.Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
 
-import Hedgehog (Property, tripping)
+import Hedgehog (Group, Property, tripping)
 import qualified Hedgehog as H
 
 import Cardano.Binary.Class
@@ -96,6 +96,7 @@ import Test.Cardano.Chain.Txp.Example
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -117,9 +118,9 @@ goldenHeader =
     "test/golden/bi/block/Header"
 
 -- | Round-trip test the backwards compatible header encoding/decoding functions
-roundTripHeaderCompat :: Property
+roundTripHeaderCompat :: TSProperty
 roundTripHeaderCompat =
-  eachOf 10 (feedPMEpochSlots $ genWithEpochSlots genHeader) roundTripsHeaderCompat
+  eachOfTS (1%5) (feedPMEpochSlots $ genWithEpochSlots genHeader) roundTripsHeaderCompat
   where
     roundTripsHeaderCompat :: WithEpochSlots Header -> H.PropertyT IO ()
     roundTripsHeaderCompat esh@(WithEpochSlots es _) =
@@ -133,9 +134,9 @@ roundTripHeaderCompat =
 --------------------------------------------------------------------------------
 
 -- | Round-trip test the backwards compatible block encoding/decoding functions
-roundTripBlockCompat :: Property
+roundTripBlockCompat :: TSProperty
 roundTripBlockCompat =
-  eachOf 10 (feedPM genBlockWithEpochSlots) roundTripsBlockCompat
+  eachOfTS (1%5) (feedPM genBlockWithEpochSlots) roundTripsBlockCompat
   where
     roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
     roundTripsBlockCompat esb@(WithEpochSlots es _) =
@@ -153,9 +154,9 @@ goldenBlockSignature :: Property
 goldenBlockSignature =
   goldenTestBi exampleBlockSignature "test/golden/bi/block/BlockSignature"
 
-roundTripBlockSignatureBi :: Property
+roundTripBlockSignatureBi :: TSProperty
 roundTripBlockSignatureBi =
-  eachOf 10 (feedPMEpochSlots genBlockSignature) roundTripsBiBuildable
+  eachOfTS (1%5) (feedPMEpochSlots genBlockSignature) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -199,8 +200,8 @@ goldenHeaderHash :: Property
 goldenHeaderHash =
   goldenTestBi exampleHeaderHash "test/golden/bi/block/HeaderHash"
 
-roundTripHeaderHashBi :: Property
-roundTripHeaderHashBi = eachOf 1000 genHeaderHash roundTripsBiBuildable
+roundTripHeaderHashBi :: TSProperty
+roundTripHeaderHashBi = eachOfTS 10 genHeaderHash roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -221,8 +222,8 @@ goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
 goldenBody :: Property
 goldenBody = goldenTestBi exampleBody "test/golden/bi/block/Body"
 
-roundTripBodyBi :: Property
-roundTripBodyBi = eachOf 20 (feedPM genBody) roundTripsBiShow
+roundTripBodyBi :: TSProperty
+roundTripBodyBi = eachOfTS (1%4) (feedPM genBody) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -245,9 +246,9 @@ goldenConsensusData =
       exampleChainDifficulty
       exampleBlockSignature
 
-roundTripConsensusData :: Property
+roundTripConsensusData :: TSProperty
 roundTripConsensusData =
-  eachOf 20 (feedPMEpochSlots $ genWithEpochSlots genConsensusData) roundTripConsensusData'
+  eachOfTS (1%5) (feedPMEpochSlots $ genWithEpochSlots genConsensusData) roundTripConsensusData'
   where
     roundTripConsensusData' :: WithEpochSlots ConsensusData -> H.PropertyT IO ()
     roundTripConsensusData' (WithEpochSlots es cd) =
@@ -264,8 +265,8 @@ goldenExtraBodyData :: Property
 goldenExtraBodyData = goldenTestBi mebd "test/golden/bi/block/ExtraBodyData"
   where mebd = ExtraBodyData (mkAttributes ())
 
-roundTripExtraBodyDataBi :: Property
-roundTripExtraBodyDataBi = eachOf 1000 genExtraBodyData roundTripsBiBuildable
+roundTripExtraBodyDataBi :: TSProperty
+roundTripExtraBodyDataBi = eachOfTS 10 genExtraBodyData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -276,9 +277,9 @@ goldenExtraHeaderData :: Property
 goldenExtraHeaderData =
   goldenTestBi exampleExtraHeaderData "test/golden/bi/block/ExtraHeaderData"
 
-roundTripExtraHeaderDataBi :: Property
+roundTripExtraHeaderDataBi :: TSProperty
 roundTripExtraHeaderDataBi =
-  eachOf 1000 genExtraHeaderData roundTripsBiBuildable
+  eachOfTS 10 genExtraHeaderData roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -288,8 +289,8 @@ roundTripExtraHeaderDataBi =
 goldenProof :: Property
 goldenProof = goldenTestBi exampleProof "test/golden/bi/block/Proof"
 
-roundTripProofBi :: Property
-roundTripProofBi = eachOf 20 (feedPM genProof) roundTripsBiBuildable
+roundTripProofBi :: TSProperty
+roundTripProofBi = eachOfTS (1%5) (feedPM genProof) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -299,8 +300,8 @@ roundTripProofBi = eachOf 20 (feedPM genProof) roundTripsBiBuildable
 goldenToSign :: Property
 goldenToSign = goldenTestBi exampleToSign "test/golden/bi/block/ToSign"
 
-roundTripToSignBi :: Property
-roundTripToSignBi = eachOf 20 (feedPMEpochSlots genToSign) roundTripsBiShow
+roundTripToSignBi :: TSProperty
+roundTripToSignBi = eachOfTS (1%5) (feedPMEpochSlots genToSign) roundTripsBiShow
 
 
 --------------------------------------------------------------------------------
@@ -381,6 +382,6 @@ exampleToSign = ToSign
 -- Main test export
 -----------------------------------------------------------------------
 
-tests :: IO Bool
-tests = and <$> sequence
-  [H.checkSequential $$discoverGolden, H.checkParallel $$discoverRoundTrip]
+tests :: TestScenario -> IO Bool
+tests ts = and <$> sequence
+  [H.checkSequential $$discoverGolden, H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)]
