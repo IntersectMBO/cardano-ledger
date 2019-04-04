@@ -3097,9 +3097,10 @@ rewards. In order to include a new pool in the ranked display of pools, a wallet
 will have to pick a default value for the apparent performance.
 
 In order to neither advantage nor disadvantage new pools, we recommend
-initialising the moving average of the apparent performance with the median of
-the averged apparent performance of the top \(k\) stake pools (i.e., those that
-we expect to attract members).
+initialising the moving average by looking at the top \(k\) stake pools (i.e.,
+those that we expect to attract members), taking the moving averages of the
+apparent performance for each of them , and then calculating the median and
+using it as a starting value for the new pool's apparent performance.
 
 \subsection{Utility}
 \label{utility}
