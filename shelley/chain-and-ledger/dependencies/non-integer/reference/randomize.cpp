@@ -12,8 +12,8 @@ int main()
   size_t n;
   std::cin >> n;
 
-  const double l = 0.1;
-  const double u = 19.1;
+  const double l = 0.0000000000001;
+  const double u = 1.0;
 
   std::uniform_real_distribution<double> uniform(l, u);
   std::default_random_engine generator;
