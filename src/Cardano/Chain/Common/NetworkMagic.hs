@@ -20,12 +20,9 @@ import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..),
 -- NetworkMagic
 --------------------------------------------------------------------------------
 
--- Although it doesn't make sense for an identifier to have a sign, we're opting
--- to maintain consistency with `ProtocolMagicId`, rather than risk subtle
--- conversion bugs.
 data NetworkMagic
     = NetworkMainOrStage
-    | NetworkTestnet {-# UNPACK #-} !Int32
+    | NetworkTestnet {-# UNPACK #-} !Word32
     deriving (Show, Eq, Ord, Generic, NFData)
 
 instance B.Buildable NetworkMagic where

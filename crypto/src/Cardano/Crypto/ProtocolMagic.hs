@@ -39,7 +39,7 @@ data ProtocolMagic = ProtocolMagic
   } deriving (Eq, Show, Generic, NFData)
 
 newtype ProtocolMagicId = ProtocolMagicId
-  { unProtocolMagicId :: Int32
+  { unProtocolMagicId :: Word32
   } deriving (Show, Eq, Generic)
     deriving newtype Bi
     deriving anyclass NFData
@@ -52,7 +52,7 @@ instance A.FromJSON ProtocolMagicId where
 
 -- mhueschen: For backwards-compatibility reasons, I redefine this function
 -- in terms of the two record accessors.
-getProtocolMagic :: ProtocolMagic -> Int32
+getProtocolMagic :: ProtocolMagic -> Word32
 getProtocolMagic = unProtocolMagicId . getProtocolMagicId
 
 instance A.ToJSON ProtocolMagic where

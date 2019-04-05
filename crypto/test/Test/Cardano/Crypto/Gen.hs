@@ -101,7 +101,7 @@ genProtocolMagic =
   ProtocolMagic <$> genProtocolMagicId <*> genRequiresNetworkMagic
 
 genProtocolMagicId :: Gen ProtocolMagicId
-genProtocolMagicId = ProtocolMagicId <$> Gen.int32 Range.constantBounded
+genProtocolMagicId = ProtocolMagicId <$> Gen.word32 Range.constantBounded
 
 genRequiresNetworkMagic :: Gen RequiresNetworkMagic
 genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]

@@ -145,7 +145,7 @@ genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic = Gen.choice
   [ pure NetworkMainOrStage
-  , NetworkTestnet <$> Gen.int32 Range.constantBounded
+  , NetworkTestnet <$> Gen.word32 Range.constantBounded
   ]
 
 genScriptVersion :: Gen Word16
