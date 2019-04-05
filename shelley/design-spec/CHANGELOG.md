@@ -1,5 +1,16 @@
 # Delegation Design Document Changelog
 
+## 2019-04-05
+Rewrote the chapter on rewards.
+
+We had lots of discussions about how to properly account for the performance of
+pools, particularly in Praos where the actual performance is not observable due
+to the private leader schedule. We finally converged to a solution, leading to a
+re-write of the incentives section.
+
+Also, changed the title of the document, and made the capitalisation of ada
+consistent.
+
 ## 2019-03-01
 Incorporating further input from the workshop in Berlin, and following discussions,
 into the document.
