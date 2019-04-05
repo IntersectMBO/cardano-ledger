@@ -89,6 +89,10 @@ int main()
           mp_exp_cmp_result res;
           bool leader = false;
 
+          std::cout << "data: " << print_fixedp(sigma, precision, 34)
+                    << " " << print_fixedp(p, precision, 34)
+                    << std::endl;
+
           {
             auto before = std::chrono::high_resolution_clock::now();
             base = one - f;
