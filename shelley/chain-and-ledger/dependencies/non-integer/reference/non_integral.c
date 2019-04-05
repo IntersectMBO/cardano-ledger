@@ -9,7 +9,7 @@ mpz_t precision;
 mpz_t e;
 mpz_t eps;
 
-void mp_exp_taylor(mpz_t, const int, const mpz_t, const mpz_t);
+int mp_exp_taylor(mpz_t, const int, const mpz_t, const mpz_t);
 
 void initialize(const mpz_t _precision, const mpz_t epsilon)
 {
@@ -47,6 +47,11 @@ void div(mpz_t rop, const mpz_t x, const mpz_t y)
   mpz_set(rop, temp);
 
   mpz_clear(temp_r); mpz_clear(temp_q); mpz_clear(temp);
+}
+
+void ref_div(mpz_t rop, const mpz_t x, const mpz_t y)
+{
+  div(rop, x, y);
 }
 
 void scale(mpz_t rop)
@@ -190,10 +195,11 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 
 /* Entry point for 'exp' approximation. First does the scaling of 'x' to [0,1]
    and then calls the continued fraction approximation function. */
-void ref_exp_(mpz_t rop, const mpz_t x)
+int ref_exp_(mpz_t rop, const mpz_t x)
 {
   mpz_t temp_q, temp_r;
   mpz_init(temp_q); mpz_init(temp_r);
+  int iterations = 0;
 
   if(mpz_cmp(x, zero) == 0)
     mpz_set(rop, one);
@@ -203,7 +209,7 @@ void ref_exp_(mpz_t rop, const mpz_t x)
       mpz_init(temp); mpz_init(x_);
       mpz_neg(x_, x);
 
-      ref_exp_(temp, x_);
+      iterations = ref_exp_(temp, x_);
 
       div(rop, one, temp);
 
@@ -220,18 +226,19 @@ void ref_exp_(mpz_t rop, const mpz_t x)
       mpz_mul(n_exponent, n_exponent, precision); /* ceil(x) */
 
       mpz_tdiv_q_ui(x_, x, n);
-      mp_exp_taylor(rop, 1000, x_, eps);
+      iterations = mp_exp_taylor(rop, 1000, x_, eps);
 
       ipow(rop, rop, n);
       mpz_clear(n_exponent); mpz_clear(x_); mpz_clear(temp_r); mpz_clear(temp_q);
     }
 
   mpz_clear(temp_r); mpz_clear(temp_q);
+  return iterations;
 }
 
-void ref_exp(mpz_t rop, const mpz_t x)
+int ref_exp(mpz_t rop, const mpz_t x)
 {
-  ref_exp_(rop, x);
+  return ref_exp_(rop, x);
 }
 
 int findE(const mpz_t x)
@@ -319,7 +326,7 @@ void ref_pow(mpz_t rop, const mpz_t base, const mpz_t exponent)
 
 /* Taylor / MacLaurin series approximation */
 
-void mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
+int mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 {
   mpz_set(rop, one);
   int n = 0;
@@ -344,11 +351,92 @@ void mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon
 
       mpz_set(lastX, nextX);
       n++;
+      /* gmp_printf("%Zd\n", rop); */
     }
 
   mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
   mpz_clear(diff);
+  return n;
 }
+
+/*
+   `bound_x` is the bound for exp in the interval x is chosen from
+
+   `compare` the value to compare to
+
+   if the result is GT, then the computed value is guaranteed to be greater, if
+   the result is LT, the computed value is guaranteed to be less than
+   `compare`. In the case of `UNKNOWN` no conclusion was possible for the
+   selected precision.
+
+   Lagrange remainder require knowledge of the maximum value to compute the
+   maximal error of the remainder.
+*/
+mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const int bound_x, const mpz_t compare)
+{
+  mpz_set(rop, one);
+  int n = 0;
+  mpz_t last, divisor, lastX, nextX, error, upper, lower, error_term;
+  mpz_init_set(last, one); mpz_init_set(divisor, one); mpz_init_set(lastX, one);
+  mpz_init(nextX); mpz_init_set(error, x);
+  mpz_init(upper); mpz_init(lower); mpz_init(error_term);
+
+  mp_exp_cmp_result result;
+
+  result.estimate = UNKNOWN;
+  while(n < maxN)
+    {
+      mpz_set(nextX, error);
+
+      if(mpz_cmpabs(nextX, eps) < 0)
+        break;
+
+      mpz_add(divisor, divisor, one);
+
+      /* update error estimation, this is initially bound_x * x and in general
+         bound_x * x^(n+1)/(n + 1)!  we use `error` to store the x^n part and a
+         single integral multiplication with the bound
+       */
+      mpz_mul(error, error, x);
+      scale(error);
+      div(error, error, divisor);
+
+      mpz_mul_si(error_term, error, bound_x);
+
+      mpz_set(last, rop);
+      mpz_add(rop, rop, nextX);
+
+      /* compare is guaranteed to be above overall result */
+      mpz_add(upper, rop, error_term);
+
+      if(mpz_cmp(compare, upper) > 0)
+        {
+          result.estimate = GT;
+          n++;
+          break;
+        }
+
+      mpz_sub(lower, rop, error_term);
+
+      /* compare is guaranteed to be below overall result */
+      if(mpz_cmp(compare, lower) < 0)
+        {
+          result.estimate = LT;
+          n++;
+          break;
+        }
+
+      mpz_set(lastX, nextX);
+      n++;
+    }
+
+  mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
+  mpz_clear(error); mpz_clear(upper); mpz_clear(lower); mpz_clear(error_term);
+
+  result.iterations = n;
+  return result;
+}
+
 
 /* Raspberry Pi
 exp avg: 0.000318684 maximal time: 0.000730824
