@@ -2619,8 +2619,6 @@ advance:
   of still available ada that will be created per epoch.
 \item
   The fraction \(\tau\in[0,1]\) of rewards going to the treasury.
-%% \item
-%%   An exponent \(\gamma\in(0,\infty)\) for penalty calculation.
 \end{itemize}
 
 We will discuss
@@ -2694,10 +2692,15 @@ where
     Praos, where we do not always have one leader per slot, we only have a
     notion of how many blocks we expect per epoch \emph{on average}.} of blocks
   that should have been produced during the epoch under ideal conditions (i.e.,
-  no forks, no missed blocks),
-\item[\(\rho\)] is the monetary expansion parameter,
+  no forks, no missed blocks).
+
+  For Ouroboros Classic~\citep{ouroboros_classic}, the number of expected blocks
+  will be the number of slots in an epoch, while for Ouroboros Praos, we will
+  use the number of slots per epoch times the active slots coefficient \(f\)
+  (see Equation (1) in \citep{ouroboros_praos}).
+\item[\(\rho\)] is the monetary expansion parameter.
 \item[\(T_\infty\)] is the maximal amount of ada to ever be in circulation
-  (i.e., \(45\cdot10^{9}\) ada), and
+  (i.e., \(45\cdot10^{9}\) ada).
 \item[T] is the amount of ada in circulation at the beginning of the epoch for
   which we want to calculate the rewards pot.
 \end{itemize}
