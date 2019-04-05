@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
@@ -14,18 +13,26 @@ module Cardano.Chain.Update.Validation.Interface
     -- * Interface functions
   , registerProposal
   , registerVote
+  , registerEndorsement
+  , registerEpoch
   )
 where
 
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
+import Data.Set (union)
+import qualified Data.Set as S
 
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 import Cardano.Chain.Common.StakeholderId (StakeholderId)
+import Cardano.Chain.Common.BlockCount (BlockCount)
 
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
-import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
+import Cardano.Chain.Update.ProtocolParameters
+  ( ProtocolParameters
+  , ppUpdateImplicit
+  )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   ( NumSoftwareVersion
@@ -33,29 +40,46 @@ import Cardano.Chain.Update.SoftwareVersion
   , svAppName
   , svNumber
   )
+import Cardano.Chain.Update.Validation.Endorsement
+  ( CandidateProtocolUpdate
+  , Endorsement
+  , endorsementProtocolVersion
+  )
+import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
+import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
+  ( tryBumpVersion
+  )
+import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
-import Cardano.Chain.Update.Vote (UpId, AProposal, recoverUpId, AVote)
+import Cardano.Chain.Update.Vote (AProposal, AVote, UpId, recoverUpId)
 import Cardano.Crypto (ProtocolMagicId)
 
-data TODO
 
 data Environment = Environment
-  { protocolMagic :: ProtocolMagicId
-  , currentEpoch  :: !EpochIndex
+  { protocolMagic :: !ProtocolMagicId
   , currentSlot   :: !FlatSlotId
   , delegationMap :: !(Map StakeholderId StakeholderId)
+  , k             :: !BlockCount
+  -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
+  -- of our protocol parameters, so it seems that we need to pass it in the
+  -- environment. However we need to double-check this with others.
+  , numGenKeys    :: !Word8
+  -- ^ Number of genesis keys. This is used to calculate the proportion of
+  -- genesis keys that need to endorse a new protocol version for it to be
+  -- considered for adoption. See
+  -- @Cardano.Chain.Update.Validation.Endorsement.Environment@.
   }
 
 -- | Update interface state.
 data State = State
-  { prevEpoch                         :: !EpochIndex
-    -- ^ Previously seen epoch
+  { currentEpoch                      :: !EpochIndex
+    -- ^ Current epoch
   , adoptedProtocolVersion            :: !ProtocolVersion
-  , adoptedProtocolParams             :: !ProtocolParameters
+  , adoptedProtocolParameters         :: !ProtocolParameters
     -- ^ Adopted protocol parameters
-  , futureAdopts                      :: !TODO -- We should take this from Cardano.Chain.Update.Validation.Endorsement
-    -- ^ Future protocol version adoptions
+  , candidateProtocolUpdates          :: ![CandidateProtocolUpdate]
+    -- ^ Candidate protocol versions
   , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
     -- ^ Current application versions (by application name)
   , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameters))
@@ -66,20 +90,21 @@ data State = State
     -- ^ Confirmed update proposals
   , proposalVotes                     :: !(Map UpId (Set StakeholderId))
     -- ^ Update proposals votes
-  , proposalsEndorsements             :: TODO -- We should take this from Cardano.Chain.Update.Validation.Endorsement
-                                              -- So this should be a @Set Endorsement@
+  , registeredEndorsements            :: !(Set Endorsement)
     -- ^ Update proposals endorsements
-  , proposalRegistrationSlot          :: Map UpId FlatSlotId
+  , proposalRegistrationSlot          :: !(Map UpId FlatSlotId)
     -- ^ Slot at which an update proposal was registered
   }
 
 data Error
   = Registration Registration.Error
   | Voting Voting.Error
+  | Endorsement Endorsement.Error
+  | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
 
 -- | Register an update proposal.
 --
--- This corresponds to the @UPIREG@ rules in the spec.
+-- This corresponds to the @UPIREG@ rule in the Byron ledger specification.
 registerProposal
   :: MonadError Error m
   => Environment
@@ -87,37 +112,52 @@ registerProposal
   -> AProposal ByteString
   -> m State
 registerProposal env st proposal = do
-  Registration.State rpus' raus' <-
-    Registration.registerProposal pm pv pps avs dms regSubSt proposal
-      `wrapError` Registration
+  Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals'
+    <- Registration.registerProposal subEnv subSt proposal
+       `wrapError` Registration
   pure $!
-    st { registeredProtocolUpdateProposals = rpus'
-       , registeredSoftwareUpdateProposals = raus'
-       , proposalRegistrationSlot = M.insert (recoverUpId proposal) currentSlot pws
+    st { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+       , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals'
+       , proposalRegistrationSlot =
+           M.insert (recoverUpId proposal) currentSlot proposalRegistrationSlot
        }
+
   where
     Environment
-      { protocolMagic = pm
+      { protocolMagic
       , currentSlot
-      , delegationMap = dms
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolVersion = pv
-      , adoptedProtocolParams = pps
-      , appVersions = avs
-      , registeredProtocolUpdateProposals = rpus
-      , registeredSoftwareUpdateProposals = raus
-      , proposalRegistrationSlot = pws
+      { adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , appVersions
+      , registeredProtocolUpdateProposals
+      , registeredSoftwareUpdateProposals
+      , proposalRegistrationSlot
       } = st
 
-    regSubSt = Registration.State rpus raus
+    subEnv =
+      Registration.Environment
+        protocolMagic
+        adoptedProtocolVersion
+        adoptedProtocolParameters
+        appVersions
+        delegationMap
+
+    subSt =
+      Registration.State
+        registeredProtocolUpdateProposals
+        registeredSoftwareUpdateProposals
 
 -- | Register a vote for the given proposal.
 --
 -- If the proposal gets enough confirmations after adding the given vote, then
 -- it will get added to the set of confirmed proposals.
--- This corresponds to the @UPIVOTE@ rules in the spec.
+--
+-- This corresponds to the @UPIVOTE@ rule in the Byron ledger
+-- specification.
 --
 registerVote
   :: MonadError Error m
@@ -126,42 +166,195 @@ registerVote
   -> AVote ByteString
   -> m State
 registerVote env st vote = do
-  Voting.State vts' cps' <-
-    Voting.registerVoteWithConfirmation pm subEnv subSt vote
+  Voting.State proposalVotes' confirmedProposals'
+    <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting
   let
-    avsNew =
-      M.fromList $! [ (svAppName sv, (svNumber sv, sn))
-                    | (pid, sv) <- M.toList raus
-                    , pid `elem` M.keys cps'
+    appVersions' =
+      M.fromList $! [ (svAppName sv, (svNumber sv, currentSlot))
+                    | (pid, sv) <- M.toList registeredSoftwareUpdateProposals
+                    , pid `elem` M.keys confirmedProposals'
                     ]
   pure $!
-    st { confirmedProposals = cps'
-       , proposalVotes = vts'
-       , appVersions = M.union avsNew avs
-       , registeredSoftwareUpdateProposals = M.withoutKeys raus (M.keysSet cps)
+    st { confirmedProposals = confirmedProposals'
+       , proposalVotes = proposalVotes'
+       -- Note that it's important that the new application versions are passed
+       -- as the first argument of @M.union@, since the values in this first
+       -- argument overwrite the values in the second.
+       , appVersions = M.union appVersions' appVersions
+       , registeredSoftwareUpdateProposals =
+           M.withoutKeys
+             registeredSoftwareUpdateProposals
+             (M.keysSet confirmedProposals)
        }
        -- TODO: consider using the `Relation` instances from `fm-ledger-rules` (see `Ledger.Core`)
 
   where
-
     Environment
-      { protocolMagic = pm
-      , currentSlot = sn
-      , delegationMap = dms
+      { protocolMagic
+      , currentSlot
+      , delegationMap
       } = env
 
     State
-      { adoptedProtocolParams = pps
+      { adoptedProtocolParameters
       , proposalRegistrationSlot
-      , proposalVotes = vts
-      , confirmedProposals = cps
-      , appVersions =  avs
-      , registeredSoftwareUpdateProposals = raus
+      , proposalVotes
+      , confirmedProposals
+      , appVersions
+      , registeredSoftwareUpdateProposals
       } = st
 
     rups = M.keysSet proposalRegistrationSlot
 
-    subEnv = Voting.Environment sn pps (Voting.RegistrationEnvironment rups dms)
+    subEnv =
+      Voting.Environment
+        currentSlot
+        adoptedProtocolParameters
+        (Voting.RegistrationEnvironment rups delegationMap)
 
-    subSt = Voting.State vts cps
+    subSt = Voting.State proposalVotes confirmedProposals
+
+-- | Register an endorsement.
+--
+-- An endorsement represents the fact that a genesis stakeholder is ready to
+-- start using the protocol version being endorsed. In the decentralized era
+-- only genesis key holders can endorse protocol versions.
+--
+-- This corresponds to the @UPIEND@ rule in the Byron ledger
+-- specification.
+registerEndorsement
+  :: MonadError Error m
+  => Environment
+  -> State
+  -> Endorsement
+  -> m State
+registerEndorsement env st endorsement = do
+  Endorsement.State candidateProtocolUpdates' registeredEndorsements'
+    <- Endorsement.register subEnv subSt endorsement
+       `wrapError` Endorsement
+  let
+    pidsKeep = nonExpiredPids `union` confirmedPids
+
+    nonExpiredPids =
+      M.keysSet $ M.filter (currentSlot - u <=) proposalRegistrationSlot
+
+    confirmedPids = M.keysSet confirmedProposals
+
+    registeredProtocolUpdateProposals' =
+      M.restrictKeys registeredProtocolUpdateProposals pidsKeep
+
+    vsKeep = S.fromList $ fst <$> M.elems registeredProtocolUpdateProposals'
+
+  pure $!
+    st { candidateProtocolUpdates = candidateProtocolUpdates'
+       , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
+       , registeredSoftwareUpdateProposals =
+           M.restrictKeys registeredSoftwareUpdateProposals pidsKeep
+       , proposalVotes =
+           M.restrictKeys proposalVotes pidsKeep
+       , registeredEndorsements =
+           S.filter ((`S.member` vsKeep) . endorsementProtocolVersion) registeredEndorsements'
+       , proposalRegistrationSlot =
+           M.restrictKeys proposalRegistrationSlot pidsKeep
+       }
+
+  where
+    subEnv =
+      Endorsement.Environment
+        k
+        currentSlot
+        delegationMap
+        adoptedProtocolParameters
+        confirmedProposals
+        registeredProtocolUpdateProposals
+        numGenKeys
+
+    Environment
+      { k
+      , currentSlot
+      , delegationMap
+      , numGenKeys
+      } = env
+
+    State
+      { adoptedProtocolParameters
+      , confirmedProposals
+      , registeredProtocolUpdateProposals
+      , registeredSoftwareUpdateProposals
+      , candidateProtocolUpdates
+      , proposalVotes
+      , registeredEndorsements
+      , proposalRegistrationSlot
+      } = st
+
+    subSt =
+      Endorsement.State
+        candidateProtocolUpdates
+        registeredEndorsements
+
+    u = ppUpdateImplicit adoptedProtocolParameters
+
+-- | Register an epoch. Whenever an epoch number is seen on a block this epoch
+-- number should be passed to this function so that on epoch change the
+-- protocol parameters can be updated, provided that there is an update
+-- candidate that was accepted and endorsed by a majority of the genesis keys.
+--
+-- This corresponds to the @UPIEC@ rules in the Byron ledger specification.
+registerEpoch
+  :: MonadError Error m
+  => Environment
+  -> State
+  -> EpochIndex
+  -- ^ Epoch seen on the block.
+  -> m State
+registerEpoch env st lastSeenEpoch = do
+  let PVBump.State
+        currentEpoch'
+        adoptedProtocolVersion'
+        nextProtocolParameters'
+        = tryBumpVersion subEnv subSt lastSeenEpoch
+  if adoptedProtocolVersion' == adoptedProtocolVersion
+    then
+      -- Nothing changes in the state, since we are not changing protocol
+      -- versions. This happens when either the epoch does not change (and
+      -- therefore the protocol parameters cannot change) or there are no
+      -- update proposals that can be adopted (either because there are no
+      -- candidates or they do not fulfill the requirements for adoption).
+      pure $! st
+    else
+      -- We have a new protocol version, so we update the current protocol
+      -- version and parameters, and we perform a cleanup of the state
+      -- variables.
+      pure $!
+        st { currentEpoch = currentEpoch'
+           , adoptedProtocolVersion = adoptedProtocolVersion'
+           , adoptedProtocolParameters = nextProtocolParameters'
+           , candidateProtocolUpdates = []
+           , registeredProtocolUpdateProposals = M.empty
+           , confirmedProposals = M.empty
+           , proposalVotes = M.empty
+           , registeredEndorsements = S.empty
+           , proposalRegistrationSlot = M.empty
+           }
+  where
+    subEnv = PVBump.Environment k currentSlot candidateProtocolUpdates
+
+    subSt =
+      PVBump.State
+        currentEpoch
+        adoptedProtocolVersion
+        adoptedProtocolParameters
+
+
+    Environment
+      { k
+      , currentSlot
+      } = env
+
+    State
+      { currentEpoch
+      , adoptedProtocolVersion
+      , adoptedProtocolParameters
+      , candidateProtocolUpdates
+      } = st

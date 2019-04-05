@@ -44,6 +44,16 @@ data ProtocolParameters = ProtocolParameters
   , ppUpdateVoteThd     :: !LovelacePortion
   , ppUpdateProposalThd :: !LovelacePortion
   , ppUpdateImplicit    :: !FlatSlotId
+  -- ^ Time to live for a protocol update proposal. This used to be the number
+  -- of slots after which the system made a decision regarding an update
+  -- proposal confirmation, when a majority of votes was not reached in the
+  -- given number of slots. If there were more positive than negative votes the
+  -- proposal became confirmed, otherwise it was rejected. Since in the
+  -- Byron-Shelley bridge we do not have negative votes, and we aim at
+  -- simplifying the update mechanism, 'ppUpdateImplicit' is re-interpreted as
+  -- the number of slots a proposal has to gather a majority of votes. If a
+  -- majority of votes has not been reached before this period, then the
+  -- proposal is rejected.
   , ppSoftforkRule      :: !SoftforkRule
   , ppTxFeePolicy       :: !TxFeePolicy
   , ppUnlockStakeEpoch  :: !EpochIndex
