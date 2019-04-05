@@ -9,8 +9,8 @@ module Cardano.Spec.Chain.STS.Rule.Chain where
 
 import Control.Lens ((^.), _1, _3, _5, Lens')
 import qualified Crypto.Hash
+import qualified Data.Bimap as Bimap
 import Data.ByteString (ByteString)
-import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Sequence (Seq)
 import qualified Hedgehog.Gen as Gen
@@ -191,7 +191,7 @@ instance HasTrace CHAIN where
     -- size numbers.
     slotInc <- Gen.integral (Range.exponential 0 10)
     -- Get some random issuer from the delegates of the delegation map.
-    vkI <- Gen.element $ Map.elems (ds ^. dms)
+    vkI <- Gen.element $ Bimap.elems (ds ^. dms)
     let dsEnv
           = DSEnv
           { _dSEnvAllowedDelegators = gks

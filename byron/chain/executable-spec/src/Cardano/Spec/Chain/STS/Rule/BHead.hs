@@ -5,7 +5,7 @@
 module Cardano.Spec.Chain.STS.Rule.BHead where
 
 import Control.Lens ((^.))
-import Data.Map.Strict (Map)
+import Data.Bimap (Bimap)
 import Data.Sequence (Seq)
 
 import Control.State.Transition
@@ -21,7 +21,7 @@ data BHEAD
 instance STS BHEAD where
   type Environment BHEAD
     = ( Slot
-      , Map VKeyGenesis VKey
+      , Bimap VKeyGenesis VKey
       )
   type State BHEAD
     = ( Epoch

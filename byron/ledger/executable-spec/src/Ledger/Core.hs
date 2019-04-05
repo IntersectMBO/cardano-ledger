@@ -10,6 +10,8 @@
 module Ledger.Core where
 
 import qualified Crypto.Hash as Crypto
+import Data.Bimap (Bimap)
+import qualified Data.Bimap as Bimap
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import Data.Map.Strict (Map)
@@ -178,6 +180,25 @@ class Relation m where
 
   -- | Union Override
   (⨃) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
+
+instance (Ord k, Ord v) => Relation (Bimap k v) where
+  type Domain (Bimap k v) = k
+  type Range (Bimap k v) = v
+
+  singleton = Bimap.singleton
+
+  dom = Set.fromList . Bimap.keys
+  range = Set.fromList . Bimap.elems
+
+  s ◁ r = Bimap.filter (\k _ -> k `Set.member` s) r
+  s ◃ r = s ◁ r
+
+  s ⋪ r = Bimap.filter (\k _ -> k `Set.notMember` s) r
+
+  r ▹ s = Bimap.filter (\_ v -> Set.member v s) r
+
+  d0 ∪ d1 = Bimap.fold Bimap.insert d0 d1
+  d0 ⨃ d1 = d1 ∪ (dom d1 ⋪ d0)
 
 instance Relation (Map k v) where
   type Domain (Map k v) = k

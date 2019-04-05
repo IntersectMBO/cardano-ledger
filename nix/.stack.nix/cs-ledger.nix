@@ -18,6 +18,7 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
@@ -47,6 +48,7 @@
         "ledger-delegation-test" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.bimap)
             (hsPkgs.containers)
             (hsPkgs.lens)
             (hsPkgs.hedgehog)
