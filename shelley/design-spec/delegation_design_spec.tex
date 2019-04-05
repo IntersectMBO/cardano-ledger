@@ -3097,7 +3097,11 @@ In order to neither advantage nor disadvantage new pools, we recommend
 initialising the moving average by looking at the top \(k\) stake pools (i.e.,
 those that we expect to attract members), taking the moving averages of the
 apparent performance for each of them , and then calculating the median and
-using it as a starting value for the new pool's apparent performance.
+using it as a starting value \(p_0\) for the new pool's apparent performance.
+
+For wallets using an exponential moving average, simply set the current moving
+average to \(p_0\). For wallets using a moving window, fill all positions in the
+window with \(p_0\).
 
 Of course, this leaves us with a bootstrapping problem: what should we use for
 the apparent performance of the very first pool? We propose that wallets should
