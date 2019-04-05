@@ -100,7 +100,6 @@ leaderComputation (sigma, p) = taylorExpCmp 3 (1/q) (-sigma*c')
 leader' :: (FixedPoint, FixedPoint) -> CompareResult
 leader' (invQ, negAlpha) = taylorExpCmp 3 invQ negAlpha
 
-
 main :: IO ()
 main = do
   -- precomputed <-
@@ -123,12 +122,22 @@ main = do
       let c = 1 - f
       let c' = ln' c
       return (1/q, (-sigma * c'))
+  precomputedLeader' <-
+    forM leaderTest $ \(sigma, p) -> do
+      c <- evaluate $ ln' (1 - f)
+      return (p, sigma, c)
+
   defaultMain
     [
       bgroup
       "taylorCmp"
       [bench "cmp" $ whnf leader' (invQ, negAlpha)
       | (invQ, negAlpha) <- precomputedLeader
+      ]
+    , bgroup
+      "partial pre-computation"
+      [bench "exp(alpha*c)" $ whnf (\(p', s', c') -> p' < 1 - exp' (s' * c')) (p, sigma, c)
+      | (p, sigma, c) <- precomputedLeader'
       ]
     , bgroup
       "full calculation"
