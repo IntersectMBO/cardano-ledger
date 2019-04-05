@@ -238,6 +238,7 @@ test-suite cardano-ledger-test
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
+                       "-with-rtsopts=-K450K -M200M"
 
   if (!flag(development))
     ghc-options:         -Werror
