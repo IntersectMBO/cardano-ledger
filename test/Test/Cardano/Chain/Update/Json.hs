@@ -8,30 +8,30 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Hedgehog (Property)
 import qualified Hedgehog as H
 
 import Test.Cardano.Chain.Update.Gen (genProtocolParameters, genSoftforkRule)
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
 --------------------------------------------------------------------------------
 -- ProtocolParameters
 --------------------------------------------------------------------------------
 
-roundTripProtocolParameters :: Property
-roundTripProtocolParameters =
-  eachOf 1000 genProtocolParameters roundTripsAesonBuildable
+ts_roundTripProtocolParameters :: TSProperty
+ts_roundTripProtocolParameters =
+  eachOfTS 1000 genProtocolParameters roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- SoftforkRule
 --------------------------------------------------------------------------------
 
-roundTripSoftforkRule :: Property
-roundTripSoftforkRule = eachOf 1000 genSoftforkRule roundTripsAesonBuildable
+ts_roundTripSoftforkRule :: TSProperty
+ts_roundTripSoftforkRule = eachOfTS 1000 genSoftforkRule roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- Main Testing Function
 --------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = H.checkParallel $$discoverRoundTrip
+tests :: TestScenario -> IO Bool
+tests ts = H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)

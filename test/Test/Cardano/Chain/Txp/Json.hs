@@ -9,7 +9,7 @@ where
 import Cardano.Prelude
 
 import qualified Data.Set as S
-import Hedgehog (Property)
+import Hedgehog (Group, Property)
 import qualified Hedgehog as H
 
 import Cardano.Chain.Txp (TxpConfiguration(..))
@@ -24,11 +24,11 @@ import Test.Cardano.Chain.Common.Example
 import Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
 import Test.Cardano.Prelude
   ( discoverGolden
-  , discoverRoundTrip
-  , eachOf
+  , discoverRoundTripArg
   , goldenTestJSONPretty
   , roundTripsAesonShow
   )
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 -------------------------------------------------------------------------------
 -- TxpConfiguration
@@ -49,8 +49,8 @@ goldenTxpConfiguration2 =
     goldenTestJSONPretty exampleTxpConfiguration2
         "test/golden/json/txp/TxpConfiguration2"
 
-roundTripTxpConfiguration :: Property
-roundTripTxpConfiguration = eachOf 200 genTxpConfiguration roundTripsAesonShow
+ts_roundTripTxpConfiguration :: TSProperty
+ts_roundTripTxpConfiguration = eachOfTS 200 genTxpConfiguration roundTripsAesonShow
 
 
 -------------------------------------------------------------------------------
@@ -75,6 +75,6 @@ exampleTxpConfiguration2 = TxpConfiguration 700 talsa
 -- Main test export
 -------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = (&&) <$> H.checkSequential $$discoverGolden <*> H.checkParallel
-  $$discoverRoundTrip
+tests :: TestScenario -> IO Bool
+tests ts = (&&) <$> H.checkSequential $$discoverGolden
+                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)

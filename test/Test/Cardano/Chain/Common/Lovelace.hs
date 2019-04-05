@@ -16,7 +16,7 @@ import Data.Data (Constr, toConstr)
 import Formatting (build, sformat)
 
 import Hedgehog
-  (Property, property, discover, (===), withTests, forAll, property)
+  (Property, property, discover, (===), forAll, property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -34,9 +34,10 @@ import Cardano.Chain.Common
   )
 
 import Test.Cardano.Chain.Common.Gen (genLovelace, genCustomLovelace)
+import Test.Options (TestScenario, TSProperty, withTestsTS)
 
-prop_addLovelace :: Property
-prop_addLovelace = withTests 1000 . property $ do
+ts_prop_addLovelace :: TSProperty
+ts_prop_addLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
   let newRange = maxLovelaceVal - unsafeGetLovelace a
   b <- forAll $ genCustomLovelace newRange
@@ -48,8 +49,8 @@ prop_addLovelaceOverflow = property $ assertIsLeftConstr
   (addLovelace (mkKnownLovelace @1) maxBound)
 
 
-prop_integerToLovelace :: Property
-prop_integerToLovelace = withTests 1000 . property $ do
+ts_prop_integerToLovelace :: TSProperty
+ts_prop_integerToLovelace = withTestsTS 1000 . property $ do
   testInt <- forAll
     (Gen.integral $ Range.linear 0 (fromIntegral maxLovelaceVal :: Integer))
   assertIsRight $ integerToLovelace testInt
@@ -68,8 +69,8 @@ prop_maxLovelaceUnchanged :: Property
 prop_maxLovelaceUnchanged =
   property $ (fromIntegral maxLovelaceVal :: Integer) === 45e15
 
-prop_mkLovelace :: Property
-prop_mkLovelace = withTests 1000 . property $ do
+ts_prop_mkLovelace :: TSProperty
+ts_prop_mkLovelace = withTestsTS 1000 . property $ do
   testWrd <- forAll (Gen.word64 $ Range.linear 0 maxLovelaceVal)
   assertIsRight $ mkLovelace testWrd
 
@@ -84,15 +85,15 @@ prop_scaleLovelaceTooLarge = property $ assertIsLeftConstr
   (scaleLovelace maxBound (2 :: Integer))
 
 
-prop_subLovelace :: Property
-prop_subLovelace = withTests 1000 . property $ do
+ts_prop_subLovelace :: TSProperty
+ts_prop_subLovelace = withTestsTS 1000 . property $ do
   a <- forAll genLovelace
   b <- forAll $ genCustomLovelace (unsafeGetLovelace a)
   assertIsRight $ subLovelace a b
 
-prop_subLovelaceUnderflow :: Property
-prop_subLovelaceUnderflow =
-  withTests 1000
+ts_prop_subLovelaceUnderflow :: TSProperty
+ts_prop_subLovelaceUnderflow =
+  withTestsTS 1000
     . property
     $ do
         -- (maxLovelaveVal - 1) to avoid an overflow error in `addLovelace`
@@ -105,8 +106,11 @@ prop_subLovelaceUnderflow =
             ("The impossible happened in subLovelaceUnderflow: " . build)
             err
 
-tests :: IO Bool
-tests = H.checkParallel $$(discover)
+tests :: TestScenario -> IO Bool
+tests ts = and <$> sequence
+  [ H.checkParallel $$discover
+  , H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
+  ]
 
 --------------------------------------------------------------------------------
 -- Dummy values for constructor comparison in assertIsLeftConstr tests

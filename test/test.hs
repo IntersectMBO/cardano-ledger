@@ -39,20 +39,20 @@ main = do
     [ Test.Cardano.Chain.Block.Bi.tests scenario
     , Test.Cardano.Chain.Block.Validation.tests scenario
     , Test.Cardano.Chain.Common.Compact.tests scenario
-    , Test.Cardano.Chain.Common.Lovelace.tests
-    , Test.Cardano.Chain.Common.Address.tests
-    , Test.Cardano.Chain.Delegation.Bi.tests
+    , Test.Cardano.Chain.Common.Lovelace.tests scenario
+    , Test.Cardano.Chain.Common.Address.tests scenario
+    , Test.Cardano.Chain.Delegation.Bi.tests scenario
     , Test.Cardano.Chain.Epoch.File.tests
-    , Test.Cardano.Chain.Genesis.Json.tests
-    , Test.Cardano.Chain.Elaboration.Delegation.tests
-    , Test.Cardano.Chain.Slotting.Properties.tests
+    , Test.Cardano.Chain.Genesis.Json.tests scenario
+    , Test.Cardano.Chain.Elaboration.Delegation.tests scenario
+    , Test.Cardano.Chain.Slotting.Properties.tests scenario
     , Test.Cardano.Chain.Ssc.Bi.tests
-    , Test.Cardano.Chain.Txp.Bi.tests
-    , Test.Cardano.Chain.Txp.Compact.tests
-    , Test.Cardano.Chain.Txp.Json.tests
+    , Test.Cardano.Chain.Txp.Bi.tests scenario
+    , Test.Cardano.Chain.Txp.Compact.tests scenario
+    , Test.Cardano.Chain.Txp.Json.tests scenario
     , Test.Cardano.Chain.Txp.Validation.tests scenario
-    , Test.Cardano.Chain.Update.Bi.tests
-    , Test.Cardano.Chain.Update.Json.tests
-    , Test.Cardano.Chain.Update.Properties.tests
-    , Test.Cardano.Chain.Block.Validation.Spec.tests
+    , Test.Cardano.Chain.Update.Bi.tests scenario
+    , Test.Cardano.Chain.Update.Json.tests scenario
+    , Test.Cardano.Chain.Update.Properties.tests scenario
+    , Test.Cardano.Chain.Block.Validation.Spec.tests scenario
     ]

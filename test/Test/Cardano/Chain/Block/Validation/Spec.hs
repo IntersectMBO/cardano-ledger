@@ -21,17 +21,16 @@ module Test.Cardano.Chain.Block.Validation.Spec
 where
 
 import Cardano.Prelude hiding (trace, State)
+import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
 import Hedgehog
   ( MonadTest
-  , Property
+  , Group
   , checkParallel
-  , discover
   , evalEither
   , forAll
   , property
-  , withTests
   )
 
 import Cardano.Chain.Block
@@ -50,18 +49,16 @@ import Control.State.Transition.Trace
 
 import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg)
 import Test.Cardano.Crypto.Gen (genProtocolMagic)
+import Test.Options (TestScenario, TSProperty, withTestsTS)
 
-tests :: IO Bool
-tests = checkParallel $$discover
+tests :: TestScenario -> IO Bool
+tests ts = checkParallel (($$discoverPropArg :: TestScenario -> Group) ts)
 
 -- | Every abstract chain that was generated according to the inference rules,
 -- after being elaborated must be validated by the concrete block validator.
-prop_generatedChainsAreValidated :: Property
-prop_generatedChainsAreValidated =
-  -- TODO: we might want to make this configurable, so that we run a smaller
-  -- number of tests when developing, and use a higher number when on CI (or in
-  -- nightly builds?).
-  withTests 300 $ property $ do
+ts_prop_generatedChainsAreValidated :: TSProperty
+ts_prop_generatedChainsAreValidated =
+  withTestsTS 300 $ property $ do
     pm <- forAll genProtocolMagic
     tr <- forAll trace
     passConcreteValidation pm tr

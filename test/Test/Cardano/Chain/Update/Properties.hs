@@ -14,7 +14,7 @@ import Data.Data (Constr, toConstr)
 import qualified Data.Text as T
 
 import qualified Hedgehog as H
-import Hedgehog (Property, property, discover, withTests, forAll, property)
+import Hedgehog (property, forAll)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -34,16 +34,17 @@ import Cardano.Chain.Update
 
 import Test.Cardano.Chain.Update.Gen
   (genApplicationName, genSoftwareVersion, genSystemTag)
+import Test.Options (TestScenario, TSProperty, withTestsTS)
 
 -- Make sure `checkApplicationName` works for allowed values.
-prop_checkApplicationName :: Property
-prop_checkApplicationName = withTests 100 . property $ do
+ts_prop_checkApplicationName :: TSProperty
+ts_prop_checkApplicationName = withTestsTS 100 . property $ do
   aName <- forAll genApplicationName
   assertIsRight $ checkApplicationName aName
 
 -- Make sure `checkApplicationName` fails on names that are too long.
-prop_checkApplicationNameTooLong :: Property
-prop_checkApplicationNameTooLong = withTests 100 . property $ do
+ts_prop_checkApplicationNameTooLong :: TSProperty
+ts_prop_checkApplicationNameTooLong = withTestsTS 100 . property $ do
   (ApplicationName aName) <- forAll $ Gen.filter
     (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
     genApplicationName
@@ -53,8 +54,8 @@ prop_checkApplicationNameTooLong = withTests 100 . property $ do
     (checkApplicationName . ApplicationName $ aName `T.append` moreText)
 
 -- Make sure `checkApplicationName` fails on names that are non-ascii.
-prop_checkApplicationNameNotAscii :: Property
-prop_checkApplicationNameNotAscii = withTests 100 . property $ do
+ts_prop_checkApplicationNameNotAscii :: TSProperty
+ts_prop_checkApplicationNameNotAscii = withTestsTS 100 . property $ do
   nonAscii <- forAll $ Gen.filter
     (all (== True) . map (not . isAscii))
     (Gen.string (Range.linear 1 applicationNameMaxLength) Gen.unicodeAll)
@@ -63,14 +64,14 @@ prop_checkApplicationNameNotAscii = withTests 100 . property $ do
     (checkApplicationName $ ApplicationName $ T.pack nonAscii)
 
 -- Make sure `checkSoftwareVersion` works for allowed values.
-prop_checkSoftwareVersion :: Property
-prop_checkSoftwareVersion = withTests 100 . property $ do
+ts_prop_checkSoftwareVersion :: TSProperty
+ts_prop_checkSoftwareVersion = withTestsTS 100 . property $ do
   sVer <- forAll genSoftwareVersion
   assertIsRight $ checkSoftwareVersion sVer
 
 -- Make sure `checkSoftwareVersion` fails on names that are too long.
-prop_checkSoftwareVersionTooLong :: Property
-prop_checkSoftwareVersionTooLong = withTests 100 . property $ do
+ts_prop_checkSoftwareVersionTooLong :: TSProperty
+ts_prop_checkSoftwareVersionTooLong = withTestsTS 100 . property $ do
   (ApplicationName aName) <- forAll $ Gen.filter
     (\name -> T.length (unApplicationName name) >= applicationNameMaxLength)
     genApplicationName
@@ -81,8 +82,8 @@ prop_checkSoftwareVersionTooLong = withTests 100 . property $ do
   assertIsLeftConstr dummySoftVerTooLong (checkSoftwareVersion sVersion')
 
 -- Make sure `checkSoftwareVersion` fails on names that are non-ascii.
-prop_checkSoftwareVersionNotAscii :: Property
-prop_checkSoftwareVersionNotAscii = withTests 100 . property $ do
+ts_prop_checkSoftwareVersionNotAscii :: TSProperty
+ts_prop_checkSoftwareVersionNotAscii = withTestsTS 100 . property $ do
   nonAscii <- forAll $ Gen.filter
     (all (== True) . map (not . isAscii))
     (Gen.string (Range.linear 1 applicationNameMaxLength) Gen.unicodeAll)
@@ -92,14 +93,14 @@ prop_checkSoftwareVersionNotAscii = withTests 100 . property $ do
   assertIsLeftConstr dummySoftVerNotAscii (checkSoftwareVersion sVersion')
 
 -- Make sure `checkSystemTag` works for allowed values.
-prop_checkSystemTag :: Property
-prop_checkSystemTag = withTests 100 . property $ do
+ts_prop_checkSystemTag :: TSProperty
+ts_prop_checkSystemTag = withTestsTS 100 . property $ do
   sTag <- forAll genSystemTag
   assertIsRight $ checkSystemTag sTag
 
 -- Make sure `checkSystemTag` fails on tags that are too long.
-prop_checkSystemTagTooLong :: Property
-prop_checkSystemTagTooLong = withTests 100 . property $ do
+ts_prop_checkSystemTagTooLong :: TSProperty
+ts_prop_checkSystemTagTooLong = withTestsTS 100 . property $ do
   (SystemTag tag) <- forAll $ Gen.filter
     (\sysTag -> T.length (getSystemTag sysTag) >= systemTagMaxLength)
     genSystemTag
@@ -108,16 +109,16 @@ prop_checkSystemTagTooLong = withTests 100 . property $ do
   assertIsLeftConstr dummySysTagTooLong (checkSystemTag sysTagTooLong)
 
 -- Make sure `checkSystemTag` fails on names that are non-ascii.
-prop_checkSystemTagNotAscii :: Property
-prop_checkSystemTagNotAscii = withTests 100 . property $ do
+ts_prop_checkSystemTagNotAscii :: TSProperty
+ts_prop_checkSystemTagNotAscii = withTestsTS 100 . property $ do
   nonAscii <- forAll $ Gen.filter
     (all (== True) . map (not . isAscii))
     (Gen.string (Range.linear 1 systemTagMaxLength) Gen.unicodeAll)
   let sysTagNonascii = SystemTag $ T.pack nonAscii
   assertIsLeftConstr dummySysTagNotAscii (checkSystemTag sysTagNonascii)
 
-tests :: IO Bool
-tests = H.checkParallel $$(discover)
+tests :: TestScenario -> IO Bool
+tests ts = H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
 
 --------------------------------------------------------------------------------
 -- Dummy values for constructor comparison in assertIsLeftConstr tests
