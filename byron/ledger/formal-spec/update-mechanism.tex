@@ -137,8 +137,9 @@ this specification can be extended to incorporate the research results.
 \end{figure}
 
 The set of protocol parameters ($\ProtPm$) is assumed to contain the following
-keys, some of which correspond with fields of the current `BlockVersionData`
-structure:
+keys, some of which correspond with fields of the
+\href{https://github.com/input-output-hk/cardano-sl/}{\texttt{cardano-sl}}
+`BlockVersionData` structure:
 \begin{itemize}
 \item Slot duration: $\var{slotDuration}$
 \item Maximum block size: $\var{maxBlockSize}$
@@ -148,9 +149,10 @@ structure:
 \item Maximum proposal size: $\var{maxProposalSize}$
 \item Transaction fee policy: $\var{txFeePolicy}$
 \item Script version: $\var{scriptVersion}$
-\item Update adoption threshold: $\var{upAdptThd}$. This would correspond with
-  `srInitThd` in `SoftForkRule`, if we set `srMinThd` to `srInitThd` and
-  `srThdDecrement` to $0$.
+\item Update adoption threshold : $\var{upAdptThd}$. This represents the
+  minimum percentage of the total number of genesis keys that have to endorse a
+  protocol version to be able to become adopted. This parameter would
+  correspond with `srMinThd` in `bvdSoftforkRule`.
 \item Chain stability parameter: $\var{stableAfter}$.
 \item Update proposal time-to-live: $\var{upropTTL}$. This would correspond to
   the number of slots specified by `bvdUpdateImplicit`. In `cardano-sl` the
@@ -988,11 +990,10 @@ blocks. Some clarifications are in order:
     & \BVREnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{k} & \mathbb{N} & \text{chain stability parameter}\\
-        \var{s_n} & \Slot & \text{current block number}\\
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{s_n} & \Slot & \text{current slot number}\\
+        t & \mathbb{Q} & \text{adoption threshold percentage}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-        (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
-                             & \text{current protocol parameters map}\\
         \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
                              & \text{registered update proposals}\\
@@ -1039,7 +1040,7 @@ rule by $\var{bv}$:
   incorporate the results of ongoing research on a decentralized update
   mechanism.
 \item If there are a significant number of genesis keys that endorse $\var{bv}$
-  (condition formalized in \cref{eq:predicate:canadopt}), there is a registered
+  (the $t$ environment variable is used for this), there is a registered
   proposal (which are contained in $\var{rpus}$) which proposes to upgrade the
   protocol to version $\var{bv}$, and this update proposal was confirmed at
   least $2 \cdot k$ slots ago (to ensure stability of the confirmation), then
@@ -1061,19 +1062,6 @@ rule by $\var{bv}$:
 \item If a block version does not correspond to a registered or confirmed
   proposal, we just ignore the endorsement.
 \end{itemize}
-
-\begin{figure}[htb]
-  \begin{equation}
-    \label{eq:predicate:canadopt}
-    \begin{array}{r c l}
-      \fun{canAdopt}~\var{pps}~\var{bvs}~\var{bv}
-      & =
-      & \var{upAdptThd} \mapsto t \in pps \wedge
-        t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
-    \end{array}
-  \end{equation}
-  \caption{Update-proposal endorsement functions}
-\end{figure}
 
 \begin{figure}[htb]
   \begin{equation}
@@ -1140,8 +1128,8 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          t\\
           \var{dms}\\
-          (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
         \end{array}
@@ -1174,7 +1162,7 @@ rule by $\var{bv}$:
     {
       \var{bvs'} = \var{bvs} \cup
       \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
-      & \neg (\fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv}) \\
+      & \size{\{\var{bv}\} \restrictdom \var{bvs}} < t\\
       \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])
     }
@@ -1183,8 +1171,8 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          t\\
           \var{dms}\\
-          (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
         \end{array}
@@ -1218,7 +1206,7 @@ rule by $\var{bv}$:
     {
       \var{bvs'} = \var{bvs} \cup
       \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
-      & \fun{canAdopt}~\var{pps}~\var{bvs'}~\var{bv} \\
+      & t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
       \var{pid} \mapsto (\var{bv}, \var{pps_c}) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])\\
       (\var{fads}) \trans{fads}{(s_n, (\var{bv}, \var{pps_c}))} (\var{fads'})
@@ -1228,8 +1216,8 @@ rule by $\var{bv}$:
         \begin{array}{l}
           k\\
           s_n\\
+          t\\
           \var{dms}\\
-          (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
         \end{array}

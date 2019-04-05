@@ -152,8 +152,8 @@ labels have the following meaning:
     & \UPIEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{e_c} & \Epoch & \text{current epoch}\\
         \var{s_n} & \Slot & \text{current slot number}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}\right)
   \end{align*}
@@ -237,8 +237,8 @@ labels have the following meaning:
     {
       {
         \begin{array}{l}
-          e_c\\
           s_n\\
+          \var{ngk}\\
           \var{dms}
         \end{array}
       }
@@ -342,8 +342,8 @@ given application name $\var{an}$.
     {
       {
         \begin{array}{l}
-          e_c\\
           s_n\\
+          \var{nkg}\\
           \var{dms}
         \end{array}
       }
@@ -436,9 +436,12 @@ Figure~\ref{fig:st-diagram-pt-up}.
 \clearpage
 
 The interface rule for protocol-version endorsement makes use of the
-$\trans{upend}{}$ transition, passing only the portion of the state relevant
-to it. In addition, the unconfirmed proposals that are older than $u$ blocks
-are removed from the parts of the state that hold:
+$\trans{upend}{}$ transition, where we set the threshold for proposal adoption
+to: the number of genesis keys ($\var{nkg}$) times the minimum proportion of
+genesis keys that need to endorse an update proposal for it to become a
+candidate for adoption (given by the protocol parameter $\var{upAdptThd}$). In
+addition, the unconfirmed proposals that are older than $u$ blocks are removed
+from the parts of the state that hold:
 \begin{itemize}
 \item the registered protocol and software update proposals,
 \item the votes associated with the proposals,
@@ -466,8 +469,8 @@ the end on an epoch.
         \begin{array}{l}
           k\\
           s_n\\
+          q \cdot \var{nkg}\\
           \var{dms}\\
-          (\var{pv}, \var{pps})\\
           \var{cps}\\
           \var{rpus}
         \end{array}
@@ -490,8 +493,9 @@ the end on an epoch.
           \end{array}
         \right)
       }\\
-      \var{stableAfter} \mapsto k \in  \var{pps} &
-      \var{upropTTL} \mapsto u \in \var{pps} \\
+      \var{stableAfter} \mapsto k \in  \var{pps}
+      & \var{upropTTL} \mapsto u \in \var{pps}
+      & \var{upAdptThd} \mapsto q \in \var{pps} \\
       {
         \begin{array}{r@{~=~}l}
           \var{pids_{keep}} & \dom~(pws \restrictrange [s_n - u, ..]) \cup \dom~\var{cps}\\
@@ -503,8 +507,8 @@ the end on an epoch.
     {
       {
         \begin{array}{l}
-          e_c\\
           s_n\\
+          \var{nkg}\\
           \var{dms}
         \end{array}
       }
@@ -727,8 +731,8 @@ expires.
     {
       {
         \begin{array}{l}
-          e_c\\
           s_n\\
+          \var{ngk}\\
           \var{dms}
         \end{array}
       }
@@ -801,8 +805,8 @@ expires.
     {
       {
         \begin{array}{l}
-          e_c\\
           s_n\\
+          \var{ngk}\\
           \var{dms}
         \end{array}
       }
