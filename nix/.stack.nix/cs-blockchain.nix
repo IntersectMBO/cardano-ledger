@@ -18,6 +18,7 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
