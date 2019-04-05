@@ -40,6 +40,7 @@
 \newcommand*\mean[1]{\overline{#1}}
 
 \newcommand\pbar{\overline{p}}
+\newcommand\Nbar{\overline{N}}
 
 \begin{document}
 
@@ -2726,7 +2727,7 @@ decrease over time. This has to be compensated by
 Note that the fees that have been collected during the bootstrap era,
 where all nodes have been provided by IOHK, Emurgo, and the Cardano
 Foundation, have not been paid out. Those fees have reduced the amount
-of ada currently in existence, but they did not change
+of ada currently in circulation, but they did not change
 \(T_\infty\). Effectively, those fees will be distributed amongst
 future stakeholders via monetary expansion.
 
@@ -2793,29 +2794,29 @@ where
   \(N\) of slots it was elected as a leader, and
 \item[\(r_e\)] is a factor that captures the relation between the relative stake
   \(\sigma\) of the pool, the number \(N\) of slots it is elected as a leader,
-  and the total number \(\overline{N}\) of blocks that were added to the chain during
+  and the total number \(\Nbar\) of blocks that were added to the chain during
   the epoch. To be precise, we have
-  \[r_e = \frac{N}{\sigma \overline{N}}\,.\]
+  \[r_e = \frac{N}{\sigma \max(1, \Nbar)}\,.\]
   The factor \(r_e\) captures all the random influences on \(\beta\): the
   randomness in the leader election that influences \(n\), and the randomness
   both from the leader election and the bunch of random influences on
-  \(\overline{N}\) (leader election, forks, performance of the network and other
+  \(\Nbar\) (leader election, forks, performance of the network and other
   pools).
 \end{enumerate}
 
 If we insert the definitions of \(p\) and \(r_e\) into \(\beta\), we find that
 \[
-\beta = \sigma \frac{n}{\max(N,1)} \frac{N}{\sigma \overline{N}}
-= \frac{n}{\overline{N}}\,,
+\beta = \sigma \frac{n}{\max(N,1)} \frac{N}{\sigma \max(1, \Nbar)}
+= \frac{n}{\max(1, \Nbar)}\,,
 \]
 which is indeed the fraction of blocks produced by the pool\footnote{When
   cancelling \(N\) and \(\max(N,1)\), note that for \(N=0\), also \(n=0\), and
   the equation trivially holds.}.
 
-In Ouroboros Praos, we can observe \(\sigma\), \(n\), and \(\overline{N}\), but
+In Ouroboros Praos, we can observe \(\sigma\), \(n\), and \(\Nbar\), but
 we do not have a direct handle on any of \(N\), \(r_e\), or \(p\). From the
 observables, we can extract
-\[ \beta = \frac{n}{\overline{N}}\,. \]
+\[ \beta = \frac{n}{\max(1, \Nbar)}\,. \]
 While the true performance \(p\) is not accessible, we can define and measure
 the \emph{apparent performance}
 \[
@@ -3097,6 +3098,14 @@ initialising the moving average by looking at the top \(k\) stake pools (i.e.,
 those that we expect to attract members), taking the moving averages of the
 apparent performance for each of them , and then calculating the median and
 using it as a starting value for the new pool's apparent performance.
+
+Of course, this leaves us with a bootstrapping problem: what should we use for
+the apparent performance of the very first pool? We propose that wallets should
+initialise the performance of pools that start during the first couple of epochs
+to \(\pbar=1\). This will also alleviate the problem that the apparent
+performance of pools will be fluctuating more during the early phases of the
+system, when a large fraction of blocks will still be produced by the old core
+nodes (see \cref{transition-to-decentralization}).
 
 \subsection{Utility}
 \label{utility}
@@ -3614,29 +3623,6 @@ awfully high\ldots).
 Setting \(\tau\) is a policy decision; we will probably use
 \(\tau=0.2\), i.e.~20\% of available epoch rewards will be sent to the
 treasury.
-
-\subsubsection{\texorpdfstring{\(\gamma\)}{\textbackslash{}gamma}}
-
-Setting \(\gamma\) is also a policy decision. Having said this, values
-of \(\gamma<1\) seem to be preferable, because pool operators
-occasionally missing one or two slots will not be punished too harshly.
-
-To help with the task of deciding on a reasonable value for \(\gamma\),
-we show the effect of different values on a potential pool that was
-elected to create 100 pools in a given epoch. The table below shows the
-ratio of rewards paid for varying numbers of missed slots and values of
-\(\gamma\):
-
-\begin{tabular}[t]{rrrrr}
-    missed slots & $\gamma=1$ & $\gamma=0.7$ & $\gamma=0.5$ & $\gamma=0.3$ \\
-    \hline
-      0 & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
-      1 & 0.9900 & 0.9930 & 0.9950 & 0.9970 \\
-      5 & 0.9500 & 0.9647 & 0.9747 & 0.9847 \\
-     10 & 0.9000 & 0.9289 & 0.9487 & 0.9689 \\
-     50 & 0.5000 & 0.6156 & 0.7071 & 0.8123 \\
-    100 & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
-\end{tabular}
 
 \section{Satisfying the Requirements}
 \label{satisfying-the-requirements}
