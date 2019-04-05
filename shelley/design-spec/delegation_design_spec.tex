@@ -1617,39 +1617,76 @@ transition period.
 For a given value of \(d\), the system will perform two steps to create the
 leader schedule for the next epoch:
 \begin{itemize}
-\item Perform leader election, as specified by the protocol that the new nodes
-  follow (probably Ouroboros Praos-Genesis), for all \(10 k\) slots in the
-  epoch.
-\item Randomly select \(10 k d\) slots of the epoch. For those slots, the result
-  of the leader election will be ignored. Instead, the bootstrap nodes will
-  create blocks for those slots, using Ouroboros BFT.
-\end{itemize}\todo{There is a subtlety here, in that Praos has more slots than
-  OBFT. We'll have to adjust this slightly. Also, if we do go for rewards per
-  block, we'll have to think about the transition period again.}
+\item Perform leader election amongst the new nodes, according to Ouroboros
+  Praos, for all \(n_s\) slots in the epoch.
+\item Randomly select \(d n_s\) slots of the epoch. Let us call those the slots
+  the \emph{OBFT slots} of that epoch. For the OBFT slots, the Praos leader
+  schedule will be overridden, and the old core nodes will be responsible for
+  creating blocks for theses slots.
 
-For reward calculations, all slots assigned to bootstrap keys will be ignored
-(or, in the case of a non-public leader schedule, the expectation value
-\(\mean{N_j}\) of the number of slots for which pool \(j\) was elected will be
-multiplied by \((1-d)\) for all pools, see \cref{pool-rewards}) . This means that
-even for high values of \(d\), pool leaders and pool members will get their full
-rewards (even though they have to do less ``work'' to get those rewards).
+  In order to keep the block frequency constant, we will select a fraction
+  \(f\) of the OBFT slots, where \(f\) is the active slots coefficient from
+  Praos (Equation (1) in \citep{ouroboros_praos}), and call those the
+  \emph{active OBFT slots} of the epoch.
 
-Effectively, a fraction of \(d\) of all slots will be masked and handled by the
-bootstrap nodes, derisking the transition without an effect on the rewards of
-any stake pool.
+  For OBFT slots, we will modify the behaviour of all nodes as follows:
+  \begin{itemize}
+  \item
+    No stake pool node shall create a block for an OBFT slot.
+  \item
+    For non-active OBFT slots, no node shall produce a block at all -- neither
+    one of the old core nodes, nor one a stake pool node.
+  \item
+    Also, for the non-active OBFT slots, no block shall be considered valid by
+    any node.
+  \item For the active OBFT slots, the old core nodes will create blocks, in a
+    round-robin fashion as per OBFT.
+  \item 
+    Blocks produced according to this schedule for the active OBFT slots shall
+    be considered valid by all nodes.
+  \end{itemize}
+\end{itemize}
 
-As an example, consider a pool \(A\) with 1\% of stake. In the fully
-decentralized case \(d=0\), \(A\) would be elected slot leader for
-\(0.01\cdot 21600=216\) slots per epoch on average. For \(d=0.9\), \(A\)
-would only be elected for \(0.01\cdot 0.1\cdot 21600=21.6\) slots per
-epoch on average, so \(A\) would only have a tenth of the work (create
-21.6 blocks instead of 216 blocks), but get the same rewards.
+\subsubsection{Rewards during the Transition Phase}
+\label{rewards-during-the-transition-phase}
 
-Parameter \(d\) can be changed on an epoch-per-epoch basis, following
+We do this soft transition as a derisking strategy, so that we can intervene in
+case we observe any difficulties in the decentralised system. But we do not want
+this to have an effect on the rewards that pools get. Operational difficulties
+of the overall system that cause us to slow down the transition should not
+reduce the rewards that individual pools get.
+
+In order to minimise the influence of the transition to pool rewards, we have to
+alter the way we measure the apparent performance for pools (see
+\cref{stake-performance-and-block-production}) during the transition phase:
+\begin{enumerate}
+  \item
+    For determining the apparent performance of any pool, we will take the total
+    number of blocks in the epoch -- \(\Nbar\) in \cref{eq:beta} -- to be the
+    number of blocks produced in \emph{non-OBFT slots}.
+  \item
+    As long as we have \(d >= 0.8\), we set the apparent performance of any pool
+    to \(1\).
+    \label{item:perf1}
+\end{enumerate}
+The reason for \cref{item:perf1} is that when only a small fraction of blocks
+are produced by stake pools, the measurement of the performance will be
+dominated by the statistical aspect of the leader election, and pools might
+frequently get a performance of \(0\) by no fault of their own.
+
+As an example\footnote{In this example, we assume \(n_s*f=21600\), to match the
+  block frequency of Byron.}, consider a pool \(A\) with 1\% of stake. In the
+fully decentralized case \(d=0\), \(A\) would be elected slot leader for
+\(0.01\cdot 21600=216\) slots per epoch on average. For \(d=0.9\), \(A\) would
+only be elected for \(0.01\cdot 0.1\cdot 21600=21.6\) slots per epoch on
+average, so \(A\) would only have a tenth of the work (create 21.6 blocks
+instead of 216 blocks), but get the same rewards.
+
+\subsubsection{Transition Plan}
+\label{transition-plan}
+
+The parameter \(d\) can be changed on an epoch-per-epoch basis, following
 the plan we'll be outlining next.
-
-\subsubsection{Plan}
-\label{plan}
 
 We plan to start with \(d=0.9\) and then decrease \(d\) by \(0.1\) each
 epoch, \emph{provided pool leader block creation is sufficient to
@@ -1661,7 +1698,7 @@ increase \(d\) again) until we have reason to believe that the problem
 has been understood and fixed.
 
 In order to decide whether block creation is sufficient, we will
-estimate the probability that at least 2160 out of every 4320 blocks
+estimate the probability that at least \(k\) out of every \(2k\) blocks
 would be created. If this probability is high enough (for example
 greater than \(1 - 10^{-10}\)), block creation will be deemed
 sufficient.
@@ -1672,17 +1709,17 @@ Distribution}: Given the number of slots \(a\) that have been faithfully
 created and the number \(b\) of slots that have been missed (counting
 from the beginning of the transition period) and using
 \href{https://en.wikipedia.org/wiki/Beta_distribution\#Bayes'_prior_probability_(Beta(1,1))}{Bayes'
-Prior \(B(1,1)\)}, the probability in question is \(P(X\geq 2160)\),
+Prior \(B(1,1)\)}, the probability in question is \(P(X\geq k)\),
 where \(X\) is drawn from the Beta-Binomial distribution with parameters
-\((a + 1)\), \((b + 1)\) and \(4320\).
+\((a + 1)\), \((b + 1)\) and \(2k\).
 
-For example, in the very first transitional epoch, 10\% of slots,
-i.e.~2160 slots, will be given to pool leaders. If at least 1261 out of
-these 2160 slots are properly created, above estimation (with
-\(a\geq 1261\) and \(b\leq 2160-1261=899\)) leads to
-\(P(X\geq 2160)\geq 1-10^{-10}\), so we will proceed with \(d=0.8\) in
-the second epoch. If however at least 900 slots are missed, we will keep
-\(d\) at \(0.9\) for the time being.
+For example, in the very first transitional epoch, 10\% of active slots,
+i.e.~2160 active slots\footnote{assuming \(k=2160\) and an epoch length of
+  \(10k\) active slots, as in Byron} will be given to pool leaders. If at least
+1261 out of these 2160 slots are properly created, above estimation (with
+\(a\geq 1261\) and \(b\leq 2160-1261=899\)) leads to \(P(X\geq 2160)\geq
+1-10^{-10}\), so we will proceed with \(d=0.8\) in the second epoch. If however
+at least 900 slots are missed, we will keep \(d\) at \(0.9\) for the time being.
 
 In addition to monitoring the number of missed blocks, we will also look
 at the fraction of stake that is active (i.e., is stored in addresses
@@ -2816,7 +2853,10 @@ which is indeed the fraction of blocks produced by the pool\footnote{When
 In Ouroboros Praos, we can observe \(\sigma\), \(n\), and \(\Nbar\), but
 we do not have a direct handle on any of \(N\), \(r_e\), or \(p\). From the
 observables, we can extract
-\[ \beta = \frac{n}{\max(1, \Nbar)}\,. \]
+\begin{equation}
+  \beta = \frac{n}{\max(1, \Nbar)}\,.
+  \label{eq:beta}
+\end{equation}
 While the true performance \(p\) is not accessible, we can define and measure
 the \emph{apparent performance}
 \[
