@@ -10,7 +10,6 @@ import Data.Sequence (Seq)
 
 import Control.State.Transition
 import Ledger.Core
-import Ledger.Signatures
 import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block

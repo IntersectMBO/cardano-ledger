@@ -114,24 +114,56 @@ $\Lovelace$ type is an alias for the set of the integers numbers
 \end{figure}
 
 \begin{figure}
+  \emph{UTxO environments}
+  \begin{equation*}
+    \UTxOEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxo_0} & \UTxO & \text{genesis UTxO}\\
+        \var{pps} & \PPMMap & \text{protocol parameters map}\\
+      \end{array}
+    \right)
+  \end{equation*}
+
   \emph{UTxO transitions}
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{utxo}{\_} \var{\_}
-    \subseteq \powerset (\PPMMap \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\UTxOEnv \times \UTxO \times \Tx \times \UTxO)
   \end{equation*}
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo}
 \end{figure}
 
 \begin{figure}
+  \begin{equation}\label{eq:utxo-bootstrap}
+    \inference
+    {
+    }
+    {
+      {\begin{array}{l}
+        utxo_0\\
+        pps
+      \end{array}}
+      \vdash
+      \var{utxo_0}
+    }
+  \end{equation}
+  \nextdef
   \begin{equation}\label{eq:utxo-inductive}
     \inference
     { \txins{tx} \subseteq \dom \var{utxo}
       & \minfee{pps}{tx} \leq \balance{(\txouts{tx})} - \balance{(\txins{tx} \restrictdom \var{utxo})}\\
       \txins{tx} \neq \emptyset
     }
-    {\var{pps} \vdash \var{utxo} \trans{utxo}{tx}
+    {
+      {\begin{array}{l}
+        utxo_0\\
+        pps
+      \end{array}}
+      \vdash
+      \var{utxo}
+      \trans{utxo}{tx}
       (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
     }
   \end{equation}

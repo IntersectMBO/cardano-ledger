@@ -21,7 +21,6 @@ import Control.State.Transition.Generator
 import Ledger.Core
 import Ledger.Core.Generator
 import Ledger.Delegation
-import Ledger.Signatures
 import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block

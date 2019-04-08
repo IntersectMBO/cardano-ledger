@@ -10,7 +10,7 @@ import qualified Data.Sequence as S
 
 import Control.State.Transition
 
-import Ledger.Core
+import Ledger.Core hiding ((|>))
 import Ledger.Update
 
 data SIGCNT
