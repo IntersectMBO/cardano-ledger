@@ -352,27 +352,6 @@ properties-based testing for validation in the executable spec.
   \end{multline*}
 \end{property}
 
-\begin{property}[\textbf{Exponential Moving Average}]
-  \label{prop:exponential-moving-average}
-
-  The function $\fun{movingAvg}$ calculates the exponential moving average,
-  dividing the number of blocks created by the pool by the expected number of
-  slots for which the pool is elected leader (or 1 if the expected number is below 1). It
-  guarantees that the result is (i) non-negative and (ii) if a previous moving
-  average has already been calculated, the new moving average lies between the
-  minimum and maximum of the old and new calculated value. With
-  $current := \frac{n}{\max(\overline{N}, 1)}$ this is trivial for (i), for (ii)
-  it is
-
-  \begin{multline*}
-    \forall \alpha \in [0, 1], n \in \mathbb{N}, \overline{N} \in \Rnn, prev \in
-    \Rnn\\
-    \implies 0\leq \min(prev, current) \leq
-    \alpha\cdot current + (1 - \alpha)\cdot prev
-    \leq \max(prev, current)
-  \end{multline*}
-\end{property}
-
 \begin{property}[\textbf{Maximal Pool Reward}]
   \label{prop:maximal-pool-reward}
 
@@ -393,21 +372,15 @@ properties-based testing for validation in the executable spec.
 
   The actual reward for a stake pool in an epoch is calculated by the function
   $\fun{poolReward}$. The actual reward per stake pool is non-negative and
-  bounded by the maximal reward for the stake pool, with $avg$ being the
-  calculated moving average of the stake pool and $maxP$ being the maximal
-  reward for the stake pool. This gives us:
+  bounded by the maximal reward for the stake pool, with $\overline{p}$ being
+  the relation $\frac{n}{\overline{N}}$ of the number of produced blocks $n$ of
+  one pool to the total number $\overline{N}$ of produced blocks in an epoch and
+  $maxP$ being the maximal reward for the stake pool. This gives us:
 
   \begin{equation*}
-    \forall \gamma \in [0,1] \implies 0\leq \floor*{avg^{\gamma}\cdot maxP} \leq maxP
+    \forall \gamma \in [0,1] \implies 0\leq \floor*{\overline{p}\cdot maxP} \leq maxP
   \end{equation*}
 \end{property}
-
-\begin{todo}
-  The property~(\ref{prop:actual-reward}) requires that $avg \in [0,1]$, else
-  the actual reward can exceed the maximal reward. This is not true, we need to
-  take into account the rewards for all stake pools.
-\end{todo}
-
 
 The two functions $\fun{r_{leader}}$ and $\fun{r_{member}}$ are closely related as
 they both split the reward between the pool leader and the members.
