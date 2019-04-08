@@ -6,7 +6,7 @@
 }:
 let
   # our packages
-  stack-pkgs = import ./pkgs.nix;
+  stack-pkgs = import ./.stack.nix;
 
   # packages which will require TH and thus
   # will need -fexternal-interpreter treatment
