@@ -13,14 +13,13 @@
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
 \newcommand{\Stake}{\type{Stake}}
-\newcommand{\Avgs}{\type{Avgs}}
 \newcommand{\RewardUpdate}{\type{RewardUpdate}}
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
-\newcommand{\reward}[8]{\fun{reward}
-  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}~ \var{#8}}
-\newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
-  ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
+\newcommand{\reward}[7]{\fun{reward}
+  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}}
+\newcommand{\rewardOnePool}[8]{\fun{rewardOnePool}
+  ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
@@ -29,8 +28,6 @@
 \newcommand{\lReward}[4]{\fun{r_{leader}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}}
-\newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
-\newcommand{\updateAvgs}[5]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
@@ -130,8 +127,6 @@ throughout the rest of the section.
     when the calculation is performed.  The returned map maps pool operator hashkeys to the
     refunds, which will ultimately be returned to the registered reward account.
   \item The function $\fun{poolStake}$ filters the stake distribution to one stake pool.
-  \item The function $\fun{updateAvgs}$ calculates the new performance moving averages.
-    Note that $\fun{movingAvg}$ is defined in Figure~\ref{fig:functions:rewards}.
 \end{itemize}
 
 
@@ -177,23 +172,6 @@ throughout the rest of the section.
         \to \Stake \to \Stake \\
       & \poolStake{hk}{delegs}{stake} =
         \dom{(\var{delegs}\restrictrange\{hk\})\restrictdom\var{stake}}
-  \end{align*}
-
-  \emph{Update Moving Averages}
-  \begin{align*}
-      & \fun{updateAvgs} \in \PParams \to \Avgs \to \BlocksMade \to
-          (\HashKey_{stake}\mapsto \HashKey_{pool}) \to \Stake \to \Avgs \\
-      & \updateAvgs{pp}{avgs}{blocks}{delegs}{stake} = \\
-      & ~~~ \left\{hk\mapsto \movingAvg{pp}{hk}{n}{(\fun{expected}~hk)}{avgs}
-            \mid
-            hk\mapsto n\in\var{blocks}
-            \right\} \\
-      & \where \\
-      & ~~~~~ \var{tot} = \sum_{\_\mapsto c\in \var{stake}}c \\
-      & ~~~~~ \fun{expected}~\var{hk} =
-                  \left(\sum\limits_{
-                    \wcard\mapsto c\in\var{(\poolStake{hk}{delegs}{stake}})}c
-                  \right) \cdot\SlotsPerEpoch / tot
   \end{align*}
 
   \caption{Helper Functions used in Rewards and Epoch Boundary}
@@ -244,7 +222,6 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
     during an epoch.
   \item $\type{Stake}$ represents the amount of stake (in $\type{Coin}$) controlled by each
     stake pool.
-  \item $\type{Avgs}$ represents the performance moving averages of the stake pools.
 \end{itemize}
 
 %%
@@ -263,10 +240,6 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
       & \Stake
       & \HashKey_{stake} \mapsto \Coin
       & \text{stake} \\
-      \var{avgs}
-      & \Avgs
-      & \HashKey_{pool} \mapsto \Rnn
-      & \text{performance moving averages} \\
     \end{array}
   \end{equation*}
   \caption{Epoch definitions}
@@ -333,8 +306,8 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
 \label{sec:snapshots}
 
 The state transition types for stake distribution snapshots are given in
-Figure~\ref{fig:ts-types:snapshot}.
-The type $\type{\Snapshots}$ contains the information needing to be saved on the epoch boundary:
+Figure~\ref{fig:ts-types:snapshot}. The type $\type{\Snapshots}$ contains the
+information needing to be saved on the epoch boundary:
 \begin{itemize}
   \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$ and $\var{pstake_{go}}$ are the three
     stake distribution snapshots (paired with the corresponding delegation map),
@@ -575,7 +548,6 @@ This transition has no preconditions and results in the following state change:
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{avgs} \\
           \var{cs} \\
         \end{array}
       \right)
@@ -594,7 +566,6 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
-          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{avgs}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{cs}} \\
         \end{array}
       \right)
@@ -1121,9 +1092,9 @@ The calculation is done pool-by-pool.
   %
   \begin{align*}
     & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \HashKey \to \PoolParam\\
-      & ~~~\to \Stake \to \Avgs \to \Coin \to \powerset{\AddrRWD}
+      & ~~~\to \Stake \to \Coin \to \powerset{\AddrRWD}
            \to (\AddrRWD \mapsto \Coin)\times\Coin \\
-      & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{avgs}{tot}{addrs_{rew}} =
+      & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{tot}{addrs_{rew}} =
           (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
@@ -1159,9 +1130,9 @@ The calculation is done pool-by-pool.
   \begin{align*}
       & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \powerset{\AddrRWD}
       \to (\HashKey \mapsto \PoolParam) \\
-      & ~~~\to \Avgs \to \Stake \to (\HashKey_{stake} \mapsto \HashKey_{pool}) \to
+      & ~~~\to \Stake \to (\HashKey_{stake} \mapsto \HashKey_{pool}) \to
       (\AddrRWD \mapsto \Coin)\times\Coin\\
-      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{avgs}{stake}{delegs}
+      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}
           = (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
@@ -1175,7 +1146,7 @@ The calculation is done pool-by-pool.
         \end{array}
       \right\} \\
       & ~~~~~~~\var{results} = \left\{
-        hk \mapsto \rewardOnePool{pp}{R}{n}{\overline{N}}{hk}{p}{s}{avgs}{tot}{addrs_{rew}}
+        hk \mapsto \rewardOnePool{pp}{R}{n}{\overline{N}}{hk}{p}{s}{tot}{addrs_{rew}}
                  \mid
         hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
       & ~~~~~~~\var{unrealized} = \sum_{\wcard\mapsto (\wcard,~u)\in\var{results}}u \\
@@ -1360,7 +1331,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
       & ~~~~~~~\var{R} = \var{totalPot} - \Delta t_1 \\
       & ~~~~~~~\var{rs},~\Delta t_2
-           = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{stake}{delegs} \\
+           = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
       & ~~~~~~~\var{rp} = R - \left(
                               \sum\limits_{\_\mapsto c\in\var{rs}}c
                               \right) - \Delta t_2 \\
@@ -1394,7 +1365,6 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{avgs} \\
           \var{cs} \\
           ~ \\
           \var{utxo} \\
@@ -1417,7 +1387,6 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{avgs} \\
           \var{cs} \\
           ~ \\
           \var{utxo} \\

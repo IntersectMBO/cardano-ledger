@@ -492,7 +492,6 @@ Figure~\ref{fig:ts-types:ocert}. The state consists of
 \item The stake pools map \var{stpools}.
 \item The pool parameters \var{poolParams}.
 \item The map of retiring stake pools to epochs \var{retiring}.
-\item The moving averages of the stake pools \var{avg}.
 \item The mapping \var{cs} of operational certificate counters.
 \end{itemize}
 
@@ -558,7 +557,6 @@ of the key \var{hk} with the KES period \var{n}.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
@@ -568,7 +566,6 @@ of the key \var{hk} with the KES period \var{n}.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
       \end{array}
       \right)
