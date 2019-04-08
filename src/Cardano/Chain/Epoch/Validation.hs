@@ -1,10 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Epoch.Validation
   ( EpochError(..)
   , validateEpochFile
   , validateEpochFiles
+  , validateEpochFileForFolding
   )
 where
 
@@ -17,7 +19,7 @@ import qualified Streaming.Prelude as S
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
-  , ChainValidationState
+  , ChainValidationState(..)
   , blockSlot
   , updateChainBlockOrBoundary
   )
@@ -42,6 +44,15 @@ validateEpochFile
   -> IO (Either EpochError ChainValidationState)
 validateEpochFile config cvs fp =
     runResourceT . runExceptT $ foldChainValidationState config cvs stream
+  where stream = parseEpochFileWithBoundary mainnetEpochSlots fp
+
+-- | TODO: Annotate me and include logging
+validateEpochFileForFolding
+  :: Genesis.Config
+  -> ChainValidationState
+  -> FilePath
+  -> ExceptT EpochError ResIO ChainValidationState
+validateEpochFileForFolding config cvs fp = foldChainValidationState config cvs stream
   where stream = parseEpochFileWithBoundary mainnetEpochSlots fp
 
 -- | Check that a list of epochs 'Block's are valid.

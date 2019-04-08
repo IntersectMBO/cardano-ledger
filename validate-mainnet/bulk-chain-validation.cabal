@@ -26,6 +26,7 @@ executable bulk-chain-validation-exe
                      , cardano-shell
                      , formatting
                      , iohk-monitoring
+                     , resourcet
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

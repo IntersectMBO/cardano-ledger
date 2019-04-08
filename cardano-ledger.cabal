@@ -121,6 +121,7 @@ library
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-prelude
+                     , cardano-shell
                      , containers
                      , concurrency
                      , cryptonite

@@ -25,17 +25,15 @@ module Cardano.Chain.Block.Validation
   -- * UTxO
   , HeapSize(..)
   , UTxOSize(..)
-  , applyBlockUTxOMVar
   , calcUTxOSize
   , foldUTxO
   , foldUTxOBlock
-  , scanUTxOfromGenesis
   )
 where
 
 import Cardano.Prelude
 
-import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
@@ -80,7 +78,7 @@ import qualified Cardano.Chain.Delegation.Payload as DlgPayload
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Interface as DI
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
-import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFiles)
+import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots)
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
@@ -638,47 +636,9 @@ newtype UTxOSize =
   UTxOSize { unUTxOSize :: Int}
   deriving Show
 
--- | Apply a block of 'Tx's to the 'UTxO' and update
--- an MVar with the heap size and map size of the 'UTxO'
--- along with the 'SlotId'.
-applyBlockUTxOMVar
-  :: ProtocolMagic
-  -> Update.ProtocolParameters
-  -> MVar (HeapSize UTxO, UTxOSize, SlotId)
-  -> UTxO
-  -> ABlock ByteString
-  -> ExceptT Error ResIO UTxO
-applyBlockUTxOMVar pm pps sizeMVar utxo block = do
-  resResult <- liftIO . runResourceT . runExceptT $ foldUTxOBlock
-    pm
-    pps
-    utxo
-    block
-  case resResult of
-    Left  e           -> throwE e
-    Right updatedUtxo -> do
-      _ <- liftIO $ takeMVar sizeMVar
-      liftIO . putMVar sizeMVar $ calcUTxOSize block updatedUtxo
-      return updatedUtxo
-
--- | Return the updated 'UTxO' after applying a block.
-scanUTxOfromGenesis
-  :: ProtocolMagic
-  -> Update.ProtocolParameters
-  -> UTxO
-  -> MVar (HeapSize UTxO, UTxOSize, SlotId)
-  -> [FilePath]
-  -> IO (Either Error UTxO)
-scanUTxOfromGenesis pm pps utxo sizeMVar fs =
-  runResourceT
-    . runExceptT
-    $ S.foldM_ (applyBlockUTxOMVar pm pps sizeMVar) (pure utxo) pure
-    $ hoist (withExceptT ErrorParseError) blocks
-  where blocks = parseEpochFiles mainnetEpochSlots fs
-
-calcUTxOSize :: ABlock ByteString -> UTxO -> (HeapSize UTxO, UTxOSize, SlotId)
-calcUTxOSize blk utxo =
+calcUTxOSize :: FlatSlotId-> UTxO -> (HeapSize UTxO, UTxOSize, FlatSlotId)
+calcUTxOSize fsId utxo =
   ( HeapSize . heapWords $ unUTxO utxo
   , UTxOSize . M.size $ unUTxO utxo
-  , unflattenSlotId mainnetEpochSlots $ blockSlot blk
+  , fsId
   )
