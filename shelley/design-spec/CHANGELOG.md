@@ -1,5 +1,18 @@
 # Delegation Design Document Changelog
 
+## 2019-04-08
+General review of the document.
+
+Mostly small things. Consistent wording, spelling, readability, removed some
+obsolete things.
+
+Removed the remaining todo items. Decisions we still need to make are now
+tracked on github instead.
+
+Moved the section on detecting stale stake into an appendix, and changed it to
+reflect the design where stake that is not delegated to an active pool is
+ignored (which solves the problem of stale stake to a large degree).
+
 ## 2019-04-05
 Rewrote the chapter on rewards.
 
