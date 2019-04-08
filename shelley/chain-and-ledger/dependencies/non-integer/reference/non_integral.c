@@ -376,8 +376,8 @@ mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const in
 {
   mpz_set(rop, one);
   int n = 0;
-  mpz_t last, divisor, lastX, nextX, error, upper, lower, error_term;
-  mpz_init_set(last, one); mpz_init_set(divisor, one); mpz_init_set(lastX, one);
+  mpz_t last, divisor, nextX, error, upper, lower, error_term;
+  mpz_init_set(last, one); mpz_init_set(divisor, one);
   mpz_init(nextX); mpz_init_set(error, x);
   mpz_init(upper); mpz_init(lower); mpz_init(error_term);
 
@@ -426,11 +426,10 @@ mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const in
           break;
         }
 
-      mpz_set(lastX, nextX);
       n++;
     }
 
-  mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
+  mpz_clear(last); mpz_clear(divisor); mpz_clear(nextX);
   mpz_clear(error); mpz_clear(upper); mpz_clear(lower); mpz_clear(error_term);
 
   result.iterations = n;

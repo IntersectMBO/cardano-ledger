@@ -452,6 +452,21 @@ test whether $p$ is greater than $\Sigma_k + \vert R_{k}(x) \vert$ or less than
 $\Sigma_k - \vert R_{k}(x)\vert$ to decide whether one can stop at an early
 iteration.
 
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.75\textwidth]{haskell.png}
+  \caption{Benchmark Results for the Haskell Implementation}
+  \label{fig:haskell-optimization-results}
+\end{figure}
+
+Figure~\ref{fig:haskell-optimization-results} shows the benchmark results for
+test data using the Haskell implementation. The lower (red) results show the
+run-time (in $\mu s$) for the naive, full computation. The middle (blue) part
+shows the run-time using a partial pre-computation of $\ln (1-f)$ for the
+exponentiation. The upper (yellow) part shows the run-time using the proposed
+optimization. For the 10 data points, the first 5 succeed in the leader
+election, the remaining 5 do not.
+
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{plainnat}
 \bibliography{references}

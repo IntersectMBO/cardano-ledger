@@ -74,19 +74,75 @@ benchmark =
   , ( 29, 21.3751514550890100882157511395770368, 13.142726180309635244407016807569817)
   ]
 
+leaderTest :: [(FixedPoint, FixedPoint)]
+leaderTest =
+  [
+    (0.8976665211035411703124553958948864, 0.0606582711007603145244895640289280)
+  , (0.5716976452274246673714149660295168, 0.0331504489265505234519324656402432)
+  , (0.7065648209493466791499936332513280, 0.0191904944750586084629366710468608)
+  , (0.6163887307023640265975933760962560, 0.0009789115765377905506587582136320)
+  , (0.8287250814277211883261694752849920, 0.0818294354737262242315256763252736)
+  , (0.6296088792688894580304263956660224, 0.2136254446486856645093028182097920)
+  , (0.0043534976530209208384197958303744, 0.0800088928081371273822004693696512)
+  , (0.0064410557720643207061256238268416, 0.5185265748729378110381531598946304)
+  , (0.0077974162429930188849042033737728, 0.0669355530388412925139403990368256)
+  , (0.0475597669349733145505167025635328, 0.3283014027373916529841907104219136)]
+
+f :: FixedPoint
+f = 1 / 10
+
+leaderComputation :: (FixedPoint, FixedPoint) -> CompareResult
+leaderComputation (sigma, p) = taylorExpCmp 3 (1/q) (-sigma*c')
+  where c = 1 - f
+        c' = ln' c
+        q = 1 - p
+
+leader' :: (FixedPoint, FixedPoint) -> CompareResult
+leader' (invQ, negAlpha) = taylorExpCmp 3 invQ negAlpha
+
 main :: IO ()
 main = do
-  precomputed <-
-    forM benchmark $ \(i, x, y) -> do
-      c <- evaluate $ ln' x
-      return (i, c, y)
+  -- precomputed <-
+  --   forM benchmark $ \(i, x, y) -> do
+  --     c <- evaluate $ ln' x
+  --     return (i, c, y)
+  -- defaultMain
+  --   [ bgroup
+  --       "***"
+  --       [bench (show i) $ whnf (uncurry (***)) (x, y) | (i, x, y) <- benchmark]
+  --   , bgroup
+  --       "constant"
+  --       [ bench (show i) $ whnf (\(c, y) -> exp' (y * c)) (c, y)
+  --       | (i, c, y) <- precomputed
+  --       ]
+  --   ]
+  precomputedLeader <-
+    forM leaderTest $ \(sigma, p) -> do
+      let q = 1 - p
+      let c = 1 - f
+      let c' = ln' c
+      return (1/q, (-sigma * c'))
+  precomputedLeader' <-
+    forM leaderTest $ \(sigma, p) -> do
+      c <- evaluate $ ln' (1 - f)
+      return (p, sigma, c)
+
   defaultMain
-    [ bgroup
-        "***"
-        [bench (show i) $ whnf (uncurry (***)) (x, y) | (i, x, y) <- benchmark]
+    [
+      bgroup
+      "taylorCmp"
+      [bench "cmp" $ whnf leader' (invQ, negAlpha)
+      | (invQ, negAlpha) <- precomputedLeader
+      ]
     , bgroup
-        "constant"
-        [ bench (show i) $ whnf (\(c, y) -> exp' (y * c)) (c, y)
-        | (i, c, y) <- precomputed
-        ]
+      "partial pre-computation"
+      [bench "exp(alpha*c)" $ whnf (\(p', s', c') -> p' < 1 - exp' (s' * c')) (p, sigma, c)
+      | (p, sigma, c) <- precomputedLeader'
+      ]
+    , bgroup
+      "full calculation"
+      [bench "cmp" $ whnf (\(s, p') -> p' < 1 - ((1 - f) *** s)) (sigma, p)
+      | (sigma, p) <- leaderTest
+      ]
     ]
+  print $ map leaderComputation leaderTest

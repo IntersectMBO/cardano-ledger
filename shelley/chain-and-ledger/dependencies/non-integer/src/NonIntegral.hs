@@ -5,7 +5,14 @@ module NonIntegral
   , findE
   , splitLn
   , scaleExp
+  , CompareResult(..)
+  , taylorExpCmp
   ) where
+
+data CompareResult = BELOW
+                   | ABOVE
+                   | UNKNOWN
+  deriving (Show, Eq)
 
 scaleExp :: (RealFrac b) => b -> (Integer, b)
 scaleExp x = (ceiling x, x / fromIntegral (ceiling x :: Integer))
@@ -176,3 +183,21 @@ taylorExp maxN currentN x lastX acc divisor
     | abs nextX < eps  = acc
     | otherwise = taylorExp maxN (currentN + 1) x nextX (acc + nextX) (divisor + 1)
     where nextX = (lastX * x) / divisor
+
+taylorExpCmp :: (RealFrac a, Show a) => a -> a -> a -> CompareResult
+taylorExpCmp boundX cmp x =
+  taylorExpCmp' 1000 0 boundX cmp x x 1 1
+
+taylorExpCmp' :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a -> a -> CompareResult
+taylorExpCmp' maxN currentN boundX cmp x err acc divisor
+  | maxN == currentN = UNKNOWN
+  | abs nextX < eps = UNKNOWN
+  | otherwise =
+    if cmp >= acc' + errorTerm then ABOVE
+    else if cmp < acc' - errorTerm then BELOW
+         else taylorExpCmp' maxN (currentN + 1) boundX cmp x error' acc' divisor'
+              where divisor' = divisor + 1
+                    errorTerm = error' * boundX
+                    nextX = err
+                    error' = (err * x) / divisor'
+                    acc' = acc + nextX

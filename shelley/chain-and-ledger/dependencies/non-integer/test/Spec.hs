@@ -141,6 +141,25 @@ prop_FPlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
           x'' = fromIntegral x'
           y'' = fromIntegral y'
 
+prop_LeaderCmp :: PosInt -> PosInt -> PosInt -> PosInt -> Property
+prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
+  p_ < 1 && sigma < 1 ==>
+    classify (p_ < (1 - ((1 - f) *** sigma))) "is leader" $
+    ( (p_ >= (1 - ((1 - f) *** sigma))) &&
+      ((taylorExpCmp 3 (1/(1 - p_)) (-sigma*c)) == ABOVE)
+    || (p_ < (1 - ((1 - f) *** sigma))) &&
+       ((taylorExpCmp 3 (1/(1 - p_)) (-sigma*c)) == BELOW))
+  where (p, p') = normalizeInts q q'
+        (s, s') = normalizeInts a a'
+        p'''    = fromIntegral p' :: FixedPoint
+        p''     = fromIntegral p
+        s'''    = fromIntegral s' :: FixedPoint
+        s''     = fromIntegral s
+        p_      = p''' / p''
+        sigma   = s''' / s''
+        f       = fromIntegral 1 / fromIntegral 10 :: FixedPoint
+        c       = ln' (1 - f)
+
 -----------------------------------
 -- Double versions of properties --
 -----------------------------------
@@ -336,6 +355,8 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
+  putStrLn "property σ, p ∈ [0,1]: p < 1 - (1 - f)^σ <=> taylorExpCmp 3 (1/(1 - p)) (-sigma * ln (1 - f))"
+  quickCheck (withMaxSuccess 10000 prop_LeaderCmp)
   putStrLn ""
 
   putStrLn "------------------------------"
