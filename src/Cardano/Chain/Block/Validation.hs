@@ -8,6 +8,7 @@
 
 module Cardano.Chain.Block.Validation
   ( updateBody
+  , updateChainBlockOrBoundary
   , updateChainBoundary
   , updateHeader
   , updateBlock
@@ -19,18 +20,31 @@ module Cardano.Chain.Block.Validation
   -- * SigningHistory
   , SigningHistory(..)
   , updateSigningHistory
+
+  -- * UTxO
+  , HeapSize(..)
+  , UTxOSize(..)
+  , applyBlockUTxOMVar
+  , calcUTxOSize
+  , foldUTxO
+  , foldUTxOBlock
+  , scanUTxOfromGenesis
   )
 where
 
 import Cardano.Prelude
 
+import Control.Monad.Trans.Resource (ResIO, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq(..), (<|))
+import Streaming (Of(..), Stream, hoist)
+import qualified Streaming.Prelude as S
 
 import Cardano.Chain.Block.Block
   ( ABlock(..)
+  , ABlockOrBoundary(..)
   , BoundaryValidationData(..)
   , blockDlgPayload
   , blockHashAnnotated
@@ -38,6 +52,7 @@ import Cardano.Chain.Block.Block
   , blockLength
   , blockProof
   , blockSlot
+  , blockTxPayload
   )
 import Cardano.Chain.Block.Header
   ( BlockSignature(..)
@@ -51,6 +66,7 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Delegation.Payload as DlgPayload
 import Cardano.Chain.Delegation.Validation
   (initialInterfaceState, updateDelegation)
+import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots , parseEpochFiles)
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
@@ -59,8 +75,13 @@ import Cardano.Chain.Genesis as Genesis
   , configK
   , configSlotSecurityParam
   )
+import Cardano.Chain.Slotting (SlotId, unflattenSlotId)
+import Cardano.Chain.Txp.TxPayload (aUnTxPayload)
+import Cardano.Chain.Txp.UTxO (UTxO(..))
+import Cardano.Chain.Txp.Validation (UTxOValidationError, updateUTxOWitness)
 import Cardano.Crypto
-  ( PublicKey
+  ( ProtocolMagic
+  , PublicKey
   , hash
   , hashRaw
   )
@@ -188,6 +209,17 @@ data ChainValidationError
 -- Validation Functions
 --------------------------------------------------------------------------------
 
+updateChainBlockOrBoundary
+  :: MonadError ChainValidationError m
+  => Genesis.Config
+  -> ChainValidationState
+  -> ABlockOrBoundary ByteString
+  -> m ChainValidationState
+updateChainBlockOrBoundary config c b = case b of
+  ABOBBoundary bvd   -> updateChainBoundary config c bvd
+  ABOBBlock    block -> updateBlock config c block
+
+
 updateChainBoundary
   :: MonadError ChainValidationError m
   => Genesis.Config
@@ -287,3 +319,78 @@ updateBlock config cvs b = do
   updateHeader config cvs b
     >>= (\cvs' -> return $ cvs' { cvsPreviousHash = Just $ blockHashAnnotated b })
     >>= (\cvs' -> updateBody config cvs' b)
+
+--------------------------------------------------------------------------------
+-- UTxO
+--------------------------------------------------------------------------------
+
+data Error
+  = ErrorParseError ParseError
+  | ErrorUTxOValidationError SlotId UTxOValidationError
+  deriving (Eq, Show)
+
+-- | Fold transaction validation over a 'Stream' of 'Block's
+foldUTxO
+  :: ProtocolMagic
+  -> UTxO
+  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
+  -> ExceptT Error ResIO UTxO
+foldUTxO pm utxo blocks = S.foldM_
+  (foldUTxOBlock pm)
+  (pure utxo)
+  pure
+  (hoist (withExceptT ErrorParseError) blocks)
+
+-- | Fold 'updateUTxO' over the transactions in a single 'Block'
+foldUTxOBlock
+  :: ProtocolMagic -> UTxO -> ABlock ByteString -> ExceptT Error ResIO UTxO
+foldUTxOBlock pm utxo block =
+  withExceptT (ErrorUTxOValidationError . unflattenSlotId mainnetEpochSlots $ blockSlot block)
+    $ foldM (updateUTxOWitness pm) utxo (aUnTxPayload $ blockTxPayload block)
+
+-- | Size of a heap value, in words
+newtype HeapSize a =
+  HeapSize { unHeapSize :: Int}
+  deriving Show
+
+-- | Number of entries in the UTxO
+newtype UTxOSize =
+  UTxOSize { unUTxOSize :: Int}
+  deriving Show
+
+-- | Apply a block of 'Tx's to the 'UTxO' and update
+-- an MVar with the heap size and map size of the 'UTxO'
+-- along with the 'SlotId'.
+applyBlockUTxOMVar
+  :: ProtocolMagic
+  -> MVar (HeapSize UTxO, UTxOSize, SlotId)
+  -> UTxO
+  -> ABlock ByteString
+  -> ExceptT Error ResIO UTxO
+applyBlockUTxOMVar pm sizeMVar utxo block = do
+  resResult <- liftIO . runResourceT . runExceptT $ foldUTxOBlock pm utxo block
+  case resResult of
+    Left e -> throwE e
+    Right updatedUtxo -> do
+              _ <- liftIO $ takeMVar sizeMVar
+              liftIO . putMVar sizeMVar $ calcUTxOSize block updatedUtxo
+              return updatedUtxo
+
+-- | Return the updated 'UTxO' after applying a block.
+scanUTxOfromGenesis
+  :: ProtocolMagic
+  -> UTxO
+  -> MVar (HeapSize UTxO, UTxOSize, SlotId)
+  -> [FilePath]
+  -> IO (Either Error UTxO)
+scanUTxOfromGenesis pm utxo sizeMVar fs = runResourceT . runExceptT $ S.foldM_
+    (applyBlockUTxOMVar pm sizeMVar)
+    (pure utxo)
+    pure $ hoist (withExceptT ErrorParseError) blocks
+  where
+    blocks = parseEpochFiles mainnetEpochSlots fs
+
+calcUTxOSize :: ABlock ByteString -> UTxO -> (HeapSize UTxO, UTxOSize, SlotId)
+calcUTxOSize blk utxo =
+  (HeapSize . heapWords $ unUTxO utxo, UTxOSize . M.size $ unUTxO utxo, unflattenSlotId mainnetEpochSlots $ blockSlot blk)
+

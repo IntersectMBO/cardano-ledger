@@ -31,9 +31,30 @@ extra-deps:
 
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
-
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0
+
+  # Following deps are for cardano-shell
+  - git: https://github.com/input-output-hk/cardano-shell
+    commit: fd48ab20512e24b72b6661c00bada8ed30ccc823
+
+  - katip-0.7.0.0@sha256:4b30d0643e18d01a3fd264d3d75921b49b2f464336a52fa46fa049107ebbfe04
+  - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1
+  - ekg-0.4.0.15@sha256:f52d7c00654d72d2ab988255f30adba95a52484ac310bab9c136c64732e69f4b
+  - ekg-json-0.1.0.6@sha256:4ff2e9cac213a5868ae8b4a7c72a16a9a76fac14d944ae819b3d838a9725569b
+
+  - git: https://github.com/input-output-hk/iohk-monitoring-framework
+    commit: 8fb87e83468831289820ef9edb3d5ef912b0db0f
+    subdirs:
+        - contra-tracer
+        - iohk-monitoring
+
+  # Extracted from cardano-sl since it's quite useful
+  - git: https://github.com/input-output-hk/cardano-sl-x509
+    commit: 71115d199368f1cc969a4936a856808539063253
+    subdirs:
+      - .
+
 
 nix:
   shell-file: scripts/nix/stack-shell.nix

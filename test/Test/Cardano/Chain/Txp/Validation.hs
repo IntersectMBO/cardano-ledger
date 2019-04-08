@@ -8,11 +8,10 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Control.Monad.Trans.Resource (runResourceT)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.String (fromString)
-import Streaming (Of(..), Stream, hoist)
-import qualified Streaming.Prelude as S
+import System.FilePath (takeFileName)
 
 import Hedgehog
   ( Group(..)
@@ -24,15 +23,11 @@ import Hedgehog
   , withTests
   )
 
-import System.FilePath (takeFileName)
-
-import Cardano.Chain.Block (ABlock, blockSlot, blockTxPayload)
-import Cardano.Chain.Epoch.File (ParseError, parseEpochFile)
-import Cardano.Chain.Genesis
-  (configProtocolMagic, configEpochSlots)
-import Cardano.Chain.Slotting (EpochSlots, FlatSlotId)
-import Cardano.Chain.Txp
-  (UTxO, UTxOValidationError, aUnTxPayload, genesisUtxo, updateUTxOWitness)
+import Cardano.Chain.Block (foldUTxO)
+import Cardano.Chain.Epoch.File (parseEpochFile)
+import Cardano.Chain.Genesis (configProtocolMagic, configEpochSlots)
+import Cardano.Chain.Slotting (EpochSlots)
+import Cardano.Chain.Txp (UTxO, genesisUtxo)
 import Cardano.Crypto (ProtocolMagic(..))
 import Cardano.Mirror (mainnetEpochFiles)
 
@@ -77,14 +72,7 @@ tests scenario = do
     properties = zip (fromString . takeFileName <$> files) (epochValid pm es utxoRef <$> files)
   checkSequential $ Group "Test.Cardano.Chain.Txp.Validation" properties
 
-
-data Error
-  = ErrorParseError ParseError
-  | ErrorUTxOValidationError FlatSlotId UTxOValidationError
-  deriving (Eq, Show)
-
-
--- | Check that a single epoch's transactions are valid by folding over 'Blund's
+-- | Check that a single epoch's transactions are valid by folding over 'Block's
 epochValid :: ProtocolMagic -> EpochSlots -> IORef UTxO -> FilePath -> Property
 epochValid pm es utxoRef fp = withTests 1 . property $ do
   utxo <- liftIO $ readIORef utxoRef
@@ -93,23 +81,3 @@ epochValid pm es utxoRef fp = withTests 1 . property $ do
   newUtxo <- evalEither result
   liftIO $ writeIORef utxoRef newUtxo
 
-
--- | Fold transaction validation over a 'Stream' of 'Blund's
-foldUTxO
-  :: ProtocolMagic
-  -> UTxO
-  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT Error ResIO UTxO
-foldUTxO pm utxo blocks = S.foldM_
-  (foldUTxOBlund pm)
-  (pure utxo)
-  pure
-  (hoist (withExceptT ErrorParseError) blocks)
-
-
--- | Fold 'updateUTxO' over the transactions in a single 'Blund'
-foldUTxOBlund
-  :: ProtocolMagic -> UTxO -> ABlock ByteString -> ExceptT Error ResIO UTxO
-foldUTxOBlund pm utxo block =
-  withExceptT (ErrorUTxOValidationError $ blockSlot block)
-    $ foldM (updateUTxOWitness pm) utxo (aUnTxPayload $ blockTxPayload block)

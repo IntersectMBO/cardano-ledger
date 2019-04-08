@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -26,6 +27,8 @@ import Control.Monad.Except (liftEither)
 import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
 import Data.Time (UTCTime)
+import Formatting (build, bprint, int, stext)
+import qualified Formatting.Buildable as B
 
 import Cardano.Binary.Class (serialize')
 import Cardano.Chain.Common
@@ -103,6 +106,43 @@ data GenesisDataGenerationError
   | GenesisDataGenerationPassPhraseMismatch
   | GenesisDataGenerationRedeemKeyGen
   deriving (Eq, Show)
+
+instance B.Buildable GenesisDataGenerationError where
+  build = \case
+    GenesisDataAddressBalanceMismatch distr addresses balances ->
+      bprint ("GenesisData address balance mismatch, Distribution: "
+             . stext
+             . " Addresses list length: "
+             . int
+             . " Balances list length: "
+             . int
+             )
+             distr
+             addresses
+             balances
+    GenesisDataGenerationDelegationError genesisDelegError ->
+      bprint ("GenesisDataGenerationDelegationError: "
+             . build
+             )
+             genesisDelegError
+    GenesisDataGenerationDistributionMismatch testBalance totalBalance ->
+      bprint ("GenesisDataGenerationDistributionMismatch: Test balance: "
+             . build
+             . " Total balance: "
+             . build
+             )
+             testBalance
+             totalBalance
+    GenesisDataGenerationLovelaceError lovelaceErr ->
+      bprint ("GenesisDataGenerationLovelaceError: "
+             . build
+             )
+             lovelaceErr
+    GenesisDataGenerationPassPhraseMismatch ->
+      bprint "GenesisDataGenerationPassPhraseMismatch"
+    GenesisDataGenerationRedeemKeyGen ->
+      bprint "GenesisDataGenerationRedeemKeyGen"
+
 
 generateGenesisData
   :: MonadError GenesisDataGenerationError m

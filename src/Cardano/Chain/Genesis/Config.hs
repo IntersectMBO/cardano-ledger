@@ -35,6 +35,8 @@ import Data.Aeson
   (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
 import Data.Coerce (coerce)
 import Data.Time (UTCTime)
+import Formatting (build, bprint, string)
+import qualified Formatting.Buildable as B
 import System.FilePath ((</>))
 import System.IO.Error (userError)
 
@@ -300,3 +302,30 @@ data ConfigurationError
   -- ^ Custom seed was provided, but it doesn't make sense
   | ConfigurationGenerationError GenesisDataGenerationError
   deriving (Show)
+
+instance B.Buildable ConfigurationError where
+  build = \case
+    MissingSystemStartTime ->
+      bprint "Missing system start time."
+    UnnecessarySystemStartTime ->
+      bprint "Cannot give a custom start time when using a mainnet genesis."
+    ConfigurationGenesisDataError genesisDataError ->
+      bprint ("Error in constructing GenesisData: "
+             . build
+             )
+             genesisDataError
+    GenesisHashMismatch genesisHash expectedHash ->
+      bprint ("GenesisData canonical JSON hash is different than expected. GenesisHash: "
+             . string
+             . " Expected hash: "
+             . string
+             )
+             (show genesisHash)
+             (show expectedHash)
+    MeaninglessSeed ->
+      bprint "Custom seed was provided but it does not make sense"
+    ConfigurationGenerationError genesisDataGenerationError ->
+      bprint ("Configuration GenenerationError"
+             . build
+             )
+             genesisDataGenerationError

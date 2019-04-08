@@ -3,7 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Epoch.File
-  ( parseEpochFile
+  ( mainnetEpochSlots
+  , parseEpochFile
   , parseEpochFiles
   , parseEpochFileWithBoundary
   , parseEpochFilesWithBoundary
@@ -31,7 +32,7 @@ import System.FilePath ((-<.>))
 
 import Cardano.Binary.Class (DecoderError, decodeFullDecoder, slice)
 import Cardano.Chain.Block.Block (ABlock, ABlockOrBoundary(..), decodeABlockOrBoundary)
-import Cardano.Chain.Slotting (EpochSlots)
+import Cardano.Chain.Slotting (EpochSlots(..))
 
 
 -- Epoch file format:
@@ -67,6 +68,12 @@ loadFileWithHeader file header =
     if h == header
       then rest
       else lift $ throwError (ParseErrorMissingHeader file)
+
+-- | Slots per epoch used in mainnet
+--
+-- This number has been fixed throughout the Byron era.
+mainnetEpochSlots :: EpochSlots
+mainnetEpochSlots = EpochSlots 21600
 
 parseEpochFile
   :: EpochSlots

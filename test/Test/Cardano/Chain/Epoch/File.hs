@@ -13,10 +13,8 @@ import qualified Hedgehog as H
 import Streaming (Of((:>)))
 import qualified Streaming as S
 
-import Cardano.Chain.Epoch.File (ParseError, parseEpochFiles)
+import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFiles)
 import Cardano.Mirror (mainnetEpochFiles)
-
-import Test.Cardano.Chain.Config (mainnetEpochSlots)
 
 tests :: IO Bool
 tests = H.checkSequential $$(H.discoverPrefix "prop")

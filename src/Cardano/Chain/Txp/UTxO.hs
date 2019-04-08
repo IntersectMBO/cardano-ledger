@@ -5,7 +5,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 
 module Cardano.Chain.Txp.UTxO
-  ( UTxO
+  ( UTxO(..)
   , UTxOError
   , fromList
   , member

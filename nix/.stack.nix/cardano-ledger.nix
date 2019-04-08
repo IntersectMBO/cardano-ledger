@@ -29,6 +29,7 @@
           (hsPkgs.cardano-prelude)
           (hsPkgs.cborg)
           (hsPkgs.containers)
+          (hsPkgs.concurrency)
           (hsPkgs.cryptonite)
           (hsPkgs.Cabal)
           (hsPkgs.directory)
@@ -44,6 +45,21 @@
           (hsPkgs.time)
           (hsPkgs.vector)
           ];
+        };
+      exes = {
+        "cardano-ledger-validation-exe" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.containers)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-mainnet-mirror)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-shell)
+            (hsPkgs.formatting)
+            (hsPkgs.iohk-monitoring)
+            ];
+          };
         };
       tests = {
         "cardano-ledger-test" = {
