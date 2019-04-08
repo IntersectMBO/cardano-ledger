@@ -1976,79 +1976,6 @@ constraint to actually distribute those rewards at the beginning of epoch
 \(e\) at the beginning of \(e+2\), we will have a whole epoch for that
 calculation.
 
-\subsection{Design Option: Stale Stake}
-\label{stale-stake}
-
-This section sketches an optional mechanism for tracking \emph{stale
-  stake}, i.e., stake that is no longer being actively
-controlled. Stale stake can limit the chain growth (since elected
-leaders might fail to show up and sign blocks), and decrease the
-amount of honest stake, making the system easier to attack. The
-mechanism described below is aimed at mitigating the first effect.
-
-In the current design, stale stake is much less likely to become a
-problem than in earlier iterations (since we automatically discard
-stake that is not delegated to a valid stake pool), so we propose to
-not implement this design option, at least not in the initial Shelley
-release. We keep it in this document for further reference.
-
-Over time, we expect that an increasing amount of stake will become
-inactive. Individual stakeholders might lose their keys or interest in
-the system, and stake pool operators might stop operating in an
-disorderly fashion without posting a retirement certificate. This poses
-two problems for the system: the chain growth will decrease, limiting
-the rate at which transactions can be processed, and increasing the
-latency. It will also play in the hands of an adversary, since stake
-which is offline is counted as adversarial.
-
-Luckily, this stale stake can be detected by looking at the blockchain:
-every time a stale staking key is elected, we will get an empty slot,
-and a block will be missing in the chain. Of course, a single empty slot
-does not need to indicate that the elected staking key is indeed stale
-(there might be network issues, a node might have crashed or been
-rebooted). But a key that misses multiple slots where it was elected is
-likely to be inactive.
-
-The system will consider stake keys that satisfy the following two
-conditions to be inactive:
-
-\begin{itemize}
-\item
-  The key has failed to sign blocks for the last 10 slots where it was
-  elected as a slot leader\footnote{The number 10 here is arbitrary and
-    subject to discussion.}.
-\item
-  It has not been used to sign a single block during the previous epoch
-\end{itemize}
-
-The second criterion is meant to prevent large stake pools or
-stakeholders from being considered inactive if they experience a
-temporary outage that is shorter than an epoch, but long enough to cover
-10 slots for which they were elected.
-
-Inactive stake keys will not be considered during leader election. This
-ensures that the chain growth is not slowed down by the inactive stake.
-It also somewhat improves the security problem: instead of the inactive
-stake becoming adversarial, the overall amount of stake is effectively
-reduced.
-
-Stakeholders who have delegated to a pool that is considered inactive
-should be notified by their wallet the next time they come online, and
-the wallet should advise them to re-delegate.
-
-Owners of a stale staking key -- both individual stakeholders and
-operators of a stake pool -- should also be notified when their staking
-key becomes stale. If they still have the key after it became stale (for
-instance, if their node went down temporarily), they should have the
-possibility to announce to the blockchain that their key should be
-considered to be active again. They can do that by posting a
-\emph{heartbeat} message, a message that contains the current slot
-number, and is signed with the stale key, as transaction metadata. The
-system shall recognise such messages, and consider the key to be active
-again if it became stale before the slot number mentioned in the
-heartbeat. Including the slot number in the heartbeat prevents a
-malicious third party from re-using a previous heartbeat message.
-
 \subsection{Wallet Recovery Process}
 \label{wallet-recovery-process}
 
@@ -4269,6 +4196,51 @@ never drop below $d_{\min}\cdot d_R=0.5$ ada.
 \todo{We have to discuss this proposal with the researchers on the
   Game Theory side. We also need to decide whether we should preclude
   transactions with an overall negative fee.}
+\section{Design Option: Stale Stake}
+\label{stale-stake}
+
+This section sketches an optional mechanism for tracking \emph{stale
+  stake}, i.e., stake that is no longer being actively
+controlled. Stale stake can limit the chain growth (since elected
+leaders might fail to show up and sign blocks), and decrease the
+amount of honest stake, making the system easier to attack. The
+mechanism described below is aimed at mitigating the first effect.
+
+In the current design, stale stake is much less likely to become a
+problem than in earlier iterations (since we automatically discard
+stake that is not delegated to a valid stake pool), so we propose to
+not implement this design option, at least not in the initial Shelley
+release. We keep it in this document for further reference.
+
+In the current design, the only circumstance where an actor becoming inactive
+would limit the chain growth is when a stake pool operator ceases to operate
+their pool, without retiring it. Furthermore, since a failure to produce blocks
+will reduce the rewards for stake pool members, such a pool would loose members
+and become irrelevant. Thus, an abandoned pool will be an impediment to chain
+growth only if there are stakeholders delegating to that pool who also become
+inactive and do not re-delegate.
+
+In order to further mitigate this potential problem, the system could monitor
+the apparent performance of all pools over time, and prune pools that fulfill
+both of the following conditions:
+
+\begin{itemize}
+  \item The apparent performance of the pool has consistently been zero for a
+    certain number of epochs (i.e., the block did not produce any blocks after a
+    certain moment in time).
+  \item The pool has enough stake that it should have been elected as slot
+    leader within those epochs several times.
+\end{itemize}
+
+The number of epochs and size in stake should be such that we can rule out the
+hypothesis that the pool is still active, but was just not elected as leader
+during those epochs, with statistical significance\footnote{Setting those
+  numbers would require some research if we were to implement this feature.}.
+
+We do not anticipate that abandoned pools should become a problem anytime soon.
+By monitoring the chain growth, we could detect whenever a significant fraction
+of pools accumulates in abandoned pools, and implement abandoned pool detection
+when necessary.
 
 \section{FAQ}
 
