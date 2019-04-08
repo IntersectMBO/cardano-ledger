@@ -193,8 +193,6 @@ state transition types. We define two separate parts of the ledger state.
         their costs and margin.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
-      \item $\var{avgs}$ stores the latest value of the pool's performance moving average.  This
-        value quantifies the desirability of delegating to a given pool, based on past performance.
       \item $\var{cs}$ stores the latest operational certificate counter used for each pool.
         The counters are used the operation certificate transition in Figure~\ref{fig:rules:ocert}.
     \end{itemize}
@@ -228,7 +226,6 @@ and the protocol parameters.
       \var{poolParams} & \HashKey_{pool} \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
-      \var{avgs} & \HashKey_{pool} \mapsto \Rnn & \text{performance moving average}\\
       \var{cs} & \HashKey_{pool} \mapsto \N & \text{operational certificate counters}\\
     \end{array}\right)
     \end{array}
@@ -500,7 +497,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
@@ -512,7 +508,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \varUpdate{\var{poolParams}} & \varUpdate{\union}
                                     & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
        \var{retiring} \\
-       \var{avgs} \\
        \varUpdate{\var{cs}} & \varUpdate{\union}
                             & \varUpdate{\{\var{hk} \mapsto 0\}} \\
       \end{array}
@@ -538,7 +533,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
@@ -549,7 +543,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \varUpdate{\var{poolParams}} & \varUpdate{\unionoverrideRight}
                                   & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
@@ -577,7 +570,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
     \right)
@@ -588,7 +580,6 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{poolParams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
     \right)
@@ -813,7 +804,6 @@ will be invalid.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
@@ -827,7 +817,6 @@ will be invalid.
         \var{stpools} \\
         \var{poolParams} \\
         \var{retiring} \\
-        \var{avgs} \\
         \var{cs} \\
       \end{array}
       \right)
