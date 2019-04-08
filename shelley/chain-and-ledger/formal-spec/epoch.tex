@@ -28,7 +28,7 @@
 \newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\lReward}[4]{\fun{r_{leader}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
-\newcommand{\poolReward}[6]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}}
+\newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}}
 \newcommand{\movingAvg}[5]{\fun{movingAvg}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\updateAvgs}[5]{\fun{updateAvgs}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
@@ -972,7 +972,7 @@ in sequence.
 
 This section defines the reward calculation for the proof of stake leader election.
 Figure~\ref{fig:functions:rewards} defines the pool reward as described in section
-6.5.1 of \cite{delegation_design}.
+5.5.2 of~\cite{delegation_design}.
 
 \begin{itemize}
   \item The function $\fun{maxPool}$ gives the maximum reward a stake pool can receive in an epoch.
@@ -983,23 +983,17 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       \item $\var{a_0}$, the leader-stake influence
       \item $n_{opt}$, the optimal number of saturated stake pools
     \end{itemize}
-  \item The function $\fun{movingAvg}$ calculates the new moving average for a given stake pool
-    based on its performance and the protocol parameter:
-    \begin{itemize}
-      \item $\alpha$, the moving average weight
-    \end{itemize}
-  \item The function $\fun{poolReward}$ gives the total rewards available to be distributed
-    to the members of the given pool. It depends on one additional protocol parameter:
-    \begin{itemize}
-      \item $\gamma$, the moving average exponent
-    \end{itemize}
+  \item The function $\fun{poolReward}$ gives the total rewards available to be
+    distributed to the members of the given pool. It depends on the relative
+    stake $\sigma$, the number $n$ of blocks the pool added to the chain and the
+    total number $\overline{N}$ of blocks added to the chain in the last epoch.
 \end{itemize}
 
 %%
 %% Figure - Functions for the Reward Calculation
 %%
 \begin{figure}[htb]
-  \emph{Maximal Reward Function, called $f(s,\sigma)$ in section 6.5.1 of \cite{delegation_design}}
+  \emph{Maximal Reward Function, called $f(s,\sigma)$ in section 5.5.2 of~\cite{delegation_design}}
   %
   \begin{align*}
       & \fun{maxPool} \in \PParams \to \Coin \to \unitInterval \to \unitInterval \to \Coin \\
@@ -1018,32 +1012,15 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       & ~~~~~~~p'=\min(p_r,~z_0) \\
   \end{align*}
 
-  \emph{Exponential moving average, called $\langle x\rangle_e$ in 6.5.1 of
-        \cite{delegation_design}}
+  \emph{Actual Reward Function, called $\hat{f}_j$ in section 5.5.2 of~\cite{delegation_design}}
   %
   \begin{align*}
-      & \fun{movingAvg} \in \PParams \to \HashKey \to \N \to \Rnn \to \Avgs \to \R \\
-      & \movingAvg{pp}{hk}{n}{\overline{N}}{avgs} =
-        \begin{cases}
-        \frac{n}{\max(\overline{N}, 1)}
-        & hk\notin \dom\var{avgs}\\
-        \\
-          \alpha\cdot\frac{n}{\max(\overline{N}, 1)}+(1-\alpha)\cdot\var{prev}
-        & hk\mapsto\var{prev}\in\var{avgs}\\
-        \end{cases} \\
+      & \fun{poolReward} \in \HashKey \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
+      & \poolReward{hk}{s}{n}{\overline{N}}{\hat{f}} =
+      \floor*{\overline{p}\cdot\var{\hat{f}}}\\
       & ~~~\where \\
-      & ~~~~~~~\alpha = \fun{movingAvgWeight}~pp \\
-  \end{align*}
-
-  \emph{Actual Reward Function, called $\hat{f}_j$ in section 6.5.1 of \cite{delegation_design}}
-  %
-  \begin{align*}
-      & \fun{poolReward} \in \PParams \to \HashKey \to \N \to \Rnn \to \Avgs \to \Coin \to \Coin \\
-      & \poolReward{pp}{hk}{n}{\overline{N}}{avgs}{maxP} =
-      \floor*{avg^\gamma\cdot \var{maxP}}\\
-      & ~~~\where \\
-      & ~~~~~~~\gamma = \fun{movingAvgExp}~pp \\
-      & ~~~~~~~\var{avg} = \movingAvg{pp}{hk}{n}{\overline{N}}{avgs} \\
+      & ~~~~~~~\overline{p} = \frac{\beta}{s} \\
+      & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
   \end{align*}
   \caption{Functions used in the Reward Calculation}
   \label{fig:functions:rewards}
@@ -1143,10 +1120,10 @@ The calculation is done pool-by-pool.
   \emph{Calculation to reward a single stake pool}
   %
   \begin{align*}
-      & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \HashKey \to \PoolParam\\
+    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \HashKey \to \PoolParam\\
       & ~~~\to \Stake \to \Avgs \to \Coin \to \powerset{\AddrRWD}
            \to (\AddrRWD \mapsto \Coin)\times\Coin \\
-      & \rewardOnePool{pp}{R}{n}{poolHK}{pool}{stake}{avgs}{tot}{addrs_{rew}} =
+      & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{avgs}{tot}{addrs_{rew}} =
           (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
@@ -1155,7 +1132,6 @@ The calculation is done pool-by-pool.
         hk\in(\fun{poolOwners}~\var{pool})\\
         }} c \\
       & ~~~~~~~\sigma = \var{pstake} / tot \\
-      & ~~~~~~~\var{\overline{N}} = \sigma * \SlotsPerEpoch\\
       & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
       & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
       & ~~~~~~~maxP =
@@ -1164,7 +1140,7 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{poolR} = \poolReward{pp}{hk}{n}{\overline{N}}{avgs}{maxP} \\
+      & ~~~~~~~\var{poolR} = \poolReward{hk}{s}{n}{\overline{N}}{maxP} \\
       & ~~~~~~~\var{mRewards} = \left\{
                                   \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
                                   ~\Big\vert~
@@ -1189,6 +1165,7 @@ The calculation is done pool-by-pool.
           = (\var{rewards},~\var{unrealized})\\
       & ~~~\where \\
       & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
+      & ~~~~~~~\var{\overline{N}} = \sum_{\_\mapsto m\in blocks}m \\
       & ~~~~~~~pdata = \left\{
         hk\mapsto \left(p,~n,~\poolStake{hk}{delegs}{stake}\right)
         \mathrel{\Bigg|}
@@ -1198,9 +1175,9 @@ The calculation is done pool-by-pool.
         \end{array}
       \right\} \\
       & ~~~~~~~\var{results} = \left\{
-        hk \mapsto \rewardOnePool{pp}{R}{n}{hk}{p}{s}{avgs}{tot}{addrs_{rew}}
+        hk \mapsto \rewardOnePool{pp}{R}{n}{\overline{N}}{hk}{p}{s}{avgs}{tot}{addrs_{rew}}
                  \mid
-                 hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
+        hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
       & ~~~~~~~\var{unrealized} = \sum_{\wcard\mapsto (\wcard,~u)\in\var{results}}u \\
       & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto(\var{r},~\wcard)\in\var{results}}\var{r}
   \end{align*}
