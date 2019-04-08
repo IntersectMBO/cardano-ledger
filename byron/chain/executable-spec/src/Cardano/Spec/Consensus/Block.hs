@@ -9,7 +9,6 @@ import           Control.Lens ((^.))
 import qualified Cardano.Spec.Chain.STS.Block as CBM -- Concrete Block Module
 import           Ledger.Core
 import           Ledger.Delegation
-import           Ledger.Signatures
 
 
 class BlockHeader h where

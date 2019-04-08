@@ -1,6 +1,12 @@
+{-# LANGUAGE ConstrainedClassMethods    #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
+
 module Ledger.Core where
 
 import qualified Crypto.Hash as Crypto
@@ -8,6 +14,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Monoid (Sum(..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
@@ -15,7 +22,10 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
 import Data.AbstractSize
-import Ledger.Signatures
+
+
+-- | An encoded hash of part of the system.
+type Hash = Crypto.Digest Crypto.SHA256
 
 -- | Hash part of the ledger paylod
 class HasHash a where
@@ -114,6 +124,19 @@ newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving (Eq, Ord, Num, Show)
 
 ---------------------------------------------------------------------------------
+-- Transactions
+---------------------------------------------------------------------------------
+
+-- |The address of a transaction output, used to identify the owner.
+newtype Addr = Addr VKey
+  deriving (Show, Eq, Ord)
+
+-- | A unit of value held by a UTxO.
+newtype Value = Value Natural
+  deriving (Show, Eq, Ord)
+  deriving (Semigroup, Monoid) via (Sum Natural)
+
+---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
 ---------------------------------------------------------------------------------
 
@@ -124,39 +147,48 @@ psSize :: PairSet a b -> Int
 psSize = Set.size . unPairSet
 
 class Relation m where
-  singleton :: a -> b -> m a b
+  type Domain m :: *
+  type Range m :: *
+
+  singleton :: Domain m -> Range m -> m
 
   -- | Domain
-  dom :: Ord a => m a b -> Set a
+  dom :: Ord (Domain m) => m -> Set (Domain m)
   -- | Range
-  range :: Ord b => m a b -> Set b
+  range :: Ord (Range m) => m -> Set (Range m)
 
   -- | Domain restriction
   --
-  (◁), (◃) :: Ord a => Set a -> m a b -> m a b
+  (◁), (◃), (<|) :: Ord (Domain m) => Set (Domain m) -> m -> m
+  s ◃ r = s ◁ r
+  s <| r = s ◁ r
 
   -- | Domain exclusion
   --
-  (⋪) :: Ord a => Set a -> m a b -> m a b
+  (⋪), (</|) :: Ord (Domain m) => Set (Domain m) -> m -> m
+  s </| r = s ⋪ r
 
   -- | Range restriction
   --
-  (▹) :: Ord b => m a b -> Set b -> m a b
+  (▹), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
+  s |> r = s ▹ r
 
   -- | Union
-  (∪) :: (Ord a, Ord b) => m a b -> m a b -> m a b
+  (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
   -- | Union Override
-  (⨃) :: (Ord a, Ord b) => m a b -> m a b -> m a b
+  (⨃) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
-instance Relation Map where
+instance Relation (Map k v) where
+  type Domain (Map k v) = k
+  type Range (Map k v) = v
+
   singleton = Map.singleton
 
   dom = Map.keysSet
   range = Set.fromList . Map.elems
 
   s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
-  s ◃ r = s ◁ r
 
   s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
 
@@ -165,14 +197,17 @@ instance Relation Map where
   d0 ∪ d1 = Map.union d0 d1
   d0 ⨃ d1 = d1 ∪ (Map.keysSet d1 ⋪ d0)
 
-instance Relation PairSet where
+-- TODO: Remove `PairSet` and just use `Set (a, b)`?
+instance Relation (PairSet a b) where
+  type Domain (PairSet a b) = a
+  type Range (PairSet a b) = b
+
   singleton a b = PairSet $ Set.singleton (a,b)
 
   dom = Set.map fst . unPairSet
   range = Set.map snd . unPairSet
 
   s ◁ r = PairSet . Set.filter (\(k,_) -> k `Set.member` s) $ unPairSet r
-  s ◃ r = s ◁ r
 
   s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` s) $ unPairSet r
 
