@@ -208,7 +208,7 @@ which will be used throughout this section. It consists of:
     Initially there will be no way to remove these funds.
   \item The value $\var{reserves}$ tracks the amount of coin currently stored in the reserves.
     A portion of the coin in this pot enters the circulation each epoch via reward distribution.
-  \item The value $\var{totalPot}$ is a combination of fees and leftover rewards from
+  \item The value $\var{rewardPot}$ is a combination of fees and leftover rewards from
     the previous epoch, and the new coin added to ciculation from reserves.
     This pot is used to pay rewards.
 \end{itemize}
@@ -225,7 +225,7 @@ More will be said about the general accounting system in Section~\ref{sec:reward
       \begin{array}{r@{~\in~}ll}
         \var{treasury} & \Coin & \text{treasury pot}\\
         \var{reserves} & \Coin & \text{reserve pot}\\
-        \var{totalPot} & \Coin & \text{total pot}\\
+        \var{rewardPot} & \Coin & \text{reward pot}\\
       \end{array}
     \right)
   \end{equation*}
@@ -566,7 +566,7 @@ This transition has no preconditions and results in the following state change:
         \begin{array}{r}
           \var{treasury} \\
           \var{reserves} \\
-          \var{totalPot} \\
+          \var{rewardPot} \\
           ~ \\
           \var{stkeys} \\
           \var{rewards} \\
@@ -585,7 +585,7 @@ This transition has no preconditions and results in the following state change:
         \begin{array}{rcl}
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
-          \var{totalPot} \\
+          \var{rewardPot} \\
           ~ \\
           \var{stkeys} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
@@ -718,7 +718,7 @@ for ease of reading.
           \begin{array}{r}
             \var{treasury} \\
             \varUpdate{reserves + diff} \\
-            \var{totalPot} \\
+            \var{rewardPot} \\
             \var{rewards} \\
           \end{array}
         }
@@ -1236,7 +1236,7 @@ during the reward update calculation.
     \node (C) at (3,2.5) {Circulation};
     \node (R) at (5, 1) {Reserves};
     \node (D) at (1, 2) {Deposits};
-    \node (FR) at (1,1) {Total pot};
+    \node (FR) at (1,1) {Reward pot};
     \node (RA) at (5, 2) {Reward accounts};
     \node (T) at (3,0.5) {Treasury};
 
@@ -1274,13 +1274,13 @@ It consists of four pots:
 \begin{itemize}
   \item The change to the treasury. This will be a positive value.
   \item The change to the reserves. This will be a negative value.
-  \item The change to the total pot. This will be a non-negative value.
+  \item The change to the reward pot. This will be a non-negative value.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
 \end{itemize}
 
 Note here that it is not obvious that the calculation of the
-change in the total pot presented in Figure~\ref{fig:functions:reward-update-creation}
+change in the reward pot presented in Figure~\ref{fig:functions:reward-update-creation}
 below is not
 negative. A sketch of the proof is provided in
 Section 6.4 of~\cite{delegation_design}.
@@ -1296,7 +1296,7 @@ Section 6.4 of~\cite{delegation_design}.
       \begin{array}{r@{~\in~}ll}
         \Delta t & \Coin & \text{change to the treasury} \\
         \Delta r & \Coin & \text{change to the reserves} \\
-        \Delta p_t & \Coin & \text{change to the total pot} \\
+        \Delta p_t & \Coin & \text{change to the reward pot} \\
         \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
         \Delta f & \Coin & \text{change to the fee pot} \\
       \end{array}
@@ -1317,14 +1317,14 @@ The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
   \item First we calculate the change to the reserves,
     as determined by the $\rho$ protocol parameter.
-  \item Next we calculate the proportion of the total pot that will move to the treasury,
+  \item Next we calculate the proportion of the reward pot that will move to the treasury,
     as determined by the $\tau$ protocol parameter.
   \item The rewards are calculated, using the oldest stake distribution snapshot (the one
     labeled ``go'').
     As given by $\fun{maxPool}$, each pool can receive a maximal amount, determined by its
     performance.  The difference between the maximal amount and the actual amount received is
     added to the amount moved to the treasury.
-  \item Next we calculate change in the $\var{totalPot}$, the total amount of coin available
+  \item Next we calculate change in the $\var{rewardPot}$, the total amount of coin available
   for rewards this
     epoch, as described in section 6.4 of \cite{delegation_design}. It consists of:
     \begin{itemize}
@@ -1350,7 +1350,7 @@ smaller refunds for deposits than were paid upon depositing.
 
 The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
-      \item Adjust the treasury, reserves, fee and total pots by the appropriate amounts.
+      \item Adjust the treasury, reserves, fee and reward pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
     \end{itemize}
 
@@ -1374,7 +1374,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       & ~~~~~~~(\wcard,~\wcard,~\var{pstate_{go}},~\var{poolsSS},~\var{blocksSS},~\var{feeSS})
         = \var{ss}\\
       & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
-      & ~~~~~~~(\wcard,~\var{reserves},~\var{totalPot}) = \var{acnt} \\
+      & ~~~~~~~(\wcard,~\var{reserves},~\var{rewardPot}) = \var{acnt} \\
       & ~~~~~~~\left(
                  \wcard,~
                  \left(
@@ -1383,7 +1383,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
                  \right)
                \right) = \var{ls} \\
       & ~~~~~~~\Delta r = \floor*{(\fun{rho}~{pp}) \cdot \var{reserves}} \\
-      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
+      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
       & ~~~~~~~\var{rs},~\Delta t_2
            = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{avgs}{stake}{delegs} \\
       & ~~~~~~~\Delta p_t = \var{feeSS} + \Delta r - \left(
@@ -1409,7 +1409,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
         \begin{array}{c}
           \var{treasury} \\
           \var{reserves} \\
-          \var{totalPot} \\
+          \var{rewardPot} \\
           ~ \\
           \var{stkeys} \\
           \var{rewards} \\
@@ -1432,7 +1432,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
         \begin{array}{c}
           \varUpdate{\var{treasury} + \Delta t}\\
           \varUpdate{\var{reserves} + \Delta r}\\
-          \varUpdate{\var{totalPot} + \Delta p_t} \\
+          \varUpdate{\var{rewardPot} + \Delta p_t} \\
           ~ \\
           \var{stkeys} \\
           \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
