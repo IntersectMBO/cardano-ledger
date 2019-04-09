@@ -389,7 +389,7 @@ Figure~\ref{fig:functions:deposits-decay} defines the decays functions.
   \item The function $\fun{decayedKey}$ calculates how much of a stake key deposit
     has decayed since the last epoch. Again, this is done using the time to live of
     the transaction (and not the current slot, as explained above).
-    At the epoch boundaries, decayed portions of deposits are moved to the reward pot,
+    At the epoch boundaries, decayed portions of deposits are moved to the total pot,
     so between epochs we need only account for what has decayed since the last epoch.
     The value is calculated by subtracting the refund calculation based at the epoch boundary
     from the refund calculation based at the time to live of the transaction.
