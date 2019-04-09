@@ -133,9 +133,9 @@ $\trans{sdeleg}{\wcard}$ are presented in
     \label{eq:rule:delegation-scheduling}
     \inference
     {
-      (\var{vk_s},~ \sigma) = \dwit{c}
+      (\var{vk_s},~ \sigma) \leteq \dwit{c}
       & \verify{vk_s}{\serialised{\dbody{c}}}{\sigma} & vk_s \in \mathcal{K}\\ ~ \\
-      (\var{vk_s},~ \var{vk_d}) = \dwho{c} & e_d = \depoch{c}
+      (\var{vk_s},~ \var{vk_d}) \leteq \dwho{c} & e_d \leteq \depoch{c}
       & (e_d,~ \var{vk_s}) \notin \var{eks} & 0 \leq e_d - e \leq 1 \\ ~ \\
       d \leteq 2 \cdot k & (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
@@ -252,8 +252,8 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
   \begin{equation}
     \inference
     {
-      \var{dms_0} = \Set{k \mapsto k}{k \in \mathcal{K}} &
-      \var{dws_0} = \Set{k \mapsto 0}{k \in \mathcal{K}}
+      \var{dms_0} \leteq \Set{k \mapsto k}{k \in \mathcal{K}} &
+      \var{dws_0} \leteq \Set{k \mapsto 0}{k \in \mathcal{K}}
     }
     {
       \mathcal{K}
@@ -469,8 +469,8 @@ delegations have on the ledger.
   \begin{equation}
     \inference[Initial-ADELEGS]
     {
-      \var{dms_0} = \Set{k \mapsto k}{k \in \mathcal{K}} &
-      \var{dws_0} = \Set{k \mapsto 0}{k \in \mathcal{K}}
+      \var{dms_0} \leteq \Set{k \mapsto k}{k \in \mathcal{K}} &
+      \var{dws_0} \leteq \Set{k \mapsto 0}{k \in \mathcal{K}}
     }
     {
       \mathcal{K}
