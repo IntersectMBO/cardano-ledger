@@ -26,6 +26,7 @@ import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Update.Gen (genProtocolVersion, genCanonicalProtocolParameters)
 import Test.Cardano.Chain.Genesis.Gen (genCanonicalGenesisData, genCanonicalGenesisDelegation, genSafeProxyCert)
 import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic, genPublicKey)
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
 
@@ -44,52 +45,52 @@ goldenStaticConfig_GCSrc = goldenTestJSONPretty
   exampleStaticConfig_GCSrc
   "test/golden/json/genesis/StaticConfig_GCSrc"
 
-roundTripStaticConfig :: Property
-roundTripStaticConfig = eachOf 100 (feedPM genStaticConfig) roundTripsAesonShow
+ts_roundTripStaticConfig :: TSProperty
+ts_roundTripStaticConfig = eachOfTS 100 (feedPM genStaticConfig) roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- JSON Canonical Tests
 --------------------------------------------------------------------------------
 
-roundTripCanonicalCertificate :: Property
-roundTripCanonicalCertificate =
-  eachOf 100 (feedPM genCanonicalCertificate) roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalCertificate :: TSProperty
+ts_roundTripCanonicalCertificate =
+  eachOfTS 100 (feedPM genCanonicalCertificate) roundTripsCanonicalJsonPretty
 
-roundTripCanonicalGenesisAvvmBalances :: Property
-roundTripCanonicalGenesisAvvmBalances =
-  eachOf 100 genGenesisAvvmBalances roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisAvvmBalances :: TSProperty
+ts_roundTripCanonicalGenesisAvvmBalances =
+  eachOfTS 100 genGenesisAvvmBalances roundTripsCanonicalJsonPretty
 
-roundTripCanonicalGenesisData :: Property
-roundTripCanonicalGenesisData =
-  eachOf 100 (feedPM genCanonicalGenesisData) roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisData :: TSProperty
+ts_roundTripCanonicalGenesisData =
+  eachOfTS 100 (feedPM genCanonicalGenesisData) roundTripsCanonicalJsonPretty
 
-roundTripCanonicalGenesisDelegation :: Property
-roundTripCanonicalGenesisDelegation =
-  eachOf 100 (feedPM genCanonicalGenesisDelegation) roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisDelegation :: TSProperty
+ts_roundTripCanonicalGenesisDelegation =
+  eachOfTS 100 (feedPM genCanonicalGenesisDelegation) roundTripsCanonicalJsonPretty
 
-roundTripCanonicalGenesisNonAvvmBalances :: Property
-roundTripCanonicalGenesisNonAvvmBalances =
-  eachOf 100 genGenesisNonAvvmBalances roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisNonAvvmBalances :: TSProperty
+ts_roundTripCanonicalGenesisNonAvvmBalances =
+  eachOfTS 100 genGenesisNonAvvmBalances roundTripsCanonicalJsonPretty
 
-roundTripCanonicalGenesisWStakeholders :: Property
-roundTripCanonicalGenesisWStakeholders =
-  eachOf 100 genGenesisWStakeholders roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisWStakeholders :: TSProperty
+ts_roundTripCanonicalGenesisWStakeholders =
+  eachOfTS 100 genGenesisWStakeholders roundTripsCanonicalJsonPretty
 
-roundTripCanonicalProtocolParameters :: Property
-roundTripCanonicalProtocolParameters =
-  eachOf 100 genCanonicalProtocolParameters roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalProtocolParameters :: TSProperty
+ts_roundTripCanonicalProtocolParameters =
+  eachOfTS 100 genCanonicalProtocolParameters roundTripsCanonicalJsonPretty
 
-roundTripCanonicalSafeProxyCert :: Property
-roundTripCanonicalSafeProxyCert =
-  eachOf 100 genSafeProxyCert roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalSafeProxyCert :: TSProperty
+ts_roundTripCanonicalSafeProxyCert =
+  eachOfTS 100 genSafeProxyCert roundTripsCanonicalJsonPretty
 
 --------------------------------------------------------------------------------
 -- GenesisAvvmBalances
 --------------------------------------------------------------------------------
 
-roundTripGenesisAvvmBalances :: Property
-roundTripGenesisAvvmBalances =
-  eachOf 100 genGenesisAvvmBalances roundTripsAesonShow
+ts_roundTripGenesisAvvmBalances :: TSProperty
+ts_roundTripGenesisAvvmBalances =
+  eachOfTS 100 genGenesisAvvmBalances roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- GenesisData (Canonical JSON)
@@ -108,38 +109,38 @@ golden_GenesisData0Dec =
 -- GenesisDelegation
 --------------------------------------------------------------------------------
 
-roundTripGenesisDelegation :: Property
-roundTripGenesisDelegation =
-  eachOf 100 (feedPM genGenesisDelegation) roundTripsAesonShow
+ts_roundTripGenesisDelegation :: TSProperty
+ts_roundTripGenesisDelegation =
+  eachOfTS 100 (feedPM genGenesisDelegation) roundTripsAesonShow
 
-roundTripCanonicalPublicKey :: Property
-roundTripCanonicalPublicKey =
-  eachOf 100 genPublicKey roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalPublicKey :: TSProperty
+ts_roundTripCanonicalPublicKey =
+  eachOfTS 100 genPublicKey roundTripsCanonicalJsonPretty
 
 --------------------------------------------------------------------------------
 -- GenesisInitializer
 --------------------------------------------------------------------------------
 
-roundTripGenesisInitializer :: Property
-roundTripGenesisInitializer =
-  eachOf 1000 genGenesisInitializer roundTripsAesonShow
+ts_roundTripGenesisInitializer :: TSProperty
+ts_roundTripGenesisInitializer =
+  eachOfTS 1000 genGenesisInitializer roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- BlockVersionData
 --------------------------------------------------------------------------------
 
-roundTripProtocolVersion :: Property
-roundTripProtocolVersion =
-  eachOf 100 genProtocolVersion roundTripsAesonShow
+ts_roundTripProtocolVersion :: TSProperty
+ts_roundTripProtocolVersion =
+  eachOfTS 100 genProtocolVersion roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- ProtocolMagic
 --------------------------------------------------------------------------------
 
-roundTripProtocolMagic :: Property
-roundTripProtocolMagic =
-  eachOf 100 genProtocolMagic roundTripsAesonShow
+ts_roundTripProtocolMagic :: TSProperty
+ts_roundTripProtocolMagic =
+  eachOfTS 100 genProtocolMagic roundTripsAesonShow
 
-tests :: IO Bool
-tests = (&&) <$> H.checkSequential $$discoverGolden <*> H.checkParallel
-  $$discoverRoundTrip
+tests :: TestScenario -> IO Bool
+tests ts = (&&) <$> H.checkSequential $$discoverGolden
+                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)

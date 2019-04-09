@@ -20,6 +20,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Delegation.Gen (genCertificate, genPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -30,9 +31,9 @@ goldenCertificate :: Property
 goldenCertificate = goldenTestBi cert "test/golden/bi/delegation/ProxyVKHeavy"
   where cert = exampleCertificates !! 0
 
-roundTripCertificateBi :: Property
-roundTripCertificateBi =
-  eachOf 200 (feedPM genCertificate) roundTripsBiBuildable
+ts_roundTripCertificateBi :: TSProperty
+ts_roundTripCertificateBi =
+  eachOfTS 200 (feedPM genCertificate) roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -43,10 +44,11 @@ goldenDlgPayload :: Property
 goldenDlgPayload = goldenTestBi dp "test/golden/bi/delegation/DlgPayload"
   where dp = unsafePayload (take 4 exampleCertificates)
 
-roundTripDlgPayloadBi :: Property
-roundTripDlgPayloadBi = eachOf 100 (feedPM genPayload) roundTripsBiBuildable
+ts_roundTripDlgPayloadBi :: TSProperty
+ts_roundTripDlgPayloadBi = eachOfTS 100 (feedPM genPayload) roundTripsBiBuildable
 
 
-tests :: IO Bool
-tests = and <$> sequence
-  [H.checkSequential $$discoverGolden, H.checkParallel $$discoverRoundTrip]
+tests :: TestScenario -> IO Bool
+tests ts = and <$> sequence
+  [ H.checkSequential $$discoverGolden
+  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)]

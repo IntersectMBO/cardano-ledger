@@ -7,10 +7,11 @@ module Test.Cardano.Chain.Elaboration.Delegation
 where
 
 import Cardano.Prelude
+import Test.Cardano.Prelude
 
 import qualified Data.Set as Set
 import Hedgehog
-  (Property, checkSequential, discover, evalEither, forAll, property, withTests)
+  (Group, checkSequential, evalEither, forAll, property)
 
 import Cardano.Binary.Class (Annotated(..), serialize')
 import Cardano.Chain.Delegation as Delegation (Certificate)
@@ -30,13 +31,15 @@ import qualified Cardano.Chain.Genesis as Genesis
 
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Chain.Elaboration.Keys (elaborateKeyPair, vKeyPair)
+import Test.Options (TestScenario, TSProperty, withTestsTS)
 
-tests :: IO Bool
-tests = checkSequential $$discover
+tests :: TestScenario -> IO Bool
+tests ts = checkSequential (($$discoverPropArg :: TestScenario -> Group) ts)
 
-prop_elaboratedCertsValid :: Property
-prop_elaboratedCertsValid =
-  withTests 50
+
+ts_prop_elaboratedCertsValid :: TSProperty
+ts_prop_elaboratedCertsValid =
+  withTestsTS 50
     . property
     $ do
         config <- readMainetCfg

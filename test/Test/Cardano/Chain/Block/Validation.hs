@@ -146,8 +146,8 @@ foldChainValidationState config cvs blocks = S.foldM_
 --   - The map and sequence agree on the number of blocks signed by each
 --     stakeholder
 --   - The sequence never exceeds @k@ values
-prop_signingHistoryUpdatesPreserveInvariants :: Property
-prop_signingHistoryUpdatesPreserveInvariants =
+ts_prop_signingHistoryUpdatesPreserveInvariants :: Property
+ts_prop_signingHistoryUpdatesPreserveInvariants =
   withTests 100
     . property
     $ do

@@ -31,6 +31,7 @@
           (hsPkgs.containers)
           (hsPkgs.formatting)
           (hsPkgs.hedgehog)
+          (hsPkgs.optparse-applicative)
           (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.vector)

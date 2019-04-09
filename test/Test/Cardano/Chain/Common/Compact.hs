@@ -10,12 +10,9 @@ where
 import Cardano.Prelude
 
 import Hedgehog
-  ( Property
-  , MonadTest
+  ( MonadTest
   , assert
   , property
-  , discover
-  , withTests
   , forAll
   , property
   , tripping
@@ -25,18 +22,19 @@ import qualified Hedgehog as H
 import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)
 
 import Test.Cardano.Chain.Common.Gen (genAddress)
-import Test.Cardano.Prelude (discoverRoundTrip, eachOf)
+import Test.Cardano.Prelude (discoverPropArg, discoverRoundTripArg)
+import Test.Options (TestScenario, TSProperty, eachOfTS, withTestsTS)
 
 --------------------------------------------------------------------------------
 -- Compact Address
 --------------------------------------------------------------------------------
 
-roundTripCompactAddress :: Property
-roundTripCompactAddress =
-  eachOf 1000 genAddress (trippingCompact toCompactAddress fromCompactAddress)
+ts_roundTripCompactAddress :: TSProperty
+ts_roundTripCompactAddress =
+  eachOfTS 1000 genAddress (trippingCompact toCompactAddress fromCompactAddress)
 
-prop_heapWordsSavingsCompactAddress :: Property
-prop_heapWordsSavingsCompactAddress = withTests 1000 $ property $ do
+ts_prop_heapWordsSavingsCompactAddress :: TSProperty
+ts_prop_heapWordsSavingsCompactAddress = withTestsTS 1000 $ property $ do
   addr <- forAll genAddress
   let compactAddr = toCompactAddress addr
   assert $ heapWords compactAddr < heapWords addr
@@ -55,6 +53,6 @@ trippingCompact toCompact fromCompact x =
 -- Main test export
 -------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = (&&) <$> H.checkParallel $$discover <*> H.checkParallel
-  $$discoverRoundTrip
+tests :: TestScenario -> IO Bool
+tests ts = (&&) <$> H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
+                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)

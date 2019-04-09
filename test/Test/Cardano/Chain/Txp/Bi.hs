@@ -61,6 +61,7 @@ import Test.Cardano.Chain.Txp.Gen
 import Test.Cardano.Crypto.Example
   (examplePublicKey, exampleRedeemPublicKey, exampleSecretKey)
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -71,8 +72,8 @@ goldenTx :: Property
 goldenTx = goldenTestBi tx "test/golden/bi/txp/Tx"
   where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
-roundTripTx :: Property
-roundTripTx = eachOf 50 genTx roundTripsBiBuildable
+ts_roundTripTx :: TSProperty
+ts_roundTripTx = eachOfTS 50 genTx roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxAttributes
@@ -83,15 +84,15 @@ goldenTxAttributes = goldenTestBi txA "test/golden/bi/txp/TxAttributes"
   where txA = mkAttributes ()
 
 
-roundTripTxAttributes :: Property
-roundTripTxAttributes = eachOf 10 genTxAttributes roundTripsBiBuildable
+ts_roundTripTxAttributes :: TSProperty
+ts_roundTripTxAttributes = eachOfTS 10 genTxAttributes roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxAux
 --------------------------------------------------------------------------------
 
-roundTripTxAux :: Property
-roundTripTxAux = eachOf 100 (feedPM genTxAux) roundTripsBiBuildable
+ts_roundTripTxAux :: TSProperty
+ts_roundTripTxAux = eachOfTS 100 (feedPM genTxAux) roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- Tx Hash
@@ -100,8 +101,8 @@ roundTripTxAux = eachOf 100 (feedPM genTxAux) roundTripsBiBuildable
 goldenHashTx :: Property
 goldenHashTx = goldenTestBi exampleHashTx "test/golden/bi/txp/HashTx"
 
-roundTripHashTx :: Property
-roundTripHashTx = eachOf 50 genTxHash roundTripsBiBuildable
+ts_roundTripHashTx :: TSProperty
+ts_roundTripHashTx = eachOfTS 50 genTxHash roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxIn
@@ -111,8 +112,8 @@ roundTripHashTx = eachOf 50 genTxHash roundTripsBiBuildable
 goldenTxInUtxo :: Property
 goldenTxInUtxo = goldenTestBi exampleTxInUtxo "test/golden/bi/txp/TxIn_Utxo"
 
-roundTripTxIn :: Property
-roundTripTxIn = eachOf 100 genTxIn roundTripsBiBuildable
+ts_roundTripTxIn :: TSProperty
+ts_roundTripTxIn = eachOfTS 100 genTxIn roundTripsBiBuildable
 
 
 --------------------------------------------------------------------------------
@@ -122,8 +123,8 @@ roundTripTxIn = eachOf 100 genTxIn roundTripsBiBuildable
 goldenTxId :: Property
 goldenTxId = goldenTestBi exampleTxId "test/golden/bi/txp/TxId"
 
-roundTripTxId :: Property
-roundTripTxId = eachOf 50 genTxId roundTripsBiBuildable
+ts_roundTripTxId :: TSProperty
+ts_roundTripTxId = eachOfTS 50 genTxId roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxInList
@@ -132,8 +133,8 @@ roundTripTxId = eachOf 50 genTxId roundTripsBiBuildable
 goldenTxInList :: Property
 goldenTxInList = goldenTestBi exampleTxInList "test/golden/bi/txp/TxInList"
 
-roundTripTxInList :: Property
-roundTripTxInList = eachOf 50 genTxInList roundTripsBiShow
+ts_roundTripTxInList :: TSProperty
+ts_roundTripTxInList = eachOfTS 50 genTxInList roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- TxInWitness
@@ -152,8 +153,8 @@ goldenRedeemWitness = goldenTestBi
  where
   redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
 
-roundTripTxInWitness :: Property
-roundTripTxInWitness = eachOf 50 (feedPM genTxInWitness) roundTripsBiBuildable
+ts_roundTripTxInWitness :: TSProperty
+ts_roundTripTxInWitness = eachOfTS 50 (feedPM genTxInWitness) roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxOutList
@@ -162,8 +163,8 @@ roundTripTxInWitness = eachOf 50 (feedPM genTxInWitness) roundTripsBiBuildable
 goldenTxOutList :: Property
 goldenTxOutList = goldenTestBi exampleTxOutList "test/golden/bi/txp/TxOutList"
 
-roundTripTxOutList :: Property
-roundTripTxOutList = eachOf 50 genTxOutList roundTripsBiShow
+ts_roundTripTxOutList :: TSProperty
+ts_roundTripTxOutList = eachOfTS 50 genTxOutList roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- TxOut
@@ -175,8 +176,8 @@ goldenTxOut = goldenTestBi exampleTxOut "test/golden/bi/txp/TxOut"
 goldenTxOut1 :: Property
 goldenTxOut1 = goldenTestBi exampleTxOut1 "test/golden/bi/txp/TxOut1"
 
-roundTripTxOut :: Property
-roundTripTxOut = eachOf 50 genTxOut roundTripsBiBuildable
+ts_roundTripTxOut :: TSProperty
+ts_roundTripTxOut = eachOfTS 50 genTxOut roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxPayload
@@ -185,8 +186,8 @@ roundTripTxOut = eachOf 50 genTxOut roundTripsBiBuildable
 goldenTxPayload1 :: Property
 goldenTxPayload1 = goldenTestBi exampleTxPayload1 "test/golden/bi/txp/TxPayload1"
 
-roundTripTxPayload :: Property
-roundTripTxPayload = eachOf 50 (feedPM genTxPayload) roundTripsBiShow
+ts_roundTripTxPayload :: TSProperty
+ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- TxProof
@@ -195,8 +196,8 @@ roundTripTxPayload = eachOf 50 (feedPM genTxPayload) roundTripsBiShow
 goldenTxProof :: Property
 goldenTxProof = goldenTestBi exampleTxProof "test/golden/bi/txp/TxProof"
 
-roundTripTxProof :: Property
-roundTripTxProof = eachOf 50 (feedPM genTxProof) roundTripsBiBuildable
+ts_roundTripTxProof :: TSProperty
+ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxSig
@@ -211,8 +212,8 @@ goldenTxSig = goldenTestBi txSigGold "test/golden/bi/txp/TxSig"
     exampleSecretKey
     exampleTxSigData
 
-roundTripTxSig :: Property
-roundTripTxSig = eachOf 50 (feedPM genTxSig) roundTripsBiBuildable
+ts_roundTripTxSig :: TSProperty
+ts_roundTripTxSig = eachOfTS 50 (feedPM genTxSig) roundTripsBiBuildable
 
 --------------------------------------------------------------------------------
 -- TxSigData
@@ -221,8 +222,8 @@ roundTripTxSig = eachOf 50 (feedPM genTxSig) roundTripsBiBuildable
 goldenTxSigData :: Property
 goldenTxSigData = goldenTestBi exampleTxSigData "test/golden/bi/txp/TxSigData"
 
-roundTripTxSigData :: Property
-roundTripTxSigData = eachOf 50 genTxSigData roundTripsBiShow
+ts_roundTripTxSigData :: TSProperty
+ts_roundTripTxSigData = eachOfTS 50 genTxSigData roundTripsBiShow
 
 --------------------------------------------------------------------------------
 -- TxWitness
@@ -231,8 +232,8 @@ roundTripTxSigData = eachOf 50 genTxSigData roundTripsBiShow
 goldenTxWitness :: Property
 goldenTxWitness = goldenTestBi exampleTxWitness "test/golden/bi/txp/TxWitness"
 
-roundTripTxWitness :: Property
-roundTripTxWitness = eachOf 20 (feedPM genTxWitness) roundTripsBiShow
+ts_roundTripTxWitness :: TSProperty
+ts_roundTripTxWitness = eachOfTS 20 (feedPM genTxWitness) roundTripsBiShow
 
 sizeEstimates :: H.Group
 sizeEstimates
@@ -302,9 +303,10 @@ sizeEstimates
 -- Main test export
 -----------------------------------------------------------------------
 
-tests :: IO Bool
-tests = and <$> sequence
+tests :: TestScenario -> IO Bool
+tests ts = and <$> sequence
   [ H.checkSequential $$discoverGolden
-  , H.checkParallel $$discoverRoundTrip
+  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
   , H.checkParallel sizeEstimates
   ]
+

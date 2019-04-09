@@ -43,6 +43,8 @@ library
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Properties
 
+                       Test.Options
+
   build-depends:       base
                      , base16-bytestring
                      , bytestring
@@ -57,6 +59,7 @@ library
                      , containers
                      , formatting
                      , hedgehog
+                     , optparse-applicative
                      , text
                      , time
                      , vector
