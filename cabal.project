@@ -1,6 +1,7 @@
 packages:
   crypto crypto/test
   ./     ./test
+  validate-mainnet
 
 package cardano-ledger
   tests: True
