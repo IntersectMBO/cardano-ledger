@@ -3506,7 +3506,7 @@ See \cref{fig:rewards} for the effect of various choices for
 
 \subsubsection{\texorpdfstring{\(\rho\)}{\textbackslash{}rho}}
 
-In order to determine the inflation rate per epoch \(\rho\), we need four
+In order to determine the inflation rate per epoch \(\rho\), we need five
 more pieces of information:
 
 \begin{itemize}
@@ -3519,16 +3519,20 @@ more pieces of information:
   epoch.
 \item
   The expected ratio \(r\) of \emph{rewards} per year per staked ada.
+\item
+  The expected value of $\eta$, the ratio of actually produced blocks
+  versus expected produced blocks (see~\ref{monetary-expansion}).
 \end{itemize}
 
 The available rewards for one epoch (assuming an equilibrium state with
 \(k\) pools and noticing that there are \(\frac{365}{5}=73\) epochs per
 year) will be \[
-    \left(1-\tau\right)\cdot\bigl(F + \rho\cdot\left(T\infty - T\right)\bigr) - \frac{k\cdot c}{73\cdot e}.
+    \left(1-\tau\right)\cdot\bigl(F + \min(\eta,1)\cdot\rho\cdot\left(T\infty - T\right)\bigr) - \frac{k\cdot c}{73\cdot e}.
 \] On the other hand, \emph{expected} rewards per epoch are \[
     T\cdot\left(\sqrt[73]{1+r}-1\right).
 \] Equating the two, we get \[
-    \rho=\frac{T\cdot\left(\sqrt[73]{1+r}-1\right)-(1-\tau)\cdot F+\frac{k\cdot c}{73\cdot e}}{\left(1-\tau\right)\cdot\left(T_\infty-T\right)}.
+    \rho=\frac{T\cdot\left(\sqrt[73]{1+r}-1\right)-(1-\tau)\cdot F+\frac{k\cdot c}{73\cdot e}}
+    {\left(1-\tau\right)\cdot\min(\eta,1)\cdot\left(T_\infty-T\right)}.
 \] For example, using
 
 \begin{itemize}
@@ -3543,22 +3547,24 @@ year) will be \[
 \item
   \(c=1,000\,\mathrm{USD}\),
 \item
-  \(F=2,000\,\mathrm{ada}\) and
+  \(F=2,000\,\mathrm{ada}\),
 \item
   \(r=0.05\),
 \item
-  \(\tau=0.2\),
+  \(\tau=0.2\) and
+\item
+  \(\eta=0.9\)
 \end{itemize}
 
 we would get \[
     \rho=\frac
         {31,000,000,000\cdot\left(\sqrt[73]{1+0.05}-1\right)-0.8\cdot 2000+\frac{100\cdot 1000}{73\cdot 0.5}}
-        {0.8\cdot\left(45,000,000,000 - 31,000,000,000\right)}
+        {0.8\cdot 0.9\cdot\left(45,000,000,000 - 31,000,000,000\right)}
     \approx
-    0.0019.
+    0.0021.
 \] This would correspond to reducing the remaining amount of available
-ada by \({1.0019}^{73}-1\approx 0.144=14.4\%\) per year (which sounds
-awfully high\ldots).
+ada by \({1.0021}^{73}-1\approx 0.17=17\%\) per year (which sounds
+pretty high\ldots).
 
 \subsubsection{\texorpdfstring{\(\tau\)}{\textbackslash{}tau}}
 
