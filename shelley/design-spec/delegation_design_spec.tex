@@ -92,7 +92,7 @@ performance of the system:
   Most users will not have enough stake to warrant running their own
   node. Delegation allows all holders of ada to participate in the
   protocol, regardless of their technical abilities and the amount of
-  stake that they hold. Thus we expect less stake to be offline, making
+  stake that they hold. Thus, we expect less stake to be offline, making
   the system faster and more resilient against an adversary.
 \item
   Even if every user were to run a node that was online all the time, it
@@ -421,7 +421,7 @@ rewards can be paid into the reward accounts associated with each stake
 key. Rewards can accumulate in reward accounts over multiple epochs and
 can be reclaimed as part of a transaction using a special input type.
 
-Thus the overall structure is that addresses with stake rights are
+Thus, the overall structure is that addresses with stake rights are
 associated with a stake key, and the stake key delegates to a stake
 pool, and the stake pool takes part in the PoS protocol. Private staking
 works in exactly the same way, using a stake key, and delegating, but
@@ -492,7 +492,7 @@ diagram of the system level entities involved in the implementation of
 delegation:
 \begin{itemize}
 \item Each normal pubkey address\footnote{As opposed to script addresses}
-  contains a single payment key. However the same payment key
+  contains a single payment key. However, the same payment key
   can be used by multiple addresses (where addresses differ among each other in
   the delegation information).
 \item Many addresses can refer to the same stake key. For instance, different
@@ -500,7 +500,7 @@ delegation:
   output should be transferred to the same stake key.
 \item Each stake key has a unique reward account associated with it, and a
   reward account is only associated with the one stake key.
-\item There can be many UTxO entries (funds) for a single address. However a
+\item There can be many UTxO entries (funds) for a single address. However, a
   UTxO entry refers an available input address to use.
 \item A stake key is associated with exactly zero or one stake pools at any
   point in time. A stake pool has exactly one staking key that controls the pool
@@ -1562,7 +1562,7 @@ decentralized one, we propose a \emph{transition phase}.
 \subsubsection{Motivation}
 \label{motivation}
 
-Cardano \emph{chain growth quality} is only guaranteed when for all time widows
+Cardano \emph{chain growth quality} is only guaranteed when for all time windows
 of \(2k\) slots, a block has been created for at least \(k\) slots, where \(k\)
 is the security parameter of the protocol. At the moment, the bootstrap nodes
 are responsible for block creation, but in a fully decentralized system, this
@@ -1667,7 +1667,7 @@ instead of 216 blocks), but get the same rewards.
 \label{transition-plan}
 
 The parameter \(d\) can be changed on an epoch-per-epoch basis, following
-the plan we'll be outlining next.
+the plan we will outline.
 
 We plan to start with \(d=0.9\) and then decrease \(d\) by \(0.1\) each
 epoch, \emph{provided pool leader block creation is sufficient to
@@ -1821,7 +1821,7 @@ from an account to a UTxO can be done via a special transaction. It
 needs to be signed by the staking key the account belongs to.
 
 The transaction is protected against replay by the requirement of having at
-least on UTxO input, as described in \cref{certificate-replay-prevention}.
+least one UTxO input, as described in \cref{certificate-replay-prevention}.
 
 \paragraph{Handling of Bootstrap Addresses}
 \label{handling-of-bootstrap-addresses}
@@ -1843,7 +1843,7 @@ To prevent economic attacks, fees or refundable deposits should be
 charged where operators incur costs. In particular we will have
 refundable deposits corresponding to the state that has to be tracked
 for certificates\footnote{We plan to extend this to also cover UTxO entries in
-  the future as well.}.
+  the future.}.
 
 \subsubsection{Transaction fees}
 \label{transaction-fees}
@@ -2166,7 +2166,7 @@ form a competitive pool, without losing any control over their funds
 (see also the discussion in \cref{multiple-owners}).
 
 A stake pool operator will indicate, in the stake pool registration
-certificate,  the amount of stake that the owners pledge to
+certificate, the amount of stake that the owners pledge to
 the pool, when registering a pool. It is important that the amount
 pledged is registered in the certificate: otherwise,
 an adversarial stake pool operator could circumvent the Sybil protection
@@ -2524,7 +2524,7 @@ members joining the pool with the highest rewards \emph{at this moment},
 pool operators raising their margins to get higher rewards \emph{at this
 moment}), chaotic behaviour will ensue.
 
-Therefore we will calculate \emph{non-myopic} rewards. Wallets will display
+Therefore, we will calculate \emph{non-myopic} rewards. Wallets will display
 pools ranked by those non-myopic rewards, thus guiding stakeholders to behave in
 a way that will benefit them in the long run. Our analysis shows that if
 everybody follows this advice, the system will stabilize in a \emph{Nash
@@ -3034,7 +3034,7 @@ will have to pick a default value for the apparent performance.
 In order to neither advantage nor disadvantage new pools, we recommend
 initialising the moving average by looking at the top \(k\) stake pools (i.e.,
 those that we expect to attract members), taking the moving averages of the
-apparent performance for each of them , and then calculating the median and
+apparent performance for each of them, and then calculating the median and
 using it as a starting value \(p_0\) for the new pool's apparent performance.
 
 For wallets using an exponential moving average, simply set the current moving
@@ -4182,7 +4182,7 @@ release. We keep it in this document for further reference.
 In the current design, the only circumstance where an actor becoming inactive
 would limit the chain growth is when a stake pool operator ceases to operate
 their pool, without retiring it. Furthermore, since a failure to produce blocks
-will reduce the rewards for stake pool members, such a pool would loose members
+will reduce the rewards for stake pool members, such a pool would lose members
 and become irrelevant. Thus, an abandoned pool will be an impediment to chain
 growth only if there are stakeholders delegating to that pool who also become
 inactive and do not re-delegate.
