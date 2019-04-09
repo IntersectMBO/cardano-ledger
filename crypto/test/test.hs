@@ -1,26 +1,31 @@
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import System.Environment (withArgs)
-
-import Test.Hspec (hspec)
-
-import qualified Test.Cardano.Crypto.CryptoSpec
-import qualified Test.Cardano.Crypto.CryptoSpec2
-
 import qualified Test.Cardano.Crypto.Bi
+import qualified Test.Cardano.Crypto.Hashing
+import qualified Test.Cardano.Crypto.HD
 import qualified Test.Cardano.Crypto.Json
+import qualified Test.Cardano.Crypto.Limits
+import qualified Test.Cardano.Crypto.Keys
+import qualified Test.Cardano.Crypto.Random
+import qualified Test.Cardano.Crypto.Signing.Proxy
+import qualified Test.Cardano.Crypto.Signing.Redeem
+import qualified Test.Cardano.Crypto.Signing.Safe
+import qualified Test.Cardano.Crypto.Signing.Signing
 
 
 -- | Main testing action
---
---   We use 'withArgs' to swallow common testing arguments that we want to parse
---   with `optparse-applicative`. This is only temporary until we remove
---   `hspec`, which is interfering.
 main :: IO ()
-main = withArgs [] $ do
-  hspec $ do
-    Test.Cardano.Crypto.CryptoSpec.spec
-    Test.Cardano.Crypto.CryptoSpec2.spec
-
-  runTests [Test.Cardano.Crypto.Bi.tests, Test.Cardano.Crypto.Json.tests]
+main = runTests
+  [ Test.Cardano.Crypto.Bi.tests
+  , Test.Cardano.Crypto.Hashing.tests
+  , Test.Cardano.Crypto.HD.tests
+  , Test.Cardano.Crypto.Json.tests
+  , Test.Cardano.Crypto.Keys.tests
+  , Test.Cardano.Crypto.Limits.tests
+  , Test.Cardano.Crypto.Random.tests
+  , Test.Cardano.Crypto.Signing.Proxy.tests
+  , Test.Cardano.Crypto.Signing.Redeem.tests
+  , Test.Cardano.Crypto.Signing.Safe.tests
+  , Test.Cardano.Crypto.Signing.Signing.tests
+  ]

@@ -125,11 +125,11 @@ proxyVerifyDecoded
   :: Decoded t
   => ProtocolMagicId
   -> SignTag
-  -> ProxySignature w (BaseType t)
   -> (w -> Bool)
   -> t
+  -> ProxySignature w (BaseType t)
   -> Bool
-proxyVerifyDecoded pm t psig omegaPred m = predCorrect && sigValid
+proxyVerifyDecoded pm t omegaPred m psig = predCorrect && sigValid
  where
   psk         = psigPsk psig
   PublicKey issuerPk        = pskIssuerPk psk
@@ -146,11 +146,11 @@ proxyVerify
   :: Bi a
   => ProtocolMagicId
   -> SignTag
-  -> ProxySignature w a
   -> (w -> Bool)
   -> a
+  -> ProxySignature w a
   -> Bool
-proxyVerify pm t psig omegaPred m = predCorrect && sigValid
+proxyVerify pm t omegaPred m psig = predCorrect && sigValid
  where
   psk         = psigPsk psig
   PublicKey issuerPk        = pskIssuerPk psk

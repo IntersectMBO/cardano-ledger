@@ -95,14 +95,19 @@ test-suite test
 
   other-modules:
                        Test.Cardano.Crypto.Bi
-                       Test.Cardano.Crypto.Arbitrary
-                       Test.Cardano.Crypto.Arbitrary.Unsafe
-                       Test.Cardano.Crypto.CryptoSpec
-                       Test.Cardano.Crypto.CryptoSpec2
                        Test.Cardano.Crypto.Dummy
                        Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen
+                       Test.Cardano.Crypto.Hashing
+                       Test.Cardano.Crypto.HD
                        Test.Cardano.Crypto.Json
+                       Test.Cardano.Crypto.Keys
+                       Test.Cardano.Crypto.Limits
+                       Test.Cardano.Crypto.Random
+                       Test.Cardano.Crypto.Signing.Proxy
+                       Test.Cardano.Crypto.Signing.Redeem
+                       Test.Cardano.Crypto.Signing.Safe
+                       Test.Cardano.Crypto.Signing.Signing
 
   build-depends:       base
                      , bytestring
@@ -114,12 +119,8 @@ test-suite test
                      , cardano-prelude-test
                      , cryptonite
                      , formatting
-                     , generic-arbitrary
                      , hedgehog
-                     , hspec
                      , memory
-                     , QuickCheck
-                     , quickcheck-instances
                      , text
 
   default-language:    Haskell2010
