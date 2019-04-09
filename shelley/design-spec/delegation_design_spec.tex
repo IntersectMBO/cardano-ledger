@@ -3116,7 +3116,7 @@ pledged by the pool owner(s) has on pool rewards.
 
 Our game theoretic analysis predicts that the \(k\) pools with the
 highest \emph{potential}, the highest value of \[
-    P(\lambda,c):=\left(z_0+a_0\cdot\lambda\right)\cdot\frac{R}{1+a_0}-c
+    P(\lambda,c):=\left[z_0+a_0\cdot\min\left(\lambda,\frac{1}{k}\right)\right]\cdot\frac{R}{1+a_0}-c
 \] (where \(\lambda\) is the stake pledged by the pool owner(s) and \(c\)
 are the pool costs) will create the saturated pools.
 
