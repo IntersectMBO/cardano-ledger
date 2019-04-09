@@ -9,6 +9,7 @@ module Test.Cardano.Chain.Common.Example
   , exampleAddress3
   , exampleAddress4
   , exampleAttributes
+  , exampleAddrSpendingData_PubKey
   , exampleChainDifficulty
   , exampleStakeholderId
   )

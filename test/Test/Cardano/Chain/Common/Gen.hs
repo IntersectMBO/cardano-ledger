@@ -9,6 +9,7 @@ module Test.Cardano.Chain.Common.Gen
   , genAddressWithNM
   , genAddrType
   , genAddrSpendingData
+  , genAttributes
   , genBlockCount
   , genCanonicalTxFeePolicy
   , genChainDifficulty
@@ -40,6 +41,7 @@ import Cardano.Chain.Common
   , AddrSpendingData(..)
   , AddrType(..)
   , Address(..)
+  , Attributes
   , BlockCount(..)
   , ChainDifficulty(..)
   , CompactAddress
@@ -54,6 +56,7 @@ import Cardano.Chain.Common
   , lovelacePortionDenominator
   , makeAddress
   , maxLovelaceVal
+  , mkAttributes
   , mkLovelace
   , mkMerkleTree
   , mkStakeholderId
@@ -85,6 +88,9 @@ genAddrType = Gen.choice [pure ATPubKey, pure ATRedeem]
 genAddrSpendingData :: Gen AddrSpendingData
 genAddrSpendingData =
   Gen.choice [PubKeyASD <$> genPublicKey, RedeemASD <$> genRedeemPublicKey]
+
+genAttributes :: Gen a -> Gen (Attributes a)
+genAttributes genA = mkAttributes <$> genA
 
 genBlockCount :: Gen BlockCount
 genBlockCount = BlockCount <$> Gen.word64 Range.constantBounded
