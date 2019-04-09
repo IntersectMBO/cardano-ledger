@@ -327,7 +327,7 @@ delegations have on the ledger.
 
 \begin{figure}[htb]
   \begin{equation}
-    \inference[Initial-SDELEGS]
+    \inference
     {
     }
     {
@@ -467,10 +467,10 @@ delegations have on the ledger.
 
 \begin{figure}
   \begin{equation}
-    \inference[Initial-ADELEGS]
+    \inference
     {
-      \var{dms_0} \leteq \Set{k \mapsto k}{k \in \mathcal{K}} &
-      \var{dws_0} \leteq \Set{k \mapsto 0}{k \in \mathcal{K}}
+      \var{dms_0} \leteq \Set{\var{vk} \mapsto \var{vk}}{\var{vk} \in \mathcal{K}} &
+      \var{dws_0} \leteq \Set{\var{vk} \mapsto 0}{\var{vk} \in \mathcal{K}}
     }
     {
       \mathcal{K}
