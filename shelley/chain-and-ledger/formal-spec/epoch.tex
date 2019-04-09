@@ -1161,9 +1161,10 @@ Figure~\ref{fig:fund-preservation} captures the potential movement of funds in t
 taking every transition system in this document into account.  Value is moved between
 accounting pots, but the total amount of value in the system remains constant.
 In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the reward update calculation in
+the ``total pot'', a temporary variable used during the reward update calculation in
 Figure~\ref{fig:functions:reward-update-creation}.
 The blue arrows represent the movement of funds that pass through the ``total pot''.
+
 
 \begin{figure}[htb]
   \begin{center}
@@ -1193,7 +1194,6 @@ The blue arrows represent the movement of funds that pass through the ``total po
     (FR) edge (T)
     (FR) edge (RA)
 
-    (R) edge (FR)
     (R) edge (T)
     (R) edge (RA);
 
@@ -1204,7 +1204,6 @@ The blue arrows represent the movement of funds that pass through the ``total po
     (R) edge (TP)
 
     (TP) edge (RA)
-    (TP) edge (FR)
     (TP) edge (T);
 
   \end{tikzpicture}
