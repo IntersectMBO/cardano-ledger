@@ -983,12 +983,12 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       & ~~~~~~~p'=\min(p_r,~z_0) \\
   \end{align*}
 
-  \emph{Actual Reward Function, called $\hat{f}_j$ in section 5.5.2 of~\cite{delegation_design}}
+  \emph{Actual Reward Function, called $\hat{f}$ in section 5.5.2 of~\cite{delegation_design}}
   %
   \begin{align*}
       & \fun{poolReward} \in \HashKey \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
-      & \poolReward{hk}{s}{n}{\overline{N}}{\hat{f}} =
-      \floor*{\overline{p}\cdot\var{\hat{f}}}\\
+      & \poolReward{hk}{s}{n}{\overline{N}}{f} =
+      \floor*{\overline{p}\cdot\var{f}}\\
       & ~~~\where \\
       & ~~~~~~~\overline{p} = \frac{\beta}{s} \\
       & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
@@ -1093,9 +1093,9 @@ The calculation is done pool-by-pool.
   \begin{align*}
     & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \HashKey \to \PoolParam\\
       & ~~~\to \Stake \to \Coin \to \powerset{\AddrRWD}
-           \to (\AddrRWD \mapsto \Coin)\times\Coin \\
+           \to (\AddrRWD \mapsto \Coin) \\
       & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{tot}{addrs_{rew}} =
-          (\var{rewards},~\var{unrealized})\\
+          \var{rewards}\\
       & ~~~\where \\
       & ~~~~~~~\var{pstake} = \sum_{\_\mapsto c\in\var{stake}} c \\
       & ~~~~~~~\var{ostake} = \sum_{\substack{
@@ -1122,7 +1122,6 @@ The calculation is done pool-by-pool.
                  \var{mReward} \cup
                  \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
       & ~~~~~~~\var{rewards} = \var{addrs_{rew}}\restrictdom{\var{potentialRewards}} \\
-      & ~~~~~~~\var{unrealized} = R - \left(\sum_{\wcard\mapsto c\in\var{rewards}} c\right) \\
   \end{align*}
 
   \emph{Calculation to reward all stake pools}
@@ -1131,9 +1130,9 @@ The calculation is done pool-by-pool.
       & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \powerset{\AddrRWD}
       \to (\HashKey \mapsto \PoolParam) \\
       & ~~~\to \Stake \to (\HashKey_{stake} \mapsto \HashKey_{pool}) \to
-      (\AddrRWD \mapsto \Coin)\times\Coin\\
+      (\AddrRWD \mapsto \Coin)\\
       & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}
-          = (\var{rewards},~\var{unrealized})\\
+          = \var{rewards}\\
       & ~~~\where \\
       & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
       & ~~~~~~~\var{\overline{N}} = \sum_{\_\mapsto m\in blocks}m \\
@@ -1149,8 +1148,7 @@ The calculation is done pool-by-pool.
         hk \mapsto \rewardOnePool{pp}{R}{n}{\overline{N}}{hk}{p}{s}{tot}{addrs_{rew}}
                  \mid
         hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
-      & ~~~~~~~\var{unrealized} = \sum_{\wcard\mapsto (\wcard,~u)\in\var{results}}u \\
-      & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto(\var{r},~\wcard)\in\var{results}}\var{r}
+      & ~~~~~~~\var{rewards} = \bigcup_{\wcard\mapsto\var{r}\in\var{results}}\var{r}
   \end{align*}
   \caption{The Reward Calculation}
   \label{fig:functions:reward-calc}
