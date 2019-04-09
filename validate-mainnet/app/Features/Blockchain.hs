@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE NumDecimals         #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +19,7 @@ import Cardano.Chain.Block
   (ChainValidationState, HeapSize(..), UTxOSize(..), initialChainValidationState, scanUTxOfromGenesis)
 import Cardano.Chain.Common (parseReqNetworkMag)
 import Cardano.Chain.Epoch.Validation (EpochError, validateEpochFiles)
-import Cardano.Chain.Genesis (configProtocolMagic)
+import Cardano.Chain.Genesis (configProtocolMagic, configProtocolParameters)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochSlots(..),FlatSlotId(..), SlotId, unflattenSlotId)
 import Cardano.Chain.Txp (UTxO(..), genesisUtxo)
@@ -77,12 +76,14 @@ init config appEnv initialCVS cvsVar utxoVar = do
     liftIO $ putMVar cvsVar result
 
     -- Output UTxO size
-    let pm = configProtocolMagic $ genesisConfig config
+    let
+      pm = configProtocolMagic $ genesisConfig config
+      pps = configProtocolParameters $ genesisConfig config
 
     -- Because we are updating an 'MVar' with the new UTxO size after each
     -- block application (i.e takeMVar then putMVar), we must start with a dummy value.
     liftIO $ putMVar utxoVar dummyUTxoVal
-    _ <- liftIO $ scanUTxOfromGenesis pm (genesisUtxo $ genesisConfig config) utxoVar files
+    _ <- liftIO $ scanUTxOfromGenesis pm pps (genesisUtxo $ genesisConfig config) utxoVar files
     return ()
   where
     -- A dummy value that is inserted into the utxoVar so that folding can
@@ -137,5 +138,3 @@ createBlockchainFeature _ cc appEnv = do
         , currentUTxOSize       = liftIO $ tryReadMVar utxoSizeVar
         }
   pure (bcLayer, bcFeature)
-
-

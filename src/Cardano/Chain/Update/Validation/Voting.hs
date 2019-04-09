@@ -63,6 +63,7 @@ data Error
   = VotingInvalidSignature
   | VotingProposalNotRegistered UpId
   | VotingVoterNotDelegate StakeholderId
+  deriving (Eq, Show)
 
 
 -- | Register a vote and confirm the corresponding proposal if it passes the
@@ -96,7 +97,7 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 
   -- | This is the number of genesis keys that need to support a proposal
   threshold :: Int
-  threshold = 5
+  threshold = 4
 
   pastThreshold :: RegisteredVotes -> Bool
   pastThreshold votes' =

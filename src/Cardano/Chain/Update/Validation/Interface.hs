@@ -1,16 +1,28 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 -- | Blockchain interface validation rules.
 --
 module Cardano.Chain.Update.Validation.Interface
-  ( -- * Environment
-    Environment (..)
-    -- * State
-  , State (..)
-    -- *Error
-  , Error (..)
-    -- * Interface functions
+  (
+  -- * Environment
+    Environment(..)
+
+  -- * State
+  , State(..)
+  , initialState
+
+  -- * Signal
+  , Signal(..)
+
+  -- *Error
+  , Error(..)
+
+  -- * Interface functions
+  , registerUpdate
   , registerProposal
   , registerVote
   , registerEndorsement
@@ -24,16 +36,17 @@ import qualified Data.Map.Strict as M
 import Data.Set (union)
 import qualified Data.Set as S
 
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
-import Cardano.Chain.Common.StakeholderId (StakeholderId)
 import Cardano.Chain.Common.BlockCount (BlockCount)
+import Cardano.Chain.Common.StakeholderId (StakeholderId)
+import qualified Cardano.Chain.Genesis as Genesis
+import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppUpdateImplicit
   )
-import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(..))
 import Cardano.Chain.Update.SoftwareVersion
   ( NumSoftwareVersion
   , SoftwareVersion
@@ -94,13 +107,59 @@ data State = State
     -- ^ Update proposals endorsements
   , proposalRegistrationSlot          :: !(Map UpId FlatSlotId)
     -- ^ Slot at which an update proposal was registered
-  }
+  } deriving (Eq, Show, Generic)
+    deriving anyclass NFData
 
 data Error
   = Registration Registration.Error
   | Voting Voting.Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
+  deriving (Eq, Show)
+
+
+-- | Signal combining signals from various rules
+data Signal = Signal
+  { proposal    :: !(Maybe (AProposal ByteString))
+  , votes       :: ![AVote ByteString]
+  , endorsement :: !Endorsement
+  }
+
+
+-- | Initial update interface state
+initialState :: Genesis.Config -> State
+initialState config = State
+  { currentEpoch                      = 0
+  , adoptedProtocolVersion            = ProtocolVersion 0 0 0
+  , adoptedProtocolParameters         = Genesis.configProtocolParameters config
+  , candidateProtocolUpdates          = []
+  , appVersions                       = mempty
+  , registeredProtocolUpdateProposals = mempty
+  , registeredSoftwareUpdateProposals = mempty
+  , confirmedProposals                = mempty
+  , proposalVotes                     = mempty
+  , registeredEndorsements            = mempty
+  , proposalRegistrationSlot          = mempty
+  }
+
+
+-- | Group together the other registration rules in a single rule
+--
+--   This corresponds to the @BUPI@ rule in the Byron chain specification.
+registerUpdate
+  :: MonadError Error m => Environment -> State -> Signal -> m State
+registerUpdate env st Signal { proposal, votes, endorsement } = do
+  -- Register proposal if it exists
+  st' <- case proposal of
+    Nothing -> pure st
+    Just p  -> registerProposal env st p
+
+  -- Register the votes
+  st'' <- foldM (registerVote env) st' votes
+
+  -- Register endorsement
+  registerEndorsement env st'' endorsement
+
 
 -- | Register an update proposal.
 --

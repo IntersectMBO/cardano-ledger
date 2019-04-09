@@ -40,7 +40,7 @@ import Cardano.Crypto (hash)
 
 newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
-  } deriving (Generic, Show)
+  } deriving (Eq, Show, Generic)
     deriving newtype HeapWords
     deriving anyclass NFData
 
