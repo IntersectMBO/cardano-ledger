@@ -580,7 +580,7 @@ outside the size of the moving window ($k$).
       \begin{array}{r@{~\in~}lr}
         k & \mathbb{N} & \text{chain stability parameter} \\
         t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
-        \var{ds} & \DelegState & \text{Delegation state} \\
+        \var{ds} & \DelegState & \text{delegation state} \\
       \end{array}
     \right)
   \end{equation*}
@@ -767,6 +767,7 @@ During PBFT processing of the block header, we do the following:
 \section{Block processing}
 \label{sec:block-processing}
 
+\newcommand{\BHEnv}{\type{BHEnv}}
 \newcommand{\BHState}{\type{BHState}}
 
 \newcommand{\BBEnv}{\type{BBEnv}}
@@ -875,6 +876,16 @@ header processing we verify the following things:
 \end{figure}
 
 \begin{figure}[ht]
+  \emph{Block header processing environments}
+  \begin{align*}
+    & \BHEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+      \end{array}\right)
+  \end{align*}
 
   \emph{Block header processing states}
   \begin{equation*}
