@@ -1048,9 +1048,13 @@ than that of the members.
 Finally, the full reward calculation is presented in Figure~\ref{fig:functions:reward-calc}.
 The calculation is done pool-by-pool.
 \begin{itemize}
-\item The $\fun{rewardOnePool}$ function calculates the rewards given out to
-  each member of a given pool. The pool leader is identified by the stake key of
-  the pool operator. The function returns the rewards, calculated as follows:
+  \item The $\fun{rewardOnePool}$ function calculates the rewards given out to each member of a
+    given pool. The pool leader is identified by the stake key of the pool operator.  The function
+    returns both the rewards and the total amount of unrealized potential rewards (ie the
+    difference beween the max reward $R$ and what was actually paid out).  The unrealized
+    amount will go to the treasury. Note that rewards attached to unregistered reward accounts
+    will end up in the unrealized amount.
+    The calculation involves the following:
     \begin{itemize}
       \item $\var{pstake}$, the total amount of stake controlled by the stake pool.
       \item $\var{ostake}$, the total amount of stake controlled by the stake pool operator
@@ -1067,9 +1071,11 @@ The calculation is done pool-by-pool.
       \item $\var{potentialRewards}$, the combination of $\var{mRewards}$ and $\var{lRewards}$.
       \item $\var{rewards}$, the restriction of $\var{potentialRewards}$ to the active
         reward accounts.
+      \item $\var{unrealized}$, difference between $R$ (max rewards) and the sum of all
+        individual rewards paid out.
     \end{itemize}
   \item The $\fun{reward}$ function applies $\fun{rewardOnePool}$ to each registered stake
-    pool, calculating both the full reward mapping.
+    pool, calculating both the full reward mapping and the total unrealized rewards value.
 \end{itemize}
 
 %%
@@ -1155,9 +1161,10 @@ Figure~\ref{fig:fund-preservation} captures the potential movement of funds in t
 taking every transition system in this document into account.  Value is moved between
 accounting pots, but the total amount of value in the system remains constant.
 In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the reward update calculation in
+the ``total pot'', a temporary variable used during the reward update calculation in
 Figure~\ref{fig:functions:reward-update-creation}.
 The blue arrows represent the movement of funds that pass through the ``total pot''.
+
 
 \begin{figure}[htb]
   \begin{center}
@@ -1187,7 +1194,6 @@ The blue arrows represent the movement of funds that pass through the ``total po
     (FR) edge (T)
     (FR) edge (RA)
 
-    (R) edge (FR)
     (R) edge (T)
     (R) edge (RA);
 
@@ -1198,7 +1204,6 @@ The blue arrows represent the movement of funds that pass through the ``total po
     (R) edge (TP)
 
     (TP) edge (RA)
-    (TP) edge (FR)
     (TP) edge (T);
 
   \end{tikzpicture}
