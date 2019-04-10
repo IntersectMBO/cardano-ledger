@@ -53,12 +53,10 @@ poolReapTransition = do
         Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
   let unclaimed = Map.foldl (+) (Coin 0) unclaimed'
   let StakePools stakePools = p ^. stPools
-  let Avgs averages = p ^. avgs
   pure
     ( a & treasury %~ (+) unclaimed
     , d & rewards %~ flip Map.union refunds &
       delegations %~ flip Map.withoutKeys retired
     , p & stPools .~ (StakePools $ Map.withoutKeys stakePools retired) &
       pParams %~ flip Map.withoutKeys retired &
-      retiring %~ flip Map.withoutKeys retired &
-      avgs .~ (Avgs $ Map.withoutKeys averages retired))
+      retiring %~ flip Map.withoutKeys retired)
