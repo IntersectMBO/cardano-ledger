@@ -35,3 +35,5 @@ executable bulk-chain-validation-exe
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
+                       -with-rtsopts=-T
+
