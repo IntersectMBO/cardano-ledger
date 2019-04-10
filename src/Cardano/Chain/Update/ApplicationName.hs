@@ -25,19 +25,21 @@ import qualified Data.Text as T
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 newtype ApplicationName = ApplicationName
   { unApplicationName :: Text
   } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData)
 
-instance Bi ApplicationName where
-  encode appName = encode (unApplicationName appName)
-  decode = ApplicationName <$> decode
+instance ToCBOR ApplicationName where
+  toCBOR appName = toCBOR (unApplicationName appName)
+
+instance FromCBOR ApplicationName where
+  fromCBOR = ApplicationName <$> fromCBOR
 
 instance FromJSON ApplicationName where
-  -- FIXME does the defaultOptions derived JSON encode directly as text? Or
+  -- FIXME does the defaultOptions derived JSON toCBOR directly as text? Or
   -- as an object with a single key?
   parseJSON v = ApplicationName <$> parseJSON v
 

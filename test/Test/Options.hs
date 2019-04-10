@@ -14,6 +14,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
+import GHC.Stack (withFrozenCallStack)
 import Options.Applicative as Opts
   ( Parser
   , ParserInfo
@@ -117,7 +118,7 @@ eachOfTS
   -> TestScenario
   -> Property
 eachOfTS count gen predicate scenario =
-  eachOf (scenarioScaled count scenario) gen predicate
+  withFrozenCallStack $ eachOf (scenarioScaled count scenario) gen predicate
 
 -- | A modified `withTests` which uses the default TestScenario values,
 -- multiplied by a scalar

@@ -2,46 +2,48 @@
 
 module Test.Cardano.Crypto.Gen
   (
-        -- Protocol Magic Generator
+  -- * Protocol Magic Generator
     genProtocolMagic
   , genProtocolMagicId
 
-        -- Sign Tag Generator
+  -- * Sign Tag Generator
   , genSignTag
 
-        -- Key Generators
+  -- * Key Generators
   , genKeypair
   , genPublicKey
   , genSecretKey
   , genEncryptedSecretKey
 
-        -- Redeem Key Generators
+  -- * Redeem Key Generators
   , genRedeemKeypair
   , genRedeemPublicKey
   , genRedeemSecretKey
 
-        -- Proxy Cert and Key Generators
+  -- * Proxy Cert and Key Generators
   , genProxyCert
   , genProxyVerificationKey
   , genProxySignature
 
-        -- Signature Generators
+  -- * Signature Generators
   , genSignature
   , genSignatureEncoded
   , genRedeemSignature
 
-        -- Hash Generators
+  -- * Hash Generators
   , genAbstractHash
 
-        -- SafeSigner Generators
+  -- * SafeSigner Generators
   , genSafeSigner
 
-        -- PassPhrase Generators
+  -- * PassPhrase Generators
   , genPassPhrase
 
-        -- HD Generators
+  -- * HD Generators
   , genHDPassphrase
   , genHDAddressPayload
+
+  -- * Helper Generators
   , genHashRaw
   , genTextHash
   , feedPM
@@ -56,7 +58,7 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Binary.Class (Bi, Raw(..))
+import Cardano.Binary (Raw(..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
   (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
@@ -160,17 +162,17 @@ genRedeemSecretKey = snd <$> genRedeemKeypair
 -- Proxy Cert and Key Generators
 --------------------------------------------------------------------------------
 
-genProxyCert :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
+genProxyCert :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
   safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxyVerificationKey
-  :: Bi w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
+  :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
 genProxyVerificationKey pm genW =
   createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
 
 genProxySignature
-  :: (Bi w, Bi a)
+  :: (ToCBOR w, ToCBOR a)
   => ProtocolMagicId
   -> Gen a
   -> Gen w
@@ -188,7 +190,7 @@ genProxySignature pm genA genW = do
 -- Signature Generators
 --------------------------------------------------------------------------------
 
-genSignature :: Bi a => ProtocolMagicId -> Gen a -> Gen (Signature a)
+genSignature :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (Signature a)
 genSignature pm genA = sign pm <$> genSignTag <*> genSecretKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
@@ -196,7 +198,7 @@ genSignatureEncoded genB =
   signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSecretKey <*> genB
 
 genRedeemSignature
-  :: Bi a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
+  :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
  where
   gst  = genSignTag
@@ -208,7 +210,7 @@ genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
 --------------------------------------------------------------------------------
 
 genAbstractHash
-  :: (Bi a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
+  :: (ToCBOR a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
 genAbstractHash genA = abstractHash <$> genA
 
 

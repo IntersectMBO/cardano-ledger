@@ -24,7 +24,7 @@ import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 -- | Index of epoch.
@@ -47,9 +47,11 @@ newtype EpochIndex = EpochIndex
 instance Buildable EpochIndex where
   build = bprint ("#" . int)
 
-instance Bi EpochIndex where
-  encode (EpochIndex epoch) = encode epoch
-  decode = EpochIndex <$> decode
+instance ToCBOR EpochIndex where
+  toCBOR (EpochIndex epoch) = toCBOR epoch
+
+instance FromCBOR EpochIndex where
+  fromCBOR = EpochIndex <$> fromCBOR
 
 -- Note that it will be encoded as string, because 'EpochIndex' doesn't
 -- necessary fit into JS number.

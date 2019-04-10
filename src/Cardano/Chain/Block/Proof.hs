@@ -1,24 +1,21 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Block.Proof
   ( Proof(..)
   , mkProof
-  , ProofError(..)
-  , checkProof
+  , recoverProof
   )
 where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError(..))
 import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.Body
   (ABody(..), Body, bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
@@ -44,17 +41,18 @@ instance B.Buildable Proof where
     (proofDelegation proof)
     (proofUpdate proof)
 
-instance Bi Proof where
-  encode bc =
+instance ToCBOR Proof where
+  toCBOR bc =
     encodeListLen 4
-      <> encode (proofTxp bc)
-      <> encode (proofSsc bc)
-      <> encode (proofDelegation bc)
-      <> encode (proofUpdate bc)
+      <> toCBOR (proofTxp bc)
+      <> toCBOR (proofSsc bc)
+      <> toCBOR (proofDelegation bc)
+      <> toCBOR (proofUpdate bc)
 
-  decode = do
+instance FromCBOR Proof where
+  fromCBOR = do
     enforceSize "Proof" 4
-    Proof <$> decode <*> decode <*> decode <*> decode
+    Proof <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
 mkProof :: Body -> Proof
 mkProof body = Proof
@@ -64,6 +62,7 @@ mkProof body = Proof
   , proofUpdate     = Update.mkProof $ bodyUpdatePayload body
   }
 
+-- TODO: Should we be using this somewhere?
 recoverProof :: ABody ByteString -> Proof
 recoverProof body = Proof
   { proofTxp        = recoverTxProof $ bodyTxPayload body
@@ -71,22 +70,3 @@ recoverProof body = Proof
   , proofDelegation = hashDecoded $ bodyDlgPayload body
   , proofUpdate     = Update.recoverProof $ bodyUpdatePayload body
   }
-
-data ProofError = ProofIncorrect Proof Proof
-
-instance B.Buildable ProofError where
-  build = \case
-    ProofIncorrect p p' -> bprint
-      ( "Incorrect proof of Body.\n"
-      . "Proof in header:\n"
-      . build . "\n"
-      . "Calculated proof:\n"
-      . build . "\n"
-      )
-      p
-      p'
-
-checkProof :: MonadError ProofError m => ABody ByteString -> Proof -> m ()
-checkProof body proof =
-  (calculatedProof == proof) `orThrowError` ProofIncorrect proof calculatedProof
-  where calculatedProof = recoverProof body

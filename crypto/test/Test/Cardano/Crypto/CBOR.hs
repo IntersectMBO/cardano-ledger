@@ -6,7 +6,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
-module Test.Cardano.Crypto.Bi
+module Test.Cardano.Crypto.CBOR
   ( constantByteString
   , getBytes
   , tests
@@ -24,7 +24,7 @@ import qualified Data.ByteString as BS
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary.Class (Bi, Dropper, dropBytes, dropList, enforceSize)
+import Cardano.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Crypto
   ( AbstractHash
   , PassPhrase
@@ -53,9 +53,9 @@ import Cardano.Crypto
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
-  , goldenTestBi
-  , roundTripsBiBuildable
-  , roundTripsBiShow
+  , goldenTestCBOR
+  , roundTripsCBORBuildable
+  , roundTripsCBORShow
   )
 import Test.Cardano.Crypto.Gen
 
@@ -73,11 +73,11 @@ roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
 --------------------------------------------------------------------------------
 
 goldenPublicKey :: Property
-goldenPublicKey = goldenTestBi pkey "test/golden/PublicKey"
+goldenPublicKey = goldenTestCBOR pkey "test/golden/PublicKey"
   where Right pkey = PublicKey <$> xpub (getBytes 0 64)
 
-roundTripPublicKeyBi :: Property
-roundTripPublicKeyBi = eachOf 1000 genPublicKey roundTripsBiBuildable
+roundTripPublicKeyCBOR :: Property
+roundTripPublicKeyCBOR = eachOf 1000 genPublicKey roundTripsCBORBuildable
 
 roundTripPublicKeyAeson :: Property
 roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
@@ -88,11 +88,11 @@ roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
 --------------------------------------------------------------------------------
 
 goldenSecretKey :: Property
-goldenSecretKey = goldenTestBi skey "test/golden/SecretKey"
+goldenSecretKey = goldenTestCBOR skey "test/golden/SecretKey"
   where Right skey = SecretKey <$> xprv (getBytes 10 128)
 
-roundTripSecretKeyBi :: Property
-roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
+roundTripSecretKeyCBOR :: Property
+roundTripSecretKeyCBOR = eachOf 1000 genSecretKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ roundTripSecretKeyBi = eachOf 1000 genSecretKey roundTripsBiBuildable
 --------------------------------------------------------------------------------
 
 goldenSignature :: Property
-goldenSignature = goldenTestBi sig "test/golden/Signature"
+goldenSignature = goldenTestCBOR sig "test/golden/Signature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   sig        = sign (ProtocolMagicId 0) SignForTestingOnly skey ()
@@ -110,8 +110,8 @@ genUnitSignature = do
   pm <- genProtocolMagicId
   genSignature pm (pure ())
 
-roundTripSignatureBi :: Property
-roundTripSignatureBi = eachOf 1000 genUnitSignature roundTripsBiBuildable
+roundTripSignatureCBOR :: Property
+roundTripSignatureCBOR = eachOf 1000 genUnitSignature roundTripsCBORBuildable
 
 roundTripSignatureAeson :: Property
 roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
@@ -124,15 +124,15 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 -- | This instance is unsafe, as it allows a timing attack. But it's OK for
 -- tests.
 instance Eq XPrv where
-   (==) = (==) `on` unXPrv
+  (==) = (==) `on` unXPrv
 
 goldenEncryptedSecretKey :: Property
-goldenEncryptedSecretKey = goldenTestBi esk "test/golden/EncryptedSecretKey"
+goldenEncryptedSecretKey = goldenTestCBOR esk "test/golden/EncryptedSecretKey"
   where Right esk = noPassEncrypt . SecretKey <$> xprv (getBytes 10 128)
 
-roundTripEncryptedSecretKeysBi :: Property
-roundTripEncryptedSecretKeysBi =
-  eachOf 100 genEncryptedSecretKey roundTripsBiBuildable
+roundTripEncryptedSecretKeysCBOR :: Property
+roundTripEncryptedSecretKeysCBOR =
+  eachOf 100 genEncryptedSecretKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -140,12 +140,12 @@ roundTripEncryptedSecretKeysBi =
 --------------------------------------------------------------------------------
 
 goldenRedeemPublicKey :: Property
-goldenRedeemPublicKey = goldenTestBi rpk "test/golden/RedeemPublicKey"
+goldenRedeemPublicKey = goldenTestCBOR rpk "test/golden/RedeemPublicKey"
   where Just rpk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
 
-roundTripRedeemPublicKeyBi :: Property
-roundTripRedeemPublicKeyBi =
-  eachOf 1000 genRedeemPublicKey roundTripsBiBuildable
+roundTripRedeemPublicKeyCBOR :: Property
+roundTripRedeemPublicKeyCBOR =
+  eachOf 1000 genRedeemPublicKey roundTripsCBORBuildable
 
 roundTripRedeemPublicKeyAeson :: Property
 roundTripRedeemPublicKeyAeson =
@@ -157,12 +157,12 @@ roundTripRedeemPublicKeyAeson =
 --------------------------------------------------------------------------------
 
 goldenRedeemSecretKey :: Property
-goldenRedeemSecretKey = goldenTestBi rsk "test/golden/RedeemSecretKey"
+goldenRedeemSecretKey = goldenTestCBOR rsk "test/golden/RedeemSecretKey"
   where Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
 
-roundTripRedeemSecretKeyBi :: Property
-roundTripRedeemSecretKeyBi =
-  eachOf 1000 genRedeemSecretKey roundTripsBiBuildable
+roundTripRedeemSecretKeyCBOR :: Property
+roundTripRedeemSecretKeyCBOR =
+  eachOf 1000 genRedeemSecretKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ roundTripRedeemSecretKeyBi =
 --------------------------------------------------------------------------------
 
 goldenRedeemSignature :: Property
-goldenRedeemSignature = goldenTestBi rsig "test/golden/RedeemSignature"
+goldenRedeemSignature = goldenTestCBOR rsig "test/golden/RedeemSignature"
  where
   Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
   rsig     = redeemSign (ProtocolMagicId 0) SignForTestingOnly rsk ()
@@ -180,9 +180,9 @@ genUnitRedeemSignature = do
   pm <- genProtocolMagicId
   genRedeemSignature pm (pure ())
 
-roundTripRedeemSignatureBi :: Property
-roundTripRedeemSignatureBi =
-  eachOf 1000 genUnitRedeemSignature roundTripsBiBuildable
+roundTripRedeemSignatureCBOR :: Property
+roundTripRedeemSignatureCBOR =
+  eachOf 1000 genUnitRedeemSignature roundTripsCBORBuildable
 
 roundTripRedeemSignatureAeson :: Property
 roundTripRedeemSignatureAeson =
@@ -203,7 +203,7 @@ goldenDeprecatedVssPublicKey =
 --------------------------------------------------------------------------------
 
 goldenProxyCert :: Property
-goldenProxyCert = goldenTestBi pcert "test/golden/ProxyCert"
+goldenProxyCert = goldenTestCBOR pcert "test/golden/ProxyCert"
  where
   Right pkey = PublicKey <$> xpub (getBytes 0 64)
   Right skey = SecretKey <$> xprv (getBytes 10 128)
@@ -215,8 +215,8 @@ genUnitProxyCert = do
   pm <- genProtocolMagicId
   genProxyCert pm $ pure ()
 
-roundTripProxyCertBi :: Property
-roundTripProxyCertBi = eachOf 100 genUnitProxyCert roundTripsBiBuildable
+roundTripProxyCertCBOR :: Property
+roundTripProxyCertCBOR = eachOf 100 genUnitProxyCert roundTripsCBORBuildable
 
 roundTripProxyCertAeson :: Property
 roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
@@ -227,7 +227,7 @@ roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
 --------------------------------------------------------------------------------
 
 goldenProxyVerificationKey :: Property
-goldenProxyVerificationKey = goldenTestBi
+goldenProxyVerificationKey = goldenTestCBOR
   psk
   "test/golden/ProxyVerificationKey"
  where
@@ -240,9 +240,9 @@ genUnitProxyVerificationKey = do
   pm <- genProtocolMagicId
   genProxyVerificationKey pm $ pure ()
 
-roundTripProxyVerificationKeyBi :: Property
-roundTripProxyVerificationKeyBi =
-  eachOf 100 genUnitProxyVerificationKey roundTripsBiBuildable
+roundTripProxyVerificationKeyCBOR :: Property
+roundTripProxyVerificationKeyCBOR =
+  eachOf 100 genUnitProxyVerificationKey roundTripsCBORBuildable
 
 roundTripProxyVerificationKeyAeson :: Property
 roundTripProxyVerificationKeyAeson =
@@ -254,18 +254,18 @@ roundTripProxyVerificationKeyAeson =
 --------------------------------------------------------------------------------
 
 goldenProxySignature :: Property
-goldenProxySignature = goldenTestBi psig "test/golden/ProxySignature"
+goldenProxySignature = goldenTestCBOR psig "test/golden/ProxySignature"
  where
   Right skey = SecretKey <$> xprv (getBytes 10 128)
   psk =
     createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) (toPublic skey) ()
   psig = proxySign (ProtocolMagicId 0) SignForTestingOnly skey psk ()
 
-roundTripProxySignatureBi :: Property
-roundTripProxySignatureBi = eachOf
+roundTripProxySignatureCBOR :: Property
+roundTripProxySignatureCBOR = eachOf
   100
   genUnitProxySignature
-  roundTripsBiBuildable
+  roundTripsCBORBuildable
  where
   genUnitProxySignature = do
     pm <- genProtocolMagicId
@@ -321,13 +321,14 @@ goldenDeprecatedSecretProof = deprecatedGoldenDecode
 --------------------------------------------------------------------------------
 
 goldenAbstractHash :: Property
-goldenAbstractHash = goldenTestBi (hash ()) "test/golden/AbstractHash"
+goldenAbstractHash = goldenTestCBOR (hash ()) "test/golden/AbstractHash"
 
 genUnitAbstractHash :: Gen (AbstractHash Blake2b_256 ())
 genUnitAbstractHash = genAbstractHash $ pure ()
 
-roundTripAbstractHashBi :: Property
-roundTripAbstractHashBi = eachOf 1000 genUnitAbstractHash roundTripsBiBuildable
+roundTripAbstractHashCBOR :: Property
+roundTripAbstractHashCBOR =
+  eachOf 1000 genUnitAbstractHash roundTripsCBORBuildable
 
 roundTripAbstractHashAeson :: Property
 roundTripAbstractHashAeson =
@@ -338,27 +339,28 @@ roundTripAbstractHashAeson =
 --------------------------------------------------------------------------------
 
 goldenPassPhrase :: Property
-goldenPassPhrase = goldenTestBi passphrase "test/golden/PassPhrase"
+goldenPassPhrase = goldenTestCBOR passphrase "test/golden/PassPhrase"
   where
     -- PassPhrase has to be 32 bytes in length
         passphrase = ByteArray.pack (BS.unpack $ getBytes 3 32) :: PassPhrase
 
-roundTripPassPhraseBi :: Property
-roundTripPassPhraseBi = eachOf 1000 genPassPhrase roundTripsBiBuildable
+roundTripPassPhraseCBOR :: Property
+roundTripPassPhraseCBOR = eachOf 1000 genPassPhrase roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- HDAddressPayload
 --------------------------------------------------------------------------------
 
 goldenHDAddressPayload :: Property
-goldenHDAddressPayload = goldenTestBi hdap "test/golden/HDAddressPayload"
+goldenHDAddressPayload = goldenTestCBOR hdap "test/golden/HDAddressPayload"
  where
   Right hdap =
     flip packHDAddressAttr [] . deriveHDPassphrase . PublicKey <$> xpub
       (getBytes 0 64)
 
-roundTripHDAddressPayloadBi :: Property
-roundTripHDAddressPayloadBi = eachOf 1000 genHDAddressPayload roundTripsBiShow
+roundTripHDAddressPayloadCBOR :: Property
+roundTripHDAddressPayloadCBOR =
+  eachOf 1000 genHDAddressPayload roundTripsCBORShow
 
 roundTripHDAddressPayloadAeson :: Property
 roundTripHDAddressPayloadAeson =
@@ -385,7 +387,7 @@ constantByteString
 sizeEstimates :: H.Group
 sizeEstimates =
   let
-    testPrecise :: forall a . (Show a, Bi a) => Gen a -> Property
+    testPrecise :: forall a . (Show a, ToCBOR a) => Gen a -> Property
     testPrecise g = sizeTest $ scfg { gen = g, precise = True }
   in H.Group
     "Encoded size bounds for crypto types."

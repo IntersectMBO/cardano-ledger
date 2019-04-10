@@ -25,7 +25,9 @@ import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (FromCBOR, ToCBOR)
+
+
 -- | Magic number which should differ for different clusters. It's
 --   defined here, because it's used for signing. It also used for other
 --   things (e. g. it's part of a serialized block).
@@ -41,7 +43,7 @@ data ProtocolMagic = ProtocolMagic
 newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Word32
   } deriving (Show, Eq, Generic)
-    deriving newtype Bi
+    deriving newtype (FromCBOR, ToCBOR)
     deriving anyclass NFData
 
 instance A.ToJSON ProtocolMagicId where

@@ -29,7 +29,7 @@ import Data.Data (Data)
 import Formatting (bprint, build, int)
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 
 
@@ -38,9 +38,11 @@ newtype LocalSlotIndex = UnsafeLocalSlotIndex
   { unLocalSlotIndex :: Word16
   } deriving (Eq, Ord, Generic, NFData, Show, B.Buildable)
 
-instance Bi LocalSlotIndex where
-  encode = encode . unLocalSlotIndex
-  decode = UnsafeLocalSlotIndex <$> decode
+instance ToCBOR LocalSlotIndex where
+  toCBOR = toCBOR . unLocalSlotIndex
+
+instance FromCBOR LocalSlotIndex where
+  fromCBOR = UnsafeLocalSlotIndex <$> fromCBOR
 
 deriveJSON defaultOptions ''LocalSlotIndex
 

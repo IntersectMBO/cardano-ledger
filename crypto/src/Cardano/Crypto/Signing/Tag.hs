@@ -13,7 +13,7 @@ import Cardano.Prelude
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
-import qualified Cardano.Binary.Class as Bi
+import Cardano.Binary (serialize')
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 
 
@@ -69,4 +69,4 @@ signTag protocolMagic = \case
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
   SignProxyVK    -> "\x0a" <> network
-  where network = Bi.serialize' (unProtocolMagicId $ protocolMagic)
+  where network = serialize' (unProtocolMagicId protocolMagic)

@@ -13,10 +13,10 @@
 module Cardano.Chain.Block.Block
   ( ABlock(..)
   , Block
-  , encodeBlock
-  , decodeABlock
-  , decodeABlockOrBoundary
-  , decodeBlockOrBoundary
+  , toCBORBlock
+  , fromCBORABlock
+  , fromCBORABlockOrBoundary
+  , fromCBORBlockOrBoundary
   , mkBlock
   , mkBlockExplicit
   , blockHash
@@ -53,15 +53,16 @@ import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, build, int, shown)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan(..)
   , Decoder
   , DecoderError(..)
   , Encoding
+  , FromCBOR(..)
+  , ToCBOR(..)
   , annotatedDecoder
-  , decodeAnnotated
+  , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
@@ -73,7 +74,6 @@ import Cardano.Chain.Block.Body
   , bodyTxPayload
   , bodyTxs
   , bodyUpdatePayload
-  , decodeABody
   )
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
@@ -85,9 +85,9 @@ import Cardano.Chain.Block.Header
   , Header
   , HeaderHash
   , ToSign
-  , decodeAHeader
+  , fromCBORAHeader
   , dropBoundaryHeader
-  , encodeHeader'
+  , toCBORHeader'
   , genesisHeaderHash
   , hashHeader
   , headerAttributes
@@ -162,29 +162,31 @@ renderBlock es block =
 
 -- | Encode a block, given a number of slots-per-epoch.
 --
--- Unlike 'encodeBlock', this function does not take the deprecated epoch
+-- Unlike 'toCBORBlock', this function does not take the deprecated epoch
 -- boundary blocks into account.
 --
-encodeBlockWithoutBoundary :: EpochSlots -> Block -> Encoding
-encodeBlockWithoutBoundary epochSlots block
+toCBORBlockWithoutBoundary :: EpochSlots -> Block -> Encoding
+toCBORBlockWithoutBoundary epochSlots block
   =  encodeListLen 3
-  <> encodeHeader' epochSlots (blockHeader block)
-  <> encode (blockBody block)
-  <> encode (blockExtraData block)
+  <> toCBORHeader' epochSlots (blockHeader block)
+  <> toCBOR (blockBody block)
+  <> toCBOR (blockExtraData block)
 
-decodeABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
-decodeABlock epochSlots = do
+fromCBORABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
+fromCBORABlock epochSlots = do
   Annotated (header, body, ed) byteSpan <-
     annotatedDecoder $ do
       enforceSize "Block" 3
-      (,,) <$> decodeAHeader epochSlots <*> decodeABody <*> decodeAnnotated
+      (,,) <$> fromCBORAHeader epochSlots <*> fromCBOR <*> fromCBORAnnotated
   pure $ ABlock header body ed byteSpan
 
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-encodeBlock :: EpochSlots -> Block -> Encoding
-encodeBlock epochSlots block =
-  encodeListLen 2 <> encode (1 :: Word) <> encodeBlockWithoutBoundary epochSlots block
+toCBORBlock :: EpochSlots -> Block -> Encoding
+toCBORBlock epochSlots block =
+  encodeListLen 2
+    <> toCBOR (1 :: Word)
+    <> toCBORBlockWithoutBoundary epochSlots block
 
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
@@ -198,17 +200,18 @@ data ABlockOrBoundary a
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeABlockOrBoundary :: EpochSlots -> Bool -> Decoder s (ABlockOrBoundary ByteSpan)
-decodeABlockOrBoundary epochSlots isEpochZero = do
+fromCBORABlockOrBoundary
+  :: EpochSlots -> Bool -> Decoder s (ABlockOrBoundary ByteSpan)
+fromCBORABlockOrBoundary epochSlots isEpochZero = do
   enforceSize "Block" 2
-  decode @Word >>= \case
+  fromCBOR @Word >>= \case
     0 -> ABOBBoundary <$> dropBoundaryBlock isEpochZero
-    1 -> ABOBBlock <$> decodeABlock epochSlots
+    1 -> ABOBBlock <$> fromCBORABlock epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-decodeBlockOrBoundary :: EpochSlots -> Bool -> Decoder s (Maybe Block)
-decodeBlockOrBoundary epochSlots isEpcohZero =
-  decodeABlockOrBoundary epochSlots isEpcohZero >>= \case
+fromCBORBlockOrBoundary :: EpochSlots -> Bool -> Decoder s (Maybe Block)
+fromCBORBlockOrBoundary epochSlots isEpochZero =
+  fromCBORABlockOrBoundary epochSlots isEpochZero >>= \case
     ABOBBoundary _ -> pure Nothing
     ABOBBlock    b -> pure . Just $ void b
 
@@ -377,4 +380,3 @@ blockAttributes = ebdAttributes . blockExtraData
 
 blockLength :: ABlock ByteString -> Int64
 blockLength = fromIntegral . BS.length . blockAnnotation
-

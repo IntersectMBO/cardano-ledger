@@ -27,7 +27,7 @@ import Data.List ((!!))
 import qualified Data.Map.Strict as Map
 import Data.Time (NominalDiffTime)
 
-import Cardano.Binary.Class (Raw(..))
+import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
   (LovelacePortion(..), TxFeePolicy(..), TxSizeLinear(..), mkKnownLovelace)
 import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId(..))
@@ -55,7 +55,7 @@ import Cardano.Chain.Update
 import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Chain.Common.Example (exampleAttributes)
-import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (examplePublicKey, exampleSafeSigner)
 
 

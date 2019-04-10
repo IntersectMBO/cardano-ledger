@@ -119,7 +119,6 @@ library
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-prelude
-                     , cborg
                      , containers
                      , concurrency
                      , cryptonite
@@ -182,7 +181,7 @@ test-suite cardano-ledger-test
 
   other-modules:
 
-                       Test.Cardano.Chain.Block.Bi
+                       Test.Cardano.Chain.Block.CBOR
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Validation
 
@@ -195,7 +194,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Common.Lovelace
                        Test.Cardano.Chain.Config
 
-                       Test.Cardano.Chain.Delegation.Bi
+                       Test.Cardano.Chain.Delegation.CBOR
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
 
@@ -210,20 +209,20 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
 
-                       Test.Cardano.Chain.Ssc.Bi
+                       Test.Cardano.Chain.Ssc.CBOR
 
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Slotting.Properties
 
-                       Test.Cardano.Chain.Txp.Bi
+                       Test.Cardano.Chain.Txp.CBOR
                        Test.Cardano.Chain.Txp.Compact
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json
                        Test.Cardano.Chain.Txp.Validation
 
-                       Test.Cardano.Chain.Update.Bi
+                       Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Json

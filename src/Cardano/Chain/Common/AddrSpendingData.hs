@@ -17,8 +17,15 @@ import Cardano.Prelude
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
-  (Bi(..), Case(..), DecoderError(..), encodeListLen, enforceSize, szCases)
+import Cardano.Binary
+  ( Case(..)
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  , szCases
+  )
 import Cardano.Crypto.Signing (PublicKey, RedeemPublicKey)
 
 
@@ -40,23 +47,24 @@ instance B.Buildable AddrSpendingData where
     RedeemASD rpk -> bprint ("RedeemASD " . build) rpk
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
-instance Bi AddrSpendingData where
-  encode = \case
-    PubKeyASD pk -> encodeListLen 2 <> encode (0 :: Word8) <> encode pk
+instance ToCBOR AddrSpendingData where
+  toCBOR = \case
+    PubKeyASD pk -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR pk
     RedeemASD redeemPK ->
-      encodeListLen 2 <> encode (2 :: Word8) <> encode redeemPK
-
-  decode = do
-    enforceSize "AddrSpendingData" 2
-    decode @Word8 >>= \case
-      0   -> PubKeyASD <$> decode
-      2   -> RedeemASD <$> decode
-      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
+      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR redeemPK
 
   encodedSizeExpr size _ = szCases
     [ Case "PubKeyASD" $ size $ Proxy @(Word8, PublicKey)
     , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemPublicKey)
     ]
+
+instance FromCBOR AddrSpendingData where
+  fromCBOR = do
+    enforceSize "AddrSpendingData" 2
+    fromCBOR @Word8 >>= \case
+      0   -> PubKeyASD <$> fromCBOR
+      2   -> RedeemASD <$> fromCBOR
+      tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
 
 -- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.
 --   It's separated, because 'Address' doesn't store 'AddrSpendingData', but we
@@ -68,22 +76,24 @@ data AddrType
   deriving anyclass NFData
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
-instance Bi AddrType where
-  encode = encode @Word8 . \case
+instance ToCBOR AddrType where
+  toCBOR = toCBOR @Word8 . \case
     ATPubKey -> 0
     ATRedeem -> 2
 
-  decode = decode @Word8 >>= \case
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
+
+instance FromCBOR AddrType where
+  fromCBOR = fromCBOR @Word8 >>= \case
     0   -> pure ATPubKey
     2   -> pure ATRedeem
     tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag
 
-  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance HeapWords AddrType where
   heapWords = \case
-    ATPubKey    -> 0
-    ATRedeem    -> 0
+    ATPubKey -> 0
+    ATRedeem -> 0
 
 -- | Convert 'AddrSpendingData' to the corresponding 'AddrType'
 addrSpendingDataToType :: AddrSpendingData -> AddrType

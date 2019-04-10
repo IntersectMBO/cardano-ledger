@@ -13,7 +13,7 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Binary.Class (serialize', decodeFull')
+import Cardano.Binary (serialize', decodeFull')
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
 import Data.ByteString.Short (ShortByteString)
 

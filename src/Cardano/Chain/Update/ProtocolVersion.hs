@@ -16,7 +16,7 @@ import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 
 
 -- | Communication protocol version
@@ -34,13 +34,14 @@ instance Show ProtocolVersion where
 instance Buildable ProtocolVersion where
   build = bprint shown
 
-instance Bi ProtocolVersion where
-  encode pv =
-    encodeListLen 3 <> encode (pvMajor pv) <> encode (pvMinor pv) <> encode
+instance ToCBOR ProtocolVersion where
+  toCBOR pv =
+    encodeListLen 3 <> toCBOR (pvMajor pv) <> toCBOR (pvMinor pv) <> toCBOR
       (pvAlt pv)
 
-  decode = do
+instance FromCBOR ProtocolVersion where
+  fromCBOR = do
     enforceSize "ProtocolVersion" 3
-    ProtocolVersion <$> decode <*> decode <*> decode
+    ProtocolVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 deriveJSON defaultOptions ''ProtocolVersion

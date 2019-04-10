@@ -13,7 +13,7 @@ import Control.DeepSeq (NFData)
 
 import Cardano.Prelude
 
-import Cardano.Binary.Class (Raw)
+import Cardano.Binary (Raw)
 import Cardano.Crypto.Hashing (Hash)
 
 newtype GenesisHash = GenesisHash

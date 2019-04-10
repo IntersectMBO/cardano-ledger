@@ -20,8 +20,6 @@ where
 import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Encoding as E
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
@@ -33,7 +31,7 @@ import Formatting.Buildable (Buildable(..))
 import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
 
 
 -- | Wrapper around 'CC.XPub'.
@@ -53,16 +51,18 @@ instance Monad m => TJC.ToJSON m PublicKey where
 instance MonadError SchemaError m => TJC.FromJSON m PublicKey where
   fromJSON = parseJSString parseFullPublicKey
 
-instance Bi PublicKey where
-  encode (PublicKey a) = encodeXPub a
-  decode = fmap PublicKey decodeXPub
+instance ToCBOR PublicKey where
+  toCBOR (PublicKey a) = toCBORXPub a
   encodedSizeExpr _ _ = 66
 
-encodeXPub :: CC.XPub -> E.Encoding
-encodeXPub a = encode $ CC.unXPub a
+instance FromCBOR PublicKey where
+  fromCBOR = fmap PublicKey fromCBORXPub
 
-decodeXPub :: D.Decoder s CC.XPub
-decodeXPub = toCborError . CC.xpub =<< decode
+toCBORXPub :: CC.XPub -> Encoding
+toCBORXPub a = toCBOR $ CC.unXPub a
+
+fromCBORXPub :: Decoder s CC.XPub
+fromCBORXPub = toCborError . CC.xpub =<< fromCBOR
 
 instance Buildable PublicKey where
   build = bprint ("pub:" . shortPublicKeyHexF)

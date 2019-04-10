@@ -1,10 +1,13 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Payload
   ( APayload(..)
@@ -12,7 +15,6 @@ module Cardano.Chain.Update.Payload
   , PayloadError(..)
   , payload
   , checkPayload
-  , decodeAPayload
   )
 where
 
@@ -22,15 +24,13 @@ import Control.Monad.Except (MonadError, liftEither)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
   , Decoded(..)
-  , Decoder
+  , FromCBOR(..)
+  , ToCBOR(..)
   , annotatedDecoder
-  , decodeListWith
-  , decodeMaybe
   , encodeListLen
   , enforceSize
   )
@@ -40,15 +40,12 @@ import Cardano.Chain.Update.Vote
   , Proposal
   , ProposalError
   , Vote
-  , VoteError
   , checkProposal
-  , checkVote
-  , decodeAProposal
-  , decodeAVote
   , formatMaybeProposal
   , formatVoteShort
   )
 import Cardano.Crypto (ProtocolMagicId)
+
 
 -- | Update System payload
 data APayload a = APayload
@@ -56,8 +53,7 @@ data APayload a = APayload
   , payloadVotes      :: ![AVote a]
   , payloadAnnotation :: a
   } deriving (Eq, Show, Generic, Functor)
-
-instance NFData a => NFData (APayload a)
+    deriving anyclass NFData
 
 type Payload = APayload ()
 
@@ -68,7 +64,7 @@ instance Decoded (APayload ByteString) where
   type BaseType (APayload ByteString) = Payload
   recoverBytes = payloadAnnotation
 
-instance B.Buildable (Payload) where
+instance B.Buildable Payload where
   build p
     | null (payloadVotes p)
     = formatMaybeProposal (payloadProposal p) <> ", no votes"
@@ -77,40 +73,33 @@ instance B.Buildable (Payload) where
       ("\n    votes: " . listJson)
       (map formatVoteShort (payloadVotes p))
 
-instance Bi (APayload ()) where
-  encode p = encodeListLen 2 <> encode (payloadProposal p) <> encode (payloadVotes p)
+instance ToCBOR Payload where
+  toCBOR p =
+    encodeListLen 2 <> toCBOR (payloadProposal p) <> toCBOR (payloadVotes p)
 
-  decode = void <$> decodeAPayload
+instance FromCBOR Payload where
+  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
 
+instance FromCBOR (APayload ByteSpan) where
+  fromCBOR = do
+    Annotated (proposal, votes) byteSpan <- annotatedDecoder $ do
+      enforceSize "Update.Payload" 2
+      (,) <$> fromCBOR <*> fromCBOR
+    pure $ APayload proposal votes byteSpan
 
-decodeAPayload :: Decoder s (APayload ByteSpan)
-decodeAPayload = do
-  Annotated (proposal, votes) byteSpan <- annotatedDecoder $ do
-    enforceSize "Update.Payload" 2
-    proposal <- decodeMaybe decodeAProposal
-    votes    <- decodeListWith decodeAVote
-    pure (proposal, votes)
-  pure $ APayload proposal votes byteSpan
-
-
-data PayloadError
+newtype PayloadError
   = PayloadProposalError ProposalError
-  | PayloadVoteError VoteError
 
 instance B.Buildable PayloadError where
   build = \case
     PayloadProposalError err -> bprint
       ("Proposal was invalid while checking Update.Payload.\n Error: " . build)
       err
-    PayloadVoteError err -> bprint
-      ("Vote was invalid while checking Update.Payload.\n Error: " . build)
-      err
 
 checkPayload
   :: MonadError PayloadError m => ProtocolMagicId -> APayload ByteString -> m ()
-checkPayload pm p = do
+checkPayload pm p =
   maybe
     (pure ())
     (liftEither . first PayloadProposalError . checkProposal pm)
     (payloadProposal p)
-  forM_ (payloadVotes p) (liftEither . first PayloadVoteError . checkVote pm)

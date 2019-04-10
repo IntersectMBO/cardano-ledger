@@ -39,7 +39,7 @@ import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
-import Cardano.Binary.Class (Annotated(..), serialize')
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import Cardano.Chain.Genesis as Genesis

@@ -24,7 +24,7 @@ import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Update.ApplicationName
 
 
@@ -45,12 +45,13 @@ instance B.Buildable SoftwareVersion where
 instance Show SoftwareVersion where
   show = formatToString build
 
-instance Bi SoftwareVersion where
-  encode sv = encodeListLen 2 <> encode (svAppName sv) <> encode (svNumber sv)
+instance ToCBOR SoftwareVersion where
+  toCBOR sv = encodeListLen 2 <> toCBOR (svAppName sv) <> toCBOR (svNumber sv)
 
-  decode = do
+instance FromCBOR SoftwareVersion where
+  fromCBOR = do
     enforceSize "SoftwareVersion" 2
-    SoftwareVersion <$> decode <*> decode
+    SoftwareVersion <$> fromCBOR <*> fromCBOR
 
 data SoftwareVersionError =
   SoftwareVersionApplicationNameError ApplicationNameError

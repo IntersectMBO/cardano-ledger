@@ -19,7 +19,7 @@ import Formatting (int, sformat)
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import Cardano.Binary.Class (Bi(..))
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 newtype PassPhrase =
@@ -42,11 +42,12 @@ instance Buildable PassPhrase where
 instance Default PassPhrase where
   def = emptyPassphrase
 
-instance Bi PassPhrase where
-  encode pp = encode (ByteArray.convert pp :: ByteString)
+instance ToCBOR PassPhrase where
+  toCBOR pp = toCBOR (ByteArray.convert pp :: ByteString)
 
-  decode = do
-    bs <- decode @ByteString
+instance FromCBOR PassPhrase where
+  fromCBOR = do
+    bs <- fromCBOR @ByteString
     let bl = BS.length bs
     -- Currently passphrase may be either 32-byte long or empty (for
     -- unencrypted keys).

@@ -10,7 +10,7 @@
       author = "IOHK";
       homepage = "";
       url = "";
-      synopsis = "Code used throughout the Cardano ecosystem";
+      synopsis = "Binary serialization for Cardano";
       description = "This package includes the binary serialization format for Cardano";
       buildType = "Simple";
       };
@@ -25,9 +25,7 @@
           (hsPkgs.containers)
           (hsPkgs.digest)
           (hsPkgs.formatting)
-          (hsPkgs.lens)
           (hsPkgs.recursion-schemes)
-          (hsPkgs.mtl)
           (hsPkgs.safe-exceptions)
           (hsPkgs.tagged)
           (hsPkgs.text)
@@ -44,13 +42,10 @@
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.cborg)
-            (hsPkgs.cereal)
             (hsPkgs.containers)
             (hsPkgs.formatting)
-            (hsPkgs.half)
             (hsPkgs.hedgehog)
             (hsPkgs.hspec)
-            (hsPkgs.mtl)
             (hsPkgs.pretty-show)
             (hsPkgs.QuickCheck)
             (hsPkgs.quickcheck-instances)
@@ -63,8 +58,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "c719857de4a2f18fa13bc5cdb85d74ae3841f50f";
-      sha256 = "1p2g026xxc60xiqw7891cry2lwzjavbzdqbqx9mk7x7wlhcsb6jv";
+      rev = "5bca69f048c4d599c362d797ee8b036c118f77f4";
+      sha256 = "1xhazql8ybn7pprgn2zqgd4waf89z1xicdiwmpsizp97s1k0paki";
       });
     postUnpack = "sourceRoot+=/binary; echo source root reset to \$sourceRoot";
     }

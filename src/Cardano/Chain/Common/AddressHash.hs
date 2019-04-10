@@ -10,20 +10,19 @@ import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Digest, SHA3_256)
 import qualified Crypto.Hash as CryptoHash
 
-import Cardano.Binary.Class (Bi)
-import qualified Cardano.Binary.Class as Bi
+import Cardano.Binary (ToCBOR, serialize)
 import Cardano.Crypto.Hashing (AbstractHash(..))
 
 -- | Hash used to identify address.
 type AddressHash = AbstractHash Blake2b_224
 
-unsafeAddressHash :: Bi a => a -> AddressHash b
+unsafeAddressHash :: ToCBOR a => a -> AddressHash b
 unsafeAddressHash = AbstractHash . secondHash . firstHash
  where
-  firstHash :: Bi a => a -> Digest SHA3_256
-  firstHash = CryptoHash.hashlazy . Bi.serialize
+  firstHash :: ToCBOR a => a -> Digest SHA3_256
+  firstHash = CryptoHash.hashlazy . serialize
   secondHash :: Digest SHA3_256 -> Digest Blake2b_224
   secondHash = CryptoHash.hash
 
-addressHash :: Bi a => a -> AddressHash a
+addressHash :: ToCBOR a => a -> AddressHash a
 addressHash = unsafeAddressHash

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Cardano.Chain.Delegation.Bi
+module Test.Cardano.Chain.Delegation.CBOR
   ( tests
   )
 where
@@ -16,7 +16,7 @@ import qualified Hedgehog as H
 import Cardano.Chain.Delegation (unsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestBi, roundTripsBiBuildable)
+  (goldenTestCBOR, roundTripsCBORBuildable)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Delegation.Gen (genCertificate, genPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
@@ -28,12 +28,14 @@ import Test.Options (TestScenario, TSProperty, eachOfTS)
 --------------------------------------------------------------------------------
 
 goldenCertificate :: Property
-goldenCertificate = goldenTestBi cert "test/golden/bi/delegation/ProxyVKHeavy"
+goldenCertificate = goldenTestCBOR
+  cert
+  "test/golden/cbor/delegation/ProxyVKHeavy"
   where cert = exampleCertificates !! 0
 
-ts_roundTripCertificateBi :: TSProperty
-ts_roundTripCertificateBi =
-  eachOfTS 200 (feedPM genCertificate) roundTripsBiBuildable
+ts_roundTripCertificateCBOR :: TSProperty
+ts_roundTripCertificateCBOR =
+  eachOfTS 200 (feedPM genCertificate) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -41,14 +43,16 @@ ts_roundTripCertificateBi =
 --------------------------------------------------------------------------------
 
 goldenDlgPayload :: Property
-goldenDlgPayload = goldenTestBi dp "test/golden/bi/delegation/DlgPayload"
+goldenDlgPayload = goldenTestCBOR dp "test/golden/cbor/delegation/DlgPayload"
   where dp = unsafePayload (take 4 exampleCertificates)
 
-ts_roundTripDlgPayloadBi :: TSProperty
-ts_roundTripDlgPayloadBi = eachOfTS 100 (feedPM genPayload) roundTripsBiBuildable
+ts_roundTripDlgPayloadCBOR :: TSProperty
+ts_roundTripDlgPayloadCBOR =
+  eachOfTS 100 (feedPM genPayload) roundTripsCBORBuildable
 
 
 tests :: TestScenario -> IO Bool
 tests ts = and <$> sequence
   [ H.checkSequential $$discoverGolden
-  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)]
+  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+  ]

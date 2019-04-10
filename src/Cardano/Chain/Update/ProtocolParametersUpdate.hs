@@ -19,7 +19,7 @@ import Data.Time (NominalDiffTime)
 import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters(..))
@@ -84,41 +84,42 @@ instance B.Buildable ProtocolParametersUpdate where
     bytes' :: Format r (Natural -> r)
     bytes' = bytes (shortest @Double)
 
-instance Bi ProtocolParametersUpdate where
-  encode ppu =
+instance ToCBOR ProtocolParametersUpdate where
+  toCBOR ppu =
     encodeListLen 14
-      <> encode (ppuScriptVersion ppu)
-      <> encode (ppuSlotDuration ppu)
-      <> encode (ppuMaxBlockSize ppu)
-      <> encode (ppuMaxHeaderSize ppu)
-      <> encode (ppuMaxTxSize ppu)
-      <> encode (ppuMaxProposalSize ppu)
-      <> encode (ppuMpcThd ppu)
-      <> encode (ppuHeavyDelThd ppu)
-      <> encode (ppuUpdateVoteThd ppu)
-      <> encode (ppuUpdateProposalThd ppu)
-      <> encode (ppuUpdateImplicit ppu)
-      <> encode (ppuSoftforkRule ppu)
-      <> encode (ppuTxFeePolicy ppu)
-      <> encode (ppuUnlockStakeEpoch ppu)
+      <> toCBOR (ppuScriptVersion ppu)
+      <> toCBOR (ppuSlotDuration ppu)
+      <> toCBOR (ppuMaxBlockSize ppu)
+      <> toCBOR (ppuMaxHeaderSize ppu)
+      <> toCBOR (ppuMaxTxSize ppu)
+      <> toCBOR (ppuMaxProposalSize ppu)
+      <> toCBOR (ppuMpcThd ppu)
+      <> toCBOR (ppuHeavyDelThd ppu)
+      <> toCBOR (ppuUpdateVoteThd ppu)
+      <> toCBOR (ppuUpdateProposalThd ppu)
+      <> toCBOR (ppuUpdateImplicit ppu)
+      <> toCBOR (ppuSoftforkRule ppu)
+      <> toCBOR (ppuTxFeePolicy ppu)
+      <> toCBOR (ppuUnlockStakeEpoch ppu)
 
-  decode = do
+instance FromCBOR ProtocolParametersUpdate where
+  fromCBOR = do
     enforceSize "ProtocolParametersUpdate" 14
     ProtocolParametersUpdate
-      <$> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
-      <*> decode
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 empty :: ProtocolParametersUpdate
 empty = ProtocolParametersUpdate

@@ -1,14 +1,16 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Txp.TxAux
   ( TxAux
   , ATxAux(..)
-  , decodeATxAux
   , mkTxAux
   , taTx
   , taWitness
@@ -22,12 +24,12 @@ import Data.Aeson (FromJSON, ToJSON)
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class
+import Cardano.Binary
   ( Annotated(..)
-  , Bi(..)
   , ByteSpan
-  , Decoder
-  , decodeAnnotated
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
@@ -45,8 +47,7 @@ data ATxAux a = ATxAux
   { aTaTx      :: !(Annotated Tx a)
   , aTaWitness :: !(Annotated TxWitness a)
   } deriving (Generic, Show, Eq, Functor)
-
-instance NFData a => NFData (ATxAux a)
+    deriving anyclass NFData
 
 taTx :: ATxAux a -> Tx
 taTx = unAnnotated . aTaTx
@@ -64,20 +65,18 @@ txaF = later $ \ta -> bprint
 instance B.Buildable TxAux where
   build = bprint txaF
 
-instance Bi TxAux where
-  encode ta = encodeListLen 2 <> encode (taTx ta) <> encode (taWitness ta)
-
-  decode = void <$> decodeATxAux
+instance ToCBOR TxAux where
+  toCBOR ta = encodeListLen 2 <> toCBOR (taTx ta) <> toCBOR (taWitness ta)
 
   encodedSizeExpr size pxy = 1 + size (taTx <$> pxy) + size (taWitness <$> pxy)
 
+instance FromCBOR TxAux where
+  fromCBOR = void <$> fromCBOR @(ATxAux ByteSpan)
 
-decodeATxAux :: Decoder s (ATxAux ByteSpan)
-decodeATxAux = do
-  enforceSize "TxAux" 2
-  ATxAux <$> decodeAnnotated <*> decodeAnnotated
-
-
+instance FromCBOR (ATxAux ByteSpan) where
+  fromCBOR = do
+    enforceSize "TxAux" 2
+    ATxAux <$> fromCBORAnnotated <*> fromCBORAnnotated
 
 instance ToJSON (ATxAux ()) where
 instance FromJSON (ATxAux ()) where

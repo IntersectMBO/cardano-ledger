@@ -31,8 +31,9 @@ import qualified Streaming.Prelude as S
 import System.Directory (doesFileExist)
 import System.FilePath (takeFileName, (-<.>))
 
-import Cardano.Binary.Class (DecoderError, decodeFullDecoder, slice)
-import Cardano.Chain.Block.Block (ABlock, ABlockOrBoundary(..), decodeABlockOrBoundary)
+import Cardano.Binary (DecoderError, decodeFullDecoder, slice)
+import Cardano.Chain.Block.Block
+  (ABlock, ABlockOrBoundary(..), fromCBORABlockOrBoundary)
 import Cardano.Chain.Slotting (EpochSlots(..))
 
 
@@ -159,7 +160,7 @@ getSlotData epochSlots isEpochZero = runExceptT $ do
     blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
     bb         <- ExceptT . pure $ decodeFullDecoder
       "ABlockOrBoundary"
-      (decodeABlockOrBoundary epochSlots isEpochZero)
+      (fromCBORABlockOrBoundary epochSlots isEpochZero)
       blockBytes
     pure $ map (LBS.toStrict . slice blockBytes) bb
   -- Drop the Undo bytes as we no longer use these

@@ -35,7 +35,8 @@ import Cardano.Crypto
   , redeemDeterministicKeyGen
   )
 
-import Test.Cardano.Crypto.Bi (getBytes)
+import Test.Cardano.Crypto.CBOR (getBytes)
+
 
 exampleProtocolMagicId0 :: ProtocolMagicId
 exampleProtocolMagicId0 = ProtocolMagicId 31337

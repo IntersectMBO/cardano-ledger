@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -33,7 +35,8 @@ import Formatting (Format, bprint, build, int, ords, sformat)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary
+  (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.BlockCount (BlockCount, unBlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
@@ -53,6 +56,7 @@ data SlotId = SlotId
   { siEpoch :: !EpochIndex
   , siSlot  :: !LocalSlotIndex
   } deriving (Show, Eq, Ord, Generic)
+    deriving anyclass NFData
 
 instance B.Buildable SlotId where
   build si = bprint
@@ -60,14 +64,13 @@ instance B.Buildable SlotId where
     (unLocalSlotIndex $ siSlot si)
     (getEpochIndex $ siEpoch si)
 
-instance NFData SlotId
+instance ToCBOR SlotId where
+  toCBOR si = encodeListLen 2 <> toCBOR (siEpoch si) <> toCBOR (siSlot si)
 
-instance Bi SlotId where
-  encode si = encodeListLen 2 <> encode (siEpoch si) <> encode (siSlot si)
-
-  decode = do
+instance FromCBOR SlotId where
+  fromCBOR = do
     enforceSize "SlotId" 2
-    SlotId <$> decode <*> decode
+    SlotId <$> fromCBOR <*> fromCBOR
 
 deriveJSON defaultOptions ''SlotId
 
@@ -93,12 +96,16 @@ slotIdF = build
 
 -- | FlatSlotId is a flat version of SlotId
 newtype FlatSlotId = FlatSlotId
-      { unFlatSlotId :: Word64
-      } deriving (Eq, Generic, Num, Ord, Show)
+  { unFlatSlotId :: Word64
+  } deriving (Eq, Generic, Ord, Show)
+    deriving newtype Num
+    deriving anyclass NFData
 
-instance Bi FlatSlotId where
-  encode = encode . unFlatSlotId
-  decode = FlatSlotId <$> decode
+instance ToCBOR FlatSlotId where
+  toCBOR = toCBOR . unFlatSlotId
+
+instance FromCBOR FlatSlotId where
+  fromCBOR = FlatSlotId <$> fromCBOR
 
 instance Monad m => ToJSON m FlatSlotId where
   toJSON = toJSON . unFlatSlotId
@@ -120,8 +127,6 @@ instance B.Buildable FlatSlotId where
   build (unFlatSlotId -> x) = bprint
     int
     x
-
-instance NFData FlatSlotId
 
 -- | Flatten 'SlotId' (which is basically pair of integers) into a single number.
 -- 'FlatSlotId' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'

@@ -13,7 +13,13 @@ import Cardano.Prelude
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary.Class (Bi(..), Raw, encodeListLen, enforceSize)
+import Cardano.Binary
+  ( FromCBOR(..)
+  , Raw
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Crypto (Hash)
 
 
@@ -53,14 +59,15 @@ instance B.Buildable UpdateData where
     (udUpdaterHash ud)
     (udMetadataHash ud)
 
-instance Bi UpdateData where
-  encode ud =
+instance ToCBOR UpdateData where
+  toCBOR ud =
     encodeListLen 4
-      <> encode (udAppDiffHash ud)
-      <> encode (udPkgHash ud)
-      <> encode (udUpdaterHash ud)
-      <> encode (udMetadataHash ud)
+      <> toCBOR (udAppDiffHash ud)
+      <> toCBOR (udPkgHash ud)
+      <> toCBOR (udUpdaterHash ud)
+      <> toCBOR (udMetadataHash ud)
 
-  decode = do
+instance FromCBOR UpdateData where
+  fromCBOR = do
     enforceSize "UpdateData" 4
-    UpdateData <$> decode <*> decode <*> decode <*> decode
+    UpdateData <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR

@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Crypto.Limits (tests) where
+module Test.Cardano.Crypto.Limits
+  ( tests
+  )
+where
 
 import Cardano.Prelude
 import Test.Cardano.Prelude
@@ -9,8 +12,7 @@ import Test.Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256)
 import qualified Data.ByteString as BS
 
-import Cardano.Binary.Class (Bi, serialize')
-import Cardano.Binary.Limit (Limit)
+import Cardano.Binary (Limit, ToCBOR, serialize')
 import Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey, mlSignature)
 
 import Hedgehog
@@ -54,5 +56,5 @@ prop_abstractHash256LenLimited = eachOf
   (genAbstractHash @Int32 @Blake2b_256 (Gen.int32 Range.constantBounded))
   (msgLenLimited mlAbstractHash)
 
-msgLenLimited :: Bi a => Limit a -> a -> PropertyT IO ()
+msgLenLimited :: ToCBOR a => Limit a -> a -> PropertyT IO ()
 msgLenLimited limit a = assert $ BS.length (serialize' a) <= fromIntegral limit

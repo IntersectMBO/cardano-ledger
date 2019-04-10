@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Crypto.Signing.Proxy.Cert
@@ -19,7 +19,7 @@ import Data.Coerce (coerce)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary.Class (Bi, Decoded(..), serialize')
+import Cardano.Binary (FromCBOR, ToCBOR, Decoded(..), serialize')
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.Safe (SafeSigner)
@@ -34,7 +34,8 @@ newtype ProxyCert w = ProxyCert
              , Ord
              , Show
              , NFData
-             , Bi
+             , FromCBOR
+             , ToCBOR
              , Buildable
              , Aeson.FromJSON
              , Aeson.ToJSON
@@ -49,7 +50,7 @@ instance (Typeable x, MonadError SchemaError m) => FromJSON m (ProxyCert x) wher
 -- | Proxy certificate creation from secret key of issuer, public key of
 --   delegate and the message space ω.
 safeCreateProxyCert
-  :: Bi w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyCert w
+  :: ToCBOR w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyCert w
 safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
  where
   sig = safeSign pm SignProxyVK ss

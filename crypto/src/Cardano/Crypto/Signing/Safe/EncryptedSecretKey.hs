@@ -23,12 +23,12 @@ import Data.Default (Default(..))
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import Cardano.Binary.Class (Bi(..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.Scrypt as S
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase, emptyPassphrase)
 import Cardano.Crypto.Signing.SecretKey
-  (SecretKey(..), decodeXPrv, encodeXPrv, toPublic)
+  (SecretKey(..), fromCBORXPrv, toCBORXPrv, toPublic)
 
 
 -- | Encrypted HD secret key
@@ -50,15 +50,16 @@ instance Show EncryptedSecretKey where
 instance Buildable EncryptedSecretKey where
   build _ = "<encrypted key>"
 
-instance Bi EncryptedSecretKey where
-  encode (EncryptedSecretKey sk pph) =
-    encodeListLen 2 <> encodeXPrv sk <> encode pph
+instance ToCBOR EncryptedSecretKey where
+  toCBOR (EncryptedSecretKey sk pph) =
+    encodeListLen 2 <> toCBORXPrv sk <> toCBOR pph
 
-  decode =
+instance FromCBOR EncryptedSecretKey where
+  fromCBOR =
     EncryptedSecretKey
       <$  enforceSize "EncryptedSecretKey" 2
-      <*> decodeXPrv
-      <*> decode
+      <*> fromCBORXPrv
+      <*> fromCBOR
 
 -- | Parameters used to evaluate hash of passphrase.
 passScryptParam :: S.ScryptParams

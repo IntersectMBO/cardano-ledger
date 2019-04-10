@@ -1,13 +1,15 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.Txp.TxPayload
   ( TxPayload
   , ATxPayload(..)
-  , decodeATxPayload
   , mkTxPayload
   , recoverHashedBytes
   , txpTxs
@@ -18,11 +20,9 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Binary.Class
-  (Annotated(..), Bi(..), ByteSpan, Decoder, decodeListWith)
+import Cardano.Binary (Annotated(..), ByteSpan, FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxAux
-  (ATxAux, TxAux, aTaWitness, decodeATxAux, taTx, taWitness)
+import Cardano.Chain.Txp.TxAux (ATxAux, TxAux, aTaWitness, taTx, taWitness)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 
 
@@ -35,19 +35,19 @@ mkTxPayload = ATxPayload
 newtype ATxPayload a = ATxPayload
   { aUnTxPayload :: [ATxAux a]
   } deriving (Show, Eq, Generic, Functor)
+    deriving anyclass NFData
 
 unTxPayload :: ATxPayload a -> [TxAux]
 unTxPayload = fmap void . aUnTxPayload
 
-instance NFData a => NFData (ATxPayload a)
+instance ToCBOR TxPayload where
+  toCBOR = toCBOR . unTxPayload
 
-instance Bi (ATxPayload ()) where
-  encode = encode . unTxPayload
-  decode = ATxPayload <$> decode
+instance FromCBOR TxPayload where
+  fromCBOR = void <$> fromCBOR @(ATxPayload ByteSpan)
 
-
-decodeATxPayload :: Decoder s (ATxPayload ByteSpan)
-decodeATxPayload = ATxPayload <$> decodeListWith decodeATxAux
+instance FromCBOR (ATxPayload ByteSpan) where
+  fromCBOR = ATxPayload <$> fromCBOR
 
 txpTxs :: ATxPayload a -> [Tx]
 txpTxs = fmap taTx . unTxPayload
@@ -67,4 +67,3 @@ recoverHashedBytes (ATxPayload auxs) =
     -- implementation artifact
     hashedByted = prefix <> mconcat (annotation <$> aWitnesses) <> suffix
   in Annotated (unAnnotated <$> aWitnesses) hashedByted
-

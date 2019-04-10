@@ -66,7 +66,6 @@ library
                      , cardano-binary
                      , cardano-crypto
                      , cardano-prelude
-                     , cborg
                      , cryptonite
                      , cryptonite-openssl
                      , data-default
@@ -94,7 +93,7 @@ test-suite test
   type:                exitcode-stdio-1.0
 
   other-modules:
-                       Test.Cardano.Crypto.Bi
+                       Test.Cardano.Crypto.CBOR
                        Test.Cardano.Crypto.Dummy
                        Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen

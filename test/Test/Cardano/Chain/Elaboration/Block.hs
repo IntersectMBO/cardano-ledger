@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
-import qualified Cardano.Binary.Class as Binary
+import qualified Cardano.Binary as Binary
 import qualified Cardano.Crypto.Hashing as H
 import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
 
@@ -149,7 +149,7 @@ annotateBlock epochSlots block =
       case
           Binary.decodeFullDecoder
             "Block"
-            (Concrete.decodeABlockOrBoundary epochSlots False) bytes
+            (Concrete.fromCBORABlockOrBoundary epochSlots False) bytes
         of
           Left err ->
             panic
@@ -162,7 +162,7 @@ annotateBlock epochSlots block =
       Concrete.ABOBBlock bk -> bk
       Concrete.ABOBBoundary _ ->
         panic "This function should have decoded a block."
-  where bytes = Binary.serializeEncoding (Concrete.encodeBlock epochSlots block)
+  where bytes = Binary.serializeEncoding (Concrete.toCBORBlock epochSlots block)
 
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --

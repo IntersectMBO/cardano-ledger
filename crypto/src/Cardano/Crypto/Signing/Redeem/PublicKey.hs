@@ -42,14 +42,14 @@ import Formatting
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 
-import Cardano.Binary.Class (Bi)
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Orphans ()
 
 
 -- | Wrapper around 'Ed25519.PublicKey'.
 newtype RedeemPublicKey =
   RedeemPublicKey Ed25519.PublicKey
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
 
 instance Monad m => ToObjectKey m RedeemPublicKey where
   toObjectKey = pure . formatToString redeemPkB64UrlF
@@ -70,8 +70,6 @@ instance FromJSONKey RedeemPublicKey where
       $ toAesonError
       . bimap (sformat build) pure
       . fromAvvmPk
-
-deriving instance Bi RedeemPublicKey
 
 instance B.Buildable RedeemPublicKey where
   build = bprint ("redeem_pk:" . redeemPkB64F)
