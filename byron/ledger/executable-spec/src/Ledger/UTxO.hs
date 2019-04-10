@@ -114,7 +114,7 @@ utxoInductive = do
     ?! IncreasedTotalBalance
   pcMinFee pc tx <= txfee tx ?! FeeTooLow
   let
-    unspentInputs (UTxO aUtxo) = Map.keysSet aUtxo
+    unspentInputs (UTxO aUtxo) = dom aUtxo
     txinsSet = Set.fromList $ txins tx
   Set.size txinsSet == length (txins tx)
     && txinsSet `Set.isSubsetOf` unspentInputs utxo
