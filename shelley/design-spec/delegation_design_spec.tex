@@ -2502,9 +2502,9 @@ several refinements to this general principle:
   \item
     reimbursing their costs and
   \item
-    giving them a \emph{margin} before distributing pool rewards proportionally
-    amongst pool operator and pool members. (Pool operators publicly declare their
-    cost and margin, which they can freely choose.)
+    giving them a \emph{margin} before distributing the remaining pool rewards
+    proportionally amongst pool operator and pool members. (Pool operators
+    publicly declare their cost and margin, which they can freely choose.)
   \end{itemize}
 \item
   Pool rewards will slightly increase with the stake their owner(s)\footnote{For
@@ -2573,9 +2573,9 @@ be included in the registration:
 \item
   The \emph{costs} of operating the pool (in ada/epoch).
 \item
-  The pool operator \emph{margin} (in \([0,1]\)), indicating the
-  additional share the pool operator will take from pool rewards before
-  splitting rewards amongst members (see
+  The pool operator \emph{margin} (in \([0,1]\)), indicating the additional
+  share that the pool operator will take from the pool's rewards (after the
+  costs have been deducted) before splitting rewards amongst members (see
   \cref{pool-operator-reward}).
 \item
   Proof of \emph{ada pledged to the pool}, as a list of public stake
@@ -2654,7 +2654,7 @@ decrease over time. This has to be compensated by
 \item
   rising transaction fees when more and more people use the system and
 \item
-  higher exchange rates from ada to USD when the system become more
+  higher exchange rates from ada to USD when the system becomes more
   valuable.
 \end{itemize}
 
@@ -2691,13 +2691,13 @@ its operator and its members.
 \label{stake-performance-and-block-production}
 
 The incentives scheme developed in~\citep{bkks2018} distributes rewards solely
-on the basis of the size of pools in terms of the stake that they control. This
-does eliminate any incentive for a pool to try to sabotage another pool (be it
-through ignoring their blocks, or even by mounting DoS attacks on their nodes).
-However, it does not incentivise pool operators to ensure that their pool
-performs well (i.e., produces most of the blocks it is eligible to create). This
-invites freeriders, pools that rely on other pools to maintain the system, and
-collect rewards without doing any work.
+on the basis of the size of pools in terms of the stake that they control (and
+the stake pledged by the owner(s)). This does eliminate any incentive for a pool
+to try to sabotage another pool (be it through ignoring their blocks, or even by
+mounting DoS attacks on their nodes). However, it does not incentivise pool
+operators to ensure that their pool performs well (i.e., produces most of the
+blocks it is eligible to create). This invites freeriders, pools that rely on
+other pools to maintain the system, and collect rewards without doing any work.
 
 For Cardano, we will stay close to the scheme of~\citep{bkks2018}, but we will
 also take into account the \emph{performance} of a pool. Unfortunately, tracking
@@ -2724,15 +2724,15 @@ where
   \[
   p = \frac{n}{\max(N,1)}
   \]
-  of the number \(n\) blocks it successfully added to the chain and the number
-  \(N\) of slots it was elected as a leader, and
+  of the number \(n\) of blocks it successfully added to the chain and the
+  number \(N\) of slots it was elected as a leader, and
 \item[\(r_e\)] is a factor that captures the relation between the relative stake
   \(\sigma\) of the pool, the number \(N\) of slots it is elected as a leader,
   and the total number \(\Nbar\) of blocks that were added to the chain during
   the epoch. To be precise, we have
   \[r_e = \frac{N}{\sigma \max(1, \Nbar)}\,.\]
-  The factor \(r_e\) captures all the random influences on \(\beta\): the
-  randomness in the leader election that influences \(n\), and the randomness
+  The factor \(r_e\) captures random influences on \(\beta\): the
+  randomness in the leader election that influences \(N\), and the randomness
   both from the leader election and the bunch of random influences on
   \(\Nbar\) (leader election, forks, performance of the network and other
   pools).
@@ -3116,7 +3116,7 @@ pledged by the pool owner(s) has on pool rewards.
 
 Our game theoretic analysis predicts that the \(k\) pools with the
 highest \emph{potential}, the highest value of \[
-    P(\lambda,c):=\left(z_0+a_0\cdot\lambda\right)\cdot\frac{R}{1+a_0}-c
+    P(\lambda,c):=\left[z_0+a_0\cdot\min\left(\lambda,\frac{1}{k}\right)\right]\cdot\frac{R}{1+a_0}-c
 \] (where \(\lambda\) is the stake pledged by the pool owner(s) and \(c\)
 are the pool costs) will create the saturated pools.
 
@@ -3506,7 +3506,7 @@ See \cref{fig:rewards} for the effect of various choices for
 
 \subsubsection{\texorpdfstring{\(\rho\)}{\textbackslash{}rho}}
 
-In order to determine the inflation rate per epoch \(\rho\), we need four
+In order to determine the inflation rate per epoch \(\rho\), we need five
 more pieces of information:
 
 \begin{itemize}
@@ -3519,16 +3519,20 @@ more pieces of information:
   epoch.
 \item
   The expected ratio \(r\) of \emph{rewards} per year per staked ada.
+\item
+  The expected value of $\eta$, the ratio of actually produced blocks
+  versus expected produced blocks (see~\ref{monetary-expansion}).
 \end{itemize}
 
 The available rewards for one epoch (assuming an equilibrium state with
 \(k\) pools and noticing that there are \(\frac{365}{5}=73\) epochs per
 year) will be \[
-    \left(1-\tau\right)\cdot\bigl(F + \rho\cdot\left(T\infty - T\right)\bigr) - \frac{k\cdot c}{73\cdot e}.
+    \left(1-\tau\right)\cdot\bigl(F + \min(\eta,1)\cdot\rho\cdot\left(T\infty - T\right)\bigr) - \frac{k\cdot c}{73\cdot e}.
 \] On the other hand, \emph{expected} rewards per epoch are \[
     T\cdot\left(\sqrt[73]{1+r}-1\right).
 \] Equating the two, we get \[
-    \rho=\frac{T\cdot\left(\sqrt[73]{1+r}-1\right)-(1-\tau)\cdot F+\frac{k\cdot c}{73\cdot e}}{\left(1-\tau\right)\cdot\left(T_\infty-T\right)}.
+    \rho=\frac{T\cdot\left(\sqrt[73]{1+r}-1\right)-(1-\tau)\cdot F+\frac{k\cdot c}{73\cdot e}}
+    {\left(1-\tau\right)\cdot\min(\eta,1)\cdot\left(T_\infty-T\right)}.
 \] For example, using
 
 \begin{itemize}
@@ -3543,22 +3547,24 @@ year) will be \[
 \item
   \(c=1,000\,\mathrm{USD}\),
 \item
-  \(F=2,000\,\mathrm{ada}\) and
+  \(F=2,000\,\mathrm{ada}\),
 \item
   \(r=0.05\),
 \item
-  \(\tau=0.2\),
+  \(\tau=0.2\) and
+\item
+  \(\eta=0.9\)
 \end{itemize}
 
 we would get \[
     \rho=\frac
         {31,000,000,000\cdot\left(\sqrt[73]{1+0.05}-1\right)-0.8\cdot 2000+\frac{100\cdot 1000}{73\cdot 0.5}}
-        {0.8\cdot\left(45,000,000,000 - 31,000,000,000\right)}
+        {0.8\cdot 0.9\cdot\left(45,000,000,000 - 31,000,000,000\right)}
     \approx
-    0.0019.
+    0.0021.
 \] This would correspond to reducing the remaining amount of available
-ada by \({1.0019}^{73}-1\approx 0.144=14.4\%\) per year (which sounds
-awfully high\ldots).
+ada by \({1.0021}^{73}-1\approx 0.17=17\%\) per year (which sounds
+pretty high\ldots).
 
 \subsubsection{\texorpdfstring{\(\tau\)}{\textbackslash{}tau}}
 
