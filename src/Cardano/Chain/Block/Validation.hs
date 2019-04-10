@@ -87,13 +87,14 @@ import Cardano.Chain.Genesis as Genesis
   , GenesisHash
   , configBootStakeholders
   , configEpochSlots
+  , configHeavyDelegation
   , configK
   , configProtocolMagic
   , configProtocolMagicId
-  , configSlotSecurityParam
   )
+import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
-  (EpochIndex, FlatSlotId, SlotId(..), unflattenSlotId)
+  (EpochIndex(..), FlatSlotId(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
 import Cardano.Chain.Txp (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.Txp.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
@@ -101,7 +102,9 @@ import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
 import Cardano.Crypto
   ( ProtocolMagic
+  , ProtocolMagicId
   , PublicKey
+  , getProtocolMagicId
   , hashRaw
   , hashDecoded
   )
@@ -174,7 +177,7 @@ initialChainValidationState
   => Genesis.Config
   -> m ChainValidationState
 initialChainValidationState config = do
-  delegationState <- DI.initialState config
+  delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
     { cvsLastSlot       = 0
     , cvsSigningHistory = SigningHistory
@@ -186,11 +189,24 @@ initialChainValidationState config = do
         $ configBootStakeholders config
       , shSigningQueue = Empty
       }
-    , cvsPreviousHash    = Left $ configGenesisHash config
+    , cvsPreviousHash   = Left $ configGenesisHash config
     , cvsUtxo           = genesisUtxo config
     , cvsUpdateState    = UPI.initialState config
     , cvsDelegationState = delegationState
     }
+ where
+  delegationEnv = DI.Environment
+    { DI.protocolMagic = configProtocolMagicId config
+    , DI.allowedDelegators = M.keysSet
+      . unGenesisWStakeholders
+      $ configBootStakeholders config
+    , DI.k           = configK config
+    , DI.currentEpoch = EpochIndex 0
+    , DI.currentSlot = FlatSlotId 0
+    }
+
+  genesisDelegation = configHeavyDelegation config
+
 
 --------------------------------------------------------------------------------
 -- ChainValidationError
@@ -317,6 +333,14 @@ updateChainBoundary cvs bvd = do
     }
 
 
+data BodyEnvironment = BodyEnvironment
+  { protocolMagic      :: !ProtocolMagic
+  , k                  :: !BlockCount
+  , numGenKeys         :: !Word8
+  , protocolParameters :: !Update.ProtocolParameters
+  , currentEpoch       :: !EpochIndex
+  }
+
 data BodyState = BodyState
   { utxo            :: !UTxO
   , updateState     :: !UPI.State
@@ -330,11 +354,11 @@ data BodyState = BodyState
 --   protocol.
 updateBody
   :: MonadError ChainValidationError m
-  => Genesis.Config
+  => BodyEnvironment
   -> BodyState
   -> ABlock ByteString
   -> m BodyState
-updateBody config bs b = do
+updateBody env bs b = do
 
   -- Validate the block size
   blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
@@ -343,29 +367,32 @@ updateBody config bs b = do
   length attributes == 0 `orThrowError` ChainValidationBlockAttributesTooLarge
 
   -- Validate the delegation payload signature
-  proofDelegation (blockProof b) == hashDecoded (blockDlgPayload b)
+  proofDelegation (blockProof b)
+    == hashDecoded (blockDlgPayload b)
     `orThrowError` ChainValidationDelegationProofError
 
   -- Update the delegation state
   delegationState' <-
-    DI.updateDelegation config slot d delegationState certificates
+    DI.updateDelegation delegationEnv delegationState certificates
       `wrapError` ChainValidationDelegationSchedulingError
 
   -- Validate the transaction payload proof
-  proofTxp (blockProof b) == recoverTxProof (blockTxPayload b)
+  proofTxp (blockProof b)
+    == recoverTxProof (blockTxPayload b)
     `orThrowError` ChainValidationUTxOProofError
 
   -- Update the UTxO
   utxo' <-
     UTxO.updateUTxO
-        (configProtocolMagic config)
+        protocolMagic
         (UPI.adoptedProtocolParameters updateState)
         utxo
         txs
       `wrapError` ChainValidationUTxOValidationError
 
   -- Validate the update payload proof
-  proofUpdate (blockProof b) == hashDecoded (blockUpdatePayload b)
+  proofUpdate (blockProof b)
+    == hashDecoded (blockUpdatePayload b)
     `orThrowError` ChainValidationUpdateProofError
 
   -- Update the update state
@@ -379,35 +406,37 @@ updateBody config bs b = do
     , delegationState = delegationState'
     }
  where
+  BodyEnvironment { protocolMagic, k, numGenKeys, currentEpoch }
+    = env
+
+  BodyState { utxo, updateState, delegationState } = bs
+
   maxBlockSize =
     Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters updateState
 
   UnparsedFields attributes = attrRemain $ blockAttributes b
 
-  slot      = blockSlot b
-  d         = configSlotSecurityParam config
+  currentSlot = blockSlot b
 
-  BodyState { utxo, updateState, delegationState } = bs
   certificates = DlgPayload.getPayload $ blockDlgPayload b
 
-  txs       = aUnTxPayload $ blockTxPayload b
+  txs         = aUnTxPayload $ blockTxPayload b
 
-  updateEnv = UPI.Environment
-    { UPI.protocolMagic = configProtocolMagicId config
-    , UPI.currentSlot = slot
-    , UPI.delegationMap = Activation.asDelegationMap
-      $ DI.isActivationState delegationState
-    , UPI.k           = configK config
-    , UPI.numGenKeys  = numGenKeys
+  delegationEnv = DI.Environment
+    { DI.protocolMagic = getProtocolMagicId protocolMagic
+    , DI.allowedDelegators = M.keysSet (DI.delegationMap delegationState)
+    , DI.k           = k
+    , DI.currentEpoch = currentEpoch
+    , DI.currentSlot = currentSlot
     }
 
-  numGenKeys :: Word8
-  numGenKeys =
-    case length (unGenesisWStakeholders $ configBootStakeholders config) of
-      n
-        | n > fromIntegral (maxBound :: Word8) -> panic
-          "updateBody: Too many genesis keys"
-        | otherwise -> fromIntegral n
+  updateEnv = UPI.Environment
+    { UPI.protocolMagic = getProtocolMagicId protocolMagic
+    , UPI.k           = k
+    , UPI.currentSlot = currentSlot
+    , UPI.numGenKeys  = numGenKeys
+    , UPI.delegationMap = DI.delegationMap delegationState
+    }
 
   updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
 
@@ -417,16 +446,23 @@ updateBody config bs b = do
     Endorsement (blockProtocolVersion b) (mkStakeholderId $ blockIssuer b)
 
 
+data HeaderEnvironment = HeaderEnvironment
+  { protocolMagic :: !ProtocolMagicId
+  , k             :: !BlockCount
+  , numGenKeys    :: !Word8
+  , delegationMap :: !(Map StakeholderId StakeholderId)
+  , lastSlot      :: !FlatSlotId
+  }
+
+
 -- | This is an implementation of the the BHEAD rule.
 updateHeader
   :: MonadError ChainValidationError m
-  => Genesis.Config
-  -> FlatSlotId
-  -> Map StakeholderId StakeholderId
+  => HeaderEnvironment
   -> UPI.State
   -> AHeader ByteString
   -> m UPI.State
-updateHeader config lastSlot delegationMap us h = do
+updateHeader env st h = do
   -- Validate the header size
   headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
 
@@ -434,28 +470,32 @@ updateHeader config lastSlot delegationMap us h = do
   length attributes == 0 `orThrowError` ChainValidationHeaderAttributesTooLarge
 
   -- Perform epoch transition
-  EpochState { updateState = updateState' } <- epochTransition
-    config
-    delegationMap
-    epochState
-    (headerSlot h)
-
-  pure updateState'
+  epochTransition epochEnv st (headerSlot h)
  where
-  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters us
+  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
 
   UnparsedFields attributes = attrRemain $ headerAttributes h
 
-  epochState    = EpochState
-    { currentEpoch = siEpoch
-      $ unflattenSlotId (configEpochSlots config) lastSlot
-    , updateState  = us
+  HeaderEnvironment { protocolMagic, k, numGenKeys, delegationMap, lastSlot }
+    = env
+
+  epochEnv = EpochEnvironment
+    { protocolMagic
+    , k
+    , numGenKeys
+    , delegationMap
+    , currentEpoch
     }
 
+  currentEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) lastSlot
 
-data EpochState = EpochState
-  { currentEpoch :: !EpochIndex
-  , updateState  :: !UPI.State
+
+data EpochEnvironment = EpochEnvironment
+  { protocolMagic :: !ProtocolMagicId
+  , k             :: !BlockCount
+  , numGenKeys    :: !Word8
+  , delegationMap :: !(Map StakeholderId StakeholderId)
+  , currentEpoch  :: !EpochIndex
   }
 
 
@@ -466,38 +506,28 @@ data EpochState = EpochState
 --   rules from the Byron chain specification.
 epochTransition
   :: MonadError ChainValidationError m
-  => Genesis.Config
-  -> Map StakeholderId StakeholderId
-  -> EpochState
+  => EpochEnvironment
+  -> UPI.State
   -> FlatSlotId
-  -> m EpochState
-epochTransition config delegationMap st slot = if nextEpoch > currentEpoch
-  then do
-    updateState' <-
-      UPI.registerEpoch updateEnv updateState nextEpoch
-        `wrapError` ChainValidationUpdateError
-    pure $ EpochState {currentEpoch = nextEpoch, updateState = updateState'}
+  -> m UPI.State
+epochTransition env st slot = if nextEpoch > currentEpoch
+  then
+    UPI.registerEpoch updateEnv st nextEpoch
+      `wrapError` ChainValidationUpdateError
   else pure st
  where
-  EpochState { currentEpoch, updateState } = st
+  EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
+    = env
 
-  nextEpoch = siEpoch $ unflattenSlotId (configEpochSlots config) slot
+  nextEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) slot
 
   updateEnv = UPI.Environment
-    { UPI.protocolMagic = configProtocolMagicId config
+    { UPI.protocolMagic = protocolMagic
+    , UPI.k           = k
     , UPI.currentSlot = slot
-    , UPI.delegationMap = delegationMap
-    , UPI.k           = configK config
     , UPI.numGenKeys  = numGenKeys
+    , UPI.delegationMap = delegationMap
     }
-
-  numGenKeys :: Word8
-  numGenKeys =
-    case length (unGenesisWStakeholders $ configBootStakeholders config) of
-      n
-        | n > fromIntegral (maxBound :: Word8) -> panic
-          "epochTransition: Too many genesis keys"
-        | otherwise -> fromIntegral n
 
 
 -- | This represents the CHAIN rule. It is intended more for use in tests than
@@ -513,25 +543,26 @@ updateBlock
   -> ABlock ByteString
   -> m ChainValidationState
 updateBlock config cvs b = do
-  let
-    delegationMap =
-      Activation.asDelegationMap . DI.isActivationState $ cvsDelegationState cvs
 
-  updateState' <- updateHeader
-    config
-    (cvsLastSlot cvs)
-    delegationMap
-    (cvsUpdateState cvs)
-    (blockHeader b)
+  -- Update the header
+  updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
 
   let
+    bodyEnv = BodyEnvironment
+      { protocolMagic = configProtocolMagic config
+      , k = configK config
+      , numGenKeys
+      , protocolParameters = UPI.adoptedProtocolParameters updateState'
+      , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
+      }
+
     bs = BodyState
       { utxo        = cvsUtxo cvs
       , updateState = updateState'
       , delegationState = cvsDelegationState cvs
       }
 
-  BodyState { utxo, updateState, delegationState } <- updateBody config bs b
+  BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
 
   pure $ cvs
     { cvsLastSlot     = blockSlot b
@@ -540,6 +571,26 @@ updateBlock config cvs b = do
     , cvsUpdateState  = updateState
     , cvsDelegationState = delegationState
     }
+ where
+  headerEnv = HeaderEnvironment
+    { protocolMagic = configProtocolMagicId config
+    , k          = configK config
+    , numGenKeys
+    , delegationMap
+    , lastSlot   = cvsLastSlot cvs
+    }
+
+  numGenKeys :: Word8
+  numGenKeys =
+    case length (unGenesisWStakeholders $ configBootStakeholders config) of
+      n
+        | n > fromIntegral (maxBound :: Word8) -> panic
+          "updateBody: Too many genesis keys"
+        | otherwise -> fromIntegral n
+
+  delegationMap =
+    Activation.asDelegationMap . DI.isActivationState $ cvsDelegationState cvs
+
 
 --------------------------------------------------------------------------------
 -- UTxO

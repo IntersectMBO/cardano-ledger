@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
   ( Environment (..)

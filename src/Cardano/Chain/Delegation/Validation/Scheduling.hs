@@ -1,11 +1,13 @@
 {-# LANGUAGE DeriveAnyClass   #-}
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Chain.Delegation.Validation.Scheduling
   (
   -- * Scheduling
-    State(..)
+    Environment(..)
+  , State(..)
   , Error(..)
   , ScheduledDelegation(..)
   , scheduleCertificate
@@ -14,34 +16,37 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import qualified Data.Map.Strict as M
 import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
-import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (BlockCount, StakeholderId, mkStakeholderId)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
-import Cardano.Chain.Genesis as Genesis
-  ( Config
-  , GenesisWStakeholders(..)
-  , configBootStakeholders
-  , configEpochSlots
-  , configProtocolMagicId
-  )
+import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
-  , EpochSlots(..)
   , addSlotNumber
-  , slotNumberEpoch
   )
 import Cardano.Crypto
-  (AProxyVerificationKey(..), pskOmega, validateProxyVerificationKey)
+  ( AProxyVerificationKey(..)
+  , ProtocolMagicId
+  , pskOmega
+  , validateProxyVerificationKey
+  )
 
 
 --------------------------------------------------------------------------------
 -- Scheduling
 --------------------------------------------------------------------------------
+
+data Environment = Environment
+  { protocolMagic     :: !ProtocolMagicId
+  , allowedDelegators :: !(Set StakeholderId)
+  , currentEpoch      :: !EpochIndex
+  , currentSlot       :: !FlatSlotId
+  , k                 :: !BlockCount
+  } deriving (Eq, Show, Generic, NFData)
 
 data State = State
   { ssScheduledDelegations :: !(Seq ScheduledDelegation)
@@ -79,35 +84,30 @@ data Error
 --   scheduling inference rule from the ledger specification.
 scheduleCertificate
   :: MonadError Error m
-  => Genesis.Config
-  -> FlatSlotId
-  -> EpochSlots
+  => Environment
   -> State
   -> ACertificate ByteString
   -> m State
-scheduleCertificate config slot d ss cert = do
+scheduleCertificate env ss cert = do
 
   -- Check that the delegator is a genesis key
-  (delegator `M.member` genesisStakeholders)
+  (delegator `Set.member` allowedDelegators)
     `orThrowError` NonGenesisDelegator delegator
 
   -- Check that the delegation epoch is greater than or equal to the current one
-  (epoch <= delegationEpoch)
-    `orThrowError` PastEpoch epoch delegationEpoch
+  (currentEpoch <= delegationEpoch)
+    `orThrowError` PastEpoch currentEpoch delegationEpoch
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
   ((delegationEpoch, delegator) `Set.notMember` ssKeyEpochDelegations ss)
-    `orThrowError` MultipleDelegationsForEpoch
-                    delegationEpoch
-                    delegator
+    `orThrowError` MultipleDelegationsForEpoch delegationEpoch delegator
 
   -- Check that the delegator hasn't issued a certificate in this slot
   isNothing (Seq.findIndexL delegatesThisSlot (ssScheduledDelegations ss))
-    `orThrowError` MultipleDelegationsForSlot slot delegator
+    `orThrowError` MultipleDelegationsForSlot currentSlot delegator
 
   -- Check that the delegation certificate is valid
-  validateProxyVerificationKey (configProtocolMagicId config) cert
-    `wrapError` InvalidCertificate
+  validateProxyVerificationKey protocolMagic cert `wrapError` InvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair
   pure $ State
@@ -117,16 +117,15 @@ scheduleCertificate config slot d ss cert = do
       (ssKeyEpochDelegations ss)
     }
  where
-  delegator = mkStakeholderId $ pskIssuerPk cert
-  delegate  = mkStakeholderId $ pskDelegatePk cert
+  Environment { protocolMagic, allowedDelegators, currentEpoch, currentSlot, k }
+    = env
 
-  genesisStakeholders =
-    unGenesisWStakeholders $ configBootStakeholders config
+  delegator       = mkStakeholderId $ pskIssuerPk cert
+  delegate        = mkStakeholderId $ pskDelegatePk cert
 
-  epoch           = slotNumberEpoch (configEpochSlots config) slot
   delegationEpoch = pskOmega cert
 
-  activationSlot  = addSlotNumber d slot
+  activationSlot  = addSlotNumber (kSlotSecurityParam k) currentSlot
 
   delegatesThisSlot sd =
     sdSlot sd == activationSlot && sdDelegator sd == delegator

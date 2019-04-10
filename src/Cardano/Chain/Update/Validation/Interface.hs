@@ -71,17 +71,17 @@ import Cardano.Crypto (ProtocolMagicId)
 
 data Environment = Environment
   { protocolMagic :: !ProtocolMagicId
-  , currentSlot   :: !FlatSlotId
-  , delegationMap :: !(Map StakeholderId StakeholderId)
   , k             :: !BlockCount
   -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
   -- of our protocol parameters, so it seems that we need to pass it in the
   -- environment. However we need to double-check this with others.
+  , currentSlot   :: !FlatSlotId
   , numGenKeys    :: !Word8
   -- ^ Number of genesis keys. This is used to calculate the proportion of
   -- genesis keys that need to endorse a new protocol version for it to be
   -- considered for adoption. See
   -- @Cardano.Chain.Update.Validation.Endorsement.Environment@.
+  , delegationMap :: !(Map StakeholderId StakeholderId)
   }
 
 -- | Update interface state.
@@ -332,8 +332,8 @@ registerEndorsement env st endorsement = do
     Environment
       { k
       , currentSlot
-      , delegationMap
       , numGenKeys
+      , delegationMap
       } = env
 
     State
