@@ -345,176 +345,6 @@ cases where there is or is not an update proposal contained within the block.
 \end{figure}
 
 \clearpage
-
-\section{Epoch transitions}
-
-\newcommand{\Epoch}{\type{Epoch}}
-
-\newcommand{\ETState}{\type{ETState}}
-\newcommand{\ETEnv}{\type{ETEnv}}
-
-\newcommand{\sepochname}{sEpoch}
-\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
-
-During each block transition, we must determine whether that block sits on an
-epoch boundary and, if so, carry out various actions which are done on that
-boundary. In the BFT era, the only computation carried out at the epoch boundary
-is the update of protocol versions.
-
-We rely on a function $\fun{\sepochname}$, whose type is given in
-\cref{fig:defs:epoch}, to determine the epoch corresponding to a given slot.
-%
-We do not provide an implementation for such function in this specification,
-but in practice a possible way of implementing such function is to rely on map
-from the epochs to their corresponding length (given in number of slots they
-contain). Such a map would also be required by the database layer to find the
-requisite epoch file to look up a given block. We envision that an
-implementation may of course choose a more compact representation for this
-partial function that only records the changes in epoch length, rather than
-storing a length for each epoch.
-
-It is also worth noticing that in the Byron era, the number of slots per-epoch
-is fixed to $10 \cdot k$, where $k$ is the chain stability parameter.
-
-Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
-updates the update state to the correct version.
-
-\begin{figure}[ht]
-  \emph{Abstract functions}
-  %
-  \begin{equation*}
-    \begin{array}{rlr}
-      \fun{\sepochname}
-      & \in \Slot \totalf \Epoch
-      & \text{epoch containing this slot} \\
-    \end{array}
-  \end{equation*}
-
-  \caption{Epoch transition types and functions}
-  \label{fig:defs:epoch}
-\end{figure}
-
-\begin{figure}[ht]
-  \emph{Epoch transition environments}
-  \begin{align*}
-    & \ETEnv
-      = \left(
-      \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-      \end{array}\right)
-  \end{align*}
-
-  \emph{Epoch transition states}
-  \begin{equation*}
-    \ETState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{e_c} & \Epoch & \text{Current epoch} \\
-        \var{us} & \UPIState & \text{Update interface state}
-      \end{array}
-    \right)
-  \end{equation*}
-
-  \emph{Epoch transition transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{epoch}{\_} \var{\_} \subseteq
-    \powerset ((\VKey \mapsto \VKeyGen) \times \ETState \times \Slot \times \ETState)
-  \end{equation*}
-  \caption{Epoch transition transition-system types}
-  \label{fig:ts-types:epoch}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{equation*}
-    \inference
-    {
-      \var{e_c} \geq \sepoch{s}
-    }
-    {
-      {\left(
-        \begin{array}{l}
-          k\\
-          \var{ngk}\\
-          \var{dms}
-        \end{array}
-      \right)}
-      \vdash
-      {
-        \left(
-          {\begin{array}{c}
-             \var{e_c} \\
-             \var{us}
-           \end{array}
-         }
-       \right)
-     }
-     \trans{epoch}{s}
-     {
-       \left(
-         {\begin{array}{c}
-            \var{e_c} \\
-            \var{us}
-          \end{array}
-        }
-      \right)
-    }
-  }
-\end{equation*}
-\vspace{20pt}
-\begin{equation*}
-  \inference
-  {
-    \var{e_n} \leteq \sepoch{s}
-    & \var{e_c} < \var{e_n}
-    &
-    {\left(
-        \begin{array}{l}
-          k\\
-          s\\
-          \var{ngk}\\
-          \var{dms}
-        \end{array}
-      \right)
-    }
-    \vdash \var{us} \trans{upiec}{} \var{us'}
-  }
-  {
-    {
-      \begin{array}{l}
-        k\\
-        \var{ngk}\\
-        \var{dms}
-      \end{array}
-    }
-    \vdash
-    {
-      \left(
-        {\begin{array}{c}
-           \var{e_c} \\
-           \var{us}
-         \end{array}
-       }
-     \right)
-   }
-   \trans{epoch}{s}
-   {
-     \left(
-       {\begin{array}{c}
-          \var{e_n} \\
-          \var{us'}
-        \end{array}
-      }
-    \right)
-  }
-}
-\end{equation*}
-\caption{Epoch transition rules}
-\label{fig:rules:epoch}
-\end{figure}
-
-\clearpage
 \section{Permissive BFT}
 
 The majority of this specification is concerned with the processing of the
@@ -764,6 +594,173 @@ During PBFT processing of the block header, we do the following:
 
 \clearpage
 
+\section{Epoch transitions}
+
+\newcommand{\Epoch}{\type{Epoch}}
+
+\newcommand{\ETState}{\type{ETState}}
+\newcommand{\ETEnv}{\type{ETEnv}}
+
+\newcommand{\sepochname}{sEpoch}
+\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
+
+During each block transition, we must determine whether that block sits on an
+epoch boundary and, if so, carry out various actions which are done on that
+boundary. In the BFT era, the only computation carried out at the epoch boundary
+is the update of protocol versions.
+
+We rely on a function $\fun{\sepochname}$, whose type is given in
+\cref{fig:defs:epoch}, to determine the epoch corresponding to a given slot.
+%
+We do not provide an implementation for such function in this specification,
+but in practice a possible way of implementing such function is to rely on map
+from the epochs to their corresponding length (given in number of slots they
+contain). Such a map would also be required by the database layer to find the
+requisite epoch file to look up a given block. We envision that an
+implementation may of course choose a more compact representation for this
+partial function that only records the changes in epoch length, rather than
+storing a length for each epoch.
+
+It is also worth noticing that in the Byron era, the number of slots per-epoch
+is fixed to $10 \cdot k$, where $k$ is the chain stability parameter.
+
+Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
+updates the update state to the correct version.
+
+\begin{figure}[ht]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{rlr}
+      \fun{\sepochname}
+      & \in \Slot \totalf \Epoch
+      & \text{epoch containing this slot} \\
+    \end{array}
+  \end{equation*}
+
+  \caption{Epoch transition types and functions}
+  \label{fig:defs:epoch}
+\end{figure}
+
+\begin{figure}[ht]
+  \emph{Epoch transition environments}
+  \begin{align*}
+    & \ETEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{e_c} & \Epoch & \text{Current epoch}
+      \end{array}\right)
+  \end{align*}
+
+  \emph{Epoch transition states}
+  \begin{equation*}
+    \ETState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{us} & \UPIState & \text{update interface state}
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{Epoch transition transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{epoch}{\_} \var{\_} \subseteq
+    \powerset ((\VKey \mapsto \VKeyGen) \times \ETState \times \Slot \times \ETState)
+  \end{equation*}
+  \caption{Epoch transition transition-system types}
+  \label{fig:ts-types:epoch}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \inference
+    {
+      \var{e_c} \geq \sepoch{s}
+    }
+    {
+      {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \var{dms}\\
+          \var{e_c}
+        \end{array}
+      \right)}
+      \vdash
+      {
+        \left(
+          {\begin{array}{c}
+             \var{us}
+           \end{array}
+         }
+       \right)
+     }
+     \trans{epoch}{s}
+     {
+       \left(
+         {\begin{array}{c}
+            \var{us}
+          \end{array}
+        }
+      \right)
+    }
+  }
+\end{equation*}
+\vspace{20pt}
+\begin{equation*}
+  \inference
+  {
+    \var{e_c} < \sepoch{s}
+    &
+    {\left(
+        \begin{array}{l}
+          k\\
+          s\\
+          \var{ngk}\\
+          \var{dms}
+        \end{array}
+      \right)
+    }
+    \vdash \var{us} \trans{upiec}{} \var{us'}
+  }
+  {
+    {
+      \begin{array}{l}
+        k\\
+        \var{ngk}\\
+        \var{dms}\\
+        \var{e_c}
+      \end{array}
+    }
+    \vdash
+    {
+      \left(
+        {\begin{array}{c}
+           \var{us}
+         \end{array}
+       }
+     \right)
+   }
+   \trans{epoch}{s}
+   {
+     \left(
+       {\begin{array}{c}
+          \var{us'}
+        \end{array}
+      }
+    \right)
+  }
+}
+\end{equation*}
+\caption{Epoch transition rules}
+\label{fig:rules:epoch}
+\end{figure}
+
+\clearpage
+
 \section{Block processing}
 \label{sec:block-processing}
 
@@ -884,6 +881,7 @@ header processing we verify the following things:
         k & \mathbb{N} & \text{chain stability parameter}\\
         \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{s_{last}} & \Slot & \text{slot of the last seen block}
       \end{array}\right)
   \end{align*}
 
@@ -913,20 +911,19 @@ header processing we verify the following things:
         \begin{array}{l}
           k\\
           \var{ngk}\\
-          \var{dms}
+          \var{dms}\\
+          \sepoch{s_{last}}\\
         \end{array}
       \right)}
       \vdash
       {\left(
           \begin{array}{l}
-            \sepoch{s}\\
             us
           \end{array}
         \right)}
       \trans{epoch}{\bslot{b}}
       {\left(
           \begin{array}{l}
-            \var{e_n} \\
             us'
           \end{array}
         \right)}
@@ -938,7 +935,8 @@ header processing we verify the following things:
         \begin{array}{l}
           k\\
           \var{ngk}\\
-          \var{dms}
+          \var{dms}\\
+          \var{s_{last}}
         \end{array}
         \right)}
       \vdash
@@ -1233,7 +1231,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
    \right)
  }
 \end{equation*}
-\vspace{20pt}
+\vspace{30pt}
 \begin{equation*}
   \inference
   {
@@ -1244,7 +1242,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \begin{array}{l}
           k\\
           \var{ngk}\\
-          \fun{dms}~\var{ds}
+          \fun{dms}~\var{ds}\\
+          \var{s_{last}}
         \end{array}
         \right)}
         &
