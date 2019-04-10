@@ -77,6 +77,7 @@
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.containers)
+            (hsPkgs.cryptonite)
             (hsPkgs.cs-blockchain)
             (hsPkgs.cs-ledger)
             (hsPkgs.filepath)
