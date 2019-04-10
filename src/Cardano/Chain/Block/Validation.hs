@@ -12,8 +12,7 @@ module Cardano.Chain.Block.Validation
   , updateChainBoundary
   , updateHeader
   , updateBlock
-  , ChainValidationState
-  , cvsPreviousHash
+  , ChainValidationState(..)
   , initialChainValidationState
   , ChainValidationError
 
@@ -393,4 +392,3 @@ scanUTxOfromGenesis pm utxo sizeMVar fs = runResourceT . runExceptT $ S.foldM_
 calcUTxOSize :: ABlock ByteString -> UTxO -> (HeapSize UTxO, UTxOSize, SlotId)
 calcUTxOSize blk utxo =
   (HeapSize . heapWords $ unUTxO utxo, UTxOSize . M.size $ unUTxO utxo, unflattenSlotId mainnetEpochSlots $ blockSlot blk)
-
