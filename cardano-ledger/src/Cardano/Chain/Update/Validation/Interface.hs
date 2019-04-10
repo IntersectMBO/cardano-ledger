@@ -47,7 +47,7 @@ import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
-  , ppUpdateImplicit
+  , ppUpdateProposalTTL
   , upAdptThd
   )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(..))
@@ -357,7 +357,7 @@ registerEndorsement env st endorsement = do
         candidateProtocolUpdates
         registeredEndorsements
 
-    u = ppUpdateImplicit adoptedProtocolParameters
+    u = ppUpdateProposalTTL adoptedProtocolParameters
 
 -- | Register an epoch. Whenever an epoch number is seen on a block this epoch
 -- number should be passed to this function so that on epoch change the

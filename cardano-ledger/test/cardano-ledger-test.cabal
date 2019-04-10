@@ -67,6 +67,7 @@ library
                      , filepath
                      , formatting
                      , hedgehog
+                     , mtl
                      , optparse-applicative
                      , tasty
                      , text

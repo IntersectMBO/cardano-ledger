@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Cardano.Chain.Genesis.Spec
   ( GenesisSpec(..)
@@ -8,7 +9,6 @@ module Cardano.Chain.Genesis.Spec
 where
 
 import Cardano.Prelude
-import Prelude (String)
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
@@ -51,7 +51,7 @@ mkGenesisSpec
   -> BlockCount
   -> ProtocolMagic
   -> GenesisInitializer
-  -> Either String GenesisSpec
+  -> Either Text GenesisSpec
 mkGenesisSpec avvmDistr delega bvd k pm specType = do
   let avvmKeys = M.keys $ unGenesisAvvmBalances avvmDistr
   (length (nub avvmKeys) == length avvmKeys)

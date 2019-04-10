@@ -22,6 +22,7 @@
 
 module Cardano.Chain.Common.LovelacePortion
   ( LovelacePortion(..)
+  , LovelacePortionError
   , mkLovelacePortion
   , mkKnownLovelacePortion
   , lovelacePortionDenominator
@@ -102,6 +103,7 @@ instance Bounded LovelacePortion where
 data LovelacePortionError
   = LovelacePortionDoubleOutOfRange Double
   | LovelacePortionTooLarge Word64
+  deriving Show
 
 instance B.Buildable LovelacePortionError where
   build = \case

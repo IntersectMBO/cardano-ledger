@@ -12,7 +12,6 @@
             "scriptVersion": 999,
             "maxBlockSize": 999,
             "heavyDelThd": 9.9e-14,
-            "updateImplicit": 99,
             "maxHeaderSize": 999,
             "updateVoteThd": 9.9e-14,
             "slotDuration": 9.99e-4,
@@ -23,7 +22,8 @@
                 "initThd": 9.9e-14
             },
             "mpcThd": 9.9e-14,
-            "unlockStakeEpoch": 99
+            "unlockStakeEpoch": 99,
+            "updateProposalTTL": 99
         },
         "k": {
             "unBlockCount": 37
