@@ -3,7 +3,7 @@
 
 Addresses are described in section 4.2 of the delegation design document \cite{delegation_design}.
 The types needed for the addresses are defined in Figure~\ref{fig:defs:addresses}.
-There are three types of UTxO addresses:
+There are four types of UTxO addresses:
 \begin{itemize}
   \item Base addresses, $\AddrB$,
         containing the hash of a payment key and the hash of a staking key,
@@ -11,6 +11,8 @@ There are three types of UTxO addresses:
         containing the hash of a payment key and a pointer to a stake key registration certificate,
   \item Enterprise addresses, $\AddrE$,
         containing only the hash of a payment key (and which have no staking rights).
+  \item Bootstrap addresses, $\AddrBS$,
+        corresponding to the addresses in Byron, behaving exactly like enterprise addresses.
 \end{itemize}
 Together, these three address types make up the $\Addr$ type, which will be used
 in transaction outputs in Section~\ref{sec:utxo}.
@@ -62,8 +64,17 @@ Section~\ref{sec:utxo} and follows \cite{chimeric}.
       & \text{enterprise address}
       \\
       \var{addr}
+      & \AddrBS
+      & \HashKey_{pay}
+      & \text{bootstrap address}
+      \\
+      \var{addr}
       & \Addr
-      & \AddrB \uniondistinct \AddrP \uniondistinct \AddrE
+      & \begin{array}{l@{~\uniondistinct}l}
+          \AddrB & \AddrP \uniondistinct \AddrE
+          \\
+                 & \AddrBS
+        \end{array}
       & \text{output address}
       \\
       \var{acct}
