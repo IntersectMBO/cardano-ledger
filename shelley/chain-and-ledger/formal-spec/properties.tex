@@ -411,9 +411,9 @@ they both split the reward between the pool leader and the members.
   \item $obl \leq deposits$
   \item $\forall \rho \in [0,1]: expansion = \floor*{\rho\cdot reserves} \leq
     reserves$
-  \item $\forall \tau \in [0,1]: newTreasury = \floor*{\tau\cdot totalPool} \leq
-    totalPool$
-  \item $totalPool - newTreasury - paidRewards \geq 0$
+  \item $\forall \tau \in [0,1]: newTreasury = \floor*{\tau\cdot rewardPot} \leq
+    rewardPot$
+  \item $rewardPot - newTreasury - paidRewards \geq 0$
   \end{itemize}
 
   where $paidRewards$ is the sum of rewards paid to the stake pool members.
