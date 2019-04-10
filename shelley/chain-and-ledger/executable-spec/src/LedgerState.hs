@@ -29,15 +29,12 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
-  , rewardPot
   , PState(..)
-  , avgs
   , cCounters
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
   , StakeShare(..)
-  , Avgs(..)
   , Validity(..)
   , mkStakeShare
   , emptyAccount
@@ -94,13 +91,11 @@ module LedgerState
   , decayedTx
   , poolRefunds
   -- epoch boundary
-  , movingAvg
   , poolRewards
   , leaderRew
   , memberRew
   , rewardOnePool
   , reward
-  , updateAvgs
   , stakeDistr
   , poolDistr
   , applyRUpd
@@ -136,7 +131,6 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          poolPubKey, poolSpec, poolPledge,
                                          RewardAcnt(..), poolRAcnt, poolOwners)
 
-import           NonIntegral ((***))
 import           BaseTypes
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -195,11 +189,6 @@ instance Monoid Validity where
 
 type RewardAccounts = Map.Map RewardAcnt Coin
 
--- | Performance moving averages
-newtype Avgs =
-  Avgs (Map.Map HashKey StakeShare)
-        deriving (Show, Eq)
-
 -- | StakeShare type
 newtype StakeShare =
   StakeShare Rational
@@ -230,8 +219,6 @@ data PState = PState
     , _pParams     :: Map.Map HashKey PoolParams
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map.Map HashKey Epoch
-      -- |Moving average for key in epoch.
-    , _avgs        :: Avgs
       -- | Operational Certificate Counters.
     , _cCounters   :: Map.Map HashKey Natural
     } deriving (Show, Eq)
@@ -247,18 +234,16 @@ data DWState =
 data RewardUpdate = RewardUpdate
   { deltaT :: Coin
   , deltaR :: Coin
-  , rp     :: Coin
   , rs     :: Map.Map RewardAcnt Coin
   , deltaF :: Coin
   } deriving (Show, Eq)
 
 emptyRewardUpdate :: RewardUpdate
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) (Coin 0) Map.empty (Coin 0)
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
 
 data AccountState = AccountState
   { _treasury  :: Coin
   , _reserves  :: Coin
-  , _rewardPot :: Coin
   } deriving (Show, Eq)
 
 data EpochState = EpochState AccountState PParams SnapShots LedgerState
@@ -276,9 +261,8 @@ emptyLedgerState = LedgerState
                    0
                    (Slot 0)
 
-
 emptyAccount :: AccountState
-emptyAccount = AccountState (Coin 0) (Coin 0) (Coin 0)
+emptyAccount = AccountState (Coin 0) (Coin 0)
 
 emptyDelegation :: DWState
 emptyDelegation =
@@ -289,7 +273,7 @@ emptyDState = DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty
 
 emptyPState :: PState
 emptyPState =
-  PState (StakePools Map.empty) Map.empty Map.empty (Avgs Map.empty) Map.empty
+  PState (StakePools Map.empty) Map.empty Map.empty Map.empty
 
 data UTxOState =
     UTxOState
@@ -704,30 +688,19 @@ delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith (+) delegatedOutpu
 -- epoch boundary calculations --
 ---------------------------------
 
--- | Calulcate moving average
-movingAvg :: PParams -> HashKey -> Natural -> Rational -> Avgs -> Rational
-movingAvg pc hk n expectedSlots (Avgs averages) =
-  let fraction = fromIntegral n / max expectedSlots 1
-   in case Map.lookup hk averages of
-        Nothing -> fraction
-        Just (StakeShare prev) -> alpha * fraction + (1 - alpha) * prev
-          where alpha = intervalValue $ pc ^. movingAvgWeight
-
 -- | Calculate pool reward
 poolRewards ::
-     PParams
-  -> HashKey
+     HashKey
+  -> UnitInterval
   -> Natural
-  -> Rational
-  -> Avgs
+  -> Natural
   -> Coin
   -> Coin
-poolRewards pc hk n expectedSlots averages (Coin maxP) =
-  floor $ e * fromIntegral maxP
+poolRewards hk sigma blocksN blocksTotal (Coin maxP) =
+  floor $ p * fromIntegral maxP
   where
-    avg = pc ^. movingAvgExp
-    gamma = movingAvg pc hk n expectedSlots averages
-    e = approxRational (fromRational avg *** fromRational gamma) fpEpsilon
+    p = beta / (intervalValue sigma)
+    beta = fromIntegral blocksN / (fromIntegral $ max 1 blocksTotal)
 
 -- | Calculate pool leader reward
 leaderRew :: Coin -> PoolParams -> StakeShare -> StakeShare -> Coin
@@ -753,15 +726,15 @@ rewardOnePool ::
      PParams
   -> Coin
   -> Natural
+  -> Natural
   -> HashKey
   -> PoolParams
   -> Stake
-  -> Avgs
   -> Coin
   -> Set.Set RewardAcnt
-  -> (Map.Map RewardAcnt Coin, Coin)
-rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
-  (rewards', unrealized)
+  -> Map.Map RewardAcnt Coin
+rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
+  rewards'
   where
     Coin pstake = Map.foldl (+) (Coin 0) stake
     Coin ostake = stake Map.! poolHK
@@ -773,7 +746,8 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    poolR = poolRewards pp poolHK n expectedSlots averages maxP
+    Just s' = mkUnitInterval sigma
+    poolR = poolRewards poolHK s' blocksN blocksTotal maxP
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
@@ -783,7 +757,6 @@ rewardOnePool pp r n poolHK pool (Stake stake) averages (Coin total) addrsRew =
     iReward  = leaderRew poolR pool (StakeShare $ fromIntegral hkStake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
     rewards' = Map.restrictKeys potentialRewards addrsRew
-    unrealized = r - Map.foldl (+) (Coin 0) rewards'
 
 reward ::
      PParams
@@ -791,12 +764,11 @@ reward ::
   -> Coin
   -> Set.Set RewardAcnt
   -> Map.Map HashKey PoolParams
-  -> Avgs
   -> Stake
   -> Map.Map HashKey HashKey
-  -> (Map.Map RewardAcnt Coin, Coin)
-reward pp (BlocksMade b) r addrsRew poolParams avgs' stake@(Stake stake') delegs =
-  (rewards', unrealized)
+  -> Map.Map RewardAcnt Coin
+reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
+  rewards'
   where
     total = Map.foldl (+) (Coin 0) stake'
     pdata =
@@ -809,37 +781,18 @@ reward pp (BlocksMade b) r addrsRew poolParams avgs' stake@(Stake stake') delegs
       ]
     results =
       [ ( hk
-        , rewardOnePool pp r n hk pool actgr avgs' total addrsRew)
+        , rewardOnePool pp r n totalBlocks hk pool actgr total addrsRew)
       | (hk, (pool, n, actgr)) <- pdata
       ]
-    unrealized = foldl (\s (_, (_, u)) -> s + u) (Coin 0) results
-    rewards' = foldl (\m (_, (r', _)) -> Map.union m r') Map.empty results
-
--- | Update moving averages
-updateAvgs ::
-     PParams
-  -> Avgs
-  -> BlocksMade
-  -> Map.Map HashKey Stake
-  -> Avgs
-updateAvgs pp avgs' (BlocksMade blocks) pooledStake =
-    Avgs $ Map.mapWithKey
-             (\hk n -> StakeShare $ movingAvg pp hk n (expected hk) avgs') blocks
-    where
-      (Coin tot)  = Map.foldl (+) (Coin 0) $ Map.map sumStake pooledStake
-      sumStake (Stake s) = Map.foldl (+) (Coin 0) s
-      getCoinVal (Coin c) = fromIntegral c :: Integer
-      expected hk =
-          case Map.lookup hk pooledStake of
-            Just st -> getCoinVal (sumStake st) * fromIntegral slotsPerEpoch % fromIntegral tot
-            Nothing -> 0
+    rewards' = foldl (\m (_, r') -> Map.union m r') Map.empty results
+    totalBlocks = Map.foldr (+) 0 b
 
 -- | Stake distribution
 stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' = ds
-      PState (StakePools stpools) _ _ _ _             = ps
+      PState (StakePools stpools) _ _ _               = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
       Stake baseStake'   = baseStake outs
@@ -871,21 +824,24 @@ applyRUpd ru (EpochState as pp ss ls) = es'
              , _delegationState = DWState
                   (dstate' { _rewards = rewards'})
                   (_pstate $ _delegationState ls)}
-        es' = EpochState (AccountState treasury' reserves' (rp ru)) pp ss ls'
+        es' = EpochState (AccountState treasury' reserves')  pp ss ls'
 
 -- | Create a reward update
 createRUpd :: BlocksMade -> EpochState -> RewardUpdate
-createRUpd _ (EpochState acnt pp ss ls) = -- TODO where should `b` be used?
-  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') (Coin rp') rs' (-(_feeSS ss))
+createRUpd (BlocksMade b) (EpochState acnt pp ss ls) =
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
   where Coin reserves' = _reserves acnt
-        deltaR' = floor $ (intervalValue $ _rho pp) * fromIntegral reserves'
-        Coin totalPot = (_feeSS ss) + (_rewardPot acnt) + deltaR'
+        deltaR' =
+          floor $ min 1 eta * (intervalValue $ _rho pp) * fromIntegral reserves'
+        Coin totalPot = (_feeSS ss) + deltaR'
         deltaT1 = floor $ (intervalValue $ _tau pp) * fromIntegral totalPot
         r@(Coin r') = Coin $ totalPot - deltaT1
         rewards' = _rewards $ _dstate $ _delegationState ls
-        avgs' = _avgs $ _pstate $ _delegationState ls
         (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
-        (rs', Coin deltaT2) = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' avgs' stake' delegs'
+        deltaT2 = r' - c'
+        rs' = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' stake' delegs'
         Coin c' = Map.foldr (+) (Coin 0) rs'
-        rp' = (r' - deltaT2) - c'
+        blocksMade = fromIntegral $ Map.foldr (+) 0 b :: Integer
+        expectedBlocks = (intervalValue $ _activeSlotCoeff pp) * fromIntegral slotsPerEpoch
+        eta = (fromIntegral blocksMade) / expectedBlocks
