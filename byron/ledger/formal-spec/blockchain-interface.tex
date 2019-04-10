@@ -17,9 +17,10 @@
     \left(
       \begin{array}{r@{~\in~}lr}
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
-        \var{e} & \Epoch & \text{epoch}\\
-        \var{s} & \Slot & \text{slot}\\
-        \var{pps} & \PPMMap & \text{Protocol parameters}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{e} & \Epoch & \text{current epoch}\\
+        \var{s} & \Slot & \text{current slot}\\
+        \var{pps} & \PPMMap & \text{protocol parameters}
       \end{array}
     \right)
   \end{equation*}
@@ -194,7 +195,7 @@ labels have the following meaning:
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{\_} \_ &
-      \powerset (\UPIEnv \times \UPIState \times \Epoch \times \UPIState)
+      \powerset (\UPIEnv \times \UPIState \times \UPIState)
     \end{array}
   \end{equation*}
   \caption{Update-proposals interface transition-system types}
