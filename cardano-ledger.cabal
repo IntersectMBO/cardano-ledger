@@ -149,31 +149,6 @@ library
   if (!flag(development))
     ghc-options:         -Werror
 
-executable cardano-ledger-validation-exe
-  main-is:             Main.hs
-  other-modules:
-                       Features.Blockchain
-  hs-source-dirs:      app
-
-  build-depends:       base >=4.11 && <5
-                     , containers
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
-                     , cardano-mainnet-mirror
-                     , cardano-prelude
-                     , cardano-shell
-                     , formatting
-                     , iohk-monitoring
-
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -fno-warn-all-missed-specialisations
-                       -fno-warn-missing-import-lists
-                       -fno-warn-safe
-                       -fno-warn-unsafe
-
 test-suite cardano-ledger-test
   hs-source-dirs:      test
   main-is:             test.hs

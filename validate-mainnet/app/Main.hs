@@ -110,7 +110,7 @@ utxoSizeScanner logTrace bcl ll =
           threadDelay 1e6
           utxoSizeAfterBlockLoop lgTrace
   in do
-    logNotice logTrace "Begin validating epoch files..."
+    logNotice logTrace "Begin logging UTxO size..."
     utxoSizeAfterBlockLoop logTrace
 
 

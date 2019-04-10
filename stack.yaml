@@ -5,6 +5,7 @@ packages:
   - test
   - crypto
   - crypto/test
+  - validate-mainnet
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
