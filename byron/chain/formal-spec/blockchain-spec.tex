@@ -273,9 +273,9 @@ cases where there is or is not an update proposal contained within the block.
     \Bupisig =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{mprop} & \UProp^{?} & \text{Possible update proposal}\\
-        \var{votes} & \seqof{\Vote} & \text{Votes for update proposals}\\
-        \var{end} & (\VKey \times \ProtVer) & \text{Protocol version endorsment}
+        \var{mprop} & \UProp^{?} & \text{possible update proposal}\\
+        \var{votes} & \seqof{\Vote} & \text{votes for update proposals}\\
+        \var{end} & (\VKey \times \ProtVer) & \text{protocol version endorsment}
       \end{array}
     \right)
   \end{equation*}
@@ -354,18 +354,21 @@ cases where there is or is not an update proposal contained within the block.
 \newcommand{\ETEnv}{\type{ETEnv}}
 
 \newcommand{\sepochname}{sEpoch}
-\newcommand{\sepoch}[2]{\fun{\sepochname}\ #1\ #2}
+\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
 
 During each block transition, we must determine whether that block sits on an
 epoch boundary and, if so, carry out various actions which are done on that
 boundary. In the BFT era, the only computation carried out at the epoch boundary
 is the update of protocol versions.
 
-In figure~\ref{fig:defs:epoch} we give the definition of the $\sepoch$
-function to determine the epoch corresponding to a given slot. This relies on
-keeping a map of the length of each epoch. Such a map is also required by the
-database layer to find the requisite epoch file to look up a given block, and is
-hence maintained by the ledger layer for this purpose. We envision that an
+We rely on a function $\fun{\sepochname}$, whose type is given in
+\cref{fig:defs:epoch}, to determine the epoch corresponding to a given slot.
+%
+We do not provide an implementation for such function in this specification,
+but in practice a possible way of implementing such function is to rely on map
+from the epochs to their corresponding length (given in number of slots they
+contain). Such a map would also be required by the database layer to find the
+requisite epoch file to look up a given block. We envision that an
 implementation may of course choose a more compact representation for this
 partial function that only records the changes in epoch length, rather than
 storing a length for each epoch.
@@ -377,21 +380,13 @@ Figure \ref{fig:rules:epoch} determines when an epoch change has occurred and
 updates the update state to the correct version.
 
 \begin{figure}[ht]
-  \emph{Derived functions}
+  \emph{Abstract functions}
   %
   \begin{equation*}
     \begin{array}{rlr}
-      \fun{\sepochname} & \in \Slot \totalf (\Epoch \partialf \SlotCount) \totalf \Epoch & \text{Epoch containing this slot} \\
-    \end{array}
-  \end{equation*}
-  \begin{equation*}
-      \fun{\sepochname}~\var{slot}~\fun{elens} = \min  \left\{ e \middle| slot < \sum_{i \leq e} \fun{elens}~i \right\}
-  \end{equation*}
-
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \pp{slotsPerEpoch} & \SlotCount & \text{Number of slots in the current epoch} \\
+      \fun{\sepochname}
+      & \in \Slot \totalf \Epoch
+      & \text{epoch containing this slot} \\
     \end{array}
   \end{equation*}
 
@@ -400,13 +395,22 @@ updates the update state to the correct version.
 \end{figure}
 
 \begin{figure}[ht]
+  \emph{Epoch transition environments}
+  \begin{align*}
+    & \ETEnv
+      = \left(
+      \begin{array}{r@{~\in~}lr}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+      \end{array}\right)
+  \end{align*}
 
   \emph{Epoch transition states}
   \begin{equation*}
     \ETState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
         \var{e_c} & \Epoch & \text{Current epoch} \\
         \var{us} & \UPIState & \text{Update interface state}
       \end{array}
@@ -426,13 +430,20 @@ updates the update state to the correct version.
   \begin{equation*}
     \inference
     {
-      \var{e_c} \geq \sepoch{s}{elens}
+      \var{e_c} \geq \sepoch{s}
     }
-    {\var{dms} \vdash
+    {
+      {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
       {
         \left(
           {\begin{array}{c}
-             \var{elens} \\
              \var{e_c} \\
              \var{us}
            \end{array}
@@ -443,7 +454,6 @@ updates the update state to the correct version.
      {
        \left(
          {\begin{array}{c}
-            \var{elens} \\
             \var{e_c} \\
             \var{us}
           \end{array}
@@ -456,36 +466,42 @@ updates the update state to the correct version.
 \begin{equation*}
   \inference
   {
-    \pp{slotsPerEpoch} \mapsto \var{es} \in \fun{pps}~\var{us} & \var{e_n} \leteq \sepoch{s}{elens} \\
-    \var{e_c} < \var{e_n}
-    \\
+    \var{e_n} \leteq \sepoch{s}
+    & \var{e_c} < \var{e_n}
+    &
     {\left(
         \begin{array}{l}
-          \var{\var{e_c}} \\
-          \var{s} \\
+          k\\
+          s\\
+          \var{ngk}\\
           \var{dms}
         \end{array}
       \right)
     }
-    \vdash \var{us} \trans{upiec}{\var{e_n}} \var{us'}
+    \vdash \var{us} \trans{upiec}{} \var{us'}
   }
   {
-    \var{dms} \vdash
+    {
+      \begin{array}{l}
+        k\\
+        \var{ngk}\\
+        \var{dms}
+      \end{array}
+    }
+    \vdash
     {
       \left(
         {\begin{array}{c}
-           \var{elens} \\
            \var{e_c} \\
            \var{us}
          \end{array}
        }
      \right)
    }
-   \trans{epoch}{\var{s}}
+   \trans{epoch}{s}
    {
      \left(
        {\begin{array}{c}
-          \var{elens} \unionoverride \{\var{e_n} \mapsto \var{es}\}\\
           \var{e_n} \\
           \var{us'}
         \end{array}
@@ -548,18 +564,6 @@ issue (via delegates) $475$ blocks (since $2160 \cdot 0.22 = 475.2$), but a
 $476^{\text{th}}$ block would be rejected. See Appendix
 \ref{apdx:calculating-t} for the background on this value.
 
-\begin{figure}[ht]
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \pp{stableAfter} & \mathbb{N} & \text{Chain stability parameter} \\
-      \pp{blockSignatureCountThreshold} & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{Block signature count threshold} \\
-    \end{array}
-  \end{equation*}
-  \caption{Blockchain signature count protocol parameters}
-  \label{fig:defs:sigcnt}
-\end{figure}
-
 Figure \ref{fig:rules:sigcnt} gives the rules for signature counting. We verify
 that the key that delegates to the signer of this block has not already signed
 more than its allowed threshold of blocks. If there are no delegators for the
@@ -574,7 +578,8 @@ outside the size of the moving window ($k$).
     \BSCEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
+        k & \mathbb{N} & \text{chain stability parameter} \\
+        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
         \var{ds} & \DelegState & \text{Delegation state} \\
       \end{array}
     \right)
@@ -593,15 +598,15 @@ outside the size of the moving window ($k$).
   \begin{equation*}
     \inference
     {
-      \pp{stableAfter} \partialf \var{k} \in pps & \pp{blockSignatureCountThreshold} \partialf \var{t} \in pps \\
       \{\var{vk_g}\} \leteq (\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\}
       & \var{sgs'} \leteq \var{sgs};_k {vk_g} &
       \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq k \cdot t \\
     }
     {
       \left(
-        {\begin{array}{c}
-           \var{pps} \\
+        {\begin{array}{l}
+           k\\
+           t\\
            \var{ds}
          \end{array}}
      \right)
@@ -662,11 +667,11 @@ During PBFT processing of the block header, we do the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{Previous header hash} \\
-      \fun{\bhhashname} & \Bhead \totalf \Hash & \text{Header hash} \\
-      \fun{\bhsigname} & \Bhead \totalf \Sig & \text{Block signature} \\
-      \fun{\bhissuername} & \Bhead \totalf \VKey & \text{Block issuer} \\
-      \fun{\bhslotname} & \Bhead \totalf \Slot & \text{Slot for which this block is issued}
+      \fun{\bhprevhashname} & \Bhead \totalf \Hash & \text{previous header hash} \\
+      \fun{\bhhashname} & \Bhead \totalf \Hash & \text{header hash} \\
+      \fun{\bhsigname} & \Bhead \totalf \Sig & \text{block signature} \\
+      \fun{\bhissuername} & \Bhead \totalf \VKey & \text{block issuer} \\
+      \fun{\bhslotname} & \Bhead \totalf \Slot & \text{slot for which this block is issued}
     \end{array}
   \end{equation*}
   \caption{Permissive BFT types and functions}
@@ -679,10 +684,11 @@ During PBFT processing of the block header, we do the following:
     \PBFTEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
-        \var{ds} & \DelegState & \text{Delegation state} \\
-        \var{s_{last}} & \Slot & \text{Slot for which the last known block was issued} \\
-        \var{s_{now}} & \Slot & \text{Current slot} \\
+        k & \mathbb{N} & \text{chain stability parameter} \\
+        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
+        \var{ds} & \DelegState & \text{delegation state} \\
+        \var{s_{last}} & \Slot & \text{slot for which the last known block was issued} \\
+        \var{s_{now}} & \Slot & \text{current slot} \\
       \end{array}
     \right)
   \end{equation*}
@@ -716,7 +722,8 @@ During PBFT processing of the block header, we do the following:
       \\
       {\left(
           \begin{array}{l}
-            \var{pps} \\
+            k\\
+            t\\
             ds
           \end{array}
         \right)}
@@ -727,7 +734,8 @@ During PBFT processing of the block header, we do the following:
     {
       \left(
         {\begin{array}{c}
-          \var{pps} \\
+           k\\
+           t\\
            \var{ds} \\
            \var{s_{last}} \\
            \var{s_{now}} \\
@@ -843,8 +851,8 @@ header processing we verify the following things:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      bh & \Bhead & \text{Block header} \\
-      bts & \Bhtosign & \text{Part of the block header which must be signed}
+      bh & \Bhead & \text{block header} \\
+      bts & \Bhtosign & \text{part of the block header which must be signed}
     \end{array}
   \end{equation*}
   %
@@ -852,8 +860,8 @@ header processing we verify the following things:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{\bheadname} & \Block \totalf \Bhead & \text{Block header} \\
-      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{Block header size in bytes}\\
+      \fun{\bheadname} & \Block \totalf \Bhead & \text{block header} \\
+      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}\\
     \end{array}
   \end{equation*}
   \emph{Protocol parameters}
@@ -873,8 +881,7 @@ header processing we verify the following things:
     \BHState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{us} & \UPIState & \text{Update state} \\
-        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
+        \var{us} & \UPIState & \text{update state}
       \end{array}
     \right)
   \end{equation*}
@@ -890,18 +897,24 @@ header processing we verify the following things:
 \begin{figure}[ht]
   \begin{equation*}
     \inference
-    { \fun{pps} ~ us \vdash
+    {
+      {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
       {\left(
           \begin{array}{l}
-            \var{elens} \\
-            \sepoch{s_{last}}{elens} \\
+            \sepoch{s}\\
             us
           \end{array}
         \right)}
       \trans{epoch}{\bslot{b}}
       {\left(
           \begin{array}{l}
-            \var{elens'} \\
             \var{e_n} \\
             us'
           \end{array}
@@ -910,18 +923,23 @@ header processing we verify the following things:
       \\ \maxheadersize \mapsto \var{s_{max}} \in \fun{pps}~\var{us'} & \bhdrsize{bh} \leq \var{s_{max}}
     }
     {
-      \var{s_{last}} \vdash
+      {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \var{dms}
+        \end{array}
+        \right)}
+      \vdash
       \left(
         {\begin{array}{c}
-           \var{us} \\
-           \var{elens}
+           \var{us}
          \end{array}}
      \right)
      \trans{bhead}{\var{bh}}
      \left(
        {\begin{array}{c}
-          \var{us'} \\
-          \var{elens'}
+          \var{us'}
         \end{array}}
     \right)
   }
@@ -953,7 +971,7 @@ payload; UTxO, delegation and update.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      bb & \Bbody & \text{Block body} \\
+      bb & \Bbody & \text{block body} \\
 
     \end{array}
   \end{equation*}
@@ -962,15 +980,15 @@ payload; UTxO, delegation and update.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{bUtxo} & \Block \totalf \UTxO & \text{Block UTxO payload} \\
+      \fun{bUtxo} & \Block \totalf \UTxO & \text{block UTxO payload} \\
       \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
                                          & \text{block certificates} \\
-      \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{Block update proposal payload} \\
-      \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{Block update votes payload} \\
-      \fun{bProtVer} & \Block \totalf \ProtVer & \text{Block protocol version} \\
+      \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{block update proposal payload} \\
+      \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{block update votes payload} \\
+      \fun{bProtVer} & \Block \totalf \ProtVer & \text{block protocol version} \\
       \fun{bhUtxoSig} & \Bhead \totalf \Sig & \text{UTxO payload signature} \\
-      \fun{bhDlgSig} & \Bhead \totalf \Sig & \text{Delegation payload signature} \\
-      \fun{bhUpdSig} & \Bhead \totalf \Sig & \text{Update payload signature} \\
+      \fun{bhDlgSig} & \Bhead \totalf \Sig & \text{delegation payload signature} \\
+      \fun{bhUpdSig} & \Bhead \totalf \Sig & \text{update payload signature} \\
     \end{array}
   \end{equation*}
   \emph{Derived functions}
@@ -994,8 +1012,10 @@ payload; UTxO, delegation and update.
     \BBEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pps} & \ProtParams & \text{Protocol parameters} \\
-        \var{e_n} & \Epoch & \text{Epoch we are currently processing blocks for}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+        \var{pps} & \ProtParams & \text{protocol parameters} \\
+        \var{e_n} & \Epoch & \text{epoch we are currently processing blocks for}
       \end{array}
     \right)
   \end{equation*}
@@ -1006,8 +1026,8 @@ payload; UTxO, delegation and update.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{utxo} & \UTxO & \text{UTxO} \\
-        \var{us} & \UPIState & \text{Update interface state} \\
-        \var{ds} & \DIState & \text{Delegation state}
+        \var{ds} & \DIState & \text{delegation state} \\
+        \var{us} & \UPIState & \text{update interface state}
       \end{array}
     \right)
   \end{equation*}
@@ -1031,9 +1051,10 @@ payload; UTxO, delegation and update.
       \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
       {\left(
           \begin{array}{l}
+            k \\
             \bslot{b} \\
-            \var{e_n} \\
-            \fun{dms} ~ \var{ds}
+            \var{ngk}\\
+            \fun{dms}~ ds
           \end{array}
         \right)}
       \vdash \var{us} \trans{bupi}{
@@ -1049,6 +1070,7 @@ payload; UTxO, delegation and update.
       {\left(
           \begin{array}{l}
             \dom{(\fun{dms}~ ds)} \\
+            k\\
             \var{e_n} \\
             \bslot{b} \\
             \fun{pps} ~  us \\
@@ -1059,7 +1081,9 @@ payload; UTxO, delegation and update.
     }
     {
       \left(
-        {\begin{array}{c}
+        {\begin{array}{l}
+           k\\
+           \var{ngk}\\
            \var{pps} \\
            \var{e_n}
          \end{array}}
@@ -1124,18 +1148,30 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \end{figure}
 
 \begin{figure}[ht]
+  \emph{Chain extension environments}
+  \begin{equation*}
+    \CEEnv
+    = \left(
+      \begin{array}{r@{~\in~}lr}
+        k & \mathbb{N} & \text{chain stability parameter}\\
+        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
+        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+        \var{s_{now}} & \Slot & \text{current slot}
+      \end{array}\right)
+  \end{equation*}
+
+
   \emph{Chain extension states}
   \begin{equation*}
     \CEState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{s_{last}} & \Slot & \text{Slot of the last seen block} \\
-        \var{elens} & \Epoch \partialf \SlotCount & \text{Historical epoch lengths} \\
-        \var{sgs} & \seqof{\VKeyGen} & \text{Last signers}\\
-        \var{h} & \Hash & \text{Current block hash} \\
+        \var{s_{last}} & \Slot & \text{slot of the last seen block} \\
+        \var{sgs} & \seqof{\VKeyGen} & \text{last signers}\\
+        \var{h} & \Hash & \text{current block hash} \\
         \var{utxo} & \UTxO & \text{UTxO} \\
-        \var{us} & \UPIState & \text{Update interface state} \\
-        \var{ds} & \DIState & \text{Delegation state}
+        \var{ds} & \DIState & \text{delegation state}\\
+        \var{us} & \UPIState & \text{update interface state} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1169,8 +1205,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
           \var{sgs} \\
           \var{h} \\
           \var{utxo} \\
-          \var{us} \\
-          \var{ds}
+          \var{ds} \\
+          \var{us}
         \end{array}}
     \right)
     \trans{chain}{b}
@@ -1180,8 +1216,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
          \var{sgs} \\
          \var{h'} \\
          \var{utxo} \\
-         \var{us} \\
-         \var{ds}
+         \var{ds} \\
+         \var{us}
        \end{array}}
    \right)
  }
@@ -1190,104 +1226,110 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \begin{equation*}
   \inference
   {
-    \neg\isebb{b} &
-    \var{s_{last}}
-    \vdash
-    \left(
-      {\begin{array}{c}
-         \var{us} \\
-         \var{elens} \\
-       \end{array}}
-   \right)
-   \trans{bhead}{\bhead{b}}
-   \left(
-     {\begin{array}{c}
-        \var{us'} \\
-        \var{elens'} \\
-      \end{array}}
-  \right)
-  \\
-  \left(
-    {\begin{array}{c}
-       \fun{pps} ~ us' \\
-       \var{ds} \\
-       \var{s_{last}} \\
-       \var{s_{now}} \\
-     \end{array}}
- \right)
- \vdash
- \left(
-   {\begin{array}{c}
-      \var{h} \\
-      \var{sgs}
-    \end{array}}
-\right)
-\trans{pbft}{\var{bh}}
-\left(
-  {\begin{array}{c}
-     \var{h'} \\
-     \var{sgs}'
-   \end{array}}
-\right)
-  \\
-  {\left(
-      \begin{array}{l}
-        \fun{pps} ~  us' \\
-        \sepoch{(\bslot{b})}{elens} \\
+    \neg\isebb{b} \\~\\
+    {
+      \begin{array}{r@{~\vdash~}l}
+        {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \fun{dms}~\var{ds}
+        \end{array}
+        \right)}
+        &
+        \left(
+          {\begin{array}{c}
+             \var{us}
+           \end{array}
+        }\right)
+        \trans{bhead}{\bhead{b}}
+        \left(
+        {\begin{array}{c}
+           \var{us'}
+         \end{array}}
+        \right)\\
+        \left(
+        {\begin{array}{l}
+           k\\
+           t\\
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
+         \end{array}}
+        \right)
+        &
+        \left(
+          {\begin{array}{c}
+             \var{h} \\
+             \var{sgs}
+           \end{array}}
+        \right)
+        \trans{pbft}{\var{bh}}
+        \left(
+        {\begin{array}{c}
+           \var{h'} \\
+           \var{sgs}'
+         \end{array}}
+        \right)\\
+        {\left(
+        \begin{array}{l}
+          k\\
+          \var{ngk}\\
+          \fun{pps} ~  us' \\
+          \sepoch{(\bslot{b})} \\
+        \end{array}
+        \right)}
+        &
+        {\left(
+          {\begin{array}{c}
+             \var{utxo} \\
+             \var{ds} \\
+             \var{us'}
+           \end{array}}
+        \right)}
+        \trans{bbody}{b}
+        {\left(
+          {\begin{array}{c}
+             \var{utxo'} \\
+             \var{ds'} \\
+             \var{us''}
+           \end{array}}
+        \right)}
       \end{array}
-    \right)}
-  \vdash
+    }
+  }
   {
     \left(
-      {\begin{array}{c}
-         \var{utxo} \\
-         \var{ds} \\
-         \var{us'}
+      {\begin{array}{l}
+         k\\
+         t\\
+         \var{ngk}\\
+         \var{s_{now}}
        \end{array}}
-   \right)
- }
- \trans{bbody}{b}
- {
-   \left(
-     {\begin{array}{c}
-        \var{utxo'} \\
-        \var{ds'} \\
-        \var{us''}
-      \end{array}}
-  \right)
-}
-}
-{
-  \left(
-    {\begin{array}{c}
-       \var{s_{now}}
-     \end{array}}
- \right)
- \vdash
- \left(
-   {\begin{array}{c}
-      \var{s_{last}} \\
-      \var{elens} \\
-      \var{sgs} \\
-      \var{h} \\
-      \var{utxo} \\
-      \var{us} \\
-      \var{ds}
-    \end{array}}
-\right)
-\trans{chain}{b}
-\left(
-  {\begin{array}{c}
-     \var{\bslot{b}} \\
-     \var{elens'} \\
-     \var{sgs'} \\
-     \var{h'} \\
-     \var{utxo'} \\
-     \var{us''} \\
-     \var{ds'}
-   \end{array}}
-\right)
-}
+     \right)
+     \vdash
+     \left(
+       {\begin{array}{c}
+          \var{s_{last}} \\
+          \var{sgs} \\
+          \var{h} \\
+          \var{utxo} \\
+          \var{ds} \\
+          \var{us}
+        \end{array}}
+    \right)
+    \trans{chain}{b}
+    \left(
+      {\begin{array}{c}
+         \var{\bslot{b}} \\
+         \var{sgs'} \\
+         \var{h'} \\
+         \var{utxo'} \\
+         \var{ds'} \\
+         \var{us''}
+       \end{array}}
+    \right)
+  }
 \end{equation*}
 \caption{Blockchain extension rules}
 \label{fig:rules:chain-extension}
