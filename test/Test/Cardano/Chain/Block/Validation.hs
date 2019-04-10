@@ -121,16 +121,20 @@ foldChainValidationState
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO ChainValidationState
-foldChainValidationState config cvs blocks = S.foldM_
-  (\c b ->
-    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b)) $ case b of
-      ABOBBoundary bvd   -> updateChainBoundary config c bvd
-      ABOBBlock    block -> updateBlock config c block
-  )
-  (pure cvs)
-  pure
-  (hoist (withExceptT ErrorParseError) blocks)
+foldChainValidationState config cvs blocks =
+  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
  where
+  validate
+     :: Monad m
+     => ChainValidationState
+     -> ABlockOrBoundary ByteString
+     -> ExceptT Error m ChainValidationState
+  validate c b =
+    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b)) $
+      case b of
+        ABOBBoundary bvd   -> updateChainBoundary c bvd
+        ABOBBlock    block -> updateBlock config c block
+
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe FlatSlotId
   blockOrBoundarySlot = \case
     ABOBBoundary _     -> Nothing

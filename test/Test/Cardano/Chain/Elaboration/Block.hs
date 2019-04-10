@@ -97,13 +97,11 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
     , Concrete.ehdEBDataProof     = H.hash extraBodyData
     }
 
-  prevHash = fromMaybe
-    (Genesis.configGenesisHeaderHash config)
-    (Concrete.cvsPreviousHash st)
+  prevHash :: Concrete.HeaderHash
+  prevHash =
+    either Concrete.genesisHeaderHash identity $ Concrete.cvsPreviousHash st
 
   sid =
---    Slotting.unflattenSlotId (coerce (pps ^. bkSlotsPerEpoch))
---      $
       Slotting.FlatSlotId
           (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
 
@@ -151,7 +149,7 @@ annotateBlock epochSlots block =
       case
           Binary.decodeFullDecoder
             "Block"
-            (Concrete.decodeABlockOrBoundary epochSlots) bytes
+            (Concrete.decodeABlockOrBoundary epochSlots False) bytes
         of
           Left err ->
             panic

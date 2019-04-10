@@ -42,12 +42,12 @@ module Cardano.Chain.Block.Block
   -- * BoundaryBlock
   , ABlockOrBoundary(..)
   , BoundaryValidationData(..)
-  , dropBoundaryBlock
   )
 where
 
 import Cardano.Prelude
 
+import Data.Coerce (coerce)
 import qualified Data.ByteString as BS
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, build, int, shown)
@@ -198,17 +198,17 @@ data ABlockOrBoundary a
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-decodeABlockOrBoundary :: EpochSlots -> Decoder s (ABlockOrBoundary ByteSpan)
-decodeABlockOrBoundary epochSlots = do
+decodeABlockOrBoundary :: EpochSlots -> Bool -> Decoder s (ABlockOrBoundary ByteSpan)
+decodeABlockOrBoundary epochSlots isEpochZero = do
   enforceSize "Block" 2
   decode @Word >>= \case
-    0 -> ABOBBoundary <$> dropBoundaryBlock
+    0 -> ABOBBoundary <$> dropBoundaryBlock isEpochZero
     1 -> ABOBBlock <$> decodeABlock epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-decodeBlockOrBoundary :: EpochSlots -> Decoder s (Maybe Block)
-decodeBlockOrBoundary epochSlots =
-  decodeABlockOrBoundary epochSlots >>= \case
+decodeBlockOrBoundary :: EpochSlots -> Bool -> Decoder s (Maybe Block)
+decodeBlockOrBoundary epochSlots isEpcohZero =
+  decodeABlockOrBoundary epochSlots isEpcohZero >>= \case
     ABOBBoundary _ -> pure Nothing
     ABOBBlock    b -> pure . Just $ void b
 
@@ -217,18 +217,19 @@ decodeBlockOrBoundary epochSlots =
 --------------------------------------------------------------------------------
 
 data BoundaryValidationData a = BoundaryValidationData
-  { boundaryBlockLength :: Int64
+  { boundaryBlockLength :: !Int64
   -- ^ The length of the boundary block in bytes
-  , boundaryPrevHash    :: HeaderHash
-  -- ^ The hash of the previous block
-  , boundaryHeaderBytes :: a
+  , boundaryPrevHash    :: !(Either GenesisHash HeaderHash)
+  -- ^ The hash of the previous block. Should only be GenesisHash for the
+  -- initial boundary block.
+  , boundaryHeaderBytes :: !a
   -- ^ Annotation representing the header bytes
   } deriving (Functor)
 
 -- | A decoder that drops the boundary block, but preserves the 'ByteSpan' of
 --   the header for hashing
-dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
-dropBoundaryBlock = do
+dropBoundaryBlock ::  Bool -> Decoder s (BoundaryValidationData ByteSpan)
+dropBoundaryBlock isEpochZero = do
   Annotated (Annotated hh bs) (ByteSpan start end) <- annotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
     aHeaderHash <- annotatedDecoder dropBoundaryHeader
@@ -237,10 +238,11 @@ dropBoundaryBlock = do
     pure aHeaderHash
   pure $ BoundaryValidationData
     { boundaryBlockLength = end - start
-    , boundaryPrevHash    = hh
+    -- For the zeroth boundary block this field needs to be a 'GenesisHash'
+    -- and for all subsequent blocks it's a 'HeaderHash'.
+    , boundaryPrevHash    = if isEpochZero then Left (coerce hh) else Right hh
     , boundaryHeaderBytes = bs
     }
-
 
 --------------------------------------------------------------------------------
 -- Block

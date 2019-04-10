@@ -69,8 +69,8 @@ import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots , parseEpochFiles
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
+  , GenesisHash
   , configBootStakeholders
-  , configGenesisHeaderHash
   , configK
   , configSlotSecurityParam
   )
@@ -84,7 +84,6 @@ import Cardano.Crypto
   , hash
   , hashRaw
   )
-
 
 --------------------------------------------------------------------------------
 -- SigningHistory
@@ -137,10 +136,15 @@ updateSigningHistory pk sh
 
 data ChainValidationState = ChainValidationState
   { cvsSigningHistory  :: !SigningHistory
-  , cvsPreviousHash    :: !(Maybe HeaderHash)
+  , cvsPreviousHash    :: !(Either GenesisHash HeaderHash)
+  -- ^ GenesisHash for the previous hash of the zeroth boundary block and
+  -- HeaderHash for all others.
   , cvsDelegationState :: !Delegation.InterfaceState
   } deriving (Eq, Show, Generic, NFData)
 
+-- | Create the state needed to validate the zeroth epoch of the chain. The
+-- zeroth epoch starts with a boundary block where the previous hash is
+-- the genesis hash.
 initialChainValidationState
   :: MonadError Delegation.SchedulingError m
   => Genesis.Config
@@ -157,10 +161,9 @@ initialChainValidationState config = do
         $ configBootStakeholders config
       , shSigningQueue = Empty
       }
-    , cvsPreviousHash    = Nothing
+    , cvsPreviousHash    = Left $ configGenesisHash config
     , cvsDelegationState = delegationState
     }
-
 
 --------------------------------------------------------------------------------
 -- ChainValidationError
@@ -183,8 +186,23 @@ data ChainValidationError
   | ChainValidationInvalidDelegation PublicKey PublicKey
   -- ^ The delegation used in the signature is not valid according to the ledger
 
+  | ChainValidationGenesisHashMismatch GenesisHash GenesisHash
+  -- ^ Genesis hash mismatch
+
+  | ChainValidationExpectedGenesisHash GenesisHash HeaderHash
+  -- ^ Expected GenesisHash but got HeaderHash
+
+  | ChainValidationExpectedHeaderHash HeaderHash GenesisHash
+  -- ^ Expected HeaderHash but GenesisHash
+
   | ChainValidationInvalidHash HeaderHash HeaderHash
   -- ^ The hash of the previous block does not match the value in the header
+
+  | ChainValidationMissingHash HeaderHash
+  -- ^ The hash of the previous block is missing and should be given hash.
+
+  | ChainValidationUnexpectedGenesisHash HeaderHash
+  -- ^ There should not be a hash of the previous but there is.
 
   | ChainValidationInvalidSignature BlockSignature
   -- ^ The signature of the block is invalid
@@ -215,24 +233,28 @@ updateChainBlockOrBoundary
   -> ABlockOrBoundary ByteString
   -> m ChainValidationState
 updateChainBlockOrBoundary config c b = case b of
-  ABOBBoundary bvd   -> updateChainBoundary config c bvd
+  ABOBBoundary bvd   -> updateChainBoundary c bvd
   ABOBBlock    block -> updateBlock config c block
 
 
 updateChainBoundary
   :: MonadError ChainValidationError m
-  => Genesis.Config
-  -> ChainValidationState
+  => ChainValidationState
   -> BoundaryValidationData ByteString
   -> m ChainValidationState
-updateChainBoundary config cvs bvd = do
-  let
-    prevHash =
-      fromMaybe (configGenesisHeaderHash config) (cvsPreviousHash cvs)
+updateChainBoundary cvs bvd = do
+  case (cvsPreviousHash cvs, boundaryPrevHash bvd) of
+    (Left expected, Left actual) ->
+        (expected == actual)
+          `orThrowError` ChainValidationGenesisHashMismatch expected actual
+    (Right expected, Right actual) ->
+        (expected == actual)
+          `orThrowError` ChainValidationInvalidHash expected actual
 
-  -- Validate the previous block hash of 'b'
-  (boundaryPrevHash bvd == prevHash)
-    `orThrowError` ChainValidationInvalidHash prevHash (boundaryPrevHash bvd)
+    (Left gh, Right hh) ->
+        throwError $ ChainValidationExpectedGenesisHash gh hh
+    (Right hh, Left gh) ->
+        throwError $ ChainValidationExpectedHeaderHash hh gh
 
   -- Validate that the block is within the size bounds
   (boundaryBlockLength bvd <= 2e6)
@@ -241,7 +263,7 @@ updateChainBoundary config cvs bvd = do
   -- Update the previous hash
   pure $ cvs
     { cvsPreviousHash =
-      Just
+      Right
       . coerce
       . hashRaw
       . BSL.fromStrict
@@ -316,7 +338,7 @@ updateBlock
   -> m ChainValidationState
 updateBlock config cvs b = do
   updateHeader config cvs b
-    >>= (\cvs' -> return $ cvs' { cvsPreviousHash = Just $ blockHashAnnotated b })
+    >>= (\cvs' -> return $ cvs' { cvsPreviousHash = Right $ blockHashAnnotated b })
     >>= (\cvs' -> updateBody config cvs' b)
 
 --------------------------------------------------------------------------------

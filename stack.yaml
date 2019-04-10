@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/2256fd727c5f92e6218afdcf8cddf6e01c4a9dcd/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/d2a4f06827bfa11c021ce719285e8d0bb6ac8e44/snapshot.yaml
 
 packages:
   - .
@@ -44,7 +44,7 @@ extra-deps:
   - ekg-json-0.1.0.6@sha256:4ff2e9cac213a5868ae8b4a7c72a16a9a76fac14d944ae819b3d838a9725569b
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 8fb87e83468831289820ef9edb3d5ef912b0db0f
+    commit: cec19ad55e489f7db6ab248e0475ee3fe8b36669
     subdirs:
         - contra-tracer
         - iohk-monitoring
