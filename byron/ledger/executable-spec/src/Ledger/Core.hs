@@ -216,7 +216,7 @@ instance Relation (Map k v) where
   r ▹ s = Map.filter (flip Set.member s) r
 
   d0 ∪ d1 = Map.union d0 d1
-  d0 ⨃ d1 = d1 ∪ (Map.keysSet d1 ⋪ d0)
+  d0 ⨃ d1 = d1 ∪ (dom d1 ⋪ d0)
 
 -- TODO: Remove `PairSet` and just use `Set (a, b)`?
 instance Relation (PairSet a b) where
