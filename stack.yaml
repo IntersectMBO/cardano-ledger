@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ff5fd5f33849be8a826506c34e5b0278f267f804/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/b25eed0ab3b6da51bc10970759d491331e56c822/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
