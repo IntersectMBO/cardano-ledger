@@ -29,6 +29,7 @@ library
                      , Ledger.Update
                      , Ledger.UTxO
   build-depends:       base >=4.11 && <5
+                     , bimap
                      , bytestring
                      , containers
                      , cryptonite
@@ -85,6 +86,7 @@ test-suite ledger-delegation-test
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends: base
+               , bimap
                , containers
                , lens
                , hedgehog

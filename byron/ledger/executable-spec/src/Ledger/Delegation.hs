@@ -69,6 +69,8 @@ module Ledger.Delegation
 where
 
 import Data.AbstractSize
+import Data.Bimap (Bimap)
+import qualified Data.Bimap as Bimap
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -198,24 +200,21 @@ makeFields ''DSState
 
 -- | Delegation state
 data DState = DState
-  { _dStateDelegationMap :: Map VKeyGenesis VKey
+  { _dStateDelegationMap :: Bimap VKeyGenesis VKey
     -- | When was the last time each genesis key delegated.
   , _dStateLastDelegation :: Map VKeyGenesis Slot
   } deriving (Eq, Show)
 
 makeFields ''DState
 
-delegatorOf :: Map VKeyGenesis VKey -> VKey -> Maybe VKeyGenesis
-delegatorOf dm vk =
-  case Map.keys $ Map.filter (== vk) dm of
-    res:_ -> Just res
-    []    -> Nothing
+delegatorOf :: Bimap VKeyGenesis VKey -> VKey -> Maybe VKeyGenesis
+delegatorOf = flip Bimap.lookupR
 
 -- | Interface environment is the same as scheduling environment.
 type DIEnv = DSEnv
 
 data DIState = DIState
-  { _dIStateDelegationMap :: Map VKeyGenesis VKey
+  { _dIStateDelegationMap :: Bimap VKeyGenesis VKey
   , _dIStateLastDelegation :: Map VKeyGenesis Slot
   , _dIStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
   , _dIStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
@@ -223,8 +222,8 @@ data DIState = DIState
 
 makeFields ''DIState
 
-dms :: HasDelegationMap a (Map VKeyGenesis VKey)
-    => Lens' a (Map VKeyGenesis VKey)
+dms :: HasDelegationMap a (Bimap VKeyGenesis VKey)
+    => Lens' a (Bimap VKeyGenesis VKey)
 dms = delegationMap
 
 dIStateDSState :: Lens' DIState DSState
@@ -336,7 +335,7 @@ instance STS ADELEG where
   initialRules = [ do
                      IRC env <- judgmentContext
                      return DState
-                       { _dStateDelegationMap  = Map.fromSet (\(VKeyGenesis k) -> k) env
+                       { _dStateDelegationMap  = Bimap.fromList $ map (\vkg@(VKeyGenesis k) -> (vkg, k)) (Set.toList env)
                        , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
                        }
                  ]
@@ -347,7 +346,7 @@ instance STS ADELEG where
           Nothing -> True ?! BeforeExistingDelegation
           Just sp -> sp < slt ?! BeforeExistingDelegation
         return $ st
-          & delegationMap %~ (\sdm -> sdm ⨃ Map.singleton vks vkd)
+          & delegationMap %~ (\sdm -> sdm ⨃ Bimap.singleton vks vkd)
           & lastDelegation %~ (\ldm -> ldm ⨃ Map.singleton vks slt)
     , do
         (TRC (_env, st, (slt, (vks, _vkd)))) <- judgmentContext

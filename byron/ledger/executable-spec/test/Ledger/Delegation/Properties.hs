@@ -12,8 +12,9 @@ where
 
 import Control.Arrow ((&&&), first)
 import Control.Lens ((^.), makeLenses, (&), (.~), view, to)
+import Data.Bimap (Bimap)
+import qualified Data.Bimap as Bimap
 import Data.List (last)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Hedgehog
@@ -114,7 +115,7 @@ import Ledger.Core.Generator (vkGen)
 -- | Initial state for the ADELEG and ADELEGS systems
 initADelegsState :: DState
 initADelegsState = DState
-  { _dStateDelegationMap  = Map.empty
+  { _dStateDelegationMap  = Bimap.empty
   , _dStateLastDelegation = Map.empty
   }
 
@@ -224,8 +225,8 @@ expectedDms
   -> [(Int, DBlock)]
   -- ^ Delegation certificates to apply, and the slot at which these
   -- certificates where scheduled.
-  -> Map VKeyGenesis VKey
-expectedDms s d sbs = Map.fromList (fmap (delegator &&& delegate) activeCerts)
+  -> Bimap VKeyGenesis VKey
+expectedDms s d sbs = Bimap.fromList (fmap (delegator &&& delegate) activeCerts)
   where
     -- | We keep all the blocks whose certificates should be active given the
     -- current slot.
