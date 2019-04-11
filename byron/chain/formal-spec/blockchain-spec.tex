@@ -619,6 +619,9 @@ requisite epoch file to look up a given block. We envision that an
 implementation may of course choose a more compact representation for this
 partial function that only records the changes in epoch length, rather than
 storing a length for each epoch.
+%
+In addition, we rely on abstract constant (function) $\var{ngk}$, which
+determines the number of genesis keys.
 
 It is also worth noticing that in the Byron era, the number of slots per-epoch
 is fixed to $10 \cdot k$, where $k$ is the chain stability parameter.
@@ -630,10 +633,11 @@ updates the update state to the correct version.
   \emph{Abstract functions}
   %
   \begin{equation*}
-    \begin{array}{rlr}
+    \begin{array}{r@{~\in~}lr}
       \fun{\sepochname}
-      & \in \Slot \totalf \Epoch
+      & \Slot \totalf \Epoch
       & \text{epoch containing this slot} \\
+      \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
     \end{array}
   \end{equation*}
 
@@ -647,7 +651,6 @@ updates the update state to the correct version.
     & \ETEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{e_c} & \Epoch & \text{Current epoch}
       \end{array}\right)
@@ -681,7 +684,6 @@ updates the update state to the correct version.
     {
       {\left(
         \begin{array}{l}
-          \var{ngk}\\
           \var{dms}\\
           \var{e_c}
         \end{array}
@@ -715,7 +717,6 @@ updates the update state to the correct version.
     {\left(
         \begin{array}{l}
           s\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
       \right)
@@ -723,13 +724,12 @@ updates the update state to the correct version.
     \vdash \var{us} \trans{upiec}{} \var{us'}
   }
   {
-    {
+    {\left(
       \begin{array}{l}
-        \var{ngk}\\
         \var{dms}\\
         \var{e_c}
       \end{array}
-    }
+    \right)}
     \vdash
     {
       \left(
@@ -873,7 +873,6 @@ header processing we verify the following things:
     & \BHEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{s_{last}} & \Slot & \text{slot of the last seen block}
       \end{array}\right)
@@ -891,7 +890,7 @@ header processing we verify the following things:
   \emph{Block header processing transitions}
   \begin{equation*}
     \var{\_} \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\Slot \times \BHState \times \Bhead \times \BHState)
+    \powerset (\BHEnv \times \BHState \times \Bhead \times \BHState)
   \end{equation*}
   \caption{Block header processing transition-system types}
   \label{fig:ts-types:bhead}
@@ -903,7 +902,6 @@ header processing we verify the following things:
     {
       {\left(
         \begin{array}{l}
-          \var{ngk}\\
           \var{dms}\\
           \sepoch{s_{last}}\\
         \end{array}
@@ -926,7 +924,6 @@ header processing we verify the following things:
     {
       {\left(
         \begin{array}{l}
-          \var{ngk}\\
           \var{dms}\\
           \var{s_{last}}
         \end{array}
@@ -1013,7 +1010,6 @@ payload; UTxO, delegation and update.
     \BBEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{pps} & \ProtParams & \text{protocol parameters} \\
         \var{e_n} & \Epoch & \text{epoch we are currently processing blocks for}
       \end{array}
@@ -1052,7 +1048,6 @@ payload; UTxO, delegation and update.
       {\left(
           \begin{array}{l}
             \bslot{b} \\
-            \var{ngk}\\
             \fun{dms}~ ds
           \end{array}
         \right)}
@@ -1079,7 +1074,6 @@ payload; UTxO, delegation and update.
     {
       \left(
         {\begin{array}{l}
-           \var{ngk}\\
            \var{pps} \\
            \var{e_n}
          \end{array}}
@@ -1149,7 +1143,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     \CEEnv
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{s_{now}} & \Slot & \text{current slot}
       \end{array}\right)
   \end{equation*}
@@ -1187,11 +1180,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
        \var{h'} \leteq \bhhash{(\bhead b)}
     }
     {
-      \left(
-        {\begin{array}{c}
-           \var{s_{now}}
-         \end{array}}
-     \right)
+     \var{s_{now}}
      \vdash
      \left(
        {\begin{array}{c}
@@ -1225,7 +1214,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
       \begin{array}{r@{~\vdash~}l}
         {\left(
         \begin{array}{l}
-          \var{ngk}\\
           \fun{dms}~\var{ds}\\
           \var{s_{last}}
         \end{array}
@@ -1265,7 +1253,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \right)\\
         {\left(
         \begin{array}{l}
-          \var{ngk}\\
           \fun{pps} ~  us' \\
           \sepoch{(\bslot{b})} \\
         \end{array}
@@ -1290,12 +1277,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     }
   }
   {
-    \left(
-      {\begin{array}{l}
-         \var{ngk}\\
-         \var{s_{now}}
-       \end{array}}
-     \right)
+     \var{s_{now}}
      \vdash
      \left(
        {\begin{array}{c}
