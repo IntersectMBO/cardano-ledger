@@ -1155,9 +1155,10 @@ Figure~\ref{fig:fund-preservation} captures the potential movement of funds in t
 taking every transition system in this document into account.  Value is moved between
 accounting pots, but the total amount of value in the system remains constant.
 In particular, the red subgraph represents the inputs and outputs to
-the ``total pot'' used during the reward update calculation in
+the ``reward pot'', a temporary variable used during the reward update calculation in
 Figure~\ref{fig:functions:reward-update-creation}.
-The blue arrows represent the movement of funds that pass through the ``total pot''.
+The blue arrows represent the movement of funds that pass through the ``reward pot''.
+
 
 \begin{figure}[htb]
   \begin{center}
@@ -1167,14 +1168,14 @@ The blue arrows represent the movement of funds that pass through the ``total po
       , implied/.style={blue, draw}
       , toTotPot/.style={red, draw}
       ]
-    \node (C) at (3,2.5) {Circulation};
-    \node (R) at (5, 1) {Reserves};
-    \node (D) at (1, 2) {Deposits};
-    \node (FR) at (1,1) {Fees};
-    \node (RA) at (5, 2) {Reward accounts};
-    \node (T) at (3,0.5) {Treasury};
+    \node (C) at (3,2.5) {\LARGE Circulation};
+    \node (R) at (5, 1) {\LARGE Reserves};
+    \node (D) at (1, 2) {\LARGE Deposits};
+    \node (FR) at (1,1) {\LARGE Fees};
+    \node (RA) at (5, 2) {\LARGE Reward accounts};
+    \node (T) at (3,0.5) {\LARGE Treasury};
 
-    \draw[->, direct, thick]
+    \draw[->, direct, ultra thick]
     (C) edge (D)
     (C) edge (FR)
 
@@ -1183,25 +1184,22 @@ The blue arrows represent the movement of funds that pass through the ``total po
 
     (RA) edge (C);
 
-    \draw[->, implied, thick]
+    \draw[->, implied, ultra thick]
     (FR) edge (T)
     (FR) edge (RA)
 
-    (R) edge (FR)
     (R) edge (T)
     (R) edge (RA);
 
-    \node (TP) at (3, 1.25) {Total pot};
+    \node (TP) at (3, 1.15) {\LARGE Reward pot};
 
-    \draw[->, toTotPot, thick]
+    \draw[->, toTotPot, ultra thick]
     (FR) edge (TP)
     (R) edge (TP)
 
     (TP) edge (RA)
-    (TP) edge (FR)
     (TP) edge (T);
-
-  \end{tikzpicture}
+    \end{tikzpicture}
   \end{center}
   \caption{Preservation of Value}
   \label{fig:fund-preservation}
@@ -1247,7 +1245,7 @@ The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
   \item First we calculate the change to the reserves,
     as determined by the $\rho$ protocol parameter.
-  \item Next we calculate $\var{totalPot}$, the total amount of coin available for rewards this
+  \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
     epoch, as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
     \begin{itemize}
       \item The fee pot, containing the transaction fees from the epoch.
@@ -1256,7 +1254,7 @@ The $\fun{createRUpd}$ function does the following:
     \end{itemize}
     Note that the fee pot and the decayed amount are taken from the snapshot taken at the
     epoch boundary.  (See~Figure\ref{fig:rules:snapshot}).
-  \item Next we calculate the proportion of the total pot that will move to the treasury,
+  \item Next we calculate the proportion of the reward pot that will move to the treasury,
     as determined by the $\tau$ protocol parameter. The remaining pot is called the
     $\var{R}$, just as in section 6.5 of \cite{delegation_design}.
   \item The rewards are calculated, using the oldest stake distribution snapshot (the one
@@ -1309,9 +1307,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot \var{reserves}}
     \\
       & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
-      & ~~~~~~~\var{totalPot} = \var{feeSS} + \Delta r \\
-      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{totalPot}} \\
-      & ~~~~~~~\var{R} = \var{totalPot} - \Delta t_1 \\
+      & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
+      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
+      & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
       & ~~~~~~~\var{rs}
            = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
       & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
