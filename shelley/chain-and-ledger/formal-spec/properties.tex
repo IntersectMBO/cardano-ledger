@@ -373,9 +373,10 @@ properties-based testing for validation in the executable spec.
   The actual reward for a stake pool in an epoch is calculated by the function
   $\fun{poolReward}$. The actual reward per stake pool is non-negative and
   bounded by the maximal reward for the stake pool, with $\overline{p}$ being
-  the relation $\frac{n}{\overline{N}}$ of the number of produced blocks $n$ of
-  one pool to the total number $\overline{N}$ of produced blocks in an epoch and
-  $maxP$ being the maximal reward for the stake pool. This gives us:
+  the relation $\frac{n}{\max(1, \overline{N})}$ of the number of produced
+  blocks $n$ of one pool to the total number $\overline{N}$ of produced blocks
+  in an epoch and $maxP$ being the maximal reward for the stake pool. This gives
+  us:
 
   \begin{equation*}
     \forall \gamma \in [0,1] \implies 0\leq \floor*{\overline{p}\cdot maxP} \leq maxP
@@ -399,24 +400,6 @@ they both split the reward between the pool leader and the members.
       c)\cdot(1-m)\cdot\frac{t_{j}}{\sigma}} \leq \hat{f}
   \end{multline*}
 
-\end{property}
-
-\begin{property}[\textbf{Accounting transition}]
-  \label{prop:accnt}
-
-  The $\fun{ACCNT}$ transition rule has the following properties in order to
-  ensure non-negative values:
-
-  \begin{itemize}
-  \item $obl \leq deposits$
-  \item $\forall \rho \in [0,1]: expansion = \floor*{\rho\cdot reserves} \leq
-    reserves$
-  \item $\forall \tau \in [0,1]: newTreasury = \floor*{\tau\cdot rewardPot} \leq
-    rewardPot$
-  \item $rewardPot - newTreasury - paidRewards \geq 0$
-  \end{itemize}
-
-  where $paidRewards$ is the sum of rewards paid to the stake pool members.
 \end{property}
 
 \clearpage
