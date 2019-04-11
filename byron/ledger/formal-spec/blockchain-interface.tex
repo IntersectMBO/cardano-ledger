@@ -17,7 +17,6 @@
     \left(
       \begin{array}{r@{~\in~}lr}
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{e} & \Epoch & \text{current epoch}\\
         \var{s} & \Slot & \text{current slot}
       \end{array}
@@ -55,12 +54,11 @@
     \inference
     {
       d \leteq 2 \cdot k \\
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         k
-       \end{array}}
+         s
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -80,6 +78,10 @@
         \right)
       }
       &
+      {\begin{array}{l}
+       \mathcal{K}
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
@@ -99,12 +101,11 @@
       }
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
-         k\\
          e\\
          s
-      \end{array}}
+      \end{array}\right)}
       \vdash
       {
         \left(
@@ -146,15 +147,30 @@ labels have the following meaning:
 \item[UPIEC] Update-proposal-interface epoch-change.
 \end{description}
 
+In these rules we make use of the abstract constant $\var{ngk}$, defined in
+\cref{fig:defs:upi}, which determines the number of genesis keys:
+
+\begin{figure}[ht]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+    \end{array}
+  \end{equation*}
+
+  \caption{Update interface types and functions}
+  \label{fig:defs:upi}
+\end{figure}
+
+
 \begin{figure}[htb]
   \emph{Update-proposals interface environments}
   \begin{align*}
     & \UPIEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{s_n} & \Slot & \text{current slot number}\\
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}\right)
   \end{align*}
@@ -235,13 +251,12 @@ labels have the following meaning:
       pws' \leteq pws \unionoverrideRight \{ \upId{up} \mapsto s_n\}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -339,13 +354,12 @@ given application name $\var{an}$.
       \}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -464,7 +478,6 @@ the end on an epoch.
     {
       {
         \begin{array}{l}
-          k\\
           s_n\\
           q \cdot \var{ngk}\\
           \var{dms}\\
@@ -501,14 +514,12 @@ the end on an epoch.
       }
     }
     {
-      {
+      {\left(
         \begin{array}{l}
-          k\\
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -595,11 +606,10 @@ expires.
       [.., s_n - 2 \cdot k] \restrictdom \var{fads} = \epsilon
     }
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -626,11 +636,10 @@ expires.
       \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 2 \cdot k] \restrictdom \var{fads}
     }
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -658,11 +667,10 @@ expires.
     \label{eq:rule:upi-ec-pv-unchanged}
     \inference
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -681,14 +689,12 @@ expires.
       } &\var{pv} = \var{pv'}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
-          k\\
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -728,11 +734,10 @@ expires.
     \label{eq:rule:upi-ec-pv-change}
     \inference
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -752,14 +757,12 @@ expires.
       & \var{pv} \neq \var{pv'}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
-          k \\
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(

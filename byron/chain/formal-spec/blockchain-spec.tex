@@ -393,7 +393,7 @@ $t=0.22$ as a good value. Specifically, given $k=2160$, we would allow a single
 genesis key to issue (via delegates) $475$ blocks (since
 $2160 \cdot 0.22 = 475.2$), but a $476^{\text{th}}$ block would be rejected.
 See Appendix \ref{apdx:calculating-t} for the background on this value. The
-abstract constant (functions) related to the protocol are defined in
+abstract constant (nullary functions) related to the protocol are defined in
 \cref{fig:defs:proto-abstract-funcs}.
 
 \begin{figure}[ht]
@@ -620,7 +620,7 @@ implementation may of course choose a more compact representation for this
 partial function that only records the changes in epoch length, rather than
 storing a length for each epoch.
 %
-In addition, we rely on abstract constant (function) $\var{ngk}$, which
+In addition, we rely on abstract constant (nullary function) $\var{ngk}$, which
 determines the number of genesis keys.
 
 It is also worth noticing that in the Byron era, the number of slots per-epoch
