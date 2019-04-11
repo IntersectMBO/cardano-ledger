@@ -21,9 +21,11 @@ library
                        Test.Cardano.Chain.Block.CBOR
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Common.Address
+                       Test.Cardano.Chain.Common.CBOR
                        Test.Cardano.Chain.Common.Compact
                        Test.Cardano.Chain.Common.Example
                        Test.Cardano.Chain.Common.Gen
+                       Test.Cardano.Chain.Common.Json
                        Test.Cardano.Chain.Common.Lovelace
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
@@ -31,8 +33,10 @@ library
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
+                       Test.Cardano.Chain.Slotting.CBOR
                        Test.Cardano.Chain.Slotting.Example
                        Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Slotting.Json
                        Test.Cardano.Chain.Slotting.Properties
                        Test.Cardano.Chain.Txp.CBOR
                        Test.Cardano.Chain.Txp.Compact
@@ -57,6 +61,7 @@ library
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
+                     , cryptonite
                      , formatting
                      , hedgehog
                      , optparse-applicative
