@@ -384,15 +384,32 @@ block header, since the block body is entirely concerned with the ledger.
 \newcommand{\BSCEnv}{\type{BSCEnv}}
 \newcommand{\BSCState}{\type{BSCState}}
 
-To guard against the compromise of a minority of the genesis keys,
-we require that in the rolling window of the last $k$ blocks, the number of
-blocks signed by keys that $sk_s$ delegated to is no more than a threshold $k
-\cdot t$, where $t$ is a constant that will be picked in the range
-$1/5 \leq t \leq 1/4$. Initial research suggests setting $t=0.22$ as a good
-value. Specifically, given $k=2160$, we would allow a single genesis key to
-issue (via delegates) $475$ blocks (since $2160 \cdot 0.22 = 475.2$), but a
-$476^{\text{th}}$ block would be rejected. See Appendix
-\ref{apdx:calculating-t} for the background on this value.
+To guard against the compromise of a minority of the genesis keys, we require
+that in the rolling window of the last $k$ blocks, where $k$ is the chain
+stability parameter, the number of blocks signed by keys that $sk_s$ delegated
+to is no more than a threshold $k \cdot t$, where $t$ is a constant that will
+be picked in the range $1/5 \leq t \leq 1/4$. Initial research suggests setting
+$t=0.22$ as a good value. Specifically, given $k=2160$, we would allow a single
+genesis key to issue (via delegates) $475$ blocks (since
+$2160 \cdot 0.22 = 475.2$), but a $476^{\text{th}}$ block would be rejected.
+See Appendix \ref{apdx:calculating-t} for the background on this value. The
+abstract constant (functions) related to the protocol are defined in
+\cref{fig:defs:proto-abstract-funcs}.
+
+\begin{figure}[ht]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      k & \mathbb{N} & \text{chain stability parameter}\\
+      t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
+    \end{array}
+  \end{equation*}
+
+  \caption{Protocol abstract functions}
+  \label{fig:defs:proto-abstract-funcs}
+\end{figure}
+
 
 Figure \ref{fig:rules:sigcnt} gives the rules for signature counting. We verify
 that the key that delegates to the signer of this block has not already signed
@@ -408,8 +425,6 @@ outside the size of the moving window ($k$).
     \BSCEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter} \\
-        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
         \var{ds} & \DelegState & \text{delegation state} \\
       \end{array}
     \right)
@@ -433,18 +448,12 @@ outside the size of the moving window ($k$).
       \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq k \cdot t \\
     }
     {
-      \left(
-        {\begin{array}{l}
-           k\\
-           t\\
-           \var{ds}
-         \end{array}}
-     \right)
-     \vdash
-     {\var{sgs}}
-     \trans{sigcnt}{\var{vk_d}}
-     {\var{sgs'}}
-   }
+      \var{ds}
+      \vdash
+      {\var{sgs}}
+      \trans{sigcnt}{\var{vk_d}}
+      {\var{sgs'}}
+    }
    \label{eq:rule:sigcnt}
  \end{equation*}
  \caption{Block signature count rules}
@@ -514,8 +523,6 @@ During PBFT processing of the block header, we do the following:
     \PBFTEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter} \\
-        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
         \var{ds} & \DelegState & \text{delegation state} \\
         \var{s_{last}} & \Slot & \text{slot for which the last known block was issued} \\
         \var{s_{now}} & \Slot & \text{current slot} \\
@@ -550,13 +557,7 @@ During PBFT processing of the block header, we do the following:
       \\ \var{s} > \var{s_{last}} & \var{s} \leq \var{s_{now}}
       \\ \bhprevhash{bh} = \var{h} & \verify{vk_d}{\serialised{\bhtosign{bh}}}{(\bhsig{bh})}
       \\
-      {\left(
-          \begin{array}{l}
-            k\\
-            t\\
-            ds
-          \end{array}
-        \right)}
+      ds
       \vdash
       \var{sgs} \trans{sigcnt}{\var{vk_d}} \var{sgs'}
       \\
@@ -564,8 +565,6 @@ During PBFT processing of the block header, we do the following:
     {
       \left(
         {\begin{array}{c}
-           k\\
-           t\\
            \var{ds} \\
            \var{s_{last}} \\
            \var{s_{now}} \\
@@ -648,7 +647,6 @@ updates the update state to the correct version.
     & \ETEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{e_c} & \Epoch & \text{Current epoch}
@@ -668,7 +666,7 @@ updates the update state to the correct version.
   \emph{Epoch transition transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{epoch}{\_} \var{\_} \subseteq
-    \powerset ((\VKey \mapsto \VKeyGen) \times \ETState \times \Slot \times \ETState)
+    \powerset (\ETEnv \times \ETState \times \Slot \times \ETState)
   \end{equation*}
   \caption{Epoch transition transition-system types}
   \label{fig:ts-types:epoch}
@@ -683,7 +681,6 @@ updates the update state to the correct version.
     {
       {\left(
         \begin{array}{l}
-          k\\
           \var{ngk}\\
           \var{dms}\\
           \var{e_c}
@@ -717,7 +714,6 @@ updates the update state to the correct version.
     &
     {\left(
         \begin{array}{l}
-          k\\
           s\\
           \var{ngk}\\
           \var{dms}
@@ -729,7 +725,6 @@ updates the update state to the correct version.
   {
     {
       \begin{array}{l}
-        k\\
         \var{ngk}\\
         \var{dms}\\
         \var{e_c}
@@ -878,7 +873,6 @@ header processing we verify the following things:
     & \BHEnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{s_{last}} & \Slot & \text{slot of the last seen block}
@@ -909,7 +903,6 @@ header processing we verify the following things:
     {
       {\left(
         \begin{array}{l}
-          k\\
           \var{ngk}\\
           \var{dms}\\
           \sepoch{s_{last}}\\
@@ -933,7 +926,6 @@ header processing we verify the following things:
     {
       {\left(
         \begin{array}{l}
-          k\\
           \var{ngk}\\
           \var{dms}\\
           \var{s_{last}}
@@ -1021,7 +1013,6 @@ payload; UTxO, delegation and update.
     \BBEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{pps} & \ProtParams & \text{protocol parameters} \\
         \var{e_n} & \Epoch & \text{epoch we are currently processing blocks for}
@@ -1060,7 +1051,6 @@ payload; UTxO, delegation and update.
       \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
       {\left(
           \begin{array}{l}
-            k \\
             \bslot{b} \\
             \var{ngk}\\
             \fun{dms}~ ds
@@ -1079,7 +1069,6 @@ payload; UTxO, delegation and update.
       {\left(
           \begin{array}{l}
             \dom{(\fun{dms}~ ds)} \\
-            k\\
             \var{e_n}\\
             \bslot{b}
           \end{array}
@@ -1090,7 +1079,6 @@ payload; UTxO, delegation and update.
     {
       \left(
         {\begin{array}{l}
-           k\\
            \var{ngk}\\
            \var{pps} \\
            \var{e_n}
@@ -1161,8 +1149,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     \CEEnv
     = \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
-        t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
         \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{s_{now}} & \Slot & \text{current slot}
       \end{array}\right)
@@ -1187,7 +1173,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   \emph{Chain extension transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
-    \powerset (\Slot \times \CEState \times \Block \times \CEState)
+    \powerset (\CEEnv \times \CEState \times \Block \times \CEState)
   \end{equation*}
 
   \caption{Blockchain extension transition-system types}
@@ -1239,7 +1225,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
       \begin{array}{r@{~\vdash~}l}
         {\left(
         \begin{array}{l}
-          k\\
           \var{ngk}\\
           \fun{dms}~\var{ds}\\
           \var{s_{last}}
@@ -1259,8 +1244,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \right)\\
         \left(
         {\begin{array}{l}
-           k\\
-           t\\
            \var{ds} \\
            \var{s_{last}} \\
            \var{s_{now}} \\
@@ -1282,7 +1265,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \right)\\
         {\left(
         \begin{array}{l}
-          k\\
           \var{ngk}\\
           \fun{pps} ~  us' \\
           \sepoch{(\bslot{b})} \\
@@ -1310,8 +1292,6 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   {
     \left(
       {\begin{array}{l}
-         k\\
-         t\\
          \var{ngk}\\
          \var{s_{now}}
        \end{array}}
