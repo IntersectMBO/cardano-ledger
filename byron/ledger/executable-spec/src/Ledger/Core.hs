@@ -141,7 +141,7 @@ newtype Value = Value Natural
 ---------------------------------------------------------------------------------
 
 newtype PairSet a b = PairSet {unPairSet :: Set (a,b)}
-  deriving (Eq, Show)
+  deriving (Eq, Semigroup, Show)
 
 psSize :: PairSet a b -> Int
 psSize = Set.size . unPairSet

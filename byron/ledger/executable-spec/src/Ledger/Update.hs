@@ -385,11 +385,11 @@ instance STS ADDVOTE where
             ) <- judgmentContext
         let pid = vote ^. vPropId
             vk = vote ^. vCaster
-            vtsPid = Set.fromList
+            vtsPid = Core.PairSet $ Set.fromList
               [(pid, vks) | vks <- Set.toList . Map.findWithDefault Set.empty vk $ invertMap dms ]
         Set.member pid rups ?! NoUpdateProposal pid
         Core.verify vk pid (vote ^. vSig) ?! AVSigDoesNotVerify
-        return $! Core.PairSet $ Set.union (Core.unPairSet vts) vtsPid
+        return $! vts <> vtsPid
     ]
 
 data UPVOTE
