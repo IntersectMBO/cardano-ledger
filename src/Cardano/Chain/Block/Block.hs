@@ -25,6 +25,7 @@ module Cardano.Chain.Block.Block
   , blockProof
   , blockSlot
   , blockLeaderKey
+  , blockIssuer
   , blockDifficulty
   , blockToSign
   , blockSignature
@@ -93,6 +94,7 @@ import Cardano.Chain.Block.Header
   , headerAttributes
   , headerDifficulty
   , headerEBDataProof
+  , headerIssuer
   , headerLeaderKey
   , headerPrevHash
   , headerProof
@@ -191,7 +193,7 @@ toCBORBlock epochSlots block =
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
   | ABOBBoundary (BoundaryValidationData a)
-  deriving (Functor)
+  deriving (Eq, Show, Functor)
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 --
@@ -227,7 +229,7 @@ data BoundaryValidationData a = BoundaryValidationData
   -- initial boundary block.
   , boundaryHeaderBytes :: !a
   -- ^ Annotation representing the header bytes
-  } deriving (Functor)
+  } deriving (Eq, Show, Functor)
 
 -- | A decoder that drops the boundary block, but preserves the 'ByteSpan' of
 --   the header for hashing
@@ -342,6 +344,9 @@ blockSlot = headerSlot . blockHeader
 blockLeaderKey :: ABlock a -> PublicKey
 blockLeaderKey = headerLeaderKey . blockHeader
 
+blockIssuer :: ABlock a -> PublicKey
+blockIssuer = headerIssuer . blockHeader
+
 blockDifficulty :: ABlock a -> ChainDifficulty
 blockDifficulty = headerDifficulty . blockHeader
 
@@ -378,5 +383,5 @@ blockDlgPayload = bodyDlgPayload . blockBody
 blockAttributes :: ABlock a -> Attributes ()
 blockAttributes = ebdAttributes . blockExtraData
 
-blockLength :: ABlock ByteString -> Int64
+blockLength :: ABlock ByteString -> Natural
 blockLength = fromIntegral . BS.length . blockAnnotation

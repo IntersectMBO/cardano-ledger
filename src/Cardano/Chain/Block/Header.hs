@@ -23,6 +23,7 @@ module Cardano.Chain.Block.Header
   -- * Accessors
   , headerSlot
   , headerLeaderKey
+  , headerIssuer
   , headerLength
   , headerDifficulty
   , headerSignature
@@ -112,6 +113,8 @@ import Cardano.Crypto
   ( Hash
   , ProtocolMagicId(..)
   , ProxySignature
+  , AProxySignature(..)
+  , AProxyVerificationKey(..)
   , PublicKey
   , SecretKey
   , SignTag(..)
@@ -296,6 +299,10 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body extra
 headerSlot :: AHeader a -> FlatSlotId
 headerSlot = consensusSlot . headerConsensusData
 
+headerIssuer :: AHeader a -> PublicKey
+headerIssuer h = case headerSignature h of
+  BlockSignature psig -> pskDelegatePk $ psigPsk psig
+
 headerLeaderKey :: AHeader a -> PublicKey
 headerLeaderKey = consensusLeaderKey . headerConsensusData
 
@@ -325,7 +332,7 @@ headerToSign epochSlots h = ToSign
   (headerDifficulty h)
   (headerExtraData h)
 
-headerLength :: AHeader ByteString -> Int64
+headerLength :: AHeader ByteString -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
 
 data HeaderError

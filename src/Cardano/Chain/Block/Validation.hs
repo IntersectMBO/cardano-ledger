@@ -1,10 +1,12 @@
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE DeriveAnyClass   #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumDecimals      #-}
-{-# LANGUAGE TupleSections    #-}
-{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumDecimals           #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -45,44 +47,66 @@ import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
   , BoundaryValidationData(..)
+  , blockAttributes
   , blockDlgPayload
   , blockHashAnnotated
   , blockHeader
+  , blockIssuer
   , blockLength
   , blockProof
+  , blockProtocolVersion
   , blockSlot
   , blockTxPayload
+  , blockUpdatePayload
   )
 import Cardano.Chain.Block.Header
-  ( BlockSignature(..)
+  ( AHeader
+  , BlockSignature(..)
   , HeaderHash
+  , headerAttributes
   , headerLength
+  , headerSlot
   , wrapBoundaryBytes
   )
-import Cardano.Chain.Block.Proof (proofDelegation)
-import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
-import qualified Cardano.Chain.Delegation as Delegation
+import Cardano.Chain.Block.Proof (Proof(..))
+import Cardano.Chain.Common
+  ( Attributes(..)
+  , BlockCount(..)
+  , StakeholderId
+  , UnparsedFields(..)
+  , mkStakeholderId
+  )
 import qualified Cardano.Chain.Delegation.Payload as DlgPayload
-import Cardano.Chain.Delegation.Validation
-  (initialInterfaceState, updateDelegation)
-import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots , parseEpochFiles)
+import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
+import qualified Cardano.Chain.Delegation.Validation.Interface as DI
+import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
+import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFiles)
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
   , GenesisWStakeholders(..)
   , GenesisHash
   , configBootStakeholders
+  , configEpochSlots
+  , configHeavyDelegation
   , configK
-  , configSlotSecurityParam
+  , configProtocolMagic
+  , configProtocolMagicId
   )
-import Cardano.Chain.Slotting (SlotId, unflattenSlotId)
-import Cardano.Chain.Txp.TxPayload (aUnTxPayload)
-import Cardano.Chain.Txp.UTxO (UTxO(..))
-import Cardano.Chain.Txp.Validation (UTxOValidationError, updateUTxOWitness)
+import Cardano.Chain.ProtocolConstants (kEpochSlots)
+import Cardano.Chain.Slotting
+  (EpochIndex(..), FlatSlotId(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
+import Cardano.Chain.Txp (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
+import qualified Cardano.Chain.Txp.Validation as UTxO
+import qualified Cardano.Chain.Update as Update
+import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
+import qualified Cardano.Chain.Update.Validation.Interface as UPI
 import Cardano.Crypto
   ( ProtocolMagic
+  , ProtocolMagicId
   , PublicKey
-  , hash
+  , getProtocolMagicId
   , hashRaw
+  , hashDecoded
   )
 
 --------------------------------------------------------------------------------
@@ -135,24 +159,28 @@ updateSigningHistory pk sh
 --------------------------------------------------------------------------------
 
 data ChainValidationState = ChainValidationState
-  { cvsSigningHistory  :: !SigningHistory
+  { cvsLastSlot        :: !FlatSlotId
+  , cvsSigningHistory  :: !SigningHistory
   , cvsPreviousHash    :: !(Either GenesisHash HeaderHash)
   -- ^ GenesisHash for the previous hash of the zeroth boundary block and
-  -- HeaderHash for all others.
-  , cvsDelegationState :: !Delegation.InterfaceState
+  --   HeaderHash for all others.
+  , cvsUtxo            :: !UTxO
+  , cvsUpdateState     :: !UPI.State
+  , cvsDelegationState :: !DI.State
   } deriving (Eq, Show, Generic, NFData)
 
 -- | Create the state needed to validate the zeroth epoch of the chain. The
--- zeroth epoch starts with a boundary block where the previous hash is
--- the genesis hash.
+--   zeroth epoch starts with a boundary block where the previous hash is the
+--   genesis hash.
 initialChainValidationState
-  :: MonadError Delegation.SchedulingError m
+  :: MonadError Scheduling.Error m
   => Genesis.Config
   -> m ChainValidationState
 initialChainValidationState config = do
-  delegationState <- initialInterfaceState config
+  delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
-    { cvsSigningHistory  = SigningHistory
+    { cvsLastSlot       = 0
+    , cvsSigningHistory = SigningHistory
       { shK = configK config
       , shStakeholderCounts = M.fromList
         . map (, BlockCount 0)
@@ -161,9 +189,24 @@ initialChainValidationState config = do
         $ configBootStakeholders config
       , shSigningQueue = Empty
       }
-    , cvsPreviousHash    = Left $ configGenesisHash config
+    , cvsPreviousHash   = Left $ configGenesisHash config
+    , cvsUtxo           = genesisUtxo config
+    , cvsUpdateState    = UPI.initialState config
     , cvsDelegationState = delegationState
     }
+ where
+  delegationEnv = DI.Environment
+    { DI.protocolMagic = configProtocolMagicId config
+    , DI.allowedDelegators = M.keysSet
+      . unGenesisWStakeholders
+      $ configBootStakeholders config
+    , DI.k           = configK config
+    , DI.currentEpoch = EpochIndex 0
+    , DI.currentSlot = FlatSlotId 0
+    }
+
+  genesisDelegation = configHeavyDelegation config
+
 
 --------------------------------------------------------------------------------
 -- ChainValidationError
@@ -174,11 +217,17 @@ data ChainValidationError
   = ChainValidationBoundaryTooLarge
   -- ^ The size of an epoch boundary block exceeds the limit
 
-  | ChainValidationHeaderTooLarge
-  -- ^ The size of a block header exceeds the limit
+  | ChainValidationBlockAttributesTooLarge
+  -- ^ The size of a block's attributes is non-zero
 
   | ChainValidationBlockTooLarge
   -- ^ The size of a regular block exceeds the limit
+
+  | ChainValidationHeaderAttributesTooLarge
+  -- ^ The size of a block header's attributes is non-zero
+
+  | ChainValidationHeaderTooLarge
+  -- ^ The size of a block header exceeds the limit
 
   | ChainValidationDelegationPayloadError Text
   -- ^ There is a problem with the delegation payload signature
@@ -210,7 +259,7 @@ data ChainValidationError
   | ChainValidationDelegationProofError
   -- ^ The delegation proof does not correspond to the delegation payload
 
-  | ChainValidationDelegationSchedulingError Delegation.SchedulingError
+  | ChainValidationDelegationSchedulingError Scheduling.Error
   -- ^ A delegation certificate failed validation in the ledger layer
 
   | ChainValidationSignatureLight
@@ -218,6 +267,18 @@ data ChainValidationError
 
   | ChainValidationTooManyDelegations PublicKey
   -- ^ The delegator for this block has delegated in too many recent blocks
+
+  | ChainValidationUpdateError UPI.Error
+  -- ^ Something failed to register in the update interface
+
+  | ChainValidationUpdateProofError
+  -- ^ The update payload proof did not match
+
+  | ChainValidationUTxOValidationError UTxO.UTxOValidationError
+  -- ^ A transaction failed validation in the ledger layer
+
+  | ChainValidationUTxOProofError
+  -- ^ The UTxO payload proof did not match
 
   deriving (Eq, Show)
 
@@ -271,58 +332,203 @@ updateChainBoundary cvs bvd = do
       $ boundaryHeaderBytes bvd
     }
 
+
+data BodyEnvironment = BodyEnvironment
+  { protocolMagic      :: !ProtocolMagic
+  , k                  :: !BlockCount
+  , numGenKeys         :: !Word8
+  , protocolParameters :: !Update.ProtocolParameters
+  , currentEpoch       :: !EpochIndex
+  }
+
+data BodyState = BodyState
+  { utxo            :: !UTxO
+  , updateState     :: !UPI.State
+  , delegationState :: !DI.State
+  }
+
 -- | This is an implementation of the BBODY rule as per the chain specification.
---   Compared to `updateChain`, this does not validate any header level checks, nor
---   does it carry out anything which might be considered part of the protocol.
+--
+--   Compared to `updateChain`, this does not validate any header level checks,
+--   nor does it carry out anything which might be considered part of the
+--   protocol.
 updateBody
   :: MonadError ChainValidationError m
-  => Genesis.Config
-  -> ChainValidationState
+  => BodyEnvironment
+  -> BodyState
   -> ABlock ByteString
-  -> m ChainValidationState
-updateBody config cvs b = do
+  -> m BodyState
+updateBody env bs b = do
 
   -- Validate the block size
-  -- TODO Max block size should come from protocol params
-  let maxBlockSize :: Int64
-      maxBlockSize = 2e6 in
-    blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
+  blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
+
+  -- Validate the block attributes size
+  length attributes == 0 `orThrowError` ChainValidationBlockAttributesTooLarge
 
   -- Validate the delegation payload signature
-  proofDelegation (blockProof b) == hash (const () <$> blockDlgPayload b)
+  proofDelegation (blockProof b)
+    == hashDecoded (blockDlgPayload b)
     `orThrowError` ChainValidationDelegationProofError
 
+  -- Update the delegation state
   delegationState' <-
-      updateDelegation config slot d delegationState certificates
-        `wrapError` ChainValidationDelegationSchedulingError
+    DI.updateDelegation delegationEnv delegationState certificates
+      `wrapError` ChainValidationDelegationSchedulingError
 
-  pure $ cvs
-    {cvsDelegationState = delegationState'}
+  -- Validate the transaction payload proof
+  proofTxp (blockProof b)
+    == recoverTxProof (blockTxPayload b)
+    `orThrowError` ChainValidationUTxOProofError
+
+  -- Update the UTxO
+  utxo' <-
+    UTxO.updateUTxO
+        protocolMagic
+        (UPI.adoptedProtocolParameters updateState)
+        utxo
+        txs
+      `wrapError` ChainValidationUTxOValidationError
+
+  -- Validate the update payload proof
+  proofUpdate (blockProof b)
+    == hashDecoded (blockUpdatePayload b)
+    `orThrowError` ChainValidationUpdateProofError
+
+  -- Update the update state
+  updateState' <-
+    UPI.registerUpdate updateEnv updateState updateSignal
+      `wrapError` ChainValidationUpdateError
+
+  pure $ BodyState
+    { utxo        = utxo'
+    , updateState = updateState'
+    , delegationState = delegationState'
+    }
  where
-  slot = blockSlot b
-  d    = configSlotSecurityParam config
+  BodyEnvironment { protocolMagic, k, numGenKeys, currentEpoch }
+    = env
 
-  delegationState = cvsDelegationState cvs
+  BodyState { utxo, updateState, delegationState } = bs
+
+  maxBlockSize =
+    Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters updateState
+
+  UnparsedFields attributes = attrRemain $ blockAttributes b
+
+  currentSlot = blockSlot b
+
   certificates = DlgPayload.getPayload $ blockDlgPayload b
 
+  txs         = aUnTxPayload $ blockTxPayload b
+
+  delegationEnv = DI.Environment
+    { DI.protocolMagic = getProtocolMagicId protocolMagic
+    , DI.allowedDelegators = M.keysSet (DI.delegationMap delegationState)
+    , DI.k           = k
+    , DI.currentEpoch = currentEpoch
+    , DI.currentSlot = currentSlot
+    }
+
+  updateEnv = UPI.Environment
+    { UPI.protocolMagic = getProtocolMagicId protocolMagic
+    , UPI.k           = k
+    , UPI.currentSlot = currentSlot
+    , UPI.numGenKeys  = numGenKeys
+    , UPI.delegationMap = DI.delegationMap delegationState
+    }
+
+  updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
+
+  updateProposal = Update.payloadProposal $ blockUpdatePayload b
+  updateVotes    = Update.payloadVotes $ blockUpdatePayload b
+  updateEndorsement =
+    Endorsement (blockProtocolVersion b) (mkStakeholderId $ blockIssuer b)
+
+
+data HeaderEnvironment = HeaderEnvironment
+  { protocolMagic :: !ProtocolMagicId
+  , k             :: !BlockCount
+  , numGenKeys    :: !Word8
+  , delegationMap :: !(Map StakeholderId StakeholderId)
+  , lastSlot      :: !FlatSlotId
+  }
+
+
 -- | This is an implementation of the the BHEAD rule.
---
---   TODO When the update system is implemented, this should update protocol
---   parameters as per the EPOCH rule
 updateHeader
   :: MonadError ChainValidationError m
-  => Genesis.Config
-  -> ChainValidationState
-  -> ABlock ByteString
-  -> m ChainValidationState
-updateHeader _config cvs (blockHeader -> h) = do
+  => HeaderEnvironment
+  -> UPI.State
+  -> AHeader ByteString
+  -> m UPI.State
+updateHeader env st h = do
   -- Validate the header size
-  -- TODO Max header size should come from protocol params
-  let maxHeaderSize :: Int64
-      maxHeaderSize = 2e6
-   in headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
+  headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
 
-  pure $! cvs
+  -- Validate the header attributes are empty
+  length attributes == 0 `orThrowError` ChainValidationHeaderAttributesTooLarge
+
+  -- Perform epoch transition
+  epochTransition epochEnv st (headerSlot h)
+ where
+  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
+
+  UnparsedFields attributes = attrRemain $ headerAttributes h
+
+  HeaderEnvironment { protocolMagic, k, numGenKeys, delegationMap, lastSlot }
+    = env
+
+  epochEnv = EpochEnvironment
+    { protocolMagic
+    , k
+    , numGenKeys
+    , delegationMap
+    , currentEpoch
+    }
+
+  currentEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) lastSlot
+
+
+data EpochEnvironment = EpochEnvironment
+  { protocolMagic :: !ProtocolMagicId
+  , k             :: !BlockCount
+  , numGenKeys    :: !Word8
+  , delegationMap :: !(Map StakeholderId StakeholderId)
+  , currentEpoch  :: !EpochIndex
+  }
+
+
+-- | Perform epoch transition if we have moved across the epoch boundary
+--
+--   We pass through to the update interface UPIEC rule, which adopts any
+--   confirmed proposals and cleans up the state. This corresponds to the EPOCH
+--   rules from the Byron chain specification.
+epochTransition
+  :: MonadError ChainValidationError m
+  => EpochEnvironment
+  -> UPI.State
+  -> FlatSlotId
+  -> m UPI.State
+epochTransition env st slot = if nextEpoch > currentEpoch
+  then
+    UPI.registerEpoch updateEnv st nextEpoch
+      `wrapError` ChainValidationUpdateError
+  else pure st
+ where
+  EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
+    = env
+
+  nextEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) slot
+
+  updateEnv = UPI.Environment
+    { UPI.protocolMagic = protocolMagic
+    , UPI.k           = k
+    , UPI.currentSlot = slot
+    , UPI.numGenKeys  = numGenKeys
+    , UPI.delegationMap = delegationMap
+    }
+
 
 -- | This represents the CHAIN rule. It is intended more for use in tests than
 --   in a real implementation, which will want to invoke its constituent rules
@@ -337,9 +543,54 @@ updateBlock
   -> ABlock ByteString
   -> m ChainValidationState
 updateBlock config cvs b = do
-  updateHeader config cvs b
-    >>= (\cvs' -> return $ cvs' { cvsPreviousHash = Right $ blockHashAnnotated b })
-    >>= (\cvs' -> updateBody config cvs' b)
+
+  -- Update the header
+  updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
+
+  let
+    bodyEnv = BodyEnvironment
+      { protocolMagic = configProtocolMagic config
+      , k = configK config
+      , numGenKeys
+      , protocolParameters = UPI.adoptedProtocolParameters updateState'
+      , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
+      }
+
+    bs = BodyState
+      { utxo        = cvsUtxo cvs
+      , updateState = updateState'
+      , delegationState = cvsDelegationState cvs
+      }
+
+  BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
+
+  pure $ cvs
+    { cvsLastSlot     = blockSlot b
+    , cvsPreviousHash = Right $ blockHashAnnotated b
+    , cvsUtxo         = utxo
+    , cvsUpdateState  = updateState
+    , cvsDelegationState = delegationState
+    }
+ where
+  headerEnv = HeaderEnvironment
+    { protocolMagic = configProtocolMagicId config
+    , k          = configK config
+    , numGenKeys
+    , delegationMap
+    , lastSlot   = cvsLastSlot cvs
+    }
+
+  numGenKeys :: Word8
+  numGenKeys =
+    case length (unGenesisWStakeholders $ configBootStakeholders config) of
+      n
+        | n > fromIntegral (maxBound :: Word8) -> panic
+          "updateBody: Too many genesis keys"
+        | otherwise -> fromIntegral n
+
+  delegationMap =
+    Activation.asDelegationMap . DI.isActivationState $ cvsDelegationState cvs
+
 
 --------------------------------------------------------------------------------
 -- UTxO
@@ -347,27 +598,35 @@ updateBlock config cvs b = do
 
 data Error
   = ErrorParseError ParseError
-  | ErrorUTxOValidationError SlotId UTxOValidationError
+  | ErrorUTxOValidationError SlotId UTxO.UTxOValidationError
   deriving (Eq, Show)
 
 -- | Fold transaction validation over a 'Stream' of 'Block's
 foldUTxO
   :: ProtocolMagic
+  -> Update.ProtocolParameters
   -> UTxO
   -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO UTxO
-foldUTxO pm utxo blocks = S.foldM_
-  (foldUTxOBlock pm)
+foldUTxO pm pps utxo blocks = S.foldM_
+  (foldUTxOBlock pm pps)
   (pure utxo)
   pure
   (hoist (withExceptT ErrorParseError) blocks)
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Block'
 foldUTxOBlock
-  :: ProtocolMagic -> UTxO -> ABlock ByteString -> ExceptT Error ResIO UTxO
-foldUTxOBlock pm utxo block =
-  withExceptT (ErrorUTxOValidationError . unflattenSlotId mainnetEpochSlots $ blockSlot block)
-    $ foldM (updateUTxOWitness pm) utxo (aUnTxPayload $ blockTxPayload block)
+  :: ProtocolMagic
+  -> Update.ProtocolParameters
+  -> UTxO
+  -> ABlock ByteString
+  -> ExceptT Error ResIO UTxO
+foldUTxOBlock pm pps utxo block =
+  withExceptT
+      (ErrorUTxOValidationError . unflattenSlotId mainnetEpochSlots $ blockSlot
+        block
+      )
+    $ UTxO.updateUTxO pm pps utxo (aUnTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =
@@ -384,33 +643,42 @@ newtype UTxOSize =
 -- along with the 'SlotId'.
 applyBlockUTxOMVar
   :: ProtocolMagic
+  -> Update.ProtocolParameters
   -> MVar (HeapSize UTxO, UTxOSize, SlotId)
   -> UTxO
   -> ABlock ByteString
   -> ExceptT Error ResIO UTxO
-applyBlockUTxOMVar pm sizeMVar utxo block = do
-  resResult <- liftIO . runResourceT . runExceptT $ foldUTxOBlock pm utxo block
+applyBlockUTxOMVar pm pps sizeMVar utxo block = do
+  resResult <- liftIO . runResourceT . runExceptT $ foldUTxOBlock
+    pm
+    pps
+    utxo
+    block
   case resResult of
-    Left e -> throwE e
+    Left  e           -> throwE e
     Right updatedUtxo -> do
-              _ <- liftIO $ takeMVar sizeMVar
-              liftIO . putMVar sizeMVar $ calcUTxOSize block updatedUtxo
-              return updatedUtxo
+      _ <- liftIO $ takeMVar sizeMVar
+      liftIO . putMVar sizeMVar $ calcUTxOSize block updatedUtxo
+      return updatedUtxo
 
 -- | Return the updated 'UTxO' after applying a block.
 scanUTxOfromGenesis
   :: ProtocolMagic
+  -> Update.ProtocolParameters
   -> UTxO
   -> MVar (HeapSize UTxO, UTxOSize, SlotId)
   -> [FilePath]
   -> IO (Either Error UTxO)
-scanUTxOfromGenesis pm utxo sizeMVar fs = runResourceT . runExceptT $ S.foldM_
-    (applyBlockUTxOMVar pm sizeMVar)
-    (pure utxo)
-    pure $ hoist (withExceptT ErrorParseError) blocks
-  where
-    blocks = parseEpochFiles mainnetEpochSlots fs
+scanUTxOfromGenesis pm pps utxo sizeMVar fs =
+  runResourceT
+    . runExceptT
+    $ S.foldM_ (applyBlockUTxOMVar pm pps sizeMVar) (pure utxo) pure
+    $ hoist (withExceptT ErrorParseError) blocks
+  where blocks = parseEpochFiles mainnetEpochSlots fs
 
 calcUTxOSize :: ABlock ByteString -> UTxO -> (HeapSize UTxO, UTxOSize, SlotId)
 calcUTxOSize blk utxo =
-  (HeapSize . heapWords $ unUTxO utxo, UTxOSize . M.size $ unUTxO utxo, unflattenSlotId mainnetEpochSlots $ blockSlot blk)
+  ( HeapSize . heapWords $ unUTxO utxo
+  , UTxOSize . M.size $ unUTxO utxo
+  , unflattenSlotId mainnetEpochSlots $ blockSlot blk
+  )

@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
   ( Environment (..)
@@ -17,7 +20,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Cardano.Chain.Common
-import Cardano.Chain.Delegation.Validation
+import Cardano.Chain.Delegation.Validation.Activation (delegatorOf)
 import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolParameters
 import Cardano.Chain.Update.ProtocolVersion
@@ -42,31 +45,34 @@ data Environment = Environment
   }
 
 data State = State
-  { candidateProtocolVersions :: [CandidateProtocolUpdate]
-  , registeredEndorsements :: Set Endorsement
+  { candidateProtocolVersions :: ![CandidateProtocolUpdate]
+  , registeredEndorsements    :: !(Set Endorsement)
   }
 
 data CandidateProtocolUpdate = CandidateProtocolUpdate
-  { cpuSlot               :: FlatSlotId
+  { cpuSlot               :: !FlatSlotId
     -- ^ Slot at which this protocol version and parameters gathered enough
     -- endorsements and became a candidate. This is used to check which
     -- versions became candidates 2k slots before the end of an epoch (and only
     -- those can be adopted at that epoch). Versions that became candidates
     -- later than 2k slots before the end of an epoch can be adopted in
     -- following epochs.
-  , cpuProtocolVersion    :: ProtocolVersion
-  , cpuProtocolParameters :: ProtocolParameters
-  }
+  , cpuProtocolVersion    :: !ProtocolVersion
+  , cpuProtocolParameters :: !ProtocolParameters
+  } deriving (Eq, Show, Generic)
+    deriving anyclass NFData
 
 data Endorsement = Endorsement
-  { endorsementProtocolVersion :: ProtocolVersion
-  , endorsementStakeholder     :: StakeholderId
-  } deriving (Eq, Ord)
+  { endorsementProtocolVersion :: !ProtocolVersion
+  , endorsementStakeholder     :: !StakeholderId
+  } deriving (Eq, Show, Ord, Generic)
+    deriving anyclass NFData
 
 data Error
   = MultipleProposalsForProtocolVersion ProtocolVersion
   -- ^ Multiple proposals were found, which propose an update to the same
   -- protocol version.
+  deriving (Eq, Show)
 
 -- | Register an endorsement.
 --
@@ -117,7 +123,7 @@ register env st endorsement =
   isConfirmedAndStable upId = upId `M.member` scps
    where
     -- Stable and confirmed proposals.
-    scps     = M.filter (stableAt <=) confirmedProposals
+    scps     = M.filter (<= stableAt) confirmedProposals
     stableAt = currentSlot - twice k
 
   pps = adoptedProtocolParameters env

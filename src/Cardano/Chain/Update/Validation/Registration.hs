@@ -20,7 +20,9 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Binary (Annotated(..))
+import Cardano.Chain.Common
+  (Attributes(..), StakeholderId, UnparsedFields(..), mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.ProtocolParameters
@@ -38,13 +40,14 @@ import Cardano.Chain.Update.SoftwareVersion
   )
 import Cardano.Chain.Update.Vote
   ( AProposal(AProposal)
-  , ProposalBody(ProposalBody)
+  , ProposalBody(..)
   , UpId
   , pbProtocolParametersUpdate
   , pbSoftwareVersion
   , proposalAnnotation
   , proposalAnnotation
   , proposalBody
+  , recoverProposalSignedBytes
   , recoverUpId
   , pbProtocolVersion
   )
@@ -86,6 +89,7 @@ data Error
   | RegistrationInvalidSoftwareVersion SoftwareVersion
   | RegistrationMaxBlockSizeTooLarge (TooLarge Natural)
   | RegistrationMaxTxSizeTooLarge (TooLarge Natural)
+  | RegistrationProposalAttributesTooLarge
   | RegistrationProposalEmpty
   | RegistrationProposalTooLarge (TooLarge Natural)
   deriving (Eq, Show)
@@ -105,19 +109,33 @@ registerProposal
   -> AProposal ByteString
   -> m State
 registerProposal env rs proposal = do
+  -- Check that the proposal attributes are empty
+  length attributes == 0 `orThrowError` RegistrationProposalAttributesTooLarge
+
   -- Check that the proposer is delegated to by a genesis key
   not (null $ M.filter (== proposer) delegationMap)
     `orThrowError` RegistrationInvalidProposer proposer
 
   -- Verify the proposal signature
-  verifySignatureDecoded protocolMagic SignUSProposal proposerPK body sig
+  verifySignatureDecoded
+      protocolMagic
+      SignUSProposal
+      proposerPK
+      (recoverProposalSignedBytes body)
+      sig
     `orThrowError` RegistrationInvalidSignature
 
   -- Check that the proposal is valid
   registerProposalComponents
-    adoptedProtocolVersion adoptedProtocolParameters appVersions rs proposal
+    adoptedProtocolVersion
+    adoptedProtocolParameters
+    appVersions
+    rs
+    proposal
  where
   AProposal body proposerPK sig _ = proposal
+
+  Attributes _ (UnparsedFields attributes) = pbAttributes $ unAnnotated body
 
   proposer = mkStakeholderId proposerPK
 
@@ -168,7 +186,7 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
     maybe True ((/= appVersion) . fst) $ M.lookup appName appVersions
 
   protocolVersionChanged =
-    not $ protocolVersion == adoptedPV && PPU.isEmpty ppu
+    not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
 
   State registeredPUPs registeredSUPs = rs
 
@@ -301,6 +319,6 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
 svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 0
+  Nothing -> appVersion == 1
   Just (currentAppVersion, _) -> appVersion == currentAppVersion + 1
   where SoftwareVersion appName appVersion = softwareVersion

@@ -61,7 +61,9 @@ library
 
                        Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
-                       Cardano.Chain.Delegation.Validation
+                       Cardano.Chain.Delegation.Validation.Activation
+                       Cardano.Chain.Delegation.Validation.Interface
+                       Cardano.Chain.Delegation.Validation.Scheduling
 
                        Cardano.Chain.Genesis.AvvmBalances
                        Cardano.Chain.Genesis.Config
@@ -199,7 +201,6 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Txp.Example
                        Test.Cardano.Chain.Txp.Gen
                        Test.Cardano.Chain.Txp.Json
-                       Test.Cardano.Chain.Txp.Validation
 
                        Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example
@@ -245,7 +246,7 @@ test-suite cardano-ledger-test
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
-                       "-with-rtsopts=-K450K -M200M"
+                       "-with-rtsopts=-K450K -M500M"
 
   if (!flag(development))
     ghc-options:         -Werror

@@ -22,6 +22,7 @@ module Cardano.Chain.Update.Vote
   , formatMaybeProposal
   , mkProposal
   , proposalBody
+  , recoverProposalSignedBytes
   , recoverUpId
   , signProposal
 
@@ -94,13 +95,13 @@ import Cardano.Crypto
 type UpId = Hash Proposal
 
 data ProposalBody = ProposalBody
-  { pbProtocolVersion         :: !ProtocolVersion
+  { pbProtocolVersion          :: !ProtocolVersion
   , pbProtocolParametersUpdate :: !ProtocolParametersUpdate
-  , pbSoftwareVersion         :: !SoftwareVersion
-  , pbData                    :: !(Map SystemTag UpdateData)
+  , pbSoftwareVersion          :: !SoftwareVersion
+  , pbData                     :: !(Map SystemTag UpdateData)
   -- ^ UpdateData for each system which this update affects. It must be
   --   non-empty.
-  , pbAttributes              :: !(Attributes ())
+  , pbAttributes               :: !(Attributes ())
   -- ^ Attributes which are currently empty, but provide extensibility
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
@@ -119,9 +120,15 @@ instance FromCBOR ProposalBody where
     enforceSize "ProposalBody" 5
     ProposalBody <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
+-- | Prepend byte corresponding to `encodeListLen 5`, which was used during
+--   signing
+recoverProposalSignedBytes
+  :: Annotated ProposalBody ByteString -> Annotated ProposalBody ByteString
+recoverProposalSignedBytes = fmap ("\133" <>)
+
 -- | Proposal for software update
 data AProposal a = AProposal
-  { aProposalBody      :: (Annotated ProposalBody a)
+  { aProposalBody      :: !(Annotated ProposalBody a)
   , proposalIssuer     :: !PublicKey
   -- ^ Who proposed this UP.
   , proposalSignature  :: !(Signature ProposalBody)
@@ -131,7 +138,7 @@ data AProposal a = AProposal
 
 type Proposal = AProposal ()
 
-mkProposal :: ProposalBody -> PublicKey -> (Signature ProposalBody) -> Proposal
+mkProposal :: ProposalBody -> PublicKey -> Signature ProposalBody -> Proposal
 mkProposal b k s = AProposal (Annotated b ()) k s ()
 
 proposalBody :: AProposal a -> ProposalBody

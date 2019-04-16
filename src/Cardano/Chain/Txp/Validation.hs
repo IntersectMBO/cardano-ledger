@@ -8,7 +8,8 @@
 module Cardano.Chain.Txp.Validation
   ( validateTx
   , updateUTxO
-  , updateUTxOWitness
+  , updateUTxOTxWitness
+  , updateUTxOTx
   , TxValidationError
   , UTxOValidationError
   )
@@ -19,19 +20,19 @@ import Cardano.Prelude
 
 
 import Control.Monad.Except (MonadError)
+import qualified Data.ByteString as BS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
 
-import Cardano.Binary (Annotated(..), biSize)
+import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( Address
   , Lovelace
   , LovelaceError
   , NetworkMagic
   , TxFeePolicy(..)
-  , TxSizeLinear(..)
   , addrNetworkMagic
   , calculateTxSizeLinear
   , checkPubKeyAddress
@@ -41,12 +42,13 @@ import Cardano.Chain.Common
   , subLovelace
   )
 import Cardano.Chain.Txp.Tx (Tx(..), TxIn, TxOut(..))
-import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taTx, taWitness)
+import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taWitness)
 import Cardano.Chain.Txp.TxWitness
   (TxInWitness(..), TxSigData(..), recoverSigData)
 import Cardano.Chain.Txp.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.Txp.UTxO as UTxO
+import Cardano.Chain.Update (ProtocolParameters(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProtocolMagicId
@@ -64,6 +66,7 @@ data TxValidationError
   | TxValidationMissingInput TxIn
   | TxValidationNetworkMagicMismatch NetworkMagic NetworkMagic
   -- ^ Fields are <expected> <actual>
+  | TxValidationTxTooLarge Natural Natural
   deriving (Eq, Show)
 
 
@@ -77,8 +80,16 @@ data TxValidationError
 --   actually assume 3 by calculating the fee as output balance - input balance.
 validateTx
   :: MonadError TxValidationError m
-  => ProtocolMagic -> TxFeePolicy -> UTxO -> Tx -> m ()
-validateTx pm feePolicy utxo tx = do
+  => ProtocolMagic
+  -> ProtocolParameters
+  -> UTxO
+  -> Annotated Tx ByteString
+  -> m ()
+validateTx pm pps utxo (Annotated tx txBytes) = do
+
+  -- Check that the size of the transaction is less than the maximum
+  txSize <= ppMaxTxSize pps
+    `orThrowError` TxValidationTxTooLarge txSize (ppMaxTxSize pps)
 
   -- Check that outputs have valid NetworkMagic
   let nm = makeNetworkMagic pm
@@ -108,7 +119,10 @@ validateTx pm feePolicy utxo tx = do
   (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
  where
 
-  txSize    = biSize tx
+  feePolicy = ppTxFeePolicy pps
+
+  txSize :: Natural
+  txSize = fromIntegral $ BS.length txBytes
 
   inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
@@ -164,34 +178,35 @@ data UTxOValidationError
 
 
 -- | Validate a transaction and use it to update the 'UTxO'
-updateUTxO :: MonadError UTxOValidationError m
-           => ProtocolMagic -> UTxO -> Tx -> m UTxO
-updateUTxO pm utxo tx = do
+updateUTxOTx
+  :: MonadError UTxOValidationError m
+  => ProtocolMagic
+  -> ProtocolParameters
+  -> UTxO
+  -> Annotated Tx ByteString
+  -> m UTxO
+updateUTxOTx pm pps utxo aTx@(Annotated tx _) = do
 
-  validateTx pm hardcodedTxFeePolicy utxo tx
+  validateTx pm pps utxo aTx
     `wrapError` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
     `wrapError` UTxOValidationUTxOError
- where
-
-  hardcodedTxFeePolicy = TxFeePolicyTxSizeLinear
-    $ TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44)
 
 
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
-updateUTxOWitness
+updateUTxOTxWitness
   :: MonadError UTxOValidationError m
   => ProtocolMagic
+  -> ProtocolParameters
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO
-updateUTxOWitness pm utxo ta = do
+updateUTxOTxWitness pm pps utxo ta = do
   let
-    tx      = taTx ta
+    aTx@(Annotated tx _) = aTaTx ta
     witness = taWitness ta
-    --TODO:  after rebase: hashAnnotated fix
-    sigData = recoverSigData $ aTaTx ta
+    sigData = recoverSigData aTx
     pmi = getProtocolMagicId pm
 
   -- Get the signing addresses for each transaction input from the 'UTxO'
@@ -206,4 +221,14 @@ updateUTxOWitness pm utxo ta = do
     `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxO pm utxo tx
+  updateUTxOTx pm pps utxo aTx
+
+-- | Update UTxO with a list of transactions
+updateUTxO
+  :: MonadError UTxOValidationError m
+  => ProtocolMagic
+  -> ProtocolParameters
+  -> UTxO
+  -> [ATxAux ByteString]
+  -> m UTxO
+updateUTxO pm = foldM . updateUTxOTxWitness pm
