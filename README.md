@@ -79,3 +79,29 @@ will run it over all `.hs` files with our `brittany` config file.
 
 Otherwise, if your build fails the `brittany` CI tests, the buildkite page will
 include a `git` patch that you can apply and amend you your commit.
+
+
+## Scaling tests according to TestScenario
+
+This repo uses custom Template Haskell helper functions allow the number of tests to scale for the scenarios of `Development`, `ContinuousIntegration`, and `QualityAssurance` (as defined [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L52-L55)). This code block illustrates how to use said functionality:
+```
+import Test.Cardano.Prelude
+import Test.Options (TestScenario, TSProperty, eachOfTS, withTestsTS)
+import Hedgehog (property, (===))
+
+ts_prop_trivial :: TSProperty
+ts_prop_trivial = withTestsTS 1000 . property $ do
+  True === True
+
+ts_roundTripTrivial :: TSProperty
+ts_roundTripTrivial = eachOfTS 1000 genTrivial roundTripsCBORBuildable
+
+tests :: TestScenario -> IO Bool
+tests ts = and <$> sequence
+  [ H.checkParallel (($$discoverPropArg :: TestScenario -> Group) ts)
+  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
+  ]
+```
+It is assumed that `genTrivial` is defined and in-scope, and that the type it generates has appropriate instances that allow it to roundtrip.
+
+Note that we specify a concrete number of tests to run: `1000`. This is the number which will execute in the `ContinuousIntegration` scenario, and the ratios by which that number will be multiplied for the other scenarios are given [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
