@@ -149,11 +149,22 @@ keys, some of which correspond with fields of the
 \item Maximum proposal size: $\var{maxProposalSize}$
 \item Transaction fee policy: $\var{txFeePolicy}$
 \item Script version: $\var{scriptVersion}$
-\item Update adoption threshold : $\var{upAdptThd}$. This represents the
-  minimum percentage of the total number of genesis keys that have to endorse a
-  protocol version to be able to become adopted. This parameter would
-  correspond with `srMinThd` in `bvdSoftforkRule`.
-\item Chain stability parameter: $\var{stableAfter}$.
+\item Update adoption threshold: $\var{upAdptThd}$. This represents the minimum
+  percentage of the total number of genesis keys that have to endorse a
+  protocol version to be able to become adopted. There is no corresponding
+  parameter in the `cardano-sl` protocol parameters, however we do have a
+  soft-fork minimum threshold parameter (`srMinThd` in `bvdSoftforkRule`). When
+  divided by, $1\times 10^{15}$, it determines the minimum portion of the total
+  stake that is needed for the adoption of a new protocol version. On mainnet,
+  this number is set to $6 \times 10^{14}$, so the minimum portion becomes
+  $0.6$. This number can be multiplied by the total number of genesis keys to
+  obtain how many keys are needed to reach a majority.
+\item Confirmation threshold $\var{cfmThd}$: This represents the minimum
+  percentage of the total number of genesis keys that have to vote on a
+  proposal for it to become confirmed. As with $\var{upAdptThd}$ there is no
+  corresponding protocol parameter in the `cardano-sl` protocol parameters, so
+  in the implementation we will be using `srMinThd` as well to get the portion
+  of keys that need to vote on a proposal to be confirmed.
 \item Update proposal time-to-live: $\var{upropTTL}$. This would correspond to
   the number of slots specified by `bvdUpdateImplicit`. In `cardano-sl` the
   rule was that after `bvdUpdateImplicit` slots, if a proposal did not reach a
@@ -162,16 +173,10 @@ keys, some of which correspond with fields of the
   specification, we re-interpret the meaning of this parameter as the proposal
   time-to-live: if after the number of slots specified by `bvdUpdateImplicit`
   the proposal does not reach a majority of approvals, the proposal is simply
-  discarded. In the mainnet configuration (`mainnet-genesis.json` this value is
+  discarded. In the mainnet configuration (`mainnet-genesis.json`) this value is
   set to $10000$, which corresponds with almost half of the total number of
-  slots in an epoch).
+  slots in an epoch.
 \end{itemize}
-In addition we make use of the $\var{cfmThd}$ key, which determines the portion
-of the stakeholders that have to vote for a proposal to consider it confirmed.
-This key does not seem to have a corresponding field in `BlockVersionData`, so
-to be consistent with the existing chain the value corresponding to
-$\var{cfmThd}$ can be set to $4$, which represents the majority of the $7$
-genesis keys.
 
 \subsection{Update proposals registration}
 \label{sec:update-proposals-registration}
@@ -237,9 +242,7 @@ The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal
       current maximum block size,
     \item the maximum transaction size must be smaller than the maximum block
       size (this requirement is \textbf{crucial} for having every transaction
-      fitting in a block \footnote{TODO: we should discuss if this is enough,
-        since a block might contain other data that contributes to its total
-        size}), and
+      fitting in a block, and
     \item the proposed new script version can be incremented by at most 1.
     \end{itemize}
   \item must have a unique version among the current active proposals. This
@@ -802,7 +805,7 @@ In Rule~\ref{eq:rule:voting}:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_n} & \Slot & \text{current slot number}\\
-        \var{pps} & \PPMMap & \text{current protocol parameters map}\\
+        \var{t} & \mathbb{Q} & \text{confirmation threshold}\\
         \var{rups} & \powerset{\UPropId}
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
@@ -868,7 +871,6 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
         \right)
       }\\
       \var{pid} \leteq \vPropId{v}
-      & \var{cfmThd} \mapsto t \in \var{pps}
       & (\size{\{\var{pid}\} \restrictdom \var{vts'}} < t
       \vee \var{pid} \in \dom~\var{cps}
       )
@@ -877,7 +879,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
       {
         \begin{array}{l}
           s_n\\
-          \var{pps}\\
+          \var{t}\\
           \var{rups}\\
           \var{dms}
         \end{array}
@@ -930,7 +932,6 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
         \right)
       }\\
       \var{pid} \leteq \vPropId{v}
-      & \var{cfmThd} \mapsto t \in \var{pps}
       & t \leq \size{\{\var{pid}\} \restrictdom \var{vts'}}
       & \var{pid} \notin \dom~\var{cps}
     }
@@ -938,7 +939,7 @@ The rules in Figure~\ref{fig:rules:up-vote-reg} model the registration of a vote
       {
         \begin{array}{l}
           \var{s_n}\\
-          \var{pps}\\
+          \var{t}\\
           \var{rups}\\
           \var{dms}
         \end{array}
@@ -990,7 +991,6 @@ blocks. Some clarifications are in order:
     & \BVREnv
       = \left(
       \begin{array}{r@{~\in~}lr}
-        k & \mathbb{N} & \text{chain stability parameter}\\
         \var{s_n} & \Slot & \text{current slot number}\\
         t & \mathbb{Q} & \text{adoption threshold}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
@@ -1126,7 +1126,6 @@ rule by $\var{bv}$:
     {
       {
         \begin{array}{l}
-          k\\
           s_n\\
           t\\
           \var{dms}\\
@@ -1169,7 +1168,6 @@ rule by $\var{bv}$:
     {
       {
         \begin{array}{l}
-          k\\
           s_n\\
           t\\
           \var{dms}\\
@@ -1214,7 +1212,6 @@ rule by $\var{bv}$:
     {
       {
         \begin{array}{l}
-          k\\
           s_n\\
           t\\
           \var{dms}\\
@@ -1386,14 +1383,3 @@ complex update mechanism depends on research that is in progress at the time of
 writing this specification. We decided to keep the update mechanism as simple
 as possible in the centralized era and incorporate the research results for the
 decentralized era at a later stage.
-
-\subsection{Questions}
-\label{sec:up-questions}
-
-This temporary section contains unanswered questions about the formalization of
-update mechanism:
-
-\begin{itemize}
-\item Do we need to model the $\var{scriptVersion}$?
-\item Do we allow an update proposal that proposes no update?
-\end{itemize}
