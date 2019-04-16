@@ -17,9 +17,8 @@
     \left(
       \begin{array}{r@{~\in~}lr}
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
-        \var{e} & \Epoch & \text{epoch}\\
-        \var{s} & \Slot & \text{slot}\\
-        \var{pps} & \PPMMap & \text{Protocol parameters}
+        \var{e} & \Epoch & \text{current epoch}\\
+        \var{s} & \Slot & \text{current slot}
       \end{array}
     \right)
   \end{equation*}
@@ -54,13 +53,12 @@
     \label{eq:rule:delegation-interface}
     \inference
     {
-      \var{stableAfter} \mapsto k \in \var{pps} & d \leteq 2 \cdot k \\
-      {\begin{array}{l}
+      d \leteq 2 \cdot k \\
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         k
-       \end{array}}
+         s
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -80,6 +78,10 @@
         \right)
       }
       &
+      {\begin{array}{l}
+       \mathcal{K}
+       \end{array}}
+      \vdash
       {
         \left(
           \begin{array}{l}
@@ -99,12 +101,11 @@
       }
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         pps
-      \end{array}}
+         s
+      \end{array}\right)}
       \vdash
       {
         \left(
@@ -146,6 +147,23 @@ labels have the following meaning:
 \item[UPIEC] Update-proposal-interface epoch-change.
 \end{description}
 
+In these rules we make use of the abstract constant $\var{ngk}$, defined in
+\cref{fig:defs:upi}, which determines the number of genesis keys:
+
+\begin{figure}[ht]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+    \end{array}
+  \end{equation*}
+
+  \caption{Update interface types and functions}
+  \label{fig:defs:upi}
+\end{figure}
+
+
 \begin{figure}[htb]
   \emph{Update-proposals interface environments}
   \begin{align*}
@@ -153,7 +171,6 @@ labels have the following meaning:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_n} & \Slot & \text{current slot number}\\
-        \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}\right)
   \end{align*}
@@ -163,7 +180,6 @@ labels have the following meaning:
     & \UPIState = \\
     & \left(
       \begin{array}{r@{~\in~}lr}
-        \var{e_p} & \Epoch & \text{previously seen epoch}\\
         (\var{pv}, \var{pps}) & \ProtVer \times \PPMMap
         & \text{current protocol information}\\
         \var{fads} & \seqof{(\Slot \times (\ProtVer \times \PPMMap))}
@@ -193,7 +209,7 @@ labels have the following meaning:
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{\_} \_ &
-      \powerset (\UPIEnv \times \UPIState \times \Epoch \times \UPIState)
+      \powerset (\UPIEnv \times \UPIState \times \UPIState)
     \end{array}
   \end{equation*}
   \caption{Update-proposals interface transition-system types}
@@ -235,18 +251,16 @@ labels have the following meaning:
       pws' \leteq pws \unionoverrideRight \{ \upId{up} \mapsto s_n\}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
@@ -263,7 +277,6 @@ labels have the following meaning:
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
@@ -308,10 +321,11 @@ given application name $\var{an}$.
     \label{eq:rule:upi-vote}
     \inference
     {
+      \var{cfmThd} \mapsto q \in \var{pps}\\
       {
         \begin{array}{l}
           s_n\\
-          \var{pps}\\
+          q \cdot \var{ngk}\\
           \var{\dom~pws}\\
           \var{dms}
         \end{array}
@@ -340,18 +354,16 @@ given application name $\var{an}$.
       \}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
@@ -368,7 +380,6 @@ given application name $\var{an}$.
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs} \unionoverrideRight \var{avs_{new}}\\
@@ -467,7 +478,6 @@ the end on an epoch.
     {
       {
         \begin{array}{l}
-          k\\
           s_n\\
           q \cdot \var{ngk}\\
           \var{dms}\\
@@ -493,8 +503,7 @@ the end on an epoch.
           \end{array}
         \right)
       }\\
-      \var{stableAfter} \mapsto k \in  \var{pps}
-      & \var{upropTTL} \mapsto u \in \var{pps}
+      \var{upropTTL} \mapsto u \in \var{pps}
       & \var{upAdptThd} \mapsto q \in \var{pps} \\
       {
         \begin{array}{r@{~\leteq~}l}
@@ -505,18 +514,16 @@ the end on an epoch.
       }
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
@@ -533,7 +540,6 @@ the end on an epoch.
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             (\var{pv}, \var{pps})\\
             \var{fads'}\\
             \var{avs}\\
@@ -554,10 +560,8 @@ the end on an epoch.
 
 \clearpage
 
-Rule~\ref{eq:rule:upi-ec-pv-change} models how the epoch, protocol-version and its
-parameters are changed depending on the epoch in the signal ($e_n$ in this
-case). A change in the epoch only occurs if the new epoch is greater than the
-previously seen epoch ($e_p$).
+Rule~\ref{eq:rule:upi-ec-pv-change} models how the protocol-version and its
+parameters are changed depending on an epoch change signal.
 %
 On an epoch change, this rule will pick a candidate that gathered enough
 endorsements at least $2 \cdot k$ slots ago. If a protocol-version candidate
@@ -596,65 +600,29 @@ expires.
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:pvbump-change-noop}
-    \inference
-    {
-      e_n \leq e_p
-    }
-    {
-      {\begin{array}{l}
-         k\\
-         s_n\\
-         \var{fads}
-       \end{array}}
-      \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}
-          \end{array}
-        \right)
-      }
-      \trans{pvbump}{\var{e_n}}
-      {
-        \left(
-          \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}
-          \end{array}
-        \right)
-      }
-    }
-  \end{equation}
-  \nextdef
-  \begin{equation}
     \label{eq:rule:pvbump-change-epoch-only}
     \inference
     {
-      [.., s_n - 2 \cdot k] \restrictdom \var{fads} = \epsilon &  e_p < e_n
+      [.., s_n - 2 \cdot k] \restrictdom \var{fads} = \epsilon
     }
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
+            \var{pv}, \var{pps}\\
           \end{array}
         \right)
       }
-      \trans{pvbump}{\var{e_n}}
+      \trans{pvbump}{}
       {
         \left(
           \begin{array}{l}
-            \var{e_n}\\
-            \var{(\var{pv}, \var{pps})}\\
+            \var{pv}, \var{pps}\\
           \end{array}
         \right)
       }
@@ -666,29 +634,25 @@ expires.
     \inference
     {
       \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 2 \cdot k] \restrictdom \var{fads}
-      & e_p < e_n
     }
     {
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
+            \var{pv}, \var{pps}\\
           \end{array}
         \right)
       }
-      \trans{pvbump}{\var{e_n}}
+      \trans{pvbump}{}
       {
         \left(
           \begin{array}{l}
-            \var{e_n}\\
-            \var{(\var{pv_c}, \var{pps_c})}\\
+            \var{pv_c}, \var{pps_c}\\
           \end{array}
         \right)
       }
@@ -703,45 +667,39 @@ expires.
     \label{eq:rule:upi-ec-pv-unchanged}
     \inference
     {
-      \var{stableAfter} \mapsto k \in  \var{pps} &
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}
+            \var{pv}, \var{pps}
           \end{array}
         \right)
       }
-      \trans{pvbump}{\var{e_n}}
+      \trans{pvbump}{}
       {
         \left(
           \begin{array}{l}
-            \var{e'}\\
-            \var{(\var{pv'}, \var{pps'})}\\
+            \var{pv'}, \var{pps'}\\
           \end{array}
         \right)
-      }\\ ~ \\ \var{pv} = \var{pv'}
+      } &\var{pv} = \var{pv'}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}\\
+            (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
             \var{rpus}\\
@@ -753,12 +711,11 @@ expires.
           \end{array}
         \right)
       }
-      \trans{upiec}{\var{e_n}}
+      \trans{upiec}{}
       {
         \left(
           \begin{array}{l}
-            \var{e'}\\
-            \var{(\var{pv}, \var{pps})}\\
+            (\var{pv}, \var{pps})\\
             \var{fads}\\
             \var{avs}\\
             \var{rpus}\\
@@ -777,44 +734,39 @@ expires.
     \label{eq:rule:upi-ec-pv-change}
     \inference
     {
-      \var{stableAfter} \mapsto k \in  \var{pps} &
-      {\begin{array}{l}
-         k\\
+      {\left(\begin{array}{l}
          s_n\\
          \var{fads}
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
-            \var{(\var{pv}, \var{pps})}
+            \var{pv}, \var{pps}\\
           \end{array}
         \right)
       }
-      \trans{pvbump}{\var{e_n}}
+      \trans{pvbump}{}
       {
         \left(
           \begin{array}{l}
-            \var{e'}\\
-            \var{(\var{pv'}, \var{pps'})}\\
+            \var{pv'}, \var{pps'}\\
           \end{array}
         \right)
-      }\\ ~ \\ \var{pv} \neq \var{pv'}
+      }
+      & \var{pv} \neq \var{pv'}
     }
     {
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
-          \var{ngk}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
           \begin{array}{l}
-            \var{e_p}\\
             \var{(\var{pv}, \var{pps})}\\
             \var{fads}\\
             \var{avs}\\
@@ -827,12 +779,11 @@ expires.
           \end{array}
         \right)
       }
-      \trans{upiec}{\var{e_n}}
+      \trans{upiec}{}
       {
         \left(
           \begin{array}{l}
-            \var{e'}\\
-            \var{(\var{pv'}, \var{pps'})}\\
+            (\var{pv'}, \var{pps'})\\
             \epsilon\\
             \var{avs}\\
             \emptyset\\

@@ -30,7 +30,9 @@ Rule~\ref{eq:rule:delegation-scheduling} determines when a certificate can
 become ``scheduled''. The definitions used in this rules are presented in
 \cref{fig:defs:delegation-scheduling}, and the types of the system induced by
 $\trans{sdeleg}{\wcard}$ are presented in
-\cref{fig:ts-types:delegation-scheduling}.
+\cref{fig:ts-types:delegation-scheduling}. Here and in the remaining rules we
+will be using $k$ as an abstract constant that give us the chain stability
+parameter.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -65,7 +67,8 @@ $\trans{sdeleg}{\wcard}$ are presented in
       \fun{dwho} & \DCert \mapsto (\VKeyGen \times \VKey)
       & \text{who delegates to whom in the certificate}\\
       \fun{depoch} & \DCert \mapsto \Epoch
-      & \text{certificate epoch}
+      & \text{certificate epoch}\\
+      \var{k} & \mathbb{N} & \text{chain stability parameter}
     \end{array}
   \end{equation*}
   \caption{Delegation scheduling definitions}
@@ -81,7 +84,6 @@ $\trans{sdeleg}{\wcard}$ are presented in
         \mathcal{K} & \powerset{\VKeyGen} & \text{allowed delegators}\\
         \var{e} & \Epoch & \text{epoch}\\
         \var{s} & \Slot & \text{slot}\\
-        \var{k} & \SlotCount & \text{chain stability parameter}
       \end{array}
     \right)
   \end{equation*}
@@ -113,12 +115,11 @@ $\trans{sdeleg}{\wcard}$ are presented in
     {
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
        \mathcal{K}\\
         e\\
-        s\\
-        d
-      \end{array}}
+        s
+      \end{array}\right)}
       \vdash
       \left(
         \begin{array}{l}
@@ -140,12 +141,11 @@ $\trans{sdeleg}{\wcard}$ are presented in
       d \leteq 2 \cdot k & (s + d,~ (\var{vk_s},~ \wcard)) \notin \var{sds}\\
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
        \mathcal{K}\\
         e\\
-        s\\
-        k
-      \end{array}}
+        s
+      \end{array}\right)}
       \vdash
       {
         \left(
@@ -327,16 +327,15 @@ delegations have on the ledger.
 
 \begin{figure}[htb]
   \begin{equation}
-    \inference[Initial-SDELEGS]
+    \inference
     {
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
        \mathcal{K}\\
         e\\
-        s\\
-        d
-      \end{array}}
+        s
+      \end{array}\right)}
       \vdash
       \left(
         \begin{array}{l}
@@ -353,12 +352,11 @@ delegations have on the ledger.
     {
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
          s\\
-         d
-       \end{array}}
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -384,12 +382,11 @@ delegations have on the ledger.
     \label{eq:rule:delegation-scheduling-seq-ind}
     \inference
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         d
-       \end{array}}
+         s
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -409,12 +406,11 @@ delegations have on the ledger.
         \right)
       }
       &
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         d
-       \end{array}}
+         s
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -435,12 +431,11 @@ delegations have on the ledger.
       }
     }
     {
-      {\begin{array}{l}
+      {\left(\begin{array}{l}
          \mathcal{K} \\
          e\\
-         s\\
-         d
-       \end{array}}
+         s
+       \end{array}\right)}
       \vdash
       {
         \left(
@@ -467,10 +462,10 @@ delegations have on the ledger.
 
 \begin{figure}
   \begin{equation}
-    \inference[Initial-ADELEGS]
+    \inference
     {
-      \var{dms_0} \leteq \Set{k \mapsto k}{k \in \mathcal{K}} &
-      \var{dws_0} \leteq \Set{k \mapsto 0}{k \in \mathcal{K}}
+      \var{dms_0} \leteq \Set{\var{vk} \mapsto \var{vk}}{\var{vk} \in \mathcal{K}} &
+      \var{dws_0} \leteq \Set{\var{vk} \mapsto 0}{\var{vk} \in \mathcal{K}}
     }
     {
       \mathcal{K}
@@ -516,6 +511,8 @@ delegations have on the ledger.
     \label{eq:rule:delegation-seq-ind}
     \inference
     {
+      \mathcal{K}
+      \vdash
       {
         \left(
           \begin{array}{l}
@@ -534,6 +531,8 @@ delegations have on the ledger.
         \right)
       }
       &
+      \mathcal{K}
+      \vdash
       {
         \left(
           \begin{array}{l}
