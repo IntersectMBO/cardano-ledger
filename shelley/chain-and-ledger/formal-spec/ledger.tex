@@ -1,0 +1,198 @@
+\section{Ledger State Transition}
+\label{sec:ledger-trans}
+
+The entire state transformation of the ledger state caused by a valid transaction
+can now be given as the combination of the UTxO transition and the delegation transitions.
+
+Figure~\ref{fig:ts-types:ledger} defines the types for this transition.
+The environment for this rule consists of:
+\begin{itemize}
+  \item The current slot.
+  \item The transaction index within the current block.
+  \item The protocol parameters.
+\end{itemize}
+The ledger state consists of:
+\begin{itemize}
+  \item The UTxO state.
+  \item The delegation and pool states.
+\end{itemize}
+
+\begin{figure}[htb]
+  \emph{Ledger environment}
+  \begin{equation*}
+    \LEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{current slot}\\
+        \var{txIx} & \Ix & \text{transaction index}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Ledger state}
+  \begin{equation*}
+    \LState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxoSt} & \UTxOState & \text{UTxO state}\\
+        \var{dpstate} & \DPState & \text{delegation and pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Ledger transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{ledger}{\_} \var{\_}
+    \subseteq \powerset (\LEnv \times \LState \times \Tx \times \LState)
+  \end{equation*}
+  \caption{Ledger transition-system types}
+  \label{fig:ts-types:ledger}
+\end{figure}
+
+Figure~\ref{fig:ts-types:ledger} defines the ledger state transition.
+It has a single rule, which first calls the $\mathsf{UTXOW}$ transition,
+and then calls the $\mathsf{DELEGS}$ transition.
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:ledger}
+    \inference[ledger]
+    {
+      (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
+    (\var{stkeys}, \_, \_, \_) \leteq \var{dstate} \\
+    (\var{stpools}, \_, \_, \_, \_) \leteq \var{pstate} \\~\\
+      \left({
+        \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+        \var{stkeys} \\
+        \var{stpools}
+        \end{array}
+    }\right)
+      \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}\\~\\~\\
+      %
+      {
+        \left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{txIx} \\
+          \var{pp} \\
+        \end{array}
+      \right)
+      }
+      \vdash
+      dpstate \trans{delegs}{\var{tx}} dpstate'
+    }
+    {
+      \left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{txIx} \\
+          \var{pp} \\
+        \end{array}
+      \right)
+      \vdash
+      \left(
+        \begin{array}{ll}
+          utxoSt \\
+          dpstate \\
+        \end{array}
+      \right)
+      \trans{ledger}{tx}
+      \left(
+        \begin{array}{ll}
+          \varUpdate{utxoSt'} \\
+          \varUpdate{dpstate'} \\
+        \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Ledger inference rule}
+  \label{fig:rules:ledger}
+\end{figure}
+
+\clearpage
+
+The transition system $\mathsf{LEDGER}$ in Figure~\ref{fig:rules:ledger} is iterated
+in $\mathsf{LEDGERS}$ in order to process a list of transitions.
+
+\begin{figure}[htb]
+  \emph{Ledger Sequence transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{ledgers}{\_} \var{\_}
+    \subseteq \powerset ((\Slot\times\PParams) \times \LState \times \seqof{\Tx} \times \LState)
+  \end{equation*}
+  \caption{Ledger transition-system types}
+  \label{fig:ts-types:ledgers}
+\end{figure}
+
+\begin{figure}[hbt]
+  \begin{equation}
+    \label{eq:ledgers-base}
+    \inference[Seq-ledger-base]
+    {}
+    {
+     \left(
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+    \right)
+    \vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}
+    \label{eq:ledgers-induct}
+    \inference[Seq-ledger-ind]
+    {
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot}\\
+            \var{pp}\\
+          \end{array}
+        \right)
+      }
+      \vdash
+      \var{ls}
+      \trans{ledgers}{\Gamma}
+      \var{ls'}
+      &
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot}\\
+            \mathsf{len}~\Gamma - 1\\
+            \var{pp}\\
+          \end{array}
+        \right)
+      }
+      \vdash
+        \var{ls'}
+        \trans{ledger}{c}
+        \var{ls''}
+    }
+    {
+    {
+      \left(
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+      \end{array}
+    \right)
+    }
+    \vdash
+      \var{ls}
+      \trans{ledgers}{\Gamma; c}
+      \varUpdate{\var{ls''}}
+    }
+  \end{equation}
+  \caption{Ledger sequence rules}
+  \label{fig:rules:ledger-sequence}
+\end{figure}

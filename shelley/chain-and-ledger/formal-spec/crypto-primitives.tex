@@ -1,0 +1,133 @@
+\section{Cryptographic primitives}
+\label{sec:crypto-primitives-shelley}
+
+Figure~\ref{fig:crypto-defs-shelley} introduces the cryptographic abstractions used in
+this document. we begin by listing the abstract types, which are meant to
+represent the corresponding concepts in cryptography. Only the functionality
+explicitly stated in the figures below is assumed to be within the scope of this paper.
+That is, their exact
+implementation remains open to interpretation and we do not rely on
+any additional properties derived from the study or implementation of public key
+cryptography outside this work. The types and rules we give here are needed in
+order to guarantee certain security properties of the delegation process, which
+we discuss later.
+
+The cryptographic concepts required for the formal definition
+of witnessing include public-private key pairs, one-way functions
+and signatures. The constraint we introduce states that a signature of
+some data signed with a (private) key is only correct whenever we can verify
+it using the corresponding public key.
+
+Besides basic cryptographic abstractions, we also make use of some abstract
+data storage properties in this document in order to build necessary definitions
+and make judgement calls about them.
+
+Abstract data types in this paper are essentially placeholders with names
+indicating the data types they are meant to represent in an implementation.
+Derived types are made up of data structures (i.e.~products, lists, finite
+maps, etc.) built from abstract types. The underlying structure of a data type
+is implementation-dependent and furthermore, the way the data is stored on
+physical storage can vary as well.
+
+Serialization is a physical manifestation of data on a given storage device.
+In this document, the properties and rules we state involving serialization are
+assumed to hold true independently of the storage medium and style of data
+organization chosen for an implementation.
+
+\begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{sk} & \SKey & \text{private signing key}\\
+      \var{vk} & \VKey & \text{public verifying key}\\
+      \var{hk} & \HashKey & \text{hash of a key}\\
+      \sigma & \Sig  & \text{signature}\\
+      \var{d} & \Data  & \text{data}\\
+    \end{array}
+  \end{equation*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk, vk) & \KeyPair & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \hashKey{} & \VKey \to \HashKey
+                 & \text{hashKey function} \\
+                 %
+      \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
+                   & \text{verification relation}\\
+                   %
+      \fun{sign} & \SKey \to \Data \to \Sig
+                 & \text{signing function}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall (sk, vk) \in \KeyPair,~ d \in \Data,~ \sigma \in \Sig \cdot
+    \sign{sk}{d} = \sigma \implies \verify{vk}{d}{\sigma}
+  \end{align*}
+  \emph{Notation for serialized and verified data}
+  \begin{align*}
+    & \serialised{x} & \text{serialised representation of } x\\
+    & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma} = \verify{vk}{d}{\sigma}
+    & \text{shorthand notation for } \fun{verify}
+  \end{align*}
+  \caption{Cryptographic definitions}
+  \label{fig:crypto-defs-shelley}
+\end{figure}
+
+When we get to the blockchain layer validation, we will use
+key evolving signatures according to the MMM scheme \citep{cryptoeprint:2001:034}.
+Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
+needed for KES.
+
+
+\begin{figure}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{sk} & \N \to \SKeyEv & \text{private signing keys}\\
+      \var{vk} & \VKeyEv & \text{public verifying key}\\
+    \end{array}
+  \end{equation*}
+  \emph{Notation for evolved signing key}
+  \begin{align*}
+    & \var{sk_n} = \var{sk}~n & n\text{-th evolution of }sk
+  \end{align*}
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      (sk_n, vk) & \KeyPairEv & \text{signing-verifying key pairs}
+    \end{array}
+  \end{equation*}
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Data \times \Sig\right)}
+                        & \text{verification relation}\\
+                        %
+      \fun{sign_{ev}} & \SKey \to \N \to \Data \to \Sig
+                      & \text{signing function}\\
+    \end{array}
+  \end{equation*}
+  \emph{Constraints}
+  \begin{align*}
+    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
+    & ~~~~~~~~\signEv{sk}{n}{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
+  \end{align*}
+  \emph{Notation for verified KES data}
+  \begin{align*}
+    & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma}^n = \verifyEv{vk}{n}{d}{\sigma}
+    & \text{shorthand notation for } \fun{verify_{ev}}
+  \end{align*}
+  \caption{KES Cryptographic definitions}
+  \label{fig:kes-defs-shelley}
+\end{figure}
+\clearpage

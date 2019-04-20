@@ -18,13 +18,13 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.cs-ledger)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
-          (hsPkgs.memory)
           (hsPkgs.small-steps)
           ];
         };
@@ -36,12 +36,12 @@
             (hsPkgs.hedgehog)
             (hsPkgs.lens)
             (hsPkgs.tasty)
-            (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
             (hsPkgs.cs-blockchain)
+            (hsPkgs.cs-ledger)
             (hsPkgs.small-steps)
             ];
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../specs/chain/hs; }
+    } // rec { src = (pkgs.lib).mkDefault ../.././byron/chain/executable-spec; }

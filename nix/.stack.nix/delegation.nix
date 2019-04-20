@@ -22,13 +22,6 @@
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.memory)
-          (hsPkgs.multiset)
-          (hsPkgs.tasty)
-          (hsPkgs.tasty-hunit)
-          (hsPkgs.hedgehog)
-          (hsPkgs.tasty-hedgehog)
-          (hsPkgs.tasty-hedgehog-coverage)
-          (hsPkgs.text)
           (hsPkgs.small-steps)
           (hsPkgs.microlens)
           (hsPkgs.microlens-th)
@@ -45,7 +38,6 @@
             (hsPkgs.tasty-hedgehog-coverage)
             (hsPkgs.hedgehog)
             (hsPkgs.delegation)
-            (hsPkgs.cryptonite)
             (hsPkgs.containers)
             (hsPkgs.multiset)
             (hsPkgs.text)
@@ -54,4 +46,6 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../hs; }
+    } // rec {
+    src = (pkgs.lib).mkDefault ../.././shelley/chain-and-ledger/executable-spec;
+    }

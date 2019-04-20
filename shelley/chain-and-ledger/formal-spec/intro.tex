@@ -1,0 +1,53 @@
+\section{Introduction}
+\label{sec:introduction-shelley}
+
+This document is a formal specification of the functionality of the ledger on the blockchain.
+This includes the blockchain layer determining what is a valid block,
+but does not include any concurrency issues such as chain selection.
+The details of the background and the larger context
+for the design decisions formalized in this document are presented
+in~\cite{delegation_design}
+
+In this work,
+we present important properties any implementation of the ledger must have.
+Specifically, we model the following aspects
+of the functionality of the ledger on the blockchain:
+
+\begin{description}
+\item[Preservation of value] Every coin in the system is accounted for,
+  and the total amount is unchanged by every transaction and epoch change.
+  In particular, every coin is accounted for by one of the following categories:
+  \begin{itemize}
+    \item Circulation (UTxO)
+    \item Deposit pot
+    \item Fee pot
+    \item Reserves (monetary expansion)
+    \item Rewards (account addresses)
+    \item Treasury
+  \end{itemize}
+\item[Witnesses] Authentication of parts of the transaction data by means of
+  cryptographic entities (such as signatures and private keys) contained in
+  these transactions.
+\item[Delegation] Validity of delegation certificates, which delegate
+  block-signing rights.
+\item[Stake] Staking rights associated to an address.
+\end{description}
+
+While the blockchain protocol is a reactive system driven by the arrival
+of blocks causing updates to the ledger, the formal description is a collection
+of rules which is a
+static description of what a \textit{valid ledger} is. The specifics of the
+semantics we use to define and apply
+the rules we present in this document are explained in detail in
+\cite{small_step_semantics}. A valid ledger state can only
+reached by applying a sequence of inference rules and any valid ledger state
+is reachable by applying some sequence of these rules.
+
+The structure of the rules we give here is such that their application is
+deterministic. That is, given a specific initial state and relevant environmental
+constants, there is no ambiguity
+about which rule should be applied at any given time (i.e.~which state
+transition is allowed take place). This is an important property which reflects
+the reality of the implementation --- the blockchain evolves in a particular way
+given some user activity and the passage of time --- its behaviour is
+never unexpected.

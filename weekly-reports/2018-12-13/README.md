@@ -8,13 +8,13 @@ latex spec to align with our new plan for them.
 
 | Issue | PR | Summary |
 |-------|----|---------|
-|       | x | [Anytime rewards rules #113](https://github.com/input-output-hk/fm-ledger-rules/pull/113) |
-|       | x | [experiment to try small step sem. with lhs2tex #114](https://github.com/input-output-hk/fm-ledger-rules/pull/114) |
-|       | x | [STS implementation of `UTXO` rule #115](https://github.com/input-output-hk/fm-ledger-rules/pull/115) |
-|       | x | [Use lenses from `mircolens` where appropriate #116](https://github.com/input-output-hk/fm-ledger-rules/pull/116) |
-|       | x | [adding reward withdrawals #120](https://github.com/input-output-hk/fm-ledger-rules/pull/120) |
-|       | x | [Update `UTXO` rule for new STS framework #121](https://github.com/input-output-hk/fm-ledger-rules/pull/121) |
-| x     |   | [Reward Withdrawals (executable model) #88](https://github.com/input-output-hk/fm-ledger-rules/issues/88) |
+|       | x | [Anytime rewards rules #113](https://github.com/input-output-hk/cardano-ledger-specs/pull/113) |
+|       | x | [experiment to try small step sem. with lhs2tex #114](https://github.com/input-output-hk/cardano-ledger-specs/pull/114) |
+|       | x | [STS implementation of `UTXO` rule #115](https://github.com/input-output-hk/cardano-ledger-specs/pull/115) |
+|       | x | [Use lenses from `mircolens` where appropriate #116](https://github.com/input-output-hk/cardano-ledger-specs/pull/116) |
+|       | x | [adding reward withdrawals #120](https://github.com/input-output-hk/cardano-ledger-specs/pull/120) |
+|       | x | [Update `UTXO` rule for new STS framework #121](https://github.com/input-output-hk/cardano-ledger-specs/pull/121) |
+| x     |   | [Reward Withdrawals (executable model) #88](https://github.com/input-output-hk/cardano-ledger-specs/issues/88) |
 
 # Milestone status
 
@@ -57,4 +57,4 @@ Not started yet
 
 # Things to try next week
 
- - Think about merging `fm-ledger-rules` into `cardano-chain`
+ - Think about merging `cardano-ledger-specs` into `cardano-chain`

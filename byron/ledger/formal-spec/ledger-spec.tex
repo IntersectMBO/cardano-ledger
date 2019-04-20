@@ -1,0 +1,161 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{iohk}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
+\usepackage{xcolor}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+\usepackage{listings} % for code blocks.
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing, positioning, arrows.meta, calc}
+% For drawing simple diagrams involving arrows between LaTeX symbols
+\usepackage{tikz-cd}
+
+%%
+%% Types
+%%
+\newcommand{\Bool}{\type{Bool}}
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Value}{\type{Value}}
+\newcommand{\Lovelace}{\type{Lovelace}}
+\newcommand{\UTxOEnv}{\type{UTxOEnv}}
+%% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+%% Adding delegation
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\VKeyGen}{\type{VKey_G}}
+%% Blockchain
+\newcommand{\Gkeys}{\var{G_{keys}}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+\newcommand{\BDEnv}{\type{BDEnv}}
+\newcommand{\BDState}{\type{BDState}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\SlotCount}{\type{SlotCount}}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}~ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
+\newcommand{\values}[1]{\fun{values}~ #1}
+\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+%% UTxO witnesses
+\newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
+\newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
+% wildcard parameter
+\newcommand{\wcard}[0]{\underline{\phantom{a}}}
+%% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}~ #1}
+%% Delegation
+\newcommand{\delegatesName}{\fun{delegates}}
+\newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+\newcommand{\dwho}[1]{\fun{dwho}~\var{#1}}
+\newcommand{\depoch}[1]{\fun{depoch}~\var{#1}}
+%% Delegation witnesses
+\newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
+\newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
+%% Blockchain
+\newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
+\newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
+%% Set notation
+\newcommand\Set[2]{\{\,#1\mid#2\,\}}
+%% Let bindings
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+
+%% For properties
+\newcommand{\txs}{\ensuremath{\mathcal{T}}}
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
+\newcommand{\biguo}[1]{\ensuremath{\underset{#1}{\underrightarrow\bigcup}}}
+
+%\includeonly{update-mechanism, delegation, blockchain-interface}
+
+%% Parameters that control floats placement. See https://robjhyndman.com/hyndsight/latex-floats/
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.7}
+\newcommand{\DEnv}{\type{DEnv}}
+\newcommand{\DSEnv}{\type{DSEnv}}
+\newcommand{\DSState}{\type{DSState}}
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\DEState}{\type{DEState}}
+
+
+\newtheorem{definition}{Definition}
+\newtheorem{property}{Property}
+
+\begin{document}
+
+\input{frontmatter.tex}
+
+\tableofcontents
+\listoffigures
+
+\include{intro}
+
+\include{notation}
+
+\include{crypto-primitives}
+
+\include{utxo}
+
+\include{delegation}
+
+\include{update-mechanism}
+
+\include{blockchain-interface}
+
+\include{properties}
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

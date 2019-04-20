@@ -1,0 +1,15 @@
+# code owners are automatically assigned to review PRs
+
+# The goal is to not have more than 2 people responsible to avoid having too
+# many reviewers which often leads to nobody feeling responsible to actually
+# perform the review.
+
+shelley/chain-and-ledger/dependencies/non-integer/ @mgudemann
+shelley/design_spec/ @JaredCorduan @kantp
+shelley/chain-and-ledger/executable-spec/ @mgudemann @JaredCorduan
+shelley/chain-and-ledger/formal-spec/ @JaredCorduan @mgudemann
+nix/ @nc6 @ruhatch
+scripts/ @nc6 @ruhatch
+byron/chain/ @nc6 @mdimjasevic
+byron/ledger/ @nc6 @dnadales
+byron/semantics/ @nc6 @dnadales

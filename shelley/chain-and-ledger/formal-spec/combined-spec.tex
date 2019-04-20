@@ -1,0 +1,261 @@
+\documentclass[11pt,a4paper,dvipsnames]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{iohk}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
+\usepackage{xcolor}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{enumerate}
+
+
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+
+%%
+%% Packages needed for Byron Spec
+%%
+\usetikzlibrary{decorations.pathreplacing, positioning, arrows.meta, calc}
+% For drawing simple diagrams involving arrows between LaTeX symbols
+\usepackage{tikz-cd}
+\usepackage{listings}
+
+
+%%
+%% Types
+%%
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\TxBody}{\type{TxBody}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\Wdrl}{\type{Wdrl}}
+\newcommand{\Value}{\type{Value}}
+\newcommand{\Coin}{\type{Coin}}
+\newcommand{\PParams}{\type{PParams}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
+\newcommand{\Duration}{\type{Duration}}
+\newcommand{\StakePools}{\type{StakePools}}
+\newcommand{\StakeKeys}{\type{StakeKeys}}
+
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
+\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
+\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
+\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
+\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+\newcommand{\PoolParam}{\type{PoolParam}}
+\newcommand{\UTxOState}{\ensuremath{\type{UTxOState}}}
+\newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
+
+\newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\AddrB}{\type{Addr_{base}}}
+\newcommand{\AddrP}{\type{Addr_{ptr}}}
+\newcommand{\AddrE}{\type{Addr_{enterprise}}}
+\newcommand{\Ptr}{\type{Ptr}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\DWEnv}{\type{DWEnv}}
+\newcommand{\DPSEnv}{\type{DPSEnv}}
+\newcommand{\DPEnv}{\type{DPEnv}}
+\newcommand{\DEnv}{\type{DEnv}}
+\newcommand{\PEnv}{\type{PEnv}}
+\newcommand{\DPState}{\type{DPState}}
+\newcommand{\PState}{\type{PState}}
+\newcommand{\DCertBody}{\type{DCertBody}}
+\newcommand{\TData}{\type{TData}}
+\newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
+
+%% Adding witnesses
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\KeyPair}{\type{KeyPair}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+%% Adding delegation
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\VKeyGen}{\type{VKeyGen}}
+%% Blockchain
+\newcommand{\Gkeys}{\var{G_{keys}}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\UTxOEnv}{\type{UTxOEnv}}
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+\newcommand{\BDEnv}{\type{BDEnv}}
+\newcommand{\BDState}{\type{BDState}}
+\newcommand{\LEnv}{\type{LEnv}}
+\newcommand{\LState}{\type{LState}}
+
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}~ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
+\newcommand{\txcerts}[1]{\fun{txcerts}~ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
+\newcommand{\outs}[1]{\fun{outs}~ \var{#1}}
+\newcommand{\values}[1]{\fun{values}~ #1}
+\newcommand{\ubalance}[1]{\fun{ubalance}~ \var{#1}}
+\newcommand{\txttl}[1]{\fun{txttl}~ \var{#1}}
+\newcommand{\firstSlot}[1]{\fun{firstSlot}~ \var{#1}}
+\newcommand{\deposits}[2]{\fun{deposits}~ \var{#1} ~ \var{#2}}
+\newcommand{\decayedKey}[4]{\fun{decayedKey}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\keyRefund}[6]{\fun{keyRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
+\newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
+\newcommand{\keyRefunds}[3]{\fun{keyRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\consumed}[4]{\fun{consumed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\produced}[2]{\fun{produced}~ \var{#1}~ \var{#2}}
+\newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}
+
+\newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
+\newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
+\newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
+\newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
+\newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
+\newcommand{\cwitness}[1]{\fun{cwitness}~ \var{#1}}
+\newcommand{\dpool}[1]{\fun{dpool}~ \var{#1}}
+\newcommand{\poolParam}[1]{\fun{poolParam}~ \var{#1}}
+\newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
+\newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
+\newcommand{\epoch}[1]{\fun{epoch}~ \var{#1}}
+\newcommand{\dcerts}[1]{\fun{dcerts}~ \var{#1}}
+
+%% UTxO witnesses
+\newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
+\newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
+\newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
+\newcommand{\txwdrls}[1]{\fun{txwdrls}~ \var{#1}}
+\newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
+\newcommand{\slotminus}[2]{\var{#1}~-_{s}~\var{#2}}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+% wildcard parameter
+\newcommand{\wcard}[0]{\underline{\phantom{a}}}
+%% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}~ #1}
+%% Delegation
+\newcommand{\delegatesName}{\fun{delegates}}
+\newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+\newcommand{\dwho}[1]{\fun{dwho}~\var{#1}}
+\newcommand{\depoch}[1]{\fun{depoch}~\var{#1}}
+\newcommand{\dval}{\ensuremath{d_{\mathsf{val}}}}
+%% Delegation witnesses
+\newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
+\newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
+%% Blockchain
+\newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
+\newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
+%% ledgerstate constants
+\newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
+\newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
+\newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
+\newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
+
+\newcommand{\unitInterval}{\ensuremath{[0,~1]}}
+\newcommand{\unitIntervalNonNull}{\ensuremath{(0,~1]}}
+\newcommand{\nonnegReals}{\ensuremath{[0,~\infty)}}
+\newcommand{\posReals}{\ensuremath{(0,~\infty)}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{property}{Property}[section]
+
+\begin{document}
+
+\input{frontmatter.tex}
+
+\tableofcontents
+\listoffigures
+
+\include{intro}
+\include{notation}
+\include{crypto-primitives}
+\include{address}
+\include{protocol-parameters}
+\include{transactions}
+\include{utxo}
+\include{delegation}
+\include{ledger}
+\include{epoch}
+\include{properties}
+\include{non-integral}
+
+\newpage
+
+
+%%
+%% Byron Spec
+%%
+
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+\newcommand{\SkVk}{\type{SkVk}}
+\newcommand{\hash}[1]{\fun{hash}~ \var{#1}}
+\newcommand{\Lovelace}{\type{Lovelace}}
+\newcommand{\balance}[1]{\fun{balance}~ \var{#1}}
+\newcommand{\addr}[1]{\fun{addr}~ \var{#1}}
+\newcommand{\wits}[1]{\fun{wits}~ \var{#1}}
+\newcommand{\SlotCount}{\type{SlotCount}}
+\newcommand{\DSEnv}{\type{DSEnv}}
+\newcommand{\DSState}{\type{DSState}}
+\newcommand\Set[2]{\{\,#1\mid#2\,\}}
+\newcommand{\Bool}{\type{Bool}}
+\newcommand{\txs}{\ensuremath{\mathcal{T}}}
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
+
+\input{../byron/ledger/formal-spec/intro.tex}
+\input{../byron/ledger/formal-spec/notation.tex}
+\input{../byron/ledger/formal-spec/crypto-primitives.tex}
+\input{../byron/ledger/formal-spec/utxo.tex}
+\input{../byron/ledger/formal-spec/delegation.tex}
+\input{../byron/ledger/formal-spec/update-mechanism.tex}
+\input{../byron/ledger/formal-spec/blockchain-interface.tex}
+\input{../byron/ledger/formal-spec/properties.tex}
+
+\newpage
+
+\begin{appendix}
+  \input{appendix}
+\end{appendix}
+
+
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

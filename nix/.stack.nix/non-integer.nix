@@ -17,7 +17,9 @@
     components = {
       "library" = { depends = [ (hsPkgs.base) ]; };
       exes = {
-        "nonInt" = { depends = [ (hsPkgs.base) (hsPkgs.non-integer) ]; };
+        "nonInt" = {
+          depends = [ (hsPkgs.base) (hsPkgs.non-integer) (hsPkgs.criterion) ];
+          };
         };
       tests = {
         "non-integer-test" = {
@@ -25,4 +27,6 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../dependencies/non-integer; }
+    } // rec {
+    src = (pkgs.lib).mkDefault ../.././shelley/chain-and-ledger/dependencies/non-integer;
+    }

@@ -1,7 +1,9 @@
 let
   localLib = import ./lib.nix;
 in
+{ cardano-ledger-specs ? { outPath = ./.; rev = "abcdef"; } ,... }@args:
 localLib.nix-tools.release-nix {
+  _this = cardano-ledger-specs;
   package-set-path = ./.;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
@@ -37,13 +39,14 @@ localLib.nix-tools.release-nix {
   #   tests.cs-ledger.ledger-delegation-test.x86_64-linux -- will build and run the ledger-delegation-test from the
   #                                                          cs-ledger package on linux.
   #
-  required-name = "fm-ledger-rules-required-checks";
+  required-name = "cardano-ledger-specs-required-checks";
   required-targets = jobs: [
     jobs.byronLedgerSpec
     jobs.byronChainSpec
     jobs.semanticsSpec
     jobs.shelleyLedgerSpec
     jobs.delegationDesignSpec
+    jobs.nonIntegerCalculations
 
     jobs.nix-tools.libs.cs-blockchain.x86_64-darwin
     jobs.nix-tools.libs.cs-blockchain.x86_64-linux
@@ -64,4 +67,4 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-delegation-test.x86_64-linux
     ];
 
-}
+} (builtins.removeAttrs args ["cardano-ledger-specs"])

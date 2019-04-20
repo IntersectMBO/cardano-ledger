@@ -1,0 +1,259 @@
+\newcommand{\PPMMap}{\ensuremath{\type{PParams}}}
+\newcommand{\Lmax}{\ensuremath{\mathbb{L}_{\var{max}}}}
+\section{UTxO}
+\label{sec:state-trans-utxo-1}
+
+The transition rules for unspent outputs are presented in
+Figure~\ref{fig:rules:utxo}. The states of the UTxO transition system, along
+with their types are defined in Figure~\ref{fig:defs:utxo}, here we define the
+protocol parameters as an abstract type, this type is made concrete in
+Section~\ref{sec:update}, where the update mechanism is discussed. Functions on
+these types are defined in Figure~\ref{fig:derived-defs:utxo}. In particular,
+note that in function $\fun{minfee}$ we make use of the fact that the
+$\Lovelace$ type is an alias for the set of the integers numbers
+($\mathbb{Z}$).
+
+\begin{figure*}[htb]
+  \emph{Abstract types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{tx} & \Tx & \text{transaction}\\
+      %
+      \var{txid} & \TxId & \text{transaction id}\\
+      %
+      ix & \Ix & \text{transaction index}\\
+      %
+      \var{addr} & \Addr & \text{address}\\
+      %
+      \var{pps} & \PPMMap & \text{protocol parameters}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}r@{~\in~}lr}
+      \ell & \Lovelace
+      & n  & \mathbb{Z}
+      & \text{currency value}
+      \\
+      \var{txin}
+      & \TxIn
+      & (\var{txid}, \var{ix})
+      & \TxId \times \Ix
+      & \text{transaction input}
+      \\
+      \var{txout}
+      & \type{TxOut}
+      & (\var{addr}, c)
+      & \Addr \times \Lovelace
+      & \text{transaction output}
+      \\
+      \var{utxo}
+      & \UTxO
+      & m
+      & \TxIn \mapsto \TxOut
+      & \text{unspent tx outputs}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Abstract Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+      %
+      \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
+                                  & \text{transaction body}\\
+      %
+      \fun{a} & \PPMMap \to \mathbb{Z} & \text{minumum fee factor}\\
+      %
+      \fun{b} & \PPMMap \to \mathbb{Z} & \text{minumum fee constant}\\
+      %
+      \fun{txSize} & \Tx \to \mathbb{Z} & \text{abstract size of a transaction}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Constraints}
+  \begin{equation}
+    \label{eq:txid-injective}
+    \forall \var{tx_i}, \var{tx_j} \cdot
+    \txid{\var{tx_i}} = \txid{\var{tx_j}} \Rightarrow \var{tx_i} = \var{tx_j}
+  \end{equation}
+  \caption{Definitions used in the UTxO transition system}
+  \label{fig:defs:utxo}
+\end{figure*}
+
+\begin{figure}
+  \begin{align*}
+    & \fun{txins} \in \Tx \to \powerset{\TxIn}
+    & \text{transaction inputs} \\
+    & \txins{tx} = \var{inputs} \where \txbody{tx} = (\var{inputs}, ~\wcard)
+    \nextdef
+    & \fun{txouts} \in \Tx \to \UTxO
+    & \text{transaction outputs as UTxO} \\
+    & \fun{txouts} ~ \var{tx} =
+      \left\{ (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
+      \middle| \begin{array}{l@{~}c@{~}l}
+                 (\_, \var{outputs}) & = & \txbody{tx} \\
+                 \var{ix} \mapsto \var{txout} & \in & \var{outputs}
+               \end{array}
+      \right\}
+    \nextdef
+    & \fun{balance} \in \UTxO \to \mathbb{Z}
+    & \text{UTxO balance} \\
+    & \fun{balance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c\\
+   \nextdef
+   %
+    & \fun{minfee} \in \PPMMap \to \Tx \to \mathbb{Z} & \text{minimum fee}\\
+    & \fun{minfee}~\var{pps}~\var{tx} =
+      \fun{a}~\var{pps} * \fun{txSize}~\var{tx} + \fun{b}~\var{pps}
+  \end{align*}
+  \caption{Functions used in UTxO rules}
+  \label{fig:derived-defs:utxo}
+\end{figure}
+
+\begin{figure}
+  \emph{UTxO environments}
+  \begin{equation*}
+    \UTxOEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxo_0} & \UTxO & \text{genesis UTxO}\\
+        \var{pps} & \PPMMap & \text{protocol parameters map}\\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \emph{UTxO transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{utxo}{\_} \var{\_}
+    \subseteq \powerset (\UTxOEnv \times \UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO transition-system types}
+  \label{fig:ts-types:utxo}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}\label{eq:utxo-bootstrap}
+    \inference
+    {
+    }
+    {
+      {\begin{array}{l}
+        utxo_0\\
+        pps
+      \end{array}}
+      \vdash
+      \var{utxo_0}
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}\label{eq:utxo-inductive}
+    \inference
+    { \txins{tx} \subseteq \dom \var{utxo}
+      & \minfee{pps}{tx} \leq \balance{(\txouts{tx})} - \balance{(\txins{tx} \restrictdom \var{utxo})}\\
+      \txins{tx} \neq \emptyset
+    }
+    {
+      {\begin{array}{l}
+        utxo_0\\
+        pps
+      \end{array}}
+      \vdash
+      \var{utxo}
+      \trans{utxo}{tx}
+      (\txins{tx} \subtractdom \var{utxo}) \cup \txouts{tx}
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:rules:utxo}
+\end{figure}
+
+Rule~\ref{eq:utxo-inductive} specifies under which conditions a transaction can
+be applied to a set of unspent outputs, and how the set of unspent output
+changes with a transaction:
+\begin{itemize}
+\item Each input spent in the transaction must be in the set of unspent
+  outputs.
+\item The minimum fee, which depends on the transaction and the protocol
+  parameters, must be less or equal than the difference between the balance of
+  the unspent outputs in a transaction (i.e. the total amount paid in a
+  transaction) and the amount of spent inputs.
+\item The set of inputs must not be empty.
+\item If the above conditions hold, then the new state will not have the inputs
+  spent in transaction $\var{tx}$ and it will have the new outputs in
+  $\var{tx}$.
+\end{itemize}
+
+\clearpage
+
+\subsection{Witnesses}
+\label{sec:witnesses}
+
+The rules for witnesses are presented in Figure~\ref{fig:rules:utxow}.
+The definitions used in Rule~\ref{eq:utxo-witness-inductive} are given in
+Figure~\ref{fig:defs:utxow}. Note that
+Rule~\ref{eq:utxo-witness-inductive} uses the transition relation defined in
+Figure~\ref{fig:rules:utxo}. The main reason for doing this is to define
+the rules incrementally, modeling different aspects in isolation to keep the
+rules as simple as possible. Also note that the $\trans{utxo}{}$ relation could
+have been defined in terms of $\trans{utxow}{}$ (thus composing the rules in a
+different order). The choice here is arbitrary.
+
+\begin{figure}[htb]
+  \emph{Abstract functions}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
+      & \text{witnesses of a transaction}\\
+      \fun{hash_{spend}} & \Addr \mapsto \HashKey
+      & \text{hash of a spending key in an address}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions used in the UTxO transition system with witnesses}
+  \label{fig:defs:utxow}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
+    & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
+    \nextdef
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hash of an input address}\\
+    & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
+      \wedge a \mapsto h \in \fun{hash_{spend}} \}
+  \end{align*}
+  \caption{Functions used in rules witnesses}
+  \label{fig:derived-defs:utxow}
+\end{figure}
+
+\begin{figure}
+  \emph{UTxO with witness transitions}
+  \begin{equation*}
+    \var{\_} \vdash
+    \var{\_} \trans{utxow}{\_} \var{\_}
+    \subseteq \powerset (\PPMMap \times \UTxO \times \Tx \times \UTxO)
+  \end{equation*}
+  \caption{UTxO with witness transition-system types}
+  \label{fig:ts-types:utxow}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive}
+    \inference
+    { \var{pps} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}
+      & \var{maxTxSize} \mapsto \var{t} \in \var{pps} & \fun{txSize}~\var{tx} \leq t \\ ~ \\
+      & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
+      \cdot
+      \mathcal{V}^\sigma_{\var{vk}}~{\serialised{\txbody{tx}}}
+      \wedge  \fun{addr_h}~{utxo}~i = \hash{vk}\\
+    }
+    {\var{pps} \vdash \var{utxo} \trans{utxow}{tx} \var{utxo'}}
+  \end{equation}
+  \caption{UTxO with witnesses inference rules}
+  \label{fig:rules:utxow}
+\end{figure}

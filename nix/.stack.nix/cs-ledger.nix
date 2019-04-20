@@ -18,13 +18,13 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
           (hsPkgs.memory)
-          (hsPkgs.text)
           (hsPkgs.small-steps)
           ];
         };
@@ -33,13 +33,22 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.doctest)
-            (hsPkgs.doctest-discover)
+            (hsPkgs.bytestring)
+            (hsPkgs.containers)
+            (hsPkgs.cryptonite)
+            (hsPkgs.hedgehog)
+            (hsPkgs.lens)
+            (hsPkgs.memory)
+            (hsPkgs.text)
+            (hsPkgs.small-steps)
             (hsPkgs.cs-ledger)
             ];
+          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
           };
         "ledger-delegation-test" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.bimap)
             (hsPkgs.containers)
             (hsPkgs.lens)
             (hsPkgs.hedgehog)
@@ -52,4 +61,6 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault .././../specs/ledger/hs; }
+    } // rec {
+    src = (pkgs.lib).mkDefault ../.././byron/ledger/executable-spec;
+    }
