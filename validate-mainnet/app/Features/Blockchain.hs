@@ -52,7 +52,8 @@ cleanup = pure ()
 init
   :: forall m
    . MonadIO m
-  => BlockchainConfiguration
+  => Trace IO Text
+  -> BlockchainConfiguration
   -> ApplicationEnvironment
   -> LoggingLayer
   -> ChainValidationState
@@ -73,7 +74,8 @@ init config appEnv ll initialCVS cvsVar = do
 
 
 createBlockchainFeature
-  :: CardanoEnvironment
+  :: Trace IO Text
+  -> CardanoEnvironment
   -> CardanoConfiguration
   -> ApplicationEnvironment
   -> LoggingLayer

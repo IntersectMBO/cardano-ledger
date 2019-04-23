@@ -9,8 +9,8 @@ rotation:
 
 # these backends are initialized:
 setupBackends:
-  # - AggregationBK
-  # - EKGViewBK
+  - AggregationBK
+  - EKGViewBK
   - KatipBK
 
 # if not indicated otherwise, then messages are passed to these backends:
@@ -38,6 +38,9 @@ defaultScribes:
 options:
   cfokey:
     value: "Release-1.0.0"
-  # mapBackends:
-  #   demo-playground.simple-node.CoreId 0.validation:
-  #     - AggregationBK
+  mapSubtrace:
+    iohk.benchmarking:
+      subtrace: ObservableTrace
+      contents:
+        - GhcRtsStats
+        - MonotonicClock
