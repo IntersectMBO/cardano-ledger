@@ -39,8 +39,6 @@
           (hsPkgs.ekg-core)
           (hsPkgs.process)
           (hsPkgs.QuickCheck)
-          (hsPkgs.text)
-          (hsPkgs.transformers)
           ];
         };
       exes = {

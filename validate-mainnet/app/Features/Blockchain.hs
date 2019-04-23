@@ -16,16 +16,18 @@ import Cardano.Prelude
 import Formatting (build, sformat)
 
 import Cardano.Chain.Block
-  (ChainValidationState, calcUTxOSize, cvsLastSlot, cvsUtxo, initialChainValidationState)
+  ( ChainValidationState
+  , initialChainValidationState
+  )
 import Cardano.Chain.Common (parseReqNetworkMag)
-import Cardano.Chain.Epoch.Validation (EpochError, validateEpochFileForFolding)
-import Control.Monad.Trans.Resource (runResourceT)
+import Cardano.Chain.Epoch.Validation (EpochError, validateEpochFile)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Mirror (mainnetEpochFiles)
 import Cardano.Shell.Constants.Types (CardanoConfiguration(..), Core(..), Genesis(..))
 import Cardano.Shell.Features.Logging (LoggingLayer(..))
 import Cardano.Shell.Types
   (ApplicationEnvironment(..), CardanoEnvironment, CardanoFeature(..))
+
 
 -- | `BlockchainLayer` provides a window of sorts that
 -- enables us to access values from various 'MVar's
@@ -45,8 +47,8 @@ data BlockchainConfiguration = BlockchainConfiguration
 cleanup :: forall m . MonadIO m => m ()
 cleanup = pure ()
 
--- TODO: I believe this should get the epoch files locally
--- however for now I use `cardano-mainnet-mirror`.
+-- TODO: This should get the epoch files from a location specified in the config,
+-- but for now we use `cardano-mainnet-mirror`.
 init
   :: forall m
    . MonadIO m
@@ -56,22 +58,19 @@ init
   -> ChainValidationState
   -> MVar (Either EpochError ChainValidationState)
   -> m ()
-init config appEnv ll initialCVS cvsVar
-  = do files <- case appEnv of
-         Development -> take 10 <$> liftIO mainnetEpochFiles
-         Production  -> liftIO mainnetEpochFiles
+init config appEnv ll initialCVS cvsVar = do
+  files <- case appEnv of
+    Development -> take 10 <$> liftIO mainnetEpochFiles
+    Production  -> liftIO mainnetEpochFiles
 
-       -- Validate epoch files.
-       result <- liftIO . runResourceT . runExceptT $
-                   foldM
-                     (\ initCVS file ->
-                        do llLogNotice ll (llBasicTrace ll)
-                             (show $ calcUTxOSize (cvsLastSlot initCVS) (cvsUtxo initCVS))
-                           validateEpochFileForFolding (genesisConfig config) initCVS file)
-                     initialCVS
-                     files
-       liftIO $ putMVar cvsVar result
-       return ()
+  -- Validate epoch files.
+  result <- liftIO . runExceptT $ foldM
+    (validateEpochFile (genesisConfig config) (llBasicTrace ll))
+    initialCVS
+    files
+
+  liftIO $ putMVar cvsVar result
+
 
 createBlockchainFeature
   :: CardanoEnvironment

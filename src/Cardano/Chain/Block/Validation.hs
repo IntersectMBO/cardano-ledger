@@ -1,12 +1,14 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE NumDecimals           #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE NumDecimals                #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TupleSections              #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -38,6 +40,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq(..), (<|))
+import Formatting.Buildable (Buildable)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
@@ -630,15 +633,16 @@ foldUTxOBlock pm pps utxo block =
 newtype HeapSize a =
   HeapSize { unHeapSize :: Int}
   deriving Show
+  deriving newtype Buildable
 
 -- | Number of entries in the UTxO
 newtype UTxOSize =
   UTxOSize { unUTxOSize :: Int}
   deriving Show
+  deriving newtype Buildable
 
-calcUTxOSize :: FlatSlotId-> UTxO -> (HeapSize UTxO, UTxOSize, FlatSlotId)
-calcUTxOSize fsId utxo =
+calcUTxOSize :: UTxO -> (HeapSize UTxO, UTxOSize)
+calcUTxOSize utxo =
   ( HeapSize . heapWords $ unUTxO utxo
   , UTxOSize . M.size $ unUTxO utxo
-  , fsId
   )

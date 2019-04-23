@@ -1,6 +1,6 @@
-name:                bulk-chain-validation
+name:                validate-mainnet
 version:             0.1.0.0
-description:         Bulk chain validation
+description:         Run validation code over blocks from mainnet
 license:             MIT
 license-file:        LICENSE
 author:              IOHK
@@ -11,7 +11,7 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
-executable bulk-chain-validation-exe
+executable validate-mainnet
   main-is:             Main.hs
   other-modules:
                        Features.Blockchain
@@ -26,7 +26,6 @@ executable bulk-chain-validation-exe
                      , cardano-shell
                      , formatting
                      , iohk-monitoring
-                     , resourcet
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -37,4 +36,3 @@ executable bulk-chain-validation-exe
                        -fno-warn-safe
                        -fno-warn-unsafe
                        -with-rtsopts=-T
-

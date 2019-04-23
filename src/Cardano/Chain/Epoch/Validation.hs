@@ -1,32 +1,41 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Chain.Epoch.Validation
   ( EpochError(..)
   , validateEpochFile
   , validateEpochFiles
-  , validateEpochFileForFolding
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude hiding (trace)
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Formatting (Format, build, sformat)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
+import Cardano.BM.Trace (Trace, appendName, logNotice)
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
   , ChainValidationState(..)
+  , UTxOSize
   , blockSlot
+  , calcUTxOSize
   , updateChainBlockOrBoundary
   )
 import Cardano.Chain.Epoch.File
-  (ParseError, mainnetEpochSlots, parseEpochFileWithBoundary, parseEpochFilesWithBoundary)
+  ( ParseError
+  , mainnetEpochSlots
+  , parseEpochFileWithBoundary
+  , parseEpochFilesWithBoundary
+  )
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (SlotId, unflattenSlotId)
+import Cardano.Chain.Slotting
+  (EpochIndex, SlotId, slotNumberEpoch, unflattenSlotId)
 
 
 data EpochError
@@ -38,22 +47,37 @@ data EpochError
 
 -- | Check that a single epoch's `Block`s are valid by folding over them
 validateEpochFile
-  :: Genesis.Config
+  :: forall m
+   . (MonadIO m, MonadError EpochError m)
+  => Genesis.Config
+  -> Trace m Text
   -> ChainValidationState
   -> FilePath
-  -> IO (Either EpochError ChainValidationState)
-validateEpochFile config cvs fp =
-    runResourceT . runExceptT $ foldChainValidationState config cvs stream
-  where stream = parseEpochFileWithBoundary mainnetEpochSlots fp
+  -> m ChainValidationState
+validateEpochFile config trace cvs fp = do
+  subTrace <- appendName "epoch-validation" trace
+  res      <- liftIO . runResourceT . runExceptT $ foldChainValidationState
+    config
+    cvs
+    stream
+  either throwError (logResult subTrace) res
+ where
+  stream = parseEpochFileWithBoundary mainnetEpochSlots fp
 
--- | TODO: Annotate me and include logging
-validateEpochFileForFolding
-  :: Genesis.Config
-  -> ChainValidationState
-  -> FilePath
-  -> ExceptT EpochError ResIO ChainValidationState
-validateEpochFileForFolding config cvs fp = foldChainValidationState config cvs stream
-  where stream = parseEpochFileWithBoundary mainnetEpochSlots fp
+  logResult :: Trace m Text -> ChainValidationState -> m ChainValidationState
+  logResult trace' cvs' = cvs' <$ logNotice
+    trace'
+    (sformat
+      epochValidationFormat
+      (slotNumberEpoch (Genesis.configEpochSlots config) (cvsLastSlot cvs))
+      (snd $ calcUTxOSize (cvsUtxo cvs'))
+    )
+
+  epochValidationFormat :: Format r (EpochIndex -> UTxOSize -> r)
+  epochValidationFormat =
+    "Succesfully validated epoch " . build . "\n" .
+    "UTxO size at the end of the epoch: " . build . "\n"
+
 
 -- | Check that a list of epochs 'Block's are valid.
 validateEpochFiles
@@ -64,6 +88,7 @@ validateEpochFiles
 validateEpochFiles config cvs fps =
     runResourceT . runExceptT $ foldChainValidationState config cvs stream
   where stream = parseEpochFilesWithBoundary mainnetEpochSlots fps
+
 
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState

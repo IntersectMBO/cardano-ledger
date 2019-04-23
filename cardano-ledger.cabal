@@ -121,7 +121,6 @@ library
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-prelude
-                     , cardano-shell
                      , containers
                      , concurrency
                      , cryptonite
@@ -130,6 +129,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , iohk-monitoring
                      , memory
                      , mtl
                      , resourcet
