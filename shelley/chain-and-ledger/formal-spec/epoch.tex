@@ -764,7 +764,7 @@ Finally, it is possible to define the complete epoch boundary transition type,
 which is defined in Figure~\ref{fig:ts-types:epoch}.
 In the environment of this transition, we have the potentially new
 protocol parameters and the blocks made during this epoch.  The state is made up of the
-the accounting state, the current protocol parameters, the snapshots and the ledger state.
+the accounting state, the snapshots and the ledger state.
 
 %%
 %% Figure - Epoch Defs
@@ -787,7 +787,6 @@ the accounting state, the current protocol parameters, the snapshots and the led
     \left(
       \begin{array}{r@{~\in~}ll}
         \var{acnt} & \Acnt & \text{accounting}\\
-        \var{pp} & \PParams & \text{current protocol parameters}\\
         \var{ss} & \Snapshots & \text{snapshots}\\
         \var{ls} & \LState & \text{ledger state}\\
       \end{array}
@@ -816,7 +815,9 @@ in sequence.
   \begin{equation}\label{eq:epoch}
     \inference[Epoch]
     {
-      (\var{utxoSt},~(\var{dstate}~\var{pstate}))\leteq\var{ls}
+      (\var{utxoSt},~(\var{dstate}~\var{pstate}),~\var{us})\leteq\var{ls}
+      &
+      \var{pp}\leteq\pps{us}
       \\
       {
         \begin{array}{l}
@@ -898,8 +899,9 @@ in sequence.
         \end{array}
       }
       \right)
-      \\~\\
-      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'))
+      \\~\\~\\
+      \var{us}' \leteq \var{us}\unionoverrideRight\{pp'\} \\
+      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'),~\var{us'})
     }
     {
       \begin{array}{l}
@@ -910,7 +912,6 @@ in sequence.
       \left(
       \begin{array}{r}
         \var{acnt} \\
-        \var{pp} \\
         \var{ss} \\
         \var{ls} \\
       \end{array}
@@ -919,7 +920,6 @@ in sequence.
       \left(
       \begin{array}{rcl}
         \varUpdate{\var{acnt''}} \\
-        \varUpdate{\var{pp'}} \\
         \varUpdate{\var{ss'}} \\
         \varUpdate{\var{ls'}} \\
       \end{array}
