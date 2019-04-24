@@ -252,7 +252,7 @@ There are several standard sets used in the document:
 \newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
 \newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
-\newcommand{\Bupisig}{\type{BUPISig}}
+\newcommand{\UpdatePayload}{\type{UpdatePayload}}
 % Imported definitions
 
 \newcommand{\UPIEnv}{\type{UPIEnv}}
@@ -270,7 +270,7 @@ cases where there is or is not an update proposal contained within the block.
 \begin{figure}[ht]
   \emph{Update interface signals}
   \begin{equation*}
-    \Bupisig =
+    \UpdatePayload =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{mprop} & \UProp^{?} & \text{possible update proposal}\\
@@ -288,7 +288,7 @@ cases where there is or is not an update proposal contained within the block.
   \emph{Update interface processing transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bupi}{\_} \var{\_} \subseteq
-    \powerset (\UPIEnv \times \UPIState \times \Bupisig \times \UPIState)
+    \powerset (\UPIEnv \times \UPIState \times \UpdatePayload \times \UPIState)
   \end{equation*}
   \caption{Update interface processing transition-system types}
   \label{fig:ts-types:bupi}
