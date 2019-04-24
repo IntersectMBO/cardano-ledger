@@ -10,6 +10,21 @@ repository.
 [![Build status](https://badge.buildkite.com/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0.svg?branch=master)](https://buildkite.com/input-output-hk/cardano-ledger)
 [![Coverage Status](https://coveralls.io/repos/github/input-output-hk/cardano-chain/badge.svg?branch=master)](https://coveralls.io/github/input-output-hk/cardano-chain?branch=master)
 
+## Demo Mainnet Validation
+
+The `validate-mainnet` package contains an executable that integrates the
+`cardano-ledger` validation logic with the `cardano-shell` application wrapper.
+It validates mainnet blocks held in the `cardano-mainnet-mirror` package and
+demonstrates:
+- We have implemented ledger validation compatible with the existing chain
+- We are ready to integrate with other parts of the system, including consensus,
+  logging, and benchmarking
+
+You can run the demo using stack by running
+```
+stack build && stack exec validate-mainnet
+```
+
 
 ## Developing
 

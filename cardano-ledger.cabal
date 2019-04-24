@@ -129,6 +129,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , iohk-monitoring
                      , memory
                      , mtl
                      , resourcet
