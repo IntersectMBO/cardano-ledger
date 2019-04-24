@@ -52,8 +52,7 @@ cleanup = pure ()
 init
   :: forall m
    . MonadIO m
-  => Trace IO Text
-  -> BlockchainConfiguration
+  => BlockchainConfiguration
   -> ApplicationEnvironment
   -> LoggingLayer
   -> ChainValidationState
@@ -66,7 +65,7 @@ init config appEnv ll initialCVS cvsVar = do
 
   -- Validate epoch files.
   result <- liftIO . runExceptT $ foldM
-    (validateEpochFile (genesisConfig config) (llBasicTrace ll))
+    (validateEpochFile (genesisConfig config) (llBasicTrace ll) (llConfiguration ll))
     initialCVS
     files
 
@@ -74,8 +73,7 @@ init config appEnv ll initialCVS cvsVar = do
 
 
 createBlockchainFeature
-  :: Trace IO Text
-  -> CardanoEnvironment
+  :: CardanoEnvironment
   -> CardanoConfiguration
   -> ApplicationEnvironment
   -> LoggingLayer

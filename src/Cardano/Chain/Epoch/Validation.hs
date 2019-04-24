@@ -17,6 +17,9 @@ import Formatting (Format, build, sformat)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
+import qualified Cardano.BM.Configuration as Log
+import Cardano.BM.Data.Severity as Log
+import Cardano.BM.Observer.Monadic as BM
 import Cardano.BM.Trace (Trace, appendName, logNotice)
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
@@ -51,15 +54,17 @@ validateEpochFile
    . (MonadIO m, MonadError EpochError m)
   => Genesis.Config
   -> Trace m Text
+  -> Log.Configuration
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile config trace cvs fp = do
+validateEpochFile config trace logconf cvs fp = do
   subTrace <- appendName "epoch-validation" trace
-  res      <- liftIO . runResourceT . runExceptT $ foldChainValidationState
-    config
-    cvs
-    stream
+  res      <- BM.bracketObserveX logconf subTrace Log.Info "benchmark" $
+      liftIO $ runResourceT $ runExceptT $ foldChainValidationState
+        config
+        cvs
+        stream
   either throwError (logResult subTrace) res
  where
   stream = parseEpochFileWithBoundary mainnetEpochSlots fp

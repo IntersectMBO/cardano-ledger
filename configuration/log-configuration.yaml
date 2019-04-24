@@ -12,13 +12,14 @@ setupBackends:
   - AggregationBK
   - EKGViewBK
   - KatipBK
+  - EditorBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
 
 # if wanted, the GUI is listening on this port:
-# hasGUI: 18321
+hasGUI: 12787
 
 # if wanted, the EKG interface is listening on this port:
 hasEKG: 12788
@@ -39,8 +40,29 @@ options:
   cfokey:
     value: "Release-1.0.0"
   mapSubtrace:
-    iohk.benchmarking:
-      subtrace: ObservableTrace
+    benchmark:
       contents:
         - GhcRtsStats
         - MonotonicClock
+      subtrace: ObservableTrace
+    '#ekgview':
+      contents:
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: .monoclock.basic.
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.cpuNs.timed.
+      - - tag: StartsWith
+          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.gcNum.timed.
+      subtrace: FilterTrace
+  mapBackends:
+    cardano.epoch-validation.benchmark:
+      - AggregationBK
+    '#aggregation.cardano.epoch-validation.benchmark':
+      - EKGViewBK
+

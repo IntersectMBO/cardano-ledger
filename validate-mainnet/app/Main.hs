@@ -7,21 +7,19 @@ module Main
   )
 where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Cardano.BM.Data.LogItem        (LoggerName)
-import           Cardano.Shell.Features.Logging (LoggingLayer (..), Trace,
-                                                 createLoggingFeature)
-import           Cardano.Shell.Lib              (runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Presets          (mainnetConfiguration)
-import           Cardano.Shell.Types            (ApplicationEnvironment (..),
-                                                 CardanoApplication (..),
-                                                 initializeCardanoEnvironment)
-import           Control.Concurrent             (threadDelay)
-import           Features.Blockchain            (BlockchainLayer (..),
-                                                 createBlockchainFeature)
-
-
+import Control.Concurrent (threadDelay)
+import Features.Blockchain (BlockchainLayer(..), createBlockchainFeature)
+import Cardano.Shell.Features.Logging (LoggingLayer(..), Trace, createLoggingFeature)
+import Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
+import Cardano.Shell.Presets (mainnetConfiguration)
+import Cardano.Shell.Types
+  ( ApplicationEnvironment(..)
+  , CardanoApplication(..)
+  , initializeCardanoEnvironment
+  )
+  
 main :: IO ()
 main = do
   -- This is where the configuration and environment should come from; these
@@ -35,15 +33,7 @@ main = do
     cardanoEnvironment
     cardanoConfiguration
 
-  let logTrace :: Trace IO Text
-      logTrace = llBasicTrace loggingLayer
-
-      appendName :: LoggerName -> Trace IO Text -> IO (Trace IO Text)
-      appendName = llAppendName loggingLayer
-
-  mainTrace <- appendName "cardano-ledger" logTrace
-
-  (blockchainLayer, blockchainFeature) <- createBlockchainFeature mainTrace
+  (blockchainLayer, blockchainFeature) <- createBlockchainFeature
     cardanoEnvironment
     cardanoConfiguration
     Production
@@ -54,7 +44,7 @@ main = do
       Production
       [blockchainFeature, loggingFeature]
     . CardanoApplication
-    $ blockchainApp mainTrace loggingLayer blockchainLayer
+    $ blockchainApp loggingLayer blockchainLayer
 
 
 -- The overall application. These are various
