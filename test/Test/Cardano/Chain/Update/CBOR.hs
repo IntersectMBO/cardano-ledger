@@ -9,8 +9,6 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import qualified Data.Map.Strict as Map
-
 import Hedgehog (Group, Property)
 import qualified Hedgehog as H
 
@@ -43,7 +41,6 @@ import Test.Cardano.Chain.Update.Gen
   , genProof
   , genProposal
   , genProposalBody
-  , genProposals
   , genProtocolParameters
   , genProtocolVersion
   , genSoftforkRule
@@ -219,21 +216,6 @@ goldenUpdateProposal =
 ts_roundTripUpdateProposal :: TSProperty
 ts_roundTripUpdateProposal =
   eachOfTS 20 (feedPM genProposal) roundTripsCBORBuildable
-
-
---------------------------------------------------------------------------------
--- UpdateProposals
---------------------------------------------------------------------------------
-
-goldenUpdateProposals :: Property
-goldenUpdateProposals = goldenTestCBOR ups "test/golden/cbor/update/Proposals"
-  where
-    -- Need to revisit this.
-        ups = Map.fromList [(exampleUpId, exampleProposal)]
-
-ts_roundTripUpdateProposals :: TSProperty
-ts_roundTripUpdateProposals =
-  eachOfTS 20 (feedPM genProposals) roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------

@@ -12,7 +12,6 @@ module Test.Cardano.Chain.Update.Gen
   , genProof
   , genProposal
   , genProposalBody
-  , genProposals
   , genUpId
   , genUpsData
   , genVote
@@ -34,7 +33,6 @@ import Cardano.Chain.Update
   , Proof
   , Proposal
   , ProposalBody(..)
-  , Proposals
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
@@ -169,10 +167,6 @@ genProposal pm =
     <$> genProposalBody
     <*> genPublicKey
     <*> genSignature pm genProposalBody
-
-genProposals :: ProtocolMagicId -> Gen Proposals
-genProposals pm =
-  Gen.map (Range.linear 0 10) ((,) <$> genUpId pm <*> genProposal pm)
 
 genProposalBody :: Gen ProposalBody
 genProposalBody =

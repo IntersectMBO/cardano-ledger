@@ -1,5 +1,6 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingVia      #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 -- | Validation rules for registering votes and confirming proposals
 --
@@ -23,12 +24,10 @@ import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.Vote
-  ( AVote
+  ( AVote(..)
   , UpId
   , recoverSignedBytes
-  , uvKey
-  , uvProposalId
-  , uvSignature
+  , proposalId
   )
 import Cardano.Crypto
   ( ProtocolMagicId
@@ -105,7 +104,7 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 
   isConfirmed = flip M.member confirmedProposals
 
-  upId        = uvProposalId vote
+  upId        = proposalId vote
 
 
 -- | Validate and register a vote
@@ -145,10 +144,10 @@ registerVote pm vre votes vote = do
  where
   RegistrationEnvironment registeredProposals delegationMap = vre
 
-  voterPK     = uvKey vote
+  UnsafeVote { voterPK, signature } = vote
+
   voter       = mkStakeholderId voterPK
 
-  upId        = uvProposalId vote
+  upId        = proposalId vote
 
-  signature   = uvSignature vote
   signedBytes = recoverSignedBytes vote
