@@ -328,7 +328,7 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_DIdemPotent')
   putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   quickCheck (withMaxSuccess 1000 prop_DExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
   quickCheck (withMaxSuccess 1000 prop_DExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_DlnLaw)
@@ -351,7 +351,7 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_FPIdemPotent')
   putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   quickCheck (withMaxSuccess 1000 prop_FPExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
   quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
@@ -375,7 +375,7 @@ main = do
   putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
   putStrLn "skipped, takes too long"
   -- quickCheck (withMaxSuccess 5 prop_ExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q * p) = exp(q) + exp(p)"
+  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
   quickCheck (withMaxSuccess 10 prop_ExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   putStrLn "skipped, takes too long"
