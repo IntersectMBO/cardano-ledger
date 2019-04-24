@@ -22,7 +22,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-mainnet-mirror";
-      rev = "0232971dddd5cd235c5a0c18d7b4f342a887276f";
-      sha256 = "16yqqwypl4y6hzagsxz0k1hbw1lkk2bdiyj0kl32g24ydwp12ggd";
+      rev = "4f8db35bb50e5417729fb8bdf455dbe6445a6695";
+      sha256 = "1wr98g1n7rslnfk7qkzkn4fdyp81r98b551spl5lnmls9db6bn2z";
       });
     }
