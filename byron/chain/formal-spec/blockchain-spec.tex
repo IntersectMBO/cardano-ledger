@@ -854,8 +854,7 @@ header processing we verify the following things:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\bheadname} & \Block \totalf \Bhead & \text{block header} \\
-      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}\\
-      \fun{pps} & \UPIState \totalf \ProtParams & \text{update-state protocol-parameters}
+      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}
     \end{array}
   \end{equation*}
 
@@ -1071,7 +1070,7 @@ payload; UTxO, delegation and update.
           \end{array}
         \right)}
       \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'} &
-      \fun{pps} ~  \var{us'} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+      \var{pps} \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
     }
     {
       \left(
@@ -1133,6 +1132,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
+      \fun{pps} & \UPIState \totalf \ProtParams & \text{update-state protocol-parameters}
     \end{array}
   \end{equation*}
   \caption{Blockchain Extension Types and Functions}
