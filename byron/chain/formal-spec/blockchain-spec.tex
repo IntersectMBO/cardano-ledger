@@ -231,6 +231,12 @@ underlying systems and types defined will rely on definitions in that document.
     \caption{Definition of the Union Override Operation}
     \label{fig:unionoverride}
   \end{figure}
+\item[Pattern matching in premises] In the inference-rules premises use
+  $\var{patt} = \var{exp}$ to pattern-match an expression $\var{exp} $ with a
+  certain pattern $\var{patt}$. For instance, we use $\Lambda'; x = \Lambda$ to
+  be able to deconstruct a sequence $\Lambda$ in its last element, and prefix.
+  If an expression does not match the given pattern, then the premise does not
+  hold, and the rule cannot trigger.
 \end{description}
 
 \subsection{Sets}
