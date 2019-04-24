@@ -86,6 +86,10 @@
 \newcommand{\DelegState}{\type{DIState}}
 
 \newcommand{\ProtParams}{\type{PParams}} % protocol parameters
+\newcommand{\ProtPm}{\ensuremath{\type{Ppm}}}
+\newcommand{\maxblocksize}{\pp{maxBlockSize}}
+\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
+
 \newcommand{\Nothing}{\Diamond}
 
 %%
@@ -98,7 +102,7 @@
 \newcommand{\isebbname}{bIsEBB}
 \newcommand{\bcertsname}{bCerts}
 \newcommand{\bhsigname}{bhSig}
-\newcommand{\bhissuername}{bhissuer}
+\newcommand{\bhissuername}{bhIssuer}
 
 %%
 %% Functions and relations
@@ -237,6 +241,10 @@ underlying systems and types defined will rely on definitions in that document.
   be able to deconstruct a sequence $\Lambda$ in its last element, and prefix.
   If an expression does not match the given pattern, then the premise does not
   hold, and the rule cannot trigger.
+\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
+    function} from $A$ to $B$, which can be seen as a map (dictionary) with
+  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
+  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
 \end{description}
 
 \subsection{Sets}
@@ -498,7 +506,7 @@ During PBFT processing of the block header, we do the following:
     corresponds to the known hash of the previous block.
   \item We check that the header signature correctly verifies the ``signed''
     content of the header.
-  \item Finally, we verify and update the signature count rules.
+  \item Finally, we verify and update the state according to the signature count rules.
   \end{enumerate}
   \begin{figure}[ht]
   \emph{Abstract types}
@@ -763,6 +771,51 @@ updates the update state to the correct version.
 
 \clearpage
 
+\section{Protocol parameters}
+
+The rules presented henceforth make use of a protocol parameters map, which map
+different protocol parameters to their current values. The types associated to
+protocol parameters are defined in \cref{fig:prot-params-defs}.
+
+\begin{figure}[ht]
+  \emph{Abstract types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{p} & \ProtPm & \text{protocol parameter}\\
+      \var{v} & \type{Value} & \text{disjoint union of all value types}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
+      \var{pps} & \ProtParams & \var{pps} & \ProtPm \mapsto \type{Value}
+      & \text{protocol parameters map}\\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Protocol parameters}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \maxblocksize{} & \ProtPm & \text{maximum block size}\\
+      \maxheadersize{} & \ProtPm & \text{maximum block header size} \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Protocol-parameter types} Given $\var{pps} \in \ProtParams$
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l}
+      \var{pps}~\maxblocksize{} & \mathbb{N}\\
+      \var{pps}~\maxheadersize{} & \mathbb{N} \\
+    \end{array}
+  \end{equation*}
+  \caption{Protocol-parameters definitions}
+  \label{fig:prot-params-defs}
+\end{figure}
+
+
+\clearpage
+
 \section{Block processing}
 \label{sec:block-processing}
 
@@ -781,9 +834,6 @@ updates the update state to the correct version.
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
-
-\newcommand{\maxblocksize}{\pp{maxBlockSize}}
-\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
@@ -814,12 +864,6 @@ of block bodies.
     \begin{array}{r@{~\in~}lr}
       \fun{\bsizename} & \Block \totalf \mathbb{N} & \text{block size in bytes} \\
       \fun{\verifyname} & \VKey \times \Data \times \Sig & \text{verification relation} \\
-    \end{array}
-  \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \maxblocksize & \mathbb{N} & \text{maximum block size} \\
     \end{array}
   \end{equation*}
   \caption{Basic Block-related Types and Functions}
@@ -860,13 +904,6 @@ header processing we verify the following things:
     \begin{array}{r@{~\in~}lr}
       \fun{\bheadname} & \Block \totalf \Bhead & \text{block header} \\
       \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}
-    \end{array}
-  \end{equation*}
-
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \maxheadersize & \mathbb{N} & \text{maximum block header size} \\
     \end{array}
   \end{equation*}
   \caption{Block header processing types and functions}
@@ -956,10 +993,12 @@ header processing we verify the following things:
 
 \subsection{Block body processing}
 
-During processing of the block body, we perform two main functions: verification
-of the body integrity using the proofs contained in the block header, and update
-of the various state components. These rules are given in figure
-\ref{fig:rules:bbody}.
+During processing of the block body, we perform two main functions:
+verification of the body integrity using the proofs contained in the block
+header, and update of the various state components. These rules are given in
+figure \ref{fig:rules:bbody}, and the types and functions used there are
+defined in \cref{fig:ts-types:bbody}, where the UTxO, delegation, and update
+state are defined in \cite{byron_ledger_spec}.
 
 Verification is done independently for the three components of the body payload:
 UTxO, delegation and update. Each of these three have a signature in the block
