@@ -446,6 +446,73 @@ Figure~\ref{fig:st-diagram-pt-up}.
 
 \clearpage
 
+A sequence of votes can be applied using $\trans{upivotes}{}$ transitions. The
+inference rules for them are presented in \cref{fig:rules:upi-votes}.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:upi-votes-base}
+    \inference
+    {
+    }
+    {
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      \var{us}
+      \trans{upivotes}{\epsilon}
+      \var{us}
+    }
+  \end{equation}
+  %
+  \begin{equation}
+    \label{eq:rule:upi-votes-ind}
+    \inference
+    {
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      \var{us}
+      \trans{upivotes}{\Gamma}
+      \var{us'}
+      &
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      \var{us'}
+      \trans{upivote}{v}
+      \var{us''}
+    }
+    {
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      \var{us}
+      \trans{upivotes}{\Gamma;v}
+      \var{us''}
+    }
+  \end{equation}
+  \caption{Applying multiple votes on update-proposals rules}
+  \label{fig:rules:upi-votes}
+\end{figure}
+\clearpage
+
 The interface rule for protocol-version endorsement makes use of the
 $\trans{upend}{}$ transition, where we set the threshold for proposal adoption
 to: the number of genesis keys ($\var{ngk}$) times the minimum proportion of
