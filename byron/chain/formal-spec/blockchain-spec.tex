@@ -403,6 +403,7 @@ abstract constant (nullary functions) related to the protocol are defined in
     \begin{array}{r@{~\in~}lr}
       k & \mathbb{N} & \text{chain stability parameter}\\
       t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
+      \fun{dms} & \DelegState \totalf (\VKeyGen \mapsto \VKey) & \text{delegation-state delegation-map}
     \end{array}
   \end{equation*}
 
@@ -443,7 +444,7 @@ outside the size of the moving window ($k$).
   \begin{equation*}
     \inference
     {
-      \{\var{vk_g}\} \leteq (\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\}
+      \{\var{vk_g}\} \leteq \dom{((\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\})}
       & \var{sgs'} \leteq \var{sgs};_k {vk_g} &
       \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq k \cdot t \\
     }
