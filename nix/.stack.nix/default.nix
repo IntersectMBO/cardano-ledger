@@ -21,6 +21,7 @@
         cardano-ledger-test = ./cardano-ledger-test.nix;
         cardano-crypto-wrapper = ./cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./cardano-crypto-test.nix;
+        bulk-chain-validation = ./bulk-chain-validation.nix;
         cardano-prelude = ./cardano-prelude.nix;
         cardano-prelude-test = ./cardano-prelude-test.nix;
         cardano-binary = ./cardano-binary.nix;
