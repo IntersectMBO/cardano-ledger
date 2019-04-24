@@ -39,7 +39,7 @@ eps :: Rational
 eps = (fromIntegral 1) / fromIntegral 10^16
 
 -- | Normalizes the integers, return a pair of integers, both non-negative and
--- fst <= snd.
+-- fst >= snd.
 normalizeInts :: Integer -> Integer -> (Integer, Integer)
 normalizeInts x y = (x'', y'')
     where x' = abs x
