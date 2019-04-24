@@ -765,8 +765,6 @@ updates the update state to the correct version.
 \newcommand{\BBEnv}{\type{BBEnv}}
 \newcommand{\BBState}{\type{BBState}}
 
-\newcommand{\Bbody}{\type{BlockBody}}
-
 \newcommand{\bheadname}{bHead}
 \newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
 \newcommand{\bupdpayloadname}{bUpdPayload}
@@ -966,15 +964,6 @@ In addition to block verification, we also process the three components of the
 payload; UTxO, delegation and update.
 
 \begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      bb & \Bbody & \text{block body} \\
-
-    \end{array}
-  \end{equation*}
-  %
   \emph{Abstract functions}
   %
   \begin{equation*}
