@@ -33,6 +33,12 @@ let
       # list the packages that require template haskell
       # explicity here.
       iohk-module
+      {
+        # katip has an version bound of Win32 < 2.6; this however
+        # implies that it's incompatible with ghc-8.6 (on windows).
+        # Let's force it to accept out packageset.
+        packages.katip.doExactConfig = true;
+      }
     ];
   };
 in
