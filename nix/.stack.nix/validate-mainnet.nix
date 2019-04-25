@@ -27,6 +27,7 @@
             (hsPkgs.cardano-shell)
             (hsPkgs.formatting)
             (hsPkgs.iohk-monitoring)
+            (hsPkgs.text)
             ];
           };
         };
