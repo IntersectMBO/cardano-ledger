@@ -14,7 +14,7 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common (Attributes, areAttributesKnown)
+import Cardano.Chain.Common (Attributes, attributesAreKnown)
 
 
 -- | Represents main block extra data
@@ -25,7 +25,7 @@ newtype ExtraBodyData = ExtraBodyData
 
 instance B.Buildable ExtraBodyData where
   build (ExtraBodyData attrs)
-    | areAttributesKnown attrs = "no extra data"
+    | attributesAreKnown attrs = "no extra data"
     | otherwise = bprint ("extra data has attributes: " . build) attrs
 
 instance ToCBOR ExtraBodyData where

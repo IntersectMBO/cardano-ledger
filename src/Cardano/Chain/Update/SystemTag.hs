@@ -60,7 +60,7 @@ systemTagMaxLength = 10
 data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text
-  deriving Data
+  deriving (Eq, Show, Data)
 
 instance B.Buildable SystemTagError where
   build = \case

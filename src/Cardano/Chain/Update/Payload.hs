@@ -4,7 +4,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
@@ -12,16 +11,13 @@
 module Cardano.Chain.Update.Payload
   ( APayload(..)
   , Payload
-  , PayloadError(..)
   , payload
-  , checkPayload
   )
 where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
-import Formatting (bprint, build)
+import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
@@ -34,17 +30,16 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   )
-import Cardano.Chain.Update.Vote
+import Cardano.Chain.Update.Proposal
   ( AProposal
-  , AVote
   , Proposal
-  , ProposalError
-  , Vote
-  , checkProposal
   , formatMaybeProposal
+  )
+import Cardano.Chain.Update.Vote
+  ( AVote
+  , Vote
   , formatVoteShort
   )
-import Cardano.Crypto (ProtocolMagicId)
 
 
 -- | Update System payload
@@ -86,20 +81,3 @@ instance FromCBOR (APayload ByteSpan) where
       enforceSize "Update.Payload" 2
       (,) <$> fromCBOR <*> fromCBOR
     pure $ APayload proposal votes byteSpan
-
-newtype PayloadError
-  = PayloadProposalError ProposalError
-
-instance B.Buildable PayloadError where
-  build = \case
-    PayloadProposalError err -> bprint
-      ("Proposal was invalid while checking Update.Payload.\n Error: " . build)
-      err
-
-checkPayload
-  :: MonadError PayloadError m => ProtocolMagicId -> APayload ByteString -> m ()
-checkPayload pm p =
-  maybe
-    (pure ())
-    (liftEither . first PayloadProposalError . checkProposal pm)
-    (payloadProposal p)

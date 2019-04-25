@@ -42,6 +42,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
+import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppUpdateImplicit
@@ -65,7 +66,7 @@ import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
 import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
-import Cardano.Chain.Update.Vote (AProposal, AVote, UpId, recoverUpId)
+import Cardano.Chain.Update.Vote (AVote)
 import Cardano.Crypto (ProtocolMagicId)
 
 

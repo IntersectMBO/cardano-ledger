@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 -- | Validation rules for registering updates
 --
@@ -20,11 +20,20 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
-import Cardano.Binary (Annotated(..))
-import Cardano.Chain.Common
-  (Attributes(..), StakeholderId, UnparsedFields(..), mkStakeholderId)
+import Cardano.Chain.Common (StakeholderId, attributesAreKnown, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
+import qualified Cardano.Chain.Update.Proposal as Proposal
+import Cardano.Chain.Update.Proposal
+  ( AProposal(..)
+  , ProposalBody(..)
+  , UpId
+  , protocolParametersUpdate
+  , softwareVersion
+  , recoverProposalSignedBytes
+  , recoverUpId
+  , protocolVersion
+  )
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppMaxBlockSize
@@ -37,20 +46,10 @@ import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(ProtocolVersion))
 import Cardano.Chain.Update.SoftwareVersion
   ( NumSoftwareVersion
   , SoftwareVersion(SoftwareVersion)
+  , SoftwareVersionError
+  , checkSoftwareVersion
   )
-import Cardano.Chain.Update.Vote
-  ( AProposal(AProposal)
-  , ProposalBody(..)
-  , UpId
-  , pbProtocolParametersUpdate
-  , pbSoftwareVersion
-  , proposalAnnotation
-  , proposalAnnotation
-  , proposalBody
-  , recoverProposalSignedBytes
-  , recoverUpId
-  , pbProtocolVersion
-  )
+import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag)
 import Cardano.Crypto
   ( ProtocolMagicId
   , SignTag(SignUSProposal)
@@ -59,7 +58,7 @@ import Cardano.Crypto
 
 
 data Environment = Environment
-  { protocolMagic             :: ProtocolMagicId
+  { protocolMagic             :: !ProtocolMagicId
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
@@ -80,18 +79,20 @@ type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, FlatSlotId)
 
 -- | Error captures the ways in which registration could fail
 data Error
-  = RegistrationDuplicateProtocolVersion ProtocolVersion
-  | RegistrationDuplicateSoftwareVersion SoftwareVersion
-  | RegistrationInvalidProposer StakeholderId
-  | RegistrationInvalidProtocolVersion ProtocolVersion
-  | RegistrationInvalidScriptVersion Word16 Word16
-  | RegistrationInvalidSignature
-  | RegistrationInvalidSoftwareVersion SoftwareVersion
-  | RegistrationMaxBlockSizeTooLarge (TooLarge Natural)
-  | RegistrationMaxTxSizeTooLarge (TooLarge Natural)
-  | RegistrationProposalAttributesTooLarge
-  | RegistrationProposalEmpty
-  | RegistrationProposalTooLarge (TooLarge Natural)
+  = DuplicateProtocolVersion ProtocolVersion
+  | DuplicateSoftwareVersion SoftwareVersion
+  | InvalidProposer StakeholderId
+  | InvalidProtocolVersion ProtocolVersion
+  | InvalidScriptVersion Word16 Word16
+  | InvalidSignature
+  | InvalidSoftwareVersion SoftwareVersion
+  | MaxBlockSizeTooLarge (TooLarge Natural)
+  | MaxTxSizeTooLarge (TooLarge Natural)
+  | ProposalAttributesUnknown
+  | ProposalEmpty
+  | ProposalTooLarge (TooLarge Natural)
+  | SoftwareVersionError SoftwareVersionError
+  | SystemTagError SystemTagError
   deriving (Eq, Show)
 
 data TooLarge n = TooLarge
@@ -110,20 +111,20 @@ registerProposal
   -> m State
 registerProposal env rs proposal = do
   -- Check that the proposal attributes are empty
-  length attributes == 0 `orThrowError` RegistrationProposalAttributesTooLarge
+  attributesAreKnown (attributes body) `orThrowError` ProposalAttributesUnknown
 
   -- Check that the proposer is delegated to by a genesis key
-  not (null $ M.filter (== proposer) delegationMap)
-    `orThrowError` RegistrationInvalidProposer proposer
+  not (null $ M.filter (== proposerId) delegationMap)
+    `orThrowError` InvalidProposer proposerId
 
   -- Verify the proposal signature
   verifySignatureDecoded
       protocolMagic
       SignUSProposal
-      proposerPK
-      (recoverProposalSignedBytes body)
-      sig
-    `orThrowError` RegistrationInvalidSignature
+      issuer
+      (recoverProposalSignedBytes aBody)
+      signature
+    `orThrowError` InvalidSignature
 
   -- Check that the proposal is valid
   registerProposalComponents
@@ -133,11 +134,11 @@ registerProposal env rs proposal = do
     rs
     proposal
  where
-  AProposal body proposerPK sig _ = proposal
+  AProposal { aBody, issuer, signature } = proposal
 
-  Attributes _ (UnparsedFields attributes) = pbAttributes $ unAnnotated body
+  body = Proposal.body proposal
 
-  proposer = mkStakeholderId proposerPK
+  proposerId = mkStakeholderId issuer
 
   Environment
     { protocolMagic
@@ -162,8 +163,10 @@ registerProposalComponents
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
-  (protocolVersionChanged || softwareVersionChanged)
-    `orThrowError` RegistrationProposalEmpty
+  protocolVersionChanged || softwareVersionChanged `orThrowError` ProposalEmpty
+
+  -- Check that the 'SystemTag's in the metadata are valid
+  mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Register protocol update if we have one
   registeredPUPs' <- if protocolVersionChanged
@@ -177,8 +180,8 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
   pure $ State registeredPUPs' registeredSUPs'
  where
-  ProposalBody protocolVersion ppu softwareVersion _ _ =
-    proposalBody proposal
+  ProposalBody protocolVersion ppu softwareVersion metadata _ =
+    Proposal.body proposal
 
   SoftwareVersion appName appVersion = softwareVersion
 
@@ -211,20 +214,19 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   -- Check that this protocol version isn't already registered
   null (M.filter ((== newPV) . fst) registeredPUPs)
-    `orThrowError` RegistrationDuplicateProtocolVersion newPV
+    `orThrowError` DuplicateProtocolVersion newPV
 
   -- Check that this protocol version is a valid next version
-  pvCanFollow newPV adoptedPV
-    `orThrowError` RegistrationInvalidProtocolVersion newPV
+  pvCanFollow newPV adoptedPV `orThrowError` InvalidProtocolVersion newPV
 
   canUpdate adoptedPP newPP proposal
 
   pure $ M.insert (recoverUpId proposal) (newPV, newPP) registeredPUPs
  where
-  body  = proposalBody proposal
-  newPV = pbProtocolVersion body
-  ppu   = pbProtocolParametersUpdate body
-  newPP = PPU.apply ppu adoptedPP
+  ProposalBody { protocolVersion = newPV, protocolParametersUpdate } =
+    Proposal.body proposal
+  newPP = PPU.apply protocolParametersUpdate adoptedPP
+
 
 -- | Check that the new 'ProtocolVersion' is a valid next version
 --
@@ -253,26 +255,26 @@ canUpdate
 canUpdate adoptedPP proposedPP proposal = do
 
   -- Check that the proposal size is less than the maximum
-  (proposalSize <= maxProposalSize) `orThrowError` RegistrationProposalTooLarge
+  (proposalSize <= maxProposalSize) `orThrowError` ProposalTooLarge
     (TooLarge maxProposalSize proposalSize)
 
   -- Check that the new maximum block size is no more than twice the current one
   (newMaxBlockSize <= 2 * adoptedMaxBlockSize)
-    `orThrowError` RegistrationMaxBlockSizeTooLarge
+    `orThrowError` MaxBlockSizeTooLarge
                      (TooLarge adoptedMaxBlockSize newMaxBlockSize)
 
   -- Check that the new max transaction size is less than the new max block size
   (newMaxTxSize <=  newMaxBlockSize)
-    `orThrowError` RegistrationMaxTxSizeTooLarge
+    `orThrowError` MaxTxSizeTooLarge
                      (TooLarge newMaxBlockSize newMaxTxSize)
 
   -- Check that the new script version is either the same or incremented
   (0 <= scriptVersionDiff && scriptVersionDiff <= 1)
-    `orThrowError` RegistrationInvalidScriptVersion
+    `orThrowError` InvalidScriptVersion
                      adoptedScriptVersion newScriptVersion
  where
   proposalSize :: Natural
-  proposalSize         = fromIntegral . BS.length $ proposalAnnotation proposal
+  proposalSize         = fromIntegral . BS.length $ Proposal.annotation proposal
   maxProposalSize      = ppMaxProposalSize adoptedPP
 
   adoptedMaxBlockSize  = ppMaxBlockSize adoptedPP
@@ -284,12 +286,14 @@ canUpdate adoptedPP proposedPP proposal = do
   newScriptVersion     = ppScriptVersion proposedPP
   scriptVersionDiff    = newScriptVersion - adoptedScriptVersion
 
+
 -- | Check that a new 'SoftwareVersion' is valid
 --
 --   We check that:
 --
 --   1) The 'SoftwareVersion' hasn't already been registered
---   2) The new 'SoftwareVersion' is a valid next version
+--   2) The 'SoftwareVersion' is valid according to static checks
+--   3) The new 'SoftwareVersion' is a valid next version
 --
 --   This corresponds to the `UPSVV` rule in the spec.
 registerSoftwareUpdate
@@ -302,15 +306,18 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
   -- Check that this software version isn't already registered
   null (M.filter (== softwareVersion) registeredSUPs)
-    `orThrowError` RegistrationDuplicateSoftwareVersion softwareVersion
+    `orThrowError` DuplicateSoftwareVersion softwareVersion
+
+  -- Check that the software version is valid
+  checkSoftwareVersion softwareVersion `wrapError` SoftwareVersionError
 
   -- Check that this software version is a valid next version
   svCanFollow appVersions softwareVersion
-    `orThrowError` RegistrationInvalidSoftwareVersion softwareVersion
+    `orThrowError` InvalidSoftwareVersion softwareVersion
 
   -- Add to the list of registered software update proposals
   pure $ M.insert (recoverUpId proposal) softwareVersion registeredSUPs
-  where softwareVersion = pbSoftwareVersion $ proposalBody proposal
+  where ProposalBody { softwareVersion } = Proposal.body proposal
 
 
 -- | Check that a new 'SoftwareVersion' is a valid next version
