@@ -1029,7 +1029,7 @@ payload; UTxO, delegation and update.
   \begin{equation*}
     \begin{array}{rlr}
       \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bhissuer{b}) \\
+      \bendorsment{b} & = (\bprotver{b}, (\bhissuer{} \cdot \bhead{}) ~ b)\\
       \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
       \bslot{b} & = (\bhslotname \cdot \bheadname)~b \\
       \fun{\bupdpayloadname} & \in \Block \to (\UProp^{?}\times\seqof{\Vote}) & \text{Block update payload} \\
