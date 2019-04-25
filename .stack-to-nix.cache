@@ -17,3 +17,5 @@ http://github.com/nc6/canonical-json a9dc9b893649bc2e2a770ab22d278a780f7e3a3c . 
 https://github.com/input-output-hk/cardano-shell 0c3e043d0d3789d0b251938c2f4b481891b95e0e . 0ipsq55p1rbkhrrr55k8kcq1hm2pg5dgldfpd6mc2g3ivmcswlc0 cardano-shell cardano-shell.nix
 https://github.com/input-output-hk/iohk-monitoring-framework ff64e89e4a58262b11daecf3a7835442a0e0e812 contra-tracer 0crmm74k5l249i85y73c1lqgfihr1a21bhcv79b0d7m6bvxlng8q contra-tracer contra-tracer.nix
 https://github.com/input-output-hk/iohk-monitoring-framework ff64e89e4a58262b11daecf3a7835442a0e0e812 iohk-monitoring 0crmm74k5l249i85y73c1lqgfihr1a21bhcv79b0d7m6bvxlng8q iohk-monitoring iohk-monitoring.nix
+https://github.com/input-output-hk/iohk-monitoring-framework 8614c66d9f13ad7bd68975700651a720a78d620e contra-tracer 1bz7kfbjqwf3kc80qqinwfqqmrmkmj5mf1cx9alvdmjdx65didiv contra-tracer contra-tracer.nix
+https://github.com/input-output-hk/iohk-monitoring-framework 8614c66d9f13ad7bd68975700651a720a78d620e iohk-monitoring 1bz7kfbjqwf3kc80qqinwfqqmrmkmj5mf1cx9alvdmjdx65didiv iohk-monitoring iohk-monitoring.nix

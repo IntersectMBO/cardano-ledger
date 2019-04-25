@@ -44,7 +44,7 @@ extra-deps:
   - ekg-json-0.1.0.6@sha256:4ff2e9cac213a5868ae8b4a7c72a16a9a76fac14d944ae819b3d838a9725569b
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: ff64e89e4a58262b11daecf3a7835442a0e0e812
+    commit: 8614c66d9f13ad7bd68975700651a720a78d620e
     subdirs:
       - contra-tracer
       - iohk-monitoring
