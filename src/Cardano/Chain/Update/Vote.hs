@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
@@ -15,7 +16,6 @@ module Cardano.Chain.Update.Vote
     AProposal(..)
   , Proposal
   , ProposalError(..)
-  , Proposals
   , UpId
   , ProposalBody(..)
   , checkProposal
@@ -30,7 +30,7 @@ module Cardano.Chain.Update.Vote
   , AVote(..)
   , VoteId
   , Vote
-  , uvProposalId
+  , proposalId
   , mkVote
   , mkVoteSafe
   , formatVoteShort
@@ -144,18 +144,12 @@ mkProposal b k s = AProposal (Annotated b ()) k s ()
 proposalBody :: AProposal a -> ProposalBody
 proposalBody = unAnnotated . aProposalBody
 
-upId :: Proposal -> UpId
-upId = hash
-
 recoverUpId :: AProposal ByteString -> UpId
 recoverUpId = hashDecoded
 
 instance Decoded (AProposal ByteString) where
   type BaseType (AProposal ByteString) = Proposal
   recoverBytes = proposalAnnotation
-
-type Proposals = Map UpId Proposal
-
 
 instance B.Buildable (AProposal ()) where
   build proposal = bprint
@@ -174,7 +168,7 @@ instance B.Buildable (AProposal ()) where
     )
     (pbSoftwareVersion body)
     (pbProtocolVersion body)
-    (upId proposal)
+    (hash proposal)
     (pbProtocolParametersUpdate body)
     (Map.keys $ pbData body)
     attrsBuilder
@@ -203,23 +197,23 @@ instance FromCBOR Proposal where
 
 instance FromCBOR (AProposal ByteSpan) where
   fromCBOR = do
-    Annotated (body, pk, signature) byteSpan <- annotatedDecoder $ do
+    Annotated (body, pk, sig) byteSpan <- annotatedDecoder $ do
       enforceSize "Proposal" 7
       body <- annotatedDecoder
         (ProposalBody <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR)
-      pk        <- fromCBOR
-      signature <- fromCBOR
-      pure (body, pk, signature)
-    pure $ AProposal body pk signature byteSpan
+      pk   <- fromCBOR
+      sig  <- fromCBOR
+      pure (body, pk, sig)
+    pure $ AProposal body pk sig byteSpan
 
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
 
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
-signProposal pm body ss = mkProposal body issuer signature
+signProposal pm body ss = mkProposal body issuer sig
  where
-  issuer    = safeToPublic ss
-  signature = safeSign pm SignUSProposal ss body
+  issuer = safeToPublic ss
+  sig    = safeSign pm SignUSProposal ss body
 
 data ProposalError
   = ProposalInvalidSignature (Signature ProposalBody)
@@ -292,21 +286,17 @@ type Vote = AVote ()
 --
 --   Invariant: The signature is valid.
 data AVote a = UnsafeVote
-  { uvKey         :: !PublicKey
+  { voterPK       :: !PublicKey
   -- ^ Public key of stakeholder, who votes
-  , aUvProposalId :: !(Annotated UpId a)
+  , aProposalId   :: !(Annotated UpId a)
   -- ^ Proposal to which this vote applies
-  , aUvDecision   :: !(Annotated Bool a)
-  -- ^ Approval/rejection bit
-  , uvSignature   :: !(Signature (UpId, Bool))
+  , signature     :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit) by stakeholder
   } deriving (Eq, Show, Generic, Functor)
+    deriving anyclass NFData
 
-uvProposalId :: AVote a -> UpId
-uvProposalId = unAnnotated . aUvProposalId
-
-uvDecision :: AVote a -> Bool
-uvDecision = unAnnotated . aUvDecision
+proposalId :: AVote a -> UpId
+proposalId = unAnnotated . aProposalId
 
 recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
@@ -315,12 +305,12 @@ recoverSignedBytes v =
       [ "\130"
       -- The byte above is part of the signed payload, but is not part of the transmitted payload.
       -- This is an implementation artifact of the previous
-      , annotation $ aUvProposalId v
-      , annotation $ aUvDecision v
+      , annotation $ aProposalId v
+      , "\245"
+      -- The byte above is the canonical encoding of @True@, which we hardcode,
+      -- because we removed the possibility of negative voting
       ]
-  in Annotated (uvProposalId v, uvDecision v) bytes
-
-instance NFData a => NFData (AVote a)
+  in Annotated (proposalId v, True) bytes
 
 instance B.Buildable (AVote a) where
   build uv = bprint
@@ -328,13 +318,10 @@ instance B.Buildable (AVote a) where
     . build
     . ", proposal id: "
     . build
-    . ", voter's decision: "
-    . build
     . " }"
     )
-    (addressHash $ uvKey uv)
-    (uvProposalId uv)
-    (uvDecision uv)
+    (addressHash $ voterPK uv)
+    (proposalId uv)
 
 instance B.Buildable (Proposal, [Vote]) where
   build (up, votes) =
@@ -343,10 +330,14 @@ instance B.Buildable (Proposal, [Vote]) where
 instance ToCBOR Vote where
   toCBOR uv =
     encodeListLen 4
-      <> toCBOR (uvKey uv)
-      <> toCBOR (uvProposalId uv)
-      <> toCBOR (uvDecision uv)
-      <> toCBOR (uvSignature uv)
+      <> toCBOR (voterPK uv)
+      <> toCBOR (proposalId uv)
+      -- We encode @True@ here because we removed the decision bit. This is safe
+      -- because we know that all @Vote@s on mainnet use this encoding and any
+      -- changes to the encoding in our implementation will be picked up by
+      -- golden tests.
+      <> toCBOR True
+      <> toCBOR (signature uv)
 
 instance FromCBOR Vote where
   fromCBOR = void <$> fromCBOR @(AVote ByteSpan)
@@ -354,11 +345,12 @@ instance FromCBOR Vote where
 instance FromCBOR (AVote ByteSpan) where
   fromCBOR = do
     enforceSize "Vote" 4
-    UnsafeVote
-      <$> fromCBOR
-      <*> fromCBORAnnotated
-      <*> fromCBORAnnotated
-      <*> fromCBOR
+    voterPK     <- fromCBOR
+    aProposalId <- fromCBORAnnotated
+    -- Drop the decision bit that previously allowed negative voting
+    void $ fromCBOR @Bool
+    signature <- fromCBOR
+    pure $ UnsafeVote { voterPK, aProposalId, signature }
 
 -- | A safe constructor for 'UnsafeVote'
 mkVote
@@ -370,11 +362,10 @@ mkVote
   -> Bool
   -- ^ Approval/rejection bit
   -> Vote
-mkVote pm sk proposalId decision = UnsafeVote
+mkVote pm sk upId decision = UnsafeVote
   (toPublic sk)
-  (Annotated proposalId ())
-  (Annotated decision ())
-  (sign pm SignUSVote sk (proposalId, decision))
+  (Annotated upId ())
+  (sign pm SignUSVote sk (upId, decision))
 
 -- | Same as 'mkVote', but uses 'SafeSigner'
 mkVoteSafe
@@ -386,23 +377,21 @@ mkVoteSafe
   -> Bool
   -- ^ Approval/rejection bit
   -> Vote
-mkVoteSafe pm sk proposalId decision = UnsafeVote
+mkVoteSafe pm sk upId decision = UnsafeVote
   (safeToPublic sk)
-  (Annotated proposalId ())
-  (Annotated decision ())
-  (safeSign pm SignUSVote sk (proposalId, decision))
+  (Annotated upId ())
+  (safeSign pm SignUSVote sk (upId, decision))
 
 -- | Format 'Vote' compactly
 formatVoteShort :: Vote -> Builder
 formatVoteShort uv = bprint
-  ("(" . shortHashF . " " . builder . " " . shortHashF . ")")
-  (addressHash $ uvKey uv)
-  (bool "against" "for" $ uvDecision uv)
-  (uvProposalId uv)
+  ("(" . shortHashF . " " . shortHashF . ")")
+  (addressHash $ voterPK uv)
+  (proposalId uv)
 
 -- | Formatter for 'Vote' which displays it compactly
 shortVoteF :: Format r (Vote -> r)
 shortVoteF = later formatVoteShort
 
 mkVoteId :: Vote -> VoteId
-mkVoteId vote = (uvProposalId vote, uvKey vote, uvDecision vote)
+mkVoteId vote = (proposalId vote, voterPK vote, True)
