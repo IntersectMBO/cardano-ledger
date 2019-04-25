@@ -11,7 +11,6 @@ import Cardano.Prelude
 
 import Control.Concurrent (threadDelay)
 import Features.Blockchain (BlockchainLayer(..), createBlockchainFeature)
-import Cardano.BM.Data.LogItem (LoggerName)
 import Cardano.Shell.Features.Logging (LoggingLayer(..), Trace, createLoggingFeature)
 import Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import Cardano.Shell.Presets (mainnetConfiguration)
@@ -20,8 +19,7 @@ import Cardano.Shell.Types
   , CardanoApplication(..)
   , initializeCardanoEnvironment
   )
-
-
+  
 main :: IO ()
 main = do
   -- This is where the configuration and environment should come from; these
@@ -34,6 +32,7 @@ main = do
   (loggingLayer, loggingFeature) <- createLoggingFeature
     cardanoEnvironment
     cardanoConfiguration
+
   (blockchainLayer, blockchainFeature) <- createBlockchainFeature
     cardanoEnvironment
     cardanoConfiguration
