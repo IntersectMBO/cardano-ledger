@@ -1020,9 +1020,9 @@ payload; UTxO, delegation and update.
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{block protocol version} \\
-      \fun{bhUtxoSig} & \Bhead \totalf \Sig & \text{UTxO payload signature} \\
-      \fun{bhDlgSig} & \Bhead \totalf \Sig & \text{delegation payload signature} \\
-      \fun{bhUpdSig} & \Bhead \totalf \Sig & \text{update payload signature} \\
+      \fun{bhUtxoProof} & \Bhead \totalf \Hash & \text{UTxO payload hash} \\
+      \fun{bhDlgProof} & \Bhead \totalf \Hash & \text{delegation payload hash} \\
+      \fun{bhUpdProof} & \Bhead \totalf \Hash & \text{update payload hash} \\
     \end{array}
   \end{equation*}
   \emph{Derived functions}
@@ -1078,9 +1078,9 @@ payload; UTxO, delegation and update.
     \inference
     { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
       \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bhissuer{\var{bh}} \\
-      \verify{\var{vk_d}}{\serialised{\butxo{b}}}{(\fun{bhUtxoSig}~\var{bh})} &
-      \verify{\var{vk_d}}{\serialised{\bcerts{b}}}{(\fun{bhDlgSig}~\var{bh})} \\
-      \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
+      \fun{hash}~(\butxo{b}) = \fun{bhUtxoProof}~\var{bh} &
+      \fun{hash}~(\bcerts{b}) = \fun{bhDlgProof}~\var{bh} \\
+      \fun{hash}~(\bupdpayload{b}) = \fun{bhUpdProof}~\var{bh}\\~\\
       {\left(
           \begin{array}{l}
             \bslot{b} \\
