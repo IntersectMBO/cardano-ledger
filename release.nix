@@ -55,8 +55,8 @@ localLib.pkgs.lib.mapAttrsRecursiveCond
     jobs.nix-tools.tests.cardano-ledger.cardano-ledger-test.x86_64-linux
 
     # windows cross compilation targets
-    # jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-ledger.x86_64-linux
-    # jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-ledger.cardano-ledger-test.x86_64-linux
+    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-ledger.x86_64-linux
+    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-ledger.cardano-ledger-test.x86_64-linux
   ];
 
 } (builtins.removeAttrs args ["cardano-ledger"]))
