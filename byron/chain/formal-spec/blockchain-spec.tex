@@ -773,7 +773,7 @@ updates the update state to the correct version.
 
 \section{Protocol parameters}
 
-The rules presented henceforth make use of a protocol parameters map, which map
+The rules presented henceforth make use of a protocol parameters map, which maps
 different protocol parameters to their current values. The types associated to
 protocol parameters are defined in \cref{fig:prot-params-defs}.
 
@@ -781,15 +781,14 @@ protocol parameters are defined in \cref{fig:prot-params-defs}.
   \emph{Abstract types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{p} & \ProtPm & \text{protocol parameter}\\
-      \var{v} & \type{Value} & \text{disjoint union of all value types}\\
+      \var{p} & \ProtPm & \text{protocol parameter}
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{~=~}r@{~\in~}lr}
-      \var{pps} & \ProtParams & \var{pps} & \ProtPm \mapsto \type{Value}
+      \var{pps} & \ProtParams & \var{pps} & \ProtPm \mapsto \type{Data}
       & \text{protocol parameters map}\\
     \end{array}
   \end{equation*}
@@ -798,15 +797,15 @@ protocol parameters are defined in \cref{fig:prot-params-defs}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \maxblocksize{} & \ProtPm & \text{maximum block size}\\
-      \maxheadersize{} & \ProtPm & \text{maximum block header size} \\
+      \maxheadersize{} & \ProtPm & \text{maximum block header size}\\
     \end{array}
   \end{equation*}
   %
-  \emph{Protocol-parameter types} Given $\var{pps} \in \ProtParams$
+  \emph{Protocol-parameter types} given $\var{pps} \in \ProtParams$
   \begin{equation*}
     \begin{array}{r@{~\in~}l}
       \var{pps}~\maxblocksize{} & \mathbb{N}\\
-      \var{pps}~\maxheadersize{} & \mathbb{N} \\
+      \var{pps}~\maxheadersize{} & \mathbb{N}\\
     \end{array}
   \end{equation*}
   \caption{Protocol-parameters definitions}
@@ -1020,9 +1019,10 @@ payload; UTxO, delegation and update.
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{block protocol version} \\
-      \fun{bhUtxoProof} & \Bhead \totalf \Hash & \text{UTxO payload hash} \\
-      \fun{bhDlgProof} & \Bhead \totalf \Hash & \text{delegation payload hash} \\
-      \fun{bhUpdProof} & \Bhead \totalf \Hash & \text{update payload hash} \\
+      \fun{bhUtxoHash} & \Bhead \totalf \Hash & \text{UTxO payload hash} \\
+      \fun{bhDlgHash} & \Bhead \totalf \Hash & \text{delegation payload hash} \\
+      \fun{bhUpdHash} & \Bhead \totalf \Hash & \text{update payload hash} \\
+      \fun{hash} & \type{Data} \totalf \Hash & \text{hash function} \\
     \end{array}
   \end{equation*}
   \emph{Derived functions}
@@ -1078,9 +1078,9 @@ payload; UTxO, delegation and update.
     \inference
     { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
       \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bhissuer{\var{bh}} \\
-      \fun{hash}~(\butxo{b}) = \fun{bhUtxoProof}~\var{bh} &
-      \fun{hash}~(\bcerts{b}) = \fun{bhDlgProof}~\var{bh} \\
-      \fun{hash}~(\bupdpayload{b}) = \fun{bhUpdProof}~\var{bh}\\~\\
+      \fun{hash}~(\butxo{b}) = \fun{bhUtxoHash}~\var{bh} &
+      \fun{hash}~(\bcerts{b}) = \fun{bhDlgHash}~\var{bh} \\
+      \fun{hash}~(\bupdpayload{b}) = \fun{bhUpdHash}~\var{bh}\\~\\
       {\left(
           \begin{array}{l}
             \bslot{b} \\
