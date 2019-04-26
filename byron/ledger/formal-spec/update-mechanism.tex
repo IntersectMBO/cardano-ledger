@@ -274,10 +274,26 @@ that does not propose changes in the protocol version, or does not propose
 changes the software version. However the update proposal must contain a change
 proposal in any of these two aspects.
 %
-
 Also note that we do not allow for updating the protocol parameters without
 updating the protocol version. If an update in the protocol parameters does not
 cause a soft-fork we might use the alt version for that purpose.
+
+In Rule~\ref{eq:rule:up-av-validity} we make use of an abstract function
+$\fun{apNameValid}$ which checks that the name is an ASCII string of less than
+12 characters.
+
+\begin{figure}[htb]
+  \emph{Abstract functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{apNameValid} & \ApName \rightarrow \mathbb{B} & \text{validity checking for application name}
+    \end{array}
+  \end{equation*}
+  \caption{Update proposal validity definitions}
+  \label{fig:defs:update-proposal-validity}
+\end{figure}
+
+
 
 \begin{figure}[htb]
   \begin{equation}
@@ -324,6 +340,7 @@ cause a soft-fork we might use the alt version for that purpose.
     \inference
     {
       (\var{an}, \var{av}) \leteq \upSwVer{up}
+      & \fun{apNameValid}~\var{an}\\
       & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
       & (\var{an}, \var{av}) \notin \range~\var{raus}
     }

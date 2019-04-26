@@ -4,6 +4,8 @@
 \item[Natural Numbers] The set $\mathbb{N}$ refers to the set of all natural
   numbers $\{0, 1, 2, \ldots\}$. The set $\mathbb{Q}$ refers to the set of
   rational numbers.
+\item[Booleans] The set $\mathbb{B}$ denotes the set of booleans
+  $\{\var{True}, \var{False}\}$.
 \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
   the subsets of $X$.
 \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
@@ -50,7 +52,7 @@
   it by $\wcard$ to make it explicit that we do not use this variable in the
   scope of the given term.
 \item[Implicit existential quantifications] Given a predicate
-  $P \in X \to Bool$, we use $P \wcard$ as a shorthand notation for
+  $P \in X \to \mathbb{B}$, we use $P \wcard$ as a shorthand notation for
   $\exists x \cdot P~x$.
 % TODO: use leteq
 \item[Pattern matching in premises] In the inference-rules premises use
