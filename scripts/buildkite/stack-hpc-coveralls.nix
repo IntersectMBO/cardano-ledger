@@ -9,8 +9,8 @@ mkDerivation {
   version = "0.0.4.0";
   src = fetchgit {
     url = "https://github.com/input-output-hk/stack-hpc-coveralls";
-    rev = "347159869bc9af2de6c6fa16e247ae060e82b954";
-    sha256 = "0qsfxddbzvw3lkyvr0876vnlsm1901gy2mksbghg709wpip4xksp";
+    rev = "cf24759a4130a8fd77235eab1ac06e9a8ac0d3c2";
+    sha256 = "0914dy4yqhjv9f9n5fnn73m7jmqp5cs7d09pw9sg2x9arv0j3iam";
     fetchSubmodules = true;
   };
   isLibrary = true;
