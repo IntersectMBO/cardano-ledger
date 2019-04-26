@@ -24,6 +24,8 @@ library
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
+                       Cardano.Chain.Delegation.Validation.Activation
+                       Cardano.Chain.Delegation.Validation.Interface
                        Cardano.Chain.Epoch.File
                        Cardano.Chain.Epoch.Validation
                        Cardano.Chain.Genesis
@@ -61,8 +63,6 @@ library
 
                        Cardano.Chain.Delegation.Certificate
                        Cardano.Chain.Delegation.Payload
-                       Cardano.Chain.Delegation.Validation.Activation
-                       Cardano.Chain.Delegation.Validation.Interface
                        Cardano.Chain.Delegation.Validation.Scheduling
 
                        Cardano.Chain.Genesis.AvvmBalances
