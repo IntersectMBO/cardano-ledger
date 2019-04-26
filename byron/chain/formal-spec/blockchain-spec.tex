@@ -86,6 +86,10 @@
 \newcommand{\DelegState}{\type{DIState}}
 
 \newcommand{\ProtParams}{\type{PParams}} % protocol parameters
+\newcommand{\ProtPm}{\ensuremath{\type{Ppm}}}
+\newcommand{\maxblocksize}{\pp{maxBlockSize}}
+\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
+
 \newcommand{\Nothing}{\Diamond}
 
 %%
@@ -98,7 +102,7 @@
 \newcommand{\isebbname}{bIsEBB}
 \newcommand{\bcertsname}{bCerts}
 \newcommand{\bhsigname}{bhSig}
-\newcommand{\bhissuername}{bhissuer}
+\newcommand{\bhissuername}{bhIssuer}
 
 %%
 %% Functions and relations
@@ -231,6 +235,16 @@ underlying systems and types defined will rely on definitions in that document.
     \caption{Definition of the Union Override Operation}
     \label{fig:unionoverride}
   \end{figure}
+\item[Pattern matching in premises] In the inference-rules premises use
+  $\var{patt} = \var{exp}$ to pattern-match an expression $\var{exp} $ with a
+  certain pattern $\var{patt}$. For instance, we use $\Lambda'; x = \Lambda$ to
+  be able to deconstruct a sequence $\Lambda$ in its last element, and prefix.
+  If an expression does not match the given pattern, then the premise does not
+  hold, and the rule cannot trigger.
+\item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
+    function} from $A$ to $B$, which can be seen as a map (dictionary) with
+  keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
+  $a \mapsto b \in m$ is equivalent to $m~ a = b$.
 \end{description}
 
 \subsection{Sets}
@@ -252,7 +266,7 @@ There are several standard sets used in the document:
 \newcommand{\bprotver}[1]{\fun{bProtVer}\ #1}
 \newcommand{\bendorsment}[1]{\fun{bEndorsment}\ #1}
 
-\newcommand{\Bupisig}{\type{BUPISig}}
+\newcommand{\UpdatePayload}{\type{UpdatePayload}}
 % Imported definitions
 
 \newcommand{\UPIEnv}{\type{UPIEnv}}
@@ -270,7 +284,7 @@ cases where there is or is not an update proposal contained within the block.
 \begin{figure}[ht]
   \emph{Update interface signals}
   \begin{equation*}
-    \Bupisig =
+    \UpdatePayload =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{mprop} & \UProp^{?} & \text{possible update proposal}\\
@@ -288,7 +302,7 @@ cases where there is or is not an update proposal contained within the block.
   \emph{Update interface processing transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bupi}{\_} \var{\_} \subseteq
-    \powerset (\UPIEnv \times \UPIState \times \Bupisig \times \UPIState)
+    \powerset (\UPIEnv \times \UPIState \times \UpdatePayload \times \UPIState)
   \end{equation*}
   \caption{Update interface processing transition-system types}
   \label{fig:ts-types:bupi}
@@ -403,6 +417,7 @@ abstract constant (nullary functions) related to the protocol are defined in
     \begin{array}{r@{~\in~}lr}
       k & \mathbb{N} & \text{chain stability parameter}\\
       t & \left[\frac{1}{5}, \frac{1}{4}\right] & \text{block signature count threshold}\\
+      \fun{dms} & \DelegState \totalf (\VKeyGen \mapsto \VKey) & \text{delegation-state delegation-map}
     \end{array}
   \end{equation*}
 
@@ -443,7 +458,7 @@ outside the size of the moving window ($k$).
   \begin{equation*}
     \inference
     {
-      \{\var{vk_g}\} \leteq (\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\}
+      \{\var{vk_g}\} \leteq \dom{((\fun{dms} ~ \var{ds}) \restrictrange \{\var{vk_d}\})}
       & \var{sgs'} \leteq \var{sgs};_k {vk_g} &
       \size{\fun{filter}~(=\var{vk_g})~\var{sgs'}} \leq k \cdot t \\
     }
@@ -491,7 +506,7 @@ During PBFT processing of the block header, we do the following:
     corresponds to the known hash of the previous block.
   \item We check that the header signature correctly verifies the ``signed''
     content of the header.
-  \item Finally, we verify and update the signature count rules.
+  \item Finally, we verify and update the state according to the signature count rules.
   \end{enumerate}
   \begin{figure}[ht]
   \emph{Abstract types}
@@ -765,8 +780,6 @@ updates the update state to the correct version.
 \newcommand{\BBEnv}{\type{BBEnv}}
 \newcommand{\BBState}{\type{BBState}}
 
-\newcommand{\Bbody}{\type{BlockBody}}
-
 \newcommand{\bheadname}{bHead}
 \newcommand{\bhead}[1]{\fun{\bheadname}\ #1}
 \newcommand{\bupdpayloadname}{bUpdPayload}
@@ -776,9 +789,6 @@ updates the update state to the correct version.
 \newcommand{\bslot}[1]{\fun{\bslotname}\ #1}
 
 \newcommand{\butxo}[1]{\fun{bUtxo}\ #1}
-
-\newcommand{\maxblocksize}{\pp{maxBlockSize}}
-\newcommand{\maxheadersize}{\pp{maxHeaderSize}}
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
@@ -811,12 +821,6 @@ of block bodies.
       \fun{\verifyname} & \VKey \times \Data \times \Sig & \text{verification relation} \\
     \end{array}
   \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \maxblocksize & \mathbb{N} & \text{maximum block size} \\
-    \end{array}
-  \end{equation*}
   \caption{Basic Block-related Types and Functions}
   \label{fig:block-defs}
 \end{figure}
@@ -824,10 +828,11 @@ of block bodies.
 \subsection{Block header processing}
 
 Figure \ref{fig:ts-types:bhead} gives the transition system types for block
-header processing. The header state contains the current update state and
-historical epoch length map, which must be updated along the epoch boundary.
-Figure \ref{fig:rules:bhead} gives the corresponding transition rules. During
-header processing we verify the following things:
+header processing. The $\maxheadersize{}$ protocol parameter is defined in
+\cite{byron_ledger_spec}. The header state contains the current update state
+and historical epoch length map, which must be updated along the epoch
+boundary. Figure \ref{fig:rules:bhead} gives the corresponding transition
+rules. During header processing we verify the following things:
 
 \begin{enumerate}
   \item We compute whether this block is the first block in a new epoch.
@@ -854,13 +859,7 @@ header processing we verify the following things:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\bheadname} & \Block \totalf \Bhead & \text{block header} \\
-      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}\\
-    \end{array}
-  \end{equation*}
-  \emph{Protocol parameters}
-  \begin{equation*}
-    \begin{array}{r@{~\partialf~}l!{~\in~\ProtParams~}r}
-      \maxheadersize & \mathbb{N} & \text{maximum block header size} \\
+      \fun{\bhdrsizename} & \Bhead \totalf \mathbb{N} & \text{block header size in bytes}
     \end{array}
   \end{equation*}
   \caption{Block header processing types and functions}
@@ -950,10 +949,13 @@ header processing we verify the following things:
 
 \subsection{Block body processing}
 
-During processing of the block body, we perform two main functions: verification
-of the body integrity using the proofs contained in the block header, and update
-of the various state components. These rules are given in figure
-\ref{fig:rules:bbody}.
+During processing of the block body, we perform two main functions:
+verification of the body integrity using the proofs contained in the block
+header, and update of the various state components. These rules are given in
+\cref{fig:rules:bbody}, where the types and the functions used there are
+defined in \cref{fig:ts-types:bbody}. The UTxO, delegation, and update state as
+well as the $\maxblocksize{}$ protocol parameter are defined in
+\cite{byron_ledger_spec}.
 
 Verification is done independently for the three components of the body payload:
 UTxO, delegation and update. Each of these three have a signature in the block
@@ -965,15 +967,6 @@ In addition to block verification, we also process the three components of the
 payload; UTxO, delegation and update.
 
 \begin{figure}[ht]
-  \emph{Abstract types}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      bb & \Bbody & \text{block body} \\
-
-    \end{array}
-  \end{equation*}
-  %
   \emph{Abstract functions}
   %
   \begin{equation*}
@@ -984,16 +977,17 @@ payload; UTxO, delegation and update.
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{block update proposal payload} \\
       \fun{bUpdVotes} & \Block \totalf \seqof{\Vote} & \text{block update votes payload} \\
       \fun{bProtVer} & \Block \totalf \ProtVer & \text{block protocol version} \\
-      \fun{bhUtxoSig} & \Bhead \totalf \Sig & \text{UTxO payload signature} \\
-      \fun{bhDlgSig} & \Bhead \totalf \Sig & \text{delegation payload signature} \\
-      \fun{bhUpdSig} & \Bhead \totalf \Sig & \text{update payload signature} \\
+      \fun{bhUtxoHash} & \Bhead \totalf \Hash & \text{UTxO payload hash} \\
+      \fun{bhDlgHash} & \Bhead \totalf \Hash & \text{delegation payload hash} \\
+      \fun{bhUpdHash} & \Bhead \totalf \Hash & \text{update payload hash} \\
+      \fun{hash} & \type{Data} \totalf \Hash & \text{hash function} \\
     \end{array}
   \end{equation*}
   \emph{Derived functions}
   \begin{equation*}
     \begin{array}{rlr}
       \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, \bhissuer{b}) \\
+      \bendorsment{b} & = (\bprotver{b}, (\bhissuer{} \cdot \bhead{}) ~ b)\\
       \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
       \bslot{b} & = (\bhslotname \cdot \bheadname)~b \\
       \fun{\bupdpayloadname} & \in \Block \to (\UProp^{?}\times\seqof{\Vote}) & \text{Block update payload} \\
@@ -1042,9 +1036,9 @@ payload; UTxO, delegation and update.
     \inference
     { \maxblocksize \mapsto \var{b_{max}} \in \var{pps} && \bsize{b} \leq \var{b_{max}} \\
       \var{bh} \leteq \bhead{b} & \var{vk_d} \leteq \bhissuer{\var{bh}} \\
-      \verify{\var{vk_d}}{\serialised{\butxo{b}}}{(\fun{bhUtxoSig}~\var{bh})} &
-      \verify{\var{vk_d}}{\serialised{\bcerts{b}}}{(\fun{bhDlgSig}~\var{bh})} \\
-      \verify{\var{vk_d}}{\serialised{\bupdpayload{b}}}{(\fun{bhUpdSig}~\var{bh})} \\
+      \fun{hash}~(\butxo{b}) = \fun{bhUtxoHash}~\var{bh} &
+      \fun{hash}~(\bcerts{b}) = \fun{bhDlgHash}~\var{bh} \\
+      \fun{hash}~(\bupdpayload{b}) = \fun{bhUpdHash}~\var{bh}\\~\\
       {\left(
           \begin{array}{l}
             \bslot{b} \\
@@ -1069,7 +1063,7 @@ payload; UTxO, delegation and update.
           \end{array}
         \right)}
       \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'} &
-      \fun{pps} ~  us \vdash \var{utxo} \trans{utxow}{\butxo{b}} \var{utxo'} \\
+      \var{pps} \vdash \var{utxo} \trans{utxows}{\butxo{b}} \var{utxo'} \\
     }
     {
       \left(
@@ -1131,6 +1125,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\isebbname} & \Block \totalf \mathbb{B} & \text{epoch boundary block check} \\
+      \fun{pps} & \UPIState \totalf \ProtParams & \text{update-state protocol-parameters}
     \end{array}
   \end{equation*}
   \caption{Blockchain Extension Types and Functions}
