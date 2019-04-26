@@ -20,6 +20,7 @@
 \newcommand{\ApName}{\ensuremath{\type{ApName}}}
 \newcommand{\SWVer}{\ensuremath{\type{SWVer}}}
 \newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
+\newcommand{\STag}{\ensuremath{\type{STag}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
@@ -78,7 +79,8 @@ this specification can be extended to incorporate the research results.
       \var{p} & \ProtPm & \text{protocol parameter}\\
       \var{upd} & \type{UpdData} & \text{update data}\\
       \var{upa} & \type{UpdAttrs} & \text{update attributes}\\
-      \var{an} & \ApName & \text{application name}
+      \var{an} & \ApName & \text{application name}\\
+      \var{t} & \STag & \text{system tag}
     \end{array}
   \end{equation*}
   %
@@ -130,6 +132,7 @@ this specification can be extended to incorporate the research results.
       \fun{upSwVer} & \UProp \to \SWVer & \text{software-version update proposal}\\
       \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
       \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}\\
+      \fun{upSTags} & \powerset{\STag} & \text{update proposal system tags}
     \end{array}
   \end{equation*}
   \caption{Update proposals definitions}
@@ -278,22 +281,26 @@ Also note that we do not allow for updating the protocol parameters without
 updating the protocol version. If an update in the protocol parameters does not
 cause a soft-fork we might use the alt version for that purpose.
 
-In Rule~\ref{eq:rule:up-av-validity} we make use of an abstract function
-$\fun{apNameValid}$ which checks that the name is an ASCII string of less than
-12 characters.
+In Rule~\ref{eq:rule:up-av-validity} we make use of the following abstract
+functions:
+\begin{itemize}
+\item $\fun{apNameValid}$, which checks that the name is an ASCII string of less
+  than 12 characters.
+\item $\fun{sTagValid}$, which checks that the name is an ASCII string of less
+  than 10 characters.
+\end{itemize}
 
 \begin{figure}[htb]
   \emph{Abstract functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{apNameValid} & \ApName \rightarrow \mathbb{B} & \text{validity checking for application name}
+      \fun{apNameValid} & \ApName \rightarrow \mathbb{B} & \text{validity checking for application name}\\
+      \fun{sTagValid} & \STag \rightarrow \mathbb{B} & \text{validity checking for system tag}
     \end{array}
   \end{equation*}
   \caption{Update proposal validity definitions}
   \label{fig:defs:update-proposal-validity}
 \end{figure}
-
-
 
 \begin{figure}[htb]
   \begin{equation}
@@ -378,7 +385,8 @@ $\fun{apNameValid}$ which checks that the name is an ASCII string of less than
       & \var{nv} \leteq \upPV{up}
       & \fun{pvCanFollow}~\var{nv}~\var{pv}\\
       & \upSize{up} \leq \var{pps}~\var{maxProposalSize}
-      & \var{nv} \notin \dom~(\range~\var{rpus})
+      & \var{nv} \notin \dom~(\range~\var{rpus})\\
+      \forall \var{t} \in \fun{upSTags}~\var{up} \cdot \fun{sTagValid}~t
     }
     {
       {
