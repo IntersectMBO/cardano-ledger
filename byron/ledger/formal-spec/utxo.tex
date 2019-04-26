@@ -257,3 +257,35 @@ different order). The choice here is arbitrary.
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow}
 \end{figure}
+
+\clearpage
+
+\subsection{Transaction sequences}
+\label{sec:transaction-seqs}
+
+\cref{fig:rules:utxow-seq} models the application of a sequence of
+transactions.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \label{eq:rule:utxow-seq-base}
+    \inference
+    {}
+    {\var{pps} \vdash \var{utxo} \trans{utxows}{\epsilon} \var{utxo}}
+  \end{equation}
+  %
+  \nextdef
+  %
+  \begin{equation}
+    \label{eq:rule:utxow-seq-ind}
+    \inference
+    {
+      \var{pps} \vdash \var{utxo} \trans{utxows}{\Gamma} \var{utxo'}
+      &
+      \var{pps} \vdash \var{utxo'} \trans{utxow}{\var{tx}} \var{utxo''}
+    }
+    {\var{pps} \vdash \var{utxo} \trans{utxows}{\Gamma;\var{tx}} \var{utxo''}}
+  \end{equation}
+  \caption{UTxO sequence rules}
+  \label{fig:rules:utxow-seq}
+\end{figure}

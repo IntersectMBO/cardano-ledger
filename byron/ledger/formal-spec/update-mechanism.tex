@@ -141,11 +141,9 @@ keys, some of which correspond with fields of the
 \href{https://github.com/input-output-hk/cardano-sl/}{\texttt{cardano-sl}}
 `BlockVersionData` structure:
 \begin{itemize}
-\item Slot duration: $\var{slotDuration}$
 \item Maximum block size: $\var{maxBlockSize}$
 \item Maximum transaction size: $\var{maxTxSize}$
 \item Maximum header size: $\var{maxHeaderSize}$
-\item Maximum transaction size: $\var{maxTxSize}$
 \item Maximum proposal size: $\var{maxProposalSize}$
 \item Transaction fee policy: $\var{txFeePolicy}$
 \item Script version: $\var{scriptVersion}$
@@ -177,6 +175,24 @@ keys, some of which correspond with fields of the
   set to $10000$, which corresponds with almost half of the total number of
   slots in an epoch.
 \end{itemize}
+
+The protocol parameters are formally defined in \cref{fig:prot-params-defs}.
+
+\begin{figure}[ht]
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \var{maxBlockSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum block size}\\
+      \var{maxTxSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum transaction size}\\
+      \var{maxHeaderSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum header size}\\
+      \var{scriptVersion} \mapsto \mathbb{N} & \PPMMap & \text{script version}\\
+      \var{upAdptThd} \mapsto \mathbb{R} & \PPMMap & \text{update proposal adoption threshold}\\
+      \var{cfmThd} \mapsto \mathbb{N} & \PPMMap & \text{update proposal confirmation threshold}\\
+      \var{upropTTL} \mapsto \mathbb{\Slot} & \PPMMap & \text{update proposal time-to-live}\\
+    \end{array}
+  \end{equation*}
+  \caption{Protocol-parameters definitions}
+  \label{fig:prot-params-defs}
+\end{figure}
 
 \subsection{Update proposals registration}
 \label{sec:update-proposals-registration}
