@@ -209,7 +209,7 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{} \_ &
-      \powerset (\UPIEnv \times \UPIState \times \UPIState)
+      \powerset (\Slot \times \UPIState \times \UPIState)
     \end{array}
   \end{equation*}
   \caption{Update-proposals interface transition-system types}
@@ -756,12 +756,7 @@ expires.
       } &\var{pv} = \var{pv'}
     }
     {
-      {\left(
-        \begin{array}{l}
-          s_n\\
-          \var{dms}
-        \end{array}
-      \right)}
+      s_n
       \vdash
       {
         \left(
@@ -824,12 +819,7 @@ expires.
       & \var{pv} \neq \var{pv'}
     }
     {
-      {\left(
-        \begin{array}{l}
-          s_n\\
-          \var{dms}
-        \end{array}
-      \right)}
+      s_n
       \vdash
       {
         \left(
