@@ -21,6 +21,7 @@ module Cardano.Chain.Block.Validation
   , ChainValidationState(..)
   , initialChainValidationState
   , ChainValidationError
+  , HeaderEnvironment(..)
 
   -- * SigningHistory
   , SigningHistory(..)
