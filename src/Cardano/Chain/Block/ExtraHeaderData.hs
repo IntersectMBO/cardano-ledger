@@ -2,19 +2,15 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Block.ExtraHeaderData
   ( ExtraHeaderData(..)
-  , ExtraHeaderDataError(..)
-  , verifyExtraHeaderData
   )
 where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
 import Formatting (bprint, build, builder)
 import qualified Formatting.Buildable as B
 
@@ -22,8 +18,7 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Common (Attributes, attributesAreKnown)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
-import Cardano.Chain.Update.SoftwareVersion
-  (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
+import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto (Hash)
 
 
@@ -65,21 +60,3 @@ instance FromCBOR ExtraHeaderData where
   fromCBOR = do
     enforceSize "ExtraHeaderData" 4
     ExtraHeaderData <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-
-newtype ExtraHeaderDataError =
-  ExtraHeaderDataSoftwareVersionError SoftwareVersionError
-  deriving (Eq, Show)
-
-instance B.Buildable ExtraHeaderDataError where
-  build = \case
-    ExtraHeaderDataSoftwareVersionError err -> bprint
-      ( "SoftwareVersion was invalid while checking ExtraHeaderData.\n Error: "
-      . build
-      )
-      err
-
-verifyExtraHeaderData
-  :: MonadError ExtraHeaderDataError m => ExtraHeaderData -> m ()
-verifyExtraHeaderData ehd =
-  liftEither . first ExtraHeaderDataSoftwareVersionError $ checkSoftwareVersion
-    (ehdSoftwareVersion ehd)
