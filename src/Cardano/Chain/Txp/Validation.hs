@@ -17,9 +17,7 @@ module Cardano.Chain.Txp.Validation
   )
 where
 
-
 import Cardano.Prelude
-
 
 import Control.Monad.Except (MonadError)
 import qualified Data.ByteString as BS
@@ -27,10 +25,9 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
-
 import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
-  ( Address
+  ( Address(..)
   , Lovelace
   , LovelaceError
   , NetworkMagic
@@ -42,6 +39,7 @@ import Cardano.Chain.Common
   , makeNetworkMagic
   , mkKnownLovelace
   , subLovelace
+  , unknownAttributesLength
   )
 import Cardano.Chain.Txp.Tx (Tx(..), TxIn, TxOut(..))
 import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taWitness)
@@ -69,6 +67,8 @@ data TxValidationError
   | TxValidationNetworkMagicMismatch NetworkMagic NetworkMagic
   -- ^ Fields are <expected> <actual>
   | TxValidationTxTooLarge Natural Natural
+  | TxValidationUnknownAddressAttributes
+  | TxValidationUnknownAttributes
   deriving (Eq, Show)
 
 
@@ -91,6 +91,10 @@ validateTx env utxo (Annotated tx txBytes) = do
   -- Check that the size of the transaction is less than the maximum
   txSize <= maxTxSize
     `orThrowError` TxValidationTxTooLarge txSize maxTxSize
+
+  -- Check that the transaction attributes are less than the max size
+  unknownAttributesLength (txAttributes tx) < 128
+    `orThrowError` TxValidationUnknownAttributes
 
   -- Check that outputs have valid NetworkMagic
   let nm = makeNetworkMagic protocolMagic
@@ -144,12 +148,19 @@ validateTxIn utxo txIn
   | txIn `UTxO.member` utxo = pure ()
   | otherwise = throwError $ TxValidationMissingInput txIn
 
+
 -- | Validate the NetworkMagic of a TxOut
-validateTxOutNM :: MonadError TxValidationError m => NetworkMagic -> TxOut -> m ()
-validateTxOutNM nm txOut =
-  let addrNm = addrNetworkMagic . txOutAddress $ txOut
-   in (nm == addrNm)
-        `orThrowError` TxValidationNetworkMagicMismatch nm addrNm
+validateTxOutNM
+  :: MonadError TxValidationError m => NetworkMagic -> TxOut -> m ()
+validateTxOutNM nm txOut = do
+  -- Make sure that the unknown attributes are less than the max size
+  unknownAttributesLength (addrAttributes (txOutAddress txOut)) < 128
+    `orThrowError` TxValidationUnknownAddressAttributes
+
+  -- Check that the network magic in the address matches the expected one
+  (nm == addrNm) `orThrowError` TxValidationNetworkMagicMismatch nm addrNm
+  where addrNm = addrNetworkMagic . txOutAddress $ txOut
+
 
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
