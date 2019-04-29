@@ -42,8 +42,6 @@ module Cardano.Chain.Block.Header
   , fromCBORHeader
   , fromCBORHeader'
   , fromCBORAHeader
-  , HeaderError(..)
-  , verifyHeader
   , HeaderHash
   , headerHashF
   , hashHeader
@@ -64,7 +62,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Text.Lazy.Builder (Builder)
@@ -92,8 +89,7 @@ import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
   (dropBoundaryConsensusData, dropBoundaryExtraHeaderData)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
-import Cardano.Chain.Block.ExtraHeaderData
-  (ExtraHeaderData(..), ExtraHeaderDataError, verifyExtraHeaderData)
+import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (Attributes, ChainDifficulty(..))
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
@@ -120,7 +116,6 @@ import Cardano.Crypto
   , SignTag(..)
   , hashHexF
   , proxySign
-  , proxyVerifyDecoded
   , pskIssuerPk
   , unsafeAbstractHash
   )
@@ -334,44 +329,6 @@ headerToSign epochSlots h = ToSign
 
 headerLength :: AHeader ByteString -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
-
-data HeaderError
-  = HeaderExtraDataError ExtraHeaderDataError
-  | HeaderInvalidSignature BlockSignature
-  deriving (Eq, Show)
-
-instance B.Buildable HeaderError where
-  build = \case
-    HeaderExtraDataError err -> bprint
-      ("ExtraHeaderData was invalid while checking Header.\n Error: " . build)
-      err
-    HeaderInvalidSignature sig ->
-      bprint ("Invalid signature while checking Header.\n" . build) sig
-
-
--- | Verify a main block header in isolation
-verifyHeader
-  :: MonadError HeaderError m
-  => ProtocolMagicId
-  -> EpochSlots
-  -> AHeader ByteString
-  -> m ()
-verifyHeader pm epochSlots header = do
-  -- Previous header hash is always valid.
-  -- Body proof is just a bunch of hashes, which is always valid (although must
-  -- be checked against the actual body, in verifyBlock. Extra header data
-  -- requires validation.
-  liftEither . first HeaderExtraDataError $ verifyExtraHeaderData
-    (headerExtraData header)
-  -- Internal consistency: is the signature in the consensus data really for
-  -- this block?
-  verifyBlockSignature (consensusSignature consensus)
-    `orThrowError` HeaderInvalidSignature (consensusSignature consensus)
- where
-  verifyBlockSignature (BlockSignature proxySig) =
-    proxyVerifyDecoded pm SignMainBlockHeavy (const True) signed proxySig
-  signed    = recoverSignedBytes epochSlots header
-  consensus = headerConsensusData header
 
 -- | Encode a 'Header' accounting for deprecated epoch boundary blocks
 toCBORHeader :: EpochSlots -> Header -> Encoding
