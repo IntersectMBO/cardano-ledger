@@ -16,10 +16,17 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
+import Cardano.Chain.Common.Merkle
+  (MerkleRoot, mkMerkleTree, mkMerkleTreeDecoded, mtRoot)
 import Cardano.Chain.Txp.Tx (Tx)
 import Cardano.Chain.Txp.TxPayload
-  (ATxPayload, TxPayload, recoverHashedBytes, txpTxs, txpWitnesses)
+  ( ATxPayload
+  , TxPayload
+  , recoverHashedBytes
+  , txpAnnotatedTxs
+  , txpTxs
+  , txpWitnesses
+  )
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hash, hashDecoded)
 
@@ -64,6 +71,6 @@ mkTxProof payload = TxProof
 recoverTxProof :: ATxPayload ByteString -> TxProof
 recoverTxProof payload = TxProof
   { txpNumber        = fromIntegral (length $ txpTxs payload)
-  , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
+  , txpRoot          = mtRoot (mkMerkleTreeDecoded $ txpAnnotatedTxs payload)
   , txpWitnessesHash = hashDecoded $ recoverHashedBytes payload
   }
