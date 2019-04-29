@@ -16,6 +16,7 @@ module Cardano.Chain.Block.Validation
   , updateChainBoundary
   , updateHeader
   , updateBlock
+  , BodyState(..)
   , ChainValidationState(..)
   , initialChainValidationState
   , ChainValidationError
