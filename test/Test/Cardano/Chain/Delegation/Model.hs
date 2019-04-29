@@ -26,7 +26,7 @@ import Ledger.Delegation (DELEG, SDELEG)
 import qualified Ledger.Delegation as Abstract
 
 import qualified Test.Cardano.Chain.Elaboration.Delegation as E
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
 --------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
       result = Scheduling.scheduleCertificate
         (E.elaborateDSEnv abstractEnv)
         concreteState
-        (E.elaborateDCertAnnotated dummyProtocolMagicId cert)
+        (E.elaborateDCertAnnotated Dummy.protocolMagicId cert)
 
     liftIO . writeIORef concreteRef $ fromRight concreteState result
 

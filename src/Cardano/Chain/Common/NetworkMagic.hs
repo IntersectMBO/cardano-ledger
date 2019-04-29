@@ -13,7 +13,7 @@ import Cardano.Prelude hiding ((%))
 import           Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B
 
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..),
+import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
                      RequiresNetworkMagic (..), getProtocolMagic)
 
 
@@ -34,7 +34,7 @@ instance HeapWords NetworkMagic where
   heapWords NetworkMainOrStage = 0
   heapWords (NetworkTestnet _) = 2
 
-makeNetworkMagic :: ProtocolMagic -> NetworkMagic
+makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of
     RequiresNoMagic -> NetworkMainOrStage
     RequiresMagic   -> NetworkTestnet (getProtocolMagic pm)
@@ -42,4 +42,3 @@ makeNetworkMagic pm = case getRequiresNetworkMagic pm of
 parseReqNetworkMag :: Text -> RequiresNetworkMagic
 parseReqNetworkMag "NetworkMainOrStage" = RequiresNoMagic
 parseReqNetworkMag _                    = RequiresMagic
-

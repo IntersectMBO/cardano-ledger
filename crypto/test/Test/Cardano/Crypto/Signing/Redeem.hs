@@ -16,7 +16,7 @@ import Cardano.Crypto.Signing (SignTag(..))
 import Cardano.Crypto.Signing.Redeem
   (redeemSign, redeemToPublic, verifyRedeemSig)
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Cardano.Crypto.Gen
   (genRedeemKeypair, genRedeemPublicKey, genRedeemSecretKey)
 
@@ -40,8 +40,8 @@ prop_redeemSign = property $ do
   a        <- forAll genData
 
   assert
-    $ verifyRedeemSig dummyProtocolMagicId SignForTestingOnly pk a
-    $ redeemSign dummyProtocolMagicId SignForTestingOnly sk a
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly pk a
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when the wrong 'RedeemPublicKey' is used
 prop_redeemSignDifferentKey :: Property
@@ -52,8 +52,8 @@ prop_redeemSignDifferentKey = property $ do
 
   assert
     . not
-    $ verifyRedeemSig dummyProtocolMagicId SignForTestingOnly pk a
-    $ redeemSign dummyProtocolMagicId SignForTestingOnly sk a
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly pk a
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 -- | Signing fails when then wrong signature data is used
 prop_redeemSignDifferentData :: Property
@@ -64,8 +64,8 @@ prop_redeemSignDifferentData = property $ do
 
   assert
     . not
-    $ verifyRedeemSig dummyProtocolMagicId SignForTestingOnly pk b
-    $ redeemSign dummyProtocolMagicId SignForTestingOnly sk a
+    $ verifyRedeemSig Dummy.protocolMagicId SignForTestingOnly pk b
+    $ redeemSign Dummy.protocolMagicId SignForTestingOnly sk a
 
 genData :: Gen [Int32]
 genData = Gen.list (Range.constant 0 50) (Gen.int32 Range.constantBounded)

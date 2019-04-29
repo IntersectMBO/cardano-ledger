@@ -44,7 +44,7 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic      :: !ProtocolMagicId
+  { protocolMagic      :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators  :: !(Set StakeholderId)
   , k                  :: !BlockCount
   , currentEpoch       :: !EpochIndex

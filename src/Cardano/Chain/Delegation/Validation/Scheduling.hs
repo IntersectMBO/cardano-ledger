@@ -20,6 +20,7 @@ import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
+import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (BlockCount, StakeholderId, mkStakeholderId)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
@@ -41,7 +42,7 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic     :: !ProtocolMagicId
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators :: !(Set StakeholderId)
   , currentEpoch      :: !EpochIndex
   , currentSlot       :: !FlatSlotId

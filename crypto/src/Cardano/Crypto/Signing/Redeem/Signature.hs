@@ -20,12 +20,13 @@ import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Coerce (coerce)
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary (Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
+import Cardano.Binary
+  (Annotated, Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Redeem.PublicKey (RedeemPublicKey(..))
 import Cardano.Crypto.Signing.Redeem.SecretKey (RedeemSecretKey(..))
-import Cardano.Crypto.Signing.Tag (SignTag, signTag)
+import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 
 
 -- | Wrapper around 'Ed25519.Signature'
@@ -69,27 +70,24 @@ verifyRedeemSig
   -> RedeemSignature a
   -> Bool
 verifyRedeemSig pm tag k x s =
-  verifyRedeemSigRaw pm (Just tag) k (serialize' x) (coerce s)
+  verifyRedeemSigRaw k (signTag pm tag <> serialize' x) (coerce s)
 
 verifyRedeemSigDecoded
   :: Decoded t
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> SignTag
   -> RedeemPublicKey
   -> t
   -> RedeemSignature (BaseType t)
   -> Bool
 verifyRedeemSigDecoded pm tag k x s =
-  verifyRedeemSigRaw pm (Just tag) k (recoverBytes x) (coerce s)
+  verifyRedeemSigRaw k (signTagDecoded pm tag <> recoverBytes x) (coerce s)
 
 -- | Verify raw 'ByteString'
 verifyRedeemSigRaw
-  :: ProtocolMagicId
-  -> Maybe SignTag
-  -> RedeemPublicKey
+  :: RedeemPublicKey
   -> ByteString
   -> RedeemSignature Raw
   -> Bool
-verifyRedeemSigRaw pm mbTag (RedeemPublicKey k) x (RedeemSignature s) =
-  Ed25519.verify k (tag <> x) s
-  where tag = maybe mempty (signTag pm) mbTag
+verifyRedeemSigRaw (RedeemPublicKey k) x (RedeemSignature s) =
+  Ed25519.verify k x s

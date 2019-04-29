@@ -133,7 +133,7 @@ isSelfSignedPsk psk = pskIssuerPk psk == pskDelegatePk psk
 -- | Return the key if it's valid, and throw an error otherwise
 validateProxyVerificationKey
   :: MonadError Text m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> AProxyVerificationKey w ByteString
   -> m ()
 validateProxyVerificationKey pm psk =

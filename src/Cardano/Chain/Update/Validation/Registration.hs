@@ -20,6 +20,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
+import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (StakeholderId, attributesAreKnown, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
@@ -58,7 +59,7 @@ import Cardano.Crypto
 
 
 data Environment = Environment
-  { protocolMagic             :: !ProtocolMagicId
+  { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))

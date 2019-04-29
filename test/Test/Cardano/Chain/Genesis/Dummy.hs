@@ -56,7 +56,7 @@ import Cardano.Chain.Slotting (EpochIndex(..), EpochSlots, SlotCount)
 import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
 import Cardano.Crypto (SecretKey)
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
 dummyConfig :: Config
@@ -104,7 +104,7 @@ dummyGenesisSpec = UnsafeGenesisSpec
   , gsHeavyDelegation = UnsafeGenesisDelegation mempty
   , gsProtocolParameters = dummyProtocolParameters
   , gsK           = dummyK
-  , gsProtocolMagic = dummyProtocolMagic
+  , gsProtocolMagic = Dummy.protocolMagic
   , gsInitializer = dummyGenesisInitializer
   }
 

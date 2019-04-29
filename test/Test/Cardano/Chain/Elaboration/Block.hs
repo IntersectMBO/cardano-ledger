@@ -27,7 +27,7 @@ import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
 import qualified Cardano.Binary as Binary
 import qualified Cardano.Crypto.Hashing as H
-import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic (AProtocolMagic(..))
 
 import qualified Cardano.Chain.Block as Concrete
 import qualified Cardano.Chain.Common as Common
@@ -57,7 +57,7 @@ import Cardano.Chain.Common
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagic, dummyProtocolMagicId)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
@@ -199,7 +199,7 @@ rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
 abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
 abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
  where
-  rnm = getRequiresNetworkMagic dummyProtocolMagic
+  rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
 
   genesisData = Genesis.GenesisData
     { Genesis.gdBootStakeholders = Genesis.GenesisWStakeholders
@@ -213,7 +213,7 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
         -- an abstract protocol parameter for k. Then we need to solve the
         -- problem that in the concrete implementation k and w are the same.
                     BlockCount (Abstract.unBlockCount $ pps ^. stableAfter)
-    , Genesis.gdProtocolMagicId = dummyProtocolMagicId
+    , Genesis.gdProtocolMagicId = Dummy.protocolMagicId
     , Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
     }
 

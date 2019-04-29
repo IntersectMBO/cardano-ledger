@@ -20,6 +20,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
+import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.Proposal (UpId)
@@ -69,7 +70,7 @@ data Error
 --   voting threshold. This corresponds to the @UPVOTE@ rules in the spec.
 registerVoteWithConfirmation
   :: MonadError Error m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> Environment
   -> State
   -> AVote ByteString
@@ -118,7 +119,7 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 --   This corresponds to the `ADDVOTE` rule in the spec.
 registerVote
   :: MonadError Error m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> RegistrationEnvironment
   -> RegisteredVotes
   -> AVote ByteString
