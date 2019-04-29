@@ -43,6 +43,8 @@
 \newcommand{\BHeaderState}{\type{BHeaderState}}
 \newcommand{\VRFEnv}{\type{VRFEnv}}
 \newcommand{\DSliderEnv}{\type{DSliderEnv}}
+\newcommand{\VRFState}{\type{VRFState}}
+\newcommand{\OCertState}{\type{OCertState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
@@ -222,8 +224,7 @@ given in Figure~\ref{fig:ts-types:newepoch}, it consists of
 
 \begin{itemize}
 \item The epoch nonce.
-\item The new protocol parameters.
-\item An optional rewards update.
+\item The current slot.
 \end{itemize}
 The new epoch state is given in Figure~\ref{fig:ts-types:newepoch}, it consists
 of
@@ -240,7 +241,7 @@ of
 
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
 $\fun{obftSchedule}$ for creating the OBFT leader schedule for each new epoch,
-as explained in section 3.9.2 of \cite{delegation_design}.
+as explained in section 3.9.2 of~\cite{delegation_design}.
 The function takes a seed, the decentralization parameter $d$, and the active slot coeffient $f$.
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
 of which are active.
@@ -252,7 +253,7 @@ of which are active.
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta_1 & \Seed & \text{epoch nonce} \\
-        \var{pp_n} & \PParams & \text{new protocol parameters}
+        \var{s} & \Slot & \text{current slot}
       \end{array}
     \right)
   \end{equation*}
@@ -329,9 +330,15 @@ in the pool distribution.
     {
       e = e_\ell + 1
       &
-      \var{es}' \leteq \fun{applyRUpd}~\var{ru}~\var{es}
+      (\wcard,~\wcard,~(\wcard,~\wcard,~\var{us}))\leteq\var{es}
       \\
       {
+        \var{s}\vdash\var{us} \trans{upiec}{} \var{us'}
+      }
+      &
+      \var{pp_n}\leteq\pps{us'}
+     \\
+     {
         \left(
           {\begin{array}{c}
               \var{pp}_n \\
@@ -339,7 +346,7 @@ in the pool distribution.
            \end{array}}
        \right)
        \vdash
-       \var{es'}\trans{epoch}{\var{e}}\var{es''}
+       (\fun{applyRUpd}~\var{ru}~\var{es})\trans{epoch}{\var{e}}\var{es'}
      }
      \\~\\~\\
      {\begin{array}{r@{~\leteq~}l}
@@ -353,14 +360,15 @@ in the pool distribution.
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
                     \right\} \\
-         \var{dsched} & \fun{obftSchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+         \var{dsched'} & \fun{obftSchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+        \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
     }
     {
       \left(
         {\begin{array}{c}
             \eta_1 \\
-            \var{pp_n} \\
+            \var{s} \\
         \end{array}}
       \right)
       \vdash
@@ -371,6 +379,7 @@ in the pool distribution.
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
+            \var{dsched} \\
       \end{array}\right)}
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
@@ -380,6 +389,7 @@ in the pool distribution.
             \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
+            \varUpdate{\var{dsched}'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -395,7 +405,7 @@ in the pool distribution.
       \left(
         {\begin{array}{c}
             \eta_1 \\
-            \var{pp_n} \\
+            \var{s} \\
         \end{array}}
       \right)
       \vdash
@@ -503,22 +513,36 @@ There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
 \subsection{Operational Certificate Transition}
 \label{sec:oper-cert-trans}
 
-The Operational Certificate Transition does not use any environment, its signal
-is a block header body, its state is shown in
-Figure~\ref{fig:ts-types:ocert}. The state consists of
+The Operational Certificate Transition contains the genesis keys as its environment.
+Its signal is a block header body, its state is shown in
+Figure~\ref{fig:ts-types:ocert}. The state consists of the pool state and the genesis
+key delegations:
 
 \begin{itemize}
 \item The stake pools map \var{stpools}.
 \item The pool parameters \var{poolParams}.
 \item The map of retiring stake pools to epochs \var{retiring}.
 \item The mapping \var{cs} of operational certificate counters.
+\item The mapping of genesis keys to operational keys.
 \end{itemize}
 
 \begin{figure}
+  %
+  \emph{Operational Certificate states}
+  \begin{equation*}
+    \OCertState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{ps} & \PState & \text{pool state} \\
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Operational Certificate Transitions}
   \begin{equation*}
-    \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\PState \times \BHBody \times \PState)
+    \_ \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
+    \powerset (\powerset{\VKeyGen} \times \OCertState \times \BHBody \times \OCertState)
   \end{equation*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
@@ -550,6 +574,8 @@ transition which are the following:
 After this, the transition system updates the operational certificate state by
 updating the mapping of operational certificates where it overwrites the entry
 of the key \var{hk} with the KES period \var{n}.
+If the cold key was a genesis key, then the \var{dms} map is updated with the new
+operational hot key.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:ocert}
@@ -568,8 +594,11 @@ of the key \var{hk} with the KES period \var{n}.
       m \leq n
       &
       \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
+      \\
+      d = \var{gkeys} \restrictdom \{\var{vk_{cold}}\mapsto \var{vk_{hot}}\}
     }
     {
+      \var{gkeys}
       \vdash
       \left(
       \begin{array}{r}
@@ -577,6 +606,8 @@ of the key \var{hk} with the KES period \var{n}.
         \var{poolParams} \\
         \var{retiring} \\
         \var{cs} \\
+        \\
+        \var{dms} \\
       \end{array}
       \right)
       \trans{ocert}{\var{bhb}}
@@ -586,6 +617,8 @@ of the key \var{hk} with the KES period \var{n}.
         \var{poolParams} \\
         \var{retiring} \\
         \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
+        \\
+        \varUpdate{\var{dms}\unionoverrideRight d} \\
       \end{array}
       \right)
     }
@@ -865,7 +898,7 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
 \label{sec:decentralization-slider}
 
 The transition from the boostrap era to a fully decentralized network is explained in
-section 3.9.2 of \cite{delegation_design}.
+section 3.9.2 of~\cite{delegation_design}.
 Key to this transition is a protocol parameter $d$ which controls how many slots are governed by
 the genesis nodes via OBFT, and which slots are open to any registered stake pool.
 The transition system introduced in this section, $\type{DSLIDE}$, covers this mechanism.
@@ -1007,14 +1040,14 @@ The environments for this transition is:
 
 The Block Body Transition updates the block body state which comprises the
 ledger state and the map describing the produced blocks. The environment of the
-$\mathsf{BBODY}$ transition are the protocol parameters.
+$\mathsf{BBODY}$ transition are the genesis key delegations.
 
 \begin{figure}
   \emph{BBody Transitions}
 
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset (\PParams \times (\LState\times\BlocksMade)
+    \powerset ((\VKeyGen\mapsto\VKey) \times (\LState\times\BlocksMade)
     \times \Block \times (\LState\times\BlocksMade))
   \end{equation*}
   \caption{BBody transition-system types}
@@ -1061,6 +1094,10 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \var{bh} \leteq \bheader{block}
       &
       \var{bhb} \leteq \bhbody{bh}
+      \\
+      (\wcard,~\wcard,~\var{us})\leteq ls
+      &
+      \var{pp}\leteq\pps{us}
       \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
@@ -1072,7 +1109,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
         \left(
           {\begin{array}{c}
              \bslot{bhb} \\
-             \var{pp} \\
+             \var{dms} \\
            \end{array}}
         \right)
         \vdash
@@ -1082,7 +1119,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       }
     }
     {
-      \var{pp} \\
+      \var{dms} \\
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1221,8 +1258,7 @@ part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
 $\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
 
 The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
-it is comprised of the current slot number \var{s_{now}} and the new protocol
-parameters \var{pp_n}.
+it is comprised of the current slot number \var{s_{now}} and the set of genesis keys.
 
 The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
 following:
@@ -1235,6 +1271,7 @@ following:
 \item The epoch state \var{es}.
 \item The reward update \var{ru}.
 \item The stake pool distribution \var{pd}.
+\item The genesis key delegations.
 \end{itemize}
 
 \begin{figure}
@@ -1244,7 +1281,7 @@ following:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_{now}} & \Slot & \text{current slot} \\
-        \var{pp_n} & \PParams & \text{new protocol parameters} \\
+        \var{gkeys} & \VKeyGen & \text{genesis keys} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1263,6 +1300,7 @@ following:
         \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dsched} & \Slot\mapsto\VKeyGen^? & \text{OBFT schedule} \\
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1281,6 +1319,7 @@ Figure~\ref{fig:rules:chain}. Its signal is a \var{block} from the \var{block}
 we extract the block header body \var{bhb}. From \var{bhb} we extract the block
 nonce $\eta$ and the block slot \var{s}. The transition rule itself has no
 preconditions, instead it calls all its subrules.
+Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:chain}
@@ -1298,7 +1337,7 @@ preconditions, instead it calls all its subrules.
         \left(
           {\begin{array}{c}
               \eta_c \\
-              \var{pp_n} \\
+              \var{s} \\
           \end{array}}
         \right)
         \vdash
@@ -1336,13 +1375,19 @@ preconditions, instead it calls all its subrules.
         \end{array}\right)}
       }
       \\~\\
-      (\var{acnt}',~\var{pp}',~\var{ss}',~\var{ls}') \leteq \var{es}'
-      &
-      (\var{us}',~(\var{ds}',~\var{ps'})) \leteq \var{ls}'
+      (\var{acnt}',~\var{ss}',~(\var{utxoSt}',~(\var{ds}',~\var{ps'}),~\var{us}'))\leteq\var{es}'
       \\
-      \vdash\var{ps}'\trans{ocert}{bhb}\var{ps}''
-      &
-      \var{ls}'' \leteq (\var{us}',~(\var{ds}',~\var{ps}''))
+      \var{gkeys}
+      \vdash
+      {\left(\begin{array}{c}
+      \var{ps}' \\
+      \var{dms} \\
+      \end{array}\right)}
+      \trans{ocert}{bhb}
+      {\left(\begin{array}{c}
+      \var{ps}'' \\
+      \var{dms}' \\
+      \end{array}\right)}
       &
       (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) \leteq \var{ps}''
       \\
@@ -1355,7 +1400,7 @@ preconditions, instead it calls all its subrules.
               \var{pd}' \\
               \var{stpools} \\
               \\
-              \var{dsched} \\
+              \var{dsched'} \\
           \end{array}}
         \right)
         \vdash
@@ -1380,26 +1425,28 @@ preconditions, instead it calls all its subrules.
         \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
       }
       \\
+      \var{ls} \leteq (\var{utxoSt}',~(\var{ds}',~\var{ps}''),~\var{us}')
+      \\
       {
-        \var{pp'}\vdash
+        \var{dms}'\vdash
         {\left(\begin{array}{c}
-              \var{ls}'' \\
+              \var{ls} \\
               \var{b'} \\
         \end{array}\right)}
         \trans{bbody}{\var{block}}
         {\left(\begin{array}{c}
-              \var{ls}''' \\
+              \var{ls}' \\
               b'' \\
         \end{array}\right)}
       }
       &
-      \var{es}'' \leteq (\var{acnt}',~\var{pp}'~\var{ss}',~\var{ls}''')
+      \var{es}'' \leteq (\var{acnt}',~\var{ss}',~\var{ls}')
     }
     {
       \left(
         {\begin{array}{c}
             \var{s_{now}} \\
-            \var{pp_n} \\
+            \var{gkeys} \\
         \end{array}}
       \right)
       \vdash
@@ -1413,6 +1460,7 @@ preconditions, instead it calls all its subrules.
             \var{ru} \\
             \var{pd} \\
             \var{dsched} \\
+            \var{dms} \\
       \end{array}\right)}
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
@@ -1425,6 +1473,7 @@ preconditions, instead it calls all its subrules.
             \varUpdate{\var{ru}''} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{dsched}'} \\
+            \varUpdate{\var{dms}'} \\
       \end{array}\right)}
     }
   \end{equation}

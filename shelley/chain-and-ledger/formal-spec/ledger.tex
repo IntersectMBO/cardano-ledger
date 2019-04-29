@@ -9,12 +9,13 @@ The environment for this rule consists of:
 \begin{itemize}
   \item The current slot.
   \item The transaction index within the current block.
-  \item The protocol parameters.
+  \item The genesis key delegation map. The type $\VKeyGen$ is defined in \cite{byron_ledger_spec}.
 \end{itemize}
 The ledger state consists of:
 \begin{itemize}
   \item The UTxO state.
   \item The delegation and pool states.
+  \item The update state, as defined in \cite{byron_ledger_spec}.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -25,7 +26,7 @@ The ledger state consists of:
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
-        \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis delegations}\\
       \end{array}
     \right)
   \end{equation*}
@@ -37,6 +38,7 @@ The ledger state consists of:
       \begin{array}{r@{~\in~}lr}
         \var{utxoSt} & \UTxOState & \text{UTxO state}\\
         \var{dpstate} & \DPState & \text{delegation and pool state}\\
+        \var{us} & \UPIState & \text{update state}\\
       \end{array}
     \right)
   \end{equation*}
@@ -53,7 +55,8 @@ The ledger state consists of:
 
 Figure~\ref{fig:ts-types:ledger} defines the ledger state transition.
 It has a single rule, which first calls the $\mathsf{UTXOW}$ transition,
-and then calls the $\mathsf{DELEGS}$ transition.
+then calls the $\mathsf{DELEGS}$ transition, and finally calls
+the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
 
 \begin{figure}
   \begin{equation}
@@ -62,7 +65,8 @@ and then calls the $\mathsf{DELEGS}$ transition.
     {
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
     (\var{stkeys}, \_, \_, \_) \leteq \var{dstate} \\
-    (\var{stpools}, \_, \_, \_, \_) \leteq \var{pstate} \\~\\
+    (\var{stpools}, \_, \_, \_, \_) \leteq \var{pstate} \\
+    \var{pp} \leteq \pps{us}\\~\\
       \left({
         \begin{array}{r}
         \var{slot} \\
@@ -84,13 +88,24 @@ and then calls the $\mathsf{DELEGS}$ transition.
       }
       \vdash
       dpstate \trans{delegs}{\var{tx}} dpstate'
+      \\~\\~\\
+      {
+        \left(
+        \begin{array}{l}
+          \var{slot} \\
+          \var{dms} \\
+        \end{array}
+      \right)
+      }
+      \vdash
+      us \trans{bupi}{\fun{txup}~\var{tx}} us'
     }
     {
       \left(
         \begin{array}{l}
           \var{slot} \\
           \var{txIx} \\
-          \var{pp} \\
+          \var{dms} \\
         \end{array}
       \right)
       \vdash
@@ -98,6 +113,7 @@ and then calls the $\mathsf{DELEGS}$ transition.
         \begin{array}{ll}
           utxoSt \\
           dpstate \\
+          us \\
         \end{array}
       \right)
       \trans{ledger}{tx}
@@ -105,6 +121,7 @@ and then calls the $\mathsf{DELEGS}$ transition.
         \begin{array}{ll}
           \varUpdate{utxoSt'} \\
           \varUpdate{dpstate'} \\
+          \varUpdate{us'} \\
         \end{array}
       \right)
     }
@@ -123,7 +140,8 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{ledgers}{\_} \var{\_}
-    \subseteq \powerset ((\Slot\times\PParams) \times \LState \times \seqof{\Tx} \times \LState)
+    \subseteq \powerset \Big((\Slot\times(\VKeyGen\mapsto\VKey)\Big) \times \LState \times
+      \seqof{\Tx} \times \LState)
   \end{equation*}
   \caption{Ledger transition-system types}
   \label{fig:ts-types:ledgers}
@@ -138,7 +156,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
      \left(
       \begin{array}{r}
         \var{slot} \\
-        \var{pp} \\
+        \var{dms} \\
       \end{array}
     \right)
     \vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls}
@@ -155,7 +173,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
         \left(
           \begin{array}{r}
             \var{slot}\\
-            \var{pp}\\
+            \var{dms}\\
           \end{array}
         \right)
       }
@@ -169,7 +187,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
           \begin{array}{r}
             \var{slot}\\
             \mathsf{len}~\Gamma - 1\\
-            \var{pp}\\
+            \var{dms}\\
           \end{array}
         \right)
       }
@@ -183,7 +201,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
       \left(
       \begin{array}{r}
         \var{slot}\\
-        \var{pp}\\
+        \var{dms}\\
       \end{array}
     \right)
     }
