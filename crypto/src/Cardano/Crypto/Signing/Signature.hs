@@ -34,6 +34,7 @@ import Cardano.Prelude
 import qualified Cardano.Crypto.Wallet as CC
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.ByteArray (ScrubbedBytes)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Formatting (Format, bprint, build, formatToString, later, sformat, stext)
 import qualified Formatting.Buildable as B
@@ -49,6 +50,7 @@ import Cardano.Binary
   , Raw
   , ToCBOR(..)
   , serialize'
+  , serializeEncoding
   )
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
@@ -176,15 +178,15 @@ safeSignRaw pm mbTag (SafeSigner (EncryptedSigningKey sk _) (PassPhrase pp)) x =
 
 -- | Verify a signature
 verifySignature
-  :: ToCBOR a
-  => ProtocolMagicId
+  :: (a -> Encoding)
+  -> ProtocolMagicId
   -> SignTag
   -> VerificationKey
   -> a
   -> Signature a
   -> Bool
-verifySignature pm tag vk x sig =
-  verifySignatureRaw vk (signTag pm tag <> serialize' x) (coerce sig)
+verifySignature toEnc pm tag vk x sig =
+  verifySignatureRaw vk (signTag pm tag <> (BSL.toStrict . serializeEncoding $ toEnc x)) (coerce sig)
 
 -- | Verify a signature
 verifySignatureDecoded
