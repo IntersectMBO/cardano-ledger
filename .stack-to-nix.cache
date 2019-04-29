@@ -19,3 +19,6 @@ https://github.com/input-output-hk/iohk-monitoring-framework ff64e89e4a58262b11d
 https://github.com/input-output-hk/iohk-monitoring-framework ff64e89e4a58262b11daecf3a7835442a0e0e812 iohk-monitoring 0crmm74k5l249i85y73c1lqgfihr1a21bhcv79b0d7m6bvxlng8q iohk-monitoring iohk-monitoring.nix
 https://github.com/input-output-hk/iohk-monitoring-framework 8614c66d9f13ad7bd68975700651a720a78d620e contra-tracer 1bz7kfbjqwf3kc80qqinwfqqmrmkmj5mf1cx9alvdmjdx65didiv contra-tracer contra-tracer.nix
 https://github.com/input-output-hk/iohk-monitoring-framework 8614c66d9f13ad7bd68975700651a720a78d620e iohk-monitoring 1bz7kfbjqwf3kc80qqinwfqqmrmkmj5mf1cx9alvdmjdx65didiv iohk-monitoring iohk-monitoring.nix
+https://github.com/input-output-hk/cardano-ledger-specs 30f2728662e782c50f2da1f66f4b3159e85c8ff1 byron/semantics/executable-spec 1zaw311hk9n8kr2phja57hrflfalnniib3mz89761qyf38v7n3kp small-steps small-steps.nix
+https://github.com/input-output-hk/cardano-ledger-specs 30f2728662e782c50f2da1f66f4b3159e85c8ff1 byron/ledger/executable-spec 1zaw311hk9n8kr2phja57hrflfalnniib3mz89761qyf38v7n3kp cs-ledger cs-ledger.nix
+https://github.com/input-output-hk/cardano-ledger-specs 30f2728662e782c50f2da1f66f4b3159e85c8ff1 byron/chain/executable-spec 1zaw311hk9n8kr2phja57hrflfalnniib3mz89761qyf38v7n3kp cs-blockchain cs-blockchain.nix

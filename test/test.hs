@@ -19,6 +19,7 @@ import qualified Test.Cardano.Chain.Common.Json
 import qualified Test.Cardano.Chain.Common.Lovelace
 -- import qualified Test.Cardano.Chain.Block.Validation.Spec
 import qualified Test.Cardano.Chain.Delegation.CBOR
+import qualified Test.Cardano.Chain.Delegation.Model
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
 import qualified Test.Cardano.Chain.Slotting.CBOR
@@ -28,6 +29,7 @@ import qualified Test.Cardano.Chain.Ssc.CBOR
 import qualified Test.Cardano.Chain.Txp.CBOR
 import qualified Test.Cardano.Chain.Txp.Compact
 import qualified Test.Cardano.Chain.Txp.Json
+import qualified Test.Cardano.Chain.Txp.Model
 import qualified Test.Cardano.Chain.Update.CBOR
 import qualified Test.Cardano.Chain.Update.Json
 import qualified Test.Cardano.Chain.Update.Properties
@@ -47,9 +49,10 @@ main = do
     , Test.Cardano.Chain.Common.Lovelace.tests scenario
     , Test.Cardano.Chain.Common.Address.tests scenario
     , Test.Cardano.Chain.Delegation.CBOR.tests scenario
+    , Test.Cardano.Chain.Delegation.Model.tests
     , Test.Cardano.Chain.Epoch.File.tests
-    , Test.Cardano.Chain.Genesis.Json.tests scenario
     , Test.Cardano.Chain.Elaboration.Delegation.tests scenario
+    , Test.Cardano.Chain.Genesis.Json.tests scenario
     , Test.Cardano.Chain.Slotting.CBOR.tests scenario
     , Test.Cardano.Chain.Slotting.Properties.tests scenario
     , Test.Cardano.Chain.Slotting.Json.tests scenario
@@ -57,6 +60,7 @@ main = do
     , Test.Cardano.Chain.Txp.CBOR.tests scenario
     , Test.Cardano.Chain.Txp.Compact.tests scenario
     , Test.Cardano.Chain.Txp.Json.tests scenario
+    , Test.Cardano.Chain.Txp.Model.tests
     , Test.Cardano.Chain.Update.CBOR.tests scenario
     , Test.Cardano.Chain.Update.Json.tests scenario
     , Test.Cardano.Chain.Update.Properties.tests scenario

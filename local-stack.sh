@@ -1,3 +1,2 @@
 #!/bin/sh
-export STACK_YAML=stack-local.yaml
-stack --work-dir=.stack-work-local $@
+stack --stack-yaml=stack-local.yaml --work-dir=.stack-work-local $@

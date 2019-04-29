@@ -5,9 +5,9 @@ module Test.Cardano.Chain.Slotting.Gen
   ( genEpochIndex
   , genFlatSlotId
   , genLocalSlotIndex
-  , genLsiEpochSlots
   , genEpochSlots
   , genWithEpochSlots
+  , genSlotCount
   , genSlotId
   , genConsistentSlotIdEpochSlots
   , feedPMEpochSlots
@@ -27,6 +27,7 @@ import Cardano.Chain.Slotting
   , EpochSlots(..)
   , FlatSlotId(..)
   , LocalSlotIndex
+  , SlotCount(..)
   , SlotId(..)
   , WithEpochSlots(WithEpochSlots)
   , localSlotIndexMaxBound
@@ -41,13 +42,6 @@ import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 genEpochIndex :: Gen EpochIndex
 genEpochIndex = EpochIndex <$> Gen.word64 Range.constantBounded
-
--- Generates a `EpochSlots` based on `LocalSlotIndex`
-genLsiEpochSlots :: Gen EpochSlots
-genLsiEpochSlots = EpochSlots <$> Gen.word64 (Range.linear 1 w16Max)
- where
-  w16Max :: Word64
-  w16Max = fromIntegral (maxBound :: Word16)
 
 genFlatSlotId :: Gen FlatSlotId
 genFlatSlotId = FlatSlotId <$> Gen.word64 Range.constantBounded
@@ -87,6 +81,9 @@ genWithEpochSlots
   -> Gen (WithEpochSlots a)
 genWithEpochSlots gen pm es = WithEpochSlots es <$> gen pm es
 
+genSlotCount :: Gen SlotCount
+genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
+
 genSlotId :: EpochSlots -> Gen SlotId
 genSlotId epochSlots =
   SlotId <$> genEpochIndex <*> genLocalSlotIndex epochSlots
@@ -95,10 +92,10 @@ genSlotId epochSlots =
 -- the `Word64` maximum boundary of `flattenSlotId` when flattened.
 genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
 genConsistentSlotIdEpochSlots = do
-  sc  <- genLsiEpochSlots
-  lsi <- genLocalSlotIndex sc
-  eI  <- genRestrictedEpochIndex $ maxBound `div` unEpochSlots sc
-  pure (SlotId eI lsi, sc)
+  es  <- genEpochSlots
+  lsi <- genLocalSlotIndex es
+  eI  <- genRestrictedEpochIndex $ maxBound `div` unEpochSlots es
+  pure (SlotId eI lsi, es)
  where
   genRestrictedEpochIndex :: Word64 -> Gen EpochIndex
   genRestrictedEpochIndex bound =

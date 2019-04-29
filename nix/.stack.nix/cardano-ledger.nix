@@ -52,6 +52,7 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.base16-bytestring)
+            (hsPkgs.bimap)
             (hsPkgs.bytestring)
             (hsPkgs.cardano-binary)
             (hsPkgs.cardano-binary-test)

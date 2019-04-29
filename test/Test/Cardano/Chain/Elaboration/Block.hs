@@ -11,12 +11,14 @@ module Test.Cardano.Chain.Elaboration.Block
   ( abEnvToCfg
   , elaborate
   , elaborateBS
+  , rcDCert
   )
 where
 
 import Cardano.Prelude hiding (to)
 
 import Control.Lens ((^.), to, (^..))
+import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -41,7 +43,7 @@ import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL, epochL)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation (DCert, delegationMap, delegatorOf, mkDCert)
-import Ledger.Update (bkSgnCntW, bkSlotsPerEpoch, maxBkSz, maxHdrSz, PParams)
+import Ledger.Update (PParams, bkSlotsPerEpoch, maxBkSz, maxHdrSz, stableAfter)
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , ChainDifficulty(ChainDifficulty)
@@ -55,24 +57,28 @@ import Cardano.Chain.Common
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
+import Test.Cardano.Crypto.Dummy (dummyProtocolMagic, dummyProtocolMagicId)
+
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate
   :: Genesis.Config
   -> Transition.Environment CHAIN
-  -> Transition.State CHAIN
+  -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ()
-elaborate config (_, _, pps) ast st ab = Concrete.ABlock
+elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
   { Concrete.blockHeader     = bh0
   , Concrete.blockBody       = bb0
   , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
   , Concrete.blockAnnotation = ()
   }
  where
+  pm = Genesis.configProtocolMagicId config
+
   bh0 = Concrete.mkHeaderExplicit
-    (Genesis.configProtocolMagicId config)
+    pm
     prevHash
     (ChainDifficulty 0)
     (ppsEpochSlots pps)
@@ -103,14 +109,14 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
 
   sid =
       Slotting.FlatSlotId
-          (ab ^. Abstract.bHeader . Abstract.bSlot . to Abstract.unSlot)
+          (ab ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
 
-  issuer   = ab ^. Abstract.bHeader . Abstract.bIssuer
+  issuer   = ab ^. Abstract.bHeader . Abstract.bhIssuer
 
   (_, ssk) = elaborateKeyPair $ vKeyPair issuer
 
   cDCert :: Delegation.Certificate
-  cDCert = elaborateDCert config $ rcDCert issuer ast
+  cDCert = elaborateDCert pm dCert
 
   bb0    = Concrete.ABody
     { Concrete.bodyTxPayload     = Txp.ATxPayload []
@@ -122,7 +128,7 @@ elaborate config (_, _, pps) ast st ab = Concrete.ABlock
   dcerts =
     ab
       ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to
-            (elaborateDCert config)
+            (elaborateDCert pm)
           )
 
 ppsEpochSlots :: PParams -> Slotting.EpochSlots
@@ -135,12 +141,12 @@ elaborateBS
                     -- environment? (in such case we wouldn't need this
                     -- parameter)
   -> Transition.Environment CHAIN
-  -> Transition.State CHAIN
+  -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ByteString
-elaborateBS config aenv ast@(_, _, _, _, _, pps) st ab =
-  annotateBlock (ppsEpochSlots pps) $ elaborate config aenv ast st ab
+elaborateBS config aenv@(_, _, pps) dCert st ab =
+  annotateBlock (ppsEpochSlots pps) $ elaborate config aenv dCert st ab
 
 annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
 annotateBlock epochSlots block =
@@ -175,7 +181,7 @@ rcDCert
   -> DCert
 rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
  where
-  dm :: Map Abstract.VKeyGenesis Abstract.VKey
+  dm :: Bimap Abstract.VKeyGenesis Abstract.VKey
   dm  = ast ^. disL . delegationMap
 
   vkg = fromMaybe err $ delegatorOf dm vk
@@ -187,13 +193,13 @@ rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
 
   sigVkg = Abstract.sign (Abstract.sKey vkp) vkg
 
---  | Make a genesis configuration from an initial abstract environment of the
---  | trace.
+-- | Make a genesis configuration from an initial abstract environment of the
+--   trace.
 --
-abEnvToCfg :: ProtocolMagic -> Transition.Environment CHAIN -> Genesis.Config
-abEnvToCfg pm (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
+abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
+abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
  where
-  rnm = getRequiresNetworkMagic pm
+  rnm = getRequiresNetworkMagic dummyProtocolMagic
 
   genesisData = Genesis.GenesisData
     { Genesis.gdBootStakeholders = Genesis.GenesisWStakeholders
@@ -202,12 +208,12 @@ abEnvToCfg pm (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rn
     , Genesis.gdStartTime = UTCTime (ModifiedJulianDay 0) 0
     , Genesis.gdNonAvvmBalances = Genesis.GenesisNonAvvmBalances []
     , Genesis.gdProtocolParameters = gPps
-    , Genesis.gdK         =
+    , Genesis.gdK =
         -- TODO: this should be a different protocol parameter once we have
         -- an abstract protocol parameter for k. Then we need to solve the
         -- problem that in the concrete implementation k and w are the same.
-                            BlockCount (fromIntegral $ pps ^. bkSgnCntW)
-    , Genesis.gdProtocolMagicId = getProtocolMagicId pm
+                    BlockCount (Abstract.unBlockCount $ pps ^. stableAfter)
+    , Genesis.gdProtocolMagicId = dummyProtocolMagicId
     , Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
     }
 

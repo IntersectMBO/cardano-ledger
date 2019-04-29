@@ -21,11 +21,11 @@ extra-deps:
       - binary/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 965b32be3361b2ed404e1e58a6fb3cf525d3a26c
+    commit: 30f2728662e782c50f2da1f66f4b3159e85c8ff1
     subdirs:
-      - specs/semantics/hs
-      - specs/ledger/hs
-      - specs/chain/hs
+      - byron/semantics/executable-spec
+      - byron/ledger/executable-spec
+      - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-mainnet-mirror
     commit: 4f8db35bb50e5417729fb8bdf455dbe6445a6695
