@@ -22,10 +22,10 @@ import qualified Data.Set as Set
 import Cardano.Chain.Common
 import Cardano.Chain.Delegation.Validation.Activation (delegatorOf)
 import Cardano.Chain.Slotting
+import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters
 import Cardano.Chain.Update.ProtocolVersion
 import Cardano.Chain.Update.SoftforkRule
-import Cardano.Chain.Update.Vote
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 
 

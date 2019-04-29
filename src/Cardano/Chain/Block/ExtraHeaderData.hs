@@ -20,7 +20,7 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
-import Cardano.Chain.Common (Attributes, areAttributesKnown)
+import Cardano.Chain.Common (Attributes, attributesAreKnown)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion
   (SoftwareVersion, SoftwareVersionError, checkSoftwareVersion)
@@ -48,7 +48,7 @@ instance B.Buildable ExtraHeaderData where
     formattedExtra
    where
     formattedExtra
-      | areAttributesKnown (ehdAttributes mehd) = mempty
+      | attributesAreKnown (ehdAttributes mehd) = mempty
       | otherwise = bprint
         ("    attributes: " . build . "\n")
         (ehdAttributes mehd)

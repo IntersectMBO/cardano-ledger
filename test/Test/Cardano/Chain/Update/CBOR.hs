@@ -32,7 +32,6 @@ import Test.Cardano.Chain.Update.Example
   , exampleUpId
   , exampleUpdateData
   , exampleVote
-  , exampleVoteId
   )
 import Test.Cardano.Chain.Update.Gen
   ( genApplicationName
@@ -50,7 +49,6 @@ import Test.Cardano.Chain.Update.Gen
   , genUpdateData
   , genUpsData
   , genVote
-  , genVoteId
   )
 import Test.Cardano.Crypto.Gen (feedPM, genHashRaw)
 import Test.Options (TestScenario, TSProperty, eachOfTS)
@@ -258,17 +256,6 @@ ts_roundTripUpId = eachOfTS 20 (feedPM genUpId) roundTripsCBORBuildable
 
 ts_roundTripUpsData :: TSProperty
 ts_roundTripUpsData = eachOfTS 20 genUpsData roundTripsCBORShow
-
-
---------------------------------------------------------------------------------
--- VoteId
---------------------------------------------------------------------------------
-
-goldenVoteId :: Property
-goldenVoteId = goldenTestCBOR exampleVoteId "test/golden/cbor/update/VoteId"
-
-ts_roundTripVoteId :: TSProperty
-ts_roundTripVoteId = eachOfTS 20 (feedPM genVoteId) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------

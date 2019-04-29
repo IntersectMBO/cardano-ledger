@@ -15,7 +15,6 @@ module Test.Cardano.Chain.Update.Gen
   , genUpId
   , genUpsData
   , genVote
-  , genVoteId
   )
 where
 
@@ -42,7 +41,6 @@ import Cardano.Chain.Update
   , UpId
   , UpdateData(..)
   , Vote
-  , VoteId
   , applicationNameMaxLength
   , mkProposal
   , mkVote
@@ -186,6 +184,3 @@ genUpsData =
 
 genVote :: ProtocolMagicId -> Gen Vote
 genVote pm = mkVote pm <$> genSecretKey <*> genUpId pm <*> Gen.bool
-
-genVoteId :: ProtocolMagicId -> Gen VoteId
-genVoteId pm = (,,) <$> genUpId pm <*> genPublicKey <*> Gen.bool

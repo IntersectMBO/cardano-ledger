@@ -14,9 +14,8 @@ module Test.Cardano.Chain.Update.Example
   , exampleProof
   , exampleProposal
   , exampleProposalBody
-  , exampleVote
   , exampleUpId
-  , exampleVoteId
+  , exampleVote
   )
 where
 
@@ -46,7 +45,6 @@ import Cardano.Chain.Update
   , UpId
   , UpdateData(..)
   , Vote
-  , VoteId
   , mkProof
   , mkVoteSafe
   , payload
@@ -56,7 +54,7 @@ import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Chain.Common.Example (exampleAttributes)
 import Test.Cardano.Crypto.CBOR (getBytes)
-import Test.Cardano.Crypto.Example (examplePublicKey, exampleSafeSigner)
+import Test.Cardano.Crypto.Example (exampleSafeSigner)
 
 
 exampleApplicationName :: ApplicationName
@@ -170,10 +168,6 @@ exampleVote = mkVoteSafe pm ss ui ar
   ss = exampleSafeSigner 0
   ui = exampleUpId
   ar = True
-
--- | ```type VoteId = (UpId, PublicKey, Bool)```
-exampleVoteId :: VoteId
-exampleVoteId = (exampleUpId, examplePublicKey, False)
 
 exampleSoftwareVersion :: SoftwareVersion
 exampleSoftwareVersion = SoftwareVersion (ApplicationName "Golden") 99

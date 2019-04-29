@@ -22,10 +22,10 @@ import qualified Data.Set as Set
 
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.Vote
   ( AVote(..)
-  , UpId
   , recoverSignedBytes
   , proposalId
   )

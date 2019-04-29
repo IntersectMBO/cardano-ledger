@@ -55,7 +55,7 @@ import Cardano.Chain.Common
   , lovelaceF
   , lovelaceToInteger
   )
-import Cardano.Chain.Common.Attributes (Attributes, areAttributesKnown)
+import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
 import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
 
 
@@ -93,7 +93,7 @@ instance B.Buildable Tx where
    where
     attrs = txAttributes tx
     attrsBuilder
-      | areAttributesKnown attrs = mempty
+      | attributesAreKnown attrs = mempty
       | otherwise                = bprint (", attributes: " . build) attrs
 
 instance ToCBOR Tx where

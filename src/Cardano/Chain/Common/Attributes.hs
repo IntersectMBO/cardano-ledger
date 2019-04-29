@@ -17,7 +17,7 @@
 module Cardano.Chain.Common.Attributes
   ( UnparsedFields(..)
   , Attributes(..)
-  , areAttributesKnown
+  , attributesAreKnown
   , toCBORAttributes
   , fromCBORAttributes
   , mkAttributes
@@ -89,14 +89,14 @@ instance Show h => Show (Attributes h) where
     let
       remain :: Prelude.String
       remain
-        | areAttributesKnown attr
+        | attributesAreKnown attr
         = ""
         | otherwise
         = ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
     in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
 
 instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
-  build attr = if areAttributesKnown attr
+  build attr = if attributesAreKnown attr
     then Buildable.build (attrData attr)
     else bprint
       ("Attributes { data: " . build . ", remain: <" . int . " bytes> }")
@@ -105,7 +105,7 @@ instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
 
 instance Buildable (Attributes ()) where
   build attr
-    | areAttributesKnown attr = "<no attributes>"
+    | attributesAreKnown attr = "<no attributes>"
     | otherwise = bprint
       ("Attributes { data: (), remain: <" . int . " bytes> }")
       (unknownAttributesLength attr)
@@ -121,8 +121,8 @@ instance HeapWords h => HeapWords (Attributes h) where
 
 -- | Check whether all data from 'Attributes' is known, i. e. was successfully
 --   parsed into some structured data
-areAttributesKnown :: Attributes a -> Bool
-areAttributesKnown = M.null . fromUnparsedFields . attrRemain
+attributesAreKnown :: Attributes a -> Bool
+attributesAreKnown = M.null . fromUnparsedFields . attrRemain
 
 unknownAttributesLength :: Attributes a -> Int
 unknownAttributesLength =

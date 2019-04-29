@@ -94,12 +94,13 @@ library
                        Cardano.Chain.Txp.TxWitness
 
                        Cardano.Chain.Update.ApplicationName
-                       Cardano.Chain.Update.ProtocolVersion
-                       Cardano.Chain.Update.ProtocolParameters
-                       Cardano.Chain.Update.ProtocolParametersUpdate
                        Cardano.Chain.Update.Data
                        Cardano.Chain.Update.Payload
                        Cardano.Chain.Update.Proof
+                       Cardano.Chain.Update.Proposal
+                       Cardano.Chain.Update.ProtocolParameters
+                       Cardano.Chain.Update.ProtocolParametersUpdate
+                       Cardano.Chain.Update.ProtocolVersion
                        Cardano.Chain.Update.SoftforkRule
                        Cardano.Chain.Update.SoftwareVersion
                        Cardano.Chain.Update.SystemTag
