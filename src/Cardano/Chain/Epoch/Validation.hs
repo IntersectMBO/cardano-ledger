@@ -25,6 +25,7 @@ import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
   , ChainValidationState(..)
+  , HeapSize
   , UTxOSize
   , blockSlot
   , calcUTxOSize
@@ -39,6 +40,7 @@ import Cardano.Chain.Epoch.File
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   (EpochIndex, SlotId, slotNumberEpoch, unflattenSlotId)
+import Cardano.Chain.Txp (UTxO)
 
 
 data EpochError
@@ -75,13 +77,19 @@ validateEpochFile config trace logconf cvs fp = do
     (sformat
       epochValidationFormat
       (slotNumberEpoch (Genesis.configEpochSlots config) (cvsLastSlot cvs))
-      (snd $ calcUTxOSize (cvsUtxo cvs'))
+      utxoSize
+      heapSize
     )
+   where
+    sizePair = calcUTxOSize (cvsUtxo cvs')
+    utxoSize = snd sizePair
+    heapSize = fst sizePair
 
-  epochValidationFormat :: Format r (EpochIndex -> UTxOSize -> r)
+  epochValidationFormat :: Format r (EpochIndex -> UTxOSize -> HeapSize UTxO -> r)
   epochValidationFormat =
     "Succesfully validated epoch " . build . "\n" .
-    "UTxO size at the end of the epoch: " . build . "\n"
+    "Number of UTxO entries at the end of the epoch: " . build . "\n" .
+    "UTxO heap size in words at the end of the epoch: " . build . "\n"
 
 
 -- | Check that a list of epochs 'Block's are valid.
