@@ -18,6 +18,7 @@ module Cardano.Chain.Common.Attributes
   ( UnparsedFields(..)
   , Attributes(..)
   , attributesAreKnown
+  , unknownAttributesLength
   , toCBORAttributes
   , fromCBORAttributes
   , mkAttributes
