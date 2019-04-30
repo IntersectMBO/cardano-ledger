@@ -17,6 +17,7 @@
 \newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
 
 \newcommand{\HashHeader}{\type{HashHeader}}
+\newcommand{\HashBBody}{\type{HashBBody}}
 \newcommand{\bhHash}[1]{\fun{bhHash}~ \var{#1}}
 \newcommand{\bHeaderSize}[1]{\fun{bHeaderSize}~ \var{#1}}
 \newcommand{\bSize}[1]{\fun{bSize}~ \var{#1}}
@@ -29,13 +30,14 @@
 \newcommand{\hsig}[1]{\fun{hsig}~\var{#1}}
 \newcommand{\bprev}[1]{\fun{bprev}~\var{#1}}
 \newcommand{\bhash}[1]{\fun{bhash}~\var{#1}}
-\newcommand{\bsig}[1]{\fun{bsig}~\var{#1}}
 \newcommand{\bissuer}[1]{\fun{bissuer}~\var{#1}}
 \newcommand{\bseedl}[1]{\fun{bseed}_{\ell}~\var{#1}}
 \newcommand{\bprfn}[1]{\fun{bprf}_{n}~\var{#1}}
 \newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
 \newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
 \newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
+\newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
+\newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
 
 \newcommand{\PraosEnv}{\type{PraosEnv}}
 \newcommand{\PraosState}{\type{PraosState}}
@@ -127,6 +129,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{h} & \HashHeader & \text{hash of a block header}\\
+      \var{hb} & \HashBBody & \text{hash of a block body}\\
     \end{array}
   \end{equation*}
   %
@@ -157,7 +160,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
         \var{prf}_{\eta} & \Proof & \text{nonce proof}\\
         \ell & \unitInterval & \text{leader election value}\\
         \var{prf_{\ell}} & \Proof & \text{leader election proof}\\
-        \var{sig} & \Sig & \text{block body signature}\\
+        \var{bsize} & \N & \text{size of the block body}\\
+        \var{bhash} & \HashBBody & \text{block body hash}\\
         \var{oc} & \OCert & \text{operational certificate}\\
       \end{array}
     \right)
@@ -205,7 +209,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{\bprfn{}} & \BHBody \to \Proof\\
       \fun{bleader} & \BHBody \to \unitInterval\\
       \fun{\bprfl{}} & \BHBody \to \Proof\\
-      \fun{bsig} & \BHBody \to \Sig \\
+      \fun{hBbsize} & \BHBody \to \N \\
+      \fun{bbodyhash} & \seqof{\Tx} \to \HashBBody \\
       \fun{bocert} & \BHBody \to \OCert \\
     \end{array}
   \end{equation*}
@@ -669,40 +674,39 @@ the last slot.
   \label{fig:ts-types:bheader}
 \end{figure}
 
-The $\mathsf{BHEAD}$ transition rule is shown in
-Figure~\ref{fig:rules:bheader}. The signal is a new block header \var{bh}, from
-its body \var{bhb} we extract:
+The $\mathsf{BHEAD}$ transition rule is shown in Figure~\ref{fig:rules:bheader}.
+The signal is a new block header \var{bh}, from which we extract:
 
 \begin{itemize}
+\item The block header body \var{bhb}.
+\item The signature $\sigma$ of the block header.
 \item The slot \var{slot} of the block header.
-\item The hash of the block header \var{h} of the previous block header.
 \item The hot verification key \var{vk_{hot}} of the operational certificate of
   the block header.
-\item The signature $\sigma$ of the block header.
-\item The block header body \var{bhb}.
+\item The hash of the previous block header \var{h}.
 \end{itemize}
 
 The transition rule is executed, if the following conditions are satisfied:
 
 \begin{itemize}
-\item The size of \var{bh} is less than or equal to the maximal size that the
-  protocol parameters allow for block headers.
+\item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
+  \var{stpools}.
 \item The \var{slot} of the block header is greater than the last slot and less
   than or equal to the current slot \var{s_{now}}.
 \item The hash \var{h} of the previous block header in the block header state
   matches the hash in the body of the block header.
 \item The verification key validates the signature $\sigma$ for the block
-  header body.
-\item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
-  \var{stpools}.
+  header body, according to the expected KES evolution.
+\item The size of \var{bh} is less than or equal to the maximal size that the
+  protocol parameters allow for block headers.
+\item The size of the block body, as claimed by the block header, is less than or equal to the
+  maximal size that the protocol parameters allow for block bodies.
+  It will later be verified that the size of the block body matches the size claimed
+  in the header (see Figure~\ref{fig:rules:bbody}).
 \end{itemize}
 
 The state update finally sets \var{slot} as new block header slot and hash of
 \var{bh} as the new block header hash in the block header state.
-
-This transition makes sure that the block can be applied at the current time,
-that the block header is in the right sequence and that the block header has
-been signed with the correct signing key according to the KES.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:bheader}
@@ -722,10 +726,12 @@ been signed with the correct signing key according to the KES.
       \var{s_\ell} < \var{slot} \leq \var{s_{now}}
       &
       \var{h} = \bprev{bhb}
-      \\
-      \mathcal{V}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
       &
+      \mathcal{V}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
+      \\
       \bHeaderSize{bh} \leq \fun{maxBHSize}~\var{pp}
+      &
+      \hBbsize{bhb} \leq \fun{maxBBSize}~\var{pp}
     }
     {
       \left(
@@ -1095,8 +1101,8 @@ its sub-rule is $\mathsf{LEDGERS}$ which does the update of the ledger
 state. The signal is a block from which we extract:
 
 \begin{itemize}
-\item The block header body \var{bhb}.
 \item The sequence of transactions \var{txs} of the block.
+\item The block header body \var{bhb}.
 \item The verification key \var{vk} of the issuer of the \var{block} and its
   hash \var{hk}.
 \end{itemize}
@@ -1104,8 +1110,8 @@ state. The signal is a block from which we extract:
 The transition is executed if the following preconditions are met:
 
 \begin{itemize}
-\item The size of the block body is less than or equal to the maximal body size
-  described in the protocol parameters.
+\item The size of the block body matches the value given in the block header body.
+\item The hash of the block body matches the value given in the block header body.
 \item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
   \var{n} is equal to 0.
 \item The transactions \var{txs} were correctly signed by \var{vk}, producing
@@ -1122,23 +1128,15 @@ current slot is not an overlay slot.
     {
       \var{txs} \leteq \bbody{block}
       &
-      \var{vk} \leteq \bissuer{bhb}
+      \var{bhb} \leteq \bhbody\bheader{block}
       &
-      \var{hk} \leteq \hashKey{vk}
-      \\
-      \sigma \leteq \bsig{bhb}
-      &
-      \var{bh} \leteq \bheader{block}
-      &
-      \var{bhb} \leteq \bhbody{bh}
-      \\
-      (\wcard,~\wcard,~\var{us})\leteq ls
-      &
-      \var{pp}\leteq\pps{us}
+      \var{hk} \leteq \hashKey\bissuer{bhb}
       \\~\\
-      \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
+      \bBodySize{txs} = \hBbsize{bhb}
       &
-      \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
+      \fun{hash}~{txs} = \bbodyhash{bhb}
+      \\~\\
+      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{kh}\mapsto 0\})
       \\~\\
       {
         \left(
