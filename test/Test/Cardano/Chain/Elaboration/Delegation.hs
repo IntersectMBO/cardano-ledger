@@ -43,7 +43,7 @@ import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Options (TestScenario, TSProperty, withTestsTS)
 
 
@@ -64,7 +64,8 @@ ts_prop_elaboratedCertsValid =
         cert <- forAll $ elaborateDCertAnnotated pm <$> dcertGen env
 
         -- Validate the certificate
-        evalEither $ validateProxyVerificationKey pm cert
+        evalEither
+          $ validateProxyVerificationKey (Annotated pm (serialize' pm)) cert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -106,7 +107,7 @@ elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
 
 elaborateDSEnv :: DSEnv -> Scheduling.Environment
 elaborateDSEnv abstractEnv = Scheduling.Environment
-  { Scheduling.protocolMagic = dummyProtocolMagicId
+  { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId
   , Scheduling.allowedDelegators = Set.fromList
     $   mkStakeholderId
     .   elaborateVKeyGenesis

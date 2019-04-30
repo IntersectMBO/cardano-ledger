@@ -29,7 +29,7 @@ import Cardano.Crypto.Signing
   , validateProxyVerificationKey
   )
 
-import Test.Cardano.Crypto.Dummy (dummyProtocolMagicId)
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner, genSecretKey)
 
 
@@ -57,15 +57,15 @@ prop_proxySign = property $ do
     <*> Gen.int32 Range.constantBounded
   let
     psk = createPsk
-      dummyProtocolMagicId
+      Dummy.protocolMagicId
       issuerSafeSigner
       (toPublic delegateSK)
       omega
   a <- forAll genData
 
   assert
-    $ proxyVerify dummyProtocolMagicId SignForTestingOnly (== omega) a
-    $ proxySign dummyProtocolMagicId SignForTestingOnly delegateSK psk a
+    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) a
+    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
 
 -- | Cannot verify a 'ProxySignature' with an incorrect key
 prop_proxySignDifferentKey :: Property
@@ -84,12 +84,12 @@ prop_proxySignDifferentKey = property $ do
 
   let
     psk = createPsk
-      dummyProtocolMagicId
+      Dummy.protocolMagicId
       issuerSafeSigner
       (toPublic delegateSK)
       omega
     psk' = createPsk
-      dummyProtocolMagicId
+      Dummy.protocolMagicId
       issuerSafeSigner'
       (toPublic delegateSK)
       omega
@@ -100,9 +100,9 @@ prop_proxySignDifferentKey = property $ do
 
   assert
     . not
-    $ proxyVerify dummyProtocolMagicId SignForTestingOnly (== omega) a
+    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) a
     $ switchPsk
-    $ proxySign dummyProtocolMagicId SignForTestingOnly delegateSK psk a
+    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
 
 -- | Cannot verify a 'ProxySignature' with the wrong data
 prop_proxySignDifferentData :: Property
@@ -116,7 +116,7 @@ prop_proxySignDifferentData = property $ do
     <*> Gen.int32 Range.constantBounded
   let
     psk = createPsk
-      dummyProtocolMagicId
+      Dummy.protocolMagicId
       issuerSafeSigner
       (toPublic delegateSK)
       omega
@@ -125,8 +125,8 @@ prop_proxySignDifferentData = property $ do
 
   assert
     . not
-    $ proxyVerify dummyProtocolMagicId SignForTestingOnly (== omega) b
-    $ proxySign dummyProtocolMagicId SignForTestingOnly delegateSK psk a
+    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) b
+    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
 
 
 --------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ prop_proxyVerificationKeyCorrect = property $ do
   omega      <- forAll $ Gen.int32 Range.constantBounded
 
   let
-    psk   = createPsk dummyProtocolMagicId issuerSafeSigner delegatePK omega
+    psk   = createPsk Dummy.protocolMagicId issuerSafeSigner delegatePK omega
     bytes = serialize psk
 
     annotatedPsk :: AProxyVerificationKey Int32 ByteString
@@ -154,7 +154,7 @@ prop_proxyVerificationKeyCorrect = property $ do
         $ decodeFull bytes
 
   assert . isRight $ validateProxyVerificationKey
-    dummyProtocolMagicId
+    Dummy.annotatedProtocolMagicId
     annotatedPsk
 
 -- | Cannot validate 'ProxyVerificationKey's with incorrect public keys
@@ -166,7 +166,7 @@ prop_proxyVerificationKeyIncorrect = property $ do
   omega       <- forAll $ Gen.int32 Range.constantBounded
 
   let
-    psk = (createPsk dummyProtocolMagicId issuerSafeSigner delegatePK omega)
+    psk = (createPsk Dummy.protocolMagicId issuerSafeSigner delegatePK omega)
       { pskDelegatePk = delegatePK'
       }
     bytes = serialize psk
@@ -181,7 +181,7 @@ prop_proxyVerificationKeyIncorrect = property $ do
         $ decodeFull bytes
 
   assert . isLeft $ validateProxyVerificationKey
-    dummyProtocolMagicId
+    Dummy.annotatedProtocolMagicId
     annotatedPsk
 
 genData :: Gen [Int32]

@@ -39,7 +39,7 @@ import Hedgehog
 
 import Test.Cardano.Chain.Elaboration.Keys
 import Test.Cardano.Chain.Genesis.Dummy
-import Test.Cardano.Crypto.Dummy
+import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
 -- | We return both the result of the update and the concrete transaction that
@@ -70,7 +70,7 @@ type Wit v = Abstract.Wit (TxId v)
 elaborateUTxOEnv
   :: Abstract.UTxOEnv (TxId Concrete) -> Concrete.UTxO.Environment
 elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
-  { Concrete.UTxO.protocolMagic      = dummyProtocolMagic
+  { Concrete.UTxO.protocolMagic      = Dummy.aProtocolMagic
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
     { Concrete.ppTxFeePolicy =
       Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear
@@ -132,7 +132,7 @@ elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.PkWitness
   signature
  where
   (concretePK, concreteSK) = elaborateKeyPair $ vKeyPair key
-  signature = sign dummyProtocolMagicId SignTx concreteSK sigData
+  signature = sign Dummy.protocolMagicId SignTx concreteSK sigData
   sigData   = Concrete.TxSigData $ hash concreteTx
 
 elaborateTxIns :: UTxO Concrete -> [TxIn Concrete] -> NonEmpty Concrete.TxIn
@@ -160,7 +160,7 @@ elaborateTxOuts =
 elaborateTxOut :: Abstract.TxOut -> Concrete.TxOut
 elaborateTxOut abstractTxOut = Concrete.TxOut
   { Concrete.txOutAddress = Concrete.makePubKeyAddress
-    (Concrete.makeNetworkMagic dummyProtocolMagic)
+    (Concrete.makeNetworkMagic Dummy.protocolMagic)
     (elaborateVKey abstractPK)
   , Concrete.txOutValue   = lovelaceValue
   }

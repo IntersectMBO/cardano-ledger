@@ -19,7 +19,7 @@ import Data.Coerce (coerce)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary (FromCBOR, ToCBOR, Decoded(..), serialize')
+import Cardano.Binary (Annotated, Decoded(..), FromCBOR, ToCBOR, serialize')
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.Safe (SafeSigner)
@@ -62,7 +62,7 @@ safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
 --   way
 verifyProxyCert
   :: (Decoded (f ByteString), Functor f)
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> PublicKey
   -> PublicKey
   -> f ByteString

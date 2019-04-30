@@ -41,7 +41,8 @@ import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary
-  ( Decoded(..)
+  ( Annotated(..)
+  , Decoded(..)
   , Decoder
   , Encoding
   , FromCBOR(..)
@@ -52,7 +53,7 @@ import Cardano.Binary
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..))
-import Cardano.Crypto.Signing.Tag (SignTag(..), signTag)
+import Cardano.Crypto.Signing.Tag (SignTag(..), signTag, signTagDecoded)
 import Cardano.Crypto.Signing.Safe
   (SafeSigner(..), PassPhrase(..), EncryptedSecretKey(..))
 
@@ -183,30 +184,24 @@ verifySignature
   -> Signature a
   -> Bool
 verifySignature pm tag pk x sig =
-  verifySignatureRaw pm (Just tag) pk (serialize' x) (coerce sig)
+  verifySignatureRaw pk (signTag pm tag <> serialize' x) (coerce sig)
 
 -- | Verify a signature
 verifySignatureDecoded
   :: Decoded t
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> SignTag
   -> PublicKey
   -> t
   -> Signature (BaseType t)
   -> Bool
 verifySignatureDecoded pm tag pk x sig =
-  verifySignatureRaw pm (Just tag) pk (recoverBytes x) (coerce sig)
+  verifySignatureRaw pk (signTagDecoded pm tag <> recoverBytes x) (coerce sig)
 
 -- | Verify 'Raw' signature
 verifySignatureRaw
-  :: ProtocolMagicId
-  -> Maybe SignTag
-  -> PublicKey
+  :: PublicKey
   -> ByteString
   -> Signature Raw
   -> Bool
-verifySignatureRaw pm mTag (PublicKey k) x (Signature sig) = CC.verify
-  k
-  (tag <> x)
-  sig
-  where tag = maybe mempty (signTag pm) mTag
+verifySignatureRaw (PublicKey k) x (Signature sig) = CC.verify k x sig

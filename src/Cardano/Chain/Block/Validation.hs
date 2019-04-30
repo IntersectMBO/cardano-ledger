@@ -44,17 +44,20 @@ import Formatting.Buildable (Buildable)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
   , BoundaryValidationData(..)
   , blockAttributes
+  , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
   , blockHeader
   , blockIssuer
   , blockLength
   , blockProof
+  , blockProtocolMagicId
   , blockProtocolVersion
   , blockSlot
   , blockTxPayload
@@ -90,7 +93,6 @@ import Cardano.Chain.Genesis as Genesis
   , configEpochSlots
   , configHeavyDelegation
   , configK
-  , configProtocolMagic
   , configProtocolMagicId
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
@@ -102,10 +104,9 @@ import qualified Cardano.Chain.Update as Update
 import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
 import Cardano.Crypto
-  ( ProtocolMagic
+  ( AProtocolMagic(..)
   , ProtocolMagicId
   , PublicKey
-  , getProtocolMagicId
   , hashRaw
   , hashDecoded
   )
@@ -197,7 +198,7 @@ initialChainValidationState config = do
     }
  where
   delegationEnv = DI.Environment
-    { DI.protocolMagic = configProtocolMagicId config
+    { DI.protocolMagic = Annotated pm (serialize' pm)
     , DI.allowedDelegators = M.keysSet
       . unGenesisWStakeholders
       $ configBootStakeholders config
@@ -205,6 +206,8 @@ initialChainValidationState config = do
     , DI.currentEpoch = EpochIndex 0
     , DI.currentSlot = FlatSlotId 0
     }
+
+  pm = configProtocolMagicId config
 
   genesisDelegation = configHeavyDelegation config
 
@@ -262,6 +265,9 @@ data ChainValidationError
 
   | ChainValidationDelegationSchedulingError Scheduling.Error
   -- ^ A delegation certificate failed validation in the ledger layer
+
+  | ChainValidationProtocolMagicMismatch ProtocolMagicId ProtocolMagicId
+  -- ^ The 'ProtocolMagic' in the block doesn't match the configured one
 
   | ChainValidationSignatureLight
   -- ^ A block is using unsupported lightweight delegation
@@ -335,7 +341,7 @@ updateChainBoundary cvs bvd = do
 
 
 data BodyEnvironment = BodyEnvironment
-  { protocolMagic      :: !ProtocolMagic
+  { protocolMagic      :: !(AProtocolMagic ByteString)
   , k                  :: !BlockCount
   , numGenKeys         :: !Word8
   , protocolParameters :: !Update.ProtocolParameters
@@ -420,7 +426,7 @@ updateBody env bs b = do
   txs         = aUnTxPayload $ blockTxPayload b
 
   delegationEnv = DI.Environment
-    { DI.protocolMagic = getProtocolMagicId protocolMagic
+    { DI.protocolMagic = getAProtocolMagicId protocolMagic
     , DI.allowedDelegators = M.keysSet (DI.delegationMap delegationState)
     , DI.k           = k
     , DI.currentEpoch = currentEpoch
@@ -433,7 +439,7 @@ updateBody env bs b = do
     }
 
   updateEnv = UPI.Environment
-    { UPI.protocolMagic = getProtocolMagicId protocolMagic
+    { UPI.protocolMagic = getAProtocolMagicId protocolMagic
     , UPI.k           = k
     , UPI.currentSlot = currentSlot
     , UPI.numGenKeys  = numGenKeys
@@ -449,7 +455,7 @@ updateBody env bs b = do
 
 
 data HeaderEnvironment = HeaderEnvironment
-  { protocolMagic :: !ProtocolMagicId
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
   , k             :: !BlockCount
   , numGenKeys    :: !Word8
   , delegationMap :: !(Map StakeholderId StakeholderId)
@@ -493,7 +499,7 @@ updateHeader env st h = do
 
 
 data EpochEnvironment = EpochEnvironment
-  { protocolMagic :: !ProtocolMagicId
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
   , k             :: !BlockCount
   , numGenKeys    :: !Word8
   , delegationMap :: !(Map StakeholderId StakeholderId)
@@ -546,13 +552,21 @@ updateBlock
   -> m ChainValidationState
 updateBlock config cvs b = do
 
+  -- Compare the block's 'ProtocolMagic' to the configured value
+  blockProtocolMagicId b == configProtocolMagicId config
+    `orThrowError` ChainValidationProtocolMagicMismatch
+                    (blockProtocolMagicId b)
+                    (configProtocolMagicId config)
+
   -- Update the header
   updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
 
   let
     bodyEnv = BodyEnvironment
-      { protocolMagic = configProtocolMagic config
-      , k = configK config
+      { protocolMagic = AProtocolMagic
+        (blockAProtocolMagicId b)
+        (configReqNetMagic config)
+      , k          = configK config
       , numGenKeys
       , protocolParameters = UPI.adoptedProtocolParameters updateState'
       , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
@@ -575,7 +589,7 @@ updateBlock config cvs b = do
     }
  where
   headerEnv = HeaderEnvironment
-    { protocolMagic = configProtocolMagicId config
+    { protocolMagic = blockAProtocolMagicId b
     , k          = configK config
     , numGenKeys
     , delegationMap

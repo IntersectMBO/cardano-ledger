@@ -52,7 +52,7 @@ import Cardano.Chain.Txp.UTxO
 import qualified Cardano.Chain.Txp.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters(..))
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
   , ProtocolMagicId
   , SignTag(..)
   , verifySignatureDecoded
@@ -154,7 +154,7 @@ validateTxOutNM nm txOut =
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
   :: MonadError TxValidationError m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> Annotated TxSigData ByteString
   -> Address
   -> TxInWitness
@@ -175,7 +175,7 @@ validateWitness pmi sigData addr witness = case witness of
 
 
 data Environment = Environment
-  { protocolMagic      :: !ProtocolMagic
+  { protocolMagic      :: !(AProtocolMagic ByteString)
   , protocolParameters :: !ProtocolParameters
   } deriving (Eq, Show)
 
@@ -225,7 +225,7 @@ updateUTxOTxWitness env utxo ta = do
   updateUTxOTx env utxo aTx
  where
   Environment { protocolMagic } = env
-  pmi = getProtocolMagicId protocolMagic
+  pmi = getAProtocolMagicId protocolMagic
 
   aTx@(Annotated tx _) = aTaTx ta
   witness = taWitness ta

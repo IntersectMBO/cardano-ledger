@@ -13,7 +13,8 @@
 
 module Cardano.Chain.Block.Header
   ( Header
-  , AHeader
+  , AHeader(..)
+  , headerProtocolMagicId
   , headerPrevHash
   , headerProof
   , mkHeader
@@ -128,17 +129,20 @@ import Cardano.Crypto
 type Header = AHeader ()
 
 data AHeader a = AHeader
-  { headerProtocolMagicId :: !ProtocolMagicId
-  , aHeaderPrevHash     :: !(Annotated HeaderHash a)
+  { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a)
+  , aHeaderPrevHash        :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
-  , aHeaderProof        :: !(Annotated Proof a)
+  , aHeaderProof           :: !(Annotated Proof a)
   -- ^ Proof of body
-  , headerConsensusData :: !(AConsensusData a)
+  , headerConsensusData    :: !(AConsensusData a)
   -- ^ Consensus data to verify consensus algorithm
-  , aHeaderExtraData    :: !(Annotated ExtraHeaderData a)
+  , aHeaderExtraData       :: !(Annotated ExtraHeaderData a)
   -- ^ Any extra data
-  , headerAnnotation    :: a
+  , headerAnnotation       :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
+
+headerProtocolMagicId :: AHeader a -> ProtocolMagicId
+headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
 
 headerPrevHash :: AHeader a -> HeaderHash
 headerPrevHash = unAnnotated . aHeaderPrevHash
@@ -207,7 +211,7 @@ fromCBORAHeader epochSlots = do
     annotatedDecoder $ do
       enforceSize "Header" 5
       (,,,,)
-        <$> fromCBOR
+        <$> fromCBORAnnotated
         <*> fromCBORAnnotated
         <*> fromCBORAnnotated
         <*> fromCBORAConsensus epochSlots
@@ -271,7 +275,7 @@ mkHeaderExplicit
   -> Header
 mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body extra
   = AHeader
-    pm
+    (Annotated pm ())
     (Annotated prevHash ())
     (Annotated proof ())
     consensus

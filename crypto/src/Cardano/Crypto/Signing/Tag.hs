@@ -5,6 +5,7 @@
 module Cardano.Crypto.Signing.Tag
   ( SignTag(..)
   , signTag
+  , signTagDecoded
   )
 where
 
@@ -13,7 +14,7 @@ import Cardano.Prelude
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
-import Cardano.Binary (serialize')
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 
 
@@ -54,10 +55,18 @@ data SignTag
 instance Buildable SignTag where
   build = bprint shown
 
+-- | Get magic bytes corresponding to a 'SignTag', taking `ProtocolMagic` bytes
+--   from the annotation
+signTagDecoded :: Annotated ProtocolMagicId ByteString -> SignTag -> ByteString
+signTagDecoded = signTagRaw . annotation
+
 -- | Get magic bytes corresponding to a 'SignTag'. Guaranteed to be different
 --   (and begin with a different byte) for different tags.
 signTag :: ProtocolMagicId -> SignTag -> ByteString
-signTag protocolMagic = \case
+signTag = signTagRaw . serialize' . unProtocolMagicId
+
+signTagRaw :: ByteString -> SignTag -> ByteString
+signTagRaw network = \case
   SignForTestingOnly -> "\x00"
   SignTx         -> "\x01" <> network
   SignRedeemTx   -> "\x02" <> network
@@ -69,4 +78,3 @@ signTag protocolMagic = \case
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
   SignMainBlockHeavy -> "\x09" <> network
   SignProxyVK    -> "\x0a" <> network
-  where network = serialize' (unProtocolMagicId protocolMagic)

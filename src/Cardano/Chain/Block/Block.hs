@@ -21,6 +21,8 @@ module Cardano.Chain.Block.Block
   , mkBlockExplicit
   , blockHash
   , blockHashAnnotated
+  , blockAProtocolMagicId
+  , blockProtocolMagicId
   , blockPrevHash
   , blockProof
   , blockSlot
@@ -81,7 +83,7 @@ import Cardano.Chain.Block.Boundary
 import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData(..))
 import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Header
-  ( AHeader
+  ( AHeader(..)
   , BlockSignature(..)
   , Header
   , HeaderHash
@@ -98,6 +100,7 @@ import Cardano.Chain.Block.Header
   , headerLeaderKey
   , headerPrevHash
   , headerProof
+  , headerProtocolMagicId
   , headerProtocolVersion
   , headerSignature
   , headerSlot
@@ -328,6 +331,12 @@ blockHash epochSlots = hashHeader epochSlots . blockHeader
 
 blockHashAnnotated :: ABlock ByteString -> HeaderHash
 blockHashAnnotated = hashDecoded . fmap wrapHeaderBytes . blockHeader
+
+blockProtocolMagicId :: ABlock a -> ProtocolMagicId
+blockProtocolMagicId = headerProtocolMagicId . blockHeader
+
+blockAProtocolMagicId :: ABlock a -> Annotated ProtocolMagicId a
+blockAProtocolMagicId = aHeaderProtocolMagicId . blockHeader
 
 blockExtraData :: ABlock a -> ExtraBodyData
 blockExtraData = unAnnotated . aBlockExtraData

@@ -27,7 +27,8 @@ import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( ByteSpan
+  ( Annotated
+  , ByteSpan
   , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -45,7 +46,7 @@ import Cardano.Crypto.Signing.Proxy.VerificationKey
 import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
 import Cardano.Crypto.Signing.SecretKey (SecretKey(..), toPublic)
 import Cardano.Crypto.Signing.Signature (fromCBORXSignature, toCBORXSignature)
-import Cardano.Crypto.Signing.Tag (SignTag, signTag)
+import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 
 
 -- | Delegate signature made with certificate-based permission. @w@ stays for
@@ -82,8 +83,8 @@ instance (Typeable s, FromCBOR w) => FromCBOR (AProxySignature w s ByteSpan) whe
       <*> fromCBORXSignature
 
 validateProxySignature
-  :: (MonadError Text m)
-  => ProtocolMagicId
+  :: MonadError Text m
+  => Annotated ProtocolMagicId ByteString
   -> AProxySignature w a ByteString
   -> m ()
 validateProxySignature pm psig = validateProxyVerificationKey pm (psigPsk psig)
@@ -123,7 +124,7 @@ proxySign pm t sk@(SecretKey delegateSk) psk m
 --   space predicate and message itself.
 proxyVerifyDecoded
   :: Decoded t
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> SignTag
   -> (w -> Bool)
   -> t
@@ -137,7 +138,7 @@ proxyVerifyDecoded pm t omegaPred m psig = predCorrect && sigValid
   predCorrect = omegaPred (pskOmega psk)
   sigValid    = CC.verify
     pdDelegatePkRaw
-    (mconcat ["01", CC.unXPub issuerPk, signTag pm t, recoverBytes m])
+    (mconcat ["01", CC.unXPub issuerPk, signTagDecoded pm t, recoverBytes m])
     (psigSig psig)
 
 -- | Verify delegated signature given issuer's pk, signature, message space

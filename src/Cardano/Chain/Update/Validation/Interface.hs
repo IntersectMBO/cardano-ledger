@@ -36,11 +36,11 @@ import qualified Data.Map.Strict as M
 import Data.Set (union)
 import qualified Data.Set as S
 
+import Cardano.Binary (Annotated)
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.StakeholderId (StakeholderId)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
-
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -71,7 +71,7 @@ import Cardano.Crypto (ProtocolMagicId)
 
 
 data Environment = Environment
-  { protocolMagic :: !ProtocolMagicId
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
   , k             :: !BlockCount
   -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
   -- of our protocol parameters, so it seems that we need to pass it in the
