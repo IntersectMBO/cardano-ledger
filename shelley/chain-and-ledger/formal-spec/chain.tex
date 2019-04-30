@@ -240,7 +240,7 @@ of
 \end{itemize}
 
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
-$\fun{obftSchedule}$ for creating the OBFT leader schedule for each new epoch,
+$\fun{overlaySchedule}$ for creating the OBFT leader overlay schedule for each new epoch,
 as explained in section 3.9.2 of~\cite{delegation_design}.
 The function takes a seed, the decentralization parameter $d$, and the active slot coeffient $f$.
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
@@ -276,13 +276,13 @@ of which are active.
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{obftSchedule} \in \Seed \to \unitInterval \to \unitInterval \to
+    & \fun{overlaySchedule} \in \Seed \to \unitInterval \to \unitInterval \to
       (\Slot\mapsto\VKeyGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{dsched}\leteq\fun{obftSchedule}~\eta~\var{d}~\var{f} \\
+    \text{ given: }~\var{dsched}\leteq\fun{overlaySchedule}~\eta~\var{d}~\var{f} \\
     |\var{dsched}| = \floor{d\cdot\SlotsPerEpoch} \\
     |\{s\mapsto k\in\var{dsched}~\mid~k\neq\Nothing\}| = \floor{f\cdot d\cdot\SlotsPerEpoch} \\
   \end{align*}
@@ -360,7 +360,7 @@ in the pool distribution.
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
                     \right\} \\
-         \var{dsched'} & \fun{obftSchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+         \var{dsched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
         \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
     }
@@ -1257,8 +1257,7 @@ The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
 part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
 $\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
 
-The environment for the chain rule is shown in Figure~\ref{fig:ts-types:chain},
-it is comprised of the current slot number \var{s_{now}} and the set of genesis keys.
+The environment for the chain rule is the current slot number \var{s_{now}}.
 
 The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
 following:
@@ -1271,21 +1270,13 @@ following:
 \item The epoch state \var{es}.
 \item The reward update \var{ru}.
 \item The stake pool distribution \var{pd}.
-\item The genesis key delegations.
+\item The genesis key delegations \var{dms}.
+\item The genesis keys \var{gkeys}.
+  \textbf{Note} that the genesis keys enter the state during the transition
+  from Byron to Shelley by the $\mathsf{toShelley}$ function, and are \textbf{otherwise unchanged}.
 \end{itemize}
 
 \begin{figure}
-  \emph{Chain environments}
-  \begin{equation*}
-    \ChainEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{current slot} \\
-        \var{gkeys} & \VKeyGen & \text{genesis keys} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{Chain states}
   \begin{equation*}
     \ChainState =
@@ -1301,6 +1292,7 @@ following:
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dsched} & \Slot\mapsto\VKeyGen^? & \text{OBFT schedule} \\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{gkeys} & \VKeyGen & \text{genesis keys} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1308,7 +1300,7 @@ following:
   \emph{Chain Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
-    \powerset (\ChainEnv \times \ChainState \times \Block \times \ChainState)
+    \powerset (\Slot \times \ChainState \times \Block \times \ChainState)
   \end{equation*}
   \caption{Chain transition-system types}
   \label{fig:ts-types:chain}
@@ -1443,12 +1435,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
       \var{es}'' \leteq (\var{acnt}',~\var{ss}',~\var{ls}')
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{s_{now}} \\
-            \var{gkeys} \\
-        \end{array}}
-      \right)
+      \var{s_{now}}
       \vdash
       {\left(\begin{array}{c}
             (\eta_0,~\eta_c,~\eta_v) \\
@@ -1461,6 +1448,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
             \var{pd} \\
             \var{dsched} \\
             \var{dms} \\
+            \var{gkeys} \\
       \end{array}\right)}
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
@@ -1474,11 +1462,115 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{dsched}'} \\
             \varUpdate{\var{dms}'} \\
+            \var{gkeys} \\
       \end{array}\right)}
     }
   \end{equation}
   \caption{Chain rules}
   \label{fig:rules:chain}
+\end{figure}
+
+\clearpage
+
+\subsection{Byron to Shelley Transition}
+\label{sec:byron-to-shelley}
+
+This section describes how to transition the state held by the Byron ledger to the Shelley ledger.
+The Byron ledger state $\CEState$ is defined in \cite{byron_chain_spec}.
+Figure~\ref{fig:functions:to-shelley} defines a function $\fun{toShelley}$
+which takes the Byron ledger state and creates the Shelley ledger state.
+
+%%
+%% Figure - Byron to Shelley State Transition
+%%
+\begin{figure}[htb]
+  \emph{Byron to Shelley Transition}
+  %
+  \begin{align*}
+      & \fun{toShelley} \in \CEState \to \ChainState \\
+      & \fun{toShelley}~
+      \left(
+        \begin{array}{c}
+          \var{s_{last}} \\
+          \wcard \\
+          \var{h} \\
+          \var{utxo} \\
+          \var{ds} \\
+          \var{us}
+        \end{array}
+      \right)
+      =
+      \left(
+        \begin{array}{c}
+          (\fun{hash}~{h},~\fun{hash}~{h},~\fun{hash}~{h}) \\
+          \emptyset \\
+          h \\
+          \var{s_{last}} \\
+          \epoch{s_{last}} \\
+          \\
+          \left(
+            \begin{array}{c}
+              \left(
+                \begin{array}{c}
+                  0 \\
+                  45\times 10^{15} - \fun{balance}~{utxo}
+                \end{array}
+              \right) \\
+              \left(
+                \begin{array}{c}
+                  (\emptyset, \emptyset) \\
+                  (\emptyset, \emptyset) \\
+                  (\emptyset, \emptyset) \\
+                  \emptyset \\
+                  \emptyset \\
+                  0
+                \end{array}
+              \right) \\
+              \left(
+                \begin{array}{c}
+                  \left(
+                    \begin{array}{c}
+                      \var{utxo} \\
+                      0 \\
+                      0 \\
+                    \end{array}
+                  \right) \\
+                  \left(
+                    \begin{array}{c}
+                    \left(
+                      \begin{array}{c}
+                        \emptyset \\
+                        \emptyset \\
+                        \emptyset \\
+                        \emptyset \\
+                      \end{array}
+                    \right) \\
+                    \left(
+                      \begin{array}{c}
+                        \emptyset \\
+                        \emptyset \\
+                        \emptyset \\
+                        \emptyset \\
+                      \end{array}
+                    \right) \\
+                    \end{array}
+                  \right) \\
+                  \var{us} \\
+                \end{array}
+              \right) \\
+            \end{array}
+          \right) \\
+          \\
+          \Nothing \\
+          \emptyset \\
+          \emptyset \\
+          \dom{dms} \\
+        \end{array}
+      \right)
+  \end{align*}
+
+  \caption{Byron to Shelley State Transtition}
+  \label{fig:functions:to-shelley}
 \end{figure}
 
 %%% Local Variables:
