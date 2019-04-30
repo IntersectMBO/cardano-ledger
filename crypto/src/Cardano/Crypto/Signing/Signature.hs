@@ -137,12 +137,12 @@ sign
   -> SigningKey
   -> a
   -> Signature a
-sign pm tag sk = signEncoded pm tag sk . serialize'
+sign pm tag sk = signEncoded pm tag sk . toCBOR
 
 -- | Like 'sign' but without the 'ToCBOR' constraint
 signEncoded
-  :: ProtocolMagicId -> SignTag -> SigningKey -> ByteString -> Signature a
-signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk
+  :: ProtocolMagicId -> SignTag -> SigningKey -> Encoding -> Signature a
+signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk . BSL.toStrict . serializeEncoding
 
 -- | Sign a 'Raw' bytestring
 signRaw
