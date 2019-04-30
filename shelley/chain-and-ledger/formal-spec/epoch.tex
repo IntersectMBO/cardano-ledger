@@ -949,9 +949,10 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
       \item $n_{opt}$, the optimal number of saturated stake pools
     \end{itemize}
   \item The function $\fun{poolReward}$ gives the total rewards available to be
-    distributed to the members of the given pool. It depends on the relative
-    stake $\sigma$, the number $n$ of blocks the pool added to the chain and the
+    distributed to the members of the given pool. It depends on the protocol parameter $d$,
+    the relative stake $\sigma$, the number $n$ of blocks the pool added to the chain and the
     total number $\overline{N}$ of blocks added to the chain in the last epoch.
+
 \end{itemize}
 
 %%
@@ -980,11 +981,15 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
   \emph{Actual Reward Function, called $\hat{f}$ in section 5.5.2 of~\cite{delegation_design}}
   %
   \begin{align*}
-      & \fun{poolReward} \in \HashKey \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
-      & \poolReward{hk}{s}{n}{\overline{N}}{f} =
+      & \fun{poolReward} \in \unitInterval \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
+      & \poolReward{d}{s}{n}{\overline{N}}{f} =
       \floor*{\overline{p}\cdot\var{f}}\\
       & ~~~\where \\
-      & ~~~~~~~\overline{p} = \frac{\beta}{s} \\
+      & ~~~~~~~\overline{p} =
+        \begin{cases}
+          \frac{\beta}{s} & \text{if } d < 0.8 \\
+          1 & \text{otherwise}
+        \end{cases} \\
       & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
   \end{align*}
   \caption{Functions used in the Reward Calculation}
@@ -1099,7 +1104,7 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{poolR} = \poolReward{hk}{s}{n}{\overline{N}}{maxP} \\
+      & ~~~~~~~\var{poolR} = \poolReward{(\fun{d}~pp)}{s}{n}{\overline{N}}{maxP} \\
       & ~~~~~~~\var{mRewards} = \left\{
                                   \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
                                   ~\Big\vert~
