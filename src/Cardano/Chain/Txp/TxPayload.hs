@@ -12,6 +12,7 @@ module Cardano.Chain.Txp.TxPayload
   , ATxPayload(..)
   , mkTxPayload
   , recoverHashedBytes
+  , txpAnnotatedTxs
   , txpTxs
   , txpWitnesses
   , unTxPayload
@@ -22,7 +23,7 @@ import Cardano.Prelude
 
 import Cardano.Binary (Annotated(..), ByteSpan, FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxAux (ATxAux, TxAux, aTaWitness, taTx, taWitness)
+import Cardano.Chain.Txp.TxAux (ATxAux(..), TxAux, taTx, taWitness)
 import Cardano.Chain.Txp.TxWitness (TxWitness)
 
 
@@ -48,6 +49,9 @@ instance FromCBOR TxPayload where
 
 instance FromCBOR (ATxPayload ByteSpan) where
   fromCBOR = ATxPayload <$> fromCBOR
+
+txpAnnotatedTxs :: ATxPayload a -> [Annotated Tx a]
+txpAnnotatedTxs = fmap aTaTx . aUnTxPayload
 
 txpTxs :: ATxPayload a -> [Tx]
 txpTxs = fmap taTx . unTxPayload
