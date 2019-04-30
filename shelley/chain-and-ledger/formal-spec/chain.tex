@@ -240,7 +240,7 @@ of
 \end{itemize}
 
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
-$\fun{obftSchedule}$ for creating the OBFT leader schedule for each new epoch,
+$\fun{overlaySchedule}$ for creating the OBFT leader overlay schedule for each new epoch,
 as explained in section 3.9.2 of~\cite{delegation_design}.
 The function takes a seed, the decentralization parameter $d$, and the active slot coeffient $f$.
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
@@ -276,13 +276,13 @@ of which are active.
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{obftSchedule} \in \Seed \to \unitInterval \to \unitInterval \to
+    & \fun{overlaySchedule} \in \Seed \to \unitInterval \to \unitInterval \to
       (\Slot\mapsto\VKeyGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{dsched}\leteq\fun{obftSchedule}~\eta~\var{d}~\var{f} \\
+    \text{ given: }~\var{dsched}\leteq\fun{overlaySchedule}~\eta~\var{d}~\var{f} \\
     |\var{dsched}| = \floor{d\cdot\SlotsPerEpoch} \\
     |\{s\mapsto k\in\var{dsched}~\mid~k\neq\Nothing\}| = \floor{f\cdot d\cdot\SlotsPerEpoch} \\
   \end{align*}
@@ -360,7 +360,7 @@ in the pool distribution.
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
                     \right\} \\
-         \var{dsched'} & \fun{obftSchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+         \var{dsched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
         \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
     }
