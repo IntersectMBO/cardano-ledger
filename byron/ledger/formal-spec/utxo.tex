@@ -259,22 +259,21 @@ here is arbitrary.
     \begin{array}{r@{~\in~}lr}
       \fun{wits} & \Tx \to \powerset{(\VKey \times \Sig)}
       & \text{witnesses of a transaction}\\
-      \fun{hash_{spend}} & \Addr \mapsto \HashKey
-      & \text{hash of a spending key in an address}\\
+      \fun{hash_{vkey}} & \Addr \mapsto \HashKey
+      & \text{hash of a verifying key in an address}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system with witnesses}
   \label{fig:defs:utxow}
 \end{figure}
-
 \begin{figure}[htb]
   \begin{align*}
-    & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{address of an input}\\
+    & \addr{}{} \in \UTxO \to \TxIn \mapsto \Addr & \text{addresses of inputs}\\
     & \addr{utxo} = \{ i \mapsto a \mid i \mapsto (a, \wcard) \in \var{utxo} \} \\
     \nextdef
-    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{hash of an input address}\\
+    & \fun{addr_h} \in \UTxO \to \TxIn \mapsto \HashKey & \text{verifying key hashes}\\
     & \fun{addr_h}~utxo = \{ i \mapsto h \mid i \mapsto (a, \wcard) \in \var{utxo}
-      \wedge a \mapsto h \in \fun{hash_{spend}} \}
+      \wedge a \mapsto h \in \fun{hash_{vkey}} \}
   \end{align*}
   \caption{Functions used in rules witnesses}
   \label{fig:derived-defs:utxow}
