@@ -24,6 +24,7 @@ import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (BlockCount, StakeholderId, mkStakeholderId)
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
@@ -54,13 +55,13 @@ data Environment = Environment
 
 -- | State shared between the blockchain and the ledger
 data State = State
-  { isSchedulingState :: !Scheduling.State
-  , isActivationState :: !Activation.State
+  { schedulingState :: !Scheduling.State
+  , activationState :: !Activation.State
   } deriving (Eq, Show, Generic, NFData)
 
 
-delegationMap :: State -> Map StakeholderId StakeholderId
-delegationMap = Activation.asDelegationMap . isActivationState
+delegationMap :: State -> Delegation.Map
+delegationMap = Activation.delegationMap . activationState
 
 
 -- | The initial state maps each genesis key to itself and overrides this using
@@ -75,14 +76,14 @@ initialState env genesisDelegation = updateDelegation env is certificates
   Environment { allowedDelegators } = env
 
   is = State
-    { isSchedulingState = Scheduling.State
-      { Scheduling.ssScheduledDelegations = mempty
-      , Scheduling.ssKeyEpochDelegations  = mempty
+    { schedulingState = Scheduling.State
+      { Scheduling.scheduledDelegations = mempty
+      , Scheduling.keyEpochDelegations  = mempty
       }
-    , isActivationState = Activation.State
-      { Activation.asDelegationMap   = M.fromList
+    , activationState = Activation.State
+      { Activation.delegationMap   = Delegation.fromList
         $ zip (toList allowedDelegators) (toList allowedDelegators)
-      , Activation.asDelegationSlots = M.fromList
+      , Activation.delegationSlots = M.fromList
         $   (, FlatSlotId 0)
         <$> toList allowedDelegators
       }
@@ -103,9 +104,8 @@ initialState env genesisDelegation = updateDelegation env is certificates
 -- | Check whether a delegation is valid in the 'State'
 delegates :: State -> VerificationKey -> VerificationKey -> Bool
 delegates is delegator delegate =
-  case M.lookup (mkStakeholderId delegator) (delegationMap is) of
-    Nothing -> False
-    Just vk -> vk == mkStakeholderId delegate
+  (mkStakeholderId delegator, mkStakeholderId delegate)
+    `Delegation.pairMember` delegationMap is
 
 
 -- | Update the 'State' with a list of new 'Certificate's
@@ -118,32 +118,31 @@ updateDelegation
   -> [ACertificate ByteString]
   -> m State
 updateDelegation env is certificates = do
-
   -- Schedule new certificates
   Scheduling.State delegations keyEpochs <- foldM
     (Scheduling.scheduleCertificate schedulingEnv)
-    (isSchedulingState is)
+    (schedulingState is)
     certificates
 
   -- Activate certificates up to this slot
   let
     as = foldl
       Activation.activateDelegation
-      (isActivationState is)
+      (activationState is)
       (Seq.filter ((<= currentSlot) . Scheduling.sdSlot) delegations)
 
   -- Remove stale values from 'Scheduling.State'
   let
     ss' = Scheduling.State
-      { Scheduling.ssScheduledDelegations = Seq.filter
+      { Scheduling.scheduledDelegations = Seq.filter
         (inWindow . Scheduling.sdSlot)
         delegations
-      , Scheduling.ssKeyEpochDelegations  = Set.filter
+      , Scheduling.keyEpochDelegations  = Set.filter
         ((>= currentEpoch) . fst)
         keyEpochs
       }
 
-  pure $ State {isSchedulingState = ss', isActivationState = as}
+  pure $ State {schedulingState = ss', activationState = as}
  where
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env

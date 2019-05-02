@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass   #-}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE DerivingVia      #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns   #-}
@@ -22,6 +24,7 @@ import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.Vote
@@ -41,18 +44,20 @@ data Environment = Environment
   { veCurrentSlot                   :: FlatSlotId
   , veConfirmationThreshold         :: Int
   , veVotingRegistrationEnvironment :: RegistrationEnvironment
-  }
+  } deriving (Eq, Show, Generic)
+    deriving anyclass NFData
 
 -- | Environment required to validate and register a vote
 data RegistrationEnvironment = RegistrationEnvironment
- { vreRegisteredUpdateProposal :: Set UpId
- , vreDelegationMap            :: Map StakeholderId StakeholderId
- }
+ { vreRegisteredUpdateProposal :: !(Set UpId)
+ , vreDelegationMap            :: !Delegation.Map
+ } deriving (Eq, Show, Generic)
+   deriving anyclass NFData
 
 -- | State keeps track of registered votes and confirmed proposals
 data State = State
-  { vsVotes              :: RegisteredVotes
-  , vsConfirmedProposals :: Map UpId FlatSlotId
+  { vsVotes              :: !RegisteredVotes
+  , vsConfirmedProposals :: !(Map UpId FlatSlotId)
   }
 
 type RegisteredVotes = Map UpId (Set StakeholderId)
@@ -120,23 +125,21 @@ registerVote
   -> AVote ByteString
   -> m RegisteredVotes
 registerVote pm vre votes vote = do
-
   -- Check that the proposal being voted on is registered
   (upId `Set.member` registeredProposals)
     `orThrowError` VotingProposalNotRegistered upId
 
-  -- Retrieve the set of genesis keys delegating to the voter
-  let delegators = Set.fromList . M.keys $ M.filter (== voter) delegationMap
-
   -- Check that the set of genesis keys is not empty
-  not (null delegators) `orThrowError` VotingVoterNotDelegate voter
+  delegator <- case Delegation.lookupR voter delegationMap of
+    Nothing -> throwError (VotingVoterNotDelegate voter)
+    Just d  -> pure d
 
   -- Check that the signature is valid
   verifySignatureDecoded pm SignUSVote voterVK signedBytes signature
     `orThrowError` VotingInvalidSignature
 
   -- Add the delegators to the set of votes for this proposal
-  pure $ M.insertWith Set.union upId delegators votes
+  pure $ M.insertWith Set.union upId (Set.singleton delegator) votes
  where
   RegistrationEnvironment registeredProposals delegationMap = vre
 

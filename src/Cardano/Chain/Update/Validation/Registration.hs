@@ -22,6 +22,7 @@ import qualified Data.Map.Strict as M
 
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import qualified Cardano.Chain.Update.Proposal as Proposal
@@ -63,7 +64,7 @@ data Environment = Environment
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
-  , delegationMap             :: !(Map StakeholderId StakeholderId)
+  , delegationMap             :: !Delegation.Map
   }
 
 -- | State keeps track of registered protocol and software update
@@ -112,7 +113,7 @@ registerProposal
   -> m State
 registerProposal env rs proposal = do
   -- Check that the proposer is delegated to by a genesis key
-  not (null $ M.filter (== proposerId) delegationMap)
+  Delegation.memberR proposerId delegationMap
     `orThrowError` InvalidProposer proposerId
 
   -- Verify the proposal signature

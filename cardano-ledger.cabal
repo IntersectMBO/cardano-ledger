@@ -64,6 +64,7 @@ library
                        Cardano.Chain.Common.TxSizeLinear
 
                        Cardano.Chain.Delegation.Certificate
+                       Cardano.Chain.Delegation.Map
                        Cardano.Chain.Delegation.Payload
 
                        Cardano.Chain.Genesis.AvvmBalances
@@ -116,6 +117,7 @@ library
                      , aeson
                      , base58-bytestring
                      , base64-bytestring-type
+                     , bimap
                      , binary
                      , bytestring
                      , canonical-json
