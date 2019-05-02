@@ -40,7 +40,7 @@ import Cardano.Chain.Epoch.File
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   (EpochIndex, SlotId, slotNumberEpoch, unflattenSlotId)
-import Cardano.Chain.Txp (UTxO)
+import Cardano.Chain.UTxO (UTxO)
 
 
 data EpochError

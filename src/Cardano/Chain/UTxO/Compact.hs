@@ -16,7 +16,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module Cardano.Chain.Txp.Compact
+module Cardano.Chain.UTxO.Compact
   ( CompactTxIn
   , toCompactTxIn
   , fromCompactTxIn
@@ -43,7 +43,7 @@ import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 import Cardano.Chain.Common.Compact
   (CompactAddress, fromCompactAddress, toCompactAddress)
 import Cardano.Chain.Common.Lovelace (Lovelace)
-import Cardano.Chain.Txp.Tx (TxId, TxIn(..), TxOut(..))
+import Cardano.Chain.UTxO.Tx (TxId, TxIn(..), TxOut(..))
 
 --------------------------------------------------------------------------------
 -- Compact TxIn

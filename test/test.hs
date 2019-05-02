@@ -26,10 +26,10 @@ import qualified Test.Cardano.Chain.Slotting.CBOR
 import qualified Test.Cardano.Chain.Slotting.Properties
 import qualified Test.Cardano.Chain.Slotting.Json
 import qualified Test.Cardano.Chain.Ssc.CBOR
-import qualified Test.Cardano.Chain.Txp.CBOR
-import qualified Test.Cardano.Chain.Txp.Compact
-import qualified Test.Cardano.Chain.Txp.Json
-import qualified Test.Cardano.Chain.Txp.Model
+import qualified Test.Cardano.Chain.UTxO.CBOR
+import qualified Test.Cardano.Chain.UTxO.Compact
+import qualified Test.Cardano.Chain.UTxO.Json
+import qualified Test.Cardano.Chain.UTxO.Model
 import qualified Test.Cardano.Chain.Update.CBOR
 import qualified Test.Cardano.Chain.Update.Json
 import qualified Test.Cardano.Chain.Update.Properties
@@ -57,10 +57,10 @@ main = do
     , Test.Cardano.Chain.Slotting.Properties.tests scenario
     , Test.Cardano.Chain.Slotting.Json.tests scenario
     , Test.Cardano.Chain.Ssc.CBOR.tests
-    , Test.Cardano.Chain.Txp.CBOR.tests scenario
-    , Test.Cardano.Chain.Txp.Compact.tests scenario
-    , Test.Cardano.Chain.Txp.Json.tests scenario
-    , Test.Cardano.Chain.Txp.Model.tests
+    , Test.Cardano.Chain.UTxO.CBOR.tests scenario
+    , Test.Cardano.Chain.UTxO.Compact.tests scenario
+    , Test.Cardano.Chain.UTxO.Json.tests scenario
+    , Test.Cardano.Chain.UTxO.Model.tests
     , Test.Cardano.Chain.Update.CBOR.tests scenario
     , Test.Cardano.Chain.Update.Json.tests scenario
     , Test.Cardano.Chain.Update.Properties.tests scenario

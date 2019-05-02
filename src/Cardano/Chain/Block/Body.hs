@@ -21,9 +21,9 @@ import Cardano.Binary
   (ByteSpan, FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
-import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
-import Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 
 -- | 'Body' consists of payloads of all block components
@@ -36,7 +36,7 @@ body tx ssc dlg upd = ABody tx ssc dlg upd
 -- | 'Body' consists of payloads of all block components
 data ABody a = ABody
   { bodyTxPayload     :: !(ATxPayload a)
-  -- ^ Txp payload
+  -- ^ UTxO payload
   , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
   , bodyDlgPayload    :: !(Delegation.APayload a)

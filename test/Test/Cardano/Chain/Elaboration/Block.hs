@@ -34,7 +34,7 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Ssc as Ssc
-import qualified Cardano.Chain.Txp as Txp
+import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Slotting as Slotting
 
@@ -119,7 +119,7 @@ elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
   cDCert = elaborateDCert pm dCert
 
   bb0    = Concrete.ABody
-    { Concrete.bodyTxPayload     = Txp.ATxPayload []
+    { Concrete.bodyTxPayload     = UTxO.ATxPayload []
     , Concrete.bodySscPayload    = Ssc.SscPayload
     , Concrete.bodyDlgPayload    = Delegation.UnsafeAPayload dcerts ()
     , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()

@@ -27,9 +27,9 @@ import Formatting hiding (bytes)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Concrete
-import qualified Cardano.Chain.Txp as Concrete
-import qualified Cardano.Chain.Txp.UTxO as Concrete.UTxO
-import qualified Cardano.Chain.Txp.Validation as Concrete.UTxO
+import qualified Cardano.Chain.UTxO as Concrete
+import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
+import qualified Cardano.Chain.UTxO.Validation as Concrete.UTxO
 import qualified Cardano.Chain.Update as Concrete
 import Cardano.Crypto
 import qualified Ledger.Core as Abstract

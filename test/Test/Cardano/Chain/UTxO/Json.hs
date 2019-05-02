@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Test.Cardano.Chain.Txp.Json
+module Test.Cardano.Chain.UTxO.Json
   ( tests
   )
 where
@@ -12,7 +12,7 @@ import qualified Data.Set as S
 import Hedgehog (Group, Property)
 import qualified Hedgehog as H
 
-import Cardano.Chain.Txp (TxpConfiguration(..))
+import Cardano.Chain.UTxO (UTxOConfiguration(..))
 
 import Test.Cardano.Chain.Common.Example
   ( exampleAddress
@@ -21,7 +21,7 @@ import Test.Cardano.Chain.Common.Example
   , exampleAddress3
   , exampleAddress4
   )
-import Test.Cardano.Chain.Txp.Gen (genTxpConfiguration)
+import Test.Cardano.Chain.UTxO.Gen (genUTxOConfiguration)
 import Test.Cardano.Prelude
   ( discoverGolden
   , discoverRoundTripArg
@@ -31,43 +31,43 @@ import Test.Cardano.Prelude
 import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 -------------------------------------------------------------------------------
--- TxpConfiguration
+-- UTxOConfiguration
 -------------------------------------------------------------------------------
 
-goldenTxpConfiguration0 :: Property
-goldenTxpConfiguration0 = goldenTestJSONPretty
-  exampleTxpConfiguration0
-  "test/golden/json/txp/TxpConfiguration0"
+goldenUTxOConfiguration0 :: Property
+goldenUTxOConfiguration0 = goldenTestJSONPretty
+  exampleUTxOConfiguration0
+  "test/golden/json/utxo/UTxOConfiguration0"
 
-goldenTxpConfiguration1 :: Property
-goldenTxpConfiguration1 =
-    goldenTestJSONPretty exampleTxpConfiguration1
-        "test/golden/json/txp/TxpConfiguration1"
+goldenUTxOConfiguration1 :: Property
+goldenUTxOConfiguration1 =
+    goldenTestJSONPretty exampleUTxOConfiguration1
+        "test/golden/json/utxo/UTxOConfiguration1"
 
-goldenTxpConfiguration2 :: Property
-goldenTxpConfiguration2 =
-    goldenTestJSONPretty exampleTxpConfiguration2
-        "test/golden/json/txp/TxpConfiguration2"
+goldenUTxOConfiguration2 :: Property
+goldenUTxOConfiguration2 =
+    goldenTestJSONPretty exampleUTxOConfiguration2
+        "test/golden/json/utxo/UTxOConfiguration2"
 
-ts_roundTripTxpConfiguration :: TSProperty
-ts_roundTripTxpConfiguration = eachOfTS 200 genTxpConfiguration roundTripsAesonShow
+ts_roundTripUTxOConfiguration :: TSProperty
+ts_roundTripUTxOConfiguration = eachOfTS 200 genUTxOConfiguration roundTripsAesonShow
 
 
 -------------------------------------------------------------------------------
 -- Main test export
 -------------------------------------------------------------------------------
 
-exampleTxpConfiguration0 :: TxpConfiguration
-exampleTxpConfiguration0 = TxpConfiguration 99 talsa
+exampleUTxOConfiguration0 :: UTxOConfiguration
+exampleUTxOConfiguration0 = UTxOConfiguration 99 talsa
   where talsa = S.fromList [exampleAddress]
 
-exampleTxpConfiguration1 :: TxpConfiguration
-exampleTxpConfiguration1 = TxpConfiguration 9 talsa
+exampleUTxOConfiguration1 :: UTxOConfiguration
+exampleUTxOConfiguration1 = UTxOConfiguration 9 talsa
   where
     talsa = S.fromList [exampleAddress1, exampleAddress2, exampleAddress3]
 
-exampleTxpConfiguration2 :: TxpConfiguration
-exampleTxpConfiguration2 = TxpConfiguration 700 talsa
+exampleUTxOConfiguration2 :: UTxOConfiguration
+exampleUTxOConfiguration2 = UTxOConfiguration 700 talsa
   where
     talsa = S.fromList [exampleAddress4, exampleAddress]
 

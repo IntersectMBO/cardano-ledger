@@ -1,4 +1,4 @@
-module Cardano.Chain.Txp.GenesisUTxO
+module Cardano.Chain.UTxO.GenesisUTxO
   ( genesisUtxo
   )
 where
@@ -11,8 +11,8 @@ import Cardano.Chain.Common (Address, Lovelace, makeRedeemAddress)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic, makeNetworkMagic)
 import Cardano.Chain.Genesis (unGenesisAvvmBalances, unGenesisNonAvvmBalances)
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Txp.UTxO (UTxO)
-import qualified Cardano.Chain.Txp.UTxO as UTxO
+import Cardano.Chain.UTxO.UTxO (UTxO)
+import qualified Cardano.Chain.UTxO.UTxO as UTxO
 
 
 -- | Create initial 'UTxO' from balances defined in the genesis config

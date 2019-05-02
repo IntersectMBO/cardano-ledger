@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 
-module Cardano.Chain.Txp.UTxO
+module Cardano.Chain.UTxO.UTxO
   ( UTxO(..)
   , UTxOError
   , empty
@@ -31,8 +31,8 @@ import qualified Data.Set as S
 
 import Cardano.Chain.Common
   (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
-import Cardano.Chain.Txp.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
-import Cardano.Chain.Txp.Compact
+import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
+import Cardano.Chain.UTxO.Compact
   ( CompactTxIn
   , CompactTxOut
   , fromCompactTxOut

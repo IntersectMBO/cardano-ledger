@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 
-module Test.Cardano.Chain.Txp.CBOR
+module Test.Cardano.Chain.UTxO.CBOR
   ( tests
   )
 where
@@ -19,14 +19,14 @@ import qualified Hedgehog as H
 
 import Cardano.Binary (ToCBOR, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
-import Cardano.Chain.Txp
+import Cardano.Chain.UTxO
   (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
 import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
-import Test.Cardano.Chain.Txp.Example
+import Test.Cardano.Chain.UTxO.Example
   ( exampleHashTx
   , exampleRedeemSignature
   , exampleTxId
@@ -41,7 +41,7 @@ import Test.Cardano.Chain.Txp.Example
   , exampleTxSigData
   , exampleTxWitness
   )
-import Test.Cardano.Chain.Txp.Gen
+import Test.Cardano.Chain.UTxO.Gen
   ( genTx
   , genTxAttributes
   , genTxAux
@@ -69,7 +69,7 @@ import Test.Options (TestScenario, TSProperty, eachOfTS)
 --------------------------------------------------------------------------------
 
 goldenTx :: Property
-goldenTx = goldenTestCBOR tx "test/golden/cbor/txp/Tx"
+goldenTx = goldenTestCBOR tx "test/golden/cbor/utxo/Tx"
   where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
 ts_roundTripTx :: TSProperty
@@ -81,7 +81,7 @@ ts_roundTripTx = eachOfTS 50 genTx roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenTxAttributes :: Property
-goldenTxAttributes = goldenTestCBOR txA "test/golden/cbor/txp/TxAttributes"
+goldenTxAttributes = goldenTestCBOR txA "test/golden/cbor/utxo/TxAttributes"
   where txA = mkAttributes ()
 
 ts_roundTripTxAttributes :: TSProperty
@@ -101,7 +101,7 @@ ts_roundTripTxAux = eachOfTS 100 (feedPM genTxAux) roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenHashTx :: Property
-goldenHashTx = goldenTestCBOR exampleHashTx "test/golden/cbor/txp/HashTx"
+goldenHashTx = goldenTestCBOR exampleHashTx "test/golden/cbor/utxo/HashTx"
 
 ts_roundTripHashTx :: TSProperty
 ts_roundTripHashTx = eachOfTS 50 genTxHash roundTripsCBORBuildable
@@ -113,7 +113,7 @@ ts_roundTripHashTx = eachOfTS 50 genTxHash roundTripsCBORBuildable
 
 goldenTxInUtxo :: Property
 goldenTxInUtxo =
-  goldenTestCBOR exampleTxInUtxo "test/golden/cbor/txp/TxIn_Utxo"
+  goldenTestCBOR exampleTxInUtxo "test/golden/cbor/utxo/TxIn_Utxo"
 
 ts_roundTripTxIn :: TSProperty
 ts_roundTripTxIn = eachOfTS 100 genTxIn roundTripsCBORBuildable
@@ -124,7 +124,7 @@ ts_roundTripTxIn = eachOfTS 100 genTxIn roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenTxId :: Property
-goldenTxId = goldenTestCBOR exampleTxId "test/golden/cbor/txp/TxId"
+goldenTxId = goldenTestCBOR exampleTxId "test/golden/cbor/utxo/TxId"
 
 ts_roundTripTxId :: TSProperty
 ts_roundTripTxId = eachOfTS 50 genTxId roundTripsCBORBuildable
@@ -135,7 +135,7 @@ ts_roundTripTxId = eachOfTS 50 genTxId roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenTxInList :: Property
-goldenTxInList = goldenTestCBOR exampleTxInList "test/golden/cbor/txp/TxInList"
+goldenTxInList = goldenTestCBOR exampleTxInList "test/golden/cbor/utxo/TxInList"
 
 ts_roundTripTxInList :: TSProperty
 ts_roundTripTxInList = eachOfTS 50 genTxInList roundTripsCBORShow
@@ -148,13 +148,13 @@ ts_roundTripTxInList = eachOfTS 50 genTxInList roundTripsCBORShow
 goldenPkWitness :: Property
 goldenPkWitness = goldenTestCBOR
   pkWitness
-  "test/golden/cbor/txp/TxInWitness_PkWitness"
+  "test/golden/cbor/utxo/TxInWitness_PkWitness"
   where pkWitness = PkWitness examplePublicKey exampleTxSig
 
 goldenRedeemWitness :: Property
 goldenRedeemWitness = goldenTestCBOR
   redeemWitness
-  "test/golden/cbor/txp/TxInWitness_RedeemWitness"
+  "test/golden/cbor/utxo/TxInWitness_RedeemWitness"
  where
   redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
 
@@ -169,7 +169,7 @@ ts_roundTripTxInWitness =
 
 goldenTxOutList :: Property
 goldenTxOutList =
-  goldenTestCBOR exampleTxOutList "test/golden/cbor/txp/TxOutList"
+  goldenTestCBOR exampleTxOutList "test/golden/cbor/utxo/TxOutList"
 
 ts_roundTripTxOutList :: TSProperty
 ts_roundTripTxOutList = eachOfTS 50 genTxOutList roundTripsCBORShow
@@ -180,10 +180,10 @@ ts_roundTripTxOutList = eachOfTS 50 genTxOutList roundTripsCBORShow
 --------------------------------------------------------------------------------
 
 goldenTxOut :: Property
-goldenTxOut = goldenTestCBOR exampleTxOut "test/golden/cbor/txp/TxOut"
+goldenTxOut = goldenTestCBOR exampleTxOut "test/golden/cbor/utxo/TxOut"
 
 goldenTxOut1 :: Property
-goldenTxOut1 = goldenTestCBOR exampleTxOut1 "test/golden/cbor/txp/TxOut1"
+goldenTxOut1 = goldenTestCBOR exampleTxOut1 "test/golden/cbor/utxo/TxOut1"
 
 ts_roundTripTxOut :: TSProperty
 ts_roundTripTxOut = eachOfTS 50 genTxOut roundTripsCBORBuildable
@@ -195,7 +195,7 @@ ts_roundTripTxOut = eachOfTS 50 genTxOut roundTripsCBORBuildable
 
 goldenTxPayload1 :: Property
 goldenTxPayload1 =
-  goldenTestCBOR exampleTxPayload1 "test/golden/cbor/txp/TxPayload1"
+  goldenTestCBOR exampleTxPayload1 "test/golden/cbor/utxo/TxPayload1"
 
 ts_roundTripTxPayload :: TSProperty
 ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORShow
@@ -206,7 +206,7 @@ ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORShow
 --------------------------------------------------------------------------------
 
 goldenTxProof :: Property
-goldenTxProof = goldenTestCBOR exampleTxProof "test/golden/cbor/txp/TxProof"
+goldenTxProof = goldenTestCBOR exampleTxProof "test/golden/cbor/utxo/TxProof"
 
 ts_roundTripTxProof :: TSProperty
 ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORBuildable
@@ -217,7 +217,7 @@ ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenTxSig :: Property
-goldenTxSig = goldenTestCBOR txSigGold "test/golden/cbor/txp/TxSig"
+goldenTxSig = goldenTestCBOR txSigGold "test/golden/cbor/utxo/TxSig"
  where
   txSigGold = sign
     (ProtocolMagicId 0)
@@ -235,7 +235,7 @@ ts_roundTripTxSig = eachOfTS 50 (feedPM genTxSig) roundTripsCBORBuildable
 
 goldenTxSigData :: Property
 goldenTxSigData =
-  goldenTestCBOR exampleTxSigData "test/golden/cbor/txp/TxSigData"
+  goldenTestCBOR exampleTxSigData "test/golden/cbor/utxo/TxSigData"
 
 ts_roundTripTxSigData :: TSProperty
 ts_roundTripTxSigData = eachOfTS 50 genTxSigData roundTripsCBORShow
@@ -247,7 +247,7 @@ ts_roundTripTxSigData = eachOfTS 50 genTxSigData roundTripsCBORShow
 
 goldenTxWitness :: Property
 goldenTxWitness =
-  goldenTestCBOR exampleTxWitness "test/golden/cbor/txp/TxWitness"
+  goldenTestCBOR exampleTxWitness "test/golden/cbor/utxo/TxWitness"
 
 ts_roundTripTxWitness :: TSProperty
 ts_roundTripTxWitness = eachOfTS 20 (feedPM genTxWitness) roundTripsCBORShow

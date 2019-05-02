@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Test.Cardano.Chain.Txp.Compact
+module Test.Cardano.Chain.UTxO.Compact
   ( tests
   )
 where
@@ -23,7 +23,7 @@ import Hedgehog
   )
 import qualified Hedgehog as H
 
-import Cardano.Chain.Txp
+import Cardano.Chain.UTxO
   ( fromCompactTxId
   , toCompactTxId
   , fromCompactTxIn
@@ -32,7 +32,7 @@ import Cardano.Chain.Txp
   , toCompactTxOut
   )
 
-import Test.Cardano.Chain.Txp.Gen
+import Test.Cardano.Chain.UTxO.Gen
   ( genTxId
   , genTxIn
   , genTxOut

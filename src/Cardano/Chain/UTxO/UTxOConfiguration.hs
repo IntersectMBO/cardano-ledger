@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Cardano.Chain.Txp.TxpConfiguration
-  ( TxpConfiguration(..)
+module Cardano.Chain.UTxO.UTxOConfiguration
+  ( UTxOConfiguration(..)
   )
 where
 
@@ -13,7 +13,7 @@ import Data.Aeson.Options (defaultOptions)
 import Cardano.Chain.Common.Address (Address)
 
 -- | Delegation configruation part.
-data TxpConfiguration = TxpConfiguration
+data UTxOConfiguration = UTxOConfiguration
   { -- | Limit on the number of transactions that can be stored in
     -- the mem pool.
     ccMemPoolLimitTx      :: !Int
@@ -23,8 +23,8 @@ data TxpConfiguration = TxpConfiguration
   , tcAssetLockedSrcAddrs :: !(Set Address)
   } deriving (Eq,Show,Generic)
 
-instance ToJSON TxpConfiguration where
+instance ToJSON UTxOConfiguration where
   toJSON = genericToJSON defaultOptions
 
-instance FromJSON TxpConfiguration where
+instance FromJSON UTxOConfiguration where
   parseJSON = genericParseJSON defaultOptions

@@ -33,9 +33,9 @@ library
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
                        Cardano.Chain.Ssc
-                       Cardano.Chain.Txp
-                       Cardano.Chain.Txp.UTxO
-                       Cardano.Chain.Txp.Validation
+                       Cardano.Chain.UTxO
+                       Cardano.Chain.UTxO.UTxO
+                       Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
 
   other-modules:
@@ -84,14 +84,14 @@ library
                        Cardano.Chain.Slotting.SlotCount
                        Cardano.Chain.Slotting.SlotId
 
-                       Cardano.Chain.Txp.Compact
-                       Cardano.Chain.Txp.GenesisUTxO
-                       Cardano.Chain.Txp.Tx
-                       Cardano.Chain.Txp.TxAux
-                       Cardano.Chain.Txp.TxPayload
-                       Cardano.Chain.Txp.TxpConfiguration
-                       Cardano.Chain.Txp.TxProof
-                       Cardano.Chain.Txp.TxWitness
+                       Cardano.Chain.UTxO.Compact
+                       Cardano.Chain.UTxO.GenesisUTxO
+                       Cardano.Chain.UTxO.Tx
+                       Cardano.Chain.UTxO.TxAux
+                       Cardano.Chain.UTxO.TxPayload
+                       Cardano.Chain.UTxO.UTxOConfiguration
+                       Cardano.Chain.UTxO.TxProof
+                       Cardano.Chain.UTxO.TxWitness
 
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.Data
@@ -202,12 +202,12 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Slotting.Json
                        Test.Cardano.Chain.Slotting.Properties
 
-                       Test.Cardano.Chain.Txp.CBOR
-                       Test.Cardano.Chain.Txp.Compact
-                       Test.Cardano.Chain.Txp.Example
-                       Test.Cardano.Chain.Txp.Gen
-                       Test.Cardano.Chain.Txp.Json
-                       Test.Cardano.Chain.Txp.Model
+                       Test.Cardano.Chain.UTxO.CBOR
+                       Test.Cardano.Chain.UTxO.Compact
+                       Test.Cardano.Chain.UTxO.Example
+                       Test.Cardano.Chain.UTxO.Gen
+                       Test.Cardano.Chain.UTxO.Json
+                       Test.Cardano.Chain.UTxO.Model
 
                        Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example

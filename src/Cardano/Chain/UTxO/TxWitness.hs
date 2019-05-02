@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module Cardano.Chain.Txp.TxWitness
+module Cardano.Chain.UTxO.TxWitness
   ( TxWitness
   , TxInWitness(..)
   , TxSigData(..)
@@ -40,7 +40,7 @@ import Cardano.Binary
   , szCases
   )
 import Cardano.Chain.Common (addressHash)
-import Cardano.Chain.Txp.Tx (Tx)
+import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Crypto
   ( Hash
   , PublicKey

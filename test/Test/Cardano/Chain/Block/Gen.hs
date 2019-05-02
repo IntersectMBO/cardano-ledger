@@ -45,7 +45,7 @@ import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
   (genEpochIndex, genEpochSlots, genFlatSlotId, genSlotId)
-import Test.Cardano.Chain.Txp.Gen (genTxPayload, genTxProof)
+import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash

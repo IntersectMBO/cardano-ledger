@@ -98,8 +98,8 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
   (EpochIndex(..), FlatSlotId(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
-import Cardano.Chain.Txp (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
-import qualified Cardano.Chain.Txp.Validation as UTxO
+import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
+import qualified Cardano.Chain.UTxO.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
 import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
@@ -384,7 +384,7 @@ updateBody env bs b = do
       `wrapError` ChainValidationDelegationSchedulingError
 
   -- Validate the transaction payload proof
-  proofTxp (blockProof b)
+  proofUTxO (blockProof b)
     == recoverTxProof (blockTxPayload b)
     `orThrowError` ChainValidationUTxOProofError
 
