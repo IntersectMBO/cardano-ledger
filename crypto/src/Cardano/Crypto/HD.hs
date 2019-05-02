@@ -42,7 +42,8 @@ import Data.ByteArray as BA (convert)
 import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import Data.ByteString.Char8 as B
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), decodeFull', serialize')
+import Cardano.Binary
+  (FromCBOR(..), ToCBOR(..), decodeBytesCanonical, decodeFull', serialize')
 import Cardano.Crypto.Signing (PublicKey(..))
 import Cardano.Crypto.Signing.Safe
   (EncryptedSecretKey(..), PassPhrase, checkPassMatches)
@@ -64,8 +65,11 @@ data HDPassphrase =
 newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
   } deriving (Eq, Ord, Show, Generic)
-    deriving newtype (FromCBOR, ToCBOR, HeapWords)
+    deriving newtype (ToCBOR, HeapWords)
     deriving anyclass NFData
+
+instance FromCBOR HDAddressPayload where
+  fromCBOR = HDAddressPayload <$> decodeBytesCanonical
 
 instance FromJSON HDAddressPayload where
   parseJSON v = HDAddressPayload . getByteString64 <$> parseJSON v

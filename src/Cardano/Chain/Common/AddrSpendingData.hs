@@ -22,8 +22,10 @@ import Cardano.Binary
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , decodeListLenCanonical
+  , decodeWord8Canonical
   , encodeListLen
-  , enforceSize
+  , matchSize
   , szCases
   )
 import Cardano.Crypto.Signing (PublicKey, RedeemPublicKey)
@@ -60,8 +62,9 @@ instance ToCBOR AddrSpendingData where
 
 instance FromCBOR AddrSpendingData where
   fromCBOR = do
-    enforceSize "AddrSpendingData" 2
-    fromCBOR @Word8 >>= \case
+    len <- decodeListLenCanonical
+    matchSize "AddrSpendingData" 2 len
+    decodeWord8Canonical >>= \case
       0   -> PubKeyASD <$> fromCBOR
       2   -> RedeemASD <$> fromCBOR
       tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
@@ -84,7 +87,7 @@ instance ToCBOR AddrType where
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance FromCBOR AddrType where
-  fromCBOR = fromCBOR @Word8 >>= \case
+  fromCBOR = decodeWord8Canonical >>= \case
     0   -> pure ATPubKey
     2   -> pure ATRedeem
     tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag

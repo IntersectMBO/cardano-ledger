@@ -84,8 +84,10 @@ import Cardano.Binary
   , biSize
   , decodeCrcProtected
   , decodeFull'
+  , decodeListLenCanonical
   , encodeCrcProtected
   , encodedCrcProtectedSizeExpr
+  , matchSize
   , serialize'
   )
 import Cardano.Chain.Common.AddrAttributes (AddrAttributes(..))
@@ -123,7 +125,16 @@ import Cardano.Crypto.Signing
 newtype Address' = Address'
   { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
   } deriving (Eq, Show, Generic)
-    deriving newtype (FromCBOR, ToCBOR)
+    deriving newtype ToCBOR
+
+-- We need to use canonical encodings for @Address'@ so that all implementations
+-- agree on the `AddressHash`. The components of the @Address'@ also have
+-- canonical encodings enforced.
+instance FromCBOR Address' where
+  fromCBOR = do
+    len <- decodeListLenCanonical
+    matchSize "Address'" 3 len
+    fmap Address' $ (,,) <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address

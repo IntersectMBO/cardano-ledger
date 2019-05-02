@@ -31,7 +31,8 @@ import Formatting.Buildable (Buildable(..))
 import Text.JSON.Canonical (JSValue(..))
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
+import Cardano.Binary
+  (Decoder, Encoding, FromCBOR(..), ToCBOR(..), decodeBytesCanonical)
 
 
 -- | Wrapper around 'CC.XPub'.
@@ -61,8 +62,10 @@ instance FromCBOR PublicKey where
 toCBORXPub :: CC.XPub -> Encoding
 toCBORXPub a = toCBOR $ CC.unXPub a
 
+-- | We enforce canonical CBOR encodings for `PublicKey`s, because we serialize
+--   them before hashing to get `HashKey`s.
 fromCBORXPub :: Decoder s CC.XPub
-fromCBORXPub = toCborError . CC.xpub =<< fromCBOR
+fromCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
 
 instance Buildable PublicKey where
   build = bprint ("pub:" . shortPublicKeyHexF)

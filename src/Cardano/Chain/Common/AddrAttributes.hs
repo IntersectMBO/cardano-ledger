@@ -19,6 +19,8 @@ import Cardano.Binary
   , FromCBOR(..)
   , ToCBOR(..)
   , decodeFull
+  , decodeFullDecoder
+  , decodeWord32Canonical
   , serialize
   )
 import Cardano.Chain.Common.Attributes
@@ -93,8 +95,11 @@ instance ToCBOR (Attributes AddrAttributes) where
 instance FromCBOR (Attributes AddrAttributes) where
   fromCBOR = fromCBORAttributes initValue go
    where
-    initValue = AddrAttributes { aaPkDerivationPath = Nothing
-                               , aaNetworkMagic = NetworkMainOrStage }
+    initValue = AddrAttributes
+      { aaPkDerivationPath = Nothing
+      , aaNetworkMagic     = NetworkMainOrStage
+      }
+
     go
       :: Word8
       -> LByteString
@@ -103,6 +108,8 @@ instance FromCBOR (Attributes AddrAttributes) where
     go n v acc = case n of
       1 -> (\deriv -> Just $ acc { aaPkDerivationPath = Just deriv })
         <$> toCborError (decodeFull v)
-      2 -> (\deriv -> Just $ acc {aaNetworkMagic = NetworkTestnet deriv })
-        <$> toCborError (decodeFull v)
+      2 ->
+        (\deriv -> Just $ acc { aaNetworkMagic = NetworkTestnet deriv })
+          <$> toCborError
+                (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
       _ -> pure Nothing
