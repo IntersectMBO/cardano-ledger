@@ -236,11 +236,11 @@ of
 \item The old epoch state.
 \item An optional rewards update.
 \item The stake pool distribution of the epoch.
-\item The OBFT leader schedule.
+\item The OBFT overlay schedule.
 \end{itemize}
 
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
-$\fun{overlaySchedule}$ for creating the OBFT leader overlay schedule for each new epoch,
+$\fun{overlaySchedule}$ for creating the OBFT overlay schedule for each new epoch,
 as explained in section 3.9.2 of~\cite{delegation_design}.
 The function takes a seed, the decentralization parameter $d$, and the active slot coeffient $f$.
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
@@ -269,7 +269,7 @@ of which are active.
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dsched} & \Slot\mapsto\VKeyGen^? & \text{OBFT schedule} \\
+        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
       \end{array}
     \right)
   \end{equation*}
@@ -282,9 +282,9 @@ of which are active.
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{dsched}\leteq\fun{overlaySchedule}~\eta~\var{d}~\var{f} \\
-    |\var{dsched}| = \floor{d\cdot\SlotsPerEpoch} \\
-    |\{s\mapsto k\in\var{dsched}~\mid~k\neq\Nothing\}| = \floor{f\cdot d\cdot\SlotsPerEpoch} \\
+    \text{ given: }~\var{osched}\leteq\fun{overlaySchedule}~\eta~\var{d}~\var{f} \\
+    |\var{osched}| = \floor{d\cdot\SlotsPerEpoch} \\
+    |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| = \floor{f\cdot d\cdot\SlotsPerEpoch} \\
   \end{align*}
   %
   \emph{New Epoch Transitions}
@@ -314,7 +314,7 @@ In the second case, the new epoch state is updated as follows:
   via the call to $\mathsf{EPOCH}$.
 \item The rewards update is set to \Nothing.
 \item The pool distribution is updated according to the changes in the stake pools.
-\item A new OBFT schedule is created.
+\item A new OBFT overlay schedule is created.
 \end{itemize}
 
 The new pool distribution \var{pd}' is calculated from the delegation map and
@@ -360,7 +360,7 @@ in the pool distribution.
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
                     \right\} \\
-         \var{dsched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+         \var{osched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
         \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
     }
@@ -379,7 +379,7 @@ in the pool distribution.
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
-            \var{dsched} \\
+            \var{osched} \\
       \end{array}\right)}
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
@@ -389,7 +389,7 @@ in the pool distribution.
             \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
-            \varUpdate{\var{dsched}'} \\
+            \varUpdate{\var{osched}'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -906,9 +906,9 @@ The transition system introduced in this section, $\type{DSLIDE}$, covers this m
 The environments for this transition is:
 \begin{itemize}
   \item The environment for the $\type{VRF}$ transition $\var{ve}$.
-  \item A mapping $\var{dsched}$ of slots to an optional genesis key.
+  \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
-    the slots in $\var{dsched}$ are the ``OBFT slots''.
+    the slots in $\var{osched}$ are the ``OBFT slots''.
     A slot in this map with a value of $\Nothing$ is a non-active slots,
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
@@ -921,7 +921,7 @@ The environments for this transition is:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{ve} & \VRFEnv & \text{VRF environment} \\
-        \var{dsched} & \Slot\mapsto\VKeyGen^? & \text{OBFT schedule} \\
+        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
       \end{array}
     \right)
   \end{equation*}
@@ -939,7 +939,7 @@ The environments for this transition is:
   \begin{equation}\label{eq:active-pbft}
     \inference[Active-OBFT]
     {
-      \{\bslot \bhbody bh \mapsto \var{gkey}\} \in \var{dsched}
+      \{\bslot \bhbody bh \mapsto \var{gkey}\} \in \var{osched}
       \\
       (\var{s_{now}},~\var{pp},~\wcard,~\wcard,~\var{stpools})\leteq ve
       \\~\\
@@ -971,7 +971,7 @@ The environments for this transition is:
       \left(
         {\begin{array}{c}
             \var{ve} \\
-            \var{dsched} \\
+            \var{osched} \\
         \end{array}}
       \right)
       \vdash
@@ -992,7 +992,7 @@ The environments for this transition is:
   \begin{equation}\label{eq:decentralized}
     \inference[Decentralized]
     {
-      \bslot \bhbody bh \notin \dom{\var{dsched}}
+      \bslot \bhbody bh \notin \dom{\var{osched}}
       \\~\\
       {
         \var{ve}\vdash
@@ -1015,7 +1015,7 @@ The environments for this transition is:
       \left(
         {\begin{array}{c}
             \var{ve} \\
-            \var{dsched} \\
+            \var{osched} \\
         \end{array}}
       \right)
       \vdash
@@ -1040,18 +1040,54 @@ The environments for this transition is:
 
 The Block Body Transition updates the block body state which comprises the
 ledger state and the map describing the produced blocks. The environment of the
-$\mathsf{BBODY}$ transition are the genesis key delegations.
+$\mathsf{BBODY}$ transition are the genesis key delegations and the overlay schedule slots.
+The environments and states are defined in Figure~\ref{fig:ts-types:bbody}, along with
+a helper function $\fun{incrBlocks}$, which counts the number of non-overlay blocks
+produced by each stake pool.
 
 \begin{figure}
+  \emph{BBody environments}
+  \begin{equation*}
+    \BBodyEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{oslots} & \powerset{\Slot} & \text{overlay schedule slots} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{BBody states}
+  \begin{equation*}
+    \BBodyState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{ls} & \LState & \text{ledger state} \\
+        \var{b} & \BlocksMade & \text{blocks made} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{BBody Transitions}
-
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset ((\VKeyGen\mapsto\VKey) \times (\LState\times\BlocksMade)
-    \times \Block \times (\LState\times\BlocksMade))
+    \powerset (\BBodyEnv \times \BBodyState \times \Block \times \BBodyState)
   \end{equation*}
   \caption{BBody transition-system types}
   \label{fig:ts-types:bbody}
+  %
+  \emph{BBody helper function}
+  \begin{align*}
+      & \fun{incrBlocks} \in \Bool \to \HashKey \to
+          \BlocksMade \to \BlocksMade \\
+      & \fun{incrBlocks}~\var{isOverlay}~\var{hk}~\var{b} =
+        \begin{cases}
+          b & \text{if }\var{isOverlay} \\
+          b\cup\{\var{hk}\mapsto 1\} & \text{if }\var{hk}\notin\dom{b} \\
+          b\unionoverrideRight\{\var{hk}\mapsto n+1\} & \text{if }\var{hk}\mapsto n\in b \\
+        \end{cases}
+  \end{align*}
+
 \end{figure}
 
 The $\mathsf{BBODY}$ transition rule is shown in Figure~\ref{fig:rules:bbody},
@@ -1077,7 +1113,8 @@ The transition is executed if the following preconditions are met:
 \end{itemize}
 
 After this, the transition system updates the mapping of the hashed stake pool
-keys to the incremented value of produced blocks (\var{n} + 1).
+keys to the incremented value of produced blocks (\var{n} + 1), provided the
+current slot is not an overlay slot.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:bbody}
@@ -1101,8 +1138,6 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \\~\\
       \bBodySize{txs} < \fun{maxBBSize}~\var{pp}
       &
-      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{kh}\mapsto 0\})
-      &
       \mathcal{V}_{\var{vk}}{\serialised{txs}}_{\sigma}
       \\~\\
       {
@@ -1119,7 +1154,10 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       }
     }
     {
-      \var{dms} \\
+      \left(\begin{array}{c}
+        \var{dms} \\
+        \var{oslots} \\
+      \end{array}\right)
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1128,7 +1166,7 @@ keys to the incremented value of produced blocks (\var{n} + 1).
       \trans{bbody}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{ls}'} \\
-            \varUpdate{b \unionoverrideRight \{\var{hk}\mapsto n+1\}} \\
+            \varUpdate{\fun{incrBlocks}~{(\bslot{bhb}\in\var{oslots})}~{hk}~{b}} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1290,7 +1328,7 @@ following:
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dsched} & \Slot\mapsto\VKeyGen^? & \text{OBFT schedule} \\
+        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{overlay schedule} \\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
         \var{gkeys} & \VKeyGen & \text{genesis keys} \\
       \end{array}
@@ -1340,7 +1378,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{es} \\
               \var{ru} \\
               \var{pd} \\
-              \var{dsched} \\
+              \var{osched} \\
         \end{array}\right)}
         \trans{newepoch}{\var{e}}
         {\left(\begin{array}{c}
@@ -1350,7 +1388,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{es}' \\
               \var{ru}' \\
               \var{pd}' \\
-              \var{dsched}' \\
+              \var{osched}' \\
         \end{array}\right)}
       }
       &
@@ -1392,7 +1430,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{pd}' \\
               \var{stpools} \\
               \\
-              \var{dsched'} \\
+              \var{osched'} \\
           \end{array}}
         \right)
         \vdash
@@ -1420,7 +1458,11 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
       \var{ls} \leteq (\var{utxoSt}',~(\var{ds}',~\var{ps}''),~\var{us}')
       \\
       {
-        \var{dms}'\vdash
+        {\left(\begin{array}{c}
+        \var{dms}' \\
+        \dom{osched'} \\
+        \end{array}\right)}
+        \vdash
         {\left(\begin{array}{c}
               \var{ls} \\
               \var{b'} \\
@@ -1446,7 +1488,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
-            \var{dsched} \\
+            \var{osched} \\
             \var{dms} \\
             \var{gkeys} \\
       \end{array}\right)}
@@ -1460,7 +1502,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
             \varUpdate{\var{es}''} \\
             \varUpdate{\var{ru}''} \\
             \varUpdate{\var{pd}'} \\
-            \varUpdate{\var{dsched}'} \\
+            \varUpdate{\var{osched}'} \\
             \varUpdate{\var{dms}'} \\
             \var{gkeys} \\
       \end{array}\right)}
