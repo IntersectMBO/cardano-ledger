@@ -24,7 +24,6 @@ import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.Proposal (UpId)
-import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.Vote
   ( AVote(..)
   , recoverSignedBytes
@@ -40,7 +39,7 @@ import Cardano.Crypto
 -- | Environment used to register votes and confirm proposals
 data Environment = Environment
   { veCurrentSlot                   :: FlatSlotId
-  , veProtocolParameters            :: ProtocolParameters
+  , veConfirmationThreshold         :: Int
   , veVotingRegistrationEnvironment :: RegistrationEnvironment
   }
 
@@ -92,12 +91,8 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
     , vsConfirmedProposals = confirmedProposals'
     }
  where
-  Environment slot _ voteRegEnv  = votingEnv
+  Environment slot threshold voteRegEnv  = votingEnv
   State votes confirmedProposals = vs
-
-  -- | This is the number of genesis keys that need to support a proposal
-  threshold :: Int
-  threshold = 4
 
   pastThreshold :: RegisteredVotes -> Bool
   pastThreshold votes' =

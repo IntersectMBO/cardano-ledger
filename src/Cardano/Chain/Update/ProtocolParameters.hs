@@ -11,6 +11,7 @@
 
 module Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters(..)
+  , upAdptThd
   , isBootstrapEraPP
   )
 where
@@ -26,7 +27,8 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
-import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
+import Cardano.Chain.Common
+  (LovelacePortion, TxFeePolicy, lovelacePortionToDouble)
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
@@ -175,3 +177,14 @@ deriveJSON S.defaultOptions ''ProtocolParameters
 --   unlock stake epoch
 isBootstrapEraPP :: ProtocolParameters -> EpochIndex -> Bool
 isBootstrapEraPP adoptedPP = isBootstrapEra (ppUnlockStakeEpoch adoptedPP)
+
+-- | In Byron we do not have a @upAdptThd@ protocol parameter, so we have to
+--   use the existing ones.
+--
+--   @lovelacePortionToDouble . srMinThd . ppSoftforkRule@ will give us the
+--   ratio (in the interval @[0, 1]@) of the total stake that has to endorse a
+--   protocol version to become adopted. In genesis configuration, this ratio
+--   will evaluate to @0.6@, so if we have 7 genesis keys, @upAdptThd = 4@.
+upAdptThd :: Word8 -> ProtocolParameters -> Int
+upAdptThd numGenKeys pps = floor $ stakeRatio * fromIntegral numGenKeys
+  where stakeRatio = lovelacePortionToDouble . srMinThd . ppSoftforkRule $ pps
