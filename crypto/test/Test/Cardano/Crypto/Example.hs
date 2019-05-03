@@ -7,11 +7,11 @@ module Test.Cardano.Crypto.Example
   , exampleProtocolMagic3
   , exampleProtocolMagic4
   , exampleProtocolMagicId0
-  , examplePublicKey
-  , examplePublicKeys
-  , exampleRedeemPublicKey
-  , exampleSecretKey
-  , exampleSecretKeys
+  , exampleVerificationKey
+  , exampleVerificationKeys
+  , exampleRedeemVerificationKey
+  , exampleSigningKey
+  , exampleSigningKeys
   , exampleSafeSigner
   , staticSafeSigners
   )
@@ -28,11 +28,11 @@ import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagic
   , ProtocolMagicId(..)
-  , PublicKey(..)
-  , RedeemPublicKey
+  , VerificationKey(..)
+  , RedeemVerificationKey
   , RequiresNetworkMagic(..)
   , SafeSigner
-  , SecretKey(..)
+  , SigningKey(..)
   , noPassSafeSigner
   , redeemDeterministicKeyGen
   )
@@ -63,32 +63,32 @@ exampleProtocolMagic4 :: ProtocolMagic
 exampleProtocolMagic4 =
   AProtocolMagic (Annotated (ProtocolMagicId 500) ()) RequiresNoMagic
 
-examplePublicKey :: PublicKey
-examplePublicKey = pk where [pk] = examplePublicKeys 16 1 -- 16 could be any number, as we take the first key
+exampleVerificationKey :: VerificationKey
+exampleVerificationKey = vk where [vk] = exampleVerificationKeys 16 1 -- 16 could be any number, as we take the first key
 
-examplePublicKeys :: Int -> Int -> [PublicKey]
-examplePublicKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
+exampleVerificationKeys :: Int -> Int -> [VerificationKey]
+exampleVerificationKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
  where
   toKey start =
-    let Right pk = PublicKey <$> CC.xpub (getBytes start 64) in pk
+    let Right vk = VerificationKey <$> CC.xpub (getBytes start 64) in vk
 
-exampleRedeemPublicKey :: RedeemPublicKey
-exampleRedeemPublicKey =
+exampleRedeemVerificationKey :: RedeemVerificationKey
+exampleRedeemVerificationKey =
   fromJust (fst <$> redeemDeterministicKeyGen (getBytes 0 32))
 
 -- In order to get the key starting at byte 10, we generate two with offsets of 10
 -- between them and take the second.
-exampleSecretKey :: SecretKey
-exampleSecretKey = exampleSecretKeys 10 2 !! 1
+exampleSigningKey :: SigningKey
+exampleSigningKey = exampleSigningKeys 10 2 !! 1
 
-exampleSecretKeys :: Int -> Int -> [SecretKey]
-exampleSecretKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
+exampleSigningKeys :: Int -> Int -> [SigningKey]
+exampleSigningKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
  where
   toKey start =
-    let Right sk = SecretKey <$> CC.xprv (getBytes start 128) in sk
+    let Right sk = SigningKey <$> CC.xprv (getBytes start 128) in sk
 
 exampleSafeSigner :: Int -> SafeSigner
 exampleSafeSigner offset = staticSafeSigners !! offset
 
 staticSafeSigners :: [SafeSigner]
-staticSafeSigners = map noPassSafeSigner (exampleSecretKeys 1 6)
+staticSafeSigners = map noPassSafeSigner (exampleSigningKeys 1 6)

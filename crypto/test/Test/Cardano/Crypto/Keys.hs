@@ -16,16 +16,16 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Crypto.Signing
   ( deterministicKeyGen
-  , encToPublic
-  , fullPublicKeyF
-  , parseFullPublicKey
+  , encToVerification
+  , fullVerificationKeyF
+  , parseFullVerificationKey
   , redeemDeterministicKeyGen
-  , redeemToPublic
+  , redeemToVerification
   , safeDeterministicKeyGen
-  , toPublic
+  , toVerification
   )
 
-import Test.Cardano.Crypto.Gen (genPassPhrase, genPublicKey)
+import Test.Cardano.Crypto.Gen (genPassPhrase, genVerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -40,31 +40,31 @@ tests = checkParallel $$discover
 -- Key Properties
 --------------------------------------------------------------------------------
 
--- | Derived 'PublicKey' is the same as generated one
+-- | Derived 'VerificationKey' is the same as generated one
 prop_pubKeyDerivedGenerated :: Property
 prop_pubKeyDerivedGenerated = property $ do
   seed <- forAll $ Gen.bytes (Range.singleton 32)
-  let (pk, sk) = deterministicKeyGen seed
-  pk === toPublic sk
+  let (vk, sk) = deterministicKeyGen seed
+  vk === toVerification sk
 
 prop_pubKeyParsing :: Property
 prop_pubKeyParsing = property $ do
-  pk <- forAll genPublicKey
-  parseFullPublicKey (sformat fullPublicKeyF pk) === Right pk
+  vk <- forAll genVerificationKey
+  parseFullVerificationKey (sformat fullVerificationKeyF vk) === Right vk
 
--- | Derived 'RedeemPublicKey' is the same as generated one
-prop_redeemPubKeyDerivedGenerated :: Property
-prop_redeemPubKeyDerivedGenerated = property $ do
+-- | Derived 'RedeemVerificationKey' is the same as generated one
+prop_redeemVerKeyDerivedGenerated :: Property
+prop_redeemVerKeyDerivedGenerated = property $ do
   seed <- forAll $ Gen.bytes (Range.singleton 32)
   let
-    (pk, sk) =
+    (vk, sk) =
       fromMaybe (panic "redeem keygen failed") $ redeemDeterministicKeyGen seed
-  pk === redeemToPublic sk
+  vk === redeemToVerification sk
 
--- | Derived 'PublicKey' is the same as generated one
-prop_safePubKeyDerivedGenerated :: Property
-prop_safePubKeyDerivedGenerated = property $ do
+-- | Derived 'VerificationKey' is the same as generated one
+prop_safeVerKeyDerivedGenerated :: Property
+prop_safeVerKeyDerivedGenerated = property $ do
   pp   <- forAll genPassPhrase
   seed <- forAll $ Gen.bytes (Range.singleton 32)
-  let (pk, sk) = safeDeterministicKeyGen seed pp
-  pk === encToPublic sk
+  let (vk, sk) = safeDeterministicKeyGen seed pp
+  vk === encToVerification sk

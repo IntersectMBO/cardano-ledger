@@ -3,7 +3,7 @@
 
 module Cardano.Crypto.Limits
   ( mlAbstractHash
-  , mlPublicKey
+  , mlVerificationKey
   , mlXSignature
   , mlSignature
   )
@@ -15,7 +15,7 @@ import qualified Cardano.Crypto.Wallet as CC
 import Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
 
 import Cardano.Binary (Limit)
-import Cardano.Crypto (AbstractHash, PublicKey, Signature(..))
+import Cardano.Crypto (AbstractHash, VerificationKey, Signature(..))
 
 
 mlAbstractHash
@@ -23,8 +23,8 @@ mlAbstractHash
 mlAbstractHash =
   fromIntegral (hashDigestSize (panic "AbstractHash limit" :: algo) + 4)
 
-mlPublicKey :: Limit PublicKey
-mlPublicKey = 66
+mlVerificationKey :: Limit VerificationKey
+mlVerificationKey = 66
 
 mlXSignature :: Limit CC.XSignature
 mlXSignature = 66

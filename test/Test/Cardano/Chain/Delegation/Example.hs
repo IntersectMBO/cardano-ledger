@@ -11,7 +11,7 @@ import Cardano.Chain.Delegation (Certificate)
 import Cardano.Chain.Slotting (EpochIndex(..))
 import Cardano.Crypto (ProtocolMagicId(..), createPsk)
 
-import Test.Cardano.Crypto.Example (examplePublicKeys, staticSafeSigners)
+import Test.Cardano.Crypto.Example (exampleVerificationKeys, staticSafeSigners)
 
 
 staticProtocolMagics :: [ProtocolMagicId]
@@ -22,6 +22,6 @@ exampleCertificates = zipWith4
   createPsk
   staticProtocolMagics
   staticSafeSigners
-  (examplePublicKeys 1 6)
+  (exampleVerificationKeys 1 6)
   exampleEpochIndices
   where exampleEpochIndices = EpochIndex <$> [5, 1, 3, 27, 99, 247]

@@ -12,7 +12,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder (integerDec, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 
-import Cardano.Crypto.Signing (PublicKey, SecretKey, deterministicKeyGen)
+import Cardano.Crypto.Signing (VerificationKey, SigningKey, deterministicKeyGen)
 import Ledger.Core
   ( KeyPair
   , Owner(Owner)
@@ -23,7 +23,7 @@ import Ledger.Core
   , sKey
   )
 
-elaborateKeyPair :: KeyPair -> (PublicKey, SecretKey)
+elaborateKeyPair :: KeyPair -> (VerificationKey, SigningKey)
 elaborateKeyPair kp = deterministicKeyGen $ padSeed seed
  where
   Owner o = owner $ sKey kp
@@ -34,8 +34,8 @@ elaborateKeyPair kp = deterministicKeyGen $ padSeed seed
 vKeyPair :: VKey -> KeyPair
 vKeyPair (VKey o) = keyPair o
 
-elaborateVKey :: VKey -> PublicKey
+elaborateVKey :: VKey -> VerificationKey
 elaborateVKey = fst . elaborateKeyPair . vKeyPair
 
-elaborateVKeyGenesis :: VKeyGenesis -> PublicKey
+elaborateVKeyGenesis :: VKeyGenesis -> VerificationKey
 elaborateVKeyGenesis (VKeyGenesis vk) = elaborateVKey vk

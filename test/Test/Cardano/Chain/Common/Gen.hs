@@ -65,7 +65,7 @@ import Cardano.Chain.Common
   )
 
 import Test.Cardano.Crypto.Gen
-  (genHDAddressPayload, genPublicKey, genRedeemPublicKey)
+  (genHDAddressPayload, genVerificationKey, genRedeemVerificationKey)
 
 
 genAddrAttributes :: Gen AddrAttributes
@@ -83,11 +83,11 @@ genAddressWithNM nm = makeAddress <$> genAddrSpendingData
                                   <*> genAddrAttributesWithNM nm
 
 genAddrType :: Gen AddrType
-genAddrType = Gen.choice [pure ATPubKey, pure ATRedeem]
+genAddrType = Gen.choice [pure ATVerKey, pure ATRedeem]
 
 genAddrSpendingData :: Gen AddrSpendingData
 genAddrSpendingData =
-  Gen.choice [PubKeyASD <$> genPublicKey, RedeemASD <$> genRedeemPublicKey]
+  Gen.choice [VerKeyASD <$> genVerificationKey, RedeemASD <$> genRedeemVerificationKey]
 
 genAttributes :: Gen a -> Gen (Attributes a)
 genAttributes genA = mkAttributes <$> genA
@@ -158,7 +158,7 @@ genScriptVersion :: Gen Word16
 genScriptVersion = Gen.word16 Range.constantBounded
 
 genStakeholderId :: Gen StakeholderId
-genStakeholderId = mkStakeholderId <$> genPublicKey
+genStakeholderId = mkStakeholderId <$> genVerificationKey
 
 genTxFeePolicy :: Gen TxFeePolicy
 genTxFeePolicy = TxFeePolicyTxSizeLinear <$> genTxSizeLinear

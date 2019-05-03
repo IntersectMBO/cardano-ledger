@@ -24,8 +24,8 @@ import Cardano.Binary
   (Annotated, Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
-import Cardano.Crypto.Signing.Redeem.PublicKey (RedeemPublicKey(..))
-import Cardano.Crypto.Signing.Redeem.SecretKey (RedeemSecretKey(..))
+import Cardano.Crypto.Signing.Redeem.VerificationKey (RedeemVerificationKey(..))
+import Cardano.Crypto.Signing.Redeem.SigningKey (RedeemSigningKey(..))
 import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 
 
@@ -44,7 +44,7 @@ redeemSign
   :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
-  -> RedeemSecretKey
+  -> RedeemSigningKey
   -> a
   -> RedeemSignature a
 redeemSign pm tag k = coerce . redeemSignRaw pm (Just tag) k . serialize'
@@ -53,10 +53,10 @@ redeemSign pm tag k = coerce . redeemSignRaw pm (Just tag) k . serialize'
 redeemSignRaw
   :: ProtocolMagicId
   -> Maybe SignTag
-  -> RedeemSecretKey
+  -> RedeemSigningKey
   -> ByteString
   -> RedeemSignature Raw
-redeemSignRaw pm mbTag (RedeemSecretKey k) x =
+redeemSignRaw pm mbTag (RedeemSigningKey k) x =
   RedeemSignature $ Ed25519.sign k (Ed25519.toPublic k) $ tag <> x
   where tag = maybe mempty (signTag pm) mbTag
 
@@ -65,7 +65,7 @@ verifyRedeemSig
   :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
-  -> RedeemPublicKey
+  -> RedeemVerificationKey
   -> a
   -> RedeemSignature a
   -> Bool
@@ -76,7 +76,7 @@ verifyRedeemSigDecoded
   :: Decoded t
   => Annotated ProtocolMagicId ByteString
   -> SignTag
-  -> RedeemPublicKey
+  -> RedeemVerificationKey
   -> t
   -> RedeemSignature (BaseType t)
   -> Bool
@@ -85,9 +85,9 @@ verifyRedeemSigDecoded pm tag k x s =
 
 -- | Verify raw 'ByteString'
 verifyRedeemSigRaw
-  :: RedeemPublicKey
+  :: RedeemVerificationKey
   -> ByteString
   -> RedeemSignature Raw
   -> Bool
-verifyRedeemSigRaw (RedeemPublicKey k) x (RedeemSignature s) =
+verifyRedeemSigRaw (RedeemVerificationKey k) x (RedeemSignature s) =
   Ed25519.verify k x s

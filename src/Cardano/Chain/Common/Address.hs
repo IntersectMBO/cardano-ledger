@@ -22,7 +22,7 @@ module Cardano.Chain.Common.Address
 
   -- * Spending data checks
   , checkAddrSpendingData
-  , checkPubKeyAddress
+  , checkVerKeyAddress
   , checkRedeemAddress
 
   -- * Encoding
@@ -41,15 +41,15 @@ module Cardano.Chain.Common.Address
 
   -- * Construction
   , makeAddress
-  , makePubKeyAddress
-  , makePubKeyHdwAddress
+  , makeVerKeyAddress
+  , makeVerKeyHdwAddress
   , makeRedeemAddress
   , createHDAddressNH
   , createHDAddressH
 
   -- * Maximal sizes (needed for tx creation)
-  , largestPubKeyAddress
-  , maxPubKeyAddressSize
+  , largestVerKeyAddress
+  , maxVerKeyAddressSize
   , largestHDAddress
   , maxHDAddressSize
   )
@@ -103,19 +103,19 @@ import Cardano.Crypto.HD
   , HDPassphrase
   , ShouldCheckPassphrase(..)
   , deriveHDPassphrase
-  , deriveHDPublicKey
-  , deriveHDSecretKey
+  , deriveHDVerificationKey
+  , deriveHDSigningKey
   , packHDAddressAttr
   )
 import Cardano.Crypto.Signing
-  ( EncryptedSecretKey
+  ( EncryptedSigningKey
   , PassPhrase
-  , PublicKey
-  , RedeemPublicKey
-  , SecretKey
+  , VerificationKey
+  , RedeemVerificationKey
+  , SigningKey
   , deterministicKeyGen
   , emptyPassphrase
-  , encToPublic
+  , encToVerification
   , noPassEncrypt
   )
 
@@ -214,7 +214,7 @@ addressDetailedF = later $ \addr -> bprint
  where
   formattedType :: AddrType -> Builder
   formattedType = \case
-    ATPubKey -> "PubKey"
+    ATVerKey -> "VerKey"
     ATRedeem -> "Redeem"
 
 -- | Currently we use Bitcoin alphabet for representing addresses in base58
@@ -260,60 +260,60 @@ makeAddress spendingData attributesUnwrapped = Address
   attributes = mkAttributes attributesUnwrapped
   address'   = Address' (addrType', spendingData, attributes)
 
--- | A function for making an address from 'PublicKey'
-makePubKeyAddress :: NetworkMagic -> PublicKey -> Address
-makePubKeyAddress nm = makePubKeyAddressImpl nm Nothing
+-- | A function for making an address from 'VerificationKey'
+makeVerKeyAddress :: NetworkMagic -> VerificationKey -> Address
+makeVerKeyAddress nm = makeVerKeyAddressImpl nm Nothing
 
 -- | A function for making an HDW address
-makePubKeyHdwAddress
+makeVerKeyHdwAddress
   :: NetworkMagic
   -> HDAddressPayload
   -- ^ Derivation path
-  -> PublicKey
+  -> VerificationKey
   -> Address
-makePubKeyHdwAddress nm path = makePubKeyAddressImpl nm (Just path)
+makeVerKeyHdwAddress nm path = makeVerKeyAddressImpl nm (Just path)
 
-makePubKeyAddressImpl :: NetworkMagic -> Maybe HDAddressPayload -> PublicKey -> Address
-makePubKeyAddressImpl nm path key = makeAddress spendingData attrs
+makeVerKeyAddressImpl :: NetworkMagic -> Maybe HDAddressPayload -> VerificationKey -> Address
+makeVerKeyAddressImpl nm path key = makeAddress spendingData attrs
  where
-  spendingData = PubKeyASD key
-  attrs        = AddrAttributes { aaPkDerivationPath = path
+  spendingData = VerKeyASD key
+  attrs        = AddrAttributes { aaVKDerivationPath = path
                                 , aaNetworkMagic = nm }
 
--- | A function for making an address from 'RedeemPublicKey'
-makeRedeemAddress :: NetworkMagic -> RedeemPublicKey -> Address
+-- | A function for making an address from 'RedeemVerificationKey'
+makeRedeemAddress :: NetworkMagic -> RedeemVerificationKey -> Address
 makeRedeemAddress nm key = makeAddress spendingData attrs
  where
   spendingData = RedeemASD key
-  attrs        = AddrAttributes { aaPkDerivationPath = Nothing
+  attrs        = AddrAttributes { aaVKDerivationPath = Nothing
                                 , aaNetworkMagic = nm }
 
--- | Create address from secret key in hardened way
+-- | Create address from signing key in hardened way
 createHDAddressH
   :: NetworkMagic
   -> ShouldCheckPassphrase
   -> PassPhrase
   -> HDPassphrase
-  -> EncryptedSecretKey
+  -> EncryptedSigningKey
   -> [Word32]
   -> Word32
-  -> Maybe (Address, EncryptedSecretKey)
+  -> Maybe (Address, EncryptedSigningKey)
 createHDAddressH nm scp passphrase hdPassphrase parent parentPath childIndex = do
-  derivedSK <- deriveHDSecretKey scp passphrase parent childIndex
+  derivedSK <- deriveHDSigningKey scp passphrase parent childIndex
   let
     addressPayload =
       packHDAddressAttr hdPassphrase $ parentPath ++ [childIndex]
-  let pk = encToPublic derivedSK
-  return (makePubKeyHdwAddress nm addressPayload pk, derivedSK)
+  let vk = encToVerification derivedSK
+  return (makeVerKeyHdwAddress nm addressPayload vk, derivedSK)
 
--- | Create address from public key via non-hardened way
+-- | Create address from verification key via non-hardened way
 createHDAddressNH
-  :: NetworkMagic -> HDPassphrase -> PublicKey -> [Word32] -> Word32 -> (Address, PublicKey)
+  :: NetworkMagic -> HDPassphrase -> VerificationKey -> [Word32] -> Word32 -> (Address, VerificationKey)
 createHDAddressNH nm passphrase parent parentPath childIndex = do
-  let derivedPK = deriveHDPublicKey parent childIndex
+  let derivedVK = deriveHDVerificationKey parent childIndex
   let
     addressPayload = packHDAddressAttr passphrase $ parentPath ++ [childIndex]
-  (makePubKeyHdwAddress nm addressPayload derivedPK, derivedPK)
+  (makeVerKeyHdwAddress nm addressPayload derivedVK, derivedVK)
 
 
 --------------------------------------------------------------------------------
@@ -329,13 +329,13 @@ checkAddrSpendingData asd addr =
     == addrSpendingDataToType asd
   where address' = Address' (addrType addr, asd, addrAttributes addr)
 
--- | Check if given 'Address' is created from given 'PublicKey'
-checkPubKeyAddress :: PublicKey -> Address -> Bool
-checkPubKeyAddress pk = checkAddrSpendingData (PubKeyASD pk)
+-- | Check if given 'Address' is created from given 'VerificationKey'
+checkVerKeyAddress :: VerificationKey -> Address -> Bool
+checkVerKeyAddress vk = checkAddrSpendingData (VerKeyASD vk)
 
--- | Check if given 'Address' is created from given 'RedeemPublicKey'
-checkRedeemAddress :: RedeemPublicKey -> Address -> Bool
-checkRedeemAddress rpk = checkAddrSpendingData (RedeemASD rpk)
+-- | Check if given 'Address' is created from given 'RedeemVerificationKey'
+checkRedeemAddress :: RedeemVerificationKey -> Address -> Bool
+checkRedeemAddress rvk = checkAddrSpendingData (RedeemASD rvk)
 
 
 --------------------------------------------------------------------------------
@@ -350,21 +350,21 @@ addrAttributesUnwrapped = attrData . addrAttributes
 addrNetworkMagic :: Address -> NetworkMagic
 addrNetworkMagic = aaNetworkMagic . addrAttributesUnwrapped
 
--- | Makes account secret key for given wallet set
+-- | Makes account signing key for given wallet set
 deriveLvl2KeyPair
   :: NetworkMagic
   -> ShouldCheckPassphrase
   -> PassPhrase
-  -> EncryptedSecretKey
+  -> EncryptedSigningKey
   -- ^ key of wallet
   -> Word32
   -- ^ account derivation index
   -> Word32
   -- ^ address derivation index
-  -> Maybe (Address, EncryptedSecretKey)
+  -> Maybe (Address, EncryptedSigningKey)
 deriveLvl2KeyPair nm scp passphrase wsKey accountIndex addressIndex = do
-  wKey <- deriveHDSecretKey scp passphrase wsKey accountIndex
-  let hdPass = deriveHDPassphrase $ encToPublic wsKey
+  wKey <- deriveHDSigningKey scp passphrase wsKey accountIndex
+  let hdPass = deriveHDPassphrase $ encToVerification wsKey
   -- We don't need to check passphrase twice
   createHDAddressH
     nm
@@ -378,9 +378,9 @@ deriveLvl2KeyPair nm scp passphrase wsKey accountIndex addressIndex = do
 deriveFirstHDAddress
   :: NetworkMagic
   -> PassPhrase
-  -> EncryptedSecretKey
+  -> EncryptedSigningKey
   -- ^ key of wallet set
-  -> Maybe (Address, EncryptedSecretKey)
+  -> Maybe (Address, EncryptedSigningKey)
 deriveFirstHDAddress nm passphrase wsKey = deriveLvl2KeyPair
   nm
   (ShouldCheckPassphrase False)
@@ -405,14 +405,14 @@ isRedeemAddress addr = case addrType addr of
 -- Maximal size
 --------------------------------------------------------------------------------
 
--- | Largest (considering size of serialized data) PubKey address. Actual size
+-- | Largest (considering size of serialized data) VerKey address. Actual size
 --   depends on CRC32 value which is serialized using var-length encoding.
-largestPubKeyAddress :: Address
-largestPubKeyAddress = makePubKeyAddress (NetworkTestnet maxBound) goodPk
+largestVerKeyAddress :: Address
+largestVerKeyAddress = makeVerKeyAddress (NetworkTestnet maxBound) goodVK
 
--- | Maximal size of PubKey address.
-maxPubKeyAddressSize :: Natural
-maxPubKeyAddressSize = biSize largestPubKeyAddress
+-- | Maximal size of VerKey address.
+maxVerKeyAddressSize :: Natural
+maxVerKeyAddressSize = biSize largestVerKeyAddress
 
 -- | Largest (considering size of serialized data) HD address with. Actual size
 --   depends on CRC32 value which is serialized using var-length encoding.
@@ -434,17 +434,17 @@ largestHDAddress = case lvl2KeyPair of
 maxHDAddressSize :: Natural
 maxHDAddressSize = biSize largestHDAddress
 
--- Public key and secret key for which we know that they produce
+-- Public key and signing key for which we know that they produce
 -- largest addresses in all cases we are interested in. It was checked
 -- manually.
-goodSkAndPk :: (PublicKey, SecretKey)
-goodSkAndPk = deterministicKeyGen $ BS.replicate 32 0
+goodSkAndVK :: (VerificationKey, SigningKey)
+goodSkAndVK = deterministicKeyGen $ BS.replicate 32 0
 
-goodPk :: PublicKey
-goodPk = fst goodSkAndPk
+goodVK :: VerificationKey
+goodVK = fst goodSkAndVK
 
-goodSk :: SecretKey
-goodSk = snd goodSkAndPk
+goodSk :: SigningKey
+goodSk = snd goodSkAndVK
 
 
 -- Encodes the `Address` __without__ the CRC32.

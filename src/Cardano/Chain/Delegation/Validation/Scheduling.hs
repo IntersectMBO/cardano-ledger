@@ -121,8 +121,8 @@ scheduleCertificate env ss cert = do
   Environment { protocolMagic, allowedDelegators, currentEpoch, currentSlot, k }
     = env
 
-  delegator       = mkStakeholderId $ pskIssuerPk cert
-  delegate        = mkStakeholderId $ pskDelegatePk cert
+  delegator       = mkStakeholderId $ pskIssuerVK cert
+  delegate        = mkStakeholderId $ pskDelegateVK cert
 
   delegationEpoch = pskOmega cert
 

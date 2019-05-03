@@ -36,7 +36,7 @@ import Cardano.Chain.Slotting
   , subSlotNumber
   )
 import Cardano.Crypto
-  (AProxyVerificationKey(..), ProtocolMagicId, PublicKey, pskOmega)
+  (AProxyVerificationKey(..), ProtocolMagicId, VerificationKey, pskOmega)
 
 
 --------------------------------------------------------------------------------
@@ -94,18 +94,18 @@ initialState env genesisDelegation = updateDelegation env is certificates
   annotateCertificate :: Certificate -> ACertificate ByteString
   annotateCertificate c = UnsafeAProxyVerificationKey
     { aPskOmega     = Annotated (pskOmega c) (serialize' $ pskOmega c)
-    , pskIssuerPk   = pskIssuerPk c
-    , pskDelegatePk = pskDelegatePk c
+    , pskIssuerVK   = pskIssuerVK c
+    , pskDelegateVK = pskDelegateVK c
     , pskCert       = pskCert c
     }
 
 
 -- | Check whether a delegation is valid in the 'State'
-delegates :: State -> PublicKey -> PublicKey -> Bool
+delegates :: State -> VerificationKey -> VerificationKey -> Bool
 delegates is delegator delegate =
   case M.lookup (mkStakeholderId delegator) (delegationMap is) of
     Nothing -> False
-    Just pk -> pk == mkStakeholderId delegate
+    Just vk -> vk == mkStakeholderId delegate
 
 
 -- | Update the 'State' with a list of new 'Certificate's

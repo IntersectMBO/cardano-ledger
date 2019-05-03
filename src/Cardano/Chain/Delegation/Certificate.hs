@@ -31,8 +31,8 @@ instance Monad m => ToJSON m Certificate where
   toJSON psk = mkObject
     -- omega is encoded as a number, because in genesis we always set it to 0
     [ ("omega", pure (JSNum . fromIntegral $ pskOmega psk))
-    , ("issuerPk"  , toJSON $ pskIssuerPk psk)
-    , ("delegatePk", toJSON $ pskDelegatePk psk)
+    , ("issuerPk"  , toJSON $ pskIssuerVK psk)
+    , ("delegatePk", toJSON $ pskDelegateVK psk)
     , ("cert"      , toJSON $ pskCert psk)
     ]
 

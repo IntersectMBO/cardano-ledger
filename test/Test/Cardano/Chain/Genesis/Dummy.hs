@@ -11,9 +11,9 @@ module Test.Cardano.Chain.Genesis.Dummy
   , dummyGenesisInitializer
   , dummyGenesisAvvmBalances
   , dummyGeneratedSecrets
-  , dummyGenesisSecretKeys
-  , dummyGenesisSecretKeysRich
-  , dummyGenesisSecretKeysPoor
+  , dummyGenesisSigningKeys
+  , dummyGenesisSigningKeysRich
+  , dummyGenesisSigningKeysPoor
   , dummyGenesisSecretsRich
   , dummyGenesisSecretsPoor
   , dummyGenesisSpec
@@ -47,14 +47,14 @@ import Cardano.Chain.Genesis
   , GenesisSpec(..)
   , PoorSecret
   , TestnetBalanceOptions(..)
-  , gsSecretKeys
-  , gsSecretKeysPoor
+  , gsSigningKeys
+  , gsSigningKeysPoor
   , mkConfig
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting (EpochIndex(..), EpochSlots, SlotCount)
 import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
-import Cardano.Crypto (SecretKey)
+import Cardano.Crypto (SigningKey)
 
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
@@ -83,20 +83,20 @@ dummyGeneratedSecrets =
       )
     $ configGeneratedSecrets dummyConfig
 
-dummyGenesisSecretsRich :: [SecretKey]
+dummyGenesisSecretsRich :: [SigningKey]
 dummyGenesisSecretsRich = gsRichSecrets dummyGeneratedSecrets
 
 dummyGenesisSecretsPoor :: [PoorSecret]
 dummyGenesisSecretsPoor = gsPoorSecrets dummyGeneratedSecrets
 
-dummyGenesisSecretKeys :: [SecretKey]
-dummyGenesisSecretKeys = gsSecretKeys dummyGeneratedSecrets
+dummyGenesisSigningKeys :: [SigningKey]
+dummyGenesisSigningKeys = gsSigningKeys dummyGeneratedSecrets
 
-dummyGenesisSecretKeysRich :: [SecretKey]
-dummyGenesisSecretKeysRich = gsRichSecrets dummyGeneratedSecrets
+dummyGenesisSigningKeysRich :: [SigningKey]
+dummyGenesisSigningKeysRich = gsRichSecrets dummyGeneratedSecrets
 
-dummyGenesisSecretKeysPoor :: [SecretKey]
-dummyGenesisSecretKeysPoor = gsSecretKeysPoor dummyGeneratedSecrets
+dummyGenesisSigningKeysPoor :: [SigningKey]
+dummyGenesisSigningKeysPoor = gsSigningKeysPoor dummyGeneratedSecrets
 
 dummyGenesisSpec :: GenesisSpec
 dummyGenesisSpec = UnsafeGenesisSpec

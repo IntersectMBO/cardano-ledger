@@ -26,7 +26,7 @@ import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
 import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Delegation.Certificate (Certificate)
-import Cardano.Crypto (isSelfSignedPsk, pskDelegatePk, pskIssuerPk)
+import Cardano.Crypto (isSelfSignedPsk, pskDelegateVK, pskIssuerVK)
 
 
 -- | This type contains genesis state of heavyweight delegation. It wraps a map
@@ -72,7 +72,7 @@ instance B.Buildable GenesisDelegationError where
   build = \case
     GenesisDelegationDuplicateIssuer ->
       bprint
-        "Encountered duplicate issuer PublicKey while constructing GenesisDelegation."
+        "Encountered duplicate issuer VerificationKey while constructing GenesisDelegation."
     GenesisDelegationInvalidKey k k' -> bprint
       ( "Invalid key in GenesisDelegation map.\nExpected: "
       . build
@@ -97,10 +97,10 @@ instance B.Buildable GenesisDelegationError where
 mkGenesisDelegation
   :: MonadError GenesisDelegationError m => [Certificate] -> m GenesisDelegation
 mkGenesisDelegation psks = do
-  ((length . nub $ pskIssuerPk <$> psks) == length psks)
+  ((length . nub $ pskIssuerVK <$> psks) == length psks)
     `orThrowError` GenesisDelegationDuplicateIssuer
   let
-    res = M.fromList [ (mkStakeholderId $ pskIssuerPk psk, psk) | psk <- psks ]
+    res = M.fromList [ (mkStakeholderId $ pskIssuerVK psk, psk) | psk <- psks ]
   recreateGenesisDelegation res
 
 -- | Safe constructor of 'GenesisDelegation' from existing map.
@@ -111,12 +111,12 @@ recreateGenesisDelegation
 recreateGenesisDelegation pskMap = do
   forM_ (M.toList pskMap) $ \(k, psk) -> do
 
-    let k' = mkStakeholderId $ pskIssuerPk psk
+    let k' = mkStakeholderId $ pskIssuerVK psk
     (k == k') `orThrowError` GenesisDelegationInvalidKey k k'
 
     not (isSelfSignedPsk psk) `orThrowError` GenesisDelegationSelfSignedPsk psk
 
-    let delegateId = mkStakeholderId $ pskDelegatePk psk
+    let delegateId = mkStakeholderId $ pskDelegateVK psk
     (delegateId `M.notMember` pskMap)
       `orThrowError` GenesisDelegationMultiLayerDelegation delegateId
 

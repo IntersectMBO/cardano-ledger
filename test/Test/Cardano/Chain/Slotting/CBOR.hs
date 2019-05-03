@@ -35,32 +35,32 @@ import Test.Options (TestScenario, TSProperty, eachOfTS)
 --------------------------------------------------------------------------------
 golden_EpochIndex :: Property
 golden_EpochIndex =
-  goldenTestCBOR exampleEpochIndex "test/golden/bi/slotting/EpochIndex"
+  goldenTestCBOR exampleEpochIndex "test/golden/cbor/slotting/EpochIndex"
 
-ts_roundTripEpochIndexBi :: TSProperty
-ts_roundTripEpochIndexBi = eachOfTS 1000 genEpochIndex roundTripsCBORBuildable
+ts_roundTripEpochIndexCBOR :: TSProperty
+ts_roundTripEpochIndexCBOR = eachOfTS 1000 genEpochIndex roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- FlatSlotId
 --------------------------------------------------------------------------------
 golden_FlatSlotId :: Property
-golden_FlatSlotId = goldenTestCBOR fsi "test/golden/bi/slotting/FlatSlotId"
+golden_FlatSlotId = goldenTestCBOR fsi "test/golden/cbor/slotting/FlatSlotId"
   where fsi = 5001 :: FlatSlotId
 
-ts_roundTripFlatSlotIdBi :: TSProperty
-ts_roundTripFlatSlotIdBi = eachOfTS 1000 genFlatSlotId roundTripsCBORBuildable
+ts_roundTripFlatSlotIdCBOR :: TSProperty
+ts_roundTripFlatSlotIdCBOR = eachOfTS 1000 genFlatSlotId roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex
 --------------------------------------------------------------------------------
 golden_LocalSlotIndex :: Property
 golden_LocalSlotIndex =
-  goldenTestCBOR lsi "test/golden/bi/slotting/LocalSlotIndex"
+  goldenTestCBOR lsi "test/golden/cbor/slotting/LocalSlotIndex"
  where
   lsi = UnsafeLocalSlotIndex 52
 
-ts_roundTripLocalSlotIndexBi :: TSProperty
-ts_roundTripLocalSlotIndexBi = eachOfTS 1000 gen roundTripsCBORBuildable
+ts_roundTripLocalSlotIndexCBOR :: TSProperty
+ts_roundTripLocalSlotIndexCBOR = eachOfTS 1000 gen roundTripsCBORBuildable
  where
   gen = feedPMEpochSlots (\_pm es -> genLocalSlotIndex es)
 
@@ -68,21 +68,21 @@ ts_roundTripLocalSlotIndexBi = eachOfTS 1000 gen roundTripsCBORBuildable
 -- EpochSlots
 --------------------------------------------------------------------------------
 golden_EpochSlots :: Property
-golden_EpochSlots = goldenTestCBOR sc "test/golden/bi/slotting/EpochSlots"
+golden_EpochSlots = goldenTestCBOR sc "test/golden/cbor/slotting/EpochSlots"
   where sc = EpochSlots 474747
 
-ts_roundTripEpochSlotsBi :: TSProperty
-ts_roundTripEpochSlotsBi = eachOfTS 1000 genEpochSlots roundTripsCBORBuildable
+ts_roundTripEpochSlotsCBOR :: TSProperty
+ts_roundTripEpochSlotsCBOR = eachOfTS 1000 genEpochSlots roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- SlotId
 --------------------------------------------------------------------------------
 golden_SlotId :: Property
 golden_SlotId = goldenTestCBOR (exampleSlotId (EpochSlots 777))
-                               "test/golden/bi/slotting/SlotId"
+                               "test/golden/cbor/slotting/SlotId"
 
-ts_roundTripSlotIdBi :: TSProperty
-ts_roundTripSlotIdBi = eachOfTS 1000 gen roundTripsCBORBuildable
+ts_roundTripSlotIdCBOR :: TSProperty
+ts_roundTripSlotIdCBOR = eachOfTS 1000 gen roundTripsCBORBuildable
  where
   gen = feedPMEpochSlots (\_pm es -> genSlotId es)
 

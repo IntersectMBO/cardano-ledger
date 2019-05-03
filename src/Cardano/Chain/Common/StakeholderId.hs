@@ -23,12 +23,12 @@ import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common.AddressHash
 import Cardano.Crypto (decodeAbstractHash, hashHexF, shortHashF)
-import Cardano.Crypto.Signing (PublicKey)
+import Cardano.Crypto.Signing (VerificationKey)
 
 
--- | Stakeholder identifier (stakeholders are identified by their public keys)
+-- | Stakeholder identifier (stakeholders are identified by their verification keys)
 newtype StakeholderId = StakeholderId
-  { getStakeholderId :: AddressHash PublicKey
+  { getStakeholderId :: AddressHash VerificationKey
   } deriving ( Eq
              , Ord
              , Show
@@ -49,7 +49,7 @@ instance MonadError SchemaError m => FromObjectKey m StakeholderId where
         . parseJSString decodeAbstractHash
         . JSString
 
-mkStakeholderId :: PublicKey -> StakeholderId
+mkStakeholderId :: VerificationKey -> StakeholderId
 mkStakeholderId = StakeholderId . addressHash
 
 shortStakeholderF :: Format r (StakeholderId -> r)

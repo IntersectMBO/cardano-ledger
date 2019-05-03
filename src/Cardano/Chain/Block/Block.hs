@@ -116,7 +116,8 @@ import Cardano.Chain.UTxO.TxPayload (ATxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto (ProtocolMagicId, PublicKey, SecretKey, hashDecoded)
+import Cardano.Crypto
+  (ProtocolMagicId, SigningKey, VerificationKey, hashDecoded)
 
 
 --------------------------------------------------------------------------------
@@ -258,10 +259,10 @@ mkBlock
   -> Either GenesisHash Header
   -> EpochSlots
   -> FlatSlotId
-  -> SecretKey
-  -- ^ The 'SecretKey' used for signing the block
+  -> SigningKey
+  -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
-  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
+  -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
   -> Block
 mkBlock pm bv sv prevHeader epochSlots = mkBlockExplicit
@@ -288,10 +289,10 @@ mkBlockExplicit
   -> ChainDifficulty
   -> EpochSlots
   -> FlatSlotId
-  -> SecretKey
-  -- ^ The 'SecretKey' used for signing the block
+  -> SigningKey
+  -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
-  -- ^ A certificate of delegation from a genesis key to the 'SecretKey'
+  -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
   -> Block
 mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk dlgCert body
@@ -338,10 +339,10 @@ blockProof = headerProof . blockHeader
 blockSlot :: ABlock a -> FlatSlotId
 blockSlot = headerSlot . blockHeader
 
-blockLeaderKey :: ABlock a -> PublicKey
+blockLeaderKey :: ABlock a -> VerificationKey
 blockLeaderKey = headerLeaderKey . blockHeader
 
-blockIssuer :: ABlock a -> PublicKey
+blockIssuer :: ABlock a -> VerificationKey
 blockIssuer = headerIssuer . blockHeader
 
 blockDifficulty :: ABlock a -> ChainDifficulty

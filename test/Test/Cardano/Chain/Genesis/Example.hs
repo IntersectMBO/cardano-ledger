@@ -48,13 +48,13 @@ import Cardano.Crypto
   , ProtocolMagicId(..)
   , RequiresNetworkMagic(..)
   , ProxyCert(..)
-  , RedeemPublicKey
+  , RedeemVerificationKey
   , Signature(..)
   , abstractHash
   , redeemDeterministicKeyGen
   , unsafeProxyVerificationKey
   )
-import Cardano.Crypto.Signing (PublicKey(..))
+import Cardano.Crypto.Signing (VerificationKey(..))
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Example
@@ -82,12 +82,12 @@ exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances = GenesisAvvmBalances $ M.fromList
-  [ (exampleRedeemPublicKey' (0, 32) , mkKnownLovelace @36524597913081152)
-  , (exampleRedeemPublicKey' (32, 32), mkKnownLovelace @37343863242999412)
+  [ (exampleRedeemVerificationKey' (0, 32) , mkKnownLovelace @36524597913081152)
+  , (exampleRedeemVerificationKey' (32, 32), mkKnownLovelace @37343863242999412)
   ]
  where
-  exampleRedeemPublicKey' :: (Int, Int) -> RedeemPublicKey
-  exampleRedeemPublicKey' (m, n) =
+  exampleRedeemVerificationKey' :: (Int, Int) -> RedeemVerificationKey
+  exampleRedeemVerificationKey' (m, n) =
     fromJust (fst <$> redeemDeterministicKeyGen (getBytes m n))
 
 exampleGenesisData0 :: GenesisData
@@ -105,13 +105,13 @@ exampleGenesisData0 = GenesisData
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
-    [ ( mkStakeholderId issuePubKey
+    [ ( mkStakeholderId issueVerKey
       , unsafeProxyVerificationKey
         (EpochIndex 68300481033)
-        issuePubKey
-        (PublicKey
+        issueVerKey
+        (VerificationKey
           (CC.XPub
-            { CC.xpubPublicKey = pskDelPubKey
+            { CC.xpubPublicKey = pskDelVerKey
             , CC.xpubChaincode = pskDelChainCode
             }
           )
@@ -121,8 +121,8 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
     ]
   )
  where
-  issuePubKey = PublicKey
-    (CC.XPub {CC.xpubPublicKey = pskPubKey, CC.xpubChaincode = pskChainCode})
+  issueVerKey = VerificationKey
+    (CC.XPub {CC.xpubPublicKey = pskVerKey, CC.xpubChaincode = pskChainCode})
   sig :: Signature EpochIndex
   sig = Signature $ fromRight (panic "Something went wrong") $ CC.xsignature
     (hexToBS
@@ -130,7 +130,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
                                  \1c5c78a79ec73777f74e13973af83752114d9f18166\
                                  \085997fc81e432cab7fee99a275d8bf138ad04e103"
     )
-  pskPubKey =
+  pskVerKey =
     hexToBS
       "e2a1773a2a82d10c30890cbf84eccbdc1aaaee920496424d36e8\
                         \68039d9cb519"
@@ -139,7 +139,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
       "21b25efe033d9b00d4f02ccd9cdabcec332\
                                          \abbc6fdf883ca5bf3a8aff4aac27e"
     )
-  pskDelPubKey =
+  pskDelVerKey =
     hexToBS
       "ddca69bfeac14c013304da88ac032ee63281ab036c1b1b918\
                            \8e4b174b303f43e"

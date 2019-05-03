@@ -12,9 +12,9 @@ import qualified Data.ByteString as BS
 
 import Cardano.Crypto.Hashing (hash)
 import qualified Cardano.Crypto.Scrypt as S
-import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
-import Cardano.Crypto.Signing.Safe.EncryptedSecretKey
-  (EncryptedSecretKey(..), mkEncSecretWithSaltUnsafe)
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
+import Cardano.Crypto.Signing.Safe.EncryptedSigningKey
+  (EncryptedSigningKey(..), mkEncSecretWithSaltUnsafe)
 import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase(..))
 
 
@@ -25,14 +25,14 @@ safeCreateKeypairFromSeed seed (PassPhrase pp) =
 -- NB. It's recommended to run it with 'runSecureRandom' from
 -- "Cardano.Crypto.Random" because the OpenSSL generator is probably safer than
 -- the default IO generator.
-safeKeyGen :: (MonadRandom m) => PassPhrase -> m (PublicKey, EncryptedSecretKey)
+safeKeyGen :: (MonadRandom m) => PassPhrase -> m (VerificationKey, EncryptedSigningKey)
 safeKeyGen pp = do
   seed <- getRandomBytes 32
   pure $ safeDeterministicKeyGen seed pp
 
 safeDeterministicKeyGen
-  :: BS.ByteString -> PassPhrase -> (PublicKey, EncryptedSecretKey)
+  :: BS.ByteString -> PassPhrase -> (VerificationKey, EncryptedSigningKey)
 safeDeterministicKeyGen seed pp = bimap
-  PublicKey
+  VerificationKey
   (mkEncSecretWithSaltUnsafe (S.mkSalt (hash seed)) pp)
   (safeCreateKeypairFromSeed seed pp)

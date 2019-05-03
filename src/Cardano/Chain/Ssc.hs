@@ -131,7 +131,7 @@ dropSignedCommitment = dropTriple dropBytes dropCommitment dropBytes
 dropCommitment :: Dropper s
 dropCommitment = do
   enforceSize "Commitment" 2
-  -- Map (AsBinary VssPublicKey) (NonEmpty (AsBinary EncShare))
+  -- Map (AsBinary VssVerificationKey) (NonEmpty (AsBinary EncShare))
   dropMap dropBytes (dropList dropBytes)
   dropSecretProof
 
@@ -177,11 +177,11 @@ dropVssCertificatesMap = dropSet dropVssCertificate
 dropVssCertificate :: Dropper s
 dropVssCertificate = do
   enforceSize "VssCertificate" 4
-  -- AsBinary VssPublicKey
+  -- AsBinary VssVerificationKey
   dropBytes
   -- EpochIndex
   dropWord64
-  -- Signature (AsBinary VssPublicKey, EpochIndex)
+  -- Signature (AsBinary VssVerificationKey, EpochIndex)
   dropBytes
-  -- PublicKey
+  -- VerificationKey
   dropBytes

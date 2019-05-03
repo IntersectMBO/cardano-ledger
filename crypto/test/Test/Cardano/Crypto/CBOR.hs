@@ -31,9 +31,9 @@ import Cardano.Crypto
   , ProtocolMagicId(..)
   , ProxyCert
   , ProxyVerificationKey
-  , PublicKey(..)
+  , VerificationKey(..)
   , RedeemSignature
-  , SecretKey(..)
+  , SigningKey(..)
   , SignTag(SignForTestingOnly)
   , Signature
   , createPsk
@@ -47,7 +47,7 @@ import Cardano.Crypto
   , redeemSign
   , safeCreateProxyCert
   , sign
-  , toPublic
+  , toVerification
   )
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
@@ -69,30 +69,30 @@ roundTripProtocolMagicAeson = eachOf 1000 genProtocolMagic roundTripsAesonShow
 
 
 --------------------------------------------------------------------------------
--- PublicKey
+-- VerificationKey
 --------------------------------------------------------------------------------
 
-goldenPublicKey :: Property
-goldenPublicKey = goldenTestCBOR pkey "test/golden/PublicKey"
-  where Right pkey = PublicKey <$> xpub (getBytes 0 64)
+goldenVerificationKey :: Property
+goldenVerificationKey = goldenTestCBOR vkey "test/golden/VerificationKey"
+  where Right vkey = VerificationKey <$> xpub (getBytes 0 64)
 
-roundTripPublicKeyCBOR :: Property
-roundTripPublicKeyCBOR = eachOf 1000 genPublicKey roundTripsCBORBuildable
+roundTripVerificationKeyCBOR :: Property
+roundTripVerificationKeyCBOR = eachOf 1000 genVerificationKey roundTripsCBORBuildable
 
-roundTripPublicKeyAeson :: Property
-roundTripPublicKeyAeson = eachOf 1000 genPublicKey roundTripsAesonBuildable
+roundTripVerificationKeyAeson :: Property
+roundTripVerificationKeyAeson = eachOf 1000 genVerificationKey roundTripsAesonBuildable
 
 
 --------------------------------------------------------------------------------
--- SecretKey
+-- SigningKey
 --------------------------------------------------------------------------------
 
-goldenSecretKey :: Property
-goldenSecretKey = goldenTestCBOR skey "test/golden/SecretKey"
-  where Right skey = SecretKey <$> xprv (getBytes 10 128)
+goldenSigningKey :: Property
+goldenSigningKey = goldenTestCBOR skey "test/golden/SigningKey"
+  where Right skey = SigningKey <$> xprv (getBytes 10 128)
 
-roundTripSecretKeyCBOR :: Property
-roundTripSecretKeyCBOR = eachOf 1000 genSecretKey roundTripsCBORBuildable
+roundTripSigningKeyCBOR :: Property
+roundTripSigningKeyCBOR = eachOf 1000 genSigningKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ roundTripSecretKeyCBOR = eachOf 1000 genSecretKey roundTripsCBORBuildable
 goldenSignature :: Property
 goldenSignature = goldenTestCBOR sig "test/golden/Signature"
  where
-  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  Right skey = SigningKey <$> xprv (getBytes 10 128)
   sig        = sign (ProtocolMagicId 0) SignForTestingOnly skey ()
 
 genUnitSignature :: Gen (Signature ())
@@ -118,7 +118,7 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 
 
 --------------------------------------------------------------------------------
--- EncryptedSecretKey
+-- EncryptedSigningKey
 --------------------------------------------------------------------------------
 
 -- | This instance is unsafe, as it allows a timing attack. But it's OK for
@@ -126,43 +126,43 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 instance Eq XPrv where
   (==) = (==) `on` unXPrv
 
-goldenEncryptedSecretKey :: Property
-goldenEncryptedSecretKey = goldenTestCBOR esk "test/golden/EncryptedSecretKey"
-  where Right esk = noPassEncrypt . SecretKey <$> xprv (getBytes 10 128)
+goldenEncryptedSigningKey :: Property
+goldenEncryptedSigningKey = goldenTestCBOR esk "test/golden/EncryptedSigningKey"
+  where Right esk = noPassEncrypt . SigningKey <$> xprv (getBytes 10 128)
 
-roundTripEncryptedSecretKeysCBOR :: Property
-roundTripEncryptedSecretKeysCBOR =
-  eachOf 100 genEncryptedSecretKey roundTripsCBORBuildable
-
-
---------------------------------------------------------------------------------
--- RedeemPublicKey
---------------------------------------------------------------------------------
-
-goldenRedeemPublicKey :: Property
-goldenRedeemPublicKey = goldenTestCBOR rpk "test/golden/RedeemPublicKey"
-  where Just rpk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
-
-roundTripRedeemPublicKeyCBOR :: Property
-roundTripRedeemPublicKeyCBOR =
-  eachOf 1000 genRedeemPublicKey roundTripsCBORBuildable
-
-roundTripRedeemPublicKeyAeson :: Property
-roundTripRedeemPublicKeyAeson =
-  eachOf 1000 genRedeemPublicKey roundTripsAesonBuildable
+roundTripEncryptedSigningKeysCBOR :: Property
+roundTripEncryptedSigningKeysCBOR =
+  eachOf 100 genEncryptedSigningKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
--- RedeemSecretKey
+-- RedeemVerificationKey
 --------------------------------------------------------------------------------
 
-goldenRedeemSecretKey :: Property
-goldenRedeemSecretKey = goldenTestCBOR rsk "test/golden/RedeemSecretKey"
+goldenRedeemVerificationKey :: Property
+goldenRedeemVerificationKey = goldenTestCBOR rvk "test/golden/RedeemVerificationKey"
+  where Just rvk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
+
+roundTripRedeemVerificationKeyCBOR :: Property
+roundTripRedeemVerificationKeyCBOR =
+  eachOf 1000 genRedeemVerificationKey roundTripsCBORBuildable
+
+roundTripRedeemVerificationKeyAeson :: Property
+roundTripRedeemVerificationKeyAeson =
+  eachOf 1000 genRedeemVerificationKey roundTripsAesonBuildable
+
+
+--------------------------------------------------------------------------------
+-- RedeemSigningKey
+--------------------------------------------------------------------------------
+
+goldenRedeemSigningKey :: Property
+goldenRedeemSigningKey = goldenTestCBOR rsk "test/golden/RedeemSigningKey"
   where Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
 
-roundTripRedeemSecretKeyCBOR :: Property
-roundTripRedeemSecretKeyCBOR =
-  eachOf 1000 genRedeemSecretKey roundTripsCBORBuildable
+roundTripRedeemSigningKeyCBOR :: Property
+roundTripRedeemSigningKeyCBOR =
+  eachOf 1000 genRedeemSigningKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -205,10 +205,10 @@ goldenDeprecatedVssPublicKey =
 goldenProxyCert :: Property
 goldenProxyCert = goldenTestCBOR pcert "test/golden/ProxyCert"
  where
-  Right pkey = PublicKey <$> xpub (getBytes 0 64)
-  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  Right vkey = VerificationKey <$> xpub (getBytes 0 64)
+  Right skey = SigningKey <$> xprv (getBytes 10 128)
   pcert =
-    safeCreateProxyCert (ProtocolMagicId 0) (noPassSafeSigner skey) pkey ()
+    safeCreateProxyCert (ProtocolMagicId 0) (noPassSafeSigner skey) vkey ()
 
 genUnitProxyCert :: Gen (ProxyCert ())
 genUnitProxyCert = do
@@ -231,9 +231,9 @@ goldenProxyVerificationKey = goldenTestCBOR
   psk
   "test/golden/ProxyVerificationKey"
  where
-  Right pkey = PublicKey <$> xpub (getBytes 0 64)
-  Right skey = SecretKey <$> xprv (getBytes 10 128)
-  psk        = createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) pkey ()
+  Right vkey = VerificationKey <$> xpub (getBytes 0 64)
+  Right skey = SigningKey <$> xprv (getBytes 10 128)
+  psk        = createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) vkey ()
 
 genUnitProxyVerificationKey :: Gen (ProxyVerificationKey ())
 genUnitProxyVerificationKey = do
@@ -256,9 +256,9 @@ roundTripProxyVerificationKeyAeson =
 goldenProxySignature :: Property
 goldenProxySignature = goldenTestCBOR psig "test/golden/ProxySignature"
  where
-  Right skey = SecretKey <$> xprv (getBytes 10 128)
+  Right skey = SigningKey <$> xprv (getBytes 10 128)
   psk =
-    createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) (toPublic skey) ()
+    createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) (toVerification skey) ()
   psig = proxySign (ProtocolMagicId 0) SignForTestingOnly skey psk ()
 
 roundTripProxySignatureCBOR :: Property
@@ -355,7 +355,7 @@ goldenHDAddressPayload :: Property
 goldenHDAddressPayload = goldenTestCBOR hdap "test/golden/HDAddressPayload"
  where
   Right hdap =
-    flip packHDAddressAttr [] . deriveHDPassphrase . PublicKey <$> xpub
+    flip packHDAddressAttr [] . deriveHDPassphrase . VerificationKey <$> xpub
       (getBytes 0 64)
 
 roundTripHDAddressPayloadCBOR :: Property
@@ -391,31 +391,31 @@ sizeEstimates =
     testPrecise g = sizeTest $ scfg { gen = g, precise = True }
   in H.Group
     "Encoded size bounds for crypto types."
-    [ ("PublicKey", testPrecise genPublicKey)
-    , ( "AbstractHash Blake2b_224 PublicKey"
-      , testPrecise @(AbstractHash Blake2b_224 PublicKey)
-        $ genAbstractHash genPublicKey
+    [ ("VerificationKey", testPrecise genVerificationKey)
+    , ( "AbstractHash Blake2b_224 VerificationKey"
+      , testPrecise @(AbstractHash Blake2b_224 VerificationKey)
+        $ genAbstractHash genVerificationKey
       )
-    , ( "AbstractHash Blake2b_256 PublicKey"
-      , testPrecise @(AbstractHash Blake2b_256 PublicKey)
-        $ genAbstractHash genPublicKey
+    , ( "AbstractHash Blake2b_256 VerificationKey"
+      , testPrecise @(AbstractHash Blake2b_256 VerificationKey)
+        $ genAbstractHash genVerificationKey
       )
-    , ( "AbstractHash Blake2b_384 PublicKey"
-      , testPrecise @(AbstractHash Blake2b_384 PublicKey)
-        $ genAbstractHash genPublicKey
+    , ( "AbstractHash Blake2b_384 VerificationKey"
+      , testPrecise @(AbstractHash Blake2b_384 VerificationKey)
+        $ genAbstractHash genVerificationKey
       )
-    , ( "AbstractHash Blake2b_512 PublicKey"
-      , testPrecise @(AbstractHash Blake2b_512 PublicKey)
-        $ genAbstractHash genPublicKey
+    , ( "AbstractHash Blake2b_512 VerificationKey"
+      , testPrecise @(AbstractHash Blake2b_512 VerificationKey)
+        $ genAbstractHash genVerificationKey
       )
-    , ( "AbstractHash SHA1 PublicKey"
-      , testPrecise @(AbstractHash SHA1 PublicKey)
-        $ genAbstractHash genPublicKey
+    , ( "AbstractHash SHA1 VerificationKey"
+      , testPrecise @(AbstractHash SHA1 VerificationKey)
+        $ genAbstractHash genVerificationKey
       )
-    , ("RedeemPublicKey", testPrecise genRedeemPublicKey)
-    , ("RedeemSecretKey", testPrecise genRedeemSecretKey)
-    , ( "RedeemSignature PublicKey"
-      , testPrecise (genRedeemSignature (ProtocolMagicId 0) genPublicKey)
+    , ("RedeemVerificationKey", testPrecise genRedeemVerificationKey)
+    , ("RedeemSigningKey", testPrecise genRedeemSigningKey)
+    , ( "RedeemSignature VerificationKey"
+      , testPrecise (genRedeemSignature (ProtocolMagicId 0) genVerificationKey)
       )
     ]
 

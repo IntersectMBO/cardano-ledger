@@ -16,8 +16,8 @@ module Cardano.Crypto.HD
   , ShouldCheckPassphrase(..)
   , packHDAddressAttr
   , unpackHDAddressAttr
-  , deriveHDPublicKey
-  , deriveHDSecretKey
+  , deriveHDVerificationKey
+  , deriveHDSigningKey
   , deriveHDPassphrase
   , decryptChaChaPoly
   , encryptChaChaPoly
@@ -44,12 +44,12 @@ import Data.ByteString.Char8 as B
 
 import Cardano.Binary
   (FromCBOR(..), ToCBOR(..), decodeBytesCanonical, decodeFull', serialize')
-import Cardano.Crypto.Signing (PublicKey(..))
+import Cardano.Crypto.Signing (VerificationKey(..))
 import Cardano.Crypto.Signing.Safe
-  (EncryptedSecretKey(..), PassPhrase, checkPassMatches)
+  (EncryptedSigningKey(..), PassPhrase, checkPassMatches)
 
 
--- | Passphrase is a hash of root public key.
+-- | Passphrase is a hash of root verification key.
 data HDPassphrase =
   HDPassphrase !ByteString
   deriving (Eq, Show)
@@ -77,13 +77,13 @@ instance FromJSON HDAddressPayload where
 instance ToJSON HDAddressPayload where
   toJSON = toJSON . makeByteString64 . getHDAddressPayload
 
--- | Compute passphrase as hash of the root public key
-deriveHDPassphrase :: PublicKey -> HDPassphrase
-deriveHDPassphrase (PublicKey pk) = HDPassphrase $ PBKDF2.generate
+-- | Compute passphrase as hash of the root verification key
+deriveHDPassphrase :: VerificationKey -> HDPassphrase
+deriveHDPassphrase (VerificationKey vk) = HDPassphrase $ PBKDF2.generate
   (PBKDF2.prfHMAC SHA512)
   -- Parameters for the hashing function. 500 iter of PBDKF2 with HMAC-SHA256
   (PBKDF2.Parameters 500 passLen)
-  (unXPub pk)
+  (unXPub vk)
   ("address-hashing" :: ByteString)
  where
     -- Password length in bytes
@@ -101,30 +101,30 @@ firstNonHardened = 0
 isHardened :: Word32 -> Bool
 isHardened = (>= firstHardened)
 
--- | Derive public key from public key in non-hardened (normal) way.
+-- | Derive verification key from verification key in non-hardened (normal) way.
 --   If you try to pass an 'isHardened' index, error will be called.
-deriveHDPublicKey :: PublicKey -> Word32 -> PublicKey
-deriveHDPublicKey (PublicKey xpub) childIndex
+deriveHDVerificationKey :: VerificationKey -> Word32 -> VerificationKey
+deriveHDVerificationKey (VerificationKey xpub) childIndex
   | isHardened childIndex
   = panic "Wrong index for non-hardened derivation"
   | otherwise
-  = maybe (panic "deriveHDPublicKey: deriveXPub failed") PublicKey
+  = maybe (panic "deriveHDVerificationKey: deriveXPub failed") VerificationKey
     $ deriveXPub DerivationScheme1 xpub childIndex
 
 -- | Whether to call 'checkPassMatches'
 newtype ShouldCheckPassphrase = ShouldCheckPassphrase Bool
 
--- | Derive child's secret key from parent's secret key using user's passphrase
-deriveHDSecretKey
+-- | Derive child's signing key from parent's signing key using user's passphrase
+deriveHDSigningKey
   :: ShouldCheckPassphrase
   -> PassPhrase
-  -> EncryptedSecretKey
+  -> EncryptedSigningKey
   -> Word32
-  -> Maybe EncryptedSecretKey
-deriveHDSecretKey (ShouldCheckPassphrase checkPass) passPhrase encSK@(EncryptedSecretKey xprv pph) childIndex
+  -> Maybe EncryptedSigningKey
+deriveHDSigningKey (ShouldCheckPassphrase checkPass) passPhrase encSK@(EncryptedSigningKey xprv pph) childIndex
   = do
     when checkPass $ checkPassMatches passPhrase encSK
-    pure $ EncryptedSecretKey
+    pure $ EncryptedSigningKey
       (deriveXPrv DerivationScheme1 passPhrase xprv childIndex)
       pph
 

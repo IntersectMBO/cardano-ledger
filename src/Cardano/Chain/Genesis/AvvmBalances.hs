@@ -16,14 +16,14 @@ import qualified Data.Aeson as Aeson
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Chain.Common (Lovelace)
-import Cardano.Crypto.Signing.Redeem (RedeemPublicKey)
+import Cardano.Crypto.Signing.Redeem (RedeemVerificationKey)
 
 
 -- | Predefined balances of AVVM (Ada Voucher Vending Machine) entries.
 -- People who purchased Ada at a pre-sale were issued a certificate during
 -- the pre-sale period. These certificates allow customers to redeem ADA.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
-  { unGenesisAvvmBalances :: Map RedeemPublicKey Lovelace
+  { unGenesisAvvmBalances :: Map RedeemVerificationKey Lovelace
   } deriving (Show, Eq, Semigroup)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where

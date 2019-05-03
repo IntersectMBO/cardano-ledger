@@ -81,12 +81,12 @@ elaborateDCert :: ProtocolMagicId -> DCert -> Concrete.Certificate
 elaborateDCert pm cert = createPsk
   pm
   (noPassSafeSigner delegatorSK)
-  delegatePK
+  delegateVK
   epochIndex
  where
   VKeyGenesis delegatorVKey = delegator cert
   (_         , delegatorSK) = elaborateKeyPair $ vKeyPair delegatorVKey
-  (delegatePK, _          ) = elaborateKeyPair . vKeyPair $ delegate cert
+  (delegateVK, _          ) = elaborateKeyPair . vKeyPair $ delegate cert
 
   Epoch e = _depoch cert
 

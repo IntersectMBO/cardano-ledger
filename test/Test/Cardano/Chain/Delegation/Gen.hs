@@ -19,19 +19,19 @@ import Cardano.Crypto (AProxyVerificationKey(..), ProtocolMagicId, createPsk)
 import Data.List (nub)
 
 import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
-import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner)
+import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner)
 
 
 genCanonicalCertificate :: ProtocolMagicId -> Gen Certificate
 genCanonicalCertificate pm =
   createPsk pm
     <$> genSafeSigner
-    <*> genPublicKey
+    <*> genVerificationKey
     <*> (EpochIndex <$> Gen.word64 (Range.constant 0 1000000000000000))
 
 genCertificate :: ProtocolMagicId -> Gen Certificate
 genCertificate pm =
-  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genEpochIndex
+  createPsk pm <$> genSafeSigner <*> genVerificationKey <*> genEpochIndex
 
 genCanonicalCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
 genCanonicalCertificateDistinctList pm = do
@@ -42,7 +42,7 @@ genCanonicalCertificateDistinctList pm = do
   allDistinct ls = length (nub ls) == length ls
 
   noSelfSigningCerts :: [Certificate] -> [Certificate]
-  noSelfSigningCerts = filter (\x -> pskIssuerPk x /= pskDelegatePk x)
+  noSelfSigningCerts = filter (\x -> pskIssuerVK x /= pskDelegateVK x)
 
 genCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
 genCertificateDistinctList pm = do
@@ -53,7 +53,7 @@ genCertificateDistinctList pm = do
   allDistinct ls = length (nub ls) == length ls
 
   noSelfSigningCerts :: [Certificate] -> [Certificate]
-  noSelfSigningCerts = filter (\x -> pskIssuerPk x /= pskDelegatePk x)
+  noSelfSigningCerts = filter (\x -> pskIssuerVK x /= pskDelegateVK x)
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =

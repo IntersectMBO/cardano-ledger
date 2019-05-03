@@ -21,7 +21,7 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (Annotated, Decoded(..), FromCBOR, ToCBOR, serialize')
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
-import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
 import Cardano.Crypto.Signing.Safe (SafeSigner)
 import Cardano.Crypto.Signing.Signature
   (Signature(..), safeSign, verifySignatureDecoded)
@@ -47,31 +47,31 @@ instance Monad m => ToJSON m (ProxyCert w) where
 instance (Typeable x, MonadError SchemaError m) => FromJSON m (ProxyCert x) where
   fromJSON = fmap ProxyCert . fromJSON
 
--- | Proxy certificate creation from secret key of issuer, public key of
+-- | Proxy certificate creation from signing key of issuer, verification key of
 --   delegate and the message space ω.
 safeCreateProxyCert
-  :: ToCBOR w => ProtocolMagicId -> SafeSigner -> PublicKey -> w -> ProxyCert w
-safeCreateProxyCert pm ss (PublicKey delegatePk) o = coerce sig
+  :: ToCBOR w => ProtocolMagicId -> SafeSigner -> VerificationKey -> w -> ProxyCert w
+safeCreateProxyCert pm ss (VerificationKey delegateVK) o = coerce sig
  where
   sig = safeSign pm SignProxyVK ss
-    $ mconcat ["00", CC.unXPub delegatePk, serialize' o]
+    $ mconcat ["00", CC.unXPub delegateVK, serialize' o]
 
--- | Checks if certificate is valid, given issuer pk, delegate pk and ω
+-- | Checks if certificate is valid, given issuer vk, delegate vk and ω
 --
 --   We serialize' the annotated 'ByteString' as the Byron release signed that
 --   way
 verifyProxyCert
   :: (Decoded (f ByteString), Functor f)
   => Annotated ProtocolMagicId ByteString
-  -> PublicKey
-  -> PublicKey
+  -> VerificationKey
+  -> VerificationKey
   -> f ByteString
   -> ProxyCert (BaseType (f ByteString))
   -> Bool
-verifyProxyCert pm issuerPk (PublicKey delegatePk) o cert =
+verifyProxyCert pm issuerVK (VerificationKey delegateVK) o cert =
   verifySignatureDecoded
     pm
     SignProxyVK
-    issuerPk
-    (serialize' . mappend ("00" <> CC.unXPub delegatePk) <$> o)
+    issuerVK
+    (serialize' . mappend ("00" <> CC.unXPub delegateVK) <$> o)
     (coerce cert)
