@@ -222,10 +222,10 @@ Alice and Bob noticing the attack.
 \subsubsection{Public Spending Keys Should not be Disclosed Prematurely}
 \label{public-spending-keys-should-not-be-disclosed-prematurely}
 
-Delegation of stake should not involve revealing the public spending
-key. The public spending key should only be revealed once the funds that
-are controlled by the corresponding private key are actually transferred
-to another address.
+Delegation of stake should not involve revealing the public spending key (other
+than the public key hash, which is already visible from the address itself). The
+public spending key should only be revealed once the funds that are controlled
+by the corresponding private key are actually transferred to another address.
 
 \subsubsection{Mitigate Key Exposure}
 \label{mitigate-key-exposure}
@@ -403,7 +403,9 @@ are the public keys used to verify signatures.
 
 Except for special classes of addresses with no stake rights\footnote{Enterprise,
   script, bootstrap era and AVVM addresses have no corresponding stake
-  rights.}, all addresses have stake rights corresponding to the funds
+  rights. AVVM is an acronym for ``Ada Virtual Vending Machine'', and AVVM
+  addresses are special addresses used in the initial distribution of Ada.}, all
+addresses have stake rights corresponding to the funds
 at the address. To exercise these stake rights, and to receive staking
 rewards, each address must be associated with a \emph{registered} stake
 key. This involves registering a stake key on the chain and using
@@ -680,6 +682,11 @@ leadership schedule.
 
 Note that using addresses with no stake rights effectively decreases
 the total amount of stake, which plays into the hands of the adversary.
+But unless we want the exchange to control the stake, it is unavoidable to
+ignore it, since there is no way to determine whom the stake "really" belongs
+to. Also note that it is generally considered bad practice to leave funds on
+exchanges, and in Cardano-Shelley, there will also be a monetary incentive to
+withdraw funds from exchanges in order to earn rewards.
 
 \subsubsection{Reward Account Address}
 \label{reward-address}
@@ -1110,8 +1117,10 @@ Still, there will only be one operator, the person holding the key of the stake
 pool itself. In addition to signing blocks, this key also holds the power to
 retire the stake pool, or to post updated registration certificates without the
 keys of all owners (in which case some of the owners are kicked off the stake
-pool). The stake pool operator will also receive the rewards for all the owners,
-and it will be their responsibility to distribute them to their fellow owners.
+pool). Also, the rewards for all owners will be paid to the reward account
+associated with the reward staking key of the pool, and it will be the
+responsibility of the person holding that key (usually the pool operator) to
+distribute the rewards amongst the owners.
 That is a conscious design decision: collaborating to form a stake pool should
 require significant trust between the owners. Otherwise, everyone could choose
 to become a co-owner of a stake pool instead of delegating, which would render
@@ -1225,7 +1234,8 @@ lifetime of \(2^7 = 128\) days, a little over three months.
 
 Operational key certificates will have a lifetime of 90 days after which they
 become invalid, to encourage pool operators to regularly rotate their
-operational key.
+operational key. The certificate will specify a slot from which it will be
+considered to be valid for 90 days.
 
 In detail, the hot/cold key setup is as follows:
 
@@ -1248,10 +1258,6 @@ In detail, the hot/cold key setup is as follows:
   pool operator will create a new operational key certificate
   \(C'\), delegating the staking rights to a new hot key
   \(vks_{\text{hot}'}\).
-\item
-  The epoch number starting from which this certificate will be valid. The
-  certificate will be considered valid for 90 days, from the beginning of that
-  epoch.
 \end{itemize}
 
 In order to render \(sks_\text{hot}\) useless, it must be established
@@ -3673,7 +3679,7 @@ In the following, we describe how the requirements listed in
   pseudonymity that is not worse than that in the Ethereum network.
 
   They can also choose to use a distinct staking key per address, or addesses
-  with no staking key at all, which gives psweudonymity that is no worse than in
+  with no staking key at all, which gives pseudonymity that is no worse than in
   Bitcoin.
 
 \item[\cref{short-addresses} Short Addresses] The goal of having

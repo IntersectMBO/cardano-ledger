@@ -1,5 +1,13 @@
 # Delegation Design Document Changelog
 
+## 2019-05-17
+Some clarifications in response to review by the auditors.
+
+## 2019-04-11
+Some subtle corrections in the rewards chapter after review by Aikaterina.
+
+First version officially published on the IOHK blog.
+
 ## 2019-04-08
 General review of the document.
 
