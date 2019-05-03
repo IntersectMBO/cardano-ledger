@@ -206,17 +206,17 @@ data ABlockOrBoundary a
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
 fromCBORABlockOrBoundary
-  :: EpochSlots -> Bool -> Decoder s (ABlockOrBoundary ByteSpan)
-fromCBORABlockOrBoundary epochSlots isEpochZero = do
+  :: EpochSlots -> Decoder s (ABlockOrBoundary ByteSpan)
+fromCBORABlockOrBoundary epochSlots = do
   enforceSize "Block" 2
   fromCBOR @Word >>= \case
-    0 -> ABOBBoundary <$> dropBoundaryBlock isEpochZero
+    0 -> ABOBBoundary <$> dropBoundaryBlock
     1 -> ABOBBlock <$> fromCBORABlock epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-fromCBORBlockOrBoundary :: EpochSlots -> Bool -> Decoder s (Maybe Block)
-fromCBORBlockOrBoundary epochSlots isEpochZero =
-  fromCBORABlockOrBoundary epochSlots isEpochZero >>= \case
+fromCBORBlockOrBoundary :: EpochSlots -> Decoder s (Maybe Block)
+fromCBORBlockOrBoundary epochSlots =
+  fromCBORABlockOrBoundary epochSlots >>= \case
     ABOBBoundary _ -> pure Nothing
     ABOBBlock    b -> pure . Just $ void b
 
@@ -230,25 +230,27 @@ data BoundaryValidationData a = BoundaryValidationData
   , boundaryPrevHash    :: !(Either GenesisHash HeaderHash)
   -- ^ The hash of the previous block. Should only be GenesisHash for the
   -- initial boundary block.
+  , boundaryEpoch       :: !Word64
   , boundaryHeaderBytes :: !a
   -- ^ Annotation representing the header bytes
   } deriving (Eq, Show, Functor)
 
 -- | A decoder that drops the boundary block, but preserves the 'ByteSpan' of
 --   the header for hashing
-dropBoundaryBlock ::  Bool -> Decoder s (BoundaryValidationData ByteSpan)
-dropBoundaryBlock isEpochZero = do
-  Annotated (Annotated hh bs) (ByteSpan start end) <- annotatedDecoder $ do
+dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
+dropBoundaryBlock = do
+  Annotated (Annotated (hh, epoch) bs) (ByteSpan start end) <- annotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
-    aHeaderHash <- annotatedDecoder dropBoundaryHeader
+    aHeaderStuff <- annotatedDecoder dropBoundaryHeader
     dropBoundaryBody
     dropBoundaryExtraBodyData
-    pure aHeaderHash
+    pure aHeaderStuff
   pure $ BoundaryValidationData
     { boundaryBlockLength = end - start
     -- For the zeroth boundary block this field needs to be a 'GenesisHash'
     -- and for all subsequent blocks it's a 'HeaderHash'.
-    , boundaryPrevHash    = if isEpochZero then Left (coerce hh) else Right hh
+    , boundaryPrevHash    = if epoch == 0 then Left (coerce hh) else Right hh
+    , boundaryEpoch       = epoch
     , boundaryHeaderBytes = bs
     }
 

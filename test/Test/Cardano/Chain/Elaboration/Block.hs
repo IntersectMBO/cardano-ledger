@@ -155,7 +155,7 @@ annotateBlock epochSlots block =
       case
           Binary.decodeFullDecoder
             "Block"
-            (Concrete.fromCBORABlockOrBoundary epochSlots False) bytes
+            (Concrete.fromCBORABlockOrBoundary epochSlots) bytes
         of
           Left err ->
             panic
