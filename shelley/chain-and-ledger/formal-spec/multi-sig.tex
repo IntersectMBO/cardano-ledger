@@ -44,6 +44,7 @@
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Wdrl}{\type{Wdrl}}
 \newcommand{\Coin}{\type{Coin}}
+\newcommand{\PParams}{\type{PParams}}
 
 \newcommand{\Slot}{\type{Slot}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
@@ -89,8 +90,6 @@
 
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
-\newcommand{\TxInMultiSig}{\type{TxIn_{multi}}}
-\newcommand{\TxInSimp}{\type{TxIn_{simple}}}
 
 \newcommand{\TxOut}{\type{TxOut}}
 \newcommand{\VKey}{\type{VKey}}
@@ -235,6 +234,11 @@
   transactions. It is based on a simple script model which uses only single step
   script execution and does not require data scripts.
 
+  A multi-signature scheme allows an unspent transaction output to be used as an
+  input to a new transaction if a pre-defined combination of signatures is
+  provided, e.g., two persons have to sign simultaneously, two out of three
+  keys have to be provided, etc.
+
   For an output that is locked with a multi-signature, the set of all keys that
   signed the transaction is given to the script for validation. In this way, the
   script can decide in a single step whether is has the correct key combination
@@ -256,12 +260,12 @@ ledger. The main changes are the following:
 
 \begin{itemize}
 \item Add a new address type that for outputs locked by scripts.
-\item Change the type of transaction inputs to optionally include a validator
-  script.
+\item Change the type of transaction inputs of a transaction to optionally
+  include a validator script.
 \item Adapt the transaction validation in such a way that funds locked by a
   multi-signature script can be spent.
 \item Adapt the functions used in the validation for the extended types of
-  addresses and transaction inputs.
+  addresses and transaction inputs with scripts.
 \end{itemize}
 
 In this approach for multi-signature, the scripts receive a set of hashed keys
@@ -271,6 +275,8 @@ keys in which combination can unlock the unspent output.
 
 This means that the scripts are completely stateless and no data needs to be
 supplied to the script apart from the hashed keys used to sign the transaction.
+It allows for any type of $n$ out of $m$ required signatures for a specific
+unspent transaction output.
 
 \section{Types}
 \label{sec:types}
@@ -333,31 +339,17 @@ pair of $\Addr\times\Coin$.
 The $\fun{hashScript}$ function calculates the hash of a script. The accessor
 function $\fun{paymentHK}$ is changed to return an optional hash key now, as
 script addresses do not carry hash keys. The accessor function
-$\fun{validatorHash}$ returns the hash of a script of a script address.
+$\fun{validatorHash}$ returns the hash of a script of a script address, or
+$\Nothing$ in case of a non-script address.
 
 \begin{figure*}[hbt]
-  \emph{Derived types}
-
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      (\var{txid}, \var{ix}) & \TxInSimp & \TxId\times\Ix & \text{tx input} \\
-      (\var{txid}, \var{ix}, \var{validator}) & \TxInMultiSig &
-                                                          \TxId \times \Ix \times
-
-                                                          \Script &
-                                                                    \text{tx input
-                                                                    for multi-sig} \\
-      \var{txin} & \TxIn & \TxInSimp \uniondistinct \TxInMultiSig & \text{tx input}
-    \end{array}
-  \end{equation*}
-
   \emph{Transaction Type}
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
       \var{txbody}
       & \TxBody
-      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut \times \Script^{?}) \times \seqof{\DCert}
+      & \powerset{(\TxIn \times \Script^{?})} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl
       \\
     \end{array}
@@ -367,9 +359,7 @@ $\fun{validatorHash}$ returns the hash of a script of a script address.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{txins} & \Tx \to \powerset{\TxIn} & \text{transaction inputs} \\
-      \fun{txouts} & \Tx \to (\Ix \mapsto \TxOut \times \Script^{?}) & \text{transaction outputs} \\
-      \fun{validatorScript} & \TxInMultiSig \to \Script & \text{validator script}
+      \fun{txins} & \Tx \to \powerset{(\TxIn \times \Script^{?})} & \text{transaction inputs}
     \end{array}
   \end{equation*}
 
@@ -386,16 +376,10 @@ $\fun{validatorHash}$ returns the hash of a script of a script address.
   \label{fig:types_defs_multi}
 \end{figure*}
 
-In Figure~\ref{fig:types_defs_multi} the base types for transaction inputs and
-outputs from~\cite{shelley_formal_spec} are extended to include simple scripts.
-The type of transaction inputs, $\TxIn$ is split into sub-types, $\TxInSimp$ for
-transaction inputs without scripts and $\TxInMultiSig$ for multi-signature.  In
-addition to the transaction id and the index, a value of type $\TxInMultiSig$
-also carries a validator script.
-
-The transaction itself is extended to optionally carry a validator script for a
-transaction output it will create. This validator script will then have to be
-validated when the respective output is to be spent later.
+In Figure~\ref{fig:types_defs_multi} the type for the transaction body
+from~\cite{shelley_formal_spec} is extended to optionally carry a validator
+script for an unspent output that is locked by a script and should be spent in
+the transaction.
 
 To validate a transaction that spends funds that are locked by a multi-signature
 script, the $\fun{validateMultiSig}$ function takes the validator script and a
@@ -408,25 +392,31 @@ sufficient to validate the multi-signature.
 \label{sec:ledg-trans-multi}
 
 The main change for the ledger transitions when using multi-signature based on
-scripts is the validation of the UTxOW transition of~\cite{shelley_formal_spec}.
+scripts is the validation of the UTxOW and UTxO transitions
+of~\cite{shelley_formal_spec}.
 
-The extended transition system is shown in
+The extended transition system for UTxOW is shown in
 Figure~\ref{fig:rules:utxow-multi-sig}, in the format described
 in~\cite{small_step_semantics}. The constraint on the set of required witnesses
 is relaxed in such a way that ``redundant'' signatures can be supplied in the
 transaction. The complete set of verification keys is then passed to
 $\fun{validateMultiSig}$ when validating all supplied scripts.
 
-\begin{figure}
-  \begin{equation}
-    \label{eq:utxo-witness-inductive-shelley}
+\begin{figure}[htb]
+  \begin{equation*}
     \inference[UTxO-wit]
     {
       (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
-      \forall (\wcard, \wcard, \var{script}) \mapsto (a, \wcard) \in \fun{txins}~tx
-      \restrictdom (\TxInMultiSig \restrictdom \var{utxo}),\\ \fun{validatorHash}~\var{a}
-      = \fun{hashScript}~script \wedge
-      \fun{validateMultiSig}~{script}~{(\dom{(\txwits{tx})})}\\~\\
+      \forall \var{s}\mapsto\var{a} \in
+      \left\{
+        \var{s}\mapsto\var{a}\vert
+        (\var{inp}, \var{s})\in\fun{txins}~tx,
+        \var{inp}\mapsto(\var{a},\wcard) \in \var{utxo},
+        \var{s}\neq\Nothing
+      \right\},\\
+      \fun{validatorHash}~\var{a}
+      = \fun{hashScript}~s \wedge
+      \fun{validateMultiSig}~{s}~{(\dom{(\txwits{tx})})}\\~\\
       \forall \var{vk} \mapsto \sigma \in \txwits{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
       \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
@@ -443,17 +433,80 @@ $\fun{validateMultiSig}$ when validating all supplied scripts.
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }
-  \end{equation}
+  \end{equation*}
   \caption{UTxO with Witnesses and Multi-Sig}
   \label{fig:rules:utxow-multi-sig}
 \end{figure}
 
+In the UTxO transition rule, the transaction inputs are used to restrict the
+domain of the $\var{utxo}$. As the return type of the function $\fun{txins}$ has
+been changed, we define the local variable $\var{txInps}$ as the projection of
+the returned triples of $\fun{txins}$ onto the first two values which correspond
+to the domain of the mapping in the UTxO.
+
+\begin{figure}[htb]
+  \begin{equation}\label{eq:utxo-inductive-shelley}
+    \inference[UTxO-inductive]
+    { \var{txInps} \leteq \{(\var{txid},\var{ix}) \vert (\var{txid}, \var{ix},
+      \wcard)\in\txins{tx}\} \\~\\
+      \txttl tx \geq \var{slot}
+      & \txins{tx} \neq \emptyset
+      & \minfee{pp}{tx} \leq \txfee{tx}
+      & \var{txInps}\subseteq \dom \var{utxo}
+      \\
+      \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+      \\
+      ~
+      \\
+      \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c \geq 0
+      \\
+      ~
+      \\
+      \var{refunded} \leteq \keyRefunds{pp}{stkeys}~{tx}
+      \\
+      \var{decayed} \leteq \decayedTx{pp}{stkeys}~{tx}
+      \\
+      \var{depositChange} \leteq
+        (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stkeys}\\
+        \var{stpools}\\
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+      \end{array}
+      \right)
+      \trans{utxo}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{(\{(\var{txInps}\subtractdom \var{utxo}) \cup \outs{tx}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:rules:utxo-mulit-sig}
+\end{figure}
+
 In order to work with the new types, some function definitions
 of~\cite{shelley_formal_spec} have to be extended. Those functions are listed in
-Figure~\ref{fig:functions-witnesses-multi-sig}. The functions $\fun{witsNeeded}$
-only collected the payment keys for non-script addresses. The function
-$\fun{outs}$ calculates the UTxO from transaction outputs, constructing values
-with and without scripts.
+Figure~\ref{fig:functions-witnesses-multi-sig}. The function $\fun{witsNeeded}$
+only collects the payment keys for non-script addresses.
+
+The function $\fun{consumed}$ computes the sum of all coin values spent by a
+transaction. As the return value of the function $\fun{txins}$ has been changed,
+the parameter passed to $\fun{ubalance}$ has to be adapted, too, by projecting
+the returned triple onto the first two entries.
 
 \begin{figure}[htb]
   \begin{align*}
@@ -464,26 +517,20 @@ with and without scripts.
       \end{array} \\
     & \fun{witsNeeded}~{utxo}~{tx} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in
-      \var{utxo},~i\in\txins{tx},~\fun{paymentHK}~a \neq \Nothing \}~\cup \\
+      \var{utxo},~(i,\Nothing)\in\txins{tx}\}~\cup \\
     & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \txwdrls{tx}\}~\cup \\
     & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
     & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}}
-    \fun{poolOwners}~{c} \\
+    \fun{poolOwners}~{c}
     \nextdef
-    & \fun{outs} \in \Tx \to \UTxO
-    & \text{tx outputs as UTxO} \\
-    & \fun{outs} ~ \var{tx} =
-        \left\{
-          (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
-          \middle|
-          \var{ix} \mapsto (\var{txout}, \Nothing) \in \txouts{tx}
-      \right\} & \\
-    & \cup
-      \left\{
-      (\fun{txid} ~ \var{tx}, \var{ix}, \var{script}) \mapsto \var{txout} ~
-      \middle|
-      \var{ix} \mapsto (\var{txout}, \var{script}) \in \txouts{tx}
-      \right\}
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeKeys \to \Wdrl \to \Tx \to \Coin
+    & \text{value consumed} \\
+    & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
+    & ~~\ubalance{(\{(\var{txid},\var{ix}) \vert (\var{txid}, \var{ix},
+      \wcard)\in\txins{tx}\}
+      \restrictdom \var{utxo})} +
+      \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
+    & ~~~~ + \keyRefunds{pp}{stkeys}{tx}
   \end{align*}
   \caption{Functions used in Witness Rule with Multi-Sig}
   \label{fig:functions-witnesses-multi-sig}
