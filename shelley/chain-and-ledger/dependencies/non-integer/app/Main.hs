@@ -28,16 +28,26 @@ epsilon = 100000000000000000
 
 doTestsFromStdin :: IO ()
 doTestsFromStdin = do
-  b <- isEOF
-  if b
+  end <- isEOF
+  if end
     then return ()
     else do
       line <- getLine
-      let base = read (takeWhile (/= ' ') line) :: FixedPoint
-      let exponent = read (tail $ dropWhile (/= ' ') line) :: FixedPoint
+      let splitLine = words line
+      let x = (read (splitLine !! 0) :: FixedPoint) / precision
+      let a = (read (splitLine !! 1) :: FixedPoint) / precision
+      let b = (read (splitLine !! 2) :: FixedPoint) / precision
+      let c = ln' (1 - f)
+      let res = taylorExpCmp 3 (1/(1 - a)) (-(b * c))
       putStrLn $
-        show ((base / precision) *** (exponent / precision)) ++
-        " " ++ show (exp' (base / precision))
+        show (exp' x) ++ " " ++
+        show (-(ln' a)) ++ " " ++
+        show (1 - ((1 - f) *** b)) ++ " " ++
+        (case res of
+            BELOW acc n -> (show acc) ++ " LT " ++ show n
+            ABOVE acc n -> (show acc) ++ " GT " ++ show n
+            UNKNOWN -> "error"
+        )
       doTestsFromStdin
 
 benchmark :: [(Int, FixedPoint, FixedPoint)]
@@ -91,17 +101,17 @@ leaderTest =
 f :: FixedPoint
 f = 1 / 10
 
-leaderComputation :: (FixedPoint, FixedPoint) -> CompareResult
+leaderComputation :: (FixedPoint, FixedPoint) -> CompareResult FixedPoint
 leaderComputation (sigma, p) = taylorExpCmp 3 (1/q) (-sigma*c')
   where c = 1 - f
         c' = ln' c
         q = 1 - p
 
-leader' :: (FixedPoint, FixedPoint) -> CompareResult
+leader' :: (FixedPoint, FixedPoint) -> CompareResult FixedPoint
 leader' (invQ, negAlpha) = taylorExpCmp 3 invQ negAlpha
 
 main :: IO ()
-main = do
+main = doTestsFromStdin
   -- precomputed <-
   --   forM benchmark $ \(i, x, y) -> do
   --     c <- evaluate $ ln' x
@@ -116,33 +126,33 @@ main = do
   --       | (i, c, y) <- precomputed
   --       ]
   --   ]
-  precomputedLeader <-
-    forM leaderTest $ \(sigma, p) -> do
-      let q = 1 - p
-      let c = 1 - f
-      let c' = ln' c
-      return (1/q, (-sigma * c'))
-  precomputedLeader' <-
-    forM leaderTest $ \(sigma, p) -> do
-      c <- evaluate $ ln' (1 - f)
-      return (p, sigma, c)
+  -- precomputedLeader <-
+  --   forM leaderTest $ \(sigma, p) -> do
+  --     let q = 1 - p
+  --     let c = 1 - f
+  --     let c' = ln' c
+  --     return (1/q, (-sigma * c'))
+  -- precomputedLeader' <-
+  --   forM leaderTest $ \(sigma, p) -> do
+  --     c <- evaluate $ ln' (1 - f)
+  --     return (p, sigma, c)
 
-  defaultMain
-    [
-      bgroup
-      "taylorCmp"
-      [bench "cmp" $ whnf leader' (invQ, negAlpha)
-      | (invQ, negAlpha) <- precomputedLeader
-      ]
-    , bgroup
-      "partial pre-computation"
-      [bench "exp(alpha*c)" $ whnf (\(p', s', c') -> p' < 1 - exp' (s' * c')) (p, sigma, c)
-      | (p, sigma, c) <- precomputedLeader'
-      ]
-    , bgroup
-      "full calculation"
-      [bench "cmp" $ whnf (\(s, p') -> p' < 1 - ((1 - f) *** s)) (sigma, p)
-      | (sigma, p) <- leaderTest
-      ]
-    ]
-  print $ map leaderComputation leaderTest
+  -- defaultMain
+  --   [
+  --     bgroup
+  --     "taylorCmp"
+  --     [bench "cmp" $ whnf leader' (invQ, negAlpha)
+  --     | (invQ, negAlpha) <- precomputedLeader
+  --     ]
+  --   , bgroup
+  --     "partial pre-computation"
+  --     [bench "exp(alpha*c)" $ whnf (\(p', s', c') -> p' < 1 - exp' (s' * c')) (p, sigma, c)
+  --     | (p, sigma, c) <- precomputedLeader'
+  --     ]
+  --   , bgroup
+  --     "full calculation"
+  --     [bench "cmp" $ whnf (\(s, p') -> p' < 1 - ((1 - f) *** s)) (sigma, p)
+  --     | (sigma, p) <- leaderTest
+  --     ]
+  --   ]
+  -- print $ map leaderComputation leaderTest
