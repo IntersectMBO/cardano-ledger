@@ -30,7 +30,7 @@
 \newcommand{\hsig}[1]{\fun{hsig}~\var{#1}}
 \newcommand{\bprev}[1]{\fun{bprev}~\var{#1}}
 \newcommand{\bhash}[1]{\fun{bhash}~\var{#1}}
-\newcommand{\bissuer}[1]{\fun{bissuer}~\var{#1}}
+\newcommand{\bvkcold}[1]{\fun{bvkcold}~\var{#1}}
 \newcommand{\bseedl}[1]{\fun{bseed}_{\ell}~\var{#1}}
 \newcommand{\bprfn}[1]{\fun{bprf}_{n}~\var{#1}}
 \newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
@@ -44,7 +44,7 @@
 \newcommand{\BHeaderEnv}{\type{BHeaderEnv}}
 \newcommand{\BHeaderState}{\type{BHeaderState}}
 \newcommand{\VRFEnv}{\type{VRFEnv}}
-\newcommand{\DSliderEnv}{\type{DSliderEnv}}
+\newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
 \newcommand{\OCertState}{\type{OCertState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
@@ -140,7 +140,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{vk_{hot}} & \VKeyEv & \text{operational (hot) key}\\
-        \var{n} & \N & \text{counter}\\
+        \var{vk_{cold}} & \VKey & \text{cold key}\\
+        \var{n} & \N & \text{certificate issue number}\\
         c_0 & \KESPeriod & \text{start KES period}\\
         \sigma & \Sig & \text{cold key signature}\\
       \end{array}
@@ -202,8 +203,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bhbody} & \BHeader \to \BHBody \\
       \fun{hsig} & \BHeader \to \Sig\\
       \fun{bbody} & \Block \to \seqof{\Tx} \\
+      \fun{bvkcold} & \BHBody \to \VKey\\
       \fun{bprev} & \BHBody \to \HashHeader\\
-      \fun{bissuer} & \BHBody \to \VKey\\
       \fun{bslot} & \BHBody \to \Slot\\
       \fun{bnonce} & \BHBody \to \Seed\\
       \fun{\bprfn{}} & \BHBody \to \Proof\\
@@ -360,11 +361,11 @@ in the pool distribution.
         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
         (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
         total & \sum_{\_ \mapsto c\in\var{stake}} c \\
-        \var{pd'} & \fun{aggregate_{+}}~\var{delegs}^{-1}\circ
+         \var{pd'} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
                     \left\{
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
-                    \right\} \\
+                \right\}\right) \\
          \var{osched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
         \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
@@ -527,7 +528,7 @@ key delegations:
 \item The stake pools map \var{stpools}.
 \item The pool parameters \var{poolParams}.
 \item The map of retiring stake pools to epochs \var{retiring}.
-\item The mapping \var{cs} of operational certificate counters.
+\item The mapping \var{cs} of certificate issue numbers.
 \item The mapping of genesis keys to operational keys.
 \end{itemize}
 
@@ -557,8 +558,8 @@ The transition rule is shown in Figure~\ref{fig:rules:ocert}. From the block
 header body \var{bhb} we first extract the following:
 
 \begin{itemize}
-\item The operational certificate, consisting of the hot key \var{vk_{hot}}, the
-  KES period number \var{n}, the KES period start \var{c_0} and the cold key
+  \item The operational certificate, consisting of the hot key \var{vk_{hot}}, the cold key
+    \var{vk_{cold}}, the KES period number \var{n}, the KES period start \var{c_0} and the cold key
   signature.
 \item The block header issuer verification key \var{vk_{cold}}.
 \item The hash \var{hk} of \var{vk_{cold}}.
@@ -570,7 +571,7 @@ transition which are the following:
 \begin{itemize}
 \item The KES period start \var{c_0} is greater than or equal to the KES period of
   the slot of the block header body and less than 90 KES periods after \var{c_0}.
-\item \var{hk} exists as key in the mapping of certificate counters to a KES
+\item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
 \item The signature $sigma$ can be verified with the cold verification key
   \var{vk_{cold}}.
@@ -586,9 +587,7 @@ operational hot key.
   \begin{equation}\label{eq:ocert}
     \inference[OCert]
     {
-      (\var{vk_{hot}},~n,~c_{0},~\sigma) \leteq \bocert{bhb}
-      &
-      \var{vk_{cold}} \leteq \bissuer{bhb}
+      (\var{vk_{hot}},~\var{vk_{cold}},~n,~c_{0},~\sigma) \leteq \bocert{bhb}
       &
       \var{hk} \leteq \hashKey{vk_{cold}}
       \\~\\
@@ -606,22 +605,30 @@ operational hot key.
       \var{gkeys}
       \vdash
       \left(
-      \begin{array}{r}
-        \var{stpools} \\
-        \var{poolParams} \\
-        \var{retiring} \\
-        \var{cs} \\
+      \begin{array}{c}
+        \left(
+        \begin{array}{c}
+          \var{stpools} \\
+          \var{poolParams} \\
+          \var{retiring} \\
+          \var{cs} \\
+        \end{array}
+        \right)\\
         \\
         \var{dms} \\
       \end{array}
       \right)
       \trans{ocert}{\var{bhb}}
       \left(
-      \begin{array}{rcl}
-        \var{stpools} \\
-        \var{poolParams} \\
-        \var{retiring} \\
-        \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
+      \begin{array}{c}
+        \left(
+        \begin{array}{c}
+          \var{stpools} \\
+          \var{poolParams} \\
+          \var{retiring} \\
+          \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
+        \end{array}
+        \right)\\
         \\
         \varUpdate{\var{dms}\unionoverrideRight d} \\
       \end{array}
@@ -834,9 +841,9 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
       &
       f \leteq \activeSlotCoeff{pp}
       \\
-      \var{vk} \leteq \bissuer bhb
+      \var{vk} \leteq \bvkcold bhb
       &
-      \var{ss} \leteq \slotToSeed{\bslot{bhb}}
+      \var{ss} \leteq \slotToSeed{(\bslot{bhb})}
       &
       \var{hk} \leteq \hashKey{vk}
       \\~\\
@@ -900,14 +907,14 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
 
 \clearpage
 
-\subsection{Decentralization Slider}
-\label{sec:decentralization-slider}
+\subsection{Overlay Schedule}
+\label{sec:overlay-schedule}
 
 The transition from the boostrap era to a fully decentralized network is explained in
 section 3.9.2 of~\cite{delegation_design}.
 Key to this transition is a protocol parameter $d$ which controls how many slots are governed by
 the genesis nodes via OBFT, and which slots are open to any registered stake pool.
-The transition system introduced in this section, $\type{DSLIDE}$, covers this mechanism.
+The transition system introduced in this section, $\type{OVERLAY}$, covers this mechanism.
 
 The environments for this transition is:
 \begin{itemize}
@@ -921,9 +928,9 @@ The environments for this transition is:
 \end{itemize}
 
 \begin{figure}
-  \emph{DSlider environments}
+  \emph{Overlay environments}
   \begin{equation*}
-    \DSliderEnv =
+    \OverlayEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{ve} & \VRFEnv & \text{VRF environment} \\
@@ -932,13 +939,13 @@ The environments for this transition is:
     \right)
   \end{equation*}
   %
-  \emph{DSlider Transitions}
+  \emph{Overlay Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{dslider}{\_} \var{\_} \subseteq
-    \powerset (\DSliderEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
+    \_ \vdash \var{\_} \trans{overlay}{\_} \var{\_} \subseteq
+    \powerset (\OverlayEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
   \end{equation*}
-  \caption{DSlider transition-system types}
-  \label{fig:ts-types:decent-slider}
+  \caption{Overlay transition-system types}
+  \label{fig:ts-types:overlay}
 \end{figure}
 
 \begin{figure}[ht]
@@ -985,7 +992,7 @@ The environments for this transition is:
             \var{h} \\
             \var{s_\ell} \\
       \end{array}\right)}
-      \trans{dslider}{\var{bh}}
+      \trans{overlay}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{\var{h}'} \\
             \varUpdate{\var{s_\ell}'} \\
@@ -1029,7 +1036,7 @@ The environments for this transition is:
             \var{h} \\
             \var{s_\ell} \\
       \end{array}\right)}
-      \trans{dslider}{\var{bh}}
+      \trans{overlay}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{\var{h}'} \\
             \varUpdate{\var{s_\ell}'} \\
@@ -1037,8 +1044,8 @@ The environments for this transition is:
     }
   \end{equation}
 
-  \caption{DSlider rules}
-  \label{fig:rules:decent-slider}
+  \caption{Overlay rules}
+  \label{fig:rules:overlay}
 \end{figure}
 
 \subsection{Block Body Transition}
@@ -1130,13 +1137,11 @@ current slot is not an overlay slot.
       &
       \var{bhb} \leteq \bhbody\bheader{block}
       &
-      \var{hk} \leteq \hashKey\bissuer{bhb}
+      \var{hk} \leteq \hashKey\bvkcold{bhb}
       \\~\\
       \bBodySize{txs} = \hBbsize{bhb}
       &
       \fun{hash}~{txs} = \bbodyhash{bhb}
-      \\~\\
-      \var{hk}\mapsto n\in (b \unionoverrideLeft \{\var{kh}\mapsto 0\})
       \\~\\
       {
         \left(
@@ -1378,7 +1383,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{pd} \\
               \var{osched} \\
         \end{array}\right)}
-        \trans{newepoch}{\var{e}}
+        \trans{newepoch}{\epoch{s}}
         {\left(\begin{array}{c}
               \var{e_\ell}' \\
               \eta_0' \\
@@ -1422,11 +1427,15 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
       {
         \left(
           {\begin{array}{c}
-              \var{s_{now}} \\
-              \var{pp}' \\
-              \eta_0' \\
-              \var{pd}' \\
-              \var{stpools} \\
+              \left(
+              {\begin{array}{c}
+                \var{s_{now}} \\
+                \var{pp}' \\
+                \eta_0' \\
+                \var{pd}' \\
+                \var{stpools} \\
+                \end{array}}
+              \right)
               \\
               \var{osched'} \\
           \end{array}}
@@ -1436,7 +1445,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{h} \\
               \var{s_\ell} \\
         \end{array}\right)}
-        \trans{dslider}{\var{bh}}
+        \trans{overlay}{\var{bh}}
         {\left(\begin{array}{c}
               \var{h}' \\
               \var{s_\ell}' \\
@@ -1604,7 +1613,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
           \Nothing \\
           \emptyset \\
           \emptyset \\
-          \dom{dms} \\
+          \dom{(\fun{dms}~\var{ds})} \\
         \end{array}
       \right)
   \end{align*}
