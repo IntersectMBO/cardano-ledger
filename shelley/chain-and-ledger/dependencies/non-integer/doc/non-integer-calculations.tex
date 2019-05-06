@@ -445,6 +445,11 @@ term) $R_{k}(x)$ can be estimated as follows:
   R_{k}(x) \leq \vert M \cdot \frac{x^{k+1}}{(k+1)!}\vert
 \end{equation*}
 
+For the use-case of the leader election, a good integral bound for the error
+estimation is the maximal value of $\vert\ln(1 - f)\vert\leq M$ for
+$f \in [0, 0.95]$ is $M = 3$. For any larger value of $f$, a different value
+would have to be chosen. The current value for $f$ is $0.1$.
+
 In general, for this use case one can easily estimate $M$, as the smallest
 integer larger than the exponential function evaluated at the upper bound of the
 interval of the domain of $x$. For each partial sum $\Sigma_{k}$, one can then
