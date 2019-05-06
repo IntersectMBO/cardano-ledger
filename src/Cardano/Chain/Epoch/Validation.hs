@@ -20,7 +20,7 @@ import qualified Streaming.Prelude as S
 import qualified Cardano.BM.Configuration as Log
 import Cardano.BM.Data.Severity as Log
 import Cardano.BM.Observer.Monadic as BM
-import Cardano.BM.Trace (Trace, appendName, logNotice)
+import Cardano.BM.Trace (Trace, appendName, logDebug, logNotice)
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
@@ -61,33 +61,46 @@ validateEpochFile
   -> FilePath
   -> m ChainValidationState
 validateEpochFile config trace logconf cvs fp = do
-  subTrace <- appendName "epoch-validation" trace
-  res      <- BM.bracketObserveX logconf subTrace Log.Info "benchmark" $
+  subTrace     <- appendName "epoch-validation" trace
+  utxoSubTrace <- appendName "utxo-stats" subTrace
+  res          <- BM.bracketObserveX logconf subTrace Log.Info "benchmark" $
       liftIO $ runResourceT $ runExceptT $ foldChainValidationState
         config
         cvs
         stream
-  either throwError (logResult subTrace) res
+  either throwError (logResult subTrace utxoSubTrace) res
  where
   stream = parseEpochFileWithBoundary mainnetEpochSlots fp
 
-  logResult :: Trace m Text -> ChainValidationState -> m ChainValidationState
-  logResult trace' cvs' = cvs' <$ logNotice
-    trace'
-    (sformat
-      epochValidationFormat
-      (slotNumberEpoch (Genesis.configEpochSlots config) (cvsLastSlot cvs))
-      utxoSize
-      heapSize
-    )
+  logResult
+    :: Trace m Text
+    -> Trace m Text
+    -> ChainValidationState
+    -> m ChainValidationState
+  logResult trace' utxoTrace cvs' = do
+    logNotice
+      trace'
+      (sformat
+        epochValidationFormat
+        (slotNumberEpoch (Genesis.configEpochSlots config) (cvsLastSlot cvs))
+      )
+    logDebug
+      utxoTrace
+      (sformat
+        utxoStatsFormat
+        utxoSize
+        heapSize
+      )
+    pure cvs'
    where
-    sizePair = calcUTxOSize (cvsUtxo cvs')
-    utxoSize = snd sizePair
-    heapSize = fst sizePair
+    (heapSize, utxoSize) = calcUTxOSize (cvsUtxo cvs')
 
-  epochValidationFormat :: Format r (EpochIndex -> UTxOSize -> HeapSize UTxO -> r)
+  epochValidationFormat :: Format r (EpochIndex -> r)
   epochValidationFormat =
-    "Succesfully validated epoch " . build . "\n" .
+    "Succesfully validated epoch " . build . "\n"
+
+  utxoStatsFormat :: Format r (UTxOSize -> HeapSize UTxO -> r)
+  utxoStatsFormat =
     "Number of UTxO entries at the end of the epoch: " . build . "\n" .
     "UTxO heap size in words at the end of the epoch: " . build . "\n"
 

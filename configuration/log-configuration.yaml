@@ -60,6 +60,10 @@ options:
         - - tag: Contains
             contents: diff.RTS.gcNum.timed.
       subtrace: FilterTrace
+    'cardano.epoch-validation.utxo-stats':
+      # Change the `subtrace` value to `Neutral` in order to log
+      # `UTxO`-related messages during epoch validation.
+      subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
       - AggregationBK
