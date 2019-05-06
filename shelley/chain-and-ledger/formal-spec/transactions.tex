@@ -25,6 +25,8 @@ A transaction, $\Tx$, is a transaction body together with:
 \begin{itemize}
   \item A collection of witnesses, represented as a finite map from payment verification keys
     to signatures.
+  \item Update payloads from genesis keys.
+    The payload type ($\UpdatePayload$) is defined in \cite{byron_chain_spec}.
 \end{itemize}
 
 Additionally, the $\UTxO$ type will be used by the ledger state to store all the
@@ -79,7 +81,7 @@ This function must produce a unique id for each unique transaction.
       \\
       \var{tx}
       & \Tx
-      & \TxBody \times (\VKey \mapsto \Sig)
+      & \TxBody \times (\VKey \mapsto \Sig) \times \UpdatePayload
       \\
     \end{array}
   \end{equation*}
@@ -95,6 +97,7 @@ This function must produce a unique id for each unique transaction.
       \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
       \fun{txwits} & \Tx \to (\VKey \mapsto \Sig) & \text{witnesses} \\
+      \fun{txup} & \Tx \to \UpdatePayload & \text{update payload} \\
     \end{array}
   \end{equation*}
   %
