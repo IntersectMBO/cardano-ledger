@@ -20,7 +20,10 @@ The transition system is explained in \cite{small_step_semantics}.
   \item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
     keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
-    $a \mapsto b \in m$ is equivalent to $m~ a = b$.
+    $a \mapsto b \in m$ is equivalent to both $m~ a = b$ and $\mathsf{a}~m = b$.
+    Given a set $A$, $A \mapsto A$ represents the identity map on $A$:
+    $\{a \mapsto a \mid a \in A\}$. The $\emptyset$ symbol is also used to
+    represent the empty map as well.
   \item[Map Operations] Figure~\ref{fig:notation:nonstandard}
     describes some non-standard map operations.
   \item[Relations] A relation on $A\times B$ is a subset of $A\times B$.
