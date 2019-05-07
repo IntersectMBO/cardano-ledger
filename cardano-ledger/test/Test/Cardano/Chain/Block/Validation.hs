@@ -87,14 +87,15 @@ ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
   result <- (liftIO . runResourceT . runExceptT)
     (foldChainValidationState config cvs stream)
 
-  void $ evalEither result
+  cvs' <- evalEither result
+
+  assert =<< liftIO (isNormalForm $! cvs')
 
 
 data Error
   = ErrorParseError ParseError
   | ErrorChainValidationError (Maybe FlatSlotId) ChainValidationError
   deriving (Eq, Show)
-
 
 
 -- | Fold chain validation over a 'Stream' of 'Block's
