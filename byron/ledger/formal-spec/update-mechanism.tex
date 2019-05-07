@@ -20,6 +20,7 @@
 \newcommand{\ApName}{\ensuremath{\type{ApName}}}
 \newcommand{\SWVer}{\ensuremath{\type{SWVer}}}
 \newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
+\newcommand{\Metadata}{\ensuremath{\type{Mdt}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
 \newcommand{\upPV}[1]{\ensuremath{\fun{upPV}~\var{#1}}}
@@ -29,6 +30,7 @@
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
 \newcommand{\upParams}[1]{\ensuremath{\fun{upParams}~\var{#1}}}
 \newcommand{\upSwVer}[1]{\ensuremath{\fun{upSwVer}~\var{#1}}}
+\newcommand{\upMetadata}[1]{\ensuremath{\fun{upMdt}~\var{#1}}}
 \newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
 \newcommand{\vPropId}[1]{\ensuremath{\fun{vPropId}~\var{#1}}}
 \newcommand{\vSig}[1]{\ensuremath{\fun{vSig}~\var{#1}}}
@@ -68,6 +70,8 @@ this specification can be extended to incorporate the research results.
 
 \subsection{Update proposals}
 \label{sec:update-proposals}
+
+% TODO: add prose explaining what metadata is.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -129,7 +133,8 @@ this specification can be extended to incorporate the research results.
                                            & \text{proposed parameters update}\\
       \fun{upSwVer} & \UProp \to \SWVer & \text{software-version update proposal}\\
       \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
-      \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}\\
+      \fun{upSigData} & \UProp \to \UPropSD & \text{update proposal signed data}\\
+      \fun{upMdt} & \UProp \to \Metadata & \text{software update metadata}
     \end{array}
   \end{equation*}
   \caption{Update proposals definitions}
@@ -205,24 +210,24 @@ The protocol parameters are formally defined in \cref{fig:prot-params-defs}.
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot \times \Metadata)
         & \text{application versions}\\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Update proposals validity states}
-  \begin{equation*}
-    \UPVState
-    = \left(
+  \begin{align*}
+    & \UPVState \\
+    & = \left(
       \begin{array}{r@{~\in~}lr}
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered protocol update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer \times \Metadata)
         & \text{registered software update proposals}\\
       \end{array}
     \right)
-  \end{equation*}
+  \end{align*}
   %
   \emph{Update proposals validity transitions}
     \begin{equation*}
@@ -310,7 +315,7 @@ cause a soft-fork we might use the alt version for that purpose.
     \label{eq:func:av-can-follow}
     \begin{array}{r c l}
       \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
-      & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
+      & (\var{an} \mapsto (\var{av_c}, \wcard, \wcard) \in \var{avs}
         \Rightarrow \var{av} = \var{av_c} + 1)\\
       & \wedge & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
     \end{array}
@@ -325,7 +330,7 @@ cause a soft-fork we might use the alt version for that purpose.
     {
       (\var{an}, \var{av}) \leteq \upSwVer{up}
       & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
-      & (\var{an}, \var{av}) \notin \range~\var{raus}
+      & (\var{an}, \var{av}, \wcard) \notin \range~\var{raus}
     }
     {
       {
@@ -345,7 +350,7 @@ cause a soft-fork we might use the alt version for that purpose.
       {
         \left(
           \begin{array}{l}
-            \var{raus} \unionoverrideRight \{ \upId{up} \mapsto (\var{an}, \var{av})\}
+            \var{raus} \unionoverrideRight \{ \upId{up} \mapsto (\var{an}, \var{av}, \upMetadata{up})\}
           \end{array}
         \right)
       }
@@ -417,7 +422,7 @@ cause a soft-fork we might use the alt version for that purpose.
         \right)
       }
       &
-      (\var{an}, \var{av}) \leteq \upSwVer{up} & \var{an} \mapsto (\var{av}, \_) \in \var{avs}
+      (\var{an}, \var{av}) \leteq \upSwVer{up} & \var{an} \mapsto (\var{av}, \_, \_) \in \var{avs}
     }
     {
       {
@@ -607,7 +612,7 @@ an update proposal:
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot \times \Metadata)
         & \text{application versions}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}
@@ -621,7 +626,7 @@ an update proposal:
       \begin{array}{r@{~\in~}lr}
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer \times \Metadata)
         & \text{registered software update proposals}
       \end{array}
     \right)
