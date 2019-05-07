@@ -139,7 +139,7 @@ ts_roundTripBlockCompat = eachOfTS
     esb
     (serializeEncoding . toCBORBlock es . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
-    . decodeFullDecoder "Block" (fromCBORBlockOrBoundary es False)
+    . decodeFullDecoder "Block" (fromCBORBlockOrBoundary es)
     )
 
 
