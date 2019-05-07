@@ -193,8 +193,8 @@ state transition types. We define two separate parts of the ledger state.
         their costs and margin.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
-      \item $\var{cs}$ stores the latest operational certificate counter used for each pool.
-        The counters are used the operation certificate transition in Figure~\ref{fig:rules:ocert}.
+      \item $\var{cs}$ stores the latest operational certificate issues numbers used for each pool.
+        The numbers are used the operation certificate transition in Figure~\ref{fig:rules:ocert}.
     \end{itemize}
 \end{itemize}
 
@@ -226,7 +226,7 @@ and the protocol parameters.
       \var{poolParams} & \HashKey_{pool} \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
       \var{retiring} & \HashKey_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
-      \var{cs} & \HashKey_{pool} \mapsto \N & \text{operational certificate counters}\\
+      \var{cs} & \HashKey_{pool} \mapsto \N & \text{certificate issue numbers}\\
     \end{array}\right)
     \end{array}
   \end{equation*}
