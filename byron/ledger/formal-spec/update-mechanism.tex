@@ -279,9 +279,7 @@ The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal
       fitting in a block, and
     \item the proposed new script version can be incremented by at most 1.
     \end{itemize}
-  \item must have a unique version among the current active proposals. This
-    implies that a proposal is uniquely determined by the protocol version it
-    proposes.
+  \item must have a unique version among the current active proposals.
   \end{itemize}
 \item if an update proposal proposes to increase the application version
   version ($\var{av}$) for a given application ($\var{an}$), then there should
@@ -1348,6 +1346,11 @@ update proposals we can simplify the version checking logic considerably.
 We do not model the implicit agreement rule. If a proposal does not get enough
 votes before the end of the voting period, then we simply discard it. At the
 moment it is not clear whether the implicit agreement rule is needed.
+Furthermore, in a non-federated setting, one could imagine an attack based on
+exploiting an implicit agreement rule, where the attacker would attempt to
+carry out a DoS attack on the parts of network that are likely to affect a
+proposal in a way that is undesirable for the attacker. Thus the explicit
+agreement seems to be a safer option.
 
 \subsubsection{Adoption threshold}
 \label{sec:adoption-threshold}
@@ -1380,12 +1383,6 @@ The rule of Figure~\ref{eq:rule:up-pv-validity} does not check the
 meaning in the handover phase: its use will be reserved for unlocking the
 Ouroboros-BFT logic in the software.
 
-\subsubsection{No grouping of proposals per-application name}
-\label{sec:no-app-up-grouping}
-
-It is unclear at this moment whether we need to model the applications names
-and versions, so this aspect is not modeled in the present rules.
-
 \subsubsection{Ignored attributes of proposals}
 
 In Figure~\ref{fig:defs:update-proposals} the types
@@ -1414,13 +1411,6 @@ proposal must be submitted with a different key, which adds extra complexity
 for devops. In light of the preceding discussion, unless there is a benefit for
 restricting the number of times a genesis key can submit an update proposal, we
 opted for removing such constraint in the current specification.
-
-\subsubsection{Protocol only or software only updates allowed}
-\label{sec:ptonly-or-swonly-allowed}
-
-We allow for updates in the protocol version without requiring a software
-version update, and conversely, we allow for a software update without
-requiring an update in the protocol.
 
 \subsubsection{Acceptance of blocks endorsing unconfirmed proposal updates}
 \label{sec:acceptance-of-uncofirmed-up-endorsements}
