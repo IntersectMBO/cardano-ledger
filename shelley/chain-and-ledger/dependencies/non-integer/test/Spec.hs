@@ -145,10 +145,10 @@ prop_LeaderCmp :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
   p_ < 1 && sigma < 1 ==>
     classify (p_ < (1 - ((1 - f) *** sigma))) "is leader" $
-    ( (p_ >= (1 - ((1 - f) *** sigma))) &&
-      ((taylorExpCmp 3 (1/(1 - p_)) (-sigma*c)) == ABOVE)
-    || (p_ < (1 - ((1 - f) *** sigma))) &&
-       ((taylorExpCmp 3 (1/(1 - p_)) (-sigma*c)) == BELOW))
+    let result = taylorExpCmp 3 (1/(1 - p_)) (-sigma*c) in
+      (case result of
+        ABOVE _ _ -> p_ >= (1 - ((1 - f) *** sigma))
+        BELOW _ _ -> p_ < (1 - ((1 - f) *** sigma)))
   where (p, p') = normalizeInts q q'
         (s, s') = normalizeInts a a'
         p'''    = fromIntegral p' :: FixedPoint
