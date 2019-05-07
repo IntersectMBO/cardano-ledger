@@ -12,7 +12,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Test.Cardano.Chain.Txp.Model
+module Test.Cardano.Chain.UTxO.Model
   ( tests
   )
 where
@@ -25,7 +25,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Unsafe.Coerce
 
-import qualified Cardano.Chain.Txp as Concrete
+import qualified Cardano.Chain.UTxO as Concrete
 import qualified Control.State.Transition as STS
 import qualified Ledger.Core as Abstract
 import qualified Ledger.UTxO as Abstract

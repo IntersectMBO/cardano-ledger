@@ -38,11 +38,11 @@ library
                        Test.Cardano.Chain.Slotting.Gen
                        Test.Cardano.Chain.Slotting.Json
                        Test.Cardano.Chain.Slotting.Properties
-                       Test.Cardano.Chain.Txp.CBOR
-                       Test.Cardano.Chain.Txp.Compact
-                       Test.Cardano.Chain.Txp.Example
-                       Test.Cardano.Chain.Txp.Gen
-                       Test.Cardano.Chain.Txp.Json
+                       Test.Cardano.Chain.UTxO.CBOR
+                       Test.Cardano.Chain.UTxO.Compact
+                       Test.Cardano.Chain.UTxO.Example
+                       Test.Cardano.Chain.UTxO.Gen
+                       Test.Cardano.Chain.UTxO.Json
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Properties

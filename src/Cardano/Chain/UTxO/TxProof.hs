@@ -3,7 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
 
-module Cardano.Chain.Txp.TxProof
+module Cardano.Chain.UTxO.TxProof
   ( TxProof(..)
   , mkTxProof
   , recoverTxProof
@@ -18,8 +18,8 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Merkle
   (MerkleRoot, mkMerkleTree, mkMerkleTreeDecoded, mtRoot)
-import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxPayload
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxPayload
   ( ATxPayload
   , TxPayload
   , recoverHashedBytes
@@ -27,7 +27,7 @@ import Cardano.Chain.Txp.TxPayload
   , txpTxs
   , txpWitnesses
   )
-import Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Crypto (Hash, hash, hashDecoded)
 
 

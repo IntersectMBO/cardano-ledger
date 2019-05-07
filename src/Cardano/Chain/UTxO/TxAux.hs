@@ -8,7 +8,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Cardano.Chain.Txp.TxAux
+module Cardano.Chain.UTxO.TxAux
   ( TxAux
   , ATxAux(..)
   , mkTxAux
@@ -33,8 +33,8 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   )
-import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 
 
 -- | Transaction + auxiliary data

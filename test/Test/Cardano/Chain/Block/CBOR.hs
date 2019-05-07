@@ -84,7 +84,7 @@ import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Slotting.Example (exampleSlotId, exampleFlatSlotId)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots, genWithEpochSlots)
-import Test.Cardano.Chain.Txp.Example (exampleTxPayload, exampleTxProof)
+import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKeys)
 import Test.Cardano.Crypto.Gen (feedPM)

@@ -7,7 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Cardano.Chain.Txp.TxPayload
+module Cardano.Chain.UTxO.TxPayload
   ( TxPayload
   , ATxPayload(..)
   , mkTxPayload
@@ -22,12 +22,12 @@ where
 import Cardano.Prelude
 
 import Cardano.Binary (Annotated(..), ByteSpan, FromCBOR(..), ToCBOR(..))
-import Cardano.Chain.Txp.Tx (Tx)
-import Cardano.Chain.Txp.TxAux (ATxAux(..), TxAux, taTx, taWitness)
-import Cardano.Chain.Txp.TxWitness (TxWitness)
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxAux (ATxAux(..), TxAux, taTx, taWitness)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 
 
--- | Payload of Txp component which is part of the block body
+-- | Payload of UTxO component which is part of the block body
 type TxPayload = ATxPayload ()
 
 mkTxPayload :: [TxAux] -> TxPayload

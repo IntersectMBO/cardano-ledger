@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
-module Test.Cardano.Chain.Txp.Example
+module Test.Cardano.Chain.UTxO.Example
   ( exampleTxId
   , exampleTxInList
   , exampleTxInUtxo
@@ -37,7 +37,7 @@ import Cardano.Chain.Common
   , mkMerkleTree
   , mtRoot
   )
-import Cardano.Chain.Txp
+import Cardano.Chain.UTxO
   ( Tx(..)
   , TxAux
   , TxId

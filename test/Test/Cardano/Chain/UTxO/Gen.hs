@@ -1,4 +1,4 @@
-module Test.Cardano.Chain.Txp.Gen
+module Test.Cardano.Chain.UTxO.Gen
   ( genCompactTxId
   , genCompactTxIn
   , genCompactTxOut
@@ -15,7 +15,7 @@ module Test.Cardano.Chain.Txp.Gen
   , genTxOut
   , genTxOutList
   , genTxPayload
-  , genTxpConfiguration
+  , genUTxOConfiguration
   , genTxProof
   , genTxSig
   , genTxSigData
@@ -37,7 +37,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Common (mkAttributes)
-import Cardano.Chain.Txp
+import Cardano.Chain.UTxO
   ( CompactTxId
   , CompactTxIn
   , CompactTxOut
@@ -53,7 +53,7 @@ import Cardano.Chain.Txp
   , TxSig
   , TxSigData(..)
   , TxWitness
-  , TxpConfiguration(..)
+  , UTxOConfiguration(..)
   , UTxO
   , fromList
   , mkTxAux
@@ -122,11 +122,11 @@ genTxOut = TxOut <$> genAddress <*> genLovelace
 genTxOutList :: Gen (NonEmpty TxOut)
 genTxOutList = Gen.nonEmpty (Range.linear 1 100) genTxOut
 
-genTxpConfiguration :: Gen TxpConfiguration
-genTxpConfiguration = do
+genUTxOConfiguration :: Gen UTxOConfiguration
+genUTxOConfiguration = do
   limit <- Gen.int (Range.constant 0 200)
   addrs <- Gen.list (Range.linear 0 50) genAddress
-  return (TxpConfiguration limit (S.fromList addrs))
+  return (UTxOConfiguration limit (S.fromList addrs))
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
 genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)

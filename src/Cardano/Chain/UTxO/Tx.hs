@@ -6,7 +6,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module Cardano.Chain.Txp.Tx
+module Cardano.Chain.UTxO.Tx
   ( Tx(..)
   , txF
   , TxId

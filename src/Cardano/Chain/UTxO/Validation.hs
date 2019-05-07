@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TypeApplications  #-}
 
-module Cardano.Chain.Txp.Validation
+module Cardano.Chain.UTxO.Validation
   ( validateTx
   , updateUTxO
   , updateUTxOTxWitness
@@ -41,13 +41,13 @@ import Cardano.Chain.Common
   , subLovelace
   , unknownAttributesLength
   )
-import Cardano.Chain.Txp.Tx (Tx(..), TxIn, TxOut(..))
-import Cardano.Chain.Txp.TxAux (ATxAux, aTaTx, taWitness)
-import Cardano.Chain.Txp.TxWitness
+import Cardano.Chain.UTxO.Tx (Tx(..), TxIn, TxOut(..))
+import Cardano.Chain.UTxO.TxAux (ATxAux, aTaTx, taWitness)
+import Cardano.Chain.UTxO.TxWitness
   (TxInWitness(..), TxSigData(..), recoverSigData)
-import Cardano.Chain.Txp.UTxO
+import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
-import qualified Cardano.Chain.Txp.UTxO as UTxO
+import qualified Cardano.Chain.UTxO.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters(..))
 import Cardano.Crypto
   ( AProtocolMagic(..)
