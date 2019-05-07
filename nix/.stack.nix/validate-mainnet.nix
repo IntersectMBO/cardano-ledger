@@ -22,7 +22,7 @@
             (hsPkgs.containers)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
-            (hsPkgs.cardano-mainnet-mirror)
+            (hsPkgs.cardano-ledger-test)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)
             (hsPkgs.formatting)

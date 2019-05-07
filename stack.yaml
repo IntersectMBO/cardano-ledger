@@ -27,9 +27,6 @@ extra-deps:
       - byron/ledger/executable-spec
       - byron/chain/executable-spec
 
-  - git: https://github.com/input-output-hk/cardano-mainnet-mirror
-    commit: 87d325cc5b5f0840590afcb6ef0e172553045226
-
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
   # To be able to use `stack hoogle`

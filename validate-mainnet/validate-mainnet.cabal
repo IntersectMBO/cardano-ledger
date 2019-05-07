@@ -21,7 +21,7 @@ executable validate-mainnet
                      , containers
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     , cardano-mainnet-mirror
+                     , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
                      , formatting

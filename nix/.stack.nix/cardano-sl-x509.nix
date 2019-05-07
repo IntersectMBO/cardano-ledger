@@ -52,7 +52,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-sl-x509";
-      rev = "71115d199368f1cc969a4936a856808539063253";
-      sha256 = "16npjbnwiwvslc6fxamg84q31f0wsl01g9yr3nkmymvnk4lff2g3";
+      rev = "e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4";
+      sha256 = "11qi871sb52vcbxibsjbc3s112pl26ljjvv13q53lvd1ydcgbc3n";
       });
     }

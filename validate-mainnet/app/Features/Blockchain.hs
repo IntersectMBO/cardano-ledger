@@ -22,11 +22,12 @@ import Cardano.Chain.Block
 import Cardano.Chain.Common (parseReqNetworkMag)
 import Cardano.Chain.Epoch.Validation (EpochError, validateEpochFile)
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Mirror (mainnetEpochFiles)
 import Cardano.Shell.Constants.Types (CardanoConfiguration(..), Core(..), Genesis(..))
 import Cardano.Shell.Features.Logging (LoggingLayer(..))
 import Cardano.Shell.Types
   (ApplicationEnvironment(..), CardanoEnvironment, CardanoFeature(..))
+
+import Test.Cardano.Mirror (mainnetEpochFiles)
 
 
 -- | `BlockchainLayer` provides a window of sorts that

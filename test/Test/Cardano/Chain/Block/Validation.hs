@@ -54,11 +54,12 @@ import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Crypto (PublicKey)
-import Cardano.Mirror (mainnetEpochFiles)
 
-import Test.Cardano.Crypto.Gen (genPublicKey)
-import Test.Options (TestScenario(..))
 import Test.Cardano.Chain.Config (readMainetCfg)
+import Test.Cardano.Crypto.Gen (genPublicKey)
+import Test.Cardano.Mirror (mainnetEpochFiles)
+import Test.Options (TestScenario(..))
+
 
 -- | These tests perform chain validation over mainnet epoch files
 --

@@ -30,6 +30,8 @@
           (hsPkgs.cardano-prelude-test)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
+          (hsPkgs.directory)
+          (hsPkgs.filepath)
           (hsPkgs.formatting)
           (hsPkgs.hedgehog)
           (hsPkgs.optparse-applicative)
