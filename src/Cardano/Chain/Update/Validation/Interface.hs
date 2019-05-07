@@ -46,6 +46,7 @@ import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppUpdateImplicit
+  , upAdptThd
   )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(..))
 import Cardano.Chain.Update.SoftwareVersion
@@ -253,6 +254,7 @@ registerVote env st vote = do
     Environment
       { protocolMagic
       , currentSlot
+      , numGenKeys
       , delegationMap
       } = env
 
@@ -270,7 +272,7 @@ registerVote env st vote = do
     subEnv =
       Voting.Environment
         currentSlot
-        adoptedProtocolParameters
+        (upAdptThd numGenKeys adoptedProtocolParameters)
         (Voting.RegistrationEnvironment rups delegationMap)
 
     subSt = Voting.State proposalVotes confirmedProposals
@@ -324,11 +326,10 @@ registerEndorsement env st endorsement = do
       Endorsement.Environment
         k
         currentSlot
+        (upAdptThd numGenKeys adoptedProtocolParameters)
         delegationMap
-        adoptedProtocolParameters
         confirmedProposals
         registeredProtocolUpdateProposals
-        numGenKeys
 
     Environment
       { k

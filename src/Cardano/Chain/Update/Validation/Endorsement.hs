@@ -19,13 +19,12 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
-import Cardano.Chain.Common
+import Cardano.Chain.Common (BlockCount, StakeholderId)
 import Cardano.Chain.Delegation.Validation.Activation (delegatorOf)
-import Cardano.Chain.Slotting
+import Cardano.Chain.Slotting (FlatSlotId, twice)
 import Cardano.Chain.Update.Proposal (UpId)
-import Cardano.Chain.Update.ProtocolParameters
-import Cardano.Chain.Update.ProtocolVersion
-import Cardano.Chain.Update.SoftforkRule
+import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
+import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 
 
@@ -33,15 +32,10 @@ data Environment = Environment
   { k                                 :: !BlockCount
   -- ^ Chain stability parameter.
   , currentSlot                       :: !FlatSlotId
+  , adoptionThreshold                 :: !Int
   , delegationMap                     :: !(Map StakeholderId StakeholderId)
-  , adoptedProtocolParameters         :: !ProtocolParameters
   , confirmedProposals                :: !(Map UpId FlatSlotId)
   , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
-  , numGenesisKeys                    :: !Word8
-  -- ^ Number of genesis keys. This is used in combination with the
-  -- 'ppUpdateProposalThd' protocol parameter to calculate the proportion of
-  -- genesis keys that need to endorse a new protocol version for it to be
-  -- considered for adoption.
   }
 
 data State = State
@@ -86,7 +80,7 @@ register env st endorsement =
 
     -- Try to register the endorsement and check if we can adopt the proposal
     [(upId, (_, pps'))] -> if isConfirmedAndStable upId
-      then if canAdopt numGenesisKeys pps registeredEndorsements' pv
+      then if numberOfEndorsements >= adoptionThreshold
         -- Register the endorsement and adopt the proposal in the next epoch
         then do
           let
@@ -114,10 +108,10 @@ register env st endorsement =
   Environment
     { k
     , currentSlot
+    , adoptionThreshold
     , delegationMap
     , confirmedProposals
     , registeredProtocolUpdateProposals
-    , numGenesisKeys
     } = env
 
   isConfirmedAndStable upId = upId `M.member` scps
@@ -126,8 +120,12 @@ register env st endorsement =
     scps     = M.filter (<= stableAt) confirmedProposals
     stableAt = currentSlot - twice k
 
-  pps = adoptedProtocolParameters env
-  pv  = endorsementProtocolVersion endorsement
+  numberOfEndorsements :: Int
+  numberOfEndorsements = length $ Set.filter
+    ((== pv) . endorsementProtocolVersion)
+    registeredEndorsements'
+
+  pv = endorsementProtocolVersion endorsement
 
   State { candidateProtocolVersions, registeredEndorsements } = st
 
@@ -143,32 +141,6 @@ register env st endorsement =
     vk  = endorsementStakeholder endorsement
     epv = endorsementProtocolVersion endorsement
 
-canAdopt
-  :: Word8
-  -- ^ Number of genesis keys.
-  -> ProtocolParameters
-  -> Set Endorsement
-  -> ProtocolVersion
-  -> Bool
-canAdopt ngk pps endorsements protocolVersion =
-  upAdptThd <= numberOfEndorsements
- where
-  -- In Byron we do not have a @upAdptThd@ protocol parameter, so we have to
-  -- use the existing ones.
-  --
-  -- @lovelacePortionToDouble . srMinThd . ppSoftforkRule@ will give us the
-  -- ratio (in the interval @[0, 1]@) of the total stake that has to endorse a
-  -- protocol version to become adopted. In genesis configuration, this ratio
-  -- will evaluate to @0.6@, so if we have 7 genesis keys, @upAdptThd = 4@.
-  upAdptThd :: Int
-  upAdptThd = floor $ stakeRatio * fromIntegral ngk
-   where
-    stakeRatio = lovelacePortionToDouble . srMinThd . ppSoftforkRule $ pps
-
-  numberOfEndorsements :: Int
-  numberOfEndorsements = length $ Set.filter
-    ((== protocolVersion) . endorsementProtocolVersion)
-    endorsements
 
 -- | Add a newly endorsed protocol version to the 'CandidateProtocolUpdate's
 --

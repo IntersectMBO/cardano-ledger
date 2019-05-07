@@ -67,7 +67,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-mainnet-mirror
-  tag: 4f8db35bb50e5417729fb8bdf455dbe6445a6695
+  tag: 87d325cc5b5f0840590afcb6ef0e172553045226
 
 source-repository-package
   type: git
