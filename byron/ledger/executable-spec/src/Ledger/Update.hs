@@ -12,6 +12,7 @@
 module Ledger.Update where
 
 import Control.Lens
+import Data.Char (isAscii)
 import Data.Ix (inRange)
 import Data.List (foldl', partition)
 import Data.Map.Strict (Map)
@@ -95,6 +96,10 @@ type UpSD =
   , SwVer
   )
 
+-- | System tag, this represents a target operating system for the update (e.g.
+-- @linux@, @win64@, or @mac32@).
+type STag = String
+
 -- | Update proposal
 data UProp = UProp
   { _upId :: UpId
@@ -103,6 +108,8 @@ data UProp = UProp
   , _upPV :: ProtVer
   , _upSwVer :: SwVer
   , _upSig :: Core.Sig UpSD
+  , _upSTags :: Set STag
+  -- ^ System tags involved in the update proposal.
   }
 
 makeLenses ''UProp
@@ -206,6 +213,7 @@ instance STS UPSVV where
   data PredicateFailure UPSVV
     = AlreadyProposedSv
     | CannotFollowSv
+    | InvalidApplicationName
     deriving (Eq, Show)
 
   initialRules = []
@@ -213,10 +221,14 @@ instance STS UPSVV where
     [ do
         TRC (avs, raus, up) <- judgmentContext
         let SwVer an av = up ^. upSwVer
+        apNameValid an ?! InvalidApplicationName
         svCanFollow avs (an,av) ?! CannotFollowSv
         (an, av) `notElem` Map.elems raus ?! AlreadyProposedSv
         return $! raus ⨃ [(up ^. upId, (an, av))]
     ]
+    where
+      apNameValid (ApName n) = all isAscii n && length n <= 12
+
 
 data UPPVV
 
@@ -232,6 +244,7 @@ instance STS UPPVV where
     = CannotFollowPv
     | CannotUpdatePv
     | AlreadyProposedPv
+    | InvalidSystemTags
     deriving (Eq, Show)
 
   initialRules = []
@@ -244,8 +257,11 @@ instance STS UPPVV where
         pvCanFollow nv pv ?! CannotFollowPv
         canUpdate pps up ?! CannotUpdatePv
         nv `notElem` (fst <$> Map.elems rpus) ?! AlreadyProposedPv
+        all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! rpus ⨃ Map.singleton pid (nv, ppsn)
     ]
+    where
+      sTagValid tag = all isAscii tag && length tag <= 10
 
 
 -- | Update proposal validity
