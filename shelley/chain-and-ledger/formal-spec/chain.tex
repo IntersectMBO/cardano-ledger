@@ -946,9 +946,13 @@ The environments for this transition is:
   \begin{equation}\label{eq:active-pbft}
     \inference[Active-OBFT]
     {
-      \{\bslot \bhbody bh \mapsto \var{gkey}\} \in \var{osched}
-      \\
+      \var{bhb}\leteq\bhbody{bh}
+      &
       (\var{s_{now}},~\var{pp},~\wcard,~\wcard)\leteq ve
+      \\
+      \{\bslot bhb \mapsto \var{gkey}\} \in \var{osched}
+      &
+      \var{gkey} = \bvkcold{bhb}
       \\~\\
       {
         \left(
