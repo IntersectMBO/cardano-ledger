@@ -43,15 +43,11 @@ int main()
 
   initialize(precision.get_mpz_t(), epsilon.get_mpz_t());
 
-  std::chrono::duration<double> total_exp =
-    std::chrono::duration<double>::zero();
-  std::chrono::duration<double> total_pow =
+  std::chrono::duration<double> total =
     std::chrono::duration<double>::zero();
   std::chrono::duration<double> total_cmp =
     std::chrono::duration<double>::zero();
-  std::chrono::duration<double> maximal_exp =
-    std::chrono::duration<double>::zero();
-  std::chrono::duration<double> maximal_pow =
+  std::chrono::duration<double> maximal =
     std::chrono::duration<double>::zero();
   std::chrono::duration<double> maximal_cmp =
     std::chrono::duration<double>::zero();
@@ -90,7 +86,6 @@ int main()
 
           std::chrono::duration<double> diff;
           mp_exp_cmp_result res;
-          bool leader = false;
 
           // calculate exp' x
           {
@@ -101,9 +96,7 @@ int main()
 
           // calculate ln' a, print -ln' a
           {
-            auto before = std::chrono::high_resolution_clock::now();
             ref_ln(ln_a.get_mpz_t(), a.get_mpz_t());
-            auto after = std::chrono::high_resolution_clock::now();
             std::cout << " " << print_fixedp(-ln_a, precision, 34);
           }
 
@@ -114,6 +107,11 @@ int main()
             auto before = std::chrono::high_resolution_clock::now();
             ref_pow(threshold_b.get_mpz_t(), c.get_mpz_t(), b.get_mpz_t());
             auto after = std::chrono::high_resolution_clock::now();
+            diff = after - before;
+            total += diff;
+            if(maximal < diff)
+              maximal = diff;
+
             std::cout << " " << print_fixedp(one - threshold_b, precision, 34);
           }
 
@@ -137,6 +135,12 @@ int main()
             // 3 is used as bound, might need to be adapted for other use cases
             res =
               ref_exp_cmp(approx.get_mpz_t(), 1000, alpha.get_mpz_t(), 3, q.get_mpz_t());
+            auto after = std::chrono::high_resolution_clock::now();
+
+            diff = after - before;
+            total_cmp += diff;
+            if(maximal_cmp < diff)
+              maximal_cmp = diff;
 
             // we compare 1/(1-p) < e^-(1-(1-f)^sigma)
             if(a < (one - threshold_b) && res.estimate != LT)
@@ -157,7 +161,6 @@ int main()
                           << std::endl;
               }
 
-            auto after = std::chrono::high_resolution_clock::now();
             cmp_iterations += res.iterations;
             if(res.iterations > cmp_max_iters)
               cmp_max_iters = res.iterations;
@@ -177,20 +180,12 @@ int main()
         std::cout << "format error" << std::endl;
     }
 
-  // std::cout << "exp(x * const) avg: " << (total_exp.count() / n)
-  //           << " maximal time: " << maximal_exp.count()
-  //           << " iterations avg " << (iterations * 1.0) / n
-  //           << " maximal iterations " << max_iters
-  //           << std::endl;
-  // std::cout << "pow avg: " << (total_pow.count() / n)
-  //           << " maximal time: " << maximal_pow.count()
-  //           << std::endl;
-
-  // std::cout << "cmp avg: " << (total_cmp.count() / n)
-  //           << " maximal time: " << maximal_cmp.count()
-  //           << " iterations avg " << (cmp_iterations * 1.0) / n
-  //           << " maximal iterations " << cmp_max_iters
-  //           << std::endl;
+  std::cerr << "(1 - (1 - f))^b avg: " << (total.count() / n)
+            << " maximal time: " << maximal.count()
+            << std::endl;
+  std::cerr << "Taylor error estimation avg: " << (total_cmp.count() / n)
+            << " maximal time: " << maximal_cmp.count()
+            << std::endl;
 
   cleanup();
   return 0;
