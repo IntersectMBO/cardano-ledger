@@ -54,11 +54,6 @@ int main()
 
   // format is "sigma p"
   size_t n = 0;
-  int iterations = 0;
-  int max_iters = 0;
-
-  int cmp_iterations = 0;
-  int cmp_max_iters = 0;
 
   mpz_class f;
   mpz_class one("1");
@@ -160,14 +155,6 @@ int main()
                           << print_fixedp(one - threshold_b, precision, 34)
                           << std::endl;
               }
-
-            cmp_iterations += res.iterations;
-            if(res.iterations > cmp_max_iters)
-              cmp_max_iters = res.iterations;
-            diff = after - before;
-            total_cmp += diff;
-            if(maximal_cmp < diff)
-              maximal_cmp = diff;
 
             std::cout << " " << print_fixedp(approx, precision, 34)
                       << " " << (res.estimate == LT ? "LT" : "GT")
