@@ -1,23 +1,26 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
-The rules for the ledger depend on several parameters and are contained in the $\PParams$ type
-defined in Figure~\ref{fig:defs:protocol-parameters}.
+The rules for the ledger depend on several parameters contained in the $\PParams$ type,
+defined in \cite{byron_ledger_spec}.
+The parameters are listed in Figure~\ref{fig:defs:protocol-parameters},
+the first nine of which below are common to the Byron era.
 
 The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
+Two global constants are defined, $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$,
+representing the number of slots in an epoch/KES period. Cycles will be used in
+the key evolving signatures. As global constants, these values can only be
+changed by updating the software.
+
+Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
 This value depends on the protocol parameters and the size of the transaction.
 
 Two time related types are introduced, $\Epoch$ and $\type{Duration}$.
 A $\type{Duration}$ is the difference between two slots, as given by $\slotminus{}{}$.
-
-Two global constants are defined, $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$,
-representing the number of slots in an epoch/KES period.  Cycles will be used in
-the key evolving signatures.  As global constants, these values can only be
-changed by updating the software.
 
 Lastly, there are two functions, $\fun{epoch}$ and $\fun{firstSlot}$ for converting
 between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycle of a slot.
@@ -27,7 +30,6 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
       \var{dur} & \Duration & \text{difference between slots}\\
       \var{epoch} & \Epoch & \text{epoch} \\
       \var{kesPeriod} & \KESPeriod & \text{KES period} \\
@@ -49,33 +51,42 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   \emph{Protocol Parameters}
   %
   \begin{equation*}
-    \PParams =
-    \left(
       \begin{array}{r@{~\in~}lr}
-        \var{fparams} & \type{FeeParams} & \text{min fee parameters}\\
-        \var{keyDeposit} & \Coin & \text{stake key deposit}\\
-        \var{keyMinRefund} & \unitInterval & \text{stake key min refund}\\
-        \var{keyDecayRate} & \nonnegReals & \text{stake key decay rate}\\
-        \var{poolDeposit} & \Coin & \text{stake pool deposit}\\
-        \var{poolMinRefund} & \unitInterval & \text{stake pool min refund}\\
-        \var{poolDecayRate} & \nonnegReals & \text{stake pool decay rate}\\
-        \var{E_{max}} & \Epoch & \text{epoch bound on pool retirement}\\
-        \var{n_{opt}} & \Npos & \text{desired number of pools}\\
-        \var{a_0} & \posReals & \text{pool influence}\\
-        \tau & \unitInterval & \text{treasury expansion}\\
-        \rho & \unitInterval & \text{monetary expansion}\\
-        \var{maxBHSize} & \N & \text{max block header size}\\
-        \var{maxBBSize} & \N & \text{max block body size}\\
-        \var{activeSlotCoeff} & \unitInterval & f\text{ in \cite{ouroboros_praos}}\\
-        \var{d} & \{0,~0.1,~0.2,~\ldots,~1\} & \text{decentralization parameter}\\
+        \var{a} \mapsto \Z & \PParams & \text{min fee factor}\\
+        \var{b} \mapsto \Z & \PParams & \text{min fee constant}\\
+        \var{maxBlockSize} \mapsto \N & \PParams & \text{max block body size}\\
+        \var{maxHeaderSize} \mapsto \N & \PParams & \text{max block header size}\\
+        \var{scriptVersion} \mapsto \N & \PParams & \text{script version}\\
+        \var{upAdptThd} \mapsto \R & \PParams & \text{update proposal adoption threshold}\\
+        \var{cfmThd} \mapsto \N & \PParams & \text{update proposal confirmation threshold}\\
+        \var{upropTTL} \mapsto \Slot & \PParams & \text{update proposal time-to-live}\\
+        \var{keyDeposit} \mapsto \Coin & \PParams & \text{stake key deposit}\\
+        \var{keyMinRefund} \mapsto \unitInterval & \PParams & \text{stake key min refund}\\
+        \var{keyDecayRate} \mapsto \nonnegReals & \PParams & \text{stake key decay rate}\\
+        \var{poolDeposit} \mapsto \Coin & \PParams & \text{stake pool deposit}\\
+        \var{poolMinRefund} \mapsto \unitInterval & \PParams & \text{stake pool min refund}\\
+        \var{poolDecayRate} \mapsto \nonnegReals & \PParams & \text{stake pool decay rate}\\
+        \var{E_{max}} \mapsto \Epoch & \PParams & \text{epoch bound on pool retirement}\\
+        \var{n_{opt}} \mapsto \Npos & \PParams & \text{desired number of pools}\\
+        \var{a_0} \mapsto \posReals & \PParams & \text{pool influence}\\
+        \tau \mapsto \unitInterval & \PParams & \text{treasury expansion}\\
+        \rho \mapsto \unitInterval & \PParams & \text{monetary expansion}\\
+        \var{activeSlotCoeff} \mapsto \unitInterval & \PParams & f\text{ in \cite{ouroboros_praos}}\\
+        \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
       \end{array}
-    \right)
   \end{equation*}
   %
   \emph{Accessor Functions}
   %
   \begin{center}
-    \fun{fparams},
+    \fun{a},
+    \fun{b},
+    \fun{maxBlockSize},
+    \fun{maxHeaderSize},
+    \fun{scriptVersion},
+    \fun{upAdptThd},
+    \fun{cfmThd},
+    \fun{upropTTL},
     \fun{keyDeposit},
     \fun{keyMinRefund},
     \fun{keyDecayRate},
@@ -87,8 +98,6 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \fun{influence},
     \fun{tau},
     \fun{rho},
-    \fun{maxBHSize},
-    \fun{maxBBSize},
     \fun{activeSlotCoeff},
     \fun{d},
   \end{center}
@@ -97,9 +106,6 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{minfee} & \PParams \to \Tx \to \Coin
-                   & \text{minimum fee calculation}
-      \\
       (\slotminus{}{}) & \Slot \to \Slot \to \Duration
                        & \text{duration between slots}
     \end{array}
@@ -114,9 +120,19 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \end{array}
   \end{equation*}
   %
-  \emph{Derived Functions}
+  \caption{Definitions used in Protocol Parameters}
+  \label{fig:defs:protocol-parameters}
+\end{figure*}
+
+\begin{figure*}[htb]
+  \emph{Helper Functions}
   %
   \begin{align*}
+    \fun{minfee} & \in \PParams \to \Tx \to \Coin & \text{minimum fee}\\
+    \fun{minfee} & ~\var{pps}~\var{tx} =
+    (\fun{a}~\var{pps}) * \fun{txSize}~\var{tx} + (\fun{b}~\var{pps})
+    \\
+    \\
     \fun{epoch} & \in ~ \Slot \to \Epoch & \text{epoch of a slot}
     \\
     \fun{epoch} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerEpoch
@@ -133,8 +149,8 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \fun{kesPeriod} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerKESPeriod
   \end{align*}
   %
-  \caption{Definitions used in Protocol Parameters}
-  \label{fig:defs:protocol-parameters}
+  \caption{Helper functions for the Protocol Parameters}
+  \label{fig:defs:protocol-parameters-helpers}
 \end{figure*}
 
 \clearpage
