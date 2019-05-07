@@ -28,7 +28,7 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-mainnet-mirror
-    commit: 4f8db35bb50e5417729fb8bdf455dbe6445a6695
+    commit: 87d325cc5b5f0840590afcb6ef0e172553045226
 
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
