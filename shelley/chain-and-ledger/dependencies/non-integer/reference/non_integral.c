@@ -376,8 +376,8 @@ mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const in
 {
   mpz_set(rop, one);
   int n = 0;
-  mpz_t last, divisor, nextX, error, upper, lower, error_term;
-  mpz_init_set(last, one); mpz_init_set(divisor, one);
+  mpz_t divisor, nextX, error, upper, lower, error_term;
+  mpz_init_set(divisor, one);
   mpz_init(nextX); mpz_init_set(error, x);
   mpz_init(upper); mpz_init(lower); mpz_init(error_term);
 
@@ -403,7 +403,6 @@ mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const in
 
       mpz_mul_si(error_term, error, bound_x);
 
-      mpz_set(last, rop);
       mpz_add(rop, rop, nextX);
 
       /* compare is guaranteed to be above overall result */
@@ -429,7 +428,7 @@ mp_exp_cmp_result ref_exp_cmp(mpz_t rop, const int maxN, const mpz_t x, const in
       n++;
     }
 
-  mpz_clear(last); mpz_clear(divisor); mpz_clear(nextX);
+  mpz_clear(divisor); mpz_clear(nextX);
   mpz_clear(error); mpz_clear(upper); mpz_clear(lower); mpz_clear(error_term);
 
   result.iterations = n;

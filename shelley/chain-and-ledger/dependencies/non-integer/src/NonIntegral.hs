@@ -9,9 +9,9 @@ module NonIntegral
   , taylorExpCmp
   ) where
 
-data CompareResult = BELOW
-                   | ABOVE
-                   | UNKNOWN
+data CompareResult a = BELOW a Int
+                     | ABOVE a Int
+                     | UNKNOWN
   deriving (Show, Eq)
 
 scaleExp :: (RealFrac b) => b -> (Integer, b)
@@ -158,14 +158,12 @@ findE eone x = contract eone x lower upper
 ln' :: (RealFrac a, Enum a, Show a) => a -> a
 ln' x = if x == 0
         then error "0 is not in domain of ln"
-        else --trace ("(n, x, x') = (" ++ show n ++ ", " ++ show x ++ ", " ++ show x' ++ ")") $
-             fromIntegral n + approxln
+        else fromIntegral n + approxln
   where (n, x') = splitLn x
         approxln = fln 1000 x'
 
 splitLn :: (RealFrac b, Show b) => b -> (Integer, b)
-splitLn x = --trace ("(n, x', y') = (" ++ show n ++ ", " ++ show x' ++ ", " ++ show y' ++ ")") $
-            (n, x')
+splitLn x = (n, x')
     where n = findE e x
           y' = exp' (fromIntegral n)
           x' = (x / y') - 1 -- x / e^n > 1!
@@ -184,17 +182,17 @@ taylorExp maxN currentN x lastX acc divisor
     | otherwise = taylorExp maxN (currentN + 1) x nextX (acc + nextX) (divisor + 1)
     where nextX = (lastX * x) / divisor
 
-taylorExpCmp :: (RealFrac a, Show a) => a -> a -> a -> CompareResult
+taylorExpCmp :: (RealFrac a, Show a) => a -> a -> a -> CompareResult a
 taylorExpCmp boundX cmp x =
   taylorExpCmp' 1000 0 boundX cmp x x 1 1
 
-taylorExpCmp' :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a -> a -> CompareResult
+taylorExpCmp' :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a -> a -> CompareResult a
 taylorExpCmp' maxN currentN boundX cmp x err acc divisor
   | maxN == currentN = UNKNOWN
   | abs nextX < eps = UNKNOWN
   | otherwise =
-    if cmp >= acc' + errorTerm then ABOVE
-    else if cmp < acc' - errorTerm then BELOW
+    if cmp >= acc' + errorTerm then ABOVE acc' (currentN + 1)
+    else if cmp < acc' - errorTerm then BELOW acc' (currentN + 1)
          else taylorExpCmp' maxN (currentN + 1) boundX cmp x error' acc' divisor'
               where divisor' = divisor + 1
                     errorTerm = error' * boundX
