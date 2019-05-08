@@ -294,7 +294,7 @@ unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{addr} & \AddrScr & \HashScr \times \Script & \text{Script address} \\
+      \var{addr} & \AddrScr & \HashScr & \text{Script address} \\
       \var{addr} & \Addr & \begin{array}{l@{~\uniondistinct}l}
                              \AddrB & \AddrP \uniondistinct \AddrE \\
                                     & \AddrBS \uniondistinct \AddrScr
@@ -316,7 +316,7 @@ unspent transaction output.
   \emph{Abstract Functions}
 
   \begin{equation*}
-    \begin{array}{{r@{~\in~}lr}}
+    \begin{array}{r@{~\in~}lr}
       \fun{hashScript} & \Script \to \HashScr & \text{hash a script}
     \end{array}
   \end{equation*}
@@ -327,7 +327,7 @@ unspent transaction output.
 
 In Figure~\ref{fig:types-scripts} the $\Addr$ type of~\cite{shelley_formal_spec}
 is extended to also include script addresses. This new script address comprises
-the hash of the validator script an the content of a data script.
+the hash of the validator script.
 
 An transaction output that is locked by a script carries the hash of the
 validator script. The output can only be spent if the matching script is
@@ -487,7 +487,7 @@ to the domain of the mapping in the UTxO.
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{(\{(\var{txInps}\subtractdom \var{utxo}) \cup \outs{tx}}  \\
+        \varUpdate{(\var{txInps}\subtractdom \var{utxo}) \cup \outs{tx}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
       \end{array}
@@ -528,9 +528,8 @@ the returned triple onto the first two entries.
     & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
     & ~~\ubalance{(\{(\var{txid},\var{ix}) \vert (\var{txid}, \var{ix},
       \wcard)\in\txins{tx}\}
-      \restrictdom \var{utxo})} +
-      \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
-    & ~~~~ + \keyRefunds{pp}{stkeys}{tx}
+      \restrictdom \var{utxo})} + \\
+    & \;\;\fun{wbalance}~(\fun{txwdrls}~{tx}) + \keyRefunds{pp}{stkeys}{tx}
   \end{align*}
   \caption{Functions used in Witness Rule with Multi-Sig}
   \label{fig:functions-witnesses-multi-sig}
