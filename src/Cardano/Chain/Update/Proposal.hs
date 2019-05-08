@@ -52,7 +52,7 @@ import Cardano.Binary
   , enforceSize
   )
 import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
-import Cardano.Chain.Update.Data (UpdateData)
+import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import Cardano.Chain.Update.ProtocolParametersUpdate (ProtocolParametersUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
@@ -199,9 +199,8 @@ data ProposalBody = ProposalBody
   { protocolVersion          :: !ProtocolVersion
   , protocolParametersUpdate :: !ProtocolParametersUpdate
   , softwareVersion          :: !SoftwareVersion
-  , metadata                 :: !(Map SystemTag UpdateData)
-  -- ^ UpdateData for each system which this update affects. It must be
-  --   non-empty.
+  , metadata                 :: !(Map SystemTag InstallerHash)
+  -- ^ InstallerHash for each system which this update affects
   , attributes               :: !(Attributes ())
   -- ^ Attributes which are currently empty, but provide extensibility
   } deriving (Eq, Show, Generic)

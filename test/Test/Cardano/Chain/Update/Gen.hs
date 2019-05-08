@@ -7,7 +7,7 @@ module Test.Cardano.Chain.Update.Gen
   , genSoftforkRule
   , genSoftwareVersion
   , genSystemTag
-  , genUpdateData
+  , genInstallerHash
   , genPayload
   , genProof
   , genProposal
@@ -39,7 +39,7 @@ import Cardano.Chain.Update
   , SoftwareVersion(..)
   , SystemTag(..)
   , UpId
-  , UpdateData(..)
+  , InstallerHash(..)
   , Vote
   , applicationNameMaxLength
   , mkProposal
@@ -147,9 +147,8 @@ genSystemTag :: Gen SystemTag
 genSystemTag =
   SystemTag <$> Gen.text (Range.constant 0 systemTagMaxLength) Gen.alphaNum
 
-genUpdateData :: Gen UpdateData
-genUpdateData =
-  UpdateData <$> genHashRaw <*> genHashRaw <*> genHashRaw <*> genHashRaw
+genInstallerHash :: Gen InstallerHash
+genInstallerHash = InstallerHash <$> genHashRaw
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm = payload <$> Gen.maybe (genProposal pm) <*> Gen.list
@@ -178,9 +177,9 @@ genProposalBody =
 genUpId :: ProtocolMagicId -> Gen UpId
 genUpId pm = genAbstractHash (genProposal pm)
 
-genUpsData :: Gen (Map SystemTag UpdateData)
+genUpsData :: Gen (Map SystemTag InstallerHash)
 genUpsData =
-  Gen.map (Range.linear 0 20) ((,) <$> genSystemTag <*> genUpdateData)
+  Gen.map (Range.linear 0 20) ((,) <$> genSystemTag <*> genInstallerHash)
 
 genVote :: ProtocolMagicId -> Gen Vote
 genVote pm = mkVote pm <$> genSecretKey <*> genUpId pm <*> Gen.bool

@@ -30,7 +30,7 @@ import Test.Cardano.Chain.Update.Example
   , exampleSoftwareVersion
   , exampleSystemTag
   , exampleUpId
-  , exampleUpdateData
+  , exampleInstallerHash
   , exampleVote
   )
 import Test.Cardano.Chain.Update.Gen
@@ -46,7 +46,7 @@ import Test.Cardano.Chain.Update.Gen
   , genSoftwareVersion
   , genSystemTag
   , genUpId
-  , genUpdateData
+  , genInstallerHash
   , genUpsData
   , genVote
   )
@@ -168,15 +168,15 @@ ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
--- UpdateData
+-- InstallerHash
 --------------------------------------------------------------------------------
 
-goldenUpdateData :: Property
-goldenUpdateData =
-  goldenTestCBOR exampleUpdateData "test/golden/cbor/update/UpdateData"
+goldenInstallerHash :: Property
+goldenInstallerHash =
+  goldenTestCBOR exampleInstallerHash "test/golden/cbor/update/InstallerHash"
 
-ts_roundTripUpdateData :: TSProperty
-ts_roundTripUpdateData = eachOfTS 20 genUpdateData roundTripsCBORBuildable
+ts_roundTripInstallerHash :: TSProperty
+ts_roundTripInstallerHash = eachOfTS 20 genInstallerHash roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------

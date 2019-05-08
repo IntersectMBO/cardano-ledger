@@ -233,14 +233,8 @@ goldenConsensusData = goldenTestCBORExplicit
   "ConcensusData"
   (toCBORConsensusData exampleEs)
   (fromCBORConsensusData exampleEs)
-  mcd
+  exampleConsensusData
   "test/golden/cbor/block/ConsensusData"
- where
-  mcd = consensusData
-    (exampleFlatSlotId exampleEs)
-    examplePublicKey
-    exampleChainDifficulty
-    exampleBlockSignature
 
 ts_roundTripConsensusData :: TSProperty
 ts_roundTripConsensusData = eachOfTS

@@ -94,7 +94,7 @@ library
                        Cardano.Chain.UTxO.TxWitness
 
                        Cardano.Chain.Update.ApplicationName
-                       Cardano.Chain.Update.Data
+                       Cardano.Chain.Update.InstallerHash
                        Cardano.Chain.Update.Payload
                        Cardano.Chain.Update.Proof
                        Cardano.Chain.Update.Proposal
