@@ -127,3 +127,9 @@ tests ts = and <$> sequence
 It is assumed that `genTrivial` is defined and in-scope, and that the type it generates has appropriate instances that allow it to roundtrip.
 
 Note that we specify a concrete number of tests to run: `1000`. This is the number which will execute in the `ContinuousIntegration` scenario, and the ratios by which that number will be multiplied for the other scenarios are given [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
+
+<hr/>
+
+<p align="center">
+  <a href="https://github.com/input-output-hk/cardano-wallet/blob/master/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/cardano-wallet.svg?style=for-the-badge" /></a>
+</p>
