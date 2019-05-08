@@ -654,7 +654,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \var{ptr} \\
         \end{array}
       }
-      \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
+      \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
     }
     { \left(
         \begin{array}{r}
@@ -690,7 +690,7 @@ will be successful, since the pool certificates are disjoint from the delegation
         \var{pp} \\
       \end{array}
     }
-    \vdash \var{pstate} \trans{pool}{c} \var{pstate'}
+    \vdash \var{pstate} \trans{\hyperref[fig:pool-rules]{pool}}{c} \var{pstate'}
     }
     { \left(
         \begin{array}{r}
@@ -856,7 +856,7 @@ will be invalid.
     }
     \vdash
       \var{dpstate'}
-      \trans{delpl}{c}
+      \trans{\hyperref[fig:rules:delpl]{delpl}}{c}
       \var{dpstate''}
     }
     {
