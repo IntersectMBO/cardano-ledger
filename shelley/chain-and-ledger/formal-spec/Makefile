@@ -6,7 +6,7 @@
 
 # Document name
 ifndef DOCNAME
-	DOCNAME = ledger-spec
+	DOCNAME = ledger-spec multi-sig
 endif
 
 # You want latexmk to *always* run, because make does not have all the info.
@@ -44,5 +44,7 @@ clean:
 
 install:
 	mkdir -pv ${out}/nix-support/
-	cp $(DOCNAME).pdf ${out}/
-	echo "doc-pdf $(DOCNAME) ${out}/$(DOCNAME).pdf" > ${out}/nix-support/hydra-build-products
+	for i in $(DOCNAME) ; do \
+	  cp $$i.pdf ${out}/ ; \
+	  echo "doc-pdf $$i ${out}/$$i.pdf" >> ${out}/nix-support/hydra-build-products ; \
+	done
