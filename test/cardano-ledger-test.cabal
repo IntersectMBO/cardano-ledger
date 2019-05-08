@@ -46,6 +46,7 @@ library
                        Test.Cardano.Chain.Update.Example
                        Test.Cardano.Chain.Update.Gen
                        Test.Cardano.Chain.Update.Properties
+                       Test.Cardano.Mirror
 
                        Test.Options
 
@@ -62,6 +63,8 @@ library
                      , cardano-prelude-test
                      , containers
                      , cryptonite
+                     , directory
+                     , filepath
                      , formatting
                      , hedgehog
                      , optparse-applicative

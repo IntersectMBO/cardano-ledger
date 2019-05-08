@@ -8,6 +8,9 @@ let
   # our packages
   stack-pkgs = import ./.stack.nix;
 
+  # The cardano-mainnet-mirror used during testing
+  cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
+
   # Build the packageset with module support.
   # We can essentially override anything in the modules
   # section.
@@ -38,6 +41,9 @@ let
         # implies that it's incompatible with ghc-8.6 (on windows).
         # Let's force it to accept out packageset.
         packages.katip.doExactConfig = true;
+
+        packages.cardano-ledger.preBuild =
+          "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
       }
     ];
   };

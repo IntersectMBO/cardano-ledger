@@ -215,6 +215,8 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Update.Json
                        Test.Cardano.Chain.Update.Properties
 
+                       Test.Cardano.Mirror
+
                        Test.Options
 
   build-depends:       base
@@ -227,13 +229,13 @@ test-suite cardano-ledger-test
                      , cardano-crypto
                      , cardano-crypto-test
                      , cardano-crypto-wrapper
-                     , cardano-mainnet-mirror
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
                      , cryptonite
                      , cs-blockchain
                      , cs-ledger
+                     , directory
                      , filepath
                      , formatting
                      , hedgehog

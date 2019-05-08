@@ -28,7 +28,6 @@
         small-steps = ./small-steps.nix;
         cs-ledger = ./cs-ledger.nix;
         cs-blockchain = ./cs-blockchain.nix;
-        cardano-mainnet-mirror = ./cardano-mainnet-mirror.nix;
         cardano-shell = ./cardano-shell.nix;
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
