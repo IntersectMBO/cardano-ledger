@@ -75,7 +75,7 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
         \var{stpools}
         \end{array}
     }\right)
-      \vdash \var{utxoSt} \trans{utxow}{tx} \var{utxoSt'}\\~\\~\\
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxow-shelley]{utxow}}{tx} \var{utxoSt'}\\~\\~\\
       %
       {
         \left(
@@ -87,7 +87,7 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
       \right)
       }
       \vdash
-      dpstate \trans{delegs}{\var{tx}} dpstate'
+      dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{\var{tx}} dpstate'
       \\~\\~\\
       {
         \left(
@@ -98,7 +98,7 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
       \right)
       }
       \vdash
-      us \trans{bupi}{\fun{txup}~\var{tx}} us'
+      us \trans{\hyperlink{byron_chain_spec_link}{bupi}}{\fun{txup}~\var{tx}} us'
     }
     {
       \left(
@@ -193,7 +193,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
       }
       \vdash
         \var{ls'}
-        \trans{ledger}{c}
+        \trans{\hyperref[fig:rules:ledger]{ledger}}{c}
         \var{ls''}
     }
     {

@@ -302,7 +302,7 @@ of which are active.
   \label{fig:ts-types:newepoch}
 \end{figure}
 
-Figure~\ref{fig:rules:not-new-epoch} defines the new epoch state transition. It
+Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It
 has two rules: the first one deals with the case when the epoch signal $e$ is before the
 current epoch \var{e_\ell}. This rule does not change the state. The second rule
 describes the change in the case of $e$ being equal to the next epoch
@@ -339,7 +339,7 @@ in the pool distribution.
       (\wcard,~\wcard,~(\wcard,~\wcard,~\var{us}))\leteq\var{es}
       \\
       {
-        \var{s}\vdash\var{us} \trans{upiec}{} \var{us'}
+        \var{s}\vdash\var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
       }
       &
       \var{pp_n}\leteq\pps{us'}
@@ -352,7 +352,8 @@ in the pool distribution.
            \end{array}}
        \right)
        \vdash
-       (\fun{applyRUpd}~\var{ru}~\var{es})\trans{epoch}{\var{e}}\var{es'}
+       (\fun{applyRUpd}~\var{ru}~\var{es})
+         \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
      }
      \\~\\~\\
      {\begin{array}{r@{~\leteq~}l}
@@ -435,7 +436,7 @@ in the pool distribution.
     }
   \end{equation}
   \caption{New Epoch rules}
-  \label{fig:rules:not-new-epoch}
+  \label{fig:rules:new-epoch}
 \end{figure}
 
 \subsection{Update Nonce Transition}
@@ -870,7 +871,7 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
              \var{s_{\ell}} \\
            \end{array}}
         \right)
-        \trans{bhead}{\var{bh}}
+        \trans{\hyperref[fig:rules:bheader]{bhead}}{\var{bh}}
         \left(
           {\begin{array}{c}
              \var{h}' \\
@@ -971,7 +972,7 @@ The environments for this transition is:
              \var{s_{\ell}} \\
            \end{array}}
         \right)
-        \trans{bhead}{\var{bh}}
+        \trans{\hyperref[fig:rules:bheader]{bhead}}{\var{bh}}
         \left(
           {\begin{array}{c}
              \var{h}' \\
@@ -1015,7 +1016,7 @@ The environments for this transition is:
              \var{s_{\ell}} \\
            \end{array}}
         \right)
-        \trans{vrf}{\var{bh}}
+        \trans{\hyperref[fig:rules:vrf]{vrf}}{\var{bh}}
         \left(
           {\begin{array}{c}
              \var{h}' \\
@@ -1152,7 +1153,7 @@ current slot is not an overlay slot.
         \right)
         \vdash
              \var{ls} \\
-        \trans{ledgers}{\var{txs}}
+        \trans{\hyperref[fig:rules:ledger-sequence]{ledgers}}{\var{txs}}
              \var{ls}' \\
       }
     }
@@ -1383,7 +1384,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{pd} \\
               \var{osched} \\
         \end{array}\right)}
-        \trans{newepoch}{\epoch{s}}
+        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
         {\left(\begin{array}{c}
               \var{e_\ell}' \\
               \eta_0' \\
@@ -1401,7 +1402,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \eta_v \\
               \eta_c \\
         \end{array}\right)}
-        \trans{updn}{\var{s}}
+        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{s}}
         {\left(\begin{array}{c}
               \eta_v' \\
               \eta_c' \\
@@ -1416,7 +1417,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
       \var{ps}' \\
       \var{dms} \\
       \end{array}\right)}
-      \trans{ocert}{bhb}
+      \trans{\hyperref[fig:rules:ocert]{ocert}}{bhb}
       {\left(\begin{array}{c}
       \var{ps}'' \\
       \var{dms}' \\
@@ -1445,7 +1446,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{h} \\
               \var{s_\ell} \\
         \end{array}\right)}
-        \trans{overlay}{\var{bh}}
+        \trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}}
         {\left(\begin{array}{c}
               \var{h}' \\
               \var{s_\ell}' \\
@@ -1459,7 +1460,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{es}' \\
           \end{array}}
         \right)
-        \vdash \var{ru}' \trans{rupd}{\var{s}} \var{ru}''
+        \vdash \var{ru}' \trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru}''
       }
       \\
       \var{ls} \leteq (\var{utxoSt}',~(\var{ds}',~\var{ps}''),~\var{us}')
@@ -1474,7 +1475,7 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
               \var{ls} \\
               \var{b'} \\
         \end{array}\right)}
-        \trans{bbody}{\var{block}}
+        \trans{\hyperref[fig:rules:bbody]{bbody}}{\var{block}}
         {\left(\begin{array}{c}
               \var{ls}' \\
               b'' \\
