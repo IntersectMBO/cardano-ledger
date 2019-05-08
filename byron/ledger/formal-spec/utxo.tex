@@ -245,7 +245,7 @@ different order). The choice here is arbitrary.
   \begin{equation}
     \label{eq:utxo-witness-inductive}
     \inference
-    { \var{pps} \vdash \var{utxo} \trans{utxo}{tx} \var{utxo'}
+    { \var{pps} \vdash \var{utxo} \trans{\hyperref[fig:rules:utxo]{utxo}}{tx} \var{utxo'}
       & \var{maxTxSize} \mapsto \var{t} \in \var{pps} & \fun{txSize}~\var{tx} \leq t \\ ~ \\
       & \forall i \in \txins{tx} \cdot \exists (\var{vk}, \sigma) \in \wits{\var{tx}}
       \cdot
@@ -282,7 +282,7 @@ transactions.
     {
       \var{pps} \vdash \var{utxo} \trans{utxows}{\Gamma} \var{utxo'}
       &
-      \var{pps} \vdash \var{utxo'} \trans{utxow}{\var{tx}} \var{utxo''}
+      \var{pps} \vdash \var{utxo'} \trans{\hyperref[fig:rules:utxow]{utxow}}{\var{tx}} \var{utxo''}
     }
     {\var{pps} \vdash \var{utxo} \trans{utxows}{\Gamma;\var{tx}} \var{utxo''}}
   \end{equation}
