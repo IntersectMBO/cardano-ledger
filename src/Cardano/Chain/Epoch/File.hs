@@ -4,8 +4,6 @@
 
 module Cardano.Chain.Epoch.File
   ( mainnetEpochSlots
-  , parseEpochFile
-  , parseEpochFiles
   , parseEpochFileWithBoundary
   , parseEpochFilesWithBoundary
   , ParseError(..)
@@ -32,7 +30,7 @@ import System.FilePath ((-<.>))
 
 import Cardano.Binary (DecoderError, decodeFullDecoder, slice)
 import Cardano.Chain.Block.Block
-  (ABlock, ABlockOrBoundary(..), fromCBORABlockOrBoundary)
+  (ABlockOrBoundary(..), fromCBORABlockOrBoundary)
 import Cardano.Chain.Slotting (EpochSlots(..))
 
 
@@ -75,19 +73,6 @@ loadFileWithHeader file header =
 -- This number has been fixed throughout the Byron era.
 mainnetEpochSlots :: EpochSlots
 mainnetEpochSlots = EpochSlots 21600
-
-parseEpochFile
-  :: EpochSlots
-  -> FilePath
-  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
-parseEpochFile epochSlots =
-  S.mapMaybe eitherToMaybe . parseEpochFileWithBoundary epochSlots
- where
-  eitherToMaybe
-    :: ABlockOrBoundary ByteString -> Maybe (ABlock ByteString)
-  eitherToMaybe = \case
-    ABOBBoundary _      -> Nothing
-    ABOBBlock    aBlock -> Just aBlock
 
 parseEpochFileWithBoundary
   :: EpochSlots
@@ -134,13 +119,6 @@ parseEpochFilesWithBoundary
        ()
 parseEpochFilesWithBoundary epochSlots fs =
   foldr (<>) mempty (parseEpochFileWithBoundary epochSlots <$> fs)
-
-parseEpochFiles
-  :: EpochSlots
-  -> [FilePath]
-  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
-parseEpochFiles epochSlots fs =
-  foldr (<>) mempty (parseEpochFile epochSlots <$> fs)
 
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
