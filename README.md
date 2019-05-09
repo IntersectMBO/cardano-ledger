@@ -4,8 +4,8 @@
   <a href="https://buildkite.com/input-output-hk/cardano-ledger">
     <img alt="Build Status" src="https://img.shields.io/buildkite/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0/master.svg?style=for-the-badge"/>
   </a>
-  <a href="https://coveralls.io/github/input-output-hk/cardano-chain?branch=master">
-    <img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-chain/master.svg?style=for-the-badge"/>
+  <a href="https://coveralls.io/github/input-output-hk/cardano-ledger?branch=master">
+    <img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-ledger/master.svg?style=for-the-badge"/>
   </a>
 </p>
 
