@@ -657,7 +657,6 @@ the last slot.
       \begin{array}{r@{~\in~}lr}
         \var{s_{now}} & \Slot & \text{current slot (wall-clock)} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
-        \var{stpools} & \StakePools & \text{stake pools} \\
       \end{array}
     \right)
   \end{equation*}
@@ -724,18 +723,16 @@ The state update finally sets \var{slot} as new block header slot and hash of
       &
       \var{slot} \leteq \bslot{bhb}
       \\
-      (\var{vk_{hot}},~\wcard,~\wcard,~\wcard) \leteq \bocert{bhb}
+      (\var{vk_{hot}},~\wcard,~\wcard,\var{c_0},~\wcard) \leteq \bocert{bhb}
       & \var{hk} \leteq \hashKey{vk_{hot}}
-      \\~\\
-      \var{hk}\mapsto s_0\in\var{stpools}
-      &
-      t \leteq \kesPeriod{slot} - \kesPeriod{s_0}
+      \\
+      t \leteq \kesPeriod{slot} - c_0
       \\~\\
       \var{s_\ell} < \var{slot} \leq \var{s_{now}}
       &
       \var{h} = \bprev{bhb}
       &
-      \mathcal{V}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
+      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
       \\
       \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
       &
@@ -746,7 +743,6 @@ The state update finally sets \var{slot} as new block header slot and hash of
         {\begin{array}{c}
             \var{s_{now}} \\
             \var{pp} \\
-            \var{stpools} \\
         \end{array}}
       \right)
       \vdash
@@ -795,7 +791,6 @@ The VRF state is $\BHeaderState$.
         \var{pp} & \PParams & \text{protocol parameters} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{stpools} & \StakePools & \text{stake pools} \\
       \end{array}
     \right)
   \end{equation*}
@@ -861,7 +856,6 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
           {\begin{array}{c}
              \var{s_{now}} \\
              \var{pp} \\
-             \var{stpools} \\
            \end{array}}
         \right)
         \vdash
@@ -887,7 +881,6 @@ returned by the application of the $\mathsf{BHEAD}$ transition rule.
             \var{pp} \\
             \eta_0 \\
             \var{pd} \\
-            \var{stpools} \\
         \end{array}}
       \right)
       \vdash
@@ -953,16 +946,19 @@ The environments for this transition is:
   \begin{equation}\label{eq:active-pbft}
     \inference[Active-OBFT]
     {
-      \{\bslot \bhbody bh \mapsto \var{gkey}\} \in \var{osched}
+      \var{bhb}\leteq\bhbody{bh}
+      &
+      (\var{s_{now}},~\var{pp},~\wcard,~\wcard)\leteq ve
       \\
-      (\var{s_{now}},~\var{pp},~\wcard,~\wcard,~\var{stpools})\leteq ve
+      \{\bslot bhb \mapsto \var{gkey}\} \in \var{osched}
+      &
+      \var{gkey} = \bvkcold{bhb}
       \\~\\
       {
         \left(
           {\begin{array}{c}
              \var{s_{now}} \\
              \var{pp} \\
-             \var{stpools} \\
            \end{array}}
         \right)
         \vdash
@@ -1422,8 +1418,6 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
       \var{ps}'' \\
       \var{dms}' \\
       \end{array}\right)}
-      &
-      (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) \leteq \var{ps}''
       \\
       {
         \left(
@@ -1434,7 +1428,6 @@ Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
                 \var{pp}' \\
                 \eta_0' \\
                 \var{pd}' \\
-                \var{stpools} \\
                 \end{array}}
               \right)
               \\
