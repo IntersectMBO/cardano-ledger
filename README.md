@@ -33,6 +33,27 @@ stack build && stack exec validate-mainnet
 ```
 
 
+## Building
+
+`cardano-ledger` can be built using `stack`, `cabal`, `nix`, or a combination.
+
+To use `stack` or `cabal` without `nix`, you first need to make sure you have
+`git`, `openssl`, and `zlib` installed on your machine. You should do this using
+a package manager appropriate to your OS. After that you can simply use `stack
+build` or `cabal new-build`.
+
+Alternatively you can use `nix` to install the external dependencies. For
+`stack` simply add the `--nix` flag to your invocation of `stack build`. If
+you're on `NixOS` this will happen automatically. For `cabal`, you can run
+`nix-shell scripts/nix/stack-shell.nix` to enter a shell with the dependencies,
+and use `cabal new-build` as normal from there.
+
+You can build directly with `nix`, by running `nix-build -A
+nix-tools.libs.cardano-ledger`. To run the test executable you must first build
+it with `nix-build -A nix-tools.tests.cardano-ledger.cardano-ledger-test -o
+cardano-ledger-test` and then run it with `./cardano-ledger-test`.
+
+
 ## Developing
 
 The `cardano-ledger` library depends on other libraries of the `input-output-hk`
