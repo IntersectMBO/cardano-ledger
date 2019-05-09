@@ -28,6 +28,7 @@ hasEKG: 12788
 setupScribes:
   - scKind: StdoutSK
     scName: stdout
+    scFormat: ScText
     scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:

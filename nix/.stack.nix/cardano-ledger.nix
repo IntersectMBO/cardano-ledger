@@ -35,7 +35,7 @@
           (hsPkgs.directory)
           (hsPkgs.filepath)
           (hsPkgs.formatting)
-          (hsPkgs.iohk-monitoring)
+#          (hsPkgs.iohk-monitoring)
           (hsPkgs.memory)
           (hsPkgs.mtl)
           (hsPkgs.resourcet)

@@ -66,7 +66,7 @@ init config appEnv ll initialCVS cvsVar = do
 
   -- Validate epoch files.
   result <- liftIO . runExceptT $ foldM
-    (validateEpochFile (genesisConfig config) (llBasicTrace ll) (llConfiguration ll))
+    (validateEpochFile (genesisConfig config) ll)
     initialCVS
     files
 

@@ -17,10 +17,9 @@ import Formatting (Format, build, sformat)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
-import qualified Cardano.BM.Configuration as Log
-import Cardano.BM.Data.Severity as Log
-import Cardano.BM.Observer.Monadic as BM
-import Cardano.BM.Trace (Trace, appendName, logDebug, logNotice)
+import Cardano.Shell.Features.Logging (LoggingLayer(..), Trace)
+import qualified Cardano.Shell.Features.Logging as Log
+
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
@@ -55,15 +54,14 @@ validateEpochFile
   :: forall m
    . (MonadIO m, MonadError EpochError m)
   => Genesis.Config
-  -> Trace m Text
-  -> Log.Configuration
+  -> LoggingLayer
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile config trace logconf cvs fp = do
-  subTrace     <- appendName "epoch-validation" trace
-  utxoSubTrace <- appendName "utxo-stats" subTrace
-  res          <- BM.bracketObserveX logconf subTrace Log.Info "benchmark" $
+validateEpochFile config ll cvs fp = do
+  subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
+  utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
+  res          <- llBracketMonadX ll (llConfiguration ll) subTrace Log.Info "benchmark" $
       liftIO $ runResourceT $ runExceptT $ foldChainValidationState
         config
         cvs
@@ -78,13 +76,13 @@ validateEpochFile config trace logconf cvs fp = do
     -> ChainValidationState
     -> m ChainValidationState
   logResult trace' utxoTrace cvs' = do
-    logNotice
+    llLogNotice ll
       trace'
       (sformat
         epochValidationFormat
         (slotNumberEpoch (Genesis.configEpochSlots config) (cvsLastSlot cvs))
       )
-    logDebug
+    llLogDebug ll
       utxoTrace
       (sformat
         utxoStatsFormat
