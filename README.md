@@ -1,4 +1,13 @@
-# cardano-ledger
+<h1 align="center">Cardano Ledger</h1>
+
+<p align="center">
+  <a href="https://buildkite.com/input-output-hk/cardano-ledger">
+    <img alt="Build Status" src="https://img.shields.io/buildkite/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0/master.svg?style=for-the-badge"/>
+  </a>
+  <a href="https://coveralls.io/github/input-output-hk/cardano-chain?branch=master">
+    <img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-chain/master.svg?style=for-the-badge"/>
+  </a>
+</p>
 
 A re-implementation of the Cardano ledger layer, designed to ease transition between the Byron and Shelley eras.
 
@@ -7,8 +16,6 @@ in the
 [`cardano-ledger-specs`](https://github.com/input-output-hk/cardano-ledger-specs)
 repository.
 
-[![Build status](https://badge.buildkite.com/92690086997996d4f9703ef752c0e918a02bb389b44d0659a0.svg?branch=master)](https://buildkite.com/input-output-hk/cardano-ledger)
-[![Coverage Status](https://coveralls.io/repos/github/input-output-hk/cardano-chain/badge.svg?branch=master)](https://coveralls.io/github/input-output-hk/cardano-chain?branch=master)
 
 ## Demo Mainnet Validation
 
@@ -120,3 +127,9 @@ tests ts = and <$> sequence
 It is assumed that `genTrivial` is defined and in-scope, and that the type it generates has appropriate instances that allow it to roundtrip.
 
 Note that we specify a concrete number of tests to run: `1000`. This is the number which will execute in the `ContinuousIntegration` scenario, and the ratios by which that number will be multiplied for the other scenarios are given [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
+
+<hr/>
+
+<p align="center">
+  <a href="https://github.com/input-output-hk/cardano-wallet/blob/master/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/cardano-wallet.svg?style=for-the-badge" /></a>
+</p>
