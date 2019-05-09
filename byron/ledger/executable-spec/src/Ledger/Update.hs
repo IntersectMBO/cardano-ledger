@@ -100,6 +100,9 @@ type UpSD =
 -- @linux@, @win64@, or @mac32@).
 type STag = String
 
+-- | For now we do not have any requirements on metadata.
+data Metadata = Metadata deriving (Eq, Ord, Show)
+
 -- | Update proposal
 data UProp = UProp
   { _upId :: UpId
@@ -110,6 +113,8 @@ data UProp = UProp
   , _upSig :: Core.Sig UpSD
   , _upSTags :: Set STag
   -- ^ System tags involved in the update proposal.
+  , _upMdt :: Metadata
+  -- ^ Metadata required for performing software updates.
   }
 
 makeLenses ''UProp
@@ -188,13 +193,13 @@ canUpdate pps prop =
   && (inRange (0,1) $ prop ^. upParams . scriptVersion - pps ^. scriptVersion)
 
 svCanFollow
-  :: Map ApName (ApVer, Core.Slot)
+  :: Map ApName (ApVer, Core.Slot, Metadata)
   -> (ApName, ApVer)
   -> Bool
 svCanFollow avs (an,av) =
     (case Map.lookup an avs of
       Nothing -> True
-      Just (x,_) -> av == x + 1
+      Just (x, _, _) -> av == x + 1
     ) && (an `Set.notMember` dom avs ==> av == ApVer 0)
   where
 
@@ -206,8 +211,8 @@ svCanFollow avs (an,av) =
 data UPSVV
 
 instance STS UPSVV where
-  type Environment UPSVV = Map ApName (ApVer, Core.Slot)
-  type State UPSVV = Map UpId (ApName, ApVer)
+  type Environment UPSVV = Map ApName (ApVer, Core.Slot, Metadata)
+  type State UPSVV = Map UpId (ApName, ApVer, Metadata)
   type Signal UPSVV = UProp
 
   data PredicateFailure UPSVV
@@ -223,11 +228,12 @@ instance STS UPSVV where
         let SwVer an av = up ^. upSwVer
         apNameValid an ?! InvalidApplicationName
         svCanFollow avs (an,av) ?! CannotFollowSv
-        (an, av) `notElem` Map.elems raus ?! AlreadyProposedSv
-        return $! raus ⨃ [(up ^. upId, (an, av))]
+        (an, av) `notElem` fmap fstSnd (Map.elems raus) ?! AlreadyProposedSv
+        return $! raus ⨃ [(up ^. upId, (an, av, up ^. upMdt))]
     ]
     where
       apNameValid (ApName n) = all isAscii n && length n <= 12
+      fstSnd (x, y, _) = (x, y)
 
 
 data UPPVV
@@ -271,12 +277,12 @@ instance STS UPV where
   type Environment UPV =
     ( ProtVer
     , PParams
-    , Map ApName (ApVer, Core.Slot)
+    , Map ApName (ApVer, Core.Slot, Metadata)
     )
 
   type State UPV =
     ( Map UpId (ProtVer, PParams)
-    , Map UpId (ApName, ApVer)
+    , Map UpId (ApName, ApVer, Metadata)
     )
 
   type Signal UPV = UProp
@@ -298,7 +304,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
-        inMap an av (fst <$> avs) ?! AVChangedInPVUpdate an av
+        inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
         return (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
@@ -318,6 +324,8 @@ instance STS UPV where
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
         return (rpus', raus')
     ]
+    where
+      swVer (x, _, _) = x
 
 instance Embed UPPVV UPV where
   wrapFailed = UPPVVFailure
@@ -331,12 +339,12 @@ instance STS UPREG where
   type Environment UPREG =
     ( ProtVer
     , PParams
-    , Map ApName (ApVer, Core.Slot)
+    , Map ApName (ApVer, Core.Slot, Metadata)
     , Map Core.VKeyGenesis Core.VKey
     )
   type State UPREG =
     ( Map UpId (ProtVer, PParams)
-    , Map UpId (ApName, ApVer)
+    , Map UpId (ApName, ApVer, Metadata)
     )
   type Signal UPREG = UProp
 
@@ -575,9 +583,9 @@ type UPIState =
   ( Core.Epoch
   , (ProtVer, PParams)
   , [(Core.Slot, (ProtVer, PParams))]
-  , Map ApName (ApVer, Core.Slot)
+  , Map ApName (ApVer, Core.Slot, Metadata)
   , Map UpId (ProtVer, PParams)
-  , Map UpId (ApName, ApVer)
+  , Map UpId (ApName, ApVer, Metadata)
   , Map UpId Core.Slot
   , Core.PairSet UpId Core.VKeyGenesis
   , Core.PairSet ProtVer Core.VKey
@@ -654,8 +662,8 @@ instance STS UPIVOTE where
               , pws)
             , v) <- judgmentContext
         (cps', vts') <- trans @UPVOTE $ TRC ((sn, pps, dom pws, dms), (cps, vts), v)
-        let avsnew = Map.fromList [(an, (av, sn)) | pid <- Map.keys cps'
-                                                  , (an, av) <- maybeToList $ Map.lookup pid raus]
+        let avsnew = Map.fromList [(an, (av, sn, m)) | pid <- Map.keys cps'
+                                                    , (an, av, m) <- maybeToList $ Map.lookup pid raus]
         return ( ep
                 , (pv, pps)
                 , fads

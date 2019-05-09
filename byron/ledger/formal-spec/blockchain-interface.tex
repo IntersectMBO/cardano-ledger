@@ -184,11 +184,11 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
         & \text{current protocol information}\\
         \var{fads} & \seqof{(\Slot \times (\ProtVer \times \PPMMap))}
         & \text{future protocol version adoptions}\\
-        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot \times \Metadata)
         & \text{application versions}\\
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered protocol update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \mathbb{N})
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer \times \Metadata)
         & \text{registered software update proposals}\\
         \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
         \var{vts} & \powerset{(\UPropId \times \VKeyGen)} & \text{proposals votes}\\
@@ -348,8 +348,8 @@ given application name $\var{an}$.
           \end{array}
         \right)
       }\\
-      \var{avs_{new}} \leteq \{ \var{an} \mapsto (\var{av}, \var{s_n})
-      \mid \var{pid} \mapsto (\var{an}, \var{av}) \in \var{raus}
+      \var{avs_{new}} \leteq \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
+      \mid \var{pid} \mapsto (\var{an}, \var{av}, m) \in \var{raus}
       ,~ \var{pid} \in \dom~\var{cps'}
       \}
     }
