@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -232,8 +233,9 @@ registerVote env st vote = do
       `wrapError` Voting
   let
     appVersions' =
+      currentSlot `seq`
       M.fromList $! [ (svAppName sv, (svNumber sv, currentSlot))
-                    | (pid, sv) <- M.toList registeredSoftwareUpdateProposals
+                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
                     , pid `elem` M.keys confirmedProposals'
                     ]
   pure $!
