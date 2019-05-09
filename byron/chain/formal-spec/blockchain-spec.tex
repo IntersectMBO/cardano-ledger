@@ -311,11 +311,14 @@ cases where there is or is not an update proposal contained within the block.
 \begin{figure}[ht]
   \begin{equation*}
     \inference
-    { \Gamma \vdash \var{us} \trans{upireg}{\var{prop}} \var{us'}
+    { \Gamma \vdash \var{us}
+      \trans{\hyperlink{byron_ledger_spec_link}{upireg}}{\var{prop}} \var{us'}
       \\
-      \Gamma \vdash \var{us'} \trans{upivotes}{\var{votes}} \var{us''}
+      \Gamma \vdash \var{us'}
+      \trans{\hyperlink{byron_ledger_spec_link}{upivotes}}{\var{votes}} \var{us''}
       &
-      \Gamma \vdash \var{us''} \trans{upiend}{\var{end}} \var{us'''}
+      \Gamma \vdash \var{us''}
+      \trans{\hyperlink{byron_ledger_spec_link}{upiend}}{\var{end}} \var{us'''}
     }
     {
       \Gamma \vdash
@@ -336,9 +339,11 @@ cases where there is or is not an update proposal contained within the block.
   \vspace{20pt}
   \begin{equation*}
     \inference
-    { \Gamma \vdash \var{us} \trans{upivotes}{\var{votes}} \var{us'}
+    { \Gamma \vdash \var{us}
+      \trans{\hyperlink{byron_ledger_spec_link}{upivotes}}{\var{votes}} \var{us'}
       &
-      \Gamma \vdash \var{us'} \trans{upiend}{\var{end}} \var{us''}
+      \Gamma \vdash \var{us'}
+      \trans{\hyperlink{byron_ledger_spec_link}{upiend}}{\var{end}} \var{us''}
     }
     {
       \Gamma \vdash \var{us}
@@ -574,7 +579,7 @@ During PBFT processing of the block header, we do the following:
       \\
       ds
       \vdash
-      \var{sgs} \trans{sigcnt}{\var{vk_d}} \var{sgs'}
+      \var{sgs} \trans{\hyperref[fig:rules:sigcnt]{sigcnt}}{\var{vk_d}} \var{sgs'}
       \\
     }
     {
@@ -729,7 +734,7 @@ updates the update state to the correct version.
   {
     \var{e_c} < \sepoch{s}
     &
-    s\vdash \var{us} \trans{upiec}{} \var{us'}
+    s\vdash \var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
   }
   {
     {\left(
@@ -904,7 +909,7 @@ rules. During header processing we verify the following things:
             us
           \end{array}
         \right)}
-      \trans{epoch}{\bslot{b}}
+      \trans{\hyperref[fig:rules:epoch]{epoch}}{\bslot{b}}
       {\left(
           \begin{array}{l}
             us'
@@ -1038,7 +1043,7 @@ payload; UTxO, delegation and update.
             \fun{dms}~ ds
           \end{array}
         \right)}
-      \vdash \var{us} \trans{bupi}{
+      \vdash \var{us} \trans{\hyperref[fig:rules:bupi]{bupi}}{
         {\left(
             \begin{array}{l}
               \bupdprop{b} \\
@@ -1055,8 +1060,9 @@ payload; UTxO, delegation and update.
             \bslot{b}
           \end{array}
         \right)}
-      \vdash \var{ds} \trans{deleg}{\bcerts{b}} \var{ds'} &
-      \var{pps} \vdash \var{utxo} \trans{utxows}{\butxo{b}} \var{utxo'} \\
+      \vdash \var{ds} \trans{\hyperlink{byron_ledger_spec_link}{deleg}}{\bcerts{b}} \var{ds'} &
+      \var{pps} \vdash \var{utxo}
+        \trans{\hyperlink{byron_ledger_spec_link}{utxows}}{\butxo{b}} \var{utxo'} \\
     }
     {
       \left(
@@ -1212,7 +1218,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
              \var{us}
            \end{array}
         }\right)
-        \trans{bhead}{\bhead{b}}
+        \trans{\hyperref[fig:rules:bhead]{bhead}}{\bhead{b}}
         \left(
         {\begin{array}{c}
            \var{us'}
@@ -1232,7 +1238,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
              \var{sgs}
            \end{array}}
         \right)
-        \trans{pbft}{\bhead{b}}
+        \trans{\hyperref[fig:rules:pbft]{pbft}}{\bhead{b}}
         \left(
         {\begin{array}{c}
            \var{h'} \\
@@ -1253,7 +1259,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
              \var{us'}
            \end{array}}
         \right)}
-        \trans{bbody}{b}
+        \trans{\hyperref[fig:rules:bbody]{bbody}}{b}
         {\left(
           {\begin{array}{c}
              \var{utxo'} \\
