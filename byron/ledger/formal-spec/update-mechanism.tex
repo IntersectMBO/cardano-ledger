@@ -20,6 +20,7 @@
 \newcommand{\ApName}{\ensuremath{\type{ApName}}}
 \newcommand{\SWVer}{\ensuremath{\type{SWVer}}}
 \newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
+\newcommand{\Metadata}{\ensuremath{\type{Mdt}}}
 \newcommand{\STag}{\ensuremath{\type{STag}}}
 
 \newcommand{\upSize}[1]{\ensuremath{\fun{upSize}~\var{#1}}}
@@ -30,6 +31,7 @@
 \newcommand{\upIssuer}[1]{\ensuremath{\fun{upIssuer}~\var{#1}}}
 \newcommand{\upParams}[1]{\ensuremath{\fun{upParams}~\var{#1}}}
 \newcommand{\upSwVer}[1]{\ensuremath{\fun{upSwVer}~\var{#1}}}
+\newcommand{\upMetadata}[1]{\ensuremath{\fun{upMdt}~\var{#1}}}
 \newcommand{\vCaster}[1]{\ensuremath{\fun{vCaster}~\var{#1}}}
 \newcommand{\vPropId}[1]{\ensuremath{\fun{vPropId}~\var{#1}}}
 \newcommand{\vSig}[1]{\ensuremath{\fun{vSig}~\var{#1}}}
@@ -73,7 +75,13 @@ this specification can be extended to incorporate the research results.
 The definitions used in the update mechanism rules are presented in
 \cref{fig:defs:update-proposals}. A system tag is used to identify the system
 for which the update is proposed (in practice this would be a string referring
-to an operating system; e.g. `linux`, `win64`, or `mac32`).
+to an operating system; e.g. `linux`, `win64`, or `mac32`). The software update
+metadata ($\Metadata$) is any information required for performing an update
+such as hashes of software downloads. Note that the fact that the metadata is
+kept abstract in the specification does not mean that we allow any arbitrary
+metadata (in the actual implementation this abstract metadata would correspond
+to `Map SystemTag UpdateData`, were the `SystemTag` corresponds with $\STag$
+and `UpdateData` contains the software hash for a specific platform).
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -85,7 +93,8 @@ to an operating system; e.g. `linux`, `win64`, or `mac32`).
       \var{upd} & \type{UpdData} & \text{update data}\\
       \var{upa} & \type{UpdAttrs} & \text{update attributes}\\
       \var{an} & \ApName & \text{application name}\\
-      \var{t} & \STag & \text{system tag}
+      \var{t} & \STag & \text{system tag}\\
+      \var{m} & \Metadata & \text{metadata}
     \end{array}
   \end{equation*}
   %
@@ -136,8 +145,9 @@ to an operating system; e.g. `linux`, `win64`, or `mac32`).
                                            & \text{proposed parameters update}\\
       \fun{upSwVer} & \UProp \to \SWVer & \text{software-version update proposal}\\
       \fun{upSig} & \UProp \to \Sig & \text{update proposal signature}\\
-      \fun{upSigdata} & \UProp \to \UPropSD & \text{update proposal signed data}\\
-      \fun{upSTags} & \powerset{\STag} & \text{update proposal system tags}
+      \fun{upSigData} & \UProp \to \UPropSD & \text{update proposal signed data}\\
+      \fun{upSTags} & \powerset{\STag} & \text{update proposal system tags}\\
+      \fun{upMdt} & \UProp \to \Metadata & \text{software update metadata}
     \end{array}
   \end{equation*}
   \caption{Update proposals definitions}
@@ -213,24 +223,24 @@ The protocol parameters are formally defined in \cref{fig:prot-params-defs}.
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot \times \Metadata)
         & \text{application versions}\\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Update proposals validity states}
-  \begin{equation*}
-    \UPVState
-    = \left(
+  \begin{align*}
+    & \UPVState \\
+    & = \left(
       \begin{array}{r@{~\in~}lr}
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered protocol update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer \times \Metadata)
         & \text{registered software update proposals}\\
       \end{array}
     \right)
-  \end{equation*}
+  \end{align*}
   %
   \emph{Update proposals validity transitions}
     \begin{equation*}
@@ -269,9 +279,7 @@ The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal
       fitting in a block, and
     \item the proposed new script version can be incremented by at most 1.
     \end{itemize}
-  \item must have a unique version among the current active proposals. This
-    implies that a proposal is uniquely determined by the protocol version it
-    proposes.
+  \item must have a unique version among the current active proposals.
   \end{itemize}
 \item if an update proposal proposes to increase the application version
   version ($\var{av}$) for a given application ($\var{an}$), then there should
@@ -338,7 +346,7 @@ functions:
     \label{eq:func:av-can-follow}
     \begin{array}{r c l}
       \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
-      & (\var{an} \mapsto (\var{av_c}, \wcard) \in \var{avs}
+      & (\var{an} \mapsto (\var{av_c}, \wcard, \wcard) \in \var{avs}
         \Rightarrow \var{av} = \var{av_c} + 1)\\
       & \wedge & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0)
     \end{array}
@@ -354,7 +362,7 @@ functions:
       (\var{an}, \var{av}) \leteq \upSwVer{up}
       & \fun{apNameValid}~\var{an}\\
       & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
-      & (\var{an}, \var{av}) \notin \range~\var{raus}
+      & (\var{an}, \var{av}, \wcard) \notin \range~\var{raus}
     }
     {
       {
@@ -374,7 +382,7 @@ functions:
       {
         \left(
           \begin{array}{l}
-            \var{raus} \unionoverrideRight \{ \upId{up} \mapsto (\var{an}, \var{av})\}
+            \var{raus} \unionoverrideRight \{ \upId{up} \mapsto (\var{an}, \var{av}, \upMetadata{up})\}
           \end{array}
         \right)
       }
@@ -447,7 +455,7 @@ functions:
         \right)
       }
       &
-      (\var{an}, \var{av}) \leteq \upSwVer{up} & \var{an} \mapsto (\var{av}, \_) \in \var{avs}
+      (\var{an}, \var{av}) \leteq \upSwVer{up} & \var{an} \mapsto (\var{av}, \_, \_) \in \var{avs}
     }
     {
       {
@@ -637,7 +645,7 @@ an update proposal:
       \begin{array}{r@{~\in~}lr}
         \var{pv} & \ProtVer & \text{adopted (current) protocol version}\\
         \var{pps} & \PPMMap & \text{adopted protocol parameters map}\\
-        \var{avs} & \ApName \mapsto (\ApVer \times \Slot)
+        \var{avs} & \ApName \mapsto (\ApVer \times \Slot \times \Metadata)
         & \text{application versions}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
       \end{array}
@@ -651,7 +659,7 @@ an update proposal:
       \begin{array}{r@{~\in~}lr}
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)
         & \text{registered update proposals}\\
-        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer)
+        \var{raus} & \UPropId \mapsto (\ApName \times \ApVer \times \Metadata)
         & \text{registered software update proposals}
       \end{array}
     \right)
@@ -1338,6 +1346,11 @@ update proposals we can simplify the version checking logic considerably.
 We do not model the implicit agreement rule. If a proposal does not get enough
 votes before the end of the voting period, then we simply discard it. At the
 moment it is not clear whether the implicit agreement rule is needed.
+Furthermore, in a non-federated setting, one could imagine an attack based on
+exploiting an implicit agreement rule, where the attacker would attempt to
+carry out a DoS attack on the parts of network that are likely to affect a
+proposal in a way that is undesirable for the attacker. Thus the explicit
+agreement seems to be a safer option.
 
 \subsubsection{Adoption threshold}
 \label{sec:adoption-threshold}
@@ -1370,12 +1383,6 @@ The rule of Figure~\ref{eq:rule:up-pv-validity} does not check the
 meaning in the handover phase: its use will be reserved for unlocking the
 Ouroboros-BFT logic in the software.
 
-\subsubsection{No grouping of proposals per-application name}
-\label{sec:no-app-up-grouping}
-
-It is unclear at this moment whether we need to model the applications names
-and versions, so this aspect is not modeled in the present rules.
-
 \subsubsection{Ignored attributes of proposals}
 
 In Figure~\ref{fig:defs:update-proposals} the types
@@ -1404,13 +1411,6 @@ proposal must be submitted with a different key, which adds extra complexity
 for devops. In light of the preceding discussion, unless there is a benefit for
 restricting the number of times a genesis key can submit an update proposal, we
 opted for removing such constraint in the current specification.
-
-\subsubsection{Protocol only or software only updates allowed}
-\label{sec:ptonly-or-swonly-allowed}
-
-We allow for updates in the protocol version without requiring a software
-version update, and conversely, we allow for a software update without
-requiring an update in the protocol.
 
 \subsubsection{Acceptance of blocks endorsing unconfirmed proposal updates}
 \label{sec:acceptance-of-uncofirmed-up-endorsements}
