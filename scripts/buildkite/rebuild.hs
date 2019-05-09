@@ -43,7 +43,7 @@ buildStep testArgs = do
 coverageUploadStep :: IO ()
 coverageUploadStep = do
   echo "--- Uploading Coverage Information"
-  need "CARDANO_CHAIN_COVERALLS_REPO_TOKEN" >>= \case
+  need "CARDANO_LEDGER_COVERALLS_REPO_TOKEN" >>= \case
     Nothing -> printf
       "Missing coverall repo token. Not uploading coverage information.\n"
     Just repoToken -> do
