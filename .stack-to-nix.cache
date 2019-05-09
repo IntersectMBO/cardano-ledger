@@ -28,3 +28,6 @@ https://github.com/input-output-hk/iohk-monitoring-framework 00413dcad916a41cf39
 https://github.com/input-output-hk/cardano-prelude d8091767addc1a51e11cb2f04392e4eb40e39b18 . 1jkvzp5bx5yqfk75qrpcvkg1ngm8mfs60z1m39ncd05ly259pm13 cardano-prelude cardano-prelude.nix
 https://github.com/input-output-hk/cardano-sl-x509 e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4 . 11qi871sb52vcbxibsjbc3s112pl26ljjvv13q53lvd1ydcgbc3n cardano-sl-x509 cardano-sl-x509.nix
 https://github.com/input-output-hk/cardano-shell 8dc987221b57a09784a1c699b2c088fb0e0a4d80 . 1cbnpj468ac7azlk3m0plwyasq9k7vxq3ai7wd016y8c2x9ia1c0 cardano-shell cardano-shell.nix
+https://github.com/input-output-hk/cardano-shell df73a199d49ff9a5e958c65414e74fdeece15897 . 0kcl7k3mxfillgfzl3z9vdls1n7vvr2r4j3r2ijg45b77is6ihrg cardano-shell cardano-shell.nix
+https://github.com/input-output-hk/cardano-shell acf5b26fbf3c3a3927507e093d54e70ad521787b . 1b5dl1xvbkn3cdxi4rbzd1gjdsv2a2qcpjl6zmpswqpz30cr9mzr cardano-shell cardano-shell.nix
+https://github.com/input-output-hk/cardano-shell 70944ad492aa49661ccf269434bf05a513cf4451 . 16fbnd3bzxld9ypxw6k9j35rnbj3790bkrnh9hdb7l8c90yrq6iz cardano-shell cardano-shell.nix
