@@ -210,6 +210,13 @@ The transition contains the following predicates:
     the amount consumed.
   \item
     The coin value of each new output must be non-negative.
+  \item
+    The transaction size must be below the allowed maximum.
+    Note that there is an implicit max transaction size given by the max block size,
+    and that if we wished to allow a transaction to be as large as will fit in a block, this
+    check would not be needed.
+    Being able to limit the size below that of the block, however, gives us some
+    control over how transactions will be packed into the blocks.
 \end{itemize}
 If all the predicates are satisfied, the state is updated as follows:
 
