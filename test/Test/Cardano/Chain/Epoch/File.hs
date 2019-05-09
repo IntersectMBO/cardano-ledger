@@ -13,7 +13,7 @@ import qualified Hedgehog as H
 import Streaming (Of((:>)))
 import qualified Streaming as S
 
-import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFiles)
+import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFilesWithBoundary)
 
 import Test.Cardano.Mirror (mainnetEpochFiles)
 
@@ -29,7 +29,7 @@ propDeserializeEpochs = H.withTests 1 $ H.property $ do
   -- to work). Now the question is whether it is OK to use an hardcoded value
   -- for the number of slots per epoch, and if so in which module should we
   -- store this constant?
-  let stream = parseEpochFiles mainnetEpochSlots files
+  let stream = parseEpochFilesWithBoundary mainnetEpochSlots files
   result <- (liftIO . runResourceT . runExceptT . S.run) (S.maps discard stream)
   result === Right ()
  where
