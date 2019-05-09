@@ -9,7 +9,7 @@ module Test.Cardano.Chain.Update.Example
   , exampleProtocolParametersUpdate
   , exampleSoftwareVersion
   , exampleSystemTag
-  , exampleUpdateData
+  , exampleInstallerHash
   , examplePayload
   , exampleProof
   , exampleProposal
@@ -43,7 +43,7 @@ import Cardano.Chain.Update
   , SoftwareVersion(..)
   , SystemTag(..)
   , UpId
-  , UpdateData(..)
+  , InstallerHash(..)
   , Vote
   , mkProof
   , mkVoteSafe
@@ -122,16 +122,15 @@ exampleSystemTags offset count = map
   [0 .. count - 1]
   where toSystemTag start = SystemTag (getText start 16)
 
-exampleUpdateData :: UpdateData
-exampleUpdateData = exampleUpdateDatas 10 2 !! 1
+exampleInstallerHash :: InstallerHash
+exampleInstallerHash = exampleInstallerHashes 10 2 !! 1
 
-exampleUpdateDatas :: Int -> Int -> [UpdateData]
-exampleUpdateDatas offset count = map
-  (toUpdateData . (* offset))
+exampleInstallerHashes :: Int -> Int -> [InstallerHash]
+exampleInstallerHashes offset count = map
+  (toInstallerHash . (* offset))
   [0 .. count - 1]
  where
-  toUpdateData start =
-    let h = hash $ Raw (getBytes start 128) in UpdateData h h h h
+  toInstallerHash start = InstallerHash . hash . Raw $ getBytes start 128
 
 exampleUpId :: UpId
 exampleUpId = hash exampleProposal
@@ -158,8 +157,9 @@ exampleProposalBody = ProposalBody bv bvm sv hm ua
   bv  = exampleProtocolVersion
   bvm = exampleProtocolParametersUpdate
   sv  = exampleSoftwareVersion
-  hm  = Map.fromList $ zip (exampleSystemTags 10 5) (exampleUpdateDatas 10 5)
-  ua  = exampleAttributes
+  hm =
+    Map.fromList $ zip (exampleSystemTags 10 5) (exampleInstallerHashes 10 5)
+  ua = exampleAttributes
 
 exampleVote :: Vote
 exampleVote = mkVoteSafe pm ss ui ar

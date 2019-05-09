@@ -4,7 +4,7 @@ module Cardano.Chain.Update
 where
 
 import Cardano.Chain.Update.ApplicationName as X
-import Cardano.Chain.Update.Data as X
+import Cardano.Chain.Update.InstallerHash as X
 import Cardano.Chain.Update.Payload as X
 import Cardano.Chain.Update.Proof as X
 import Cardano.Chain.Update.Proposal as X
