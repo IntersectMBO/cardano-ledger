@@ -71,7 +71,6 @@ elaborate
 elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
   { Concrete.blockHeader     = bh0
   , Concrete.blockBody       = bb0
-  , Concrete.aBlockExtraData = Binary.Annotated extraBodyData ()
   , Concrete.blockAnnotation = ()
   }
  where
@@ -88,10 +87,6 @@ elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
     bb0
     extraHeaderData
 
-  emptyAttrs      = Common.mkAttributes ()
-
-  extraBodyData   = Concrete.ExtraBodyData emptyAttrs
-
   -- Once the update mechanism is in place we might need to fill this in with
   -- the update data.
   extraHeaderData = Concrete.ExtraHeaderData
@@ -99,8 +94,6 @@ elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
     , Concrete.ehdSoftwareVersion = Update.SoftwareVersion
       (Update.ApplicationName "baz")
       0
-    , Concrete.ehdAttributes      = emptyAttrs
-    , Concrete.ehdEBDataProof     = H.hash extraBodyData
     }
 
   prevHash :: Concrete.HeaderHash

@@ -11,15 +11,15 @@ where
 
 import Cardano.Prelude
 
-import Formatting (bprint, build, builder)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
-import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
-import Cardano.Chain.Common (Attributes, attributesAreKnown)
+import Cardano.Binary
+  (FromCBOR(..), ToCBOR(..), dropBytes, encodeListLen, enforceSize)
+import Cardano.Chain.Common (dropEmptyAttributes)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto (Hash)
+import Cardano.Crypto (hashRaw)
 
 
 -- | Represents block header extra data
@@ -28,35 +28,30 @@ data ExtraHeaderData = ExtraHeaderData
   -- ^ Protocol version used by this block
   , ehdSoftwareVersion :: !SoftwareVersion
   -- ^ Software version used by this block
-  , ehdAttributes      :: !(Attributes ())
-  -- ^ Header attributes
-  , ehdEBDataProof     :: !(Hash ExtraBodyData)
-  -- ^ Extra body data Hash
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
 instance B.Buildable ExtraHeaderData where
   build mehd = bprint
-    ("    block: v" . build . "\n" . "    software: " . build . "\n" . builder)
+    ("    block: v" . build . "\n" . "    software: " . build)
     (ehdProtocolVersion mehd)
     (ehdSoftwareVersion mehd)
-    formattedExtra
-   where
-    formattedExtra
-      | attributesAreKnown (ehdAttributes mehd) = mempty
-      | otherwise = bprint
-        ("    attributes: " . build . "\n")
-        (ehdAttributes mehd)
 
 instance ToCBOR ExtraHeaderData where
   toCBOR ehd =
     encodeListLen 4
       <> toCBOR (ehdProtocolVersion ehd)
       <> toCBOR (ehdSoftwareVersion ehd)
-      <> toCBOR (ehdAttributes ehd)
-      <> toCBOR (ehdEBDataProof ehd)
+      -- Encoding of empty Attributes
+      <> toCBOR (mempty :: Map Word8 LByteString)
+      -- Hash of the encoding of empty ExtraBodyData
+      <> toCBOR (hashRaw "\129\160")
 
 instance FromCBOR ExtraHeaderData where
   fromCBOR = do
     enforceSize "ExtraHeaderData" 4
-    ExtraHeaderData <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
+    ExtraHeaderData
+      <$> fromCBOR
+      <*> fromCBOR
+      <*  dropEmptyAttributes
+      <*  dropBytes

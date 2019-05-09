@@ -52,7 +52,6 @@ import Cardano.Chain.Update
   )
 import Cardano.Crypto (ProtocolMagicId(..), hash)
 
-import Test.Cardano.Chain.Common.Example (exampleAttributes)
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleSafeSigner)
 
@@ -152,14 +151,13 @@ exampleProposal = signProposal pm exampleProposalBody ss
   ss = exampleSafeSigner 0
 
 exampleProposalBody :: ProposalBody
-exampleProposalBody = ProposalBody bv bvm sv hm ua
+exampleProposalBody = ProposalBody bv bvm sv hm
  where
   bv  = exampleProtocolVersion
   bvm = exampleProtocolParametersUpdate
   sv  = exampleSoftwareVersion
   hm =
     Map.fromList $ zip (exampleSystemTags 10 5) (exampleInstallerHashes 10 5)
-  ua = exampleAttributes
 
 exampleVote :: Vote
 exampleVote = mkVoteSafe pm ss ui ar

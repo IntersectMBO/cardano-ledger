@@ -21,7 +21,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary (Annotated)
-import Cardano.Chain.Common (StakeholderId, attributesAreKnown, mkStakeholderId)
+import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import qualified Cardano.Chain.Update.Proposal as Proposal
@@ -111,9 +111,6 @@ registerProposal
   -> AProposal ByteString
   -> m State
 registerProposal env rs proposal = do
-  -- Check that the proposal attributes are empty
-  attributesAreKnown (attributes body) `orThrowError` ProposalAttributesUnknown
-
   -- Check that the proposer is delegated to by a genesis key
   not (null $ M.filter (== proposerId) delegationMap)
     `orThrowError` InvalidProposer proposerId
@@ -136,8 +133,6 @@ registerProposal env rs proposal = do
     proposal
  where
   AProposal { aBody, issuer, signature } = proposal
-
-  body = Proposal.body proposal
 
   proposerId = mkStakeholderId issuer
 
@@ -181,8 +176,12 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
   pure $ State registeredPUPs' registeredSUPs'
  where
-  ProposalBody protocolVersion ppu softwareVersion metadata _ =
-    Proposal.body proposal
+  ProposalBody
+    { protocolVersion
+    , protocolParametersUpdate = ppu
+    , softwareVersion
+    , metadata
+    } = Proposal.body proposal
 
   SoftwareVersion appName appVersion = softwareVersion
 

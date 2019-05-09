@@ -31,7 +31,6 @@ import Cardano.Chain.Block
   , BlockSignature(..)
   , Body
   , ConsensusData
-  , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
   , HeaderHash
@@ -52,7 +51,6 @@ import Cardano.Chain.Block
   , toCBORHeader'
   , mkHeaderExplicit
   )
-import Cardano.Chain.Common (mkAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
   ( EpochIndex(..)
@@ -248,20 +246,6 @@ ts_roundTripConsensusData = eachOfTS
     (serializeEncoding . toCBORConsensusData es)
     (decodeFullDecoder "ConsensusData" $ fromCBORConsensusData es)
 
---------------------------------------------------------------------------------
--- ExtraBodyData
---------------------------------------------------------------------------------
-
-goldenExtraBodyData :: Property
-goldenExtraBodyData = goldenTestCBOR
-  mebd
-  "test/golden/cbor/block/ExtraBodyData"
-  where mebd = ExtraBodyData (mkAttributes ())
-
-ts_roundTripExtraBodyDataCBOR :: TSProperty
-ts_roundTripExtraBodyDataCBOR =
-  eachOfTS 1000 genExtraBodyData roundTripsCBORBuildable
-
 
 --------------------------------------------------------------------------------
 -- ExtraHeaderData
@@ -343,11 +327,8 @@ exampleConsensusData = consensusData
   exampleBlockSignature
 
 exampleExtraHeaderData :: ExtraHeaderData
-exampleExtraHeaderData = ExtraHeaderData
-  Update.exampleProtocolVersion
-  Update.exampleSoftwareVersion
-  (mkAttributes ())
-  (abstractHash (ExtraBodyData (mkAttributes ())))
+exampleExtraHeaderData =
+  ExtraHeaderData Update.exampleProtocolVersion Update.exampleSoftwareVersion
 
 exampleProof :: Proof
 exampleProof = Proof
