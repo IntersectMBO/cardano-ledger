@@ -4,7 +4,6 @@ module Test.Cardano.Chain.Block.Gen
   , genHeader
   , genBody
   , genConsensusData
-  , genExtraBodyData
   , genExtraHeaderData
   , genProof
   , genToSign
@@ -23,7 +22,6 @@ import Cardano.Chain.Block
   , BlockSignature(..)
   , Body
   , ConsensusData
-  , ExtraBodyData(..)
   , ExtraHeaderData(..)
   , Header
   , HeaderHash
@@ -35,7 +33,6 @@ import Cardano.Chain.Block
   , mkBlockExplicit
   , mkHeaderExplicit
   )
-import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Slotting
   (EpochIndex(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
@@ -94,16 +91,9 @@ genConsensusData pm epochSlots =
     <*> genChainDifficulty
     <*> genBlockSignature pm epochSlots
 
-genExtraBodyData :: Gen ExtraBodyData
-genExtraBodyData = pure . ExtraBodyData $ mkAttributes ()
-
 genExtraHeaderData :: Gen ExtraHeaderData
 genExtraHeaderData =
-  ExtraHeaderData
-    <$> Update.genProtocolVersion
-    <*> Update.genSoftwareVersion
-    <*> pure (mkAttributes ())
-    <*> genAbstractHash genExtraBodyData
+  ExtraHeaderData <$> Update.genProtocolVersion <*> Update.genSoftwareVersion
 
 genProof :: ProtocolMagicId -> Gen Proof
 genProof pm =

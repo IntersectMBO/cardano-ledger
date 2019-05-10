@@ -25,7 +25,6 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Common (mkAttributes)
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
@@ -172,7 +171,6 @@ genProposalBody =
     <*> genProtocolParametersUpdate
     <*> genSoftwareVersion
     <*> genUpsData
-    <*> pure (mkAttributes ())
 
 genUpId :: ProtocolMagicId -> Gen UpId
 genUpId pm = genAbstractHash (genProposal pm)

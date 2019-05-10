@@ -38,7 +38,7 @@ import Cardano.Prelude
 
 import qualified Data.Map.Strict as M
 import Data.Text.Lazy.Builder (Builder)
-import Formatting (bprint, build, builder)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
@@ -51,7 +51,7 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   )
-import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
+import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import Cardano.Chain.Update.ProtocolParametersUpdate (ProtocolParametersUpdate)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -125,7 +125,7 @@ instance ToCBOR Proposal where
       <> toCBOR (protocolParametersUpdate body')
       <> toCBOR (softwareVersion body')
       <> toCBOR (metadata body')
-      <> toCBOR (attributes body')
+      <> toCBOR (mempty :: Map Word8 LByteString)
       <> toCBOR (issuer proposal)
       <> toCBOR (signature proposal)
     where body' = body proposal
@@ -143,7 +143,7 @@ instance FromCBOR (AProposal ByteSpan) where
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
-        <*> fromCBOR
+        <*  dropEmptyAttributes
         )
       pk  <- fromCBOR
       sig <- fromCBOR
@@ -170,8 +170,6 @@ instance B.Buildable (AProposal ()) where
     . build
     . ", tags: "
     . listJson
-    . ", "
-    . builder
     . " }"
     )
     (softwareVersion body')
@@ -179,13 +177,8 @@ instance B.Buildable (AProposal ()) where
     (hash proposal)
     (protocolParametersUpdate body')
     (M.keys $ metadata body')
-    attrsBuilder
    where
     body' = body proposal
-    attrs = attributes body'
-    attrsBuilder
-      | attributesAreKnown attrs = "no attributes"
-      | otherwise                = bprint ("attributes: " . build) attrs
 
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
@@ -201,8 +194,6 @@ data ProposalBody = ProposalBody
   , softwareVersion          :: !SoftwareVersion
   , metadata                 :: !(Map SystemTag InstallerHash)
   -- ^ InstallerHash for each system which this update affects
-  , attributes               :: !(Attributes ())
-  -- ^ Attributes which are currently empty, but provide extensibility
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
@@ -218,12 +209,18 @@ instance ToCBOR ProposalBody where
       <> toCBOR (protocolParametersUpdate pb)
       <> toCBOR (softwareVersion pb)
       <> toCBOR (metadata pb)
-      <> toCBOR (attributes pb)
+      -- Encode empty Attributes
+      <> toCBOR (mempty :: Map Word8 LByteString)
 
 instance FromCBOR ProposalBody where
   fromCBOR = do
     enforceSize "ProposalBody" 5
-    ProposalBody <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
+    ProposalBody
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*  dropEmptyAttributes
 
 -- | Prepend byte corresponding to `encodeListLen 5`, which was used during
 --   signing

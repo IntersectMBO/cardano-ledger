@@ -49,7 +49,6 @@ import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
   , BoundaryValidationData(..)
-  , blockAttributes
   , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
@@ -67,17 +66,14 @@ import Cardano.Chain.Block.Header
   ( AHeader
   , BlockSignature(..)
   , HeaderHash
-  , headerAttributes
   , headerLength
   , headerSlot
   , wrapBoundaryBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common
-  ( Attributes(..)
-  , BlockCount(..)
+  ( BlockCount(..)
   , StakeholderId
-  , UnparsedFields(..)
   , mkStakeholderId
   )
 import qualified Cardano.Chain.Delegation.Payload as DlgPayload
@@ -366,12 +362,8 @@ updateBody
   -> ABlock ByteString
   -> m BodyState
 updateBody env bs b = do
-
   -- Validate the block size
   blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
-
-  -- Validate the block attributes size
-  length attributes == 0 `orThrowError` ChainValidationBlockAttributesTooLarge
 
   -- Validate the delegation payload signature
   proofDelegation (blockProof b)
@@ -416,8 +408,6 @@ updateBody env bs b = do
 
   maxBlockSize =
     Update.ppMaxBlockSize $ UPI.adoptedProtocolParameters updateState
-
-  UnparsedFields attributes = attrRemain $ blockAttributes b
 
   currentSlot = blockSlot b
 
@@ -474,15 +464,10 @@ updateHeader env st h = do
   -- Validate the header size
   headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
 
-  -- Validate the header attributes are empty
-  length attributes == 0 `orThrowError` ChainValidationHeaderAttributesTooLarge
-
   -- Perform epoch transition
   epochTransition epochEnv st (headerSlot h)
  where
   maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
-
-  UnparsedFields attributes = attrRemain $ headerAttributes h
 
   HeaderEnvironment { protocolMagic, k, numGenKeys, delegationMap, lastSlot }
     = env

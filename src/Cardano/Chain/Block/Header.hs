@@ -30,8 +30,6 @@ module Cardano.Chain.Block.Header
   , headerSignature
   , headerProtocolVersion
   , headerSoftwareVersion
-  , headerAttributes
-  , headerEBDataProof
   , headerToSign
   , recoverSignedBytes
 
@@ -89,10 +87,9 @@ import Cardano.Binary
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
   (dropBoundaryConsensusDataRetainEpochIndex, dropBoundaryExtraHeaderData)
-import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData)
 import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
-import Cardano.Chain.Common (Attributes, ChainDifficulty(..))
+import Cardano.Chain.Common (ChainDifficulty(..))
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -316,12 +313,6 @@ headerProtocolVersion = ehdProtocolVersion . headerExtraData
 
 headerSoftwareVersion :: AHeader a -> SoftwareVersion
 headerSoftwareVersion = ehdSoftwareVersion . headerExtraData
-
-headerAttributes :: AHeader a -> Attributes ()
-headerAttributes = ehdAttributes . headerExtraData
-
-headerEBDataProof :: AHeader a -> Hash ExtraBodyData
-headerEBDataProof = ehdEBDataProof . headerExtraData
 
 headerToSign :: EpochSlots -> AHeader a -> ToSign
 headerToSign epochSlots h = ToSign

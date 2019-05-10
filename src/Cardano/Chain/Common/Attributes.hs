@@ -23,6 +23,7 @@ module Cardano.Chain.Common.Attributes
   , fromCBORAttributes
   , mkAttributes
   , dropAttributes
+  , dropEmptyAttributes
   )
 where
 
@@ -40,10 +41,12 @@ import qualified Formatting.Buildable as Buildable
 
 import Cardano.Binary
   ( Decoder
+  , DecoderError(..)
   , Dropper
   , Encoding
   , FromCBOR(..)
   , ToCBOR(..)
+  , decodeMapLen
   , dropBytes
   , dropMap
   , dropWord8
@@ -221,5 +224,11 @@ fromCBORAttributes initval updater = do
 
 dropAttributes :: Dropper s
 dropAttributes = dropMap dropWord8 dropBytes
+
+-- | Drop `Attributes ()` making sure that the `UnparsedFields` are empty
+dropEmptyAttributes :: Dropper s
+dropEmptyAttributes = do
+  len <- decodeMapLen
+  unless (len == 0) $ cborError $ DecoderErrorSizeMismatch "Attributes" 0 len
 
 deriveJSON defaultOptions ''Attributes

@@ -33,13 +33,10 @@ module Cardano.Chain.Block.Block
   , blockSignature
   , blockProtocolVersion
   , blockSoftwareVersion
-  , blockHeaderAttributes
-  , blockExtraDataProof
   , blockTxPayload
   , blockSscPayload
   , blockDlgPayload
   , blockUpdatePayload
-  , blockAttributes
   , blockLength
 
   -- * BoundaryBlock
@@ -65,7 +62,6 @@ import Cardano.Binary
   , FromCBOR(..)
   , ToCBOR(..)
   , annotatedDecoder
-  , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
@@ -80,7 +76,6 @@ import Cardano.Chain.Block.Body
   )
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
-import Cardano.Chain.Block.ExtraBodyData (ExtraBodyData(..))
 import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Header
   ( AHeader(..)
@@ -93,9 +88,7 @@ import Cardano.Chain.Block.Header
   , toCBORHeader'
   , genesisHeaderHash
   , hashHeader
-  , headerAttributes
   , headerDifficulty
-  , headerEBDataProof
   , headerIssuer
   , headerLeaderKey
   , headerPrevHash
@@ -110,7 +103,7 @@ import Cardano.Chain.Block.Header
   , wrapHeaderBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..))
-import Cardano.Chain.Common (Attributes, ChainDifficulty (..), mkAttributes)
+import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -123,8 +116,7 @@ import Cardano.Chain.UTxO.TxPayload (ATxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto
-  (Hash, ProtocolMagicId, PublicKey, SecretKey, hash, hashDecoded)
+import Cardano.Crypto (ProtocolMagicId, PublicKey, SecretKey, hashDecoded)
 
 
 --------------------------------------------------------------------------------
@@ -137,7 +129,6 @@ type Block = ABlock ()
 data ABlock a = ABlock
   { blockHeader     :: AHeader a
   , blockBody       :: ABody a
-  , aBlockExtraData :: Annotated ExtraBodyData a
   , blockAnnotation :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
 
@@ -152,8 +143,7 @@ renderBlock es block =
     . "  " . build . "  transactions (" . int . " items): " . listJson . "\n"
     . "  " . build . "\n"
     . "  " . shown . "\n"
-    . "  update payload: " . build . "\n"
-    . "  " . build
+    . "  update payload: " . build
     )
     (WithEpochSlots es $ blockHeader block)
     (length txs)
@@ -161,7 +151,6 @@ renderBlock es block =
     (blockDlgPayload block)
     (blockSscPayload block)
     (blockUpdatePayload block)
-    (blockExtraData block)
   where txs = bodyTxs $ blockBody block
 
 
@@ -175,15 +164,18 @@ toCBORBlockWithoutBoundary epochSlots block
   =  encodeListLen 3
   <> toCBORHeader' epochSlots (blockHeader block)
   <> toCBOR (blockBody block)
-  <> toCBOR (blockExtraData block)
+  <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
 
 fromCBORABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
 fromCBORABlock epochSlots = do
-  Annotated (header, body, ed) byteSpan <-
-    annotatedDecoder $ do
-      enforceSize "Block" 3
-      (,,) <$> fromCBORAHeader epochSlots <*> fromCBOR <*> fromCBORAnnotated
-  pure $ ABlock header body ed byteSpan
+  Annotated (header, body) byteSpan <- annotatedDecoder $ do
+    enforceSize "Block" 3
+    (,)
+      <$> fromCBORAHeader epochSlots
+      <*> fromCBOR
+      -- Drop the deprecated ExtraBodyData
+      <*  (enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
+  pure $ ABlock header body byteSpan
 
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
@@ -316,13 +308,10 @@ mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk dlgCert body
       extraH
     )
     body
-    (Annotated extraB ())
     ()
  where
-  extraB :: ExtraBodyData
-  extraB = ExtraBodyData (mkAttributes ())
   extraH :: ExtraHeaderData
-  extraH = ExtraHeaderData bv sv (mkAttributes ()) (hash extraB)
+  extraH = ExtraHeaderData bv sv
 
 --------------------------------------------------------------------------------
 -- Block accessors
@@ -339,9 +328,6 @@ blockProtocolMagicId = headerProtocolMagicId . blockHeader
 
 blockAProtocolMagicId :: ABlock a -> Annotated ProtocolMagicId a
 blockAProtocolMagicId = aHeaderProtocolMagicId . blockHeader
-
-blockExtraData :: ABlock a -> ExtraBodyData
-blockExtraData = unAnnotated . aBlockExtraData
 
 blockPrevHash :: ABlock a -> HeaderHash
 blockPrevHash = headerPrevHash . blockHeader
@@ -373,12 +359,6 @@ blockProtocolVersion = headerProtocolVersion . blockHeader
 blockSoftwareVersion :: ABlock a -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockHeaderAttributes :: ABlock a -> Attributes ()
-blockHeaderAttributes = headerAttributes . blockHeader
-
-blockExtraDataProof :: ABlock a -> Hash ExtraBodyData
-blockExtraDataProof = headerEBDataProof . blockHeader
-
 blockTxPayload :: ABlock a -> ATxPayload a
 blockTxPayload = bodyTxPayload . blockBody
 
@@ -390,9 +370,6 @@ blockUpdatePayload = bodyUpdatePayload . blockBody
 
 blockDlgPayload :: ABlock a -> Delegation.APayload a
 blockDlgPayload = bodyDlgPayload . blockBody
-
-blockAttributes :: ABlock a -> Attributes ()
-blockAttributes = ebdAttributes . blockExtraData
 
 blockLength :: ABlock ByteString -> Natural
 blockLength = fromIntegral . BS.length . blockAnnotation
