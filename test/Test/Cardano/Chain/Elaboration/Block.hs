@@ -85,16 +85,8 @@ elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
     ssk
     cDCert
     bb0
-    extraHeaderData
-
-  -- Once the update mechanism is in place we might need to fill this in with
-  -- the update data.
-  extraHeaderData = Concrete.ExtraHeaderData
-    { Concrete.ehdProtocolVersion = Update.ProtocolVersion 0 0 0
-    , Concrete.ehdSoftwareVersion = Update.SoftwareVersion
-      (Update.ApplicationName "baz")
-      0
-    }
+    (Update.ProtocolVersion 0 0 0)
+    (Update.SoftwareVersion (Update.ApplicationName "baz") 0)
 
   prevHash :: Concrete.HeaderHash
   prevHash =

@@ -3,8 +3,6 @@ module Test.Cardano.Chain.Block.Gen
   , genHeaderHash
   , genHeader
   , genBody
-  , genConsensusData
-  , genExtraHeaderData
   , genProof
   , genToSign
   , genBlock
@@ -21,14 +19,11 @@ import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
   , Body
-  , ConsensusData
-  , ExtraHeaderData(..)
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
   , body
-  , consensusData
   , hashHeader
   , mkBlockExplicit
   , mkHeaderExplicit
@@ -47,7 +42,6 @@ import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genProxySignature
-  , genVerificationKey
   , genSigningKey
   , genTextHash
   )
@@ -81,19 +75,8 @@ genHeader pm epochSlots = do
     <*> pure sk
     <*> pure cert
     <*> genBody pm
-    <*> genExtraHeaderData
-
-genConsensusData :: ProtocolMagicId -> EpochSlots -> Gen ConsensusData
-genConsensusData pm epochSlots =
-  consensusData
-    <$> genFlatSlotId
-    <*> genVerificationKey
-    <*> genChainDifficulty
-    <*> genBlockSignature pm epochSlots
-
-genExtraHeaderData :: Gen ExtraHeaderData
-genExtraHeaderData =
-  ExtraHeaderData <$> Update.genProtocolVersion <*> Update.genSoftwareVersion
+    <*> Update.genProtocolVersion
+    <*> Update.genSoftwareVersion
 
 genProof :: ProtocolMagicId -> Gen Proof
 genProof pm =
@@ -110,7 +93,8 @@ genToSign pm epochSlots =
     <*> genProof pm
     <*> genSlotId epochSlots
     <*> genChainDifficulty
-    <*> genExtraHeaderData
+    <*> Update.genProtocolVersion
+    <*> Update.genSoftwareVersion
  where
   mkAbstractHash :: Header -> HeaderHash
   mkAbstractHash = hashHeader epochSlots

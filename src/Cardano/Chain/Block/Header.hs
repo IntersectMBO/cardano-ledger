@@ -23,13 +23,9 @@ module Cardano.Chain.Block.Header
 
   -- * Accessors
   , headerSlot
-  , headerLeaderKey
   , headerIssuer
   , headerLength
   , headerDifficulty
-  , headerSignature
-  , headerProtocolVersion
-  , headerSoftwareVersion
   , headerToSign
   , recoverSignedBytes
 
@@ -46,12 +42,6 @@ module Cardano.Chain.Block.Header
   , hashHeader
   , BlockSignature(..)
   , ToSign(..)
-  , ConsensusData
-  , consensusData
-
-  -- * 'ConsensusData' encoding and decoding
-  , toCBORConsensusData
-  , fromCBORConsensusData
 
   -- * Utility functions
   , genesisHeaderHash
@@ -87,9 +77,8 @@ import Cardano.Binary
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
   (dropBoundaryConsensusDataRetainEpochIndex, dropBoundaryExtraHeaderData)
-import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
-import Cardano.Chain.Common (ChainDifficulty(..))
+import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -113,6 +102,7 @@ import Cardano.Crypto
   , SigningKey
   , SignTag(..)
   , hashHexF
+  , hashRaw
   , proxySign
   , pskIssuerVK
   , unsafeAbstractHash
@@ -129,13 +119,24 @@ data AHeader a = AHeader
   { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a)
   , aHeaderPrevHash        :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
+  , aHeaderSlot            :: !(Annotated FlatSlotId a)
+  -- ^ The slot number this block was published for
+  , aHeaderDifficulty      :: !(Annotated ChainDifficulty a)
+  -- ^ The chain difficulty up to this block
+  , headerProtocolVersion  :: !ProtocolVersion
+  -- ^ The version of the protocol parameters this block is using
+  , headerSoftwareVersion  :: !SoftwareVersion
+  -- ^ The software version this block was published from
   , aHeaderProof           :: !(Annotated Proof a)
   -- ^ Proof of body
-  , headerConsensusData    :: !(AConsensusData a)
-  -- ^ Consensus data to verify consensus algorithm
-  , aHeaderExtraData       :: !(Annotated ExtraHeaderData a)
-  -- ^ Any extra data
+  , headerGenesisKey       :: !VerificationKey
+  -- ^ The genesis key that is delegating to publish this block
+  , headerSignature        :: !BlockSignature
+  -- ^ The signature of the block, which contains the delegation certificate
   , headerAnnotation       :: a
+  -- ^ An annotation that captures the full header bytes
+  , headerExtraAnnotation  :: a
+  -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   } deriving (Eq, Show, Generic, NFData, Functor)
 
 headerProtocolMagicId :: AHeader a -> ProtocolMagicId
@@ -144,11 +145,14 @@ headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
 headerPrevHash :: AHeader a -> HeaderHash
 headerPrevHash = unAnnotated . aHeaderPrevHash
 
+headerSlot :: AHeader a -> FlatSlotId
+headerSlot = unAnnotated . aHeaderSlot
+
+headerDifficulty :: AHeader a -> ChainDifficulty
+headerDifficulty = unAnnotated . aHeaderDifficulty
+
 headerProof :: AHeader a -> Proof
 headerProof = unAnnotated . aHeaderProof
-
-headerExtraData :: AHeader a -> ExtraHeaderData
-headerExtraData = unAnnotated . aHeaderExtraData
 
 instance B.Buildable (WithEpochSlots Header) where
   build (WithEpochSlots es header) = renderHeader es header
@@ -156,37 +160,26 @@ instance B.Buildable (WithEpochSlots Header) where
 renderHeader :: EpochSlots -> Header -> Builder
 renderHeader es header = bprint
   ( "Header:\n"
-  . "    hash: "
-  . hashHexF
-  . "\n"
-  . "    previous block: "
-  . hashHexF
-  . "\n"
-  . "    slot: "
-  . build
-  . "\n"
-  . "    difficulty: "
-  . int
-  . "\n"
-  . "    leader: "
-  . build
-  . "\n"
-  . "    signature: "
-  . build
-  . "\n"
-  . build
+  . "    hash: " . hashHexF . "\n"
+  . "    previous block: " . hashHexF . "\n"
+  . "    slot: " . build . "\n"
+  . "    difficulty: " . int . "\n"
+  . "    protocol: v" . build . "\n"
+  . "    software: " . build . "\n"
+  . "    genesis key: " . build . "\n"
+  . "    signature: " . build
   )
   headerHash
   (headerPrevHash header)
-  (consensusSlot consensus)
-  (unChainDifficulty $ consensusDifficulty consensus)
-  (consensusLeaderKey consensus)
-  (consensusSignature consensus)
-  (headerExtraData header)
+  (headerSlot header)
+  (unChainDifficulty $ headerDifficulty header)
+  (headerProtocolVersion header)
+  (headerSoftwareVersion header)
+  (headerGenesisKey header)
+  (headerSignature header)
  where
   headerHash :: HeaderHash
   headerHash = hashHeader es header
-  consensus  = headerConsensusData header
 
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
@@ -196,24 +189,71 @@ toCBORHeader' es h =
     <> toCBOR (headerProtocolMagicId h)
     <> toCBOR (headerPrevHash h)
     <> toCBOR (headerProof h)
-    <> toCBORConsensusData es (headerConsensusData h)
-    <> toCBOR (headerExtraData h)
+    <> (  encodeListLen 4
+       <> toCBOR (unflattenSlotId es $ headerSlot h)
+       <> toCBOR (headerGenesisKey h)
+       <> toCBOR (headerDifficulty h)
+       <> toCBOR (headerSignature h)
+       )
+    <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
+
+toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
+toCBORBlockVersions pv sv =
+  encodeListLen 4
+    <> toCBOR pv
+    <> toCBOR sv
+    -- Encoding of empty Attributes
+    <> toCBOR (mempty :: Map Word8 LByteString)
+    -- Hash of the encoding of empty ExtraBodyData
+    <> toCBOR (hashRaw "\129\160")
+
+fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
+fromCBORBlockVersions = do
+  enforceSize "BlockVersions" 4
+  (,) <$> fromCBOR <*> fromCBOR <* dropEmptyAttributes <* dropBytes
 
 fromCBORHeader' :: EpochSlots -> Decoder s Header
 fromCBORHeader' epochSlots = void <$> fromCBORAHeader epochSlots
 
 fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
 fromCBORAHeader epochSlots = do
-  Annotated (pm, prevHash, proof, cd, extraData) byteSpan <-
+  Annotated
+    ( pm
+    , prevHash
+    , proof
+    , (slot, genesisKey, difficulty, signature)
+    , Annotated (protocolVersion, softwareVersion) extraByteSpan
+    )
+    byteSpan <-
     annotatedDecoder $ do
       enforceSize "Header" 5
       (,,,,)
         <$> fromCBORAnnotated
         <*> fromCBORAnnotated
         <*> fromCBORAnnotated
-        <*> fromCBORAConsensus epochSlots
-        <*> fromCBORAnnotated
-  pure $ AHeader pm prevHash proof cd extraData byteSpan
+        <*> do
+              enforceSize "ConsensusData" 4
+              (,,,)
+                -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId`
+                -- used in 'AConsensusData' is encoded as a epoch and slot-count
+                -- pair.
+                <$> fmap (first (flattenSlotId epochSlots)) fromCBORAnnotated
+                <*> fromCBOR
+                <*> fromCBORAnnotated
+                <*> fromCBOR
+        <*> annotatedDecoder fromCBORBlockVersions
+  pure $ AHeader
+    pm
+    prevHash
+    slot
+    difficulty
+    protocolVersion
+    softwareVersion
+    proof
+    genesisKey
+    signature
+    byteSpan
+    extraByteSpan
 
 instance Decoded (AHeader ByteString) where
   type BaseType (AHeader ByteString) = Header
@@ -235,7 +275,8 @@ mkHeader
   -> Delegation.Certificate
   -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
-  -> ExtraHeaderData
+  -> ProtocolVersion
+  -> SoftwareVersion
   -> Header
 mkHeader pm prevHeader epochSlots = mkHeaderExplicit
   pm
@@ -246,7 +287,7 @@ mkHeader pm prevHeader epochSlots = mkHeaderExplicit
   prevHash   = either genesisHeaderHash (hashHeader epochSlots) prevHeader
   difficulty = either
     (const $ ChainDifficulty 0)
-    (succ . consensusDifficulty . headerConsensusData)
+    (succ . headerDifficulty)
     prevHeader
 
 -- | Extract the genesis hash and cast it into a header hash.
@@ -268,51 +309,39 @@ mkHeaderExplicit
   -> Delegation.Certificate
   -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
-  -> ExtraHeaderData
+  -> ProtocolVersion
+  -> SoftwareVersion
   -> Header
-mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body extra
+mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
   = AHeader
     (Annotated pm ())
     (Annotated prevHash ())
+    (Annotated slotId ())
+    (Annotated difficulty ())
+    pv
+    sv
     (Annotated proof ())
-    consensus
-    (Annotated extra ())
+    genesisVK
+    signature
+    ()
     ()
  where
-  proof  = mkProof body
+  proof     = mkProof body
 
-  toSign = ToSign prevHash proof epochAndSlotCount difficulty extra
-
-  epochAndSlotCount = unflattenSlotId epochSlots slotId
+  genesisVK = pskIssuerVK dlgCert
 
   signature =
     BlockSignature $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
 
-  leaderVK  = pskIssuerVK dlgCert
+  toSign = ToSign prevHash proof epochAndSlotCount difficulty pv sv
 
-  consensus = consensusData slotId leaderVK difficulty signature
+  epochAndSlotCount = unflattenSlotId epochSlots slotId
 
-headerSlot :: AHeader a -> FlatSlotId
-headerSlot = consensusSlot . headerConsensusData
+
 
 headerIssuer :: AHeader a -> VerificationKey
 headerIssuer h = case headerSignature h of
   BlockSignature psig -> pskDelegateVK $ psigPsk psig
-
-headerLeaderKey :: AHeader a -> VerificationKey
-headerLeaderKey = consensusLeaderKey . headerConsensusData
-
-headerDifficulty :: AHeader a -> ChainDifficulty
-headerDifficulty = consensusDifficulty . headerConsensusData
-
-headerSignature :: AHeader a -> BlockSignature
-headerSignature = consensusSignature . headerConsensusData
-
-headerProtocolVersion :: AHeader a -> ProtocolVersion
-headerProtocolVersion = ehdProtocolVersion . headerExtraData
-
-headerSoftwareVersion :: AHeader a -> SoftwareVersion
-headerSoftwareVersion = ehdSoftwareVersion . headerExtraData
 
 headerToSign :: EpochSlots -> AHeader a -> ToSign
 headerToSign epochSlots h = ToSign
@@ -320,7 +349,8 @@ headerToSign epochSlots h = ToSign
   (headerProof h)
   (unflattenSlotId epochSlots $ headerSlot h)
   (headerDifficulty h)
-  (headerExtraData h)
+  (headerProtocolVersion h)
+  (headerSoftwareVersion h)
 
 headerLength :: AHeader ByteString -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
@@ -432,104 +462,42 @@ instance FromCBOR BlockSignature where
 -- | Produces the ByteString that was signed in the block
 recoverSignedBytes
   :: EpochSlots -> AHeader ByteString -> Annotated ToSign ByteString
-recoverSignedBytes es h = Annotated toSign bytes
+recoverSignedBytes es h = Annotated (headerToSign es h) bytes
  where
   bytes = BS.concat
     [ "\133"
     -- This is the value of Codec.CBOR.Write.toLazyByteString (encodeListLen 5)
-    -- It is hard coded here because the signed bytes included it as an implementation artifact
+    -- It is hard coded here because the signed bytes included it as an
+    -- implementation artifact
     , (annotation . aHeaderPrevHash) h
     , (annotation . aHeaderProof) h
-    , (annotation . aConsensusSlot . headerConsensusData) h
-    , (annotation . aConsensusDifficulty . headerConsensusData) h
-    , (annotation . aHeaderExtraData) h
+    , (annotation . aHeaderSlot) h
+    , (annotation . aHeaderDifficulty) h
+    , headerExtraAnnotation h
     ]
-  toSign = ToSign
-    (headerPrevHash h)
-    (headerProof h)
-    (unflattenSlotId es $ headerSlot h)
-    (headerDifficulty h)
-    (headerExtraData h)
 
 -- | Data to be signed in 'Block'
 data ToSign = ToSign
-  { _msHeaderHash  :: !HeaderHash
+  { tsHeaderHash      :: !HeaderHash
   -- ^ Hash of previous header in the chain
-  , _msBodyProof   :: !Proof
-  , _msSlot        :: !SlotId
-  , _msChainDiff   :: !ChainDifficulty
-  , _msExtraHeader :: !ExtraHeaderData
+  , tsBodyProof       :: !Proof
+  , tsSlot            :: !SlotId
+  , tsDifficulty      :: !ChainDifficulty
+  , tsProtocolVersion :: !ProtocolVersion
+  , tsSoftwareVersion :: !SoftwareVersion
   } deriving (Eq, Show, Generic)
 
 instance ToCBOR ToSign where
-  toCBOR mts =
+  toCBOR ts =
     encodeListLen 5
-      <> toCBOR (_msHeaderHash mts)
-      <> toCBOR (_msBodyProof mts)
-      <> toCBOR (_msSlot mts)
-      <> toCBOR (_msChainDiff mts)
-      <> toCBOR (_msExtraHeader mts)
+      <> toCBOR (tsHeaderHash ts)
+      <> toCBOR (tsBodyProof ts)
+      <> toCBOR (tsSlot ts)
+      <> toCBOR (tsDifficulty ts)
+      <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
 
 instance FromCBOR ToSign where
   fromCBOR = do
     enforceSize "ToSign" 5
-    ToSign <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-
-
---------------------------------------------------------------------------------
--- ConsensusData
---------------------------------------------------------------------------------
-
-type ConsensusData = AConsensusData ()
-
-consensusData
-  :: FlatSlotId
-  -> VerificationKey
-  -> ChainDifficulty
-  -> BlockSignature
-  -> ConsensusData
-consensusData slotNo vk cd bs =
-  AConsensusData (Annotated slotNo ()) vk (Annotated cd ()) bs
-
-data AConsensusData a = AConsensusData
-  { aConsensusSlot       :: !(Annotated FlatSlotId a)
-  -- ^ Id of the slot for which this block was generated
-  , consensusLeaderKey   :: !VerificationKey
-  -- ^ Public key of the slot leader. It's essential to have it here, because
-  --   FTS gives us only hash of verification key (aka 'StakeholderId').
-  , aConsensusDifficulty :: !(Annotated ChainDifficulty a)
-  -- ^ Difficulty of chain ending in this block
-  , consensusSignature   :: !BlockSignature
-  -- ^ Signature given by slot leader
-  } deriving (Generic, Show, Eq, Functor)
-    deriving anyclass NFData
-
-fromCBORAConsensus :: EpochSlots -> Decoder s (AConsensusData ByteSpan)
-fromCBORAConsensus epochSlots = do
-  enforceSize "ConsensusData" 4
-  -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId` used in
-  -- 'AConsensusData' is encoded as a epoch and slot-count pair.
-  epochAndSlotCount :: Annotated SlotId ByteSpan <- fromCBORAnnotated
-  vk           <- fromCBOR
-  annChaiDifficulty <- fromCBORAnnotated
-  consensusSig <- fromCBOR
-  let slotNo = first (flattenSlotId epochSlots) epochAndSlotCount
-  pure $! AConsensusData slotNo vk annChaiDifficulty consensusSig
-
-consensusSlot :: AConsensusData a -> FlatSlotId
-consensusSlot = unAnnotated . aConsensusSlot
-
-consensusDifficulty :: AConsensusData a -> ChainDifficulty
-consensusDifficulty = unAnnotated . aConsensusDifficulty
-
-toCBORConsensusData :: EpochSlots -> ConsensusData -> Encoding
-toCBORConsensusData es cd =
-  encodeListLen 4
-    <> toCBOR (unflattenSlotId es $ consensusSlot cd)
-    <> toCBOR (consensusLeaderKey cd)
-    <> toCBOR (consensusDifficulty cd)
-    <> toCBOR (consensusSignature cd)
-
-fromCBORConsensusData :: EpochSlots -> Decoder s ConsensusData
-fromCBORConsensusData epochSlots =
-  (fmap . fmap) (const ()) (fromCBORAConsensus epochSlots)
+    fmap uncurry (ToSign <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR)
+      <*> fromCBORBlockVersions
