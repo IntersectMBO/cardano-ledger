@@ -26,6 +26,7 @@ library
   exposed-modules:     Ledger.Core
                      , Ledger.Core.Generator
                      , Ledger.Delegation
+                     , Ledger.GlobalParams
                      , Ledger.Update
                      , Ledger.UTxO
   build-depends:       base >=4.11 && <5

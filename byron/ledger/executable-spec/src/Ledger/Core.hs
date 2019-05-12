@@ -107,7 +107,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  We use this newtype to distinguish between a cardinal slot and a relative
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
-newtype SlotCount = SlotCount { unSlotCount :: Word64}
+newtype SlotCount = SlotCount { unSlotCount :: Word64 }
   deriving (Eq, Ord, Num, Show)
 
 -- | Add a slot count to a slot.
