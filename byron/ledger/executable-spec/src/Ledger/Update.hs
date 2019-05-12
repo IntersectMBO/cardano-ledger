@@ -26,9 +26,10 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⨃), (▹), (⋪), (◃))
+import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unBlockCount, unSlot)
 import qualified Ledger.Core as Core
 import Ledger.Delegation (liveAfter)
+import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
 
@@ -662,14 +663,20 @@ instance STS UPIVOTE where
               , pws)
             , v) <- judgmentContext
         (cps', vts') <- trans @UPVOTE $ TRC ((sn, pps, dom pws, dms), (cps, vts), v)
-        let avsnew = Map.fromList [(an, (av, sn, m)) | pid <- Map.keys cps'
-                                                    , (an, av, m) <- maybeToList $ Map.lookup pid raus]
+        let
+          stblCps  = Map.keys $ Map.filter stable cps'
+          stable s = unSlot s <= unSlot sn - 2 * unBlockCount GP.k
+          avsnew   =
+            Map.fromList [ (an, (av, sn, m))
+                         | pid <- stblCps
+                         , (an, av, m) <- maybeToList $ Map.lookup pid raus
+                         ]
         return ( ep
                 , (pv, pps)
                 , fads
                 , avs ⨃ avsnew
                 , rpus
-                , dom cps ⋪ raus
+                , Set.fromList stblCps ⋪ raus
                 , cps'
                 , vts'
                 , bvs
