@@ -21,26 +21,24 @@
           (hsPkgs.base)
           (hsPkgs.binary)
           (hsPkgs.bytestring)
-          (hsPkgs.cardano-prelude)
           (hsPkgs.Cabal)
+          (hsPkgs.cardano-prelude)
           (hsPkgs.concurrency)
           (hsPkgs.containers)
+          (hsPkgs.contravariant)
+          (hsPkgs.dhall)
           (hsPkgs.directory)
           (hsPkgs.formatting)
           (hsPkgs.iohk-monitoring)
-          (hsPkgs.safe-exceptions)
-          (hsPkgs.text)
-          (hsPkgs.transformers)
-          (hsPkgs.unix)
-          (hsPkgs.contravariant)
-          (hsPkgs.dhall)
-          (hsPkgs.ekg-core)
           (hsPkgs.process)
           (hsPkgs.QuickCheck)
+          (hsPkgs.safe-exceptions)
+          (hsPkgs.stm)
           (hsPkgs.text)
           (hsPkgs.transformers)
-          (hsPkgs.unix)
-          ];
+          ] ++ (if system.isWindows
+          then [ (hsPkgs.Win32) ]
+          else [ (hsPkgs.unix) ]);
         };
       exes = {
         "cardano-shell-exe" = {
@@ -49,6 +47,7 @@
             (hsPkgs.cardano-shell)
             (hsPkgs.cardano-prelude)
             (hsPkgs.safe-exceptions)
+            (hsPkgs.stm)
             (hsPkgs.iohk-monitoring)
             ];
           };
@@ -67,13 +66,14 @@
             (hsPkgs.cardano-sl-x509)
             (hsPkgs.async)
             (hsPkgs.process)
-            (hsPkgs.unix)
             (hsPkgs.turtle)
             (hsPkgs.directory)
             (hsPkgs.filepath)
             (hsPkgs.formatting)
             (hsPkgs.safe-exceptions)
-            ];
+            ] ++ (if system.isWindows
+            then [ (hsPkgs.Win32) ]
+            else [ (hsPkgs.unix) ]);
           };
         };
       tests = {
@@ -98,7 +98,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-shell";
-      rev = "0c3e043d0d3789d0b251938c2f4b481891b95e0e";
-      sha256 = "0ipsq55p1rbkhrrr55k8kcq1hm2pg5dgldfpd6mc2g3ivmcswlc0";
+      rev = "70944ad492aa49661ccf269434bf05a513cf4451";
+      sha256 = "16fbnd3bzxld9ypxw6k9j35rnbj3790bkrnh9hdb7l8c90yrq6iz";
       });
     }
