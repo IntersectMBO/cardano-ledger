@@ -791,6 +791,7 @@ updates the update state to the correct version.
 
 % Imported definitions
 \newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\UTxOState}{\type{UTxOState}}
 \newcommand{\DIEnv}{\type{DIEnv}}
 \newcommand{\DIState}{\type{DIState}}
 
@@ -1015,7 +1016,7 @@ payload; UTxO, delegation and update.
     \BBState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{utxoSt} & \UTxOState & \text{UTxO state} \\
         \var{ds} & \DIState & \text{delegation state} \\
         \var{us} & \UPIState & \text{update interface state}
       \end{array}
@@ -1069,8 +1070,8 @@ payload; UTxO, delegation and update.
             \var{pps}
           \end{array}
         \right)}
-      \vdash \var{utxo}
-        \trans{\hyperlink{byron_ledger_spec_link}{utxows}}{\butxo{b}} \var{utxo'} \\
+      \vdash \var{utxoSt}
+        \trans{\hyperlink{byron_ledger_spec_link}{utxows}}{\butxo{b}} \var{utxoSt'} \\
     }
     {
       \left(
@@ -1084,7 +1085,7 @@ payload; UTxO, delegation and update.
      {
        \left(
          {\begin{array}{c}
-            \var{utxo} \\
+            \var{utxoSt} \\
             \var{ds} \\
             \var{us}
           \end{array}}
@@ -1094,7 +1095,7 @@ payload; UTxO, delegation and update.
     {
       \left(
         {\begin{array}{c}
-           \var{utxo'} \\
+           \var{utxoSt'} \\
            \var{ds'} \\
            \var{us'}
          \end{array}}
@@ -1160,7 +1161,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \var{s_{last}} & \Slot & \text{slot of the last seen block} \\
         \var{sgs} & \seqof{\VKeyGen} & \text{last signers}\\
         \var{h} & \Hash & \text{current block hash} \\
-        \var{utxo} & \UTxO & \text{UTxO} \\
+        \var{utxoSt} & \UTxO & \text{UTxOState} \\
         \var{ds} & \DIState & \text{delegation state}\\
         \var{us} & \UPIState & \text{update interface state} \\
       \end{array}
@@ -1196,7 +1197,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
           \var{s_{last}} \\
           \var{sgs} \\
           \var{h} \\
-          \var{utxo} \\
+          \var{utxoSt} \\
           \var{ds} \\
           \var{us}
         \end{array}}
@@ -1207,7 +1208,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
          \var{s_{last}} \\
          \var{sgs} \\
          \var{h'} \\
-         \var{utxo} \\
+         \var{utxoSt} \\
          \var{ds} \\
          \var{us}
        \end{array}}
@@ -1270,7 +1271,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         &
         {\left(
           {\begin{array}{c}
-             \var{utxo} \\
+             \var{utxoSt} \\
              \var{ds} \\
              \var{us'}
            \end{array}}
@@ -1278,7 +1279,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \trans{\hyperref[fig:rules:bbody]{bbody}}{b}
         {\left(
           {\begin{array}{c}
-             \var{utxo'} \\
+             \var{utxoSt'} \\
              \var{ds'} \\
              \var{us''}
            \end{array}}
@@ -1299,7 +1300,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
           \var{s_{last}} \\
           \var{sgs} \\
           \var{h} \\
-          \var{utxo} \\
+          \var{utxoSt} \\
           \var{ds} \\
           \var{us}
         \end{array}}
@@ -1310,7 +1311,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
          \var{\bslot{b}} \\
          \var{sgs'} \\
          \var{h'} \\
-         \var{utxo'} \\
+         \var{utxoSt'} \\
          \var{ds'} \\
          \var{us''}
        \end{array}}

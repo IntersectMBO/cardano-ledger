@@ -1538,7 +1538,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
           \var{s_{last}} \\
           \wcard \\
           \var{h} \\
-          \var{utxo} \\
+          (\var{utxo},~\var{reserves}) \\
           \var{ds} \\
           \var{us}
         \end{array}
@@ -1557,7 +1557,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
               \left(
                 \begin{array}{c}
                   0 \\
-                  45\times 10^{15} - \fun{balance}~{utxo}
+                  \var{reserves}
                 \end{array}
               \right) \\
               \left(

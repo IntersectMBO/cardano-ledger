@@ -37,7 +37,7 @@ import Ledger.Delegation
   , _dSEnvSlot
   )
 import Ledger.Update (PParams, maxBkSz, UPIState)
-import Ledger.UTxO (UTxO, TxId, UTXOWS, UTxOEnv(UTxOEnv, pps, utxo0))
+import Ledger.UTxO (UTxO, TxId, UTXOWS, UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
 
 import Cardano.Spec.Chain.STS.Block
 
@@ -51,7 +51,7 @@ instance STS BBODY where
     )
 
   type State BBODY =
-    ( UTxO TxId
+    ( UTxOState TxId
     , DIState
     , UPIState
     )
@@ -72,7 +72,7 @@ instance STS BBODY where
 
   transitionRules =
     [ do
-        TRC ((ppsVal, e_n, utxoGenesis), (utxo, ds, us), b) <- judgmentContext
+        TRC ((ppsVal, e_n, utxoGenesis), (utxoSt, ds, us), b) <- judgmentContext
         let bMax = ppsVal ^. maxBkSz
         bSize b <= bMax ?! InvalidBlockSize
         let bh = b ^. bHeader
@@ -95,10 +95,10 @@ instance STS BBODY where
           , ds
           , b ^. bBody ^. bDCerts
           )
-        utxo' <- trans @(UTXOWS TxId) $ TRC
-          ( UTxOEnv {utxo0 = utxoGenesis, pps = ppsVal}, utxo, b ^. bBody ^. bUtxo )
+        utxoSt' <- trans @(UTXOWS TxId) $ TRC
+          ( UTxOEnv {utxo0 = utxoGenesis, pps = ppsVal}, utxoSt, b ^. bBody ^. bUtxo )
 
-        return $! (utxo', ds', us')
+        return $! (utxoSt', ds', us')
     ]
 
 instance Embed BUPI BBODY where

@@ -1,10 +1,15 @@
 -- | Ledger global parameters.
 
 module Ledger.GlobalParams
-  (k)
+  ( k
+  , lovelaceCap
+  )
 where
 
-import Ledger.Core (BlockCount (BlockCount))
+import Data.Int (Int64)
+
+import Ledger.Core (BlockCount (BlockCount), Lovelace (Lovelace))
+
 
 -- | Chain stability parameter, measured in terms of number of blocks.
 --
@@ -12,3 +17,7 @@ import Ledger.Core (BlockCount (BlockCount))
 -- configurable.
 k :: BlockCount
 k = BlockCount 2160
+
+-- | Constant amount of Lovelace in the system.
+lovelaceCap :: Lovelace
+lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
