@@ -11,6 +11,7 @@ following links:
 - [Byron Chain Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec)
 - [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
 - [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
+- [Simple Script-Based Multi-Signature Scheme](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/multi-sig)
 
 [![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
 
