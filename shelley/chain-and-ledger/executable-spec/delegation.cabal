@@ -91,4 +91,5 @@ test-suite delegation-test
       containers,
       multiset,
       text,
-      microlens
+      microlens,
+      cs-ledger

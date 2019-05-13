@@ -43,6 +43,7 @@
             (hsPkgs.multiset)
             (hsPkgs.text)
             (hsPkgs.microlens)
+            (hsPkgs.cs-ledger)
             ];
           };
         };

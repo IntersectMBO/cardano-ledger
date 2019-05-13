@@ -25,6 +25,8 @@ import           PParams
 import           Slot
 import           UTxO
 
+import qualified Ledger.Update as Byron.Update (emptyUPIState)
+
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
 
@@ -80,6 +82,7 @@ testLedgerValidTransactions ls utxoState' =
     ls @?= Right (LedgerState
                      utxoState'
                      LedgerState.emptyDelegation
+                     Byron.Update.emptyUPIState
                      testPCs
                      1
                      (Slot 0))
@@ -92,6 +95,7 @@ testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
   in ls2 @?= Right (LedgerState
                      utxoState'
                      stakeKeyRegistration
+                     Byron.Update.emptyUPIState
                      testPCs
                      1
                      (Slot 0))
@@ -109,6 +113,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
            & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
+          Byron.Update.emptyUPIState
           testPCs
           (fromIntegral $ length txs)
           (Slot 0))
@@ -127,6 +132,7 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
+          Byron.Update.emptyUPIState
           testPCs
           3
           (Slot 0))
@@ -159,6 +165,7 @@ testValidWithdrawal =
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000))
                      expectedDS
+                     Byron.Update.emptyUPIState
                      testPCs
                      1
                      (Slot 0))
