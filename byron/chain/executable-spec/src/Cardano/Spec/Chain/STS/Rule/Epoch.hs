@@ -1,23 +1,55 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Cardano.Spec.Chain.STS.Rule.Epoch where
 
+-- import Control.Lens ((^.), _2)
 import Control.State.Transition
+import Data.Bimap (Bimap)
 import Ledger.Core
+import Ledger.Update
 
-import Cardano.Spec.Chain.STS.Block
+
+-- | Compute the epoch for the given _absolute_ slot
+sEpoch :: Slot -> Epoch
+sEpoch (Slot s) = Epoch $ s `div` 21600
+
 
 data EPOCH
 
 instance STS EPOCH where
-  type Environment EPOCH = SlotCount
-  type State EPOCH = Epoch
+  type Environment EPOCH =
+    ( Bimap VKeyGenesis VKey
+    , Epoch
+    )
+  type State EPOCH = UPIState
+
   type Signal EPOCH = Slot
-  data PredicateFailure EPOCH = X
+  data PredicateFailure EPOCH =
+    UPIECFailure (PredicateFailure UPIEC)
     deriving (Eq, Show)
+
   initialRules = []
+
   transitionRules =
     [ do
-        TRC (spe, _, s) <- judgmentContext
-        return $! sEpoch s spe
+        TRC ((_, e_c), _, s) <- judgmentContext
+        case e_c >= sEpoch s of
+          True  -> onOrAfterCurrentEpoch
+          False -> beforeCurrentEpoch
     ]
+   where
+    beforeCurrentEpoch :: TransitionRule EPOCH
+    beforeCurrentEpoch = do
+      TRC ((_dms, _), us, s) <- judgmentContext
+      us' <- trans @UPIEC $ TRC (s, us, ())
+      return $! us'
+
+    onOrAfterCurrentEpoch :: TransitionRule EPOCH
+    onOrAfterCurrentEpoch = do
+      TRC (_, us, _) <- judgmentContext
+      return $! us
+
+instance Embed UPIEC EPOCH where
+  wrapFailed = UPIECFailure

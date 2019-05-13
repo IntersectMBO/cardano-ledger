@@ -78,6 +78,7 @@
 \newcommand{\Block}{\type{Block}}
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\Queue}{\type{Q}}
+\newcommand{\Tx}{\type{Tx}}
 
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\VKeyGen}{\type{VKey_G}}
@@ -139,7 +140,7 @@
 
 \author{Marko Dimjašević \\ Nicholas Clarke}
 
-\date{December 13, 2018}
+\date{May 2, 2019}
 
 \maketitle
 
@@ -209,7 +210,7 @@ underlying systems and types defined will rely on definitions in that document.
   contains all the elements of $\Lambda$ that satisfy $p$, in the same order
   they appear on $\Lambda$.
 \item[Option type] An option type in type $A$ is denoted as $A^? = A + \Nothing$. The
-  $A$ case corresponds to a case when there is a value of type $A$ and the $1$
+  $A$ case corresponds to a case when there is a value of type $A$ and the $\Nothing$
   case corresponds to a case when there is no value.
 \item[Union override] The union override operation is defined in
   Figure~\ref{fig:unionoverride}.
@@ -956,7 +957,7 @@ well as the $\maxblocksize{}$ protocol parameter are defined in
 \cite{byron_ledger_spec}.
 
 Verification is done independently for the three components of the body payload:
-UTxO, delegation and update. Each of these three have a signature in the block
+UTxO, delegation and update. Each of these three has a hash in the block
 header. Note that Byron-era block payload also has an additional component: the
 VSS payload. This part of the block is unnecessary during the BFT era, and hence
 we do not verify it.
@@ -969,7 +970,7 @@ payload; UTxO, delegation and update.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{bUtxo} & \Block \totalf \UTxO & \text{block UTxO payload} \\
+      \fun{bUtxo} & \Block \totalf (\Tx \times \powerset{(\VKey \times \Sig)}) & \text{block UTxO payload} \\
       \fun{\bcertsname} & \Block \totalf \seqof{\DCert}
                                          & \text{block certificates} \\
       \fun{bUpdProp} & \Block \totalf \UProp^{?} & \text{block update proposal payload} \\
@@ -985,7 +986,7 @@ payload; UTxO, delegation and update.
   \begin{equation*}
     \begin{array}{rlr}
       \fun{bEndorsment} & \in \Block \to \ProtVer \times \VKey & \text{Protocol version endorsment} \\
-      \bendorsment{b} & = (\bprotver{b}, (\bhissuer{} \cdot \bhead{}) ~ b)\\
+      \bendorsment{b} & = (\bprotver{b}, (\bhissuername \cdot \bheadname) ~ b)\\
       \fun{\bslotname} & \in \Block \to \Slot & \text{Slot for which this block is being issued} \\
       \bslot{b} & = (\bhslotname \cdot \bheadname)~b \\
       \fun{\bupdpayloadname} & \in \Block \to (\UProp^{?}\times\seqof{\Vote}) & \text{Block update payload} \\
@@ -1003,7 +1004,8 @@ payload; UTxO, delegation and update.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{pps} & \ProtParams & \text{protocol parameters} \\
-        \var{e_n} & \Epoch & \text{epoch we are currently processing blocks for}
+        \var{e_n} & \Epoch & \text{epoch we are currently processing blocks for} \\
+        \var{utxo_0} & \UTxO & \text{genesis UTxO}
       \end{array}
     \right)
   \end{equation*}
@@ -1061,14 +1063,21 @@ payload; UTxO, delegation and update.
           \end{array}
         \right)}
       \vdash \var{ds} \trans{\hyperlink{byron_ledger_spec_link}{deleg}}{\bcerts{b}} \var{ds'} &
-      \var{pps} \vdash \var{utxo}
+      {\left(
+          \begin{array}{l}
+            \var{utxo_0} \\
+            \var{pps}
+          \end{array}
+        \right)}
+      \vdash \var{utxo}
         \trans{\hyperlink{byron_ledger_spec_link}{utxows}}{\butxo{b}} \var{utxo'} \\
     }
     {
       \left(
         {\begin{array}{l}
            \var{pps} \\
-           \var{e_n}
+           \var{e_n} \\
+           \var{utxo_0}
          \end{array}}
      \right)
      \vdash
@@ -1137,7 +1146,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     \CEEnv
     = \left(
       \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{current slot}
+        \var{s_{now}} & \Slot & \text{current slot} \\
+        \var{utxo_0} & \UTxO & \text{genesis UTxO}
       \end{array}\right)
   \end{equation*}
 
@@ -1174,7 +1184,12 @@ body according to the rules in figures \ref{fig:rules:bhead} and
        \var{h'} \leteq \bhhash{(\bhead b)}
     }
     {
-     \var{s_{now}}
+     \left(
+       {\begin{array}{l}
+       \var{s_{now}} \\
+       \var{utxo_0}
+         \end{array}}
+     \right)
      \vdash
      \left(
        {\begin{array}{c}
@@ -1249,6 +1264,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         \begin{array}{l}
           \fun{pps} ~  us' \\
           \sepoch{(\bslot{b})} \\
+          \var{utxo_0}
         \end{array}
         \right)}
         &
@@ -1271,7 +1287,12 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     }
   }
   {
-     \var{s_{now}}
+     \left(
+      {\begin{array}{l}
+         \var{s_{now}} \\
+         \var{utxo_0}
+       \end{array}}
+     \right)
      \vdash
      \left(
        {\begin{array}{c}

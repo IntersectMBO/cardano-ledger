@@ -1,11 +1,14 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Cardano.Spec.Chain.STS.Rule.BBody where
 
+import Cardano.Spec.Chain.STS.Rule.Bupi
 import Control.Lens ((^.))
-import Data.Set (Set)
+import Data.Bimap (keys)
+import Data.Set (fromList)
 
 import Control.State.Transition
   ( Embed
@@ -23,56 +26,86 @@ import Control.State.Transition
   , wrapFailed
   )
 import Ledger.Core
-  (Epoch, Slot, VKeyGenesis)
+  (Epoch, hash)
 import Ledger.Delegation
   ( DELEG
   , DIState
+  , _dIStateDelegationMap
   , DSEnv(DSEnv)
   , _dSEnvAllowedDelegators
   , _dSEnvEpoch
   , _dSEnvSlot
-  , _dSEnvStableAfter
   )
-import Ledger.Update (PParams, maxBkSz, stableAfter)
+import Ledger.Update (PParams, maxBkSz, UPIState)
+import Ledger.UTxO (UTxO, TxId, UTXOWS, UTxOEnv(UTxOEnv, pps, utxo0))
 
-import Cardano.Spec.Chain.STS.Block (Block, bBody, bDCerts, bSize)
+import Cardano.Spec.Chain.STS.Block
 
 data BBODY
 
 instance STS BBODY where
-  type Environment BBODY
-    = ( Epoch
-      , Slot
-      , PParams
-      , Set VKeyGenesis
-      )
+  type Environment BBODY =
+    ( PParams
+    , Epoch
+    , UTxO TxId
+    )
 
-  type State BBODY = DIState
+  type State BBODY =
+    ( UTxO TxId
+    , DIState
+    , UPIState
+    )
 
   type Signal BBODY = Block
 
   data PredicateFailure BBODY
     = InvalidBlockSize
+    | InvalidUtxoHash
+    | InvalidDelegationHash
+    | InvalidUpdateProposalHash
+    | BUPIFailure (PredicateFailure BUPI)
     | DelegationFailure (PredicateFailure DELEG)
+    | UTXOWSFailure (PredicateFailure (UTXOWS TxId))
     deriving (Eq, Show)
 
   initialRules = []
 
   transitionRules =
     [ do
-        TRC ((e, s, pps, gks), ds, b) <- judgmentContext
-        bSize b <= pps ^. maxBkSz ?! InvalidBlockSize
-        let diEnv
-              = DSEnv
-              { _dSEnvAllowedDelegators = gks
-              , _dSEnvEpoch = e
-              , _dSEnvSlot = s
-              , _dSEnvStableAfter = pps ^. stableAfter
-              }
-        ds' <- trans @DELEG
-                     $ TRC (diEnv, ds, b ^. bBody . bDCerts)
-        return $! ds'
+        TRC ((ppsVal, e_n, utxoGenesis), (utxo, ds, us), b) <- judgmentContext
+        let bMax = ppsVal ^. maxBkSz
+        bSize b <= bMax ?! InvalidBlockSize
+        let bh = b ^. bHeader
+        hash (b ^. bBody ^. bUtxo)   == bh ^. bhUtxoHash ?! InvalidUtxoHash
+        hash (b ^. bBody ^. bDCerts) == bh ^. bhDlgHash  ?! InvalidDelegationHash
+        hash (bUpdPayload b)         == bh ^. bhUpdHash  ?! InvalidUpdateProposalHash
+
+        us' <- trans @BUPI $ TRC (
+            (bh ^. bhSlot, _dIStateDelegationMap ds)
+          , us
+          , (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes, bEndorsment b) )
+        ds' <- trans @DELEG $ TRC
+          ( ( DSEnv
+                { _dSEnvAllowedDelegators =
+                    (fromList . keys . _dIStateDelegationMap) ds
+                , _dSEnvEpoch = e_n
+                , _dSEnvSlot = bh ^. bhSlot
+                }
+            )
+          , ds
+          , b ^. bBody ^. bDCerts
+          )
+        utxo' <- trans @(UTXOWS TxId) $ TRC
+          ( UTxOEnv {utxo0 = utxoGenesis, pps = ppsVal}, utxo, b ^. bBody ^. bUtxo )
+
+        return $! (utxo', ds', us')
     ]
+
+instance Embed BUPI BBODY where
+  wrapFailed = BUPIFailure
 
 instance Embed DELEG BBODY where
   wrapFailed = DelegationFailure
+
+instance Embed (UTXOWS TxId) BBODY where
+  wrapFailed = UTXOWSFailure

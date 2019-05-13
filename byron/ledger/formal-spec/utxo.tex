@@ -235,7 +235,7 @@ different order). The choice here is arbitrary.
   \begin{equation*}
     \var{\_} \vdash
     \var{\_} \trans{utxow}{\_} \var{\_}
-    \subseteq \powerset (\PPMMap \times \UTxO \times \Tx \times \UTxO)
+    \subseteq \powerset (\PPMMap \times \UTxO \times (\Tx \times \powerset{(\VKey \times \Sig)}) \times \UTxO)
   \end{equation*}
   \caption{UTxO with witness transition-system types}
   \label{fig:ts-types:utxow}

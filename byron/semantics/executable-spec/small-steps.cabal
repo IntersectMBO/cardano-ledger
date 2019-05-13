@@ -30,6 +30,7 @@ library
   -- other-extensions:
   build-depends:       base >=4.11 && <5
                      , containers
+                     , cryptonite
                      , free
                      , hedgehog
                      , tasty-hunit

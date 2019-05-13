@@ -34,7 +34,6 @@ module Ledger.Delegation
     , _dSEnvAllowedDelegators
     , _dSEnvEpoch
     , _dSEnvSlot
-    , _dSEnvStableAfter
     )
   , allowedDelegators
   , DState
@@ -52,9 +51,9 @@ module Ledger.Delegation
   , _dIStateKeyEpochDelegations
   , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
   , liveAfter
+  , k
   -- * State lens fields
   , slot
-  , stableAfter
   , delegationMap
   -- * State lens type classes
   , HasScheduledDelegations
@@ -68,9 +67,12 @@ module Ledger.Delegation
   )
 where
 
+import qualified Crypto.Hash as Crypto
 import Data.AbstractSize
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -122,7 +124,7 @@ import Ledger.Core
   , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
-  , BlockCount(BlockCount)
+  , BlockCount
   , unBlockCount
   , VKey
   , VKeyGenesis(VKeyGenesis)
@@ -131,8 +133,12 @@ import Ledger.Core
   , minusSlot
   , owner
   , owner
+  , HasHash
+  , hash
   )
 import Ledger.Core.Generator (vkGen, vkgenesisGen)
+import Ledger.GlobalParams (k)
+
 
 --------------------------------------------------------------------------------
 -- Abstract types
@@ -151,6 +157,13 @@ data DCert = DCert
   } deriving (Show, Eq, Generic)
 
 instance HasTypeReps DCert
+
+instance BA.ByteArrayAccess [DCert] where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack . show
+
+instance HasHash [DCert] where
+  hash = Crypto.hash
 
 makeLenses ''DCert
 
@@ -185,7 +198,6 @@ data DSEnv = DSEnv
   { _dSEnvAllowedDelegators :: Set VKeyGenesis
   , _dSEnvEpoch :: Epoch
   , _dSEnvSlot :: Slot
-  , _dSEnvStableAfter :: BlockCount
   } deriving (Show, Eq)
 
 makeFields ''DSEnv
@@ -282,7 +294,7 @@ instance STS SDELEG where
         TRC (env, st, cert) <- judgmentContext
         verify cert ?! DoesNotVerify
         notAlreadyDelegated st cert ?! HasAlreadyDelegated
-        let d = liveAfter (env ^. stableAfter)
+        let d = liveAfter k
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
         env ^. epoch <= cert ^. depoch ?! IsPastEpoch
@@ -335,7 +347,7 @@ instance STS ADELEG where
   initialRules = [ do
                      IRC env <- judgmentContext
                      return DState
-                       { _dStateDelegationMap  = Bimap.fromList $ map (\vkg@(VKeyGenesis k) -> (vkg, k)) (Set.toList env)
+                       { _dStateDelegationMap  = Bimap.fromList $ map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
                        , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
                        }
                  ]
@@ -446,7 +458,7 @@ instance STS DELEG where
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
         as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
-        let d = liveAfter (env ^. stableAfter)
+        let d = liveAfter k
         return $ DIState
           (as ^. delegationMap)
           (as ^. lastDelegation)
@@ -518,6 +530,6 @@ instance HasTrace DELEG where
     <$> Gen.set (linear 1 7) vkgenesisGen
     <*> (Epoch <$> Gen.integral (linear 0 100))
     <*> (Slot <$> Gen.integral (linear 0 10000))
-    <*> (BlockCount <$> Gen.integral (linear 0 10))
+    -- <*> (BlockCount <$> Gen.integral (linear 0 10))
 
   sigGen e _st = dcertsGen e
