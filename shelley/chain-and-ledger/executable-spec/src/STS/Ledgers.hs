@@ -40,7 +40,8 @@ ledgersTransition = do
          trans @LEDGER $ TRC ((pp, slot, ix), (u', dw'), tx))
       (u, dw) $
     zip [0 ..] txwits
-  pure $ LedgerState u'' dw'' (_pcs ls) (_txSlotIx ls) (_currentSlot ls)
+  pure $
+    LedgerState u'' dw'' (_upiState ls) (_pcs ls) (_txSlotIx ls) (_currentSlot ls)
 
 instance Embed LEDGER LEDGERS where
   wrapFailed = LedgerFailure
