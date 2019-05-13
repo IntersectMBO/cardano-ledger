@@ -69,6 +69,9 @@
 \newcommand{\AddrE}{\type{Addr_{enterprise}}}
 \newcommand{\AddrBS}{\type{Addr_{bootstrap}}}
 \newcommand{\AddrScr}{\type{Addr_{script}}}
+\newcommand{\AddrScrBase}{\type{Addr_{base}^{script}}}
+\newcommand{\AddrScrEnterprise}{\type{Addr_{enterprise}^{script}}}
+\newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
 \newcommand{\HashScr}{\type{Hash_{script}}}
 
 \newcommand{\Ptr}{\type{Ptr}}
@@ -294,7 +297,8 @@ unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{addr} & \AddrScr & \HashScr & \text{Script address} \\
+      \var{addr} & \AddrScr & \AddrScrBase \uniondistinct \AddrScrEnterprise
+                              \uniondistinct \AddrScrPtr & \text{Script address} \\
       \var{addr} & \Addr & \begin{array}{l@{~\uniondistinct}l}
                              \AddrB & \AddrP \uniondistinct \AddrE \\
                                     & \AddrBS \uniondistinct \AddrScr
@@ -309,7 +313,15 @@ unspent transaction output.
     \begin{array}{r@{~\in~}lr}
       \fun{paymentHK} & \Addr \to \HashKey_{pay}^{?}
       & \text{hash of payment key from addr}\\
-      \fun{validatorHash} & \Addr \to \HashScr^{?} & \text{hash of validator script}
+      \fun{validatorHash} & \Addr \to \HashScr^{?} & \text{hash of validator
+                                                     script} \\
+      \fun{stakeHK_{b}} & (\AddrB \uniondistinct \AddrScrBase) \to
+                          \HashKey_{stake} & \text{hash of stake key for base
+                                             addresses}\\
+      \fun{addrPtr} & (\AddrP \uniondistinct \AddrScrPtr) \to \Ptr &
+                                                                     \text{pointer
+                                                                     from
+                                                                     pointer addresses}
     \end{array}
   \end{equation*}
 
@@ -332,15 +344,21 @@ the hash of the validator script.
 An transaction output that is locked by a script carries the hash of the
 validator script. The output can only be spent if the matching script is
 presented and validates its input. The $\AddrScr$
-(Figure~\ref{fig:types-scripts}) sub-type of $\Addr$ carries those two pieces of
+(Figure~\ref{fig:types-scripts}) sub-type of $\Addr$ carries the necessary
 information and can therefore be part of a transaction output that consists of a
-pair of $\Addr\times\Coin$.
+pair of $\Addr\times\Coin$. Analogously to $\Addr$, $\AddrScr$ also has an
+\emph{enterprise} script address type which does not allow for using the locked
+funds in staking, as well as \emph{base} and \emph{pointer} script address
+sub-types which allow for staking in the same way as $\AddrB$ and $\AddrP$.
 
 The $\fun{hashScript}$ function calculates the hash of a script. The accessor
-function $\fun{paymentHK}$ is changed to return an optional hash key now, as
-script addresses do not carry hash keys. The accessor function
-$\fun{validatorHash}$ returns the hash of a script of a script address, or
-$\Nothing$ in case of a non-script address.
+function $\fun{validatorHash}$ returns the hash of a script of a script address,
+or $\Nothing$ in case of a non-script address. The accessor function
+$\fun{paymentHK}$ is changed to return an optional hash key now, as script
+addresses do not carry hash keys. The domains of the accessor functions
+$\fun{stakeHK_b}$ and $\fun{addrPtr}$ are extended to also include the
+respective script address variants.
+
 
 \begin{figure*}[hbt]
   \emph{Transaction Type}
