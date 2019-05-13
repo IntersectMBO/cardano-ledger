@@ -108,7 +108,9 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
-  deriving (Eq, Ord, Num, Show)
+  deriving (Eq, Generic, Ord, Num, Show)
+
+instance HasTypeReps SlotCount
 
 -- | Add a slot count to a slot.
 addSlot :: Slot -> SlotCount -> Slot
@@ -123,7 +125,9 @@ minusSlot (Slot m) (SlotCount n)
   | otherwise = Slot $ m - n
 
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
-  deriving (Eq, Ord, Num, Show)
+  deriving (Eq, Generic, Ord, Num, Show)
+
+instance HasTypeReps BlockCount
 
 ---------------------------------------------------------------------------------
 -- Transactions

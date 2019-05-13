@@ -171,7 +171,7 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_n} & \Slot & \text{current slot number}\\
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
+        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
       \end{array}\right)
   \end{align*}
   %
@@ -546,22 +546,21 @@ confirmed proposals ($\var{cps}$) when a new a protocol version gets adopted
 The set of endorsement-key pairs is cleaned here as well as in the epoch change
 rule (Rule~\ref{eq:rule:upi-ec-pv-change}). The reason for this is that this set grows at
 each block, and it can get considerably large if no proposal gets adopted at
-the end on an epoch.
+the end of an epoch.
 
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-pend}
     \inference
     {
-      {
+      \left({
         \begin{array}{l}
           s_n\\
-          q \cdot \var{ngk}\\
           \var{dms}\\
           \var{cps}\\
           \var{rpus}
         \end{array}
-      }
+      }\right)
       \vdash
       {
         \left(

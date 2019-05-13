@@ -18,7 +18,6 @@ import Ledger.Core
   , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
-  , BlockCount(BlockCount)
   , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
   , owner
@@ -55,17 +54,17 @@ deleg =
     ]
 
   , testGroup "Scheduling"
-    [ testCase "Example 0" $ checkTrace @SDELEG (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2) (bc 5)) $
+    [ testCase "Example 0" $ checkTrace @SDELEG (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2)) $
 
       pure (DSState [] [])
 
-    .- dc (gk 0) (k 10) (e 8) .-> DSState [(s 12, (gk 0, k 10))]
+    .- dc (gk 0) (k 10) (e 8) .-> DSState [(s 4322, (gk 0, k 10))]
                                           [(e 8, gk 0)]
 
-    .- dc (gk 1) (k 11) (e 8) .-> DSState [(s 12, (gk 0, k 10)), (s 12, (gk 1, k 11))]
+    .- dc (gk 1) (k 11) (e 8) .-> DSState [(s 4322, (gk 0, k 10)), (s 4322, (gk 1, k 11))]
                                           [(e 8, gk 0), (e 8, gk 1)]
 
-    .- dc (gk 2) (k 10) (e 8) .-> DSState [(s 12, (gk 0, k 10)), (s 12, (gk 1, k 11)), (s 12, (gk 2, k 10))]
+    .- dc (gk 2) (k 10) (e 8) .-> DSState [(s 4322, (gk 0, k 10)), (s 4322, (gk 1, k 11)), (s 4322, (gk 2, k 10))]
                                           [(e 8, gk 0), (e 8, gk 1), (e 8, gk 2)]
     ]
   ]
@@ -78,10 +77,6 @@ deleg =
 
     gk :: Natural -> VKeyGenesis
     gk = VKeyGenesis . k
-
-    bc :: Word64 -> BlockCount
-    bc = BlockCount
-
 
     e :: Word64 -> Epoch
     e = Epoch

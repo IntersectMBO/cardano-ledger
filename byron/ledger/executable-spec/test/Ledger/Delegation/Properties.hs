@@ -64,8 +64,7 @@ import Control.State.Transition.Trace
   , traceEnv
   )
 import Ledger.Core
-  ( BlockCount(BlockCount)
-  , Epoch(Epoch)
+  ( Epoch(Epoch)
   , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
@@ -104,7 +103,7 @@ import Ledger.Delegation
   , liveAfter
   , scheduledDelegations
   , slot
-  , stableAfter
+  , k
   )
 import Ledger.Core.Generator (vkGen)
 
@@ -190,10 +189,10 @@ dcertsAreTriggeredInTrace tr
     -- certificates in the trace' signals.
     trExpectedDms
       = expectedDms lastSlot
-                    (env ^. stableAfter . to liveAfter . to unSlotCount . to fromIntegral)
+                    ((fromIntegral . unSlotCount . liveAfter) k)
                     slotsAndDcerts
 
-    (env, st) = lastState tr
+    (_, st) = lastState tr
 
     -- | Last slot that was considered for an activation.
     lastSlot :: Int
@@ -251,8 +250,7 @@ instance HasTrace DBLOCK where
     n <- integral (linear 0 14)
     e <- integral (linear 0 1000)
     s <- integral (linear 0 1000)
-    k <- integral (linear 0 1000)
-    pure $! DSEnv (Set.fromAscList $ gk <$> [0..n]) (Epoch e) (Slot s) (BlockCount k)
+    pure $! DSEnv (Set.fromAscList $ gk <$> [0..n]) (Epoch e) (Slot s)
     where
       gk = VKeyGenesis . VKey . Owner
 
