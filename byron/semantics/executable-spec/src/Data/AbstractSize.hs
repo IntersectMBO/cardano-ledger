@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -13,9 +14,11 @@ module Data.AbstractSize
   , Size
   ) where
 
+import qualified Crypto.Hash as Crypto
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq, (<|), (><), empty)
+import Data.Set (Set)
 import Data.Typeable (TypeRep, Typeable, typeOf)
 import Data.Word (Word64)
 import GHC.Generics
@@ -131,6 +134,9 @@ instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
 instance HasTypeReps a => HasTypeReps [a] where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
+instance HasTypeReps a => HasTypeReps (Set a) where
+  typeReps xs = typeOf xs <| foldMap typeReps xs
+
 instance (HasTypeReps a, HasTypeReps b) => HasTypeReps (a, b) where
   typeReps t@(a, b) = typeOf t <| (typeReps a >< typeReps b)
 
@@ -150,4 +156,7 @@ instance HasTypeReps Natural where
   typeReps x = [typeOf x]
 
 instance HasTypeReps Word64 where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps (Crypto.Digest Crypto.SHA256) where
   typeReps x = [typeOf x]

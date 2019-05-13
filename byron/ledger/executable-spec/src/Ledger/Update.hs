@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,9 +13,13 @@
 module Ledger.Update where
 
 import Control.Lens
+import qualified Crypto.Hash as Crypto
+import Data.AbstractSize (HasTypeReps)
+import Data.Bimap (Bimap, empty, lookupR)
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Char8 as BS
 import Data.Char (isAscii)
 import Data.Ix (inRange)
-import Data.List (foldl', partition)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, maybeToList)
@@ -26,9 +31,9 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unBlockCount, unSlot)
+import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..))
 import qualified Ledger.Core as Core
-import Ledger.Delegation (liveAfter)
+import Ledger.Delegation (liveAfter, k)
 import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
@@ -60,35 +65,47 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update adoption threshold (number of block issuers)
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Generic, Ord, Show)
 
 makeLenses ''PParams
 
+instance HasTypeReps PParams
+
 newtype UpId = UpId Int
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generic, Ord, Show)
+
+instance HasTypeReps UpId
 
 -- | Protocol version
 data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Generic, Ord, Show)
 
 makeLenses ''ProtVer
 
+instance HasTypeReps ProtVer
+
 newtype ApName = ApName String
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generic, Ord, Show)
+
+instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
-  deriving (Eq, Ord, Num, Show)
+  deriving (Eq, Generic, Ord, Num, Show)
+
+instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Show, Generic)
+  } deriving (Eq, Generic, Show)
 
 makeLenses ''SwVer
+
+instance HasTypeReps SwVer
 
 -- | Part of the update proposal which must be signed
 type UpSD =
@@ -102,7 +119,7 @@ type UpSD =
 type STag = String
 
 -- | For now we do not have any requirements on metadata.
-data Metadata = Metadata deriving (Eq, Ord, Show)
+data Metadata = Metadata deriving (Eq, Ord, Show, Generic)
 
 -- | Update proposal
 data UProp = UProp
@@ -116,9 +133,14 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  }
+  } deriving (Eq, Generic, Show)
 
 makeLenses ''UProp
+
+instance HasTypeReps (ProtVer, PParams, SwVer)
+instance HasTypeReps Metadata
+instance HasTypeReps UProp
+instance HasTypeReps (Maybe UProp)
 
 upSigData :: Lens' UProp UpSD
 upSigData = lens
@@ -130,8 +152,8 @@ upSigData = lens
   )
 
 -- | Test if a pair is present in a map.
-inMap :: (Ord k, Eq v) => k -> v -> Map k v -> Bool
-inMap k v m = case Map.lookup k m of
+inMap :: (Ord key, Eq v) => key -> v -> Map key v -> Bool
+inMap key v m = case Map.lookup key m of
   Just x | x == v -> True
   _ -> False
 
@@ -341,7 +363,7 @@ instance STS UPREG where
     ( ProtVer
     , PParams
     , Map ApName (ApVer, Core.Slot, Metadata)
-    , Map Core.VKeyGenesis Core.VKey
+    , Bimap Core.VKeyGenesis Core.VKey
     )
   type State UPREG =
     ( Map UpId (ProtVer, PParams)
@@ -364,7 +386,7 @@ instance STS UPREG where
             ) <- judgmentContext
         (rpus', raus') <- trans @UPV $ TRC ((pv, pps, avs), (rpus, raus), up)
         let vk = up ^. upIssuer
-        dms ▹ Set.singleton vk /= Map.empty ?! NotGenesisDelegate
+        dms ▹ Set.singleton vk /= empty ?! NotGenesisDelegate
         Core.verify vk (up ^. upSigData) (up ^. upSig) ?! DoesNotVerify
         return (rpus', raus')
 
@@ -382,16 +404,26 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  }
+  } deriving (Eq, Generic, Show)
 
 makeLenses ''Vote
+
+instance HasTypeReps Vote
+
+instance BA.ByteArrayAccess (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack . show
+
+instance HasHash (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
+  hash = Crypto.hash
+
 
 data ADDVOTE
 
 instance STS ADDVOTE where
   type Environment ADDVOTE =
     ( Set UpId
-    , Map Core.VKeyGenesis Core.VKey
+    , Bimap Core.VKeyGenesis Core.VKey
     )
   type State ADDVOTE = Core.PairSet UpId Core.VKeyGenesis
   type Signal ADDVOTE = Vote
@@ -410,8 +442,10 @@ instance STS ADDVOTE where
             ) <- judgmentContext
         let pid = vote ^. vPropId
             vk = vote ^. vCaster
-            vtsPid = Core.PairSet $ Set.fromList
-              [(pid, vks) | vks <- Set.toList . Map.findWithDefault Set.empty vk $ invertMap dms ]
+            vtsPid = Core.PairSet $
+              case lookupR vk dms of
+                Just vks -> Set.singleton (pid, vks)
+                Nothing  -> Set.empty
         Set.member pid rups ?! NoUpdateProposal pid
         Core.verify vk pid (vote ^. vSig) ?! AVSigDoesNotVerify
         return $! vts <> vtsPid
@@ -424,7 +458,7 @@ instance STS UPVOTE where
     ( Core.Slot
     , PParams
     , Set UpId
-    , Map Core.VKeyGenesis Core.VKey
+    , Bimap Core.VKeyGenesis Core.VKey
     )
   type State UPVOTE =
     ( Map UpId Core.Slot
@@ -499,15 +533,14 @@ data UPEND
 
 instance STS UPEND where
   type Environment UPEND =
-    ( Core.BlockCount
-    , Core.Slot
-    , (ProtVer, PParams)
+    ( Core.Slot
+    , Bimap VKeyGenesis VKey
     , Map UpId Core.Slot
     , Map UpId (ProtVer, PParams)
     )
   type State UPEND =
     ( [(Core.Slot, (ProtVer, PParams))]
-    , Core.PairSet ProtVer Core.VKey
+    , Core.PairSet ProtVer Core.VKeyGenesis
     )
   type Signal UPEND = (ProtVer, Core.VKey)
 
@@ -521,45 +554,65 @@ instance STS UPEND where
 
   initialRules = []
   transitionRules =
-    [ do
-        TRC ( (k, sn, _, cps, rpus)
+    [
+      do
+        TRC ( (sn, _dms, cps, rpus)
             , (fads, bvs)
             , (bv, _vk)
             ) <- judgmentContext
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid ->
+          Just pid -> do
             pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! NotAFailure
           Nothing -> True ?! NotAFailure
-        return (fads, bvs)
+        return $! (fads, bvs)
+
     , do
-        TRC ( (k, sn, (_pv, pps), cps, rpus)
+        TRC ( (sn, dms, cps, rpus)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
-        let bvs' = bvs ∪ singleton bv vk
-        (not $ canAdopt pps bvs' bv) ?! CanAdopt
-        case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid ->
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
-          Nothing -> True ?! ProtVerUnknown
-        return (fads, bvs')
+        case lookupR vk dms of
+          Nothing  -> do
+            False ?! CannotAdopt -- md 2019-05-03: not sure what to
+                                 -- return/error on here
+            return $! (fads, bvs) -- a silly thing needed to get types line up
+          Just vks -> do
+            let bvs' = bvs ∪ singleton bv vks
+            -- (not $ canAdopt pps bvs' bv) ?! CanAdopt
+            Core.psSize (Set.singleton bv ◃ bvs) < (fromIntegral . unBlockCount) t ?! CanAdopt
+            case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
+              Just pid -> do
+                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
+                return $! (fads, bvs')
+              Nothing -> do
+                True ?! ProtVerUnknown
+                return $! (fads, bvs') -- a silly thing needed to get types line up
+
     , do
-        TRC ( (k, sn, (_pv, pps), cps, rpus)
+        TRC ( (sn, dms, cps, rpus)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
-        let bvs' = bvs ∪ singleton bv vk
-        canAdopt pps bvs' bv ?! CannotAdopt
-        case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid -> do
-            -- This is safe by virtue of the fact we've just inverted the map and found this there
-            let (_, ppsc) = fromJust $ Map.lookup pid rpus
-            pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
-            fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
-            return (fads', bvs')
-          Nothing -> do
-            True ?! ProtVerUnknown
-            return (fads, bvs)
+        let vksM = lookupR vk dms
+        case vksM of
+          Nothing  -> do
+            False ?! CannotAdopt -- md 2019-05-03: not sure what to
+                                 -- return/error on here
+            return $! (fads, bvs) -- a silly thing needed to get types line up
+          Just vks -> do
+            let bvs' = bvs ∪ singleton bv vks
+            -- canAdopt pps bvs' bv ?! CannotAdopt
+            (fromIntegral . unBlockCount) t <= Core.psSize (Set.singleton bv ◃ bvs) ?! CannotAdopt
+            case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
+              Just pid -> do
+                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
+                -- This is safe by virtue of the fact we've just inverted the map and found this there
+                let (_, ppsc) = fromJust $ Map.lookup pid rpus
+                fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
+                return $! (fads', bvs')
+              Nothing -> do
+                True ?! ProtVerUnknown
+                return $! (fads, bvs')
 
     ]
 
@@ -573,23 +626,21 @@ instance Embed FADS UPEND where
 -- | The update interface environment is shared amongst various rules, so
 --   we define it as an alias here.
 type UPIEnv =
-  ( Core.Epoch
-  , Core.Slot
-  , Map Core.VKeyGenesis Core.VKey
+  ( Core.Slot
+  , Bimap Core.VKeyGenesis Core.VKey
   )
 
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
 type UPIState =
-  ( Core.Epoch
-  , (ProtVer, PParams)
+  ( (ProtVer, PParams)
   , [(Core.Slot, (ProtVer, PParams))]
   , Map ApName (ApVer, Core.Slot, Metadata)
   , Map UpId (ProtVer, PParams)
   , Map UpId (ApName, ApVer, Metadata)
   , Map UpId Core.Slot
   , Core.PairSet UpId Core.VKeyGenesis
-  , Core.PairSet ProtVer Core.VKey
+  , Core.PairSet ProtVer Core.VKeyGenesis
   , Map UpId Core.Slot
   )
 
@@ -606,9 +657,8 @@ instance STS UPIREG where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_ec, sn, dms)
-            , ( ep
-              , (pv, pps)
+        TRC ( (sn, dms)
+            , ( (pv, pps)
               , fads
               , avs
               , rpus
@@ -620,8 +670,7 @@ instance STS UPIREG where
             , up) <- judgmentContext
         (rpus', raus') <- trans @UPREG $ TRC ((pv, pps, avs, dms), (rpus, raus), up)
         let pws' = pws ⨃ [(up ^. upId, sn)]
-        return ( ep
-                , (pv, pps)
+        return ( (pv, pps)
                 , fads
                 , avs
                 , rpus'
@@ -650,9 +699,8 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_ec, sn, dms)
-            , ( ep
-              , (pv, pps)
+        TRC ( (sn, dms)
+            , ( (pv, pps)
               , fads
               , avs
               , rpus
@@ -671,8 +719,7 @@ instance STS UPIVOTE where
                          | pid <- stblCps
                          , (an, av, m) <- maybeToList $ Map.lookup pid raus
                          ]
-        return ( ep
-                , (pv, pps)
+        return ( (pv, pps)
                 , fads
                 , avs ⨃ avsnew
                 , rpus
@@ -688,6 +735,34 @@ instance STS UPIVOTE where
 instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
 
+
+data UPIVOTES
+
+instance STS UPIVOTES where
+  type Environment UPIVOTES = UPIEnv
+  type State UPIVOTES = UPIState
+  type Signal UPIVOTES = [Vote]
+
+  data PredicateFailure UPIVOTES
+    = UpivoteFailure (PredicateFailure UPIVOTE)
+    deriving (Eq, Show)
+
+  initialRules = []
+  transitionRules =
+    [ do
+        TRC (env, us, sig) <- judgmentContext
+        case (sig :: [Vote]) of
+          []     -> return us
+          (x:xs) -> do
+            us'  <- trans @UPIVOTES $ TRC (env, us, xs)
+            us'' <- trans @UPIVOTE  $ TRC (env, us', x)
+            return us''
+    ]
+
+instance Embed UPIVOTE UPIVOTES where
+  wrapFailed = UpivoteFailure
+
+
 data UPIEND
 
 instance STS UPIEND where
@@ -701,9 +776,8 @@ instance STS UPIEND where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_ec, sn, _dms)
-            , ( ep
-              , (pv, pps)
+        TRC ( (sn, dms)
+            , ( (pv, pps)
               , fads
               , avs
               , rpus
@@ -713,14 +787,12 @@ instance STS UPIEND where
               , bvs
               , pws)
             , (bv,vk)) <- judgmentContext
-        let k = pps ^. stableAfter
-            u = pps ^. upTtl
-        (fads', bvs') <- trans @UPEND $ TRC ((k, sn, (pv, pps), cps, rpus), (fads, bvs), (bv,vk))
+        let u = pps ^. upTtl
+        (fads', bvs') <- trans @UPEND $ TRC ((sn, dms, cps, rpus), (fads, bvs), (bv,vk))
         let pidskeep = dom (Map.filter (>= (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
             rpus' = pidskeep ◃ rpus
             vskeep = Set.fromList . fmap fst $ Map.elems rpus'
-        return ( ep
-                , (pv, pps)
+        return ( (pv, pps)
                 , fads'
                 , avs
                 , rpus'
@@ -740,15 +812,13 @@ data PVBUMP
 
 instance STS PVBUMP where
   type Environment PVBUMP =
-    ( Core.BlockCount
-    , Core.Slot
-    )
-  type State PVBUMP =
-    ( Core.Epoch
-    , (ProtVer, PParams)
+    ( Core.Slot
     , [(Core.Slot, (ProtVer, PParams))]
     )
-  type Signal PVBUMP = Core.Epoch
+  type State PVBUMP =
+    (ProtVer, PParams)
+
+  type Signal PVBUMP = ()
   data PredicateFailure PVBUMP
     = NewEpoch
     | OldEpoch
@@ -757,23 +827,21 @@ instance STS PVBUMP where
   initialRules = []
   transitionRules =
     [ do
-        TRC (_, (ep, (pv, pps), fads), en) <- judgmentContext
-        en <= ep ?! NewEpoch
-        return (ep, (pv, pps), fads)
-    , do
-        TRC ((k, sn), (ep, (pv, pps), fads), en) <- judgmentContext
-        ep < en ?! OldEpoch
-        return $ case (partition (\(s, _) -> s <= sn `Core.minusSlot` liveAfter k) fads) of
-          ([], _) -> (ep, (pv, pps), fads)
-          ((_, (pvc, ppsc)):_, rest) -> (en, (pvc, ppsc), rest)
+        TRC ((s_n, fads), (pv, pps), ()) <- judgmentContext
+        let r = filter ((<= s_n) . fst) fads
+        if r == []
+          then return $! (pv, pps)
+          else do
+            let (_, (pv_c, pps_c)) = last r
+            return $! (pv_c, pps_c)
     ]
 
 data UPIEC
 
 instance STS UPIEC where
-  type Environment UPIEC = UPIEnv
+  type Environment UPIEC = Core.Slot
   type State UPIEC = UPIState
-  type Signal UPIEC = Core.Epoch
+  type Signal UPIEC = ()
   data PredicateFailure UPIEC
     = PVBUMPFailure (PredicateFailure PVBUMP)
     deriving (Eq, Show)
@@ -781,36 +849,33 @@ instance STS UPIEC where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_ec, sn, _dms)
-            , ( ep
-              , (pv, pps)
-              , fads
-              , avs
-              , rpus
-              , raus
-              , cps
-              , vts
-              , bvs
-              , pws)
-            , en) <- judgmentContext
-        let k = pps ^. stableAfter
-        (e', (pv', pps'), fads') <- trans @PVBUMP $ TRC ((k, sn), (ep, (pv, pps), fads), en)
-        let pidskeep = Set.fromList [ pid | pid <- Set.toList . foldl' Set.union Set.empty
-                                     . Map.elems . Map.filterWithKey (\pvi _ -> pv' < pvi)
-                                     $ invertMap (fst <$> rpus)]
-        return ( e'
-                , (pv', pps')
-                , fads'
-                , avs
-                , pidskeep ◃ rpus
-                , raus
-                , pidskeep ◃ cps
-                , pidskeep ◃ vts
-                , bvs
-                , pidskeep ◃ pws
-                )
-
+        TRC (s_n, us, ()) <- judgmentContext
+        let
+          (pv, pps) = us ^. _1 :: (ProtVer, PParams)
+          fads      = us ^. _2 :: [(Core.Slot, (ProtVer, PParams))]
+        (pv', pps') <- trans @PVBUMP $ TRC ((s_n, fads), (pv, pps), ())
+        return $! if pv == pv'
+          then us
+          else
+            ( (pv', pps')       :: (ProtVer, PParams)
+            , []                :: [(Core.Slot, (ProtVer, PParams))]
+            , us ^. _3          :: Map ApName (ApVer, Core.Slot, Metadata)
+            , Map.empty         :: Map UpId (ProtVer, PParams)
+            , us ^. _5          :: Map UpId (ApName, ApVer, Metadata)
+            , Map.empty         :: Map UpId Core.Slot
+            , PairSet Set.empty :: Core.PairSet UpId Core.VKeyGenesis
+            , PairSet Set.empty :: Core.PairSet ProtVer Core.VKeyGenesis
+            , Map.empty         :: Map UpId Core.Slot
+            )
     ]
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
+
+--------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+-- | The number of blocks needed for endorsement
+t :: BlockCount
+t = undefined

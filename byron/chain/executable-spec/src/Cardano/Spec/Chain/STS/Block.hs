@@ -15,6 +15,9 @@ import GHC.Generics (Generic)
 import Control.State.Transition.Generator
 import Ledger.Core hiding ((<|))
 import Ledger.Delegation
+import Ledger.Update (ProtVer, UProp, Vote)
+import Ledger.UTxO (TxWits, TxId)
+
 
 data BlockHeader
   = MkBlockHeader
@@ -27,11 +30,17 @@ data BlockHeader
     -- | Block issuer.
   , _bhIssuer   :: VKey
     -- | Part of the block header which must be signed.
-  , _bhSig      :: (Sig VKey)
+  , _bhSig      :: Sig Hash
+    -- | UTxO hash
+  , _bhUtxoHash :: Hash
+    -- | Delegation hash
+  , _bhDlgHash   :: Hash
+    -- | Update payload hash
+  , _bhUpdHash :: Hash
     -- TODO: BlockVersion – the protocol (block) version that created the block
 
     -- TODO: SoftwareVersion – the software version that created the block
-  } deriving (Eq, Show, Generic)
+  } deriving (Generic, Show)
 
 makeLenses ''BlockHeader
 
@@ -40,17 +49,29 @@ makeLenses ''BlockHeader
 instance HasTypeReps BlockHeader where
   typeReps x = typeOf x
                <| typeOf (undefined :: Hash)
+               <| typeOf (x ^. bhUtxoHash :: Hash)
+               <| typeOf (x ^. bhDlgHash :: Hash)
+               <| typeOf (x ^. bhUpdHash :: Hash)
                <| typeReps (x ^. bhSlot :: Slot)
                <> typeReps (x ^. bhIssuer :: VKey)
-               <> typeReps (x ^. bhSig :: Sig VKey)
+               <> typeReps (x ^. bhSig :: Sig Hash)
 
 data BlockBody
   = BlockBody
-  { _bDCerts  :: [DCert]
-  -- ^ Delegation certificates.
-  } deriving (Eq, Show, Generic)
+  { _bDCerts     :: [DCert]
+  -- ^ Delegation certificates
+  , _bUtxo       :: [TxWits TxId]
+  -- ^ UTxO payload
+  , _bUpdProp    :: Maybe UProp
+  -- ^ Update proposal payload
+  , _bUpdVotes   :: [Vote]
+  -- ^ Update votes payload
+  , _bProtVer    :: ProtVer
+  -- ^ Protocol version
+  } deriving (Generic, Show)
 
 instance HasTypeReps BlockBody
+
 makeLenses ''BlockBody
 
 -- | A block in the chain. The specification only models regular blocks since
@@ -59,10 +80,20 @@ data Block
   = Block
   { _bHeader :: BlockHeader
   , _bBody :: BlockBody
-  } deriving (Eq, Show, Generic)
+  } deriving (Generic, Show)
 
 instance HasTypeReps Block
 makeLenses ''Block
+
+-- | Block update payload
+bUpdPayload :: Block -> (Maybe UProp, [Vote])
+bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
+
+
+-- | Protocol version endorsment
+bEndorsment :: Block -> (ProtVer, VKey)
+bEndorsment b = (b ^. bBody ^. bProtVer, b ^. bHeader ^. bhIssuer)
+
 
 -- | Compute the size (in words) that a block takes.
 bSize :: Block -> Natural
@@ -88,9 +119,16 @@ hashHeader bh = hashlazy . pack $
 bhToSign :: BlockHeader -> Hash
 bhToSign = hashHeader
 
--- | Compute the epoch for the given _absolute_ slot
-sEpoch :: Slot -> SlotCount -> Epoch
-sEpoch (Slot s) (SlotCount spe) = Epoch $ s `div` spe
+bhHash :: BlockHeader -> Hash
+bhHash = hashHeader
+
+-- | Checks if a block is an epoch boundary block.
+--
+-- The function always returns False because tests will be performed
+-- only against chains without EBBs.
+bIsEBB :: Block -> Bool
+bIsEBB = const False
+
 
 instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)

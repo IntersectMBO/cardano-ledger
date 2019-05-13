@@ -13,14 +13,18 @@ module Ledger.UTxO where
 
 import Control.State.Transition
 import qualified Crypto.Hash as Crypto
+import Data.AbstractSize
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import Data.List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
+import Data.Sequence ((<|), empty)
 import qualified Data.Set as Set
-import Ledger.Core
+import Data.Typeable (typeOf)
+import Ledger.Core hiding ((<|))
+import Ledger.Update (PParams)
 import Numeric.Natural (Natural)
 
 
@@ -28,10 +32,16 @@ import Numeric.Natural (Natural)
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
 
+instance HasTypeReps TxId where
+  typeReps x = typeOf x <| typeOf (getTxId x) <| empty
+
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn id = TxIn id Natural deriving (Show, Eq, Ord)
+
+instance HasTypeReps i => HasTypeReps (TxIn i) where
+  typeReps x@(TxIn i' n) = typeOf x <| typeOf i' <| typeOf n <| empty
 
 -- |The output of a UTxO.
 data TxOut = TxOut Addr Value deriving (Show, Eq, Ord)
@@ -79,11 +89,11 @@ instance Show id => BA.ByteArrayAccess (Tx id) where
 ---------------------------------------------------------------------------------
 
 data UTxOEnv id = UTxOEnv { utxo0 :: UTxO id
-                          , pps   :: ProtocolConstants id
+                          , pps   :: PParams
                           }
 
-newtype ProtocolConstants id = ProtocolConstants
-  { pcMinFee :: Tx id -> Value }
+pcMinFee :: PParams -> Tx id -> Value
+pcMinFee = undefined
 
 -- | UTXO transition system
 data UTXO id
@@ -136,6 +146,16 @@ data TxWits id = TxWits
                 , witnesses :: [Wit id]
                 } deriving (Show, Eq)
 
+instance HasTypeReps i => HasTypeReps (TxWits i) where
+  typeReps (TxWits b w) = typeOf b <| typeOf w <| empty
+
+instance Show id => BA.ByteArrayAccess [TxWits id] where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack  . show
+
+instance Show id => HasHash [TxWits id] where
+  hash = Crypto.hash
+
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx id -> Wit id
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
@@ -183,6 +203,34 @@ instance Ord id => STS (UTXOW id) where
 
 instance Ord id => Embed (UTXO id) (UTXOW id) where
   wrapFailed = UtxoFailure
+
+
+data UTXOWS id
+
+instance Ord id => STS (UTXOWS id) where
+  type State (UTXOWS id) = UTxO id
+  type Signal (UTXOWS id) = [TxWits id]
+  type Environment (UTXOWS id) = UTxOEnv id
+  data PredicateFailure (UTXOWS id)
+    = UtxowFailure (PredicateFailure (UTXOW id))
+    deriving (Eq, Show)
+
+  initialRules = []
+
+  transitionRules =
+    [ do
+        TRC (env, utxo, txWits) <- judgmentContext
+        case (txWits :: [TxWits id]) of
+          []     -> return utxo
+          (tx:gamma) -> do
+            utxo'  <- trans @(UTXOWS id) $ TRC (env, utxo, gamma)
+            utxo'' <- trans @(UTXOW id)  $ TRC (env, utxo', tx)
+            return utxo''
+    ]
+
+instance Ord id => Embed (UTXOW id) (UTXOWS id) where
+  wrapFailed = UtxowFailure
+
 
 -- |Determine if a UTxO input is authorized by a given key.
 authTxin :: Ord id => VKey -> TxIn id -> UTxO id -> Bool

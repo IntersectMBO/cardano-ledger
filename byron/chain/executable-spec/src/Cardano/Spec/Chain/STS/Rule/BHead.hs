@@ -4,9 +4,8 @@
 
 module Cardano.Spec.Chain.STS.Rule.BHead where
 
-import Control.Lens ((^.))
+import Control.Lens ((^.), _1)
 import Data.Bimap (Bimap)
-import Data.Sequence (Seq)
 
 import Control.State.Transition
 import Ledger.Core
@@ -16,20 +15,15 @@ import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.Epoch
 import Cardano.Spec.Chain.STS.Rule.SigCnt
 
+
 data BHEAD
 
 instance STS BHEAD where
   type Environment BHEAD
-    = ( Slot
-      , Bimap VKeyGenesis VKey
-      )
-  type State BHEAD
-    = ( Epoch
+    = ( Bimap VKeyGenesis VKey
       , Slot
-      , Hash
-      , Seq VKeyGenesis
-      , PParams
       )
+  type State BHEAD = UPIState
 
   type Signal BHEAD = BlockHeader
 
@@ -49,28 +43,11 @@ instance STS BHEAD where
 
   transitionRules =
     [ do
-        TRC ( (sNow, dms)
-            , (eLast, sLast, hLast, sgs, us)
-            , bh ) <- judgmentContext
-        -- Check header size
-        let sMax = us ^. maxHdrSz
+        TRC ((epochEnv, sLast), us, bh) <- judgmentContext
+        us' <- trans @EPOCH $ TRC ((epochEnv, sEpoch sLast), us, bh ^. bhSlot)
+        let sMax = (snd (us' ^. _1)) ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
-        -- Check that the previous hash matches
-        bh ^. bhPrevHash == hLast ?! HashesDontMatch
-        -- Check sanity of current slot
-        let sNext = bh ^. bhSlot
-        sLast < sNext ?! SlotDidNotIncrease
-        sNext <= sNow ?! SlotInTheFuture
-        -- Perform an epoch transition
-        eNext <-  trans @EPOCH $ TRC (us ^. bkSlotsPerEpoch, eLast, sNext)
-        -- Perform a signature count transition
-        sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bhIssuer)
-        return $! ( eNext
-                  , sNext
-                  , hashHeader bh -- the same as bhToSign bh
-                  , sgs'
-                  , us
-                  )
+        return $! us'
     ]
 
 instance Embed EPOCH BHEAD where

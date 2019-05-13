@@ -19,6 +19,7 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.containers)
+          (hsPkgs.cryptonite)
           (hsPkgs.free)
           (hsPkgs.hedgehog)
           (hsPkgs.tasty-hunit)
