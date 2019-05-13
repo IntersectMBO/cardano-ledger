@@ -2,6 +2,9 @@ module Keys
   ( Owner(..)
   , SKey(..)
   , VKey(..)
+  , VKeyGenesis(..)
+  , GKeys(..)
+  , Dms(..)
   , KeyPair(..)
   , keyPair
   , HashKey(..)
@@ -11,7 +14,13 @@ module Keys
   , verify
   , KESig
   , signKES
-  , verifyKES)
+  , verifyKES
+  -- | conversion between Byron / Shelley
+  , keyByronToShelley
+  , keyShelleyToByron
+  , genesisKeyByronToShelley
+  , genesisKeyShelleyToByron
+  )
 where
 
 import           Crypto.Hash           (Digest, SHA256, hash)
@@ -19,7 +28,16 @@ import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
 
-import qualified Ledger.Core           as Byron (VKey, VKeyGenesis)
+import qualified Ledger.Core           as Byron (VKey(..)
+                                                , VKeyGenesis(..)
+                                                , Owner(..))
+
+import qualified Data.Map.Strict       as Map
+import qualified Data.Set              as Set
+
+-- | A genesis key is a specialisation of a generic VKey.
+newtype VKeyGenesis = VKeyGenesis VKey
+  deriving (Eq, Ord, Show)
 
 -- |Representation of the owner of keypair.
 newtype Owner = Owner Natural deriving (Show, Eq, Ord)
@@ -68,3 +86,27 @@ verifyKES (VKey vk) vd (KESig (Sig sd sk) m) n = vk == sk && vd == sd && m == n
 instance BA.ByteArrayAccess VKey where
   length        = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack . show
+
+instance BA.ByteArrayAccess VKeyGenesis where
+  length (VKeyGenesis vk)        = (BA.length . BS.pack . show) vk
+  withByteArray (VKeyGenesis vk) = (BA.withByteArray . BS.pack . show) vk
+
+newtype Dms = Dms (Map.Map VKeyGenesis VKey)
+  deriving (Show, Eq)
+
+newtype GKeys = GKeys (Set.Set VKeyGenesis)
+  deriving (Show, Eq)
+
+keyByronToShelley :: Byron.VKey -> VKey
+keyByronToShelley (Byron.VKey (Byron.Owner owner)) =
+  VKey (Owner $ fromIntegral owner)
+
+keyShelleyToByron :: VKey -> Byron.VKey
+keyShelleyToByron (VKey (Owner owner)) =
+  Byron.VKey $ (Byron.Owner $ fromIntegral owner)
+
+genesisKeyByronToShelley :: Byron.VKeyGenesis -> VKeyGenesis
+genesisKeyByronToShelley (Byron.VKeyGenesis vk) = VKeyGenesis (keyByronToShelley vk)
+
+genesisKeyShelleyToByron :: VKeyGenesis -> Byron.VKeyGenesis
+genesisKeyShelleyToByron (VKeyGenesis vk) = Byron.VKeyGenesis (keyShelleyToByron vk)
