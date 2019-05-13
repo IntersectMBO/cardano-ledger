@@ -26,6 +26,7 @@
           (hsPkgs.microlens)
           (hsPkgs.microlens-th)
           (hsPkgs.non-integer)
+          (hsPkgs.cs-ledger)
           ];
         };
       tests = {

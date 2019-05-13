@@ -19,6 +19,8 @@ import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
 
+import qualified Ledger.Core           as Byron (VKey, VKeyGenesis)
+
 -- |Representation of the owner of keypair.
 newtype Owner = Owner Natural deriving (Show, Eq, Ord)
 
