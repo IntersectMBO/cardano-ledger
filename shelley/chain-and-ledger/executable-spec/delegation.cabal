@@ -60,7 +60,8 @@ library
     small-steps,
     microlens,
     microlens-th,
-    non-integer
+    non-integer,
+    cs-ledger
 
 test-suite delegation-test
     type:                exitcode-stdio-1.0
