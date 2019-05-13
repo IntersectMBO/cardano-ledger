@@ -59,7 +59,7 @@ import Test.Cardano.Chain.UTxO.Gen
   , genTxWitness
   )
 import Test.Cardano.Crypto.Example
-  (examplePublicKey, exampleRedeemPublicKey, exampleSecretKey)
+  (exampleVerificationKey, exampleRedeemVerificationKey, exampleSigningKey)
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Options (TestScenario, TSProperty, eachOfTS)
 
@@ -145,18 +145,18 @@ ts_roundTripTxInList = eachOfTS 50 genTxInList roundTripsCBORShow
 -- TxInWitness
 --------------------------------------------------------------------------------
 
-goldenPkWitness :: Property
-goldenPkWitness = goldenTestCBOR
-  pkWitness
-  "test/golden/cbor/utxo/TxInWitness_PkWitness"
-  where pkWitness = PkWitness examplePublicKey exampleTxSig
+goldenVKWitness :: Property
+goldenVKWitness = goldenTestCBOR
+  vkWitness
+  "test/golden/cbor/utxo/TxInWitness_VKWitness"
+  where vkWitness = VKWitness exampleVerificationKey exampleTxSig
 
 goldenRedeemWitness :: Property
 goldenRedeemWitness = goldenTestCBOR
   redeemWitness
   "test/golden/cbor/utxo/TxInWitness_RedeemWitness"
  where
-  redeemWitness = RedeemWitness exampleRedeemPublicKey exampleRedeemSignature
+  redeemWitness = RedeemWitness exampleRedeemVerificationKey exampleRedeemSignature
 
 ts_roundTripTxInWitness :: TSProperty
 ts_roundTripTxInWitness =
@@ -222,7 +222,7 @@ goldenTxSig = goldenTestCBOR txSigGold "test/golden/cbor/utxo/TxSig"
   txSigGold = sign
     (ProtocolMagicId 0)
     SignForTestingOnly
-    exampleSecretKey
+    exampleSigningKey
     exampleTxSigData
 
 ts_roundTripTxSig :: TSProperty

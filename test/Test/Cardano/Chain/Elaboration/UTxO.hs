@@ -127,11 +127,11 @@ elaborateWitnesses :: Concrete.Tx -> [Wit Concrete] -> Concrete.TxWitness
 elaborateWitnesses concreteTx = V.fromList . fmap (elaborateWitness concreteTx)
 
 elaborateWitness :: Concrete.Tx -> Wit Concrete -> Concrete.TxInWitness
-elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.PkWitness
-  concretePK
+elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness
+  concreteVK
   signature
  where
-  (concretePK, concreteSK) = elaborateKeyPair $ vKeyPair key
+  (concreteVK, concreteSK) = elaborateKeyPair $ vKeyPair key
   signature = sign Dummy.protocolMagicId SignTx concreteSK sigData
   sigData   = Concrete.TxSigData $ hash concreteTx
 
@@ -159,13 +159,13 @@ elaborateTxOuts =
 
 elaborateTxOut :: Abstract.TxOut -> Concrete.TxOut
 elaborateTxOut abstractTxOut = Concrete.TxOut
-  { Concrete.txOutAddress = Concrete.makePubKeyAddress
+  { Concrete.txOutAddress = Concrete.makeVerKeyAddress
     (Concrete.makeNetworkMagic Dummy.protocolMagic)
-    (elaborateVKey abstractPK)
+    (elaborateVKey abstractVK)
   , Concrete.txOutValue   = lovelaceValue
   }
  where
-  Abstract.TxOut (Abstract.Addr abstractPK) (Abstract.Value value) =
+  Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Value value) =
     abstractTxOut
 
   lovelaceValue = case Concrete.mkLovelace (fromIntegral value) of

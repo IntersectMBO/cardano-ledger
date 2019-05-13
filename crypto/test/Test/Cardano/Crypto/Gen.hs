@@ -11,14 +11,14 @@ module Test.Cardano.Crypto.Gen
 
   -- * Key Generators
   , genKeypair
-  , genPublicKey
-  , genSecretKey
-  , genEncryptedSecretKey
+  , genVerificationKey
+  , genSigningKey
+  , genEncryptedSigningKey
 
   -- * Redeem Key Generators
   , genRedeemKeypair
-  , genRedeemPublicKey
-  , genRedeemSecretKey
+  , genRedeemVerificationKey
+  , genRedeemSigningKey
 
   -- * Proxy Cert and Key Generators
   , genProxyCert
@@ -70,13 +70,13 @@ import Cardano.Crypto.ProtocolMagic
   , RequiresNetworkMagic(..)
   )
 import Cardano.Crypto.Signing
-  ( EncryptedSecretKey
+  ( EncryptedSigningKey
   , ProxyCert
   , ProxyVerificationKey
   , ProxySignature
-  , PublicKey
+  , VerificationKey
   , SafeSigner(..)
-  , SecretKey
+  , SigningKey
   , SignTag(..)
   , Signature
   , createPsk
@@ -87,11 +87,11 @@ import Cardano.Crypto.Signing
   , safeCreateProxyCert
   , sign
   , signEncoded
-  , toPublic
+  , toVerification
   )
 import Cardano.Crypto.Signing.Redeem
-  ( RedeemPublicKey
-  , RedeemSecretKey
+  ( RedeemVerificationKey
+  , RedeemSigningKey
   , RedeemSignature
   , redeemDeterministicKeyGen
   , redeemSign
@@ -137,31 +137,31 @@ genSignTag = Gen.element
 -- Key Generators
 --------------------------------------------------------------------------------
 
-genKeypair :: Gen (PublicKey, SecretKey)
+genKeypair :: Gen (VerificationKey, SigningKey)
 genKeypair = deterministicKeyGen <$> gen32Bytes
 
-genPublicKey :: Gen PublicKey
-genPublicKey = fst <$> genKeypair
+genVerificationKey :: Gen VerificationKey
+genVerificationKey = fst <$> genKeypair
 
-genSecretKey :: Gen SecretKey
-genSecretKey = snd <$> genKeypair
+genSigningKey :: Gen SigningKey
+genSigningKey = snd <$> genKeypair
 
-genEncryptedSecretKey :: Gen EncryptedSecretKey
-genEncryptedSecretKey = noPassEncrypt <$> genSecretKey
+genEncryptedSigningKey :: Gen EncryptedSigningKey
+genEncryptedSigningKey = noPassEncrypt <$> genSigningKey
 
 
 --------------------------------------------------------------------------------
 -- Redeem Key Generators
 --------------------------------------------------------------------------------
 
-genRedeemKeypair :: Gen (RedeemPublicKey, RedeemSecretKey)
+genRedeemKeypair :: Gen (RedeemVerificationKey, RedeemSigningKey)
 genRedeemKeypair = Gen.just $ redeemDeterministicKeyGen <$> gen32Bytes
 
-genRedeemPublicKey :: Gen RedeemPublicKey
-genRedeemPublicKey = fst <$> genRedeemKeypair
+genRedeemVerificationKey :: Gen RedeemVerificationKey
+genRedeemVerificationKey = fst <$> genRedeemKeypair
 
-genRedeemSecretKey :: Gen RedeemSecretKey
-genRedeemSecretKey = snd <$> genRedeemKeypair
+genRedeemSigningKey :: Gen RedeemSigningKey
+genRedeemSigningKey = snd <$> genRedeemKeypair
 
 
 --------------------------------------------------------------------------------
@@ -170,12 +170,12 @@ genRedeemSecretKey = snd <$> genRedeemKeypair
 
 genProxyCert :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
 genProxyCert pm genW =
-  safeCreateProxyCert pm <$> genSafeSigner <*> genPublicKey <*> genW
+  safeCreateProxyCert pm <$> genSafeSigner <*> genVerificationKey <*> genW
 
 genProxyVerificationKey
   :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
 genProxyVerificationKey pm genW =
-  createPsk pm <$> genSafeSigner <*> genPublicKey <*> genW
+  createPsk pm <$> genSafeSigner <*> genVerificationKey <*> genW
 
 genProxySignature
   :: (ToCBOR w, ToCBOR a)
@@ -184,11 +184,11 @@ genProxySignature
   -> Gen w
   -> Gen (ProxySignature w a)
 genProxySignature pm genA genW = do
-  delegateSk <- genSecretKey
+  delegateSk <- genSigningKey
   issuerSafeSigner <- genSafeSigner
   w          <- genW
   a          <- genA
-  let psk = createPsk pm issuerSafeSigner (toPublic delegateSk) w
+  let psk = createPsk pm issuerSafeSigner (toVerification delegateSk) w
   return $ proxySign pm SignProxyVK delegateSk psk a
 
 
@@ -197,18 +197,18 @@ genProxySignature pm genA genW = do
 --------------------------------------------------------------------------------
 
 genSignature :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (Signature a)
-genSignature pm genA = sign pm <$> genSignTag <*> genSecretKey <*> genA
+genSignature pm genA = sign pm <$> genSignTag <*> genSigningKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
-  signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSecretKey <*> genB
+  signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSigningKey <*> genB
 
 genRedeemSignature
   :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
  where
   gst  = genSignTag
-  grsk = genRedeemSecretKey
+  grsk = genRedeemSigningKey
 
 
 --------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 --------------------------------------------------------------------------------
 
 genSafeSigner :: Gen SafeSigner
-genSafeSigner = SafeSigner <$> genEncryptedSecretKey <*> pure emptyPassphrase
+genSafeSigner = SafeSigner <$> genEncryptedSigningKey <*> pure emptyPassphrase
 
 
 --------------------------------------------------------------------------------

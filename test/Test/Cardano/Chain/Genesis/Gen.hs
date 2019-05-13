@@ -52,7 +52,7 @@ import Cardano.Crypto
   , Signature(..)
   , noPassSafeSigner
   , safeCreateProxyCert
-  , toPublic
+  , toVerification
   )
 import qualified Cardano.Crypto.Wallet as CC
 
@@ -67,8 +67,8 @@ import Test.Cardano.Crypto.Gen
   ( genHashRaw
   , genProtocolMagic
   , genProtocolMagicId
-  , genRedeemPublicKey
-  , genSecretKey
+  , genRedeemVerificationKey
+  , genSigningKey
   , genTextHash
   )
 
@@ -167,7 +167,7 @@ genTestnetBalanceOptions =
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =
-  GenesisAvvmBalances <$> customMapGen genRedeemPublicKey genLovelace
+  GenesisAvvmBalances <$> customMapGen genRedeemVerificationKey genLovelace
 
 genGenesisWStakeholders :: Gen GenesisWStakeholders
 genGenesisWStakeholders = do
@@ -181,9 +181,9 @@ genGenesisWStakeholders = do
 genSafeProxyCert :: Gen (ProxyCert EpochIndex)
 genSafeProxyCert = do
   pmId   <- genProtocolMagicId
-  secKey <- genSecretKey
+  secKey <- genSigningKey
   eI     <- genEpochIndex
-  pure $ safeCreateProxyCert pmId (noPassSafeSigner secKey) (toPublic secKey) eI
+  pure $ safeCreateProxyCert pmId (noPassSafeSigner secKey) (toVerification secKey) eI
 
 genSignatureEpochIndex :: Gen (Signature EpochIndex)
 genSignatureEpochIndex = do

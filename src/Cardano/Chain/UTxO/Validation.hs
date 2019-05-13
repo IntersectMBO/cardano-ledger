@@ -34,7 +34,7 @@ import Cardano.Chain.Common
   , TxFeePolicy(..)
   , addrNetworkMagic
   , calculateTxSizeLinear
-  , checkPubKeyAddress
+  , checkVerKeyAddress
   , checkRedeemAddress
   , makeNetworkMagic
   , mkKnownLovelace
@@ -172,15 +172,15 @@ validateWitness
   -> m ()
 validateWitness pmi sigData addr witness = case witness of
 
-  PkWitness pk sig ->
-    (  verifySignatureDecoded pmi SignTx pk sigData sig
-      && checkPubKeyAddress pk addr
+  VKWitness vk sig ->
+    (  verifySignatureDecoded pmi SignTx vk sigData sig
+      && checkVerKeyAddress vk addr
       )
       `orThrowError` TxValidationInvalidWitness witness
 
-  RedeemWitness pk sig ->
-    (  verifyRedeemSigDecoded pmi SignRedeemTx pk sigData sig
-      && checkRedeemAddress pk addr
+  RedeemWitness vk sig ->
+    (  verifyRedeemSigDecoded pmi SignRedeemTx vk sigData sig
+      && checkRedeemAddress vk addr
       )
       `orThrowError` TxValidationInvalidWitness witness
 

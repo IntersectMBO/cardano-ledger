@@ -53,10 +53,10 @@ import Cardano.Chain.Common (BlockCount(..), mkStakeholderId)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (FlatSlotId)
-import Cardano.Crypto (PublicKey)
+import Cardano.Crypto (VerificationKey)
 
 import Test.Cardano.Chain.Config (readMainetCfg)
-import Test.Cardano.Crypto.Gen (genPublicKey)
+import Test.Cardano.Crypto.Gen (genVerificationKey)
 import Test.Cardano.Mirror (mainnetEpochFiles)
 import Test.Options (TestScenario(..))
 
@@ -158,8 +158,8 @@ ts_prop_signingHistoryUpdatesPreserveInvariants =
     $ do
 
         -- Generate a list of fake genesis stakeholders
-        publicKeys <- forAll $ replicateM 7 genPublicKey
-        let stakeholders = fmap mkStakeholderId publicKeys
+        verificationKeys <- forAll $ replicateM 7 genVerificationKey
+        let stakeholders = fmap mkStakeholderId verificationKeys
 
         -- Generate a length for the 'SigningHistory'
         -- We don't use 'genBlockCount' as that would produce too large values
@@ -175,11 +175,11 @@ ts_prop_signingHistoryUpdatesPreserveInvariants =
         -- Generate a list of signers with which to update the 'SigningHistory'
         signers <- forAll $ Gen.list
           (Range.constant 0 (fromIntegral $ 2 * unBlockCount k))
-          (Gen.element publicKeys)
+          (Gen.element verificationKeys)
 
         let
           updateAndCheckSigningHistory
-            :: SigningHistory -> PublicKey -> PropertyT IO SigningHistory
+            :: SigningHistory -> VerificationKey -> PropertyT IO SigningHistory
           updateAndCheckSigningHistory sh s = do
             -- Update the  'SigningHistory'
             let sh' = updateSigningHistory s sh

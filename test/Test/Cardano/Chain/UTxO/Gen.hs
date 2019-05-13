@@ -2,7 +2,7 @@ module Test.Cardano.Chain.UTxO.Gen
   ( genCompactTxId
   , genCompactTxIn
   , genCompactTxOut
-  , genPkWitness
+  , genVKWitness
   , genRedeemWitness
   , genTx
   , genTxAttributes
@@ -67,10 +67,10 @@ import Cardano.Crypto (Hash, ProtocolMagicId, decodeHash, sign)
 import Test.Cardano.Chain.Common.Gen (genAddress, genLovelace, genMerkleRoot)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
-  , genPublicKey
-  , genRedeemPublicKey
+  , genVerificationKey
+  , genRedeemVerificationKey
   , genRedeemSignature
-  , genSecretKey
+  , genSigningKey
   , genSignTag
   , genTextHash
   )
@@ -84,12 +84,12 @@ genCompactTxIn = toCompactTxIn <$> genTxIn
 genCompactTxOut :: Gen CompactTxOut
 genCompactTxOut = toCompactTxOut <$> genTxOut
 
-genPkWitness :: ProtocolMagicId -> Gen TxInWitness
-genPkWitness pm = PkWitness <$> genPublicKey <*> genTxSig pm
+genVKWitness :: ProtocolMagicId -> Gen TxInWitness
+genVKWitness pm = VKWitness <$> genVerificationKey <*> genTxSig pm
 
 genRedeemWitness :: ProtocolMagicId -> Gen TxInWitness
 genRedeemWitness pm =
-  RedeemWitness <$> genRedeemPublicKey <*> genRedeemSignature pm genTxSigData
+  RedeemWitness <$> genRedeemVerificationKey <*> genRedeemSignature pm genTxSigData
 
 genTx :: Gen Tx
 genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
@@ -137,13 +137,13 @@ genTxProof pm =
     (Gen.list (Range.linear 1 5) (genTxWitness pm))
 
 genTxSig :: ProtocolMagicId -> Gen TxSig
-genTxSig pm = sign pm <$> genSignTag <*> genSecretKey <*> genTxSigData
+genTxSig pm = sign pm <$> genSignTag <*> genSigningKey <*> genTxSigData
 
 genTxSigData :: Gen TxSigData
 genTxSigData = TxSigData <$> genTxHash
 
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
-genTxInWitness pm = Gen.choice [genPkWitness pm, genRedeemWitness pm]
+genTxInWitness pm = Gen.choice [genVKWitness pm, genRedeemWitness pm]
 
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =

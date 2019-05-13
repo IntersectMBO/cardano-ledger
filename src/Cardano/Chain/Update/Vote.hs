@@ -50,16 +50,16 @@ import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
 import Cardano.Crypto
   ( ProtocolMagicId
-  , PublicKey
+  , VerificationKey
   , SafeSigner
-  , SecretKey
+  , SigningKey
   , SignTag(SignUSVote)
   , Signature
   , safeSign
-  , safeToPublic
+  , safeToVerification
   , shortHashF
   , sign
-  , toPublic
+  , toVerification
   )
 
 
@@ -73,8 +73,8 @@ type Vote = AVote ()
 --
 --   Invariant: The signature is valid.
 data AVote a = UnsafeVote
-  { voterPK       :: !PublicKey
-  -- ^ Public key of stakeholder, who votes
+  { voterVK       :: !VerificationKey
+  -- ^ Verification key of stakeholder, who votes
   , aProposalId   :: !(Annotated UpId a)
   -- ^ Proposal to which this vote applies
   , signature     :: !(Signature (UpId, Bool))
@@ -90,7 +90,7 @@ data AVote a = UnsafeVote
 -- | A safe constructor for 'UnsafeVote'
 mkVote
   :: ProtocolMagicId
-  -> SecretKey
+  -> SigningKey
   -- ^ The voter
   -> UpId
   -- ^ Proposal which is voted for
@@ -98,7 +98,7 @@ mkVote
   -- ^ Approval/rejection bit
   -> Vote
 mkVote pm sk upId decision = UnsafeVote
-  (toPublic sk)
+  (toVerification sk)
   (Annotated upId ())
   (sign pm SignUSVote sk (upId, decision))
 
@@ -113,7 +113,7 @@ mkVoteSafe
   -- ^ Approval/rejection bit
   -> Vote
 mkVoteSafe pm sk upId decision = UnsafeVote
-  (safeToPublic sk)
+  (safeToVerification sk)
   (Annotated upId ())
   (safeSign pm SignUSVote sk (upId, decision))
 
@@ -133,7 +133,7 @@ proposalId = unAnnotated . aProposalId
 instance ToCBOR Vote where
   toCBOR uv =
     encodeListLen 4
-      <> toCBOR (voterPK uv)
+      <> toCBOR (voterVK uv)
       <> toCBOR (proposalId uv)
       -- We encode @True@ here because we removed the decision bit. This is safe
       -- because we know that all @Vote@s on mainnet use this encoding and any
@@ -148,12 +148,12 @@ instance FromCBOR Vote where
 instance FromCBOR (AVote ByteSpan) where
   fromCBOR = do
     enforceSize "Vote" 4
-    voterPK     <- fromCBOR
+    voterVK     <- fromCBOR
     aProposalId <- fromCBORAnnotated
     -- Drop the decision bit that previously allowed negative voting
     void $ fromCBOR @Bool
     signature <- fromCBOR
-    pure $ UnsafeVote { voterPK, aProposalId, signature }
+    pure $ UnsafeVote { voterVK, aProposalId, signature }
 
 recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
@@ -182,7 +182,7 @@ instance B.Buildable (AVote a) where
     . build
     . " }"
     )
-    (addressHash $ voterPK uv)
+    (addressHash $ voterVK uv)
     (proposalId uv)
 
 instance B.Buildable (Proposal, [Vote]) where
@@ -193,7 +193,7 @@ instance B.Buildable (Proposal, [Vote]) where
 formatVoteShort :: Vote -> Builder
 formatVoteShort uv = bprint
   ("(" . shortHashF . " " . shortHashF . ")")
-  (addressHash $ voterPK uv)
+  (addressHash $ voterVK uv)
   (proposalId uv)
 
 -- | Formatter for 'Vote' which displays it compactly

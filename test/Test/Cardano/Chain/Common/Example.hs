@@ -9,7 +9,7 @@ module Test.Cardano.Chain.Common.Example
   , exampleAddress3
   , exampleAddress4
   , exampleAttributes
-  , exampleAddrSpendingData_PubKey
+  , exampleAddrSpendingData_VerKey
   , exampleChainDifficulty
   , exampleStakeholderId
   )
@@ -33,17 +33,17 @@ import Cardano.Crypto.HD (HDAddressPayload(..))
 
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example
-  (examplePublicKey, examplePublicKeys, exampleRedeemPublicKey)
+  (exampleVerificationKey, exampleVerificationKeys, exampleRedeemVerificationKey)
 
 
 exampleAttributes :: Attributes ()
 exampleAttributes = mkAttributes ()
 
-exampleAddrSpendingData_PubKey :: AddrSpendingData
-exampleAddrSpendingData_PubKey = PubKeyASD examplePublicKey
+exampleAddrSpendingData_VerKey :: AddrSpendingData
+exampleAddrSpendingData_VerKey = VerKeyASD exampleVerificationKey
 
 exampleAddress :: Address
-exampleAddress = makeAddress exampleAddrSpendingData_PubKey attrs
+exampleAddress = makeAddress exampleAddrSpendingData_VerKey attrs
  where
   attrs = AddrAttributes hap nm
   hap   = Just (HDAddressPayload (getBytes 32 32))
@@ -52,8 +52,8 @@ exampleAddress = makeAddress exampleAddrSpendingData_PubKey attrs
 exampleAddress1 :: Address
 exampleAddress1 = makeAddress easd attrs
  where
-  easd  = PubKeyASD pk
-  [pk]  = examplePublicKeys 24 1
+  easd  = VerKeyASD vk
+  [vk]  = exampleVerificationKeys 24 1
   attrs = AddrAttributes hap nm
   hap   = Nothing :: Maybe HDAddressPayload
   nm    = NetworkMainOrStage
@@ -61,7 +61,7 @@ exampleAddress1 = makeAddress easd attrs
 exampleAddress2 :: Address
 exampleAddress2 = makeAddress easd attrs
  where
-  easd  = RedeemASD exampleRedeemPublicKey
+  easd  = RedeemASD exampleRedeemVerificationKey
   attrs = AddrAttributes hap nm
   hap   = Just (HDAddressPayload (getBytes 15 32))
   nm    = NetworkMainOrStage
@@ -69,8 +69,8 @@ exampleAddress2 = makeAddress easd attrs
 exampleAddress3 :: Address
 exampleAddress3 = makeAddress easd attrs
  where
-  easd  = PubKeyASD pk
-  [pk]  = examplePublicKeys 20 1
+  easd  = VerKeyASD vk
+  [vk]  = exampleVerificationKeys 20 1
   attrs = AddrAttributes hap nm
   hap   = Just (HDAddressPayload (getBytes 17 32))
   nm    = NetworkTestnet 9973261
@@ -78,7 +78,7 @@ exampleAddress3 = makeAddress easd attrs
 exampleAddress4 :: Address
 exampleAddress4 = makeAddress easd attrs
  where
-  easd  = exampleAddrSpendingData_PubKey
+  easd  = exampleAddrSpendingData_VerKey
   attrs = AddrAttributes Nothing nm
   nm    = NetworkTestnet 11111911
 
@@ -86,4 +86,4 @@ exampleChainDifficulty :: ChainDifficulty
 exampleChainDifficulty = ChainDifficulty 9999
 
 exampleStakeholderId :: StakeholderId
-exampleStakeholderId = mkStakeholderId examplePublicKey
+exampleStakeholderId = mkStakeholderId exampleVerificationKey

@@ -13,14 +13,14 @@ import Crypto.Hash (Blake2b_224, Blake2b_256)
 import qualified Data.ByteString as BS
 
 import Cardano.Binary (Limit, ToCBOR, serialize')
-import Cardano.Crypto.Limits (mlAbstractHash, mlPublicKey, mlSignature)
+import Cardano.Crypto.Limits (mlAbstractHash, mlVerificationKey, mlSignature)
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Test.Cardano.Crypto.Gen
-  (feedPM, genAbstractHash, genPublicKey, genSignature)
+  (feedPM, genAbstractHash, genVerificationKey, genSignature)
 
 
 --------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ tests = checkParallel $$discover
 --------------------------------------------------------------------------------
 
 prop_pubKeyLenLimited :: Property
-prop_pubKeyLenLimited = eachOf 1000 genPublicKey (msgLenLimited mlPublicKey)
+prop_pubKeyLenLimited = eachOf 1000 genVerificationKey (msgLenLimited mlVerificationKey)
 
 prop_signatureLenLimited :: Property
 prop_signatureLenLimited = eachOf

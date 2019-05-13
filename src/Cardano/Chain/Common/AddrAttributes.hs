@@ -33,12 +33,12 @@ import Cardano.Crypto.HD (HDAddressPayload)
 -- to be put into 'Attributes' data type to make it extensible with
 -- softfork.
 data AddrAttributes = AddrAttributes
-    { aaPkDerivationPath  :: !(Maybe HDAddressPayload)
+    { aaVKDerivationPath  :: !(Maybe HDAddressPayload)
     , aaNetworkMagic      :: !NetworkMagic
     } deriving (Eq, Ord, Show, Generic, NFData)
 
 instance HeapWords AddrAttributes where
-  heapWords aa = 3 + heapWords (aaPkDerivationPath aa)
+  heapWords aa = 3 + heapWords (aaVKDerivationPath aa)
                    + heapWords (aaNetworkMagic aa)
 
 instance B.Buildable AddrAttributes where
@@ -47,7 +47,7 @@ instance B.Buildable AddrAttributes where
     derivationPathBuilder
    where
     derivationPathBuilder :: Builder
-    derivationPathBuilder = case aaPkDerivationPath aa of
+    derivationPathBuilder = case aaVKDerivationPath aa of
       Nothing -> "{}"
       Just _  -> "{path is encrypted}"
 
@@ -80,7 +80,7 @@ instance ToCBOR (Attributes AddrAttributes) where
       Nothing -> []
       -- 'unsafeFromJust' is safe, because 'case' ensures
       -- that derivation path is 'Just'.
-      Just _  -> [(1, serialize . unsafeFromJust . aaPkDerivationPath)]
+      Just _  -> [(1, serialize . unsafeFromJust . aaVKDerivationPath)]
     unsafeFromJust :: Maybe a -> a
     unsafeFromJust =
       fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
@@ -96,7 +96,7 @@ instance FromCBOR (Attributes AddrAttributes) where
   fromCBOR = fromCBORAttributes initValue go
    where
     initValue = AddrAttributes
-      { aaPkDerivationPath = Nothing
+      { aaVKDerivationPath = Nothing
       , aaNetworkMagic     = NetworkMainOrStage
       }
 
@@ -106,7 +106,7 @@ instance FromCBOR (Attributes AddrAttributes) where
       -> AddrAttributes
       -> Decoder s (Maybe AddrAttributes)
     go n v acc = case n of
-      1 -> (\deriv -> Just $ acc { aaPkDerivationPath = Just deriv })
+      1 -> (\deriv -> Just $ acc { aaVKDerivationPath = Just deriv })
         <$> toCborError (decodeFull v)
       2 ->
         (\deriv -> Just $ acc { aaNetworkMagic = NetworkTestnet deriv })

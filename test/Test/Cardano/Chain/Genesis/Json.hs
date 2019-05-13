@@ -25,7 +25,7 @@ import Test.Cardano.Chain.Genesis.Gen
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Update.Gen (genProtocolVersion, genCanonicalProtocolParameters)
 import Test.Cardano.Chain.Genesis.Gen (genCanonicalGenesisData, genCanonicalGenesisDelegation, genSafeProxyCert)
-import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic, genPublicKey)
+import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic, genVerificationKey)
 import Test.Options (TestScenario, TSProperty, eachOfTS)
 
 
@@ -113,9 +113,9 @@ ts_roundTripGenesisDelegation :: TSProperty
 ts_roundTripGenesisDelegation =
   eachOfTS 100 (feedPM genGenesisDelegation) roundTripsAesonShow
 
-ts_roundTripCanonicalPublicKey :: TSProperty
-ts_roundTripCanonicalPublicKey =
-  eachOfTS 100 genPublicKey roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalVerificationKey :: TSProperty
+ts_roundTripCanonicalVerificationKey =
+  eachOfTS 100 genVerificationKey roundTripsCanonicalJsonPretty
 
 --------------------------------------------------------------------------------
 -- GenesisInitializer

@@ -24,13 +24,13 @@ import Cardano.Crypto.Signing
   , createPsk
   , proxySign
   , proxyVerify
-  , safeToPublic
-  , toPublic
+  , safeToVerification
+  , toVerification
   , validateProxyVerificationKey
   )
 
 import qualified Test.Cardano.Crypto.Dummy as Dummy
-import Test.Cardano.Crypto.Gen (genPublicKey, genSafeSigner, genSecretKey)
+import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner, genSigningKey)
 
 
 --------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ tests = checkParallel $$discover
 prop_proxySign :: Property
 prop_proxySign = property $ do
   issuerSafeSigner <- forAll genSafeSigner
-  delegateSK <- forAll genSecretKey
+  delegateSK <- forAll genSigningKey
   omega      <-
     forAll
     $   (,)
@@ -59,7 +59,7 @@ prop_proxySign = property $ do
     psk = createPsk
       Dummy.protocolMagicId
       issuerSafeSigner
-      (toPublic delegateSK)
+      (toVerification delegateSK)
       omega
   a <- forAll genData
 
@@ -72,10 +72,10 @@ prop_proxySignDifferentKey :: Property
 prop_proxySignDifferentKey = property $ do
   issuerSafeSigner  <- forAll genSafeSigner
   issuerSafeSigner' <- forAll $ Gen.filter
-    ((/= safeToPublic issuerSafeSigner) . safeToPublic)
+    ((/= safeToVerification issuerSafeSigner) . safeToVerification)
     genSafeSigner
 
-  delegateSK <- forAll genSecretKey
+  delegateSK <- forAll genSigningKey
   omega      <-
     forAll
     $   (,)
@@ -86,12 +86,12 @@ prop_proxySignDifferentKey = property $ do
     psk = createPsk
       Dummy.protocolMagicId
       issuerSafeSigner
-      (toPublic delegateSK)
+      (toVerification delegateSK)
       omega
     psk' = createPsk
       Dummy.protocolMagicId
       issuerSafeSigner'
-      (toPublic delegateSK)
+      (toVerification delegateSK)
       omega
     switchPsk :: ProxySignature w s -> ProxySignature (Int32, Int32) s
     switchPsk sig = sig { psigPsk = psk' }
@@ -108,7 +108,7 @@ prop_proxySignDifferentKey = property $ do
 prop_proxySignDifferentData :: Property
 prop_proxySignDifferentData = property $ do
   issuerSafeSigner <- forAll genSafeSigner
-  delegateSK <- forAll genSecretKey
+  delegateSK <- forAll genSigningKey
   omega      <-
     forAll
     $   (,)
@@ -118,7 +118,7 @@ prop_proxySignDifferentData = property $ do
     psk = createPsk
       Dummy.protocolMagicId
       issuerSafeSigner
-      (toPublic delegateSK)
+      (toVerification delegateSK)
       omega
   a <- forAll genData
   b <- forAll $ Gen.filter (/= a) genData
@@ -137,11 +137,11 @@ prop_proxySignDifferentData = property $ do
 prop_proxyVerificationKeyCorrect :: Property
 prop_proxyVerificationKeyCorrect = property $ do
   issuerSafeSigner <- forAll genSafeSigner
-  delegatePK <- forAll genPublicKey
+  delegateVK <- forAll genVerificationKey
   omega      <- forAll $ Gen.int32 Range.constantBounded
 
   let
-    psk   = createPsk Dummy.protocolMagicId issuerSafeSigner delegatePK omega
+    psk   = createPsk Dummy.protocolMagicId issuerSafeSigner delegateVK omega
     bytes = serialize psk
 
     annotatedPsk :: AProxyVerificationKey Int32 ByteString
@@ -157,17 +157,17 @@ prop_proxyVerificationKeyCorrect = property $ do
     Dummy.annotatedProtocolMagicId
     annotatedPsk
 
--- | Cannot validate 'ProxyVerificationKey's with incorrect public keys
+-- | Cannot validate 'ProxyVerificationKey's with incorrect verification keys
 prop_proxyVerificationKeyIncorrect :: Property
 prop_proxyVerificationKeyIncorrect = property $ do
   issuerSafeSigner <- forAll genSafeSigner
-  delegatePK  <- forAll genPublicKey
-  delegatePK' <- forAll $ Gen.filter (/= delegatePK) genPublicKey
+  delegateVK  <- forAll genVerificationKey
+  delegateVK' <- forAll $ Gen.filter (/= delegateVK) genVerificationKey
   omega       <- forAll $ Gen.int32 Range.constantBounded
 
   let
-    psk = (createPsk Dummy.protocolMagicId issuerSafeSigner delegatePK omega)
-      { pskDelegatePk = delegatePK'
+    psk = (createPsk Dummy.protocolMagicId issuerSafeSigner delegateVK omega)
+      { pskDelegateVK = delegateVK'
       }
     bytes = serialize psk
 

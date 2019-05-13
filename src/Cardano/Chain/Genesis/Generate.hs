@@ -9,8 +9,8 @@
 
 module Cardano.Chain.Genesis.Generate
   ( GeneratedSecrets(..)
-  , gsSecretKeys
-  , gsSecretKeysPoor
+  , gsSigningKeys
+  , gsSigningKeysPoor
   , PoorSecret(..)
   , generateGenesisData
   , GenesisDataGenerationError(..)
@@ -39,7 +39,7 @@ import Cardano.Chain.Common
   , applyLovelacePortionDown
   , deriveFirstHDAddress
   , divLovelace
-  , makePubKeyAddress
+  , makeVerKeyAddress
   , mkKnownLovelace
   , mkStakeholderId
   , modLovelace
@@ -59,32 +59,32 @@ import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances(..))
 import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders(..))
 import Cardano.Crypto
-  ( EncryptedSecretKey
-  , SecretKey
+  ( EncryptedSigningKey
+  , SigningKey
   , createPsk
   , deterministic
   , emptyPassphrase
-  , encToSecret
+  , encToSigning
   , getProtocolMagicId
   , keyGen
   , noPassEncrypt
   , noPassSafeSigner
   , redeemDeterministicKeyGen
   , safeKeyGen
-  , toPublic
+  , toVerification
   )
 
 
 -- | Poor node secret
-data PoorSecret = PoorSecret SecretKey | PoorEncryptedSecret EncryptedSecretKey
+data PoorSecret = PoorSecret SigningKey | PoorEncryptedSecret EncryptedSigningKey
 
 -- | Valuable secrets which can unlock genesis data.
 data GeneratedSecrets = GeneratedSecrets
-    { gsDlgIssuersSecrets :: ![SecretKey]
+    { gsDlgIssuersSecrets :: ![SigningKey]
     -- ^ Secret keys which issued heavyweight delegation certificates
     -- in genesis data. If genesis heavyweight delegation isn't used,
     -- this list is empty.
-    , gsRichSecrets       :: ![SecretKey]
+    , gsRichSecrets       :: ![SigningKey]
     -- ^ All secrets of rich nodes.
     , gsPoorSecrets       :: ![PoorSecret]
     -- ^ Keys for HD addresses of poor nodes.
@@ -92,11 +92,11 @@ data GeneratedSecrets = GeneratedSecrets
     -- ^ Fake avvm seeds.
     }
 
-gsSecretKeys :: GeneratedSecrets -> [SecretKey]
-gsSecretKeys gs = gsRichSecrets gs <> gsSecretKeysPoor gs
+gsSigningKeys :: GeneratedSecrets -> [SigningKey]
+gsSigningKeys gs = gsRichSecrets gs <> gsSigningKeysPoor gs
 
-gsSecretKeysPoor :: GeneratedSecrets -> [SecretKey]
-gsSecretKeysPoor = map poorSecretToKey . gsPoorSecrets
+gsSigningKeysPoor :: GeneratedSecrets -> [SigningKey]
+gsSigningKeysPoor = map poorSecretToKey . gsPoorSecrets
 
 data GenesisDataGenerationError
   = GenesisDataAddressBalanceMismatch Text Int Int
@@ -157,7 +157,7 @@ generateGenesisData startTime genesisSpec = do
 
     bootStakeholders :: GenesisWStakeholders
     bootStakeholders = GenesisWStakeholders $ M.fromList $ map
-      ((, 1) . mkStakeholderId . toPublic)
+      ((, 1) . mkStakeholderId . toVerification)
       bootSecrets
 
   -- Heavyweight delegation.
@@ -168,7 +168,7 @@ generateGenesisData startTime genesisSpec = do
       (\(issuerSK, delegateSK) -> createPsk
           (getProtocolMagicId pm)
           (noPassSafeSigner issuerSK)
-          (toPublic delegateSK)
+          (toVerification delegateSK)
           0
         )
         <$> zip dlgIssuersSecrets richSecrets
@@ -192,13 +192,13 @@ generateGenesisData startTime genesisSpec = do
         realAvvmBalances
 
   -- Fake AVVM Balances
-  fakeAvvmPublicKeys <-
+  fakeAvvmVerificationKeys <-
     mapM (maybe (throwError GenesisDataGenerationRedeemKeyGen) (pure . fst))
       $ fmap redeemDeterministicKeyGen (gsFakeAvvmSeeds generatedSecrets)
   let
     fakeAvvmDistr = GenesisAvvmBalances . M.fromList $ map
       (, faoOneBalance fao)
-      fakeAvvmPublicKeys
+      fakeAvvmVerificationKeys
 
   -- Non AVVM balances
   ---- Addresses
@@ -209,8 +209,8 @@ generateGenesisData startTime genesisSpec = do
       maybe (throwError GenesisDataGenerationPassPhraseMismatch) (pure . fst)
         $ deriveFirstHDAddress nm emptyPassphrase hdwSk
     createAddressPoor (PoorSecret secret) =
-      pure $ makePubKeyAddress nm (toPublic secret)
-  let richAddresses = map (makePubKeyAddress nm . toPublic) richSecrets
+      pure $ makeVerKeyAddress nm (toVerification secret)
+  let richAddresses = map (makeVerKeyAddress nm . toVerification) richSecrets
 
   poorAddresses        <- mapM createAddressPoor poorSecrets
 
@@ -318,11 +318,11 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
 -- Exported helpers
 ----------------------------------------------------------------------------
 
-poorSecretToKey :: PoorSecret -> SecretKey
+poorSecretToKey :: PoorSecret -> SigningKey
 poorSecretToKey (PoorSecret          key   ) = key
-poorSecretToKey (PoorEncryptedSecret encKey) = encToSecret encKey
+poorSecretToKey (PoorEncryptedSecret encKey) = encToSigning encKey
 
-poorSecretToEncKey :: PoorSecret -> EncryptedSecretKey
+poorSecretToEncKey :: PoorSecret -> EncryptedSigningKey
 poorSecretToEncKey (PoorSecret          key ) = noPassEncrypt key
 poorSecretToEncKey (PoorEncryptedSecret encr) = encr
 

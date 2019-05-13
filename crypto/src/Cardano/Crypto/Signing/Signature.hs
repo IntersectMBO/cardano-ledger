@@ -51,11 +51,11 @@ import Cardano.Binary
   , serialize'
   )
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
-import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
-import Cardano.Crypto.Signing.SecretKey (SecretKey(..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
+import Cardano.Crypto.Signing.SigningKey (SigningKey(..))
 import Cardano.Crypto.Signing.Tag (SignTag(..), signTag, signTagDecoded)
 import Cardano.Crypto.Signing.Safe
-  (SafeSigner(..), PassPhrase(..), EncryptedSecretKey(..))
+  (SafeSigner(..), PassPhrase(..), EncryptedSigningKey(..))
 
 
 --------------------------------------------------------------------------------
@@ -132,14 +132,14 @@ sign
   => ProtocolMagicId
   -> SignTag
   -- ^ See docs for 'SignTag'
-  -> SecretKey
+  -> SigningKey
   -> a
   -> Signature a
 sign pm tag sk = signEncoded pm tag sk . serialize'
 
 -- | Like 'sign' but without the 'ToCBOR' constraint
 signEncoded
-  :: ProtocolMagicId -> SignTag -> SecretKey -> ByteString -> Signature a
+  :: ProtocolMagicId -> SignTag -> SigningKey -> ByteString -> Signature a
 signEncoded pm tag sk = coerce . signRaw pm (Just tag) sk
 
 -- | Sign a 'Raw' bytestring
@@ -148,10 +148,10 @@ signRaw
   -> Maybe SignTag
   -- ^ See docs for 'SignTag'. Unlike in 'sign', we allow no tag to be provided
   --   just in case you need to sign /exactly/ the bytestring you provided.
-  -> SecretKey
+  -> SigningKey
   -> ByteString
   -> Signature Raw
-signRaw pm mTag (SecretKey sk) x = Signature
+signRaw pm mTag (SigningKey sk) x = Signature
   (CC.sign (mempty :: ScrubbedBytes) sk (tag <> x))
   where tag = maybe mempty (signTag pm) mTag
 
@@ -165,7 +165,7 @@ safeSignRaw
   -> SafeSigner
   -> ByteString
   -> Signature Raw
-safeSignRaw pm mbTag (SafeSigner (EncryptedSecretKey sk _) (PassPhrase pp)) x =
+safeSignRaw pm mbTag (SafeSigner (EncryptedSigningKey sk _) (PassPhrase pp)) x =
   Signature (CC.sign pp sk (tag <> x))
   where tag = maybe mempty (signTag pm) mbTag
 
@@ -179,29 +179,29 @@ verifySignature
   :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
-  -> PublicKey
+  -> VerificationKey
   -> a
   -> Signature a
   -> Bool
-verifySignature pm tag pk x sig =
-  verifySignatureRaw pk (signTag pm tag <> serialize' x) (coerce sig)
+verifySignature pm tag vk x sig =
+  verifySignatureRaw vk (signTag pm tag <> serialize' x) (coerce sig)
 
 -- | Verify a signature
 verifySignatureDecoded
   :: Decoded t
   => Annotated ProtocolMagicId ByteString
   -> SignTag
-  -> PublicKey
+  -> VerificationKey
   -> t
   -> Signature (BaseType t)
   -> Bool
-verifySignatureDecoded pm tag pk x sig =
-  verifySignatureRaw pk (signTagDecoded pm tag <> recoverBytes x) (coerce sig)
+verifySignatureDecoded pm tag vk x sig =
+  verifySignatureRaw vk (signTagDecoded pm tag <> recoverBytes x) (coerce sig)
 
 -- | Verify 'Raw' signature
 verifySignatureRaw
-  :: PublicKey
+  :: VerificationKey
   -> ByteString
   -> Signature Raw
   -> Bool
-verifySignatureRaw (PublicKey k) x (Signature sig) = CC.verify k x sig
+verifySignatureRaw (VerificationKey k) x (Signature sig) = CC.verify k x sig

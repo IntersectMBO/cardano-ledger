@@ -31,7 +31,7 @@ import qualified Data.Vector as V
 
 import Cardano.Chain.Common
   ( NetworkMagic(..)
-  , makePubKeyAddress
+  , makeVerKeyAddress
   , mkAttributes
   , mkKnownLovelace
   , mkMerkleTree
@@ -56,7 +56,7 @@ import Cardano.Crypto
   ( AbstractHash(..)
   , Hash
   , ProtocolMagicId(..)
-  , PublicKey(..)
+  , VerificationKey(..)
   , RedeemSignature
   , SignTag(..)
   , hash
@@ -67,7 +67,7 @@ import Cardano.Crypto
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Crypto.CBOR (getBytes)
-import Test.Cardano.Crypto.Example (examplePublicKey, exampleSecretKey)
+import Test.Cardano.Crypto.Example (exampleVerificationKey, exampleSigningKey)
 
 
 exampleTxAux :: TxAux
@@ -94,13 +94,13 @@ exampleTxInUtxo1 :: TxIn
 exampleTxInUtxo1 = TxInUtxo exampleHashTx 74
 
 exampleTxOut :: TxOut
-exampleTxOut = TxOut (makePubKeyAddress NetworkMainOrStage pkey)
+exampleTxOut = TxOut (makeVerKeyAddress NetworkMainOrStage vkey)
                      (mkKnownLovelace @47)
-  where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
+  where Right vkey = VerificationKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOut1 :: TxOut
-exampleTxOut1 = TxOut (makePubKeyAddress (NetworkTestnet 74) pkey) (mkKnownLovelace @47)
-  where Right pkey = PublicKey <$> CC.xpub (getBytes 0 64)
+exampleTxOut1 = TxOut (makeVerKeyAddress (NetworkTestnet 74) vkey) (mkKnownLovelace @47)
+  where Right vkey = VerificationKey <$> CC.xpub (getBytes 0 64)
 
 exampleTxOutList :: (NonEmpty TxOut)
 exampleTxOutList = fromList [exampleTxOut]
@@ -119,17 +119,17 @@ exampleTxProof = TxProof 32 mroot hashWit
  where
   mroot = mtRoot $ mkMerkleTree
     [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
-  hashWit = hash $ [(V.fromList [(PkWitness examplePublicKey exampleTxSig)])]
+  hashWit = hash $ [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
 
 exampleTxSig :: TxSig
 exampleTxSig =
-  sign (ProtocolMagicId 0) SignForTestingOnly exampleSecretKey exampleTxSigData
+  sign (ProtocolMagicId 0) SignForTestingOnly exampleSigningKey exampleTxSigData
 
 exampleTxSigData :: TxSigData
 exampleTxSigData = TxSigData exampleHashTx
 
 exampleTxWitness :: TxWitness
-exampleTxWitness = V.fromList [(PkWitness examplePublicKey exampleTxSig)]
+exampleTxWitness = V.fromList [(VKWitness exampleVerificationKey exampleTxSig)]
 
 exampleRedeemSignature :: RedeemSignature TxSigData
 exampleRedeemSignature = redeemSign

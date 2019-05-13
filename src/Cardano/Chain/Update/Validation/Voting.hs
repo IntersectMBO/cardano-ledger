@@ -132,7 +132,7 @@ registerVote pm vre votes vote = do
   not (null delegators) `orThrowError` VotingVoterNotDelegate voter
 
   -- Check that the signature is valid
-  verifySignatureDecoded pm SignUSVote voterPK signedBytes signature
+  verifySignatureDecoded pm SignUSVote voterVK signedBytes signature
     `orThrowError` VotingInvalidSignature
 
   -- Add the delegators to the set of votes for this proposal
@@ -140,9 +140,9 @@ registerVote pm vre votes vote = do
  where
   RegistrationEnvironment registeredProposals delegationMap = vre
 
-  UnsafeVote { voterPK, signature } = vote
+  UnsafeVote { voterVK, signature } = vote
 
-  voter       = mkStakeholderId voterPK
+  voter       = mkStakeholderId voterVK
 
   upId        = proposalId vote
 

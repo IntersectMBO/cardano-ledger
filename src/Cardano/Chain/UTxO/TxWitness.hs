@@ -43,8 +43,8 @@ import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Crypto
   ( Hash
-  , PublicKey
-  , RedeemPublicKey
+  , VerificationKey
+  , RedeemVerificationKey
   , RedeemSignature
   , Signature
   , hashDecoded
@@ -59,17 +59,17 @@ type TxWitness = Vector TxInWitness
 
 -- | A witness for a single input
 data TxInWitness
-  = PkWitness !PublicKey !TxSig
-  -- ^ PkWitness twKey twSig
-  | RedeemWitness !RedeemPublicKey !(RedeemSignature TxSigData)
+  = VKWitness !VerificationKey !TxSig
+  -- ^ VKWitness twKey twSig
+  | RedeemWitness !RedeemVerificationKey !(RedeemSignature TxSigData)
   -- ^ RedeemWitness twRedeemKey twRedeemSig
   deriving (Eq, Show, Generic)
   deriving anyclass NFData
 
 instance ToJSON TxInWitness where
   toJSON = \case
-    PkWitness twKey twSig ->
-      object ["tag" .= ("PkWitness" :: Text), "key" .= twKey, "sig" .= twSig]
+    VKWitness twKey twSig ->
+      object ["tag" .= ("VKWitness" :: Text), "key" .= twKey, "sig" .= twSig]
     RedeemWitness twRedeemKey twRedeemSig -> object
       [ "tag" .= ("RedeemWitness" :: Text)
       , "redeemKey" .= twRedeemKey
@@ -78,16 +78,16 @@ instance ToJSON TxInWitness where
 
 instance FromJSON TxInWitness where
   parseJSON = withObject "TxInWitness" $ \o -> (o .: "tag") >>= \case
-    ("PkWitness" :: Text) -> PkWitness <$> (o .: "key") <*> (o .: "sig")
+    ("VKWitness" :: Text) -> VKWitness <$> (o .: "key") <*> (o .: "sig")
     "RedeemWitness" ->
       RedeemWitness <$> (o .: "redeemKey") <*> (o .: "redeemSig")
     _ ->
       aesonError @Text
-        "expected 'tag' to be one of 'PkWitness' or 'RedeemWitness'"
+        "expected 'tag' to be one of 'VKWitness' or 'RedeemWitness'"
 
 instance B.Buildable TxInWitness where
-  build (PkWitness key sig) = bprint
-    ( "PkWitness: key = "
+  build (VKWitness key sig) = bprint
+    ( "VKWitness: key = "
     . build
     . ", key hash = "
     . shortHashF
@@ -98,11 +98,11 @@ instance B.Buildable TxInWitness where
     (addressHash key)
     sig
   build (RedeemWitness key sig) =
-    bprint ("PkWitness: key = " . build . ", sig = " . build) key sig
+    bprint ("VKWitness: key = " . build . ", sig = " . build) key sig
 
 instance ToCBOR TxInWitness where
   toCBOR input = case input of
-    PkWitness key sig ->
+    VKWitness key sig ->
       encodeListLen 2
         <> toCBOR (0 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
@@ -114,10 +114,10 @@ instance ToCBOR TxInWitness where
   encodedSizeExpr size _ = 2 + szCases
     (map
       (fmap knownCborDataItemSizeExpr)
-      [ Case "PkWitness" $ size $ Proxy @(PublicKey, TxSig)
+      [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
       , Case "RedeemWitness"
       $ size
-      $ Proxy @(RedeemPublicKey, RedeemSignature TxSigData)
+      $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
       ]
     )
 
@@ -126,8 +126,8 @@ instance FromCBOR TxInWitness where
     len <- decodeListLen
     fromCBOR @Word8 >>= \case
       0 -> do
-        matchSize "TxInWitness.PkWitness" len 2
-        uncurry PkWitness <$> decodeKnownCborDataItem
+        matchSize "TxInWitness.VKWitness" len 2
+        uncurry VKWitness <$> decodeKnownCborDataItem
       2 -> do
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem

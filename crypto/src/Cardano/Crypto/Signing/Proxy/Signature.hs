@@ -43,8 +43,8 @@ import Cardano.Crypto.Signing.Proxy.VerificationKey
   , pskOmega
   , validateProxyVerificationKey
   )
-import Cardano.Crypto.Signing.PublicKey (PublicKey(..))
-import Cardano.Crypto.Signing.SecretKey (SecretKey(..), toPublic)
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
+import Cardano.Crypto.Signing.SigningKey (SigningKey(..), toVerification)
 import Cardano.Crypto.Signing.Signature (fromCBORXSignature, toCBORXSignature)
 import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 
@@ -91,36 +91,36 @@ validateProxySignature pm psig = validateProxyVerificationKey pm (psigPsk psig)
 
 
 -- | Make a proxy delegate signature with help of certificate. If the delegate
---   secret key passed doesn't pair with delegate public key in certificate
+--   signing key passed doesn't pair with delegate verification key in certificate
 --   inside, we panic. Please check this condition outside of this function.
 proxySign
   :: ToCBOR a
   => ProtocolMagicId
   -> SignTag
-  -> SecretKey
+  -> SigningKey
   -> ProxyVerificationKey w
   -> a
   -> ProxySignature w a
-proxySign pm t sk@(SecretKey delegateSk) psk m
-  | toPublic sk /= pskDelegatePk psk = panic $ sformat
+proxySign pm t sk@(SigningKey delegateSk) psk m
+  | toVerification sk /= pskDelegateVK psk = panic $ sformat
     ( "proxySign called with irrelevant certificate "
-    . "(psk delegatePk: "
+    . "(psk delegateVK: "
     . build
-    . ", real delegate pk: "
+    . ", real delegate vk: "
     . build
     . ")"
     )
-    (pskDelegatePk psk)
-    (toPublic sk)
+    (pskDelegateVK psk)
+    (toVerification sk)
   | otherwise = AProxySignature {psigPsk = psk, psigSig = sigma}
  where
-  PublicKey issuerPk = pskIssuerPk psk
-  -- It's safe to put the tag after issuerPk because `CC.unXPub issuerPk` always
+  VerificationKey issuerVK = pskIssuerVK psk
+  -- It's safe to put the tag after issuerVK because `CC.unXPub issuerVK` always
   -- takes 64 bytes
   sigma = CC.sign (mempty :: ScrubbedBytes) delegateSk
-    $ mconcat ["01", CC.unXPub issuerPk, signTag pm t, serialize' m]
+    $ mconcat ["01", CC.unXPub issuerVK, signTag pm t, serialize' m]
 
--- | Verify delegated signature given issuer's pk, signature, message
+-- | Verify delegated signature given issuer's vk, signature, message
 --   space predicate and message itself.
 proxyVerifyDecoded
   :: Decoded t
@@ -133,15 +133,15 @@ proxyVerifyDecoded
 proxyVerifyDecoded pm t omegaPred m psig = predCorrect && sigValid
  where
   psk         = psigPsk psig
-  PublicKey issuerPk        = pskIssuerPk psk
-  PublicKey pdDelegatePkRaw = pskDelegatePk psk
+  VerificationKey issuerVK        = pskIssuerVK psk
+  VerificationKey pdDelegateVKRaw = pskDelegateVK psk
   predCorrect = omegaPred (pskOmega psk)
   sigValid    = CC.verify
-    pdDelegatePkRaw
-    (mconcat ["01", CC.unXPub issuerPk, signTagDecoded pm t, recoverBytes m])
+    pdDelegateVKRaw
+    (mconcat ["01", CC.unXPub issuerVK, signTagDecoded pm t, recoverBytes m])
     (psigSig psig)
 
--- | Verify delegated signature given issuer's pk, signature, message space
+-- | Verify delegated signature given issuer's vk, signature, message space
 --   predicate and message
 proxyVerify
   :: ToCBOR a
@@ -154,10 +154,10 @@ proxyVerify
 proxyVerify pm t omegaPred m psig = predCorrect && sigValid
  where
   psk         = psigPsk psig
-  PublicKey issuerPk        = pskIssuerPk psk
-  PublicKey pdDelegatePkRaw = pskDelegatePk psk
+  VerificationKey issuerVK        = pskIssuerVK psk
+  VerificationKey pdDelegateVKRaw = pskDelegateVK psk
   predCorrect = omegaPred (pskOmega psk)
   sigValid    = CC.verify
-    pdDelegatePkRaw
-    (mconcat ["01", CC.unXPub issuerPk, signTag pm t, serialize' m])
+    pdDelegateVKRaw
+    (mconcat ["01", CC.unXPub issuerVK, signTag pm t, serialize' m])
     (psigSig psig)

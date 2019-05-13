@@ -38,8 +38,8 @@ library
                        Cardano.Crypto.Signing.Tag
 
                        Cardano.Crypto.Signing.KeyGen
-                       Cardano.Crypto.Signing.PublicKey
-                       Cardano.Crypto.Signing.SecretKey
+                       Cardano.Crypto.Signing.VerificationKey
+                       Cardano.Crypto.Signing.SigningKey
                        Cardano.Crypto.Signing.Signature
 
                        Cardano.Crypto.Signing.Proxy
@@ -48,11 +48,11 @@ library
                        Cardano.Crypto.Signing.Proxy.Signature
 
                        Cardano.Crypto.Signing.Redeem.KeyGen
-                       Cardano.Crypto.Signing.Redeem.PublicKey
-                       Cardano.Crypto.Signing.Redeem.SecretKey
+                       Cardano.Crypto.Signing.Redeem.VerificationKey
+                       Cardano.Crypto.Signing.Redeem.SigningKey
                        Cardano.Crypto.Signing.Redeem.Signature
 
-                       Cardano.Crypto.Signing.Safe.EncryptedSecretKey
+                       Cardano.Crypto.Signing.Safe.EncryptedSigningKey
                        Cardano.Crypto.Signing.Safe.KeyGen
                        Cardano.Crypto.Signing.Safe.PassPhrase
                        Cardano.Crypto.Signing.Safe.SafeSigner
