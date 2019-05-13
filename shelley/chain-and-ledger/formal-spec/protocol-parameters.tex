@@ -4,7 +4,7 @@
 The rules for the ledger depend on several parameters contained in the $\PParams$ type,
 defined in \cite{byron_ledger_spec}.
 The parameters are listed in Figure~\ref{fig:defs:protocol-parameters},
-the first nine of which below are common to the Byron era.
+the first ten of which below are common to the Byron era.
 
 The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
@@ -55,6 +55,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
         \var{a} \mapsto \Z & \PParams & \text{min fee factor}\\
         \var{b} \mapsto \Z & \PParams & \text{min fee constant}\\
         \var{maxBlockSize} \mapsto \N & \PParams & \text{max block body size}\\
+        \var{maxTxSize} \mapsto \N & \PParams & \text{max transaction size}\\
         \var{maxHeaderSize} \mapsto \N & \PParams & \text{max block header size}\\
         \var{scriptVersion} \mapsto \N & \PParams & \text{script version}\\
         \var{upAdptThd} \mapsto \R & \PParams & \text{update proposal adoption threshold}\\
@@ -82,6 +83,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \fun{a},
     \fun{b},
     \fun{maxBlockSize},
+    \fun{maxTxSize},
     \fun{maxHeaderSize},
     \fun{scriptVersion},
     \fun{upAdptThd},
