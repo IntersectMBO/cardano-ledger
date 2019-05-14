@@ -2,6 +2,9 @@ module Keys
   ( Owner(..)
   , SKey(..)
   , VKey(..)
+  , VKeyGenesis(..)
+  , GKeys(..)
+  , Dms(..)
   , KeyPair(..)
   , keyPair
   , HashKey(..)
@@ -11,35 +14,29 @@ module Keys
   , verify
   , KESig
   , signKES
-  , verifyKES)
+  , verifyKES
+  )
 where
 
-import           Crypto.Hash           (Digest, SHA256, hash)
 import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
 
--- |Representation of the owner of keypair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+import           Ledger.Core           (VKey(..)
+                                       , VKeyGenesis(..)
+                                       , Owner(..)
+                                       , SKey(..)
+                                       , Sig(..)
+                                       , Hash
+                                       , hash
+                                       , KeyPair(..)
+                                       , keyPair)
 
--- |Private/Secret Key
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
-
--- |Public Key
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
-
--- |Key Pair
-data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
-
-keyPair :: Owner -> KeyPair
-keyPair owner = KeyPair (SKey owner) (VKey owner)
+import qualified Data.Map.Strict       as Map
+import qualified Data.Set              as Set
 
 -- |The hash of public Key
-newtype HashKey = HashKey (Digest SHA256) deriving (Show, Eq, Ord)
-
--- |A digital signature
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+newtype HashKey = HashKey Hash deriving (Show, Eq, Ord)
 
 data KESig a = KESig (Sig a) Natural deriving (Show, Eq, Ord)
 
@@ -63,6 +60,8 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 verifyKES :: Eq a => VKey -> a -> KESig a -> Natural -> Bool
 verifyKES (VKey vk) vd (KESig (Sig sd sk) m) n = vk == sk && vd == sd && m == n
 
-instance BA.ByteArrayAccess VKey where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
+newtype Dms = Dms (Map.Map VKeyGenesis VKey)
+  deriving (Show, Eq)
+
+newtype GKeys = GKeys (Set.Set VKeyGenesis)
+  deriving (Show, Eq)

@@ -11,10 +11,15 @@ module Slot
   , epochFromSlot
   , slotsPerEpoch
   , firstSlot
+  -- conversion between Byron / Shelley
+  , slotByronToShelley
+  , slotShelleyToByron
   ) where
 
 import           Data.Monoid             (Sum(..))
 import           Numeric.Natural         (Natural)
+
+import qualified Ledger.Core           as Byron (Slot(..))
 
 -- |A Slot
 newtype Slot = Slot Natural
@@ -48,3 +53,11 @@ firstSlot = slotFromEpoch
 -- | Hard coded global constant for number of slots per epoch
 slotsPerEpoch :: Natural
 slotsPerEpoch = 100
+
+-- | Convert `Slot` data from Byron to Shelley, there should be a check that
+-- Shelley slots fit into `Word64` used in Byron.
+slotByronToShelley :: Byron.Slot -> Slot
+slotByronToShelley (Byron.Slot s) = Slot $ fromIntegral s
+
+slotShelleyToByron :: Slot -> Byron.Slot
+slotShelleyToByron (Slot s) = Byron.Slot $ fromIntegral s

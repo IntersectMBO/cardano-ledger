@@ -34,6 +34,8 @@ import           Slot            (Epoch(..))
 
 import           Lens.Micro.TH   (makeLenses)
 
+import qualified Ledger.Update as Byron.Update (PParams(..))
+
 data PParams = PParams
   { -- |The linear factor for the minimum fee calculation
     _minfeeA         :: Integer
