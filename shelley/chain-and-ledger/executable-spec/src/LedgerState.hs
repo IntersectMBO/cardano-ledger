@@ -40,6 +40,7 @@ module LedgerState
   , emptyAccount
   , emptyPState
   , emptyDState
+  , emptyUPIState
   , poolRAcnt
   , treasury
   , reserves
@@ -132,6 +133,8 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          RewardAcnt(..), poolRAcnt, poolOwners)
 
 import           BaseTypes
+
+import qualified Ledger.Update as Byron.Update (UPIState, emptyUPIState)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -257,6 +260,7 @@ emptyLedgerState :: LedgerState
 emptyLedgerState = LedgerState
                    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
                    emptyDelegation
+                   emptyUPIState
                    emptyPParams
                    0
                    (Slot 0)
@@ -283,6 +287,14 @@ data UTxOState =
     , _fees      :: Coin
     } deriving (Show, Eq)
 
+-- | For now this contains the Byron `UPIState` and the Shelley PParams
+-- separately.
+data UPIState = UPIState Byron.Update.UPIState PParams
+  deriving (Show, Eq)
+
+emptyUPIState :: UPIState
+emptyUPIState = UPIState Byron.Update.emptyUPIState emptyPParams
+
 -- |The state associated with a 'Ledger'.
 data LedgerState =
   LedgerState
@@ -290,6 +302,8 @@ data LedgerState =
     _utxoState         :: !UTxOState
     -- |The current delegation state
   , _delegationState   :: !DWState
+    -- | UPIState
+  , _upiState          :: !UPIState
     -- |The current protocol constants.
   , _pcs               :: !PParams
     -- | The current transaction index in the current slot.
@@ -318,6 +332,7 @@ genesisState pc outs = LedgerState
     (Coin 0)
     (Coin 0))
   emptyDelegation
+  emptyUPIState
   pc
   0
   (Slot 0)
@@ -594,7 +609,7 @@ asStateTransition' slot (LedgerValidation valErrors ls) tx =
 
 -- |Retire the appropriate stake pools when the epoch changes.
 retirePools :: LedgerState -> Epoch -> LedgerState
-retirePools ls@(LedgerState _ ds _ _ _) epoch =
+retirePools ls@(LedgerState _ ds _ _ _ _) epoch =
     ls & delegationState .~
            (ds & pstate . stPools .~
                  (StakePools $ Map.filterWithKey
@@ -671,7 +686,7 @@ applyDCert _ (RetirePool key epoch) ds =
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
-delegatedStake ls@(LedgerState _ ds _ _ _) = Map.fromListWith (+) delegatedOutputs
+delegatedStake ls@(LedgerState _ ds _ _ _ _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do

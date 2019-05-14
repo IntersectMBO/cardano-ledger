@@ -10,7 +10,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Ledger.Update where
+module Ledger.Update
+  (module Ledger.Update)
+where
 
 import Control.Lens
 import qualified Crypto.Hash as Crypto
@@ -643,6 +645,30 @@ type UPIState =
   , Core.PairSet ProtVer Core.VKeyGenesis
   , Map UpId Core.Slot
   )
+
+emptyUPIState :: UPIState
+emptyUPIState =
+  (( ProtVer 0 0 0
+   , PParams                    -- TODO: choose more sensible default values
+     (2^(20::Natural))          -- max sizes chosen as non-zero to allow progress
+     (2^(20::Natural))
+     (2^(20::Natural))
+     (2^(20::Natural))
+     0.2
+     0
+     0
+     0
+     0
+     0
+     0)
+  , []
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Core.PairSet Set.empty
+  , Core.PairSet Set.empty
+  , Map.empty)
 
 data UPIREG
 

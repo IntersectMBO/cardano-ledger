@@ -29,7 +29,7 @@ import Data.AbstractSize
 -- | An encoded hash of part of the system.
 type Hash = Crypto.Digest Crypto.SHA256
 
--- | Hash part of the ledger paylod
+-- | Hash part of the ledger payload
 class HasHash a where
   hash :: a -> Hash
 

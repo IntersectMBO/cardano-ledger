@@ -336,7 +336,7 @@ in the pool distribution.
     {
       e = e_\ell + 1
       &
-      (\wcard,~\wcard,~(\wcard,~\wcard,~\var{us}))\leteq\var{es}
+      (\wcard,~\wcard,~\var{ss}, (\wcard,~\wcard,~\var{us}))\leteq\var{es}
       \\
       {
         \var{s}\vdash\var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
@@ -357,7 +357,6 @@ in the pool distribution.
      }
      \\~\\~\\
      {\begin{array}{r@{~\leteq~}l}
-        (\wcard,~\wcard,~\var{ss},~(\wcard,~\wcard,~\var{us})) & \var{es} \\
         \var{pp} & \pps{us} \\
         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
         (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
@@ -423,6 +422,7 @@ in the pool distribution.
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
+            \var{osched}
       \end{array}\right)}
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
@@ -432,6 +432,7 @@ in the pool distribution.
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
+            \var{osched}
       \end{array}\right)}
     }
   \end{equation}
