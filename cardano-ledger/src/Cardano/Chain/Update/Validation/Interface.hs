@@ -235,7 +235,9 @@ registerVote env st vote = do
   let
     appVersions' =
       currentSlot `seq`
-      M.fromList $! [ (svAppName sv, (svNumber sv, currentSlot))
+      M.fromList $! [ let !svAppName' = svAppName sv
+                          !svNumber'  = svNumber sv
+                      in (svAppName', (svNumber', currentSlot))
                     | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
                     , pid `elem` M.keys confirmedProposals'
                     ]
