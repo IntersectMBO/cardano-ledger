@@ -26,7 +26,7 @@ module Cardano.Chain.Block.Block
   , blockPrevHash
   , blockProof
   , blockSlot
-  , blockLeaderKey
+  , blockGenesisKey
   , blockIssuer
   , blockDifficulty
   , blockToSign
@@ -76,7 +76,6 @@ import Cardano.Chain.Block.Body
   )
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
-import Cardano.Chain.Block.ExtraHeaderData (ExtraHeaderData(..))
 import Cardano.Chain.Block.Header
   ( AHeader(..)
   , BlockSignature(..)
@@ -90,7 +89,7 @@ import Cardano.Chain.Block.Header
   , hashHeader
   , headerDifficulty
   , headerIssuer
-  , headerLeaderKey
+  , headerGenesisKey
   , headerPrevHash
   , headerProof
   , headerProtocolMagicId
@@ -295,7 +294,7 @@ mkBlockExplicit
   -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
   -> Block
-mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk dlgCert body
+mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotId sk dlgCert body
   = ABlock
     (mkHeaderExplicit
       pm
@@ -306,13 +305,12 @@ mkBlockExplicit pm bv sv prevHash difficulty epochSlots slotId sk dlgCert body
       sk
       dlgCert
       body
-      extraH
+      pv
+      sv
     )
     body
     ()
- where
-  extraH :: ExtraHeaderData
-  extraH = ExtraHeaderData bv sv
+
 
 --------------------------------------------------------------------------------
 -- Block accessors
@@ -339,8 +337,8 @@ blockProof = headerProof . blockHeader
 blockSlot :: ABlock a -> FlatSlotId
 blockSlot = headerSlot . blockHeader
 
-blockLeaderKey :: ABlock a -> VerificationKey
-blockLeaderKey = headerLeaderKey . blockHeader
+blockGenesisKey :: ABlock a -> VerificationKey
+blockGenesisKey = headerGenesisKey . blockHeader
 
 blockIssuer :: ABlock a -> VerificationKey
 blockIssuer = headerIssuer . blockHeader

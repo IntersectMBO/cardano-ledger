@@ -9,7 +9,6 @@ module Test.Cardano.Chain.Block.CBOR
   ( tests
   , exampleBlockSignature
   , exampleBody
-  , exampleConsensusData
   , exampleHeader
   , exampleProof
   , exampleToSign
@@ -22,7 +21,7 @@ import Test.Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
 
-import Hedgehog (Group, Property, tripping)
+import Hedgehog (Group, Property)
 import qualified Hedgehog as H
 
 import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding)
@@ -30,23 +29,18 @@ import Cardano.Chain.Block
   ( Block
   , BlockSignature(..)
   , Body
-  , ConsensusData
-  , ExtraHeaderData(..)
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
   , body
-  , consensusData
   , fromCBORBlockOrBoundary
-  , fromCBORConsensusData
   , fromCBORHeader
   , fromCBORHeader'
   , dropBoundaryBody
   , dropBoundaryConsensusData
   , dropBoundaryHeader
   , toCBORBlock
-  , toCBORConsensusData
   , toCBORHeader
   , toCBORHeader'
   , mkHeaderExplicit
@@ -84,7 +78,7 @@ import Test.Cardano.Chain.Slotting.Example (exampleSlotId, exampleFlatSlotId)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots, genWithEpochSlots)
 import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
-import Test.Cardano.Crypto.Example (exampleVerificationKey, exampleSigningKeys)
+import Test.Cardano.Crypto.Example (exampleSigningKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Options (TestScenario, TSProperty, eachOfTS)
 
@@ -223,44 +217,6 @@ ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
--- ConsensusData
---------------------------------------------------------------------------------
-
-goldenConsensusData :: Property
-goldenConsensusData = goldenTestCBORExplicit
-  "ConcensusData"
-  (toCBORConsensusData exampleEs)
-  (fromCBORConsensusData exampleEs)
-  exampleConsensusData
-  "test/golden/cbor/block/ConsensusData"
-
-ts_roundTripConsensusData :: TSProperty
-ts_roundTripConsensusData = eachOfTS
-  20
-  (feedPMEpochSlots $ genWithEpochSlots genConsensusData)
-  roundTripConsensusData'
- where
-  roundTripConsensusData' :: WithEpochSlots ConsensusData -> H.PropertyT IO ()
-  roundTripConsensusData' (WithEpochSlots es cd) = tripping
-    cd
-    (serializeEncoding . toCBORConsensusData es)
-    (decodeFullDecoder "ConsensusData" $ fromCBORConsensusData es)
-
-
---------------------------------------------------------------------------------
--- ExtraHeaderData
---------------------------------------------------------------------------------
-
-goldenExtraHeaderData :: Property
-goldenExtraHeaderData =
-  goldenTestCBOR exampleExtraHeaderData "test/golden/cbor/block/ExtraHeaderData"
-
-ts_roundTripExtraHeaderDataCBOR :: TSProperty
-ts_roundTripExtraHeaderDataCBOR =
-  eachOfTS 1000 genExtraHeaderData roundTripsCBORBuildable
-
-
---------------------------------------------------------------------------------
 -- Proof
 --------------------------------------------------------------------------------
 
@@ -297,7 +253,8 @@ exampleHeader = mkHeaderExplicit
   delegateSk
   certificate
   exampleBody
-  exampleExtraHeaderData
+  Update.exampleProtocolVersion
+  Update.exampleSoftwareVersion
  where
   pm          = ProtocolMagicId 7
   [delegateSk, issuerSk] = exampleSigningKeys 5 2
@@ -318,17 +275,6 @@ exampleBlockSignature = BlockSignature sig
     (toVerification delegateSk)
     (EpochIndex 5)
   pm = ProtocolMagicId 7
-
-exampleConsensusData :: ConsensusData
-exampleConsensusData = consensusData
-  (exampleFlatSlotId exampleEs)
-  exampleVerificationKey
-  exampleChainDifficulty
-  exampleBlockSignature
-
-exampleExtraHeaderData :: ExtraHeaderData
-exampleExtraHeaderData =
-  ExtraHeaderData Update.exampleProtocolVersion Update.exampleSoftwareVersion
 
 exampleProof :: Proof
 exampleProof = Proof
@@ -351,7 +297,8 @@ exampleToSign = ToSign
   exampleProof
   (exampleSlotId exampleEs)
   exampleChainDifficulty
-  exampleExtraHeaderData
+  Update.exampleProtocolVersion
+  Update.exampleSoftwareVersion
 
 
 -----------------------------------------------------------------------
