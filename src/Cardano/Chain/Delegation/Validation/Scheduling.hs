@@ -50,8 +50,8 @@ data Environment = Environment
   } deriving (Eq, Show, Generic, NFData)
 
 data State = State
-  { ssScheduledDelegations :: !(Seq ScheduledDelegation)
-  , ssKeyEpochDelegations  :: !(Set (EpochIndex, StakeholderId))
+  { scheduledDelegations :: !(Seq ScheduledDelegation)
+  , keyEpochDelegations  :: !(Set (EpochIndex, StakeholderId))
   } deriving (Eq, Show, Generic, NFData)
 
 data ScheduledDelegation = ScheduledDelegation
@@ -89,22 +89,21 @@ scheduleCertificate
   -> State
   -> ACertificate ByteString
   -> m State
-scheduleCertificate env ss cert = do
-
+scheduleCertificate env st cert = do
   -- Check that the delegator is a genesis key
-  (delegator `Set.member` allowedDelegators)
+  delegator `Set.member` allowedDelegators
     `orThrowError` NonGenesisDelegator delegator
 
   -- Check that the delegation epoch is greater than or equal to the current one
-  (currentEpoch <= delegationEpoch)
+  currentEpoch <= delegationEpoch
     `orThrowError` PastEpoch currentEpoch delegationEpoch
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
-  ((delegationEpoch, delegator) `Set.notMember` ssKeyEpochDelegations ss)
+  (delegationEpoch, delegator) `Set.notMember` keyEpochDelegations
     `orThrowError` MultipleDelegationsForEpoch delegationEpoch delegator
 
   -- Check that the delegator hasn't issued a certificate in this slot
-  isNothing (Seq.findIndexL delegatesThisSlot (ssScheduledDelegations ss))
+  isNothing (Seq.findIndexL delegatesThisSlot scheduledDelegations)
     `orThrowError` MultipleDelegationsForSlot currentSlot delegator
 
   -- Check that the delegation certificate is valid
@@ -112,14 +111,16 @@ scheduleCertificate env ss cert = do
 
   -- Schedule the new delegation and register the epoch/delegator pair
   pure $ State
-    { ssScheduledDelegations = delegation <| ssScheduledDelegations ss
-    , ssKeyEpochDelegations  = Set.insert
+    { scheduledDelegations = delegation <| scheduledDelegations
+    , keyEpochDelegations  = Set.insert
       (delegationEpoch, delegator)
-      (ssKeyEpochDelegations ss)
+      keyEpochDelegations
     }
  where
   Environment { protocolMagic, allowedDelegators, currentEpoch, currentSlot, k }
     = env
+
+  State { scheduledDelegations, keyEpochDelegations } = st
 
   delegator       = mkStakeholderId $ pskIssuerVK cert
   delegate        = mkStakeholderId $ pskDelegateVK cert

@@ -90,3 +90,8 @@ source-repository-package
   type: git
   location: http://github.com/nc6/canonical-json
   tag: a9dc9b893649bc2e2a770ab22d278a780f7e3a3c
+
+source-repository-package
+  type: git
+  location: https://github.com/joelwilliamson/bimap
+  tag: 997fbb38b08dec14d225d064dac05b0a85f4ceae

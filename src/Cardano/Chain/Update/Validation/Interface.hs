@@ -40,6 +40,7 @@ import qualified Data.Set as S
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.StakeholderId (StakeholderId)
+import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
@@ -84,7 +85,7 @@ data Environment = Environment
   -- genesis keys that need to endorse a new protocol version for it to be
   -- considered for adoption. See
   -- @Cardano.Chain.Update.Validation.Endorsement.Environment@.
-  , delegationMap :: !(Map StakeholderId StakeholderId)
+  , delegationMap :: !Delegation.Map
   }
 
 -- | Update interface state.

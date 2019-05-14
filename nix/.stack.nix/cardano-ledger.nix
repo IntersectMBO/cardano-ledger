@@ -21,6 +21,7 @@
           (hsPkgs.aeson)
           (hsPkgs.base58-bytestring)
           (hsPkgs.base64-bytestring-type)
+          (hsPkgs.bimap)
           (hsPkgs.binary)
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)

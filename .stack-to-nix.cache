@@ -31,3 +31,5 @@ https://github.com/input-output-hk/cardano-shell 8dc987221b57a09784a1c699b2c088f
 https://github.com/input-output-hk/cardano-shell df73a199d49ff9a5e958c65414e74fdeece15897 . 0kcl7k3mxfillgfzl3z9vdls1n7vvr2r4j3r2ijg45b77is6ihrg cardano-shell cardano-shell.nix
 https://github.com/input-output-hk/cardano-shell acf5b26fbf3c3a3927507e093d54e70ad521787b . 1b5dl1xvbkn3cdxi4rbzd1gjdsv2a2qcpjl6zmpswqpz30cr9mzr cardano-shell cardano-shell.nix
 https://github.com/input-output-hk/cardano-shell 70944ad492aa49661ccf269434bf05a513cf4451 . 16fbnd3bzxld9ypxw6k9j35rnbj3790bkrnh9hdb7l8c90yrq6iz cardano-shell cardano-shell.nix
+https://github.com/input-output-hk/cardano-shell 4be5660c721cae4b001187ec614ef5cf4fad8fc7 . 05sz1dgyz36ly3m67gq13v6dnndifhkb7c1sdazxby5vim5iicb3 cardano-shell cardano-shell.nix
+https://github.com/joelwilliamson/bimap 997fbb38b08dec14d225d064dac05b0a85f4ceae . 0wacks3f94rpms1ghg6lp8jw73rr3kz6zcw5c39drhnvv1dzc8sz bimap bimap.nix
