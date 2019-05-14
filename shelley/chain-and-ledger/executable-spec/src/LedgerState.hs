@@ -40,6 +40,7 @@ module LedgerState
   , emptyAccount
   , emptyPState
   , emptyDState
+  , emptyUPIState
   , poolRAcnt
   , treasury
   , reserves
@@ -259,7 +260,7 @@ emptyLedgerState :: LedgerState
 emptyLedgerState = LedgerState
                    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
                    emptyDelegation
-                   Byron.Update.emptyUPIState
+                   emptyUPIState
                    emptyPParams
                    0
                    (Slot 0)
@@ -286,6 +287,14 @@ data UTxOState =
     , _fees      :: Coin
     } deriving (Show, Eq)
 
+-- | For now this contains the Byron `UPIState` and the Shelley PParams
+-- separately.
+data UPIState = UPIState Byron.Update.UPIState PParams
+  deriving (Show, Eq)
+
+emptyUPIState :: UPIState
+emptyUPIState = UPIState Byron.Update.emptyUPIState emptyPParams
+
 -- |The state associated with a 'Ledger'.
 data LedgerState =
   LedgerState
@@ -294,7 +303,7 @@ data LedgerState =
     -- |The current delegation state
   , _delegationState   :: !DWState
     -- | UPIState
-  , _upiState          :: !Byron.Update.UPIState
+  , _upiState          :: !UPIState
     -- |The current protocol constants.
   , _pcs               :: !PParams
     -- | The current transaction index in the current slot.
@@ -323,7 +332,7 @@ genesisState pc outs = LedgerState
     (Coin 0)
     (Coin 0))
   emptyDelegation
-  Byron.Update.emptyUPIState
+  emptyUPIState
   pc
   0
   (Slot 0)

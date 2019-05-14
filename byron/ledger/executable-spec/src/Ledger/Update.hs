@@ -648,7 +648,19 @@ type UPIState =
 
 emptyUPIState :: UPIState
 emptyUPIState =
-  ((ProtVer 0 0 0, PParams 0 0 0 0 0.0 0 0 0 0 0 0)
+  (( ProtVer 0 0 0
+   , PParams                    -- TODO: choose more sensible default values
+     (2^(20::Natural))          -- max sizes chosen as non-zero to allow progress
+     (2^(20::Natural))
+     (2^(20::Natural))
+     (2^(20::Natural))
+     0.2
+     0
+     0
+     0
+     0
+     0
+     0)
   , []
   , Map.empty
   , Map.empty
