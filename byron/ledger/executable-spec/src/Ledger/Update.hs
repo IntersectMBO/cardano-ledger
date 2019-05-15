@@ -33,7 +33,7 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..))
+import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..), Slot(..))
 import qualified Ledger.Core as Core
 import Ledger.Delegation (liveAfter, k)
 import qualified Ledger.GlobalParams as GP
@@ -854,7 +854,7 @@ instance STS PVBUMP where
   transitionRules =
     [ do
         TRC ((s_n, fads), (pv, pps), ()) <- judgmentContext
-        let r = filter ((<= s_n) . fst) fads
+        let r = filter ((\(Slot s) -> s <= (unSlot s_n) - 2 * (unBlockCount k)) . fst) fads
         if r == []
           then return $! (pv, pps)
           else do
