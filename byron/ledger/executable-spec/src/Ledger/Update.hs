@@ -854,7 +854,9 @@ instance STS PVBUMP where
   transitionRules =
     [ do
         TRC ((s_n, fads), (pv, pps), ()) <- judgmentContext
-        let r = filter ((\(Slot s) -> s <= (unSlot s_n) - 2 * (unBlockCount k)) . fst) fads
+        let
+          firstStableSlot = Slot $ unSlot s_n - 2 * (unBlockCount k)
+          r = filter ((<= firstStableSlot) . fst) fads
         if r == []
           then return $! (pv, pps)
           else do
