@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/d8091767addc1a51e11cb2f04392e4eb40e39b18/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
 
 packages:
   - .
@@ -9,13 +9,13 @@ packages:
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: d8091767addc1a51e11cb2f04392e4eb40e39b18
+    commit: a136c4242b9c9f6124b811329bc8ccdfd86c514e
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 5bca69f048c4d599c362d797ee8b036c118f77f4
+    commit: b676160954cea07d4378ccca870a61242bc188a2
     subdirs:
       - binary
       - binary/test
@@ -27,8 +27,10 @@ extra-deps:
       - byron/ledger/executable-spec
       - byron/chain/executable-spec
 
+  # Currently Hackage only
   - sequence-0.9.8
   - tasty-hedgehog-0.2.0.0
+
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0
 
@@ -37,17 +39,12 @@ extra-deps:
     commit: 4be5660c721cae4b001187ec614ef5cf4fad8fc7
 
   - time-units-1.0.0
-  - ekg-0.4.0.15
-  - ekg-json-0.1.0.6
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
     commit: 00413dcad916a41cf392437199cfba7a2e2c76d7
     subdirs:
       - contra-tracer
       - iohk-monitoring
-
-  # Needed for IOHK monitoring
-  - libyaml-0.1.0.0
 
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509

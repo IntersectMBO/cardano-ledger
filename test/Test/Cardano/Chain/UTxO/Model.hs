@@ -251,12 +251,12 @@ instance Show (Abstract.ProtocolConstants id) where
 -- UTXOW Generators
 --------------------------------------------------------------------------------
 
-genAbstractValue :: MonadGen m => m Abstract.Value
+genAbstractValue :: Gen Abstract.Value
 genAbstractValue =
   Abstract.Value . fromIntegral <$> Gen.word32 (Range.linear 1 1000000)
 
 -- | Each address should only appear once in the starting balances
-genInitialTxOuts :: MonadGen m => m [Abstract.TxOut]
+genInitialTxOuts :: Gen [Abstract.TxOut]
 genInitialTxOuts = do
   addrs <- Gen.filter (not . null) $ Gen.subsequence modelAddresses
   traverse (\a -> Abstract.TxOut a <$> genAbstractValue) addrs
