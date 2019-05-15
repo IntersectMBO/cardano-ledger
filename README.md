@@ -45,7 +45,7 @@ build` or `cabal new-build`.
 Alternatively you can use `nix` to install the external dependencies. For
 `stack` simply add the `--nix` flag to your invocation of `stack build`. If
 you're on `NixOS` this will happen automatically. For `cabal`, you can run
-`nix-shell scripts/nix/stack-shell.nix` to enter a shell with the dependencies,
+`nix-shell nix/stack-shell.nix` to enter a shell with the dependencies,
 and use `cabal new-build` as normal from there.
 
 You can build directly with `nix`, by running `nix-build -A
@@ -103,14 +103,24 @@ particular needs of the work being done. Such file would be a copy of the
 ```
 
 
-## Updating GHC
+## Updating GHC and Package Dependencies
 
-Nix building is handled by `nix-tools`, which will generate a file with the GHC version from our stack snapshot. So an update of GHC should be as simple as:
+`nix` building is handled by `nix-tools`, which generates `nix` infrastructure
+from `stack` and `cabal` files. To generate the infrastructure, run
+`nix/regenerate.sh`.
+
+You should rerun this script whenever you update the dependencies in a cabal
+file or you update dependency/GHC versions in the `cardano-prelude` snapshot.
+
+So an update of GHC should be as simple as:
 1. Updating `snapshot.yaml` in `cardano-prelude`
 2. Updating `stack.yaml` `resolver` in `cardano-ledger`
-3. Running `scripts/nix-tools-generate.sh`
+3. Running `nix/regenerate.sh`
 
-This may require updating the version of `iohk-nix` if the compiler version you're switching to isn't supported in the current version of `iohk-nix`. This will result in an error like `missing attribute 'ghc864'`. To update `iohk-nix`, simply change the git revision in `iohk-nix.json`.
+This may require updating the version of `iohk-nix` if the compiler version
+you're switching to isn't supported in the current version of `iohk-nix`. This
+will result in an error like `missing attribute 'ghc864'`. To update `iohk-nix`,
+simply change the git revision in `iohk-nix.json`.
 
 
 ## Formatting
@@ -126,7 +136,11 @@ include a `git` patch that you can apply and amend you your commit.
 
 ## Scaling tests according to TestScenario
 
-This repo uses custom Template Haskell helper functions allow the number of tests to scale for the scenarios of `Development`, `ContinuousIntegration`, and `QualityAssurance` (as defined [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L52-L55)). This code block illustrates how to use said functionality:
+This repo uses custom Template Haskell helper functions allow the number of
+tests to scale for the scenarios of `Development`, `ContinuousIntegration`, and
+`QualityAssurance` (as defined
+[here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L52-L55)).
+This code block illustrates how to use said functionality:
 ```
 import Test.Cardano.Prelude
 import Test.Options (TestScenario, TSProperty, eachOfTS, withTestsTS)
@@ -145,12 +159,18 @@ tests ts = and <$> sequence
   , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
   ]
 ```
-It is assumed that `genTrivial` is defined and in-scope, and that the type it generates has appropriate instances that allow it to roundtrip.
+It is assumed that `genTrivial` is defined and in-scope, and that the type it
+generates has appropriate instances that allow it to roundtrip.
 
-Note that we specify a concrete number of tests to run: `1000`. This is the number which will execute in the `ContinuousIntegration` scenario, and the ratios by which that number will be multiplied for the other scenarios are given [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
+Note that we specify a concrete number of tests to run: `1000`. This is the
+number which will execute in the `ContinuousIntegration` scenario, and the
+ratios by which that number will be multiplied for the other scenarios are given
+[here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
 
 <hr/>
 
 <p align="center">
-  <a href="https://github.com/input-output-hk/cardano-wallet/blob/master/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/cardano-wallet.svg?style=for-the-badge" /></a>
+  <a href="https://github.com/input-output-hk/cardano-wallet/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/input-output-hk/cardano-wallet.svg?style=for-the-badge"/>
+  </a>
 </p>

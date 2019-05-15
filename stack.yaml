@@ -57,4 +57,4 @@ extra-deps:
     commit: 997fbb38b08dec14d225d064dac05b0a85f4ceae
 
 nix:
-  shell-file: scripts/nix/stack-shell.nix
+  shell-file: nix/stack-shell.nix

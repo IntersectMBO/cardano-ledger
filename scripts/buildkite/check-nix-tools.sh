@@ -13,11 +13,11 @@ fail_nix_tools_check() {
   # which the build fails in the 'stack2nix' step.
   git diff -w --text > /tmp/nix-tools.patch
   buildkite-agent artifact upload /tmp/nix-tools.patch --job "$BUILDKITE_JOB_ID"
-  echo "ERROR: you need to (run ./scripts/nix-tools-generate.sh or apply the patch in the buildkite artifact) and commit the changes" >&2
+  echo "ERROR: you need to (run ./nix/regenerate.sh or apply the patch in the buildkite artifact) and commit the changes" >&2
   exit 1
 }
 
 THIS="${BASH_SOURCE[0]%/*}"
-exec "${THIS}/../nix-tools-generate.sh"
+exec "${THIS}/../../nix/regenerate.sh"
 
 git diff -w --text --exit-code || fail_nix_tools_check
