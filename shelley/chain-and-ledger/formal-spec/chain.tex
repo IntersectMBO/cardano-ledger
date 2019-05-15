@@ -38,15 +38,12 @@
 \newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
 \newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
 \newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
+\newcommand{\overlaySchedule}[3]{\fun{overlaySchedule}~\var{#1}~{#2}~\var{#3}}
 
-\newcommand{\PraosEnv}{\type{PraosEnv}}
-\newcommand{\PraosState}{\type{PraosState}}
-\newcommand{\BHeaderEnv}{\type{BHeaderEnv}}
-\newcommand{\BHeaderState}{\type{BHeaderState}}
-\newcommand{\VRFEnv}{\type{VRFEnv}}
+\newcommand{\PrtclState}{\type{PrtclState}}
+\newcommand{\PrtclEnv}{\type{PrtclEnv}}
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
-\newcommand{\OCertState}{\type{OCertState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
@@ -231,6 +228,7 @@ given in Figure~\ref{fig:ts-types:newepoch}, it consists of
 \begin{itemize}
 \item The epoch nonce.
 \item The current slot.
+\item The set of genesis keys.
 \end{itemize}
 The new epoch state is given in Figure~\ref{fig:ts-types:newepoch}, it consists
 of
@@ -238,7 +236,8 @@ of
 \begin{itemize}
 \item The number of the last epoch.
 \item The old epoch nonce.
-\item The information about produced blocks for each stake pool.
+\item The information about produced blocks for each stake pool during the previous epoch.
+\item The information about produced blocks for each stake pool during the current epoch.
 \item The old epoch state.
 \item An optional rewards update.
 \item The stake pool distribution of the epoch.
@@ -248,7 +247,8 @@ of
 Figure~\ref{fig:ts-types:newepoch} also defines an abstract pseudorandom function
 $\fun{overlaySchedule}$ for creating the OBFT overlay schedule for each new epoch,
 as explained in section 3.9.2 of~\cite{delegation_design}.
-The function takes a seed, the decentralization parameter $d$, and the active slot coeffient $f$.
+The function takes a set of genesis keys, a seed, and the protocol parameters
+(of which the decentralization parameter $d$ and the active slot coeffient $f$ are used).
 It must create $(d\cdot\SlotsPerEpoch)$-many OBFT slots, $(f\cdot d\cdot \SlotsPerEpoch)$
 of which are active.
 
@@ -259,7 +259,8 @@ of which are active.
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta_1 & \Seed & \text{epoch nonce} \\
-        \var{s} & \Slot & \text{current slot}
+        \var{s} & \Slot & \text{current slot} \\
+        \var{gkeys} & \powerset{\VKeyGen} & \text{genesis keys} \\
       \end{array}
     \right)
   \end{equation*}
@@ -271,7 +272,8 @@ of which are active.
       \begin{array}{r@{~\in~}lr}
         \var{e_\ell} & \Epoch & \text{last epoch} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
-        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{b_{prev}} & \BlocksMade & \text{blocks made last epoch} \\
+        \var{b_{cur}} & \BlocksMade & \text{blocks made this epoch} \\
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
@@ -282,15 +284,17 @@ of which are active.
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{overlaySchedule} \in \Seed \to \unitInterval \to \unitInterval \to
-      (\Slot\mapsto\VKeyGen^?) \\
+    & \fun{overlaySchedule} \in \powerset{\VKeyGen} \to \Seed \to \PParams
+        \to (\Slot\mapsto\VKeyGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{osched}\leteq\fun{overlaySchedule}~\eta~\var{d}~\var{f} \\
-    |\var{osched}| = \floor{d\cdot\SlotsPerEpoch} \\
-    |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| = \floor{f\cdot d\cdot\SlotsPerEpoch} \\
+    \text{ given: }~\var{osched}\leteq\overlaySchedule{gkeys}{\eta}{pp} \\
+    \range{osched}\subseteq\var{gkeys} \\
+    |\var{osched}| = \floor{(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
+    |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| =
+    \floor{(\activeSlotCoeff{pp})\cdot(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
   \end{align*}
   %
   \emph{New Epoch Transitions}
@@ -314,8 +318,10 @@ In the second case, the new epoch state is updated as follows:
 \item The epoch is set to the new epoch $e$.
 \item The epoch nonce is replaced with the new one from the new epoch
   environment.
-\item The mapping for the blocks produced by each stake pool is set to the empty
-  map.
+\item The mapping for the blocks produced by each stake pool for the previous epoch
+  is set to the current such mapping.
+\item The mapping for the blocks produced by each stake pool for the current epoch
+  is set to the empty map.
 \item The epoch state is updated first with the rewards update \var{ru} and then
   via the call to $\mathsf{EPOCH}$.
 \item The rewards update is set to \Nothing.
@@ -348,7 +354,7 @@ in the pool distribution.
         \left(
           {\begin{array}{c}
               \var{pp}_n \\
-              \var{b} \\
+              \var{b_{prev}} \\
            \end{array}}
        \right)
        \vdash
@@ -358,7 +364,8 @@ in the pool distribution.
      \\~\\~\\
      {\begin{array}{r@{~\leteq~}l}
         \var{pp} & \pps{us} \\
-        (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+         (\wcard,~\wcard,~\var{ss'}, \wcard) & \var{es'} \\
+        (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss'} \\
         (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
         total & \sum_{\_ \mapsto c\in\var{stake}} c \\
          \var{pd'} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
@@ -366,7 +373,7 @@ in the pool distribution.
                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                     \var{c}) \in \var{stake}
                 \right\}\right) \\
-         \var{osched'} & \fun{overlaySchedule}~\eta_1~(\activeSlotCoeff{pp})~(\fun{d}~{pp})\\
+         \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
         \var{es''} & \var{es'}\unionoverrideRight\{us'\}
       \end{array}}
     }
@@ -381,7 +388,8 @@ in the pool distribution.
       {\left(\begin{array}{c}
             \var{e_\ell} \\
             \eta_0 \\
-            \var{b} \\
+            \var{b_{prev}} \\
+            \var{b_{cur}} \\
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
@@ -391,6 +399,7 @@ in the pool distribution.
       {\left(\begin{array}{c}
             \varUpdate{\var{e}} \\
             \varUpdate{\eta_1} \\
+            \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
             \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
@@ -418,7 +427,8 @@ in the pool distribution.
       {\left(\begin{array}{c}
             \var{e_\ell} \\
             \eta_0 \\
-            \var{b} \\
+            \var{b_{prev}} \\
+            \var{b_{cur}} \\
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
@@ -428,7 +438,8 @@ in the pool distribution.
       {\left(\begin{array}{c}
             \var{e_\ell} \\
             \eta_0 \\
-            \var{b} \\
+            \var{b_{prev}} \\
+            \var{b_{cur}} \\
             \var{es} \\
             \var{ru} \\
             \var{pd} \\
@@ -439,6 +450,8 @@ in the pool distribution.
   \caption{New Epoch rules}
   \label{fig:rules:new-epoch}
 \end{figure}
+
+\clearpage
 
 \subsection{Update Nonce Transition}
 \label{sec:update-nonces-trans}
@@ -464,6 +477,11 @@ There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
 \SlotsPrior{} slots from the beginning of the epoch and one where \var{s} is at least
 \SlotsPrior{} slots after the first slot of the epoch.
 
+Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
+$\eta_v\star\eta$, not $\eta_c\star\eta$. The reason for this is that even though the nonce
+candidate is frozen sometime during the epoch, we want the two nonces to again be equal at the
+start of a new epoch (so that the entropy added near the end of the epoch is not discarded).
+
 \begin{figure}[ht]
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
@@ -484,7 +502,7 @@ There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
             \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_c\seedOp\eta} \\
+            \varUpdate{\eta_v\seedOp\eta} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -518,39 +536,229 @@ There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
   \label{fig:rules:update-nonce}
 \end{figure}
 
-\subsection{Operational Certificate Transition}
-\label{sec:oper-cert-trans}
+\subsection{Reward Update Transition}
+\label{sec:reward-update-trans}
 
-The Operational Certificate Transition contains the genesis keys as its environment.
-Its signal is a block header body, its state is shown in
-Figure~\ref{fig:ts-types:ocert}. The state consists of the pool state and the genesis
-key delegations:
-
-\begin{itemize}
-\item The stake pools map \var{stpools}.
-\item The pool parameters \var{poolParams}.
-\item The map of retiring stake pools to epochs \var{retiring}.
-\item The mapping \var{cs} of certificate issue numbers.
-\item The mapping of genesis keys to operational keys.
-\end{itemize}
+The Reward Update Transition calculates a new $\RewardUpdate$ to apply in a
+$\mathsf{NEWEPOCH}$ transition. The environment is shown in
+Figure~\ref{fig:ts-types:reward-update}, it consists of the produced blocks
+mapping \var{b} and the epoch state \var{es}. Its state is an optional reward
+update.
 
 \begin{figure}
-  %
-  \emph{Operational Certificate states}
+  \emph{Reward Update environments}
   \begin{equation*}
-    \OCertState =
+    \RUpdEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ps} & \PState & \text{pool state} \\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{es} & \EpochState & \text{epoch state} \\
       \end{array}
     \right)
   \end{equation*}
   %
+  \emph{Reward Update Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{rupd}{\_} \var{\_} \subseteq
+    \powerset (\RUpdEnv \times \RewardUpdate^? \times \Slot \times \RewardUpdate^?)
+  \end{equation*}
+  \caption{Reward Update transition-system types}
+  \label{fig:ts-types:reward-update}
+\end{figure}
+
+The transition rules are shown in Figure~\ref{fig:rules:reward-update}. There
+are three cases, one which computes a new reward update, one which leaves the
+rewards update unchanged as it has not yet been applied and finally one that
+leaves the reward update unchanged as the transition was started too early.
+
+The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
+execution of the transition role is as follows:
+
+\begin{itemize}
+\item If \var{s} is less than or equal to the sum of the first slot of its epoch
+  and the duration to start rewards \StartRewards, then the state is not
+  updated.
+\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
+  update has already been calculated but not yet applied, then the state is not
+  updated.
+\item If the current reward update \var{ru} is empty and \var{s} is greater than
+  the sum of the first slot of its epoch and the duration \StartRewards, then a
+  new rewards update is calculated and the state is updated.
+\end{itemize}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:reward-update}
+    \inference[Reward-Update]
+    {
+      ru' \leteq \createRUpd{b}{es}
+      \\~\\
+      s > (\firstSlot{\epoch{s}}) + \StartRewards
+      &
+      ru = \Nothing
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{s}}\varUpdate{\var{ru}'}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:no-reward-update}
+    \inference[No-Reward-Update]
+    {
+      ru \neq \Nothing
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:reward-too-early}
+    \inference[Reward-Too-Early]
+    {
+      s \leq (\firstSlot{\epoch{s}}) + \StartRewards
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{b} \\
+            \var{es} \\
+        \end{array}}
+      \right)
+      \vdash
+      \var{ru}\trans{rupd}{\var{s}}\var{ru}
+    }
+  \end{equation}
+
+  \caption{Reward Update rules}
+  \label{fig:rules:reward-update}
+\end{figure}
+
+\subsection{Block Header Transition}
+\label{sec:block-header-trans}
+
+The Block Header Transition checks a couple sizes and performs some chain level upkeep.
+The environment consists of a set of genesis keys, and the state is the
+epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
+
+\begin{figure}
+  \emph{Block Header Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
+    \powerset (\powerset{\VKeyGen} \times \NewEpochState \times \BHeader \times \NewEpochState)
+  \end{equation*}
+  \caption{BHeader transition-system types}
+  \label{fig:ts-types:bheader}
+\end{figure}
+
+The $\mathsf{BHEAD}$ transition rule is shown in Figure~\ref{fig:rules:bhead}.
+The signal is a new block header \var{bh}, from which we extract:
+
+\begin{itemize}
+\item The block header body \var{bhb}.
+\item The slot \var{slot} of the block header.
+\end{itemize}
+
+The transition rule is executed, if the following conditions are satisfied:
+
+\begin{itemize}
+\item The size of \var{bh} is less than or equal to the maximal size that the
+  protocol parameters allow for block headers.
+\item The size of the block body, as claimed by the block header, is less than or equal to the
+  maximal size that the protocol parameters allow for block bodies.
+  It will later be verified that the size of the block body matches the size claimed
+  in the header (see Figure~\ref{fig:rules:bbody}).
+\end{itemize}
+
+If the size checks pass, then three transitions are done:
+
+\begin{itemize}
+  \item The $\mathsf{NEWEPOCH}$ transition performs any state change needed if it is the first
+    block of a new epoch.
+  \item The $\mathsf{RUPD}$ creates the reward update if it is late enough in the epoch.
+    \textbf{Note} that for every block header, either $\mathsf{NEWEPOCH}$ or $\mathsf{RUPD}$
+    will be the identity transition, and so, for instance, it does not matter if $\mathsf{RUPD}$
+    uses $\var{nes}$ or $\var{nes}'$ to obtain the needed state.
+\end{itemize}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:bheader}
+    \inference[BHead]
+    {
+      \var{bhb} \leteq \bhbody{bh}
+      &
+      \var{s} \leteq \bslot{bhb}
+      \\
+      \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
+      &
+      \hBbsize{bhb} \leq \fun{maxBlockSize}~\var{pp}
+      \\
+      {
+        \left(
+          {\begin{array}{c}
+              \eta_c \\
+              \var{s} \\
+              \var{gkeys} \\
+          \end{array}}
+        \right)
+        \vdash
+        \var{nes}
+        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
+        \var{nes}'
+      }
+      \\~\\
+      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\var{ru},~\wcard,~\wcard)\leteq\var{nes}
+      \\
+      {
+        \left(
+          {\begin{array}{c}
+              \var{b_{prev}} \\
+              \var{es} \\
+          \end{array}}
+        \right)
+        \vdash \var{ru}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru}'
+      }
+      \\
+      \var{nes}''\leteq\var{nes'}\unionoverrideRight\{\var{ru'}\}
+    }
+    {
+      \var{gkeys}
+      \vdash\var{nes}\trans{bhead}{\var{bh}}\varUpdate{\var{nes''}}
+    }
+  \end{equation}
+  \caption{BHeader rules}
+  \label{fig:rules:bhead}
+\end{figure}
+
+\clearpage
+
+\subsection{Operational Certificate Transition}
+\label{sec:oper-cert-trans}
+
+The Operational Certificate Transition contains no environments, and its state is the mapping of
+operation certificate issues numbers.  Its signal is a block header body.
+
+\begin{figure}
   \emph{Operational Certificate Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\powerset{\VKeyGen} \times \OCertState \times \BHBody \times \OCertState)
+    \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
+    \powerset (\HashKey_{pool} \mapsto \N \times \BHBody \times \HashKey_{pool} \mapsto \N)
   \end{equation*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
@@ -563,7 +771,6 @@ header body \var{bhb} we first extract the following:
   \item The operational certificate, consisting of the hot key \var{vk_{hot}}, the cold key
     \var{vk_{cold}}, the KES period number \var{n}, the KES period start \var{c_0} and the cold key
   signature.
-\item The block header issuer verification key \var{vk_{cold}}.
 \item The hash \var{hk} of \var{vk_{cold}}.
 \end{itemize}
 
@@ -600,304 +807,52 @@ operational hot key.
       m \leq n
       &
       \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
-      \\
-      d = \var{gkeys} \restrictdom \{\var{vk_{cold}}\mapsto \var{vk_{hot}}\}
     }
     {
-      \var{gkeys}
-      \vdash
-      \left(
-      \begin{array}{c}
-        \left(
-        \begin{array}{c}
-          \var{stpools} \\
-          \var{poolParams} \\
-          \var{retiring} \\
-          \var{cs} \\
-        \end{array}
-        \right)\\
-        \\
-        \var{dms} \\
-      \end{array}
-      \right)
-      \trans{ocert}{\var{bhb}}
-      \left(
-      \begin{array}{c}
-        \left(
-        \begin{array}{c}
-          \var{stpools} \\
-          \var{poolParams} \\
-          \var{retiring} \\
-          \varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}} \\
-        \end{array}
-        \right)\\
-        \\
-        \varUpdate{\var{dms}\unionoverrideRight d} \\
-      \end{array}
-      \right)
+      \vdash\var{cs}
+      \trans{ocert}{\var{bhb}}\varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}}
     }
   \end{equation}
   \caption{OCert rules}
   \label{fig:rules:ocert}
 \end{figure}
 
-\subsection{Block Header Transition}
-\label{sec:block-header-trans}
-
-The Block Header Transition updates the block header state. The environment is
-given in Figure~\ref{fig:ts-types:bheader} contains the current slot (in
-wall-clock time) and the protocol parameters. The block header state is shown in
-Figure~\ref{fig:ts-types:bheader}, it contains the hash of the last header and
-the last slot.
-
-\begin{figure}
-  \emph{Block Header environments}
-  \begin{equation*}
-    \BHeaderEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{current slot (wall-clock)} \\
-        \var{pp} & \PParams & \text{protocol parameters} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Block Header states}
-  \begin{equation*}
-    \BHeaderState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{h} & \HashHeader & \text{latest header hash} \\
-        \var{s_\ell} & \Slot & \text{last slot} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Block Header Transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\BHeaderEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
-  \end{equation*}
-  \caption{BHeader transition-system types}
-  \label{fig:ts-types:bheader}
-\end{figure}
-
-The $\mathsf{BHEAD}$ transition rule is shown in Figure~\ref{fig:rules:bheader}.
-The signal is a new block header \var{bh}, from which we extract:
-
-\begin{itemize}
-\item The block header body \var{bhb}.
-\item The signature $\sigma$ of the block header.
-\item The slot \var{slot} of the block header.
-\item The hot verification key \var{vk_{hot}} of the operational certificate of
-  the block header.
-\item The hash of the previous block header \var{h}.
-\end{itemize}
-
-The transition rule is executed, if the following conditions are satisfied:
-
-\begin{itemize}
-\item The hot verification key \var{vk_{hot}} maps to the slot \var{s_0} in
-  \var{stpools}.
-\item The \var{slot} of the block header is greater than the last slot and less
-  than or equal to the current slot \var{s_{now}}.
-\item The hash \var{h} of the previous block header in the block header state
-  matches the hash in the body of the block header.
-\item The verification key validates the signature $\sigma$ for the block
-  header body, according to the expected KES evolution.
-\item The size of \var{bh} is less than or equal to the maximal size that the
-  protocol parameters allow for block headers.
-\item The size of the block body, as claimed by the block header, is less than or equal to the
-  maximal size that the protocol parameters allow for block bodies.
-  It will later be verified that the size of the block body matches the size claimed
-  in the header (see Figure~\ref{fig:rules:bbody}).
-\end{itemize}
-
-The state update finally sets \var{slot} as new block header slot and hash of
-\var{bh} as the new block header hash in the block header state.
-
-\begin{figure}[ht]
-  \begin{equation}\label{eq:bheader}
-    \inference[BHead]
-    {
-      (\var{bhb},~\sigma) \leteq \var{bh}
-      &
-      \var{slot} \leteq \bslot{bhb}
-      \\
-      (\var{vk_{hot}},~\wcard,~\wcard,\var{c_0},~\wcard) \leteq \bocert{bhb}
-      & \var{hk} \leteq \hashKey{vk_{hot}}
-      \\
-      t \leteq \kesPeriod{slot} - c_0
-      \\~\\
-      \var{s_\ell} < \var{slot} \leq \var{s_{now}}
-      &
-      \var{h} = \bprev{bhb}
-      &
-      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
-      \\
-      \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
-      &
-      \hBbsize{bhb} \leq \fun{maxBlockSize}~\var{pp}
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{s_{now}} \\
-            \var{pp} \\
-        \end{array}}
-      \right)
-      \vdash
-      {\left(\begin{array}{c}
-            \var{h} \\
-            \var{s_\ell} \\
-      \end{array}\right)}
-      \trans{bhead}{\var{bh}}
-      {\left(\begin{array}{c}
-            \varUpdate{\bhHash{bh}} \\
-            \varUpdate{slot} \\
-      \end{array}\right)}
-    }
-  \end{equation}
-  \caption{BHeader rules}
-  \label{fig:rules:bheader}
-\end{figure}
-
 \subsection{Verifiable Random Function}
 \label{sec:verif-rand-funct}
 
-The verifiable random function (VRF) transition rule validates that a block
-header is correctly produced, i.e., the block issuer is a selected leader for
-that slot and has the right to produce the block.
-
-The verifiable random function transition uses the environment shown in
-Figure~\ref{fig:ts-types:vrf} which consists of
-
-\begin{itemize}
-\item The current slot number \var{s_{now}}.
-\item The protocol parameters.
-\item The epoch nonce $\eta_0$.
-\item The pool stake distribution.
-\item The stake pool mapping \var{stpools}.
-\end{itemize}
-
-The VRF state is $\BHeaderState$.
-
-\begin{figure}
-  \emph{VRF environments}
-  \begin{equation*}
-    \VRFEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{s_{now}} & \Slot & \text{current slot} \\
-        \var{pp} & \PParams & \text{protocol parameters} \\
-        \eta_0 & \Seed & \text{epoch nonce} \\
-        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{VRF Transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{vrf}{\_} \var{\_} \subseteq
-    \powerset (\VRFEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
-  \end{equation*}
-  \caption{VRF transition-system types}
-  \label{fig:ts-types:vrf}
-\end{figure}
-
-The $\mathsf{VRF}$ rule calls $\mathsf{BHEAD}$ as a subrule, its signal is a
-block header \var{bh}. For the transition it extracts the following:
+In this section we define a function $\fun{vrfChecks}$ which performs all the VRF related checks
+on a given block header body.
+In addition to the block header body, the function requires the epoch nonce,
+the stake distribution (aggregated by pool), and the active slots coefficient from the protocol
+parameters. The function checks:
 
 \begin{itemize}
-\item The block header body \var{bhb} of the block header.
-\item The verification key \var{vk} of the block issuer.
-\item The slot seed \var{ss} of the slot of the block.
-\end{itemize}
-
-This is used to validate the preconditions of the transition rule via
-verification of the following:
-
-\begin{itemize}
+\item The validity of the proofs for the leader value and the new nonce.
 \item The verification key is associated to a non-zero relative stake
-  $\sigma$ in \var{stpools}.
+  $\sigma$ in the stake distribution.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
-\item The verification of the proofs for the seed leader constant \var{\Seedl}
-  and the nonce seed constant $\Seede$ succeeds.
 \end{itemize}
 
-When these preconditions are fulfilled, the transition updates the VRF states by
-replacing the hash header with \var{h'} and the slot with \var{s_\ell}, as
-returned by the application of the $\mathsf{BHEAD}$ transition rule.
-
-\begin{figure}[ht]
-  \begin{equation}\label{eq:vrf}
-    \inference[VRF]
-    {
-      \var{bhb} \leteq \fun{bhbody}~{\var{bh}}
-      &
-      f \leteq \activeSlotCoeff{pp}
-      \\
-      \var{vk} \leteq \bvkcold bhb
-      &
-      \var{ss} \leteq \slotToSeed{(\bslot{bhb})}
-      &
-      \var{hk} \leteq \hashKey{vk}
-      \\~\\
-      \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})}
-      \\
-      \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})}
-      \\
-      \var{hk}\mapsto \sigma\in\var{pd}
-      &
-      \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma}
-      \\~\\
-      {
-        \left(
-          {\begin{array}{c}
-             \var{s_{now}} \\
-             \var{pp} \\
-           \end{array}}
-        \right)
-        \vdash
-        \left(
-          {\begin{array}{c}
-             \var{h} \\
-             \var{s_{\ell}} \\
-           \end{array}}
-        \right)
-        \trans{\hyperref[fig:rules:bheader]{bhead}}{\var{bh}}
-        \left(
-          {\begin{array}{c}
-             \var{h}' \\
-             \var{s_{\ell}}' \\
-           \end{array}}
-        \right)
-      }
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{s_{now}} \\
-            \var{pp} \\
-            \eta_0 \\
-            \var{pd} \\
-        \end{array}}
-      \right)
-      \vdash
-      {\left(\begin{array}{c}
-            \var{h} \\
-            \var{s_\ell} \\
-      \end{array}\right)}
-      \trans{vrf}{\var{bh}}
-      {\left(\begin{array}{c}
-            \varUpdate{\var{h}'} \\
-            \varUpdate{\var{s_\ell}'} \\
-      \end{array}\right)}
-    }
-  \end{equation}
-  \caption{VRF rules}
-  \label{fig:rules:vrf}
+\begin{figure}
+  \emph{VRF helper funnction}
+  \begin{align*}
+      & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
+      & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
+      & \begin{array}{cl}
+        ~~~~ & \var{hk}\mapsto \sigma\in\var{pd} \\
+        ~~~~ \land &
+             \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})} \\
+        ~~~~ \land &
+             \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})} \\
+        ~~~~ \land &
+             \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
+      \end{array} \\
+      & ~~~~\where \\
+      & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
+      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
+  \end{align*}
+  \label{fig:vrf-checks}
 \end{figure}
 
 \clearpage
@@ -911,16 +866,25 @@ Key to this transition is a protocol parameter $d$ which controls how many slots
 the genesis nodes via OBFT, and which slots are open to any registered stake pool.
 The transition system introduced in this section, $\type{OVERLAY}$, covers this mechanism.
 
-The environments for this transition is:
+This transition is responsible for validating the protocol for both the OBFT blocks
+and the Praos blocks, depending on the overlay schedule.
+
+The environments for this transition are:
 \begin{itemize}
-  \item The environment for the $\type{VRF}$ transition $\var{ve}$.
+  \item The protocol parameters $\var{pp}$.
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
     A slot in this map with a value of $\Nothing$ is a non-active slots,
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
+  \item The mapping of genesis keys to their operational keys $\var{dms}$.
+  \item The epoch nonce $\eta_0$.
+  \item The stake pool stake distribution $\var{pd}$.
 \end{itemize}
+
+The states for this transition consist only of the mapping of certificate issue numbers
+(which is unchanged in the OBFT case).
 
 \begin{figure}
   \emph{Overlay environments}
@@ -928,8 +892,11 @@ The environments for this transition is:
     \OverlayEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{ve} & \VRFEnv & \text{VRF environment} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
         \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
       \end{array}
     \right)
   \end{equation*}
@@ -937,7 +904,8 @@ The environments for this transition is:
   \emph{Overlay Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{overlay}{\_} \var{\_} \subseteq
-    \powerset (\OverlayEnv \times \BHeaderState \times \BHeader \times \BHeaderState)
+    \powerset (\OverlayEnv \times (\HashKey_{pool} \mapsto \N) \times \BHeader \times
+    (\HashKey_{pool} \mapsto \N))
   \end{equation*}
   \caption{Overlay transition-system types}
   \label{fig:ts-types:overlay}
@@ -947,54 +915,30 @@ The environments for this transition is:
   \begin{equation}\label{eq:active-pbft}
     \inference[Active-OBFT]
     {
-      \var{bhb}\leteq\bhbody{bh}
-      &
-      (\var{s_{now}},~\var{pp},~\wcard,~\wcard)\leteq ve
+      (\var{bhb},~\sigma)\leteq\var{bh}
       \\
       \{\bslot bhb \mapsto \var{gkey}\} \in \var{osched}
       &
       \var{gkey} = \bvkcold{bhb}
-      \\~\\
-      {
-        \left(
-          {\begin{array}{c}
-             \var{s_{now}} \\
-             \var{pp} \\
-           \end{array}}
-        \right)
-        \vdash
-        \left(
-          {\begin{array}{c}
-             \var{h} \\
-             \var{s_{\ell}} \\
-           \end{array}}
-        \right)
-        \trans{\hyperref[fig:rules:bheader]{bhead}}{\var{bh}}
-        \left(
-          {\begin{array}{c}
-             \var{h}' \\
-             \var{s_{\ell}}' \\
-           \end{array}}
-        \right)
-      }
+      \\
+      \var{dms}\mapsto\var{gkey}\in\var{vk_{hot}}
+      &
+      \mathcal{V}_{vk_{hot}}{\serialised{bhb}}_{\sigma}
     }
     {
       \left(
         {\begin{array}{c}
-            \var{ve} \\
+            \var{pp} \\
             \var{osched} \\
+            \var{dms} \\
+            \eta_0 \\
+            \var{pd} \\
         \end{array}}
       \right)
       \vdash
-      {\left(\begin{array}{c}
-            \var{h} \\
-            \var{s_\ell} \\
-      \end{array}\right)}
+      \var{cs}
       \trans{overlay}{\var{bh}}
-      {\left(\begin{array}{c}
-            \varUpdate{\var{h}'} \\
-            \varUpdate{\var{s_\ell}'} \\
-      \end{array}\right)}
+      \var{cs}
     }
   \end{equation}
 
@@ -1003,48 +947,162 @@ The environments for this transition is:
   \begin{equation}\label{eq:decentralized}
     \inference[Decentralized]
     {
-      \bslot \bhbody bh \notin \dom{\var{osched}}
+      (\var{bhb},~\sigma)\leteq\var{bh}
+      \\
+      \bslot{bhb} \notin \dom{\var{osched}}
       \\~\\
       {
-        \var{ve}\vdash
-        \left(
-          {\begin{array}{c}
-             \var{h} \\
-             \var{s_{\ell}} \\
-           \end{array}}
-        \right)
-        \trans{\hyperref[fig:rules:vrf]{vrf}}{\var{bh}}
-        \left(
-          {\begin{array}{c}
-             \var{h}' \\
-             \var{s_{\ell}}' \\
-           \end{array}}
-        \right)
+        \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bhb}}\var{cs'}
       }
+      \\~\\
+      (\var{vk_{hot}},~\wcard,~\wcard,\var{c_0},~\wcard) \leteq \bocert{bhb}
+      &
+      t \leteq \kesPeriod{slot} - c_0
+      \\
+      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
+      &
+      \fun{vrfChecks}~\eta_0~\var{pd}~(\activeSlotCoeff{pp})~\var{bhb}
     }
     {
       \left(
         {\begin{array}{c}
-            \var{ve} \\
+            \var{pp} \\
             \var{osched} \\
+            \var{dms} \\
+            \eta_0 \\
+            \var{pd} \\
         \end{array}}
       \right)
       \vdash
-      {\left(\begin{array}{c}
-            \var{h} \\
-            \var{s_\ell} \\
-      \end{array}\right)}
+      \var{cs}
       \trans{overlay}{\var{bh}}
-      {\left(\begin{array}{c}
-            \varUpdate{\var{h}'} \\
-            \varUpdate{\var{s_\ell}'} \\
-      \end{array}\right)}
+      \varUpdate{\var{cs}'}
     }
   \end{equation}
 
   \caption{Overlay rules}
   \label{fig:rules:overlay}
 \end{figure}
+
+\clearpage
+
+\subsection{Protocol Transition}
+\label{sec:protocol-trans}
+
+The protocol transition covers the common predicates of OBFT and Praos,
+and then calls $\mathsf{OVERLAY}$ for the particular transitions,
+followed by the transition to update the evolving and candidate nonces.
+
+\begin{figure}
+  \emph{Protocol environments}
+  \begin{equation*}
+    \PrtclEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{oe} & \OverlayEnv & \text{overlay environment} \\
+        \var{s_{now}} & \Slot & \text{current slot} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Protocol states}
+  \begin{equation*}
+    \PrtclState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{cs} & \HashKey_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
+        \var{h} & \HashHeader & \text{latest header hash} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
+        \eta_v & \Seed & \text{evolving nonce} \\
+        \eta_c & \Seed & \text{candidate nonce} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Protocol Transitions}
+  \begin{equation*}
+    \_ \vdash \var{\_} \trans{prtcl}{\_} \var{\_} \subseteq
+    \powerset (\powerset{\PrtclEnv} \times \PrtclState \times \BHeader \times \PrtclState)
+  \end{equation*}
+  \caption{Protocol transition-system types}
+  \label{fig:ts-types:prtcl}
+\end{figure}
+
+The environments for this transition are:
+\begin{itemize}
+  \item The overlay environment $\var{oe}$.
+  \item The current slot (as determined by wall-clock).
+\end{itemize}
+
+The states for this transition consists of:
+\begin{itemize}
+  \item The operational certificate issue number mapping.
+  \item The slot of the last block header.
+  \item The hash of last block header.
+  \item The evolving nonce.
+  \item The canditate nonce for the next epoch.
+\end{itemize}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:prtcl}
+    \inference[PRTCL]
+    {
+      \var{bhb}\leteq\bhbody{bh}
+      &
+      \var{slot} \leteq \bslot{bhb}
+      &
+      \eta\leteq\fun{bnonce}~{bhb}
+      \\
+      \var{s_\ell} < \var{slot} \leq \var{s_{now}}
+      &
+      \var{h} = \bprev{bhb}
+      \\~\\
+      {
+        \var{oe}\vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
+      }\\~\\
+      {
+        \eta\vdash
+        {\left(\begin{array}{c}
+        \eta_v \\
+        \eta_c \\
+        \end{array}\right)}
+        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
+        {\left(\begin{array}{c}
+        \eta_v' \\
+        \eta_c' \\
+        \end{array}\right)}
+      }
+    }
+    {
+      \left(
+        {\begin{array}{c}
+            \var{oe} \\
+            \var{s_{now}} \\
+        \end{array}}
+      \right)
+      \vdash
+      {\left(\begin{array}{c}
+            \var{cs} \\
+            \var{h} \\
+            \var{s_\ell} \\
+            \eta_v \\
+            \eta_c \\
+      \end{array}\right)}
+      \trans{prtcl}{\var{bh}}
+      {\left(\begin{array}{c}
+            \varUpdate{cs'} \\
+            \varUpdate{\bhHash{bh}} \\
+            \varUpdate{slot} \\
+            \varUpdate{\eta_v'} \\
+            \varUpdate{\eta_c'} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{Protocol rules}
+  \label{fig:rules:prtcl}
+\end{figure}
+
+\clearpage
 
 \subsection{Block Body Transition}
 \label{sec:block-body-trans}
@@ -1175,126 +1233,13 @@ current slot is not an overlay slot.
   \label{fig:rules:bbody}
 \end{figure}
 
-\subsection{Reward Update Transition}
-\label{sec:reward-update-trans}
-
-The Reward Update Transition calculates a new $\RewardUpdate$ to apply in a
-$\mathsf{NEWEPOCH}$ transition. The environment is shown in
-Figure~\ref{fig:ts-types:reward-update}, it consists of the produced blocks
-mapping \var{b} and the epoch state \var{es}. Its state is an optional reward
-update.
-
-\begin{figure}
-  \emph{Reward Update environments}
-  \begin{equation*}
-    \RUpdEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{b} & \BlocksMade & \text{blocks made} \\
-        \var{es} & \EpochState & \text{epoch state} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Reward Update Transitions}
-  \begin{equation*}
-    \_ \vdash \var{\_} \trans{rupd}{\_} \var{\_} \subseteq
-    \powerset (\RUpdEnv \times \RewardUpdate^? \times \Slot \times \RewardUpdate^?)
-  \end{equation*}
-  \caption{Reward Update transition-system types}
-  \label{fig:ts-types:reward-update}
-\end{figure}
-
-The transition rules are shown in Figure~\ref{fig:rules:reward-update}. There
-are three cases, one which computes a new reward update, one which leaves the
-rewards update unchanged as it has not yet been applied and finally one that
-leaves the reward update unchanged as the transition was started too early.
-
-The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
-execution of the transition role is as follows:
-
-\begin{itemize}
-\item If \var{s} is less than or equal to the sum of the first slot of its epoch
-  and the duration to start rewards \StartRewards, then the state is not
-  updated.
-\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
-  update has already been calculated but not yet applied, then the state is not
-  updated.
-\item If the current reward update \var{ru} is empty and \var{s} is greater than
-  the sum of the first slot of its epoch and the duration \StartRewards, then a
-  new rewards update is calculated and the state is updated.
-\end{itemize}
-
-\begin{figure}[ht]
-  \begin{equation}\label{eq:reward-update}
-    \inference[Reward-Update]
-    {
-      ru' \leteq \createRUpd{b}{es}
-      \\~\\
-      s > (\firstSlot{\epoch{s}}) + \StartRewards
-      &
-      ru = \Nothing
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
-      \vdash
-      \var{ru}\trans{rupd}{\var{s}}\varUpdate{\var{ru}'}
-    }
-  \end{equation}
-
-  \nextdef
-
-  \begin{equation}\label{eq:no-reward-update}
-    \inference[No-Reward-Update]
-    {
-      ru \neq \Nothing
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
-      \vdash
-      \var{ru}\trans{rupd}{\var{s}}\var{ru}
-    }
-  \end{equation}
-
-  \nextdef
-
-  \begin{equation}\label{eq:reward-too-early}
-    \inference[Reward-Too-Early]
-    {
-      s \leq (\firstSlot{\epoch{s}}) + \StartRewards
-    }
-    {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
-      \vdash
-      \var{ru}\trans{rupd}{\var{s}}\var{ru}
-    }
-  \end{equation}
-
-  \caption{Reward Update rules}
-  \label{fig:rules:reward-update}
-\end{figure}
+\clearpage
 
 \subsection{Chain Transition}
 \label{sec:chain-trans}
 
 The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
-part of the STS. It calls $\mathsf{BBODY}$, $\mathsf{VRF}$, $\mathsf{RUPD}$,
-$\mathsf{UPDN}$, $\mathsf{OCERT}$ and $\mathsf{NEWEPOCH}$ as sub-rules.
+part of the STS. It calls $\mathsf{BHEAD}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY}$ as sub-rules.
 
 The environment for the chain rule is the current slot number \var{s_{now}}.
 
@@ -1302,17 +1247,12 @@ The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
 following:
 
 \begin{itemize}
-\item The three nonces for the $\mathsf{VRF}$.
-\item The mapping of produced blocks.
-\item The last slot \var{s_\ell}.
-\item The last epoch \var{e_\ell}.
-\item The epoch state \var{es}.
-\item The reward update \var{ru}.
-\item The stake pool distribution \var{pd}.
-\item The genesis key delegations \var{dms}.
-\item The genesis keys \var{gkeys}.
-  \textbf{Note} that the genesis keys enter the state during the transition
-  from Byron to Shelley by the $\mathsf{toShelley}$ function, and are \textbf{otherwise unchanged}.
+  \item The epoch specific state $\var{nes}$.
+  \item The evolving nonce $\eta_v$.
+  \item The candidate nonce $\eta_c$.
+  \item The last header hash \var{h}.
+  \item The last slot \var{s_\ell}.
+  \item The genesis key delegations \var{dms}.
 \end{itemize}
 
 \begin{figure}
@@ -1321,17 +1261,12 @@ following:
     \ChainState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        (\eta_0,~\eta_c,~\eta_v) & \Seed\times\Seed\times\Seed & \text{nonces} \\
-        \var{b} & \BlocksMade & \text{blocks made} \\
+        \var{nes} & \NewEpochState & \text{epoch specific state} \\
+        ~\eta_v & \Seed & \text{evolving nonce} \\
+        ~\eta_c & \Seed & \text{candidate nonce} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
         \var{s_\ell} & \Slot & \text{last slot} \\
-        \var{e_\ell} & \Epoch & \text{lats epoch} \\
-        \var{es} & \EpochState & \text{epoch state} \\
-        \var{ru} & \RewardUpdate^? & \text{potential reward update} \\
-        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{overlay schedule} \\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
-        \var{gkeys} & \VKeyGen & \text{genesis keys} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1346,167 +1281,92 @@ following:
 \end{figure}
 
 The $\mathsf{CHAIN}$ transition rule is shown in
-Figure~\ref{fig:rules:chain}. Its signal is a \var{block} from the \var{block}
-we extract the block header body \var{bhb}. From \var{bhb} we extract the block
-nonce $\eta$ and the block slot \var{s}. The transition rule itself has no
-preconditions, instead it calls all its subrules.
-Note that $\mathsf{UPIEC}$ is defined in \cite{byron_ledger_spec}.
+Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from which
+we extract the block header \var{bh}.
+The transition rule itself has no preconditions, instead it calls all its subrules.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:chain}
     \inference[Chain]
     {
-      \var{bh} \leteq \bheader{block}
-      &
-      \var{bhb} \leteq \bhbody{bh}
-      &
-      \eta \leteq \fun{bnonce}~\var{bhb}
-      &
-      \var{s} \leteq \bslot{bhb}
+      \var{bh} \leteq \bheader{block} \\
       \\~\\
+      {
+        \dom{dms}\vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
+      } \\~\\
+      (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
+        \leteq\var{nes'} \\
+        (\wcard,~\wcard,\var{ls})\leteq\var{es}\\
+        (\wcard,(\wcard,~(\wcard,~\wcard,~\wcard,~\var{cs})),\var{us})\leteq\var{ls}\\
       {
         \left(
           {\begin{array}{c}
-              \eta_c \\
-              \var{s} \\
+              \left(\begin{array}{c}
+                 \pps{us} \\
+                 \var{osched} \\
+                 \var{dms} \\
+                 \eta_0 \\
+                 \var{pd} \\
+              \end{array}\right)\\
+              \var{s_{now}} \\
           \end{array}}
         \right)
         \vdash
         {\left(\begin{array}{c}
-              \var{e_\ell} \\
-              \eta_0 \\
-              \var{b} \\
-              \var{es} \\
-              \var{ru} \\
-              \var{pd} \\
-              \var{osched} \\
-        \end{array}\right)}
-        \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
-        {\left(\begin{array}{c}
-              \var{e_\ell}' \\
-              \eta_0' \\
-              \var{b}' \\
-              \var{es}' \\
-              \var{ru}' \\
-              \var{pd}' \\
-              \var{osched}' \\
-        \end{array}\right)}
-      }
-      &
-      {
-        \eta_{0} \vdash
-        {\left(\begin{array}{c}
+              \var{cs} \\
+              \var{h} \\
+              \var{s_\ell} \\
               \eta_v \\
               \eta_c \\
         \end{array}\right)}
-        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{s}}
+        \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
+              \var{cs'} \\
+              \var{h'} \\
+              \var{s_\ell'} \\
               \eta_v' \\
               \eta_c' \\
         \end{array}\right)}
-      }
-      \\~\\
-      (\var{acnt}',~\var{ss}',~(\var{utxoSt}',~(\var{ds}',~\var{ps'}),~\var{us}'))\leteq\var{es}'
-      \\
-      \var{gkeys}
-      \vdash
-      {\left(\begin{array}{c}
-      \var{ps}' \\
-      \var{dms} \\
-      \end{array}\right)}
-      \trans{\hyperref[fig:rules:ocert]{ocert}}{bhb}
-      {\left(\begin{array}{c}
-      \var{ps}'' \\
-      \var{dms}' \\
-      \end{array}\right)}
-      \\
-      {
-        \left(
-          {\begin{array}{c}
-              \left(
-              {\begin{array}{c}
-                \var{s_{now}} \\
-                \var{pp}' \\
-                \eta_0' \\
-                \var{pd}' \\
-                \end{array}}
-              \right)
-              \\
-              \var{osched'} \\
-          \end{array}}
-        \right)
-        \vdash
-        {\left(\begin{array}{c}
-              \var{h} \\
-              \var{s_\ell} \\
-        \end{array}\right)}
-        \trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}}
-        {\left(\begin{array}{c}
-              \var{h}' \\
-              \var{s_\ell}' \\
-        \end{array}\right)}
-      }
-      &
-      {
-        \left(
-          {\begin{array}{c}
-              \var{b} \\
-              \var{es}' \\
-          \end{array}}
-        \right)
-        \vdash \var{ru}' \trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru}''
-      }
-      \\
-      \var{ls} \leteq (\var{utxoSt}',~(\var{ds}',~\var{ps}''),~\var{us}')
-      \\
+      } \\~\\~\\
+      \var{ls'}\leteq\var{ls}\unionoverrideRight\{\var{cs}'\} \\
       {
         {\left(\begin{array}{c}
-        \var{dms}' \\
-        \dom{osched'} \\
+        \var{dms} \\
+        \dom{osched} \\
         \end{array}\right)}
         \vdash
         {\left(\begin{array}{c}
-              \var{ls} \\
-              \var{b'} \\
+              \var{ls}' \\
+              \var{b_{cur}} \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:bbody]{bbody}}{\var{block}}
         {\left(\begin{array}{c}
-              \var{ls}' \\
-              b'' \\
+              \var{ls}'' \\
+              \var{b_{cur}'} \\
         \end{array}\right)}
-      }
-      &
-      \var{es}'' \leteq (\var{acnt}',~\var{ss}',~\var{ls}')
+      }\\
+      \var{es'}\leteq\var{es}\unionoverrideRight\{\var{ls}''\} \\
+      \var{nes''}\leteq\var{nes'}\unionoverrideRight\{\var{es}',~\var{b_{cur}'}\}
     }
     {
       \var{s_{now}}
       \vdash
       {\left(\begin{array}{c}
-            (\eta_0,~\eta_c,~\eta_v) \\
-            \var{b} \\
+            \var{nes} \\
+            \eta_v \\
+            \eta_c \\
             \var{h} \\
             \var{s_\ell} \\
-            \var{e_\ell} \\
-            \var{es} \\
-            \var{ru} \\
-            \var{pd} \\
-            \var{osched} \\
             \var{dms} \\
-            \var{gkeys} \\
       \end{array}\right)}
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
-            \varUpdate{(\eta_0',~\eta_c',~\eta_v')} \\
-            \varUpdate{\var{b}''} \\
+            \varUpdate{\var{nes}''} \\
+            \varUpdate{\eta_v'} \\
+            \varUpdate{\eta_c'} \\
             \varUpdate{\var{h}'} \\
             \varUpdate{\var{s_\ell}'} \\
-            \varUpdate{\var{e_\ell}'} \\
-            \varUpdate{\var{es}''} \\
-            \varUpdate{\var{ru}''} \\
-            \varUpdate{\var{pd}'} \\
-            \varUpdate{\var{osched}'} \\
-            \varUpdate{\var{dms}'} \\
-            \var{gkeys} \\
+            \var{dms} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1546,69 +1406,75 @@ which takes the Byron ledger state and creates the Shelley ledger state.
       =
       \left(
         \begin{array}{c}
-          (\fun{hash}~{h},~\fun{hash}~{h},~\fun{hash}~{h}) \\
-          \emptyset \\
-          h \\
-          \var{s_{last}} \\
-          \epoch{s_{last}} \\
-          \\
           \left(
             \begin{array}{c}
-              \left(
-                \begin{array}{c}
-                  0 \\
-                  \var{reserves}
-                \end{array}
-              \right) \\
-              \left(
-                \begin{array}{c}
-                  (\emptyset, \emptyset) \\
-                  (\emptyset, \emptyset) \\
-                  (\emptyset, \emptyset) \\
-                  \emptyset \\
-                  \emptyset \\
-                  0
-                \end{array}
-              \right) \\
+              \epoch{s_{last}} \\
+              \fun{hash}~{h} \\
+              \emptyset \\
+              \emptyset \\
               \left(
                 \begin{array}{c}
                   \left(
                     \begin{array}{c}
-                      \var{utxo} \\
                       0 \\
-                      0 \\
+                      \var{reserves} \\
                     \end{array}
                   \right) \\
                   \left(
                     \begin{array}{c}
-                    \left(
-                      \begin{array}{c}
-                        \emptyset \\
-                        \emptyset \\
-                        \emptyset \\
-                        \emptyset \\
-                      \end{array}
-                    \right) \\
-                    \left(
-                      \begin{array}{c}
-                        \emptyset \\
-                        \emptyset \\
-                        \emptyset \\
-                        \emptyset \\
-                      \end{array}
-                    \right) \\
+                      (\emptyset, \emptyset) \\
+                      (\emptyset, \emptyset) \\
+                      (\emptyset, \emptyset) \\
+                      \emptyset \\
+                      \emptyset \\
+                      0
                     \end{array}
                   \right) \\
-                  \var{us} \\
+                  \left(
+                    \begin{array}{c}
+                      \left(
+                        \begin{array}{c}
+                          \var{utxo} \\
+                          0 \\
+                          0 \\
+                        \end{array}
+                      \right) \\
+                      \left(
+                        \begin{array}{c}
+                        \left(
+                          \begin{array}{c}
+                            \emptyset \\
+                            \emptyset \\
+                            \emptyset \\
+                            \emptyset \\
+                          \end{array}
+                        \right) \\
+                        \left(
+                          \begin{array}{c}
+                            \emptyset \\
+                            \emptyset \\
+                            \emptyset \\
+                            \emptyset \\
+                          \end{array}
+                        \right) \\
+                        \end{array}
+                      \right) \\
+                      \var{us} \\
+                    \end{array}
+                  \right) \\
                 \end{array}
               \right) \\
+              \\
+              \Nothing \\
+              \emptyset \\
+              \emptyset \\
             \end{array}
           \right) \\
-          \\
-          \Nothing \\
-          \emptyset \\
-          \emptyset \\
-          \dom{(\fun{dms}~\var{ds})} \\
+          \fun{hash}~{h} \\
+          \fun{hash}~{h} \\
+          \var{h} \\
+          \var{s_{last}} \\
+          \fun{dms}~\var{ds} \\
         \end{array}
       \right)
   \end{align*}
