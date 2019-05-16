@@ -61,7 +61,7 @@ validateEpochFile
 validateEpochFile config ll cvs fp = do
   subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
   utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
-  res          <- llBracketMonadX ll (llConfiguration ll) subTrace Log.Info "benchmark" $
+  res          <- llBracketMonadX ll subTrace Log.Info "benchmark" $
       liftIO $ runResourceT $ runExceptT $ foldChainValidationState
         config
         cvs

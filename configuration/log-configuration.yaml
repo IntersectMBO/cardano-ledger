@@ -41,25 +41,25 @@ options:
   cfokey:
     value: "Release-1.0.0"
   mapSubtrace:
+    '#messagecounters.aggregation':
+      subtrace: NoTrace
+    '#messagecounters.ekgview':
+      subtrace: NoTrace
+    '#messagecounters.katip':
+      subtrace: NoTrace
+    '#messagecounters.switchboard':
+      subtrace: NoTrace
     benchmark:
       contents:
-        - GhcRtsStats
         - MonotonicClock
+        #- GhcRtsStats
       subtrace: ObservableTrace
     '#ekgview':
       contents:
       - - tag: Contains
           contents: 'cardano.epoch-validation.benchmark'
         - - tag: Contains
-            contents: .monoclock.basic.
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.cpuNs.timed.
-      - - tag: StartsWith
-          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.gcNum.timed.
+            contents: 'diff.Clock.monoclock.basic'
       subtrace: FilterTrace
     'cardano.epoch-validation.utxo-stats':
       # Change the `subtrace` value to `Neutral` in order to log
