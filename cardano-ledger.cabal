@@ -37,6 +37,7 @@ library
                        Cardano.Chain.UTxO.UTxO
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
+                       Cardano.Chain.Update.Validation.Interface
 
   other-modules:
                        Cardano.Chain.Block.Block
@@ -104,7 +105,6 @@ library
                        Cardano.Chain.Update.SoftwareVersion
                        Cardano.Chain.Update.SystemTag
                        Cardano.Chain.Update.Validation.Endorsement
-                       Cardano.Chain.Update.Validation.Interface
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
                        Cardano.Chain.Update.Validation.Registration
                        Cardano.Chain.Update.Validation.Voting

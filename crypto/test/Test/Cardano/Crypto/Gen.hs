@@ -54,6 +54,7 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import qualified Data.ByteArray as ByteArray
+import Data.Coerce (coerce)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -86,7 +87,7 @@ import Cardano.Crypto.Signing
   , proxySign
   , safeCreateProxyCert
   , sign
-  , signEncoded
+  , signRaw
   , toVerification
   )
 import Cardano.Crypto.Signing.Redeem
@@ -201,7 +202,7 @@ genSignature pm genA = sign pm <$> genSignTag <*> genSigningKey <*> genA
 
 genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
-  signEncoded <$> genProtocolMagicId <*> genSignTag <*> genSigningKey <*> genB
+  coerce . signRaw <$> genProtocolMagicId <*> (Just <$> genSignTag) <*> genSigningKey <*> genB
 
 genRedeemSignature
   :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
