@@ -1483,7 +1483,8 @@ funds that are
 \begin{itemize}
 \item in base addresses using that staking key
 \item in pointer addresses for that staking key's registration
-  certificate
+  certificate (as long as the requirements in \cref{pointer-address} are
+  fulfilled)
 \item in the reward account of that staking key
 \end{itemize}
 
@@ -1613,8 +1614,13 @@ leader schedule for the next epoch:
 
   In order to keep the block frequency constant, we will select a fraction
   \(f\) of the OBFT slots, where \(f\) is the active slots coefficient from
-  Praos (Equation (1) in \citep{ouroboros_praos}), and call those the
-  \emph{active OBFT slots} of the epoch.
+  Praos\footnote{In Ouroboros Praos, a large fraction of slots will deliberately
+  be empty, which makes it easier to treat network delays in the adversarial
+  model, and to still give guarantees of liveness and persistence when some
+  blocks are not propagated within a single slot. Note that it is still possible
+  to achieve the same block frequency as in Ouroboros Classic, by choosing a
+  shorter slot length.} (Equation (1) in \citep{ouroboros_praos}), and call
+  those the \emph{active OBFT slots} of the epoch.
 
   For OBFT slots, we will modify the behaviour of all nodes as follows:
   \begin{itemize}
@@ -1891,12 +1897,13 @@ resources on the nodes should require a deposit, as described in
 should all require making a deposit. This deposit should be released
 when
 \begin{itemize}
-\item a UTxO entry is removed by using it as an input to a transaction
 \item a staking key is de-registered
 \item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
   epoch, and we will delay paying out the refund until that epoch.
+\item a UTxO entry is removed by using it as an input to a transaction (in a
+  future release)
 \end{itemize}
 Note that posting a delegation certificate does \emph{not} require a
 deposit; delegation certificates need a staking key registration
@@ -1929,7 +1936,7 @@ can be added to the ledger can be used to calculate the refund.
 As described, there is a lot of work to be done by the nodes as the system
 progresses from epoch to epoch: the stake distribution and slot leader schedule
 need to be calculated, the fees accumulated during the epoch need to be
-addedsummed up, performance of the pools evaluated, deposits decayed, and
+summed up, performance of the pools evaluated, deposits decayed, and
 rewards determined and distributed.
 
 Doing all that \emph{at} the transition between two epochs is far from ideal. It
