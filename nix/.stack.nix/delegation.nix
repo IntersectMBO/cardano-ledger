@@ -36,7 +36,6 @@
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
-            (hsPkgs.tasty-hedgehog-coverage)
             (hsPkgs.hedgehog)
             (hsPkgs.delegation)
             (hsPkgs.containers)
