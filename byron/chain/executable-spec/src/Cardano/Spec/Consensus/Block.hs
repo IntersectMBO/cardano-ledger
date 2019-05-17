@@ -2,6 +2,10 @@
 {-# LANGUAGE TypeFamilies     #-}
 
 -- | Type classes for interfacing with the consensus layer
+--
+-- NOTE: at the moment there are no plans of interfacing the executable spec
+-- with the consensus layer, and this module is not used anywhere in
+-- `cardano-ledger-specs`.
 module Cardano.Spec.Consensus.Block where
 
 import           Control.Lens ((^.))
