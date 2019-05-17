@@ -13,7 +13,7 @@ import           Lens.Micro              ((^.), (&), (%~), (.~))
 
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
-import           Test.Tasty.Hedgehog.Coverage
+import           Hedgehog.Internal.Property (LabelName(..))
 
 import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
@@ -53,56 +53,61 @@ propPositiveBalance =
 
 -- | This property states that the balance of the initial genesis state equals
 -- the balance of the end ledger state plus the collected fees.
-propPreserveBalanceInitTx :: Cover
+propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
-    withCoverage $ do
+    property $ do
       (_, steps, fee, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
-      classify (steps > 1) "non-trivial number of steps"
+      classify "non-trivial number of steps" (steps > 1)
       case next of
         Left _    -> failure
         Right ls' -> do
-              classify (isNotDustDist (ls ^. utxoState . utxo) (ls' ^. utxoState . utxo)) "non-trivial wealth dist"
+              classify "non-trivial wealth dist"
+                (isNotDustDist (ls ^. utxoState . utxo) (ls' ^. utxoState . utxo))
               balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) + fee
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
-propBalanceTxInTxOut :: Cover
-propBalanceTxInTxOut = withCoverage $ do
+propBalanceTxInTxOut :: Property
+propBalanceTxInTxOut = property $ do
   (l, steps, fee, txwits, l')  <- forAll genValidStateTx
   let tx                       = txwits ^. body
   let inps                     = txins tx
-  classify (steps > 1) "non-trivial valid ledger state"
-  classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
+  classify "non-trivial valid ledger state" (steps > 1)
+  classify "non-trivial wealth dist"
+    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
   (balance $ inps <| (l ^. utxoState . utxo)) === ((balance $ txouts tx) + fee)
 
 -- | Property (Preserve Outputs of Transaction)
-propPreserveOutputs :: Cover
-propPreserveOutputs = withCoverage $ do
+propPreserveOutputs :: Property
+propPreserveOutputs = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
   let tx                    = txwits ^. body
-  classify (steps > 1) "non-trivial valid ledger state"
-  classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
+  classify "non-trivial valid ledger state" (steps > 1)
+  classify "non-trivial wealth dist"
+    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
   True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo)
 
 -- | Property (Eliminate Inputs of Transaction)
-propEliminateInputs :: Cover
-propEliminateInputs = withCoverage $ do
+propEliminateInputs :: Property
+propEliminateInputs = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
   let tx                    = txwits ^. body
-  classify (steps > 1) "non-trivial valid ledger state"
-  classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
+  classify "non-trivial valid ledger state" (steps > 1)
+  classify "non-trivial wealth dist"
+    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
   Map.empty === Map.restrictKeys (utxoMap $ l' ^. utxoState . utxo) (txins tx)
 
 -- | Property (Completeness and Collision-Freeness of new TxIds)
-propUniqueTxIds :: Cover
-propUniqueTxIds = withCoverage $ do
+propUniqueTxIds :: Property
+propUniqueTxIds = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
   let tx                    = txwits ^. body
   let origTxIds             = collectIds <$> (Map.keys $ utxoMap (l ^. utxoState . utxo))
   let newTxIds              = collectIds <$> (Map.keys $ utxoMap (txouts tx))
   let txId                  = txid tx
-  classify (steps > 1) "non-trivial valid ledger state"
-  classify (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo)) "non-trivial wealth dist"
+  classify "non-trivial valid ledger state" (steps > 1)
+  classify "non-trivial wealth dist"
+    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
   True === ((all (== txId) newTxIds) &&
             (not $ any (== txId) origTxIds) &&
             Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo))
@@ -110,8 +115,8 @@ propUniqueTxIds = withCoverage $ do
 
 -- | Property checks no double spend occurs in the currently generated 'TxWits'
 -- transactions. Note: this is more a property of the current generator.
-propNoDoubleSpend :: Cover
-propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+propNoDoubleSpend :: Property
+propNoDoubleSpend = withTests 1000 $ property $ do
       (_, _, _, _, txs, next)  <- forAll genNonEmptyAndAdvanceTx
       case next of
         Left _  -> failure
@@ -124,8 +129,8 @@ propNoDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $
 -- | Classify mutated transaction into double-spends (validated and
 -- non-validated). This is a property of the validator, i.e., no validated
 -- transaction should ever be able to do a double spend.
-classifyInvalidDoubleSpend :: Cover
-classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+classifyInvalidDoubleSpend :: Property
+classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       (_, _, _, _, txs, LedgerValidation validationErrors _)
           <- forAll genNonEmptyAndAdvanceTx'
       let inputIndicesSet  = unions $ map (\txwit -> fromSet $ txwit ^. body . inputs) txs
@@ -133,9 +138,9 @@ classifyInvalidDoubleSpend = Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withC
                                    (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                                    inputIndicesSet)
       let isMultiSpend = 0 < multiSpentInputs
-      classify (isMultiSpend && validationErrors == []) "multi-spend, validation OK"
-      classify (isMultiSpend && validationErrors /= []) "multi-spend, validation KO"
-      classify (isMultiSpend) "multi-spend"
+      classify "multi-spend, validation OK" (isMultiSpend && validationErrors == [])
+      classify "multi-spend, validation KO" (isMultiSpend && validationErrors /= [])
+      classify "multi-spend" (isMultiSpend)
       True === ((not isMultiSpend) || validationErrors /= [])
 
 -- | 'TestTree' of property-based testing properties.
@@ -145,49 +150,49 @@ propertyTests = testGroup "Property-Based Testing"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"
                     propPositiveBalance
-                  , testPropertyCoverage
+                  , testProperty
                     "several transaction added to genesis ledger state"
                     propPreserveBalanceInitTx]
                 , testGroup "Property tests starting from valid ledger state"
-                  [testPropertyCoverage
+                  [testProperty
                     "preserve balance restricted to TxIns in Balance of outputs"
                     propBalanceTxInTxOut
-                  , testPropertyCoverage
+                  , testProperty
                     "Preserve outputs of transaction"
                     propPreserveOutputs
-                  , testPropertyCoverage
+                  , testProperty
                     "Eliminate Inputs of Transaction"
                     propEliminateInputs
-                  , testPropertyCoverage
+                  , testProperty
                     "Completeness and Collision-Freeness of new TxIds"
                     propUniqueTxIds
-                  , testPropertyCoverage
+                  , testProperty
                     "No Double Spend in valid ledger states"
                     propNoDoubleSpend
-                  , testPropertyCoverage
+                  , testProperty
                     "changing witness set"
                     propCheckMinimalWitnessSet
-                  , testPropertyCoverage
+                  , testProperty
                     "using subset of witness set"
                     propCheckMissingWitness
-                  , testPropertyCoverage
+                  , testProperty
                     "Correctly preserve balance"
                     propPreserveBalance
                   ]
                 , testGroup "Property tests with mutated transactions"
-                  [testPropertyCoverage
+                  [testProperty
                    "preserve balance of change in UTxO"
                    propBalanceTxInTxOut'
-                  , testPropertyCoverage
+                  , testProperty
                     "Classify double spend"
                     classifyInvalidDoubleSpend
                   ]
                 ]
 
 -- | Mutations for Property 7.2
-propBalanceTxInTxOut' :: Cover
+propBalanceTxInTxOut' :: Property
 propBalanceTxInTxOut' =
-  Test.Tasty.Hedgehog.Coverage.withTests 1000 $ withCoverage $ do
+  withTests 1000 $ property $ do
   (l, _, fee, txwits, lv)  <- forAll genStateTx
   let tx                       = _body txwits
   let inps                     = txins tx
@@ -197,14 +202,15 @@ propBalanceTxInTxOut' =
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
   let balanceOk                = balanceSource == balanceTarget + fee
-  classify (valErrors /= [] && balanceOk && nonTrivial) "non-valid, OK"
+  classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
   if valErrors /= [] && balanceOk && nonTrivial
-  then label (pack (  "inputs: "       ++ (show $ Set.size $ tx ^. inputs)
-                     ++ " outputs: "   ++ (show $ length $ tx ^. outputs)
-                     ++ " balance l "  ++ (show balanceSource)
-                     ++ " balance l' " ++ (show balanceTarget)
-                     ++ " txfee " ++ show fee
-                     ++ "\n  validationErrors: " ++ show valErrors))
+
+  then label $ LabelName (   "inputs: "     ++ (show $ Set.size $ tx ^. inputs)
+              ++ " outputs: "   ++ (show $ length $ tx ^. outputs)
+              ++ " balance l "  ++ (show balanceSource)
+              ++ " balance l' " ++ (show balanceTarget)
+              ++ " txfee " ++ show fee
+              ++ "\n  validationErrors: " ++ show valErrors)
   else (if valErrors /= [] && balanceOk
         then label ("non-validated, OK, trivial")
         else (if valErrors /= []
@@ -218,16 +224,16 @@ propBalanceTxInTxOut' =
 -- was used to sign the transaction, then the transaction must validate. If the
 -- witness was not already used to sign the transaction, a `UnneededWitnesses`
 -- validation error must be reported.
-propCheckMinimalWitnessSet :: Cover
-propCheckMinimalWitnessSet = withCoverage $ do
+propCheckMinimalWitnessSet :: Property
+propCheckMinimalWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = txwits ^. body
   let witness                  = makeWitness tx keyPair
   let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
   let l''                      = asStateTransition (Slot (steps)) l txwits'
-  classify (not $ witness `Set.member` (txwits ^. witnessSet))
-               "unneeded signature added"
+  classify "unneeded signature added"
+    (not $ witness `Set.member` (txwits ^. witnessSet))
   case l'' of
     Left [UnneededWitnesses]  ->
         (witness `Set.member` (txwits ^. witnessSet)) === False
@@ -236,8 +242,8 @@ propCheckMinimalWitnessSet = withCoverage $ do
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.
-propCheckMissingWitness :: Cover
-propCheckMissingWitness = withCoverage $ do
+propCheckMissingWitness :: Property
+propCheckMissingWitness = property $ do
   (l, steps, _, txwits, _) <- forAll genValidStateTx
   witnessList              <- forAll (Gen.subsequence $
                                         Set.toList (txwits ^. witnessSet))
@@ -246,16 +252,16 @@ propCheckMissingWitness = withCoverage $ do
   let l'                    = asStateTransition (Slot steps) l (txwits & witnessSet .~ witnessSet')
   let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
                               witnessSet' /= witnessSet''
-  classify (isRealSubset) "real subset"
-  label (pack ("witnesses:" ++ show (Set.size witnessSet'')))
+  classify "real subset" (isRealSubset)
+  label $ LabelName ("witnesses:" ++ show (Set.size witnessSet''))
   case l' of
     Left [MissingWitnesses] -> isRealSubset === True
     Right _                 -> (witnessSet' == witnessSet'') === True
     _                       -> failure
 
 -- | Property (Preserve Balance)
-propPreserveBalance :: Cover
-propPreserveBalance = withCoverage $ do
+propPreserveBalance :: Property
+propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
            (balance (l ^. utxoState . utxo))
