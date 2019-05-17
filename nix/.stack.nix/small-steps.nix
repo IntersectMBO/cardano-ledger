@@ -44,7 +44,9 @@
             (hsPkgs.doctest)
             (hsPkgs.small-steps)
             ];
-          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
+          build-tools = [
+            (hsPkgs.buildPackages.doctest-discover or (pkgs.buildPackages.doctest-discover))
+            ];
           };
         };
       };
