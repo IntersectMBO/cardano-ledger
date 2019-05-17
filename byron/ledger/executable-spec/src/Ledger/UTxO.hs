@@ -117,6 +117,7 @@ data UTXO id
 data UTxOState id = UTxOState { utxo :: UTxO id
                               , reserves :: Lovelace
                               }
+  deriving (Show)
 
 instance (Ord id, HasTypeReps id) => STS (UTXO id) where
 

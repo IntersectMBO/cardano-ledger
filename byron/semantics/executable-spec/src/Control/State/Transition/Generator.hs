@@ -33,9 +33,21 @@ module Control.State.Transition.Generator
 where
 
 import Control.Monad (forM)
+import Control.Monad.Trans.Maybe (MaybeT)
+import Data.Functor.Identity (Identity)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (Size(Size), unSize)
+import qualified Hedgehog.Range as Range
+import Hedgehog.Range (Size(Size))
+
+--------------------------------------------------------------------------------
+-- Temporary imports till hedgehog exposes interleaveTreeT and withGenT
+--------------------------------------------------------------------------------
+import Hedgehog.Internal.Gen
+import Hedgehog.Internal.Tree
+--------------------------------------------------------------------------------
+-- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
+--------------------------------------------------------------------------------
 
 import Control.State.Transition
   ( Environment
@@ -50,9 +62,9 @@ import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
   , lastState
-  , mkTrace
   , traceLength
   , traceSignals
+  , closure
   )
 
 class STS s => HasTrace s where
@@ -60,78 +72,84 @@ class STS s => HasTrace s where
 
   sigGen :: Environment s -> State s -> Gen (Signal s)
 
-  trace :: Gen (Trace s)
-  trace = do
+  trace
+    :: Int
+    -- ^ Length of the generated trace.
+    -> Gen (Trace s)
+  trace n = do
     env <- initEnvGen @s
     case applySTS @s (IRC env) of
       -- Hedgehog will give up if the generators fail to produce any valid
       -- initial state, hence we don't have a risk of entering an infinite
       -- recursion.
-      Left _pf  -> trace
+      Left _pf  -> trace n
       -- Applying an initial rule with an environment and state will simply
       -- validate that state, so we do not care which state 'applySTS' returns.
-      Right st -> genTrace env st (sigGen @s)
+      Right st -> genTrace n env st (sigGen @s)
 
 -- | Return a (valid) trace generator given an initial state, environment, and
 -- signal generator.
+--
 genTrace
   :: forall s
    . STS s
-  => Environment s
+  => Int
+  -- ^ Trace upper bound. This will be linearly scaled as a function of the
+  -- generator size.
+  -> Environment s
+  -- ^ Environment, which remains constant in the system.
   -> State s
+  -- ^ Initial state.
   -> (Environment s -> State s -> Gen (Signal s))
+  -- ^ Signal generator. This generator relies on an environment and a state to
+  -- generate a signal.
   -> Gen (Trace s)
-genTrace env st aSigGen = Gen.sized $ \d -> mkTrace env st <$> go d st []
+genTrace ub env st0 aSigGen = do
+  -- Generate the initial size of the trace, but don't shrink it (notice the
+  -- use of 'integral_') since we will be shrinking the traces manually (so it
+  -- doesn't make sense to shrink the trace size).
+  --
+  -- Note that the length of the resulting trace might be less than the
+  -- generated value if invalid signals (according to some current state) are
+  -- generated in 'loop'.
+  n <- integral_ $ Range.linear 0 ub
+  mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
   where
-    go d sti acc =
-      Gen.frequency [ (5, return acc)
-                    -- The probability of continue with the recursion depends
-                    -- on the size parameter of the generator. Here the
-                    -- constant factor is determined ad-hoc.
-                    , (unSize d * 2, do
-                          mStSig <- genSigSt @s env sti aSigGen
-                          case mStSig of
-                            Nothing ->
-                              go d sti acc
-                            Just (stNext, sig) ->
-                              go d stNext ((stNext, sig): acc)
-                      )
-                    ]
-  -- An alternate way to generate a trace of the size of the generator might
-  -- be:
-  --
-  -- >>>  go 0 _   acc = return acc
-  -- >>>  go d sti acc = do
-  -- >>>    mStSig <- genSigSt @s env sti aSigGen
-  -- >>>    case mStSig of
-  -- >>>      Nothing ->
-  -- >>>        go (d - 1) sti acc
-  -- >>>      Just (stNext, sig) ->
-  -- >>>        go (d - 1) stNext ((stNext, sig): acc)
-  --
+    loop
+      :: Int
+      -> State s
+      -> [TreeT (MaybeT Identity) (Signal s)]
+      -> Gen [TreeT (MaybeT Identity) (Signal s)]
+    loop 0 _ acc = pure acc
+    loop d sti acc = do
+      sigTree :: TreeT (MaybeT Identity) (Signal s)
+        <- toTreeMaybeT $ aSigGen env sti
+      let
+        --  Take the root of the next-state signal tree.
+        mSig = treeValue <$> runDiscardEffect sigTree
+      case mSig of
+        Nothing ->
+          loop (d - 1) sti acc
+        Just sig ->
+          case applySTS @s (TRC(env, sti, sig)) of
+            Left _     -> loop (d - 1) sti acc
+            Right sti' -> loop (d - 1) sti' (sigTree : acc)
 
--- | Return a signal-and-ensuing-state generator, given an initial state,
--- environment and signal generator.
-genSigSt
-  :: forall s
-   . STS s
-  => Environment s
-  -> State s
-  -> (Environment s -> State s -> Gen (Signal s))
-  -> Gen (Maybe (State s, Signal s))
-genSigSt env st aSigGen = do
-  sig <- aSigGen env st
-  -- TODO: we might want to know why are we getting a given failure...
-  case applySTS @s (TRC(env, st, sig)) of
-    Left _ -> pure Nothing
-    Right nextSt -> pure $ Just (nextSt, sig)
+    interleaveSigs
+      :: MaybeT Identity (NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)])
+      -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
+    interleaveSigs mst = do
+      nodeT :: NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)]  <- mst
+      lts <- interleaveTreeT (nodeValue nodeT)
+      pure $! closure @s env st0 <$> lts
 
 traceSuchThat
   :: forall s
    . HasTrace s
-  => (Trace s -> Bool)
+  => Int
+  -> (Trace s -> Bool)
   -> Gen (Trace s)
-traceSuchThat cond = Gen.filter cond (trace @s)
+traceSuchThat n cond = Gen.filter cond (trace @s n)
 
 suchThatLastState
   :: forall s
@@ -145,9 +163,10 @@ suchThatLastState traceGen cond = Gen.filter (cond . lastState) traceGen
 nonTrivialTrace
   :: forall s
    . (HasTrace s, HasSizeInfo (Signal s))
-  => Gen (Trace s)
-nonTrivialTrace =
-  Gen.filter (any (not . isTrivial) . traceSignals OldestFirst) trace
+  => Int
+  -> Gen (Trace s)
+nonTrivialTrace ub =
+  Gen.filter (any (not . isTrivial) . traceSignals OldestFirst) (trace ub)
 
 class HasSizeInfo sig where
   isTrivial :: sig -> Bool
@@ -165,16 +184,31 @@ sampleMaxTraceSize
   :: forall s
    . HasTrace s
   => Int
+  -- ^ Trace's upper bound
+  -> Int
   -- ^ Generator size
   -> Int
   -- ^ Number of samples to take
   -> IO Int
-sampleMaxTraceSize d n =
+sampleMaxTraceSize ub d n =
   maximum <$>
-    forM [0..n] (const $ traceLength <$> Gen.sample (Gen.resize (Size d) (trace @s)))
+    forM [0..n] (const $ traceLength <$> Gen.sample (Gen.resize (Size d) (trace @s ub)))
 
 randomTrace
   :: forall s
    . HasTrace s
-  => IO (Trace s)
-randomTrace = Gen.sample trace
+  => Int
+  -> IO (Trace s)
+randomTrace ub = Gen.sample (trace ub)
+
+--------------------------------------------------------------------------------
+-- Temporary definitions till hedgehog exposes these
+--------------------------------------------------------------------------------
+
+interleaveTreeT :: Monad m => [TreeT m a] -> m (NodeT m [a])
+interleaveTreeT =
+  fmap interleave . traverse runTreeT
+
+--------------------------------------------------------------------------------
+-- END: Temporary definitions till hedgehog exposes these
+--------------------------------------------------------------------------------

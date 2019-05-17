@@ -13,7 +13,7 @@ import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
 import GHC.Generics (Generic)
 import Control.State.Transition.Generator
-import Ledger.Core hiding ((<|))
+import Ledger.Core (Hash, VKey, Slot, Sig)
 import Ledger.Delegation
 import Ledger.Update (ProtVer, UProp, Vote)
 import Ledger.UTxO (TxWits, TxId)
