@@ -49,7 +49,13 @@ coverageUploadStep = do
     Just repoToken -> do
       result <- proc
         "shc"
-        ["--repo-token", repoToken, "combined", "all"]
+        [ "--repo-token"
+        , repoToken
+        , "--exclude-dirs"
+        , "crypto/test"
+        , "combined"
+        , "all"
+        ]
         empty
       case result of
         ExitSuccess   -> printf "Coverage information upload successful.\n"
