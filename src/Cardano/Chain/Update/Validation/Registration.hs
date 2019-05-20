@@ -91,7 +91,6 @@ data Error
   | MaxBlockSizeTooLarge (TooLarge Natural)
   | MaxTxSizeTooLarge (TooLarge Natural)
   | ProposalAttributesUnknown
-  | ProposalEmpty
   | ProposalTooLarge (TooLarge Natural)
   | SoftwareVersionError SoftwareVersionError
   | SystemTagError SystemTagError
@@ -159,9 +158,6 @@ registerProposalComponents
   -> AProposal ByteString
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
-
-  protocolVersionChanged || softwareVersionChanged `orThrowError` ProposalEmpty
-
   -- Check that the 'SystemTag's in the metadata are valid
   mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
