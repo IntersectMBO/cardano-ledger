@@ -1,6 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Chain.Elaboration.UTxO
   ( UTxO
@@ -12,6 +14,7 @@ module Test.Cardano.Chain.Elaboration.UTxO
   , elaborateUTxOEnv
   , elaborateUTxO
   , elaborateTxWitsBS
+  , elaborateTxOut
   , ConcreteResult(..)
   )
 where
@@ -19,9 +22,10 @@ where
 import Cardano.Prelude
 
 import qualified Data.ByteString.Lazy as LBS
-import Data.Coerce
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
+import Data.Sequence ((<|))
+import Data.Typeable (typeOf)
 import qualified Data.Vector as V
 import Formatting hiding (bytes)
 
@@ -32,6 +36,9 @@ import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import qualified Cardano.Chain.UTxO.Validation as Concrete.UTxO
 import qualified Cardano.Chain.Update as Concrete
 import Cardano.Crypto
+
+import Data.AbstractSize (HasTypeReps(..))
+import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
 import qualified Ledger.Core as Abstract
 import qualified Ledger.UTxO as Abstract
 
@@ -56,6 +63,10 @@ instance Ord ConcreteResult where
 
 type TxId v = Either Abstract.Addr (Var ConcreteResult v)
 
+instance Typeable v => HasTypeReps (TxId v) where
+  typeReps (Left a) = typeOf a <| empty
+  typeReps (Right _) = empty
+
 type UTxO v = Abstract.UTxO (TxId v)
 
 type TxWits v = Abstract.TxWits (TxId v)
@@ -67,8 +78,7 @@ type TxIn v = Abstract.TxIn (TxId v)
 type Wit v = Abstract.Wit (TxId v)
 
 
-elaborateUTxOEnv
-  :: Abstract.UTxOEnv (TxId Concrete) -> Concrete.UTxO.Environment
+elaborateUTxOEnv :: Abstract.UTxOEnv txid -> Concrete.UTxO.Environment
 elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
   { Concrete.UTxO.protocolMagic      = Dummy.aProtocolMagic
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
@@ -79,29 +89,38 @@ elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
     }
   }
 
-elaborateUTxO :: UTxO Concrete -> Concrete.UTxO
-elaborateUTxO (Abstract.UTxO utxo) =
-  Concrete.UTxO.fromList . fmap elaborateUTxOEntry $ M.toList utxo
+elaborateUTxO
+  :: (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> Concrete.UTxO
+elaborateUTxO elaborateTxId =
+  Concrete.UTxO.fromList
+    . fmap (elaborateUTxOEntry elaborateTxId)
+    . M.toList
+    . Abstract.unUTxO
 
 elaborateUTxOEntry
-  :: (TxIn Concrete, Abstract.TxOut) -> (Concrete.TxIn, Concrete.TxOut)
-elaborateUTxOEntry (abstractTxIn, abstractTxOut) =
+  :: (Concrete.TxOut -> id -> Concrete.TxId)
+  -> (Abstract.TxIn id, Abstract.TxOut)
+  -> (Concrete.TxIn, Concrete.TxOut)
+elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut) =
   (concreteTxIn, concreteTxOut)
  where
   concreteTxOut = elaborateTxOut abstractTxOut
-  concreteTxIn  = elaborateUTxOInput concreteTxOut abstractTxIn
+  concreteTxIn  = elaborateUTxOInput (elaborateTxId concreteTxOut) abstractTxIn
 
-elaborateUTxOInput :: Concrete.TxOut -> TxIn Concrete -> Concrete.TxIn
-elaborateUTxOInput concreteTxOut (Abstract.TxIn mTxId index) =
-  Concrete.TxInUtxo concreteTxId (fromIntegral index)
- where
-  concreteTxId = case mTxId of
-    Left _     -> coerce . hash $ Concrete.txOutAddress concreteTxOut
-    Right res -> hash . crAppliedTx $ concrete res
+elaborateUTxOInput :: (id -> Concrete.TxId) -> Abstract.TxIn id -> Concrete.TxIn
+elaborateUTxOInput elaborateTxId (Abstract.TxIn txId index) =
+  Concrete.TxInUtxo (elaborateTxId txId) (fromIntegral index)
 
 elaborateTxWitsBS
-  :: UTxO Concrete -> TxWits Concrete -> Concrete.ATxAux ByteString
-elaborateTxWitsBS utxo0 = annotateTxAux . elaborateTxWits utxo0
+  :: Ord id
+  => (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> Abstract.TxWits id
+  -> Concrete.ATxAux ByteString
+elaborateTxWitsBS elaborateTxId utxo0 =
+  annotateTxAux . elaborateTxWits elaborateTxId utxo0
  where
   annotateTxAux :: Concrete.TxAux -> Concrete.ATxAux ByteString
   annotateTxAux txAux =
@@ -110,23 +129,33 @@ elaborateTxWitsBS utxo0 = annotateTxAux . elaborateTxWits utxo0
       $ CBOR.decodeFull bytes
     where bytes = CBOR.serialize txAux
 
-elaborateTxWits :: UTxO Concrete -> TxWits Concrete -> Concrete.TxAux
-elaborateTxWits utxo0 (Abstract.TxWits tx witnesses) = Concrete.mkTxAux
-  concreteTx
-  (elaborateWitnesses concreteTx witnesses)
-  where concreteTx = elaborateTx utxo0 tx
+elaborateTxWits
+  :: Ord id
+  => (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> Abstract.TxWits id
+  -> Concrete.TxAux
+elaborateTxWits elaborateTxId utxo0 (Abstract.TxWits tx witnesses) =
+  Concrete.mkTxAux concreteTx (elaborateWitnesses concreteTx witnesses)
+  where concreteTx = elaborateTx elaborateTxId utxo0 tx
 
-elaborateTx :: UTxO Concrete -> Tx Concrete -> Concrete.Tx
-elaborateTx utxo0 (Abstract.Tx _ inputs outputs) = Concrete.UnsafeTx
-  { Concrete.txInputs     = elaborateTxIns utxo0 inputs
-  , Concrete.txOutputs    = elaborateTxOuts outputs
-  , Concrete.txAttributes = Concrete.mkAttributes ()
-  }
+elaborateTx
+  :: Ord id
+  => (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> Abstract.Tx id
+  -> Concrete.Tx
+elaborateTx elaborateTxId utxo0 (Abstract.Tx _ inputs outputs) =
+  Concrete.UnsafeTx
+    { Concrete.txInputs     = elaborateTxIns elaborateTxId utxo0 inputs
+    , Concrete.txOutputs    = elaborateTxOuts outputs
+    , Concrete.txAttributes = Concrete.mkAttributes ()
+    }
 
-elaborateWitnesses :: Concrete.Tx -> [Wit Concrete] -> Concrete.TxWitness
+elaborateWitnesses :: Concrete.Tx -> [Abstract.Wit id] -> Concrete.TxWitness
 elaborateWitnesses concreteTx = V.fromList . fmap (elaborateWitness concreteTx)
 
-elaborateWitness :: Concrete.Tx -> Wit Concrete -> Concrete.TxInWitness
+elaborateWitness :: Concrete.Tx -> Abstract.Wit id -> Concrete.TxInWitness
 elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness
   concreteVK
   signature
@@ -135,14 +164,24 @@ elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness
   signature = sign Dummy.protocolMagicId SignTx concreteSK sigData
   sigData   = Concrete.TxSigData $ hash concreteTx
 
-elaborateTxIns :: UTxO Concrete -> [TxIn Concrete] -> NonEmpty Concrete.TxIn
-elaborateTxIns utxo0 =
+elaborateTxIns
+  :: Ord id
+  => (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> [Abstract.TxIn id]
+  -> NonEmpty Concrete.TxIn
+elaborateTxIns elaborateTxId utxo0 =
   fromMaybe (panic "elaborateTxIns: Empty list of TxIns") . NE.nonEmpty . fmap
-    (elaborateTxIn utxo0)
+    (elaborateTxIn elaborateTxId utxo0)
 
-elaborateTxIn :: UTxO Concrete -> TxIn Concrete -> Concrete.TxIn
-elaborateTxIn (Abstract.UTxO utxo) abstractTxIn = fst
-  $ elaborateUTxOEntry (abstractTxIn, abstractTxOut)
+elaborateTxIn
+  :: Ord id
+  => (Concrete.TxOut -> id -> Concrete.TxId)
+  -> Abstract.UTxO id
+  -> Abstract.TxIn id
+  -> Concrete.TxIn
+elaborateTxIn elaborateTxId (Abstract.UTxO utxo) abstractTxIn =
+  fst $ elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut)
  where
   abstractTxOut =
     fromMaybe (panic "elaborateTxIn: Missing output for input")
@@ -165,7 +204,7 @@ elaborateTxOut abstractTxOut = Concrete.TxOut
   , Concrete.txOutValue   = lovelaceValue
   }
  where
-  Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Value value) =
+  Abstract.TxOut (Abstract.Addr abstractVK) (Abstract.Lovelace value) =
     abstractTxOut
 
   lovelaceValue = case Concrete.mkLovelace (fromIntegral value) of

@@ -38,6 +38,7 @@ import Ledger.Core
   , VKeyGenesis(..)
   )
 import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
+import qualified Ledger.GlobalParams as Abstract
 
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Chain.Elaboration.Keys
@@ -72,7 +73,6 @@ ts_prop_elaboratedCertsValid =
       $ [0 .. 6]
     , _dSEnvEpoch       = Epoch 0
     , _dSEnvSlot        = Slot 0
-    , _dSEnvStableAfter = BlockCount 20
     }
 
 
@@ -113,6 +113,8 @@ elaborateDSEnv abstractEnv = Scheduling.Environment
     <$> Set.toList genesisKeys
   , Scheduling.currentEpoch = fromIntegral e
   , Scheduling.currentSlot = Concrete.FlatSlotId s
-  , Scheduling.k           = Concrete.BlockCount d
+  , Scheduling.k           = Concrete.BlockCount k
   }
-  where DSEnv genesisKeys (Epoch e) (Slot s) (BlockCount d) = abstractEnv
+  where
+    DSEnv genesisKeys (Epoch e) (Slot s) = abstractEnv
+    BlockCount k = Abstract.k

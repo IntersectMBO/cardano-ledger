@@ -92,7 +92,7 @@ commandCHAIN
   => IORef Concrete.ChainValidationState
   -> STS.Environment CHAIN
   -> Command Gen m StateCHAIN
-commandCHAIN concreteRef env@(_, genKeys, _) = Command gen execute callbacks
+commandCHAIN concreteRef env@(_, _, dsEnv, _) = Command gen execute callbacks
  where
   gen :: StateCHAIN v -> Maybe (Gen (SignalCHAIN v))
   gen StateCHAIN { abstractState, certs } =
@@ -101,7 +101,7 @@ commandCHAIN concreteRef env@(_, genKeys, _) = Command gen execute callbacks
     genCert :: Gen Abstract.DCert
     genCert = case certs of
       [] -> do
-        key <- Gen.element $ Set.toList genKeys
+        key <- Gen.element $ Set.toList $ dsEnv ^. Abstract.allowedDelegators
         let
           skey = Abstract.SKey (Abstract.owner key)
           vkey = Abstract.VKey (Abstract.owner key)
