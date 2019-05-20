@@ -67,6 +67,8 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update adoption threshold (number of block issuers)
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
+  , _factorA :: Int
+  , _factorB :: Int
   } deriving (Eq, Generic, Ord, Show)
 
 makeLenses ''PParams
@@ -660,7 +662,10 @@ emptyUPIState =
      0
      0
      0
-     0)
+     0
+     0
+     0
+   )
   , []
   , Map.empty
   , Map.empty

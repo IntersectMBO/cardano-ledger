@@ -17,9 +17,10 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
-import Data.Set (Set)
+import Data.Set (Set, isSubsetOf)
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import Data.Foldable (toList)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
@@ -138,9 +139,11 @@ newtype Addr = Addr VKey
   deriving (Show, Eq, Ord)
 
 -- | A unit of value held by a UTxO.
-newtype Value = Value Natural
-  deriving (Show, Eq, Ord)
-  deriving (Semigroup, Monoid) via (Sum Natural)
+--
+newtype Lovelace = Lovelace Integer
+  deriving (Show, Eq, Ord, Num)
+  deriving (Semigroup, Monoid) via (Sum Integer)
+
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
@@ -165,13 +168,13 @@ class Relation m where
 
   -- | Domain restriction
   --
-  (◁), (◃), (<|) :: Ord (Domain m) => Set (Domain m) -> m -> m
+  (◁), (◃), (<|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
   s ◃ r = s ◁ r
   s <| r = s ◁ r
 
   -- | Domain exclusion
   --
-  (⋪), (</|) :: Ord (Domain m) => Set (Domain m) -> m -> m
+  (⋪), (</|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
   s </| r = s ⋪ r
 
   -- | Range restriction
@@ -194,10 +197,10 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
   dom = Set.fromList . Bimap.keys
   range = Set.fromList . Bimap.elems
 
-  s ◁ r = Bimap.filter (\k _ -> k `Set.member` s) r
+  s ◁ r = Bimap.filter (\k _ -> k `Set.member` toSet s) r
   s ◃ r = s ◁ r
 
-  s ⋪ r = Bimap.filter (\k _ -> k `Set.notMember` s) r
+  s ⋪ r = Bimap.filter (\k _ -> k `Set.notMember` toSet s) r
 
   r ▹ s = Bimap.filter (\_ v -> Set.member v s) r
 
@@ -213,9 +216,9 @@ instance Relation (Map k v) where
   dom = Map.keysSet
   range = Set.fromList . Map.elems
 
-  s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` s) r
+  s ◁ r = Map.filterWithKey (\k _ -> k `Set.member` toSet s) r
 
-  s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` s) r
+  s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` toSet s) r
 
   r ▹ s = Map.filter (flip Set.member s) r
 
@@ -232,12 +235,27 @@ instance Relation (PairSet a b) where
   dom = Set.map fst . unPairSet
   range = Set.map snd . unPairSet
 
-  s ◁ r = PairSet . Set.filter (\(k,_) -> k `Set.member` s) $ unPairSet r
+  s ◁ r = PairSet . Set.filter (\(k,_) -> k `Set.member` toSet s) $ unPairSet r
 
-  s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` s) $ unPairSet r
+  s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` toSet s) $ unPairSet r
 
   r ▹ s = PairSet . Set.filter (\(_,v) -> Set.member v s) $ unPairSet r
 
   (PairSet d0) ∪ (PairSet d1) = PairSet $ Set.union d0 d1
 
   d0 ⨃ d1 = d1 ∪ ((dom d1) ⋪ d0)
+
+
+---------------------------------------------------------------------------------
+-- Aliases
+---------------------------------------------------------------------------------
+
+-- | Inclusion among foldables.
+--
+-- Unicode: 2286.
+--
+(⊆) :: (Foldable f, Foldable g, Ord a) => f a -> g a -> Bool
+x ⊆ y = toSet x `isSubsetOf` toSet y
+
+toSet :: (Foldable f, Ord a) => f a -> Set a
+toSet = Set.fromList . toList

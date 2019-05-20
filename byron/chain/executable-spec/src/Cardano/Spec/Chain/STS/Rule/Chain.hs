@@ -23,7 +23,7 @@ import Ledger.Core
 -- import Ledger.Core.Generator
 import Ledger.Delegation
 import Ledger.Update
-import Ledger.UTxO (UTxO, TxId)
+import Ledger.UTxO (UTxO, TxId, UTxOState)
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.BHead
@@ -44,7 +44,7 @@ instance STS CHAIN where
     ( Slot
     , Seq VKeyGenesis
     , Hash
-    , UTxO TxId
+    , UTxOState TxId
     , DIState
     , UPIState
     )
@@ -77,23 +77,23 @@ instance STS CHAIN where
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC ((sNow, utxoGenesis), (sLast, sgs, h, utxo, ds, us), b) <- judgmentContext
+      TRC ((sNow, utxoGenesis), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
         trans @BHEAD $ TRC ((dm, sLast), us, b ^. bHeader)
       let ppsUs' = snd (us' ^. _1)
       (h', sgs') <-
         trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow), (h, sgs), b ^. bHeader)
-      (utxo', ds', us'') <- trans @BBODY $ TRC
+      (utxoSt', ds', us'') <- trans @BBODY $ TRC
         (
           ( ppsUs'
           , sEpoch (b ^. bHeader ^. bhSlot)
           , utxoGenesis
           )
-        , (utxo, ds, us')
+        , (utxoSt, ds, us')
         , b
         )
-      return $! (b ^. bHeader ^. bhSlot, sgs', h', utxo', ds', us'')
+      return $! (b ^. bHeader ^. bhSlot, sgs', h', utxoSt', ds', us'')
 
 
 instance Embed BHEAD CHAIN where
