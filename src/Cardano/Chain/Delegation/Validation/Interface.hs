@@ -23,7 +23,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated(..), serialize')
-import Cardano.Chain.Common (BlockCount, StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
@@ -71,9 +71,13 @@ initialState
   => Environment
   -> GenesisDelegation
   -> m State
-initialState env genesisDelegation = updateDelegation env is certificates
+initialState env genesisDelegation = updateDelegation env' is certificates
  where
   Environment { allowedDelegators } = env
+  -- We modify the environment here to allow the delegation certificates to 
+  -- be applied immediately. Since the environment is not propagated, this 
+  -- should be harmless.
+  env' = env { k = BlockCount 0 }
 
   is = State
     { schedulingState = Scheduling.State
