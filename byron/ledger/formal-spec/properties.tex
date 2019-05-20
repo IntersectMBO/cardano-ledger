@@ -118,7 +118,21 @@ UTxO does not contain any future outputs, which is a reasonable constraint.
 \begin{property}[No double spending]\label{prop:no-double-spending}
   For all
 
-  $$\var{utxo_0} \transtar{\hyperref[fig:rules:utxo]{utxo}}{\txs} \var{utxo}$$
+  $$
+  \left(
+    \begin{array}{l}
+      \var{utxo_0}\\
+      \var{reserves_0}
+    \end{array}
+  \right)
+  \transtar{\hyperref[fig:rules:utxo]{utxo}}{\txs}
+  \left(
+    \begin{array}{l}
+      \var{utxo}\\
+      \var{reserves}
+    \end{array}
+  \right)
+  $$
 
   such that
 
@@ -141,7 +155,21 @@ spent outputs.
 \begin{property}[UTxO is outputs minus inputs]\label{prop:utxo-out-min-in}
   For all
 
-  $$\var{utxo_0} \transtar{\hyperref[fig:rules:utxo]{utxo}}{\txs} \var{utxo}$$
+  $$
+  \left(
+    \begin{array}{l}
+      \var{utxo_0}\\
+      \var{reserves_0}
+    \end{array}
+  \right)
+  \transtar{\hyperref[fig:rules:utxo]{utxo}}{\txs}
+  \left(
+    \begin{array}{l}
+      \var{utxo}\\
+      \var{reserves}
+    \end{array}
+  \right)
+  $$
 
   such that
 
@@ -154,5 +182,33 @@ spent outputs.
   $$
   \bigcup_{\txins{}} \txs \subtractdom (\var{utxo_0} \cup \bigcup_{\txouts{}} \txs) = \var{utxo}
   $$
+
+\end{property}
+
+Property~\ref{prop:utxo-money-supply-cnst} models the fact that the amount of
+money in the system (counted as Lovelaces) remains constant.
+
+\begin{property}[Money supply is constant in the system]\label{prop:utxo-money-supply-cnst}
+  For all
+
+  $$
+  \left(
+    \begin{array}{l}
+      \var{utxo_0}\\
+      \var{reserves_0}
+    \end{array}
+  \right)
+  \transtar{\hyperref[fig:rules:utxo]{utxo}}{\txs}
+  \left(
+    \begin{array}{l}
+      \var{utxo}\\
+      \var{reserves}
+    \end{array}
+  \right)
+  $$
+
+  we have:
+
+  $$ \var{reserves} + \balance{utxo} =  \var{reserves_0} + \balance{utxo_0} $$
 
 \end{property}

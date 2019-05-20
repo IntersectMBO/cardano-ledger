@@ -576,3 +576,18 @@ delegations have on the ledger.
   \caption{Delegations sequence rules}
   \label{fig:rules:delegation-seq}
 \end{figure}
+
+\subsection{Deviation from the \texttt{cardano-sl} implementation}
+\label{sec:delegation:deviation-cardano-sl-imp}
+
+In the \texttt{cardano-sl} implementation, the block issuer needs to include a
+delegation certificate in the block, which witness the fact that a genesis key
+gave the issuer the rights of issuing blocks on behalf of this genesis key. The
+reasons why this was implemented in this way in \texttt{cardano-sl} are not
+clear, since the delegation certificates are posted on the chain, so the ledger
+state contains the information about who delegates to whom. Hence in the
+current specification we use a heavyweight delegation scheme, i.e. where the
+certificates are posted on the chain, but an implementation of this rules that
+aims at being compatible with the implementation in \texttt{cardano-sl} has to
+take the fact that delegation certificates are also present in a block into
+account.
