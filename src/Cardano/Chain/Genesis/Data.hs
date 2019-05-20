@@ -15,10 +15,9 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError, liftEither)
+import Control.Monad.Except (MonadError)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import Data.List (lookup)
 import Data.Time (UTCTime)
 import Formatting (bprint, build, stext)
@@ -33,6 +32,7 @@ import Text.JSON.Canonical
   , fromJSObject
   , mkObject
   , parseCanonicalJSON
+  , renderCanonicalJSON
   )
 
 import Cardano.Chain.Common (BlockCount (..))
@@ -94,8 +94,8 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> fromJSField obj "blockVersionData"
       -- The above is called blockVersionData for backwards compatibility with
       -- mainnet genesis block
-      <*> (BlockCount . (fromIntegral @Int54) <$> fromJSField protocolConsts "k")
-      <*> (ProtocolMagicId <$> (fromJSField protocolConsts "protocolMagic"))
+      <*> (BlockCount . fromIntegral @Int54 <$> fromJSField protocolConsts "k")
+      <*> (ProtocolMagicId <$> fromJSField protocolConsts "protocolMagic")
       <*> fromJSField obj "avvmDistr"
 
 data GenesisDataError
@@ -110,20 +110,19 @@ instance B.Buildable GenesisDataError where
     GenesisDataSchemaError err ->
       bprint ("Incorrect schema for GenesisData.\n Error: " . build) err
 
+-- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData
   :: (MonadError GenesisDataError m, MonadIO m)
   => FilePath
   -> m (GenesisData, GenesisHash)
 readGenesisData fp = do
-  bytes <- liftIO $ BS.readFile fp
-  let bytes' = BSL.fromStrict bytes
+  bytes           <- liftIO $ BSL.fromStrict <$> BS.readFile fp
 
   genesisDataJSON <-
-    liftEither . first (GenesisDataParseError . toS) $ parseCanonicalJSON bytes'
+    parseCanonicalJSON bytes `wrapError` GenesisDataParseError . toS
 
-  genesisData <- liftEither . first GenesisDataSchemaError $ fromJSON
-    genesisDataJSON
+  genesisData <- fromJSON genesisDataJSON `wrapError` GenesisDataSchemaError
 
-  let genesisHash = GenesisHash $ coerce $ hashRaw bytes'
+  let genesisHash = GenesisHash $ hashRaw (renderCanonicalJSON genesisDataJSON)
 
   pure (genesisData, genesisHash)
