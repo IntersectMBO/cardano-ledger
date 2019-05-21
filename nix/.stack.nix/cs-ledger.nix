@@ -43,7 +43,9 @@
             (hsPkgs.small-steps)
             (hsPkgs.cs-ledger)
             ];
-          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
+          build-tools = [
+            (hsPkgs.buildPackages.doctest-discover or (pkgs.buildPackages.doctest-discover))
+            ];
           };
         "ledger-delegation-test" = {
           depends = [

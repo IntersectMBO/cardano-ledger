@@ -85,7 +85,6 @@ test-suite delegation-test
       tasty,
       tasty-hunit,
       tasty-hedgehog,
-      tasty-hedgehog-coverage,
       hedgehog,
       delegation,
       containers,
