@@ -5,5 +5,14 @@
    - [ ] Issue #447
 ** TODO Plan out the work required to finish importing the Byron update system into Shelley.
    - [ ] Issue #448 (We may need to break this issue up into more parts.)
-** Update the executable spec with <details needed>
-** Update the multi-sig spec with <details needed>
+** Update the executable spec [0/3]
+*** TODO Add overview of STS rule hierarchy
+*** TODO Check for differences in current exec spec and STS rules
+*** TODO Estimate effort and outline plan to converge formal and exec spec
+ - [] Issue #485
+** Update the multi-sig spec [0/4]
+*** TODO Explicitly define witnesses for scripts
+*** TODO Clear separate treatment of script witnesses and signature witnesses
+*** TODO Use "standard" Plutus script validator function with redeemer script
+*** TODO Add Jan's script as example use for clarification
+ - [] Issue #486
