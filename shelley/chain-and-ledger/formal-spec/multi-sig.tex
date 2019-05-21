@@ -90,6 +90,7 @@
 \newcommand{\UpdatePayload}{\type{UpdatePayload}}
 
 \newcommand{\Script}{\type{Script}}
+\newcommand{\PendingTx}{\type{PendingTx}}
 
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
@@ -159,7 +160,8 @@
 
 %% UTxO witnesses
 \newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
-\newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
+\newcommand{\txwitsVKey}[1]{\fun{txwitsVKey}~\var{#1}}
+\newcommand{\txwitsScript}[1]{\fun{txwitsScript}~\var{#1}}
 \newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
 \newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
 \newcommand{\verifyEv}[4]{\fun{verify_{ev}} ~ #1 ~ #2 ~ #3 ~ #4}
@@ -233,9 +235,9 @@
 \maketitle
 
 \begin{abstract}
-  This documents specifies a simple way to support multi-signature
-  transactions. It is based on a simple script model which uses only single step
-  script execution and does not require data scripts.
+  This documents specifies a way to support multi-signature transactions. It is
+  based on a simple script model which uses only single step script execution
+  and does not require data scripts.
 
   A multi-signature scheme allows an unspent transaction output to be used as an
   input to a new transaction if a pre-defined combination of signatures is
@@ -377,7 +379,10 @@ respective script address variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{txins} & \Tx \to \powerset{(\TxIn \times \Script^{?})} & \text{transaction inputs}
+      \fun{txins} & \Tx \to \powerset{(\TxIn \times \Script^{?})} &
+                                                                    \text{transaction inputs} \\
+      \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
+      \fun{txwitsScripts} & \Tx \to \powerset{\Script}) & \text{script witnesses}
     \end{array}
   \end{equation*}
 
@@ -385,9 +390,7 @@ respective script address variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{validateMultiSig} & \Script \to \powerset\HashKey \to \Bool &
-                                                                         \text{validate
-                                                                         multi-sig}
+      \fun{validate} & () \to () \to \PendingTx \to () & \text{validate multi-sig}
     \end{array}
   \end{equation*}
   \caption{Types for Transaction Inputs with Scripts}
@@ -399,12 +402,21 @@ from~\cite{shelley_formal_spec} is extended to optionally carry a validator
 script for an unspent output that is locked by a script and should be spent in
 the transaction.
 
+The new address introduced for scripts also requires a new type of witness. The
+former $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new function
+$\fun{txwitsScript}$ returns the set of all validator scripts of a transaction.
+
 To validate a transaction that spends funds that are locked by a multi-signature
-script, the $\fun{validateMultiSig}$ function takes the validator script and a
-set of verification hash keys. The requirement for the hash keys passed to the
-validator script is that the transaction has been correctly signed with each
-key. Therefore the script only needs to check whether the set of keys is
-sufficient to validate the multi-signature.
+script, the abstract $\fun{validate}$ function corresponds to the validator
+script. Its type consists of first two parameters of unit type and then one
+parameter of type $\PendingTx$, its return type is also unit. The first two
+input parameters correspond to the redeemer and the data scripts which are used
+in the full extended UTxO model for Plutus~\cite{plutus_eutxo}, as those values
+are not required here, we use them with the unit type. $\PendingTx$ is a
+representation of the transaction that is to be validated. In particular, this
+information contains the set of hash keys that did sign the transaction. The
+unit return type signifies that there is no data to return, Plutus uses an
+``error'' state to represent a failed validation.
 
 \section{Ledger Transition for Multi-Signature}
 \label{sec:ledg-trans-multi}
@@ -434,10 +446,10 @@ $\fun{validateMultiSig}$ when validating all supplied scripts.
       \right\},\\
       \fun{validatorHash}~\var{a}
       = \fun{hashScript}~s \wedge
-      \fun{validateMultiSig}~{s}~{(\dom{(\txwits{tx})})}\\~\\
-      \forall \var{vk} \mapsto \sigma \in \txwits{tx},
+      \fun{validateMultiSig}~{s}~{(\dom{(\txwitsVKey{tx})})}\\~\\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
+      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\
       {
         \begin{array}{l}
         \var{utxoEnv}
