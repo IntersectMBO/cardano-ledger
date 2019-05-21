@@ -7,6 +7,7 @@ packages:
   - crypto/test
   - validate-mainnet
 
+
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-prelude
     commit: a136c4242b9c9f6124b811329bc8ccdfd86c514e
@@ -36,15 +37,19 @@ extra-deps:
 
   # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 4be5660c721cae4b001187ec614ef5cf4fad8fc7
+    commit: 4e9651df29752d1205719028e288ce9e0478a373
 
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 00413dcad916a41cf392437199cfba7a2e2c76d7
+    commit: f1c4ceef7d7ea6fb4425484c2b19b84048a3549d
     subdirs:
       - contra-tracer
       - iohk-monitoring
+
+  - ekg-prometheus-adapter-0.1.0.4
+  - prometheus-2.1.1
+  - containers-0.5.11.0
 
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
