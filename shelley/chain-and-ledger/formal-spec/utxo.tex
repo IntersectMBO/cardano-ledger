@@ -154,6 +154,7 @@ The signal for the UTxO transition is a transaction.
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{stkeys} & \StakeKeys & \text{stake key}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -166,6 +167,7 @@ The signal for the UTxO transition is a transaction.
         \var{utxo} & \UTxO & \text{UTxO}\\
         \var{deposits} & \Coin & \text{deposits pot}\\
         \var{fees} & \Coin & \text{fee pot}\\
+        \var{H} & \VKey\mapsto\Seed & \text{extra entropy}\\
       \end{array}
     \right)
   \end{equation*}
@@ -209,6 +211,8 @@ The transition contains the following predicates:
     In other words, the amount of value produced by the transaction must be the same as
     the amount consumed.
   \item
+    The extra entropy values can only come from the genesis keys.
+  \item
     The coin value of each new output must be non-negative.
   \item
     The transaction size must be below the allowed maximum.
@@ -234,6 +238,8 @@ If all the predicates are satisfied, the state is updated as follows:
     which has decayed to the fee pot.
     The amount decayed will depend on the time to live of the transaction
     and will be explained further in Section~\ref{sec:deps-refunds}.
+  \item Update the extra entropy mapping, overriding any old values so that
+    each genesis key can vote for at most one value each epoch.
 \end{itemize}
 
 The accounting for the reward withdrawals is not done in this transition system.
@@ -289,6 +295,12 @@ requests).
       \\
       ~
       \\
+      H'\leteq\fun{txeent}~\var{tx}
+      &
+      \dom{H'}\subseteq\dom{dms}
+      \\
+      ~
+      \\
       \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c \geq 0
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
@@ -308,6 +320,7 @@ requests).
         \var{pp}\\
         \var{stkeys}\\
         \var{stpools}\\
+        \var{dms}\\
       \end{array}
       \vdash
       \left(
@@ -315,6 +328,7 @@ requests).
         \var{utxo} \\
         \var{deposits} \\
         \var{fees} \\
+        \var{H}\\
       \end{array}
       \right)
       \trans{utxo}{tx}
@@ -323,6 +337,7 @@ requests).
         \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \outs{tx}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
+        \varUpdate{H\unionoverrideRight H'}\\
       \end{array}
       \right)
     }
@@ -522,17 +537,20 @@ This consists of:
   \item payment keys for outputs being spent
   \item stake keys for reward withdrawals
   \item stake keys for delegation certificates (all five types)
+  \item delegates of the genesis keys for any extra entropy values
   \item stake keys for the pool owners in a pool registration certificate
 \end{itemize}
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{witsNeeded} \in \UTxO \to \Tx \to \powerset{\HashKey}
+    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\HashKey}
     & \text{hashkeys for needed witnesses} \\
-    & \fun{witsNeeded}~{utxo}~{tx} = \\
+    & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
     & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \txwdrls{tx}\}~\cup \\
     & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    & ~~\{\hashKey{vkey} \mid
+    \var{gkey}\mapsto\var{vkey}\in(\dom{(\fun{txeent}~\var{tx})}\restrictdom\var{dms})\}~\cup \\
     & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
   \end{align*}
   \caption{Functions used in witness rule}
@@ -570,7 +588,8 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwits{tx},
         \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} = \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
+      \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} =
+        \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
       {
         \begin{array}{l}
         \var{utxoEnv}
