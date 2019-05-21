@@ -382,7 +382,7 @@ respective script address variants.
       \fun{txins} & \Tx \to \powerset{(\TxIn \times \Script^{?})} &
                                                                     \text{transaction inputs} \\
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
-      \fun{txwitsScripts} & \Tx \to \powerset{\Script}) & \text{script witnesses}
+      \fun{txwitsScripts} & \Tx \to \powerset{\Script} & \text{script witnesses}
     \end{array}
   \end{equation*}
 
@@ -416,7 +416,25 @@ are not required here, we use them with the unit type. $\PendingTx$ is a
 representation of the transaction that is to be validated. In particular, this
 information contains the set of hash keys that did sign the transaction. The
 unit return type signifies that there is no data to return, Plutus uses an
-``error'' state to represent a failed validation.
+``error'' state to represent a failed validation. Despite that, we will use the
+validate function as a predicate where \emph{False} corresponds to the Plutus
+error state and \emph{True} to the unit return result.
+
+The following is a possible Plutus implementation of the multi-signature
+validation script. The type $\type{MultiSig}$ is a list of hash keys, so
+$validate hkeys$ will return a validator script with the correct type according
+as in Figure~\ref{fig:types_defs_multi}.
+
+\begin{verbatim}
+   validate :: MultiSig -> () -> () -> PendingTx -> ()
+   validate (MultiSig keys num) () () p =
+       let
+           present = P.length (P.filter (V.txSignedBy p) keys)
+       in
+           if P.geq present num
+           then ()
+           else P.error (P.traceH "WRONG!" ())
+\end{verbatim}
 
 \section{Ledger Transition for Multi-Signature}
 \label{sec:ledg-trans-multi}
