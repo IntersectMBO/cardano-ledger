@@ -1,8 +1,6 @@
 \section{Blockchain layer}
 \label{sec:chain}
 
-\newcommand{\Seed}{\type{Seed}}
-\newcommand{\seedOp}{\star}
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
@@ -105,6 +103,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \emph{Constants}
   \begin{align*}
+    & 0_{seed} \in \Seed & \text{neutral seed element} \\
     & \Seedl \in \Seed & \text{leader seed constant} \\
     & \Seede \in \Seed & \text{nonce seed constant}\\
     & \SlotsPrior \in \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
@@ -316,25 +315,75 @@ In the second case, the new epoch state is updated as follows:
 
 \begin{itemize}
 \item The epoch is set to the new epoch $e$.
-\item The epoch nonce is replaced with the new one from the new epoch
-  environment.
+\item The epoch nonce is replaced with the compbination of the new one from the
+  environment and any extra entropy present in the UTxO state.
 \item The mapping for the blocks produced by each stake pool for the previous epoch
   is set to the current such mapping.
 \item The mapping for the blocks produced by each stake pool for the current epoch
   is set to the empty map.
-\item The epoch state is updated first with the rewards update \var{ru} and then
-  via the call to $\mathsf{EPOCH}$.
+\item The epoch state is updated with: first applying the rewards update \var{ru},
+  then calling the $\mathsf{EPOCH}$ transition, updating the update state, and finally
+  resetting the extra entropy mapping.
 \item The rewards update is set to \Nothing.
-\item The pool distribution is updated according to the changes in the stake pools.
+\item The new pool distribution \var{pd}' is calculated from the delegation map and
+  stake allocation of the previous epoch.
 \item A new OBFT overlay schedule is created.
 \end{itemize}
 
-The new pool distribution \var{pd}' is calculated from the delegation map and
-stake allocation of the previous epoch. It associates every stake pool key
-($\HashKey_{pool}$) to which a staking key ($\HashKey_{stake}$) delegates with
-the stake that $\HashKey_{stake}$ has. The sum of stake for all staking keys
-delegating to $\HashKey_{pool}$ then becomes the new entry of $\HashKey_{pool}$
-in the pool distribution.
+Figure~\ref{fig:funcs:new-epoch-helper} gives some helper functions for the
+$\mathsf{NEWEPOCH}$ transition.
+Three of the four functions help with the nested data structures.
+The other function, $\fun{extraEntropy}$, will return a seed value to be used as extra
+entropy for the next epoch nonce if at least five genesis keys are in agreement of the value,
+and zero otherwise.
+
+%%
+%% Figure - Helper Functions for New Epoch Rules
+%%
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{getEEnt} \in \EpochState \to \VKeyGen\mapsto\Seed \\
+      & \fun{getEEnt}~
+          (\wcard, ~\wcard,
+          ~((\wcard,~\wcard,~\wcard,~\var{H}),~\wcard,~\wcard))
+    = H
+  \end{align*}
+
+  \begin{align*}
+      & \fun{resetEEnt} \in \EpochState \to \EpochState \\
+      & \fun{resetEEnt}~
+          (\var{acnt},
+          ~\var{ss},
+          ~((\var{utxo},~\var{deposits},~\var{fees},~\wcard),~\var{dpstate},~\var{us}))
+    = \\
+      &~~
+          (\var{acnt},
+          ~\var{ss},
+          ~((\var{utxo},~\var{deposits},~\var{fees},~\emptyset),~\var{dpstate},~\var{us}))
+  \end{align*}
+
+  \begin{align*}
+      & \fun{extraEntropy} \in \EpochState \to \PParams \to \powerset{\VKeyGen} \to \Seed \\
+      & \fun{extraEntropy}~\var{es}~\var{pp}~\var{gkeys} =
+        \begin{cases}
+          \eta & \text{if}~\exists\eta(~|H\restrictrange \{\eta\}|/|gkeys|\geq t~)\\
+          0_{seed} & \text{otherwise} \\
+        \end{cases} \\
+      &
+        \where \\
+      & ~~~~ H = \fun{getEEnt}~\var{es} \\
+      & ~~~~ t = \fun{upAdptThd}~\var{pp}
+  \end{align*}
+
+  \begin{align*}
+      & \fun{setUPIState} \in \EpochState \to \UPIState \to \EpochState \\
+      & \fun{setUPIState}~(\var{acnt},~\var{ss},~(\var{utxoSt},~\var{dpstate},~\wcard))~\var{us} =
+      (\var{acnt},~\var{ss},~(\var{utxoSt},~\var{dpstate},~\var{us}))
+  \end{align*}
+
+  \caption{New Epoch Helper Functions}
+  \label{fig:funcs:new-epoch-helper}
+\end{figure}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:new-epoch}
@@ -374,7 +423,9 @@ in the pool distribution.
                     \var{c}) \in \var{stake}
                 \right\}\right) \\
          \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
-        \var{es''} & \var{es'}\unionoverrideRight\{us'\}
+         \eta_e & \fun{extraEntropy}~\var{es'}~\var{pp}~\var{gkeys} \\
+         \var{es''} & \fun{setUPIState}~\var{es'}~\var{us'} \\
+         \var{es'''} & \fun{resetEEnt}~\var{es''} \\
       \end{array}}
     }
     {
@@ -382,6 +433,7 @@ in the pool distribution.
         {\begin{array}{c}
             \eta_1 \\
             \var{s} \\
+            \var{gkeys} \\
         \end{array}}
       \right)
       \vdash
@@ -398,10 +450,10 @@ in the pool distribution.
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
             \varUpdate{\var{e}} \\
-            \varUpdate{\eta_1} \\
+            \varUpdate{\eta_1\seedOp\eta_e} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}''} \\
+            \varUpdate{\var{es}'''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
@@ -421,6 +473,7 @@ in the pool distribution.
         {\begin{array}{c}
             \eta_1 \\
             \var{s} \\
+            \var{gkeys} \\
         \end{array}}
       \right)
       \vdash
@@ -654,14 +707,14 @@ execution of the transition role is as follows:
 \label{sec:block-header-trans}
 
 The Block Header Transition checks a couple sizes and performs some chain level upkeep.
-The environment consists of a set of genesis keys, and the state is the
+The environment consists of a candidate nonce and a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
 \begin{figure}
   \emph{Block Header Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\powerset{\VKeyGen} \times \NewEpochState \times \BHeader \times \NewEpochState)
+    \powerset ((\Seed\times\powerset{\VKeyGen}) \times \NewEpochState \times \BHeader \times \NewEpochState)
   \end{equation*}
   \caption{BHeader transition-system types}
   \label{fig:ts-types:bheader}
@@ -738,7 +791,12 @@ If the size checks pass, then three transitions are done:
       \var{nes}''\leteq\var{nes'}\unionoverrideRight\{\var{ru'}\}
     }
     {
-      \var{gkeys}
+      \left(
+        {\begin{array}{c}
+            \eta_c \\
+            \var{gkeys} \\
+        \end{array}}
+      \right)
       \vdash\var{nes}\trans{bhead}{\var{bh}}\varUpdate{\var{nes''}}
     }
   \end{equation}
@@ -1292,7 +1350,13 @@ The transition rule itself has no preconditions, instead it calls all its subrul
       \var{bh} \leteq \bheader{block} \\
       \\~\\
       {
-        \dom{dms}\vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
+        \left(
+          {\begin{array}{c}
+              \eta_c \\
+              \var{gkeys} \\
+          \end{array}}
+        \right)
+        \vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
       } \\~\\
       (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
