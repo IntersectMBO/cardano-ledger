@@ -14,6 +14,7 @@ module Cardano.Chain.Block.Block
   ( ABlock(..)
   , Block
   , toCBORBlock
+  , toCBORBlockWithoutBoundary
   , fromCBORABlock
   , fromCBORABlockOrBoundary
   , fromCBORBlockOrBoundary
