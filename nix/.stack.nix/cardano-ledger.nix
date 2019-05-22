@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = { development = false; };
+    flags = { development = false; test-normal-form = false; };
     package = {
       specVersion = "1.10";
       identifier = { name = "cardano-ledger"; version = "0.1.0.0"; };
@@ -83,6 +83,27 @@
             (hsPkgs.text)
             (hsPkgs.time)
             (hsPkgs.vector)
+            ];
+          };
+        "epoch-validation-normal-form-test" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.bytestring)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-crypto-test)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-prelude-test)
+            (hsPkgs.containers)
+            (hsPkgs.directory)
+            (hsPkgs.filepath)
+            (hsPkgs.formatting)
+            (hsPkgs.hedgehog)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.resourcet)
+            (hsPkgs.streaming)
+            (hsPkgs.tasty)
+            (hsPkgs.tasty-hedgehog)
             ];
           };
         };

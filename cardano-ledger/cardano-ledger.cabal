@@ -17,6 +17,11 @@ flag development
     default: False
     manual: True
 
+flag test-normal-form
+    description: Test ledger state normal form during epoch validation
+    default: False
+    manual: True
+
 library
   hs-source-dirs:      src
   exposed-modules:
@@ -264,9 +269,13 @@ test-suite cardano-ledger-test
   if (!flag(development))
     ghc-options:         -Werror
 
-executable epoch-validation-normal-form-test
+test-suite epoch-validation-normal-form-test
+  if (!flag(test-normal-form))
+   buildable: False
+
   hs-source-dirs:      test
   main-is:             NormalFormTest.hs
+  type:                exitcode-stdio-1.0
 
   other-modules:
                        Test.Cardano.Chain.Block.Validation
