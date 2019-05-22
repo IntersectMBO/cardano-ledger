@@ -15,7 +15,7 @@
 # give us the iohk-nix tooling, which also includes
 # the nix-tools tooling.
 let
-  localLib = import ./lib.nix;
+  localLib = import ./nix/lib.nix;
 in
 # This file needs to export a function that takes
 # the arguments it is passed and forwards them to
@@ -26,7 +26,7 @@ in
 { ... }@args:
 # We will instantiate the defaul-nix template with the
 # nix/pkgs.nix file...
-localLib.nix-tools.default-nix ./nix args
+localLib.nix-tools.default-nix ./nix/pkgs.nix args
 # ... and add a few custom packages as well.
 // {
   byronLedgerSpec = import ./byron/ledger/formal-spec {};

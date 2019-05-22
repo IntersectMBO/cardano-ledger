@@ -154,7 +154,7 @@ To add a new Haskell project, you should do the following:
    ``cardano-prelude`](https://github.com/input-output-hk/cardano-prelude/blob/master/snapshot.yaml),
    then you may have to submit a PR there to update that snapshot.
 3. At this point, test that your new project builds using `stack build <project_name>`.
-4. Run the [nix-tools-generate](./scripts/nix-tools-generate.sh) script to
+4. Run the [regenerate](./nix/regenerate.sh) script to
    rebuild the nix configuration from your stack.yaml file.
 5. Test that you can build your new project by running the following: `nix build
    -f default.nix nix-tools.libs.<project_name>`. If you have executables, then
@@ -162,9 +162,7 @@ To add a new Haskell project, you should do the following:
    attribute path. A good way to see what's available is to execute `:l
    default.nix` in `nix repl`. This will allow you to explore the potential
    attribute names.
-6. If your project uses template haskell, it may not build in the previous step.
-   In this case, add it to the `th-packages` list in [pkgs.nix](./nix/pkgs.nix).
-7. If you want your product to be tested by CI, add it to
+5. If you want your product to be tested by CI, add it to
    [release.nix](./release.nix) using the format specified in that file.
 
 ## To add a new LaTeX specification
@@ -177,7 +175,7 @@ from [the Shelley ledger spec](./shelley/chain-and-ledger/formal-spec)).
 2. Modify the `DOCNAME` in the `Makefile`.
 3. Update `default.nix` to:
    1. Make sure that the relative path in the first line is pointing to
-      (lib.nix)[./lib.nix]. This is used to pin the
+      (lib.nix)[./nix/lib.nix]. This is used to pin the
       `nixpkgs` version used to build the LaTeX specifications.
    2. Update the `buildInputs` to add in any LaTeX packages you need in your
       document, and remove any unneeded ones.

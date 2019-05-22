@@ -8,14 +8,6 @@ let
   # our packages
   stack-pkgs = import ./.stack.nix;
 
-  # packages which will require TH and thus
-  # will need -fexternal-interpreter treatment
-  # when cross compiling.
-  th-packages = [
-    "hedgehog"
-    "small-steps" "cs-ledger" "cs-blockchain"
-  ];
-
   # Build the packageset with module support.
   # We can essentially override anything in the modules
   # section.
@@ -23,7 +15,7 @@ let
   #  packages.cbors.patches = [ ./one.patch ];
   #  packages.cbors.flags.optimize-gmp = false;
   #
-  compiler = (stack-pkgs.extras {}).compiler.nix-name;
+  compiler = (stack-pkgs.extras haskell.hackage).compiler.nix-name;
   pkgSet = haskell.mkStackPkgSet {
     inherit stack-pkgs;
 
