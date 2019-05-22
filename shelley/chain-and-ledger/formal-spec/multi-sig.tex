@@ -363,6 +363,14 @@ respective script address variants.
 
 
 \begin{figure*}[hbt]
+  \emph{Abstract Type}
+
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      pendingTx & \PendingTx & \text{information about pending Tx}
+    \end{array}
+  \end{equation*}
+
   \emph{Transaction Type}
 
   \begin{equation*}
@@ -379,8 +387,8 @@ respective script address variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{txins} & \Tx \to \powerset{(\TxIn \times \Script^{?})} &
-                                                                    \text{transaction inputs} \\
+      \fun{txinsVKey} & \Tx \to \powerset{\TxIn} &\text{VKey locked transaction inputs} \\
+      \fun{txinsScript} & \Tx \to \powerset{(\TxIn \times \Script)} &\text{Script locked transaction inputs} \\
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
       \fun{txwitsScripts} & \Tx \to \powerset{\Script} & \text{script witnesses}
     \end{array}
@@ -390,6 +398,7 @@ respective script address variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \fun{txPending} & \Tx \to \PendingTx & \text{Get necessary information from Tx} \\
       \fun{validate} & () \to () \to \PendingTx \to () & \text{validate multi-sig}
     \end{array}
   \end{equation*}
@@ -406,24 +415,28 @@ The new address introduced for scripts also requires a new type of witness. The
 former $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new function
 $\fun{txwitsScript}$ returns the set of all validator scripts of a transaction.
 
+$\PendingTx$ is a representation of the transaction that is to be validated. In
+particular, this information contains the set of hash keys that did sign the
+transaction.  The function $\fun{txPending}$ constructs the necessary
+information about an transaction which is passed as $\PendingTx$ to the script.
+
 To validate a transaction that spends funds that are locked by a multi-signature
 script, the abstract $\fun{validate}$ function corresponds to the validator
 script. Its type consists of first two parameters of unit type and then one
 parameter of type $\PendingTx$, its return type is also unit. The first two
 input parameters correspond to the redeemer and the data scripts which are used
 in the full extended UTxO model for Plutus~\cite{plutus_eutxo}, as those values
-are not required here, we use them with the unit type. $\PendingTx$ is a
-representation of the transaction that is to be validated. In particular, this
-information contains the set of hash keys that did sign the transaction. The
-unit return type signifies that there is no data to return, Plutus uses an
-``error'' state to represent a failed validation. Despite that, we will use the
-validate function as a predicate where \emph{False} corresponds to the Plutus
-error state and \emph{True} to the unit return result.
+are not required here, we use them with the unit type. The unit return type
+signifies that there is no data to return, Plutus uses an ``error'' state to
+represent a failed validation. Despite that, we will use the validate function
+as a predicate where \emph{False} corresponds to the Plutus error state and
+\emph{True} to the unit return result.
 
 The following is a possible Plutus implementation of the multi-signature
 validation script. The type $\type{MultiSig}$ is a list of hash keys, so
-$validate hkeys$ will return a validator script with the correct type according
-as in Figure~\ref{fig:types_defs_multi}.
+$validate~hkeys$ will return a validator script with the correct type according
+as in Figure~\ref{fig:types_defs_multi} when $hkeys$ is a value of type
+$\type{MultiSig}$.
 
 \begin{verbatim}
    validate :: MultiSig -> () -> () -> PendingTx -> ()
@@ -454,17 +467,17 @@ $\fun{validateMultiSig}$ when validating all supplied scripts.
   \begin{equation*}
     \inference[UTxO-wit]
     {
-      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
-      \forall \var{s}\mapsto\var{a} \in
-      \left\{
+      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\
+      validators \leteq \left\{
         \var{s}\mapsto\var{a}\vert
-        (\var{inp}, \var{s})\in\fun{txins}~tx,
-        \var{inp}\mapsto(\var{a},\wcard) \in \var{utxo},
-        \var{s}\neq\Nothing
-      \right\},\\
-      \fun{validatorHash}~\var{a}
-      = \fun{hashScript}~s \wedge
-      \fun{validateMultiSig}~{s}~{(\dom{(\txwitsVKey{tx})})}\\~\\
+        (\var{inp}, \var{s})\in\fun{txinsScript}~tx,
+        \var{inp}\mapsto(\var{a},\wcard) \in \var{utxo}
+      \right\}
+      \\~\\
+      \forall \var{validate}\mapsto\var{a} \in validators, \fun{validatorHash}~\var{a} = \fun{hashScript}~validate \\
+      \forall \var{validate} \in \dom~validators, \fun{validate}~()~()~{(\fun{pendingTx}~tx)}\\~\\
+      \range(\fun{txinsVKey}~tx \restrictdom \var{utxo}) \cap (\AddrScr\times\Coin) = \emptyset
+      \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
       \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\
