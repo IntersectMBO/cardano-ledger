@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Main
   ( main
   )
@@ -7,12 +5,9 @@ where
 
 import Cardano.Prelude
 
-import Hedgehog (Group(..))
-import Hedgehog.Internal.Property (GroupName(..), PropertyName(..))
-import Test.Tasty (TestTree, askOption, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty (testGroup)
 
-import Test.Options (TSGroup, mainWithTestScenario)
+import Test.Options (ShouldAssertNF(..), mainWithTestScenario, tsGroupToTree)
 
 import qualified Test.Cardano.Chain.Block.CBOR
 import qualified Test.Cardano.Chain.Block.Model
@@ -46,7 +41,7 @@ main =
     $   tsGroupToTree
     <$> [ Test.Cardano.Chain.Block.CBOR.tests
         , Test.Cardano.Chain.Block.Model.tests
-        , Test.Cardano.Chain.Block.Validation.tests
+        , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
         , Test.Cardano.Chain.Common.Address.tests
         , Test.Cardano.Chain.Common.CBOR.tests
         , Test.Cardano.Chain.Common.Compact.tests
@@ -69,9 +64,3 @@ main =
         , Test.Cardano.Chain.Update.Json.tests
         , Test.Cardano.Chain.Update.Properties.tests
         ]
-
-tsGroupToTree :: TSGroup -> TestTree
-tsGroupToTree tsGroup = askOption $ \scenario -> case tsGroup scenario of
-  Group { groupName, groupProperties } -> testGroup
-    (unGroupName groupName)
-    (uncurry testProperty . first unPropertyName <$> groupProperties)

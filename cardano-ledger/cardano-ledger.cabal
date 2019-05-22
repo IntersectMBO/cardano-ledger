@@ -263,3 +263,44 @@ test-suite cardano-ledger-test
 
   if (!flag(development))
     ghc-options:         -Werror
+
+executable epoch-validation-normal-form-test
+  hs-source-dirs:      test
+  main-is:             NormalFormTest.hs
+
+  other-modules:
+                       Test.Cardano.Chain.Block.Validation
+                       Test.Cardano.Chain.Config
+                       Test.Cardano.Mirror
+                       Test.Options
+
+  build-depends:       base
+                     , bytestring
+                     , cardano-ledger
+                     , cardano-crypto-test
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , containers
+                     , directory
+                     , filepath
+                     , formatting
+                     , hedgehog
+                     , optparse-applicative
+                     , resourcet
+                     , streaming
+                     , tasty
+                     , tasty-hedgehog
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+                       "-with-rtsopts=-K450K -M500M"
+
+  if (!flag(development))
+    ghc-options:         -Werror

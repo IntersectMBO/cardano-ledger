@@ -10,7 +10,6 @@ module Test.Cardano.Chain.Block.Validation
 where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
 import qualified Data.Map.Strict as M
@@ -20,8 +19,10 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Hedgehog
-  ( Property
+  ( Group(..)
+  , Property
   , PropertyT
+  , annotate
   , assert
   , discover
   , evalEither
@@ -54,15 +55,24 @@ import Cardano.Crypto (VerificationKey)
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Crypto.Gen (genVerificationKey)
 import Test.Cardano.Mirror (mainnetEpochFiles)
-import Test.Options (TestScenario(..), TSGroup, TSProperty, concatTSGroups)
+import Test.Options
+  (ShouldAssertNF(..), TestScenario(..), TSGroup, TSProperty, concatTSGroups)
 
 
 -- | These tests perform chain validation over mainnet epoch files
-tests :: TSGroup
-tests = concatTSGroups [const $$discover, $$discoverPropArg]
+tests :: ShouldAssertNF -> TSGroup
+tests shouldAssertNF = concatTSGroups
+  [ const $$discover
+  , \scenario -> Group
+    "Test.Cardano.Chain.Block.Validation"
+    [ ( "ts_prop_mainnetEpochsValid"
+      , ts_prop_mainnetEpochsValid shouldAssertNF scenario
+      )
+    ]
+  ]
 
-ts_prop_mainnetEpochsValid :: TSProperty
-ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
+ts_prop_mainnetEpochsValid :: ShouldAssertNF -> TSProperty
+ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
   menv <- liftIO $ lookupEnv "CARDANO_MAINNET_MIRROR"
   assert $ isJust menv
 
@@ -89,7 +99,16 @@ ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
 
   cvs' <- evalEither result
 
-  assert =<< liftIO (isNormalForm $! cvs')
+  case shouldAssertNF of
+    AssertNF -> do
+      annotate ("Did you build with `ghc -fhpc` or `stack --coverage`?\n"
+        <> "If so, please be aware that hpc will introduce thunks around "
+        <> "expressions for its program coverage measurement purposes and "
+        <> "this assertion can fail as a result.\n"
+        <> "Otherwise, for some reason, the `ChainValidationState` is not in "
+        <> "normal form.")
+      assert =<< liftIO (isNormalForm $! cvs')
+    NoAssertNF -> pass
 
 
 data Error
