@@ -392,6 +392,13 @@ respective script address variants.
       \fun{txinsVKey} & \Tx \to \powerset{\TxIn} &\text{VKey locked transaction inputs} \\
       \fun{txinsScript} & \Tx \to \powerset{(\TxIn \times \Script)} &\text{Script locked transaction inputs} \\
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
+    \end{array}
+  \end{equation*}
+
+  \emph{Functions}
+
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
       \fun{txwitsScripts} & \Tx \to \powerset{\Script} & \text{script witnesses}
     \end{array}
   \end{equation*}
