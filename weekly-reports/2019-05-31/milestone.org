@@ -10,12 +10,15 @@
 *** TODO Check for differences in current exec spec and STS rules
 *** TODO Estimate effort and outline plan to converge formal and exec spec
  - [] Issue #486
-** Update the multi-sig spec [3/4]
+** Update the multi-sig spec [4/4]
 *** DONE Explicitly define witnesses for scripts
     CLOSED: [2019-05-22 Wed 14:20]
 *** DONE Clear separate treatment of script witnesses and signature witnesses
     CLOSED: [2019-05-22 Wed 14:20]
 *** DONE Use "standard" Plutus script validator function with redeemer script
     CLOSED: [2019-05-22 Wed 14:20]
-*** TODO Add Jan's script as example use for clarification
+*** DONE Add Jan's script as example use for clarification
+    CLOSED: [2019-05-23 Thu 10:22]
  - [X] Issue #485
+*** Add Duncan's example as script-like DSL alternative
+ - [ ] Issue #498

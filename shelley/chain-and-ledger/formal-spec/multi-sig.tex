@@ -607,11 +607,62 @@ to the union of the inputs of $\fun{txinsVKey}~tx$ and $\fun{txinsScript}~tx$.
   \label{fig:functions:multi-sig-utxo}
 \end{figure}
 
+\section{Alternative Implementation}
+\label{sec:altern-impl}
+
+An alternative implementation for multi-signature scripts is an embedding of the
+script as data type which can then be interpreted natively or via a Plutus
+script. In the below example code, the type $\type{MultiSigScript}$ is defined
+as a tree-structure $\type{MultiSigTerm}$ that is either a single signature leaf
+node or a list of $\type{MultiSigTerms}$ and a threshold.
+
+\begin{verbatim}
+module MultiSigScript where
+
+import qualified Data.Set as Set
+import           Data.Set (Set)
+
+data VKeyHash = VKeyHash Int -- dummy representation
+  deriving (Eq, Ord, Show)
+
+type MultiSigScript = MultiSigTerm
+
+data MultiSigTerm = SingleSig     VKeyHash
+                  | MultiSig  Int [MultiSigTerm]
+  deriving Show
+\end{verbatim}
+
+The validation of such a term can then be done as follows, checking for presence
+of a single signature as the base case and comparing the number of validating
+nodes in the list with the threshold in the recursion case.
+
+\begin{verbatim}
+evalMultiSigScript :: MultiSigScript -> Set VKeyHash -> Bool
+evalMultiSigScript (SingleSig vkh) vkhs =
+    vkh `Set.member` vkhs
+
+evalMultiSigScript (MultiSig m ts) vkhs =
+    sum [ if evalMultiSigScript t vkhs then 1 else 0 | t <- ts ] >= m
+
+
+mkVKeyHashSet :: [Int] -> Set VKeyHash
+mkVKeyHashSet = Set.fromList . map VKeyHash
+
+verifyCases :: MultiSigScript -> [(Set VKeyHash, Bool)] -> Bool
+verifyCases script cases =
+    and [ evalMultiSigScript script keyset == expected
+        | (keyset, expected) <- cases]
+\end{verbatim}
+
+The appendix~\ref{sec:native-multi-sign} provides some example of how this
+scheme can be used. The intention is to have an alternative in the case for
+whenever the simple Plutus script integration would not be viable.
+
 \section{Summary}
 \label{sec:summary}
 
-The presented simple multi-signature scheme does not require the scripts to use
-any cryptographic primitives. It requires only the ability to compare the
+The presented multi-signature base on Plutus scheme does not require the scripts
+to use any cryptographic primitives. It requires only the ability to compare the
 required keys to those that actually signed the transaction. Gas cost can
 therefore be calculated statically in advance. The scripts could be realized as
 smart contracts with only limited requirements on functionality on the script
@@ -627,8 +678,94 @@ allows the creation of transactions with an arbitrary number of signatures. This
 potentially is a risk for an attack. The number of signatures should be taken
 into account in some way in the calculation of the transaction fee.
 
+The alternative, script-like integration as DSL allows for native integration
+via the direct interpretation of the $\type{MultiSigScript}$. Its integration
+works in the same way as the Plutus script-based approach. If the Plutus
+approach is not viable for any reason, e.g., script size or readiness of
+library, it can be pursued instead.
+
 \addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
 \bibliography{references}
+
+\appendix
+
+\section{Native Multi-Signature Examples}
+\label{sec:native-multi-sign}
+
+\begin{verbatim}
+example1Of2 =
+  MultiSig 1 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
+
+example1Of2_verify =
+    verifyCases
+      example1Of2
+      [ (mkVKeyHashSet [],    False)
+      , (mkVKeyHashSet [1],   True)
+      , (mkVKeyHashSet [2],   True)
+      , (mkVKeyHashSet [1,2], True)
+      , (mkVKeyHashSet [3],   False)
+      ]
+
+example2Of2 =
+  MultiSig 2 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
+
+example2Of2_verify =
+    verifyCases
+      example2Of2
+      [ (mkVKeyHashSet [],      False)
+      , (mkVKeyHashSet [1],     False)
+      , (mkVKeyHashSet [2],     False)
+      , (mkVKeyHashSet [1,2],   True)
+      , (mkVKeyHashSet [3],     False)
+      , (mkVKeyHashSet [1,2,3], True)
+      ]
+
+exampleNestedOrAnd =
+  MultiSig 1 [ MultiSig 2 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
+             , MultiSig 2 [SingleSig (VKeyHash 3), SingleSig (VKeyHash 4)]
+             ]
+
+exampleNestedAndOr =
+  MultiSig 2 [ MultiSig 1 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
+             , MultiSig 1 [SingleSig (VKeyHash 3), SingleSig (VKeyHash 4)]
+             ]
+
+exampleNestedOrAnd_verify =
+    verifyCases
+      exampleNestedOrAnd
+      [ (keysset, expected)
+      | has1 <- [False, True]
+      , has2 <- [False, True]
+      , has3 <- [False, True]
+      , has4 <- [False, True]
+      , has5 <- [False, True]
+      , let keysset = mkVKeyHashSet $ [ 1 | has1 ]
+                                   ++ [ 2 | has2 ]
+                                   ++ [ 3 | has3 ]
+                                   ++ [ 4 | has4 ]
+                                   ++ [ 5 | has5 ]
+            expected = (has1 && has2)
+                    || (has3 && has4)
+      ]
+
+exampleNestedAndOr_verify =
+    verifyCases
+      exampleNestedAndOr
+      [ (keysset, expected)
+      | has1 <- [False, True]
+      , has2 <- [False, True]
+      , has3 <- [False, True]
+      , has4 <- [False, True]
+      , has5 <- [False, True]
+      , let keysset = mkVKeyHashSet $ [ 1 | has1 ]
+                                   ++ [ 2 | has2 ]
+                                   ++ [ 3 | has3 ]
+                                   ++ [ 4 | has4 ]
+                                   ++ [ 5 | has5 ]
+            expected = (has1 || has2)
+                    && (has3 || has4)
+      ]
+\end{verbatim}
 
 \end{document}
 
