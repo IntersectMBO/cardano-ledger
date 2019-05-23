@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- | Traces of transition systems and associated operators.
@@ -23,6 +24,7 @@ module Control.State.Transition.Trace
   , preStatesAndSignals
   , traceLength
   , lastState
+  , closure
   )
 where
 
@@ -204,6 +206,27 @@ preStatesAndSignals OldestFirst tr
   = zip (traceStates OldestFirst tr) (traceSignals OldestFirst tr)
 preStatesAndSignals NewestFirst tr
   = reverse $ preStatesAndSignals OldestFirst tr
+
+-- | Apply the signals in the list and elaborate a trace with the resulting
+-- states.
+--
+-- If any of the signals cannot be applied, then it is discarded, and the next
+-- signal is tried.
+closure
+  :: forall s
+   . STS s
+   => Environment s
+   -> State s
+   -> [Signal s]
+   -> Trace s
+closure env st0 sigs = mkTrace env st0 $ loop st0 sigs []
+  where
+    loop _ [] acc =
+      acc
+    loop sti (sig : sigs') acc =
+      case applySTS @s (TRC(env, sti, sig)) of
+        Left _ -> loop sti sigs' acc
+        Right sti' -> loop sti sigs' ((sti', sig) : acc)
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces

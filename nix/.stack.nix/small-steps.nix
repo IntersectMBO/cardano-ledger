@@ -48,6 +48,17 @@
             (hsPkgs.buildPackages.doctest-discover or (pkgs.buildPackages.doctest-discover))
             ];
           };
+        "examples" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.containers)
+            (hsPkgs.hedgehog)
+            (hsPkgs.tasty)
+            (hsPkgs.tasty-hedgehog)
+            (hsPkgs.tasty-expected-failure)
+            (hsPkgs.small-steps)
+            ];
+          };
         };
       };
     } // rec {
