@@ -1,0 +1,44 @@
+digraph STS {
+        CHAIN -> BBODY
+        CHAIN -> PRTCL
+        CHAIN -> BHEAD
+        BBODY -> PRTCL [style=dotted]
+        PRTCL -> BHEAD [style=dotted]
+
+        UTXOW -> UTXO
+
+        DELEGS -> DELPL
+        DELEGS -> DELEGS
+        DELPL  -> DELEGS [style=dotted]
+
+        DELPL -> DELEG
+        DELPL -> POOL
+
+        LEDGER -> BUPI
+        LEDGER -> DELEGS
+        LEDGER -> UTXOW
+
+        LEDGERS -> LEDGER
+        LEDGERS -> LEDGERS
+        LEDGER  -> LEDGERS [style=dotted]
+
+        EPOCH -> SNAP
+        EPOCH -> POOLREAP
+        EPOCH -> NEWPP
+        NEWPP -> POOLREAP [style=dotted]
+        NEWPP -> SNAP [style=dotted]
+
+        NEWEPOCH -> EPOCH
+        NEWEPOCH -> UPIEC
+        EPOCH -> UPIEC [style=dotted]
+
+        BHEAD -> RUPD
+        BHEAD -> NEWEPOCH
+
+        OVERLAY -> OCERT
+
+        PRTCL -> UPDN
+        PRTCL -> OVERLAY
+
+        BBODY -> LEDGERS
+}
