@@ -167,6 +167,61 @@ number which will execute in the `ContinuousIntegration` scenario, and the
 ratios by which that number will be multiplied for the other scenarios are given
 [here](https://github.com/input-output-hk/cardano-ledger/blob/062983f0583852c99545efcf1a7d697dff470107/test/Test/Options.hs#L81-L91).
 
+
+## Nix Tools
+
+The `nix` directory contains files related to `iohk-nix`, the `nix`-based
+infrastructure were using to manage our dependencies and build on hydra. The
+important files are:
+
+- `nix/iohk-nix-src.json`, which contains JSON pointing to the `iohk-nix` source
+
+- `nix/lib.nix`, which imports `iohk-nix` and creates and attribute set
+  containing its `lib`, `pkgs`, and `nix-tools` attributes
+
+- `nix/regenerate.sh`, which generates `nix` expressions for all the Haskell
+  dependencies in the Stack project
+
+- `nix/pkgs.nix`, which creates a package set from the generated `nix`
+  expressions
+
+- `default.nix`, the top-level `nix` expression for the project, based on the
+  generated package set
+
+- `release.nix`, the specification for which packages to build on hydra
+
+There are a couple of common issues that developers run into while working with
+`iohk-nix`:
+
+- `error: attribute 'ghc864' missing, at (string):1:43` is an error that you
+  will usually get if you're trying to evaluate some `nix` expression using your
+  system-wide `nixpkgs` and the version of `ghc` there doesn't match the one
+  that you're trying to build with. This is usually solved by getting the
+  offending `.nix` file to `import ./nix/lib.nix`. Sometime this occurs while
+  running `stack` and this means `stack` is running with the `--nix` flag. In
+  this case, you need to make sure you have a `shell.nix` file for `stack` that
+  points to `nix/lib.nix`. Then add:
+  ```
+  nix:
+    shell-file: nix/stack-shell.nix
+  ```
+  to your `stack.yaml`.
+
+- While evaluating `release.nix`, e.g. using the
+  `scripts/buildkite/check-hydra.sh` script, you might see
+  ```
+  "error": "attribute '1.0.0.0' missing, at /path/to/nix/.stack.nix/default.nix:6:30"
+  ```
+  which indicates that a package version is missing from the `iohk-nix` package
+  set. This is usually because the version is new to Hackage, and so it has only
+  recently made it into
+  [`hackage.nix`](https://github.com/input-output-hk/hackage.nix/), a set of
+  `nix` expressions for all the packages on Hackage. This is pinned in
+  `iohk-nix`, so to solve this, submit a PR to `iohk-nix` updating the revision
+  of `pins/haskell-nix.json`, or get IOHK DevOps to submit this PR for you if
+  you're unsure how to do that.
+
+
 <hr/>
 
 <p align="center">
