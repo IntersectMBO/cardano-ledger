@@ -12,7 +12,7 @@ steps:
       - "cp -R . /build/cardano-ledger-specs"
       - "cd /build/cardano-ledger-specs"
       - "nix-build ci/buildkite -o stack-rebuild"
-      - "./stack-rebuild"
+#      - "./stack-rebuild"
     agents:
       system: x86_64-linux
 
