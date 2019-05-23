@@ -397,7 +397,7 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{~\leteq~}l}
-        (\var{utxo},~\var{deposits},~\var{fees}) & \var{utxoSt}\\
+        (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
         (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
@@ -673,6 +673,7 @@ for ease of reading.
             \var{utxo} \\
             \varUpdate{oblg_{new}} \\
             \var{fees} \\
+            \var{H} \\
           \end{array}
         }
       \right)
