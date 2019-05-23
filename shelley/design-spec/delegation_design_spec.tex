@@ -222,10 +222,10 @@ Alice and Bob noticing the attack.
 \subsubsection{Public Spending Keys Should not be Disclosed Prematurely}
 \label{public-spending-keys-should-not-be-disclosed-prematurely}
 
-Delegation of stake should not involve revealing the public spending
-key. The public spending key should only be revealed once the funds that
-are controlled by the corresponding private key are actually transferred
-to another address.
+Delegation of stake should not involve revealing the public spending key (other
+than the public key hash, which is already visible from the address itself). The
+public spending key should only be revealed once the funds that are controlled
+by the corresponding private key are actually transferred to another address.
 
 \subsubsection{Mitigate Key Exposure}
 \label{mitigate-key-exposure}
@@ -403,7 +403,9 @@ are the public keys used to verify signatures.
 
 Except for special classes of addresses with no stake rights\footnote{Enterprise,
   script, bootstrap era and AVVM addresses have no corresponding stake
-  rights.}, all addresses have stake rights corresponding to the funds
+  rights. AVVM is an acronym for ``Ada Virtual Vending Machine'', and AVVM
+  addresses are special addresses used in the initial distribution of Ada.}, all
+addresses have stake rights corresponding to the funds
 at the address. To exercise these stake rights, and to receive staking
 rewards, each address must be associated with a \emph{registered} stake
 key. This involves registering a stake key on the chain and using
@@ -680,6 +682,11 @@ leadership schedule.
 
 Note that using addresses with no stake rights effectively decreases
 the total amount of stake, which plays into the hands of the adversary.
+But unless we want the exchange to control the stake, it is unavoidable to
+ignore it, since there is no way to determine whom the stake "really" belongs
+to. Also note that it is generally considered bad practice to leave funds on
+exchanges, and in Cardano-Shelley, there will also be a monetary incentive to
+withdraw funds from exchanges in order to earn rewards.
 
 \subsubsection{Reward Account Address}
 \label{reward-address}
@@ -1110,8 +1117,10 @@ Still, there will only be one operator, the person holding the key of the stake
 pool itself. In addition to signing blocks, this key also holds the power to
 retire the stake pool, or to post updated registration certificates without the
 keys of all owners (in which case some of the owners are kicked off the stake
-pool). The stake pool operator will also receive the rewards for all the owners,
-and it will be their responsibility to distribute them to their fellow owners.
+pool). Also, the rewards for all owners will be paid to the reward account
+associated with the reward staking key of the pool, and it will be the
+responsibility of the person holding that key (usually the pool operator) to
+distribute the rewards amongst the owners.
 That is a conscious design decision: collaborating to form a stake pool should
 require significant trust between the owners. Otherwise, everyone could choose
 to become a co-owner of a stake pool instead of delegating, which would render
@@ -1225,7 +1234,8 @@ lifetime of \(2^7 = 128\) days, a little over three months.
 
 Operational key certificates will have a lifetime of 90 days after which they
 become invalid, to encourage pool operators to regularly rotate their
-operational key.
+operational key. The certificate will specify a slot from which it will be
+considered to be valid for 90 days.
 
 In detail, the hot/cold key setup is as follows:
 
@@ -1248,10 +1258,6 @@ In detail, the hot/cold key setup is as follows:
   pool operator will create a new operational key certificate
   \(C'\), delegating the staking rights to a new hot key
   \(vks_{\text{hot}'}\).
-\item
-  The epoch number starting from which this certificate will be valid. The
-  certificate will be considered valid for 90 days, from the beginning of that
-  epoch.
 \end{itemize}
 
 In order to render \(sks_\text{hot}\) useless, it must be established
@@ -1477,7 +1483,8 @@ funds that are
 \begin{itemize}
 \item in base addresses using that staking key
 \item in pointer addresses for that staking key's registration
-  certificate
+  certificate (as long as the requirements in \cref{pointer-address} are
+  fulfilled)
 \item in the reward account of that staking key
 \end{itemize}
 
@@ -1607,8 +1614,13 @@ leader schedule for the next epoch:
 
   In order to keep the block frequency constant, we will select a fraction
   \(f\) of the OBFT slots, where \(f\) is the active slots coefficient from
-  Praos (Equation (1) in \citep{ouroboros_praos}), and call those the
-  \emph{active OBFT slots} of the epoch.
+  Praos\footnote{In Ouroboros Praos, a large fraction of slots will deliberately
+  be empty, which makes it easier to treat network delays in the adversarial
+  model, and to still give guarantees of liveness and persistence when some
+  blocks are not propagated within a single slot. Note that it is still possible
+  to achieve the same block frequency as in Ouroboros Classic, by choosing a
+  shorter slot length.} (Equation (1) in \citep{ouroboros_praos}), and call
+  those the \emph{active OBFT slots} of the epoch.
 
   For OBFT slots, we will modify the behaviour of all nodes as follows:
   \begin{itemize}
@@ -1885,12 +1897,13 @@ resources on the nodes should require a deposit, as described in
 should all require making a deposit. This deposit should be released
 when
 \begin{itemize}
-\item a UTxO entry is removed by using it as an input to a transaction
 \item a staking key is de-registered
 \item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
   epoch, and we will delay paying out the refund until that epoch.
+\item a UTxO entry is removed by using it as an input to a transaction (in a
+  future release)
 \end{itemize}
 Note that posting a delegation certificate does \emph{not} require a
 deposit; delegation certificates need a staking key registration
@@ -1923,7 +1936,7 @@ can be added to the ledger can be used to calculate the refund.
 As described, there is a lot of work to be done by the nodes as the system
 progresses from epoch to epoch: the stake distribution and slot leader schedule
 need to be calculated, the fees accumulated during the epoch need to be
-addedsummed up, performance of the pools evaluated, deposits decayed, and
+summed up, performance of the pools evaluated, deposits decayed, and
 rewards determined and distributed.
 
 Doing all that \emph{at} the transition between two epochs is far from ideal. It
@@ -3673,7 +3686,7 @@ In the following, we describe how the requirements listed in
   pseudonymity that is not worse than that in the Ethereum network.
 
   They can also choose to use a distinct staking key per address, or addesses
-  with no staking key at all, which gives psweudonymity that is no worse than in
+  with no staking key at all, which gives pseudonymity that is no worse than in
   Bitcoin.
 
 \item[\cref{short-addresses} Short Addresses] The goal of having
