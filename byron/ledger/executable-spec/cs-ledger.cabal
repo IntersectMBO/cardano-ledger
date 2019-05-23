@@ -29,6 +29,7 @@ library
                      , Ledger.GlobalParams
                      , Ledger.Update
                      , Ledger.UTxO
+                     , Ledger.UTxO.Generators
   build-depends:       base >=4.11 && <5
                      , bimap
                      , bytestring

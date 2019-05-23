@@ -39,7 +39,9 @@ class HasHash a where
 ---------------------------------------------------------------------------------
 
 -- |Representation of the owner of key pair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord, HasTypeReps)
+newtype Owner = Owner
+  { unOwner :: Natural
+  } deriving (Show, Eq, Ord, HasTypeReps)
 
 class HasOwner a where
   owner :: a -> Owner
@@ -136,13 +138,14 @@ instance HasTypeReps BlockCount
 
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, HasOwner)
 
 -- | A unit of value held by a UTxO.
 --
-newtype Lovelace = Lovelace Integer
-  deriving (Show, Eq, Ord, Num)
-  deriving (Semigroup, Monoid) via (Sum Integer)
+newtype Lovelace = Lovelace
+  { unLovelace :: Integer
+  } deriving (Show, Eq, Ord, Num)
+    deriving (Semigroup, Monoid) via (Sum Integer)
 
 
 ---------------------------------------------------------------------------------
