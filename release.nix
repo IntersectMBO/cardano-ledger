@@ -1,5 +1,5 @@
 let
-  localLib = import ./lib.nix;
+  localLib = import ./nix/lib.nix;
 in
 { cardano-ledger-specs ? { outPath = ./.; rev = "abcdef"; } ,... }@args:
 localLib.nix-tools.release-nix {
@@ -10,7 +10,7 @@ localLib.nix-tools.release-nix {
   # are intereted in building on CI via nix-tools.
   packages = [ "small-steps" "cs-ledger" "cs-blockchain" "delegation" ];
 
-  # The set of jobs we consider crutial for each CI run.
+  # The set of jobs we consider crucial for each CI run.
   # if a single one of these fails, the build will be marked
   # as failed.
   #
