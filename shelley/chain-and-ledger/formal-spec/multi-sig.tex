@@ -546,7 +546,15 @@ be a subset of the domain of $utxo$ and cannot be empty.
       \\
       ~
       \\
+      H'\leteq\fun{txeent}~\var{tx}
+      &
+      \dom{H'}\subseteq\dom{dms}
+      \\
+      ~
+      \\
       \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c \geq 0
+      \\
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
       ~
       \\
@@ -563,6 +571,7 @@ be a subset of the domain of $utxo$ and cannot be empty.
         \var{pp}\\
         \var{stkeys}\\
         \var{stpools}\\
+        \var{dms}\\
       \end{array}
       \vdash
       \left(
@@ -570,6 +579,7 @@ be a subset of the domain of $utxo$ and cannot be empty.
         \var{utxo} \\
         \var{deposits} \\
         \var{fees} \\
+        \var{H}\\
       \end{array}
       \right)
       \trans{utxo}{tx}
@@ -578,6 +588,7 @@ be a subset of the domain of $utxo$ and cannot be empty.
         \varUpdate{(\var{txInps}\subtractdom \var{utxo}) \cup \outs{tx}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
+        \varUpdate{H\unionoverrideRight H'}\\
       \end{array}
       \right)
     }
