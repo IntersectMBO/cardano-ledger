@@ -649,10 +649,12 @@ will be successful, since the pool certificates are disjoint from the delegation
     {
       &
       {
-        \begin{array}{r}
-          \var{slot} \\
-          \var{ptr} \\
-        \end{array}
+        \left(
+          \begin{array}{r}
+            \var{slot} \\
+            \var{ptr} \\
+          \end{array}
+        \right)
       }
       \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
     }
@@ -685,10 +687,12 @@ will be successful, since the pool certificates are disjoint from the delegation
     {
     &
     {
-      \begin{array}{r}
-        \var{slot} \\
-        \var{pp} \\
-      \end{array}
+      \left(
+        \begin{array}{r}
+          \var{slot} \\
+          \var{pp} \\
+        \end{array}
+      \right)
     }
     \vdash \var{pstate} \trans{\hyperref[fig:pool-rules]{pool}}{c} \var{pstate'}
     }

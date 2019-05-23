@@ -5,8 +5,9 @@
    - [ ] Issue #447
 ** TODO Plan out the work required to finish importing the Byron update system into Shelley.
    - [ ] Issue #448 (We may need to break this issue up into more parts.)
-** Update the executable spec [0/3]
-*** TODO Add overview of STS rule hierarchy
+** Update the executable spec [1/3]
+*** DONE Add overview of STS rule hierarchy
+    CLOSED: [2019-05-23 Thu 13:24]
 *** TODO Check for differences in current exec spec and STS rules
 *** TODO Estimate effort and outline plan to converge formal and exec spec
  - [] Issue #486
