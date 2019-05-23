@@ -51,7 +51,17 @@ data TxOut = TxOut { addr  :: Addr
                    } deriving (Show, Eq, Ord)
 
 -- |The unspent transaction outputs.
-newtype UTxO id = UTxO (Map (TxIn id) TxOut) deriving (Show, Eq, Relation)
+newtype UTxO id = UTxO
+  { unUTxO :: Map (TxIn id) TxOut
+  } deriving (Show, Eq, Relation)
+
+-- | Construct a UTxO from initial TxOuts, using the supplied id generator
+fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
+fromTxOuts mkId = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
+
+-- | Construct a UTxO from initial TxOuts, using Owner as TxId
+fromTxOutsNatural :: [TxOut] -> UTxO Natural
+fromTxOutsNatural = fromTxOuts (unOwner . owner . addr)
 
 -- |A raw transaction
 data Tx id = Tx { txid    :: id
