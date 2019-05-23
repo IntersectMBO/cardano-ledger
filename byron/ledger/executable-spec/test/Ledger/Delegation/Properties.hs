@@ -267,7 +267,7 @@ dcertsAreTriggered :: Property
 dcertsAreTriggered = withTests 300 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
-  forAll nonTrivialTrace >>= dcertsAreTriggeredInTrace
+  forAll (nonTrivialTrace 1000) >>= dcertsAreTriggeredInTrace
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules
@@ -283,7 +283,7 @@ dcertsAreTriggered = withTests 300 $ property $
 rejectDupSchedDelegs :: Property
 rejectDupSchedDelegs = property $ do
   (tr, dcert) <- forAll $ do
-    tr <- trace @DELEG
+    tr <- trace @DELEG 1000
           `suchThatLastState` (not . null . view scheduledDelegations)
     let vkS =
           case lastState tr ^. scheduledDelegations of

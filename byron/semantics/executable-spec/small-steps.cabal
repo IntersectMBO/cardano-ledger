@@ -76,3 +76,21 @@ test-suite doctests
 
   if (!flag(development))
     ghc-options:      -Werror
+
+
+test-suite examples
+  hs-source-dirs:      test
+  main-is:             examples/Main.hs
+  other-modules:       Control.State.Transition.Examples.Sum
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                     , containers
+                     , hedgehog
+                     , tasty
+                     , tasty-hedgehog
+                     , tasty-expected-failure
+                     --
+                     , small-steps
+  if (!flag(development))
+    ghc-options:      -Werror
