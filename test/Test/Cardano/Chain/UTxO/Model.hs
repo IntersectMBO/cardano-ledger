@@ -299,5 +299,5 @@ modelAddresses = Abstract.Addr . Abstract.VKey . Abstract.Owner <$> [0 .. 5]
 -- Main Test Export
 --------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = checkSequential $$discover
+tests :: Group
+tests = $$discover

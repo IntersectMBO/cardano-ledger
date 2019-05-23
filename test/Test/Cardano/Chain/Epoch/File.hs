@@ -8,7 +8,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
-import Hedgehog (Property, (===))
+import Hedgehog (Group, Property, (===), discover)
 import qualified Hedgehog as H
 import Streaming (Of((:>)))
 import qualified Streaming as S
@@ -18,11 +18,11 @@ import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFilesW
 import Test.Cardano.Mirror (mainnetEpochFiles)
 
 
-tests :: IO Bool
-tests = H.checkSequential $$(H.discoverPrefix "prop")
+tests :: Group
+tests = $$discover
 
-propDeserializeEpochs :: Property
-propDeserializeEpochs = H.withTests 1 $ H.property $ do
+prop_deserializeEpochs :: Property
+prop_deserializeEpochs = H.withTests 1 $ H.property $ do
   files <- take 10 <$> liftIO mainnetEpochFiles
   H.assert $ not (null files)
   -- TODO: the property cannot take any parameters (if we want discoverPrefix

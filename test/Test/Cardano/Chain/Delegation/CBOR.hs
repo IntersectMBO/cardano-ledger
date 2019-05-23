@@ -11,7 +11,6 @@ import Test.Cardano.Prelude
 import Data.List ((!!))
 
 import Hedgehog (Property)
-import qualified Hedgehog as H
 
 import Cardano.Chain.Delegation (unsafePayload)
 
@@ -20,7 +19,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Delegation.Gen (genCertificate, genPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -51,8 +50,5 @@ ts_roundTripDlgPayloadCBOR =
   eachOfTS 100 (feedPM genPayload) roundTripsCBORBuildable
 
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-  [ H.checkSequential $$discoverGolden
-  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
-  ]
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

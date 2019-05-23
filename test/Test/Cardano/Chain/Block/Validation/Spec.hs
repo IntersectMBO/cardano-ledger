@@ -24,14 +24,7 @@ import Cardano.Prelude hiding (trace, State)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
-import Hedgehog
-  ( MonadTest
-  , Group
-  , checkParallel
-  , evalEither
-  , forAll
-  , property
-  )
+import Hedgehog (MonadTest, evalEither, forAll, property)
 
 import Cardano.Chain.Block
   ( ChainValidationError
@@ -47,11 +40,11 @@ import Control.State.Transition.Trace
   (TraceOrder(OldestFirst), Trace, preStatesAndSignals, traceEnv)
 
 import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg, rcDCert)
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 
-tests :: TestScenario -> IO Bool
-tests ts = checkParallel (($$discoverPropArg :: TestScenario -> Group) ts)
+tests :: TSGroup
+tests = $$discoverPropArg
 
 -- | Every abstract chain that was generated according to the inference rules,
 -- after being elaborated must be validated by the concrete block validator.

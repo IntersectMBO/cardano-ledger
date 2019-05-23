@@ -13,12 +13,10 @@ import Test.Cardano.Prelude
 
 import qualified Data.Map as M
 import Data.Typeable (typeRep)
-import Hedgehog
-  (Gen, Group, Property)
+import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary
-  (ToCBOR, Case(..), Raw(..), SizeOverride(..), szCases)
+import Cardano.Binary (Case(..), Raw(..), SizeOverride(..), ToCBOR, szCases)
 import Cardano.Chain.Common
   ( AddrAttributes(..)
   , AddrSpendingData (..)
@@ -74,7 +72,7 @@ import Test.Cardano.Chain.Common.Gen
   )
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -301,9 +299,6 @@ sizeEstimates =
 -- Main test export
 --------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-    [ H.checkSequential $$discoverGolden
-    , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
-    , H.checkParallel sizeEstimates
-    ]
+tests :: TSGroup
+tests = concatTSGroups
+  [const $$discoverGolden, $$discoverRoundTripArg, const sizeEstimates]

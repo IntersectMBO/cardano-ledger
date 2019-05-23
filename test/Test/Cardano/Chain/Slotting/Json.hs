@@ -9,7 +9,6 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import Hedgehog (Property)
-import qualified Hedgehog as H
 
 import Cardano.Chain.Slotting
   (EpochSlots(..), FlatSlotId (..), LocalSlotIndex (..))
@@ -23,7 +22,7 @@ import Test.Cardano.Chain.Slotting.Gen
   , genEpochSlots
   , feedPMEpochSlots
   )
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -75,7 +74,6 @@ ts_roundTripEpochSlots = eachOfTS 1000 genEpochSlots roundTripsAesonShow
 --------------------------------------------------------------------------------
 -- Main test export
 --------------------------------------------------------------------------------
-tests :: TestScenario -> IO Bool
-tests ts =
-  (&&) <$> H.checkSequential $$discoverGolden
-       <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

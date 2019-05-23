@@ -10,24 +10,18 @@ module Test.Cardano.Chain.Block.Validation
 where
 
 import Cardano.Prelude
+import Test.Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
-import Data.String (fromString)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
-import System.FilePath (takeFileName)
 
 import Hedgehog
-  ( Group(..)
-  , Property
-  , PropertyName
+  ( Property
   , PropertyT
   , assert
-  , checkParallel
-  , checkSequential
   , discover
   , evalEither
   , forAll
@@ -50,7 +44,7 @@ import Cardano.Chain.Block
   , updateSigningHistory
   )
 import Cardano.Chain.Common (BlockCount(..), mkStakeholderId)
-import Cardano.Chain.Epoch.File (ParseError, parseEpochFileWithBoundary)
+import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Crypto (VerificationKey)
@@ -58,24 +52,20 @@ import Cardano.Crypto (VerificationKey)
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Crypto.Gen (genVerificationKey)
 import Test.Cardano.Mirror (mainnetEpochFiles)
-import Test.Options (TestScenario(..))
+import Test.Options (TestScenario(..), TSGroup, TSProperty, concatTSGroups)
 
 
 -- | These tests perform chain validation over mainnet epoch files
---
---   We have chosen to split each epoch file into its own 'Property', because
---   this leads to a clearer log of progress during testing. This requires an
---   'IORef' to synchronise the 'ChainValidationState' between epochs, as
---   'Property's do not return values.
-tests :: TestScenario -> IO Bool
-tests scenario = do
+tests :: TSGroup
+tests = concatTSGroups [const $$discover, $$discoverPropArg]
+
+ts_prop_mainnetEpochsValid :: TSProperty
+ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
   -- Get the 'Genesis.Config' from the mainnet genesis JSON
   config <- readMainetCfg
 
-  -- Create an 'IORef' containing the initial 'ChainValidationState'
-  cvsRef <-
-    newIORef $ either (panic . show) identity $ initialChainValidationState
-      config
+  -- Construct the initial 'ChainValidationState'
+  let cvs = either (panic . show) identity $ initialChainValidationState config
 
   let
     takeFiles :: [FilePath] -> [FilePath]
@@ -85,18 +75,14 @@ tests scenario = do
       QualityAssurance      -> identity
 
   -- Get a list of epoch files to perform validation on
-  files <- takeFiles <$> mainnetEpochFiles
+  files <- takeFiles <$> liftIO mainnetEpochFiles
 
-  -- Validate the blocks of each epoch file in a single 'Property' and check
-  -- them all sequentially
-  let
-    properties :: [(PropertyName, Property)]
-    properties = zip
-      (fromString . takeFileName <$> files)
-      (epochValid config cvsRef <$> files)
-  (&&)
-    <$> checkSequential (Group "Test.Cardano.Chain.Block.Validation" properties)
-    <*> checkParallel $$discover
+  let stream = parseEpochFilesWithBoundary (configEpochSlots config) files
+
+  result <- (liftIO . runResourceT . runExceptT)
+    (foldChainValidationState config cvs stream)
+
+  void $ evalEither result
 
 
 data Error
@@ -104,16 +90,6 @@ data Error
   | ErrorChainValidationError (Maybe FlatSlotId) ChainValidationError
   deriving (Eq, Show)
 
--- | Check that a single epoch's 'Block's are valid by folding over them
-epochValid
-  :: Genesis.Config -> IORef ChainValidationState -> FilePath -> Property
-epochValid config cvsRef fp = withTests 1 . property $ do
-  cvs <- liftIO $ readIORef cvsRef
-  let stream = parseEpochFileWithBoundary (configEpochSlots config) fp
-  result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState config cvs stream)
-  newCvs <- evalEither result
-  liftIO $ writeIORef cvsRef newCvs
 
 
 -- | Fold chain validation over a 'Stream' of 'Block's
@@ -151,8 +127,8 @@ foldChainValidationState config cvs blocks =
 --   - The map and sequence agree on the number of blocks signed by each
 --     stakeholder
 --   - The sequence never exceeds @k@ values
-ts_prop_signingHistoryUpdatesPreserveInvariants :: Property
-ts_prop_signingHistoryUpdatesPreserveInvariants =
+prop_signingHistoryUpdatesPreserveInvariants :: Property
+prop_signingHistoryUpdatesPreserveInvariants =
   withTests 100
     . property
     $ do

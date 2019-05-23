@@ -13,7 +13,6 @@ import Data.Char (isAscii)
 import Data.Data (Constr, toConstr)
 import qualified Data.Text as T
 
-import qualified Hedgehog as H
 import Hedgehog (property, forAll)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -34,7 +33,7 @@ import Cardano.Chain.Update
 
 import Test.Cardano.Chain.Update.Gen
   (genApplicationName, genSoftwareVersion, genSystemTag)
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 -- Make sure `checkApplicationName` works for allowed values.
 ts_prop_checkApplicationName :: TSProperty
@@ -117,8 +116,8 @@ ts_prop_checkSystemTagNotAscii = withTestsTS 100 . property $ do
   let sysTagNonascii = SystemTag $ T.pack nonAscii
   assertIsLeftConstr dummySysTagNotAscii (checkSystemTag sysTagNonascii)
 
-tests :: TestScenario -> IO Bool
-tests ts = H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
+tests :: TSGroup
+tests = $$discoverPropArg
 
 --------------------------------------------------------------------------------
 -- Dummy values for constructor comparison in assertIsLeftConstr tests

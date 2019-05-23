@@ -68,6 +68,7 @@ library
                      , formatting
                      , hedgehog
                      , optparse-applicative
+                     , tasty
                      , text
                      , time
                      , vector

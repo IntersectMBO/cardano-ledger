@@ -21,7 +21,7 @@ import Test.Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
 
-import Hedgehog (Group, Property)
+import Hedgehog (Property)
 import qualified Hedgehog as H
 
 import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding)
@@ -80,7 +80,7 @@ import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
 import Test.Cardano.Crypto.Example (exampleSigningKeys)
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -305,8 +305,5 @@ exampleToSign = ToSign
 -- Main test export
 -----------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-  [ H.checkSequential $$discoverGolden
-  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
-  ]
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

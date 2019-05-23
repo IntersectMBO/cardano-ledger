@@ -12,16 +12,13 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Hedgehog
-  (property, (===), forAll)
-import qualified Hedgehog as H
+import Hedgehog ((===), forAll, property)
 
-import Cardano.Chain.Common
-  ( addrNetworkMagic
-  )
+import Cardano.Chain.Common (addrNetworkMagic)
 
 import Test.Cardano.Chain.Common.Gen (genNetworkMagic, genAddressWithNM)
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
+
 
 ts_prop_addressNetworkMagicIdentity :: TSProperty
 ts_prop_addressNetworkMagicIdentity = withTestsTS 1000 . property $ do
@@ -29,5 +26,5 @@ ts_prop_addressNetworkMagicIdentity = withTestsTS 1000 . property $ do
   addr <- forAll (genAddressWithNM nm)
   nm === addrNetworkMagic addr
 
-tests :: TestScenario -> IO Bool
-tests ts = H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
+tests :: TSGroup
+tests = $$discoverPropArg

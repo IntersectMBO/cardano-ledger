@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
@@ -9,19 +8,8 @@ where
 
 import Cardano.Prelude
 import Test.Cardano.Prelude
-  ( discoverPropArg
-  , discoverRoundTripArg
-  )
 
-import Hedgehog
-  ( MonadTest
-  , assert
-  , property
-  , forAll
-  , property
-  , tripping
-  )
-import qualified Hedgehog as H
+import Hedgehog (MonadTest, assert, forAll, property, tripping)
 
 import Cardano.Chain.UTxO
   ( fromCompactTxId
@@ -32,13 +20,8 @@ import Cardano.Chain.UTxO
   , toCompactTxOut
   )
 
-import Test.Cardano.Chain.UTxO.Gen
-  ( genTxId
-  , genTxIn
-  , genTxOut
-  )
-import Test.Options
-  (TestScenario, TSProperty, eachOfTS, withTestsTS)
+import Test.Cardano.Chain.UTxO.Gen (genTxId, genTxIn, genTxOut)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS, withTestsTS)
 
 --------------------------------------------------------------------------------
 -- Compact TxIn
@@ -96,7 +79,5 @@ trippingCompact toCompact fromCompact x =
 -- Main test export
 -------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts =
-  (&&) <$> H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
-       <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+tests :: TSGroup
+tests = concatTSGroups [$$discoverPropArg, $$discoverRoundTripArg]

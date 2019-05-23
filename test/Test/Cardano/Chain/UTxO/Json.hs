@@ -9,8 +9,7 @@ where
 import Cardano.Prelude
 
 import qualified Data.Set as S
-import Hedgehog (Group, Property)
-import qualified Hedgehog as H
+import Hedgehog (Property)
 
 import Cardano.Chain.UTxO (UTxOConfiguration(..))
 
@@ -28,7 +27,7 @@ import Test.Cardano.Prelude
   , goldenTestJSONPretty
   , roundTripsAesonShow
   )
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 -------------------------------------------------------------------------------
 -- UTxOConfiguration
@@ -75,6 +74,5 @@ exampleUTxOConfiguration2 = UTxOConfiguration 700 talsa
 -- Main test export
 -------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = (&&) <$> H.checkSequential $$discoverGolden
-                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

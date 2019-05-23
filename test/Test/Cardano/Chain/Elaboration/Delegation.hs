@@ -12,8 +12,7 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import qualified Data.Set as Set
-import Hedgehog
-  (Group, checkSequential, evalEither, forAll, property)
+import Hedgehog (evalEither, forAll, property)
 
 import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (mkStakeholderId)
@@ -44,11 +43,11 @@ import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 
-tests :: TestScenario -> IO Bool
-tests ts = checkSequential (($$discoverPropArg :: TestScenario -> Group) ts)
+tests :: TSGroup
+tests = $$discoverPropArg
 
 
 ts_prop_elaboratedCertsValid :: TSProperty

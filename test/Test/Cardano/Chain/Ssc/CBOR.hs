@@ -9,8 +9,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Hedgehog (Property)
-import qualified Hedgehog as H
+import Hedgehog (Group(..), Property)
 
 import Cardano.Binary (dropBytes)
 import Cardano.Chain.Ssc
@@ -30,6 +29,7 @@ import Cardano.Chain.Ssc
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (deprecatedGoldenDecode, roundTripsCBORShow)
+import Test.Options (concatGroups)
 
 
 --------------------------------------------------------------------------------
@@ -208,6 +208,5 @@ goldenDeprecatedVssCertificatesMap = deprecatedGoldenDecode
 -- Main test export
 --------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = and <$> sequence
-  [H.checkSequential $$discoverGolden, H.checkParallel $$discoverRoundTrip]
+tests :: Group
+tests = concatGroups [$$discoverGolden, $$discoverRoundTrip]

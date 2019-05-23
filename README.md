@@ -54,7 +54,18 @@ it with `nix-build -A nix-tools.tests.cardano-ledger.cardano-ledger-test -o
 cardano-ledger-test` and then run it with `./cardano-ledger-test`.
 
 
-## Developing
+## Running Specific Tests
+
+The `cardano-ledger-test` test suite uses `tasty`, so you can choose to run only
+some of the tests using the `-p` flag followed by a pattern. Simple patterns
+such as `foo` just check for `foo` anywhere in the tests name or the name of the
+groups that hold it. So to run only test for the `UTxO` you could add `-p UTxO`.
+The patterns are actually `awk` expressions, so you can refer to the [`tasty`
+documentation](http://hackage.haskell.org/package/tasty) to help with more
+complex pattern matching.
+
+
+## Local Dependencies
 
 The `cardano-ledger` library depends on other libraries of the `input-output-hk`
 organization, whose versions are pinned in the `stack.yaml` file, e.g.:
