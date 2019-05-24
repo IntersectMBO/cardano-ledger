@@ -1,5 +1,5 @@
 let
-  localLib = import ./lib.nix;
+  localLib = import ./nix/lib.nix;
   # Path of nix-tools jobs that we want to evict from release.nix:
   disabled = [
     # FIXME: those tests freeze on darwin hydra agents:
