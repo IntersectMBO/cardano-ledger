@@ -498,11 +498,12 @@ when $hkeys$ is a value of type $\type{MultiSig}$.
 \end{figure*}
 
 Figure~\ref{fig:defs:functions-txins} shows the helper functions
-$\fun{txinsVKey}$ and $\fun{txinsScript}$ which split the transaction inputs of
-the transaction into those that are locked with a private key and those that are
-locked via a script. The helper function $\fun{validators}$ constructs a map
-from transaction inputs to scripts where for each input, the corresponding
-output of the UTxO can only be spent if the script validates the transaction.
+$\fun{txinsVKey}$ and $\fun{txinsScript}$ which partition the set of transaction
+inputs of the transaction into those that are locked with a private key and
+those that are locked via a script. The helper function $\fun{validators}$
+constructs a map from transaction inputs to scripts where for each input, the
+corresponding output of the UTxO can only be spent if the script validates the
+transaction.
 
 \section{Ledger Transition for Multi-Signature}
 \label{sec:ledg-trans-multi}
@@ -614,6 +615,13 @@ verifyCases script cases =
 The appendix~\ref{sec:native-multi-sign} provides some example of how this
 scheme can be used. The intention is to have an alternative in the case for
 whenever the simple Plutus script integration would not be viable.
+
+The integration would follow the same approach as outlined for Plutus scripts in
+Sections~\ref{sec:types} and \ref{sec:ledg-trans-multi}. First, a new type of
+address is introduced which holds the hash of the necessary information about
+how an output can be unlocked. Then, a new witness type is defined and added to
+the transaction type definition. After that, the STS rule UTXOW is extended with
+the validation of the new witnesses.
 
 \section{Summary}
 \label{sec:summary}
