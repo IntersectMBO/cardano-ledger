@@ -22,11 +22,9 @@ import Control.State.Transition
   )
 import Data.AbstractSize (HasTypeReps)
 
-import qualified Debug.Trace as Debug
-
 import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
-import Ledger.Update (PParams(PParams), _factorA, _factorB)
+import Ledger.Update (PParams)
 import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value)
 
 data UTXO id
@@ -67,18 +65,17 @@ instance (Ord id, HasTypeReps id) => STS (UTXO id) where
             , tx
             ) <- judgmentContext
 
---        txins tx ⊆ dom utxo ?! (Debug.trace "Inputs not in utxo" InputsNotInUTxO)
-        txins tx ⊆ dom utxo ?! (error "Boom!")
+        txins tx ⊆ dom utxo ?! InputsNotInUTxO
 
         let fee = balance (txins tx ◁ utxo) - balance (txouts tx)
 
-        pcMinFee pps tx <= fee ?! (error "boom") -- FeeTooLow
+        pcMinFee pps tx <= fee ?! FeeTooLow
 
-        (not . null) (txins tx) ?! (error "boom") -- EmptyTxInputs --
+        (not . null) (txins tx) ?! EmptyTxInputs
 
         let
           outputValues = fmap value $ Set.toList $ range (txouts tx)
-        all (0<) outputValues ?! (error "boom") -- NonPositiveOutputs
+        all (0<) outputValues ?! NonPositiveOutputs
 
         return $ UTxOState { utxo     = (txins tx ⋪ utxo) ∪ txouts tx
                            , reserves = reserves + fee

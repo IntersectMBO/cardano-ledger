@@ -9,7 +9,7 @@ packages:
 
 extra-deps:
 - sequence-0.9.8
-- tasty-hedgehog-1.0.0.0
+- tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
 
 nix:
   shell-file: nix/stack-shell.nix

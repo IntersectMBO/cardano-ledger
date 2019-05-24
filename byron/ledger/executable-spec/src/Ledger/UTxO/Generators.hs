@@ -7,7 +7,7 @@ import Data.Bitraversable (bitraverse)
 import qualified Data.Map.Strict as M
 
 import Ledger.Core hiding (Range, range)
-import Ledger.UTxO hiding (utxo)
+import Ledger.UTxO
 
 import Hedgehog (Gen, Property, Range, (===), assert, forAll, property)
 import qualified Hedgehog.Gen as Gen

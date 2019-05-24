@@ -32,8 +32,6 @@ module Control.State.Transition.Generator
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Control.Monad (forM)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Functor.Identity (Identity)

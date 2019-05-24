@@ -21,21 +21,17 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
 
+import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
+import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
 import Control.State.Transition
 import Control.State.Transition.Generator
 import Ledger.Core
-import Ledger.GlobalParams (k)
 import Ledger.Delegation
 import Ledger.Update
 import qualified Ledger.Update.Generators as UpdateGen
 import Ledger.UTxO
   ( TxId
-  , UTXOWS
   , UTxO(UTxO)
-  , UTxOEnv(UTxOEnv)
-  , UTxOState
-  , pps
-  , utxo0
   )
 
 import Cardano.Spec.Chain.STS.Block
@@ -173,7 +169,7 @@ instance HasTrace CHAIN where
             <$> gCurrentSlot
             <*> pure initialUTxO
             <*> initEnvGen @DELEG
-            <*> UpdateGen.pparams
+            <*> UpdateGen.pps
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.

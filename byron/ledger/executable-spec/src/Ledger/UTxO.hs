@@ -22,15 +22,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Sequence ((<|), empty)
-import qualified Data.Set as Set
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
 
-import Control.State.Transition
-import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
-
 import Ledger.Core hiding ((<|))
-import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams (PParams), _factorA, _factorB)
 
 -- |A unique ID of a transaction, which is computable from the transaction.

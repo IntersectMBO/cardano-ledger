@@ -69,8 +69,7 @@ instance (Ord id, HasTypeReps id) => STS (UTXOW id) where
   transitionRules =
     [ do
         TRC (env, utxoSt@UTxOState {utxo}, tw) <- judgmentContext
---        witnessed tw utxo ?! InsufficientWitnesses
-        witnessed tw utxo ?! error "Boom!"
+        witnessed tw utxo ?! InsufficientWitnesses
         utxoSt' <- trans @(UTXO id) $ TRC (env, utxoSt, body tw)
         return utxoSt'
     ]
@@ -78,15 +77,14 @@ instance (Ord id, HasTypeReps id) => STS (UTXOW id) where
 instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
   wrapFailed = UtxoFailure
 
+-- | Constant list of addresses intended to be used in the generators.
 traceAddrs :: [Addr]
-traceAddrs = mkAddr <$> [0 .. 10]
+traceAddrs = mkAddr <$> [0 .. 50]
 
 instance HasTrace (UTXOW TxId) where
   initEnvGen
     = UTxOEnv <$> genUTxO <*> UpdateGen.pps
     where
-      -- genInitialTxOuts :: [Addr] -> Gen [TxOut]
-      -- fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
       genUTxO = do
         txOuts <- UTxOGen.genInitialTxOuts traceAddrs
         -- All the outputs in the initial UTxO need to refer to some
@@ -102,21 +100,9 @@ instance HasTrace (UTXOW TxId) where
     tx@Tx {inputs, outputs} <- UTxOGen.genTxFromUTxO dummyTxId traceAddrs (utxo st)
     let
       txHash = Crypto.hash $ IOs (inputs, outputs)
---      tx' = tx { txid = TxId txHash , inputs = [], outputs = []} -- TODO remove empty lists assigments
       tx' = tx { txid = TxId txHash }
       wits = witnessForTxIn tx' (utxo st) <$> inputs
-      res = TxWits tx' wits
-    -- if not $ witnessed res (utxo st)
-    --   then error "Unwitnessed!!!"
-    --   else pure ()
-    -- case applySTS @(UTXOW TxId) (TRC (_e, st, res)) of
-    --   Left pf -> error $ show pf
-    --   Right st' -> do
-    --     pure $ unsafePerformIO $ do
-    --       print "Andaaaa!!!"
-    --       pure ()
-    --     Debug.traceM "Yeah!\n"-- pure ()
-    pure $ res
+    pure $ TxWits tx' wits
 
 newtype IOs = IOs ([TxIn TxId], [TxOut])
   deriving (Show)
