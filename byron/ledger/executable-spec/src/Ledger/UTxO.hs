@@ -33,15 +33,6 @@ import Ledger.Core hiding ((<|))
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams (PParams), _factorA, _factorB)
 
---------------------------------------------------------------------------------
--- TODO: remove after taking the rules out.
---------------------------------------------------------------------------------
-import Hedgehog (Gen)
---------------------------------------------------------------------------------
--- TODO: remove after taking the rules out.
---------------------------------------------------------------------------------
-
-
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Ord)
@@ -99,10 +90,6 @@ txouts tx = UTxO $ Map.fromList
   [ (TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0 ..] ]
   where transId = txid tx
 
--- TODO: Handle fees properly
-txfee :: Tx id -> Lovelace
-txfee _ = Lovelace 0
-
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO id -> Lovelace
 balance (UTxO utxo) = Map.foldl' addValues mempty utxo
@@ -119,10 +106,6 @@ instance Show id => BA.ByteArrayAccess (Tx id) where
 -- UTxO transitions
 ---------------------------------------------------------------------------------
 
-data UTxOEnv id = UTxOEnv { utxo0 :: UTxO id
-                          , pps   :: PParams
-                          } deriving (Show)
-
 pcMinFee :: forall id . HasTypeReps id => PParams -> Tx id -> Lovelace
 pcMinFee PParams {_factorA = a, _factorB = b} tx
   = fromIntegral $ a * txsize tx + b
@@ -133,57 +116,6 @@ txsize = abstractSize costs
                              , (typeOf (undefined :: TxOut)  , 1)
                              ]
 
--- | UTXO transition system
-data UTXO id
-
-data UTxOState id = UTxOState { utxo :: UTxO id
-                              , reserves :: Lovelace
-                              }
-  deriving (Show)
-
-instance (Ord id, HasTypeReps id) => STS (UTXO id) where
-
-  type Environment (UTXO id) = UTxOEnv id
-  type State (UTXO id) = UTxOState id
-  type Signal (UTXO id) = Tx id
-  data PredicateFailure (UTXO id)
-    = EmptyTxInputs
-    | FeeTooLow
-    | IncreasedTotalBalance
-    | InputsNotInUTxO
-    | NonPositiveOutputs
-    deriving (Eq, Show)
-
-  initialRules =
-    [ do
-        IRC UTxOEnv {utxo0} <- judgmentContext
-        return $ UTxOState { utxo     = utxo0
-                           , reserves = lovelaceCap - balance utxo0
-                           }
-    ]
-  transitionRules =
-    [ do
-        TRC ( UTxOEnv _ pps
-            , UTxOState {utxo, reserves}
-            , tx
-            ) <- judgmentContext
-
-        txins tx ⊆ dom utxo ?! InputsNotInUTxO
-
-        let fee = balance (txins tx ◁ utxo) - balance (txouts tx)
-
-        pcMinFee pps tx <= fee ?! FeeTooLow
-
-        (not . null) (txins tx) ?! EmptyTxInputs
-
-        let
-          outputValues = fmap value $ Set.toList $ range (txouts tx)
-        all (0<) outputValues ?! NonPositiveOutputs
-
-        return $ UTxOState { utxo     = (txins tx ⋪ utxo) ∪ txouts tx
-                           , reserves = reserves + fee
-                           }
-    ]
 
 ---------------------------------------------------------------------------------
 -- UTxO transitions
@@ -229,86 +161,6 @@ makeTxWits (UTxO utxo) tx = TxWits
     in KeyPair (SKey o) (VKey o)
   keys = getKey <$> inputs tx
   wits = makeWitness <$> keys <*> pure tx
-
--- | UTXO with witnessing
-data UTXOW id
-
-instance (Ord id, HasTypeReps id) => STS (UTXOW id) where
-
-  type Environment (UTXOW id) = UTxOEnv id
-  type State (UTXOW id) = UTxOState id
-  type Signal (UTXOW id) = TxWits id
-  data PredicateFailure (UTXOW id)
-    = UtxoFailure (PredicateFailure (UTXO id))
-    | InsufficientWitnesses
-    deriving (Eq, Show)
-
-  initialRules =
-    [ do
-        IRC env <- judgmentContext
-        trans @(UTXO id) $ IRC env
-    ]
-
-  transitionRules =
-    [ do
-        TRC (env, utxoSt@UTxOState {utxo}, tw) <- judgmentContext
-        witnessed tw utxo ?! InsufficientWitnesses
-        utxoSt' <- trans @(UTXO id) $ TRC (env, utxoSt, body tw)
-        return utxoSt'
-    ]
-
-instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
-  wrapFailed = UtxoFailure
-
--- TODO: we need to take the rules out to avoid cyclic dependencies.
-genInitialTxOuts :: [Addr] -> Gen [TxOut]
-genInitialTxOuts = undefined
-
-instance HasTrace (UTXOW TxId) where
-  initEnvGen
-    = UTxOEnv <$> genUTxO <*> undefined
-    where
-      -- genInitialTxOuts :: [Addr] -> Gen [TxOut]
-      -- fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
-      genUTxO = do
-        addrs  <- genAddrs
-        txOuts <- genInitialTxOuts addrs
-        pure $ fromTxOuts txOut2Id txOuts
-        where
-          genAddrs = undefined
-          txOut2Id = undefined
-
-  sigGen _e _st = undefined
-data UTXOWS id
-
-instance (Ord id, HasTypeReps id) => STS (UTXOWS id) where
-  type State (UTXOWS id) = UTxOState id
-  type Signal (UTXOWS id) = [TxWits id]
-  type Environment (UTXOWS id) = UTxOEnv id
-  data PredicateFailure (UTXOWS id)
-    = UtxowFailure (PredicateFailure (UTXOW id))
-    deriving (Eq, Show)
-
-  initialRules =
-    [ do
-        IRC env <- judgmentContext
-        trans @(UTXOW id) $ IRC env
-    ]
-
-  transitionRules =
-    [ do
-        TRC (env, utxo, txWits) <- judgmentContext
-        case (txWits :: [TxWits id]) of
-          []     -> return utxo
-          (tx:gamma) -> do
-            utxo'  <- trans @(UTXOWS id) $ TRC (env, utxo, gamma)
-            utxo'' <- trans @(UTXOW id)  $ TRC (env, utxo', tx)
-            return utxo''
-    ]
-
-instance (Ord id, HasTypeReps id) => Embed (UTXOW id) (UTXOWS id) where
-  wrapFailed = UtxowFailure
-
 
 -- |Determine if a UTxO input is authorized by a given key.
 authTxin :: Ord id => VKey -> TxIn id -> UTxO id -> Bool

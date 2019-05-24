@@ -56,7 +56,17 @@ interleaveTreeT = fmap Tree.interleave . traverse runTreeT
 --------------------------------------------------------------------------------
 
 -- | Generate a valid transaction from a given 'UTxO'
-genTxFromUTxO :: Ord id => id -> [Addr] -> UTxO id -> Gen (Tx id)
+genTxFromUTxO
+  :: Ord id
+  => id
+  -- ^ Placeholder id. This will be the resulting id of the transaction.
+  -> [Addr]
+  -- ^ List of addresses to choose from as recipients of the transaction
+  -- outputs.
+  -> UTxO id
+  -- ^ UTxO used to determine which unspent outputs can be used in the
+  -- transaction.
+  -> Gen (Tx id)
 genTxFromUTxO placeholderId addrs utxo =
   uncurry (Tx placeholderId) <$> Gen.filter
     (not . null . fst)

@@ -32,6 +32,8 @@ module Control.State.Transition.Generator
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Control.Monad (forM)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Functor.Identity (Identity)
@@ -128,12 +130,18 @@ genTrace ub env st0 aSigGen = do
         --  Take the root of the next-state signal tree.
         mSig = treeValue <$> runDiscardEffect sigTree
       case mSig of
-        Nothing ->
+        Nothing -> do
+          Debug.traceM "I got nothing!"
+          _ <- error "Nothing :/"
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
-            Left _     -> loop (d - 1) sti acc
-            Right sti' -> loop (d - 1) sti' (sigTree : acc)
+            Left _err    -> do
+--              Debug.traceShowM _err
+              loop (d - 1) sti acc
+            Right sti' -> do
+              Debug.traceShowM "Got a next state!\n"
+              loop (d - 1) sti' (sigTree : acc)
 
     interleaveSigs
       :: MaybeT Identity (NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)])

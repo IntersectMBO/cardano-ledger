@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main
   ( main
   )
@@ -5,26 +7,31 @@ where
 
 import System.Environment (withArgs)
 
+import Hedgehog (checkParallel, Group (Group))
 import Test.Tasty (TestTree, defaultMain, testGroup, localOption)
 import Test.Tasty.Hedgehog (testProperty)
 import Test.Tasty.Ingredients.ConsoleReporter (UseColor(Auto))
+
 import Ledger.Delegation.Examples (deleg)
 import Ledger.Delegation.Properties (dcertsAreTriggered, rejectDupSchedDelegs)
 import Ledger.Pvbump.Properties (emptyPVUpdate, beginningsNoUpdate, lastProposal)
-import Ledger.UTxO.Properties (moneyIsConstant)
+import Ledger.UTxO.Properties (moneyIsConstant, classifyTraces)
 
 main :: IO ()
-main = withArgs [] $ defaultMain tests
+main = do
+  checkParallel $ Group "Classification" [ ("UTXOW", classifyTraces)
+                                         ]
+  defaultMain tests
  where
   tests :: TestTree
   tests = localOption Auto $ testGroup
     "Ledger"
     [ testGroup "Delegation Examples" deleg
-    , testGroup
-      "Delegation Properties"
-      [ testProperty "Activation"                      dcertsAreTriggered
-      , testProperty "One delegation per-slot per-key" rejectDupSchedDelegs
-      ]
+    -- , testGroup
+    --   "Delegation Properties"
+    --   [ testProperty "Activation"                      dcertsAreTriggered
+    --   , testProperty "One delegation per-slot per-key" rejectDupSchedDelegs
+    --   ]
     , testGroup
       "PVBUMP properties"
       [ testProperty "Same state for no updates"         emptyPVUpdate

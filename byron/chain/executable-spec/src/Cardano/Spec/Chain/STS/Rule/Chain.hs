@@ -27,6 +27,7 @@ import Ledger.Core
 import Ledger.GlobalParams (k)
 import Ledger.Delegation
 import Ledger.Update
+import qualified Ledger.Update.Generators as UpdateGen
 import Ledger.UTxO
   ( TxId
   , UTXOWS
@@ -168,7 +169,11 @@ disL = _5
 
 instance HasTrace CHAIN where
 
-  initEnvGen = (,,,) <$> gCurrentSlot <*> pure initialUTxO <*> initEnvGen @DELEG <*> gPParams
+  initEnvGen = (,,,)
+            <$> gCurrentSlot
+            <*> pure initialUTxO
+            <*> initEnvGen @DELEG
+            <*> UpdateGen.pparams
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
@@ -177,48 +182,6 @@ instance HasTrace CHAIN where
       -- TODO: For now we generate an empty UTxO. In later iterations we will
       -- incorporate the UTxO payload into the chain.
       initialUTxO = UTxO Map.empty
-
-      gPParams
-        = PParams
-        <$> gMaxHeaderSize
-        <*> gMaxBlockSize
-        <*> gMaxTxSize
-        <*> gMaxProposalSize
-        <*> gBlockSigCntThreshold
-        <*> gSlotsPerEpoch
-        <*> gUpdateProposalTTL
-        <*> pure 1 -- _scriptVersion
-        <*> gConfirmationTreshold
-        <*> gAdoptinThreshold
-        <*> pure k -- _stableAfter
-        <*> pure 0 -- factor @a@
-        <*> pure 0 -- factor @b@
-        where
-          -- In mainet the maximum header size is set to 2000000 and the maximum
-          -- block size is also set to 2000000, so we have to make sure we cover
-          -- those values here. The upper bound is arbitrary though.
-          --
-          -- TODO: For a more realistic lower bound we should figure out the
-          -- minimum block size.
-          gMaxHeaderSize = Gen.integral (Range.constant 0 4000000)
-          gMaxBlockSize  = Gen.integral (Range.constant 0 4000000)
-
-          gMaxTxSize = Gen.integral (Range.constant 0 4000000)
-          gMaxProposalSize = Gen.integral (Range.constant 0 4000000)
-
-          gBlockSigCntThreshold = pure (1/5) -- TODO: this needs to be aligned with the formal specs.
-
-          -- The number of slots per epoch is computed from 'k':
-          -- slots per-epoch = k * 10
-          gSlotsPerEpoch = pure $! SlotCount $ unBlockCount k *  10
-
-          gUpdateProposalTTL = SlotCount <$> Gen.integral (Range.linear 1 100)
-
-          -- Confirmation threshold
-          gConfirmationTreshold = Gen.integral (Range.linear 1 7)
-
-          -- Update adoption threshold
-          gAdoptinThreshold = Gen.integral (Range.linear 1 7)
 
   sigGen (_sNow, _utxo0, dsEnv, _pps) (Slot s, _sgs, h, _utxo, ds, _us) = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks

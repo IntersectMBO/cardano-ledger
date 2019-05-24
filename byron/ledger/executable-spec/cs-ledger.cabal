@@ -29,9 +29,11 @@ library
                      , Ledger.Delegation
                      , Ledger.GlobalParams
                      , Ledger.Update
-                     , Ledger.Update.Generator
+                     , Ledger.Update.Generators
                      , Ledger.UTxO
                      , Ledger.UTxO.Generators
+                     , Cardano.Ledger.Spec.STS.UTXO
+                     , Cardano.Ledger.Spec.STS.UTXOW
   build-depends:       base >=4.11 && <5
                      , bimap
                      , bytestring
