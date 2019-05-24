@@ -244,6 +244,8 @@ test-suite cardano-ledger-test
                      , resourcet
                      , small-steps
                      , streaming
+                     , tasty
+                     , tasty-hedgehog
                      , text
                      , time
                      , vector

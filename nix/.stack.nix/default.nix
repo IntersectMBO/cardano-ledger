@@ -2,8 +2,7 @@
   extras = hackage:
     {
       packages = {
-        "sequence" = (((hackage.sequence)."0.9.8").revisions).default;
-        "tasty-hedgehog" = (((hackage.tasty-hedgehog)."0.2.0.0").revisions).default;
+        "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.0").revisions).default;
         "haskell-src-exts" = (((hackage.haskell-src-exts)."1.21.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
         "ekg-prometheus-adapter" = (((hackage.ekg-prometheus-adapter)."0.1.0.4").revisions).default;

@@ -15,9 +15,7 @@ import Test.Cardano.Prelude
 import Data.Data (Constr, toConstr)
 import Formatting (build, sformat)
 
-import Hedgehog
-  (Property, property, discover, (===), forAll, property)
-import qualified Hedgehog as H
+import Hedgehog (Property, (===), discover, forAll, property)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -34,7 +32,8 @@ import Cardano.Chain.Common
   )
 
 import Test.Cardano.Chain.Common.Gen (genLovelace, genCustomLovelace)
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, withTestsTS)
+
 
 ts_prop_addLovelace :: TSProperty
 ts_prop_addLovelace = withTestsTS 1000 . property $ do
@@ -106,11 +105,9 @@ ts_prop_subLovelaceUnderflow =
             ("The impossible happened in subLovelaceUnderflow: " . build)
             err
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-  [ H.checkParallel $$discover
-  , H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
-  ]
+tests :: TSGroup
+tests = concatTSGroups [const $$discover, $$discoverPropArg]
+
 
 --------------------------------------------------------------------------------
 -- Dummy values for constructor comparison in assertIsLeftConstr tests

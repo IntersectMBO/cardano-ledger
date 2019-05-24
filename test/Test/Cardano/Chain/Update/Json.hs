@@ -5,13 +5,10 @@ module Test.Cardano.Chain.Update.Json
   )
 where
 
-import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import qualified Hedgehog as H
-
 import Test.Cardano.Chain.Update.Gen (genProtocolParameters, genSoftforkRule)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -33,5 +30,5 @@ ts_roundTripSoftforkRule = eachOfTS 1000 genSoftforkRule roundTripsAesonBuildabl
 -- Main Testing Function
 --------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+tests :: TSGroup
+tests = $$discoverRoundTripArg

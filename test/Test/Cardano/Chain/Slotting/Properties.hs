@@ -11,14 +11,7 @@ import Test.Cardano.Prelude
 import Data.Data (Constr, toConstr)
 import Formatting (build, sformat)
 
-import Hedgehog
-  ( Group
-  , property
-  , forAll
-  , (===)
-  , success
-  , checkSequential
-  )
+import Hedgehog ((===), forAll, property, success)
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -46,7 +39,7 @@ import Test.Cardano.Chain.Slotting.Gen
   , genSlotId
   , genConsistentSlotIdEpochSlots
   )
-import Test.Options (TestScenario, TSProperty, withTestsTS)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 
 --------------------------------------------------------------------------------
@@ -242,5 +235,5 @@ ts_prop_subSlotNumber = withTestsTS 100 . property $ do
     subtracted = fs - sc'
   subSlotNumber sc fs === if fs > sc' then subtracted else FlatSlotId 0
 
-tests :: TestScenario -> IO Bool
-tests ts = checkSequential (($$discoverPropArg :: TestScenario -> Group) ts)
+tests :: TSGroup
+tests = $$discoverPropArg

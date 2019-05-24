@@ -9,21 +9,14 @@ where
 
 import Cardano.Prelude
 
-import Hedgehog
-  ( MonadTest
-  , assert
-  , property
-  , forAll
-  , property
-  , tripping
-  )
-import qualified Hedgehog as H
+import Hedgehog (MonadTest, assert, forAll, property, tripping)
 
 import Cardano.Chain.Common (fromCompactAddress, toCompactAddress)
 
 import Test.Cardano.Chain.Common.Gen (genAddress)
 import Test.Cardano.Prelude (discoverPropArg, discoverRoundTripArg)
-import Test.Options (TestScenario, TSProperty, eachOfTS, withTestsTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS, withTestsTS)
+
 
 --------------------------------------------------------------------------------
 -- Compact Address
@@ -39,9 +32,10 @@ ts_prop_heapWordsSavingsCompactAddress = withTestsTS 1000 $ property $ do
   let compactAddr = toCompactAddress addr
   assert $ heapWords compactAddr < heapWords addr
 
--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
 -- Tripping util
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 trippingCompact
   :: (HasCallStack, MonadTest m, Show a, Show b, Eq a)
@@ -49,10 +43,10 @@ trippingCompact
 trippingCompact toCompact fromCompact x =
   tripping x toCompact (Identity . fromCompact)
 
--------------------------------------------------------------------------------
--- Main test export
--------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = (&&) <$> H.checkParallel (($$discoverPropArg :: TestScenario -> H.Group) ts)
-                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+--------------------------------------------------------------------------------
+-- Main test export
+--------------------------------------------------------------------------------
+
+tests :: TSGroup
+tests = concatTSGroups [$$discoverPropArg, $$discoverRoundTripArg]

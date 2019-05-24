@@ -9,8 +9,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Hedgehog (Group, Property)
-import qualified Hedgehog as H
+import Hedgehog (Property)
 
 import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common (LovelacePortion(..))
@@ -51,7 +50,7 @@ import Test.Cardano.Chain.Update.Gen
   , genVote
   )
 import Test.Cardano.Crypto.Gen (feedPM, genHashRaw)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -262,8 +261,5 @@ ts_roundTripUpsData = eachOfTS 20 genUpsData roundTripsCBORShow
 -- Main test export
 --------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-  [ H.checkSequential $$discoverGolden
-  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
-  ]
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

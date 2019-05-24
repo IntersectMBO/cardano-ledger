@@ -76,6 +76,8 @@
             (hsPkgs.resourcet)
             (hsPkgs.small-steps)
             (hsPkgs.streaming)
+            (hsPkgs.tasty)
+            (hsPkgs.tasty-hedgehog)
             (hsPkgs.text)
             (hsPkgs.time)
             (hsPkgs.vector)

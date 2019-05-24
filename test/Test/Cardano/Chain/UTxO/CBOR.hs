@@ -61,7 +61,7 @@ import Test.Cardano.Chain.UTxO.Gen
 import Test.Cardano.Crypto.Example
   (exampleVerificationKey, exampleRedeemVerificationKey, exampleSigningKey)
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -326,9 +326,6 @@ sizeEstimates
 -- Main test export
 --------------------------------------------------------------------------------
 
-tests :: TestScenario -> IO Bool
-tests ts = and <$> sequence
-  [ H.checkSequential $$discoverGolden
-  , H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
-  , H.checkParallel sizeEstimates
-  ]
+tests :: TSGroup
+tests = concatTSGroups
+  [const $$discoverGolden, $$discoverRoundTripArg, const sizeEstimates]

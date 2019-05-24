@@ -10,9 +10,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Hedgehog
-  (Group, Property)
-import qualified Hedgehog as H
+import Hedgehog (Property)
 
 import Cardano.Chain.Common
   ( LovelacePortion(..)
@@ -30,7 +28,7 @@ import Test.Cardano.Chain.Common.Example
   )
 import Test.Cardano.Chain.Common.Gen
   (genAddress, genLovelace, genLovelacePortion, genTxFeePolicy, genTxSizeLinear)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
@@ -129,7 +127,6 @@ ts_roundTripTxSizeLinear = eachOfTS 1000 genTxSizeLinear roundTripsAesonBuildabl
 --------------------------------------------------------------------------------
 -- Main test export
 --------------------------------------------------------------------------------
-tests :: TestScenario -> IO Bool
-tests ts =
-  (&&) <$> H.checkSequential $$discoverGolden
-       <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> Group) ts)
+
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverRoundTripArg]

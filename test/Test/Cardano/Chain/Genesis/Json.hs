@@ -10,7 +10,6 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import Hedgehog (Property)
-import qualified Hedgehog as H
 
 import Test.Cardano.Chain.Genesis.Example
   (exampleGenesisData0, exampleStaticConfig_GCSpec, exampleStaticConfig_GCSrc)
@@ -23,10 +22,12 @@ import Test.Cardano.Chain.Genesis.Gen
   , genStaticConfig
   )
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
-import Test.Cardano.Chain.Update.Gen (genProtocolVersion, genCanonicalProtocolParameters)
-import Test.Cardano.Chain.Genesis.Gen (genCanonicalGenesisData, genCanonicalGenesisDelegation, genSafeProxyCert)
+import Test.Cardano.Chain.Update.Gen
+  (genProtocolVersion, genCanonicalProtocolParameters)
+import Test.Cardano.Chain.Genesis.Gen
+  (genCanonicalGenesisData, genCanonicalGenesisDelegation, genSafeProxyCert)
 import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic, genVerificationKey)
-import Test.Options (TestScenario, TSProperty, eachOfTS)
+import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 
@@ -141,6 +142,5 @@ ts_roundTripProtocolMagic :: TSProperty
 ts_roundTripProtocolMagic =
   eachOfTS 100 genProtocolMagic roundTripsAesonShow
 
-tests :: TestScenario -> IO Bool
-tests ts = (&&) <$> H.checkSequential $$discoverGolden
-                <*> H.checkParallel (($$discoverRoundTripArg :: TestScenario -> H.Group) ts)
+tests :: TSGroup
+tests = concatTSGroups [const $$discoverGolden, $$discoverPropArg]

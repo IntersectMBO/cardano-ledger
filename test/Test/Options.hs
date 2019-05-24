@@ -1,48 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
+
 module Test.Options
-  ( Opts(..)
-  , optsParser
-  , TestScenario(..)
+  ( TestScenario(..)
+  , mainWithTestScenario
   , scenarioScaled
   , scenarioScaleDefault
   , eachOfTS
   , withTestsTS
   , TSProperty
+  , TSGroup
+  , concatGroups
+  , concatTSGroups
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude hiding (Option)
 import Test.Cardano.Prelude
 
 import GHC.Stack (withFrozenCallStack)
-import Options.Applicative as Opts
-  ( Parser
-  , ParserInfo
-  , auto
-  , help
-  , helper
-  , info
-  , long
-  , metavar
-  , option
-  , short
-  , value
-  )
 
-import Hedgehog (Gen, Property, PropertyT, TestLimit, withTests)
-
-
---------------------------------------------------------------------------------
--- Opts
---------------------------------------------------------------------------------
-
-newtype Opts = Opts
-  { optsTestScenario :: TestScenario
-  }
-
-optsParser :: ParserInfo Opts
-optsParser = info (parser <**> helper) mempty
-  where parser = Opts <$> testScenarioParser
+import Hedgehog (Gen, Group(..), Property, PropertyT, TestLimit, withTests)
+import Test.Tasty (TestTree, defaultMainWithIngredients, includingOptions)
+import Test.Tasty.Ingredients (Ingredient(..), composeReporters)
+import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
+import Test.Tasty.Options
+  (IsOption(..), OptionDescription(..), lookupOption, safeRead)
 
 
 --------------------------------------------------------------------------------
@@ -55,27 +38,46 @@ data TestScenario
   | QualityAssurance
   deriving (Read, Show)
 
-testScenarioParser :: Parser TestScenario
-testScenarioParser = Opts.option
-  auto
-  (  short 's'
-  <> long "scenario"
-  <> metavar "TEST_SCENARIO"
-  <> help helpText
-  <> value Development
-  )
- where
-  helpText :: [Char]
-  helpText =
-    "Run under one of Development (default), ContinuousIntegration, or "
-      <> "QualityAssurance, to affect how tests are run"
+instance IsOption TestScenario where
+  defaultValue = Development
+  parseValue = safeRead
+  optionName = pure "scenario"
+  optionHelp = pure helpText
+
+logScenario :: Ingredient
+logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
+  let scenario = lookupOption @TestScenario options
+  putTextLn $ "\nRunning in scenario: " <> show scenario
+  pure (const (pure True))
+
+mainWithTestScenario :: TestTree -> IO ()
+mainWithTestScenario = defaultMainWithIngredients
+  [ includingOptions [Option (Proxy @TestScenario)]
+  , listingTests
+  , composeReporters logScenario consoleTestReporter
+  ]
+
+helpText :: [Char]
+helpText =
+  "Run under one of Development (default), ContinuousIntegration, or "
+    <> "QualityAssurance, to affect how tests are run"
 
 
 --------------------------------------------------------------------------------
 -- TestLimit scaling functions & helpers
 --------------------------------------------------------------------------------
 
--- | Convenient alias for TestScenario-dependent Property's
+-- | Convenient alias for TestScenario-dependent @Group@s
+type TSGroup = TestScenario -> Group
+
+concatGroups :: [Group] -> Group
+concatGroups []         = panic "concatGroups: No tests in test Group"
+concatGroups gs@(g : _) = Group (groupName g) (concat $ groupProperties <$> gs)
+
+concatTSGroups :: [TSGroup] -> TSGroup
+concatTSGroups gs ts = concatGroups $ ($ ts) <$> gs
+
+-- | Convenient alias for TestScenario-dependent @Property@s
 type TSProperty = TestScenario -> Property
 
 -- | Default ratio of tests in development

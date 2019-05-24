@@ -134,5 +134,5 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
 -- Main Test Export
 --------------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = checkSequential $$discover
+tests :: Group
+tests = $$discover
