@@ -82,12 +82,13 @@ test-suite doctests
   if (!flag(development))
     ghc-options:      -Werror
 
-test-suite ledger-test
+test-suite ledger-rules-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules: Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.Pvbump.Properties
+               , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends: base

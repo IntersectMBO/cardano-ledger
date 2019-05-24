@@ -24,6 +24,7 @@ module Control.State.Transition.Trace
   , preStatesAndSignals
   , traceLength
   , lastState
+  , firstAndLastState
   , closure
   )
 where
@@ -105,6 +106,25 @@ lastState :: Trace s -> State s
 lastState tr = case tr ^. traceTrans of
   (st, _):_ -> st
   _ -> tr ^. traceInitState
+
+-- | Return the first and last state of the trace.
+--
+-- The first state is returned in the first component of the result tuple.
+--
+-- Examples:
+--
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> firstAndLastState tr0
+-- (0,0)
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> firstAndLastState tr0123
+-- (0,3)
+--
+firstAndLastState :: Trace s -> (State s, State s)
+firstAndLastState tr = (_traceInitState tr, lastState tr)
+
 
 data TraceOrder = NewestFirst | OldestFirst deriving (Eq)
 

@@ -13,7 +13,6 @@
 
 module Ledger.UTxO where
 
-import Control.State.Transition
 import qualified Crypto.Hash as Crypto
 import Data.AbstractSize (HasTypeReps, typeReps, abstractSize)
 import qualified Data.ByteArray as BA
@@ -26,9 +25,22 @@ import Data.Sequence ((<|), empty)
 import qualified Data.Set as Set
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
+
+import Control.State.Transition
+import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+
 import Ledger.Core hiding ((<|))
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams (PParams), _factorA, _factorB)
+
+--------------------------------------------------------------------------------
+-- TODO: remove after taking the rules out.
+--------------------------------------------------------------------------------
+import Hedgehog (Gen)
+--------------------------------------------------------------------------------
+-- TODO: remove after taking the rules out.
+--------------------------------------------------------------------------------
+
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
@@ -109,7 +121,7 @@ instance Show id => BA.ByteArrayAccess (Tx id) where
 
 data UTxOEnv id = UTxOEnv { utxo0 :: UTxO id
                           , pps   :: PParams
-                          }
+                          } deriving (Show)
 
 pcMinFee :: forall id . HasTypeReps id => PParams -> Tx id -> Lovelace
 pcMinFee PParams {_factorA = a, _factorB = b} tx
@@ -248,7 +260,25 @@ instance (Ord id, HasTypeReps id) => STS (UTXOW id) where
 instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
   wrapFailed = UtxoFailure
 
+-- TODO: we need to take the rules out to avoid cyclic dependencies.
+genInitialTxOuts :: [Addr] -> Gen [TxOut]
+genInitialTxOuts = undefined
 
+instance HasTrace (UTXOW TxId) where
+  initEnvGen
+    = UTxOEnv <$> genUTxO <*> undefined
+    where
+      -- genInitialTxOuts :: [Addr] -> Gen [TxOut]
+      -- fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
+      genUTxO = do
+        addrs  <- genAddrs
+        txOuts <- genInitialTxOuts addrs
+        pure $ fromTxOuts txOut2Id txOuts
+        where
+          genAddrs = undefined
+          txOut2Id = undefined
+
+  sigGen _e _st = undefined
 data UTXOWS id
 
 instance (Ord id, HasTypeReps id) => STS (UTXOWS id) where

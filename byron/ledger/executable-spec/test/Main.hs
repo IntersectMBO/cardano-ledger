@@ -11,7 +11,7 @@ import Test.Tasty.Ingredients.ConsoleReporter (UseColor(Auto))
 import Ledger.Delegation.Examples (deleg)
 import Ledger.Delegation.Properties (dcertsAreTriggered, rejectDupSchedDelegs)
 import Ledger.Pvbump.Properties (emptyPVUpdate, beginningsNoUpdate, lastProposal)
-
+import Ledger.UTxO.Properties (moneyIsConstant)
 
 main :: IO ()
 main = withArgs [] $ defaultMain tests
@@ -19,9 +19,9 @@ main = withArgs [] $ defaultMain tests
   tests :: TestTree
   tests = localOption Auto $ testGroup
     "Ledger"
-    [ testGroup "Ledger" [testGroup "Delegation Examples" deleg]
+    [ testGroup "Delegation Examples" deleg
     , testGroup
-      "Properties"
+      "Delegation Properties"
       [ testProperty "Activation"                      dcertsAreTriggered
       , testProperty "One delegation per-slot per-key" rejectDupSchedDelegs
       ]
@@ -31,4 +31,6 @@ main = withArgs [] $ defaultMain tests
       , testProperty "Same state for early on in chain"  beginningsNoUpdate
       , testProperty "State determined by last proposal" lastProposal
       ]
+    , testGroup "UTxO Properties"
+      [ testProperty "Money is constant" moneyIsConstant]
     ]
