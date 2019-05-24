@@ -76,8 +76,8 @@ import Cardano.Chain.Block.Header
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
-  , StakeholderId
-  , mkStakeholderId
+  , KeyHash
+  , hashKey
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Delegation.Validation.Interface as DI
@@ -85,9 +85,9 @@ import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots)
 import Cardano.Chain.Genesis as Genesis
   ( Config(..)
-  , GenesisWStakeholders(..)
+  , GenesisKeyHashes(..)
   , GenesisHash
-  , configBootStakeholders
+  , configGenesisKeyHashes
   , configEpochSlots
   , configHeavyDelegation
   , configK
@@ -115,42 +115,42 @@ import Cardano.Crypto
 
 -- | The history of signers in the last @K@ blocks
 --
---   We maintain a map of the number of blocks signed for each stakeholder to
+--   We maintain a map of the number of blocks signed for each keyHash to
 --   improve performance. The sum of the `BlockCount`s in the map should be
 --   equal to the length of the sequence.
 data SigningHistory = SigningHistory
   { shK                 :: !BlockCount
-  , shSigningQueue      :: !(Seq StakeholderId)
-  , shStakeholderCounts :: !(Map StakeholderId BlockCount)
+  , shSigningQueue      :: !(Seq KeyHash)
+  , shKeyHashCounts :: !(Map KeyHash BlockCount)
   } deriving (Eq, Show, Generic, NFData)
 
 -- | Update the `SigningHistory` with a new signer, removing the oldest value if
 --   the sequence is @K@ blocks long
 updateSigningHistory :: VerificationKey -> SigningHistory -> SigningHistory
 updateSigningHistory vk sh
-  | length (shSigningQueue sh) < fromIntegral (unBlockCount $ shK sh) = sh & addStakeholderIn
-  | otherwise = sh & addStakeholderIn & removeStakeholderOut
+  | length (shSigningQueue sh) < fromIntegral (unBlockCount $ shK sh) = sh & addKeyHashIn
+  | otherwise = sh & addKeyHashIn & removeKeyHashOut
  where
-  stakeholderIn = mkStakeholderId vk
+  keyHashIn = hashKey vk
 
-  addStakeholderIn :: SigningHistory -> SigningHistory
-  addStakeholderIn sh' = sh'
-    { shSigningQueue      = stakeholderIn <| shSigningQueue sh'
-    , shStakeholderCounts = M.adjust
+  addKeyHashIn :: SigningHistory -> SigningHistory
+  addKeyHashIn sh' = sh'
+    { shSigningQueue      = keyHashIn <| shSigningQueue sh'
+    , shKeyHashCounts = M.adjust
       succ
-      stakeholderIn
-      (shStakeholderCounts sh')
+      keyHashIn
+      (shKeyHashCounts sh')
     }
 
-  removeStakeholderOut :: SigningHistory -> SigningHistory
-  removeStakeholderOut sh' = case shSigningQueue sh' of
+  removeKeyHashOut :: SigningHistory -> SigningHistory
+  removeKeyHashOut sh' = case shSigningQueue sh' of
     Empty -> sh'
-    rest :|> stakeholderOut -> sh'
+    rest :|> keyHashOut -> sh'
       { shSigningQueue      = rest
-      , shStakeholderCounts = M.adjust
+      , shKeyHashCounts = M.adjust
         pred
-        stakeholderOut
-        (shStakeholderCounts sh')
+        keyHashOut
+        (shKeyHashCounts sh')
       }
 
 
@@ -182,11 +182,9 @@ initialChainValidationState config = do
     { cvsLastSlot       = 0
     , cvsSigningHistory = SigningHistory
       { shK = configK config
-      , shStakeholderCounts = M.fromList
-        . map (, BlockCount 0)
-        . M.keys
-        . unGenesisWStakeholders
-        $ configBootStakeholders config
+      , shKeyHashCounts = M.fromSet (const $ BlockCount 0)
+        . unGenesisKeyHashes
+        $ configGenesisKeyHashes config
       , shSigningQueue = Empty
       }
     , cvsPreviousHash   = Left $ configGenesisHash config
@@ -197,9 +195,7 @@ initialChainValidationState config = do
  where
   delegationEnv = DI.Environment
     { DI.protocolMagic = Annotated pm (serialize' pm)
-    , DI.allowedDelegators = M.keysSet
-      . unGenesisWStakeholders
-      $ configBootStakeholders config
+    , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
     , DI.k           = configK config
     , DI.currentEpoch = EpochIndex 0
     , DI.currentSlot = FlatSlotId 0
@@ -443,7 +439,7 @@ updateBody env bs b = do
   updateProposal = Update.payloadProposal $ blockUpdatePayload b
   updateVotes    = Update.payloadVotes $ blockUpdatePayload b
   updateEndorsement =
-    Endorsement (blockProtocolVersion b) (mkStakeholderId $ blockIssuer b)
+    Endorsement (blockProtocolVersion b) (hashKey $ blockIssuer b)
 
 
 data HeaderEnvironment = HeaderEnvironment
@@ -585,7 +581,7 @@ updateBlock config cvs b = do
 
   numGenKeys :: Word8
   numGenKeys =
-    case length (unGenesisWStakeholders $ configBootStakeholders config) of
+    case length (unGenesisKeyHashes $ configGenesisKeyHashes config) of
       n
         | n > fromIntegral (maxBound :: Word8) -> panic
           "updateBody: Too many genesis keys"

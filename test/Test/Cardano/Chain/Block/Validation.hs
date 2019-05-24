@@ -43,7 +43,7 @@ import Cardano.Chain.Block
   , updateChainBoundary
   , updateSigningHistory
   )
-import Cardano.Chain.Common (BlockCount(..), mkStakeholderId)
+import Cardano.Chain.Common (BlockCount(..), hashKey)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (FlatSlotId)
@@ -125,7 +125,7 @@ foldChainValidationState config cvs blocks =
 -- | Check that updating a 'SigningHistory' maintains the invariants that:
 --
 --   - The map and sequence agree on the number of blocks signed by each
---     stakeholder
+--     keyHash
 --   - The sequence never exceeds @k@ values
 prop_signingHistoryUpdatesPreserveInvariants :: Property
 prop_signingHistoryUpdatesPreserveInvariants =
@@ -133,9 +133,9 @@ prop_signingHistoryUpdatesPreserveInvariants =
     . property
     $ do
 
-        -- Generate a list of fake genesis stakeholders
+        -- Generate a list of fake genesis keyHashes
         verificationKeys <- forAll $ replicateM 7 genVerificationKey
-        let stakeholders = fmap mkStakeholderId verificationKeys
+        let keyHashes = fmap hashKey verificationKeys
 
         -- Generate a length for the 'SigningHistory'
         -- We don't use 'genBlockCount' as that would produce too large values
@@ -145,7 +145,7 @@ prop_signingHistoryUpdatesPreserveInvariants =
           initialSigningHistory = SigningHistory
             { shK = k
             , shSigningQueue = Seq.Empty
-            , shStakeholderCounts = M.fromList $ fmap (, BlockCount 0) stakeholders
+            , shKeyHashCounts = M.fromList $ fmap (, BlockCount 0) keyHashes
             }
 
         -- Generate a list of signers with which to update the 'SigningHistory'
@@ -160,17 +160,17 @@ prop_signingHistoryUpdatesPreserveInvariants =
             -- Update the  'SigningHistory'
             let sh' = updateSigningHistory s sh
 
-            -- For each stakeholder the value in the map is the same as that in
+            -- For each keyHash the value in the map is the same as that in
             -- the sequence
-            stakeholders `forM_` \s' -> do
+            keyHashes `forM_` \s' -> do
               let
-                stakeholderCount :: Int
-                stakeholderCount = maybe 0 (fromIntegral . unBlockCount) $ M.lookup
+                keyHashCount :: Int
+                keyHashCount = maybe 0 (fromIntegral . unBlockCount) $ M.lookup
                   s'
-                  (shStakeholderCounts sh')
-                stakeholderCount' =
+                  (shKeyHashCounts sh')
+                keyHashCount' =
                   length $ Seq.filter (== s') (shSigningQueue sh')
-              stakeholderCount === stakeholderCount'
+              keyHashCount === keyHashCount'
 
             -- The length of the overall sequence is less than or equal to 'k'
             assert $ length (shSigningQueue sh') <= fromIntegral (unBlockCount $ shK sh')

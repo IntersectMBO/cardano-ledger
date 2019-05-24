@@ -19,6 +19,7 @@ import qualified Data.ByteString.Base16 as B16
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
 import Cardano.Binary (Annotated(..), Raw(..))
@@ -27,8 +28,7 @@ import Cardano.Chain.Common
   , LovelacePortion(..)
   , mkKnownLovelace
   , mkKnownLovelacePortion
-  , mkStakeholderId
-  , StakeholderId
+  , hashKey
   )
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
@@ -38,7 +38,7 @@ import Cardano.Chain.Genesis
   , GenesisDelegation(..)
   , GenesisInitializer(..)
   , GenesisSpec(..)
-  , GenesisWStakeholders(..)
+  , GenesisKeyHashes(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
@@ -58,7 +58,7 @@ import Cardano.Crypto.Signing (VerificationKey(..))
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Example
-  (exampleAddress, exampleAddress1, exampleStakeholderId)
+  (exampleAddress, exampleAddress1, exampleKeyHash)
 import Test.Cardano.Chain.Update.Example (exampleProtocolParameters)
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
@@ -92,7 +92,7 @@ exampleGenesisAvvmBalances = GenesisAvvmBalances $ M.fromList
 
 exampleGenesisData0 :: GenesisData
 exampleGenesisData0 = GenesisData
-  { gdBootStakeholders = exampleGenesisWStakeholders
+  { gdGenesisKeyHashes = exampleGenesisKeyHashes
   , gdHeavyDelegation = exampleGenesisDelegation
   , gdStartTime = exampleUTCTime0
   , gdNonAvvmBalances = exampleGenesisNonAvvmBalances0
@@ -105,7 +105,7 @@ exampleGenesisData0 = GenesisData
 exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
-    [ ( mkStakeholderId issueVerKey
+    [ ( hashKey issueVerKey
       , unsafeProxyVerificationKey
         (EpochIndex 68300481033)
         issueVerKey
@@ -174,18 +174,8 @@ exampleGenesisNonAvvmBalances0 = GenesisNonAvvmBalances
   coin  = mkKnownLovelace @36524597913081152
   coin1 = mkKnownLovelace @37343863242999412
 
-exampleGenesisWStakeholders :: GenesisWStakeholders
-exampleGenesisWStakeholders =
-  let
-    mapSize :: Int
-    mapSize = 1
-    stakeholderIds :: [StakeholderId]
-    stakeholderIds = replicate mapSize exampleStakeholderId
-    word16s :: [Word16]
-    word16s = [1337]
-  in GenesisWStakeholders
-    { unGenesisWStakeholders = M.fromList $ zip stakeholderIds word16s
-    }
+exampleGenesisKeyHashes :: GenesisKeyHashes
+exampleGenesisKeyHashes = GenesisKeyHashes (Set.singleton exampleKeyHash)
 
 exampleUTCTime0 :: UTCTime
 exampleUTCTime0 = UTCTime (ModifiedJulianDay 10000) (secondsToDiffTime 82401)

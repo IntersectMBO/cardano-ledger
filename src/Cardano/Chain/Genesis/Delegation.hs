@@ -24,14 +24,14 @@ import Formatting (build, formatToString, bprint)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
-import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (Certificate)
 import Cardano.Crypto (isSelfSignedPsk, pskDelegateVK, pskIssuerVK)
 
 
 -- | This type contains genesis state of heavyweight delegation. It wraps a map
---   where keys are issuers (i. e. stakeholders who delegated) and values are
---   proxy signing keys. There are some invariants:
+--   where keys are issuers and values are delegation certificates. There are
+--   some invariants:
 --
 --   1. In each pair delegate must differ from issuer, i. e. no revocations.
 --   2. PSKs must be consistent with keys in the map, i. e. issuer's ID must be
@@ -40,7 +40,7 @@ import Cardano.Crypto (isSelfSignedPsk, pskDelegateVK, pskIssuerVK)
 --      supported. It's not needed in genesis, it can always be reduced.
 --
 newtype GenesisDelegation = UnsafeGenesisDelegation
-  { unGenesisDelegation :: Map StakeholderId Certificate
+  { unGenesisDelegation :: Map KeyHash Certificate
   } deriving (Show, Eq)
 
 instance Monad m => ToJSON m GenesisDelegation where
@@ -63,8 +63,8 @@ instance Aeson.FromJSON GenesisDelegation where
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer
-  | GenesisDelegationInvalidKey StakeholderId StakeholderId
-  | GenesisDelegationMultiLayerDelegation StakeholderId
+  | GenesisDelegationInvalidKey KeyHash KeyHash
+  | GenesisDelegationMultiLayerDelegation KeyHash
   | GenesisDelegationSelfSignedPsk Certificate
   deriving (Eq, Show)
 
@@ -100,23 +100,23 @@ mkGenesisDelegation psks = do
   ((length . nub $ pskIssuerVK <$> psks) == length psks)
     `orThrowError` GenesisDelegationDuplicateIssuer
   let
-    res = M.fromList [ (mkStakeholderId $ pskIssuerVK psk, psk) | psk <- psks ]
+    res = M.fromList [ (hashKey $ pskIssuerVK psk, psk) | psk <- psks ]
   recreateGenesisDelegation res
 
 -- | Safe constructor of 'GenesisDelegation' from existing map.
 recreateGenesisDelegation
   :: MonadError GenesisDelegationError m
-  => Map StakeholderId Certificate
+  => Map KeyHash Certificate
   -> m GenesisDelegation
 recreateGenesisDelegation pskMap = do
   forM_ (M.toList pskMap) $ \(k, psk) -> do
 
-    let k' = mkStakeholderId $ pskIssuerVK psk
+    let k' = hashKey $ pskIssuerVK psk
     (k == k') `orThrowError` GenesisDelegationInvalidKey k k'
 
     not (isSelfSignedPsk psk) `orThrowError` GenesisDelegationSelfSignedPsk psk
 
-    let delegateId = mkStakeholderId $ pskDelegateVK psk
+    let delegateId = hashKey $ pskDelegateVK psk
     (delegateId `M.notMember` pskMap)
       `orThrowError` GenesisDelegationMultiLayerDelegation delegateId
 

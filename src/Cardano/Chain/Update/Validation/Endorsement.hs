@@ -19,7 +19,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
-import Cardano.Chain.Common (BlockCount, StakeholderId)
+import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (FlatSlotId, twice)
 import Cardano.Chain.Update.Proposal (UpId)
@@ -58,7 +58,7 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
 
 data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion
-  , endorsementStakeholder     :: !StakeholderId
+  , endorsementKeyHash         :: !KeyHash
   } deriving (Eq, Show, Ord, Generic)
     deriving anyclass NFData
 
@@ -133,12 +133,12 @@ register env st endorsement =
     Just vkS -> Set.insert (Endorsement epv vkS) registeredEndorsements
     Nothing  -> registeredEndorsements
       -- Note that we do not throw an error if there is no corresponding
-      -- delegate for the given endorsement stakeholder. This is consistent
+      -- delegate for the given endorsement keyHash. This is consistent
       -- with the @UPEND@ rules. The check that there is a delegator should be
       -- done in the rule that checks that the block issuer is a delegate of a
       -- genesis key.
    where
-    vk  = endorsementStakeholder endorsement
+    vk  = endorsementKeyHash endorsement
     epv = endorsementProtocolVersion endorsement
 
 

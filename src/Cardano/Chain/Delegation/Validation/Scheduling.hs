@@ -21,7 +21,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated)
-import Cardano.Chain.Common (BlockCount, StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
@@ -43,7 +43,7 @@ import Cardano.Crypto
 
 data Environment = Environment
   { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
-  , allowedDelegators :: !(Set StakeholderId)
+  , allowedDelegators :: !(Set KeyHash)
   , currentEpoch      :: !EpochIndex
   , currentSlot       :: !FlatSlotId
   , k                 :: !BlockCount
@@ -51,13 +51,13 @@ data Environment = Environment
 
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation)
-  , keyEpochDelegations  :: !(Set (EpochIndex, StakeholderId))
+  , keyEpochDelegations  :: !(Set (EpochIndex, KeyHash))
   } deriving (Eq, Show, Generic, NFData)
 
 data ScheduledDelegation = ScheduledDelegation
   { sdSlot      :: !FlatSlotId
-  , sdDelegator :: !StakeholderId
-  , sdDelegate  :: !StakeholderId
+  , sdDelegator :: !KeyHash
+  , sdDelegate  :: !KeyHash
   } deriving (Eq, Show, Generic, NFData)
 
 data Error
@@ -65,13 +65,13 @@ data Error
   = InvalidCertificate Text
   -- ^ The delegation certificate has an invalid signature
 
-  | MultipleDelegationsForEpoch EpochIndex StakeholderId
+  | MultipleDelegationsForEpoch EpochIndex KeyHash
   -- ^ This delegator has already delegated for the given epoch
 
-  | MultipleDelegationsForSlot FlatSlotId StakeholderId
+  | MultipleDelegationsForSlot FlatSlotId KeyHash
   -- ^ This delegator has already delgated in this slot
 
-  | NonGenesisDelegator StakeholderId
+  | NonGenesisDelegator KeyHash
   -- ^ This delegator is not one of the allowed genesis keys
 
   | PastEpoch EpochIndex EpochIndex
@@ -122,8 +122,8 @@ scheduleCertificate env st cert = do
 
   State { scheduledDelegations, keyEpochDelegations } = st
 
-  delegator       = mkStakeholderId $ pskIssuerVK cert
-  delegate        = mkStakeholderId $ pskDelegateVK cert
+  delegator       = hashKey $ pskIssuerVK cert
+  delegate        = hashKey $ pskDelegateVK cert
 
   delegationEpoch = pskOmega cert
 

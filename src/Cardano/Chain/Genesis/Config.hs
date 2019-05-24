@@ -15,7 +15,7 @@ module Cardano.Chain.Genesis.Config
   , configProtocolMagic
   , configProtocolMagicId
   , configGeneratedSecretsThrow
-  , configBootStakeholders
+  , configGenesisKeyHashes
   , configHeavyDelegation
   , configStartTime
   , configNonAvvmBalances
@@ -51,7 +51,7 @@ import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
 import Cardano.Chain.Genesis.Generate
   (GeneratedSecrets, GenesisDataGenerationError, generateGenesisData)
 import Cardano.Chain.Genesis.Spec (GenesisSpec(..), mkGenesisSpec)
-import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
+import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.ProtocolConstants
@@ -183,8 +183,8 @@ configGeneratedSecretsThrow =
       pure
     . configGeneratedSecrets
 
-configBootStakeholders :: Config -> GenesisWStakeholders
-configBootStakeholders = gdBootStakeholders . configGenesisData
+configGenesisKeyHashes :: Config -> GenesisKeyHashes
+configGenesisKeyHashes = gdGenesisKeyHashes . configGenesisData
 
 configHeavyDelegation :: Config -> GenesisDelegation
 configHeavyDelegation = gdHeavyDelegation . configGenesisData

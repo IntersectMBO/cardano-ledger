@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated)
-import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.Proposal (UpId)
@@ -60,13 +60,13 @@ data State = State
   , vsConfirmedProposals :: !(Map UpId FlatSlotId)
   }
 
-type RegisteredVotes = Map UpId (Set StakeholderId)
+type RegisteredVotes = Map UpId (Set KeyHash)
 
 -- | Error captures the ways in which vote registration could fail
 data Error
   = VotingInvalidSignature
   | VotingProposalNotRegistered UpId
-  | VotingVoterNotDelegate StakeholderId
+  | VotingVoterNotDelegate KeyHash
   deriving (Eq, Show)
 
 
@@ -145,7 +145,7 @@ registerVote pm vre votes vote = do
 
   UnsafeVote { voterVK, signature } = vote
 
-  voter       = mkStakeholderId voterVK
+  voter       = hashKey voterVK
 
   upId        = proposalId vote
 

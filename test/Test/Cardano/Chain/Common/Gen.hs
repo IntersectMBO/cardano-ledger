@@ -21,7 +21,7 @@ module Test.Cardano.Chain.Common.Gen
   , genMerkleTree
   , genNetworkMagic
   , genScriptVersion
-  , genStakeholderId
+  , genKeyHash
   , genTxFeePolicy
   , genTxSizeLinear
   )
@@ -50,7 +50,7 @@ import Cardano.Chain.Common
   , MerkleRoot(..)
   , MerkleTree
   , NetworkMagic(..)
-  , StakeholderId
+  , KeyHash
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , lovelacePortionDenominator
@@ -59,7 +59,7 @@ import Cardano.Chain.Common
   , mkAttributes
   , mkLovelace
   , mkMerkleTree
-  , mkStakeholderId
+  , hashKey
   , mtRoot
   , toCompactAddress
   )
@@ -157,8 +157,8 @@ genNetworkMagic = Gen.choice
 genScriptVersion :: Gen Word16
 genScriptVersion = Gen.word16 Range.constantBounded
 
-genStakeholderId :: Gen StakeholderId
-genStakeholderId = mkStakeholderId <$> genVerificationKey
+genKeyHash :: Gen KeyHash
+genKeyHash = hashKey <$> genVerificationKey
 
 genTxFeePolicy :: Gen TxFeePolicy
 genTxFeePolicy = TxFeePolicyTxSizeLinear <$> genTxSizeLinear

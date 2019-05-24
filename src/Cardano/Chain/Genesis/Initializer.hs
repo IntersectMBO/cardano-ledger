@@ -21,7 +21,7 @@ data GenesisInitializer = GenesisInitializer
   , giAvvmBalanceFactor :: !LovelacePortion
   -- ^ Avvm balances will be multiplied by this factor
   , giUseHeavyDlg       :: !Bool
-  -- ^ Whether to use heavyweight delegation for bootstrap era stakeholders
+  -- ^ Whether to use heavyweight delegation for genesis keys
   , giSeed              :: !Integer
   -- ^ Seed to use to generate secret data. There are two ways to use it:
   --

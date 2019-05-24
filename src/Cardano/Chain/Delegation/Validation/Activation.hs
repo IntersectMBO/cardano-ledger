@@ -14,7 +14,7 @@ import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
 
-import Cardano.Chain.Common (StakeholderId)
+import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation(..))
 import Cardano.Chain.Slotting (FlatSlotId(..))
@@ -28,7 +28,7 @@ import Cardano.Chain.Slotting (FlatSlotId(..))
 --   became active in.
 data State = State
   { delegationMap   :: !Delegation.Map
-  , delegationSlots :: !(Map StakeholderId FlatSlotId)
+  , delegationSlots :: !(Map KeyHash FlatSlotId)
   } deriving (Eq, Show, Generic, NFData)
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the

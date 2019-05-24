@@ -21,7 +21,6 @@ import Control.Lens ((^.), to, (^..))
 import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
@@ -51,7 +50,7 @@ import Cardano.Chain.Common
   , TxFeePolicy(TxFeePolicyTxSizeLinear)
   , TxSizeLinear(TxSizeLinear)
   , mkKnownLovelace
-  , mkStakeholderId
+  , hashKey
   )
 
 import Test.Cardano.Chain.Elaboration.Keys
@@ -187,8 +186,7 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
   rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
 
   genesisData = Genesis.GenesisData
-    { Genesis.gdBootStakeholders = Genesis.GenesisWStakeholders
-      genesisStakeHolders
+    { Genesis.gdGenesisKeyHashes = Genesis.GenesisKeyHashes genesisKeyHashes
     , Genesis.gdHeavyDelegation = Genesis.UnsafeGenesisDelegation [] -- We don't need initial heavyweight delegation.
     , Genesis.gdStartTime = UTCTime (ModifiedJulianDay 0) 0
     , Genesis.gdNonAvvmBalances = Genesis.GenesisNonAvvmBalances []
@@ -228,9 +226,5 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
     , Update.ppUnlockStakeEpoch = 0
     }
 
-
-  genesisStakeHolders :: Map Common.StakeholderId Word16
-  genesisStakeHolders = Map.fromList
-    $ zip (mkStakeholderId . elaborateVKeyGenesis <$> vkgs') [1 ..]
-
-  vkgs' = Set.toList vkgs
+  genesisKeyHashes :: Set Common.KeyHash
+  genesisKeyHashes = Set.map (hashKey . elaborateVKeyGenesis) vkgs

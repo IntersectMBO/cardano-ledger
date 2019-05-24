@@ -23,22 +23,21 @@ import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 
 
--- | Specification how to generate full genesis data.
+-- | Specification how to generate full 'GenesisData'
 data GenesisSpec = UnsafeGenesisSpec
-  { gsAvvmDistr         :: !GenesisAvvmBalances
-  -- ^ Genesis data describes avvm utxo.
-  , gsHeavyDelegation   :: !GenesisDelegation
+  { gsAvvmDistr          :: !GenesisAvvmBalances
+  -- ^ Genesis data describes avvm utxo
+  , gsHeavyDelegation    :: !GenesisDelegation
   -- ^ Genesis state of heavyweight delegation. Will be concatenated with
-  --   genesis delegation for bootstrap stakeholders if 'tiUseHeavyDlg' is
-  --   'True'.
-  , gsProtocolParameters  :: !ProtocolParameters
-  -- ^ Genesis 'ProtocolParameters'.
-  , gsK                 :: !BlockCount
+  --   delegation genesis keyHashes if 'tiUseHeavyDlg' is 'True'
+  , gsProtocolParameters :: !ProtocolParameters
+  -- ^ Genesis 'ProtocolParameters'
+  , gsK                  :: !BlockCount
   -- ^ The security parameter of the Ouroboros protocol
-  , gsProtocolMagic     :: !ProtocolMagic
+  , gsProtocolMagic      :: !ProtocolMagic
   -- ^ The magic number unique to any instance of Cardano
-  , gsInitializer       :: !GenesisInitializer
-  -- ^ Other data which depend on genesis type.
+  , gsInitializer        :: !GenesisInitializer
+  -- ^ Other data which depend on genesis type
   } deriving (Eq, Show, Generic)
 
 deriveJSON defaultOptions ''GenesisSpec

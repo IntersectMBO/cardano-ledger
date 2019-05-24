@@ -73,12 +73,12 @@ type Vote = AVote ()
 --
 --   Invariant: The signature is valid.
 data AVote a = UnsafeVote
-  { voterVK       :: !VerificationKey
-  -- ^ Verification key of stakeholder, who votes
-  , aProposalId   :: !(Annotated UpId a)
+  { voterVK     :: !VerificationKey
+  -- ^ Verification key casting the vote
+  , aProposalId :: !(Annotated UpId a)
   -- ^ Proposal to which this vote applies
-  , signature     :: !(Signature (UpId, Bool))
-  -- ^ Signature of (Update proposal, Approval/rejection bit) by stakeholder
+  , signature   :: !(Signature (UpId, Bool))
+  -- ^ Signature of (Update proposal, Approval/rejection bit)
   } deriving (Eq, Show, Generic, Functor)
     deriving anyclass NFData
 

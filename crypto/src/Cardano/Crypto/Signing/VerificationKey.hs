@@ -63,7 +63,7 @@ toCBORXPub :: CC.XPub -> Encoding
 toCBORXPub a = toCBOR $ CC.unXPub a
 
 -- | We enforce canonical CBOR encodings for `VerificationKey`s, because we serialize
---   them before hashing to get `HashKey`s.
+--   them before hashing to get `KeyHash`es.
 fromCBORXPub :: Decoder s CC.XPub
 fromCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
 

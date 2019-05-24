@@ -25,11 +25,11 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import qualified Data.Set as Set
 
-import Cardano.Chain.Common.StakeholderId (StakeholderId)
+import Cardano.Chain.Common.KeyHash (KeyHash)
 
 
 newtype Map = Map
-  { unMap :: Bimap StakeholderId StakeholderId
+  { unMap :: Bimap KeyHash KeyHash
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
@@ -38,13 +38,13 @@ newtype Map = Map
 -- Query
 --------------------------------------------------------------------------------
 
-memberR :: StakeholderId -> Map -> Bool
+memberR :: KeyHash -> Map -> Bool
 memberR b = Bimap.memberR b . unMap
 
-pairMember :: (StakeholderId, StakeholderId) -> Map -> Bool
+pairMember :: (KeyHash, KeyHash) -> Map -> Bool
 pairMember p = Bimap.pairMember p . unMap
 
-lookupR :: StakeholderId -> Map -> Maybe StakeholderId
+lookupR :: KeyHash -> Map -> Maybe KeyHash
 lookupR b = Bimap.lookupR b . unMap
 
 
@@ -52,7 +52,7 @@ lookupR b = Bimap.lookupR b . unMap
 -- Update
 --------------------------------------------------------------------------------
 
-insert :: StakeholderId -> StakeholderId -> Map -> Map
+insert :: KeyHash -> KeyHash -> Map -> Map
 insert a b = Map . Bimap.insert a b . unMap
 
 
@@ -60,8 +60,8 @@ insert a b = Map . Bimap.insert a b . unMap
 -- Conversion/traversal
 --------------------------------------------------------------------------------
 
-fromList :: [(StakeholderId, StakeholderId)] -> Map
+fromList :: [(KeyHash, KeyHash)] -> Map
 fromList = Map . Bimap.fromList
 
-keysSet :: Map -> Set StakeholderId
+keysSet :: Map -> Set KeyHash
 keysSet = Set.fromList . Bimap.keys . unMap
