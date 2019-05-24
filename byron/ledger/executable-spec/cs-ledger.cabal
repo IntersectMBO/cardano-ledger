@@ -35,7 +35,7 @@ library
                      , bytestring
                      , containers
                      , cryptonite
-                     , hedgehog
+                     , hedgehog >= 1.0
                      , lens
                      , memory
                      -- Local deps
@@ -61,7 +61,7 @@ test-suite doctests
                      , bytestring
                      , containers
                      , cryptonite
-                     , hedgehog
+                     , hedgehog >= 1.0
                      , lens
                      , memory
                      , text
@@ -91,7 +91,7 @@ test-suite ledger-delegation-test
                , bimap
                , containers
                , lens
-               , hedgehog
+               , hedgehog >= 1.0
                , tasty
                , tasty-hunit
                , tasty-hedgehog
