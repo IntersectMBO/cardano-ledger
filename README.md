@@ -1,4 +1,13 @@
-# Formal Models for Ledger Rules
+<h1 align="center">Formal Models for Ledger Rules</h1>
+
+<p align="center">
+  <a href="https://buildkite.com/input-output-hk/cardano-ledger-specs">
+    <img alt="Build Status" src="https://img.shields.io/buildkite/a94c23758aeb2858869d5e256e466fc78e03a5baf1954cb8cc.svg?style=for-the-badge"/>
+  </a>
+  <a href="https://coveralls.io/github/input-output-hk/cardano-ledger-specs?branch=master">
+    <img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
+  </a>
+</p>
 
 Formal and executable specifications for the new features to be introduced by Shelley.
 
@@ -12,8 +21,6 @@ following links:
 - [Byron Ledger Specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec)
 - [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
 - [Simple Script-Based Multi-Signature Scheme](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/multi-sig)
-
-[![Build Status](https://travis-ci.org/input-output-hk/cardano-ledger-specs.svg?branch=master)](https://travis-ci.org/input-output-hk/cardano-ledger-specs)
 
 # Repository structure
 
@@ -198,3 +205,9 @@ repo in the following places:
 Note that the user guide linked above is incomplete and does not correctly refer
 to projects built using `iohk-nix`, as this one is. A certain amount of trial
 and error may be required to make substantive changes!
+
+<p align="center">
+  <a href="https://github.com/input-output-hk/cardano-ledger-specs/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
+  </a>
+</p>
