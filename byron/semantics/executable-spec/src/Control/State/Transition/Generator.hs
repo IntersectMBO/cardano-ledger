@@ -131,17 +131,12 @@ genTrace ub env st0 aSigGen = do
         mSig = treeValue <$> runDiscardEffect sigTree
       case mSig of
         Nothing -> do
-          Debug.traceM "I got nothing!"
           _ <- error "Nothing :/"
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
-            Left _err    -> do
---              Debug.traceShowM _err
-              loop (d - 1) sti acc
-            Right sti' -> do
-              Debug.traceShowM "Got a next state!\n"
-              loop (d - 1) sti' (sigTree : acc)
+            Left _err  -> loop (d - 1) sti acc
+            Right sti' -> loop (d - 1) sti' (sigTree : acc)
 
     interleaveSigs
       :: MaybeT Identity (NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)])

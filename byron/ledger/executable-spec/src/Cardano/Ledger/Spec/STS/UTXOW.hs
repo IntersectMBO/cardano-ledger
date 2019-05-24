@@ -9,11 +9,6 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
-import qualified Debug.Trace as Debug
-import System.IO.Unsafe (unsafePerformIO)
-
-
-
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import qualified Crypto.Hash as Crypto
@@ -34,7 +29,6 @@ import Control.State.Transition
   , trans
   , transitionRules
   , wrapFailed
-  , applySTS
   )
 import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 import Data.AbstractSize (HasTypeReps)
@@ -42,7 +36,6 @@ import Data.AbstractSize (HasTypeReps)
 import Ledger.Core
   ( Addr(Addr)
   , KeyPair(KeyPair)
-  , Owner(Owner)
   , hash
   , keyPair
   , mkAddr
@@ -116,13 +109,13 @@ instance HasTrace (UTXOW TxId) where
     -- if not $ witnessed res (utxo st)
     --   then error "Unwitnessed!!!"
     --   else pure ()
-    case applySTS @(UTXOW TxId) (TRC (_e, st, res)) of
-      Left pf -> error $ show pf
-      Right st' -> do
-        pure $ unsafePerformIO $ do
-          print "Andaaaa!!!"
-          pure ()
-        Debug.traceM "Yeah!\n"-- pure ()
+    -- case applySTS @(UTXOW TxId) (TRC (_e, st, res)) of
+    --   Left pf -> error $ show pf
+    --   Right st' -> do
+    --     pure $ unsafePerformIO $ do
+    --       print "Andaaaa!!!"
+    --       pure ()
+    --     Debug.traceM "Yeah!\n"-- pure ()
     pure $ res
 
 newtype IOs = IOs ([TxIn TxId], [TxOut])

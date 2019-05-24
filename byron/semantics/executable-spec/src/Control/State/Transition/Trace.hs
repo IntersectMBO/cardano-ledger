@@ -239,14 +239,13 @@ closure
    -> State s
    -> [Signal s]
    -> Trace s
-closure env st0 sigs = mkTrace env st0 $ loop st0 sigs []
+closure env st0 sigs = mkTrace env st0 $ loop st0 (reverse sigs) []
   where
-    loop _ [] acc =
-      acc
+    loop _ [] acc = acc
     loop sti (sig : sigs') acc =
       case applySTS @s (TRC(env, sti, sig)) of
         Left _ -> loop sti sigs' acc
-        Right sti' -> loop sti sigs' ((sti', sig) : acc)
+        Right sti' -> loop sti' sigs' ((sti', sig) : acc)
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces
