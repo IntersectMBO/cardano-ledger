@@ -41,7 +41,7 @@ library
                      , containers
                      , cryptonite
                      , cs-ledger
-                     , hedgehog
+                     , hedgehog >= 1.0
                      , lens
                      , small-steps
   ghc-options:         -Wall
@@ -60,7 +60,7 @@ test-suite chain-spec-test
   default-language:    Haskell2010
   build-depends:       base
                      , data-ordlist
-                     , hedgehog
+                     , hedgehog >= 1.0
                      , lens
                      , tasty
                      , tasty-hedgehog
