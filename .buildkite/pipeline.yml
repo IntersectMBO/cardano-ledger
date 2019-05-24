@@ -1,8 +1,21 @@
 steps:
+  - label: 'stack rebuild'
+    command:
+      # cache-s3 needs a build directory that is the same across all buildkite agents.
+      # so copy the source into /build/cardano-ledger-specs
+      - "rm -rf /build/cardano-ledger-specs"
+      - "cp -R . /build/cardano-ledger-specs"
+      - "cd /build/cardano-ledger-specs"
+      - "nix-build ci/buildkite -o stack-rebuild"
+      - "./stack-rebuild"
+    agents:
+      system: x86_64-linux
+
   - label: 'check-hydra'
     command: 'ci/check-hydra.sh'
     agents:
       system: x86_64-linux
+
   - label: 'stack2nix'
     command: 'ci/check-stack2nix.sh'
     agents:
