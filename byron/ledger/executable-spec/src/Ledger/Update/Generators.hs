@@ -12,7 +12,7 @@ import Ledger.Update (PParams (PParams))
 
 -- | Protocol parameters generator.
 --
--- TODO: The protocol parameters still needs to be aligned with the formal
+-- TODO: The protocol parameters still need to be aligned with the formal
 -- spec.
 pps :: Gen PParams
 pps
