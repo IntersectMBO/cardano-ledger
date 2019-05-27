@@ -131,7 +131,8 @@ So an update of GHC should be as simple as:
 This may require updating the version of `iohk-nix` if the compiler version
 you're switching to isn't supported in the current version of `iohk-nix`. This
 will result in an error like `missing attribute 'ghc864'`. To update `iohk-nix`,
-simply change the git revision in `iohk-nix.json`.
+simply change the git revision in `iohk-nix.json`, this can be done automatically
+by running the `update-iohk-nix.sh` script in the [`nix/`](nix/) folder.
 
 
 ## Formatting
@@ -192,6 +193,9 @@ important files are:
 
 - `nix/regenerate.sh`, which generates `nix` expressions for all the Haskell
   dependencies in the Stack project
+  
+- `nix/update-iohk-nix.sh`, which updates the `iohk-nix-src.json` according to
+the latest version of [`iohk-nix`](https://github.com/input-output-hk/iohk-nix/)
 
 - `nix/pkgs.nix`, which creates a package set from the generated `nix`
   expressions
