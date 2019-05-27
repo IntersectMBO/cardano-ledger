@@ -135,7 +135,7 @@ import Ledger.Core
   , HasHash
   , hash
   )
-import Ledger.Core.Generator (vkGen, vkgenesisGen)
+import Ledger.Core.Generators (vkGen, vkgenesisGen)
 import Ledger.GlobalParams (k)
 
 

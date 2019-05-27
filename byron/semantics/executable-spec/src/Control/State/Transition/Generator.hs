@@ -135,8 +135,7 @@ genTrace ub env st0 aSigGen = do
         --  Take the root of the next-state signal tree.
         mSig = treeValue <$> runDiscardEffect sigTree
       case mSig of
-        Nothing -> do
-          _ <- error "Nothing :/"
+        Nothing ->
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of

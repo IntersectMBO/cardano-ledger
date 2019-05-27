@@ -70,7 +70,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _factorA :: Int
   -- ^ Minimum fees per transaction
   , _factorB :: Int
-  -- ^ additional fees per transaction size
+  -- ^ Additional fees per transaction size
   } deriving (Eq, Generic, Ord, Show)
 
 makeLenses ''PParams

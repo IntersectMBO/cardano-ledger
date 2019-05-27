@@ -110,13 +110,6 @@ instance HasTrace (UTXOW TxId) where
     let wits = witnessForTxIn tx (utxo st) <$> (inputs tx)
     pure $ TxWits tx wits
 
-newtype IOs = IOs ([TxIn TxId], [TxOut])
-  deriving (Show)
-
-instance BA.ByteArrayAccess (IOs) where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack  . show
-
 witnessForTxIn :: Ord id => Tx id -> UTxO id -> TxIn id -> Wit id
 witnessForTxIn tx (UTxO utxo) txin =
   case Map.lookup txin utxo of
@@ -127,3 +120,10 @@ witnessForTxIn tx (UTxO utxo) txin =
 
 witnessForTx :: KeyPair -> Tx id -> Wit id
 witnessForTx (KeyPair sk vk) tx = Wit vk (sign sk tx)
+
+newtype IOs = IOs ([TxIn TxId], [TxOut])
+  deriving (Show)
+
+instance BA.ByteArrayAccess (IOs) where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack  . show

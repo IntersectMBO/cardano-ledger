@@ -54,7 +54,7 @@ newtype UTxO id = UTxO
   } deriving (Show, Eq, Relation)
 
 addValue :: TxOut -> Lovelace -> TxOut
-addValue tx@TxOut{value} d = tx {value = value + d}
+addValue tx@TxOut{ value } d = tx { value = value + d }
 
 -- | Construct a UTxO from initial TxOuts, using the supplied id generator
 fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
@@ -79,7 +79,7 @@ instance Eq id => Eq (Tx id) where
 
 -- | Total value of a transaction.
 txValue :: Tx id -> Lovelace
-txValue Tx {outputs} = sum $ fmap value outputs
+txValue Tx { outputs } = sum $ fmap value outputs
 
 -- |Compute the UTxO inputs of a transaction.
 txins :: Tx id -> [TxIn id]

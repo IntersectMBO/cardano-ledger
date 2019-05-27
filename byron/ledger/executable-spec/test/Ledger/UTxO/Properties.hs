@@ -38,8 +38,8 @@ moneyIsConstant = withTests 200 . property $ do
   (st0, st) <- firstAndLastState <$> forAll (trace @(UTXOW TxId) 500)
   reserves st0 + balance (utxo st0) === reserves st + balance (utxo st)
 
--- To test the performance of the integrated shrinker for UTxO traces one could replace
--- the return statement of the UTXO @transitionRule@ by:
+-- To test the performance of the integrated shrinker for UTxO traces one could
+-- replace the return statement of the 'UTXO' @transitionRule@ by:
 --
 -- >>> let xs =
 -- >>>       if 2 < length (txins tx)
@@ -52,7 +52,6 @@ moneyIsConstant = withTests 200 . property $ do
 -- This should give a minimal counterexample of a trace with a signal
 -- containing exactly 3 inputs, and only one output.
 
--- | Classify the traces.
 tracesAreClassified :: Property
 -- TODO: we might want to run this only while developing, and not on CI.
 tracesAreClassified = withTests 200 . property $ do

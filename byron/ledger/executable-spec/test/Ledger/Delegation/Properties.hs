@@ -8,7 +8,8 @@
 -- associated with this aspect of the ledger.
 module Ledger.Delegation.Properties
   ( dcertsAreTriggered
-  , rejectDupSchedDelegs, classifyTracesDeleg
+  , rejectDupSchedDelegs
+  , tracesAreClassified
   )
 where
 
@@ -53,6 +54,7 @@ import Control.State.Transition
 import Control.State.Transition.Generator
   ( HasSizeInfo
   , HasTrace
+  , classifyTraceLength
   , initEnvGen
   , isTrivial
   , nonTrivialTrace
@@ -109,8 +111,9 @@ import Ledger.Delegation
   , scheduledDelegations
   , slot
   )
-import Ledger.Core.Generator (vkGen)
+
 import Ledger.GlobalParams (k)
+import Ledger.Core.Generators (vkGen)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -311,12 +314,9 @@ rejectDupSchedDelegs = property $ do
   assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` pfs
 
 -- | Classify the traces.
-classifyTracesDeleg :: Property -- TODO: remove the Deleg suffix and use qualified imports
-classifyTracesDeleg = property $ do
-  tr <- forAll (trace @(DELEG) 1000)
-  classify "empty"       $ traceLength tr == 0
-  classify "singleton"   $ traceLength tr == 1
-  classify "[2, 100)"    $  2 < traceLength tr && traceLength tr < 100
-  classify "[100, 500)"  $ 100 < traceLength tr && traceLength tr < 500
-  classify "500 xxx"        $ traceLength tr == 500
+tracesAreClassified :: Property
+tracesAreClassified = property $ do
+  let (tl, step) = (1000, 100)
+  tr <- forAll (trace @DELEG tl)
+  classifyTraceLength tr tl step
   success
