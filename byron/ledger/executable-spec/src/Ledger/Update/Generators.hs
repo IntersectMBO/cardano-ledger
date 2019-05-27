@@ -31,7 +31,7 @@ pps
   <*> pure 0 -- factor @a@
   <*> pure 0 -- factor @b@
   where
-    -- In mainet the maximum header size is set to 2000000 and the maximum
+    -- In mainnet the maximum header size is set to 2000000 and the maximum
     -- block size is also set to 2000000, so we have to make sure we cover
     -- those values here. The upper bound is arbitrary though.
     --
