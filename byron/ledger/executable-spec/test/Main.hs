@@ -17,8 +17,7 @@ import Ledger.UTxO.Properties (moneyIsConstant)
 import qualified Ledger.UTxO.Properties as UTxO
 
 main :: IO ()
-main = do
-  defaultMain tests
+main = defaultMain tests
  where
   tests :: TestTree
   tests = localOption Auto $ testGroup
