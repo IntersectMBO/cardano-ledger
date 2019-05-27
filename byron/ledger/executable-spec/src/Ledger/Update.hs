@@ -44,17 +44,17 @@ import Prelude hiding (min)
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   { _maxBkSz  :: Natural
-  -- ^ Maximum (abstract) block size in words.
+  -- ^ Maximum (abstract) block size in words
   , _maxHdrSz :: Natural
-  -- ^ Maximum (abstract) block header size in words.
+  -- ^ Maximum (abstract) block header size in words
   , _maxTxSz :: Natural
-  -- ^ Maximum (abstract) transaction size in words.
+  -- ^ Maximum (abstract) transaction size in words
   , _maxPropSz :: Natural
-  -- ^ Maximum (abstract) update proposal size in words.
+  -- ^ Maximum (abstract) update proposal size in words
   , _bkSgnCntT :: Double
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
-  -- and 1/4.
+  -- and 1/4
   , _bkSlotsPerEpoch :: Core.SlotCount
   -- ^ Number of slots in an epoch
   , _upTtl :: Core.SlotCount
@@ -68,7 +68,9 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
   , _factorA :: Int
+  -- ^ Minimum fees per transaction
   , _factorB :: Int
+  -- ^ additional fees per transaction size
   } deriving (Eq, Generic, Ord, Show)
 
 makeLenses ''PParams

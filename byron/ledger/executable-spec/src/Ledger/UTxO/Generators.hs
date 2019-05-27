@@ -1,9 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Ledger.UTxO.Generators where
 
 import Control.Applicative (empty)
 import Data.Bitraversable (bitraverse)
+import Data.List (foldl')
 import qualified Data.Map.Strict as M
 
 import Ledger.Core hiding (Range, range)
@@ -204,7 +206,7 @@ shrinkLeftPreserving inValue outValue modifyOutValue (xs1, ys1) = do
     go 0  x        = x
     go _  []       = []
     go n' (x : xs) = if getVal x > n'
-      then modifyVal (subtract n) x : xs
+      then modifyVal (subtract n') x : xs
       else go (n' - getVal x) xs
 
 

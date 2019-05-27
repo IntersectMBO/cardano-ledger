@@ -31,12 +31,12 @@ data UTXO id
 
 data UTxOEnv id = UTxOEnv { utxo0 :: UTxO id
                           , pps   :: PParams
-                          } deriving (Show)
+                          } deriving (Eq, Show)
 
 data UTxOState id = UTxOState { utxo :: UTxO id
                               , reserves :: Lovelace
                               }
-  deriving (Show)
+  deriving (Eq, Show)
 
 instance (Ord id, HasTypeReps id) => STS (UTXO id) where
 
@@ -80,4 +80,5 @@ instance (Ord id, HasTypeReps id) => STS (UTXO id) where
         return $ UTxOState { utxo     = (txins tx ⋪ utxo) ∪ txouts tx
                            , reserves = reserves + fee
                            }
+
     ]

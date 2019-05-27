@@ -13,6 +13,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import qualified Crypto.Hash as Crypto
 import qualified Data.Map as Map
+import Hedgehog (Gen)
 
 import Control.State.Transition
   ( Embed
@@ -42,6 +43,7 @@ import Ledger.Core
   , owner
   , sign
   )
+import Ledger.GlobalParams (lovelaceCap)
 import qualified Ledger.Update.Generators as UpdateGen
 import Ledger.UTxO
 import qualified Ledger.UTxO.Generators as UTxOGen
@@ -79,7 +81,18 @@ instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
 
 -- | Constant list of addresses intended to be used in the generators.
 traceAddrs :: [Addr]
-traceAddrs = mkAddr <$> [0 .. 50]
+traceAddrs = mkAddr <$> [0 .. 10]
+
+genTx :: [Addr] -> UTxO TxId -> Gen (Tx TxId)
+genTx addrs utxo = do
+  -- Use a dummy hash for now, as we will be replacing the transaction id
+  -- after the call to UTxOGen.genTxFromUTxO.
+  let dummyTxId = TxId $ Crypto.hash $ IOs ([], [])
+  -- Generate a valid transaction from a given 'UTxO'
+  tx@Tx {inputs, outputs} <- UTxOGen.genTxFromUTxO dummyTxId addrs utxo
+  let
+    txHash = Crypto.hash $ IOs (inputs, outputs)
+  pure $ tx { txid = TxId txHash }
 
 instance HasTrace (UTXOW TxId) where
   initEnvGen
@@ -93,16 +106,9 @@ instance HasTrace (UTXOW TxId) where
         pure $ fromTxOuts (TxId . hash . addr) txOuts
 
   sigGen _e st = do
-    -- Use a dummy hash for now, as we will be replacing the transaction id
-    -- after the call to UTxOGen.genTxFromUTxO.
-    let dummyTxId = TxId $ Crypto.hash $ IOs ([], [])
-    -- | Generate a valid transaction from a given 'UTxO'
-    tx@Tx {inputs, outputs} <- UTxOGen.genTxFromUTxO dummyTxId traceAddrs (utxo st)
-    let
-      txHash = Crypto.hash $ IOs (inputs, outputs)
-      tx' = tx { txid = TxId txHash }
-      wits = witnessForTxIn tx' (utxo st) <$> inputs
-    pure $ TxWits tx' wits
+    tx <- genTx traceAddrs (utxo st)
+    let wits = witnessForTxIn tx (utxo st) <$> (inputs tx)
+    pure $ TxWits tx wits
 
 newtype IOs = IOs ([TxIn TxId], [TxOut])
   deriving (Show)

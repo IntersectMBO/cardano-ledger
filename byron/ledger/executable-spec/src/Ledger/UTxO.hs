@@ -53,6 +53,9 @@ newtype UTxO id = UTxO
   { unUTxO :: Map (TxIn id) TxOut
   } deriving (Show, Eq, Relation)
 
+addValue :: TxOut -> Lovelace -> TxOut
+addValue tx@TxOut{value} d = tx {value = value + d}
+
 -- | Construct a UTxO from initial TxOuts, using the supplied id generator
 fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
 fromTxOuts mkId = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
@@ -71,9 +74,12 @@ instance HasTypeReps i => HasTypeReps (Tx i) where
   typeReps x@(Tx i' inputs outputs)
     = typeOf x <| typeOf i' <| typeOf inputs <| typeOf outputs <| empty
 
-
 instance Eq id => Eq (Tx id) where
   (Tx _ ins outs) == (Tx _ ins' outs') = ins == ins' && outs == outs'
+
+-- | Total value of a transaction.
+txValue :: Tx id -> Lovelace
+txValue Tx {outputs} = sum $ fmap value outputs
 
 -- |Compute the UTxO inputs of a transaction.
 txins :: Tx id -> [TxIn id]

@@ -529,6 +529,5 @@ instance HasTrace DELEG where
     <$> Gen.set (linear 1 7) vkgenesisGen
     <*> (Epoch <$> Gen.integral (linear 0 100))
     <*> (Slot <$> Gen.integral (linear 0 10000))
-    -- <*> (BlockCount <$> Gen.integral (linear 0 10))
 
   sigGen e _st = dcertsGen e
