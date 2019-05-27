@@ -1,5 +1,5 @@
 -- | Generators for the 'Ledger.Core' values.
-module Ledger.Core.Generators -- TODO: reame to Generators.
+module Ledger.Core.Generators
   ( vkGen
   , vkgenesisGen
   , addrGen

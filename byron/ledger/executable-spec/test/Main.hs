@@ -39,6 +39,6 @@ main = do
     , testGroup
       "UTxO Properties"
       [ testProperty "Money is constant" moneyIsConstant
-      , testProperty "Classification" UTxO.tracesAreClassified
+      , testProperty "Traces are classified" UTxO.tracesAreClassified
       ]
     ]
