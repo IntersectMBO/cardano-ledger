@@ -35,13 +35,29 @@ pps
     -- block size is also set to 2000000, so we have to make sure we cover
     -- those values here. The upper bound is arbitrary though.
     --
+    -- A constant distribution between [@min@, @max@] will almost never
+    -- generate @min@. Since we want to test the minimum size we use the
+    -- 'choice' combinator.
+    --
     -- TODO: For a more realistic lower bound we should figure out the
     -- minimum block size.
-    gMaxHeaderSize = Gen.integral (Range.constant 0 4000000)
-    gMaxBlockSize  = Gen.integral (Range.constant 0 4000000)
+    gMaxHeaderSize = Gen.choice
+                     [ pure 0
+                     , Gen.integral (Range.constant 1 4000000)
+                     ]
+    gMaxBlockSize  = Gen.choice
+                     [ pure 0
+                     , Gen.integral (Range.constant 1 4000000)
+                     ]
 
-    gMaxTxSize = Gen.integral (Range.constant 0 4000000)
-    gMaxProposalSize = Gen.integral (Range.constant 0 4000000)
+    gMaxTxSize = Gen.choice
+                 [ pure 0
+                 , Gen.integral (Range.constant 1 4000000)
+                 ]
+    gMaxProposalSize = Gen.choice
+                       [ pure 0
+                       , Gen.integral (Range.constant 1 4000000)
+                       ]
 
     gBlockSigCntThreshold = pure (1/5) -- TODO: this needs to be aligned with the formal specs.
 
