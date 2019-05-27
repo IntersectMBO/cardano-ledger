@@ -74,7 +74,13 @@ import Formatting
   (Format, bprint, build, builder, formatToString, later, sformat)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
-  (FromJSON(..), FromObjectKey(..), JSValue(..), ToJSON(..), ToObjectKey(..))
+  ( FromJSON(..)
+  , FromObjectKey(..)
+  , JSValue(..)
+  , ToJSON(..)
+  , ToObjectKey(..)
+  , toJSString
+  )
 
 import Cardano.Binary
   ( DecoderError(..)
@@ -173,7 +179,7 @@ instance B.Buildable [Address] where
   build = bprint listJson
 
 instance Monad m => ToObjectKey m Address where
-  toObjectKey = pure . formatToString addressF
+  toObjectKey = pure . toJSString . formatToString addressF
 
 instance MonadError SchemaError m => FromObjectKey m Address where
   fromObjectKey = fmap Just . parseJSString fromCBORTextAddress . JSString

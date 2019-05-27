@@ -11,6 +11,7 @@
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "transformers" = (((hackage.transformers)."0.5.6.2").revisions).default;
         "process" = (((hackage.process)."1.6.5.0").revisions).default;
+        "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
         } // {
         cardano-ledger = ./cardano-ledger.nix;
         cardano-ledger-test = ./cardano-ledger-test.nix;

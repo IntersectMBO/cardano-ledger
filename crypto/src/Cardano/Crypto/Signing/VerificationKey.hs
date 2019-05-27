@@ -28,7 +28,7 @@ import qualified Data.Text.Lazy.Builder as Builder
 import Formatting
   (Format, bprint, fitLeft, formatToString, later, sformat, stext, (%.))
 import Formatting.Buildable (Buildable(..))
-import Text.JSON.Canonical (JSValue(..))
+import Text.JSON.Canonical (JSValue(..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary
@@ -47,7 +47,7 @@ instance FromJSON VerificationKey where
   parseJSON v = parseJSON v >>= toAesonError . parseFullVerificationKey
 
 instance Monad m => TJC.ToJSON m VerificationKey where
-  toJSON = pure . JSString . formatToString fullVerificationKeyF
+  toJSON = pure . JSString . toJSString . formatToString fullVerificationKeyF
 
 instance MonadError SchemaError m => TJC.FromJSON m VerificationKey where
   fromJSON = parseJSString parseFullVerificationKey

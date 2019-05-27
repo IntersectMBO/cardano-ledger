@@ -285,6 +285,7 @@ test-suite epoch-validation-normal-form-test
 
   build-depends:       base
                      , bytestring
+                     , cardano-binary
                      , cardano-ledger
                      , cardano-crypto-test
                      , cardano-crypto-wrapper
@@ -297,6 +298,7 @@ test-suite epoch-validation-normal-form-test
                      , hedgehog
                      , optparse-applicative
                      , resourcet
+                     , silently
                      , streaming
                      , tasty
                      , tasty-hedgehog

@@ -19,6 +19,8 @@ where
 
 import Cardano.Prelude
 
+import System.IO.Silently (hSilence)
+
 import Test.Options (ShouldAssertNF (..), mainWithTestScenario, tsGroupToTree)
 
 import qualified Test.Cardano.Chain.Block.Validation
@@ -26,6 +28,7 @@ import qualified Test.Cardano.Chain.Block.Validation
 
 main :: IO ()
 main =
-  mainWithTestScenario
+  hSilence [stderr]
+    . mainWithTestScenario
     . tsGroupToTree
     $ Test.Cardano.Chain.Block.Validation.tests AssertNF

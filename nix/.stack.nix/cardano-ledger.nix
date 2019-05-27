@@ -89,6 +89,7 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.bytestring)
+            (hsPkgs.cardano-binary)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-crypto-test)
             (hsPkgs.cardano-crypto-wrapper)
@@ -101,6 +102,7 @@
             (hsPkgs.hedgehog)
             (hsPkgs.optparse-applicative)
             (hsPkgs.resourcet)
+            (hsPkgs.silently)
             (hsPkgs.streaming)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hedgehog)

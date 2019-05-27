@@ -38,7 +38,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Formatting (Format, bprint, build, formatToString, later, sformat, stext)
 import qualified Formatting.Buildable as B
-import Text.JSON.Canonical (JSValue(..))
+import Text.JSON.Canonical (JSValue(..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary
@@ -79,7 +79,7 @@ instance ToJSON (Signature w) where
   toJSON = toJSON . sformat fullSignatureHexF
 
 instance Monad m => TJC.ToJSON m (Signature w) where
-  toJSON = pure . JSString . formatToString fullSignatureHexF
+  toJSON = pure . JSString . toJSString . formatToString fullSignatureHexF
 
 instance (Typeable x, MonadError SchemaError m) => TJC.FromJSON m (Signature x) where
   fromJSON = parseJSString parseFullSignature

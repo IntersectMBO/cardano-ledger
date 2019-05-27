@@ -38,7 +38,7 @@ import System.Environment (lookupEnv)
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
-  , ChainValidationState
+  , ChainValidationState(..)
   , SigningHistory(..)
   , blockSlot
   , initialChainValidationState
@@ -94,21 +94,17 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
 
   let stream = parseEpochFilesWithBoundary (configEpochSlots config) files
 
+  annotate ("Did you build with `ghc -fhpc` or `stack --coverage`?\n"
+    <> "If so, please be aware that hpc will introduce thunks around "
+    <> "expressions for its program coverage measurement purposes and "
+    <> "this assertion can fail as a result.\n"
+    <> "Otherwise, for some reason, the `ChainValidationState` is not in "
+    <> "normal form.")
+
   result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState config cvs stream)
+    (foldChainValidationState shouldAssertNF config cvs stream)
 
-  cvs' <- evalEither result
-
-  case shouldAssertNF of
-    AssertNF -> do
-      annotate ("Did you build with `ghc -fhpc` or `stack --coverage`?\n"
-        <> "If so, please be aware that hpc will introduce thunks around "
-        <> "expressions for its program coverage measurement purposes and "
-        <> "this assertion can fail as a result.\n"
-        <> "Otherwise, for some reason, the `ChainValidationState` is not in "
-        <> "normal form.")
-      assert =<< liftIO (isNormalForm $! cvs')
-    NoAssertNF -> pass
+  void $ evalEither result
 
 
 data Error
@@ -119,23 +115,38 @@ data Error
 
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
-  :: Genesis.Config
+  :: ShouldAssertNF
+  -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO ChainValidationState
-foldChainValidationState config cvs blocks =
-  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
+foldChainValidationState shouldAssertNF config cvs blocks = S.foldM_
+  validate
+  (pure cvs)
+  pure
+  (hoist (withExceptT ErrorParseError) blocks)
  where
   validate
-     :: Monad m
-     => ChainValidationState
-     -> ABlockOrBoundary ByteString
-     -> ExceptT Error m ChainValidationState
+    :: MonadIO m
+    => ChainValidationState
+    -> ABlockOrBoundary ByteString
+    -> ExceptT Error m ChainValidationState
   validate c b =
-    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b)) $
-      case b of
-        ABOBBoundary bvd   -> updateChainBoundary c bvd
-        ABOBBlock    block -> updateBlock config c block
+    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b))
+      $ case b of
+          ABOBBoundary bvd -> do
+            case shouldAssertNF of
+              AssertNF -> do
+                isNF <- liftIO $ isNormalForm $! c
+                unless
+                  isNF
+                  (  panic
+                  $  "ChainValidationState not in normal form at slot: "
+                  <> show (cvsLastSlot c)
+                  )
+              NoAssertNF -> pure ()
+            updateChainBoundary c bvd
+          ABOBBlock block -> updateBlock config c block
 
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe FlatSlotId
   blockOrBoundarySlot = \case
