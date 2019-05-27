@@ -12,7 +12,9 @@ module Cardano.Ledger.Spec.STS.UTXOW where
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
 import qualified Crypto.Hash as Crypto
+import Data.List (find)
 import qualified Data.Map as Map
+import Data.Maybe (isJust)
 import Hedgehog (Gen)
 
 import Control.State.Transition
@@ -37,15 +39,31 @@ import Data.AbstractSize (HasTypeReps)
 import Ledger.Core
   ( Addr(Addr)
   , KeyPair(KeyPair)
+  , VKey
   , hash
   , keyPair
   , mkAddr
   , owner
   , sign
+  , verify
   )
-import Ledger.GlobalParams (lovelaceCap)
 import qualified Ledger.Update.Generators as UpdateGen
 import Ledger.UTxO
+  ( Tx(Tx)
+  , TxId(TxId)
+  , TxId(TxId)
+  , TxIn
+  , TxOut(TxOut)
+  , TxWits(TxWits)
+  , UTxO(UTxO)
+  , Wit(Wit)
+  , addr
+  , body
+  , fromTxOuts
+  , inputs
+  , outputs
+  , txid
+  )
 import qualified Ledger.UTxO.Generators as UTxOGen
 
 import Cardano.Ledger.Spec.STS.UTXO
@@ -75,6 +93,26 @@ instance (Ord id, HasTypeReps id) => STS (UTXOW id) where
         utxoSt' <- trans @(UTXO id) $ TRC (env, utxoSt, body tw)
         return utxoSt'
     ]
+
+-- |Determine if a UTxO input is authorized by a given key.
+authTxin :: Ord id => VKey -> TxIn id -> UTxO id -> Bool
+authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
+  Just (TxOut (Addr pay) _) -> key == pay
+  _                         -> False
+
+-- |Given a ledger state, determine if the UTxO witnesses in a given
+-- transaction are sufficient.
+-- TODO - should we only check for one witness for each unique input address?
+witnessed :: Ord id => TxWits id -> UTxO id -> Bool
+witnessed (TxWits tx wits) utxo =
+  length wits == length ins && all (hasWitness wits) ins
+ where
+  ins = inputs tx
+  hasWitness ws input =
+    isJust $ find (isWitness tx input utxo) ws
+  isWitness tx' input unspent (Wit key sig) =
+    verify key tx' sig && authTxin key input unspent
+
 
 instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
   wrapFailed = UtxoFailure

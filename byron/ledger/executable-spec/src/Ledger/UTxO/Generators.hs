@@ -5,7 +5,6 @@ module Ledger.UTxO.Generators where
 
 import Control.Applicative (empty)
 import Data.Bitraversable (bitraverse)
-import Data.List (foldl')
 import qualified Data.Map.Strict as M
 
 import Ledger.Core hiding (Range, range)

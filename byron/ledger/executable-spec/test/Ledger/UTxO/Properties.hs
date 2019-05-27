@@ -1,18 +1,13 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Ledger.UTxO.Properties where
 
-import Data.String (fromString)
-import Data.Foldable (traverse_)
 import Control.Monad (when)
 import Hedgehog
   ( Property
-  , PropertyT
   , (===)
-  , assert
-  , classify, collect
+  , classify
   , forAll
   , property
   , success
@@ -21,8 +16,7 @@ import Hedgehog
 
 import Control.State.Transition.Generator (classifyTraceLength, trace)
 import Control.State.Transition.Trace
-  ( Trace
-  , TraceOrder(OldestFirst)
+  ( TraceOrder(OldestFirst)
   , firstAndLastState
   , traceLength
   , traceSignals
@@ -62,15 +56,15 @@ tracesAreClassified = withTests 200 . property $ do
   -- were arbitrarily determined, since in order to have a good partition of
   -- the interval [0, maximum possible number of inputs/outputs] we'd need to
   -- know how many addresses are being used in the trace generation.
-  let tl = traceLength tr
-  when (0 < tl) $ do
+  let actualTl = traceLength tr
+  when (0 < actualTl) $ do
     let txs = body <$> traceSignals OldestFirst tr
         nrInputs = fromIntegral $ sum (length . inputs <$> txs)
         nrOutputs = fromIntegral $ sum (length . outputs <$> txs)
-        avgInputs = nrInputs / fromIntegral tl
-        avgOutputs = nrOutputs / fromIntegral tl
+        avgInputs = nrInputs / fromIntegral actualTl
+        avgOutputs = nrOutputs / fromIntegral actualTl
     -- Classify the average number of inputs
-    classify "avg nr. inputs == 0"      $ 0 == avgInputs
+    classify "avg nr. inputs == 0"      $ (0 :: Double) == avgInputs
     classify "avg nr. inputs == 1"      $ 1 == avgInputs
     classify "avg nr. inputs [2, 5)"    $ 2 <= avgInputs && avgInputs < 5
     classify "avg nr. inputs [5, 10)"   $ 5 <= avgInputs && avgInputs < 10
@@ -78,7 +72,7 @@ tracesAreClassified = withTests 200 . property $ do
     classify "avg nr. inputs [25, 100)" $ 25 <= avgInputs && avgInputs < 100
     classify ">= 100"                   $ 100 <= avgInputs
     -- Classify the average number of outputs
-    classify "avg nr. outputs == 0"      $ 0 == avgOutputs
+    classify "avg nr. outputs == 0"      $ (0 :: Double) == avgOutputs
     classify "avg nr. outputs == 1"      $ 1 == avgOutputs
     classify "avg nr. outputs [2, 5)"    $ 2 <= avgOutputs && avgOutputs < 5
     classify "avg nr. outputs [5, 10)"   $ 5 <= avgOutputs && avgOutputs < 10

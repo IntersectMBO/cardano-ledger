@@ -232,12 +232,38 @@ preStatesAndSignals NewestFirst tr
 --
 -- If any of the signals cannot be applied, then it is discarded, and the next
 -- signal is tried.
+--
+-- >>> :set -XTypeFamilies
+-- >>> :set -XTypeApplications
+-- >>> import Control.State.Transition (initialRules, transitionRules, judgmentContext)
+-- >>> :{
+-- data ADDER
+-- instance STS ADDER where
+--   type Environment ADDER = ()
+--   type State ADDER = Int
+--   type Signal ADDER = Int
+--   data PredicateFailure ADDER = NoFailuresPossible deriving (Eq, Show)
+--   initialRules = [ pure 0 ]
+--   transitionRules =
+--     [ do
+--         TRC ((), st, inc) <- judgmentContext
+--         pure $! st + inc
+--     ]
+-- :}
+--
+-- >>> closure @ADDER () 0 [3, 2, 1]
+-- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = [(6,3),(3,2),(1,1)]}
+--
+-- >>> closure @ADDER () 10 [-3, -2, -1]
+-- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = [(4,-3),(7,-2),(9,-1)]}
+--
 closure
   :: forall s
    . STS s
    => Environment s
    -> State s
    -> [Signal s]
+   -- ^ List of signals to apply, where the newest signal comes first.
    -> Trace s
 closure env st0 sigs = mkTrace env st0 $ loop st0 (reverse sigs) []
   where

@@ -25,7 +25,6 @@ import Hedgehog
   , Property
   , (===)
   , assert
-  , classify
   , forAll
   , property
   , success
@@ -68,7 +67,6 @@ import Control.State.Transition.Trace
   , lastState
   , preStatesAndSignals
   , traceEnv
-  , traceLength
   )
 import Ledger.Core
   ( Epoch(Epoch)

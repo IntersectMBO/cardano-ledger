@@ -17,10 +17,9 @@ import qualified Crypto.Hash as Crypto
 import Data.AbstractSize (HasTypeReps, typeReps, abstractSize)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Char8 as BS
-import Data.List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe)
 import Data.Sequence ((<|), empty)
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
@@ -162,22 +161,3 @@ makeTxWits (UTxO utxo) tx = TxWits
     in KeyPair (SKey o) (VKey o)
   keys = getKey <$> inputs tx
   wits = makeWitness <$> keys <*> pure tx
-
--- |Determine if a UTxO input is authorized by a given key.
-authTxin :: Ord id => VKey -> TxIn id -> UTxO id -> Bool
-authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
-  Just (TxOut (Addr pay) _) -> key == pay
-  _                         -> False
-
--- |Given a ledger state, determine if the UTxO witnesses in a given
--- transaction are sufficient.
--- TODO - should we only check for one witness for each unique input address?
-witnessed :: Ord id => TxWits id -> UTxO id -> Bool
-witnessed (TxWits tx wits) utxo =
-  length wits == length ins && all (hasWitness wits) ins
- where
-  ins = inputs tx
-  hasWitness ws input =
-    isJust $ find (isWitness tx input utxo) ws
-  isWitness tx' input unspent (Wit key sig) =
-    verify key tx' sig && authTxin key input unspent
