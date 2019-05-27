@@ -6,25 +6,31 @@ module Ledger.UTxO.Properties where
 
 import Data.String (fromString)
 import Data.Foldable (traverse_)
+import Control.Monad (when)
 import Hedgehog
   ( Property
   , PropertyT
   , (===)
   , assert
-  , classify
+  , classify, collect
   , forAll
   , property
   , success
   , withTests
   )
 
-import Control.State.Transition.Generator (trace)
-import Control.State.Transition.Trace (firstAndLastState, traceLength, Trace)
+import Control.State.Transition.Generator (classifyTraceLength, trace)
+import Control.State.Transition.Trace
+  ( Trace
+  , TraceOrder(OldestFirst)
+  , firstAndLastState
+  , traceLength
+  , traceSignals
+  )
 
 import Cardano.Ledger.Spec.STS.UTXO (reserves, utxo)
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO (balance, TxId)
-
+import Ledger.UTxO (TxId, balance, body, inputs, outputs)
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
@@ -47,47 +53,37 @@ moneyIsConstant = withTests 200 . property $ do
 -- containing exactly 3 inputs, and only one output.
 
 -- | Classify the traces.
-prop_classifyTraces :: Property
+tracesAreClassified :: Property
 -- TODO: we might want to run this only while developing, and not on CI.
-prop_classifyTraces = withTests 200 . property $ do
-  classifyTraces 500 50
+tracesAreClassified = withTests 200 . property $ do
+  let (tl, step) = (500, 50)
+  tr <- forAll (trace @(UTXOW TxId) tl)
+  classifyTraceLength tr tl step
+  -- Classify the average number of inputs and outputs. Note that the intervals
+  -- were arbitrarily determined, since in order to have a good partition of
+  -- the interval [0, maximum possible number of inputs/outputs] we'd need to
+  -- know how many addresses are being used in the trace generation.
+  let tl = traceLength tr
+  when (0 < tl) $ do
+    let txs = body <$> traceSignals OldestFirst tr
+        nrInputs = fromIntegral $ sum (length . inputs <$> txs)
+        nrOutputs = fromIntegral $ sum (length . outputs <$> txs)
+        avgInputs = nrInputs / fromIntegral tl
+        avgOutputs = nrOutputs / fromIntegral tl
+    -- Classify the average number of inputs
+    classify "avg nr. inputs == 0"      $ 0 == avgInputs
+    classify "avg nr. inputs == 1"      $ 1 == avgInputs
+    classify "avg nr. inputs [2, 5)"    $ 2 <= avgInputs && avgInputs < 5
+    classify "avg nr. inputs [5, 10)"   $ 5 <= avgInputs && avgInputs < 10
+    classify "avg nr. inputs [10, 25)"  $ 10 <= avgInputs && avgInputs < 25
+    classify "avg nr. inputs [25, 100)" $ 25 <= avgInputs && avgInputs < 100
+    classify ">= 100"                   $ 100 <= avgInputs
+    -- Classify the average number of outputs
+    classify "avg nr. outputs == 0"      $ 0 == avgOutputs
+    classify "avg nr. outputs == 1"      $ 1 == avgOutputs
+    classify "avg nr. outputs [2, 5)"    $ 2 <= avgOutputs && avgOutputs < 5
+    classify "avg nr. outputs [5, 10)"   $ 5 <= avgOutputs && avgOutputs < 10
+    classify "avg nr. outputs [10, 25)"  $ 10 <= avgOutputs && avgOutputs < 25
+    classify "avg nr. outputs [25, 100)" $ 25 <= avgOutputs && avgOutputs < 100
+    classify ">= 100"                    $ 100 <= avgOutputs
   success
-
-classifyTraces :: Int -> Int -> PropertyT IO ()
-classifyTraces ub step = do
-  tr <- forAll (trace @(UTXOW TxId) ub)
-  classify "empty"      $ traceLength tr == 0
-  classify "singleton"  $ traceLength tr == 1
-  traverse_ (classifyInterval tr) $ mkIntervals 2 (ub - 1) step
-  classify ubL $ traceLength tr == 1
-  where
-    ubL = fromString $ show ub
-
--- | Given a lower bound @low@,  an upper bound @high@ and a step size @step@
--- (both of which must be positive), divide the interval @[0, ub]@ into
--- sub-intervals of @step@ size.
---
--- If any of these values is negative the empty list will be returned.
-mkIntervals
-  :: Int
-  -- ^ Interval lower bound
-  -> Int
-  -- ^ Interval upper bound
-  -> Int
-  -- ^ Step size, used to divide the interval in sub-intervals of the same
-  -- length.
-  -> [(Int, Int)]
-mkIntervals low high step
-  | 0 <= low && low <= high && 0 < step =
-    [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
-  | otherwise = []
-  where
-    highNorm = high - low
-    n = highNorm `div` step + 1 `min` highNorm `mod` step
-
-classifyInterval :: Trace s -> (Int, Int) -> PropertyT IO ()
-classifyInterval tr (low, high) =
-  classify desc $! low <= traceLength tr && traceLength tr < high
-  where
-    -- Hedgehog's LabelName doesn't have a monoid instance at the moment.
-    desc = fromString $ "[" <> show low <> ", " <> show high <> ")"

@@ -12,7 +12,8 @@ import Test.Tasty.Ingredients.ConsoleReporter (UseColor(Auto))
 import Ledger.Delegation.Examples (deleg)
 import Ledger.Delegation.Properties (dcertsAreTriggered, rejectDupSchedDelegs)
 import Ledger.Pvbump.Properties (emptyPVUpdate, beginningsNoUpdate, lastProposal)
-import Ledger.UTxO.Properties (moneyIsConstant, prop_classifyTraces)
+import Ledger.UTxO.Properties (moneyIsConstant)
+import qualified Ledger.UTxO.Properties as UTxO
 
 main :: IO ()
 main = do
@@ -35,6 +36,6 @@ main = do
       ]
     , testGroup "UTxO Properties"
       [ testProperty "Money is constant" moneyIsConstant
-      , testProperty "Classification"    prop_classifyTraces
+      , testProperty "Classification" UTxO.tracesAreClassified
       ]
     ]
