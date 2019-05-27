@@ -22,4 +22,4 @@
     CLOSED: [2019-05-23 Thu 10:22]
  - [X] Issue #485
 *** Add Duncan's example as script-like DSL alternative
- - [ ] Issue #498
+ - [X] Issue #498

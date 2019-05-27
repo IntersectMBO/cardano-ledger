@@ -602,10 +602,6 @@ evalMultiSigScript (SingleSig vkh) vkhs =
 evalMultiSigScript (MultiSig m ts) vkhs =
     sum [ if evalMultiSigScript t vkhs then 1 else 0 | t <- ts ] >= m
 
-
-mkVKeyHashSet :: [Int] -> Set VKeyHash
-mkVKeyHashSet = Set.fromList . map VKeyHash
-
 verifyCases :: MultiSigScript -> [(Set VKeyHash, Bool)] -> Bool
 verifyCases script cases =
     and [ evalMultiSigScript script keyset == expected
@@ -658,6 +654,9 @@ library, it can be pursued instead.
 \label{sec:native-multi-sign}
 
 \begin{verbatim}
+mkVKeyHashSet :: [Int] -> Set VKeyHash
+mkVKeyHashSet = Set.fromList . map VKeyHash
+
 example1Of2 =
   MultiSig 1 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
 
