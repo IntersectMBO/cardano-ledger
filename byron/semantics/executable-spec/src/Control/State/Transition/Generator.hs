@@ -241,7 +241,7 @@ isTraceInInterval :: Trace s -> (Int, Int) -> PropertyT IO ()
 isTraceInInterval tr (low, high) =
   classify desc $! low <= traceLength tr && traceLength tr < high
   where
-    -- Hedgehog's LabelName doesn't have a monoid instance at the moment.
+    -- Hedgehog's LabelName doesn't have a monoid instance at the moment...
     desc = fromString $ "[" <> show low <> ", " <> show high <> ")"
 
 -- | Given a lower bound @low@,  an upper bound @high@ and a step size @step@
