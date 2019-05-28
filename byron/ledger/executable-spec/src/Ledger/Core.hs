@@ -127,6 +127,15 @@ minusSlot (Slot m) (SlotCount n)
   | m <= n    = Slot 0
   | otherwise = Slot $ m - n
 
+-- | Subtract a slot count from a slot.
+--
+-- In case the slot count is greater than the slot's index, it returns
+-- Nothing.
+minusSlotMaybe :: Slot -> SlotCount -> Maybe Slot
+minusSlotMaybe (Slot m) (SlotCount n)
+  | m < n     = Nothing
+  | otherwise = Just . Slot $ m - n
+
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving (Eq, Generic, Ord, Num, Show)
 

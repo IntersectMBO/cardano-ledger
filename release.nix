@@ -36,7 +36,7 @@ localLib.nix-tools.release-nix {
   #   libs.cardano-chain.x86_64-darwin -- will build the cardano-chain library on and for macOS
   #   libs.cardano-chain.x86_64-linux -- will build the cardano-chain library on and for linux
   #   libs.x86_64-pc-mingw32-cardano-chain.x86_64-linux -- will build the cardano-chain library on linux for windows.
-  #   tests.cs-ledger.ledger-delegation-test.x86_64-linux -- will build and run the ledger-delegation-test from the
+  #   tests.cs-ledger.ledger-test.x86_64-linux -- will build and run the ledger-test from the
   #                                                          cs-ledger package on linux.
   #
   required-name = "cardano-ledger-specs-required-checks";
@@ -55,8 +55,8 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.libs.cs-ledger.x86_64-darwin
     jobs.nix-tools.libs.cs-ledger.x86_64-linux
 
-    jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-darwin
-    jobs.nix-tools.tests.cs-ledger.ledger-delegation-test.x86_64-linux
+    jobs.nix-tools.tests.cs-ledger.ledger-test.x86_64-darwin
+    jobs.nix-tools.tests.cs-ledger.ledger-test.x86_64-linux
 
     # Windows cross-compilation targets
 
@@ -64,7 +64,7 @@ localLib.nix-tools.release-nix {
     jobs.nix-tools.libs.x86_64-pc-mingw32-cs-ledger.x86_64-linux
     jobs.nix-tools.libs.x86_64-pc-mingw32-small-steps.x86_64-linux
 
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-delegation-test.x86_64-linux
+    jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-test.x86_64-linux
     ];
 
 } (builtins.removeAttrs args ["cardano-ledger-specs"])

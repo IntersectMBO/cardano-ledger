@@ -51,7 +51,6 @@ module Ledger.Delegation
   , _dIStateKeyEpochDelegations
   , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
   , liveAfter
-  , k
   -- * State lens fields
   , slot
   , delegationMap

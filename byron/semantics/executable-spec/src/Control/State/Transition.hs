@@ -52,6 +52,12 @@ newtype IRC sts = IRC (Environment sts)
 -- | Context available to transition rules.
 newtype TRC sts = TRC (Environment sts, State sts, Signal sts)
 
+deriving instance
+  ( Show (Environment sts)
+  , Show (State sts)
+  , Show (Signal sts)
+  ) => Show (TRC sts)
+
 type family RuleContext (t :: RuleType) = (ctx :: Type -> Type) | ctx -> t where
   RuleContext 'Initial = IRC
   RuleContext 'Transition = TRC
