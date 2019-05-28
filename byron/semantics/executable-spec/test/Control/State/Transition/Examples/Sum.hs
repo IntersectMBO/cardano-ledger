@@ -47,19 +47,12 @@ instance HasTrace SUM where
 prop_Bounded :: Property
 prop_Bounded = property $ do
   tr <- forAll (trace @SUM 300)
-  classify "empty" $ traceLength tr == 0
-  classify "[1, 150)" $ 1 < traceLength tr && traceLength tr < 150
-  classify "[150, 300]" $ 150 < traceLength tr
   assert (lastState tr < 10)
 
 -- | Property that simply classifies the trace length distribution.
 prop_Classified :: Property
 prop_Classified = withTests 300 $ property $ do
-  tr <- forAll (trace @SUM 1000)
-  classify "empty"       $ traceLength tr == 0
-  classify "singleton"   $ traceLength tr == 1
-  classify "[2, 100)"    $ 2 < traceLength tr && traceLength tr < 100
-  classify "[100, 500)"  $ 100 < traceLength tr && traceLength tr < 500
-  classify "[500, 1000)" $ 500 < traceLength tr && traceLength tr < 1000
-  classify "1000"        $ traceLength tr == 1000
+  let tl = 1000
+  tr <- forAll (trace @SUM tl)
+  classifyTraceLength tr tl 100
   assert True

@@ -10,6 +10,8 @@ import Control.Lens ((^.))
 import Data.Bimap (keys)
 import Data.Set (fromList)
 
+import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
+import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
 import Control.State.Transition
   ( Embed
   , Environment
@@ -37,7 +39,7 @@ import Ledger.Delegation
   , _dSEnvSlot
   )
 import Ledger.Update (PParams, maxBkSz, UPIState)
-import Ledger.UTxO (UTxO, TxId, UTXOWS, UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
+import Ledger.UTxO (UTxO, TxId)
 
 import Cardano.Spec.Chain.STS.Block
 

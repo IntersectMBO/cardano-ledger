@@ -24,14 +24,17 @@ flag development
 library
   hs-source-dirs:      src
   exposed-modules:     Hedgehog.Gen.Aux
-                       Ledger.Core
-                     , Ledger.Core.Generator
+                     , Ledger.Core
+                     , Ledger.Core.Generators
                      , Ledger.Delegation
                      , Ledger.GlobalParams
                      , Ledger.Update
-                     , Ledger.Update.Generator
+                     , Ledger.Update.Generators
                      , Ledger.UTxO
                      , Ledger.UTxO.Generators
+                     , Cardano.Ledger.Spec.STS.UTXO
+                     , Cardano.Ledger.Spec.STS.UTXOW
+                     , Cardano.Ledger.Spec.STS.UTXOWS
   build-depends:       base >=4.11 && <5
                      , bimap
                      , bytestring
@@ -82,12 +85,13 @@ test-suite doctests
   if (!flag(development))
     ghc-options:      -Werror
 
-test-suite ledger-test
+test-suite ledger-rules-test
   hs-source-dirs: test
   main-is: Main.hs
   other-modules: Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.Pvbump.Properties
+               , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends: base

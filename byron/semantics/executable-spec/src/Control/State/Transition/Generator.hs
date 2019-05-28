@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -29,13 +30,19 @@ module Control.State.Transition.Generator
   , isTrivial
   , sampleMaxTraceSize
   , randomTrace
+  -- * Trace classification
+  , classifyTraceLength
+  , isTraceInInterval
+  , mkIntervals
   )
 where
 
 import Control.Monad (forM)
 import Control.Monad.Trans.Maybe (MaybeT)
+import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity)
-import Hedgehog (Gen)
+import Data.String (fromString)
+import Hedgehog (Gen, PropertyT, classify)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Hedgehog.Range (Size(Size))
@@ -132,7 +139,7 @@ genTrace ub env st0 aSigGen = do
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
-            Left _     -> loop (d - 1) sti acc
+            Left _err  -> loop (d - 1) sti acc
             Right sti' -> loop (d - 1) sti' (sigTree : acc)
 
     interleaveSigs
@@ -200,6 +207,95 @@ randomTrace
   => Int
   -> IO (Trace s)
 randomTrace ub = Gen.sample (trace ub)
+
+--------------------------------------------------------------------------------
+-- Trace classification
+--------------------------------------------------------------------------------
+
+-- | Classify the trace length as either:
+--
+-- - being empty
+-- - being a singleton
+-- - having the given maximum size
+-- - belonging to one of the intervals between 2 and the maximum size - 1. The
+--   number of intervals are determined by the @step@ parameter.
+--
+classifyTraceLength
+  :: Trace s
+  -> Int
+  -- ^ Maximum size of the traces
+  -> Int
+  -- ^ Steps used to divide the interval
+  -> PropertyT IO ()
+classifyTraceLength tr ub step = do
+  classify "empty"      $ traceLength tr == 0
+  classify "singleton"  $ traceLength tr == 1
+  traverse_ (isTraceInInterval tr) $ mkIntervals 2 (ub - 1) step
+  classify ubL $ traceLength tr == 1
+  where
+    ubL = fromString $ show ub
+
+-- | Classify the trace as belonging to the given `(low, high)` interval if its
+-- length is between the `(min, max)` range passed as parameter.
+isTraceInInterval :: Trace s -> (Int, Int) -> PropertyT IO ()
+isTraceInInterval tr (low, high) =
+  classify desc $! low <= traceLength tr && traceLength tr < high
+  where
+    -- Hedgehog's LabelName doesn't have a monoid instance at the moment...
+    desc = fromString $ "[" <> show low <> ", " <> show high <> ")"
+
+-- | Given a lower bound @low@,  an upper bound @high@ and a step size @step@
+-- (both of which must be positive), divide the interval @[0, ub]@ into
+-- sub-intervals of @step@ size.
+--
+-- If any of these values is negative the empty list will be returned.
+--
+-- Examples:
+--
+-- >>> mkIntervals 0 0 0 :: [(Int, Int)]
+-- []
+--
+-- >>> mkIntervals 0 10 2 :: [(Int, Int)]
+-- [(0,2),(2,4),(4,6),(6,8),(8,10)]
+--
+-- >>> mkIntervals 1 10 2 :: [(Int, Int)]
+-- [(1,3),(3,5),(5,7),(7,9),(9,10)]
+--
+--
+-- >>> mkIntervals 3 10 3 :: [(Int, Int)]
+-- [(3,6),(6,9),(9,10)]
+--
+-- >>> mkIntervals 5 2 3 :: [(Int, Int)]
+-- []
+--
+-- >>> mkIntervals (-1) 10 3 :: [(Int, Int)]
+-- []
+--
+-- >>> mkIntervals 1 (-10) 3 :: [(Int, Int)]
+-- []
+--
+-- >>> mkIntervals 1 1000 (-100) :: [(Int, Int)]
+-- []
+--
+mkIntervals
+  :: Integral n
+  => n
+  -- ^ Interval lower bound
+  -> n
+  -- ^ Interval upper bound
+  -> n
+  -- ^ Step size, used to divide the interval in sub-intervals of the same
+  -- length.
+  -> [(n, n)]
+mkIntervals low high step
+  | 0 <= low && low <= high && 0 < step =
+    [(low + i * step, high `min` (low + (i + 1) * step)) | i <- [0 .. n - 1]]
+  | otherwise = []
+  where
+    highNorm = high - low
+    n = highNorm `div` step + 1 `min` (highNorm `mod` step)
+
+
 
 --------------------------------------------------------------------------------
 -- Temporary definitions till hedgehog exposes these

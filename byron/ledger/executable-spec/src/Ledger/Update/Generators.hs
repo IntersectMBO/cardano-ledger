@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections       #-}
 
 -- | Generators for the 'Ledger.Update' values.
-module Ledger.Update.Generator
+module Ledger.Update.Generators
   ( pparamsGen
   , protVerGen
   -- PVBUMP environment generators
@@ -21,7 +21,7 @@ import           Hedgehog.Gen.Aux (doubleInc)
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
-import           Ledger.Core.Generator (slotGen)
+import           Ledger.Core.Generators (slotGen)
 import           Ledger.GlobalParams (k)
 import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
 import           Numeric.Natural (Natural)
@@ -36,6 +36,9 @@ protVerGen =
     <*> Gen.integral (Range.linear (0 :: Natural) 100)
 
 -- | Generates valid protocol parameters
+--
+-- TODO: The protocol parameters still need to be aligned with the formal
+-- spec.
 pparamsGen :: Gen PParams
 pparamsGen =
   (\((maxBkSz, maxHdrSz, maxTxSz, maxPropSz) :: (Natural, Natural, Natural, Natural))
@@ -73,25 +76,28 @@ pparamsGen =
   -- | Generates maxBkSz, maxHdrSz, maxTxSz and maxPropSz
   szGen :: Gen (Natural, Natural, Natural, Natural)
   szGen = do
-    bk <- Gen.integral (Range.linear 1 hi)
-    (,,,)
-      <$> Gen.constant bk
-      <*> gRange bk
-      <*> gRange bk
-      <*> gRange bk
+    bkSize <- Gen.integral (Range.linear 1 hi)
+    (bkSize,,,)
+      <$> gRange bkSize
+      <*> gRange bkSize
+      <*> gRange bkSize
    where
-    lo = 1    :: Natural
-    hi = 1000 :: Natural
+    lo = 1       :: Natural
+    -- In mainnet the maximum header size is set to 2000000 and the maximum
+    -- block size is also set to 2000000, so we have to make sure we cover
+    -- those values here. The upper bound is arbitrary though.
+    hi = 4000000 :: Natural
     gRange :: Natural -> Gen Natural
     gRange upper = Gen.integral (Range.linear lo upper)
 
   -- | Generates bkSlotsPerEpoch, upTtl and stableAfter
   slotBlockGen :: Gen (SlotCount, SlotCount, BlockCount)
-  slotBlockGen = do
-    perEpoch <- SlotCount <$> Gen.word64 (Range.linear 1 21600)
-    (,,)
-      <$> Gen.constant perEpoch
-      <*> (SlotCount  <$> gRange perEpoch)
+  slotBlockGen =
+    -- The number of slots per epoch is computed from 'k':
+    -- slots per-epoch = k * 10
+    let perEpoch = SlotCount $ unBlockCount k *  10 in
+    (perEpoch,,)
+      <$> (SlotCount  <$> gRange perEpoch)
       <*> (BlockCount <$> gRange perEpoch)
    where
     gRange :: SlotCount -> Gen Word64

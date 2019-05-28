@@ -24,6 +24,7 @@ module Control.State.Transition.Trace
   , preStatesAndSignals
   , traceLength
   , lastState
+  , firstAndLastState
   , closure
   )
 where
@@ -105,6 +106,25 @@ lastState :: Trace s -> State s
 lastState tr = case tr ^. traceTrans of
   (st, _):_ -> st
   _ -> tr ^. traceInitState
+
+-- | Return the first and last state of the trace.
+--
+-- The first state is returned in the first component of the result tuple.
+--
+-- Examples:
+--
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> firstAndLastState tr0
+-- (0,0)
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> firstAndLastState tr0123
+-- (0,3)
+--
+firstAndLastState :: Trace s -> (State s, State s)
+firstAndLastState tr = (_traceInitState tr, lastState tr)
+
 
 data TraceOrder = NewestFirst | OldestFirst deriving (Eq)
 
@@ -212,21 +232,46 @@ preStatesAndSignals NewestFirst tr
 --
 -- If any of the signals cannot be applied, then it is discarded, and the next
 -- signal is tried.
+--
+-- >>> :set -XTypeFamilies
+-- >>> :set -XTypeApplications
+-- >>> import Control.State.Transition (initialRules, transitionRules, judgmentContext)
+-- >>> :{
+-- data ADDER
+-- instance STS ADDER where
+--   type Environment ADDER = ()
+--   type State ADDER = Int
+--   type Signal ADDER = Int
+--   data PredicateFailure ADDER = NoFailuresPossible deriving (Eq, Show)
+--   initialRules = [ pure 0 ]
+--   transitionRules =
+--     [ do
+--         TRC ((), st, inc) <- judgmentContext
+--         pure $! st + inc
+--     ]
+-- :}
+--
+-- >>> closure @ADDER () 0 [3, 2, 1]
+-- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = [(6,3),(3,2),(1,1)]}
+--
+-- >>> closure @ADDER () 10 [-3, -2, -1]
+-- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = [(4,-3),(7,-2),(9,-1)]}
+--
 closure
   :: forall s
    . STS s
    => Environment s
    -> State s
    -> [Signal s]
+   -- ^ List of signals to apply, where the newest signal comes first.
    -> Trace s
-closure env st0 sigs = mkTrace env st0 $ loop st0 sigs []
+closure env st0 sigs = mkTrace env st0 $ loop st0 (reverse sigs) []
   where
-    loop _ [] acc =
-      acc
+    loop _ [] acc = acc
     loop sti (sig : sigs') acc =
       case applySTS @s (TRC(env, sti, sig)) of
         Left _ -> loop sti sigs' acc
-        Right sti' -> loop sti sigs' ((sti', sig) : acc)
+        Right sti' -> loop sti' sigs' ((sti', sig) : acc)
 
 --------------------------------------------------------------------------------
 -- Minimal DSL to specify expectations on traces

@@ -47,7 +47,7 @@
             (hsPkgs.buildPackages.doctest-discover or (pkgs.buildPackages.doctest-discover))
             ];
           };
-        "ledger-test" = {
+        "ledger-rules-test" = {
           depends = [
             (hsPkgs.base)
             (hsPkgs.bimap)

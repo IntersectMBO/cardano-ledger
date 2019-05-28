@@ -52,7 +52,7 @@ library
   if (!flag(development))
     ghc-options:       -Werror
 
-test-suite chain-spec-test
+test-suite chain-rules-test
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Cardano.Spec.Chain.STS.Properties
