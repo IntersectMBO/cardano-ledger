@@ -149,6 +149,17 @@ instance HasTypeReps BlockCount
 newtype Addr = Addr VKey
   deriving (Show, Eq, Ord, HasOwner)
 
+-- | Create an address from a number.
+mkAddr :: Natural -> Addr
+mkAddr = Addr . VKey . Owner
+
+instance BA.ByteArrayAccess Addr where
+  length        = BA.length . BS.pack . show
+  withByteArray = BA.withByteArray . BS.pack . show
+
+instance HasHash Addr where
+  hash = Crypto.hash
+
 -- | A unit of value held by a UTxO.
 --
 newtype Lovelace = Lovelace

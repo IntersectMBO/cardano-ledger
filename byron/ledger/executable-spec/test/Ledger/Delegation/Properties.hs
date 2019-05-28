@@ -1,12 +1,15 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+
 -- | Properties of the delegation traces induced by the transition systems
 -- associated with this aspect of the ledger.
 module Ledger.Delegation.Properties
   ( dcertsAreTriggered
   , rejectDupSchedDelegs
+  , tracesAreClassified
   )
 where
 
@@ -24,6 +27,7 @@ import Hedgehog
   , assert
   , forAll
   , property
+  , success
   , withTests
   )
 import Hedgehog.Gen (integral)
@@ -49,6 +53,7 @@ import Control.State.Transition
 import Control.State.Transition.Generator
   ( HasSizeInfo
   , HasTrace
+  , classifyTraceLength
   , initEnvGen
   , isTrivial
   , nonTrivialTrace
@@ -104,8 +109,9 @@ import Ledger.Delegation
   , scheduledDelegations
   , slot
   )
-import Ledger.Core.Generator (vkGen)
+
 import Ledger.GlobalParams (k)
+import Ledger.Core.Generators (vkGen)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -304,3 +310,11 @@ rejectDupSchedDelegs = property $ do
         Left res -> res
         Right _ -> []
   assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` pfs
+
+-- | Classify the traces.
+tracesAreClassified :: Property
+tracesAreClassified = property $ do
+  let (tl, step) = (1000, 100)
+  tr <- forAll (trace @DELEG tl)
+  classifyTraceLength tr tl step
+  success

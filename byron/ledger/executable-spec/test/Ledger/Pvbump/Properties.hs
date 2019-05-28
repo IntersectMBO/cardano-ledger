@@ -4,7 +4,7 @@ module Ledger.Pvbump.Properties where
 
 import           Control.State.Transition (applySTS, TRC(..))
 import           Data.Maybe (fromMaybe)
-import           Ledger.Update.Generator
+import           Ledger.Update.Generators
 import           Hedgehog
 import           Ledger.Core (BlockCount(..), SlotCount(..), minusSlotMaybe)
 import           Ledger.GlobalParams (k)
