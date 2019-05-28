@@ -169,7 +169,7 @@ instance HasTrace CHAIN where
             <$> gCurrentSlot
             <*> pure initialUTxO
             <*> initEnvGen @DELEG
-            <*> UpdateGen.pps
+            <*> UpdateGen.pparamsGen
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.

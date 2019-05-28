@@ -117,7 +117,7 @@ traceAddrs = mkAddr <$> [0 .. 10]
 
 instance HasTrace (UTXOW TxId) where
   initEnvGen
-    = UTxOEnv <$> genUTxO <*> UpdateGen.pps
+    = UTxOEnv <$> genUTxO <*> UpdateGen.pparamsGen
     where
       genUTxO = do
         txOuts <- UTxOGen.genInitialTxOuts traceAddrs
@@ -128,7 +128,7 @@ instance HasTrace (UTXOW TxId) where
 
   sigGen _e st = do
     tx <- UTxOGen.tx traceAddrs (utxo st)
-    let wits = witnessForTxIn tx (utxo st) <$> (inputs tx)
+    let wits = witnessForTxIn tx (utxo st) <$> inputs tx
     pure $ TxWits tx wits
 
 witnessForTxIn :: Ord id => Tx id -> UTxO id -> TxIn id -> Wit id
