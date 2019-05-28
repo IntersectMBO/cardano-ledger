@@ -12,40 +12,52 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Header
-  ( Header
+  (
+  -- * Header
+    Header
   , AHeader(..)
+
+  -- * Header Constructors
+  , mkHeader
+  , mkHeaderExplicit
+
+  -- * Header Accessors
   , headerProtocolMagicId
   , headerPrevHash
   , headerProof
-  , mkHeader
-  , mkHeaderExplicit
-  , wrapHeaderBytes
-
-  -- * Accessors
   , headerSlot
   , headerIssuer
   , headerLength
   , headerDifficulty
   , headerToSign
-  , recoverSignedBytes
+
+  -- * Header Binary Serialization
+  , toCBORHeader
+  , toCBORHeaderToHash
+  , fromCBORAHeader
+  , fromCBORHeader
+  , fromCBORHeaderToHash
+  , wrapHeaderBytes
+
+  -- * Header Formatting
+  , renderHeader
 
   -- * Boundary Header
   , dropBoundaryHeader
   , wrapBoundaryBytes
-  , toCBORHeader
-  , toCBORHeader'
-  , fromCBORHeader
-  , fromCBORHeader'
-  , fromCBORAHeader
+
+  -- * HeaderHash
   , HeaderHash
   , headerHashF
   , hashHeader
-  , BlockSignature(..)
-  , ToSign(..)
-
-  -- * Utility functions
   , genesisHeaderHash
-  , renderHeader
+
+  -- * BlockSignature
+  , BlockSignature(..)
+
+  -- * ToSign
+  , ToSign(..)
+  , recoverSignedBytes
   )
 where
 
@@ -139,126 +151,10 @@ data AHeader a = AHeader
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   } deriving (Eq, Show, Generic, NFData, Functor)
 
-headerProtocolMagicId :: AHeader a -> ProtocolMagicId
-headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
 
-headerPrevHash :: AHeader a -> HeaderHash
-headerPrevHash = unAnnotated . aHeaderPrevHash
-
-headerSlot :: AHeader a -> FlatSlotId
-headerSlot = unAnnotated . aHeaderSlot
-
-headerDifficulty :: AHeader a -> ChainDifficulty
-headerDifficulty = unAnnotated . aHeaderDifficulty
-
-headerProof :: AHeader a -> Proof
-headerProof = unAnnotated . aHeaderProof
-
-instance B.Buildable (WithEpochSlots Header) where
-  build (WithEpochSlots es header) = renderHeader es header
-
-renderHeader :: EpochSlots -> Header -> Builder
-renderHeader es header = bprint
-  ( "Header:\n"
-  . "    hash: " . hashHexF . "\n"
-  . "    previous block: " . hashHexF . "\n"
-  . "    slot: " . build . "\n"
-  . "    difficulty: " . int . "\n"
-  . "    protocol: v" . build . "\n"
-  . "    software: " . build . "\n"
-  . "    genesis key: " . build . "\n"
-  . "    signature: " . build
-  )
-  headerHash
-  (headerPrevHash header)
-  (headerSlot header)
-  (unChainDifficulty $ headerDifficulty header)
-  (headerProtocolVersion header)
-  (headerSoftwareVersion header)
-  (headerGenesisKey header)
-  (headerSignature header)
- where
-  headerHash :: HeaderHash
-  headerHash = hashHeader es header
-
--- | Encode a header, without taking in to account deprecated epoch boundary
--- blocks.
-toCBORHeader' :: EpochSlots -> Header -> Encoding
-toCBORHeader' es h =
-  encodeListLen 5
-    <> toCBOR (headerProtocolMagicId h)
-    <> toCBOR (headerPrevHash h)
-    <> toCBOR (headerProof h)
-    <> (  encodeListLen 4
-       <> toCBOR (unflattenSlotId es $ headerSlot h)
-       <> toCBOR (headerGenesisKey h)
-       <> toCBOR (headerDifficulty h)
-       <> toCBOR (headerSignature h)
-       )
-    <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
-
-toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
-toCBORBlockVersions pv sv =
-  encodeListLen 4
-    <> toCBOR pv
-    <> toCBOR sv
-    -- Encoding of empty Attributes
-    <> toCBOR (mempty :: Map Word8 LByteString)
-    -- Hash of the encoding of empty ExtraBodyData
-    <> toCBOR (hashRaw "\129\160")
-
-fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
-fromCBORBlockVersions = do
-  enforceSize "BlockVersions" 4
-  (,) <$> fromCBOR <*> fromCBOR <* dropEmptyAttributes <* dropBytes
-
-fromCBORHeader' :: EpochSlots -> Decoder s Header
-fromCBORHeader' epochSlots = void <$> fromCBORAHeader epochSlots
-
-fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
-fromCBORAHeader epochSlots = do
-  Annotated
-    ( pm
-    , prevHash
-    , proof
-    , (slot, genesisKey, difficulty, signature)
-    , Annotated (protocolVersion, softwareVersion) extraByteSpan
-    )
-    byteSpan <-
-    annotatedDecoder $ do
-      enforceSize "Header" 5
-      (,,,,)
-        <$> fromCBORAnnotated
-        <*> fromCBORAnnotated
-        <*> fromCBORAnnotated
-        <*> do
-              enforceSize "ConsensusData" 4
-              (,,,)
-                -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId`
-                -- used in 'AConsensusData' is encoded as a epoch and slot-count
-                -- pair.
-                <$> fmap (first (flattenSlotId epochSlots)) fromCBORAnnotated
-                <*> fromCBOR
-                <*> fromCBORAnnotated
-                <*> fromCBOR
-        <*> annotatedDecoder fromCBORBlockVersions
-  pure $ AHeader
-    pm
-    prevHash
-    slot
-    difficulty
-    protocolVersion
-    softwareVersion
-    proof
-    genesisKey
-    signature
-    byteSpan
-    extraByteSpan
-
-instance Decoded (AHeader ByteString) where
-  type BaseType (AHeader ByteString) = Header
-  recoverBytes = headerAnnotation
-
+--------------------------------------------------------------------------------
+-- Header Constructors
+--------------------------------------------------------------------------------
 
 -- | Smart constructor for 'Header'
 mkHeader
@@ -289,10 +185,6 @@ mkHeader pm prevHeader epochSlots = mkHeaderExplicit
     (const $ ChainDifficulty 0)
     (succ . headerDifficulty)
     prevHeader
-
--- | Extract the genesis hash and cast it into a header hash.
-genesisHeaderHash :: GenesisHash -> HeaderHash
-genesisHeaderHash = coerce . unGenesisHash
 
 -- | Make a 'Header' for a given slot, with a given body, parent hash,
 --   and difficulty. This takes care of some signing and consensus data.
@@ -338,6 +230,24 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
   epochAndSlotCount = unflattenSlotId epochSlots slotId
 
 
+--------------------------------------------------------------------------------
+-- Header Accessors
+--------------------------------------------------------------------------------
+
+headerProtocolMagicId :: AHeader a -> ProtocolMagicId
+headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
+
+headerPrevHash :: AHeader a -> HeaderHash
+headerPrevHash = unAnnotated . aHeaderPrevHash
+
+headerSlot :: AHeader a -> FlatSlotId
+headerSlot = unAnnotated . aHeaderSlot
+
+headerDifficulty :: AHeader a -> ChainDifficulty
+headerDifficulty = unAnnotated . aHeaderDifficulty
+
+headerProof :: AHeader a -> Proof
+headerProof = unAnnotated . aHeaderProof
 
 headerIssuer :: AHeader a -> VerificationKey
 headerIssuer h = case headerSignature h of
@@ -355,20 +265,140 @@ headerToSign epochSlots h = ToSign
 headerLength :: AHeader ByteString -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
 
--- | Encode a 'Header' accounting for deprecated epoch boundary blocks
-toCBORHeader :: EpochSlots -> Header -> Encoding
-toCBORHeader epochSlots h =
-  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBORHeader' epochSlots h
 
-fromCBORHeader :: EpochSlots -> Decoder s (Maybe Header)
-fromCBORHeader epochSlots = do
+--------------------------------------------------------------------------------
+-- Header Binary Serialization
+--------------------------------------------------------------------------------
+
+-- | Encode a header, without taking in to account deprecated epoch boundary
+-- blocks.
+toCBORHeader :: EpochSlots -> Header -> Encoding
+toCBORHeader es h =
+  encodeListLen 5
+    <> toCBOR (headerProtocolMagicId h)
+    <> toCBOR (headerPrevHash h)
+    <> toCBOR (headerProof h)
+    <> (  encodeListLen 4
+       <> toCBOR (unflattenSlotId es $ headerSlot h)
+       <> toCBOR (headerGenesisKey h)
+       <> toCBOR (headerDifficulty h)
+       <> toCBOR (headerSignature h)
+       )
+    <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
+
+toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
+toCBORBlockVersions pv sv =
+  encodeListLen 4
+    <> toCBOR pv
+    <> toCBOR sv
+    -- Encoding of empty Attributes
+    <> toCBOR (mempty :: Map Word8 LByteString)
+    -- Hash of the encoding of empty ExtraBodyData
+    <> toCBOR (hashRaw "\129\160")
+
+fromCBORHeader :: EpochSlots -> Decoder s Header
+fromCBORHeader epochSlots = void <$> fromCBORAHeader epochSlots
+
+fromCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
+fromCBORAHeader epochSlots = do
+  Annotated
+    ( pm
+    , prevHash
+    , proof
+    , (slot, genesisKey, difficulty, signature)
+    , Annotated (protocolVersion, softwareVersion) extraByteSpan
+    )
+    byteSpan <-
+    annotatedDecoder $ do
+      enforceSize "Header" 5
+      (,,,,)
+        <$> fromCBORAnnotated
+        <*> fromCBORAnnotated
+        <*> fromCBORAnnotated
+        <*> do
+              enforceSize "ConsensusData" 4
+              (,,,)
+                -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId`
+                -- used in 'AConsensusData' is encoded as a epoch and slot-count
+                -- pair.
+                <$> fmap (first (flattenSlotId epochSlots)) fromCBORAnnotated
+                <*> fromCBOR
+                <*> fromCBORAnnotated
+                <*> fromCBOR
+        <*> annotatedDecoder fromCBORBlockVersions
+  pure $ AHeader
+    pm
+    prevHash
+    slot
+    difficulty
+    protocolVersion
+    softwareVersion
+    proof
+    genesisKey
+    signature
+    byteSpan
+    extraByteSpan
+
+fromCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
+fromCBORBlockVersions = do
+  enforceSize "BlockVersions" 4
+  (,) <$> fromCBOR <*> fromCBOR <* dropEmptyAttributes <* dropBytes
+
+instance Decoded (AHeader ByteString) where
+  type BaseType (AHeader ByteString) = Header
+  recoverBytes = headerAnnotation
+
+-- | Encode a 'Header' accounting for deprecated epoch boundary blocks
+--
+--   This encoding is only used when hashing the header for backwards
+--   compatibility, but should not be used when serializing a header within a
+--   block
+toCBORHeaderToHash :: EpochSlots -> Header -> Encoding
+toCBORHeaderToHash epochSlots h =
+  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBORHeader epochSlots h
+
+fromCBORHeaderToHash :: EpochSlots -> Decoder s (Maybe Header)
+fromCBORHeaderToHash epochSlots = do
   enforceSize "Header" 2
   fromCBOR @Word >>= \case
     0 -> do
       void dropBoundaryHeader
       pure Nothing
-    1 -> Just <$!> fromCBORHeader' epochSlots
+    1 -> Just <$!> fromCBORHeader epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+
+
+--------------------------------------------------------------------------------
+-- Header Formatting
+--------------------------------------------------------------------------------
+
+instance B.Buildable (WithEpochSlots Header) where
+  build (WithEpochSlots es header) = renderHeader es header
+
+renderHeader :: EpochSlots -> Header -> Builder
+renderHeader es header = bprint
+  ( "Header:\n"
+  . "    hash: " . hashHexF . "\n"
+  . "    previous block: " . hashHexF . "\n"
+  . "    slot: " . build . "\n"
+  . "    difficulty: " . int . "\n"
+  . "    protocol: v" . build . "\n"
+  . "    software: " . build . "\n"
+  . "    genesis key: " . build . "\n"
+  . "    signature: " . build
+  )
+  headerHash
+  (headerPrevHash header)
+  (headerSlot header)
+  (unChainDifficulty $ headerDifficulty header)
+  (headerProtocolVersion header)
+  (headerSoftwareVersion header)
+  (headerGenesisKey header)
+  (headerSignature header)
+ where
+  headerHash :: HeaderHash
+  headerHash = hashHeader es header
+
 
 --------------------------------------------------------------------------------
 -- HeaderHash
@@ -380,6 +410,10 @@ type HeaderHash = Hash Header
 -- | Specialized formatter for 'HeaderHash'
 headerHashF :: Format r (HeaderHash -> r)
 headerHashF = build
+
+-- | Extract the genesis hash and cast it into a header hash.
+genesisHeaderHash :: GenesisHash -> HeaderHash
+genesisHeaderHash = coerce . unGenesisHash
 
 -- | These bytes must be prepended when hashing raw boundary header data
 --
@@ -394,9 +428,10 @@ wrapHeaderBytes = mappend "\130\SOH"
 -- | Hash the serialised representation of a `Header`
 --
 --   For backwards compatibility we have to take the hash of the header
---   serialised with 'toCBORHeader'
+--   serialised with 'toCBORHeaderToHash'
 hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeader es
+hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash es
+
 
 --------------------------------------------------------------------------------
 -- BoundaryHeader

@@ -153,7 +153,7 @@ annotateBlock epochSlots block =
       Concrete.ABOBBlock bk -> bk
       Concrete.ABOBBoundary _ ->
         panic "This function should have decoded a block."
-  where bytes = Binary.serializeEncoding (Concrete.toCBORBlock epochSlots block)
+  where bytes = Binary.serializeEncoding (Concrete.toCBORABOBBlock epochSlots block)
 
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --
