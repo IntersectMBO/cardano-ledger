@@ -476,12 +476,12 @@ according to Figure~\ref{fig:types_defs_multi}.
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \TxIn & \text{VKey Tx inputs}\\
+    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{VKey Tx inputs}\\
     \fun{txinsVKey} & ~\var{txins}~\var{utxo} =
     \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrVKey \times Coin))
     \\
     \\
-    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \TxIn & \text{Script Tx inputs}\\
+    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{Script Tx inputs}\\
     \fun{txinsScript} & ~\var{txins}~\var{utxo} =
                         \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
     \\
