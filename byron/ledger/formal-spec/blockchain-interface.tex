@@ -50,7 +50,7 @@
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:delegation-interface}
+    \label{eq:rule:delegation-interface-init}
     \inference
     {
       {\left(\begin{array}{l}
@@ -59,18 +59,18 @@
         s
       \end{array}\right)}
       \vdash
-      \trans{sdeleg}{}
+      \trans{\hyperref[eq:sdeleg-bootstrap]{sdeleg}}{}
       {\left(
         \begin{array}{l}
-          \epsilon\\
-          \emptyset
+          \var{sds_0}\\
+          \var{eks_0}
         \end{array}
       \right)}
       &
       {
         \mathcal{K}
         \vdash
-        \trans{adeleg}{}
+        \trans{\hyperref[eq:adeleg-bootstrap]{adeleg}}{}
         \left(
           \begin{array}{l}
             \var{dms_0}\\
@@ -92,8 +92,8 @@
           \begin{array}{l}
             \var{dms_0}\\
             \var{dws_0}\\
-            \epsilon\\
-            \emptyset
+            \var{sds_0}\\
+            \var{eks_0}
           \end{array}
         \right)
       }
