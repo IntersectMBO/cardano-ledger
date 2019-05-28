@@ -140,7 +140,7 @@ UTxO does not contain any future outputs, which is a reasonable constraint.
     \forall \txs_i \cdot \dom~(\txouts{\txs_i}) \cap \dom~(\var{utxo_0}) = \emptyset
   $$
 
-  we have
+  we have:
 
   $$
   \forall \txs_i,~\txs_j \cdot i < j \Rightarrow \txins{\txs_i} \cap \txins{\txs_j} = \emptyset
@@ -222,8 +222,12 @@ Property~\ref{PVBUMP-empty-future-adopt} states that when no proposals are
 available, the system remains in the same state it started with.
 
 \begin{property}[PVBUMP no change on empty future adoptions]\label{PVBUMP-empty-future-adopt}
-  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
-    that $fads = \epsilon$:}
+  For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
+  that:
+
+  $$fads = \epsilon$$
+
+  we have:
 
   $$
   \left(
@@ -251,8 +255,11 @@ Property~\ref{prop:pvbump-early-on} states that early on in the lifetime
 of the blockchain the PVBUMP system remains in the same state it started with.
 
 \begin{property}[PVBUMP early on]\label{prop:pvbump-early-on}
-  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
-    that $s_n \leq 2 \cdot k$:}
+  For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such that:
+
+  $$s_n \leq 2 \cdot k$$
+
+  we have:
 
   $$
   \left(
@@ -284,14 +291,18 @@ protocol version and protocol parameters that is after a slot with an index
 $2 \cdot k$.
 
 \begin{property}[PVBUMP last proposal]\label{prop:pvbump-last-proposal}
-  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
-    that $s_n > 2 \cdot k$ and}
+  For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such that:
+
+  $$s_n > 2 \cdot k$$
+
+  and
 
   $$
   \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 2 \cdot k]
   \restrictdom \var{fads}
   $$
-  \textrm{ we have: }
+
+  we have:
 
   $$
   \left(

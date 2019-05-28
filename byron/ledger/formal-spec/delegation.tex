@@ -262,7 +262,9 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
       \var{dws_0} \leteq \Set{k \mapsto 0}{k \in \mathcal{K}}
     }
     {
-      \mathcal{K}
+      \left(
+        \mathcal{K}
+      \right)
       \vdash
       \trans{adeleg}{}
       \left(
@@ -280,7 +282,7 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
       \var{vk_d} \notin \range~\var{dms} & (\var{vk_s} \mapsto s_p \in \var{dws} \Rightarrow s_p < s)
     }
     {
-      \mathcal{K}
+      \left(\mathcal{K}\right)
       \vdash
       \left(
       \begin{array}{r}
@@ -303,7 +305,7 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
     {\var{vk_d} \in \range~\var{dms} \vee (\var{vk_s} \mapsto s_p  \in \var{dws}  \wedge s \leq s_p)
     }
     {
-      \mathcal{K}
+      \left(\mathcal{K}\right)
       \vdash
       \left(
       \begin{array}{r}

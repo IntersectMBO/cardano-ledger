@@ -272,14 +272,14 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
     \label{eq:rule:upi-reg-interface}
     \inference
     {
-      {
+      {\left(
         \begin{array}{l}
           \var{pv}\\
           \var{pps}\\
           \var{avs}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -374,14 +374,14 @@ given application name $\var{an}$.
     \inference
     {
       \var{cfmThd} \mapsto q \in \var{pps}\\
-      {
+      {\left(
         \begin{array}{l}
           s_n\\
           q \cdot \var{ngk}\\
           \var{\dom~pws}\\
           \var{dms}
         \end{array}
-      }
+      \right)}
       \vdash
       {
         \left(
@@ -817,7 +817,7 @@ expires.
       } &\var{pv} = \var{pv'}
     }
     {
-      s_n
+      (s_n)
       \vdash
       {
         \left(
@@ -880,7 +880,7 @@ expires.
       & \var{pv} \neq \var{pv'}
     }
     {
-      s_n
+      (s_n)
       \vdash
       {
         \left(
