@@ -26,7 +26,7 @@ described in \cite{small_step_semantics}.
   \item For all $e \in \Gamma$, $s \in S$, $(e, s, \epsilon, s)$ is a valid
     trace of $L$.
 
-  \item If $(e, s, \txs s')$ is a valid trace, and
+  \item If $(e, s, \txs, s')$ is a valid trace, and
     $e \vdash s' \trans{}{\var{t}} s''$ is a valid transition according to the
     rules of $L$, then $(e, s, \txs; t, s'')$ is also a valid trace.
   \end{itemize}

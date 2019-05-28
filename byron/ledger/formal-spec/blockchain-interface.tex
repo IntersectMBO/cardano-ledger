@@ -50,6 +50,57 @@
 
 \begin{figure}[htb]
   \begin{equation}
+    \label{eq:rule:delegation-interface-init}
+    \inference
+    {
+      {\left(\begin{array}{l}
+       \mathcal{K}\\
+        e\\
+        s
+      \end{array}\right)}
+      \vdash
+      \trans{\hyperref[eq:sdeleg-bootstrap]{sdeleg}}{}
+      {\left(
+        \begin{array}{l}
+          \var{sds_0}\\
+          \var{eks_0}
+        \end{array}
+      \right)}
+      &
+      {
+        \mathcal{K}
+        \vdash
+        \trans{\hyperref[eq:adeleg-bootstrap]{adeleg}}{}
+        \left(
+          \begin{array}{l}
+            \var{dms_0}\\
+            \var{dws_0}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {\left(\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s
+      \end{array}\right)}
+      \vdash
+      \trans{deleg}{}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms_0}\\
+            \var{dws_0}\\
+            \var{sds_0}\\
+            \var{eks_0}
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
     \label{eq:rule:delegation-interface}
     \inference
     {
