@@ -29,7 +29,7 @@
           ];
         };
       tests = {
-        "chain-spec-test" = {
+        "chain-rules-test" = {
           depends = [
             (hsPkgs.base)
             (hsPkgs.data-ordlist)
