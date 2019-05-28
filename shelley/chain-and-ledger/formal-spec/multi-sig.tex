@@ -333,7 +333,7 @@ required signatures for a specific unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{hashScript} & \Script \to \HashScr & \text{hash a script}
+      \fun{hashScript} & \Script \to \HashScr & \text{hash a serialized script}
     \end{array}
   \end{equation*}
 
@@ -361,11 +361,10 @@ $\AddrVKeyP$.
 
 The $\fun{hashScript}$ function calculates the hash of a script by serializing
 and then hashing it. The accessor function $\fun{validatorHash}$ returns the
-hash of a script of a script address, or $\Nothing$ in case of a non-script
-address. The domain of the accessor function $\fun{paymentHK}$ is changed to
-pubkey addresses. The domains of the accessor functions $\fun{stakeHK_b}$ and
-$\fun{addrPtr}$ are extended to also include the respective script address
-variants.
+hash of a script of a script address. The domain of the accessor function
+$\fun{paymentHK}$ is changed to pubkey addresses. The domains of the accessor
+functions $\fun{stakeHK_b}$ and $\fun{addrPtr}$ are extended to also include the
+respective script address variants.
 
 \begin{figure*}[hbt]
   \emph{Abstract Type}
@@ -380,7 +379,7 @@ variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
-      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \powerset \Script)
+      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
       \\
       \var{tx}
       & \Tx
@@ -394,7 +393,7 @@ variants.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
-      \fun{txwitsScripts} & \Tx \to \powerset{\Script} & \text{script witnesses}
+      \fun{txwitsScripts} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}
     \end{array}
   \end{equation*}
 
@@ -413,10 +412,10 @@ variants.
 In Figure~\ref{fig:types_defs_multi} the type of a transaction
 from~\cite{shelley_formal_spec} is extended to carry an additional witness
 type. This is achieved by explicitly defining $\TxWitness$ as a type of the form
-of a pair of pubkey witnesses and a set of scripts. The former accessor function
+of a pair of pubkey witnesses and script witnesses. The former accessor function
 $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new accessor function
-$\fun{txwitsScript}$ returns the set of all validator scripts of a
-transaction. All scripts in this set need to validate the transaction in order
+$\fun{txwitsScript}$ returns a map of script hashes to validator scripts of a
+transaction. All scripts in the map need to validate the transaction in order
 for it to be accepted.
 
 $\PendingTx$ is a representation of the pending transaction. In particular, this
@@ -480,17 +479,15 @@ according to Figure~\ref{fig:types_defs_multi}.
                         \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
     \\
     \\
-    \fun{validators} & \in \powerset\TxIn \to \UTxO \to \powerset \Script \to
+    \fun{validators} & \in \powerset\TxIn \to \UTxO \to (\HashScr\mapsto\Script) \to
                        (\TxIn \mapsto \Script) \\
     \fun{validators} &~\var{txins}~\var{utxo}~\var{scripts} = \\
                        & \{
                          i\mapsto s \vert
                          i\mapsto (a,\wcard) \in \var{txins}\restrictdom(utxo
                          \restrictrange (\AddrScr\times\Coin)) \\
-                    &
-                      \wedge s \in scripts
-                      \wedge a = \fun{hashScript}~s
-                      \}
+                    & \wedge (\fun{validatorHash}~a) \mapsto s \in scripts
+                      \wedge \fun{validatorHash}~a = \fun{hashScript}~s\}
   \end{align*}
   %
   \caption{Helper Functions for Transaction Inputs}
@@ -546,7 +543,7 @@ validation script.
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\
+      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
       {
         \begin{array}{l}
         \var{utxoEnv}
