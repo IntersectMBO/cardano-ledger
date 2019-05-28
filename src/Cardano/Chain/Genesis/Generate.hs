@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -338,34 +339,36 @@ genTestnetDistribution
   -> Lovelace
   -> m ([Lovelace], [Lovelace])
 genTestnetDistribution tbo testBalance = do
-
   (richBalances, poorBalances, totalBalance) <-
     liftEither . first GenesisDataGenerationLovelaceError $ do
-      oneRichmanBalance <- if numRichmen == 0
+      richmanBalance      <- divLovelace desiredRichBalance tboRichmen
+
+      richmanBalanceExtra <- modLovelace desiredRichBalance tboRichmen
+
+      richmanBalance'     <- if tboRichmen == 0
         then pure $ mkKnownLovelace @0
         else addLovelace
-          (divLovelace desiredRichBalance numRichmen)
-          (if modLovelace desiredRichBalance numRichmen > mkKnownLovelace @0
+          richmanBalance
+          (if richmanBalanceExtra > mkKnownLovelace @0
             then mkKnownLovelace @1
             else mkKnownLovelace @0
           )
 
-      realRichBalance     <- scaleLovelace oneRichmanBalance numRichmen
+      totalRichBalance    <- scaleLovelace richmanBalance' tboRichmen
 
-      desiredPoorsBalance <- subLovelace testBalance realRichBalance
+      desiredPoorsBalance <- subLovelace testBalance totalRichBalance
 
-      let
-        onePoorBalance = if numPoors == 0
-          then mkKnownLovelace @0
-          else divLovelace desiredPoorsBalance numPoors
+      poorBalance         <- if tboPoors == 0
+        then pure $ mkKnownLovelace @0
+        else divLovelace desiredPoorsBalance tboPoors
 
-      realPoorBalance <- scaleLovelace onePoorBalance numPoors
+      totalPoorBalance <- scaleLovelace poorBalance tboPoors
 
-      totalBalance    <- addLovelace realRichBalance realPoorBalance
+      totalBalance     <- addLovelace totalRichBalance totalPoorBalance
 
       pure
-        ( replicate numRichmen oneRichmanBalance
-        , replicate numPoors   onePoorBalance
+        ( replicate (fromIntegral tboRichmen) richmanBalance'
+        , replicate (fromIntegral tboPoors)   poorBalance
         , totalBalance
         )
 
@@ -374,11 +377,7 @@ genTestnetDistribution tbo testBalance = do
     else throwError
       $ GenesisDataGenerationDistributionMismatch testBalance totalBalance
  where
-  numRichmen :: Int
-  numRichmen = fromIntegral $ tboRichmen tbo
-
-  numPoors :: Int
-  numPoors = fromIntegral $ tboPoors tbo
+  TestnetBalanceOptions { tboPoors, tboRichmen } = tbo
 
   desiredRichBalance =
     applyLovelacePortionDown (tboRichmenShare tbo) testBalance
