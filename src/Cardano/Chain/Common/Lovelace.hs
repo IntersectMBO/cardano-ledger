@@ -14,27 +14,32 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE ViewPatterns               #-}
 
 -- This is for 'mkKnownLovelace''s @n <= 45000000000000000@ constraint, which is
 -- considered redundant. TODO: investigate this.
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.Lovelace
-  ( Lovelace
+  (
+  -- * Lovelace
+    Lovelace
   , LovelaceError(..)
+  , maxLovelaceVal
+
+  -- * Constructors
   , mkLovelace
   , mkKnownLovelace
-  , lovelaceF
-  , maxLovelaceVal
-  , sumLovelace
 
-       -- * Conversions
+  -- * Formatting
+  , lovelaceF
+
+  -- * Conversions
   , unsafeGetLovelace
   , lovelaceToInteger
   , integerToLovelace
 
-       -- * Arithmetic operations
+  -- * Arithmetic operations
+  , sumLovelace
   , addLovelace
   , subLovelace
   , scaleLovelace
@@ -157,7 +162,7 @@ lovelaceToInteger = toInteger . unsafeGetLovelace
 
 -- | Addition of lovelace, returning 'LovelaceError' in case of overflow
 addLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
-addLovelace (unsafeGetLovelace -> a) (unsafeGetLovelace -> b)
+addLovelace (Lovelace a) (Lovelace b)
   | res >= a && res >= b && res <= maxLovelaceVal = Right (Lovelace res)
   | otherwise = Left (LovelaceOverflow res)
   where res = a + b
@@ -165,28 +170,24 @@ addLovelace (unsafeGetLovelace -> a) (unsafeGetLovelace -> b)
 
 -- | Subtraction of lovelace, returning 'LovelaceError' on underflow
 subLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
-subLovelace (unsafeGetLovelace -> a) (unsafeGetLovelace -> b)
+subLovelace (Lovelace a) (Lovelace b)
   | a >= b    = Right (Lovelace (a - b))
   | otherwise = Left (LovelaceUnderflow a b)
 
 -- | Scale a 'Lovelace' by an 'Integral' factor, returning 'LovelaceError' when
 --   the result is too large
 scaleLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
-scaleLovelace (unsafeGetLovelace -> a) b
-  | res <= lovelaceToInteger (maxBound :: Lovelace) = Right
-  $ Lovelace (fromInteger res)
-  | otherwise = Left $ LovelaceTooLarge res
-  where res = toInteger a * toInteger b
+scaleLovelace (Lovelace a) b = integerToLovelace $ toInteger a * toInteger b
 {-# INLINE scaleLovelace #-}
 
 -- | Integer division of a 'Lovelace' by an 'Integral' factor
-divLovelace :: Integral b => Lovelace -> b -> Lovelace
-divLovelace (unsafeGetLovelace -> a) b = Lovelace (a `div` fromIntegral b)
+divLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
+divLovelace (Lovelace a) b = integerToLovelace $ toInteger a `div` toInteger b
 {-# INLINE divLovelace #-}
 
 -- | Integer modulus of a 'Lovelace' by an 'Integral' factor
-modLovelace :: Integral b => Lovelace -> b -> Lovelace
-modLovelace (Lovelace a) b = Lovelace (a `mod` fromIntegral b)
+modLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
+modLovelace (Lovelace a) b = integerToLovelace $ toInteger a `mod` toInteger b
 {-# INLINE modLovelace #-}
 
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
