@@ -114,6 +114,9 @@ parameter.
     \label{eq:sdeleg-bootstrap}
     \inference
     {
+      \var{sds_0} \leteq \epsilon
+      &
+      \var{eks_0} \leteq \emptyset
     }
     {
       {\left(\begin{array}{l}
@@ -125,8 +128,8 @@ parameter.
       \trans{sdeleg}{}
       \left(
         \begin{array}{l}
-          \epsilon\\
-          \emptyset
+          \var{sds_0}\\
+          \var{eks_0}
         \end{array}
       \right)
     }
@@ -334,7 +337,7 @@ delegations have on the ledger.
     \inference
     {
       {\begin{array}{l}
-         delegEnv
+         \var{delegEnv}
       \end{array}}
       \vdash
       \trans{\hyperref[eq:sdeleg-bootstrap]{sdeleg}}{}
@@ -344,7 +347,7 @@ delegations have on the ledger.
     }
     {
       {\begin{array}{l}
-         delegEnv
+         \var{delegEnv}
       \end{array}}
       \vdash
       \trans{sdelegs}{}
@@ -377,7 +380,7 @@ delegations have on the ledger.
       \trans{sdelegs}{\Gamma}
       \var{delegSt'}
       &
-      delegEnv
+      \var{delegEnv}
       \vdash
       \var{delegSt'}
       \trans{\hyperref[fig:rules:delegation-scheduling]{sdeleg}}{c}
@@ -400,7 +403,7 @@ delegations have on the ledger.
     \inference
     {
       {\begin{array}{l}
-         delegEnv
+         \var{delegEnv}
       \end{array}}
       \vdash
       \trans{\hyperref[eq:adeleg-bootstrap]{adeleg}}{}
@@ -410,7 +413,7 @@ delegations have on the ledger.
     }
     {
       {\begin{array}{l}
-         delegEnv
+         \var{delegEnv}
       \end{array}}
       \vdash
       \trans{adelegs}{}
