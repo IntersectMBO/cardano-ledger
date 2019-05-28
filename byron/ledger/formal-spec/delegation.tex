@@ -111,6 +111,7 @@ parameter.
 
 \begin{figure}[htb]
   \begin{equation}
+    \label{eq:sdeleg-bootstrap}
     \inference
     {
     }
@@ -121,6 +122,7 @@ parameter.
         s
       \end{array}\right)}
       \vdash
+      \trans{sdeleg}{}
       \left(
         \begin{array}{l}
           \epsilon\\
@@ -250,6 +252,7 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
 
 \begin{figure}[htb]
   \begin{equation}
+    \label{eq:adeleg-bootstrap}
     \inference
     {
       \var{dms_0} \leteq \Set{k \mapsto k}{k \in \mathcal{K}} &
@@ -258,6 +261,7 @@ delegation certificate (Rule~\ref{eq:rule:delegation-nop}).
     {
       \mathcal{K}
       \vdash
+      \trans{adeleg}{}
       \left(
         \begin{array}{l}
           \var{dms_0}\\
@@ -329,19 +333,23 @@ delegations have on the ledger.
   \begin{equation}
     \inference
     {
+      {\begin{array}{l}
+         delegEnv
+      \end{array}}
+      \vdash
+      \trans{\hyperref[eq:sdeleg-bootstrap]{sdeleg}}{}
+      \left(
+        \var{delegSt}
+      \right)
     }
     {
-      {\left(\begin{array}{l}
-       \mathcal{K}\\
-        e\\
-        s
-      \end{array}\right)}
+      {\begin{array}{l}
+         delegEnv
+      \end{array}}
       \vdash
+      \trans{sdelegs}{}
       \left(
-        \begin{array}{l}
-          \epsilon\\
-          \emptyset
-        \end{array}
+        \var{delegSt}
       \right)
     }
   \end{equation}
@@ -349,32 +357,13 @@ delegations have on the ledger.
   \begin{equation}
     \label{eq:rule:delegation-scheduling-seq-base}
     \inference
+    {}
     {
-    }
-    {
-      {\left(\begin{array}{l}
-         \mathcal{K} \\
-         e\\
-         s\\
-       \end{array}\right)}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds}\\
-            \var{eks}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{sdelegs}{\epsilon}
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds}\\
-            \var{eks}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
     }
   \end{equation}
   \nextdef
@@ -382,78 +371,24 @@ delegations have on the ledger.
     \label{eq:rule:delegation-scheduling-seq-ind}
     \inference
     {
-      {\left(\begin{array}{l}
-         \mathcal{K} \\
-         e\\
-         s
-       \end{array}\right)}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds}\\
-            \var{eks}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{sdelegs}{\Gamma}
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds'}\\
-            \var{eks'}
-          \end{array}
-        \right)
-      }
+      \var{delegSt'}
       &
-      {\left(\begin{array}{l}
-         \mathcal{K} \\
-         e\\
-         s
-       \end{array}\right)}
+      delegEnv
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds'}\\
-            \var{eks'}
-          \end{array}
-        \right)
-      }
+      \var{delegSt'}
       \trans{\hyperref[fig:rules:delegation-scheduling]{sdeleg}}{c}
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds''}\\
-            \var{eks''}
-          \end{array}
-        \right)
-      }
+      \var{delegSt''}
     }
     {
-      {\left(\begin{array}{l}
-         \mathcal{K} \\
-         e\\
-         s
-       \end{array}\right)}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds}\\
-            \var{eks}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{sdelegs}{\Gamma; c}
-      {
-        \left(
-          \begin{array}{l}
-            \var{sds''}\\
-            \var{eks''}
-          \end{array}
-        \right)
-      }
+      \var{delegSt''}
     }
   \end{equation}
   \caption{Delegation scheduling sequence rules}
@@ -464,17 +399,23 @@ delegations have on the ledger.
   \begin{equation}
     \inference
     {
-      \var{dms_0} \leteq \Set{\var{vk} \mapsto \var{vk}}{\var{vk} \in \mathcal{K}} &
-      \var{dws_0} \leteq \Set{\var{vk} \mapsto 0}{\var{vk} \in \mathcal{K}}
+      {\begin{array}{l}
+         delegEnv
+      \end{array}}
+      \vdash
+      \trans{\hyperref[eq:adeleg-bootstrap]{adeleg}}{}
+      \left(
+        \var{delegSt}
+      \right)
     }
     {
-      \mathcal{K}
+      {\begin{array}{l}
+         delegEnv
+      \end{array}}
       \vdash
+      \trans{adelegs}{}
       \left(
-        \begin{array}{l}
-          \var{dms_0}\\
-          \var{dws_0}
-        \end{array}
+        \var{delegSt}
       \right)
     }
   \end{equation}
@@ -482,28 +423,13 @@ delegations have on the ledger.
   \begin{equation}
     \label{eq:rule:delegation-seq-base}
     \inference
+    {}
     {
-    }
-    {
-      \mathcal{K}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms}\\
-            \var{dws}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{adelegs}{\epsilon}
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms}\\
-            \var{dws}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
     }
   \end{equation}
   \nextdef
@@ -511,66 +437,24 @@ delegations have on the ledger.
     \label{eq:rule:delegation-seq-ind}
     \inference
     {
-      \mathcal{K}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms}\\
-            \var{dws}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{adelegs}{\Gamma}
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms'}\\
-            \var{dws'}
-          \end{array}
-        \right)
-      }
+      \var{delegSt'}
       &
-      \mathcal{K}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms'}\\
-            \var{dws'}
-          \end{array}
-        \right)
-      }
+      \var{delegSt'}
       \trans{\hyperref[fig:rules:delegation]{adeleg}}{c}
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms''}\\
-            \var{dws''}
-          \end{array}
-        \right)
-      }
+      \var{delegSt''}
     }
     {
-      \mathcal{K}
+      \var{delegEnv}
       \vdash
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms}\\
-            \var{dws}
-          \end{array}
-        \right)
-      }
+      \var{delegSt}
       \trans{adelegs}{\Gamma; c}
-      {
-        \left(
-          \begin{array}{l}
-            \var{dms''}\\
-            \var{dws''}
-          \end{array}
-        \right)
-      }
+      \var{delegSt''}
     }
   \end{equation}
   \caption{Delegations sequence rules}
