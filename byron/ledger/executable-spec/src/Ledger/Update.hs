@@ -33,9 +33,9 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..), Slot(..))
+import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..), Slot(..), minusSlotMaybe, SlotCount(..))
 import qualified Ledger.Core as Core
-import Ledger.Delegation (liveAfter, k)
+import Ledger.Delegation (liveAfter)
 import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
@@ -566,7 +566,7 @@ instance STS UPEND where
             ) <- judgmentContext
         case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
           Just pid -> do
-            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! NotAFailure
+            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! NotAFailure
           Nothing -> True ?! NotAFailure
         return $! (fads, bvs)
 
@@ -586,7 +586,7 @@ instance STS UPEND where
             Core.psSize (Set.singleton bv ◃ bvs) < (fromIntegral . unBlockCount) t ?! CanAdopt
             case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
               Just pid -> do
-                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
+                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! ProtVerTooRecent
                 return $! (fads, bvs')
               Nothing -> do
                 True ?! ProtVerUnknown
@@ -609,7 +609,7 @@ instance STS UPEND where
             (fromIntegral . unBlockCount) t <= Core.psSize (Set.singleton bv ◃ bvs) ?! CannotAdopt
             case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
               Just pid -> do
-                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter k) cps) ?! ProtVerTooRecent
+                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! ProtVerTooRecent
                 -- This is safe by virtue of the fact we've just inverted the map and found this there
                 let (_, ppsc) = fromJust $ Map.lookup pid rpus
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
@@ -860,8 +860,10 @@ instance STS PVBUMP where
     [ do
         TRC ((s_n, fads), (pv, pps), ()) <- judgmentContext
         let
-          firstStableSlot = Slot $ unSlot s_n - 2 * (unBlockCount k)
-          r = filter ((<= firstStableSlot) . fst) fads
+          mFirstStableSlot = minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ GP.k)
+          r = case mFirstStableSlot of
+                Nothing -> []
+                Just s  -> filter ((<= s) . fst) fads
         if r == []
           then return $! (pv, pps)
           else do
