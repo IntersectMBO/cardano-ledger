@@ -9,13 +9,9 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
-import qualified Crypto.Hash as Crypto
 import Data.List (find)
 import qualified Data.Map as Map
 import Data.Maybe (isJust)
-import Hedgehog (Gen)
 
 import Control.State.Transition
   ( Embed
@@ -49,7 +45,7 @@ import Ledger.Core
   )
 import qualified Ledger.Update.Generators as UpdateGen
 import Ledger.UTxO
-  ( Tx(Tx)
+  ( Tx
   , TxId(TxId)
   , TxId(TxId)
   , TxIn
@@ -61,8 +57,6 @@ import Ledger.UTxO
   , body
   , fromTxOuts
   , inputs
-  , outputs
-  , txid
   )
 import qualified Ledger.UTxO.Generators as UTxOGen
 
@@ -121,17 +115,6 @@ instance (Ord id, HasTypeReps id) => Embed (UTXO id) (UTXOW id) where
 traceAddrs :: [Addr]
 traceAddrs = mkAddr <$> [0 .. 10]
 
-genTx :: [Addr] -> UTxO TxId -> Gen (Tx TxId)
-genTx addrs utxo = do
-  -- Use a dummy hash for now, as we will be replacing the transaction id
-  -- after the call to UTxOGen.genTxFromUTxO.
-  let dummyTxId = TxId $ Crypto.hash $ IOs ([], [])
-  -- Generate a valid transaction from a given 'UTxO'
-  tx@Tx {inputs, outputs} <- UTxOGen.genTxFromUTxO dummyTxId addrs utxo
-  let
-    txHash = Crypto.hash $ IOs (inputs, outputs)
-  pure $ tx { txid = TxId txHash }
-
 instance HasTrace (UTXOW TxId) where
   initEnvGen
     = UTxOEnv <$> genUTxO <*> UpdateGen.pps
@@ -144,7 +127,7 @@ instance HasTrace (UTXOW TxId) where
         pure $ fromTxOuts (TxId . hash . addr) txOuts
 
   sigGen _e st = do
-    tx <- genTx traceAddrs (utxo st)
+    tx <- UTxOGen.tx traceAddrs (utxo st)
     let wits = witnessForTxIn tx (utxo st) <$> (inputs tx)
     pure $ TxWits tx wits
 
@@ -158,10 +141,3 @@ witnessForTxIn tx (UTxO utxo) txin =
 
 witnessForTx :: KeyPair -> Tx id -> Wit id
 witnessForTx (KeyPair sk vk) tx = Wit vk (sign sk tx)
-
-newtype IOs = IOs ([TxIn TxId], [TxOut])
-  deriving (Show)
-
-instance BA.ByteArrayAccess (IOs) where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack  . show

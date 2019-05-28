@@ -1,4 +1,4 @@
--- |
+-- | Generators for update transition-system related data.
 
 module Ledger.Update.Generators where
 
