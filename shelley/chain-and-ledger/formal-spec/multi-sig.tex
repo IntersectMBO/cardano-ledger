@@ -403,8 +403,7 @@ variants.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{txPending} & \Tx \to \PendingTx & \text{Get necessary information from Tx} \\
-      \fun{validate} & () \to () \to \PendingTx \to \Bool & \text{validator script}\\
-      \fun{validateScript} & \Script \to \PendingTx \to \Bool & \text{script interpreter}
+      \fun{validateScript} & () \to () \to \PendingTx \to \Bool & \text{validator script}
     \end{array}
   \end{equation*}
   \caption{Types for Transaction Inputs with Scripts}
@@ -426,19 +425,14 @@ $\fun{txPending}$ constructs the necessary information about a transaction
 which can be passed as value of type $\PendingTx$ to the validator script.
 
 In order to spend funds locked by a multi-signature script, the validator
-scripts need to validate the transaction. The abstract function $\fun{validate}$
-corresponds to such a validator script. Its type consists of two parameters of
-unit type and one parameter of type $\PendingTx$; its return type is
-Boolean. The first two input parameters correspond to the redeemer and the data
-scripts which are used in the full extended UTxO model for
+scripts need to validate the transaction. The abstract function
+$\fun{validateScript}$ corresponds to such a validator script. Its type consists
+of two parameters of unit type and one parameter of type $\PendingTx$; its
+return type is Boolean. The first two input parameters correspond to the
+redeemer and the data scripts which are used in the full extended UTxO model for
 Plutus~\cite{plutus_eutxo}. As those values are not required for simple
 multi-signature, we the unit type for them. The Boolean return type signals
 whether the script succeeded in validating the transaction.
-
-The function $\fun{validateScript}$ takes a script and a $\PendingTx$ value,
-evaluates the script and returns a Boolean result. We will use this function as
-a predicate where \emph{False} corresponds to the Plutus error state and
-\emph{True} to the unit return result.
 
 The following is a possible Plutus implementation of a simple $n$ out of $m$
 multi-signature validation script. The type $\type{MultiSig}$ is a list of keys
@@ -468,8 +462,8 @@ which indicates how many of the keys are required as signatures. When the
 validation script is called, it computes the list of keys in $keys$ which signed
 the transaction. If the length of that list is greater than or equal to $num$,
 then enough signatures for the multi-signature are present. Therefore, with
-\var{hkeys} being a value of type \type{MultiSig}, calling
-$\fun{validate}~hkeys$ will return a validator script with the correct type
+\var{multiSig} being a value of type \type{MultiSig}, calling
+$\fun{validate}~multiSig$ returns a validator script with the correct type
 according to Figure~\ref{fig:types_defs_multi}.
 
 \begin{figure*}[htb]
@@ -520,8 +514,8 @@ of~\cite{shelley_formal_spec}. Its extended transition system is shown in
 Figure~\ref{fig:rules:utxow-multi-sig}, in the format described
 in~\cite{small_step_semantics}. The constraint on the set of required witnesses
 is relaxed in such a way that ``redundant'' signatures can be supplied in the
-transaction. The complete set of verification keys is then passed to
-$\fun{validate}$ as part of $pendingTx$ when validating all supplied scripts.
+transaction. The complete set of verification keys is then passed to the
+validator script as part of $pendingTx$ when validating all supplied scripts.
 
 The set of all validator scripts of $\fun{txinsScript}~(\fun{txins}~tx)$ is
 checked for:
@@ -533,8 +527,8 @@ checked for:
 
 We also check that the size of the set of spent outputs locked by a script is
 equal to the elements of the inputs for which we have a validator
-script. Overall that means that for each spent output we have one signature or
-one validation script.
+script. Overall that means that for each spent output we have a signature or a
+validation script.
 
 \begin{figure}[htb]
   \begin{equation*}
@@ -544,7 +538,7 @@ one validation script.
       \\~\\
       \forall \var{inp}\mapsto\var{validator} \in
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx),
-      \\ \fun{validateScript}~validator~(\fun{pendingTx}~tx)
+      \\ \fun{validator}~()~()~(\fun{pendingTx}~tx)
       \\~\\
       \vert
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx)
