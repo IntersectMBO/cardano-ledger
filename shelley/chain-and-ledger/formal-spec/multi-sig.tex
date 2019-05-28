@@ -435,7 +435,7 @@ Plutus~\cite{plutus_eutxo}. As those values are not required for simple
 multi-signature, we the unit type for them. The Boolean return type signals
 whether the script succeeded in validating the transaction.
 
-The function $\fun{interpreteScript}$ takes a script and a $\PendingTx$ value,
+The function $\fun{validateScript}$ takes a script and a $\PendingTx$ value,
 evaluates the script and returns a Boolean result. We will use this function as
 a predicate where \emph{False} corresponds to the Plutus error state and
 \emph{True} to the unit return result.
@@ -544,7 +544,7 @@ one validation script.
       \\~\\
       \forall \var{inp}\mapsto\var{validator} \in
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx),
-      \\ \fun{interpreteScript}~validator~(\fun{pendingTx}~tx)
+      \\ \fun{validateScript}~validator~(\fun{pendingTx}~tx)
       \\~\\
       \vert
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx)
