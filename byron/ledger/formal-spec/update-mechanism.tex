@@ -287,7 +287,7 @@ The rules in Figure~\ref{fig:rules:up-validity} model the validity of a proposal
 \end{itemize}
 Note that the rules in Figure~\ref{fig:rules:up-validity} allow for an update
 that does not propose changes in the protocol version, or does not propose
-changes the software version. However the update proposal must contain a change
+changes to the software version. However the update proposal must contain a change
 proposal in any of these two aspects.
 %
 Also note that we do not allow for updating the protocol parameters without
@@ -1031,7 +1031,7 @@ Figure~\ref{fig:ts-types:up-end} shows the types of the transition system
 associated with the registration of candidate protocol versions present in
 blocks. Some clarifications are in order:
 \begin{itemize}
-\item The $k$ parameter is used to determined when a confirmed proposal is
+\item The $k$ parameter is used to determine when a confirmed proposal is
   stable. Given we are in a current slot $s_n$, all update proposals confirmed
   at or before slot $s_n - 2 \cdot k$ are deemed stable.
 \item For the sake of conciseness, we omit the types associated to the
@@ -1089,7 +1089,7 @@ rule by $\var{bv}$:
   %
   Note that before the decentralized era we do not count the total number nodes
   that are ready to upgrade to a new protocol version, but we count only nodes
-  that are delegated by a genesis key. This allow us to implement a simple
+  that are delegated by a genesis key. This allows us to implement a simple
   update mechanism while we transition to the decentralized era, where we will
   incorporate the results of ongoing research on a decentralized update
   mechanism.
@@ -1396,8 +1396,7 @@ constraint:
 \begin{itemize}
 \item Genesis keys are controlled by the Cardano foundation.
 \item Even if a genesis key falls in the hands of the adversary, only one
-  update proposal can be submitted per-block, and proposals have an time to
-  live of $u$ blocks. So in the worst case scenario we are looking at an
+  update proposal can be submitted per-block, and proposals have a time to live of $u$ blocks. So in the worst case scenario we are looking at an
   increase in the state size of the ledger proportional to $u$.
 \end{itemize}
 On the other hand, having that constraint in place brings some extra complexity
@@ -1407,7 +1406,7 @@ then if an amendment must be made within the current epoch, then a new update
 proposal must be submitted with a different key, which adds extra complexity
 for devops. In light of the preceding discussion, unless there is a benefit for
 restricting the number of times a genesis key can submit an update proposal, we
-opted for removing such constraint in the current specification.
+opted for removing such a constraint in the current specification.
 
 \subsubsection{Acceptance of blocks endorsing unconfirmed proposal updates}
 \label{sec:acceptance-of-uncofirmed-up-endorsements}
@@ -1415,7 +1414,7 @@ opted for removing such constraint in the current specification.
 A consequence of enforcing the update rules in \cref{fig:rules:up-end} is that
 a block that is endorsing an unconfirmed proposal gets accepted, although it
 will not have any effect on the update mechanism. It is not clear at this stage
-whether such block should be rejected, therefore we have chosen to be lenient.
+whether such a block should be rejected, therefore we have chosen to be lenient.
 
 \subsubsection{Only genesis keys are counted for endorsement}
 \label{sec:only-genesis-keys-count-for-endorsement}
