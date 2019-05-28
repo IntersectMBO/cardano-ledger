@@ -53,6 +53,57 @@
     \label{eq:rule:delegation-interface}
     \inference
     {
+      {\left(\begin{array}{l}
+       \mathcal{K}\\
+        e\\
+        s
+      \end{array}\right)}
+      \vdash
+      \trans{sdeleg}{}
+      {\left(
+        \begin{array}{l}
+          \epsilon\\
+          \emptyset
+        \end{array}
+      \right)}
+      &
+      {
+        \mathcal{K}
+        \vdash
+        \trans{adeleg}{}
+        \left(
+          \begin{array}{l}
+            \var{dms_0}\\
+            \var{dws_0}
+          \end{array}
+        \right)
+      }
+    }
+    {
+      {\left(\begin{array}{l}
+         \mathcal{K} \\
+         e\\
+         s
+      \end{array}\right)}
+      \vdash
+      \trans{deleg}{}
+      {
+        \left(
+          \begin{array}{l}
+            \var{dms_0}\\
+            \var{dws_0}\\
+            \epsilon\\
+            \emptyset
+          \end{array}
+        \right)
+      }
+    }
+  \end{equation}
+  \nextdef
+  \begin{equation}
+    \label{eq:rule:delegation-interface}
+    \inference
+    {
       d \leteq 2 \cdot k \\
       {\left(\begin{array}{l}
          \mathcal{K} \\
