@@ -333,7 +333,7 @@ required signatures for a specific unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{hashScript} & \Script \to \HashScr & \text{hash a script}
+      \fun{hashScript} & \Script \to \HashScr & \text{hash a serialized script}
     \end{array}
   \end{equation*}
 
@@ -361,11 +361,10 @@ $\AddrVKeyP$.
 
 The $\fun{hashScript}$ function calculates the hash of a script by serializing
 and then hashing it. The accessor function $\fun{validatorHash}$ returns the
-hash of a script of a script address, or $\Nothing$ in case of a non-script
-address. The domain of the accessor function $\fun{paymentHK}$ is changed to
-pubkey addresses. The domains of the accessor functions $\fun{stakeHK_b}$ and
-$\fun{addrPtr}$ are extended to also include the respective script address
-variants.
+hash of a script of a script address. The domain of the accessor function
+$\fun{paymentHK}$ is changed to pubkey addresses. The domains of the accessor
+functions $\fun{stakeHK_b}$ and $\fun{addrPtr}$ are extended to also include the
+respective script address variants.
 
 \begin{figure*}[hbt]
   \emph{Abstract Type}
@@ -380,7 +379,7 @@ variants.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
-      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \powerset \Script)
+      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
       \\
       \var{tx}
       & \Tx
@@ -394,7 +393,7 @@ variants.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
-      \fun{txwitsScripts} & \Tx \to \powerset{\Script} & \text{script witnesses}
+      \fun{txwitsScripts} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}
     \end{array}
   \end{equation*}
 
@@ -403,8 +402,7 @@ variants.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{txPending} & \Tx \to \PendingTx & \text{Get necessary information from Tx} \\
-      \fun{validate} & () \to () \to \PendingTx \to () & \text{validator script}\\
-      \fun{validateScript} & \Script \to \PendingTx \to \Bool & \text{script interpreter}
+      \fun{validateScript} & () \to () \to \PendingTx \to \Bool & \text{validator script}
     \end{array}
   \end{equation*}
   \caption{Types for Transaction Inputs with Scripts}
@@ -414,10 +412,10 @@ variants.
 In Figure~\ref{fig:types_defs_multi} the type of a transaction
 from~\cite{shelley_formal_spec} is extended to carry an additional witness
 type. This is achieved by explicitly defining $\TxWitness$ as a type of the form
-of a pair of pubkey witnesses and a set of scripts. The former accessor function
+of a pair of pubkey witnesses and script witnesses. The former accessor function
 $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new accessor function
-$\fun{txwitsScript}$ returns the set of all validator scripts of a
-transaction. All scripts in this set need to validate the transaction in order
+$\fun{txwitsScript}$ returns a map of script hashes to validator scripts of a
+transaction. All scripts in the map need to validate the transaction in order
 for it to be accepted.
 
 $\PendingTx$ is a representation of the pending transaction. In particular, this
@@ -426,71 +424,70 @@ $\fun{txPending}$ constructs the necessary information about a transaction
 which can be passed as value of type $\PendingTx$ to the validator script.
 
 In order to spend funds locked by a multi-signature script, the validator
-scripts need to validate the transaction. The abstract function $\fun{validate}$
-corresponds to such a validator script. Its type consists of two parameters of
-unit type and one parameter of type $\PendingTx$; its return type is also
-unit. The first two input parameters correspond to the redeemer and the data
-scripts which are used in the full extended UTxO model for
+scripts need to validate the transaction. The abstract function
+$\fun{validateScript}$ corresponds to such a validator script. Its type consists
+of two parameters of unit type and one parameter of type $\PendingTx$; its
+return type is Boolean. The first two input parameters correspond to the
+redeemer and the data scripts which are used in the full extended UTxO model for
 Plutus~\cite{plutus_eutxo}. As those values are not required for simple
-multi-signature, we the unit type for them. The unit return type signifies that
-there is no data to return. Plutus uses an ``error'' state to represent a failed
-validation.
-
-The function $\fun{interpreteScript}$ takes a script and a $\PendingTx$ value,
-evaluates the script and returns a Boolean result. We will use this function as
-a predicate where \emph{False} corresponds to the Plutus error state and
-\emph{True} to the unit return result.
+multi-signature, we the unit type for them. The Boolean return type signals
+whether the script succeeded in validating the transaction.
 
 The following is a possible Plutus implementation of a simple $n$ out of $m$
 multi-signature validation script. The type $\type{MultiSig}$ is a list of keys
 and a threshold value.
 
 \begin{verbatim}
-   validate :: MultiSig -> () -> () -> PendingTx -> ()
-   validate (MultiSig keys num) () () p =
-       let
-           present = P.length (P.filter (V.txSignedBy p) keys)
-       in
-           if P.geq present num
-           then ()
-           else P.error (P.traceH "WRONG!" ())
+import qualified Language.PlutusTx            as P
+import           Ledger.Validation            as V
+
+data MultiSig = MultiSig
+                { signatories :: [Ledger.PubKey]
+                -- ^ List of public keys of people who may sign the transaction
+                , requiredSignatures :: Integer
+                -- ^ Minimum number of signatures required to unlock
+                --   the output (should not exceed @length signatories@)
+                }
+
+validate :: MultiSig -> () -> () -> PendingTx -> Bool
+validate multiSig@(MultiSig keys num) () () p =
+    let present = P.length (P.filter (V.txSignedBy p) keys)
+    in present `P.geq` num
 \end{verbatim}
 
-The above script takes a parameter of type $\type{MultiSig}$ which is a list of
-keys and a threshold $num$ which indicates how many of the keys of the list
-$keys$ are at least required as signatures. When $\fun{validate}$ it is called,
-it computes the list of keys in $keys$ which signed the transaction. If the
-length of that list is greater than or equal to $num$, then enough signatures
-for the multi-signature are present. Else the script ends in the Plutus
-``error'' state. Therefore, calling $validate~hkeys$ will return a validator
-script with the correct type according as in Figure~\ref{fig:types_defs_multi}
-when $hkeys$ is a value of type $\type{MultiSig}$.
+The above Plutus script takes a parameter \var{multiSig} of type
+$\type{MultiSig}$ which is a list of keys $\var{keys}$ and a threshold $num$
+which indicates how many of the keys are required as signatures. When the
+validation script is called, it computes the list of keys in $keys$ which signed
+the transaction. If the length of that list is greater than or equal to $num$,
+then enough signatures for the multi-signature are present. Therefore, with
+\var{multiSig} being a value of type \type{MultiSig}, calling
+$\fun{validate}~multiSig$ returns a validator script with the correct type
+according to Figure~\ref{fig:types_defs_multi}.
 
 \begin{figure*}[htb]
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \TxIn & \text{VKey Tx inputs}\\
+    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{VKey Tx inputs}\\
     \fun{txinsVKey} & ~\var{txins}~\var{utxo} =
     \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrVKey \times Coin))
     \\
     \\
-    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \TxIn & \text{Script Tx inputs}\\
+    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{Script Tx inputs}\\
     \fun{txinsScript} & ~\var{txins}~\var{utxo} =
                         \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
     \\
     \\
-    \fun{validators} & \in \powerset\TxIn \to \UTxO \to \powerset \Script \to
+    \fun{validators} & \in \powerset\TxIn \to \UTxO \to (\HashScr\mapsto\Script) \to
                        (\TxIn \mapsto \Script) \\
     \fun{validators} &~\var{txins}~\var{utxo}~\var{scripts} = \\
                        & \{
                          i\mapsto s \vert
                          i\mapsto (a,\wcard) \in \var{txins}\restrictdom(utxo
                          \restrictrange (\AddrScr\times\Coin)) \\
-                    &
-                      \wedge s \in scripts
-                      \wedge a = \fun{hashScript}~s
-                      \}
+                    & \wedge (\fun{validatorHash}~a) \mapsto s \in scripts
+                      \wedge \fun{validatorHash}~a = \fun{hashScript}~s\}
   \end{align*}
   %
   \caption{Helper Functions for Transaction Inputs}
@@ -514,10 +511,10 @@ of~\cite{shelley_formal_spec}. Its extended transition system is shown in
 Figure~\ref{fig:rules:utxow-multi-sig}, in the format described
 in~\cite{small_step_semantics}. The constraint on the set of required witnesses
 is relaxed in such a way that ``redundant'' signatures can be supplied in the
-transaction. The complete set of verification keys is then passed to
-$\fun{validate}$ as part of $pendingTx$ when validating all supplied scripts.
+transaction. The complete set of verification keys is then passed to the
+validator script as part of $pendingTx$ when validating all supplied scripts.
 
-The set of all validator scripts of $\fun{txinsScript~(\fun{txins}~tx})$ is
+The set of all validator scripts of $\fun{txinsScript}~(\fun{txins}~tx)$ is
 checked for:
 \begin{itemize}
 \item the script hash being equal to the hash stored in the output to spent
@@ -527,8 +524,8 @@ checked for:
 
 We also check that the size of the set of spent outputs locked by a script is
 equal to the elements of the inputs for which we have a validator
-script. Overall that means that for each spent output we have one signature or
-one validation script.
+script. Overall that means that for each spent output we have a signature or a
+validation script.
 
 \begin{figure}[htb]
   \begin{equation*}
@@ -538,7 +535,7 @@ one validation script.
       \\~\\
       \forall \var{inp}\mapsto\var{validator} \in
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx),
-      \\ \fun{interpreteScript}~validator~(\fun{pendingTx}~tx)
+      \\ \fun{validator}~()~()~(\fun{pendingTx}~tx)
       \\~\\
       \vert
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx)
@@ -546,7 +543,7 @@ one validation script.
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\
+      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
       {
         \begin{array}{l}
         \var{utxoEnv}
@@ -608,7 +605,7 @@ verifyCases script cases =
         | (keyset, expected) <- cases]
 \end{verbatim}
 
-The appendix~\ref{sec:native-multi-sign} provides some example of how this
+The Appendix~\ref{sec:native-multi-sign} provides some examples of how this
 scheme can be used. The intention is to have an alternative in the case for
 whenever the simple Plutus script integration would not be viable.
 
