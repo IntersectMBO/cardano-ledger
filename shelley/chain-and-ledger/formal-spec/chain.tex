@@ -45,7 +45,6 @@
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
-\newcommand{\BBodyEnv}{\type{BBodyEnv}}
 \newcommand{\BBodyState}{\type{BBodyState}}
 \newcommand{\RUpdEnv}{\type{RUpdEnv}}
 \newcommand{\ChainEnv}{\type{ChainEnv}}
@@ -334,7 +333,7 @@ Figure~\ref{fig:funcs:new-epoch-helper} gives some helper functions for the
 $\mathsf{NEWEPOCH}$ transition.
 Three of the four functions help with the nested data structures.
 The other function, $\fun{extraEntropy}$, will return a seed value to be used as extra
-entropy for the next epoch nonce if at least five genesis keys are in agreement of the value,
+entropy for the next epoch nonce if the threshold of genesis keys are in agreement of the value,
 and zero otherwise.
 
 %%
@@ -810,13 +809,13 @@ If the size checks pass, then three transitions are done:
 \label{sec:oper-cert-trans}
 
 The Operational Certificate Transition contains no environments, and its state is the mapping of
-operation certificate issues numbers.  Its signal is a block header body.
+operation certificate issue numbers.  Its signal is a block header.
 
 \begin{figure}
   \emph{Operational Certificate Transitions}
   \begin{equation*}
     \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\HashKey_{pool} \mapsto \N \times \BHBody \times \HashKey_{pool} \mapsto \N)
+    \powerset (\HashKey_{pool} \mapsto \N \times \BHeader \times \HashKey_{pool} \mapsto \N)
   \end{equation*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
@@ -830,6 +829,8 @@ header body \var{bhb} we first extract the following:
     \var{vk_{cold}}, the KES period number \var{n}, the KES period start \var{c_0} and the cold key
   signature.
 \item The hash \var{hk} of \var{vk_{cold}}.
+\item The slot \var{s} for the block.
+\item The number of KES periods that have elapsed since the start period on the certificate.
 \end{itemize}
 
 Using this we verify the preconditions of the operational certificate state
@@ -840,35 +841,44 @@ transition which are the following:
   the slot of the block header body and less than 90 KES periods after \var{c_0}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
-\item The signature $sigma$ can be verified with the cold verification key
+\item The signature $\sigma$ can be verified with the cold verification key
   \var{vk_{cold}}.
+\item The KES signature $\tau$ can be verified with the hot verification key
+  \var{vk_{hot}}.
 \end{itemize}
 
 After this, the transition system updates the operational certificate state by
 updating the mapping of operational certificates where it overwrites the entry
 of the key \var{hk} with the KES period \var{n}.
-If the cold key was a genesis key, then the \var{dms} map is updated with the new
-operational hot key.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:ocert}
     \inference[OCert]
     {
-      (\var{vk_{hot}},~\var{vk_{cold}},~n,~c_{0},~\sigma) \leteq \bocert{bhb}
+      (\var{bhb},~\sigma)\leteq\var{bh}
       &
+      (\var{vk_{hot}},~\var{vk_{cold}},~n,~c_{0},~\tau) \leteq \bocert{bhb}
+      \\
       \var{hk} \leteq \hashKey{vk_{cold}}
+      &
+      \var{s}\leteq\bslot{bhb}
+      &
+      t \leteq \kesPeriod{s} - c_0
       \\~\\
-      c_0 \leq \kesPeriod{\bslot{bhb}} < c_0 + 90
+      c_0 \leq \kesPeriod{s} < c_0 + 90
       \\
       \var{hk}\mapsto m\in\var{cs}
       &
       m \leq n
-      &
+      \\~\\
       \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
+      &
+      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\tau}^{t}
+      \\
     }
     {
       \vdash\var{cs}
-      \trans{ocert}{\var{bhb}}\varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}}
+      \trans{ocert}{\var{bh}}\varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}}
     }
   \end{equation}
   \caption{OCert rules}
@@ -936,13 +946,12 @@ The environments for this transition are:
     A slot in this map with a value of $\Nothing$ is a non-active slots,
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
-  \item The mapping of genesis keys to their operational keys $\var{dms}$.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
+  \item The mapping $\var{dms}$ of genesis keys to their cold keys.
 \end{itemize}
 
-The states for this transition consist only of the mapping of certificate issue numbers
-(which is unchanged in the OBFT case).
+The states for this transition consist only of the mapping of certificate issue numbers.
 
 \begin{figure}
   \emph{Overlay environments}
@@ -952,9 +961,9 @@ The states for this transition consist only of the mapping of certificate issue 
       \begin{array}{r@{~\in~}lr}
         \var{pp} & \PParams & \text{protocol parameters} \\
         \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
+        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -973,30 +982,32 @@ The states for this transition consist only of the mapping of certificate issue 
   \begin{equation}\label{eq:active-pbft}
     \inference[Active-OBFT]
     {
-      (\var{bhb},~\sigma)\leteq\var{bh}
-      \\
-      \{\bslot bhb \mapsto \var{gkey}\} \in \var{osched}
+      \var{bhb}\leteq\bheader{bh}
       &
-      \var{gkey} = \bvkcold{bhb}
+      \var{vk}\leteq\bvkcold{bhb}
       \\
-      \var{dms}\mapsto\var{gkey}\in\var{vk_{hot}}
+      \bslot bhb \mapsto \var{gkey}\in\var{osched}
       &
-      \mathcal{V}_{vk_{hot}}{\serialised{bhb}}_{\sigma}
+      \var{gkey}\mapsto\var{vk}\in\var{dms}
+      \\~\\
+      {
+        \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
+      }
     }
     {
       \left(
         {\begin{array}{c}
             \var{pp} \\
             \var{osched} \\
-            \var{dms} \\
             \eta_0 \\
             \var{pd} \\
+            \var{dms} \\
         \end{array}}
       \right)
       \vdash
       \var{cs}
       \trans{overlay}{\var{bh}}
-      \var{cs}
+      \varUpdate{\var{cs}'}
     }
   \end{equation}
 
@@ -1005,20 +1016,14 @@ The states for this transition consist only of the mapping of certificate issue 
   \begin{equation}\label{eq:decentralized}
     \inference[Decentralized]
     {
-      (\var{bhb},~\sigma)\leteq\var{bh}
+      \var{bhb}\leteq\bheader{bh}
       \\
       \bslot{bhb} \notin \dom{\var{osched}}
       \\~\\
       {
-        \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bhb}}\var{cs'}
+        \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
       \\~\\
-      (\var{vk_{hot}},~\wcard,~\wcard,\var{c_0},~\wcard) \leteq \bocert{bhb}
-      &
-      t \leteq \kesPeriod{slot} - c_0
-      \\
-      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
-      &
       \fun{vrfChecks}~\eta_0~\var{pd}~(\activeSlotCoeff{pp})~\var{bhb}
     }
     {
@@ -1026,9 +1031,9 @@ The states for this transition consist only of the mapping of certificate issue 
         {\begin{array}{c}
             \var{pp} \\
             \var{osched} \\
-            \var{dms} \\
             \eta_0 \\
             \var{pd} \\
+            \var{dms} \\
         \end{array}}
       \right)
       \vdash
@@ -1167,23 +1172,12 @@ The states for this transition consists of:
 
 The Block Body Transition updates the block body state which comprises the
 ledger state and the map describing the produced blocks. The environment of the
-$\mathsf{BBODY}$ transition are the genesis key delegations and the overlay schedule slots.
+$\mathsf{BBODY}$ transition are overlay schedule slots.
 The environments and states are defined in Figure~\ref{fig:ts-types:bbody}, along with
 a helper function $\fun{incrBlocks}$, which counts the number of non-overlay blocks
 produced by each stake pool.
 
 \begin{figure}
-  \emph{BBody environments}
-  \begin{equation*}
-    \BBodyEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
-        \var{oslots} & \powerset{\Slot} & \text{overlay schedule slots} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{BBody states}
   \begin{equation*}
     \BBodyState =
@@ -1198,7 +1192,7 @@ produced by each stake pool.
   \emph{BBody Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset (\BBodyEnv \times \BBodyState \times \Block \times \BBodyState)
+    \powerset ((\powerset{\Slot)} \times \BBodyState \times \Block \times \BBodyState)
   \end{equation*}
   \caption{BBody transition-system types}
   \label{fig:ts-types:bbody}
@@ -1258,12 +1252,7 @@ current slot is not an overlay slot.
       \fun{hash}~{txs} = \bbodyhash{bhb}
       \\~\\
       {
-        \left(
-          {\begin{array}{c}
-             \bslot{bhb} \\
-             \var{dms} \\
-           \end{array}}
-        \right)
+        \bslot{bhb}
         \vdash
              \var{ls} \\
         \trans{\hyperref[fig:rules:ledger-sequence]{ledgers}}{\var{txs}}
@@ -1271,10 +1260,7 @@ current slot is not an overlay slot.
       }
     }
     {
-      \left(\begin{array}{c}
-        \var{dms} \\
-        \var{oslots} \\
-      \end{array}\right)
+      \var{oslots}
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1310,7 +1296,6 @@ following:
   \item The candidate nonce $\eta_c$.
   \item The last header hash \var{h}.
   \item The last slot \var{s_\ell}.
-  \item The genesis key delegations \var{dms}.
 \end{itemize}
 
 \begin{figure}
@@ -1324,7 +1309,6 @@ following:
         ~\eta_c & \Seed & \text{candidate nonce} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
         \var{s_\ell} & \Slot & \text{last slot} \\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1342,12 +1326,66 @@ The $\mathsf{CHAIN}$ transition rule is shown in
 Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from which
 we extract the block header \var{bh}.
 The transition rule itself has no preconditions, instead it calls all its subrules.
+The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chain-helper}.
+
+%%
+%% Figure - Helper Functions for Chain Rules
+%%
+\begin{figure}[htb]
+  \emph{Chain Transition Helper Functions}
+  \begin{align*}
+      & \fun{getGKeys} \in \NewEpochState \to \powerset{\VKeyGen} \\
+      & \fun{getGKeys}~\var{nes} = \dom{dms} \\
+      &
+      \begin{array}{lr@{~=~}l}
+        \where
+          & (\wcard,~\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)
+          & \var{nes}
+          \\
+          & (\wcard,~\wcard,~\var{ls})
+          & \var{es}
+          \\
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard),~\wcard)
+          & \var{ls}
+      \end{array}
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{setIssueNumbers} \in \LState \to (\HashKey\to\N) \to \LState \\
+      & \fun{setIssueNumbers}~
+          (\var{utxoSt},
+          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard))
+          ~\var{us})
+          ~\var{cs} = \\
+      & ~~~~
+          (\var{utxoSt},
+          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs}))
+          ~\var{us})
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
+      & \fun{updateNES}~
+      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard),~\var{ru},
+       ~\var{pd},~\var{osched},~\var{us})
+          ~\var{b_{cur}}~\var{ls} = \\
+      & ~~~~
+      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\var{b_{cur}},~(\var{acnt},~\var{ss},~\var{ls}),
+       ~\var{ru},~\var{pd},~\var{osched},~\var{us})
+  \end{align*}
+  %
+
+  \caption{Helper Functions used in Rewards and Epoch Boundary}
+  \label{fig:funcs:chain-helper}
+\end{figure}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:chain}
     \inference[Chain]
     {
-      \var{bh} \leteq \bheader{block} \\
+      \var{bh} \leteq \bheader{block}
+      &
+      \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
       \\~\\
       {
         \left(
@@ -1361,7 +1399,10 @@ The transition rule itself has no preconditions, instead it calls all its subrul
       (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
         (\wcard,~\wcard,\var{ls})\leteq\var{es}\\
-        (\wcard,(\wcard,~(\wcard,~\wcard,~\wcard,~\var{cs})),\var{us})\leteq\var{ls}\\
+        ( \wcard,
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
+            (\wcard,~\wcard,~\wcard,~\var{cs})),
+          \var{us})\leteq\var{ls}\\
       {
         \left(
           {\begin{array}{c}
@@ -1392,12 +1433,9 @@ The transition rule itself has no preconditions, instead it calls all its subrul
               \eta_c' \\
         \end{array}\right)}
       } \\~\\~\\
-      \var{ls'}\leteq\var{ls}\unionoverrideRight\{\var{cs}'\} \\
+      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs} \\
       {
-        {\left(\begin{array}{c}
-        \var{dms} \\
-        \dom{osched} \\
-        \end{array}\right)}
+        \dom{osched}
         \vdash
         {\left(\begin{array}{c}
               \var{ls}' \\
@@ -1409,8 +1447,7 @@ The transition rule itself has no preconditions, instead it calls all its subrul
               \var{b_{cur}'} \\
         \end{array}\right)}
       }\\
-      \var{es'}\leteq\var{es}\unionoverrideRight\{\var{ls}''\} \\
-      \var{nes''}\leteq\var{nes'}\unionoverrideRight\{\var{es}',~\var{b_{cur}'}\}
+      \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls''} \\
     }
     {
       \var{s_{now}}
@@ -1421,7 +1458,6 @@ The transition rule itself has no preconditions, instead it calls all its subrul
             \eta_c \\
             \var{h} \\
             \var{s_\ell} \\
-            \var{dms} \\
       \end{array}\right)}
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
@@ -1430,7 +1466,6 @@ The transition rule itself has no preconditions, instead it calls all its subrul
             \varUpdate{\eta_c'} \\
             \varUpdate{\var{h}'} \\
             \varUpdate{\var{s_\ell}'} \\
-            \var{dms} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1511,6 +1546,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
+                            \fun{dms}~\var{ds} \\
                           \end{array}
                         \right) \\
                         \left(
@@ -1538,7 +1574,6 @@ which takes the Byron ledger state and creates the Shelley ledger state.
           \fun{hash}~{h} \\
           \var{h} \\
           \var{s_{last}} \\
-          \fun{dms}~\var{ds} \\
         \end{array}
       \right)
   \end{align*}

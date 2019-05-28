@@ -6,6 +6,7 @@ digraph STS {
         PRTCL -> BHEAD [style=dotted]
 
         UTXOW -> UTXO
+        UTXOW -> DELEGS [style=dotted]
 
         DELEGS -> DELPL
         DELEGS -> DELEGS
