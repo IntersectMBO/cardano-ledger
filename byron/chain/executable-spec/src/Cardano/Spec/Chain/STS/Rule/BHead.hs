@@ -13,8 +13,6 @@ import Ledger.Update
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.Epoch
-import Cardano.Spec.Chain.STS.Rule.SigCnt
-
 
 data BHEAD
 
@@ -36,7 +34,6 @@ instance STS BHEAD where
     -- ^ The block header slot number is greater than the current slot (As
     -- specified in the environment).
     | EpochFailure (PredicateFailure EPOCH)
-    | SigCntFailure (PredicateFailure SIGCNT)
     deriving (Eq, Show)
 
   initialRules = []
@@ -45,13 +42,10 @@ instance STS BHEAD where
     [ do
         TRC ((epochEnv, sLast), us, bh) <- judgmentContext
         us' <- trans @EPOCH $ TRC ((epochEnv, sEpoch sLast), us, bh ^. bhSlot)
-        let sMax = (snd (us' ^. _1)) ^. maxHdrSz
+        let sMax = snd (us' ^. _1) ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         return $! us'
     ]
 
 instance Embed EPOCH BHEAD where
   wrapFailed = EpochFailure
-
-instance Embed SIGCNT BHEAD where
-  wrapFailed = SigCntFailure
