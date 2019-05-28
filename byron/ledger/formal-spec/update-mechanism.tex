@@ -203,8 +203,8 @@ The protocol parameters are formally defined in \cref{fig:prot-params-defs}.
       \var{maxTxSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum transaction size}\\
       \var{maxHeaderSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum header size}\\
       \var{scriptVersion} \mapsto \mathbb{N} & \PPMMap & \text{script version}\\
-      \var{upAdptThd} \mapsto \mathbb{R} & \PPMMap & \text{update proposal adoption threshold}\\
-      \var{cfmThd} \mapsto \mathbb{N} & \PPMMap & \text{update proposal confirmation threshold}\\
+      \var{upAdptThd} \mapsto \mathbb{Q} & \PPMMap & \text{update proposal adoption threshold}\\
+      \var{cfmThd} \mapsto \mathbb{Q} & \PPMMap & \text{update proposal confirmation threshold}\\
       \var{upropTTL} \mapsto \mathbb{\Slot} & \PPMMap & \text{update proposal time-to-live}\\
     \end{array}
   \end{equation*}
@@ -859,7 +859,7 @@ In Rule~\ref{eq:rule:voting}:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_n} & \Slot & \text{current slot number}\\
-        \var{t} & \mathbb{Q} & \text{confirmation threshold}\\
+        \var{t} & \mathbb{N} & \text{confirmation threshold}\\
         \var{rups} & \powerset{\UPropId}
         & \text{registered update proposals}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}
@@ -1046,7 +1046,7 @@ blocks. Some clarifications are in order:
       = \left(
       \begin{array}{r@{~\in~}lr}
         \var{s_n} & \Slot & \text{current slot number}\\
-        t & \mathbb{Q} & \text{adoption threshold}\\
+        t & \mathbb{N} & \text{adoption threshold}\\
         \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
         \var{cps} & \UPropId \mapsto \Slot & \text{confirmed proposals}\\
         \var{rpus} & \UPropId \mapsto (\ProtVer \times \PPMMap)

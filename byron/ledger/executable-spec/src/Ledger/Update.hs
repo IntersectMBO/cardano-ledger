@@ -33,7 +33,23 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..), Slot(..), minusSlotMaybe, SlotCount(..))
+import Ledger.Core
+  ( BlockCount(..)
+  , HasHash
+  , PairSet(..)
+  , Relation(..)
+  , Slot(..)
+  , SlotCount(..)
+  , VKey
+  , VKeyGenesis
+  , (⋪)
+  , (▹)
+  , (◃)
+  , (⨃)
+  , hash
+  , minusSlotMaybe
+  , unSlot
+  )
 import qualified Ledger.Core as Core
 import Ledger.Delegation (liveAfter)
 import qualified Ledger.GlobalParams as GP
@@ -566,8 +582,8 @@ instance STS UPEND where
             , (fads, bvs)
             , (bv, _vk)
             ) <- judgmentContext
-        case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid -> do
+        case Map.lookup bv (invertBijection $ fst <$> rpus) of
+          Just pid ->
             pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! NotAFailure
           Nothing -> True ?! NotAFailure
         return $! (fads, bvs)
@@ -579,12 +595,10 @@ instance STS UPEND where
             ) <- judgmentContext
         case lookupR vk dms of
           Nothing  -> do
-            False ?! CannotAdopt -- md 2019-05-03: not sure what to
-                                 -- return/error on here
-            return $! (fads, bvs) -- a silly thing needed to get types line up
+            False ?! NotAFailure
+            return $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            -- (not $ canAdopt pps bvs' bv) ?! CanAdopt
             Core.psSize (Set.singleton bv ◃ bvs) < (fromIntegral . unBlockCount) t ?! CanAdopt
             case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
               Just pid -> do
