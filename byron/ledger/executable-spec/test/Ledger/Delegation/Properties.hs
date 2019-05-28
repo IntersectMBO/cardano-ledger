@@ -103,9 +103,9 @@ import Ledger.Delegation
   , liveAfter
   , scheduledDelegations
   , slot
-  , k
   )
 import Ledger.Core.Generator (vkGen)
+import Ledger.GlobalParams (k)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests

@@ -11,7 +11,7 @@ import qualified Data.Sequence as S
 import Control.State.Transition
 
 import Ledger.Core hiding ((|>))
-import Ledger.Delegation (k)
+import Ledger.GlobalParams (k)
 import Ledger.Update
 
 data SIGCNT

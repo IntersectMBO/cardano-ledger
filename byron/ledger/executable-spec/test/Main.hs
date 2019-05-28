@@ -10,6 +10,8 @@ import Test.Tasty.Hedgehog (testProperty)
 import Test.Tasty.Ingredients.ConsoleReporter (UseColor(Auto))
 import Ledger.Delegation.Examples (deleg)
 import Ledger.Delegation.Properties (dcertsAreTriggered, rejectDupSchedDelegs)
+import Ledger.Pvbump.Properties (emptyPVUpdate, beginningsNoUpdate, lastProposal)
+
 
 main :: IO ()
 main = withArgs [] $ defaultMain tests
@@ -22,5 +24,11 @@ main = withArgs [] $ defaultMain tests
       "Properties"
       [ testProperty "Activation"                      dcertsAreTriggered
       , testProperty "One delegation per-slot per-key" rejectDupSchedDelegs
+      ]
+    , testGroup
+      "PVBUMP properties"
+      [ testProperty "Same state for no updates"         emptyPVUpdate
+      , testProperty "Same state for early on in chain"  beginningsNoUpdate
+      , testProperty "State determined by last proposal" lastProposal
       ]
     ]

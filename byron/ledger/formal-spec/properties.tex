@@ -210,5 +210,107 @@ money in the system (counted as Lovelaces) remains constant.
   we have:
 
   $$ \var{reserves} + \balance{utxo} =  \var{reserves_0} + \balance{utxo_0} $$
+\end{property}
 
+\subsection{Update Properties}
+\label{sec:update-properties}
+
+\subsubsection{PVBUMP Properties}
+\label{sec:pvbump-properties}
+
+Property~\ref{PVBUMP-empty-future-adopt} states that when no proposals are
+available, the system remains in the same state it started with.
+
+\begin{property}[PVBUMP no change on empty future adoptions]\label{PVBUMP-empty-future-adopt}
+  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
+    that $fads = \epsilon$:}
+
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \epsilon
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  $$
+\end{property}
+
+Property~\ref{prop:pvbump-early-on} states that early on in the lifetime
+of the blockchain the PVBUMP system remains in the same state it started with.
+
+\begin{property}[PVBUMP early on]\label{prop:pvbump-early-on}
+  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
+    that $s_n \leq 2 \cdot k$:}
+
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  $$
+\end{property}
+
+Property~\ref{prop:pvbump-last-proposal} states that for all current slots
+with an index $2 \cdot k$ or higher and a proposal list with at least one
+proposal from a slot greater than $2 \cdot k$, the resulting state is
+exclusively determined by the last pair from the list comprising a new
+protocol version and protocol parameters that is after a slot with an index
+$2 \cdot k$.
+
+\begin{property}[PVBUMP last proposal]\label{prop:pvbump-last-proposal}
+  \textrm{For all $\var{s_n}$, $\var{fads}$, $\var{pv}$ and $\var{pps}$ such
+    that $s_n > 2 \cdot k$ and}
+
+  $$
+  \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 2 \cdot k]
+  \restrictdom \var{fads}
+  $$
+  \textrm{ we have: }
+
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv_c}, \var{pps_c}\\
+    \end{array}
+  \right)
+  $$
 \end{property}
