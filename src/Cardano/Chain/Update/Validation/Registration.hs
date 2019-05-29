@@ -21,7 +21,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary (Annotated)
-import Cardano.Chain.Common (StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (FlatSlotId)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
@@ -83,7 +83,7 @@ type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, FlatSlotId)
 data Error
   = DuplicateProtocolVersion ProtocolVersion
   | DuplicateSoftwareVersion SoftwareVersion
-  | InvalidProposer StakeholderId
+  | InvalidProposer KeyHash
   | InvalidProtocolVersion ProtocolVersion
   | InvalidScriptVersion Word16 Word16
   | InvalidSignature
@@ -134,7 +134,7 @@ registerProposal env rs proposal = do
  where
   AProposal { aBody, issuer, signature } = proposal
 
-  proposerId = mkStakeholderId issuer
+  proposerId = hashKey issuer
 
   Environment
     { protocolMagic

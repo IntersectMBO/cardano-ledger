@@ -51,7 +51,7 @@ import Test.Cardano.Chain.Common.Example
   , exampleAddress3
   , exampleAddress4
   , exampleAddrSpendingData_VerKey
-  , exampleStakeholderId
+  , exampleKeyHash
 
   )
 import Test.Cardano.Chain.Common.Gen
@@ -66,7 +66,7 @@ import Test.Cardano.Chain.Common.Gen
   , genLovelacePortion
   , genMerkleTree
   , genMerkleRoot
-  , genStakeholderId
+  , genKeyHash
   , genTxFeePolicy
   , genTxSizeLinear
   )
@@ -183,15 +183,15 @@ ts_roundTripLovelacePortionCBOR =
 
 
 --------------------------------------------------------------------------------
--- StakeholderId
+-- KeyHash
 --------------------------------------------------------------------------------
-golden_StakeholderId :: Property
-golden_StakeholderId =
-  goldenTestCBOR exampleStakeholderId "test/golden/cbor/common/StakeholderId"
+golden_KeyHash :: Property
+golden_KeyHash =
+  goldenTestCBOR exampleKeyHash "test/golden/cbor/common/KeyHash"
 
-ts_roundTripStakeholderIdCBOR :: TSProperty
-ts_roundTripStakeholderIdCBOR =
-  eachOfTS 1000 genStakeholderId roundTripsCBORBuildable
+ts_roundTripKeyHashCBOR :: TSProperty
+ts_roundTripKeyHashCBOR =
+  eachOfTS 1000 genKeyHash roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- TxFeePolicy

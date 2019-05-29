@@ -23,7 +23,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary (Annotated(..), serialize')
-import Cardano.Chain.Common (BlockCount(..), StakeholderId, mkStakeholderId)
+import Cardano.Chain.Common (BlockCount(..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
@@ -46,7 +46,7 @@ import Cardano.Crypto
 
 data Environment = Environment
   { protocolMagic      :: !(Annotated ProtocolMagicId ByteString)
-  , allowedDelegators  :: !(Set StakeholderId)
+  , allowedDelegators  :: !(Set KeyHash)
   , k                  :: !BlockCount
   , currentEpoch       :: !EpochIndex
   , currentSlot        :: !FlatSlotId
@@ -108,7 +108,7 @@ initialState env genesisDelegation = updateDelegation env' is certificates
 -- | Check whether a delegation is valid in the 'State'
 delegates :: State -> VerificationKey -> VerificationKey -> Bool
 delegates is delegator delegate =
-  (mkStakeholderId delegator, mkStakeholderId delegate)
+  (hashKey delegator, hashKey delegate)
     `Delegation.pairMember` delegationMap is
 
 

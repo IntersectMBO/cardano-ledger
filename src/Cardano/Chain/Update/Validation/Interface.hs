@@ -39,7 +39,7 @@ import qualified Data.Set as S
 
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common.BlockCount (BlockCount)
-import Cardano.Chain.Common.StakeholderId (StakeholderId)
+import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
@@ -105,7 +105,7 @@ data State = State
     -- ^ Registered software update proposals
   , confirmedProposals                :: !(Map UpId FlatSlotId)
     -- ^ Confirmed update proposals
-  , proposalVotes                     :: !(Map UpId (Set StakeholderId))
+  , proposalVotes                     :: !(Map UpId (Set KeyHash))
     -- ^ Update proposals votes
   , registeredEndorsements            :: !(Set Endorsement)
     -- ^ Update proposals endorsements
@@ -282,9 +282,9 @@ registerVote env st vote = do
 
 -- | Register an endorsement.
 --
--- An endorsement represents the fact that a genesis stakeholder is ready to
--- start using the protocol version being endorsed. In the decentralized era
--- only genesis key holders can endorse protocol versions.
+-- An endorsement represents the fact that a genesis key is ready to start using
+-- the protocol version being endorsed. In the decentralized era only genesis
+-- key holders can endorse protocol versions.
 --
 -- This corresponds to the @UPIEND@ rule in the Byron ledger
 -- specification.

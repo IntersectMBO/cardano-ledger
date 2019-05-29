@@ -27,6 +27,7 @@ import Cardano.Prelude
 import Control.Monad.Except (liftEither)
 import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
+import qualified Data.Set as Set
 import Data.Time (UTCTime)
 import Formatting (build, bprint, int, stext)
 import qualified Formatting.Buildable as B
@@ -42,7 +43,7 @@ import Cardano.Chain.Common
   , divLovelace
   , makeVerKeyAddress
   , mkKnownLovelace
-  , mkStakeholderId
+  , hashKey
   , modLovelace
   , scaleLovelace
   , subLovelace
@@ -58,7 +59,7 @@ import Cardano.Chain.Genesis.Initializer
   (FakeAvvmOptions(..), GenesisInitializer(..), TestnetBalanceOptions(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances(..))
 import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
-import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders(..))
+import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
 import Cardano.Crypto
   ( EncryptedSigningKey
   , SigningKey
@@ -151,15 +152,18 @@ generateGenesisData
   -> GenesisSpec
   -> m (GenesisData, GeneratedSecrets)
 generateGenesisData startTime genesisSpec = do
-
-  -- Bootstrap stakeholders
+  -- Genesis Keys
   let
-    bootSecrets = if giUseHeavyDlg gi then dlgIssuersSecrets else richSecrets
+    genesisSecrets =
+      if giUseHeavyDlg gi then dlgIssuersSecrets else richSecrets
 
-    bootStakeholders :: GenesisWStakeholders
-    bootStakeholders = GenesisWStakeholders $ M.fromList $ map
-      ((, 1) . mkStakeholderId . toVerification)
-      bootSecrets
+    genesisKeyHashes :: GenesisKeyHashes
+    genesisKeyHashes =
+      GenesisKeyHashes
+        .   Set.fromList
+        $   hashKey
+        .   toVerification
+        <$> genesisSecrets
 
   -- Heavyweight delegation.
   -- genesisDlgList is empty if giUseHeavyDlg = False
@@ -254,7 +258,7 @@ generateGenesisData startTime genesisSpec = do
 
   let
     genesisData = GenesisData
-      { gdBootStakeholders = bootStakeholders
+      { gdGenesisKeyHashes = genesisKeyHashes
       , gdHeavyDelegation = genesisDlg
       , gdStartTime = startTime
       , gdNonAvvmBalances = nonAvvmDistr

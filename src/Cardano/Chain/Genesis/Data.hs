@@ -40,7 +40,7 @@ import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
-import Cardano.Chain.Genesis.WStakeholders (GenesisWStakeholders)
+import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto
   ( ProtocolMagicId(..)
@@ -51,7 +51,7 @@ import Cardano.Crypto
 -- | Genesis data contains all data which determines consensus rules. It must be
 --   same for all nodes. It's used to initialize global state, slotting, etc.
 data GenesisData = GenesisData
-    { gdBootStakeholders :: !GenesisWStakeholders
+    { gdGenesisKeyHashes :: !GenesisKeyHashes
     , gdHeavyDelegation  :: !GenesisDelegation
     , gdStartTime        :: !UTCTime
     , gdNonAvvmBalances  :: !GenesisNonAvvmBalances
@@ -63,7 +63,7 @@ data GenesisData = GenesisData
 
 instance Monad m => ToJSON m GenesisData where
   toJSON gd = mkObject
-    [ ("bootStakeholders", toJSON $ gdBootStakeholders gd)
+    [ ("bootStakeholders", toJSON $ gdGenesisKeyHashes gd)
     , ("heavyDelegation" , toJSON $ gdHeavyDelegation gd)
     , ("startTime"       , toJSON $ gdStartTime gd)
     , ("nonAvvmBalances" , toJSON $ gdNonAvvmBalances gd)

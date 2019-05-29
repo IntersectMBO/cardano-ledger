@@ -15,7 +15,7 @@ import qualified Data.Set as Set
 import Hedgehog (evalEither, forAll, property)
 
 import Cardano.Binary (Annotated(..), serialize')
-import Cardano.Chain.Common (mkStakeholderId)
+import Cardano.Chain.Common (hashKey)
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.Delegation as Concrete
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
@@ -108,7 +108,7 @@ elaborateDSEnv :: DSEnv -> Scheduling.Environment
 elaborateDSEnv abstractEnv = Scheduling.Environment
   { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId
   , Scheduling.allowedDelegators = Set.fromList
-    $   mkStakeholderId
+    $   hashKey
     .   elaborateVKeyGenesis
     <$> Set.toList genesisKeys
   , Scheduling.currentEpoch = fromIntegral e

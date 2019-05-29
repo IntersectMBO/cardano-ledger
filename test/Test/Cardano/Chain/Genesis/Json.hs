@@ -18,7 +18,7 @@ import Test.Cardano.Chain.Genesis.Gen
   , genGenesisDelegation
   , genGenesisInitializer
   , genGenesisNonAvvmBalances
-  , genGenesisWStakeholders
+  , genGenesisKeyHashes
   , genStaticConfig
   )
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
@@ -73,9 +73,9 @@ ts_roundTripCanonicalGenesisNonAvvmBalances :: TSProperty
 ts_roundTripCanonicalGenesisNonAvvmBalances =
   eachOfTS 100 genGenesisNonAvvmBalances roundTripsCanonicalJsonPretty
 
-ts_roundTripCanonicalGenesisWStakeholders :: TSProperty
-ts_roundTripCanonicalGenesisWStakeholders =
-  eachOfTS 100 genGenesisWStakeholders roundTripsCanonicalJsonPretty
+ts_roundTripCanonicalGenesisKeyHashes :: TSProperty
+ts_roundTripCanonicalGenesisKeyHashes =
+  eachOfTS 100 genGenesisKeyHashes roundTripsCanonicalJsonPretty
 
 ts_roundTripCanonicalProtocolParameters :: TSProperty
 ts_roundTripCanonicalProtocolParameters =

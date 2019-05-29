@@ -11,7 +11,7 @@ module Test.Cardano.Chain.Common.Example
   , exampleAttributes
   , exampleAddrSpendingData_VerKey
   , exampleChainDifficulty
-  , exampleStakeholderId
+  , exampleKeyHash
   )
 where
 
@@ -24,10 +24,10 @@ import Cardano.Chain.Common
   , Attributes
   , ChainDifficulty(..)
   , NetworkMagic(..)
-  , StakeholderId
+  , KeyHash
   , makeAddress
   , mkAttributes
-  , mkStakeholderId
+  , hashKey
   )
 import Cardano.Crypto.HD (HDAddressPayload(..))
 
@@ -85,5 +85,5 @@ exampleAddress4 = makeAddress easd attrs
 exampleChainDifficulty :: ChainDifficulty
 exampleChainDifficulty = ChainDifficulty 9999
 
-exampleStakeholderId :: StakeholderId
-exampleStakeholderId = mkStakeholderId exampleVerificationKey
+exampleKeyHash :: KeyHash
+exampleKeyHash = hashKey exampleVerificationKey

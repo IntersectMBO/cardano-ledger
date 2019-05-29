@@ -9,7 +9,7 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisInitializer
   , genGenesisNonAvvmBalances
   , genGenesisSpec
-  , genGenesisWStakeholders
+  , genGenesisKeyHashes
   , genSafeProxyCert
   , genSignatureEpochIndex
   , genTestnetBalanceOptions
@@ -39,7 +39,7 @@ import Cardano.Chain.Genesis
   , GenesisInitializer(..)
   , GenesisNonAvvmBalances(..)
   , GenesisSpec(..)
-  , GenesisWStakeholders(..)
+  , GenesisKeyHashes(..)
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   , mkGenesisDelegation
@@ -57,7 +57,7 @@ import Cardano.Crypto
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Gen
-  (genAddress, genBlockCount, genLovelace, genLovelacePortion, genStakeholderId)
+  (genAddress, genBlockCount, genLovelace, genLovelacePortion, genKeyHash)
 import Test.Cardano.Chain.Delegation.Gen
   (genCanonicalCertificateDistinctList, genCertificateDistinctList)
 import Test.Cardano.Chain.Update.Gen
@@ -75,7 +75,7 @@ import Test.Cardano.Crypto.Gen
 genCanonicalGenesisData :: ProtocolMagicId -> Gen GenesisData
 genCanonicalGenesisData pm =
   GenesisData
-    <$> genGenesisWStakeholders
+    <$> genGenesisKeyHashes
     <*> genCanonicalGenesisDelegation pm
     <*> genUTCTime
     <*> genGenesisNonAvvmBalances
@@ -97,7 +97,7 @@ genCanonicalGenesisDelegation pm = do
 genGenesisData :: ProtocolMagicId -> Gen GenesisData
 genGenesisData pm =
   GenesisData
-    <$> genGenesisWStakeholders
+    <$> genGenesisKeyHashes
     <*> genGenesisDelegation pm
     <*> genUTCTime
     <*> genGenesisNonAvvmBalances
@@ -169,14 +169,9 @@ genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =
   GenesisAvvmBalances <$> customMapGen genRedeemVerificationKey genLovelace
 
-genGenesisWStakeholders :: Gen GenesisWStakeholders
-genGenesisWStakeholders = do
-  mapLength    <- Gen.int (Range.constant 10 25)
-  stakeholders <- Gen.list (Range.singleton mapLength) genStakeholderId
-  weights      <- Gen.list (Range.singleton mapLength)
-    $ Gen.word16 (Range.constant 1 30)
-  let sMap = M.fromList $ zip stakeholders weights
-  pure $ GenesisWStakeholders sMap
+genGenesisKeyHashes :: Gen GenesisKeyHashes
+genGenesisKeyHashes =
+  GenesisKeyHashes <$> Gen.set (Range.constant 10 25) genKeyHash
 
 genSafeProxyCert :: Gen (ProxyCert EpochIndex)
 genSafeProxyCert = do

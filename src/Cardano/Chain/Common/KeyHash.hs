@@ -5,10 +5,9 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
-module Cardano.Chain.Common.StakeholderId
-  ( StakeholderId
-  , mkStakeholderId
-  , shortStakeholderF
+module Cardano.Chain.Common.KeyHash
+  ( KeyHash
+  , hashKey
   )
 where
 
@@ -16,19 +15,19 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
 import Data.Aeson (FromJSONKey, ToJSONKey)
-import Formatting (Format, formatToString, mapf)
+import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common.AddressHash
-import Cardano.Crypto (decodeAbstractHash, hashHexF, shortHashF)
+import Cardano.Crypto (decodeAbstractHash, hashHexF)
 import Cardano.Crypto.Signing (VerificationKey)
 
 
--- | Stakeholder identifier (stakeholders are identified by their verification keys)
-newtype StakeholderId = StakeholderId
-  { getStakeholderId :: AddressHash VerificationKey
+-- | A 'KeyHash' refers to a 'VerificationKey'
+newtype KeyHash = KeyHash
+  { unKeyHash :: AddressHash VerificationKey
   } deriving ( Eq
              , Ord
              , Show
@@ -41,16 +40,13 @@ newtype StakeholderId = StakeholderId
              , HeapWords
              )
 
-instance Monad m => ToObjectKey m StakeholderId where
-    toObjectKey = pure . formatToString hashHexF . getStakeholderId
+instance Monad m => ToObjectKey m KeyHash where
+    toObjectKey = pure . formatToString hashHexF . unKeyHash
 
-instance MonadError SchemaError m => FromObjectKey m StakeholderId where
-    fromObjectKey = fmap (Just . StakeholderId)
+instance MonadError SchemaError m => FromObjectKey m KeyHash where
+    fromObjectKey = fmap (Just . KeyHash)
         . parseJSString decodeAbstractHash
         . JSString
 
-mkStakeholderId :: VerificationKey -> StakeholderId
-mkStakeholderId = StakeholderId . addressHash
-
-shortStakeholderF :: Format r (StakeholderId -> r)
-shortStakeholderF = mapf getStakeholderId shortHashF
+hashKey :: VerificationKey -> KeyHash
+hashKey = KeyHash . addressHash
