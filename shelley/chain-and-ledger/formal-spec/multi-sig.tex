@@ -489,7 +489,7 @@ for each script-locked output there exists a corresponding validation script.
       \\~\\
       \forall \var{inp}\mapsto\var{validator} \in
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~scriptWits,
-      \\ \fun{validateScript}~validator~(\fun{pendingTx}~tx)
+      \\ \fun{validateScript}~validator~tx
       \\~\\
       scriptIns = \dom(\fun{validators}~scriptIns~utxo~scriptWits)
       \\~\\
@@ -597,7 +597,7 @@ which indicates how many of the keys are required as signatures. When the
 validation script is called, it computes the list of keys in $keys$ which signed
 the transaction. If the length of that list is greater than or equal to $num$,
 then enough signatures for the multi-signature are present. Therefore, with
-\var{hkeys} being a value of type \type{MultiSig}, calling
+\var{hkeys} being a value of type \type{MultiSig}, partially application of
 $\fun{validate}~multisig$ will return a validator script with the correct type
 according to Figure~\ref{fig:types_defs_plutus}.
 
@@ -619,15 +619,15 @@ according to Figure~\ref{fig:types_defs_plutus}.
   \begin{align*}
     \fun{validateScript} & \in\ScriptMSig\to\Tx\to\Bool & \text{validate native
                                                           script} \\
-    \fun{validateScript} & \var{msig}~\var{tx}= \\
+    \fun{validateScript} & ~\var{msig}~\var{tx}= \\
                          & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
                            vk \in \fun{txwitsVKey}~\var{tx}\} \\
                          & \fun{evalMultiSigScript}~msig~vhks\\
   \end{align*}
   \begin{align*}
     \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\HashKey\to\Bool & \\
-    \fun{evalMultiSigScript} & ~\serialised{\type{SingleSig}~hk}_{hks}~\var{vhks} =  hk \in vhks \\
-    \fun{evalMultiSigScript} & ~\serialised{\type{MultiSig}~m~ts}_{hks}~\var{vhks} = \\
+    \fun{evalMultiSigScript} & ~(\type{SingleSig}~hk)~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & ~(\type{MultiSig}~m~ts)~\var{vhks} = \\
                              & m \leq \Sigma
                                \left(
                                [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
