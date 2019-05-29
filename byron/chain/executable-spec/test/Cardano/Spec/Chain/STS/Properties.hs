@@ -3,8 +3,10 @@ module Cardano.Spec.Chain.STS.Properties where
 
 import Control.Lens ((^..), (^.))
 import Data.Foldable (traverse_)
-import Data.List.Ordered (sort, nub)
-import Hedgehog (MonadTest, Property, assert, failure, forAll, property, withTests)
+import Data.List.Ordered (nubSortBy)
+import Data.Ord (Down(Down), comparing)
+import Hedgehog
+  (MonadTest, Property, (===), assert, failure, forAll, property, withTests)
 
 import Control.State.Transition
 import Control.State.Transition.Generator
@@ -16,17 +18,22 @@ import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.Chain
 
 slotsIncrease :: Property
-slotsIncrease = property $ forAll (trace 1000) >>= slotsIncreaseInTrace
+slotsIncrease = property $ do
+  tr <- forAll $ traceSigGen 200 (sigGenChain NoGenDelegation NoGenUTxO)
+  classifyTraceLength tr 200 50
+  slotsIncreaseInTrace tr
 
 slotsIncreaseInTrace :: MonadTest m => Trace CHAIN -> m ()
-slotsIncreaseInTrace tr = assert $ slots == sortedSlots && nub slots == slots
-  where blocks = traceSignals OldestFirst tr
+slotsIncreaseInTrace tr = slots === nubSortBy (comparing Down) slots
+  where blocks = traceSignals NewestFirst tr
         slots = blocks ^.. traverse . bHeader . bhSlot
-        sortedSlots = sort slots
 
 blockIssuersAreDelegates :: Property
 blockIssuersAreDelegates =
-  withTests 1000 $ property $ forAll (trace 1000) >>= checkBlockIssuersAreDelegates
+  withTests 200 $ property $ do
+    tr <- forAll $ traceSigGen 200 (sigGenChain GenDelegation NoGenUTxO)
+    classifyTraceLength tr 200 50
+    checkBlockIssuersAreDelegates tr
   where
     checkBlockIssuersAreDelegates :: MonadTest m => Trace CHAIN -> m ()
     checkBlockIssuersAreDelegates tr =
