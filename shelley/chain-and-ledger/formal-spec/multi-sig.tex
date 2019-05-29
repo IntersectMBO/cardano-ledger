@@ -518,6 +518,13 @@ one validation script.
 \section{Implementation of Script-Based Multi-Signature}
 \label{sec:altern-impl}
 
+There are different implementation possibilities for the introduced
+multi-signature scheme. Section~\ref{sec:plutus-scripts} describes an
+implementation based on Plutus~\cite{plutus_eutxo} which uses only simple
+scripts, without redeemer or data
+scripts. Section~\ref{sec:native-script-interp} describes and alternative
+implementation based on a script-like DSL that allows for validation using a
+native implementation.
 
 \subsection{Plutus Scripts}
 \label{sec:plutus-scripts}
@@ -531,11 +538,14 @@ one validation script.
     \end{array}
   \end{equation*}
 
-  \emph{Functions}
+  \emph{Abstract Functions}
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}
+      \fun{validateScript} & \ScriptPlutus \to \Tx \to \Bool & \text{Plutus script
+                                                               interpreter} \\
+      \fun{validate} & () \to () \to \PendingTx \to \Bool & \text{Plutus
+                                                            validator script type}
     \end{array}
   \end{equation*}
   \caption{Implementation based on Plutus Scripts}
@@ -549,18 +559,15 @@ which can be passed as value of type $\PendingTx$ to the validator script.
 
 In order to spend funds locked by a multi-signature script, the validator
 scripts need to validate the transaction. The abstract function $\fun{validate}$
-corresponds to such a validator script. Its type consists of two parameters of
-unit type and one parameter of type $\PendingTx$; its return type is
-Boolean. The first two input parameters correspond to the redeemer and the data
-scripts which are used in the full extended UTxO model for
+corresponds to such a Plutus validator script. Its type consists of two
+parameters of unit type and one parameter of type $\PendingTx$; its return type
+is Boolean. The first two input parameters correspond to the redeemer and the
+data scripts which are used in the full extended UTxO model for
 Plutus~\cite{plutus_eutxo}. As those values are not required for simple
 multi-signature, we the unit type for them. The Boolean return type signals
-whether the script succeeded in validating the transaction.
-
-The function $\fun{validateScript}$ takes a script and a $\PendingTx$ value,
-evaluates the script and returns a Boolean result. We will use this function as
-a predicate where \emph{False} corresponds to the Plutus error state and
-\emph{True} to the unit return result.
+whether the script succeeded in validating the transaction. The function
+$\fun{validateScript}$ takes a Plutus script representation and a $\PendingTx$
+value, evaluates the script and returns a Boolean result.
 
 The following is a possible Plutus implementation of a simple $n$ out of $m$
 multi-signature validation script. The type $\type{MultiSig}$ is a list of keys
@@ -591,8 +598,8 @@ validation script is called, it computes the list of keys in $keys$ which signed
 the transaction. If the length of that list is greater than or equal to $num$,
 then enough signatures for the multi-signature are present. Therefore, with
 \var{hkeys} being a value of type \type{MultiSig}, calling
-$\fun{validate}~hkeys$ will return a validator script with the correct type
-according to Figure~\ref{fig:types_defs_multi}.
+$\fun{validate}~multisig$ will return a validator script with the correct type
+according to Figure~\ref{fig:types_defs_plutus}.
 
 \subsection{Native Script Interpreter}
 \label{sec:native-script-interp}
