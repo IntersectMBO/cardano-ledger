@@ -89,8 +89,8 @@ instance STS CHAIN where
                         , Map.empty
                         , Map.empty
                         , Map.empty
-                        , PairSet (Set.empty)
-                        , PairSet (Set.empty)
+                        , Set.empty
+                        , Set.empty
                         , Map.empty
                         )
         utxoSt0 <- trans @(UTXOWS TxId) $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }

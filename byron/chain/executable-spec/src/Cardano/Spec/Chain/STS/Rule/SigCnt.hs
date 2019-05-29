@@ -12,7 +12,7 @@ import Control.State.Transition
 
 import Ledger.Core hiding ((|>))
 import Ledger.GlobalParams (k)
-import Ledger.Update
+import Ledger.Update hiding (NotADelegate)
 
 data SIGCNT
 
