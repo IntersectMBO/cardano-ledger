@@ -45,6 +45,9 @@ module Cardano.Chain.Block.Block
   , toCBORBlock
   , fromCBORABlock
 
+  -- * Block Formatting
+  , renderBlock
+
   -- * ABlockOrBoundary
   , ABlockOrBoundary(..)
   , toCBORABOBBlock
@@ -53,9 +56,6 @@ module Cardano.Chain.Block.Block
 
   -- * BoundaryValidationData
   , BoundaryValidationData(..)
-
-  -- * Extra stuff
-  , renderBlock
   )
 where
 
