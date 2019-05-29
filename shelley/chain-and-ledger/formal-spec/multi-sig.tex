@@ -632,13 +632,13 @@ $\type{MultiSigTerms}$ and a threshold.
   \end{align*}
   \begin{align*}
     \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\HashKey\to\Bool & \\
-    \fun{evalMultiSigScript} & (\type{SingleSig}~hk)~\var{vhks} =  hk \in vhks \\
-    \fun{evalMultiSigScript} & (\type{MultiSig}~m~ts)~\var{vhks} = \\
-                         & m \leq \Sigma
-                           \left(
-                           [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
-                           \textrm{then}~1~\textrm{else}~0\vert t \leftarrow ts]
-                           \right)
+    \fun{evalMultiSigScript} & ~\serialised{\type{SingleSig}~hk}_{hks}~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & ~\serialised{\type{MultiSig}~m~ts}_{hks}~\var{vhks} = \\
+                             & m \leq \Sigma
+                               \left(
+                               [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
+                               \textrm{then}~1~\textrm{else}~0\vert t \leftarrow ts]
+                               \right)
   \end{align*}
 
   \caption{Implementation based on Native Scripts}
