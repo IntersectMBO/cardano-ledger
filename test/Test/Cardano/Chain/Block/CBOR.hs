@@ -34,16 +34,16 @@ import Cardano.Chain.Block
   , Proof(..)
   , ToSign(..)
   , body
-  , fromCBORBlockOrBoundary
-  , fromCBORHeader
-  , fromCBORHeader'
   , dropBoundaryBody
   , dropBoundaryConsensusData
   , dropBoundaryHeader
-  , toCBORBlock
-  , toCBORHeader
-  , toCBORHeader'
+  , fromCBORABOBBlock
+  , fromCBORHeader
+  , fromCBORHeaderToHash
   , mkHeaderExplicit
+  , toCBORABOBBlock
+  , toCBORHeader
+  , toCBORHeaderToHash
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
@@ -95,8 +95,8 @@ exampleEs = EpochSlots 50
 goldenHeader :: Property
 goldenHeader = goldenTestCBORExplicit
   "Header"
-  (toCBORHeader' exampleEs)
-  (fromCBORHeader' exampleEs)
+  (toCBORHeader exampleEs)
+  (fromCBORHeader exampleEs)
   exampleHeader
   "test/golden/cbor/block/Header"
 
@@ -110,9 +110,9 @@ ts_roundTripHeaderCompat = eachOfTS
   roundTripsHeaderCompat :: WithEpochSlots Header -> H.PropertyT IO ()
   roundTripsHeaderCompat esh@(WithEpochSlots es _) = trippingBuildable
     esh
-    (serializeEncoding . toCBORHeader es . unWithEpochSlots)
+    (serializeEncoding . toCBORHeaderToHash es . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
-    . decodeFullDecoder "Header" (fromCBORHeader es)
+    . decodeFullDecoder "Header" (fromCBORHeaderToHash es)
     )
 
 --------------------------------------------------------------------------------
@@ -129,9 +129,9 @@ ts_roundTripBlockCompat = eachOfTS
   roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
   roundTripsBlockCompat esb@(WithEpochSlots es _) = trippingBuildable
     esb
-    (serializeEncoding . toCBORBlock es . unWithEpochSlots)
+    (serializeEncoding . toCBORABOBBlock es . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
-    . decodeFullDecoder "Block" (fromCBORBlockOrBoundary es)
+    . decodeFullDecoder "Block" (fromCBORABOBBlock es)
     )
 
 
