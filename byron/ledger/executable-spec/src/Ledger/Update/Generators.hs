@@ -5,6 +5,11 @@
 module Ledger.Update.Generators
   ( pparams
   , protVer
+  -- PVBUMP judgement contexts
+  , emptyPVUpdateJC
+  , beginningsNoUpdateJC
+  , lastProposalJC
+  -- UPIEC state generators
   , apName
   , apVer
   , metadata
@@ -26,7 +31,7 @@ module Ledger.Update.Generators
   )
 where
 
-import           Control.State.Transition (Environment, State)
+import           Control.State.Transition (Environment, State, Signal)
 import           Data.Map.Strict (Map)
 import           Data.Word (Word64)
 import           Hedgehog
@@ -154,6 +159,27 @@ pvbumpAfter2kEnv =
 -- | Generates a state value for the PVBUMP STS
 pvbumpState :: Gen (State PVBUMP)
 pvbumpState = (,) <$> protVer <*> pparams
+
+-- | Generates a judgement context for the PVBUMP STS for its property #1
+emptyPVUpdateJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+emptyPVUpdateJC = (,,)
+  <$> pvbumpEmptyListEnv
+  <*> pvbumpState
+  <*> pure ()
+
+-- | Generates a judgement context for the PVBUMP STS for its property #2
+beginningsNoUpdateJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+beginningsNoUpdateJC = (,,)
+  <$> pvbumpBeginningsEnv
+  <*> pvbumpState
+  <*> pure ()
+
+-- | Generates a judgement context for the PVBUMP STS for its property #3
+lastProposalJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+lastProposalJC = (,,)
+  <$> pvbumpAfter2kEnv
+  <*> pvbumpState
+  <*> pure ()
 
 -- | Generates an @ApName@
 apName :: Gen ApName

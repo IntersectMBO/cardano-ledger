@@ -19,13 +19,9 @@ import           Ledger.Update (PVBUMP)
 -- in.
 emptyPVUpdate :: Property
 emptyPVUpdate = property $ do
-  judgementContext <-
-    forAll $ fmap TRC $ (,,)
-      <$> G.pvbumpEmptyListEnv
-      <*> G.pvbumpState
-      <*> pure ()
-  let TRC (_, st, _) = judgementContext
-  case applySTS @PVBUMP judgementContext of
+  jc <- forAll G.emptyPVUpdateJC
+  let (_, st, _) = jc
+  case applySTS @PVBUMP (TRC jc) of
     Right st' -> st === st'
     Left _    -> failure
 
@@ -35,13 +31,9 @@ emptyPVUpdate = property $ do
 -- system started in.
 beginningsNoUpdate :: Property
 beginningsNoUpdate = property $ do
-  judgementContext <-
-    forAll $ fmap TRC $ (,,)
-      <$> G.pvbumpBeginningsEnv
-      <*> G.pvbumpState
-      <*> pure ()
-  let TRC (_, st, _) = judgementContext
-  case applySTS @PVBUMP $ judgementContext of
+  jc <- forAll G.beginningsNoUpdateJC
+  let (_, st, _) = jc
+  case applySTS @PVBUMP (TRC jc) of
     Right st' -> st === st'
     Left _    -> failure
 
@@ -53,19 +45,15 @@ beginningsNoUpdate = property $ do
 -- slot s > 2 * k.
 lastProposal :: Property
 lastProposal = property $ do
-  judgementContext <-
-    forAll $ fmap TRC $ (,,)
-      <$> G.pvbumpAfter2kEnv
-      <*> G.pvbumpState
-      <*> pure ()
+  jc <- forAll G.lastProposalJC
   let
-    TRC ((s_n, fads), _, _) = judgementContext
+    ((s_n, fads), _, _) = jc
     s = fromMaybe
       (error
         "An improper slot generator used! Constraint violated: s_n > 2*k")
       (minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ k))
     expectedSt = snd . last . (filter ((<= s) . fst)) $ fads
 
-  case applySTS @PVBUMP $ judgementContext of
+  case applySTS @PVBUMP (TRC jc) of
     Right st' -> expectedSt === st'
     Left _    -> failure
