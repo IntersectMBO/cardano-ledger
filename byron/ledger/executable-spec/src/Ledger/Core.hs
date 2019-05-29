@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -185,9 +186,6 @@ newtype Lovelace = Lovelace
 -- Domain restriction and exclusion
 ---------------------------------------------------------------------------------
 
-newtype PairSet a b = PairSet {unPairSet :: Set (a,b)}
-  deriving (Eq, Semigroup, Show)
-
 class Relation m where
   type Domain m :: *
   type Range m :: *
@@ -227,8 +225,14 @@ class Relation m where
   --
   -- Unicode: 25b7
   (▷<=) :: (Ord (Range m)) => m -> Range m -> m
-
   infixl 5 ▷<=
+
+  -- | Restrict range to values greater or equal than the given value
+  --
+  -- Unicode: 25b7
+  (▷>=) :: (Ord (Range m)) => m -> Range m -> m
+  infixl 5 ▷>=
+
 
   -- | Size of the relation
   size :: Integral n => m -> n
@@ -267,6 +271,8 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
 
   r ▷<= vmax = Bimap.filter (\_ v -> v <= vmax) r
 
+  r ▷>= vmax = Bimap.filter (\_ v -> v >= vmax) r
+
   size = fromIntegral . Bimap.size
 
 instance Relation (Map k v) where
@@ -291,33 +297,37 @@ instance Relation (Map k v) where
 
   r ▷<= vmax = Map.filter (<= vmax) r
 
+  r ▷>= vmax = Map.filter (>= vmax) r
+
   size = fromIntegral . Map.size
 
--- TODO: Remove `PairSet` and just use `Set (a, b)`?
-instance Relation (PairSet a b) where
-  type Domain (PairSet a b) = a
-  type Range (PairSet a b) = b
+instance Relation (Set (a, b)) where
+  type Domain (Set (a, b)) = a
+  type Range (Set (a, b))  = b
 
-  singleton a b = PairSet $ Set.singleton (a,b)
+  singleton a b = Set.singleton (a,b)
 
-  dom = Set.map fst . unPairSet
-  range = Set.map snd . unPairSet
+  dom = Set.map fst
+  range = Set.map snd
 
-  s ◁ r = PairSet . Set.filter (\(k,_) -> k `Set.member` toSet s) $ unPairSet r
+  s ◁ r = Set.filter (\(k,_) -> k `Set.member` toSet s) r
 
-  s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` toSet s) $ unPairSet r
+  s ⋪ r = Set.filter (\(k,_) -> k `Set.notMember` toSet s) r
 
-  r ▷ s = PairSet . Set.filter (\(_,v) -> Set.member v s) $ unPairSet r
+  r ▷ s = Set.filter (\(_,v) -> Set.member v s) r
 
-  (PairSet d0) ∪ (PairSet d1) = PairSet $ Set.union d0 d1
+  (∪) = Set.union
 
   d0 ⨃ d1 = d1' ∪ ((dom d1') ⋪ d0)
     where
-      d1' = PairSet $ toSet d1
+      d1' = toSet d1
 
-  r ▷<= vmax = PairSet . Set.filter ((<= vmax) . snd) $ unPairSet r
+  r ▷<= vmax = Set.filter ((<= vmax) . snd) $ r
 
-  size = fromIntegral . Set.size . unPairSet
+  r ▷>= vmax = Set.filter ((>= vmax) . snd) $ r
+
+  size = fromIntegral . Set.size
+
 
 ---------------------------------------------------------------------------------
 -- Aliases

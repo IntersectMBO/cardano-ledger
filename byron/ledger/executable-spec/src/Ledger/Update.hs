@@ -24,7 +24,7 @@ import Data.Ix (inRange)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
-import Data.Set (Set)
+import Data.Set (Set, union)
 import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
@@ -35,7 +35,6 @@ import Control.State.Transition
 import Ledger.Core
   ( BlockCount(..)
   , HasHash
-  , PairSet(..)
   , Relation(..)
   , Slot(..)
   , SlotCount(..)
@@ -48,6 +47,7 @@ import Ledger.Core
   , (⋪)
   , (▷)
   , (▷<=)
+  , (▷>=)
   , (◁)
   , (⨃)
   , hash
@@ -450,7 +450,7 @@ instance STS ADDVOTE where
     ( Set UpId
     , Bimap Core.VKeyGenesis Core.VKey
     )
-  type State ADDVOTE = Core.PairSet UpId Core.VKeyGenesis
+  type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
 
   data PredicateFailure ADDVOTE
@@ -467,7 +467,7 @@ instance STS ADDVOTE where
             ) <- judgmentContext
         let pid = vote ^. vPropId
             vk = vote ^. vCaster
-            vtsPid = Core.PairSet $
+            vtsPid =
               case lookupR vk dms of
                 Just vks -> Set.singleton (pid, vks)
                 Nothing  -> Set.empty
@@ -487,7 +487,7 @@ instance STS UPVOTE where
     )
   type State UPVOTE =
     ( Map UpId Core.Slot
-    , Core.PairSet UpId Core.VKeyGenesis
+    , Set (UpId, Core.VKeyGenesis)
     )
   type Signal UPVOTE = Vote
   data PredicateFailure UPVOTE
@@ -571,16 +571,15 @@ instance STS UPEND where
     )
   type State UPEND =
     ( [(Core.Slot, (ProtVer, PParams))]
-    , Core.PairSet ProtVer Core.VKeyGenesis
+    , Set (ProtVer, Core.VKeyGenesis)
     )
   type Signal UPEND = (ProtVer, Core.VKey)
 
   data PredicateFailure UPEND
-    = ProtVerUnknown
-    | ProtVerTooRecent
+    = ProtVerUnknown ProtVer
     | TryNextRule
-    | CanAdopt
-    | CannotAdopt
+    | CanAdopt ProtVer
+    | CannotAdopt ProtVer
     | NotADelegate VKey
     | UnconfirmedProposal UpId
     deriving (Eq, Show)
@@ -621,7 +620,7 @@ instance STS UPEND where
             return $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            size ([bv] ◁ bvs) < t ?! CanAdopt
+            size ([bv] ◁ bvs) < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
                 pid ∈ dom (cps ▷<= sn -. 2 *. GP.k) ?! TryNextRule
@@ -641,14 +640,14 @@ instance STS UPEND where
             return $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            t <= size ([bv] ◁ bvs) ?! CannotAdopt
+            t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, (_, ppsc)) -> do
                 pid ∈ dom (cps  ▷<= sn -. 2 *. GP.k) ?! UnconfirmedProposal pid
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
                 return $! (fads', bvs')
               Nothing -> do
-                True ?! ProtVerUnknown
+                True ?! ProtVerUnknown bv
                 return $! (fads, bvs')
 
     ]
@@ -676,8 +675,8 @@ type UPIState =
   , Map UpId (ProtVer, PParams)
   , Map UpId (ApName, ApVer, Metadata)
   , Map UpId Core.Slot
-  , Core.PairSet UpId Core.VKeyGenesis
-  , Core.PairSet ProtVer Core.VKeyGenesis
+  , Set (UpId, Core.VKeyGenesis)
+  , Set (ProtVer, Core.VKeyGenesis)
   , Map UpId Core.Slot
   )
 
@@ -704,8 +703,8 @@ emptyUPIState =
   , Map.empty
   , Map.empty
   , Map.empty
-  , Core.PairSet Set.empty
-  , Core.PairSet Set.empty
+  , Set.empty
+  , Set.empty
   , Map.empty)
 
 data UPIREG
@@ -850,12 +849,14 @@ instance STS UPIEND where
               , bvs
               , pws)
             , (bv,vk)) <- judgmentContext
-        let u = pps ^. upTtl
-            t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
+        let
+          t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
         (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus), (fads, bvs), (bv,vk))
-        let pidskeep = dom (Map.filter (>= (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
-            rpus' = pidskeep ◁ rpus
-            vskeep = Set.fromList . fmap fst $ Map.elems rpus'
+        let
+          u        = pps ^. upTtl
+          pidskeep = dom (pws ▷>= sn -. u) `union` dom cps
+          vskeep   = dom (range rpus')
+          rpus'    = pidskeep ◁ rpus
         return ( (pv, pps)
                 , fads'
                 , avs
@@ -925,15 +926,15 @@ instance STS UPIEC where
         return $! if pv == pv'
           then us
           else
-            ( (pv', pps')       :: (ProtVer, PParams)
-            , []                :: [(Core.Slot, (ProtVer, PParams))]
-            , us ^. _3          :: Map ApName (ApVer, Core.Slot, Metadata)
-            , Map.empty         :: Map UpId (ProtVer, PParams)
-            , us ^. _5          :: Map UpId (ApName, ApVer, Metadata)
-            , Map.empty         :: Map UpId Core.Slot
-            , PairSet Set.empty :: Core.PairSet UpId Core.VKeyGenesis
-            , PairSet Set.empty :: Core.PairSet ProtVer Core.VKeyGenesis
-            , Map.empty         :: Map UpId Core.Slot
+            ( (pv', pps') :: (ProtVer, PParams)
+            , []          :: [(Core.Slot, (ProtVer, PParams))]
+            , us ^. _3    :: Map ApName (ApVer, Core.Slot, Metadata)
+            , Map.empty   :: Map UpId (ProtVer, PParams)
+            , us ^. _5    :: Map UpId (ApName, ApVer, Metadata)
+            , Map.empty   :: Map UpId Core.Slot
+            , Set.empty   :: Set (UpId, Core.VKeyGenesis)
+            , Set.empty   :: Set (ProtVer, Core.VKeyGenesis)
+            , Map.empty   :: Map UpId Core.Slot
             )
     ]
 
