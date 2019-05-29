@@ -20,7 +20,7 @@ import Data.Monoid (Sum(..))
 import Data.Set (Set, isSubsetOf)
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Data.Foldable (toList)
+import Data.Foldable (toList, elem)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
@@ -127,6 +127,19 @@ minusSlot (Slot m) (SlotCount n)
   | m <= n    = Slot 0
   | otherwise = Slot $ m - n
 
+-- | An alias for 'minusSlot'
+(-.) :: Slot -> SlotCount -> Slot
+(-.) = minusSlot
+
+infixl 6 -.
+
+-- | Multiply the block count by the given constant. This function does not
+-- check for overflow.
+(*.) :: Word64 -> BlockCount -> SlotCount
+n *. (BlockCount c) = SlotCount $ n * c
+
+infixl 7 *.
+
 -- | Subtract a slot count from a slot.
 --
 -- In case the slot count is greater than the slot's index, it returns
@@ -175,9 +188,6 @@ newtype Lovelace = Lovelace
 newtype PairSet a b = PairSet {unPairSet :: Set (a,b)}
   deriving (Eq, Semigroup, Show)
 
-psSize :: PairSet a b -> Int
-psSize = Set.size . unPairSet
-
 class Relation m where
   type Domain m :: *
   type Range m :: *
@@ -191,25 +201,51 @@ class Relation m where
 
   -- | Domain restriction
   --
-  (◁), (◃), (<|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
-  s ◃ r = s ◁ r
+  -- Unicode: 25c1
+  (◁), (<|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
   s <| r = s ◁ r
 
   -- | Domain exclusion
   --
+  -- Unicode: 22ea
   (⋪), (</|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
   s </| r = s ⋪ r
 
   -- | Range restriction
   --
-  (▹), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
-  s |> r = s ▹ r
+  -- Unicode: 25b7
+  (▷), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
+  s |> r = s ▷ r
 
   -- | Union
   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
   -- | Union Override
-  (⨃) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
+  (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
+
+  -- | Restrict range to values less or equal than the given value
+  --
+  -- Unicode: 25b7
+  (▷<=) :: (Ord (Range m)) => m -> Range m -> m
+
+  infixl 5 ▷<=
+
+  -- | Size of the relation
+  size :: Integral n => m -> n
+
+-- | Alias for 'elem'.
+--
+-- Unicode: 2208
+(∈) :: (Eq a, Foldable f) => a -> f a -> Bool
+a ∈ f = elem a f
+
+-- | Alias for not 'elem'.
+--
+-- Unicode: 2209
+(∉) :: (Eq a, Foldable f) => a -> f a -> Bool
+a ∉ f = not $ elem a f
+
+infixl 4 ∉
 
 instance (Ord k, Ord v) => Relation (Bimap k v) where
   type Domain (Bimap k v) = k
@@ -221,14 +257,17 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
   range = Set.fromList . Bimap.elems
 
   s ◁ r = Bimap.filter (\k _ -> k `Set.member` toSet s) r
-  s ◃ r = s ◁ r
 
   s ⋪ r = Bimap.filter (\k _ -> k `Set.notMember` toSet s) r
 
-  r ▹ s = Bimap.filter (\_ v -> Set.member v s) r
+  r ▷ s = Bimap.filter (\_ v -> Set.member v s) r
 
   d0 ∪ d1 = Bimap.fold Bimap.insert d0 d1
-  d0 ⨃ d1 = d1 ∪ (dom d1 ⋪ d0)
+  d0 ⨃ d1 = foldr (uncurry Bimap.insert) d0 (toList d1)
+
+  r ▷<= vmax = Bimap.filter (\_ v -> v <= vmax) r
+
+  size = fromIntegral . Bimap.size
 
 instance Relation (Map k v) where
   type Domain (Map k v) = k
@@ -243,10 +282,16 @@ instance Relation (Map k v) where
 
   s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` toSet s) r
 
-  r ▹ s = Map.filter (flip Set.member s) r
+  r ▷ s = Map.filter (flip Set.member s) r
 
   d0 ∪ d1 = Map.union d0 d1
-  d0 ⨃ d1 = d1 ∪ (dom d1 ⋪ d0)
+  -- For union override we pass @d1@ as first argument, since 'Map.union' is
+  -- left biased.
+  d0 ⨃ d1 = Map.union (Map.fromList . toList $ d1) d0
+
+  r ▷<= vmax = Map.filter (<= vmax) r
+
+  size = fromIntegral . Map.size
 
 -- TODO: Remove `PairSet` and just use `Set (a, b)`?
 instance Relation (PairSet a b) where
@@ -262,12 +307,17 @@ instance Relation (PairSet a b) where
 
   s ⋪ r = PairSet . Set.filter (\(k,_) -> k `Set.notMember` toSet s) $ unPairSet r
 
-  r ▹ s = PairSet . Set.filter (\(_,v) -> Set.member v s) $ unPairSet r
+  r ▷ s = PairSet . Set.filter (\(_,v) -> Set.member v s) $ unPairSet r
 
   (PairSet d0) ∪ (PairSet d1) = PairSet $ Set.union d0 d1
 
-  d0 ⨃ d1 = d1 ∪ ((dom d1) ⋪ d0)
+  d0 ⨃ d1 = d1' ∪ ((dom d1') ⋪ d0)
+    where
+      d1' = PairSet $ toSet d1
 
+  r ▷<= vmax = PairSet . Set.filter ((<= vmax) . snd) $ unPairSet r
+
+  size = fromIntegral . Set.size . unPairSet
 
 ---------------------------------------------------------------------------------
 -- Aliases
@@ -275,7 +325,7 @@ instance Relation (PairSet a b) where
 
 -- | Inclusion among foldables.
 --
--- Unicode: 2286.
+-- Unicode: 2286
 --
 (⊆) :: (Foldable f, Foldable g, Ord a) => f a -> g a -> Bool
 x ⊆ y = toSet x `isSubsetOf` toSet y
