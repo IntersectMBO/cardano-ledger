@@ -69,7 +69,7 @@ pparamsGen =
     <*> slotBlockGen
     <*> Gen.integral (Range.linear (0 :: Natural) 1000) -- scriptVersion
     <*> Gen.integral (Range.linear 0 1000)              -- cfmThd
-    <*> Gen.double (Range.constant 0 1)               -- upAdptThd
+    <*> Gen.double (Range.constant 0 1)                 -- upAdptThd
     <*> pure 0                                          -- factor @a@
     <*> pure 0                                          -- factor @b@
  where

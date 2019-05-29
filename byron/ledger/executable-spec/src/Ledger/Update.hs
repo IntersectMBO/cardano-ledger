@@ -83,7 +83,8 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _cfmThd :: Int -- TODO: this should be a double
   -- ^ Update proposal confirmation threshold (number of votes)
   , _upAdptThd :: Double
-  -- ^ Update adoption threshold (number of block issuers)
+  -- ^ Update adoption threshold: a proportion of block issuers that have to
+  -- endorse a given version to become candidate for adoption
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
   , _factorA :: Int
@@ -554,7 +555,7 @@ instance STS FADS where
 data UPEND
 
 -- | Find the key that corresponds to the value satisfying the given predicate.
--- In case more than one key is found this function returns Nothing.
+-- In case zero or more than one key is found this function returns Nothing.
 findKey :: (v -> Bool) -> Map k v -> Maybe (k, v)
 findKey p m =
   case Map.toList (Map.filter p m) of
