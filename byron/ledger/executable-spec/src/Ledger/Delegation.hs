@@ -135,7 +135,7 @@ import Ledger.Core
   , HasHash
   , hash
   )
-import Ledger.Core.Generators (vkGen, vkgenesisGen)
+import qualified Ledger.Core.Generators as CG
 import Ledger.GlobalParams (k)
 
 
@@ -487,7 +487,7 @@ dcertGen env = do
   -- The generated delegator must be one of the genesis keys in the
   -- environment.
   vkS <- Gen.element $ Set.toList (env ^. allowedDelegators)
-  vkD <- vkGen
+  vkD <- CG.vk
   let Epoch n = env ^. epoch
   m   <- Gen.integral (linear 0 100)
   let epo = Epoch (n + m)
@@ -526,7 +526,7 @@ instance HasTrace DELEG where
     --
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
-    <$> Gen.set (linear 1 7) vkgenesisGen
+    <$> Gen.set (linear 1 7) CG.vkgenesis
     <*> (Epoch <$> Gen.integral (linear 0 100))
     <*> (Slot <$> Gen.integral (linear 0 10000))
 

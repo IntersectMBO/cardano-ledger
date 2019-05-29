@@ -1,9 +1,9 @@
 -- | Generators for the 'Ledger.Core' values.
 module Ledger.Core.Generators
-  ( vkGen
-  , vkgenesisGen
-  , addrGen
-  , slotGen
+  ( vk
+  , vkgenesis
+  , addr
+  , slot
   )
 where
 
@@ -20,16 +20,16 @@ import Ledger.Core
   , Slot(Slot)
   )
 
-vkGen :: Gen VKey
-vkGen = VKey . Owner <$> Gen.integral (Range.linear 0 10000)
+vk :: Gen VKey
+vk = VKey . Owner <$> Gen.integral (Range.linear 0 10000)
 
-vkgenesisGen :: Gen VKeyGenesis
-vkgenesisGen = VKeyGenesis <$> vkGen
+vkgenesis :: Gen VKeyGenesis
+vkgenesis = VKeyGenesis <$> vk
 
-addrGen :: Gen Addr
-addrGen = Addr <$> vkGen
+addr :: Gen Addr
+addr = Addr <$> vk
 
 -- | Generates a slot within the given bound
-slotGen :: Word64 -> Word64 -> Gen Slot
-slotGen lower upper =
+slot :: Word64 -> Word64 -> Gen Slot
+slot lower upper =
   Slot <$> Gen.word64 (Range.linear lower upper)

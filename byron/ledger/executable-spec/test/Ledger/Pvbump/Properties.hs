@@ -4,7 +4,7 @@ module Ledger.Pvbump.Properties where
 
 import           Control.State.Transition (applySTS, TRC(..))
 import           Data.Maybe (fromMaybe)
-import           Ledger.Update.Generators
+import qualified Ledger.Update.Generators as G
 import           Hedgehog
 import           Ledger.Core (BlockCount(..), SlotCount(..), minusSlotMaybe)
 import           Ledger.GlobalParams (k)
@@ -21,8 +21,8 @@ emptyPVUpdate :: Property
 emptyPVUpdate = property $ do
   judgementContext <-
     forAll $ fmap TRC $ (,,)
-      <$> pvbumpEmptyListEnvGen
-      <*> pvbumpStateGen
+      <$> G.pvbumpEmptyListEnv
+      <*> G.pvbumpState
       <*> pure ()
   let TRC (_, st, _) = judgementContext
   case applySTS @PVBUMP judgementContext of
@@ -37,8 +37,8 @@ beginningsNoUpdate :: Property
 beginningsNoUpdate = property $ do
   judgementContext <-
     forAll $ fmap TRC $ (,,)
-      <$> pvbumpBeginningsEnvGen
-      <*> pvbumpStateGen
+      <$> G.pvbumpBeginningsEnv
+      <*> G.pvbumpState
       <*> pure ()
   let TRC (_, st, _) = judgementContext
   case applySTS @PVBUMP $ judgementContext of
@@ -55,8 +55,8 @@ lastProposal :: Property
 lastProposal = property $ do
   judgementContext <-
     forAll $ fmap TRC $ (,,)
-      <$> pvbumpAfter2kEnvGen
-      <*> pvbumpStateGen
+      <$> G.pvbumpAfter2kEnv
+      <*> G.pvbumpState
       <*> pure ()
   let
     TRC ((s_n, fads), _, _) = judgementContext

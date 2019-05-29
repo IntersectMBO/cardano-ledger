@@ -111,7 +111,7 @@ import Ledger.Delegation
   )
 
 import Ledger.GlobalParams (k)
-import Ledger.Core.Generators (vkGen)
+import qualified Ledger.Core.Generators as CG
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -296,7 +296,7 @@ rejectDupSchedDelegs = property $ do
             (_, (res, _)):_ -> res
             _ -> error $  "This should not happen: "
                        ++ "tr is guaranteed to contain a non-empty sequence of scheduled delegations"
-    vkD <- vkGen
+    vkD <- CG.vk
     epo <- Epoch <$> integral (linear 0 100)
     let dcert
           = DCert

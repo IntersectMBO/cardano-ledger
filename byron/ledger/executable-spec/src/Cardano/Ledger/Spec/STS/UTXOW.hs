@@ -117,7 +117,7 @@ traceAddrs = mkAddr <$> [0 .. 10]
 
 instance HasTrace (UTXOW TxId) where
   initEnvGen
-    = UTxOEnv <$> genUTxO <*> UpdateGen.pparamsGen
+    = UTxOEnv <$> genUTxO <*> UpdateGen.pparams
     where
       genUTxO = do
         txOuts <- UTxOGen.genInitialTxOuts traceAddrs

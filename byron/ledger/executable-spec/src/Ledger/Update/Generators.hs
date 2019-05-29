@@ -3,14 +3,14 @@
 
 -- | Generators for the 'Ledger.Update' values.
 module Ledger.Update.Generators
-  ( pparamsGen
-  , protVerGen
+  ( pparams
+  , protVer
   -- PVBUMP environment generators
-  , pvbumpAfter2kEnvGen
-  , pvbumpEmptyListEnvGen
-  , pvbumpBeginningsEnvGen
+  , pvbumpAfter2kEnv
+  , pvbumpEmptyListEnv
+  , pvbumpBeginningsEnv
   -- PVBUMP state generators
-  , pvbumpStateGen
+  , pvbumpState
   )
 where
 
@@ -21,15 +21,15 @@ import           Hedgehog.Gen.Aux (doubleInc)
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
-import           Ledger.Core.Generators (slotGen)
+import qualified Ledger.Core.Generators as CG
 import           Ledger.GlobalParams (k)
 import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
 import           Numeric.Natural (Natural)
 
 
 -- | Generates a 'ProtVer'
-protVerGen :: Gen ProtVer
-protVerGen =
+protVer :: Gen ProtVer
+protVer =
   (\a b alt -> ProtVer a b alt)
     <$> Gen.integral (Range.linear (0 :: Natural) 100)
     <*> Gen.integral (Range.linear (0 :: Natural) 100)
@@ -39,8 +39,8 @@ protVerGen =
 --
 -- TODO: The protocol parameters still need to be aligned with the formal
 -- spec.
-pparamsGen :: Gen PParams
-pparamsGen =
+pparams :: Gen PParams
+pparams =
   (\((maxBkSz, maxHdrSz, maxTxSz, maxPropSz) :: (Natural, Natural, Natural, Natural))
     (bkSgnCntT :: Double)
     ((bkSlotsPerEpoch, upTtl, stableAfter) :: (SlotCount, SlotCount, BlockCount))
@@ -64,9 +64,9 @@ pparamsGen =
       factorA
       factorB
   )
-    <$> szGen
+    <$> sz
     <*> doubleInc                                       -- bkSgnCntT
-    <*> slotBlockGen
+    <*> slotBlock
     <*> Gen.integral (Range.linear (0 :: Natural) 1000) -- scriptVersion
     <*> Gen.integral (Range.linear 0 1000)              -- cfmThd
     <*> Gen.double (Range.constant 0 1)                 -- upAdptThd
@@ -74,8 +74,8 @@ pparamsGen =
     <*> pure 0                                          -- factor @b@
  where
   -- | Generates maxBkSz, maxHdrSz, maxTxSz and maxPropSz
-  szGen :: Gen (Natural, Natural, Natural, Natural)
-  szGen = do
+  sz :: Gen (Natural, Natural, Natural, Natural)
+  sz = do
     bkSize <- Gen.integral (Range.linear 1 hi)
     (bkSize,,,)
       <$> gRange bkSize
@@ -91,8 +91,8 @@ pparamsGen =
     gRange upper = Gen.integral (Range.linear lo upper)
 
   -- | Generates bkSlotsPerEpoch, upTtl and stableAfter
-  slotBlockGen :: Gen (SlotCount, SlotCount, BlockCount)
-  slotBlockGen =
+  slotBlock :: Gen (SlotCount, SlotCount, BlockCount)
+  slotBlock =
     -- The number of slots per epoch is computed from 'k':
     -- slots per-epoch = k * 10
     let perEpoch = SlotCount $ unBlockCount k *  10 in
@@ -103,41 +103,41 @@ pparamsGen =
     gRange :: SlotCount -> Gen Word64
     gRange hi = Gen.word64 (Range.linear 1 (unSlotCount hi))
 
-listGen :: Word64 -> Word64 -> Int -> Int -> Gen [(Slot, (ProtVer, PParams))]
-listGen loSl hiSl loLen hiLen = Gen.list (Range.linear loLen hiLen) inOneSlot
+list :: Word64 -> Word64 -> Int -> Int -> Gen [(Slot, (ProtVer, PParams))]
+list loSl hiSl loLen hiLen = Gen.list (Range.linear loLen hiLen) inOneSlot
  where
   inOneSlot :: Gen (Slot, (ProtVer, PParams))
   inOneSlot = (\s v p -> (s, (v, p)))
-    <$> slotGen loSl hiSl
-    <*> protVerGen
-    <*> pparamsGen
+    <$> CG.slot loSl hiSl
+    <*> protVer
+    <*> pparams
 
 -- | Generates an environment for the PVBUMP STS with an empty list of
 -- updates
-pvbumpEmptyListEnvGen :: Gen (Environment PVBUMP)
-pvbumpEmptyListEnvGen = (, []) <$> slotGen 0 100000
+pvbumpEmptyListEnv :: Gen (Environment PVBUMP)
+pvbumpEmptyListEnv = (, []) <$> CG.slot 0 100000
 
 -- | Generates an environment for the PVBUMP STS such that s_n <= 2 *
 -- k
-pvbumpBeginningsEnvGen :: Gen (Environment PVBUMP)
-pvbumpBeginningsEnvGen =
+pvbumpBeginningsEnv :: Gen (Environment PVBUMP)
+pvbumpBeginningsEnv =
   (,)
-    <$> (slotGen 0 $ 2 * (unBlockCount k))
-    <*> listGen 0 100000 0 10
+    <$> (CG.slot 0 $ 2 * (unBlockCount k))
+    <*> list 0 100000 0 10
 
 -- | Generates an environment for the PVBUMP STS such that s_n >= 2 *
 -- k
-pvbumpAfter2kEnvGen :: Gen (Environment PVBUMP)
-pvbumpAfter2kEnvGen =
+pvbumpAfter2kEnv :: Gen (Environment PVBUMP)
+pvbumpAfter2kEnv =
   let kv = unBlockCount k in (,)
-    <$> slotGen (2 * kv + 1) (10 * kv)
+    <$> CG.slot (2 * kv + 1) (10 * kv)
     <*> ((++)
-         <$> listGen 0 1 1 1 -- to ensure there is at least one
-                             -- element left after domain restriction
-                             -- in the lastProposal property
-         <*> listGen 0 (10 * kv) 1 10
+         <$> list 0 1 1 1 -- to ensure there is at least one element
+                          -- left after domain restriction in the
+                          -- lastProposal property
+         <*> list 0 (10 * kv) 1 10
         )
 
 -- | Generates a state value for the PVBUMP STS
-pvbumpStateGen :: Gen (State PVBUMP)
-pvbumpStateGen = (,) <$> protVerGen <*> pparamsGen
+pvbumpState :: Gen (State PVBUMP)
+pvbumpState = (,) <$> protVer <*> pparams
