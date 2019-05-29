@@ -484,15 +484,15 @@ one validation script.
   \begin{equation*}
     \inference[UTxO-wit]
     {
-      (utxo, \wcard, \wcard) \leteq \var{utxoSt}
+      (utxo, \wcard, \wcard) \leteq \var{utxoSt}\\
+      scriptWits \leteq \fun{txwitsScript}~tx\\
+      scriptIns \leteq \fun{txinsScript}~(\fun{txins}~tx)~utxo\\
       \\~\\
       \forall \var{inp}\mapsto\var{validator} \in
-      \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx),
+      \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~scriptWits,
       \\ \fun{validateScript}~validator~(\fun{pendingTx}~tx)
       \\~\\
-      \vert
-      \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~(\fun{txwitsScript}~tx)
-      \vert = \vert \fun{txinsScript}~(\fun{txins}~tx)~utxo\vert
+      scriptIns = \dom(\fun{validators}~scriptIns~utxo~scriptWits)
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
