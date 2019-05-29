@@ -45,6 +45,9 @@ module Cardano.Chain.Block.Block
   , toCBORBlock
   , fromCBORABlock
 
+  -- * Block Formatting
+  , renderBlock
+
   -- * ABlockOrBoundary
   , ABlockOrBoundary(..)
   , toCBORABOBBlock
