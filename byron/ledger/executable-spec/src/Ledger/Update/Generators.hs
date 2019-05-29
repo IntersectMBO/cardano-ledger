@@ -5,45 +5,37 @@
 module Ledger.Update.Generators
   ( pparams
   , protVer
-  -- PVBUMP judgement contexts
+  -- PVBUMP judgement context generators
   , emptyPVUpdateJC
   , beginningsNoUpdateJC
   , lastProposalJC
-  -- UPIEC state generators
+  -- UPIState-related generators
   , apName
   , apVer
   , metadata
-  , avs
-  , upId
-  , rpus
-  , raus
-  , cps
-  , vts
-  , bvs
-  , pws
-  , upiState
-  -- PVBUMP environment generators
-  , pvbumpAfter2kEnv
-  , pvbumpEmptyListEnv
-  , pvbumpBeginningsEnv
-  -- PVBUMP state generators
-  , pvbumpState
+  -- UPIEC judgement context generators
+  , noProtVerChangeJC
+  , protVerChangeJC
   )
 where
 
 import           Control.State.Transition (Environment, State, Signal)
 import           Data.Map.Strict (Map)
+import           Data.Set (Set)
 import           Data.Word (Word64)
 import           Hedgehog
 import           Hedgehog.Gen.Aux (doubleInc)
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
-import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..), VKeyGenesis(..), PairSet(..))
+import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..), VKeyGenesis(..), minusSlot)
 import qualified Ledger.Core.Generators as CG
 import           Ledger.GlobalParams (k)
-import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP, ApName(..), ApVer(..), Metadata(..), UpId(..), UPIState)
+import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP, ApName(..), ApVer(..), Metadata(..), UpId(..), UPIState, UPIEC)
 import           Numeric.Natural (Natural)
 
+
+-- | A judgement context of an STS
+type JC sts = (Environment sts, State sts, Signal sts)
 
 -- | Generates a 'ProtVer'
 protVer :: Gen ProtVer
@@ -161,25 +153,26 @@ pvbumpState :: Gen (State PVBUMP)
 pvbumpState = (,) <$> protVer <*> pparams
 
 -- | Generates a judgement context for the PVBUMP STS for its property #1
-emptyPVUpdateJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+emptyPVUpdateJC :: Gen (JC PVBUMP)
 emptyPVUpdateJC = (,,)
   <$> pvbumpEmptyListEnv
   <*> pvbumpState
   <*> pure ()
 
 -- | Generates a judgement context for the PVBUMP STS for its property #2
-beginningsNoUpdateJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+beginningsNoUpdateJC :: Gen (JC PVBUMP)
 beginningsNoUpdateJC = (,,)
   <$> pvbumpBeginningsEnv
   <*> pvbumpState
   <*> pure ()
 
 -- | Generates a judgement context for the PVBUMP STS for its property #3
-lastProposalJC :: Gen (Environment PVBUMP, State PVBUMP, Signal PVBUMP)
+lastProposalJC :: Gen (JC PVBUMP)
 lastProposalJC = (,,)
   <$> pvbumpAfter2kEnv
   <*> pvbumpState
   <*> pure ()
+
 
 -- | Generates an @ApName@
 apName :: Gen ApName
@@ -238,24 +231,29 @@ cps = Gen.map (Range.linear 0 10) m where
 
 -- | Generates a set for the 'vts' field of an @UPIState@, i.e.,
 -- proposal votes
-vts :: Gen (PairSet UpId VKeyGenesis)
-vts = PairSet <$> Gen.set (Range.linear 0 10) ((,) <$> upId <*> CG.vkgenesis)
+vts :: Gen (Set (UpId, VKeyGenesis))
+vts = Gen.set (Range.linear 0 10) ((,) <$> upId <*> CG.vkgenesis)
 
 -- | Generates a set for the 'bvs' field of an @UPIState@, i.e.,
 -- endorsement-key pairs
-bvs :: Gen (PairSet ProtVer VKeyGenesis)
-bvs = PairSet <$> Gen.set (Range.linear 0 10) ((,) <$> protVer <*> CG.vkgenesis)
+bvs :: Gen (Set (ProtVer, VKeyGenesis))
+bvs = Gen.set (Range.linear 0 10) ((,) <$> protVer <*> CG.vkgenesis)
 
 -- | Generates a map for the 'pws' field of an @UPIState@, i.e.,
 -- proposal timestamps
 pws :: Gen (Map UpId Slot)
 pws = Gen.map (Range.linear 0 10) ((,) <$> upId <*> CG.slot 0 100000)
 
--- | Generates an @UPIState@
-upiState :: Gen UPIState
-upiState = (,,,,,,,,)
-  <$> ((,) <$> protVer <*> pparams)
-  <*> listFads 0 100000 0 10
+-- | Generates an @UPIState@ for the UPIEC STS given a protocol
+-- version, protocol parameters and future protocol version adoptions
+upiecState
+  :: ProtVer
+  -> PParams
+  -> [(Slot, (ProtVer, PParams))]
+  -> Gen UPIState
+upiecState pv pps fads = (,,,,,,,,)
+  <$> pure (pv, pps)
+  <*> pure fads
   <*> avs
   <*> rpus
   <*> raus
@@ -263,3 +261,37 @@ upiState = (,,,,,,,,)
   <*> vts
   <*> bvs
   <*> pws
+
+-- | Generates a judgement context for property #1 of the UPIEC STS
+noProtVerChangeJC :: Gen (JC UPIEC)
+noProtVerChangeJC = do
+  ((s_n, fads), (pv, pps), ()) <- pvbumpNoChangeJC
+  st                           <- upiecState pv pps fads
+  pure (s_n, st, ())
+ where
+  pvbumpNoChangeJC :: Gen (JC PVBUMP)
+  pvbumpNoChangeJC = Gen.choice [emptyPVUpdateJC, beginningsNoUpdateJC]
+
+
+-- | Generates a judgement context for properties #2, #3 and #4 of the
+-- UPIEC STS
+protVerChangeJC :: Gen (JC UPIEC)
+protVerChangeJC = do
+  ((s_n, fads), (pv, pps), ()) <- lastProposalJC
+  s'                           <- CG.slot 0 $ upper s_n -- so that it
+                                                        -- passes
+                                                        -- domain
+                                                        -- restriction
+                                                        -- on fads
+  let
+    fad = ( s'
+          , ( pv { _pvMin = _pvMin pv + 1 } -- so that pv != pv'
+            , pps
+            )
+          )
+    fads' = fads ++ [fad]
+  st                           <- upiecState pv pps fads'
+  pure (s_n, st, ())
+ where
+  upper :: Slot -> Word64
+  upper s = unSlot (minusSlot s (SlotCount . (2 *) . unBlockCount $ k))

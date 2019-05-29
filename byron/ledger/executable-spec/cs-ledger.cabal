@@ -91,6 +91,7 @@ test-suite ledger-rules-test
   other-modules: Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.Pvbump.Properties
+               , Ledger.Upiec.Properties
                , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
