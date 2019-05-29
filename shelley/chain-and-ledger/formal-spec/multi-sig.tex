@@ -475,10 +475,9 @@ checked for:
 \item the validator script validating the transaction.
 \end{itemize}
 
-We also check that the size of the set of spent outputs locked by a script is
-equal to the elements of the inputs for which we have a validator
-script. Overall that means that for each spent output we have one signature or
-one validation script.
+We also check that the set of spent outputs locked by a script is equal to the
+elements of the inputs for which we have a validator script. This ensures that
+for each script-locked output there exists a corresponding validation script.
 
 \begin{figure}[htb]
   \begin{equation*}
@@ -566,10 +565,11 @@ data scripts which are used in the full extended UTxO model for
 Plutus~\cite{plutus_eutxo}. As those values are not required for simple
 multi-signature, we the unit type for them. The Boolean return type signals
 whether the script succeeded in validating the transaction. The function
-$\fun{validateScript}$ takes a Plutus script representation and a $\PendingTx$
-value, evaluates the script and returns a Boolean result.
+$\fun{validateScript}$ specialized for $\ScriptPlutus$ takes a Plutus script
+representation and a $\PendingTx$ value, and evaluates the script using the
+Plutus interpreter.
 
-The following is a possible Plutus implementation of a simple $n$ out of $m$
+The following is a possible Plutus implementation of a simple $m$ out of $n$
 multi-signature validation script. The type $\type{MultiSig}$ is a list of keys
 and a threshold value.
 
@@ -603,12 +603,6 @@ according to Figure~\ref{fig:types_defs_plutus}.
 
 \subsection{Native Script Interpreter}
 \label{sec:native-script-interp}
-
-An alternative implementation for multi-signature scripts is an embedding of the
-script as data type which can then be interpreted natively. In the below example
-code, the type $\type{MultiSigScript}$ is defined as a tree-structure
-$\type{MultiSigTerm}$ that is either a single signature leaf node or a list of
-$\type{MultiSigTerms}$ and a threshold.
 
 \begin{figure*}[hbt]
   \emph{MultiSig Type}
@@ -645,6 +639,13 @@ $\type{MultiSigTerms}$ and a threshold.
   \label{fig:types-msig}
 \end{figure*}
 
+An alternative implementation for multi-signature scripts is an embedding of the
+script as data type which can then be interpreted
+natively. Figure~\ref{fig:types-msig} shows the types and necessary functions
+for such a native script implementation. The type $\ScriptMSig$ is defined as a
+tree-structure which is either a single signature leaf node or a list of
+values of type $\ScriptMSig$ together with an integral threshold value.
+
 The validation of such a term is done as shown in the specialization of
 \fun{validateScript} for $\ScriptMSig$ as shown in Figure~\ref{fig:types-msig}.
 It checks for presence of a single signature in the set of signatures of a
@@ -680,16 +681,13 @@ specializing the script validation function. If the Plutus approach is not
 viable for any reason, e.g., script size or readiness of library, only the
 native script implementation could be pursued instead.
 
-\addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
-\bibliography{references}
-
 \appendix
 
 \section{Native Multi-Signature Examples}
 \label{sec:native-multi-sign}
 
 \begin{verbatim}
-verifyCases :: MultiSigScript -> [(Set VKeyHash, Bool)] -> Bool
+verifyCases :: ScriptMSig -> [(Set VKeyHash, Bool)] -> Bool
 verifyCases script cases =
     and [ evalMultiSigScript script keyset == expected
         | (keyset, expected) <- cases]
@@ -770,6 +768,9 @@ exampleNestedAndOr_verify =
                     && (has3 || has4)
       ]
 \end{verbatim}
+
+\addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
 
