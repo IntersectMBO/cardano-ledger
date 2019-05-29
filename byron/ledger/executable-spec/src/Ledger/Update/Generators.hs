@@ -5,6 +5,18 @@
 module Ledger.Update.Generators
   ( pparams
   , protVer
+  , apName
+  , apVer
+  , metadata
+  , avs
+  , upId
+  , rpus
+  , raus
+  , cps
+  , vts
+  , bvs
+  , pws
+  , upiState
   -- PVBUMP environment generators
   , pvbumpAfter2kEnv
   , pvbumpEmptyListEnv
@@ -15,15 +27,16 @@ module Ledger.Update.Generators
 where
 
 import           Control.State.Transition (Environment, State)
+import           Data.Map.Strict (Map)
 import           Data.Word (Word64)
 import           Hedgehog
 import           Hedgehog.Gen.Aux (doubleInc)
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
-import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
+import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..), VKeyGenesis(..), PairSet(..))
 import qualified Ledger.Core.Generators as CG
 import           Ledger.GlobalParams (k)
-import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
+import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP, ApName(..), ApVer(..), Metadata(..), UpId(..), UPIState)
 import           Numeric.Natural (Natural)
 
 
@@ -103,8 +116,8 @@ pparams =
     gRange :: SlotCount -> Gen Word64
     gRange hi = Gen.word64 (Range.linear 1 (unSlotCount hi))
 
-list :: Word64 -> Word64 -> Int -> Int -> Gen [(Slot, (ProtVer, PParams))]
-list loSl hiSl loLen hiLen = Gen.list (Range.linear loLen hiLen) inOneSlot
+listFads :: Word64 -> Word64 -> Int -> Int -> Gen [(Slot, (ProtVer, PParams))]
+listFads loSl hiSl loLen hiLen = Gen.list (Range.linear loLen hiLen) inOneSlot
  where
   inOneSlot :: Gen (Slot, (ProtVer, PParams))
   inOneSlot = (\s v p -> (s, (v, p)))
@@ -123,7 +136,7 @@ pvbumpBeginningsEnv :: Gen (Environment PVBUMP)
 pvbumpBeginningsEnv =
   (,)
     <$> (CG.slot 0 $ 2 * (unBlockCount k))
-    <*> list 0 100000 0 10
+    <*> listFads 0 100000 0 10
 
 -- | Generates an environment for the PVBUMP STS such that s_n >= 2 *
 -- k
@@ -132,12 +145,95 @@ pvbumpAfter2kEnv =
   let kv = unBlockCount k in (,)
     <$> CG.slot (2 * kv + 1) (10 * kv)
     <*> ((++)
-         <$> list 0 1 1 1 -- to ensure there is at least one element
+         <$> listFads 0 1 1 1 -- to ensure there is at least one element
                           -- left after domain restriction in the
                           -- lastProposal property
-         <*> list 0 (10 * kv) 1 10
+         <*> listFads 0 (10 * kv) 1 10
         )
 
 -- | Generates a state value for the PVBUMP STS
 pvbumpState :: Gen (State PVBUMP)
 pvbumpState = (,) <$> protVer <*> pparams
+
+-- | Generates an @ApName@
+apName :: Gen ApName
+apName = ApName <$> Gen.element ["byron", "shelley", "praos"]
+
+-- | Generates an @ApVer@
+apVer :: Gen ApVer
+apVer = ApVer <$> Gen.integral (Range.linear 0 100)
+
+-- | Generates @Metadata@
+metadata :: Gen Metadata
+metadata = pure Metadata
+
+-- | Generates a map for the 'avs' field of an @UPIState@, i.e.,
+-- application versions
+avs :: Gen (Map ApName (ApVer, Slot, Metadata))
+avs = Gen.map (Range.linear 0 10) forAppName where
+  forAppName :: Gen (ApName, (ApVer, Slot, Metadata))
+  forAppName = (\n v s m -> (n, (v, s, m)))
+    <$> apName
+    <*> apVer
+    <*> CG.slot 0 100000
+    <*> metadata
+
+-- | Generates an update proposal id
+upId :: Gen UpId
+upId = UpId <$> Gen.integral (Range.linear 0 10000)
+
+-- | Generates a map for the 'rpus' field of an @UPIState@, i.e.,
+-- registered protocol update proposals
+rpus :: Gen (Map UpId (ProtVer, PParams))
+rpus = Gen.map (Range.linear 0 10) forUpId where
+  forUpId :: Gen (UpId, (ProtVer, PParams))
+  forUpId = (\i v p -> (i, (v, p)))
+    <$> upId
+    <*> protVer
+    <*> pparams
+
+-- | Generates a map for the 'raus' field of an @UPIState@, i.e.,
+-- registered software update proposals
+raus :: Gen (Map UpId (ApName, ApVer, Metadata))
+raus = Gen.map (Range.linear 0 10) forUpId where
+  forUpId :: Gen (UpId, (ApName, ApVer, Metadata))
+  forUpId = (\i n v m -> (i, (n, v, m)))
+    <$> upId
+    <*> apName
+    <*> apVer
+    <*> metadata
+
+-- | Generates a map for the 'cps' field of an @UPIState@, i.e.,
+-- confirmed proposals
+cps :: Gen (Map UpId Slot)
+cps = Gen.map (Range.linear 0 10) m where
+  m :: Gen (UpId, Slot)
+  m = (,) <$> upId <*> CG.slot 0 100000
+
+-- | Generates a set for the 'vts' field of an @UPIState@, i.e.,
+-- proposal votes
+vts :: Gen (PairSet UpId VKeyGenesis)
+vts = PairSet <$> Gen.set (Range.linear 0 10) ((,) <$> upId <*> CG.vkgenesis)
+
+-- | Generates a set for the 'bvs' field of an @UPIState@, i.e.,
+-- endorsement-key pairs
+bvs :: Gen (PairSet ProtVer VKeyGenesis)
+bvs = PairSet <$> Gen.set (Range.linear 0 10) ((,) <$> protVer <*> CG.vkgenesis)
+
+-- | Generates a map for the 'pws' field of an @UPIState@, i.e.,
+-- proposal timestamps
+pws :: Gen (Map UpId Slot)
+pws = Gen.map (Range.linear 0 10) ((,) <$> upId <*> CG.slot 0 100000)
+
+-- | Generates an @UPIState@
+upiState :: Gen UPIState
+upiState = (,,,,,,,,)
+  <$> ((,) <$> protVer <*> pparams)
+  <*> listFads 0 100000 0 10
+  <*> avs
+  <*> rpus
+  <*> raus
+  <*> cps
+  <*> vts
+  <*> bvs
+  <*> pws
