@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedLists  #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies     #-}
 
 -- | Test module where we check that the block validation implementation
 -- matches the formal specification. To this end, the strategy is:
@@ -51,7 +52,7 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 300 $ property $ do
-    tr <- forAll trace
+    tr <- forAll $ trace @CHAIN 100
     passConcreteValidation tr
 
 passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()

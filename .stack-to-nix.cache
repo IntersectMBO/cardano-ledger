@@ -13,3 +13,6 @@ https://github.com/joelwilliamson/bimap 997fbb38b08dec14d225d064dac05b0a85f4ceae
 https://github.com/well-typed/cborg 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d cborg 1khd1v9yh6jdkcvzvknvhxpc1qvxvww0pp7c43w4hbvdyhs1q8wh cborg cborg.nix
 https://github.com/input-output-hk/cardano-crypto 3c707936ba0a665375acf5bd240dc4b6eaa6c0bc . 0g8ln8k8wx4csdv92bz09pr7v9dp4lcyv1334b09c9rgwdwhqg1b cardano-crypto cardano-crypto.nix
 http://github.com/nc6/canonical-json a9dc9b893649bc2e2a770ab22d278a780f7e3a3c . 0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr canonical-json canonical-json.nix
+https://github.com/input-output-hk/cardano-ledger-specs 40b5c148f16672d1d97492419c757c01ba0acae8 byron/semantics/executable-spec 0i4lf4yj9p2vncasn44mrdbbyblsrnirnlczpywaz7sxqwlinf20 small-steps small-steps.nix
+https://github.com/input-output-hk/cardano-ledger-specs 40b5c148f16672d1d97492419c757c01ba0acae8 byron/ledger/executable-spec 0i4lf4yj9p2vncasn44mrdbbyblsrnirnlczpywaz7sxqwlinf20 cs-ledger cs-ledger.nix
+https://github.com/input-output-hk/cardano-ledger-specs 40b5c148f16672d1d97492419c757c01ba0acae8 byron/chain/executable-spec 0i4lf4yj9p2vncasn44mrdbbyblsrnirnlczpywaz7sxqwlinf20 cs-blockchain cs-blockchain.nix

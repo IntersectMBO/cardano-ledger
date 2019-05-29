@@ -43,9 +43,11 @@
             (hsPkgs.small-steps)
             (hsPkgs.cs-ledger)
             ];
-          build-tools = [ ((hsPkgs.buildPackages).doctest-discover) ];
+          build-tools = [
+            (hsPkgs.buildPackages.doctest-discover or (pkgs.buildPackages.doctest-discover))
+            ];
           };
-        "ledger-delegation-test" = {
+        "ledger-rules-test" = {
           depends = [
             (hsPkgs.base)
             (hsPkgs.bimap)
@@ -64,8 +66,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-ledger-specs";
-      rev = "30f2728662e782c50f2da1f66f4b3159e85c8ff1";
-      sha256 = "1zaw311hk9n8kr2phja57hrflfalnniib3mz89761qyf38v7n3kp";
+      rev = "40b5c148f16672d1d97492419c757c01ba0acae8";
+      sha256 = "0i4lf4yj9p2vncasn44mrdbbyblsrnirnlczpywaz7sxqwlinf20";
       });
     postUnpack = "sourceRoot+=/byron/ledger/executable-spec; echo source root reset to \$sourceRoot";
     }

@@ -62,7 +62,7 @@ main =
         , Test.Cardano.Chain.UTxO.CBOR.tests
         , Test.Cardano.Chain.UTxO.Compact.tests
         , Test.Cardano.Chain.UTxO.Json.tests
-        , const Test.Cardano.Chain.UTxO.Model.tests
+        , Test.Cardano.Chain.UTxO.Model.tests
         , Test.Cardano.Chain.Update.CBOR.tests
         , Test.Cardano.Chain.Update.Json.tests
         , Test.Cardano.Chain.Update.Properties.tests

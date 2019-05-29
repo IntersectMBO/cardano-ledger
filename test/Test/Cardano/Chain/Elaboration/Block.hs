@@ -38,10 +38,12 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Slotting as Slotting
 
 import qualified Control.State.Transition as Transition
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL, epochL)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
+import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL)
+import qualified Cardano.Spec.Chain.STS.Rule.Epoch as Abstract
 import qualified Ledger.Core as Abstract
-import Ledger.Delegation (DCert, delegationMap, delegatorOf, mkDCert)
+import Ledger.Delegation
+  (DCert, allowedDelegators, delegationMap, delegatorOf, mkDCert)
 import Ledger.Update (PParams, bkSlotsPerEpoch, maxBkSz, maxHdrSz, stableAfter)
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
@@ -67,7 +69,7 @@ elaborate
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ()
-elaborate config (_, _, pps) dCert st ab = Concrete.ABlock
+elaborate config (_, _, _, pps) dCert st ab = Concrete.ABlock
   { Concrete.blockHeader     = bh0
   , Concrete.blockBody       = bb0
   , Concrete.blockAnnotation = ()
@@ -129,7 +131,7 @@ elaborateBS
   -> Concrete.ChainValidationState
   -> Abstract.Block
   -> Concrete.ABlock ByteString
-elaborateBS config aenv@(_, _, pps) dCert st ab =
+elaborateBS config aenv@(_, _, _, pps) dCert st ab =
   annotateBlock (ppsEpochSlots pps) $ elaborate config aenv dCert st ab
 
 annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
@@ -163,7 +165,8 @@ rcDCert
   -- ^ Key for which the delegation certificate is being constructed.
   -> Transition.State CHAIN
   -> DCert
-rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
+rcDCert vk ast@(slot, _, _, _, _, _) =
+  mkDCert vkg sigVkg vk (Abstract.sEpoch slot)
  where
   dm :: Bimap Abstract.VKeyGenesis Abstract.VKey
   dm  = ast ^. disL . delegationMap
@@ -181,7 +184,8 @@ rcDCert vk ast = mkDCert vkg sigVkg vk (ast ^. epochL)
 --   trace.
 --
 abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
-abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
+abEnvToCfg (_, _, dsEnv, pps) =
+  Genesis.Config genesisData genesisHash Nothing rnm
  where
   rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
 
@@ -227,4 +231,5 @@ abEnvToCfg (_, vkgs, pps) = Genesis.Config genesisData genesisHash Nothing rnm
     }
 
   genesisKeyHashes :: Set Common.KeyHash
-  genesisKeyHashes = Set.map (hashKey . elaborateVKeyGenesis) vkgs
+  genesisKeyHashes =
+    Set.map (hashKey . elaborateVKeyGenesis) (dsEnv ^. allowedDelegators)

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.UTxO.UTxO
   ( UTxO(..)
@@ -10,10 +11,13 @@ module Cardano.Chain.UTxO.UTxO
   , empty
   , fromList
   , fromBalances
+  , fromTxOut
+  , toList
   , member
   , lookup
   , lookupAddress
   , union
+  , concat
   , balance
   , (<|)
   , (</|)
@@ -22,7 +26,7 @@ module Cardano.Chain.UTxO.UTxO
   )
 where
 
-import Cardano.Prelude hiding (empty)
+import Cardano.Prelude hiding (empty, toList, concat)
 
 import Data.Coerce
 import qualified Data.List.NonEmpty as NE
@@ -35,6 +39,7 @@ import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
 import Cardano.Chain.UTxO.Compact
   ( CompactTxIn
   , CompactTxOut
+  , fromCompactTxIn
   , fromCompactTxOut
   , toCompactTxIn
   , toCompactTxOut
@@ -64,11 +69,16 @@ fromList = UTxO . M.fromList . toCompactTxInTxOutList
 
 -- | Create a 'UTxO' from a list of initial balances
 fromBalances :: [(Address, Lovelace)] -> UTxO
-fromBalances = fromList . fmap utxoEntry
- where
-  utxoEntry :: (Address, Lovelace) -> (TxIn, TxOut)
-  utxoEntry (addr, lovelace) =
-    (TxInUtxo (coerce $ hash addr) 0, TxOut addr lovelace)
+fromBalances =
+  fromRight (panic "fromBalances: duplicate Address in initial balances")
+    . concat
+    . fmap (fromTxOut . uncurry TxOut)
+
+fromTxOut :: TxOut -> UTxO
+fromTxOut out = fromList [(TxInUtxo (coerce . hash $ txOutAddress out) 0, out)]
+
+toList :: UTxO -> [(TxIn, TxOut)]
+toList = fmap (bimap fromCompactTxIn fromCompactTxOut) . M.toList . unUTxO
 
 member :: TxIn -> UTxO -> Bool
 member txIn = M.member (toCompactTxIn txIn) . unUTxO
@@ -87,6 +97,9 @@ union (UTxO m) (UTxO m') = do
   let m'' = M.union m m'
   (M.size m'' == M.size m + M.size m') `orThrowError` UTxOOverlappingUnion
   pure $ UTxO m''
+
+concat :: MonadError UTxOError m => [UTxO] -> m UTxO
+concat = foldM union empty
 
 balance :: UTxO -> Either LovelaceError Lovelace
 balance = sumLovelace . fmap compactTxOutValue . M.elems . unUTxO
