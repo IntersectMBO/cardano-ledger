@@ -53,6 +53,9 @@ module Cardano.Chain.Block.Block
 
   -- * BoundaryValidationData
   , BoundaryValidationData(..)
+
+  -- * Extra stuff
+  , renderBlock
   )
 where
 
