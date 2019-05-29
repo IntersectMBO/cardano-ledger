@@ -509,7 +509,8 @@ dcertsGen :: DSEnv -> Gen [DCert]
 -- resulting list, the higher the probability that this list will be rejected
 -- and the generator will have to retry.
 --
-dcertsGen env = Gen.list (constant 0 n) (dcertGen env)
+dcertsGen env = Gen.frequency
+  [(95, pure []), (10, Gen.list (constant 1 n) (dcertGen env))]
   where n = env ^. allowedDelegators . to length
 
 instance HasTrace DELEG where

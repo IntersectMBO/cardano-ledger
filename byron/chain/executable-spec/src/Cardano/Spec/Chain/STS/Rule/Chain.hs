@@ -1,14 +1,15 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedLists       #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.), _1, _5, Lens', to)
+import Control.Lens (Lens', (&), (.~), (^.), _1, _5, to)
 import qualified Crypto.Hash
 import qualified Data.Bimap as Bimap
 import Data.Bimap (Bimap)
@@ -17,6 +18,7 @@ import Data.ByteString (ByteString)
 import qualified Data.Map as Map
 import Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
+import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
@@ -29,10 +31,7 @@ import Ledger.Core
 import Ledger.Delegation
 import Ledger.Update
 import qualified Ledger.Update.Generators as UpdateGen
-import Ledger.UTxO
-  ( TxId
-  , UTxO(UTxO)
-  )
+import Ledger.UTxO (TxId, UTxO)
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.BHead
@@ -167,7 +166,7 @@ instance HasTrace CHAIN where
 
   initEnvGen = (,,,)
             <$> gCurrentSlot
-            <*> pure initialUTxO
+            <*> (utxo0 <$> initEnvGen @(UTXOWS TxId))
             <*> initEnvGen @DELEG
             <*> UpdateGen.pparamsGen
     where
@@ -175,36 +174,60 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-      -- TODO: For now we generate an empty UTxO. In later iterations we will
-      -- incorporate the UTxO payload into the chain.
-      initialUTxO = UTxO Map.empty
+  sigGen = sigGenChain GenDelegation GenUTxO
 
-  sigGen (_sNow, _utxo0, dsEnv, _pps) (Slot s, _sgs, h, _utxo, ds, _us) = do
+data ShouldGenDelegation = GenDelegation | NoGenDelegation
+
+data ShouldGenUTxO = GenUTxO | NoGenUTxO
+
+sigGenChain
+  :: ShouldGenDelegation
+  -> ShouldGenUTxO
+  -> Environment CHAIN
+  -> State CHAIN
+  -> Gen (Signal CHAIN)
+sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps) (Slot s, _sgs, h, utxo, ds, _us)
+  = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dms)
+    vkI         <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dms)
+    nextSlot    <- gNextSlot
+
+    delegationPayload <- case shouldGenDelegation of
+      GenDelegation   -> dcertsGen dsEnv
+      NoGenDelegation -> pure []
+
+    utxoPayload <- case shouldGenUTxO of
+      GenUTxO   -> sigGen @(UTXOWS TxId) utxoEnv utxo
+      NoGenUTxO -> pure []
+
     let
-      dummySig = pure $! Sig genesisHash (owner vkI)
-      bh = MkBlockHeader
-        <$> pure h
-        <*> gNextSlot
-        <*> pure vkI
-        <*> dummySig  -- Block header signature
-        <*> dummyHash -- UTxO hash
-        <*> dummyHash -- Delegation payload hash
-        <*> dummyHash -- Update payload hash
-    Block <$> bh <*> bb
-    where
-      -- We'd expect the slot increment to be close to 1, even for large
-      -- Gen's size numbers.
-      gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 0 10)
-      dummyHash = pure genesisHash -- We need to generate proper hashes once we
-                                   -- generate transactions and update
-                                   -- payloads.
-      bb = BlockBody
-        <$> dcertsGen dsEnv
-        <*> pure []      -- UTxO
-        <*> pure Nothing -- Update proposal
-        <*> pure []      -- Votes on update proposals
-        <*> pure (ProtVer 0 0 0)
+      dummySig       = Sig genesisHash (owner vkI)
+      unsignedHeader = MkBlockHeader
+        h
+        nextSlot
+        vkI
+        dummySig -- Fill with a dummy signature first and then sign afterwards
+        (hash utxoPayload)
+        (hash delegationPayload)
+        (hash (bb ^. bUpdProp, bb ^. bUpdVotes))
+
+      signedHeader =
+        unsignedHeader & bhSig .~ Sig (hashHeader unsignedHeader) (owner vkI)
+
+      bb =
+        BlockBody
+          delegationPayload
+          utxoPayload
+          Nothing -- Update proposal
+          []      -- Votes on update proposals
+          (ProtVer 0 0 0)
+
+    pure $ Block signedHeader bb
+   where
+    -- We'd expect the slot increment to be close to 1, even for large
+    -- Gen's size numbers.
+    gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
+
+    utxoEnv   = UTxOEnv {utxo0, pps}
