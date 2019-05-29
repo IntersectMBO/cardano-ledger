@@ -333,7 +333,7 @@ functions:
       \fun{canUpdate}~\var{pps}~\var{pps'}\\
       {\begin{array}{r c l}
          & = & \var{pps'}~\var{maxBlockSize} \leq 2\cdot\var{pps}~\var{maxBlockSize}\\
-         & \wedge & \var{pps'}~\var{maxBlockSize} <  \var{pps'}~\var{maxTxSize}\\
+         & \wedge & \var{pps'}~\var{maxTxSize} < \var{pps'}~\var{maxBlockSize} \\
          & \wedge
              & 0 \leq
                \var{pps'}~\var{scriptVersion} - \var{pps}~\var{scriptVersion}
