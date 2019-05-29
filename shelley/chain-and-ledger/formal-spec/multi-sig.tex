@@ -353,7 +353,7 @@ of the validator script. In accordance with the extended UTxO
 specification~\cite{plutus_eutxo}, the producer signs the script when creating
 and the consumer provides it later when spending the output. The type $\Script$
 is partitioned into Plutus scripts, $\ScriptPlutus$ and msig scripts
-$\ScriptMSig$, see Sections~\ref{sec:plutus-scripts}
+$\ScriptMSig$ for the native interpreter, see Sections~\ref{sec:plutus-scripts}
 and~\ref{sec:native-script-interp} for details.
 
 A transaction output that is locked by a script carries the hash of the
@@ -605,64 +605,62 @@ according to Figure~\ref{fig:types_defs_plutus}.
 \label{sec:native-script-interp}
 
 An alternative implementation for multi-signature scripts is an embedding of the
-script as data type which can then be interpreted natively (or via a Plutus
-script). In the below example code, the type $\type{MultiSigScript}$ is defined
-as a tree-structure $\type{MultiSigTerm}$ that is either a single signature leaf
-node or a list of $\type{MultiSigTerms}$ and a threshold.
+script as data type which can then be interpreted natively. In the below example
+code, the type $\type{MultiSigScript}$ is defined as a tree-structure
+$\type{MultiSigTerm}$ that is either a single signature leaf node or a list of
+$\type{MultiSigTerms}$ and a threshold.
 
-\begin{verbatim}
-module MultiSigScript where
+\begin{figure*}[hbt]
+  \emph{MultiSig Type}
 
-import qualified Data.Set as Set
-import           Data.Set (Set)
+  \begin{equation*}
+    \begin{array}{rll}
+      \var{msig} & \in \ScriptMSig = & \,\,\,\type{SingleSig}~\HashKey \\
+       && \vert\,\,\type{MultSig}~Int~[\ScriptMSig]
+    \end{array}
+  \end{equation*}
 
-data VKeyHash = VKeyHash Int -- dummy representation
-  deriving (Eq, Ord, Show)
+  \emph{Functions}
 
-type MultiSigScript = MultiSigTerm
+  \begin{align*}
+    \fun{validateScript} & \in\ScriptMSig\to\Tx\to\Bool & \text{validate native
+                                                          script} \\
+    \fun{validateScript} & \var{msig}~\var{tx}= \\
+                         & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
+                           vk \in \fun{txwitsVKey}~\var{tx}\} \\
+                         & \fun{evalMultiSigScript}~msig~vhks\\
+  \end{align*}
+  \begin{align*}
+    \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\HashKey\to\Bool & \\
+    \fun{evalMultiSigScript} & (\type{SingleSig}~hk)~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & (\type{MultiSig}~m~ts)~\var{vhks} = \\
+                         & m \leq \Sigma
+                           \left(
+                           [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
+                           \textrm{then}~1~\textrm{else}~0\vert t \leftarrow ts]
+                           \right)
+  \end{align*}
 
-data MultiSigTerm = SingleSig     VKeyHash
-                  | MultiSig  Int [MultiSigTerm]
-  deriving Show
-\end{verbatim}
+  \caption{Implementation based on Native Scripts}
+  \label{fig:types-msig}
+\end{figure*}
 
-The validation of such a term can then be done as follows, checking for presence
-of a single signature as the base case and comparing the number of validating
-nodes in the list with the threshold in the recursion case.
-
-\begin{verbatim}
-evalMultiSigScript :: MultiSigScript -> Set VKeyHash -> Bool
-evalMultiSigScript (SingleSig vkh) vkhs =
-    vkh `Set.member` vkhs
-
-evalMultiSigScript (MultiSig m ts) vkhs =
-    sum [ if evalMultiSigScript t vkhs then 1 else 0 | t <- ts ] >= m
-
-verifyCases :: MultiSigScript -> [(Set VKeyHash, Bool)] -> Bool
-verifyCases script cases =
-    and [ evalMultiSigScript script keyset == expected
-        | (keyset, expected) <- cases]
-\end{verbatim}
-
-The Appendix~\ref{sec:native-multi-sign} provides some examples of how this
-scheme can be used. The intention is to have an alternative in the case for
-whenever the simple Plutus script integration would not be viable.
-
-The integration would follow the same approach as outlined for Plutus scripts in
-Sections~\ref{sec:types} and \ref{sec:ledg-trans-multi}. First, a new type of
-address is introduced which holds the hash of the necessary information about
-how an output can be unlocked. Then, a new witness type is defined and added to
-the transaction type definition. After that, the STS rule UTXOW is extended with
-the validation of the new witnesses.
+The validation of such a term is done as shown in the specialization of
+\fun{validateScript} for $\ScriptMSig$ as shown in Figure~\ref{fig:types-msig}.
+It checks for presence of a single signature in the set of signatures of a
+transaction as the base case and compares the number of validating nodes in the
+list with the threshold in the recursion case. The
+Appendix~\ref{sec:native-multi-sign} provides some examples of how this scheme
+can be used.
 
 \section{Summary}
 \label{sec:summary}
 
-The presented multi-signature base on Plutus scheme does not require the scripts
+The presented script based multi-signature scheme does not require the scripts
 to use any cryptographic primitives. It requires only the ability to compare the
-required keys to those that actually signed the transaction. Gas cost can
-therefore be calculated statically in advance. The scripts could be realized as
-smart contracts with only limited requirements on functionality on the script
+required keys to those that actually signed the transaction. Potential gas cost
+can therefore be calculated statically in advance. The scripts can be realized
+as smart contracts with only limited requirements on functionality on the script
 language.
 
 The necessary extensions to the data types in the Shelley
@@ -675,11 +673,12 @@ allows the creation of transactions with an arbitrary number of signatures. This
 potentially is a risk for an attack. The number of signatures should be taken
 into account in some way in the calculation of the transaction fee.
 
-The alternative, script-like integration as DSL allows for native integration
-via the direct interpretation of the $\type{MultiSigScript}$. Its integration
-works in the same way as the Plutus script-based approach. If the Plutus
-approach is not viable for any reason, e.g., script size or readiness of
-library, it can be pursued instead.
+There are two proposed implementation schemes, one based on Plutus, the other on
+a script-like integration as DSL for a native interpreter. Both follow the same
+strategy for integration: extending addresses, defining witnesses and
+specializing the script validation function. If the Plutus approach is not
+viable for any reason, e.g., script size or readiness of library, only the
+native script implementation could be pursued instead.
 
 \addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
 \bibliography{references}
@@ -690,6 +689,11 @@ library, it can be pursued instead.
 \label{sec:native-multi-sign}
 
 \begin{verbatim}
+verifyCases :: MultiSigScript -> [(Set VKeyHash, Bool)] -> Bool
+verifyCases script cases =
+    and [ evalMultiSigScript script keyset == expected
+        | (keyset, expected) <- cases]
+
 mkVKeyHashSet :: [Int] -> Set VKeyHash
 mkVKeyHashSet = Set.fromList . map VKeyHash
 
