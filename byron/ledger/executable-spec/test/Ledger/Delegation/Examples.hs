@@ -46,10 +46,10 @@ deleg =
       .- (s 1, (gk 1, k 11)) .-> DState (Bimap.fromList [(gk 0, k 10), (gk 1, k 11)])
                                         [(gk 0, s 0), (gk 1, s 1)]
 
-      .- (s 2, (gk 0, k 11)) .-> DState (Bimap.fromList [(gk 0, k 11), (gk 1, k 11)])
+      .- (s 2, (gk 0, k 11)) .-> DState (Bimap.fromList [(gk 0, k 11)])
                                         [(gk 0, s 2), (gk 1, s 1)]
 
-      .- (s 3, (gk 2, k 12)) .-> DState (Bimap.fromList [(gk 0, k 11), (gk 1, k 11), (gk 2, k 12)])
+      .- (s 3, (gk 2, k 12)) .-> DState (Bimap.fromList [(gk 0, k 11), (gk 2, k 12)])
                                         [(gk 0, s 2), (gk 1, s 1), (gk 2, s 3)]
     ]
 

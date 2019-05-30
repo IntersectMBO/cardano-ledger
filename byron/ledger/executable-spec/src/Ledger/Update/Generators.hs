@@ -46,7 +46,7 @@ pparamsGen =
     ((bkSlotsPerEpoch, upTtl, stableAfter) :: (SlotCount, SlotCount, BlockCount))
     (scriptVersion :: Natural)
     (cfmThd :: Int)
-    (upAdptThd :: Int)
+    (upAdptThd :: Double)
     (factorA :: Int)
     (factorB :: Int)
     -> PParams
@@ -69,7 +69,7 @@ pparamsGen =
     <*> slotBlockGen
     <*> Gen.integral (Range.linear (0 :: Natural) 1000) -- scriptVersion
     <*> Gen.integral (Range.linear 0 1000)              -- cfmThd
-    <*> Gen.integral (Range.linear 1 100)               -- upAdptThd
+    <*> Gen.double (Range.constant 0 1)                 -- upAdptThd
     <*> pure 0                                          -- factor @a@
     <*> pure 0                                          -- factor @b@
  where

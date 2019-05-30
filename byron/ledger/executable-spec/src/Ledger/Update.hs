@@ -4,7 +4,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,8 +23,8 @@ import Data.Char (isAscii)
 import Data.Ix (inRange)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, maybeToList)
-import Data.Set (Set)
+import Data.Maybe (maybeToList)
+import Data.Set (Set, union)
 import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
@@ -33,9 +32,29 @@ import Numeric.Natural
 
 import Control.State.Transition
 
-import Ledger.Core (Relation(..), (⋪), (▹), (◃), (⨃), unSlot, HasHash, hash, PairSet(..), VKeyGenesis, VKey, BlockCount(..), Slot(..), minusSlotMaybe, SlotCount(..))
+import Ledger.Core
+  ( BlockCount(..)
+  , HasHash
+  , Relation(..)
+  , Slot(..)
+  , SlotCount(..)
+  , VKey
+  , VKeyGenesis
+  , (*.)
+  , (-.)
+  , (∈)
+  , (∉)
+  , (⋪)
+  , (▷)
+  , (▷<=)
+  , (▷>=)
+  , (◁)
+  , (⨃)
+  , hash
+  , minusSlotMaybe
+  , unSlot
+  )
 import qualified Ledger.Core as Core
-import Ledger.Delegation (liveAfter)
 import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
@@ -61,10 +80,11 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: Natural
   -- ^ Script version
-  , _cfmThd :: Int
+  , _cfmThd :: Int -- TODO: this should be a double
   -- ^ Update proposal confirmation threshold (number of votes)
-  , _upAdptThd :: Int
-  -- ^ Update adoption threshold (number of block issuers)
+  , _upAdptThd :: Double
+  -- ^ Update adoption threshold: a proportion of block issuers that have to
+  -- endorse a given version to become candidate for adoption
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
   , _factorA :: Int
@@ -293,7 +313,7 @@ instance STS UPPVV where
         canUpdate pps up ?! CannotUpdatePv
         nv `notElem` (fst <$> Map.elems rpus) ?! AlreadyProposedPv
         all sTagValid (up ^. upSTags) ?! InvalidSystemTags
-        return $! rpus ⨃ Map.singleton pid (nv, ppsn)
+        return $! rpus ⨃ [(pid, (nv, ppsn))]
     ]
     where
       sTagValid tag = all isAscii tag && length tag <= 10
@@ -392,7 +412,7 @@ instance STS UPREG where
             ) <- judgmentContext
         (rpus', raus') <- trans @UPV $ TRC ((pv, pps, avs), (rpus, raus), up)
         let vk = up ^. upIssuer
-        dms ▹ Set.singleton vk /= empty ?! NotGenesisDelegate
+        dms ▷ Set.singleton vk /= empty ?! NotGenesisDelegate
         Core.verify vk (up ^. upSigData) (up ^. upSig) ?! DoesNotVerify
         return (rpus', raus')
 
@@ -431,7 +451,7 @@ instance STS ADDVOTE where
     ( Set UpId
     , Bimap Core.VKeyGenesis Core.VKey
     )
-  type State ADDVOTE = Core.PairSet UpId Core.VKeyGenesis
+  type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
 
   data PredicateFailure ADDVOTE
@@ -448,7 +468,7 @@ instance STS ADDVOTE where
             ) <- judgmentContext
         let pid = vote ^. vPropId
             vk = vote ^. vCaster
-            vtsPid = Core.PairSet $
+            vtsPid =
               case lookupR vk dms of
                 Just vks -> Set.singleton (pid, vks)
                 Nothing  -> Set.empty
@@ -468,7 +488,7 @@ instance STS UPVOTE where
     )
   type State UPVOTE =
     ( Map UpId Core.Slot
-    , Core.PairSet UpId Core.VKeyGenesis
+    , Set (UpId, Core.VKeyGenesis)
     )
   type Signal UPVOTE = Vote
   data PredicateFailure UPVOTE
@@ -487,7 +507,7 @@ instance STS UPVOTE where
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        Core.psSize (Set.singleton pid ◃ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! HigherThanThdAndNotAlreadyConfirmed
+        size (Set.singleton pid ◁ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! HigherThanThdAndNotAlreadyConfirmed
         return (cps, vts')
     , do
         TRC ( (sn, pps, rups, dms)
@@ -496,9 +516,9 @@ instance STS UPVOTE where
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        (pps ^. cfmThd) <= Core.psSize (Set.singleton pid ◃ vts') ?! CfmThdNotReached
+        (pps ^. cfmThd) <= size (Set.singleton pid ◁ vts') ?! CfmThdNotReached
         pid `Set.notMember` dom cps ?! AlreadyConfirmed
-        return (cps ⨃ Map.singleton pid sn, vts')
+        return (cps ⨃ [(pid, sn)], vts')
 
     ]
 
@@ -508,9 +528,6 @@ instance Embed ADDVOTE UPVOTE where
 ------------------------------------------------------------------------
 -- Update voting
 ------------------------------------------------------------------------
-
-canAdopt :: PParams -> Core.PairSet ProtVer Core.VKey -> ProtVer -> Bool
-canAdopt pps bvs bv = (pps ^. upAdptThd) <= Core.psSize (Set.singleton bv ◃ bvs)
 
 data FADS
 
@@ -537,87 +554,101 @@ instance STS FADS where
 
 data UPEND
 
+-- | Find the key that corresponds to the value satisfying the given predicate.
+-- In case zero or more than one key is found this function returns Nothing.
+findKey :: (v -> Bool) -> Map k v -> Maybe (k, v)
+findKey p m =
+  case Map.toList (Map.filter p m) of
+    [(k, v)] -> Just (k, v)
+    _        -> Nothing
+
 instance STS UPEND where
   type Environment UPEND =
-    ( Core.Slot
-    , Bimap VKeyGenesis VKey
-    , Map UpId Core.Slot
-    , Map UpId (ProtVer, PParams)
+    ( Core.Slot                    -- Current slot number
+    , Natural                      -- Adoption threshold
+    , Bimap VKeyGenesis VKey       -- Delegation map
+    , Map UpId Core.Slot           -- Confirmed proposals
+    , Map UpId (ProtVer, PParams)  -- Registered update proposals
     )
   type State UPEND =
     ( [(Core.Slot, (ProtVer, PParams))]
-    , Core.PairSet ProtVer Core.VKeyGenesis
+    , Set (ProtVer, Core.VKeyGenesis)
     )
   type Signal UPEND = (ProtVer, Core.VKey)
 
   data PredicateFailure UPEND
-    = ProtVerUnknown
-    | ProtVerTooRecent
-    | NotAFailure
-    | CanAdopt
-    | CannotAdopt
+    = ProtVerUnknown ProtVer
+    | TryNextRule
+    | CanAdopt ProtVer
+    | CannotAdopt ProtVer
+    | NotADelegate VKey
+    | UnconfirmedProposal UpId
     deriving (Eq, Show)
 
   initialRules = []
   transitionRules =
     [
       do
-        TRC ( (sn, _dms, cps, rpus)
+        TRC ( (sn, _t, _dms, cps, rpus)
             , (fads, bvs)
             , (bv, _vk)
             ) <- judgmentContext
-        case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-          Just pid -> do
-            pid `Map.notMember` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! NotAFailure
-          Nothing -> True ?! NotAFailure
-        return $! (fads, bvs)
+        case findKey ((== bv) . fst) rpus of
+          Just (pid, _) -> do
+            -- If we found the proposal id that corresponds to 'bv' then we
+            -- have to check that it isn't confirmed for this rule to succeed.
+            pid ∉ dom (cps ▷<= sn  -. 2 *. GP.k) ?! TryNextRule
+            return $! (fads, bvs)
+          Nothing ->
+            -- If we didn't find the proposal id that corresponds to 'bv' then
+            -- this rule succeeds.
+            --
+            -- Note that the difference w.r.t. the case above is that this case
+            -- will succeed, whereas the case above can cause a predicate
+            -- failure if the condition of the '!?' operator is not met. Since
+            -- even on failure we _need_ to return a state, the case above also
+            -- returns the state unchanged in this case.
+            return $! (fads, bvs)
 
     , do
-        TRC ( (sn, dms, cps, rpus)
+        TRC ( (sn, t, dms, cps, rpus)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
         case lookupR vk dms of
           Nothing  -> do
-            False ?! CannotAdopt -- md 2019-05-03: not sure what to
-                                 -- return/error on here
-            return $! (fads, bvs) -- a silly thing needed to get types line up
+            False ?! TryNextRule
+            return $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            -- (not $ canAdopt pps bvs' bv) ?! CanAdopt
-            Core.psSize (Set.singleton bv ◃ bvs) < (fromIntegral . unBlockCount) t ?! CanAdopt
-            case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-              Just pid -> do
-                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! ProtVerTooRecent
+            size ([bv] ◁ bvs) < t ?! CanAdopt bv
+            case findKey ((== bv) . fst) rpus of
+              Just (pid, _) -> do
+                pid ∈ dom (cps ▷<= sn -. 2 *. GP.k) ?! TryNextRule
                 return $! (fads, bvs')
               Nothing -> do
-                True ?! ProtVerUnknown
-                return $! (fads, bvs') -- a silly thing needed to get types line up
+                True ?! TryNextRule
+                return $! (fads, bvs')
 
     , do
-        TRC ( (sn, dms, cps, rpus)
+        TRC ( (sn, t, dms, cps, rpus)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
-        let vksM = lookupR vk dms
-        case vksM of
+        case lookupR vk dms of
           Nothing  -> do
-            False ?! CannotAdopt -- md 2019-05-03: not sure what to
-                                 -- return/error on here
-            return $! (fads, bvs) -- a silly thing needed to get types line up
+            False ?! NotADelegate vk
+            return $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            -- canAdopt pps bvs' bv ?! CannotAdopt
-            (fromIntegral . unBlockCount) t <= Core.psSize (Set.singleton bv ◃ bvs) ?! CannotAdopt
-            case (Map.lookup bv (invertBijection $ fst <$> rpus)) of
-              Just pid -> do
-                pid `Map.member` (Map.filter (<= sn `Core.minusSlot` liveAfter GP.k) cps) ?! ProtVerTooRecent
-                -- This is safe by virtue of the fact we've just inverted the map and found this there
-                let (_, ppsc) = fromJust $ Map.lookup pid rpus
+            t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
+            case findKey ((== bv) . fst) rpus of
+              Just (pid, (_, ppsc)) -> do
+                pid ∈ dom (cps  ▷<= sn -. 2 *. GP.k) ?! UnconfirmedProposal pid
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
                 return $! (fads', bvs')
               Nothing -> do
-                True ?! ProtVerUnknown
+                True ?! ProtVerUnknown bv
                 return $! (fads, bvs')
 
     ]
@@ -645,8 +676,8 @@ type UPIState =
   , Map UpId (ProtVer, PParams)
   , Map UpId (ApName, ApVer, Metadata)
   , Map UpId Core.Slot
-  , Core.PairSet UpId Core.VKeyGenesis
-  , Core.PairSet ProtVer Core.VKeyGenesis
+  , Set (UpId, Core.VKeyGenesis)
+  , Set (ProtVer, Core.VKeyGenesis)
   , Map UpId Core.Slot
   )
 
@@ -673,8 +704,8 @@ emptyUPIState =
   , Map.empty
   , Map.empty
   , Map.empty
-  , Core.PairSet Set.empty
-  , Core.PairSet Set.empty
+  , Set.empty
+  , Set.empty
   , Map.empty)
 
 data UPIREG
@@ -747,11 +778,10 @@ instance STS UPIVOTE where
         let
           stblCps  = Map.keys $ Map.filter stable cps'
           stable s = unSlot s <= unSlot sn - 2 * unBlockCount GP.k
-          avsnew   =
-            Map.fromList [ (an, (av, sn, m))
-                         | pid <- stblCps
-                         , (an, av, m) <- maybeToList $ Map.lookup pid raus
-                         ]
+          avsnew   = [ (an, (av, sn, m))
+                     | pid <- stblCps
+                     , (an, av, m) <- maybeToList $ Map.lookup pid raus
+                     ]
         return ( (pv, pps)
                 , fads
                 , avs ⨃ avsnew
@@ -820,20 +850,23 @@ instance STS UPIEND where
               , bvs
               , pws)
             , (bv,vk)) <- judgmentContext
-        let u = pps ^. upTtl
-        (fads', bvs') <- trans @UPEND $ TRC ((sn, dms, cps, rpus), (fads, bvs), (bv,vk))
-        let pidskeep = dom (Map.filter (>= (sn `Core.minusSlot` u)) pws) `Set.union` dom cps
-            rpus' = pidskeep ◃ rpus
-            vskeep = Set.fromList . fmap fst $ Map.elems rpus'
+        let
+          t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
+        (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus), (fads, bvs), (bv,vk))
+        let
+          u        = pps ^. upTtl
+          pidskeep = dom (pws ▷>= sn -. u) `union` dom cps
+          vskeep   = dom (range rpus')
+          rpus'    = pidskeep ◁ rpus
         return ( (pv, pps)
                 , fads'
                 , avs
                 , rpus'
-                , pidskeep ◃ raus
+                , pidskeep ◁ raus
                 , cps
-                , pidskeep ◃ vts
-                , vskeep ◃ bvs'
-                , pidskeep ◃ pws
+                , pidskeep ◁ vts
+                , vskeep ◁ bvs'
+                , pidskeep ◁ pws
                 )
 
     ]
@@ -894,25 +927,17 @@ instance STS UPIEC where
         return $! if pv == pv'
           then us
           else
-            ( (pv', pps')       :: (ProtVer, PParams)
-            , []                :: [(Core.Slot, (ProtVer, PParams))]
-            , us ^. _3          :: Map ApName (ApVer, Core.Slot, Metadata)
-            , Map.empty         :: Map UpId (ProtVer, PParams)
-            , us ^. _5          :: Map UpId (ApName, ApVer, Metadata)
-            , Map.empty         :: Map UpId Core.Slot
-            , PairSet Set.empty :: Core.PairSet UpId Core.VKeyGenesis
-            , PairSet Set.empty :: Core.PairSet ProtVer Core.VKeyGenesis
-            , Map.empty         :: Map UpId Core.Slot
+            ( (pv', pps') :: (ProtVer, PParams)
+            , []          :: [(Core.Slot, (ProtVer, PParams))]
+            , us ^. _3    :: Map ApName (ApVer, Core.Slot, Metadata)
+            , Map.empty   :: Map UpId (ProtVer, PParams)
+            , us ^. _5    :: Map UpId (ApName, ApVer, Metadata)
+            , Map.empty   :: Map UpId Core.Slot
+            , Set.empty   :: Set (UpId, Core.VKeyGenesis)
+            , Set.empty   :: Set (ProtVer, Core.VKeyGenesis)
+            , Map.empty   :: Map UpId Core.Slot
             )
     ]
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
-
---------------------------------------------------------------------------------
--- Constants
---------------------------------------------------------------------------------
-
--- | The number of blocks needed for endorsement
-t :: BlockCount
-t = undefined
