@@ -1,8 +1,8 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
 
 packages:
-  - .
-  - test
+  - cardano-ledger
+  - cardano-ledger/test
   - crypto
   - crypto/test
   - validate-mainnet

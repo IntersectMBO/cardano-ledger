@@ -11,6 +11,9 @@ let
   # The cardano-mainnet-mirror used during testing
   cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
 
+  exe-extension =
+    pkgs.lib.optionalString pkgs.stdenv.targetPlatform.isWindows ".exe";
+
   # Build the packageset with module support.
   # We can essentially override anything in the modules
   # section.
@@ -44,6 +47,17 @@ let
 
         packages.cardano-ledger.preBuild =
           "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
+
+        packages.cardano-ledger.components.tests.cardano-ledger-test = {
+          build-tools = [ pkgs.makeWrapper ];
+          testFlags = [ "--scenario=ContinuousIntegration" ];
+          postInstall = ''
+            makeWrapper \
+              $out/cardano-ledger-*/cardano-ledger-test${exe-extension} \
+              $out/bin/cardano-ledger-test${exe-extension} \
+              --set CARDANO_MAINNET_MIRROR ${cardano-mainnet-mirror}/epochs
+          '';
+        };
       }
     ];
   };
