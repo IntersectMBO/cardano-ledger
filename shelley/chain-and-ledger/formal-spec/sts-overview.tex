@@ -8,7 +8,7 @@ a sub-rule relationship. There are two recursive rules, LEDGERS and DELEGS which
 have self loops.
 
 An arrow with a dotted line from one node to another represents a dependency in
-the sense that the output of the first rule is an input to the second one,
+the sense that the output of the target rule is an input to the source one,
 either as part of the source state, the environment or the signal. In most cases
 these dependencies are between sub-rules of a rule. In the case of recursive
 rules, the sub-rule can also have a dependency on the super-rule. Those

@@ -282,7 +282,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
       (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
-      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs}) = \var{dstate} \\
+      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard) = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
@@ -398,8 +398,8 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
-        (\var{stkeys},~\wcard,~\var{delegations},~\wcard) & \var{dstate}\\
-        (\var{stpools},~\var{poolParams},~\wcard,~\wcard,~\wcard) & \var{pstate}\\
+        (\var{stkeys},~\wcard,~\var{delegations},~\wcard,~\wcard) & \var{dstate}\\
+        (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
         \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
@@ -540,6 +540,7 @@ This transition has no preconditions and results in the following state change:
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
+          \var{dms} \\
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
@@ -557,6 +558,7 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
           \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
+          \var{dms} \\
           ~ \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
@@ -1344,6 +1346,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
+          \var{dms} \\
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
@@ -1365,6 +1368,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
           \var{delegations} \\
           \var{ptrs} \\
+          \var{dms} \\
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
