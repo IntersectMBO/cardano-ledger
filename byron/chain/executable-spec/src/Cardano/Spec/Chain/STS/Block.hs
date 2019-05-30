@@ -71,15 +71,8 @@ data BlockBody
   -- ^ Protocol version
   } deriving (Generic, Show)
 
+instance HasTypeReps BlockBody
 makeLenses ''BlockBody
-
-instance HasTypeReps BlockBody where
-  typeReps b = typeOf b
-               <| typeOf (b ^. bUpdProp :: Maybe UProp)
-               <| typeOf (b ^. bProtVer :: ProtVer)
-               <| typeReps (b ^. bDCerts :: [DCert])
-               <> typeReps (b ^. bUtxo :: [TxWits TxId])
-               <> typeReps (b ^. bUpdVotes :: [Vote])
 
 -- | A block in the chain. The specification only models regular blocks since
 -- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
@@ -101,20 +94,25 @@ bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
 bEndorsment :: Block -> (ProtVer, VKey)
 bEndorsment b = (b ^. bBody ^. bProtVer, b ^. bHeader ^. bhIssuer)
 
--- | Compute the size (in words) that a block takes.
+-- | Compute the abstract size (in words) that a block takes.
 bSize :: Block -> Natural
 bSize b = bHeaderSize (b ^. bHeader) + bBodySize (b ^. bBody)
 
--- | Compute the size (in words) that a block body occupies.
+-- | Compute the abstract size (in words) that a block body occupies.
 bBodySize :: BlockBody -> Natural
 bBodySize = fromIntegral . abstractSize costs
   where
     costs = Map.fromList [ (typeOf (undefined::Maybe UProp), 1)
+                         , (typeOf (undefined::STag), 1)
                          , (typeOf (undefined::ProtVer), 1)
                          , (typeOf (undefined::DCert), 1)
-                         , (typeOf (undefined::TxWits TxId), 1)]
+                         , (typeOf (undefined::Vote), 1)
+                         , (typeOf (undefined::TxWits TxId), 1)
+                         , (typeOf (undefined::Wit TxId), 1)
+                         , (typeOf (undefined::TxIn TxId), 1)
+                         , (typeOf (undefined::TxOut), 1)]
 
--- | Compute the size (in words) that a block header occupies.
+-- | Compute the abstract size (in words) that a block header occupies.
 bHeaderSize :: BlockHeader -> Natural
 bHeaderSize = fromIntegral . abstractSize costs
   where
