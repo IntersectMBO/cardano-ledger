@@ -46,10 +46,10 @@ genTraverseSubsequence genA as =
 
 -- | Generate a list using 'genTraverseSubsequence'
 genList :: Range Int -> Gen a -> Gen [a]
-genList range gen = Gen.sized $ \size ->
-  ensure (atLeast $ Range.lowerBound size range) $ genTraverseSubsequence
+genList range gen = Gen.sized $ \gSize ->
+  ensure (atLeast $ Range.lowerBound gSize range) $ genTraverseSubsequence
     (const gen)
-    (replicate (Range.upperBound size range) ())
+    (replicate (Range.upperBound gSize range) ())
 
 -- | Temporarily defined here until hedgehog exposes this function
 interleaveTreeT :: Monad m => [TreeT m a] -> m (NodeT m [a])

@@ -3,10 +3,12 @@
 module Ledger.GlobalParams
   ( k
   , lovelaceCap
+  , ngk
   )
 where
 
 import Data.Int (Int64)
+import Data.Word (Word64)
 
 import Ledger.Core (BlockCount (BlockCount), Lovelace (Lovelace))
 
@@ -21,3 +23,7 @@ k = BlockCount 2160
 -- | Constant amount of Lovelace in the system.
 lovelaceCap :: Lovelace
 lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
+
+-- | Number of genesis keys
+ngk :: Word64
+ngk = 7

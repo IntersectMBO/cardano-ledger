@@ -357,8 +357,8 @@ instance STS ADELEG where
           Nothing -> True ?! BeforeExistingDelegation
           Just sp -> sp < slt ?! BeforeExistingDelegation
         return $ st
-          & delegationMap %~ (\sdm -> sdm ⨃ Bimap.singleton vks vkd)
-          & lastDelegation %~ (\ldm -> ldm ⨃ Map.singleton vks slt)
+          & delegationMap %~ (\sdm -> sdm ⨃ [(vks, vkd)])
+          & lastDelegation %~ (\ldm -> ldm ⨃ [(vks, slt)])
     , do
         (TRC (_env, st, (slt, (vks, _vkd)))) <- judgmentContext
         case Map.lookup vks (st ^. lastDelegation) of
