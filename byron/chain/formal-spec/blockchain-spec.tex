@@ -506,13 +506,12 @@ During PBFT processing of the block header, we do the following:
     that of the last block issued.
   \item We check that the current block is being issued for a slot no later than
     the current slot (as determined by the system clock).
-  \item We verify that the block signer is the current delegate of at least one
-    of the authorised genesis keys.
   \item We check that the previous block hash contained in the block header
     corresponds to the known hash of the previous block.
   \item We check that the header signature correctly verifies the ``signed''
     content of the header.
-  \item Finally, we verify and update the state according to the signature count rules.
+  \item Finally, we verify and update the state according to the signature
+    count rules.
   \end{enumerate}
   \begin{figure}[ht]
   \emph{Abstract types}
