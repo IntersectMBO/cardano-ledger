@@ -8,6 +8,7 @@ import Control.Lens ((^.), makeLenses, view)
 import Crypto.Hash (hashlazy)
 import Data.AbstractSize
 import Data.ByteString.Lazy.Char8 (pack)
+import qualified Data.Map.Strict as Map
 import Data.Sequence ((<|))
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
@@ -15,9 +16,8 @@ import GHC.Generics (Generic)
 import Control.State.Transition.Generator
 import Ledger.Core (Hash, VKey, Slot, Sig)
 import Ledger.Delegation
-import Ledger.Update (ProtVer, UProp, Vote)
-import Ledger.UTxO (TxWits, TxId)
-
+import Ledger.Update (STag, ProtVer, UProp, Vote)
+import Ledger.UTxO (TxWits, TxId, TxIn, TxOut, Wit)
 
 data BlockHeader
   = MkBlockHeader
@@ -71,7 +71,6 @@ data BlockBody
   } deriving (Generic, Show)
 
 instance HasTypeReps BlockBody
-
 makeLenses ''BlockBody
 
 -- | A block in the chain. The specification only models regular blocks since
@@ -94,18 +93,32 @@ bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
 bEndorsment :: Block -> (ProtVer, VKey)
 bEndorsment b = (b ^. bBody ^. bProtVer, b ^. bHeader ^. bhIssuer)
 
-
--- | Compute the size (in words) that a block takes.
+-- | Compute the abstract size (in words) that a block takes.
 bSize :: Block -> Natural
-bSize = fromIntegral . abstractSize acctMap
-  where
-    acctMap = []
+bSize b = bHeaderSize (b ^. bHeader) + bBodySize (b ^. bBody)
 
--- | Compute the size (in words) that a block header.
-bHeaderSize :: BlockHeader -> Natural
-bHeaderSize = fromIntegral . abstractSize acctMap
+-- | Compute the abstract size (in words) that a block body occupies.
+bBodySize :: BlockBody -> Natural
+bBodySize = fromIntegral . abstractSize costs
   where
-    acctMap = []
+    costs = Map.fromList [ (typeOf (undefined::Maybe UProp), 1)
+                         , (typeOf (undefined::STag), 1)
+                         , (typeOf (undefined::ProtVer), 1)
+                         , (typeOf (undefined::DCert), 1)
+                         , (typeOf (undefined::Vote), 1)
+                         , (typeOf (undefined::TxWits TxId), 1)
+                         , (typeOf (undefined::Wit TxId), 1)
+                         , (typeOf (undefined::TxIn TxId), 1)
+                         , (typeOf (undefined::TxOut), 1)]
+
+-- | Compute the abstract size (in words) that a block header occupies.
+bHeaderSize :: BlockHeader -> Natural
+bHeaderSize = fromIntegral . abstractSize costs
+  where
+    costs = Map.fromList [ (typeOf (undefined::Hash), 1)
+                         , (typeOf (undefined::Slot), 1)
+                         , (typeOf (undefined::VKey), 1)
+                         , (typeOf (undefined::Sig Hash), 1)]
 
 -- | Computes the hash of a header.
 hashHeader :: BlockHeader -> Hash
