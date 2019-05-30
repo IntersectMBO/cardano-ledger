@@ -8,6 +8,7 @@ import Control.Lens ((^.), makeLenses, view)
 import Crypto.Hash (hashlazy)
 import Data.AbstractSize
 import Data.ByteString.Lazy.Char8 (pack)
+import qualified Data.Map.Strict as Map
 import Data.Sequence ((<|))
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
@@ -70,9 +71,15 @@ data BlockBody
   -- ^ Protocol version
   } deriving (Generic, Show)
 
-instance HasTypeReps BlockBody
-
 makeLenses ''BlockBody
+
+instance HasTypeReps BlockBody where
+  typeReps b = typeOf b
+               <| typeOf (b ^. bUpdProp :: Maybe UProp)
+               <| typeOf (b ^. bProtVer :: ProtVer)
+               <| typeReps (b ^. bDCerts :: [DCert])
+               <> typeReps (b ^. bUtxo :: [TxWits TxId])
+               <> typeReps (b ^. bUpdVotes :: [Vote])
 
 -- | A block in the chain. The specification only models regular blocks since
 -- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
@@ -94,18 +101,27 @@ bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
 bEndorsment :: Block -> (ProtVer, VKey)
 bEndorsment b = (b ^. bBody ^. bProtVer, b ^. bHeader ^. bhIssuer)
 
-
 -- | Compute the size (in words) that a block takes.
 bSize :: Block -> Natural
-bSize = fromIntegral . abstractSize acctMap
-  where
-    acctMap = []
+bSize b = bHeaderSize (b ^. bHeader) + bBodySize (b ^. bBody)
 
--- | Compute the size (in words) that a block header.
-bHeaderSize :: BlockHeader -> Natural
-bHeaderSize = fromIntegral . abstractSize acctMap
+-- | Compute the size (in words) that a block body occupies.
+bBodySize :: BlockBody -> Natural
+bBodySize = fromIntegral . abstractSize costs
   where
-    acctMap = []
+    costs = Map.fromList [ (typeOf (undefined::Maybe UProp), 1)
+                         , (typeOf (undefined::ProtVer), 1)
+                         , (typeOf (undefined::DCert), 1)
+                         , (typeOf (undefined::TxWits TxId), 1)]
+
+-- | Compute the size (in words) that a block header occupies.
+bHeaderSize :: BlockHeader -> Natural
+bHeaderSize = fromIntegral . abstractSize costs
+  where
+    costs = Map.fromList [ (typeOf (undefined::Hash), 1)
+                         , (typeOf (undefined::Slot), 1)
+                         , (typeOf (undefined::VKey), 1)
+                         , (typeOf (undefined::Sig Hash), 1)]
 
 -- | Computes the hash of a header.
 hashHeader :: BlockHeader -> Hash
