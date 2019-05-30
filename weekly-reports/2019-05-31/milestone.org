@@ -2,7 +2,7 @@
 ** TODO Update the formal spec with a new transaction component for adding extra entropy to the epoch nonce.
    - [X] Issue #394
 ** TODO Update the formal spec with a mapping from the genesis keys to the other stake pool cold keys.
-   - [ ] Issue #447
+   - [X] Issue #447
 ** TODO Plan out the work required to finish importing the Byron update system into Shelley.
    - [ ] Issue #448 (We may need to break this issue up into more parts.)
 ** Update the executable spec [1/3]

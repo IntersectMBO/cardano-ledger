@@ -9,7 +9,6 @@ The environment for this rule consists of:
 \begin{itemize}
   \item The current slot.
   \item The transaction index within the current block.
-  \item The genesis key delegation map. The type $\VKeyGen$ is defined in \cite{byron_ledger_spec}.
 \end{itemize}
 The ledger state consists of:
 \begin{itemize}
@@ -26,7 +25,6 @@ The ledger state consists of:
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis delegations}\\
       \end{array}
     \right)
   \end{equation*}
@@ -63,21 +61,6 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
     \label{eq:ledger}
     \inference[ledger]
     {
-      (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-    (\var{stkeys}, \_, \_, \_) \leteq \var{dstate} \\
-    (\var{stpools}, \_, \_, \_, \_) \leteq \var{pstate} \\
-    \var{pp} \leteq \pps{us}\\~\\
-      \left({
-        \begin{array}{r}
-        \var{slot} \\
-        \var{pp} \\
-        \var{stkeys} \\
-        \var{stpools} \\
-        \var{dms} \\
-        \end{array}
-    }\right)
-      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxow-shelley]{utxow}}{tx} \var{utxoSt'}\\~\\~\\
-      %
       {
         \left(
         \begin{array}{l}
@@ -89,6 +72,21 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
       }
       \vdash
       dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{\var{tx}} dpstate'
+      \\~\\
+      (\var{dstate}, \var{pstate}) \leteq \var{dpstate'} \\
+      (\var{stkeys}, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
+      (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
+      \var{pp} \leteq \pps{us}\\~\\
+      \left({
+        \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+        \var{stkeys} \\
+        \var{stpools} \\
+        \var{dms} \\
+        \end{array}
+      }\right)
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxow-shelley]{utxow}}{tx} \var{utxoSt'}
       \\~\\~\\
       {
         \left(
@@ -106,7 +104,6 @@ the $\mathsf{BUPI}$ transition (from \cite{byron_chain_spec}).
         \begin{array}{l}
           \var{slot} \\
           \var{txIx} \\
-          \var{dms} \\
         \end{array}
       \right)
       \vdash
@@ -141,8 +138,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{ledgers}{\_} \var{\_}
-    \subseteq \powerset \Big((\Slot\times(\VKeyGen\mapsto\VKey)\Big) \times \LState \times
-      \seqof{\Tx} \times \LState)
+    \subseteq \powerset (\Slot \times \LState \times \seqof{\Tx} \times \LState)
   \end{equation*}
   \caption{Ledger transition-system types}
   \label{fig:ts-types:ledgers}
@@ -153,15 +149,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
     \label{eq:ledgers-base}
     \inference[Seq-ledger-base]
     {}
-    {
-     \left(
-      \begin{array}{r}
-        \var{slot} \\
-        \var{dms} \\
-      \end{array}
-    \right)
-    \vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls}
-    }
+    { \var{slot}\vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls} }
   \end{equation}
 
   \nextdef
@@ -170,14 +158,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
     \label{eq:ledgers-induct}
     \inference[Seq-ledger-ind]
     {
-      {
-        \left(
-          \begin{array}{r}
-            \var{slot}\\
-            \var{dms}\\
-          \end{array}
-        \right)
-      }
+      \var{slot}
       \vdash
       \var{ls}
       \trans{ledgers}{\Gamma}
@@ -188,7 +169,6 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
           \begin{array}{r}
             \var{slot}\\
             \mathsf{len}~\Gamma - 1\\
-            \var{dms}\\
           \end{array}
         \right)
       }
@@ -198,14 +178,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transitions.
         \var{ls''}
     }
     {
-    {
-      \left(
-      \begin{array}{r}
-        \var{slot}\\
-        \var{dms}\\
-      \end{array}
-    \right)
-    }
+    \var{slot}
     \vdash
       \var{ls}
       \trans{ledgers}{\Gamma; c}
