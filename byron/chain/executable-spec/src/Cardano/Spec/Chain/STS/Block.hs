@@ -16,9 +16,8 @@ import GHC.Generics (Generic)
 import Control.State.Transition.Generator
 import Ledger.Core (Hash, VKey, Slot, Sig)
 import Ledger.Delegation
-import Ledger.Update (ProtVer, UProp, Vote)
-import Ledger.UTxO (TxWits, TxId)
-
+import Ledger.Update (STag, ProtVer, UProp, Vote)
+import Ledger.UTxO (TxWits, TxId, TxIn, TxOut, Wit)
 
 data BlockHeader
   = MkBlockHeader
