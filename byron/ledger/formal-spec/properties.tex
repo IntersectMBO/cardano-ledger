@@ -327,3 +327,294 @@ $2 \cdot k$.
   \right)
   $$
 \end{property}
+
+
+\subsubsection{UPIEC Properties}
+\label{sec:upiec-properties}
+
+Property~\ref{UPIEC-no-change} states that if PVBUMP transitions into a state
+with the same protocol version, the UPIEC STS results in the same state it
+started in.
+
+\begin{property}[UPIEC no change on no protocol change]\label{UPIEC-no-change}
+  \textnormal{If for all $s_n$, $fads$ and update interface states:}
+
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps'}\\
+    \end{array}
+  \right)
+  $$
+
+  \textnormal{then we have:}
+
+  $$
+  (s_n)
+  \vdash
+  \left(
+    \begin{array}{l}
+      (\var{pv}, \var{pps})\\
+      \var{fads}\\
+      \var{avs}\\
+      \var{rpus}\\
+      \var{raus}\\
+      \var{cps}\\
+      \var{vts}\\
+      \var{bvs}\\
+      \var{pws}
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:upi-ec]{upiec}}{}
+  \left(
+    \begin{array}{l}
+      (\var{pv}, \var{pps})\\
+      \var{fads}\\
+      \var{avs}\\
+      \var{rpus}\\
+      \var{raus}\\
+      \var{cps}\\
+      \var{vts}\\
+      \var{bvs}\\
+      \var{pws}
+    \end{array}
+  \right)
+  $$
+
+\end{property}
+
+
+Property~\ref{UPIEC-new-pv} states that if PVBUMP transitions into a state
+with a new different protocol version, the UPIEC STS results in a state that
+adopts the new protocol version and new protocol parameters.
+
+\begin{property}[UPIEC adopts new protocol version]\label{UPIEC-new-pv}
+  \textnormal{If for all $s_n$, $fads$ and update interface states such that:}
+
+  $$
+  pv \neq pv'
+  $$
+
+  \textnormal{we have:}
+  
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv'}, \var{pps'}\\
+    \end{array}
+  \right)
+  $$
+
+  \textnormal{then:}
+
+  $$
+  (s_n)
+  \vdash
+  \left(
+    \begin{array}{l}
+      (\var{pv}, \var{pps})\\
+      \var{fads}\\
+      \var{avs}\\
+      \var{rpus}\\
+      \var{raus}\\
+      \var{cps}\\
+      \var{vts}\\
+      \var{bvs}\\
+      \var{pws}
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:upi-ec]{upiec}}{}
+  \left(
+    \begin{array}{l}
+      (\var{pv'}, \var{pps'})\\
+      \var{fads'}\\
+      \var{avs'}\\
+      \var{rpus'}\\
+      \var{raus'}\\
+      \var{cps'}\\
+      \var{vts'}\\
+      \var{bvs'}\\
+      \var{pws'}
+    \end{array}
+  \right)
+  $$
+  
+\end{property}
+
+Property~\ref{UPIEC-same-components} states that if PVBUMP transitions into a
+state with a new different protocol version, the application versions and
+registered software update proposals components of the update interface state
+stay the same.
+
+\begin{property}[UPIEC same components]\label{UPIEC-same-components}
+  \textnormal{If for all $s_n$, $fads$ and update interface states such that:}
+
+  $$
+  pv \neq pv'
+  $$
+
+  \textnormal{we have:}
+  
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv'}, \var{pps'}\\
+    \end{array}
+  \right)
+  $$
+
+  \textnormal{then:}
+
+  $$
+  (s_n)
+  \vdash
+  \left(
+    \begin{array}{l}
+      (\var{pv}, \var{pps})\\
+      \var{fads}\\
+      \var{avs}\\
+      \var{rpus}\\
+      \var{raus}\\
+      \var{cps}\\
+      \var{vts}\\
+      \var{bvs}\\
+      \var{pws}
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:upi-ec]{upiec}}{}
+  \left(
+    \begin{array}{l}
+      (\var{pv'}, \var{pps''})\\
+      \var{fads'}\\
+      \var{avs}\\
+      \var{rpus'}\\
+      \var{raus}\\
+      \var{cps'}\\
+      \var{vts'}\\
+      \var{bvs'}\\
+      \var{pws'}
+    \end{array}
+  \right)
+  $$
+  
+\end{property}
+
+
+Property~\ref{UPIEC-empty-components} states that if PVBUMP transitions into a
+state with a new different protocol version, the following components of
+UPIEC's state are set to an empty set or map (according to the component's
+type):
+%
+\begin{itemize}
+\item future protocol version adoptions
+\item registered protocol update proposals
+\item confirmed proposals
+\item proposal votes
+\item endorsement-key pairs
+\item proposal timestamps
+\end{itemize}
+
+\begin{property}[UPIEC empty components]\label{UPIEC-empty-components}
+  \textnormal{If for all $s_n$, $fads$ and update interface states such that:}
+
+  $$
+  pv \neq pv'
+  $$
+
+  \textnormal{we have:}
+  
+  $$
+  \left(
+    \begin{array}{l}
+      \var{s_n}\\
+      \var{fads}
+    \end{array}
+  \right)
+  \vdash
+  \left(
+    \begin{array}{l}
+      \var{pv}, \var{pps}\\
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:pvbump]{pvbump}}{}
+  \left(
+    \begin{array}{l}
+      \var{pv'}, \var{pps'}\\
+    \end{array}
+  \right)
+  $$
+
+  \textnormal{then:}
+
+  $$
+  (s_n)
+  \vdash
+  \left(
+    \begin{array}{l}
+      (\var{pv}, \var{pps})\\
+      \var{fads}\\
+      \var{avs}\\
+      \var{rpus}\\
+      \var{raus}\\
+      \var{cps}\\
+      \var{vts}\\
+      \var{bvs}\\
+      \var{pws}
+    \end{array}
+  \right)
+  \trans{\hyperref[fig:rules:upi-ec]{upiec}}{}
+  \left(
+    \begin{array}{l}
+      (\var{pv'}, \var{pps''})\\
+      \emptyset\\
+      \var{avs'}\\
+      \emptyset\\
+      \var{raus'}\\
+      \emptyset\\
+      \emptyset\\
+      \emptyset\\
+      \emptyset
+    \end{array}
+  \right)
+  $$
+  
+\end{property}
