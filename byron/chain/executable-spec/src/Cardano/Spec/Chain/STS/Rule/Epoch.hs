@@ -6,7 +6,6 @@ module Cardano.Spec.Chain.STS.Rule.Epoch where
 
 -- import Control.Lens ((^.), _2)
 import Control.State.Transition
-import Data.Bimap (Bimap)
 import Ledger.Core
 import Ledger.Update
 
@@ -19,10 +18,7 @@ sEpoch (Slot s) = Epoch $ s `div` 21600
 data EPOCH
 
 instance STS EPOCH where
-  type Environment EPOCH =
-    ( Bimap VKeyGenesis VKey
-    , Epoch
-    )
+  type Environment EPOCH = Epoch
   type State EPOCH = UPIState
 
   type Signal EPOCH = Slot
@@ -34,7 +30,7 @@ instance STS EPOCH where
 
   transitionRules =
     [ do
-        TRC ((_, e_c), _, s) <- judgmentContext
+        TRC (e_c, _, s) <- judgmentContext
         case e_c >= sEpoch s of
           True  -> onOrAfterCurrentEpoch
           False -> beforeCurrentEpoch
@@ -42,7 +38,7 @@ instance STS EPOCH where
    where
     beforeCurrentEpoch :: TransitionRule EPOCH
     beforeCurrentEpoch = do
-      TRC ((_dms, _), us, s) <- judgmentContext
+      TRC (_, us, s) <- judgmentContext
       us' <- trans @UPIEC $ TRC (s, us, ())
       return $! us'
 
