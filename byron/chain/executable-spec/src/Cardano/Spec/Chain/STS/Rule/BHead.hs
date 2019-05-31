@@ -40,8 +40,8 @@ instance STS BHEAD where
 
   transitionRules =
     [ do
-        TRC ((epochEnv, sLast), us, bh) <- judgmentContext
-        us' <- trans @EPOCH $ TRC ((epochEnv, sEpoch sLast), us, bh ^. bhSlot)
+        TRC ((_, sLast), us, bh) <- judgmentContext
+        us' <- trans @EPOCH $ TRC (sEpoch sLast, us, bh ^. bhSlot)
         let sMax = snd (us' ^. _1) ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         return $! us'

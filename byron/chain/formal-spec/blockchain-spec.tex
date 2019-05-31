@@ -670,10 +670,9 @@ updates the update state to the correct version.
   \begin{align*}
     & \ETEnv
       = \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-        \var{e_c} & \Epoch & \text{Current epoch}
-      \end{array}\right)
+          \begin{array}{r@{~\in~}lr}
+            \var{e_c} & \Epoch & \text{current epoch}
+          \end{array}\right)
   \end{align*}
 
   \emph{Epoch transition states}
@@ -701,30 +700,20 @@ updates the update state to the correct version.
     {
       \var{e_c} \geq \sepoch{s}
     }
-    {
-      {\left(
-        \begin{array}{l}
-          \var{dms}\\
-          \var{e_c}
-        \end{array}
-      \right)}
+    {\var{e_c}
       \vdash
       {
-        \left(
           {\begin{array}{c}
              \var{us}
            \end{array}
          }
-       \right)
      }
      \trans{epoch}{s}
      {
-       \left(
          {\begin{array}{c}
             \var{us}
           \end{array}
         }
-      \right)
     }
   }
 \end{equation*}
@@ -737,29 +726,20 @@ updates the update state to the correct version.
     s\vdash \var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
   }
   {
-    {\left(
-      \begin{array}{l}
-        \var{dms}\\
-        \var{e_c}
-      \end{array}
-    \right)}
+    \var{e_c}
     \vdash
     {
-      \left(
         {\begin{array}{c}
            \var{us}
          \end{array}
        }
-     \right)
    }
    \trans{epoch}{s}
    {
-     \left(
        {\begin{array}{c}
           \var{us'}
         \end{array}
       }
-    \right)
   }
 }
 \end{equation*}
