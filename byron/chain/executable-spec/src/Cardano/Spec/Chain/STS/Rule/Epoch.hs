@@ -6,7 +6,6 @@ module Cardano.Spec.Chain.STS.Rule.Epoch where
 
 -- import Control.Lens ((^.), _2)
 import Control.State.Transition
-import Data.Bimap (Bimap)
 import Ledger.Core
 import Ledger.Update
 
