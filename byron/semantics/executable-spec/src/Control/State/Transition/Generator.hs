@@ -23,6 +23,8 @@ module Control.State.Transition.Generator
   , initEnvGen
   , sigGen
   , trace
+  , traceSigGen
+  , genTrace
   , traceSuchThat
   , suchThatLastState
   , nonTrivialTrace
@@ -74,6 +76,7 @@ import Control.State.Transition.Trace
   , closure
   )
 
+
 class STS s => HasTrace s where
   initEnvGen :: Gen (Environment s)
 
@@ -83,16 +86,25 @@ class STS s => HasTrace s where
     :: Int
     -- ^ Length of the generated trace.
     -> Gen (Trace s)
-  trace n = do
-    env <- initEnvGen @s
-    case applySTS @s (IRC env) of
-      -- Hedgehog will give up if the generators fail to produce any valid
-      -- initial state, hence we don't have a risk of entering an infinite
-      -- recursion.
-      Left _pf  -> trace n
-      -- Applying an initial rule with an environment and state will simply
-      -- validate that state, so we do not care which state 'applySTS' returns.
-      Right st -> genTrace n env st (sigGen @s)
+  trace n = traceSigGen n (sigGen @s)
+
+traceSigGen
+  :: forall s
+   . HasTrace s
+  => Int
+  -> (Environment s -> State s -> Gen (Signal s))
+  -> Gen (Trace s)
+traceSigGen n gen = do
+  env <- initEnvGen @s
+  case applySTS @s (IRC env) of
+    -- Hedgehog will give up if the generators fail to produce any valid
+    -- initial state, hence we don't have a risk of entering an infinite
+    -- recursion.
+    Left _pf  -> trace n
+    -- Applying an initial rule with an environment and state will simply
+    -- validate that state, so we do not care which state 'applySTS' returns.
+    Right st -> genTrace n env st gen
+
 
 -- | Return a (valid) trace generator given an initial state, environment, and
 -- signal generator.
@@ -231,7 +243,7 @@ classifyTraceLength tr ub step = do
   classify "empty"      $ traceLength tr == 0
   classify "singleton"  $ traceLength tr == 1
   traverse_ (isTraceInInterval tr) $ mkIntervals 2 (ub - 1) step
-  classify ubL $ traceLength tr == 1
+  classify ubL $ traceLength tr == ub
   where
     ubL = fromString $ show ub
 
