@@ -19,3 +19,4 @@ https://github.com/input-output-hk/cardano-ledger-specs 40b5c148f16672d1d9749241
 https://github.com/input-output-hk/cardano-ledger-specs e96f378bc91bb0de2bd56aa2505cd6452553a9d9 byron/semantics/executable-spec 0kv7ifjbgdsl56ir0hkz3xmmwcznsscn64jp4khws5nhgaqp8kjz small-steps small-steps.nix
 https://github.com/input-output-hk/cardano-ledger-specs e96f378bc91bb0de2bd56aa2505cd6452553a9d9 byron/ledger/executable-spec 0kv7ifjbgdsl56ir0hkz3xmmwcznsscn64jp4khws5nhgaqp8kjz cs-ledger cs-ledger.nix
 https://github.com/input-output-hk/cardano-ledger-specs e96f378bc91bb0de2bd56aa2505cd6452553a9d9 byron/chain/executable-spec 0kv7ifjbgdsl56ir0hkz3xmmwcznsscn64jp4khws5nhgaqp8kjz cs-blockchain cs-blockchain.nix
+https://github.com/input-output-hk/cardano-shell de45bf135fc0c575753613ee157378a28f9261e2 . 0j3imc9c80904ybhbrl4mb0v6h9j3c7c9l6pij6idg3adh0rla9z cardano-shell cardano-shell.nix
