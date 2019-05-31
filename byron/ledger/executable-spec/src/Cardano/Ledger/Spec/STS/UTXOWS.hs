@@ -1,7 +1,8 @@
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 -- | Transition system that models the application of multiple transactions to
 -- the UTxO part of the ledger state.
@@ -23,10 +24,13 @@ import Control.State.Transition
   , transitionRules
   , wrapFailed
   )
+import Control.State.Transition.Generator
+  (HasTrace, genTrace, initEnvGen, sigGen)
+import Control.State.Transition.Trace (TraceOrder(NewestFirst), traceSignals)
 import Data.AbstractSize (HasTypeReps)
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv, UTxOState)
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO (TxWits)
+import Ledger.UTxO (TxId, TxWits)
 
 data UTXOWS id
 
@@ -57,3 +61,10 @@ instance (Ord id, HasTypeReps id) => STS (UTXOWS id) where
 
 instance (Ord id, HasTypeReps id) => Embed (UTXOW id) (UTXOWS id) where
   wrapFailed = UtxowFailure
+
+instance HasTrace (UTXOWS TxId) where
+  initEnvGen = initEnvGen @(UTXOW TxId)
+
+  -- We generate signal for UTXOWS as a list of signals from UTXOW
+  sigGen env st = traceSignals NewestFirst
+    <$> genTrace @(UTXOW TxId) 20 env st (sigGen @(UTXOW TxId))
