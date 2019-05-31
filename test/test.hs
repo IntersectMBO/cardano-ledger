@@ -15,6 +15,7 @@ import Test.Tasty.Hedgehog (testProperty)
 import Test.Options (TSGroup, mainWithTestScenario)
 
 import qualified Test.Cardano.Chain.Block.CBOR
+import qualified Test.Cardano.Chain.Block.Model
 import qualified Test.Cardano.Chain.Block.Validation
 import qualified Test.Cardano.Chain.Common.Address
 import qualified Test.Cardano.Chain.Common.CBOR
@@ -44,6 +45,7 @@ main =
     $   testGroup "Cardano Ledger Tests"
     $   tsGroupToTree
     <$> [ Test.Cardano.Chain.Block.CBOR.tests
+        , Test.Cardano.Chain.Block.Model.tests
         , Test.Cardano.Chain.Block.Validation.tests
         , Test.Cardano.Chain.Common.Address.tests
         , Test.Cardano.Chain.Common.CBOR.tests

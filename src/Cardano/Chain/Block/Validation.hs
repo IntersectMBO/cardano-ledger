@@ -8,7 +8,6 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TupleSections              #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -224,7 +223,7 @@ data ChainValidationError
   | ChainValidationHeaderAttributesTooLarge
   -- ^ The size of a block header's attributes is non-zero
 
-  | ChainValidationHeaderTooLarge
+  | ChainValidationHeaderTooLarge Natural Natural
   -- ^ The size of a block header exceeds the limit
 
   | ChainValidationDelegationPayloadError Text
@@ -460,7 +459,8 @@ updateHeader
   -> m UPI.State
 updateHeader env st h = do
   -- Validate the header size
-  headerLength h <= maxHeaderSize `orThrowError` ChainValidationHeaderTooLarge
+  headerLength h <= maxHeaderSize
+    `orThrowError` ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
 
   -- Perform epoch transition
   epochTransition epochEnv st (headerSlot h)

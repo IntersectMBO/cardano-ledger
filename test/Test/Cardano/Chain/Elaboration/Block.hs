@@ -44,7 +44,8 @@ import qualified Cardano.Spec.Chain.STS.Rule.Epoch as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation
   (DCert, allowedDelegators, delegationMap, delegatorOf, mkDCert)
-import Ledger.Update (PParams, bkSlotsPerEpoch, maxBkSz, maxHdrSz, stableAfter)
+import Ledger.Update (maxBkSz, maxHdrSz, maxTxSz, stableAfter)
+import qualified Ledger.UTxO as Abstract
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , ChainDifficulty(ChainDifficulty)
@@ -58,30 +59,34 @@ import Cardano.Chain.Common
 import Test.Cardano.Chain.Elaboration.Keys
   (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
+import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate
-  :: Genesis.Config
-  -> Transition.Environment CHAIN
+  :: Map Abstract.TxId UTxO.TxId
+  -> Genesis.Config
   -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
-  -> Concrete.ABlock ()
-elaborate config (_, _, _, pps) dCert st ab = Concrete.ABlock
-  { Concrete.blockHeader     = bh0
-  , Concrete.blockBody       = bb0
-  , Concrete.blockAnnotation = ()
-  }
+  -> (Concrete.Block, Map Abstract.TxId UTxO.TxId)
+elaborate txIdMap config dCert st ab =
+  ( Concrete.ABlock
+    { Concrete.blockHeader     = bh0
+    , Concrete.blockBody       = bb0
+    , Concrete.blockAnnotation = ()
+    }
+  , txIdMap'
+  )
  where
-  pm = Genesis.configProtocolMagicId config
+  pm  = Genesis.configProtocolMagicId config
 
   bh0 = Concrete.mkHeaderExplicit
     pm
     prevHash
     (ChainDifficulty 0)
-    (ppsEpochSlots pps)
+    (Genesis.configEpochSlots config)
     sid
     ssk
     cDCert
@@ -93,9 +98,8 @@ elaborate config (_, _, _, pps) dCert st ab = Concrete.ABlock
   prevHash =
     either Concrete.genesisHeaderHash identity $ Concrete.cvsPreviousHash st
 
-  sid =
-      Slotting.FlatSlotId
-          (ab ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
+  sid = Slotting.FlatSlotId
+    (ab ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
 
   issuer   = ab ^. Abstract.bHeader . Abstract.bhIssuer
 
@@ -105,7 +109,7 @@ elaborate config (_, _, _, pps) dCert st ab = Concrete.ABlock
   cDCert = elaborateDCert pm dCert
 
   bb0    = Concrete.ABody
-    { Concrete.bodyTxPayload     = UTxO.ATxPayload []
+    { Concrete.bodyTxPayload     = UTxO.ATxPayload txPayload
     , Concrete.bodySscPayload    = Ssc.SscPayload
     , Concrete.bodyDlgPayload    = Delegation.UnsafeAPayload dcerts ()
     , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
@@ -117,22 +121,22 @@ elaborate config (_, _, _, pps) dCert st ab = Concrete.ABlock
             (elaborateDCert pm)
           )
 
-ppsEpochSlots :: PParams -> Slotting.EpochSlots
-ppsEpochSlots pps = Slotting.EpochSlots epochSlots
-  where
-    Abstract.SlotCount epochSlots = pps ^. bkSlotsPerEpoch
+  (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
+    txIdMap
+    (reverse $ ab ^. Abstract.bBody . Abstract.bUtxo)
 
 elaborateBS
-  :: Genesis.Config -- TODO: Do we want this to come from the abstract
+  :: Map Abstract.TxId UTxO.TxId
+  -> Genesis.Config -- TODO: Do we want this to come from the abstract
                     -- environment? (in such case we wouldn't need this
                     -- parameter)
-  -> Transition.Environment CHAIN
   -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
-  -> Concrete.ABlock ByteString
-elaborateBS config aenv@(_, _, _, pps) dCert st ab =
-  annotateBlock (ppsEpochSlots pps) $ elaborate config aenv dCert st ab
+  -> (Concrete.ABlock ByteString, Map Abstract.TxId UTxO.TxId)
+elaborateBS txIdMap config dCert st ab =
+  first (annotateBlock (Genesis.configEpochSlots config))
+    $ elaborate txIdMap config dCert st ab
 
 annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
 annotateBlock epochSlots block =
@@ -212,9 +216,9 @@ abEnvToCfg (_, _, dsEnv, pps) =
   gPps        = Update.ProtocolParameters
     { Update.ppScriptVersion    = 0
     , Update.ppSlotDuration     = 0
-    , Update.ppMaxBlockSize     = pps ^. maxBkSz
-    , Update.ppMaxHeaderSize    = pps ^. maxHdrSz
-    , Update.ppMaxTxSize        = 0
+    , Update.ppMaxBlockSize     = 100 * pps ^. maxBkSz
+    , Update.ppMaxHeaderSize    = 100 * pps ^. maxHdrSz
+    , Update.ppMaxTxSize        = 100 * pps ^. maxTxSz
     , Update.ppMaxProposalSize  = 0
     , Update.ppMpcThd           = LovelacePortion 0
     , Update.ppHeavyDelThd      = LovelacePortion 0
