@@ -3,7 +3,7 @@
     flags = {
       disable-aggregation = false;
       disable-ekg = false;
-      disable-prometheus = false;
+      disable-prometheus = true;
       disable-gui = false;
       disable-monitoring = false;
       disable-observables = false;
