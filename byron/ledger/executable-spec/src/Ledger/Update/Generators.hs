@@ -39,11 +39,10 @@ type JC sts = (Environment sts, State sts, Signal sts)
 
 -- | Generates a 'ProtVer'
 protVer :: Gen ProtVer
-protVer =
-  (\a b alt -> ProtVer a b alt)
-    <$> Gen.integral (Range.linear (0 :: Natural) 100)
-    <*> Gen.integral (Range.linear (0 :: Natural) 100)
-    <*> Gen.integral (Range.linear (0 :: Natural) 100)
+protVer = ProtVer
+  <$> Gen.integral (Range.linear (0 :: Natural) 100)
+  <*> Gen.integral (Range.linear (0 :: Natural) 100)
+  <*> Gen.integral (Range.linear (0 :: Natural) 100)
 
 -- | Generates valid protocol parameters
 --
@@ -176,7 +175,8 @@ lastProposalJC = (,,)
 
 -- | Generates an @ApName@
 apName :: Gen ApName
-apName = ApName <$> Gen.element ["byron", "shelley", "praos"]
+apName = ApName <$> Gen.element
+  ["the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog"]
 
 -- | Generates an @ApVer@
 apVer :: Gen ApVer

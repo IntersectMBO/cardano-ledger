@@ -14,7 +14,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Ledger.Core (Slot)
 import           Ledger.Update (UpId)
-import qualified Ledger.Update.Generators as G
+import qualified Ledger.Update.Generators as UpdateGen
 import           Hedgehog
 import           Ledger.Update (PVBUMP, UPIEC, ProtVer, PParams)
 
@@ -25,7 +25,7 @@ import           Ledger.Update (PVBUMP, UPIEC, ProtVer, PParams)
 -- the UPIEC STS results in the same state it started in.
 noProtVerChange :: Property
 noProtVerChange = property $ do
-  jc <- forAll G.noProtVerChangeJC
+  jc <- forAll UpdateGen.noProtVerChangeJC
   let (_, st, _) = jc
   case applySTS @UPIEC (TRC jc) of
     Right st' -> st === st'
@@ -38,7 +38,7 @@ noProtVerChange = property $ do
 -- protocol version (pv) and new protocol parameters (pps).
 protVerChangeAdopt :: Property
 protVerChangeAdopt = property $ do
-  jc <- forAll G.protVerChangeJC
+  jc <- forAll UpdateGen.protVerChangeJC
   let
     (s_n, st, _) = jc
     (pv, pps)    = st ^. _1 :: (ProtVer, PParams)
@@ -61,7 +61,7 @@ protVerChangeAdopt = property $ do
 -- update proposals (raus) components of UPIEC's state stay the same.
 protVerChangeSameComponents :: Property
 protVerChangeSameComponents = property $ do
-  jc <- forAll G.protVerChangeJC
+  jc <- forAll UpdateGen.protVerChangeJC
   let
     (s_n, st, _) = jc
     (pv, pps)    = st ^. _1 :: (ProtVer, PParams)
@@ -99,7 +99,7 @@ protVerChangeSameComponents = property $ do
 --   proposal timestamps (pws)
 protVerChangeEmptyComponents :: Property
 protVerChangeEmptyComponents = property $ do
-  jc <- forAll G.protVerChangeJC
+  jc <- forAll UpdateGen.protVerChangeJC
   let
     (s_n, st, _) = jc
     (pv, pps)    = st ^. _1 :: (ProtVer, PParams)
