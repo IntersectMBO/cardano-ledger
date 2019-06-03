@@ -7,6 +7,9 @@
 
 module Test.Cardano.Chain.UTxO.Model
   ( tests
+  , elaborateAndUpdate
+  , elaborateInitialUTxO
+  , elaborateTxWitnesses
   )
 where
 
@@ -25,10 +28,9 @@ import Cardano.Crypto (hashDecoded)
 
 import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import qualified Control.State.Transition as Abstract
 import Control.State.Transition.Generator (classifyTraceLength, trace)
 import Control.State.Transition.Trace
-  (Trace, TraceOrder(OldestFirst), preStatesAndSignals, traceEnv)
+  (Trace, TraceOrder(OldestFirst), traceEnv, traceSignals)
 import qualified Ledger.UTxO as Abstract
 
 import qualified Test.Cardano.Chain.Elaboration.UTxO as E
@@ -54,7 +56,7 @@ passConcreteValidation :: MonadTest m => Trace (UTXOW Abstract.TxId) -> m ()
 passConcreteValidation tr = void $ evalEither res
  where
   res = foldM (elaborateAndUpdate abstractEnv) initSt
-    $ preStatesAndSignals OldestFirst tr
+    $ traceSignals OldestFirst tr
 
   abstractEnv = tr ^. traceEnv
 
@@ -65,54 +67,67 @@ passConcreteValidation tr = void $ evalEither res
 --   the map from abstract TxIds to concrete TxIds
 elaborateInitialUTxO
   :: Abstract.UTxO Abstract.TxId
-  -> (Map Abstract.TxId Concrete.TxId, Concrete.UTxO)
+  -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
 elaborateInitialUTxO abstractUtxo = foldr
   txOutToUTxO
-  (mempty, Concrete.UTxO.empty)
+  (Concrete.UTxO.empty, mempty)
   (M.toList $ Abstract.unUTxO abstractUtxo)
  where
   txOutToUTxO
     :: (Abstract.TxIn Abstract.TxId, Abstract.TxOut)
-    -> (Map Abstract.TxId Concrete.TxId, Concrete.UTxO)
-    -> (Map Abstract.TxId Concrete.TxId, Concrete.UTxO)
-  txOutToUTxO (Abstract.TxIn abstractTxId _, abstractTxOut) (txIdMap, utxo) =
+    -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
+    -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
+  txOutToUTxO (Abstract.TxIn abstractTxId _, abstractTxOut) (utxo, txIdMap) =
     let
       singletonUtxo =
         Concrete.UTxO.fromTxOut (E.elaborateTxOut abstractTxOut)
       [(Concrete.TxInUtxo concreteTxId _, _)] =
         Concrete.UTxO.toList singletonUtxo
       Right utxo' = utxo `Concrete.UTxO.union` singletonUtxo
-    in (M.insert abstractTxId concreteTxId txIdMap, utxo')
+    in (utxo', M.insert abstractTxId concreteTxId txIdMap)
 
 
 -- | Elaborate a single transaction, apply it to the UTxO, and update the TxId
 --   map with the new concrete TxId
 elaborateAndUpdate
   :: Abstract.UTxOEnv Abstract.TxId
-  -> (Map Abstract.TxId Concrete.TxId, Concrete.UTxO)
-  -> (Abstract.State (UTXOW Abstract.TxId), Abstract.TxWits Abstract.TxId)
+  -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
+  -> Abstract.TxWits Abstract.TxId
   -> Either
        Concrete.UTxOValidationError
-       (Map Abstract.TxId Concrete.TxId, Concrete.UTxO)
-elaborateAndUpdate abstractEnv (txIdMap, utxo) (_abstractUtxo, abstractTxWits) =
-  (txIdMap', )
+       (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
+elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
+  (, txIdMap')
     <$> updateUTxOTxWitness
           (E.elaborateUTxOEnv abstractEnv)
           utxo
           concreteTxWitness
  where
+  (concreteTxWitness, txIdMap') =
+    elaborateTxWitsBSWithMap txIdMap abstractTxWits
+
+elaborateTxWitnesses
+  :: Map Abstract.TxId Concrete.TxId
+  -> [Abstract.TxWits Abstract.TxId]
+  -> ([Concrete.ATxAux ByteString], Map Abstract.TxId Concrete.TxId)
+elaborateTxWitnesses txIdMap = first reverse . foldl' step ([], txIdMap)
+  where step (acc, m) = first (: acc) . elaborateTxWitsBSWithMap m
+
+elaborateTxWitsBSWithMap :: Map Abstract.TxId Concrete.TxId -> Abstract.TxWits Abstract.TxId -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
+elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
+ where
   concreteTxWitness = E.elaborateTxWitsBS
-    ( const
-    $ fromMaybe
+    ( fromMaybe
         (panic
-          "elaborateAndUpdate: Missing abstract TxId during elaboration"
+          "elaborateTxWitsBSWithMap: Missing abstract TxId during elaboration"
         )
     . flip M.lookup txIdMap
     )
-    (Abstract.utxo0 abstractEnv)
     abstractTxWits
 
   concreteTxId = hashDecoded $ Concrete.aTaTx concreteTxWitness
 
-  txIdMap' =
-    M.insert (Abstract.txid $ Abstract.body abstractTxWits) concreteTxId txIdMap
+  txIdMap'     = M.insert
+    (Abstract.txid $ Abstract.body abstractTxWits)
+    concreteTxId
+    txIdMap

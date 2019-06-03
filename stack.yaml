@@ -22,14 +22,14 @@ extra-deps:
       - binary/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 40b5c148f16672d1d97492419c757c01ba0acae8
+    commit: e96f378bc91bb0de2bd56aa2505cd6452553a9d9
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
       - byron/chain/executable-spec
 
   # Currently Hackage only
-  - tasty-hedgehog-1.0.0.0
+  - tasty-hedgehog-1.0.0.1
 
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0

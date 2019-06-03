@@ -1,155 +1,109 @@
-{-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedLists  #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies     #-}
 
+-- | Test module where we check that the block validation implementation
+-- matches the formal specification. To this end, the strategy is:
+--
+-- 0. generate traces of abstract blocks, which conform to the formal semantics
+--    of the blockchain layer
+--
+-- 1. elaborate these abstract blocks into concrete blocks
+--
+-- 2. feed the generated sequence of concrete blocks to the block validation
+--    function, and check that it passes the validation.
+--
 module Test.Cardano.Chain.Block.Model
-  ( prop_commandCHAIN
+  ( tests
+  , passConcreteValidation
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude hiding (trace, State)
+import Test.Cardano.Prelude
 
-import Control.Lens
-import Data.Coerce
-import Data.IORef
-import qualified Data.Set as Set
+import Control.Lens ((^.))
+import Hedgehog (MonadTest, PropertyT, collect, evalEither, forAll, property)
 
-import Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
-
-import qualified Cardano.Chain.Block as Concrete
-import qualified Cardano.Spec.Chain.STS.Block as Abstract
+import Cardano.Chain.Block
+  ( ChainValidationError
+  , ChainValidationState(cvsUtxo)
+  , initialChainValidationState
+  , updateBlock
+  )
+import qualified Cardano.Chain.Genesis as Genesis
+import qualified Cardano.Chain.UTxO as Concrete
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
-import qualified Control.State.Transition as STS
-import qualified Control.State.Transition.Generator as STS
-import qualified Ledger.Core as Abstract
-import qualified Ledger.Delegation as Abstract
+import qualified Cardano.Spec.Chain.STS.Block as Abstract
+import Control.State.Transition.Generator (classifyTraceLength, trace)
+import Control.State.Transition (State)
+import Control.State.Transition.Trace
+  ( Trace
+  , TraceOrder(NewestFirst, OldestFirst)
+  , preStatesAndSignals
+  , traceEnv
+  , traceSignals
+  )
+import qualified Ledger.UTxO as Abstract
 
-import Test.Cardano.Chain.Elaboration.Block
-
-
---------------------------------------------------------------------------------
--- CHAIN
---------------------------------------------------------------------------------
-
--- | Generate an arbitrary chain from the executable model and ensure that the
---   executable specification and the concrete implementation of the @CHAIN@
---   system agree at the level of success and failure. We treat the concrete
---   state as a black box, so do not compare the abstract and concrete states
---   directly.
---
---   TODO: Currently this only includes the delegation payload, so we should add
---   UTxO and Update payloads as well
-prop_commandCHAIN :: Property
-prop_commandCHAIN = withTests 25 . property $ do
-
-  env <- forAll $ STS.initEnvGen @CHAIN
-
-  initialAbstractState <- either (panic . show) pure
-    $ STS.applySTS @CHAIN (STS.IRC env)
-
-  let
-    initialStateCHAIN :: StateCHAIN v
-    initialStateCHAIN =
-      StateCHAIN initialAbstractState [] (Right initialAbstractState)
-
-  let
-    initialConcreteState = either (panic . show) identity
-      $ Concrete.initialChainValidationState (abEnvToCfg env)
-
-  concreteRef <- liftIO $ newIORef initialConcreteState
-
-  actions     <- forAll $ Gen.sequential
-    (Range.linear 1 30)
-    initialStateCHAIN
-    [commandCHAIN concreteRef env]
-
-  liftIO $ writeIORef concreteRef initialConcreteState
-
-  executeSequential initialStateCHAIN actions
+import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg, rcDCert)
+import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
+import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 
-data StateCHAIN (v :: Type -> Type) = StateCHAIN
-  { abstractState :: STS.State CHAIN
-  , certs :: [Abstract.DCert]
-  , lastAbstractResult :: Either [STS.PredicateFailure CHAIN] (STS.State CHAIN)
-  }
+tests :: TSGroup
+tests = $$discoverPropArg
 
 
-data SignalCHAIN (v :: Type -> Type)
-  = SignalCHAIN Abstract.DCert (STS.Signal CHAIN)
-  deriving Show
+-- | Every abstract chain that was generated according to the inference rules,
+-- after being elaborated must be validated by the concrete block validator.
+ts_prop_generatedChainsAreValidated :: TSProperty
+ts_prop_generatedChainsAreValidated =
+  withTestsTS 100 $ property $ do
+    tr <- forAll $ trace @CHAIN 100
+    classifyTraceLength tr 100 50
+    passConcreteValidation tr
 
-instance HTraversable SignalCHAIN where
-  htraverse _ s = pure (coerce s)
 
-
-commandCHAIN
-  :: forall m
-   . MonadIO m
-  => IORef Concrete.ChainValidationState
-  -> STS.Environment CHAIN
-  -> Command Gen m StateCHAIN
-commandCHAIN concreteRef env@(_, _, dsEnv, _) = Command gen execute callbacks
+passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
+passConcreteValidation tr = void $ evalEither res
  where
-  gen :: StateCHAIN v -> Maybe (Gen (SignalCHAIN v))
-  gen StateCHAIN { abstractState, certs } =
-    Just $ SignalCHAIN <$> genCert <*> STS.sigGen @CHAIN env abstractState
-   where
-    genCert :: Gen Abstract.DCert
-    genCert = case certs of
-      [] -> do
-        key <- Gen.element $ Set.toList $ dsEnv ^. Abstract.allowedDelegators
-        let
-          skey = Abstract.SKey (Abstract.owner key)
-          vkey = Abstract.VKey (Abstract.owner key)
-        pure $ Abstract.mkDCert
-          key
-          (Abstract.sign skey key)
-          vkey
-          (Abstract.Epoch 0)
-      certs' -> Gen.element certs'
+  res =
+    foldM (elaborateAndUpdate config) (initialState, txIdMap)
+      $ preStatesAndSignals OldestFirst tr
 
-  execute
-    :: SignalCHAIN Concrete
-    -> m
-         (Either Concrete.ChainValidationError Concrete.ChainValidationState)
-  execute (SignalCHAIN cert block) = do
-    concreteState <- liftIO $ readIORef concreteRef
+  initialState = initialStateNoUTxO { cvsUtxo = initialUTxO }
 
-    let
-      concreteBlock =
-        elaborateBS (abEnvToCfg env) env cert concreteState block
+  initialStateNoUTxO =
+    either (panic . show) identity $ initialChainValidationState config
 
-      result
-        :: Either Concrete.ChainValidationError Concrete.ChainValidationState
-      result =
-        Concrete.updateBlock (abEnvToCfg env) concreteState concreteBlock
+  config = abEnvToCfg abstractEnv
 
-    liftIO . writeIORef concreteRef $ fromRight concreteState result
+  abstractEnv@(_, abstractInitialUTxO, _, _) = tr ^. traceEnv
 
-    pure result
+  (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
 
-  callbacks
-    :: [ Callback
-           SignalCHAIN
-           (Either Concrete.ChainValidationError Concrete.ChainValidationState)
-           StateCHAIN
-       ]
-  callbacks =
-    [ Update
-      $ \StateCHAIN { abstractState, certs } (SignalCHAIN _ block) _ ->
-          let
-            result =
-              STS.applySTS @CHAIN (STS.TRC (env, abstractState, block))
-            certs' = if isRight result
-              then block ^. Abstract.bBody . Abstract.bDCerts ++ certs
-              else certs
-          in StateCHAIN (fromRight abstractState result) certs' result
-    , Ensure $ \_ StateCHAIN { lastAbstractResult } _ result -> do
-      annotateShow lastAbstractResult
-      annotateShow result
-      isRight lastAbstractResult === isRight result
-    ]
+
+elaborateAndUpdate
+  :: Genesis.Config
+ -> (ChainValidationState, Map Abstract.TxId Concrete.TxId)
+  -> (State CHAIN, Abstract.Block)
+  -> Either
+       ChainValidationError
+       (ChainValidationState, Map Abstract.TxId Concrete.TxId)
+elaborateAndUpdate config (cvs, txIdMap) (ast, ab) =
+  (, txIdMap') <$> updateBlock config cvs concreteBlock
+ where
+  (concreteBlock, txIdMap') = elaborateBS txIdMap config dCert cvs ab
+  dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) ast
+
+
+classifyTransactions :: Trace CHAIN -> PropertyT IO ()
+classifyTransactions =
+  collect
+    . sum
+    . fmap (length . Abstract._bUtxo . Abstract._bBody)
+    . traceSignals NewestFirst

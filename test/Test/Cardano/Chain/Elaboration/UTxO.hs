@@ -90,7 +90,7 @@ elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
   }
 
 elaborateUTxO
-  :: (Concrete.TxOut -> id -> Concrete.TxId)
+  :: (id -> Concrete.TxId)
   -> Abstract.UTxO id
   -> Concrete.UTxO
 elaborateUTxO elaborateTxId =
@@ -100,27 +100,19 @@ elaborateUTxO elaborateTxId =
     . Abstract.unUTxO
 
 elaborateUTxOEntry
-  :: (Concrete.TxOut -> id -> Concrete.TxId)
+  :: (id -> Concrete.TxId)
   -> (Abstract.TxIn id, Abstract.TxOut)
   -> (Concrete.TxIn, Concrete.TxOut)
 elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut) =
   (concreteTxIn, concreteTxOut)
  where
   concreteTxOut = elaborateTxOut abstractTxOut
-  concreteTxIn  = elaborateUTxOInput (elaborateTxId concreteTxOut) abstractTxIn
-
-elaborateUTxOInput :: (id -> Concrete.TxId) -> Abstract.TxIn id -> Concrete.TxIn
-elaborateUTxOInput elaborateTxId (Abstract.TxIn txId index) =
-  Concrete.TxInUtxo (elaborateTxId txId) (fromIntegral index)
+  concreteTxIn  = elaborateTxIn elaborateTxId abstractTxIn
 
 elaborateTxWitsBS
-  :: Ord id
-  => (Concrete.TxOut -> id -> Concrete.TxId)
-  -> Abstract.UTxO id
-  -> Abstract.TxWits id
-  -> Concrete.ATxAux ByteString
-elaborateTxWitsBS elaborateTxId utxo0 =
-  annotateTxAux . elaborateTxWits elaborateTxId utxo0
+  :: (id -> Concrete.TxId) -> Abstract.TxWits id -> Concrete.ATxAux ByteString
+elaborateTxWitsBS elaborateTxId =
+  annotateTxAux . elaborateTxWits elaborateTxId
  where
   annotateTxAux :: Concrete.TxAux -> Concrete.ATxAux ByteString
   annotateTxAux txAux =
@@ -129,25 +121,15 @@ elaborateTxWitsBS elaborateTxId utxo0 =
       $ CBOR.decodeFull bytes
     where bytes = CBOR.serialize txAux
 
-elaborateTxWits
-  :: Ord id
-  => (Concrete.TxOut -> id -> Concrete.TxId)
-  -> Abstract.UTxO id
-  -> Abstract.TxWits id
-  -> Concrete.TxAux
-elaborateTxWits elaborateTxId utxo0 (Abstract.TxWits tx witnesses) =
+elaborateTxWits :: (id -> Concrete.TxId) -> Abstract.TxWits id -> Concrete.TxAux
+elaborateTxWits elaborateTxId (Abstract.TxWits tx witnesses) =
   Concrete.mkTxAux concreteTx (elaborateWitnesses concreteTx witnesses)
-  where concreteTx = elaborateTx elaborateTxId utxo0 tx
+  where concreteTx = elaborateTx elaborateTxId tx
 
-elaborateTx
-  :: Ord id
-  => (Concrete.TxOut -> id -> Concrete.TxId)
-  -> Abstract.UTxO id
-  -> Abstract.Tx id
-  -> Concrete.Tx
-elaborateTx elaborateTxId utxo0 (Abstract.Tx _ inputs outputs) =
+elaborateTx :: (id -> Concrete.TxId) -> Abstract.Tx id -> Concrete.Tx
+elaborateTx elaborateTxId (Abstract.Tx _ inputs outputs) =
   Concrete.UnsafeTx
-    { Concrete.txInputs     = elaborateTxIns elaborateTxId utxo0 inputs
+    { Concrete.txInputs     = elaborateTxIns elaborateTxId inputs
     , Concrete.txOutputs    = elaborateTxOuts outputs
     , Concrete.txAttributes = Concrete.mkAttributes ()
     }
@@ -165,27 +147,14 @@ elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness
   sigData   = Concrete.TxSigData $ hash concreteTx
 
 elaborateTxIns
-  :: Ord id
-  => (Concrete.TxOut -> id -> Concrete.TxId)
-  -> Abstract.UTxO id
-  -> [Abstract.TxIn id]
-  -> NonEmpty Concrete.TxIn
-elaborateTxIns elaborateTxId utxo0 =
+  :: (id -> Concrete.TxId) -> [Abstract.TxIn id] -> NonEmpty Concrete.TxIn
+elaborateTxIns elaborateTxId =
   fromMaybe (panic "elaborateTxIns: Empty list of TxIns") . NE.nonEmpty . fmap
-    (elaborateTxIn elaborateTxId utxo0)
+    (elaborateTxIn elaborateTxId)
 
-elaborateTxIn
-  :: Ord id
-  => (Concrete.TxOut -> id -> Concrete.TxId)
-  -> Abstract.UTxO id
-  -> Abstract.TxIn id
-  -> Concrete.TxIn
-elaborateTxIn elaborateTxId (Abstract.UTxO utxo) abstractTxIn =
-  fst $ elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut)
- where
-  abstractTxOut =
-    fromMaybe (panic "elaborateTxIn: Missing output for input")
-      $ M.lookup abstractTxIn utxo
+elaborateTxIn :: (id -> Concrete.TxId) -> Abstract.TxIn id -> Concrete.TxIn
+elaborateTxIn elaborateTxId (Abstract.TxIn txId index) =
+  Concrete.TxInUtxo (elaborateTxId txId) (fromIntegral index)
 
 elaborateTxOuts :: [Abstract.TxOut] -> NonEmpty Concrete.TxOut
 elaborateTxOuts =
