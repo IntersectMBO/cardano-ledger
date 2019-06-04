@@ -5,16 +5,15 @@
 module Cardano.Spec.Chain.STS.Block where
 
 import Control.Lens ((^.), makeLenses, view)
-import Crypto.Hash (hashlazy)
+import qualified Data.Hashable as H
 import Data.AbstractSize
-import Data.ByteString.Lazy.Char8 (pack)
 import qualified Data.Map.Strict as Map
 import Data.Sequence ((<|))
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
 import GHC.Generics (Generic)
 import Control.State.Transition.Generator
-import Ledger.Core (Hash, VKey, Slot, Sig)
+import Ledger.Core (Hash(Hash), VKey, Slot, Sig)
 import Ledger.Delegation
 import Ledger.Update (STag, ProtVer, UProp, Vote)
 import Ledger.UTxO (TxWits, TxId, TxIn, TxOut, Wit)
@@ -122,11 +121,7 @@ bHeaderSize = fromIntegral . abstractSize costs
 
 -- | Computes the hash of a header.
 hashHeader :: BlockHeader -> Hash
-hashHeader bh = hashlazy . pack $
-  show (bh ^. bhPrevHash) ++
-  show (bh ^. bhSlot    ) ++
-  show (bh ^. bhIssuer  )
--- TODO: we might want to serialize this properly, without using show...
+hashHeader bh = Hash $ H.hash (bh ^. bhPrevHash, bh ^. bhSlot, bh ^. bhIssuer)
 
 -- | Computes the hash of the header.
 bhToSign :: BlockHeader -> Hash

@@ -37,9 +37,8 @@ library
                      , Cardano.Ledger.Spec.STS.UTXOWS
   build-depends:       base >=4.11 && <5
                      , bimap
-                     , bytestring
                      , containers
-                     , cryptonite
+                     , hashable
                      , hedgehog >= 1.0
                      , lens
                      , memory
@@ -63,9 +62,7 @@ test-suite doctests
                      , doctest
                        -- need these, when doctest-discover runs
                        -- to ensure they are in scope.
-                     , bytestring
                      , containers
-                     , cryptonite
                      , hedgehog >= 1.0
                      , lens
                      , memory
