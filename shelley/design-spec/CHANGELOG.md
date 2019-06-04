@@ -1,5 +1,8 @@
 # Delegation Design Document Changelog
 
+## 2019-06-07
+Update section on script addresses.
+
 ## 2019-05-17
 Some clarifications in response to review by the auditors.
 
