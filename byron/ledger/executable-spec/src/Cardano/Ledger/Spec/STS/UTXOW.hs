@@ -9,9 +9,7 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
-import Data.List (find)
 import qualified Data.Map as Map
-import Data.Maybe (isJust)
 
 import Control.State.Transition
   ( Embed
@@ -99,12 +97,10 @@ authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
 -- TODO - should we only check for one witness for each unique input address?
 witnessed :: Ord id => TxWits id -> UTxO id -> Bool
 witnessed (TxWits tx wits) utxo =
-  length wits == length ins && all (hasWitness wits) ins
+  length wits == length ins && all (isWitness tx utxo) (zip ins wits)
  where
   ins = inputs tx
-  hasWitness ws input =
-    isJust $ find (isWitness tx input utxo) ws
-  isWitness tx' input unspent (Wit key sig) =
+  isWitness tx' unspent (input, Wit key sig) =
     verify key tx' sig && authTxin key input unspent
 
 

@@ -25,7 +25,7 @@
 **/*.run.xml
 
 # Cabal & Stack
-.stack-work/
+.stack-work*/
 .stack-work-local/
 */dist
 *~

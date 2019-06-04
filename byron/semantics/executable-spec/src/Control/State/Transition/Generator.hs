@@ -71,6 +71,7 @@ import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
   , lastState
+  , mkTrace
   , traceLength
   , traceSignals
   , closure
@@ -137,8 +138,8 @@ genTrace ub env st0 aSigGen = do
     loop
       :: Int
       -> State s
-      -> [TreeT (MaybeT Identity) (Signal s)]
-      -> Gen [TreeT (MaybeT Identity) (Signal s)]
+      -> [(State s, TreeT (MaybeT Identity) (Signal s))]
+      -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
     loop 0 _ acc = pure acc
     loop d sti acc = do
       sigTree :: TreeT (MaybeT Identity) (Signal s)
@@ -152,15 +153,18 @@ genTrace ub env st0 aSigGen = do
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
             Left _err  -> loop (d - 1) sti acc
-            Right sti' -> loop (d - 1) sti' (sigTree : acc)
+            Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
     interleaveSigs
-      :: MaybeT Identity (NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)])
+      :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
       -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
     interleaveSigs mst = do
-      nodeT :: NodeT (MaybeT Identity) [TreeT (MaybeT Identity) (Signal s)]  <- mst
-      lts <- interleaveTreeT (nodeValue nodeT)
-      pure $! closure @s env st0 <$> lts
+      nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
+      let (rootStates, trees) = unzip (nodeValue nodeT)
+      NodeT rootSignals children <- interleaveTreeT trees
+      pure $! NodeT
+        (mkTrace env st0 (zip rootStates rootSignals))
+        (fmap (fmap (closure @s env st0)) children)
 
 traceSuchThat
   :: forall s
