@@ -1,13 +1,14 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Ledger.UTxO.Generators where
 
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
+import Data.Hashable (Hashable)
+import qualified Data.Hashable as H
 import Control.Applicative (empty)
-import qualified Crypto.Hash as Crypto
 import Data.Bitraversable (bitraverse)
 import qualified Data.Map.Strict as M
 
@@ -322,16 +323,13 @@ tx :: [Addr] -> UTxO TxId -> Gen (Tx TxId)
 tx addrs utxo = do
   -- Use a dummy hash for now, as we will be replacing the transaction id
   -- after the call to UTxOGen.genTxFromUTxO.
-  let dummyTxId = TxId $ Crypto.hash $ IOs ([], [])
+  let dummyTxId = TxId . Hash . H.hash $ IOs ([], [])
   -- Generate a valid transaction from a given 'UTxO'
   res@Tx {inputs, outputs} <- genTxFromUTxO dummyTxId addrs utxo
   let
-    txHash = Crypto.hash $ IOs (inputs, outputs)
-  pure $ res { txid = TxId txHash }
+    txHash = H.hash $ IOs (inputs, outputs)
+  pure $ res { txid = TxId (Hash txHash) }
 
 newtype IOs = IOs ([TxIn TxId], [TxOut])
-  deriving (Show)
-
-instance BA.ByteArrayAccess IOs where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack  . show
+  deriving stock Show
+  deriving newtype Hashable

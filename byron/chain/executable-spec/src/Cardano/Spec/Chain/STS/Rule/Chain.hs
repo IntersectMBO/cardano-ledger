@@ -10,11 +10,11 @@
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
 import Control.Lens (Lens', (&), (.~), (^.), _1, _5, to)
-import qualified Crypto.Hash
 import qualified Data.Bimap as Bimap
 import Data.Bimap (Bimap)
 import Data.Bits (shift)
 import Data.ByteString (ByteString)
+import qualified Data.Hashable as H
 import qualified Data.Map as Map
 import Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
@@ -156,7 +156,7 @@ instance Embed (UTXOWS TxId) CHAIN where
 
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
-genesisHash = Crypto.Hash.hash ("" :: ByteString)
+genesisHash = Hash $ H.hash ("" :: ByteString)
 
 -- | Lens for the delegation interface state contained in the chain state.
 disL :: Lens' (State CHAIN) DIState

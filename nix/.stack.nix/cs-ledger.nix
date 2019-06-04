@@ -19,9 +19,8 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.bimap)
-          (hsPkgs.bytestring)
           (hsPkgs.containers)
-          (hsPkgs.cryptonite)
+          (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
           (hsPkgs.memory)
@@ -33,9 +32,7 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.doctest)
-            (hsPkgs.bytestring)
             (hsPkgs.containers)
-            (hsPkgs.cryptonite)
             (hsPkgs.hedgehog)
             (hsPkgs.lens)
             (hsPkgs.memory)

@@ -1,13 +1,12 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies     #-}
 
  -- | Simple example of a transition system whose states contain the sum of the
 -- integers seen in the signals.
 --
 module Control.State.Transition.Examples.Sum where
 
-import Hedgehog (Property, forAll, property, withTests, assert, classify)
+import Hedgehog (Property, forAll, property, withTests, assert)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 

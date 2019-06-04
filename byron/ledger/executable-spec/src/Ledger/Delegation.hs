@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
 
 module Ledger.Delegation
   ( -- * Delegation scheduling
@@ -66,12 +67,11 @@ module Ledger.Delegation
   )
 where
 
-import qualified Crypto.Hash as Crypto
 import Data.AbstractSize
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
+import Data.Hashable (Hashable)
+import qualified Data.Hashable as H
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -119,21 +119,22 @@ import Control.State.Transition.Generator
   , sigGen
   )
 import Ledger.Core
-  ( Epoch(Epoch)
+  ( BlockCount
+  , Epoch(Epoch)
+  , HasHash
+  , Hash(Hash)
   , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
-  , BlockCount
-  , unBlockCount
   , VKey
   , VKeyGenesis(VKeyGenesis)
   , (⨃)
   , addSlot
+  , hash
   , minusSlot
   , owner
   , owner
-  , HasHash
-  , hash
+  , unBlockCount
   )
 import Ledger.Core.Generators (vkGen, vkgenesisGen)
 import Ledger.GlobalParams (k)
@@ -153,16 +154,12 @@ data DCert = DCert
   , _dwho :: (VKeyGenesis, VKey)
     -- | Certificate epoch
   , _depoch :: Epoch
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, Hashable)
 
 instance HasTypeReps DCert
 
-instance BA.ByteArrayAccess [DCert] where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
-
 instance HasHash [DCert] where
-  hash = Crypto.hash
+  hash = Hash . H.hash
 
 makeLenses ''DCert
 
