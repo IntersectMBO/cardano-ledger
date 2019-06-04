@@ -16,7 +16,7 @@ import Control.State.Transition.Generator
 import Ledger.Core (Hash(Hash), VKey, Slot, Sig)
 import Ledger.Delegation
 import Ledger.Update (STag, ProtVer, UProp, Vote)
-import Ledger.UTxO (TxWits, TxId, TxIn, TxOut, Wit)
+import Ledger.UTxO (TxWits, TxIn, TxOut, Wit)
 
 data BlockHeader
   = MkBlockHeader
@@ -59,7 +59,7 @@ data BlockBody
   = BlockBody
   { _bDCerts     :: [DCert]
   -- ^ Delegation certificates
-  , _bUtxo       :: [TxWits TxId]
+  , _bUtxo       :: [TxWits]
   -- ^ UTxO payload
   , _bUpdProp    :: Maybe UProp
   -- ^ Update proposal payload
@@ -105,9 +105,9 @@ bBodySize = fromIntegral . abstractSize costs
                          , (typeOf (undefined::ProtVer), 1)
                          , (typeOf (undefined::DCert), 1)
                          , (typeOf (undefined::Vote), 1)
-                         , (typeOf (undefined::TxWits TxId), 1)
-                         , (typeOf (undefined::Wit TxId), 1)
-                         , (typeOf (undefined::TxIn TxId), 1)
+                         , (typeOf (undefined::TxWits), 1)
+                         , (typeOf (undefined::Wit), 1)
+                         , (typeOf (undefined::TxIn), 1)
                          , (typeOf (undefined::TxOut), 1)]
 
 -- | Compute the abstract size (in words) that a block header occupies.

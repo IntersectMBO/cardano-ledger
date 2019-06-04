@@ -20,30 +20,30 @@ import Control.State.Transition
   , (?!)
   , judgmentContext
   )
-import Data.AbstractSize (HasTypeReps)
 
 import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams)
 import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value)
 
-data UTXO id
+data UTXO
 
-data UTxOEnv id = UTxOEnv { utxo0 :: UTxO id
-                          , pps   :: PParams
-                          } deriving (Eq, Show)
+data UTxOEnv = UTxOEnv
+  { utxo0 :: UTxO
+  , pps   :: PParams
+  } deriving (Eq, Show)
 
-data UTxOState id = UTxOState { utxo :: UTxO id
-                              , reserves :: Lovelace
-                              }
-  deriving (Eq, Show)
+data UTxOState = UTxOState
+  { utxo     :: UTxO
+  , reserves :: Lovelace
+  } deriving (Eq, Show)
 
-instance (Ord id, HasTypeReps id) => STS (UTXO id) where
+instance STS UTXO where
 
-  type Environment (UTXO id) = UTxOEnv id
-  type State (UTXO id) = UTxOState id
-  type Signal (UTXO id) = Tx id
-  data PredicateFailure (UTXO id)
+  type Environment UTXO = UTxOEnv
+  type State UTXO = UTxOState
+  type Signal UTXO = Tx
+  data PredicateFailure UTXO
     = EmptyTxInputs
     | FeeTooLow
     | IncreasedTotalBalance

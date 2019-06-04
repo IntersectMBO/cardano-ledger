@@ -40,9 +40,9 @@ instance HasTypeReps TxId where
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn id = TxIn id Natural deriving (Show, Eq, Ord, Generic, Hashable)
+data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord, Generic, Hashable)
 
-instance HasTypeReps i => HasTypeReps (TxIn i) where
+instance HasTypeReps TxIn where
   typeReps x@(TxIn i' n) = typeOf x <| typeOf i' <| typeOf n <| empty
 
 -- |The output of a UTxO.
@@ -51,69 +51,66 @@ data TxOut = TxOut { addr  :: Addr
                    } deriving (Show, Eq, Ord, Generic, Hashable)
 
 -- |The unspent transaction outputs.
-newtype UTxO id = UTxO
-  { unUTxO :: Map (TxIn id) TxOut
+newtype UTxO = UTxO
+  { unUTxO :: Map TxIn TxOut
   } deriving stock (Show)
     deriving newtype (Eq, Relation)
 
 addValue :: TxOut -> Lovelace -> TxOut
 addValue tx@TxOut{ value } d = tx { value = value + d }
 
--- | Construct a UTxO from initial TxOuts, using the supplied id generator
-fromTxOuts :: Ord id => (TxOut -> id) -> [TxOut] -> UTxO id
-fromTxOuts mkId = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
+-- | Construct a UTxO from initial TxOuts
+fromTxOuts :: [TxOut] -> UTxO
+fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
+  where mkId = TxId . hash . addr
 
--- | Construct a UTxO from initial TxOuts, using Owner as TxId
-fromTxOutsNatural :: [TxOut] -> UTxO Natural
-fromTxOutsNatural = fromTxOuts (unOwner . owner . addr)
+-- | A raw transaction
+data Tx = Tx
+  { inputs  :: [TxIn]
+  , outputs :: [TxOut]
+  } deriving (Eq, Show, Ord, Generic, Hashable)
 
--- |A raw transaction
-data Tx id = Tx { txid    :: id
-                , inputs  :: [TxIn id]
-                , outputs :: [TxOut]
-                } deriving (Show, Ord, Generic, Hashable)
+instance HasTypeReps Tx where
+  typeReps x@(Tx inputs outputs)
+    = typeOf x <| typeOf inputs <| typeOf outputs <| empty
 
-instance HasTypeReps i => HasTypeReps (Tx i) where
-  typeReps x@(Tx i' inputs outputs)
-    = typeOf x <| typeOf i' <| typeOf inputs <| typeOf outputs <| empty
-
-instance Eq id => Eq (Tx id) where
-  (Tx _ ins outs) == (Tx _ ins' outs') = ins == ins' && outs == outs'
+txid :: Tx -> TxId
+txid = TxId . hash
 
 -- | Total value of a transaction.
-txValue :: Tx id -> Lovelace
+txValue :: Tx -> Lovelace
 txValue Tx { outputs } = sum $ fmap value outputs
 
 -- |Compute the UTxO inputs of a transaction.
-txins :: Tx id -> [TxIn id]
+txins :: Tx -> [TxIn]
 txins = inputs
 
 -- |Compute the UTxO outputs of a transaction.
-txouts :: Ord id => Tx id -> UTxO id
+txouts :: Tx -> UTxO
 txouts tx = UTxO $ Map.fromList
   [ (TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0 ..] ]
   where transId = txid tx
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO id -> Lovelace
+balance :: UTxO -> Lovelace
 balance (UTxO utxo) = Map.foldl' addValues mempty utxo
   where addValues b (TxOut _ a) = b <> a
 
-instance Ledger.Core.HasHash (Tx TxId) where
+instance Ledger.Core.HasHash Tx where
   hash = Hash . H.hash
 
 ---------------------------------------------------------------------------------
 -- UTxO transitions
 ---------------------------------------------------------------------------------
 
-pcMinFee :: forall id . HasTypeReps id => PParams -> Tx id -> Lovelace
+pcMinFee :: PParams -> Tx -> Lovelace
 pcMinFee PParams {_factorA = a, _factorB = b} tx
   = fromIntegral $ a * txsize tx + b
 
-txsize :: forall id . HasTypeReps id => Tx id -> Int
+txsize :: Tx -> Int
 txsize = abstractSize costs
-  where costs = Map.fromList [ (typeOf (undefined :: TxIn id), 1)
-                             , (typeOf (undefined :: TxOut)  , 1)
+  where costs = Map.fromList [ (typeOf (undefined :: TxIn) , 1)
+                             , (typeOf (undefined :: TxOut), 1)
                              ]
 
 
@@ -122,27 +119,27 @@ txsize = abstractSize costs
 ---------------------------------------------------------------------------------
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit id = Wit VKey (Sig (Tx id)) deriving (Show, Eq, Ord, Generic, Hashable)
+data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord, Generic, Hashable)
 
 -- |A fully formed transaction.
 --
 --     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
-data TxWits id = TxWits
-                { body      :: Tx id
-                , witnesses :: [Wit id]
-                } deriving (Show, Eq, Generic, Hashable)
+data TxWits = TxWits
+  { body      :: Tx
+  , witnesses :: [Wit]
+  } deriving (Show, Eq, Generic, Hashable)
 
-instance HasTypeReps i => HasTypeReps (TxWits i) where
+instance HasTypeReps TxWits where
   typeReps (TxWits b w) = typeOf b <| typeOf w <| empty
 
-instance (Show id, Hashable id) => HasHash [TxWits id] where
+instance HasHash [TxWits] where
   hash = Hash . H.hash
 
 -- |Create a witness for transaction
-makeWitness :: KeyPair -> Tx id -> Wit id
+makeWitness :: KeyPair -> Tx -> Wit
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 
-makeTxWits :: Ord id => UTxO id -> Tx id -> TxWits id
+makeTxWits :: UTxO -> Tx -> TxWits
 makeTxWits (UTxO utxo) tx = TxWits
   { body      = tx
   , witnesses = wits
