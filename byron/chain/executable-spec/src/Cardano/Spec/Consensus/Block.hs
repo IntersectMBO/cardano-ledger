@@ -14,7 +14,7 @@ import qualified Cardano.Spec.Chain.STS.Block as CBM -- Concrete Block Module
 import           Ledger.Core
 import           Ledger.Delegation
 import           Ledger.Update (ProtVer, UProp, Vote)
-import           Ledger.UTxO (TxWits, TxId)
+import           Ledger.UTxO (TxWits)
 
 
 class BlockHeader h where
@@ -39,7 +39,7 @@ class BlockBody bb where
   -- | Delegation certificates.
   bbCerts :: bb -> [DCert]
   -- | UTxO payload
-  bbUtxo :: bb -> [TxWits TxId]
+  bbUtxo :: bb -> [TxWits]
   -- | Update proposal payload
   bbUpdProp :: bb -> Maybe UProp
   -- | Update votes payload
