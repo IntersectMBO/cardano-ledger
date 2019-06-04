@@ -39,8 +39,8 @@ library
                      , bimap
                      , bytestring
                      , containers
-                     , cryptonite
                      , cs-ledger
+                     , hashable
                      , hedgehog >= 1.0
                      , lens
                      , small-steps

@@ -1,25 +1,30 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE EmptyDataDeriving          #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MonadComprehensions #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MonadComprehensions        #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE StrictData                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+
+-- This is for the Hashable Set instance
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Update
   (module Ledger.Update)
 where
 
 import Control.Lens
-import qualified Crypto.Hash as Crypto
 import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
 import Data.Char (isAscii)
+import Data.Hashable (Hashable)
+import qualified Data.Hashable as H
 import Data.Ix (inRange)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -91,43 +96,44 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: Int
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show)
+  } deriving (Eq, Generic, Ord, Show, Hashable)
 
 makeLenses ''PParams
 
 instance HasTypeReps PParams
 
 newtype UpId = UpId Int
-  deriving (Eq, Generic, Ord, Show)
-
-instance HasTypeReps UpId
+  deriving stock (Generic, Show)
+  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 -- | Protocol version
 data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show)
+  } deriving (Eq, Generic, Ord, Show, Hashable)
 
 makeLenses ''ProtVer
 
 instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
-  deriving (Eq, Generic, Ord, Show)
+  deriving stock (Generic, Show)
+  deriving newtype (Eq, Ord, Hashable)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
-  deriving (Eq, Generic, Ord, Num, Show)
+  deriving stock (Generic, Show)
+  deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show)
+  } deriving (Eq, Generic, Show, Hashable)
 
 makeLenses ''SwVer
 
@@ -145,7 +151,7 @@ type UpSD =
 type STag = String
 
 -- | For now we do not have any requirements on metadata.
-data Metadata = Metadata deriving (Eq, Ord, Show, Generic)
+data Metadata = Metadata deriving (Eq, Ord, Show, Generic, Hashable)
 
 -- | Update proposal
 data UProp = UProp
@@ -159,7 +165,11 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  } deriving (Eq, Generic, Show)
+  } deriving (Eq, Generic, Show, Hashable)
+
+instance Hashable a => Hashable (Set a) where
+  hashWithSalt = H.hashUsing Set.toList
+
 
 makeLenses ''UProp
 
@@ -430,18 +440,14 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  } deriving (Eq, Generic, Show)
+  } deriving (Eq, Generic, Show, Hashable)
 
 makeLenses ''Vote
 
 instance HasTypeReps Vote
 
-instance BA.ByteArrayAccess (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
-
 instance HasHash (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
-  hash = Crypto.hash
+  hash = Core.Hash . H.hash
 
 
 data ADDVOTE
