@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -5,7 +8,6 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -13,15 +15,15 @@
 
 module Ledger.UTxO where
 
-import qualified Crypto.Hash as Crypto
 import Data.AbstractSize (HasTypeReps, typeReps, abstractSize)
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
+import Data.Hashable (Hashable)
+import qualified Data.Hashable as H
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Sequence ((<|), empty)
 import Data.Typeable (typeOf)
+import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
 import Ledger.Core hiding ((<|))
@@ -29,7 +31,8 @@ import Ledger.Update (PParams (PParams), _factorA, _factorB)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
-  deriving (Show, Eq, Ord)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, Hashable)
 
 instance HasTypeReps TxId where
   typeReps x = typeOf x <| typeOf (getTxId x) <| empty
@@ -37,7 +40,7 @@ instance HasTypeReps TxId where
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn id = TxIn id Natural deriving (Show, Eq, Ord)
+data TxIn id = TxIn id Natural deriving (Show, Eq, Ord, Generic, Hashable)
 
 instance HasTypeReps i => HasTypeReps (TxIn i) where
   typeReps x@(TxIn i' n) = typeOf x <| typeOf i' <| typeOf n <| empty
@@ -45,12 +48,13 @@ instance HasTypeReps i => HasTypeReps (TxIn i) where
 -- |The output of a UTxO.
 data TxOut = TxOut { addr  :: Addr
                    , value :: Lovelace
-                   } deriving (Show, Eq, Ord)
+                   } deriving (Show, Eq, Ord, Generic, Hashable)
 
 -- |The unspent transaction outputs.
 newtype UTxO id = UTxO
   { unUTxO :: Map (TxIn id) TxOut
-  } deriving (Show, Eq, Relation)
+  } deriving stock (Show)
+    deriving newtype (Eq, Relation)
 
 addValue :: TxOut -> Lovelace -> TxOut
 addValue tx@TxOut{ value } d = tx { value = value + d }
@@ -67,7 +71,7 @@ fromTxOutsNatural = fromTxOuts (unOwner . owner . addr)
 data Tx id = Tx { txid    :: id
                 , inputs  :: [TxIn id]
                 , outputs :: [TxOut]
-                } deriving (Show, Ord)
+                } deriving (Show, Ord, Generic, Hashable)
 
 instance HasTypeReps i => HasTypeReps (Tx i) where
   typeReps x@(Tx i' inputs outputs)
@@ -96,11 +100,7 @@ balance (UTxO utxo) = Map.foldl' addValues mempty utxo
   where addValues b (TxOut _ a) = b <> a
 
 instance Ledger.Core.HasHash (Tx TxId) where
-  hash = Crypto.hash
-
-instance Show id => BA.ByteArrayAccess (Tx id) where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack  . show
+  hash = Hash . H.hash
 
 ---------------------------------------------------------------------------------
 -- UTxO transitions
@@ -122,7 +122,7 @@ txsize = abstractSize costs
 ---------------------------------------------------------------------------------
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit id = Wit VKey (Sig (Tx id)) deriving (Show, Eq, Ord)
+data Wit id = Wit VKey (Sig (Tx id)) deriving (Show, Eq, Ord, Generic, Hashable)
 
 -- |A fully formed transaction.
 --
@@ -130,17 +130,13 @@ data Wit id = Wit VKey (Sig (Tx id)) deriving (Show, Eq, Ord)
 data TxWits id = TxWits
                 { body      :: Tx id
                 , witnesses :: [Wit id]
-                } deriving (Show, Eq)
+                } deriving (Show, Eq, Generic, Hashable)
 
 instance HasTypeReps i => HasTypeReps (TxWits i) where
   typeReps (TxWits b w) = typeOf b <| typeOf w <| empty
 
-instance Show id => BA.ByteArrayAccess [TxWits id] where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack  . show
-
-instance Show id => HasHash [TxWits id] where
-  hash = Crypto.hash
+instance (Show id, Hashable id) => HasHash [TxWits id] where
+  hash = Hash . H.hash
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx id -> Wit id

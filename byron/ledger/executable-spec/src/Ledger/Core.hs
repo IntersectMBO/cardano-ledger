@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstrainedClassMethods    #-}
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DerivingVia                #-}
@@ -10,11 +11,10 @@
 
 module Ledger.Core where
 
-import qualified Crypto.Hash as Crypto
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Char8 as BS
+import Data.Hashable (Hashable)
+import qualified Data.Hashable as H
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
@@ -29,7 +29,10 @@ import Data.AbstractSize
 
 
 -- | An encoded hash of part of the system.
-type Hash = Crypto.Digest Crypto.SHA256
+newtype Hash = Hash
+  { unHash :: Int
+  } deriving stock (Show)
+    deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 -- | Hash part of the ledger payload
 class HasHash a where
@@ -42,40 +45,44 @@ class HasHash a where
 -- |Representation of the owner of key pair.
 newtype Owner = Owner
   { unOwner :: Natural
-  } deriving (Show, Eq, Ord, HasTypeReps)
+  } deriving stock (Show)
+    deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 class HasOwner a where
   owner :: a -> Owner
 
 -- |Signing Key.
-newtype SKey = SKey Owner deriving (Show, Eq, Ord, HasTypeReps)
+newtype SKey = SKey Owner
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, HasTypeReps)
 
 instance HasOwner SKey where
   owner (SKey o) = o
 
 -- |Verification Key.
-newtype VKey = VKey Owner deriving (Show, Eq, Ord, HasTypeReps)
+newtype VKey = VKey Owner
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 instance HasHash VKey where
-  hash = Crypto.hash
-
-instance BA.ByteArrayAccess VKey where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
+  hash = Hash . H.hash
 
 instance HasOwner VKey where
   owner (VKey o) = o
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis VKey
-  deriving (Eq, Ord, Show, HasTypeReps)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 instance HasOwner VKeyGenesis where
   owner (VKeyGenesis vk) = owner vk
 
 -- |Key Pair.
 data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord, Generic)
+  { sKey :: SKey
+  , vKey :: VKey
+  } deriving (Eq, Ord, Show, Generic)
 
 instance HasTypeReps KeyPair
 
@@ -84,7 +91,7 @@ keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic)
+data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable)
 
 instance HasTypeReps a => HasTypeReps (Sig a)
 
@@ -101,10 +108,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Word64
-  deriving (Eq, Ord, Show, HasTypeReps)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
-  deriving (Eq, Ord, Show, HasTypeReps)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
 
 -- | A number of slots.
 --
@@ -112,7 +121,8 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
-  deriving (Eq, Generic, Ord, Num, Show)
+  deriving stock (Generic, Show)
+  deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps SlotCount
 
@@ -151,9 +161,11 @@ minusSlotMaybe (Slot m) (SlotCount n)
   | otherwise = Just . Slot $ m - n
 
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
-  deriving (Eq, Generic, Ord, Num, Show)
+  deriving stock (Generic, Show)
+  deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps BlockCount
+
 
 ---------------------------------------------------------------------------------
 -- Transactions
@@ -161,24 +173,22 @@ instance HasTypeReps BlockCount
 
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
-  deriving (Show, Eq, Ord, HasOwner)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord, Hashable, HasOwner)
 
 -- | Create an address from a number.
 mkAddr :: Natural -> Addr
 mkAddr = Addr . VKey . Owner
 
-instance BA.ByteArrayAccess Addr where
-  length        = BA.length . BS.pack . show
-  withByteArray = BA.withByteArray . BS.pack . show
-
 instance HasHash Addr where
-  hash = Crypto.hash
+  hash = Hash . H.hash
 
 -- | A unit of value held by a UTxO.
 --
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
-  } deriving (Show, Eq, Ord, Num)
+  } deriving stock (Show)
+    deriving newtype (Eq, Ord, Num, Hashable)
     deriving (Semigroup, Monoid) via (Sum Integer)
 
 

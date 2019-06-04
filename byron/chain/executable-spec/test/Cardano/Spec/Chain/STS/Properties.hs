@@ -6,7 +6,7 @@ import Data.Foldable (traverse_)
 import Data.List.Ordered (nubSortBy)
 import Data.Ord (Down(Down), comparing)
 import Hedgehog
-  (MonadTest, Property, (===), assert, failure, forAll, property, withTests)
+  (MonadTest, Property, (===), failure, forAll, property, withTests)
 
 import Control.State.Transition
 import Control.State.Transition.Generator
