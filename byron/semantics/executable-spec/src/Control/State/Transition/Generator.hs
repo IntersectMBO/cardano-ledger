@@ -146,7 +146,7 @@ genTrace ub env st0 aSigGen = do
         <- toTreeMaybeT $ aSigGen env sti
       let
         --  Take the root of the next-state signal tree.
-        mSig = treeValue <$> runDiscardEffect sigTree
+        mSig = treeValue $ runDiscardEffectT sigTree
       case mSig of
         Nothing ->
           loop (d - 1) sti acc
