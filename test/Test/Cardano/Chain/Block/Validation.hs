@@ -14,6 +14,7 @@ import Test.Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
 import qualified Data.Map.Strict as M
+import Data.Maybe (isJust)
 import qualified Data.Sequence as Seq
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
@@ -31,6 +32,7 @@ import Hedgehog
   )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import System.Environment (lookupEnv)
 
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
@@ -61,6 +63,9 @@ tests = concatTSGroups [const $$discover, $$discoverPropArg]
 
 ts_prop_mainnetEpochsValid :: TSProperty
 ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
+  menv <- liftIO $ lookupEnv "CARDANO_MAINNET_MIRROR"
+  assert $ isJust menv
+
   -- Get the 'Genesis.Config' from the mainnet genesis JSON
   config <- readMainetCfg
 
