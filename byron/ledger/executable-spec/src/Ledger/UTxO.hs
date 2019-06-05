@@ -50,6 +50,9 @@ data TxOut = TxOut { addr  :: Addr
                    , value :: Lovelace
                    } deriving (Show, Eq, Ord, Generic, Hashable)
 
+instance HasTypeReps TxOut where
+  typeReps o = typeOf o <| empty
+
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
@@ -68,11 +71,7 @@ fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
 data Tx = Tx
   { inputs  :: [TxIn]
   , outputs :: [TxOut]
-  } deriving (Eq, Show, Ord, Generic, Hashable)
-
-instance HasTypeReps Tx where
-  typeReps x@(Tx inputs outputs)
-    = typeOf x <| typeOf inputs <| typeOf outputs <| empty
+  } deriving (Eq, Show, Ord, Generic, Hashable, HasTypeReps)
 
 txid :: Tx -> TxId
 txid = TxId . hash
@@ -105,7 +104,7 @@ instance Ledger.Core.HasHash Tx where
 
 pcMinFee :: PParams -> Tx -> Lovelace
 pcMinFee PParams {_factorA = a, _factorB = b} tx
-  = fromIntegral $ a * txsize tx + b
+  = fromIntegral $ a + b * txsize tx
 
 txsize :: Tx -> Int
 txsize = abstractSize costs

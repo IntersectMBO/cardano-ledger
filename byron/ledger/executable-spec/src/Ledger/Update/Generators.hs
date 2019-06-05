@@ -70,8 +70,8 @@ pparamsGen =
     <*> Gen.integral (Range.linear (0 :: Natural) 1000) -- scriptVersion
     <*> Gen.integral (Range.linear 0 1000)              -- cfmThd
     <*> Gen.double (Range.constant 0 1)                 -- upAdptThd
-    <*> pure 0                                          -- factor @a@
-    <*> pure 0                                          -- factor @b@
+    <*> Gen.int (Range.linear 0 100)                    -- factor @a@
+    <*> Gen.int (Range.linear 0 10)                     -- factor @b@
  where
   -- | Generates maxBkSz, maxHdrSz, maxTxSz and maxPropSz
   szGen :: Gen (Natural, Natural, Natural, Natural)

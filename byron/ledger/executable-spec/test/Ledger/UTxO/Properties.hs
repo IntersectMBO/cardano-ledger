@@ -3,6 +3,7 @@
 
 module Ledger.UTxO.Properties where
 
+import Control.Lens ((^.))
 import Control.Monad (when)
 import Hedgehog
   ( Property
@@ -18,13 +19,15 @@ import Control.State.Transition.Generator (classifyTraceLength, trace)
 import Control.State.Transition.Trace
   ( TraceOrder(OldestFirst)
   , firstAndLastState
+  , traceEnv
   , traceLength
   , traceSignals
   )
 
-import Cardano.Ledger.Spec.STS.UTXO (reserves, utxo)
+import Cardano.Ledger.Spec.STS.UTXO (pps, reserves, utxo)
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO (balance, body, inputs, outputs)
+import Ledger.UTxO
+  (Tx(Tx), TxIn(TxIn), balance, body, inputs, outputs, pcMinFee)
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
@@ -52,6 +55,20 @@ tracesAreClassified = withTests 200 . property $ do
   let (tl, step) = (500, 50)
   tr <- forAll (trace @UTXOW tl)
   classifyTraceLength tr tl step
+
+  let
+    pparams = pps (tr ^. traceEnv)
+    -- Transaction with one input and one output
+    unitTx = Tx [TxIn undefined undefined] [undefined]
+    unitTxFee = pcMinFee pparams unitTx
+  classify "Unit transaction cost == 0" $ unitTxFee == 0
+  classify "Unit transaction cost == 1" $ unitTxFee == 1
+  classify "Unit transaction cost [2, 5)" $ 2 <= unitTxFee && unitTxFee < 5
+  classify "Unit transaction cost [5, 10)" $ 5 <= unitTxFee && unitTxFee < 10
+  classify "Unit transaction cost [10, 25)" $ 10 <= unitTxFee && unitTxFee < 25
+  classify "Unit transaction cost [25, 100)" $ 25 <= unitTxFee && unitTxFee < 100
+  classify "Unit transaction cost >= 100" $ 100 <= unitTxFee
+
   -- Classify the average number of inputs and outputs. Note that the intervals
   -- were arbitrarily determined, since in order to have a good partition of
   -- the interval [0, maximum possible number of inputs/outputs] we'd need to
