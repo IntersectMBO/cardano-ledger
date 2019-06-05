@@ -27,44 +27,43 @@ import Control.State.Transition
 import Control.State.Transition.Generator
   (HasTrace, genTrace, initEnvGen, sigGen)
 import Control.State.Transition.Trace (TraceOrder(NewestFirst), traceSignals)
-import Data.AbstractSize (HasTypeReps)
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv, UTxOState)
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO (TxId, TxWits)
+import Ledger.UTxO (TxWits)
 
-data UTXOWS id
+data UTXOWS
 
-instance (Ord id, HasTypeReps id) => STS (UTXOWS id) where
-  type State (UTXOWS id) = UTxOState id
-  type Signal (UTXOWS id) = [TxWits id]
-  type Environment (UTXOWS id) = UTxOEnv id
-  data PredicateFailure (UTXOWS id)
-    = UtxowFailure (PredicateFailure (UTXOW id))
+instance STS UTXOWS where
+  type State UTXOWS = UTxOState
+  type Signal UTXOWS = [TxWits]
+  type Environment UTXOWS = UTxOEnv
+  data PredicateFailure UTXOWS
+    = UtxowFailure (PredicateFailure UTXOW)
     deriving (Eq, Show)
 
   initialRules =
     [ do
         IRC env <- judgmentContext
-        trans @(UTXOW id) $ IRC env
+        trans @UTXOW $ IRC env
     ]
 
   transitionRules =
     [ do
         TRC (env, utxo, txWits) <- judgmentContext
-        case (txWits :: [TxWits id]) of
+        case (txWits :: [TxWits]) of
           []     -> return utxo
           (tx:gamma) -> do
-            utxo'  <- trans @(UTXOWS id) $ TRC (env, utxo, gamma)
-            utxo'' <- trans @(UTXOW id)  $ TRC (env, utxo', tx)
+            utxo'  <- trans @UTXOWS $ TRC (env, utxo, gamma)
+            utxo'' <- trans @UTXOW  $ TRC (env, utxo', tx)
             return utxo''
     ]
 
-instance (Ord id, HasTypeReps id) => Embed (UTXOW id) (UTXOWS id) where
+instance Embed UTXOW UTXOWS where
   wrapFailed = UtxowFailure
 
-instance HasTrace (UTXOWS TxId) where
-  initEnvGen = initEnvGen @(UTXOW TxId)
+instance HasTrace UTXOWS where
+  initEnvGen = initEnvGen @UTXOW
 
   -- We generate signal for UTXOWS as a list of signals from UTXOW
-  sigGen env st = traceSignals NewestFirst
-    <$> genTrace @(UTXOW TxId) 20 env st (sigGen @(UTXOW TxId))
+  sigGen env st =
+    traceSignals NewestFirst <$> genTrace @UTXOW 20 env st (sigGen @UTXOW)
