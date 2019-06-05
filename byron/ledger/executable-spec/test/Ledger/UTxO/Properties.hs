@@ -24,12 +24,12 @@ import Control.State.Transition.Trace
 
 import Cardano.Ledger.Spec.STS.UTXO (reserves, utxo)
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO (TxId, balance, body, inputs, outputs)
+import Ledger.UTxO (balance, body, inputs, outputs)
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
 moneyIsConstant = withTests 200 . property $ do
-  (st0, st) <- firstAndLastState <$> forAll (trace @(UTXOW TxId) 500)
+  (st0, st) <- firstAndLastState <$> forAll (trace @UTXOW 500)
   reserves st0 + balance (utxo st0) === reserves st + balance (utxo st)
 
 -- To test the performance of the integrated shrinker for UTxO traces one could
@@ -50,7 +50,7 @@ tracesAreClassified :: Property
 -- TODO: we might want to run this only while developing, and not on CI.
 tracesAreClassified = withTests 200 . property $ do
   let (tl, step) = (500, 50)
-  tr <- forAll (trace @(UTXOW TxId) tl)
+  tr <- forAll (trace @UTXOW tl)
   classifyTraceLength tr tl step
   -- Classify the average number of inputs and outputs. Note that the intervals
   -- were arbitrarily determined, since in order to have a good partition of

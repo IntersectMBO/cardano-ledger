@@ -31,7 +31,7 @@ import Ledger.Core
 import Ledger.Delegation
 import Ledger.Update
 import qualified Ledger.Update.Generators as UpdateGen
-import Ledger.UTxO (TxId, UTxO)
+import Ledger.UTxO (UTxO)
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.BHead
@@ -45,7 +45,7 @@ data CHAIN
 instance STS CHAIN where
   type Environment CHAIN =
     ( Slot            -- Current slot
-    , UTxO TxId
+    , UTxO
     -- Components needed to be able to bootstrap the traces generator. They are
     -- not part of the formal spec. These might be removed once we have decided
     -- on how do we want to model initial states.
@@ -58,7 +58,7 @@ instance STS CHAIN where
     ( Slot
     , Seq VKeyGenesis
     , Hash
-    , UTxOState TxId
+    , UTxOState
     , DIState
     , UPIState
     )
@@ -71,7 +71,7 @@ instance STS CHAIN where
     | PBFTFailure (PredicateFailure PBFT)
     | MaximumBlockSize Natural Natural
     | LedgerDelegationFailure (PredicateFailure DELEG)
-    | LedgerUTxOFailure (PredicateFailure (UTXOWS TxId))
+    | LedgerUTxOFailure (PredicateFailure UTXOWS)
     deriving (Eq, Show)
 
   initialRules =
@@ -92,7 +92,7 @@ instance STS CHAIN where
                         , Set.empty
                         , Map.empty
                         )
-        utxoSt0 <- trans @(UTXOWS TxId) $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
+        utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
         ds      <- trans @DELEG $ IRC dsenv
         return $! ( s0
                   , ds ^. delegationMap . to Bimap.keys . to fromList
@@ -151,7 +151,7 @@ instance Embed PBFT CHAIN where
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerDelegationFailure
 
-instance Embed (UTXOWS TxId) CHAIN where
+instance Embed UTXOWS CHAIN where
   wrapFailed = LedgerUTxOFailure
 
 genesisHash :: Hash
@@ -166,7 +166,7 @@ instance HasTrace CHAIN where
 
   initEnvGen = (,,,)
             <$> gCurrentSlot
-            <*> (utxo0 <$> initEnvGen @(UTXOWS TxId))
+            <*> (utxo0 <$> initEnvGen @UTXOWS)
             <*> initEnvGen @DELEG
             <*> UpdateGen.pparamsGen
     where
@@ -199,7 +199,7 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps) (Slot s
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of
-      GenUTxO   -> sigGen @(UTXOWS TxId) utxoEnv utxo
+      GenUTxO   -> sigGen @UTXOWS utxoEnv utxo
       NoGenUTxO -> pure []
 
     let

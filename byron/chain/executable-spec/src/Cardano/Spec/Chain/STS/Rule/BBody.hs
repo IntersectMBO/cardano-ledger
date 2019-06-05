@@ -39,7 +39,7 @@ import Ledger.Delegation
   , _dSEnvSlot
   )
 import Ledger.Update (PParams, maxBkSz, UPIState)
-import Ledger.UTxO (UTxO, TxId)
+import Ledger.UTxO (UTxO)
 
 import Cardano.Spec.Chain.STS.Block
 
@@ -49,11 +49,11 @@ instance STS BBODY where
   type Environment BBODY =
     ( PParams
     , Epoch
-    , UTxO TxId
+    , UTxO
     )
 
   type State BBODY =
-    ( UTxOState TxId
+    ( UTxOState
     , DIState
     , UPIState
     )
@@ -67,7 +67,7 @@ instance STS BBODY where
     | InvalidUpdateProposalHash
     | BUPIFailure (PredicateFailure BUPI)
     | DelegationFailure (PredicateFailure DELEG)
-    | UTXOWSFailure (PredicateFailure (UTXOWS TxId))
+    | UTXOWSFailure (PredicateFailure UTXOWS)
     deriving (Eq, Show)
 
   initialRules = []
@@ -97,7 +97,7 @@ instance STS BBODY where
           , ds
           , b ^. bBody ^. bDCerts
           )
-        utxoSt' <- trans @(UTXOWS TxId) $ TRC
+        utxoSt' <- trans @UTXOWS $ TRC
           ( UTxOEnv {utxo0 = utxoGenesis, pps = ppsVal}, utxoSt, b ^. bBody ^. bUtxo )
 
         return $! (utxoSt', ds', us')
@@ -109,5 +109,5 @@ instance Embed BUPI BBODY where
 instance Embed DELEG BBODY where
   wrapFailed = DelegationFailure
 
-instance Embed (UTXOWS TxId) BBODY where
+instance Embed UTXOWS BBODY where
   wrapFailed = UTXOWSFailure
