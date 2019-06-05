@@ -47,12 +47,12 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 200 $ property $ do
-    tr <- forAll (trace @(UTXOW Abstract.TxId) 200)
+    tr <- forAll $ trace @UTXOW 200
     classifyTraceLength tr 200 50
     passConcreteValidation tr
 
 
-passConcreteValidation :: MonadTest m => Trace (UTXOW Abstract.TxId) -> m ()
+passConcreteValidation :: MonadTest m => Trace UTXOW -> m ()
 passConcreteValidation tr = void $ evalEither res
  where
   res = foldM (elaborateAndUpdate abstractEnv) initSt
@@ -66,7 +66,7 @@ passConcreteValidation tr = void $ evalEither res
 -- | Create the initial concrete UTxO by elaborating the outputs and updating
 --   the map from abstract TxIds to concrete TxIds
 elaborateInitialUTxO
-  :: Abstract.UTxO Abstract.TxId
+  :: Abstract.UTxO
   -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
 elaborateInitialUTxO abstractUtxo = foldr
   txOutToUTxO
@@ -74,7 +74,7 @@ elaborateInitialUTxO abstractUtxo = foldr
   (M.toList $ Abstract.unUTxO abstractUtxo)
  where
   txOutToUTxO
-    :: (Abstract.TxIn Abstract.TxId, Abstract.TxOut)
+    :: (Abstract.TxIn, Abstract.TxOut)
     -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
     -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
   txOutToUTxO (Abstract.TxIn abstractTxId _, abstractTxOut) (utxo, txIdMap) =
@@ -90,9 +90,9 @@ elaborateInitialUTxO abstractUtxo = foldr
 -- | Elaborate a single transaction, apply it to the UTxO, and update the TxId
 --   map with the new concrete TxId
 elaborateAndUpdate
-  :: Abstract.UTxOEnv Abstract.TxId
+  :: Abstract.UTxOEnv
   -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
-  -> Abstract.TxWits Abstract.TxId
+  -> Abstract.TxWits
   -> Either
        Concrete.UTxOValidationError
        (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
@@ -108,12 +108,15 @@ elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
 
 elaborateTxWitnesses
   :: Map Abstract.TxId Concrete.TxId
-  -> [Abstract.TxWits Abstract.TxId]
+  -> [Abstract.TxWits]
   -> ([Concrete.ATxAux ByteString], Map Abstract.TxId Concrete.TxId)
 elaborateTxWitnesses txIdMap = first reverse . foldl' step ([], txIdMap)
   where step (acc, m) = first (: acc) . elaborateTxWitsBSWithMap m
 
-elaborateTxWitsBSWithMap :: Map Abstract.TxId Concrete.TxId -> Abstract.TxWits Abstract.TxId -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
+elaborateTxWitsBSWithMap
+  :: Map Abstract.TxId Concrete.TxId
+  -> Abstract.TxWits
+  -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
 elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
  where
   concreteTxWitness = E.elaborateTxWitsBS
