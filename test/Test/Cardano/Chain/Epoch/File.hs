@@ -8,10 +8,12 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Data.Maybe (isJust)
 import Hedgehog (Group, Property, (===), discover)
 import qualified Hedgehog as H
 import Streaming (Of((:>)))
 import qualified Streaming as S
+import System.Environment (lookupEnv)
 
 import Cardano.Chain.Epoch.File (ParseError, mainnetEpochSlots, parseEpochFilesWithBoundary)
 
@@ -23,6 +25,9 @@ tests = $$discover
 
 prop_deserializeEpochs :: Property
 prop_deserializeEpochs = H.withTests 1 $ H.property $ do
+  menv <- liftIO $ lookupEnv "CARDANO_MAINNET_MIRROR"
+  H.assert $ isJust menv
+
   files <- take 10 <$> liftIO mainnetEpochFiles
   H.assert $ not (null files)
   -- TODO: the property cannot take any parameters (if we want discoverPrefix
