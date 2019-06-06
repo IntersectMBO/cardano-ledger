@@ -575,6 +575,10 @@ instance STS UPEND where
     , Bimap VKeyGenesis VKey       -- Delegation map
     , Map UpId Core.Slot           -- Confirmed proposals
     , Map UpId (ProtVer, PParams)  -- Registered update proposals
+    , BlockCount                   -- Chain stability parameter. This
+                                   -- is deemed to be a global
+                                   -- constant that we temporarily put
+                                   -- there.
     )
   type State UPEND =
     ( [(Core.Slot, (ProtVer, PParams))]
@@ -595,7 +599,7 @@ instance STS UPEND where
   transitionRules =
     [
       do
-        TRC ( (sn, _t, _dms, cps, rpus)
+        TRC ( (sn, _t, _dms, cps, rpus, k)
             , (fads, bvs)
             , (bv, _vk)
             ) <- judgmentContext
@@ -603,7 +607,7 @@ instance STS UPEND where
           Just (pid, _) -> do
             -- If we found the proposal id that corresponds to 'bv' then we
             -- have to check that it isn't confirmed for this rule to succeed.
-            pid ∉ dom (cps ▷<= sn  -. 2 *. GP.k) ?! TryNextRule
+            pid ∉ dom (cps ▷<= sn  -. 2 *. k) ?! TryNextRule
             return $! (fads, bvs)
           Nothing ->
             -- If we didn't find the proposal id that corresponds to 'bv' then
@@ -617,7 +621,7 @@ instance STS UPEND where
             return $! (fads, bvs)
 
     , do
-        TRC ( (sn, t, dms, cps, rpus)
+        TRC ( (sn, t, dms, cps, rpus, k)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
@@ -630,14 +634,14 @@ instance STS UPEND where
             size ([bv] ◁ bvs) < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
-                pid ∈ dom (cps ▷<= sn -. 2 *. GP.k) ?! TryNextRule
+                pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
                 return $! (fads, bvs')
               Nothing -> do
                 True ?! TryNextRule
                 return $! (fads, bvs')
 
     , do
-        TRC ( (sn, t, dms, cps, rpus)
+        TRC ( (sn, t, dms, cps, rpus, k)
             , (fads, bvs)
             , (bv, vk)
             ) <- judgmentContext
@@ -650,7 +654,7 @@ instance STS UPEND where
             t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, (_, ppsc)) -> do
-                pid ∈ dom (cps  ▷<= sn -. 2 *. GP.k) ?! UnconfirmedProposal pid
+                pid ∈ dom (cps  ▷<= sn -. 2 *. k) ?! UnconfirmedProposal pid
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
                 return $! (fads', bvs')
               Nothing -> do
@@ -671,6 +675,9 @@ instance Embed FADS UPEND where
 type UPIEnv =
   ( Core.Slot
   , Bimap Core.VKeyGenesis Core.VKey
+  , BlockCount -- this is a global constant in the formal
+               -- specification, which we put in this environment so
+               -- that we can test with different values of it.
   )
 
 -- | The update interface state is shared amongst various rules, so we define it
@@ -727,7 +734,7 @@ instance STS UPIREG where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms)
+        TRC ( (sn, dms, _k)
             , ( (pv, pps)
               , fads
               , avs
@@ -769,7 +776,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms)
+        TRC ( (sn, dms, k)
             , ( (pv, pps)
               , fads
               , avs
@@ -783,7 +790,7 @@ instance STS UPIVOTE where
         (cps', vts') <- trans @UPVOTE $ TRC ((sn, pps, dom pws, dms), (cps, vts), v)
         let
           stblCps  = Map.keys $ Map.filter stable cps'
-          stable s = unSlot s <= unSlot sn - 2 * unBlockCount GP.k
+          stable s = unSlot s <= unSlot sn - 2 * unBlockCount k
           avsnew   = [ (an, (av, sn, m))
                      | pid <- stblCps
                      , (an, av, m) <- maybeToList $ Map.lookup pid raus
@@ -845,7 +852,7 @@ instance STS UPIEND where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms)
+        TRC ( (sn, dms, k)
             , ( (pv, pps)
               , fads
               , avs
@@ -858,7 +865,7 @@ instance STS UPIEND where
             , (bv,vk)) <- judgmentContext
         let
           t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
-        (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus), (fads, bvs), (bv,vk))
+        (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus, k), (fads, bvs), (bv,vk))
         let
           u        = pps ^. upTtl
           pidskeep = dom (pws ▷>= sn -. u) `union` dom cps
@@ -886,6 +893,10 @@ instance STS PVBUMP where
   type Environment PVBUMP =
     ( Core.Slot
     , [(Core.Slot, (ProtVer, PParams))]
+    , BlockCount -- Chain stability parameter; this is a global
+                 -- constant in the formal specification, which we put
+                 -- in this environment so that we can test with
+                 -- different values of it.
     )
   type State PVBUMP =
     (ProtVer, PParams)
@@ -899,9 +910,9 @@ instance STS PVBUMP where
   initialRules = []
   transitionRules =
     [ do
-        TRC ((s_n, fads), (pv, pps), ()) <- judgmentContext
+        TRC ((s_n, fads, k), (pv, pps), ()) <- judgmentContext
         let
-          mFirstStableSlot = minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ GP.k)
+          mFirstStableSlot = minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ k)
           r = case mFirstStableSlot of
                 Nothing -> []
                 Just s  -> filter ((<= s) . fst) fads
@@ -915,7 +926,13 @@ instance STS PVBUMP where
 data UPIEC
 
 instance STS UPIEC where
-  type Environment UPIEC = Core.Slot
+  type Environment UPIEC =
+    ( Core.Slot
+    , BlockCount -- Chain stability parameter; this is a global
+                 -- constant in the formal specification, which we put
+                 -- in this environment so that we can test with
+                 -- different values of it.
+    )
   type State UPIEC = UPIState
   type Signal UPIEC = ()
   data PredicateFailure UPIEC
@@ -925,11 +942,11 @@ instance STS UPIEC where
   initialRules = []
   transitionRules =
     [ do
-        TRC (s_n, us, ()) <- judgmentContext
+        TRC ((s_n, k), us, ()) <- judgmentContext
         let
           (pv, pps) = us ^. _1 :: (ProtVer, PParams)
           fads      = us ^. _2 :: [(Core.Slot, (ProtVer, PParams))]
-        (pv', pps') <- trans @PVBUMP $ TRC ((s_n, fads), (pv, pps), ())
+        (pv', pps') <- trans @PVBUMP $ TRC ((s_n, fads, k), (pv, pps), ())
         return $! if pv == pv'
           then us
           else

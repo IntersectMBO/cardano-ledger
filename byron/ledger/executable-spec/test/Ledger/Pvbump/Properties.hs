@@ -7,7 +7,6 @@ import           Data.Maybe (fromMaybe)
 import           Ledger.Update.Generators
 import           Hedgehog
 import           Ledger.Core (BlockCount(..), SlotCount(..), minusSlotMaybe)
-import           Ledger.GlobalParams (k)
 import           Ledger.Update (PVBUMP)
 
 
@@ -59,7 +58,7 @@ lastProposal = property $ do
       <*> pvbumpStateGen
       <*> pure ()
   let
-    TRC ((s_n, fads), _, _) = judgementContext
+    TRC ((s_n, fads, k), _, _) = judgementContext
     s = fromMaybe
       (error
         "An improper slot generator used! Constraint violated: s_n > 2*k")
