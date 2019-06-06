@@ -50,6 +50,7 @@ module Cardano.Chain.Block.Header
   , HeaderHash
   , headerHashF
   , hashHeader
+  , headerHashAnnotated
   , genesisHeaderHash
 
   -- * BlockSignature
@@ -113,6 +114,7 @@ import Cardano.Crypto
   , VerificationKey
   , SigningKey
   , SignTag(..)
+  , hashDecoded
   , hashHexF
   , hashRaw
   , proxySign
@@ -431,6 +433,9 @@ wrapHeaderBytes = mappend "\130\SOH"
 --   serialised with 'toCBORHeaderToHash'
 hashHeader :: EpochSlots -> Header -> HeaderHash
 hashHeader es = unsafeAbstractHash . serializeEncoding . toCBORHeaderToHash es
+
+headerHashAnnotated :: AHeader ByteString -> HeaderHash
+headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 
 
 --------------------------------------------------------------------------------

@@ -101,6 +101,7 @@ import Cardano.Chain.Block.Header
   , genesisHeaderHash
   , hashHeader
   , headerDifficulty
+  , headerHashAnnotated
   , headerGenesisKey
   , headerIssuer
   , headerPrevHash
@@ -113,7 +114,6 @@ import Cardano.Chain.Block.Header
   , headerToSign
   , mkHeaderExplicit
   , toCBORHeader
-  , wrapHeaderBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
@@ -129,8 +129,7 @@ import Cardano.Chain.UTxO.TxPayload (ATxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto
-  (ProtocolMagicId, SigningKey, VerificationKey, hashDecoded)
+import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -220,7 +219,7 @@ blockHash :: EpochSlots -> Block -> HeaderHash
 blockHash epochSlots = hashHeader epochSlots . blockHeader
 
 blockHashAnnotated :: ABlock ByteString -> HeaderHash
-blockHashAnnotated = hashDecoded . fmap wrapHeaderBytes . blockHeader
+blockHashAnnotated = headerHashAnnotated . blockHeader
 
 blockProtocolMagicId :: ABlock a -> ProtocolMagicId
 blockProtocolMagicId = headerProtocolMagicId . blockHeader
