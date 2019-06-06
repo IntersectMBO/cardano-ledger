@@ -11,10 +11,12 @@ where
 
 import Cardano.Prelude
 
+import qualified Cardano.Crypto.Wallet as CC
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
 import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 
 
@@ -42,9 +44,12 @@ data SignTag
   -- ^ Commitment:       @(EpochIndex, Commitment)@
   | SignUSVote
   -- ^ US proposal vote: @(UpId, Bool)@
-  | SignMainBlock
-  -- ^ Main block:       @MainToSign@
-  | SignMainBlockHeavy
+  | SignBlock VerificationKey
+  -- ^ Block header:     @ToSign@
+  --
+  --   This constructor takes the 'VerificationKey' of the delegation
+  --   certificate issuer, which is prepended to the signature as part of the
+  --   sign tag
   | SignProxyVK
   -- ^ Proxy key:        @ProxyVerificationKey@
   deriving (Eq, Ord, Show, Generic)
@@ -74,7 +79,13 @@ signTagRaw network = \case
   SignUSProposal -> "\x04" <> network
   SignCommitment -> "\x05" <> network
   SignUSVote     -> "\x06" <> network
-  SignMainBlock  -> "\x07" <> network
+
+  -- "\x07" was used for SignMainBlock, but was never used in mainnet
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
-  SignMainBlockHeavy -> "\x09" <> network
-  SignProxyVK    -> "\x0a" <> network
+
+  -- This tag includes the prefix that was previously added in @proxySign@,
+  -- allowing us to unify the two signing functions
+  SignBlock (VerificationKey issuerVK) ->
+    "01" <> CC.unXPub issuerVK <> "\x09" <> network
+
+  SignProxyVK -> "\x0a" <> network

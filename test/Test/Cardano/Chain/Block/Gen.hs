@@ -16,8 +16,9 @@ import Data.Coerce (coerce)
 import Hedgehog (Gen)
 
 import Cardano.Chain.Block
-  ( Block
-  , BlockSignature(..)
+  ( ABlockSignature(..)
+  , Block
+  , BlockSignature
   , Body
   , Header
   , HeaderHash
@@ -31,7 +32,15 @@ import Cardano.Chain.Block
 import Cardano.Chain.Slotting
   (EpochIndex(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
-import Cardano.Crypto (ProtocolMagicId, createPsk, noPassSafeSigner, toVerification)
+import Cardano.Crypto
+  ( ProtocolMagicId
+  , SignTag(SignBlock)
+  , createPsk
+  , noPassSafeSigner
+  , safeToVerification
+  , sign
+  , toVerification
+  )
 
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
@@ -41,7 +50,7 @@ import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
-  , genProxySignature
+  , genSafeSigner
   , genSigningKey
   , genTextHash
   )
@@ -49,8 +58,18 @@ import Test.Cardano.Crypto.Gen
 
 genBlockSignature :: ProtocolMagicId -> EpochSlots -> Gen BlockSignature
 genBlockSignature pm epochSlots =
-  BlockSignature <$> genProxySignature pm mts genEpochIndex
-  where mts = genToSign pm epochSlots
+  mkBlockSignature
+    <$> genSafeSigner
+    <*> genSigningKey
+    <*> genEpochIndex
+    <*> genToSign pm epochSlots
+ where
+  mkBlockSignature issuerSafeSigner delegateSK epoch toSign =
+    let
+      cert     = createPsk pm issuerSafeSigner (toVerification delegateSK) epoch
+      issuerVK = safeToVerification issuerSafeSigner
+      sig      = sign pm (SignBlock issuerVK) delegateSK toSign
+    in ABlockSignature cert sig
 
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash

@@ -91,8 +91,8 @@ import Cardano.Chain.Block.Body
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
 import Cardano.Chain.Block.Header
-  ( AHeader(..)
-  , BlockSignature(..)
+  ( ABlockSignature
+  , AHeader(..)
   , Header
   , HeaderHash
   , ToSign
@@ -248,7 +248,7 @@ blockDifficulty = headerDifficulty . blockHeader
 blockToSign :: EpochSlots -> ABlock a -> ToSign
 blockToSign epochSlots = headerToSign epochSlots . blockHeader
 
-blockSignature :: ABlock a -> BlockSignature
+blockSignature :: ABlock a -> ABlockSignature a
 blockSignature = headerSignature . blockHeader
 
 blockProtocolVersion :: ABlock a -> ProtocolVersion

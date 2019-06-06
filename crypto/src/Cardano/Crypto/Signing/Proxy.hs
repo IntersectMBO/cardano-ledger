@@ -4,5 +4,4 @@ module Cardano.Crypto.Signing.Proxy
 where
 
 import Cardano.Crypto.Signing.Proxy.Cert as X
-import Cardano.Crypto.Signing.Proxy.Signature as X
 import Cardano.Crypto.Signing.Proxy.VerificationKey as X

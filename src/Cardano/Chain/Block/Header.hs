@@ -54,7 +54,8 @@ module Cardano.Chain.Block.Header
   , genesisHeaderHash
 
   -- * BlockSignature
-  , BlockSignature(..)
+  , BlockSignature
+  , ABlockSignature(..)
 
   -- * ToSign
   , ToSign(..)
@@ -95,8 +96,7 @@ import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
-  ( EpochIndex
-  , EpochSlots
+  ( EpochSlots
   , FlatSlotId(..)
   , SlotId(..)
   , WithEpochSlots(WithEpochSlots)
@@ -106,19 +106,18 @@ import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
-  ( Hash
+  ( AProxyVerificationKey(..)
+  , Hash
   , ProtocolMagicId(..)
-  , ProxySignature
-  , AProxySignature(..)
-  , AProxyVerificationKey(..)
-  , VerificationKey
-  , SigningKey
+  , Signature
   , SignTag(..)
+  , SigningKey
+  , VerificationKey
   , hashDecoded
   , hashHexF
   , hashRaw
-  , proxySign
   , pskIssuerVK
+  , sign
   , unsafeAbstractHash
   )
 
@@ -145,7 +144,7 @@ data AHeader a = AHeader
   -- ^ Proof of body
   , headerGenesisKey       :: !VerificationKey
   -- ^ The genesis key that is delegating to publish this block
-  , headerSignature        :: !BlockSignature
+  , headerSignature        :: !(ABlockSignature a)
   -- ^ The signature of the block, which contains the delegation certificate
   , headerAnnotation       :: a
   -- ^ An annotation that captures the full header bytes
@@ -216,7 +215,7 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
     sv
     (Annotated proof ())
     genesisVK
-    signature
+    sig
     ()
     ()
  where
@@ -224,10 +223,9 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
 
   genesisVK = pskIssuerVK dlgCert
 
-  signature =
-    BlockSignature $ proxySign pm SignMainBlockHeavy sk dlgCert toSign
+  sig       = ABlockSignature dlgCert $ sign pm (SignBlock genesisVK) sk toSign
 
-  toSign = ToSign prevHash proof epochAndSlotCount difficulty pv sv
+  toSign    = ToSign prevHash proof epochAndSlotCount difficulty pv sv
 
   epochAndSlotCount = unflattenSlotId epochSlots slotId
 
@@ -253,7 +251,7 @@ headerProof = unAnnotated . aHeaderProof
 
 headerIssuer :: AHeader a -> VerificationKey
 headerIssuer h = case headerSignature h of
-  BlockSignature psig -> pskDelegateVK $ psigPsk psig
+  ABlockSignature cert _ -> pskDelegateVK cert
 
 headerToSign :: EpochSlots -> AHeader a -> ToSign
 headerToSign epochSlots h = ToSign
@@ -307,7 +305,7 @@ fromCBORAHeader epochSlots = do
     ( pm
     , prevHash
     , proof
-    , (slot, genesisKey, difficulty, signature)
+    , (slot, genesisKey, difficulty, sig)
     , Annotated (protocolVersion, softwareVersion) extraByteSpan
     )
     byteSpan <-
@@ -337,7 +335,7 @@ fromCBORAHeader epochSlots = do
     softwareVersion
     proof
     genesisKey
-    signature
+    sig
     byteSpan
     extraByteSpan
 
@@ -467,31 +465,47 @@ wrapBoundaryBytes = mappend "\130\NUL"
 -- BlockSignature
 --------------------------------------------------------------------------------
 
+type BlockSignature = ABlockSignature ()
+
 -- | Signature of the 'Block'
 --
 --   We use a heavyweight delegation scheme, so the signature has two parts:
 --
 --   1. A delegation certificate from a genesis key to the block signer
 --   2. The actual signature over `ToSign`
-newtype BlockSignature = BlockSignature
-  { unBlockSignature :: ProxySignature EpochIndex ToSign
-  } deriving (Show, Eq, Generic)
+data ABlockSignature a = ABlockSignature
+  { delegationCertificate :: Delegation.ACertificate a
+  , signature             :: Signature ToSign
+  } deriving (Show, Eq, Generic, Functor)
     deriving anyclass NFData
 
 instance B.Buildable BlockSignature where
-  build (BlockSignature s) = bprint ("BlockSignature: ".build) s
+  build (ABlockSignature cert _) = bprint
+    ( "BlockSignature:\n"
+    . "  Delegation certificate: " . build
+    )
+    cert
 
 instance ToCBOR BlockSignature where
-  toCBOR (BlockSignature pxy) =
+  toCBOR (ABlockSignature cert sig) =
     -- Tag 0 was previously used for BlockSignature (no delegation)
     -- Tag 1 was previously used for BlockPSignatureLight
-    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR pxy
+    encodeListLen 2
+      <> toCBOR (2 :: Word8)
+      <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
 
 instance FromCBOR BlockSignature where
+  fromCBOR = void <$> fromCBOR @(ABlockSignature ByteSpan)
+
+instance FromCBOR (ABlockSignature ByteSpan) where
   fromCBOR = do
     enforceSize "BlockSignature" 2
     fromCBOR >>= \case
-      2 -> BlockSignature <$> fromCBOR
+      2 ->
+        ABlockSignature
+          <$  enforceSize "BlockSignature" 2
+          <*> fromCBOR
+          <*> fromCBOR
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
 
 

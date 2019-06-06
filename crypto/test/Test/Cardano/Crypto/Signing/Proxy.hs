@@ -17,20 +17,10 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Crypto.Signing
-  ( AProxySignature(..)
-  , AProxyVerificationKey(..)
-  , ProxySignature
-  , SignTag(..)
-  , createPsk
-  , proxySign
-  , proxyVerify
-  , safeToVerification
-  , toVerification
-  , validateProxyVerificationKey
-  )
+  (AProxyVerificationKey(..), createPsk, validateProxyVerificationKey)
 
 import qualified Test.Cardano.Crypto.Dummy as Dummy
-import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner, genSigningKey)
+import Test.Cardano.Crypto.Gen (genSafeSigner, genVerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -39,94 +29,6 @@ import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner, genSigningKey
 
 tests :: IO Bool
 tests = checkParallel $$discover
-
-
---------------------------------------------------------------------------------
--- Proxy Signature Properties
---------------------------------------------------------------------------------
-
--- | Can verify a correct 'ProxySignature'
-prop_proxySign :: Property
-prop_proxySign = property $ do
-  issuerSafeSigner <- forAll genSafeSigner
-  delegateSK <- forAll genSigningKey
-  omega      <-
-    forAll
-    $   (,)
-    <$> Gen.int32 Range.constantBounded
-    <*> Gen.int32 Range.constantBounded
-  let
-    psk = createPsk
-      Dummy.protocolMagicId
-      issuerSafeSigner
-      (toVerification delegateSK)
-      omega
-  a <- forAll genData
-
-  assert
-    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) a
-    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
-
--- | Cannot verify a 'ProxySignature' with an incorrect key
-prop_proxySignDifferentKey :: Property
-prop_proxySignDifferentKey = property $ do
-  issuerSafeSigner  <- forAll genSafeSigner
-  issuerSafeSigner' <- forAll $ Gen.filter
-    ((/= safeToVerification issuerSafeSigner) . safeToVerification)
-    genSafeSigner
-
-  delegateSK <- forAll genSigningKey
-  omega      <-
-    forAll
-    $   (,)
-    <$> Gen.int32 Range.constantBounded
-    <*> Gen.int32 Range.constantBounded
-
-  let
-    psk = createPsk
-      Dummy.protocolMagicId
-      issuerSafeSigner
-      (toVerification delegateSK)
-      omega
-    psk' = createPsk
-      Dummy.protocolMagicId
-      issuerSafeSigner'
-      (toVerification delegateSK)
-      omega
-    switchPsk :: ProxySignature w s -> ProxySignature (Int32, Int32) s
-    switchPsk sig = sig { psigPsk = psk' }
-
-  a <- forAll genData
-
-  assert
-    . not
-    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) a
-    $ switchPsk
-    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
-
--- | Cannot verify a 'ProxySignature' with the wrong data
-prop_proxySignDifferentData :: Property
-prop_proxySignDifferentData = property $ do
-  issuerSafeSigner <- forAll genSafeSigner
-  delegateSK <- forAll genSigningKey
-  omega      <-
-    forAll
-    $   (,)
-    <$> Gen.int32 Range.constantBounded
-    <*> Gen.int32 Range.constantBounded
-  let
-    psk = createPsk
-      Dummy.protocolMagicId
-      issuerSafeSigner
-      (toVerification delegateSK)
-      omega
-  a <- forAll genData
-  b <- forAll $ Gen.filter (/= a) genData
-
-  assert
-    . not
-    $ proxyVerify Dummy.protocolMagicId SignForTestingOnly (== omega) b
-    $ proxySign Dummy.protocolMagicId SignForTestingOnly delegateSK psk a
 
 
 --------------------------------------------------------------------------------
