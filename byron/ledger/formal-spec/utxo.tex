@@ -82,9 +82,9 @@ system.
       \fun{txbody} & \Tx \to \powerset{\TxIn} \times (\Ix \mapsto \TxOut)
                                   & \text{transaction body}\\
       %
-      \fun{a} & \PPMMap \to \mathbb{Z} & \text{minumum fee factor}\\
+      \fun{a} & \PPMMap \to \mathbb{Z} & \text{minimum fee constant}\\
       %
-      \fun{b} & \PPMMap \to \mathbb{Z} & \text{minumum fee constant}\\
+      \fun{b} & \PPMMap \to \mathbb{Z} & \text{minimum fee factor}\\
       %
       \fun{txSize} & \Tx \to \mathbb{Z} & \text{abstract size of a transaction}\\
       %
@@ -125,7 +125,7 @@ system.
    %
     & \fun{minfee} \in \PPMMap \to \Tx \to \mathbb{Z} & \text{minimum fee}\\
     & \fun{minfee}~\var{pps}~\var{tx} =
-      \fun{a}~\var{pps} * \fun{txSize}~\var{tx} + \fun{b}~\var{pps}
+      \fun{a}~\var{pps} + \fun{b}~\var{pps} * \fun{txSize}~\var{tx}
   \end{align*}
   \caption{Functions used in UTxO rules}
   \label{fig:derived-defs:utxo}
