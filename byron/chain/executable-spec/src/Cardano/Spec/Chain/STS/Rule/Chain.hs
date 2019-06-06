@@ -120,10 +120,10 @@ instance STS CHAIN where
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC ((sNow, utxoGenesis, _, _), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
+      TRC ((sNow, utxoGenesis, _, pps), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
-        trans @BHEAD $ TRC ((dm, sLast), us, b ^. bHeader)
+        trans @BHEAD $ TRC ((dm, sLast, pps ^. stableAfter), us, b ^. bHeader)
       let ppsUs' = snd (us' ^. _1)
       (h', sgs') <-
         trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow), (h, sgs), b ^. bHeader)

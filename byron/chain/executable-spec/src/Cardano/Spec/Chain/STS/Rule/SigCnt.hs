@@ -11,7 +11,6 @@ import qualified Data.Sequence as S
 import Control.State.Transition
 
 import Ledger.Core hiding ((|>))
-import Ledger.GlobalParams (k)
 import Ledger.Update hiding (NotADelegate)
 
 data SIGCNT
@@ -38,7 +37,9 @@ instance STS SIGCNT where
   transitionRules =
     [ do
         TRC ((pps, dms), sgs, vk) <- judgmentContext
-        let t' = pps ^. bkSgnCntT
+        let
+          t' = pps ^. bkSgnCntT
+          k  = pps ^. stableAfter
         case Bimap.lookupR vk dms of
           Just vkG -> do
             let sgs' = S.drop (S.length sgs + 1 - (fromIntegral . unBlockCount $ k)) (sgs |> vkG)

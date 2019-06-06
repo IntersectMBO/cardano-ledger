@@ -22,7 +22,6 @@ import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
 import           Ledger.Core.Generators (slotGen)
-import           Ledger.GlobalParams (k)
 import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
 import           Numeric.Natural (Natural)
 
@@ -92,10 +91,11 @@ pparamsGen =
 
   -- | Generates bkSlotsPerEpoch, upTtl and stableAfter
   slotBlockGen :: Gen (SlotCount, SlotCount, BlockCount)
-  slotBlockGen =
+  slotBlockGen = do
     -- The number of slots per epoch is computed from 'k':
     -- slots per-epoch = k * 10
-    let perEpoch = SlotCount $ unBlockCount k *  10 in
+    k <- BlockCount <$> Gen.integral (Range.linear 1 10000)
+    let perEpoch = SlotCount $ (unBlockCount k) * 10
     (perEpoch,,)
       <$> (SlotCount  <$> gRange perEpoch)
       <*> (BlockCount <$> gRange perEpoch)
@@ -115,23 +115,33 @@ listGen loSl hiSl loLen hiLen = Gen.list (Range.linear loLen hiLen) inOneSlot
 -- | Generates an environment for the PVBUMP STS with an empty list of
 -- updates
 pvbumpEmptyListEnvGen :: Gen (Environment PVBUMP)
-pvbumpEmptyListEnvGen = (, []) <$> slotGen 0 100000
+pvbumpEmptyListEnvGen = (, [], )
+  <$> slotGen 0 100000
+  <*> (BlockCount <$> Gen.integral (Range.linear 1 10000))
 
 -- | Generates an environment for the PVBUMP STS such that s_n <= 2 *
 -- k
 pvbumpBeginningsEnvGen :: Gen (Environment PVBUMP)
 pvbumpBeginningsEnvGen =
-  (,)
-    <$> (slotGen 0 $ 2 * (unBlockCount k))
+  (\(k, s) l -> (s, l, k))
+    <$> ksGen
     <*> listGen 0 100000 0 10
+ where
+  ksGen :: Gen (BlockCount, Slot)
+  ksGen = do
+    k <- BlockCount <$> Gen.integral (Range.linear 1 10000)
+    s <- slotGen 0 $ 2 * (unBlockCount k)
+    pure (k, s)
 
--- | Generates an environment for the PVBUMP STS such that s_n >= 2 *
+-- | Generates an environment for the PVBUMP STS such that s_n > 2 *
 -- k
 pvbumpAfter2kEnvGen :: Gen (Environment PVBUMP)
-pvbumpAfter2kEnvGen =
-  let kv = unBlockCount k in (,)
-    <$> slotGen (2 * kv + 1) (10 * kv)
-    <*> ((++)
+pvbumpAfter2kEnvGen = do
+  k <- BlockCount <$> Gen.integral (Range.linear 1 10000)
+  let kv = unBlockCount k
+  s <- slotGen (2 * kv + 1) (10 * kv)
+  (\l -> (s, l, k))
+    <$> ((++)
          <$> listGen 0 1 1 1 -- to ensure there is at least one
                              -- element left after domain restriction
                              -- in the lastProposal property
