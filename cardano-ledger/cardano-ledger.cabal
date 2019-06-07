@@ -9,7 +9,7 @@ maintainer:          operations@iohk.io
 copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
-extra-source-files:  ChangeLog.md, README.md
+extra-source-files:  README.md
 cabal-version:       >=1.10
 
 flag development

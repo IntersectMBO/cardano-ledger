@@ -2,7 +2,7 @@
   extras = hackage:
     {
       packages = {
-        "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.0").revisions).default;
+        "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.1").revisions).default;
         "haskell-src-exts" = (((hackage.haskell-src-exts)."1.21.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
