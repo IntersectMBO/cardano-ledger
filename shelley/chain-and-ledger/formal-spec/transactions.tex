@@ -19,19 +19,15 @@ A transaction body, $\TxBody$, is made up of seven pieces:
     a reward address to the coin value to be withdrawn. The coin value must be equal
     to the full value contained in the account. Explicitly stating these values ensures
     that error messages can be precise about why a transaction is invalid.
-  \item A mapping of genesis keys to an extra seed value. If there is a consensus on this value
-    among the genesis keys, this value will be used in the next epoch as extra entropy for
-    the nonce. The extra entropy is needed for the transition from the Byron era to the Shelley
-    era. It will be used as evidence that the initial nonces were not manipulated by the genesis
-    key holders before full decentralization has occured.
+  \item Update proposals, a pair of mappings from genesis keys to proposals.
+    The first mapping is for protocol parameters and the second one is for application versions.
 \end{itemize}
 A transaction, $\Tx$, is a transaction body together with:
 
 \begin{itemize}
   \item A collection of witnesses, represented as a finite map from payment verification keys
     to signatures.
-  \item Update payloads from genesis keys.
-    The payload type ($\UpdatePayload$) is defined in \cite{byron_chain_spec}.
+  \item Updates from genesis keys.
 \end{itemize}
 
 Additionally, the $\UTxO$ type will be used by the ledger state to store all the
@@ -47,6 +43,8 @@ This function must produce a unique id for each unique transaction.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{txid} & \TxId & \text{transaction id}\\
+      \var{an} & \ApName & \text{application name}\\
+      \var{m} & \Metadata & \text{metadata}\\
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -73,10 +71,30 @@ This function must produce a unique id for each unique transaction.
       & \AddrRWD \mapsto \Coin
       & \text{reward withdrawal}
       \\
-      \var{H}
-      & \EEnt
-      & \VKeyGen \mapsto \Seed
-      & \text{extra entropy}
+      \var{pup}
+      & \PPUpdate
+      & \VKeyGen \mapsto \Ppm \mapsto \Seed
+      & \text{protocol parameter update}
+      \\
+      \var{av}
+      & \ApVer
+      & \N
+      & \text{application versions}
+      \\
+      \var{apps}
+      & \Applications
+      & \ApName \mapsto (\ApVer \times \Metadata)
+      & \text{application versions}
+      \\
+      \var{aup}
+      & \AVUpdate
+      & \VKeyGen \mapsto \Applications
+      & \text{application update}
+      \\
+      \var{up}
+      & \Update
+      & \PPUpdate \times \AVUpdate
+      & \text{update proposal}
     \end{array}
   \end{equation*}
   %
@@ -87,11 +105,11 @@ This function must produce a unique id for each unique transaction.
       \var{txbody}
       & \TxBody
       & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
-        \times \Coin \times \Slot \times \Wdrl \times \EEnt
+        \times \Coin \times \Slot \times \Wdrl \times \Update
       \\
       \var{tx}
       & \Tx
-      & \TxBody \times (\VKey \mapsto \Sig) \times \UpdatePayload
+      & \TxBody \times (\VKey \mapsto \Sig)
       \\
     \end{array}
   \end{equation*}
@@ -107,8 +125,7 @@ This function must produce a unique id for each unique transaction.
       \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
       \fun{txwits} & \Tx \to (\VKey \mapsto \Sig) & \text{witnesses} \\
-      \fun{txup} & \Tx \to \UpdatePayload & \text{update payload} \\
-      \fun{txeent} & \Tx \to \EEnt & \text{extra entropy} \\
+      \fun{txup} & \Tx \to \Update & \text{protocol parameter update} \\
     \end{array}
   \end{equation*}
   %

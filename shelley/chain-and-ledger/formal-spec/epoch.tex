@@ -9,7 +9,6 @@
 \newcommand{\SnapshotEnv}{\type{SnapshotEnv}}
 \newcommand{\SnapshotState}{\type{SnapshotState}}
 \newcommand{\NewPParamState}{\type{NewPParamState}}
-\newcommand{\EpochEnv}{\type{EpochEnv}}
 \newcommand{\EpochState}{\type{EpochState}}
 \newcommand{\BlocksMade}{\type{BlocksMade}}
 \newcommand{\Stake}{\type{Stake}}
@@ -115,7 +114,7 @@ The two main transition systems in this section are:
 \subsection{Helper Functions and Accounting Fields}
 \label{sec:stake-dist-helpers}
 
-Figure~\ref{fig:funcs:epoch-helper} defines four helper functions needed
+Figure~\ref{fig:funcs:epoch-helper-rewards} defines four helper functions needed
 throughout the rest of the section.
 
 \begin{itemize}
@@ -175,7 +174,7 @@ throughout the rest of the section.
   \end{align*}
 
   \caption{Helper Functions used in Rewards and Epoch Boundary}
-  \label{fig:funcs:epoch-helper}
+  \label{fig:funcs:epoch-helper-rewards}
 \end{figure}
 
 
@@ -427,6 +426,7 @@ This transition has no preconditions and results in the following state change:
           \var{utxo} \\
           \var{deposits} \\
           \var{fees} \\
+          \var{up} \\
         \end{array}
       \right)
       \trans{snap}{e}
@@ -442,6 +442,7 @@ This transition has no preconditions and results in the following state change:
           \var{utxo} \\
           \varUpdate{\var{oblg}} \\
           \varUpdate{\var{fees} + \var{decayed}} \\
+          \var{up} \\
         \end{array}
       \right)
     }
@@ -574,7 +575,7 @@ This transition has no preconditions and results in the following state change:
 
 \clearpage
 
-\subsection{Protocol Parameter Update Transition}
+\subsection{Protocol Parameters Update Transition}
 \label{sec:pparam-update}
 
 Finally, reaching the epoch boundary may trigger a change in the protocol
@@ -592,7 +593,7 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \NewPParamEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
+        \var{pp_{new}} & \PParams^? & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
       \end{array}
@@ -625,24 +626,28 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
 
 Figure~\ref{fig:rules:new-proto-param} defines the new protocol parameter transition.
 The transition has two rules, depending on whether or not the new protocol parameters
-would incur a debt of the system that could not be covered by the reserves.
-The transition has two rules, each with one precondition. The preconditions are
-negations of each other, so that exactly one will always be met.
-This transition results in the following state change:
+meet some requirements.
+In particular, we require that the new parameters would not incur a debt of the system that
+can not be covered by the reserves, and that the max block size is greater than the sum of the
+max transaction size and the max header size.
+If the requirements are met, the new protocol parameters are accepted, the proposal is reset,
+and the reserves are adjusted to account for changes in the deposits.
+Otherwise, the only change is that the proposal is reset.
+
+Regarding adjusting the reserves for changes in the deposits, one of three things happens:
 
 \begin{itemize}
   \item If the new protocol parameters mean that \textbf{fewer} funds are required in the
-    deposit pot to cover all possible refunds, then Rule~\ref{eq:new-pc-accepted} meets
-    the precondition. The excess is moved to the reserves and the protocol parameters are updated.
+    deposit pot to cover all possible refunds, then the excess is moved to the reserves.
 
   \item If the new protocol parameters mean that \textbf{more} funds are required in the
     deposit pot to cover all possible refunds and the difference is \textbf{less} than
-    the reserve pot, then Rule~\ref{eq:new-pc-accepted} meets the precondition.  Funds are moved
-    from the reserve pot to cover the difference and the protocol parameters are updated.
+    the reserve pot, then funds are moved from the reserve pot to cover the difference.
 
   \item If the new protocol parameters mean that \textbf{more} funds are required in the
     deposit pot to cover all possible refunds and the difference is \textbf{more} than
-    the reserve pot, then Rule~\ref{eq:new-pc-denied} meets the precondition and there is no change of state.
+    the reserve pot, then Rule~\ref{eq:new-pc-denied} meets the precondition and the
+    only change of state is that the update proposals are reset.
 \end{itemize}
 
 Note that here, unlike most of the inference rules in this document,
@@ -659,15 +664,19 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-accepted}
     \inference[New-Proto-Param-Accepted]
     {
+      \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
           \var{slot} & \leteq & \firstSlot{e} \\
           \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
           \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
-          \\
-          \var{reserves} + \var{diff} & \geq & 0\\
-      \end{array}}\\
-      ~\\
+      \end{array}}
+      \\~\\~\\
+      \var{reserves} + \var{diff} \geq 0
+      \\
+      \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} <
+        \fun{maxBlockSize}~\var{pp_{new}}
+      \\~\\
       \var{utxoSt'} \leteq
       \left(
         {
@@ -675,7 +684,12 @@ for ease of reading.
             \var{utxo} \\
             \varUpdate{oblg_{new}} \\
             \var{fees} \\
-            \var{H} \\
+            \left(\begin{array}{r}
+              \varUpdate{\emptyset} \\
+              \var{aup} \\
+              \var{favs} \\
+              \var{avs} \\
+          \end{array}\right)
           \end{array}
         }
       \right)
@@ -726,9 +740,33 @@ for ease of reading.
           \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
           \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
-          \\
-          \var{reserves} + \var{diff} & < & 0\\
-      \end{array}}\\
+      \end{array}}
+      \\~\\~\\
+      \left({\begin{array}{c}
+            \var{pp_{new}}=\Nothing \\
+        \lor \\
+        \var{reserves} + \var{diff} < 0\\
+        \lor \\
+        \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} \geq
+          \fun{maxBlockSize}~\var{pp_{new}}
+    \end{array}}\right)
+      \\~\\~\\
+      \var{utxoSt'} \leteq
+      \left(
+        {
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{oblg_{new}} \\
+            \var{fees} \\
+            \left(\begin{array}{r}
+              \varUpdate{\emptyset} \\
+              \var{aup} \\
+              \var{favs} \\
+              \var{avs} \\
+          \end{array}\right)
+          \end{array}
+        }
+      \right)
     }
     {
       \begin{array}{l}
@@ -747,7 +785,7 @@ for ease of reading.
       \trans{newpp}{e}
       \left(
         \begin{array}{rcl}
-          \var{utxoSt} \\
+          \varUpdate{utxoSt'}\\
           \var{acnt} \\
           \var{pp}
         \end{array}
@@ -765,25 +803,14 @@ for ease of reading.
 
 Finally, it is possible to define the complete epoch boundary transition type,
 which is defined in Figure~\ref{fig:ts-types:epoch}.
-In the environment of this transition, we have the potentially new
-protocol parameters and the blocks made during this epoch.  The state is made up of the
-the accounting state, the snapshots and the ledger state.
+The environment of this transition consists of the blocks made during this epoch.
+The state is made up of the the accounting state, the snapshots, the ledger state and the
+protocol parameters.
 
 %%
 %% Figure - Epoch Defs
 %%
 \begin{figure}[htb]
-  \emph{Epoch environment}
-  \begin{equation*}
-    \EpochEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{pp_{new}} & \PParams & \text{new protocol parameters}\\
-        \var{blocks} & \BlocksMade & \text{blocks made in the epoch}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{Epoch States}
   \begin{equation*}
     \EpochState =
@@ -792,6 +819,7 @@ the accounting state, the snapshots and the ledger state.
         \var{acnt} & \Acnt & \text{accounting}\\
         \var{ss} & \Snapshots & \text{snapshots}\\
         \var{ls} & \LState & \text{ledger state}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
       \end{array}
     \right)
   \end{equation*}
@@ -800,7 +828,7 @@ the accounting state, the snapshots and the ledger state.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{epoch}{\_} \var{\_}
-    \subseteq \powerset (\EpochEnv \times \EpochState \times \Epoch \times \EpochState)
+    \subseteq \powerset (\BlocksMade \times \EpochState \times \Epoch \times \EpochState)
   \end{equation*}
   %
   \caption{Epoch transition-system types}
@@ -810,7 +838,6 @@ the accounting state, the snapshots and the ledger state.
 
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
 in sequence.
-
 %%
 %% Figure - Epoch Rule
 %%
@@ -818,10 +845,7 @@ in sequence.
   \begin{equation}\label{eq:epoch}
     \inference[Epoch]
     {
-      (\var{utxoSt},~(\var{dstate}~\var{pstate}),~\var{us})\leteq\var{ls}
-      &
-      \var{pp}\leteq\pps{us}
-      \\
+      (\var{utxoSt},~(\var{dstate}~\var{pstate}))\leteq\var{ls} \\
       {
         \begin{array}{l}
           \var{pp}\\
@@ -875,6 +899,8 @@ in sequence.
       }
       \right)
       \\~\\~\\
+      \var{(\wcard,~\wcard,~\wcard,~(\var{pup},~\wcard,~\wcard,~\wcard))}\leteq\var{utxoSt'}\\
+      \var{pp_{new}}\leteq\fun{votedValue_{PParams}}~\var{pup}\\
       {
         \begin{array}{l}
           \var{pp_{new}}\\
@@ -903,20 +929,17 @@ in sequence.
       }
       \right)
       \\~\\~\\
-      \var{us}' \leteq \var{us}\unionoverrideRight\{pp'\} \\
-      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'),~\var{us'})
+      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'))
     }
     {
-      \begin{array}{l}
-        \var{pp_{new}}\\
-        \var{blocks}\\
-      \end{array}
+      \var{blocks}
       \vdash
       \left(
       \begin{array}{r}
         \var{acnt} \\
         \var{ss} \\
         \var{ls} \\
+        \var{pp} \\
       \end{array}
       \right)
       \trans{epoch}{e}
@@ -925,6 +948,7 @@ in sequence.
         \varUpdate{\var{acnt''}} \\
         \varUpdate{\var{ss'}} \\
         \varUpdate{\var{ls'}} \\
+        \varUpdate{\var{pp'}} \\
       \end{array}
       \right)
     }
@@ -1356,6 +1380,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{utxo} \\
           \var{deposits} \\
           \var{fees} \\
+          \var{up} \\
         \end{array}
       \right)
       =
@@ -1378,6 +1403,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{utxo} \\
           \var{deposits} \\
           \varUpdate{\var{fees}+\Delta f} \\
+          \var{up} \\
         \end{array}
       \right)
   \end{align*}

@@ -7,6 +7,10 @@ digraph STS {
 
         UTXOW -> UTXO
         UTXOW -> DELEGS [style=dotted]
+        UTXO  -> UP
+
+        UP -> PPUP
+        UP -> AVUP
 
         DELEGS -> DELPL
         DELEGS -> DELEGS
@@ -15,7 +19,6 @@ digraph STS {
         DELPL -> DELEG
         DELPL -> POOL
 
-        LEDGER -> BUPI
         LEDGER -> DELEGS
         LEDGER -> UTXOW
 
@@ -30,8 +33,6 @@ digraph STS {
         NEWPP -> SNAP [style=dotted]
 
         NEWEPOCH -> EPOCH
-        NEWEPOCH -> UPIEC
-        EPOCH -> UPIEC [style=dotted]
 
         BHEAD -> RUPD
         BHEAD -> NEWEPOCH

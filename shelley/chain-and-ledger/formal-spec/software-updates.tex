@@ -1,0 +1,22 @@
+\section{Software Updates}
+\label{sec:software-updates}
+
+This section describes how software updates are performed.
+The process of upgrading the system a new version consists of:
+
+\begin{enumerate}
+  \item New software is ready for downloading. The core nodes propose changing the
+    \textit{application version}. If accepted, the proposal
+    will change the application version at the start of the next epoch.
+  \item All nodes see a new application version and update their software.
+    Note that the new software should be compatible with the older version, and the new
+    ledger rules will not be applied as long as the protocol version in the
+    protocol parameters is not increased.
+  \item Every block producer includes the protocol version corresponding to the software
+    they are using in the blocks they produce.
+  \item The core nodes monitor how many block headers contain the new protocol version.
+    Once enough blocks have the new version, the core nodes post another protocol parameter
+    update to increas the protocol version.
+    If this proposal is accepted, it will be changed at the start of the new epoch and
+    the current software then makes use of new rules.
+\end{enumerate}
