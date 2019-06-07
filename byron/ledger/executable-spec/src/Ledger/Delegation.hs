@@ -286,6 +286,7 @@ instance STS SDELEG where
   data PredicateFailure SDELEG
     = IsNotGenesisKey
     | IsPastEpoch
+    | EpochFarInTheFuture
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
@@ -304,7 +305,9 @@ instance STS SDELEG where
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        env ^. epoch <= cert ^. depoch ?! IsPastEpoch
+        let diff = cert ^. depoch - env ^. epoch
+        0 <= diff ?! IsPastEpoch
+        diff <= 1 ?! EpochFarInTheFuture
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. dwho
