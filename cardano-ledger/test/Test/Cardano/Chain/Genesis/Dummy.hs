@@ -113,24 +113,24 @@ dummyGenesisAvvmBalances = GenesisAvvmBalances mempty
 
 dummyProtocolParameters :: ProtocolParameters
 dummyProtocolParameters = ProtocolParameters
-  { ppScriptVersion    = 0
-  , ppSlotDuration     = 7000
-  , ppMaxBlockSize     = 2000000
-  , ppMaxHeaderSize    = 2000000
-  , ppMaxTxSize        = 4096
-  , ppMaxProposalSize  = 700
-  , ppMpcThd           = mkKnownLovelacePortion @10000000000000
-  , ppHeavyDelThd      = mkKnownLovelacePortion @5000000000000
-  , ppUpdateVoteThd    = mkKnownLovelacePortion @1000000000000
+  { ppScriptVersion     = 0
+  , ppSlotDuration      = 7000
+  , ppMaxBlockSize      = 2000000
+  , ppMaxHeaderSize     = 2000000
+  , ppMaxTxSize         = 4096
+  , ppMaxProposalSize   = 700
+  , ppMpcThd            = mkKnownLovelacePortion @10000000000000
+  , ppHeavyDelThd       = mkKnownLovelacePortion @5000000000000
+  , ppUpdateVoteThd     = mkKnownLovelacePortion @1000000000000
   , ppUpdateProposalThd = mkKnownLovelacePortion @100000000000000
-  , ppUpdateImplicit   = 10
-  , ppSoftforkRule     = SoftforkRule
+  , ppUpdateProposalTTL = 10
+  , ppSoftforkRule      = SoftforkRule
     (mkKnownLovelacePortion @900000000000000)
     (mkKnownLovelacePortion @600000000000000)
     (mkKnownLovelacePortion @50000000000000)
-  , ppTxFeePolicy      = TxFeePolicyTxSizeLinear
+  , ppTxFeePolicy       = TxFeePolicyTxSizeLinear
     (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
-  , ppUnlockStakeEpoch = EpochIndex maxBound
+  , ppUnlockStakeEpoch  = EpochIndex maxBound
   }
 
 dummyGenesisInitializer :: GenesisInitializer

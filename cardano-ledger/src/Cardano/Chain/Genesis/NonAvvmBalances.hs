@@ -16,7 +16,7 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (MonadError(..), liftEither)
+import Control.Monad.Except (MonadError(..))
 import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build, sformat)
@@ -90,22 +90,19 @@ convertNonAvvmDataToBalances balances = fmap GenesisNonAvvmBalances $ do
  where
   mkBalances :: [(Address, Lovelace)] -> m (Map Address Lovelace)
   mkBalances =
-    liftEither
-      -- Pull 'LovelaceError's out of the 'Map' and lift them to
-      -- 'NonAvvmBalancesError's
-      . first NonAvvmBalancesLovelaceError
-      . sequence
-      -- Make map joining duplicate keys with 'addLovelace' lifted from 'Lovelace ->
-      -- Lovelace -> Either LovelaceError Lovelace' to 'Either LovelaceError Lovelace -> Either
-      -- LovelaceError Lovelace -> Either LovelaceError Lovelace'
-      . M.fromListWith (\c -> join . liftM2 addLovelace c)
-      -- Lift the 'Lovelace's to 'Either LovelaceError Lovelace's
-      . fmap (second Right)
+    -- Pull 'LovelaceError's out of the 'Map' and lift them to
+    -- 'NonAvvmBalancesError's
+    (`wrapError` NonAvvmBalancesLovelaceError)
+    . sequence
+    -- Make map joining duplicate keys with 'addLovelace' lifted from 'Lovelace ->
+    -- Lovelace -> Either LovelaceError Lovelace' to 'Either LovelaceError Lovelace -> Either
+    -- LovelaceError Lovelace -> Either LovelaceError Lovelace'
+    . M.fromListWith (\c -> join . liftM2 addLovelace c)
+    -- Lift the 'Lovelace's to 'Either LovelaceError Lovelace's
+    . fmap (second Right)
 
   convert :: (Text, Integer) -> m (Address, Lovelace)
   convert (txt, i) = do
-    addr <- liftEither . first NonAvvmBalancesDecoderError $ fromCBORTextAddress
-      txt
-    lovelace <-
-      liftEither . first NonAvvmBalancesLovelaceError $ integerToLovelace i
+    addr <- fromCBORTextAddress txt `wrapError` NonAvvmBalancesDecoderError
+    lovelace <-integerToLovelace i `wrapError` NonAvvmBalancesLovelaceError
     return (addr, lovelace)

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -7,6 +6,7 @@
 module Cardano.Chain.Genesis.Config
   ( StaticConfig(..)
   , Config(..)
+  , ConfigurationError(..)
   , configGenesisHeaderHash
   , configK
   , configSlotSecurityParam
@@ -29,20 +29,19 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad (fail)
-import Control.Monad.Except (MonadError(..), liftEither)
+import Control.Monad.Except (MonadError(..))
 import Data.Aeson
   (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
 import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import Formatting (build, bprint, string)
 import qualified Formatting.Buildable as B
-import System.FilePath ((</>))
 import System.IO.Error (userError)
+import Text.Megaparsec.Error (ParseErrorBundle)
 
 import Cardano.Binary (Annotated(..), Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
-import Cardano.Chain.Common (BlockCount)
+import Cardano.Chain.Common (BlockCount, LovelaceError, LovelacePortionError)
 import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
@@ -123,7 +122,7 @@ instance FromJSON StaticConfig where
         -- GenesisInitializer
         initializerV <- specO .: "initializer"
 
-        either fail (pure . GCSpec) $ mkGenesisSpec
+        either panic (pure . GCSpec) $ mkGenesisSpec
           avvmDistrV
           heavyDelegationV
           protocolParametersV
@@ -211,8 +210,6 @@ configAvvmDistr = gdAvvmDistr . configGenesisData
 mkConfigFromStaticConfig
   :: (MonadError ConfigurationError m, MonadIO m)
   => RequiresNetworkMagic
-  -> FilePath
-  -- ^ Directory where 'configuration.yaml' is stored
   -> Maybe UTCTime
   -- ^ Optional system start time.
   --   It must be given when the genesis spec uses a testnet initializer.
@@ -220,7 +217,7 @@ mkConfigFromStaticConfig
   -- ^ Optional seed which overrides one from testnet initializer if provided
   -> StaticConfig
   -> m Config
-mkConfigFromStaticConfig rnm confDir mSystemStart mSeed = \case
+mkConfigFromStaticConfig rnm mSystemStart mSeed = \case
   -- If a 'GenesisData' source file is given, we check its hash against the
   -- given expected hash, parse it, and use the GenesisData to fill in all of
   -- the obligations.
@@ -230,7 +227,7 @@ mkConfigFromStaticConfig rnm confDir mSystemStart mSeed = \case
 
     isNothing mSeed `orThrowError` MeaninglessSeed
 
-    mkConfigFromFile rnm (confDir </> fp) (Just expectedHash)
+    mkConfigFromFile rnm fp expectedHash
 
 
   -- If a 'GenesisSpec' is given, we ensure we have a start time (needed if it's
@@ -256,18 +253,17 @@ mkConfigFromFile
   :: (MonadError ConfigurationError m, MonadIO m)
   => RequiresNetworkMagic
   -> FilePath
-  -> Maybe (Hash Raw)
+  -> Hash Raw
+  -- ^ This hash comes from 'CardanoConfiguration'
+  -- which lives in cardano-shell
   -> m Config
-mkConfigFromFile rnm fp mGenesisHash = do
+mkConfigFromFile rnm fp expectedHash = do
   (genesisData, genesisHash) <-
-    liftEither . first ConfigurationGenesisDataError =<< runExceptT
+    (`wrapError` ConfigurationGenesisDataError) =<< runExceptT
       (readGenesisData fp)
 
-  case mGenesisHash of
-    Nothing -> pure ()
-    Just expectedHash ->
-      (unGenesisHash genesisHash == expectedHash)
-        `orThrowError` GenesisHashMismatch genesisHash expectedHash
+  (unGenesisHash genesisHash == expectedHash)
+    `orThrowError` GenesisHashMismatch genesisHash expectedHash
 
   pure $ Config
     { configGenesisData      = genesisData
@@ -280,16 +276,15 @@ mkConfig
   :: MonadError ConfigurationError m => UTCTime -> GenesisSpec -> m Config
 mkConfig startTime genesisSpec = do
   (genesisData, generatedSecrets) <-
-    liftEither . first ConfigurationGenerationError $ generateGenesisData
-      startTime
-      genesisSpec
+    generateGenesisData startTime genesisSpec
+      `wrapError` ConfigurationGenerationError
+
 
   pure $ Config
     { configGenesisData      = genesisData
     , configGenesisHash      = genesisHash
     , configGeneratedSecrets = Just generatedSecrets
-    , configReqNetMagic      = getRequiresNetworkMagic
-                                 (gsProtocolMagic genesisSpec)
+    , configReqNetMagic = getRequiresNetworkMagic (gsProtocolMagic genesisSpec)
     }
   where
     -- Anything will do for the genesis hash. A hash of "patak" was used before,
@@ -308,6 +303,16 @@ data ConfigurationError
   | MeaninglessSeed
   -- ^ Custom seed was provided, but it doesn't make sense
   | ConfigurationGenerationError GenesisDataGenerationError
+  | GenesisHashDecodeError Text
+  -- ^ An error occured while decoding the genesis hash.
+  | ConfigParsingError (ParseErrorBundle Text Void)
+  -- ^ An error occured while parsing 'CardanoConfiguration'.
+  | ConfigPortionConvErr LovelacePortionError
+  -- ^ An error occured while converting from a value
+  -- from 'CardanoConfiguration' to 'LovelacePortion'.
+  | ConfigLovelaceConvErr LovelaceError
+  -- ^ An error occured while converting a value
+  -- from 'CardanoConfiguration' to 'Lovelace'.
   deriving (Show)
 
 instance B.Buildable ConfigurationError where
@@ -336,3 +341,20 @@ instance B.Buildable ConfigurationError where
              . build
              )
              genesisDataGenerationError
+    GenesisHashDecodeError decodeErr ->
+     bprint ("GenesisHashDecodeError: "
+            . string
+            )
+            (toS decodeErr)
+    ConfigParsingError pErr ->
+      bprint string (show pErr)
+    ConfigPortionConvErr err ->
+      bprint ("ConfigPortionConvErr: "
+             . build
+             )
+             err
+    ConfigLovelaceConvErr err ->
+      bprint ("ConfigLovelaceConvErr: "
+             . build
+             )
+             err

@@ -24,7 +24,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Monad.Except (liftEither)
 import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
@@ -344,7 +343,7 @@ genTestnetDistribution
   -> m ([Lovelace], [Lovelace])
 genTestnetDistribution tbo testBalance = do
   (richBalances, poorBalances, totalBalance) <-
-    liftEither . first GenesisDataGenerationLovelaceError $ do
+    (`wrapError` GenesisDataGenerationLovelaceError) $ do
       richmanBalance      <- divLovelace desiredRichBalance tboRichmen
 
       richmanBalanceExtra <- modLovelace desiredRichBalance tboRichmen

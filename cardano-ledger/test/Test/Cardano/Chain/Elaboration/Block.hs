@@ -224,14 +224,14 @@ abEnvToCfg (_, _, dsEnv, pps) =
     , Update.ppHeavyDelThd      = LovelacePortion 0
     , Update.ppUpdateVoteThd    = LovelacePortion 0
     , Update.ppUpdateProposalThd = LovelacePortion 0
-    , Update.ppUpdateImplicit   = 0
-    , Update.ppSoftforkRule     = Update.SoftforkRule
+    , Update.ppUpdateProposalTTL = 0
+    , Update.ppSoftforkRule      = Update.SoftforkRule
       (LovelacePortion 0)
       (LovelacePortion 0)
       (LovelacePortion 0)
-    , Update.ppTxFeePolicy      = TxFeePolicyTxSizeLinear
+    , Update.ppTxFeePolicy       = TxFeePolicyTxSizeLinear
       $ TxSizeLinear (mkKnownLovelace @0) (mkKnownLovelace @0)
-    , Update.ppUnlockStakeEpoch = 0
+    , Update.ppUnlockStakeEpoch  = 0
     }
 
   genesisKeyHashes :: Set Common.KeyHash

@@ -45,14 +45,14 @@ data ProtocolParameters = ProtocolParameters
   , ppHeavyDelThd       :: !LovelacePortion
   , ppUpdateVoteThd     :: !LovelacePortion
   , ppUpdateProposalThd :: !LovelacePortion
-  , ppUpdateImplicit    :: !FlatSlotId
+  , ppUpdateProposalTTL :: !FlatSlotId
   -- ^ Time to live for a protocol update proposal. This used to be the number
   -- of slots after which the system made a decision regarding an update
   -- proposal confirmation, when a majority of votes was not reached in the
   -- given number of slots. If there were more positive than negative votes the
   -- proposal became confirmed, otherwise it was rejected. Since in the
   -- Byron-Shelley bridge we do not have negative votes, and we aim at
-  -- simplifying the update mechanism, 'ppUpdateImplicit' is re-interpreted as
+  -- simplifying the update mechanism, 'ppUpdateProposalTTL' is re-interpreted as
   -- the number of slots a proposal has to gather a majority of votes. If a
   -- majority of votes has not been reached before this period, then the
   -- proposal is rejected.
@@ -90,7 +90,7 @@ instance B.Buildable ProtocolParameters where
     (ppHeavyDelThd pp)
     (ppUpdateVoteThd pp)
     (ppUpdateProposalThd pp)
-    (ppUpdateImplicit pp)
+    (ppUpdateProposalTTL pp)
     (ppSoftforkRule pp)
     (ppTxFeePolicy pp)
     (ppUnlockStakeEpoch pp)
@@ -110,7 +110,7 @@ instance Monad m => ToJSON m ProtocolParameters where
     , ("heavyDelThd"      , toJSON $ ppHeavyDelThd pp)
     , ("updateVoteThd"    , toJSON $ ppUpdateVoteThd pp)
     , ("updateProposalThd", toJSON $ ppUpdateProposalThd pp)
-    , ("updateImplicit"   , toJSON $ ppUpdateImplicit pp)
+    , ("updateImplicit"   , toJSON $ ppUpdateProposalTTL pp)
     , ("softforkRule"     , toJSON $ ppSoftforkRule pp)
     , ("txFeePolicy"      , toJSON $ ppTxFeePolicy pp)
     , ("unlockStakeEpoch" , toJSON $ ppUnlockStakeEpoch pp)
@@ -147,7 +147,7 @@ instance ToCBOR ProtocolParameters where
       <> toCBOR (ppHeavyDelThd pp)
       <> toCBOR (ppUpdateVoteThd pp)
       <> toCBOR (ppUpdateProposalThd pp)
-      <> toCBOR (ppUpdateImplicit pp)
+      <> toCBOR (ppUpdateProposalTTL pp)
       <> toCBOR (ppSoftforkRule pp)
       <> toCBOR (ppTxFeePolicy pp)
       <> toCBOR (ppUnlockStakeEpoch pp)

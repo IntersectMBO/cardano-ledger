@@ -67,8 +67,10 @@ library
                      , filepath
                      , formatting
                      , hedgehog
+                     , mtl
                      , optparse-applicative
                      , tasty
+                     , tasty-hedgehog
                      , text
                      , time
                      , vector

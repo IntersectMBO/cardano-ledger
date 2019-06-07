@@ -9,7 +9,9 @@ import Cardano.Prelude
 
 import Formatting (build, sformat)
 
+import Cardano.Binary (Raw)
 import qualified Cardano.Chain.Genesis as Genesis
+import Cardano.Crypto.Hashing (Hash, decodeHash)
 import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic(..))
 
 -- | Read the test mainnet configuration file from the @test@ directory.
@@ -19,10 +21,14 @@ import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic(..))
 --
 -- We use `RequiresNoMagic`, as it indicates mainnet
 readMainetCfg :: MonadIO m => m Genesis.Config
-readMainetCfg =
-  either
-      (panic . sformat build)
+readMainetCfg = do
+  let
+    genHash = either
+      (panic . sformat build . Genesis.GenesisHashDecodeError)
       identity
-    <$> runExceptT
-          (Genesis.mkConfigFromFile RequiresNoMagic "mainnet-genesis.json" Nothing)
+      (decodeHash
+        "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb"
+      ) :: Hash Raw
 
+  either (panic . sformat build) identity <$> runExceptT
+    (Genesis.mkConfigFromFile RequiresNoMagic "mainnet-genesis.json" genHash)
