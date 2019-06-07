@@ -24,7 +24,7 @@ import Control.State.Transition
 import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams)
-import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value)
+import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value, unUTxO)
 
 data UTXO
 
@@ -45,6 +45,7 @@ instance STS UTXO where
   type Signal UTXO = Tx
   data PredicateFailure UTXO
     = EmptyTxInputs
+    | EmptyTxOutputs
     | FeeTooLow
     | IncreasedTotalBalance
     | InputsNotInUTxO
@@ -72,6 +73,8 @@ instance STS UTXO where
         pcMinFee pps tx <= fee ?! FeeTooLow
 
         (not . null) (txins tx) ?! EmptyTxInputs
+
+        (not . null . unUTxO) (txouts tx) ?! EmptyTxOutputs
 
         let
           outputValues = fmap value $ Set.toList $ range (txouts tx)

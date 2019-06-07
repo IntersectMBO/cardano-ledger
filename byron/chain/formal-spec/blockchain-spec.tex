@@ -134,6 +134,9 @@
 % comments
 \newcommand{\marko}[1]{\todo[size=\small, color=yellow!40, inline]{Marko: #1}}
 
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
+\newtheorem{property}{Property}
+
 \begin{document}
 
 \title{Specification of the Blockchain Layer}
@@ -1300,9 +1303,114 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \caption{Blockchain extension rules}
 \label{fig:rules:chain-extension}
 \end{figure}
+
 \clearpage
+
+\section{Transition Systems Properties}
+\label{sec:ts-properties}
+
+\subsection{Header only validation}
+\label{sec:header-only-validation}
+
+\begin{property}[Header only validation]
+  There exists a function $\fun{f}$ such that for all block-chains $C$ and $C'$
+  with a common prefix $C_0$:
+  %
+  $$C=C_0 C_1 \text{ and } C'=C_0 C_1' \text{ and } C_0=C_0';b$$
+  %
+  such that:
+  $$
+  \size{C_1} \leq k \text{ and } \size{C'_1} - \size{C_1} \leq 2 \cdot k
+  $$
+  we have that:
+  $$
+  s_0 \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C_0} s_1
+  \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C_1} s_2
+  %
+  \text{ and }
+  %
+  s_1 \transtar{\hyperref[fig:rules:bbody]{bbody}}{C'_1} s'_2
+  $$
+  implies:
+  %
+  $$
+  s_1 \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C'_1} s'_2
+  \Longleftrightarrow
+  \fun{f}~b~s_2 \transtar{PBFT+BHEAD}{\bhead{C'}} s_p
+  $$
+\end{property}
+
+Things that are unclear to me:
+
+\begin{itemize}
+\item Do we need a common prefix in the chain? Apparently we need to pass a
+  slot to $\fun{f}$, but which slot do we pass? The slot of the first block in $C'_1$
+\item Do we need the double implication? Apparently yes, since if a bunch of
+  headers are validated in PBFT+BHEAD (within a certain time range), then we
+  shouldn't see the CHAIN rule fail because of the headers.
+
+\end{itemize}
+
+Considerations:
+
+\begin{itemize}
+\item We cannot go forward more than $2k$ slots, otherwise things in the body
+  state might have changed (like a scheduled delegation).
+\item According to Nick we don't need to keep in the ledger state information
+  about past delegations (and the same for other parts of the ledger state ...)
+\end{itemize}
+
+Formalization by Jared and Nick:
+
+\begin{property}
+For a chain $C$ with state $S_C$ and extension $F=\{b_0,\dots,b_n\}$
+with headers $\{h_0,\dots,h_n\}$ such that $|F| \leq 2*k $, we have that:
+
+$$
+S_C \transtar{chain}{F} S_{n}
+$$
+
+$ \implies $
+
+$$
+S_C \transtar{pbft+bhead}{[h_0,\dots,h_n]} S'_n
+$$
+
+\end{property}
+
+\begin{property}
+  For a chain $C$ with state $S_C$ and extension $F=\{b_0,\dots,b_n\}$ with
+  headers $\{h_0,\dots,h_n\}$ such that $|F| \leq 2*k $, we have that
+  $\forall i \in [1,n]$:
+
+$$
+S_C \transtar{pbft+bhead}{[h_0,\dots,h_i]} S'_i \wedge S_C \transtar{chain}{[b_0 \ldots b_{i-1}]} S_{i-1}
+$$
+
+$\implies$
+
+$$
+S_{i-1} \trans{PBFT+BHEAD}{h_i} S''_i.
+$$
+\end{property}
+
+Considerations
+
+\begin{itemize}
+\item $|F|$ above means the slots that are spanned by the blocks in $F$
+
+\item Duncan mentioned that we still need to state our back-in-time time travel
+  property, not to have the spec satisfy it, but to check that the consensus
+  implementation satisfies it.
+\end{itemize}
+
+
+
+\clearpage
+
 \bibliographystyle{plainnat}
 \bibliography{references}
+
 \begin{appendices}
   \section{Calculating the $t$ parameter}
   \label{apdx:calculating-t}
