@@ -26,8 +26,9 @@ import qualified Hedgehog as H
 
 import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding)
 import Cardano.Chain.Block
-  ( Block
-  , BlockSignature(..)
+  ( ABlockSignature(..)
+  , Block
+  , BlockSignature
   , Body
   , Header
   , HeaderHash
@@ -60,7 +61,7 @@ import Cardano.Crypto
   , createPsk
   , hash
   , noPassSafeSigner
-  , proxySign
+  , sign
   , toVerification
   )
 
@@ -265,15 +266,17 @@ exampleHeader = mkHeaderExplicit
     (EpochIndex 5)
 
 exampleBlockSignature :: BlockSignature
-exampleBlockSignature = BlockSignature sig
+exampleBlockSignature = ABlockSignature cert sig
  where
-  sig = proxySign pm SignProxyVK delegateSk psk exampleToSign
-  [delegateSk, issuerSk] = exampleSigningKeys 5 2
-  psk = createPsk
+  cert = createPsk
     pm
-    (noPassSafeSigner issuerSk)
-    (toVerification delegateSk)
+    (noPassSafeSigner issuerSK)
+    (toVerification delegateSK)
     (EpochIndex 5)
+
+  sig = sign pm (SignBlock (toVerification issuerSK)) delegateSK exampleToSign
+
+  [delegateSK, issuerSK] = exampleSigningKeys 5 2
   pm = ProtocolMagicId 7
 
 exampleProof :: Proof

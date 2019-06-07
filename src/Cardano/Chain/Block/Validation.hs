@@ -66,7 +66,7 @@ import Cardano.Chain.Block.Block
   )
 import Cardano.Chain.Block.Header
   ( AHeader
-  , BlockSignature(..)
+  , BlockSignature
   , HeaderHash
   , headerLength
   , headerSlot

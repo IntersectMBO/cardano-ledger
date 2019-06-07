@@ -42,12 +42,10 @@ import Cardano.Crypto
   , noPassEncrypt
   , noPassSafeSigner
   , packHDAddressAttr
-  , proxySign
   , redeemDeterministicKeyGen
   , redeemSign
   , safeCreateProxyCert
   , sign
-  , toVerification
   )
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
@@ -247,29 +245,6 @@ roundTripProxyVerificationKeyCBOR =
 roundTripProxyVerificationKeyAeson :: Property
 roundTripProxyVerificationKeyAeson =
   eachOf 100 genUnitProxyVerificationKey roundTripsAesonBuildable
-
-
---------------------------------------------------------------------------------
--- ProxySignature
---------------------------------------------------------------------------------
-
-goldenProxySignature :: Property
-goldenProxySignature = goldenTestCBOR psig "test/golden/ProxySignature"
- where
-  Right skey = SigningKey <$> xprv (getBytes 10 128)
-  psk =
-    createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) (toVerification skey) ()
-  psig = proxySign (ProtocolMagicId 0) SignForTestingOnly skey psk ()
-
-roundTripProxySignatureCBOR :: Property
-roundTripProxySignatureCBOR = eachOf
-  100
-  genUnitProxySignature
-  roundTripsCBORBuildable
- where
-  genUnitProxySignature = do
-    pm <- genProtocolMagicId
-    genProxySignature pm (pure ()) (pure ())
 
 
 --------------------------------------------------------------------------------
