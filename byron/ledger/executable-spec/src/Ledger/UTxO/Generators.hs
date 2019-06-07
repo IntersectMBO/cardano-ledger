@@ -79,9 +79,20 @@ genTxFromUTxO addrs txfee utxo = subtractFees txfee $ uncurry Tx <$> Gen.filter
     (\f out -> out { value = Lovelace . f . unLovelace $ value out })
   )
 
+-- | Ensure we generate a 'Tx' which utilizes enough 'Lovelace' via its inputs
+-- to cover its outputs as well as the transaction fee.
+-- This function potentially removes outputs from the generated transaction
+-- such that it is able to cover the transaction fee.
 subtractFees :: (Tx -> Lovelace) -> Gen Tx -> Gen Tx
 subtractFees txfee = fmap subtractFees'
-  . Gen.filter (\tx -> sum (value <$> outputs tx) >= txfee tx)
+  -- In Byron, we must disallow empty outputs in transactions in order to
+  -- maintain compatability with the `cardano-sl` implementation.
+  -- In order to do this, while also potentially removing some outputs from
+  -- the transaction to ensure that the transaction fee is covered, we only
+  -- generate transactions whose sum of outputs is greater than the
+  -- transaction fee. This way, we ensure that there will always remain at
+  -- least 1 'Lovelace' in the outputs.
+  . Gen.filter (\tx -> sum (value <$> outputs tx) > txfee tx)
  where
   subtractFees' tx =
     tx { outputs = subFromList (txfee tx) value updateValue (outputs tx) }
@@ -205,13 +216,13 @@ shrinkLeftPreserving inValue outValue modifyOutValue (xs1, ys1) = do
 subFromList
   :: (Num n, Ord n)
   => n
-  -- The total value to remove from the list
+  -- ^ The total value to remove from the list
   -> (a -> n)
-  -- A view into the value contained in type @a@
+  -- ^ A view into the value contained in type @a@
   -> ((n -> n) -> a -> a)
-  -- A modifier for the value contained in type @a@
+  -- ^ A modifier for the value contained in type @a@
   -> [a]
-  -- The list of @a@s to remove value from
+  -- ^ The list of @a@s to remove value from
   -> [a]
 subFromList n getVal modifyVal = go n
   where
