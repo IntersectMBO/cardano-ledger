@@ -35,6 +35,7 @@ module Ledger.Delegation
     , _dSEnvAllowedDelegators
     , _dSEnvEpoch
     , _dSEnvSlot
+    , _dSEnvK
     )
   , allowedDelegators
   , DState
@@ -119,7 +120,7 @@ import Control.State.Transition.Generator
   , sigGen
   )
 import Ledger.Core
-  ( BlockCount
+  ( BlockCount(BlockCount)
   , Epoch(Epoch)
   , HasHash
   , Hash(Hash)
@@ -137,7 +138,6 @@ import Ledger.Core
   , unBlockCount
   )
 import Ledger.Core.Generators (vkGen, vkgenesisGen)
-import Ledger.GlobalParams (k)
 
 
 --------------------------------------------------------------------------------
@@ -194,6 +194,7 @@ data DSEnv = DSEnv
   { _dSEnvAllowedDelegators :: Set VKeyGenesis
   , _dSEnvEpoch :: Epoch
   , _dSEnvSlot :: Slot
+  , _dSEnvK :: BlockCount
   } deriving (Show, Eq)
 
 makeFields ''DSEnv
@@ -290,7 +291,7 @@ instance STS SDELEG where
         TRC (env, st, cert) <- judgmentContext
         verify cert ?! DoesNotVerify
         notAlreadyDelegated st cert ?! HasAlreadyDelegated
-        let d = liveAfter k
+        let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
         env ^. epoch <= cert ^. depoch ?! IsPastEpoch
@@ -454,7 +455,7 @@ instance STS DELEG where
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
         as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
-        let d = liveAfter k
+        let d = liveAfter (env ^. k)
         return $ DIState
           (as ^. delegationMap)
           (as ^. lastDelegation)
@@ -527,5 +528,6 @@ instance HasTrace DELEG where
     <$> Gen.set (linear 1 7) vkgenesisGen
     <*> (Epoch <$> Gen.integral (linear 0 100))
     <*> (Slot <$> Gen.integral (linear 0 10000))
+    <*> (BlockCount <$> Gen.integral (linear 1 10000))
 
   sigGen e _st = dcertsGen e

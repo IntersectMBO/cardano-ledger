@@ -37,8 +37,9 @@ import Ledger.Delegation
   , _dSEnvAllowedDelegators
   , _dSEnvEpoch
   , _dSEnvSlot
+  , _dSEnvK
   )
-import Ledger.Update (PParams, maxBkSz, UPIState)
+import Ledger.Update (PParams, maxBkSz, UPIState, stableAfter)
 import Ledger.UTxO (UTxO)
 
 import Cardano.Spec.Chain.STS.Block
@@ -83,7 +84,7 @@ instance STS BBODY where
         hash (bUpdPayload b)         == bh ^. bhUpdHash  ?! InvalidUpdateProposalHash
 
         us' <- trans @BUPI $ TRC (
-            (bh ^. bhSlot, _dIStateDelegationMap ds)
+            (bh ^. bhSlot, _dIStateDelegationMap ds, ppsVal ^. stableAfter)
           , us
           , (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes, bEndorsment b) )
         ds' <- trans @DELEG $ TRC
@@ -92,6 +93,7 @@ instance STS BBODY where
                     (fromList . keys . _dIStateDelegationMap) ds
                 , _dSEnvEpoch = e_n
                 , _dSEnvSlot = bh ^. bhSlot
+                , _dSEnvK = ppsVal ^. stableAfter
                 }
             )
           , ds

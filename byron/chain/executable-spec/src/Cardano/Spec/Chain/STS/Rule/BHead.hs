@@ -20,6 +20,10 @@ instance STS BHEAD where
   type Environment BHEAD
     = ( Bimap VKeyGenesis VKey
       , Slot
+      , BlockCount -- Chain stability parameter; this is a global
+                   -- constant in the formal specification, which we
+                   -- put in this environment so that we can test with
+                   -- different values of it.
       )
   type State BHEAD = UPIState
 
@@ -40,8 +44,8 @@ instance STS BHEAD where
 
   transitionRules =
     [ do
-        TRC ((_, sLast), us, bh) <- judgmentContext
-        us' <- trans @EPOCH $ TRC (sEpoch sLast, us, bh ^. bhSlot)
+        TRC ((_, sLast, k), us, bh) <- judgmentContext
+        us' <- trans @EPOCH $ TRC ((sEpoch sLast, k), us, bh ^. bhSlot)
         let sMax = snd (us' ^. _1) ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         return $! us'

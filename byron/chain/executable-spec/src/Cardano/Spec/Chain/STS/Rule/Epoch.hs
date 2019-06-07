@@ -18,7 +18,13 @@ sEpoch (Slot s) = Epoch $ s `div` 21600
 data EPOCH
 
 instance STS EPOCH where
-  type Environment EPOCH = Epoch
+  type Environment EPOCH =
+    ( Epoch
+    , BlockCount -- Chain stability paramter; this is a global
+                 -- constant in the formal specification, which we put
+                 -- in this environment so that we can test with
+                 -- different values of it.
+    )
   type State EPOCH = UPIState
 
   type Signal EPOCH = Slot
@@ -30,7 +36,7 @@ instance STS EPOCH where
 
   transitionRules =
     [ do
-        TRC (e_c, _, s) <- judgmentContext
+        TRC ((e_c, _), _, s) <- judgmentContext
         case e_c >= sEpoch s of
           True  -> onOrAfterCurrentEpoch
           False -> beforeCurrentEpoch
@@ -38,8 +44,8 @@ instance STS EPOCH where
    where
     beforeCurrentEpoch :: TransitionRule EPOCH
     beforeCurrentEpoch = do
-      TRC (_, us, s) <- judgmentContext
-      us' <- trans @UPIEC $ TRC (s, us, ())
+      TRC ((_, k), us, s) <- judgmentContext
+      us' <- trans @UPIEC $ TRC ((s, k), us, ())
       return $! us'
 
     onOrAfterCurrentEpoch :: TransitionRule EPOCH
