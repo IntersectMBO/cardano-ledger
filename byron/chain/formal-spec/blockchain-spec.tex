@@ -59,6 +59,7 @@
 \newcommand{\pp}[1]{\mathsf{#1}}
 \newcommand{\size}[1]{\left| #1 \right|}
 \newcommand{\trans}[2]{\xlongrightarrow[\textsc{#1}]{#2}}
+\newcommand{\stslabel}[1]{\footnotesize{\textsc{#1}}}
 \newcommand{\seqof}[1]{#1^{*}}
 \newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
 
@@ -136,6 +137,7 @@
 
 \newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
 \newtheorem{property}{Property}
+\newtheorem{definition}{Definition}
 
 \begin{document}
 
@@ -1312,98 +1314,188 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \subsection{Header only validation}
 \label{sec:header-only-validation}
 
-\begin{property}[Header only validation]
-  There exists a function $\fun{f}$ such that for all block-chains $C$ and $C'$
-  with a common prefix $C_0$:
+The following transition system is used in
+Properties~\ref{prop:header-only-validation} and .
+
+\begin{definition}[PBFT+BHEAD STS]\label{def:rule:pbft+bhead}
+  $$
+  \inference
+  {
+    {\begin{array}{r@{~\vdash~}l}
+        {\left(
+        \begin{array}{l}
+          \fun{dms}~\var{ds}\\
+          \var{s_{last}}
+        \end{array}
+        \right)}
+        &
+        \left(
+          {\begin{array}{c}
+             \var{us}
+           \end{array}
+        }\right)
+        \trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}
+        \left(
+        {\begin{array}{c}
+           \var{us'}
+         \end{array}}
+        \right)\\
+       %
+        \left(
+        {\begin{array}{l}
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
+         \end{array}}
+        \right)
+        &
+        \left(
+          {\begin{array}{c}
+             \var{h} \\
+             \var{sgs}
+           \end{array}}
+        \right)
+        \trans{\hyperref[fig:rules:pbft]{pbft}}{\var{bh}}
+        \left(
+        {\begin{array}{c}
+           \var{h'} \\
+           \var{sgs}'
+         \end{array}}
+        \right)\\
+      \end{array}}
+  }
+  {
+    {\left(
+        {\begin{array}{l}
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
+         \end{array}}
+     \right)
+     \vdash
+     \left(
+          {\begin{array}{c}
+             \var{h} \\
+             \var{sgs}\\
+             \var{us}
+           \end{array}}
+       \right)
+       \trans{pbft+bhead}{\var{bh}}
+        \left(
+        {\begin{array}{c}
+           \var{h'} \\
+           \var{sgs}'\\
+           \var{us'}
+         \end{array}}
+     \right)
+     }
+   }
+  $$
+\end{definition}
+
+In any given ledger state, the consensus layer needs to be able to validate the
+block headers without having to download the block bodies. The
+Property~\ref{prop:header-only-validation} states that if an extension of a
+chain that spans less than $2 \cdot k$ slots is valid, then validating the
+headers of that extension is also valid. This property is useful for its
+converse: if the header validation check for a sequence of headers does not
+pass, then we know that the block validation that corresponds to those headers
+will not pass either.
+
+\begin{property}[Header only validation]\label{prop:header-only-validation}
+  For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
+  for all and chain extensions $E$ with headers $H$ such that:
   %
-  $$C=C_0 C_1 \text{ and } C'=C_0 C_1' \text{ and } C_0=C_0';b$$
+  $$
+  t_E - t  \leq 2*k
+  $$
   %
-  such that:
-  $$
-  \size{C_1} \leq k \text{ and } \size{C'_1} - \size{C_1} \leq 2 \cdot k
-  $$
-  we have that:
-  $$
-  s_0 \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C_0} s_1
-  \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C_1} s_2
-  %
-  \text{ and }
-  %
-  s_1 \transtar{\hyperref[fig:rules:bbody]{bbody}}{C'_1} s'_2
-  $$
-  implies:
+  we have:
   %
   $$
-  s_1 \transtar{\hyperref[fig:rules:chain-extension]{chain}}{C'_1} s'_2
-  \Longleftrightarrow
-  \fun{f}~b~s_2 \transtar{PBFT+BHEAD}{\bhead{C'}} s_p
+  e \vdash s \transtar{chain}{E} s' \implies e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
   $$
+  where $t_E$ is the maximum slot number appearing in the blocks contained in
+  $E$, and $e_h$ and $s_h$ are the environment and state needed by the
+  $\stslabel{pbft+bhead}$ transition system, which can be obtained from $e$ and
+  $s$ by selecting the appropriate environment and state components in the
+  obvious way.
 \end{property}
 
-Things that are unclear to me:
-
-\begin{itemize}
-\item Do we need a common prefix in the chain? Apparently we need to pass a
-  slot to $\fun{f}$, but which slot do we pass? The slot of the first block in $C'_1$
-\item Do we need the double implication? Apparently yes, since if a bunch of
-  headers are validated in PBFT+BHEAD (within a certain time range), then we
-  shouldn't see the CHAIN rule fail because of the headers.
-
-\end{itemize}
-
-Considerations:
-
-\begin{itemize}
-\item We cannot go forward more than $2k$ slots, otherwise things in the body
-  state might have changed (like a scheduled delegation).
-\item According to Nick we don't need to keep in the ledger state information
-  about past delegations (and the same for other parts of the ledger state ...)
-\end{itemize}
-
-Formalization by Jared and Nick:
-
-\begin{property}
-For a chain $C$ with state $S_C$ and extension $F=\{b_0,\dots,b_n\}$
-with headers $\{h_0,\dots,h_n\}$ such that $|F| \leq 2*k $, we have that:
-
+Property~\ref{prop:body-only-validation} states that if we validate a sequence
+of headers, we can validate their bodies independently and be sure that the
+blocks will pass the chain validation rule. To see this, given an environment
+$e$ and initial state $s$, assume that a sequence of headers $H$ corresponding
+to blocks in $E$ is valid according to the $\stslabel{pbft+bhead}$ transition
+system:
+%
 $$
-S_C \transtar{chain}{F} S_{n}
+e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
 $$
-
-$ \implies $
-
+%
+where $e_h$ and $s_h$ are obtained from $e$ and $s$ as described in
+Property\ref{prop:header-only-validation}. Assume the bodies of $E$ are valid
+according to the $\stslabel{bbody}$ rules, but $E$ is not valid according to the
+$\stslabel{CHAIN}$ rule. Assume that there is a $b_j \in E$ such that it is
+\textbf{the first block} such that does not pass the $\stslabel{chain}$
+validation. Then:
+%
 $$
-S_C \transtar{pbft+bhead}{[h_0,\dots,h_n]} S'_n
+e \vdash s \transtar{CHAIN}{E \shortuparrow j} s_j
 $$
-
-\end{property}
-
-\begin{property}
-  For a chain $C$ with state $S_C$ and extension $F=\{b_0,\dots,b_n\}$ with
-  headers $\{h_0,\dots,h_n\}$ such that $|F| \leq 2*k $, we have that
-  $\forall i \in [1,n]$:
-
+But by Property~\ref{prop:body-only-validation} we know that
+%
 $$
-S_C \transtar{pbft+bhead}{[h_0,\dots,h_i]} S'_i \wedge S_C \transtar{chain}{[b_0 \ldots b_{i-1}]} S_{i-1}
+e_{h_j} \vdash s_{h_j} \trans{pbft+bhead}{H.j} s_{h_{j+1}}
 $$
+which means that block $b_j$ has valid headers, and this in turn means that the
+validation of $b_j$ according to the chain rules must have failed because it
+contained an invalid block body. But this contradicts our assumption that the
+block bodies where valid.
 
-$\implies$
-
-$$
-S_{i-1} \trans{PBFT+BHEAD}{h_i} S''_i.
-$$
+\begin{property}[Body only validation]\label{prop:body-only-validation}
+  For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
+  for all and chain extensions $E$, $n = \size{E}$, with headers $H$ such that:
+  $$
+  t_E - t  \leq 2*k
+  $$
+  we have that for all $i \in [1, n]$:
+  $$
+  e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
+  \wedge
+  e \vdash s \transtar{chain}{[b_0 \ldots b_{i-1}]} s_{i-1}
+  \implies
+  e_{h_{i-1}} \vdash s_{h_{i-1}}\trans{PBFT+BHEAD}{h_i} s''_{h_{i}}
+  $$
+  where $t_E$ is the maximum slot number appearing in the blocks contained in
+  $E$, $e_h$ and $s_h$ can be obtained from $e$ and $s$, and $e_{h_{i-1}}$ and
+  $s_{h_{i-i}}$ can be obtained from $e$ and $s_{i-1}$ by selecting the
+  appropriate environments and state components in the obvious way.
 \end{property}
 
 Considerations
 
 \begin{itemize}
-\item $|F|$ above means the slots that are spanned by the blocks in $F$
-
 \item Duncan mentioned that we still need to state our back-in-time time travel
   property, not to have the spec satisfy it, but to check that the consensus
   implementation satisfies it.
 \end{itemize}
 
+
+\begin{property}[Existence of roll back function]
+  There exists a function $f$ such that for all chains $C = C_0 ; b; C_1$ with
+  corresponding headers $H = H_0; h; H_1$ we have that if
+
+$$
+s_0 \transtar{CHAIN}{C_0;b} s_1 \transtar{CHAIN}{C_1} s_2
+$$
+
+then
+
+$$
+f (slot b) s_2 \transtar{PBFT+BHEAD}{H_1} s_h
+$$
+\end{property}
 
 
 \clearpage
