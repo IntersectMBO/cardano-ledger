@@ -1473,30 +1473,24 @@ block bodies where valid.
   appropriate environments and state components in the obvious way.
 \end{property}
 
-Considerations
+Property~\ref{prop:roll-back-funk} expresses the fact the there is a function
+that allow us to recover the header-only state by rolling back, and use this
+state to validate the headers of an alternate chain. We do not enforce our
+rules to satisfy this property, but it is stated here so that it can be used as
+a reference for the tests in the consensus layer.
 
-\begin{itemize}
-\item Duncan mentioned that we still need to state our back-in-time time travel
-  property, not to have the spec satisfy it, but to check that the consensus
-  implementation satisfies it.
-\end{itemize}
-
-
-\begin{property}[Existence of roll back function]
-  There exists a function $f$ such that for all chains $C = C_0 ; b; C_1$ with
-  corresponding headers $H = H_0; h; H_1$ we have that if
-
-$$
-s_0 \transtar{CHAIN}{C_0;b} s_1 \transtar{CHAIN}{C_1} s_2
-$$
-
-then
-
-$$
-f (slot b) s_2 \transtar{PBFT+BHEAD}{H_1} s_h
-$$
+\begin{property}[Existence of roll back function]\label{prop:roll-back-funk}
+  There exists a function $\fun{f}$ such that for all chains
+  $$C = C_0 ; b; C_1$$
+  we have that if for all alternative chains $C'_1$ with corresponding headers $H'_1$
+  $$
+  e \vdash s_0 \transtar{CHAIN}{C_0;b} s_1 \transtar{CHAIN}{C_1} s_2
+  \wedge
+  e \vdash s_1 \transtar{CHAIN}{C_1'} s'_1
+  \implies
+  \fun{f}~(\bslot{b})~s_2 \transtar{PBFT+BHEAD}{H'_1} s_h
+  $$
 \end{property}
-
 
 \clearpage
 
