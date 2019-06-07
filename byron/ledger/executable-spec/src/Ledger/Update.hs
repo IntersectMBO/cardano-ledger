@@ -731,7 +731,8 @@ instance STS UPIREG where
     = UPREGFailure (PredicateFailure UPREG)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return $! emptyUPIState ]
+
   transitionRules =
     [ do
         TRC ( (sn, dms, _k)
@@ -823,7 +824,8 @@ instance STS UPIVOTES where
     = UpivoteFailure (PredicateFailure UPIVOTE)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return $! emptyUPIState ]
+
   transitionRules =
     [ do
         TRC (env, us, sig) <- judgmentContext
@@ -849,7 +851,8 @@ instance STS UPIEND where
     = UPENDFailure (PredicateFailure UPEND)
     deriving (Eq, Show)
 
-  initialRules = []
+  initialRules = [ return $! emptyUPIState ]
+
   transitionRules =
     [ do
         TRC ( (sn, dms, k)
