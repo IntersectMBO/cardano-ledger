@@ -10,6 +10,7 @@ module Ledger.Delegation.Properties
   ( dcertsAreTriggered
   , rejectDupSchedDelegs
   , tracesAreClassified
+  , dblockTracesAreClassified
   )
 where
 
@@ -25,6 +26,7 @@ import Hedgehog
   , Property
   , (===)
   , assert
+  , classify
   , forAll
   , property
   , success
@@ -67,13 +69,13 @@ import Control.State.Transition.Trace
   , lastState
   , preStatesAndSignals
   , traceEnv
+  , traceSignals
   )
 import Ledger.Core
-  ( BlockCount(BlockCount)
-  , Epoch(Epoch)
+  ( Epoch(Epoch)
   , Owner(Owner)
   , Sig(Sig)
-  , Slot(Slot)
+  , Slot
   , SlotCount(SlotCount)
   , VKey(VKey)
   , VKeyGenesis
@@ -111,7 +113,7 @@ import Ledger.Delegation
   , slot
   )
 
-import Ledger.Core.Generators (vkGen)
+import Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -167,7 +169,7 @@ instance STS DBLOCK where
 
   initialRules
     = [ do
-          IRC (env) <- judgmentContext
+          IRC env <- judgmentContext
           pure (env, initialDIState)
       ]
 
@@ -252,13 +254,26 @@ expectedDms s d sbs = Bimap.fromList (fmap (delegator &&& delegate) activeCerts)
 
 instance HasTrace DBLOCK where
 
-  initEnvGen = do
-    n <- integral (linear 0 14)
-    e <- integral (linear 0 1000)
-    s <- integral (linear 0 1000)
-    k <- integral (linear 1 10000)
-    pure $! DSEnv (Set.fromAscList $ gk <$> [0..n]) (Epoch e) (Slot s) (BlockCount k)
+  initEnvGen
+    = DSEnv
+    <$> allowedDelegators
+    -- We do not expect the current epoch to have an influence on the tests, so
+    -- we chose a small value here.
+    <*> epochGen 0 10
+    -- As with epochs, the current slot should not have influence in the tests.
+    <*> slotGen 0 100
+    -- 2160 the value of @k@ used in production. However, delegation
+    -- certificates are activated @2*k@ slots from the slot in which they are
+    -- issued. This means that if we want to see delegation activations, we
+    -- need to choose a small value for @k@ since we do not want to blow up the
+    -- testing time by using large trace lengths.
+    <*> blockCountGen 0 100
     where
+      -- We scale the number of delegators linearly up to twice the number of
+      -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
+      allowedDelegators = do
+        n <- integral (linear 0 14)
+        pure $! Set.fromAscList $ gk <$> [0 .. n]
       gk = VKeyGenesis . VKey . Owner
 
   sigGen _ (env, st) = do
@@ -275,6 +290,26 @@ dcertsAreTriggered = withTests 300 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
   forAll (nonTrivialTrace 1000) >>= dcertsAreTriggeredInTrace
+
+dblockTracesAreClassified :: Property
+dblockTracesAreClassified = property $ do
+  let (tl, step) = (1000, 100)
+  tr <- forAll (trace @DBLOCK tl)
+  classifyTraceLength tr tl step
+  -- Let's see what happens if we filter the empty signals.
+  let
+    -- Total number of delegation certificates found in the trace
+    totalDCerts :: [DCert]
+    totalDCerts = concat $ _blockCerts <$> traceSignals OldestFirst tr
+  classify "[0, 3)" $ length totalDCerts < 3
+  classify "[3, 5)" $ 3 <= length totalDCerts && length totalDCerts <= 5
+  classify "[5, 10)" $ 5 <= length totalDCerts && length totalDCerts < 10
+  classify "[10, 15)" $ 10 <= length totalDCerts && length totalDCerts < 15
+  classify "[15, 20)" $ 15 <= length totalDCerts && length totalDCerts < 20
+  classify "[20, 30)" $ 20 <= length totalDCerts && length totalDCerts < 30
+  classify "[30, 100)" $ 30 <= length totalDCerts && length totalDCerts < 100
+  classify "[100, 200)" $ 100 <= length totalDCerts && length totalDCerts < 200
+  success
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules

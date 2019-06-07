@@ -120,7 +120,7 @@ import Control.State.Transition.Generator
   , sigGen
   )
 import Ledger.Core
-  ( BlockCount(BlockCount)
+  ( BlockCount
   , Epoch(Epoch)
   , HasHash
   , Hash(Hash)
@@ -137,7 +137,13 @@ import Ledger.Core
   , owner
   , unBlockCount
   )
-import Ledger.Core.Generators (vkGen, vkgenesisGen)
+import Ledger.Core.Generators
+  ( blockCountGen
+  , epochGen
+  , slotGen
+  , vkGen
+  , vkgenesisGen
+  )
 
 
 --------------------------------------------------------------------------------
@@ -192,9 +198,13 @@ delegate c = c ^. dwho . _2
 -- | Delegation scheduling environment
 data DSEnv = DSEnv
   { _dSEnvAllowedDelegators :: Set VKeyGenesis
+  -- ^ Set of allowed delegators
   , _dSEnvEpoch :: Epoch
+  -- ^ Current epoch
   , _dSEnvSlot :: Slot
+  -- ^ Current slot
   , _dSEnvK :: BlockCount
+  -- ^ Chain stability parameter
   } deriving (Show, Eq)
 
 makeFields ''DSEnv
@@ -526,8 +536,8 @@ instance HasTrace DELEG where
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
     <$> Gen.set (linear 1 7) vkgenesisGen
-    <*> (Epoch <$> Gen.integral (linear 0 100))
-    <*> (Slot <$> Gen.integral (linear 0 10000))
-    <*> (BlockCount <$> Gen.integral (linear 1 10000))
+    <*> epochGen 0 10
+    <*> slotGen 0 100
+    <*> blockCountGen 0 100
 
   sigGen e _st = dcertsGen e
