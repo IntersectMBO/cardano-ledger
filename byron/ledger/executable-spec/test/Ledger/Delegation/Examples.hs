@@ -14,7 +14,8 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
 import Ledger.Core
-  ( Epoch(Epoch)
+  ( BlockCount(BlockCount)
+  , Epoch(Epoch)
   , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
@@ -54,7 +55,7 @@ deleg =
     ]
 
   , testGroup "Scheduling"
-    [ testCase "Example 0" $ checkTrace @SDELEG (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2)) $
+    [ testCase "Example 0" $ checkTrace @SDELEG (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2) (BlockCount 2160)) $
 
       pure (DSState [] [])
 
