@@ -1314,8 +1314,8 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 \subsection{Header only validation}
 \label{sec:header-only-validation}
 
-The following transition system is used in
-Properties~\ref{prop:header-only-validation} and .
+The following transition system is used in the Properties enunciated in this
+section.
 
 \begin{definition}[PBFT+BHEAD STS]\label{def:rule:pbft+bhead}
   $$
@@ -1394,7 +1394,7 @@ Properties~\ref{prop:header-only-validation} and .
 \end{definition}
 
 In any given ledger state, the consensus layer needs to be able to validate the
-block headers without having to download the block bodies. The
+block headers without having to download the block bodies.
 Property~\ref{prop:header-only-validation} states that if an extension of a
 chain that spans less than $2 \cdot k$ slots is valid, then validating the
 headers of that extension is also valid. This property is useful for its
@@ -1404,7 +1404,7 @@ will not pass either.
 
 \begin{property}[Header only validation]\label{prop:header-only-validation}
   For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
-  for all and chain extensions $E$ with headers $H$ such that:
+  for all chain extensions $E$ with corresponding headers $H$ such that:
   %
   $$
   t_E - t  \leq 2*k
@@ -1425,9 +1425,9 @@ will not pass either.
 Property~\ref{prop:body-only-validation} states that if we validate a sequence
 of headers, we can validate their bodies independently and be sure that the
 blocks will pass the chain validation rule. To see this, given an environment
-$e$ and initial state $s$, assume that a sequence of headers $H$ corresponding
-to blocks in $E$ is valid according to the $\stslabel{pbft+bhead}$ transition
-system:
+$e$ and initial state $s$, assume that a sequence of headers
+$H = [h_0, \ldots, h_n]$ corresponding to blocks in $E = [b_0, \ldots, b_n]$ is
+valid according to the $\stslabel{pbft+bhead}$ transition system:
 %
 $$
 e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
@@ -1441,21 +1441,21 @@ $\stslabel{CHAIN}$ rule. Assume that there is a $b_j \in E$ such that it is
 validation. Then:
 %
 $$
-e \vdash s \transtar{CHAIN}{E \shortuparrow j} s_j
+e \vdash s \transtar{CHAIN}{[b_0, \ldots b_{j-1}]} s_j
 $$
 But by Property~\ref{prop:body-only-validation} we know that
 %
 $$
-e_{h_j} \vdash s_{h_j} \trans{pbft+bhead}{H.j} s_{h_{j+1}}
+e_{h_j} \vdash s_{h_j} \trans{pbft+bhead}{h_j} s_{h_{j+1}}
 $$
 which means that block $b_j$ has valid headers, and this in turn means that the
 validation of $b_j$ according to the chain rules must have failed because it
 contained an invalid block body. But this contradicts our assumption that the
-block bodies where valid.
+block bodies were valid.
 
 \begin{property}[Body only validation]\label{prop:body-only-validation}
   For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
-  for all and chain extensions $E$, $n = \size{E}$, with headers $H$ such that:
+  for all chain extensions $E = [b_0, \ldots, b_n]$ with headers $H$ such that:
   $$
   t_E - t  \leq 2*k
   $$
