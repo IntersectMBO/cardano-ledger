@@ -21,8 +21,8 @@
           (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
-          (hsPkgs.cryptonite)
           (hsPkgs.cs-ledger)
+          (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
           (hsPkgs.small-steps)
@@ -47,8 +47,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-ledger-specs";
-      rev = "e96f378bc91bb0de2bd56aa2505cd6452553a9d9";
-      sha256 = "0kv7ifjbgdsl56ir0hkz3xmmwcznsscn64jp4khws5nhgaqp8kjz";
+      rev = "ad86dcb64e8a5f3bd7670655ab92b50921946479";
+      sha256 = "1p21vbqdpi3yxzvlmskcrlqlpkszmnif7i9rxgp7xnas6fyj079y";
       });
     postUnpack = "sourceRoot+=/byron/chain/executable-spec; echo source root reset to \$sourceRoot";
     }

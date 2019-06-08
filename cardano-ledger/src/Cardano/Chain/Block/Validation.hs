@@ -217,7 +217,7 @@ data ChainValidationError
   | ChainValidationBlockAttributesTooLarge
   -- ^ The size of a block's attributes is non-zero
 
-  | ChainValidationBlockTooLarge
+  | ChainValidationBlockTooLarge Natural Natural
   -- ^ The size of a regular block exceeds the limit
 
   | ChainValidationHeaderAttributesTooLarge
@@ -360,7 +360,8 @@ updateBody
   -> m BodyState
 updateBody env bs b = do
   -- Validate the block size
-  blockLength b <= maxBlockSize `orThrowError` ChainValidationBlockTooLarge
+  blockLength b <= maxBlockSize
+    `orThrowError` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
   -- Validate the delegation payload signature
   proofDelegation (blockProof b)
