@@ -63,6 +63,8 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
+  , dcertGen'
+  , dcertsGen'
   -- * Functions on delegation state
   , delegatorOf
   )
@@ -74,9 +76,10 @@ import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
+import Data.Maybe (catMaybes)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.Set (Set, (\\))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Hedgehog (Gen)
@@ -124,10 +127,11 @@ import Ledger.Core
   , Epoch(Epoch)
   , HasHash
   , Hash(Hash)
+  , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
-  , VKey
+  , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
   , (⨃)
   , addSlot
@@ -240,6 +244,10 @@ data DIState = DIState
   } deriving (Show, Eq)
 
 makeFields ''DIState
+
+-- | Epoch-genesis key delegation set of the delegation interface state.
+eks :: DIState -> Set (Epoch, VKeyGenesis)
+eks = _dIStateKeyEpochDelegations
 
 dms :: HasDelegationMap a (Bimap VKeyGenesis VKey)
     => Lens' a (Bimap VKeyGenesis VKey)
@@ -497,6 +505,10 @@ dcertGen :: DSEnv -> Gen DCert
 dcertGen env = do
   -- The generated delegator must be one of the genesis keys in the
   -- environment.
+  --
+  -- TODO: the delegator should be one of the allowed delegators that can
+  -- actually delegate (so it doens't have anything scheduled for this or next
+  -- epoch)
   vkS <- Gen.element $ Set.toList (env ^. allowedDelegators)
   vkD <- vkGen
   let Epoch n = env ^. epoch
@@ -507,6 +519,36 @@ dcertGen env = do
                , _dwho = (vkS, vkD)
                , _depoch = epo
                }
+
+dcertGen' :: DSEnv -> DIState -> Gen (Maybe DCert)
+dcertGen' env st =
+  let
+    allowed :: [VKeyGenesis]
+    allowed = Set.toList (_dSEnvAllowedDelegators env)
+    -- We can generate delegation certificates using the allowed delegators,
+    -- and we can delegate for the current or next epoch only.
+    preCandidates :: Set (Epoch, VKeyGenesis)
+    preCandidates = Set.fromList
+                  $  zip (repeat $ _dSEnvEpoch env) allowed
+                  ++ zip (repeat $ _dSEnvEpoch env + 1) allowed
+    -- We obtain the candidates by removing the ones that already delegated in
+    -- this or next epoch.
+    candidates :: [(Epoch, VKeyGenesis)]
+    candidates = Set.toList $ preCandidates \\ eks st
+    -- Next, we choose to whom these keys delegate.
+    target :: [VKey]
+    -- TODO: we might want to make this configurable for now we chose an upper
+    -- bound equal to three time the number of genesis keys to increase the
+    -- chance of having two genesis keys delegating to the same key.
+    target = VKey . Owner <$> [0 .. (3 * fromIntegral (length allowed))]
+
+    mkDCert' ((e, vkg), vk) = DCert (vk, e) (Sig vkg (owner vkg)) (vkg, vk) e
+  in
+
+  if null candidates
+    then return Nothing
+    else Just <$> Gen.element (mkDCert' <$> zip candidates target)
+
 
 -- | Generate a list of delegation certificates.
 --
@@ -522,6 +564,13 @@ dcertsGen :: DSEnv -> Gen [DCert]
 --
 dcertsGen env = Gen.frequency
   [(95, pure []), (10, Gen.list (constant 1 n) (dcertGen env))]
+  where n = env ^. allowedDelegators . to length
+
+dcertsGen' :: DSEnv -> DIState -> Gen [DCert]
+dcertsGen' env st =
+  -- TODO: alternatively we could define a HasTrace instance for SDELEG and use
+  -- trace here.
+  catMaybes <$> Gen.list (constant 1 n) (dcertGen' env st)
   where n = env ^. allowedDelegators . to length
 
 instance HasTrace DELEG where
@@ -543,4 +592,4 @@ instance HasTrace DELEG where
     <*> slotGen 0 100
     <*> blockCountGen 0 100
 
-  sigGen e _st = dcertsGen e
+  sigGen = dcertsGen'

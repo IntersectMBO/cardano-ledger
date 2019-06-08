@@ -11,6 +11,7 @@ module Ledger.Delegation.Properties
   , rejectDupSchedDelegs
   , tracesAreClassified
   , dblockTracesAreClassified
+  , DBLOCK
   )
 where
 
@@ -272,8 +273,8 @@ instance HasTrace DBLOCK where
       -- We scale the number of delegators linearly up to twice the number of
       -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
-        n <- integral (linear 0 14)
-        pure $! Set.fromAscList $ gk <$> [0 .. n]
+        n <- integral (linear 1 14)
+        pure $! Set.fromAscList $ gk <$> [1 .. n]
       gk = VKeyGenesis . VKey . Owner
 
   sigGen _ (env, st) = do
@@ -301,14 +302,17 @@ dblockTracesAreClassified = property $ do
     -- Total number of delegation certificates found in the trace
     totalDCerts :: [DCert]
     totalDCerts = concat $ _blockCerts <$> traceSignals OldestFirst tr
-  classify "[0, 3)" $ length totalDCerts < 3
-  classify "[3, 5)" $ 3 <= length totalDCerts && length totalDCerts <= 5
-  classify "[5, 10)" $ 5 <= length totalDCerts && length totalDCerts < 10
-  classify "[10, 15)" $ 10 <= length totalDCerts && length totalDCerts < 15
-  classify "[15, 20)" $ 15 <= length totalDCerts && length totalDCerts < 20
-  classify "[20, 30)" $ 20 <= length totalDCerts && length totalDCerts < 30
-  classify "[30, 100)" $ 30 <= length totalDCerts && length totalDCerts < 100
-  classify "[100, 200)" $ 100 <= length totalDCerts && length totalDCerts < 200
+  -- TODO: generalize this as classifyListLength (or foldableLength) (and
+  -- classifyTraceLength can use this function)
+  classify "total dcerts [0, 3)" $ length totalDCerts < 3
+  classify "total dcerts [3, 5)" $ 3 <= length totalDCerts && length totalDCerts <= 5
+  classify "total dcerts [5, 10)" $ 5 <= length totalDCerts && length totalDCerts < 10
+  classify "total dcerts [10, 15)" $ 10 <= length totalDCerts && length totalDCerts < 15
+  classify "total dcerts [15, 20)" $ 15 <= length totalDCerts && length totalDCerts < 20
+  classify "total dcerts [20, 30)" $ 20 <= length totalDCerts && length totalDCerts < 30
+  classify "total dcerts [30, 50)" $ 30 <= length totalDCerts && length totalDCerts < 50
+  classify "total dcerts [50, 100)" $ 30 <= length totalDCerts && length totalDCerts < 100
+  classify "total dcerts [100, 200)" $ 100 <= length totalDCerts && length totalDCerts < 200
   success
 
 --------------------------------------------------------------------------------
