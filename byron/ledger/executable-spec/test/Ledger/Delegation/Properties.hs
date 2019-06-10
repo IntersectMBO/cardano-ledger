@@ -19,7 +19,7 @@ import Control.Arrow ((&&&), first)
 import Control.Lens ((^.), makeLenses, (&), (.~), view, to)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.List (last)
+import Data.List (last, foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Hedgehog
@@ -234,8 +234,25 @@ expectedDms
   -- ^ Delegation certificates to apply, and the slot at which these
   -- certificates where scheduled.
   -> Bimap VKeyGenesis VKey
-expectedDms s d sbs = Bimap.fromList (fmap (delegator &&& delegate) activeCerts)
+expectedDms s d sbs =
+  foldl' insertIfInjective Bimap.empty (fmap (delegator &&& delegate) activeCerts)
   where
+    -- | Insert the key-value pair in the map only if the value is not in the
+    -- map already.
+    insertIfInjective
+      :: Bimap VKeyGenesis VKey
+      -> (VKeyGenesis, VKey)
+      -> Bimap VKeyGenesis VKey
+    insertIfInjective m (k, v) =
+      if Bimap.memberR v m
+      then m
+      else Bimap.insert k v m
+
+    -- | Get the active certificates from each block, and concatenate them all
+    -- together.
+    activeCerts :: [DCert]
+    activeCerts = concatMap _blockCerts activeBlocks
+
     -- | We keep all the blocks whose certificates should be active given the
     -- current slot.
     activeBlocks :: [DBlock]
@@ -247,11 +264,6 @@ expectedDms s d sbs = Bimap.fromList (fmap (delegator &&& delegate) activeCerts)
     -- number is negative that means that no certificate can be activated.
     activationSlot :: Int
     activationSlot = s - d
-
-    -- | Get the active certificates from each block, and concatenate them all
-    -- together.
-    activeCerts :: [DCert]
-    activeCerts = concatMap _blockCerts activeBlocks
 
 instance HasTrace DBLOCK where
 
@@ -277,11 +289,11 @@ instance HasTrace DBLOCK where
         pure $! Set.fromAscList $ gk <$> [1 .. n]
       gk = VKeyGenesis . VKey . Owner
 
-  sigGen _ (env, st) = do
-    c <- integral (constant 1 10)
-    let newSlot = (env ^.slot) `addSlot` SlotCount c
-    delegs <- sigGen @DELEG env st
-    return $ DBlock newSlot delegs
+  sigGen _ (env, st) =
+    DBlock <$> nextSlotGen <*> sigGen @DELEG env st
+    where
+      nextSlotGen = incSlot <$> integral (constant 1 10)
+      incSlot c = (env ^.slot) `addSlot` SlotCount c
 
 instance HasSizeInfo DBlock where
   isTrivial = null . view blockCerts

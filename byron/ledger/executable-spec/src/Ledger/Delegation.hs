@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
@@ -59,7 +60,7 @@ module Ledger.Delegation
   -- * State lens type classes
   , HasScheduledDelegations
   , scheduledDelegations
-  , dms
+  , dmsL
   -- * Generators
   , dcertGen
   , dcertsGen
@@ -71,7 +72,7 @@ module Ledger.Delegation
 where
 
 import Data.AbstractSize
-import Data.Bimap (Bimap)
+import Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
@@ -133,12 +134,14 @@ import Ledger.Core
   , SlotCount(SlotCount)
   , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
+  , (∈)
+  , (∉)
   , (⨃)
   , addSlot
   , hash
-  , minusSlot
   , owner
   , owner
+  , range
   , unBlockCount
   )
 import Ledger.Core.Generators
@@ -249,9 +252,9 @@ makeFields ''DIState
 eks :: DIState -> Set (Epoch, VKeyGenesis)
 eks = _dIStateKeyEpochDelegations
 
-dms :: HasDelegationMap a (Bimap VKeyGenesis VKey)
+dmsL :: HasDelegationMap a (Bimap VKeyGenesis VKey)
     => Lens' a (Bimap VKeyGenesis VKey)
-dms = delegationMap
+dmsL = delegationMap
 
 dIStateDSState :: Lens' DIState DSState
 dIStateDSState = lens
@@ -360,30 +363,52 @@ instance STS ADELEG where
     | NoLastDelegation
       -- | Not a failure; this should just pass the other rule
     | AfterExistingDelegation
+    -- | The given key is a delegate of the given genesis key.
+    | AlreadyADelegateOf VKey VKeyGenesis
+
     deriving (Eq, Show)
 
-  initialRules = [ do
-                     IRC env <- judgmentContext
-                     return DState
-                       { _dStateDelegationMap  = Bimap.fromList $ map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
-                       , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
-                       }
-                 ]
+  initialRules = [
+    do
+      IRC env <- judgmentContext
+      return DState
+        { _dStateDelegationMap  =
+            Bimap.fromList
+            $ map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
+        , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
+        }
+    ]
   transitionRules =
     [ do
-        TRC (_env, st, (slt, (vks, vkd))) <- judgmentContext
-        case Map.lookup vks (st ^. lastDelegation) of
-          Nothing -> True ?! BeforeExistingDelegation
-          Just sp -> sp < slt ?! BeforeExistingDelegation
-        return $ st
-          & delegationMap %~ (\sdm -> sdm ⨃ [(vks, vkd)])
-          & lastDelegation %~ (\ldm -> ldm ⨃ [(vks, slt)])
+        TRC ( _env
+            , DState { _dStateDelegationMap = dms
+                     , _dStateLastDelegation = dws
+                     }
+            , (s, (vks, vkd))
+            ) <- judgmentContext
+        vkd ∉ range dms ?! AlreadyADelegateOf vkd (dms !> vkd)
+        case Map.lookup vks dws of
+          Nothing -> pure () -- If vks hasn't delegated, then we proceed and
+                             -- update the @ADELEG@ state.
+          Just sp -> sp < s ?! BeforeExistingDelegation
+        return $!
+          DState { _dStateDelegationMap = dms ⨃ [(vks, vkd)]
+                 , _dStateLastDelegation = dws ⨃ [(vks, s)]
+                 }
     , do
-        (TRC (_env, st, (slt, (vks, _vkd)))) <- judgmentContext
-        case Map.lookup vks (st ^. lastDelegation) of
-          Just sp -> sp >= slt ?! AfterExistingDelegation
-          Nothing -> False ?! NoLastDelegation
-        return st
+        TRC ( _env
+            , st@DState { _dStateDelegationMap = dms
+                        , _dStateLastDelegation = dws
+                        }
+            , (s, (vks, vkd))
+            ) <- judgmentContext
+        if vkd ∈ range dms
+          then return st
+          else do
+            case Map.lookup vks dws of
+              Just sp -> sp >= s ?! AfterExistingDelegation
+              Nothing -> False ?! NoLastDelegation
+            return st
     ]
 
 -- | Delegation scheduling sequencing
@@ -408,8 +433,8 @@ instance STS SDELEGS where
         case sig of
           [] -> return st
           (x:xs) -> do
-            dss' <- trans @SDELEGS $ TRC (env, st, xs)
-            dss'' <- trans @SDELEG $ TRC (env, dss', x)
+            dss'  <- trans @SDELEG $ TRC (env, st, x)
+            dss'' <- trans @SDELEGS $ TRC (env, dss', xs)
             return dss''
     ]
 
@@ -438,8 +463,8 @@ instance STS ADELEGS where
         case sig of
           [] -> return st
           (x:xs) -> do
-            ds' <- trans @ADELEGS $ TRC (env, st, xs)
-            ds'' <- trans @ADELEG $ TRC (env, ds', x)
+            ds'  <- trans @ADELEG $ TRC (env, st, x)
+            ds'' <- trans @ADELEGS $ TRC (env, ds', xs)
             return ds''
     ]
 
@@ -487,7 +512,7 @@ instance STS DELEG where
     ]
     where
       aboutSlot :: Slot -> SlotCount -> (Slot -> Bool)
-      aboutSlot a b c = c >= (a `minusSlot` b) && c <= (a `addSlot` b)
+      aboutSlot a b c = a < c && c <= (a `addSlot` b)
 
 instance Embed SDELEGS DELEG where
   wrapFailed = SDelegSFailure
