@@ -26,3 +26,6 @@ https://github.com/input-output-hk/cardano-ledger-specs ad86dcb64e8a5f3bd7670655
 https://github.com/input-output-hk/cardano-ledger-specs ad86dcb64e8a5f3bd7670655ab92b50921946479 byron/ledger/executable-spec 1p21vbqdpi3yxzvlmskcrlqlpkszmnif7i9rxgp7xnas6fyj079y cs-ledger cs-ledger.nix
 https://github.com/input-output-hk/cardano-ledger-specs ad86dcb64e8a5f3bd7670655ab92b50921946479 byron/chain/executable-spec 1p21vbqdpi3yxzvlmskcrlqlpkszmnif7i9rxgp7xnas6fyj079y cs-blockchain cs-blockchain.nix
 https://github.com/input-output-hk/cardano-shell de45bf135fc0c575753613ee157378a28f9261e2 . 0j3imc9c80904ybhbrl4mb0v6h9j3c7c9l6pij6idg3adh0rla9z cardano-shell cardano-shell.nix
+https://github.com/input-output-hk/cardano-prelude cca3c4f8da1de19321e96a5a7cca376bc6c37637 . 087yby0q18xk9i2f50a4gjz9rdn1jgwwp8yi3qv5b2nbwb2pzvn7 cardano-prelude cardano-prelude.nix
+https://github.com/input-output-hk/cardano-prelude cca3c4f8da1de19321e96a5a7cca376bc6c37637 test 087yby0q18xk9i2f50a4gjz9rdn1jgwwp8yi3qv5b2nbwb2pzvn7 cardano-prelude-test cardano-prelude-test.nix
+http://github.com/well-typed/canonical-json ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f . 02fzn1xskis1lc1pkz0j92v6ipd89ww0k2p3dvwpm3yap5dpnm7k canonical-json canonical-json.nix

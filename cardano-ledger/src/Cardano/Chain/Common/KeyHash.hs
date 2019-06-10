@@ -17,7 +17,8 @@ import Control.Monad.Except (MonadError)
 import Data.Aeson (FromJSONKey, ToJSONKey)
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
-import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
+import Text.JSON.Canonical
+  (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common.AddressHash
@@ -41,12 +42,12 @@ newtype KeyHash = KeyHash
              )
 
 instance Monad m => ToObjectKey m KeyHash where
-    toObjectKey = pure . formatToString hashHexF . unKeyHash
+  toObjectKey = pure . toJSString . formatToString hashHexF . unKeyHash
 
 instance MonadError SchemaError m => FromObjectKey m KeyHash where
-    fromObjectKey = fmap (Just . KeyHash)
-        . parseJSString decodeAbstractHash
-        . JSString
+  fromObjectKey = fmap (Just . KeyHash)
+    . parseJSString decodeAbstractHash
+    . JSString
 
 hashKey :: VerificationKey -> KeyHash
 hashKey = KeyHash . addressHash

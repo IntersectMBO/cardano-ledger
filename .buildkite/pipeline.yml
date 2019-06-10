@@ -1,9 +1,6 @@
 steps:
   - label: 'stack rebuild'
     env:
-      AWS_REGION: us-west-1
-      S3_BUCKET: appveyor-ci-cache
-      CACHE_S3_MAX_SIZE: 2500MB
       STACK_ROOT: "/build/cardano-ledger.stack"
     command:
       # cache-s3 needs a build directory that is the same across all buildkite agents.
@@ -15,13 +12,6 @@ steps:
       - "./stack-rebuild"
     agents:
       system: x86_64-linux
-
-  # - label: 'brittany'
-  #   command:
-  #     - "nix-build scripts/brittany -o check-brittany"
-  #     - "./check-brittany"
-  #   agents:
-  #     system: x86_64-linux
 
   - label: 'nix-tools'
     command: 'scripts/buildkite/check-nix-tools.sh'

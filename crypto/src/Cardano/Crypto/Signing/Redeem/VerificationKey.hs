@@ -40,7 +40,8 @@ import qualified Data.Text as T
 import Formatting
   (Format, bprint, build, fitLeft, formatToString, later, sformat, stext, (%.))
 import qualified Formatting.Buildable as B
-import Text.JSON.Canonical (FromObjectKey(..), JSValue(..), ToObjectKey(..))
+import Text.JSON.Canonical
+  (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Orphans ()
@@ -52,7 +53,7 @@ newtype RedeemVerificationKey =
   deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
 
 instance Monad m => ToObjectKey m RedeemVerificationKey where
-  toObjectKey = pure . formatToString redeemVKB64UrlF
+  toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF
 
 instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
   fromObjectKey =

@@ -10,7 +10,6 @@ module Test.Cardano.Chain.Block.Validation
 where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
 import qualified Data.Map.Strict as M
@@ -20,8 +19,10 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Hedgehog
-  ( Property
+  ( Group(..)
+  , Property
   , PropertyT
+  , annotate
   , assert
   , discover
   , evalEither
@@ -37,7 +38,7 @@ import System.Environment (lookupEnv)
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
   , ChainValidationError
-  , ChainValidationState
+  , ChainValidationState(..)
   , SigningHistory(..)
   , blockSlot
   , initialChainValidationState
@@ -54,15 +55,24 @@ import Cardano.Crypto (VerificationKey)
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Crypto.Gen (genVerificationKey)
 import Test.Cardano.Mirror (mainnetEpochFiles)
-import Test.Options (TestScenario(..), TSGroup, TSProperty, concatTSGroups)
+import Test.Options
+  (ShouldAssertNF(..), TestScenario(..), TSGroup, TSProperty, concatTSGroups)
 
 
 -- | These tests perform chain validation over mainnet epoch files
-tests :: TSGroup
-tests = concatTSGroups [const $$discover, $$discoverPropArg]
+tests :: ShouldAssertNF -> TSGroup
+tests shouldAssertNF = concatTSGroups
+  [ const $$discover
+  , \scenario -> Group
+    "Test.Cardano.Chain.Block.Validation"
+    [ ( "ts_prop_mainnetEpochsValid"
+      , ts_prop_mainnetEpochsValid shouldAssertNF scenario
+      )
+    ]
+  ]
 
-ts_prop_mainnetEpochsValid :: TSProperty
-ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
+ts_prop_mainnetEpochsValid :: ShouldAssertNF -> TSProperty
+ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
   menv <- liftIO $ lookupEnv "CARDANO_MAINNET_MIRROR"
   assert $ isJust menv
 
@@ -84,8 +94,15 @@ ts_prop_mainnetEpochsValid scenario = withTests 1 . property $ do
 
   let stream = parseEpochFilesWithBoundary (configEpochSlots config) files
 
+  annotate ("Did you build with `ghc -fhpc` or `stack --coverage`?\n"
+    <> "If so, please be aware that hpc will introduce thunks around "
+    <> "expressions for its program coverage measurement purposes and "
+    <> "this assertion can fail as a result.\n"
+    <> "Otherwise, for some reason, the `ChainValidationState` is not in "
+    <> "normal form.")
+
   result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState config cvs stream)
+    (foldChainValidationState shouldAssertNF config cvs stream)
 
   void $ evalEither result
 
@@ -96,26 +113,40 @@ data Error
   deriving (Eq, Show)
 
 
-
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
-  :: Genesis.Config
+  :: ShouldAssertNF
+  -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO ChainValidationState
-foldChainValidationState config cvs blocks =
-  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
+foldChainValidationState shouldAssertNF config cvs blocks = S.foldM_
+  validate
+  (pure cvs)
+  pure
+  (hoist (withExceptT ErrorParseError) blocks)
  where
   validate
-     :: Monad m
-     => ChainValidationState
-     -> ABlockOrBoundary ByteString
-     -> ExceptT Error m ChainValidationState
+    :: MonadIO m
+    => ChainValidationState
+    -> ABlockOrBoundary ByteString
+    -> ExceptT Error m ChainValidationState
   validate c b =
-    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b)) $
-      case b of
-        ABOBBoundary bvd   -> updateChainBoundary c bvd
-        ABOBBlock    block -> updateBlock config c block
+    withExceptT (ErrorChainValidationError (blockOrBoundarySlot b))
+      $ case b of
+          ABOBBoundary bvd -> do
+            case shouldAssertNF of
+              AssertNF -> do
+                isNF <- liftIO $ isNormalForm $! c
+                unless
+                  isNF
+                  (  panic
+                  $  "ChainValidationState not in normal form at slot: "
+                  <> show (cvsLastSlot c)
+                  )
+              NoAssertNF -> pure ()
+            updateChainBoundary c bvd
+          ABOBBlock block -> updateBlock config c block
 
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe FlatSlotId
   blockOrBoundarySlot = \case

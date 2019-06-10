@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
@@ -12,6 +13,8 @@ module Test.Options
   , TSGroup
   , concatGroups
   , concatTSGroups
+  , tsGroupToTree
+  , ShouldAssertNF (..)
   )
 where
 
@@ -21,7 +24,10 @@ import Test.Cardano.Prelude
 import GHC.Stack (withFrozenCallStack)
 
 import Hedgehog (Gen, Group(..), Property, PropertyT, TestLimit, withTests)
-import Test.Tasty (TestTree, defaultMainWithIngredients, includingOptions)
+import Hedgehog.Internal.Property (GroupName(..), PropertyName(..))
+import Test.Tasty
+  (TestTree, askOption, defaultMainWithIngredients, includingOptions, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 import Test.Tasty.Ingredients (Ingredient(..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
 import Test.Tasty.Options
@@ -77,6 +83,13 @@ concatGroups gs@(g : _) = Group (groupName g) (concat $ groupProperties <$> gs)
 concatTSGroups :: [TSGroup] -> TSGroup
 concatTSGroups gs ts = concatGroups $ ($ ts) <$> gs
 
+tsGroupToTree :: TSGroup -> TestTree
+tsGroupToTree tsGroup = askOption $ \scenario -> case tsGroup scenario of
+  Group { groupName, groupProperties } -> testGroup
+    (unGroupName groupName)
+    (uncurry testProperty . first unPropertyName <$> groupProperties)
+
+
 -- | Convenient alias for TestScenario-dependent @Property@s
 type TSProperty = TestScenario -> Property
 
@@ -131,3 +144,12 @@ withTestsTS
   -> Property
 withTestsTS count prop scenario =
   withTests (scenarioScaled count scenario) prop
+
+--------------------------------------------------------------------------------
+-- ShouldAssertNF
+--------------------------------------------------------------------------------
+
+data ShouldAssertNF
+  = AssertNF
+  | NoAssertNF
+  deriving (Eq, Show)
