@@ -56,6 +56,7 @@ module Ledger.Delegation
   , liveAfter
   -- * State lens fields
   , slot
+  , epoch
   , delegationMap
   -- * State lens type classes
   , HasScheduledDelegations

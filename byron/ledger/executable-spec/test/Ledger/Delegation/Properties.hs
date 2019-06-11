@@ -113,6 +113,7 @@ import Ledger.Delegation
   , liveAfter
   , scheduledDelegations
   , slot
+  , epoch
   )
 
 import Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
@@ -178,9 +179,15 @@ instance STS DBLOCK where
   transitionRules
     = [ do
           TRC (_, (env, st), dblock) <- judgmentContext
-          env ^. slot < dblock ^. blockSlot ?! NotIncreasingBlockSlot
+          let nextSlot = dblock ^. blockSlot
+          env ^. slot < nextSlot ?! NotIncreasingBlockSlot
           stNext <- trans @DELEG $ TRC (env, st, dblock ^. blockCerts)
-          return (env & slot .~ dblock ^. blockSlot, stNext)
+          -- We fix the number of slots per epoch to 10. This is the same
+          -- constant used in production.
+          let nextEpoch = Epoch $ unSlot nextSlot `div` 10
+          return (env & slot .~ nextSlot
+                      & epoch .~ nextEpoch
+                 , stNext)
       ]
 
 instance Embed DELEG DBLOCK where
@@ -316,7 +323,7 @@ dblockTracesAreClassified = property $ do
     -- Total number of delegation certificates found in the trace
     totalDCerts :: [DCert]
     totalDCerts = concat $ _blockCerts <$> traceSignals OldestFirst tr
-  classifySize "total dcerts" totalDCerts length 100 10
+  classifySize "total dcerts" totalDCerts length tl step
   success
 
 --------------------------------------------------------------------------------
