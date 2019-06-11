@@ -1093,7 +1093,7 @@ payload; UTxO, delegation and update.
 
 \clearpage
 
-\section{Blockchain Extension}
+\section{Blockchain extension}
 \label{sec:chain-extension}
 
 \newcommand{\CEEnv}{\type{CEEnv}}
@@ -1308,13 +1308,13 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 
 \clearpage
 
-\section{Transition Systems Properties}
+\section{Transition systems properties}
 \label{sec:ts-properties}
 
 \subsection{Header only validation}
 \label{sec:header-only-validation}
 
-The following transition system is used in the Properties enunciated in this
+The following transition system is used in the properties enunciated in this
 section.
 
 \begin{definition}[PBFT+BHEAD STS]\label{def:rule:pbft+bhead}
@@ -1403,8 +1403,9 @@ pass, then we know that the block validation that corresponds to those headers
 will not pass either.
 
 \begin{property}[Header only validation]\label{prop:header-only-validation}
-  For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
-  for all chain extensions $E$ with corresponding headers $H$ such that:
+  For all environments $e$, states $s$ with slot number $t$\footnote{i.e. the
+    component $\var{s_{last}}$ of $s$ equals $t$}, and chain extensions $E$
+  with corresponding headers $H$ such that:
   %
   $$
   0 \leq t_E - t  \leq 2 \cdot k
@@ -1416,10 +1417,9 @@ will not pass either.
   e \vdash s \transtar{chain}{E} s' \implies e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
   $$
   where $t_E$ is the maximum slot number appearing in the blocks contained in
-  $E$, and $e_h$ and $s_h$ are the environment and state needed by the
-  $\stslabel{pbft+bhead}$ transition system, which can be obtained from $e$ and
-  $s$ by selecting the appropriate environment and state components in the
-  obvious way.
+  $E$, $e_h \leteq \fun{h_e}~e~s$ and $s_h \leteq \fun{h_s}~e~s$, and functions $\fun{h_e}$
+  and $\fun{h_s}$ select the appropriate environment and state components
+  needed by the $\stslabel{pbft+bhead}$ transition system in the obvious way.
 \end{property}
 
 Property~\ref{prop:body-only-validation} states that if we validate a sequence
@@ -1434,9 +1434,9 @@ e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
 $$
 %
 where $e_h$ and $s_h$ are obtained from $e$ and $s$ as described in
-Property\ref{prop:header-only-validation}. Assume the bodies of $E$ are valid
-according to the $\stslabel{bbody}$ rules, but $E$ is not valid according to the
-$\stslabel{CHAIN}$ rule. Assume that there is a $b_j \in E$ such that it is
+Property~\ref{prop:header-only-validation}. Assume the bodies of $E$ are valid
+according to the $\stslabel{bbody}$ rules, but $E$ is not valid according to
+the $\stslabel{CHAIN}$ rule. Assume that there is a $b_j \in E$ such that it is
 \textbf{the first block} such that does not pass the $\stslabel{chain}$
 validation. Then:
 %
@@ -1454,8 +1454,8 @@ contained an invalid block body. But this contradicts our assumption that the
 block bodies were valid.
 
 \begin{property}[Body only validation]\label{prop:body-only-validation}
-  For all environments $e$, states $s$ with slot number ($\var{s_{last}}$) $t$;
-  for all chain extensions $E = [b_0, \ldots, b_n]$ with headers $H$ such that:
+  For all environments $e$, states $s$ with slot number $t$, and chain
+  extensions $E = [b_0, \ldots, b_n]$ with corresponding headers $H$ such that:
   $$
   0 \leq t_E - t  \leq 2 \cdot k
   $$
@@ -1468,27 +1468,29 @@ block bodies were valid.
   e_{h_{i-1}} \vdash s_{h_{i-1}}\trans{PBFT+BHEAD}{h_i} s''_{h_{i}}
   $$
   where $t_E$ is the maximum slot number appearing in the blocks contained in
-  $E$, $e_h$ and $s_h$ can be obtained from $e$ and $s$, and $e_{h_{i-1}}$ and
-  $s_{h_{i-i}}$ can be obtained from $e$ and $s_{i-1}$ by selecting the
-  appropriate environments and state components in the obvious way.
+  $E$, $e_h \leteq \fun{h_e}~e~s$ and $s_h \leteq \fun{h_s}~e~s$,
+  $e_{h_{i-1}} \leteq \fun{h_e}~e~s_{i-1}$ and
+  $s_{h_{i-i}} \leteq \fun{h_s}~e~s_{i-1}$, and $\fun{h_e}$ and $\fun{h_s}$ are
+  the same functions mentioned in Property~\ref{prop:header-only-validation}.
 \end{property}
 
 Property~\ref{prop:roll-back-funk} expresses the fact the there is a function
-that allow us to recover the header-only state by rolling back, and use this
-state to validate the headers of an alternate chain. We do not enforce our
-rules to satisfy this property, but it is stated here so that it can be used as
-a reference for the tests in the consensus layer.
+that allow us to recover the header-only state by rolling back at most $k$
+blocks, and use this state to validate the headers of an alternate chain. We do
+not enforce our rules to satisfy this property, but it is stated here so that
+it can be used as a reference for the tests in the consensus layer.
 
 \begin{property}[Existence of roll back function]\label{prop:roll-back-funk}
   There exists a function $\fun{f}$ such that for all chains
   $$C = C_0 ; b; C_1$$
-  we have that if for all alternative chains $C'_1$ with corresponding headers $H'_1$
+  we have that if for all alternative chains $C'_1$, $\size{C'_1} \leq k$, with
+  corresponding headers $H'_1$
   $$
   e \vdash s_0 \transtar{CHAIN}{C_0;b} s_1 \transtar{CHAIN}{C_1} s_2
   \wedge
   e \vdash s_1 \transtar{CHAIN}{C_1'} s'_1
   \implies
-  \fun{f}~(\bslot{b})~s_2 \transtar{PBFT+BHEAD}{H'_1} s_h
+  (\fun{f}~(\bhead{b})~s_2) \transtar{PBFT+BHEAD}{H'_1} s_h
   $$
 \end{property}
 
