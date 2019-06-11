@@ -1436,7 +1436,7 @@ $$
 where $e_h$ and $s_h$ are obtained from $e$ and $s$ as described in
 Property~\ref{prop:header-only-validation}. Assume the bodies of $E$ are valid
 according to the $\stslabel{bbody}$ rules, but $E$ is not valid according to
-the $\stslabel{CHAIN}$ rule. Assume that there is a $b_j \in E$ such that it is
+the $\stslabel{chain}$ rule. Assume that there is a $b_j \in E$ such that it is
 \textbf{the first block} such that does not pass the $\stslabel{chain}$
 validation. Then:
 %
@@ -1475,10 +1475,13 @@ block bodies were valid.
 \end{property}
 
 Property~\ref{prop:roll-back-funk} expresses the fact the there is a function
-that allows us to recover the header-only state by rolling back at most $k$
-blocks, and use this state to validate the headers of an alternate chain. We do
-not enforce our rules to satisfy this property, but it is stated here so that
-it can be used as a reference for the tests in the consensus layer.
+that allow us to recover the header-only state by rolling back at most $k$
+blocks, and use this state to validate the headers of an alternate chain. Note
+that this property is not inherent to the $\stslabel{chain}$ rules and can be
+trivially satisfied by any function that keeps track of the history of the
+intermediate chain states up to $k$ blocks back. This property is stated here
+so that it can be used as a reference for the tests in the consensus layer,
+which uses the rules presented in this document.
 
 \begin{property}[Existence of roll back function]\label{prop:roll-back-funk}
   There exists a function $\fun{f}$ such that for all chains
