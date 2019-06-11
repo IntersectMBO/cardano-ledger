@@ -176,6 +176,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Model
                        Test.Cardano.Chain.Block.Validation
+                       Test.Cardano.Chain.Block.ValidationMode
 
                        Test.Cardano.Chain.Common.Address
                        Test.Cardano.Chain.Common.CBOR
@@ -195,6 +196,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Elaboration.Block
                        Test.Cardano.Chain.Elaboration.Delegation
                        Test.Cardano.Chain.Elaboration.Keys
+                       Test.Cardano.Chain.Elaboration.Update
                        Test.Cardano.Chain.Elaboration.UTxO
 
                        Test.Cardano.Chain.Epoch.File
@@ -222,6 +224,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.UTxO.Gen
                        Test.Cardano.Chain.UTxO.Json
                        Test.Cardano.Chain.UTxO.Model
+                       Test.Cardano.Chain.UTxO.ValidationMode
 
                        Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example

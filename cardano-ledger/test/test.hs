@@ -12,6 +12,7 @@ import Test.Options (ShouldAssertNF(..), mainWithTestScenario, tsGroupToTree)
 import qualified Test.Cardano.Chain.Block.CBOR
 import qualified Test.Cardano.Chain.Block.Model
 import qualified Test.Cardano.Chain.Block.Validation
+import qualified Test.Cardano.Chain.Block.ValidationMode
 import qualified Test.Cardano.Chain.Common.Address
 import qualified Test.Cardano.Chain.Common.CBOR
 import qualified Test.Cardano.Chain.Common.Compact
@@ -31,6 +32,7 @@ import qualified Test.Cardano.Chain.UTxO.CBOR
 import qualified Test.Cardano.Chain.UTxO.Compact
 import qualified Test.Cardano.Chain.UTxO.Json
 import qualified Test.Cardano.Chain.UTxO.Model
+import qualified Test.Cardano.Chain.UTxO.ValidationMode
 import qualified Test.Cardano.Chain.Update.CBOR
 import qualified Test.Cardano.Chain.Update.Json
 import qualified Test.Cardano.Chain.Update.Properties
@@ -44,6 +46,7 @@ main =
     <$> [ Test.Cardano.Chain.Block.CBOR.tests
         , Test.Cardano.Chain.Block.Model.tests
         , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
+        , Test.Cardano.Chain.Block.ValidationMode.tests
         , Test.Cardano.Chain.Common.Address.tests
         , Test.Cardano.Chain.Common.CBOR.tests
         , Test.Cardano.Chain.Common.Compact.tests
@@ -64,6 +67,7 @@ main =
         , Test.Cardano.Chain.UTxO.Compact.tests
         , Test.Cardano.Chain.UTxO.Json.tests
         , Test.Cardano.Chain.UTxO.Model.tests
+        , Test.Cardano.Chain.UTxO.ValidationMode.tests
         , Test.Cardano.Chain.Update.CBOR.tests
         , Test.Cardano.Chain.Update.Json.tests
         , Test.Cardano.Chain.Update.Properties.tests
