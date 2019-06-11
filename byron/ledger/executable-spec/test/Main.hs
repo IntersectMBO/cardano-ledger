@@ -32,6 +32,7 @@ main = defaultMain tests
       "Delegation Properties"
       [ testProperty "Certificates are triggered"           dcertsAreTriggered
       , testProperty "DBLOCK Traces are classified"         DELEG.dblockTracesAreClassified
+      , testProperty "relevant DBLOCK traces generated"     DELEG.relevantCasesAreCovered
       , testProperty "Duplicated certificates are rejected" rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       ]

@@ -11,15 +11,17 @@ module Ledger.Delegation.Properties
   , rejectDupSchedDelegs
   , tracesAreClassified
   , dblockTracesAreClassified
+  , relevantCasesAreCovered
   , DBLOCK
   )
 where
 
-import Control.Arrow ((&&&), first)
+import Control.Arrow ((&&&), first, (***))
 import Control.Lens ((^.), makeLenses, (&), (.~), view, to)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.List (last, foldl')
+import Data.List (last, foldl', nub)
+import Data.List.Unique (count)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Hedgehog
@@ -28,6 +30,7 @@ import Hedgehog
   , (===)
   , assert
 --  , classify
+  , cover
   , forAll
   , property
   , success
@@ -72,6 +75,7 @@ import Control.State.Transition.Trace
   , preStatesAndSignals
   , traceEnv
   , traceSignals
+  , traceLength
   )
 import Ledger.Core
   ( Epoch(Epoch)
@@ -92,7 +96,7 @@ import Ledger.Delegation
   , DCert(DCert)
   , DELEG
   , DIState(DIState)
-  , DSEnv(DSEnv, _dSEnvK)
+  , DSEnv(DSEnv, _dSEnvK, _dSEnvEpoch)
   , DSEnv
   , DSState(DSState)
   , DState(DState, _dStateDelegationMap, _dStateLastDelegation)
@@ -243,7 +247,7 @@ expectedDms
   -- certificates where scheduled.
   -> Bimap VKeyGenesis VKey
 expectedDms s d sbs =
-  foldl' insertIfInjective Bimap.empty (fmap (delegator &&& delegate) activeCerts)
+  foldl' insertIfInjective Bimap.empty (fmap delegatorDelegate activeCerts)
   where
     -- | Insert the key-value pair in the map only if the value is not in the
     -- map already.
@@ -272,6 +276,9 @@ expectedDms s d sbs =
     -- number is negative that means that no certificate can be activated.
     activationSlot :: Int
     activationSlot = s - d
+
+delegatorDelegate :: DCert -> (VKeyGenesis, VKey)
+delegatorDelegate = delegator &&& delegate
 
 instance HasTrace DBLOCK where
 
@@ -319,12 +326,114 @@ dblockTracesAreClassified = withTests 200 $ property $ do
   classifyTraceLength tr tl step
   -- Classify the traces by the total number of delegation certificates on
   -- them.
-  let
-    -- Total number of delegation certificates found in the trace
-    totalDCerts :: [DCert]
-    totalDCerts = concat $ _blockCerts <$> traceSignals OldestFirst tr
-  classifySize "total dcerts" totalDCerts length tl step
+  classifySize "total dcerts" (traceDCerts tr) length tl step
   success
+
+-- | Extract the delegation certificates in the blocks, in the order they would
+-- have been applied.
+traceDCerts :: Trace DBLOCK -> [DCert]
+traceDCerts tr = concat $ _blockCerts <$> traceSignals OldestFirst tr
+
+relevantCasesAreCovered :: Property
+relevantCasesAreCovered = withTests 500 $ property $ do
+  let tl = 1000
+  tr <- forAll (trace @DBLOCK tl)
+  -- There are as many delegation certificates as blocks.
+  cover 60
+        "there are at least as many delegation certificates as blocks"
+        (traceLength tr <= length (traceDCerts tr))
+
+  -- 80% of the traces do not contain more than 20% of blocks with empty
+  -- delegation payload.
+  cover 70
+        "at most 25% of the blocks can contain empty delegation payload"
+        (emptyDelegationPayloadPcnt tr <= 0.25)
+
+  -- There are delegations to the this epoch.
+  cover 50
+        "at least 30% of the certificates delegate in this epoch"
+        (0.3 <= thisEpochDelegationPcnt tr)
+
+  -- There are delegations to the next epoch.
+  cover 50
+        "at least 30% of the certificates delegate in the next epoch"
+        (0.3 <= nextEpochDelegationPcnt tr)
+
+  -- 25% of the cases must contain at least 20% of self-delegations.
+  cover 25
+       "at least 20% of the certificates self delegate"
+       (0.2 <= selfDelegationsPcnt tr)
+  -- 20% of the test cases must contain at least YY% of delegations to the same
+  -- delegate.
+  cover 20
+        "at least 10% of the certificates delegate to the same key"
+        (0.1 <= multipleDelegationsPcnt tr)
+  where
+    selfDelegationsPcnt :: Trace DBLOCK -> Double
+    selfDelegationsPcnt tr =
+      fromIntegral selfDelegations / n
+      where
+        selfDelegations = length
+                        $ filter idDeleg
+                        $ fmap delegatorDelegate (traceDCerts tr)
+
+        idDeleg (vks, vk) = owner vks == owner vk
+        n = fromIntegral (traceLength tr)
+
+    multipleDelegationsPcnt :: Trace DBLOCK -> Double
+    multipleDelegationsPcnt tr =
+      fromIntegral multipleDelegations / n
+      where
+        multipleDelegations = length
+                            $ filter ((2 <=) . snd)
+                            -- Count the occurrences. If we have more than one
+                            -- occurence for a key they we know that
+                            $ count
+                            -- Keep the delegators. Since we applied nub
+                            -- before, we know that if there are two keys in
+                            -- the result of 'fmap snd' then we know for sure
+                            -- that they were delegated by different keys.
+                            $ fmap snd
+                            -- Remove duplicated elements, since we're not
+                            -- interested in the same genesis key delegating to
+                            -- the same key.
+                            $ nub
+                            -- Get the (delegator, delegate) pairs
+                            $ fmap delegatorDelegate (traceDCerts tr)
+        n = fromIntegral (traceLength tr)
+
+    emptyDelegationPayloadPcnt :: Trace DBLOCK -> Double
+    emptyDelegationPayloadPcnt tr =
+      fromIntegral emptyDelegationPayload / n
+      where
+        emptyDelegationPayload = length
+                               $ filter null
+                               $  _blockCerts <$> traceSignals OldestFirst tr
+        n = fromIntegral (traceLength tr)
+
+    thisEpochDelegationPcnt :: Trace DBLOCK -> Double
+    thisEpochDelegationPcnt tr =
+      fromIntegral thisEpochDelegation / n
+      where
+        thisEpochDelegation = length
+                            $ filter (\(e0, e1) -> e0 == e1)
+                            $ epochDelegationEpoch tr
+        n = fromIntegral (traceLength tr)
+
+    epochDelegationEpoch :: Trace DBLOCK -> [(Epoch, Epoch)]
+    epochDelegationEpoch tr = concat
+                            $ fmap (\(e, es) -> zip (repeat e) es)
+                            $ fmap (_dSEnvEpoch . fst *** (fmap _depoch . _blockCerts))
+                            $ preStatesAndSignals @DBLOCK OldestFirst tr
+
+    nextEpochDelegationPcnt :: Trace DBLOCK -> Double
+    nextEpochDelegationPcnt tr =
+      fromIntegral thisEpochDelegation / n
+      where
+        thisEpochDelegation = length
+                            $ filter (\(e0, e1) -> e0 + 1 == e1)
+                            $ epochDelegationEpoch tr
+        n = fromIntegral (traceLength tr)
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules
