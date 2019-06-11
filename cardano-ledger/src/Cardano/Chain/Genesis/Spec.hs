@@ -10,8 +10,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
 import Data.List (nub)
 import qualified Data.Map.Strict as M
 
@@ -39,8 +37,6 @@ data GenesisSpec = UnsafeGenesisSpec
   , gsInitializer        :: !GenesisInitializer
   -- ^ Other data which depend on genesis type
   } deriving (Eq, Show, Generic)
-
-deriveJSON defaultOptions ''GenesisSpec
 
 -- | Safe constructor for 'GenesisSpec'. Throws error if something
 -- goes wrong.

@@ -31,8 +31,7 @@ import Cardano.Binary
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 
 
--- | 'Payload' is put into 'MainBlock' and is a set of heavyweight proxy signing
---   keys. List of psk issuers should be unique also.
+-- | The delegation 'Payload' contains a list of delegation 'Certificate's
 data APayload a = UnsafeAPayload
   { getPayload    :: [Delegation.ACertificate a]
   , getAnnotation :: a

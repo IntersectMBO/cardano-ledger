@@ -36,9 +36,9 @@ import Cardano.Binary
 
 
 -- | Wrapper around 'CC.XPub'.
-newtype VerificationKey =
-  VerificationKey CC.XPub
-  deriving (Eq, Ord, Show, Generic, NFData)
+newtype VerificationKey = VerificationKey
+  { unVerificationKey :: CC.XPub
+  } deriving (Eq, Ord, Show, Generic, NFData)
 
 instance ToJSON VerificationKey where
   toJSON = toJSON . sformat fullVerificationKeyF

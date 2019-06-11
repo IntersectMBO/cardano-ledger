@@ -106,8 +106,7 @@ import Cardano.Chain.Slotting
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
 import Cardano.Crypto
-  ( AProxyVerificationKey(..)
-  , Hash
+  ( Hash
   , ProtocolMagicId(..)
   , Signature
   , SignTag(..)
@@ -116,7 +115,6 @@ import Cardano.Crypto
   , hashDecoded
   , hashHexF
   , hashRaw
-  , pskIssuerVK
   , sign
   , unsafeAbstractHash
   )
@@ -221,7 +219,7 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
  where
   proof     = mkProof body
 
-  genesisVK = pskIssuerVK dlgCert
+  genesisVK = Delegation.issuerVK dlgCert
 
   sig       = ABlockSignature dlgCert $ sign pm (SignBlock genesisVK) sk toSign
 
@@ -251,7 +249,7 @@ headerProof = unAnnotated . aHeaderProof
 
 headerIssuer :: AHeader a -> VerificationKey
 headerIssuer h = case headerSignature h of
-  ABlockSignature cert _ -> pskDelegateVK cert
+  ABlockSignature cert _ -> Delegation.delegateVK cert
 
 headerToSign :: EpochSlots -> AHeader a -> ToSign
 headerToSign epochSlots h = ToSign

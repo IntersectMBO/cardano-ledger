@@ -50,8 +50,8 @@ data SignTag
   --   This constructor takes the 'VerificationKey' of the delegation
   --   certificate issuer, which is prepended to the signature as part of the
   --   sign tag
-  | SignProxyVK
-  -- ^ Proxy key:        @ProxyVerificationKey@
+  | SignCertificate
+  -- ^ Certificate:      @Certificate@
   deriving (Eq, Ord, Show, Generic)
 
 -- TODO: it would be nice if we couldn't use 'SignTag' with wrong
@@ -88,4 +88,4 @@ signTagRaw network = \case
   SignBlock (VerificationKey issuerVK) ->
     "01" <> CC.unXPub issuerVK <> "\x09" <> network
 
-  SignProxyVK -> "\x0a" <> network
+  SignCertificate -> "\x0a" <> network

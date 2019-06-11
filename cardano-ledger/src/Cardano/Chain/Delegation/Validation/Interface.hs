@@ -36,8 +36,7 @@ import Cardano.Chain.Slotting
   , addSlotNumber
   , subSlotNumber
   )
-import Cardano.Crypto
-  (AProxyVerificationKey(..), ProtocolMagicId, VerificationKey, pskOmega)
+import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -74,8 +73,8 @@ initialState
 initialState env genesisDelegation = updateDelegation env' is certificates
  where
   Environment { allowedDelegators } = env
-  -- We modify the environment here to allow the delegation certificates to 
-  -- be applied immediately. Since the environment is not propagated, this 
+  -- We modify the environment here to allow the delegation certificates to
+  -- be applied immediately. Since the environment is not propagated, this
   -- should be harmless.
   env' = env { k = BlockCount 0 }
 
@@ -97,11 +96,10 @@ initialState env genesisDelegation = updateDelegation env' is certificates
     fmap annotateCertificate . M.elems $ unGenesisDelegation genesisDelegation
 
   annotateCertificate :: Certificate -> ACertificate ByteString
-  annotateCertificate c = UnsafeAProxyVerificationKey
-    { aPskOmega     = Annotated (pskOmega c) (serialize' $ pskOmega c)
-    , pskIssuerVK   = pskIssuerVK c
-    , pskDelegateVK = pskDelegateVK c
-    , pskCert       = pskCert c
+  annotateCertificate c = c
+    { Delegation.aEpoch = Annotated
+      (Delegation.epoch c)
+      (serialize' $ Delegation.epoch c)
     }
 
 

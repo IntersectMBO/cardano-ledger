@@ -13,9 +13,15 @@ import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Delegation (Certificate, Payload, unsafePayload)
+import Cardano.Chain.Delegation
+  ( ACertificate(delegateVK, issuerVK)
+  , Certificate
+  , Payload
+  , mkCertificate
+  , unsafePayload
+  )
 import Cardano.Chain.Slotting (EpochIndex(..))
-import Cardano.Crypto (AProxyVerificationKey(..), ProtocolMagicId, createPsk)
+import Cardano.Crypto (ProtocolMagicId)
 import Data.List (nub)
 
 import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
@@ -24,14 +30,14 @@ import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner)
 
 genCanonicalCertificate :: ProtocolMagicId -> Gen Certificate
 genCanonicalCertificate pm =
-  createPsk pm
+  mkCertificate pm
     <$> genSafeSigner
     <*> genVerificationKey
     <*> (EpochIndex <$> Gen.word64 (Range.constant 0 1000000000000000))
 
 genCertificate :: ProtocolMagicId -> Gen Certificate
 genCertificate pm =
-  createPsk pm <$> genSafeSigner <*> genVerificationKey <*> genEpochIndex
+  mkCertificate pm <$> genSafeSigner <*> genVerificationKey <*> genEpochIndex
 
 genCanonicalCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
 genCanonicalCertificateDistinctList pm = do
@@ -42,7 +48,7 @@ genCanonicalCertificateDistinctList pm = do
   allDistinct ls = length (nub ls) == length ls
 
   noSelfSigningCerts :: [Certificate] -> [Certificate]
-  noSelfSigningCerts = filter (\x -> pskIssuerVK x /= pskDelegateVK x)
+  noSelfSigningCerts = filter (\x -> issuerVK x /= delegateVK x)
 
 genCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
 genCertificateDistinctList pm = do
@@ -53,7 +59,7 @@ genCertificateDistinctList pm = do
   allDistinct ls = length (nub ls) == length ls
 
   noSelfSigningCerts :: [Certificate] -> [Certificate]
-  noSelfSigningCerts = filter (\x -> pskIssuerVK x /= pskDelegateVK x)
+  noSelfSigningCerts = filter (\x -> issuerVK x /= delegateVK x)
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =

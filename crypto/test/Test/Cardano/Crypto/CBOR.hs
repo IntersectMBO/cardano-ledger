@@ -29,22 +29,17 @@ import Cardano.Crypto
   ( AbstractHash
   , PassPhrase
   , ProtocolMagicId(..)
-  , ProxyCert
-  , ProxyVerificationKey
   , VerificationKey(..)
   , RedeemSignature
   , SigningKey(..)
   , SignTag(SignForTestingOnly)
   , Signature
-  , createPsk
   , deriveHDPassphrase
   , hash
   , noPassEncrypt
-  , noPassSafeSigner
   , packHDAddressAttr
   , redeemDeterministicKeyGen
   , redeemSign
-  , safeCreateProxyCert
   , sign
   )
 
@@ -194,57 +189,6 @@ roundTripRedeemSignatureAeson =
 goldenDeprecatedVssPublicKey :: Property
 goldenDeprecatedVssPublicKey =
   deprecatedGoldenDecode "VssPublicKey" dropBytes "test/golden/VssPublicKey"
-
-
---------------------------------------------------------------------------------
--- ProxyCert
---------------------------------------------------------------------------------
-
-goldenProxyCert :: Property
-goldenProxyCert = goldenTestCBOR pcert "test/golden/ProxyCert"
- where
-  Right vkey = VerificationKey <$> xpub (getBytes 0 64)
-  Right skey = SigningKey <$> xprv (getBytes 10 128)
-  pcert =
-    safeCreateProxyCert (ProtocolMagicId 0) (noPassSafeSigner skey) vkey ()
-
-genUnitProxyCert :: Gen (ProxyCert ())
-genUnitProxyCert = do
-  pm <- genProtocolMagicId
-  genProxyCert pm $ pure ()
-
-roundTripProxyCertCBOR :: Property
-roundTripProxyCertCBOR = eachOf 100 genUnitProxyCert roundTripsCBORBuildable
-
-roundTripProxyCertAeson :: Property
-roundTripProxyCertAeson = eachOf 100 genUnitProxyCert roundTripsAesonBuildable
-
-
---------------------------------------------------------------------------------
--- ProxyVerificationKey
---------------------------------------------------------------------------------
-
-goldenProxyVerificationKey :: Property
-goldenProxyVerificationKey = goldenTestCBOR
-  psk
-  "test/golden/ProxyVerificationKey"
- where
-  Right vkey = VerificationKey <$> xpub (getBytes 0 64)
-  Right skey = SigningKey <$> xprv (getBytes 10 128)
-  psk        = createPsk (ProtocolMagicId 0) (noPassSafeSigner skey) vkey ()
-
-genUnitProxyVerificationKey :: Gen (ProxyVerificationKey ())
-genUnitProxyVerificationKey = do
-  pm <- genProtocolMagicId
-  genProxyVerificationKey pm $ pure ()
-
-roundTripProxyVerificationKeyCBOR :: Property
-roundTripProxyVerificationKeyCBOR =
-  eachOf 100 genUnitProxyVerificationKey roundTripsCBORBuildable
-
-roundTripProxyVerificationKeyAeson :: Property
-roundTripProxyVerificationKeyAeson =
-  eachOf 100 genUnitProxyVerificationKey roundTripsAesonBuildable
 
 
 --------------------------------------------------------------------------------

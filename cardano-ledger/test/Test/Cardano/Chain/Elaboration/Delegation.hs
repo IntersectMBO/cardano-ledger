@@ -12,23 +12,18 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import qualified Data.Set as Set
-import Hedgehog (evalEither, forAll, property)
+import Hedgehog (assert, forAll, property)
 
 import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (hashKey)
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.Delegation as Concrete
+import qualified Cardano.Chain.Delegation as Concrete.Certificate
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Slotting as Concrete
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Crypto.Signing
-  ( AProxyVerificationKey(..)
-  , createPsk
-  , noPassSafeSigner
-  , pskOmega
-  , validateProxyVerificationKey
-  )
+import Cardano.Crypto.Signing (noPassSafeSigner)
 import Ledger.Core
   ( BlockCount(..)
   , Epoch(..)
@@ -63,8 +58,8 @@ ts_prop_elaboratedCertsValid =
         cert <- forAll $ elaborateDCertAnnotated pm <$> dcertGen env
 
         -- Validate the certificate
-        evalEither
-          $ validateProxyVerificationKey (Annotated pm (serialize' pm)) cert
+        assert
+          $ Concrete.Certificate.isValid (Annotated pm (serialize' pm)) cert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -77,7 +72,7 @@ ts_prop_elaboratedCertsValid =
 
 
 elaborateDCert :: ProtocolMagicId -> DCert -> Concrete.Certificate
-elaborateDCert pm cert = createPsk
+elaborateDCert pm cert = Concrete.mkCertificate
   pm
   (noPassSafeSigner delegatorSK)
   delegateVK
@@ -99,9 +94,9 @@ elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
  where
   annotateDCert :: Concrete.Certificate -> Concrete.ACertificate ByteString
   annotateDCert cert = cert
-    { aPskOmega = Annotated omega (serialize' omega)
+    { Concrete.Certificate.aEpoch = Annotated omega (serialize' omega)
     }
-    where omega = pskOmega cert
+    where omega = Concrete.Certificate.epoch cert
 
 
 elaborateDSEnv :: DSEnv -> Scheduling.Environment

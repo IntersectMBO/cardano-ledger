@@ -29,13 +29,13 @@ import Cardano.Chain.Block
   , mkBlockExplicit
   , mkHeaderExplicit
   )
+import Cardano.Chain.Delegation (mkCertificate)
 import Cardano.Chain.Slotting
   (EpochIndex(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagicId
   , SignTag(SignBlock)
-  , createPsk
   , noPassSafeSigner
   , safeToVerification
   , sign
@@ -66,7 +66,8 @@ genBlockSignature pm epochSlots =
  where
   mkBlockSignature issuerSafeSigner delegateSK epoch toSign =
     let
-      cert     = createPsk pm issuerSafeSigner (toVerification delegateSK) epoch
+      cert =
+        mkCertificate pm issuerSafeSigner (toVerification delegateSK) epoch
       issuerVK = safeToVerification issuerSafeSigner
       sig      = sign pm (SignBlock issuerVK) delegateSK toSign
     in ABlockSignature cert sig
@@ -85,7 +86,9 @@ genBody pm =
 genHeader :: ProtocolMagicId -> EpochSlots -> Gen Header
 genHeader pm epochSlots = do
   sk <- genSigningKey
-  let cert = createPsk pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
+  let
+    cert =
+      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
   mkHeaderExplicit pm
     <$> genHeaderHash
     <*> genChainDifficulty
@@ -127,7 +130,9 @@ genBlockWithEpochSlots pm = do
 genBlock :: ProtocolMagicId -> EpochSlots -> Gen Block
 genBlock pm epochSlots = do
   sk <- genSigningKey
-  let cert = createPsk pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
+  let
+    cert =
+      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
   mkBlockExplicit pm
     <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion

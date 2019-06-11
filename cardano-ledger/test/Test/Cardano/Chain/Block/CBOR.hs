@@ -58,7 +58,6 @@ import Cardano.Crypto
   ( ProtocolMagicId(..)
   , SignTag(..)
   , abstractHash
-  , createPsk
   , hash
   , noPassSafeSigner
   , sign
@@ -259,7 +258,7 @@ exampleHeader = mkHeaderExplicit
  where
   pm          = ProtocolMagicId 7
   [delegateSk, issuerSk] = exampleSigningKeys 5 2
-  certificate = createPsk
+  certificate = Delegation.mkCertificate
     pm
     (noPassSafeSigner issuerSk)
     (toVerification delegateSk)
@@ -268,7 +267,7 @@ exampleHeader = mkHeaderExplicit
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = ABlockSignature cert sig
  where
-  cert = createPsk
+  cert = Delegation.mkCertificate
     pm
     (noPassSafeSigner issuerSK)
     (toVerification delegateSK)

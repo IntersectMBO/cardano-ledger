@@ -29,7 +29,7 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 goldenCertificate :: Property
 goldenCertificate = goldenTestCBOR
   cert
-  "test/golden/cbor/delegation/ProxyVKHeavy"
+  "test/golden/cbor/delegation/Certificate"
   where cert = exampleCertificates !! 0
 
 ts_roundTripCertificateCBOR :: TSProperty
