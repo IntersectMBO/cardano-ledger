@@ -245,6 +245,14 @@ classifyTraceLength
   -> PropertyT IO ()
 classifyTraceLength tr = classifySize "trace length:" tr traceLength
 
+-- | Classify the value size as either:
+--
+-- - being empty
+-- - being a singleton
+-- - having the given maximum size
+-- - belonging to one of the intervals between 2 and the maximum size - 1. The
+--   number of intervals are determined by the @step@ parameter.
+--
 classifySize
   :: String
   -- ^ Prefix to be added to the label intervals
