@@ -387,7 +387,7 @@ relevantCasesAreCovered = withTests 200 $ property $ do
         multipleDelegations = length
                             $ filter ((2 <=) . snd)
                             -- Count the occurrences. If we have more than one
-                            -- occurence for a key they we know that
+                            -- occurrence for a key they we know that
                             $ count
                             -- Keep the delegators. Since we applied nub
                             -- before, we know that if there are two keys in
