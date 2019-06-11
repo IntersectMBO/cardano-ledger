@@ -8,6 +8,7 @@ module STS.Deleg
 import           LedgerState
 import           Delegation.Certificates
 import           UTxO
+import           Slot
 
 import           Control.State.Transition
 
@@ -16,7 +17,7 @@ data DELEG
 instance STS DELEG where
   type State DELEG = DWState
   type Signal DELEG = DCert
-  type Environment DELEG = Ptr
+  type Environment DELEG = (Slot, Ptr)
   data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
                             | StakeKeyNotRegisteredDELEG
                             | StakeDelegationImpossibleDELEG
@@ -27,7 +28,7 @@ instance STS DELEG where
 
 delegationTransition :: TransitionRule DELEG
 delegationTransition = do
-  TRC (p, d, c) <- judgmentContext
+  TRC ((_, p), d, c) <- judgmentContext
   case c of
     RegKey _ -> do
       validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG

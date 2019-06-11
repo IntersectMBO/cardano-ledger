@@ -51,6 +51,7 @@ module LedgerState
   , retirePools
   , emptyDelegation
   , applyDCert
+  , applyDCertPState
   , applyUTxOUpdate
   -- * Genesis State
   , genesisId
@@ -556,12 +557,12 @@ validStakeDelegation cert ds =
 validStakePoolRegister :: DCert -> DWState -> Validity
 validStakePoolRegister _ _ = Valid
 
-validStakePoolRetire :: DCert -> DWState -> Validity
-validStakePoolRetire cert ds =
+validStakePoolRetire :: DCert -> PState -> Validity
+validStakePoolRetire cert ps =
   case cert of
     RetirePool key _ -> if Map.member (hashKey key) stakePools
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
-                         where (StakePools stakePools) = ds ^. pstate . stPools
+                         where (StakePools stakePools) = ps ^. stPools
     _                -> Valid
 
 validDelegation :: DCert -> DWState -> Validity
@@ -570,7 +571,7 @@ validDelegation cert ds =
   <> validKeyDeregistration cert ds
   <> validStakeDelegation cert ds
   <> validStakePoolRegister cert ds
-  <> validStakePoolRetire cert ds
+  <> validStakePoolRetire cert (ds ^. pstate)
 
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.
@@ -671,18 +672,27 @@ applyDCert (Ptr slot txIx clx) (DeRegKey key) ds =
 applyDCert _ (Delegate (Delegation source target)) ds =
     ds & dstate . delegations %~ Map.insert (hashKey source) (hashKey target)
 
-applyDCert (Ptr slot _ _) (RegPool sp) ds =
-    ds & pstate . stPools  .~ (StakePools $ Map.insert hsk slot' pools)
-       & pstate . pParams  %~ Map.insert hsk sp
-       & pstate . retiring %~ Map.delete hsk
-  where hsk = hashKey $ sp ^. poolPubKey
-        (StakePools pools) = ds ^. pstate . stPools
-        slot' = fromMaybe slot (Map.lookup hsk pools)
+applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ (applyDCertPState ptr dcert)
 
 -- TODO check epoch (not in new doc atm.)
-applyDCert _ (RetirePool key epoch) ds =
-    ds & pstate . retiring %~ Map.insert hk_sp epoch
+applyDCert ptr dcert@(RetirePool _ _) ds =
+  ds & pstate %~ (applyDCertPState ptr dcert)
+
+applyDCertPState :: Ptr -> DCert -> PState -> PState
+applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
+    ps & stPools  .~ (StakePools $ Map.insert hsk slot' pools)
+       & pParams  %~ Map.insert hsk sp
+       & retiring %~ Map.delete hsk
+  where hsk = hashKey $ sp ^. poolPubKey
+        (StakePools pools) = ps ^. stPools
+        slot' = fromMaybe slot (Map.lookup hsk pools)
+
+applyDCertPState _ (RetirePool key epoch) ps =
+  ps & retiring %~ Map.insert hk_sp epoch
   where hk_sp = hashKey key
+
+-- | Use onlt pool registration or retirement certificates
+applyDCertPState _ _ ps = ps
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake :: LedgerState -> Map.Map HashKey Coin
