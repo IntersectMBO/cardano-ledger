@@ -34,7 +34,7 @@ module Control.State.Transition.Generator
   , randomTrace
   -- * Trace classification
   , classifyTraceLength
-  , isTraceInInterval
+  , classifySize
   , mkIntervals
   )
 where
@@ -243,22 +243,34 @@ classifyTraceLength
   -> Int
   -- ^ Steps used to divide the interval
   -> PropertyT IO ()
-classifyTraceLength tr ub step = do
-  classify "empty"      $ traceLength tr == 0
-  classify "singleton"  $ traceLength tr == 1
-  traverse_ (isTraceInInterval tr) $ mkIntervals 2 (ub - 1) step
-  classify ubL $ traceLength tr == ub
-  where
-    ubL = fromString $ show ub
+classifyTraceLength tr = classifySize "trace length:" tr traceLength
 
--- | Classify the trace as belonging to the given `(low, high)` interval if its
--- length is between the `(min, max)` range passed as parameter.
-isTraceInInterval :: Trace s -> (Int, Int) -> PropertyT IO ()
-isTraceInInterval tr (low, high) =
-  classify desc $! low <= traceLength tr && traceLength tr < high
+classifySize
+  :: String
+  -- ^ Prefix to be added to the label intervals
+  -> a
+  -- ^ Value to classify
+  -> (a -> Int)
+  -- ^ Size function
+  -> Int
+  -- ^ Maximum value size
+  -> Int
+  -- ^ Steps used to divide the size interval
+  -> PropertyT IO ()
+classifySize prefixLabel value sizeF upBound step = do
+  classify (mkLabel "empty")     $ sizeF value == 0
+  classify (mkLabel "singleton") $ sizeF value == 1
+  traverse_ classifySizeInterval $ mkIntervals 2 (upBound - 1) step
+  classify upBoundLabel $ sizeF value == upBound
   where
-    -- Hedgehog's LabelName doesn't have a monoid instance at the moment...
-    desc = fromString $ "[" <> show low <> ", " <> show high <> ")"
+    upBoundLabel = mkLabel $ show upBound
+    mkLabel = fromString . ((prefixLabel ++ " ") ++)
+    classifySizeInterval (low, high) =
+      classify desc $! low <= sizeF value && sizeF value < high
+      where
+        -- Hedgehog's LabelName doesn't have a monoid instance at the moment...
+        desc = mkLabel $  "[" <> show low <> ", " <> show high <> ")"
+
 
 -- | Given a lower bound @low@,  an upper bound @high@ and a step size @step@
 -- (both of which must be positive), divide the interval @[0, ub]@ into

@@ -27,7 +27,7 @@ import Hedgehog
   , Property
   , (===)
   , assert
-  , classify
+--  , classify
   , forAll
   , property
   , success
@@ -57,6 +57,7 @@ import Control.State.Transition.Generator
   ( HasSizeInfo
   , HasTrace
   , classifyTraceLength
+  , classifySize
   , initEnvGen
   , isTrivial
   , nonTrivialTrace
@@ -309,22 +310,13 @@ dblockTracesAreClassified = property $ do
   let (tl, step) = (1000, 100)
   tr <- forAll (trace @DBLOCK tl)
   classifyTraceLength tr tl step
-  -- Let's see what happens if we filter the empty signals.
+  -- Classify the traces by the total number of delegation certificates on
+  -- them.
   let
     -- Total number of delegation certificates found in the trace
     totalDCerts :: [DCert]
     totalDCerts = concat $ _blockCerts <$> traceSignals OldestFirst tr
-  -- TODO: generalize this as classifyListLength (or foldableLength) (and
-  -- classifyTraceLength can use this function)
-  classify "total dcerts [0, 3)" $ length totalDCerts < 3
-  classify "total dcerts [3, 5)" $ 3 <= length totalDCerts && length totalDCerts <= 5
-  classify "total dcerts [5, 10)" $ 5 <= length totalDCerts && length totalDCerts < 10
-  classify "total dcerts [10, 15)" $ 10 <= length totalDCerts && length totalDCerts < 15
-  classify "total dcerts [15, 20)" $ 15 <= length totalDCerts && length totalDCerts < 20
-  classify "total dcerts [20, 30)" $ 20 <= length totalDCerts && length totalDCerts < 30
-  classify "total dcerts [30, 50)" $ 30 <= length totalDCerts && length totalDCerts < 50
-  classify "total dcerts [50, 100)" $ 30 <= length totalDCerts && length totalDCerts < 100
-  classify "total dcerts [100, 200)" $ 100 <= length totalDCerts && length totalDCerts < 200
+  classifySize "total dcerts" totalDCerts length 100 10
   success
 
 --------------------------------------------------------------------------------
