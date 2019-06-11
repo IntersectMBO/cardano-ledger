@@ -335,7 +335,7 @@ traceDCerts :: Trace DBLOCK -> [DCert]
 traceDCerts tr = concat $ _blockCerts <$> traceSignals OldestFirst tr
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withTests 500 $ property $ do
+relevantCasesAreCovered = withTests 200 $ property $ do
   let tl = 1000
   tr <- forAll (trace @DBLOCK tl)
   -- There are as many delegation certificates as blocks.
@@ -356,8 +356,8 @@ relevantCasesAreCovered = withTests 500 $ property $ do
 
   -- There are delegations to the next epoch.
   cover 50
-        "at least 30% of the certificates delegate in the next epoch"
-        (0.3 <= nextEpochDelegationPcnt tr)
+        "at least 50% of the certificates delegate in the next epoch"
+        (0.5 <= nextEpochDelegationPcnt tr)
 
   -- 25% of the cases must contain at least 20% of self-delegations.
   cover 25
