@@ -14,7 +14,8 @@ where
 import Cardano.Prelude
 
 import Cardano.Chain.Block
-  ( ChainValidationState
+  ( BlockValidationMode (BlockValidation)
+  , ChainValidationState
   , initialChainValidationState
   )
 import Cardano.Chain.Conversion (convertConfig)
@@ -64,7 +65,7 @@ init config appEnv ll initialCVS cvsVar = do
 
   -- Validate epoch files.
   result <- liftIO . runExceptT $ foldM
-    (validateEpochFile (genesisConfig config) ll)
+    (validateEpochFile BlockValidation (genesisConfig config) ll)
     initialCVS
     files
 

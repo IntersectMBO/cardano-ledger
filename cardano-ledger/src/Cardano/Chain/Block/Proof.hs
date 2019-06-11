@@ -28,7 +28,7 @@ import Cardano.Crypto (Hash, hash, hashDecoded)
 
 -- | Proof of everything contained in the payload
 data Proof = Proof
-  { proofUTxO        :: !TxProof
+  { proofUTxO       :: !TxProof
   , proofSsc        :: !SscProof
   , proofDelegation :: !(Hash Delegation.Payload)
   , proofUpdate     :: !Update.Proof

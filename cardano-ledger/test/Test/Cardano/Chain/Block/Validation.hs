@@ -37,6 +37,7 @@ import System.Environment (lookupEnv)
 
 import Cardano.Chain.Block
   ( ABlockOrBoundary(..)
+  , BlockValidationMode (BlockValidation)
   , ChainValidationError
   , ChainValidationState(..)
   , SigningHistory(..)
@@ -102,7 +103,7 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
     <> "normal form.")
 
   result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState shouldAssertNF config cvs stream)
+    (foldChainValidationState shouldAssertNF BlockValidation config cvs stream)
 
   void $ evalEither result
 
@@ -116,15 +117,13 @@ data Error
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
   :: ShouldAssertNF
+  -> BlockValidationMode
   -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT Error ResIO ChainValidationState
-foldChainValidationState shouldAssertNF config cvs blocks = S.foldM_
-  validate
-  (pure cvs)
-  pure
-  (hoist (withExceptT ErrorParseError) blocks)
+foldChainValidationState shouldAssertNF bvmode config cvs blocks =
+  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
  where
   validate
     :: MonadIO m
@@ -146,7 +145,7 @@ foldChainValidationState shouldAssertNF config cvs blocks = S.foldM_
                   )
               NoAssertNF -> pure ()
             updateChainBoundary c bvd
-          ABOBBlock block -> updateBlock config c block
+          ABOBBlock block -> updateBlock bvmode config c block
 
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotNumber
   blockOrBoundarySlot = \case

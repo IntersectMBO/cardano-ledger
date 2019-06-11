@@ -30,6 +30,7 @@ import Cardano.Chain.Block
   , calcUTxOSize
   , updateChainBlockOrBoundary
   )
+import Cardano.Chain.Block.ValidationMode (BlockValidationMode)
 import Cardano.Chain.Epoch.File
   ( ParseError
   , mainnetEpochSlots
@@ -53,16 +54,18 @@ data EpochError
 validateEpochFile
   :: forall m
    . (MonadIO m, MonadError EpochError m)
-  => Genesis.Config
+  => BlockValidationMode
+  -> Genesis.Config
   -> LoggingLayer
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile config ll cvs fp = do
+validateEpochFile bvmode config ll cvs fp = do
   subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
   utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
   res          <- llBracketMonadX ll subTrace Log.Info "benchmark" $
       liftIO $ runResourceT $ runExceptT $ foldChainValidationState
+        bvmode
         config
         cvs
         stream
@@ -105,25 +108,27 @@ validateEpochFile config ll cvs fp = do
 
 -- | Check that a list of epochs 'Block's are valid.
 validateEpochFiles
-  :: Genesis.Config
+  :: BlockValidationMode
+  -> Genesis.Config
   -> ChainValidationState
   -> [FilePath]
   -> IO (Either EpochError ChainValidationState)
-validateEpochFiles config cvs fps =
-    runResourceT . runExceptT $ foldChainValidationState config cvs stream
+validateEpochFiles bvmode config cvs fps =
+    runResourceT . runExceptT $ foldChainValidationState bvmode config cvs stream
   where stream = parseEpochFilesWithBoundary mainnetEpochSlots fps
 
 
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
-  :: Genesis.Config
+  :: BlockValidationMode
+  -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT EpochError ResIO ChainValidationState
-foldChainValidationState config chainValState blocks = S.foldM_
+foldChainValidationState bvmode config chainValState blocks = S.foldM_
   (\cvs block ->
     withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
-      $ updateChainBlockOrBoundary config cvs block
+      $ updateChainBlockOrBoundary bvmode config cvs block
   )
   (pure chainValState)
   pure $ hoist (withExceptT EpochParseError) blocks

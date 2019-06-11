@@ -13,3 +13,4 @@ import Cardano.Chain.UTxO.TxProof as X
 import Cardano.Chain.UTxO.TxWitness as X
 import Cardano.Chain.UTxO.UTxO as X
 import Cardano.Chain.UTxO.Validation as X
+import Cardano.Chain.UTxO.ValidationMode as X

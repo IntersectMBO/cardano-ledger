@@ -21,7 +21,8 @@ import qualified Data.Map.Strict as M
 
 import Hedgehog (MonadTest, evalEither, forAll, property)
 
-import Cardano.Chain.UTxO (updateUTxOTxWitness)
+import Cardano.Chain.UTxO
+  (TxValidationMode (TxValidation), updateUTxOTxWitness)
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Crypto (hashDecoded)
@@ -99,6 +100,7 @@ elaborateAndUpdate
 elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
   (, txIdMap')
     <$> updateUTxOTxWitness
+          TxValidation
           (E.elaborateUTxOEnv abstractEnv)
           utxo
           concreteTxWitness
