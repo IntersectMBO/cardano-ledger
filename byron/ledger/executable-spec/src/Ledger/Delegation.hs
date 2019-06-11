@@ -501,18 +501,14 @@ instance STS DELEG where
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
         as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
-        let d = liveAfter (env ^. k)
         return $ DIState
           (as ^. delegationMap)
           (as ^. lastDelegation)
-          (filter (aboutSlot (env ^. slot) d . fst)
+          (filter (((env ^. slot) `addSlot` 1 <=) . fst)
             $ sds ^. scheduledDelegations)
           (Set.filter ((env ^. epoch <=) . fst)
             $ sds ^. keyEpochDelegations)
     ]
-    where
-      aboutSlot :: Slot -> SlotCount -> (Slot -> Bool)
-      aboutSlot a b c = a < c && c <= (a `addSlot` b)
 
 instance Embed SDELEGS DELEG where
   wrapFailed = SDelegSFailure
