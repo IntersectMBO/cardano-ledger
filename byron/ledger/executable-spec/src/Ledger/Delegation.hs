@@ -408,7 +408,8 @@ instance STS ADELEG where
           else do
             case Map.lookup vks dws of
               Just sp -> sp >= s ?! AfterExistingDelegation
-              Nothing -> False ?! NoLastDelegation
+              Nothing -> error $  "This can't happen since otherwise "
+                               ++ "the previous rule would have been triggered."
             return st
     ]
 

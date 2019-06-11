@@ -313,7 +313,7 @@ dcertsAreTriggered = withTests 300 $ property $
   forAll (nonTrivialTrace 1000) >>= dcertsAreTriggeredInTrace
 
 dblockTracesAreClassified :: Property
-dblockTracesAreClassified = property $ do
+dblockTracesAreClassified = withTests 200 $ property $ do
   let (tl, step) = (1000, 100)
   tr <- forAll (trace @DBLOCK tl)
   classifyTraceLength tr tl step
