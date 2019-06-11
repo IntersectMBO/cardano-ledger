@@ -53,6 +53,7 @@ library
                        Cardano.Chain.Block.Header
                        Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.Validation
+                       Cardano.Chain.Block.ValidationMode
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
