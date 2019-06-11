@@ -99,6 +99,7 @@ library
                        Cardano.Chain.UTxO.UTxOConfiguration
                        Cardano.Chain.UTxO.TxProof
                        Cardano.Chain.UTxO.TxWitness
+                       Cardano.Chain.UTxO.ValidationMode
 
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.InstallerHash
