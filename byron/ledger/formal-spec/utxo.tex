@@ -190,7 +190,9 @@ system.
     { \txins{tx} \subseteq \dom \var{utxo}\\
       \var{fee} \leteq \balance{(\txins{tx} \restrictdom \var{utxo})} - \balance{(\txouts{tx})}
       & \minfee{pps}{tx} \leq \var{fee}\\
-      \txins{tx} \neq \emptyset & \forall \wcard \mapsto (\wcard, c) \in \txouts{tx} \cdot 0 < c
+      \txins{tx} \neq \emptyset
+      & \txouts{tx} \neq \emptyset
+      & \forall \wcard \mapsto (\wcard, c) \in \txouts{tx} \cdot 0 < c
     }
     {
       {\left(\begin{array}{l}
