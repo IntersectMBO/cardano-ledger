@@ -21,7 +21,7 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..))
+import Cardano.Chain.Slotting (EpochIndex, SlotNumber(..))
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters(..))
 import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 
@@ -38,7 +38,7 @@ data ProtocolParametersUpdate = ProtocolParametersUpdate
   , ppuHeavyDelThd       :: !(Maybe LovelacePortion)
   , ppuUpdateVoteThd     :: !(Maybe LovelacePortion)
   , ppuUpdateProposalThd :: !(Maybe LovelacePortion)
-  , ppuUpdateImplicit    :: !(Maybe FlatSlotId)
+  , ppuUpdateImplicit    :: !(Maybe SlotNumber)
   , ppuSoftforkRule      :: !(Maybe SoftforkRule)
   , ppuTxFeePolicy       :: !(Maybe TxFeePolicy)
   , ppuUnlockStakeEpoch  :: !(Maybe EpochIndex)

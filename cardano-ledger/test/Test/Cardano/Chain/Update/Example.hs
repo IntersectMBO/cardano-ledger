@@ -29,7 +29,7 @@ import Data.Time (NominalDiffTime)
 import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
   (LovelacePortion(..), TxFeePolicy(..), TxSizeLinear(..), mkKnownLovelace)
-import Cardano.Chain.Slotting (EpochIndex(..), FlatSlotId(..))
+import Cardano.Chain.Slotting (EpochIndex(..), SlotNumber(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
@@ -74,7 +74,7 @@ exampleProtocolParameters = ProtocolParameters
   (LovelacePortion 99)
   (LovelacePortion 99)
   (LovelacePortion 99)
-  (FlatSlotId 99)
+  (SlotNumber 99)
   sfrule
   (TxFeePolicyTxSizeLinear tslin)
   (EpochIndex 99)
@@ -99,7 +99,7 @@ exampleProtocolParametersUpdate = ProtocolParametersUpdate
   (Just $ LovelacePortion 99)
   (Just $ LovelacePortion 99)
   (Just $ LovelacePortion 99)
-  (Just $ FlatSlotId 99)
+  (Just $ SlotNumber 99)
   (Just sfrule')
   (Just $ TxFeePolicyTxSizeLinear tslin')
   (Just $ EpochIndex 99)

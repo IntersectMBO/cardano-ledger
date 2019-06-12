@@ -97,7 +97,7 @@ import qualified Cardano.Chain.Delegation.Certificate as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
   ( EpochSlots
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , SlotId(..)
   , WithEpochSlots(WithEpochSlots)
   , flattenSlotId
@@ -130,7 +130,7 @@ data AHeader a = AHeader
   { aHeaderProtocolMagicId :: !(Annotated ProtocolMagicId a)
   , aHeaderPrevHash        :: !(Annotated HeaderHash a)
   -- ^ Pointer to the header of the previous block
-  , aHeaderSlot            :: !(Annotated FlatSlotId a)
+  , aHeaderSlot            :: !(Annotated SlotNumber a)
   -- ^ The slot number this block was published for
   , aHeaderDifficulty      :: !(Annotated ChainDifficulty a)
   -- ^ The chain difficulty up to this block
@@ -164,7 +164,7 @@ mkHeader
   -- the legacy format used in 'ToSign', where a slot is identified by the
   -- epoch to which it belongs and the offset within that epoch (counted in
   -- number of slots).
-  -> FlatSlotId
+  -> SlotNumber
   -> SigningKey
   -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
@@ -194,7 +194,7 @@ mkHeaderExplicit
   -> ChainDifficulty
   -> EpochSlots
   -- ^ See 'mkHeader'.
-  -> FlatSlotId
+  -> SlotNumber
   -> SigningKey
   -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
@@ -238,7 +238,7 @@ headerProtocolMagicId = unAnnotated . aHeaderProtocolMagicId
 headerPrevHash :: AHeader a -> HeaderHash
 headerPrevHash = unAnnotated . aHeaderPrevHash
 
-headerSlot :: AHeader a -> FlatSlotId
+headerSlot :: AHeader a -> SlotNumber
 headerSlot = unAnnotated . aHeaderSlot
 
 headerDifficulty :: AHeader a -> ChainDifficulty
@@ -316,7 +316,7 @@ fromCBORAHeader epochSlots = do
         <*> do
               enforceSize "ConsensusData" 4
               (,,,)
-                -- Next, we decode a 'SlotId' into a 'FlatSlotId': the `SlotId`
+                -- Next, we decode a 'SlotId' into a 'SlotNumber': the `SlotId`
                 -- used in 'AConsensusData' is encoded as a epoch and slot-count
                 -- pair.
                 <$> fmap (first (flattenSlotId epochSlots)) fromCBORAnnotated

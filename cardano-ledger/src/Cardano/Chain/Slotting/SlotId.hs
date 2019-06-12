@@ -16,7 +16,7 @@ module Cardano.Chain.Slotting.SlotId
   , slotIdF
   , slotIdSucc
   , slotIdPred
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , flattenSlotId
   , unflattenSlotId
   , addSlotNumber
@@ -75,19 +75,19 @@ instance FromCBOR SlotId where
 
 deriveJSON defaultOptions ''SlotId
 
-slotIdToEnum :: EpochSlots -> FlatSlotId -> SlotId
+slotIdToEnum :: EpochSlots -> SlotNumber -> SlotId
 slotIdToEnum = unflattenSlotId
 
 slotIdFromEnum :: EpochSlots -> SlotId -> Word64
-slotIdFromEnum sc sId = unFlatSlotId $ flattenSlotId sc sId
+slotIdFromEnum sc sId = unSlotNumber $ flattenSlotId sc sId
 
 slotIdSucc :: EpochSlots -> SlotId -> SlotId
 slotIdSucc sc sId =
-  slotIdToEnum sc . FlatSlotId . (1 +) $ slotIdFromEnum sc sId
+  slotIdToEnum sc . SlotNumber . (1 +) $ slotIdFromEnum sc sId
 
 slotIdPred :: EpochSlots -> SlotId -> SlotId
 slotIdPred epochSlots sId =
-  slotIdToEnum epochSlots . FlatSlotId . subtract 1 $ slotIdFromEnum
+  slotIdToEnum epochSlots . SlotNumber . subtract 1 $ slotIdFromEnum
     epochSlots
     sId
 
@@ -95,59 +95,59 @@ slotIdPred epochSlots sId =
 slotIdF :: Format r (SlotId -> r)
 slotIdF = build
 
--- | FlatSlotId is a flat version of SlotId
-newtype FlatSlotId = FlatSlotId
-  { unFlatSlotId :: Word64
+-- | SlotNumber is a flat version of SlotId
+newtype SlotNumber = SlotNumber
+  { unSlotNumber :: Word64
   } deriving (Eq, Generic, Ord, Show)
     deriving newtype Num
     deriving anyclass NFData
 
-instance ToCBOR FlatSlotId where
-  toCBOR = toCBOR . unFlatSlotId
+instance ToCBOR SlotNumber where
+  toCBOR = toCBOR . unSlotNumber
 
-instance FromCBOR FlatSlotId where
-  fromCBOR = FlatSlotId <$> fromCBOR
+instance FromCBOR SlotNumber where
+  fromCBOR = SlotNumber <$> fromCBOR
 
-instance Monad m => ToJSON m FlatSlotId where
-  toJSON = toJSON . unFlatSlotId
+instance Monad m => ToJSON m SlotNumber where
+  toJSON = toJSON . unSlotNumber
 
-instance MonadError SchemaError m => FromJSON m FlatSlotId where
+instance MonadError SchemaError m => FromJSON m SlotNumber where
   fromJSON val = do
     number <- fromJSON val
-    pure $ FlatSlotId number
+    pure $ SlotNumber number
 
-instance Aeson.FromJSON FlatSlotId where
+instance Aeson.FromJSON SlotNumber where
   parseJSON v = do
     c <- Aeson.parseJSON v
-    pure $ FlatSlotId c
+    pure $ SlotNumber c
 
-instance Aeson.ToJSON FlatSlotId where
-  toJSON = Aeson.toJSON . unFlatSlotId
+instance Aeson.ToJSON SlotNumber where
+  toJSON = Aeson.toJSON . unSlotNumber
 
-instance B.Buildable FlatSlotId where
-  build (unFlatSlotId -> x) = bprint
+instance B.Buildable SlotNumber where
+  build (unSlotNumber -> x) = bprint
     int
     x
 
 -- | Flatten 'SlotId' (which is basically pair of integers) into a single number.
--- 'FlatSlotId' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'
+-- 'SlotNumber' is held in a 'Word64'. Assuming a slot every 20 seconds, 'Word64'
 -- is sufficient for slot indices for 10^13 years.
-flattenSlotId :: EpochSlots -> SlotId -> FlatSlotId
-flattenSlotId es si = FlatSlotId $ pastSlots + lsi
+flattenSlotId :: EpochSlots -> SlotId -> SlotNumber
+flattenSlotId es si = SlotNumber $ pastSlots + lsi
  where
   lsi :: Word64
   lsi = fromIntegral . unLocalSlotIndex $ siSlot si
   pastSlots :: Word64
-  pastSlots = unFlatSlotId (flattenEpochIndex es $ siEpoch si)
+  pastSlots = unSlotNumber (flattenEpochIndex es $ siEpoch si)
 
 -- | Flattens 'EpochIndex' into a single number
-flattenEpochIndex :: EpochSlots -> EpochIndex -> FlatSlotId
-flattenEpochIndex es (EpochIndex i) = FlatSlotId $ i * unEpochSlots es
+flattenEpochIndex :: EpochSlots -> EpochIndex -> SlotNumber
+flattenEpochIndex es (EpochIndex i) = SlotNumber $ i * unEpochSlots es
 
 -- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
-unflattenSlotId :: EpochSlots -> FlatSlotId -> SlotId
-unflattenSlotId (EpochSlots n) (FlatSlotId fsId)
+unflattenSlotId :: EpochSlots -> SlotNumber -> SlotId
+unflattenSlotId (EpochSlots n) (SlotNumber fsId)
   | n == 0    =  panic $  "'unflattenSlotId': The number of slots-per-epoch "
                        <> "passed to this function must be positive"
   | otherwise =
@@ -167,16 +167,16 @@ unflattenSlotId (EpochSlots n) (FlatSlotId fsId)
                <> "Input slots-per-epoch: " <> show n <> "."
     else fromIntegral slot
 
--- | Increase a 'FlatSlotId' by 'SlotCount'
-addSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
-addSlotNumber (SlotCount a) (FlatSlotId b) = FlatSlotId $ a + b
+-- | Increase a 'SlotNumber' by 'SlotCount'
+addSlotNumber :: SlotCount -> SlotNumber -> SlotNumber
+addSlotNumber (SlotCount a) (SlotNumber b) = SlotNumber $ a + b
 
--- | Decrease a 'FlatSlotId' by 'SlotCount', going no lower than 0
-subSlotNumber :: SlotCount -> FlatSlotId -> FlatSlotId
-subSlotNumber (SlotCount a) (FlatSlotId b) =
-  if a > b then FlatSlotId 0 else FlatSlotId (b - a)
+-- | Decrease a 'SlotNumber' by 'SlotCount', going no lower than 0
+subSlotNumber :: SlotCount -> SlotNumber -> SlotNumber
+subSlotNumber (SlotCount a) (SlotNumber b) =
+  if a > b then SlotNumber 0 else SlotNumber (b - a)
 
-slotNumberEpoch :: EpochSlots -> FlatSlotId -> EpochIndex
+slotNumberEpoch :: EpochSlots -> SlotNumber -> EpochIndex
 slotNumberEpoch epochSlots slot = siEpoch $ unflattenSlotId epochSlots slot
 
 -- | Slot such that at the beginning of epoch blocks with SlotId ≤ to this slot
@@ -201,5 +201,5 @@ crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
 -- where @k@ is the chain security parameter, which is expressed in number of
 -- blocks.
 --
-twice :: BlockCount -> FlatSlotId
-twice k = FlatSlotId (2 * unBlockCount k)
+twice :: BlockCount -> SlotNumber
+twice k = SlotNumber (2 * unBlockCount k)

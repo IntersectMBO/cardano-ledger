@@ -3,7 +3,7 @@
 module Test.Cardano.Chain.Slotting.Example
   ( exampleEpochIndex
   , exampleSlotId
-  , exampleFlatSlotId
+  , exampleSlotNumber
   )
 where
 
@@ -13,7 +13,7 @@ import Cardano.Chain.Slotting
   ( EpochIndex(..)
   , EpochSlots(..)
   , SlotId(..)
-  , FlatSlotId
+  , SlotNumber
   , mkLocalSlotIndex
   , flattenSlotId
   )
@@ -22,8 +22,8 @@ import Cardano.Chain.Slotting
 exampleEpochIndex :: EpochIndex
 exampleEpochIndex = EpochIndex 14
 
-exampleFlatSlotId :: EpochSlots -> FlatSlotId
-exampleFlatSlotId es =
+exampleSlotNumber :: EpochSlots -> SlotNumber
+exampleSlotNumber es =
   flattenSlotId es (exampleSlotId es)
 
 exampleSlotId :: EpochSlots -> SlotId

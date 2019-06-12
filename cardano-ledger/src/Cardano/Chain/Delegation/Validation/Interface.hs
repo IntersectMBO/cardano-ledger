@@ -32,7 +32,7 @@ import Cardano.Chain.Genesis (GenesisDelegation(..))
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochIndex
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , addSlotNumber
   , subSlotNumber
   )
@@ -48,7 +48,7 @@ data Environment = Environment
   , allowedDelegators  :: !(Set KeyHash)
   , k                  :: !BlockCount
   , currentEpoch       :: !EpochIndex
-  , currentSlot        :: !FlatSlotId
+  , currentSlot        :: !SlotNumber
   } deriving (Eq, Show, Generic, NFData)
 
 
@@ -87,7 +87,7 @@ initialState env genesisDelegation = updateDelegation env' is certificates
       { Activation.delegationMap   = Delegation.fromList
         $ zip (toList allowedDelegators) (toList allowedDelegators)
       , Activation.delegationSlots = M.fromList
-        $   (, FlatSlotId 0)
+        $   (, SlotNumber 0)
         <$> toList allowedDelegators
       }
     }

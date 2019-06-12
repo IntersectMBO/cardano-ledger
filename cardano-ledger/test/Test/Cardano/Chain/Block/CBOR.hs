@@ -74,7 +74,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
-import Test.Cardano.Chain.Slotting.Example (exampleSlotId, exampleFlatSlotId)
+import Test.Cardano.Chain.Slotting.Example (exampleSlotId, exampleSlotNumber)
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots, genWithEpochSlots)
 import Test.Cardano.Chain.UTxO.Example (exampleTxPayload, exampleTxProof)
 import qualified Test.Cardano.Chain.Update.Example as Update
@@ -249,7 +249,7 @@ exampleHeader = mkHeaderExplicit
   exampleHeaderHash
   exampleChainDifficulty
   exampleEs
-  (exampleFlatSlotId exampleEs)
+  (exampleSlotNumber exampleEs)
   delegateSk
   certificate
   exampleBody

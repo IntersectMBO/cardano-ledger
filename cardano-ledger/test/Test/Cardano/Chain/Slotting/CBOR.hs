@@ -11,7 +11,7 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 
 import Cardano.Chain.Slotting
-  (EpochSlots(..), FlatSlotId, LocalSlotIndex(..))
+  (EpochSlots(..), SlotNumber, LocalSlotIndex(..))
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBOR, roundTripsCBORBuildable)
@@ -20,7 +20,7 @@ import Test.Cardano.Chain.Slotting.Example
 import Test.Cardano.Chain.Slotting.Gen
   ( feedPMEpochSlots
   , genEpochIndex
-  , genFlatSlotId
+  , genSlotNumber
   , genSlotId
   , genLocalSlotIndex
   , genEpochSlots
@@ -39,14 +39,14 @@ ts_roundTripEpochIndexCBOR :: TSProperty
 ts_roundTripEpochIndexCBOR = eachOfTS 1000 genEpochIndex roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
--- FlatSlotId
+-- SlotNumber
 --------------------------------------------------------------------------------
-golden_FlatSlotId :: Property
-golden_FlatSlotId = goldenTestCBOR fsi "test/golden/cbor/slotting/FlatSlotId"
-  where fsi = 5001 :: FlatSlotId
+golden_SlotNumber :: Property
+golden_SlotNumber = goldenTestCBOR fsi "test/golden/cbor/slotting/SlotNumber"
+  where fsi = 5001 :: SlotNumber
 
-ts_roundTripFlatSlotIdCBOR :: TSProperty
-ts_roundTripFlatSlotIdCBOR = eachOfTS 1000 genFlatSlotId roundTripsCBORBuildable
+ts_roundTripSlotNumberCBOR :: TSProperty
+ts_roundTripSlotNumberCBOR = eachOfTS 1000 genSlotNumber roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex

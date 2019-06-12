@@ -121,7 +121,7 @@ import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
   ( EpochSlots
-  , FlatSlotId
+  , SlotNumber
   , WithEpochSlots(WithEpochSlots)
   )
 import Cardano.Chain.Ssc (SscPayload)
@@ -156,7 +156,7 @@ mkBlock
   -> SoftwareVersion
   -> Either GenesisHash Header
   -> EpochSlots
-  -> FlatSlotId
+  -> SlotNumber
   -> SigningKey
   -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
@@ -186,7 +186,7 @@ mkBlockExplicit
   -> HeaderHash
   -> ChainDifficulty
   -> EpochSlots
-  -> FlatSlotId
+  -> SlotNumber
   -> SigningKey
   -- ^ The 'SigningKey' used for signing the block
   -> Delegation.Certificate
@@ -233,7 +233,7 @@ blockPrevHash = headerPrevHash . blockHeader
 blockProof :: ABlock a -> Proof
 blockProof = headerProof . blockHeader
 
-blockSlot :: ABlock a -> FlatSlotId
+blockSlot :: ABlock a -> SlotNumber
 blockSlot = headerSlot . blockHeader
 
 blockGenesisKey :: ABlock a -> VerificationKey

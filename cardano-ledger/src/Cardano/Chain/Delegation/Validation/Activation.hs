@@ -17,7 +17,7 @@ import qualified Data.Map.Strict as M
 import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation(..))
-import Cardano.Chain.Slotting (FlatSlotId(..))
+import Cardano.Chain.Slotting (SlotNumber(..))
 
 
 --------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ import Cardano.Chain.Slotting (FlatSlotId(..))
 --   became active in.
 data State = State
   { delegationMap   :: !Delegation.Map
-  , delegationSlots :: !(Map KeyHash FlatSlotId)
+  , delegationSlots :: !(Map KeyHash SlotNumber)
   } deriving (Eq, Show, Generic, NFData)
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
@@ -37,7 +37,7 @@ data State = State
 --   specification.
 activateDelegation :: State -> ScheduledDelegation -> State
 activateDelegation as delegation
-  | prevDelegationSlot < slot || unFlatSlotId slot == 0 = State
+  | prevDelegationSlot < slot || unSlotNumber slot == 0 = State
     { delegationMap   = Delegation.insert delegator delegate delegationMap
     , delegationSlots = M.insert delegator slot delegationSlots
     }
@@ -47,4 +47,4 @@ activateDelegation as delegation
   ScheduledDelegation slot delegator delegate = delegation
 
   prevDelegationSlot =
-    fromMaybe (FlatSlotId 0) $ M.lookup delegator delegationSlots
+    fromMaybe (SlotNumber 0) $ M.lookup delegator delegationSlots

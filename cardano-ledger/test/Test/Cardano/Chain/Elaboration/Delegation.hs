@@ -107,7 +107,7 @@ elaborateDSEnv abstractEnv = Scheduling.Environment
     .   elaborateVKeyGenesis
     <$> Set.toList genesisKeys
   , Scheduling.currentEpoch = fromIntegral e
-  , Scheduling.currentSlot = Concrete.FlatSlotId s
+  , Scheduling.currentSlot = Concrete.SlotNumber s
   , Scheduling.k           = Concrete.BlockCount k
   }
   where

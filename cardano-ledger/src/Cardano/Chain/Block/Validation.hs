@@ -94,7 +94,7 @@ import Cardano.Chain.Genesis as Genesis
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
-  (EpochIndex(..), FlatSlotId(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
+  (EpochIndex(..), SlotNumber(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
 import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
@@ -158,7 +158,7 @@ updateSigningHistory vk sh
 --------------------------------------------------------------------------------
 
 data ChainValidationState = ChainValidationState
-  { cvsLastSlot        :: !FlatSlotId
+  { cvsLastSlot        :: !SlotNumber
   , cvsSigningHistory  :: !SigningHistory
   , cvsPreviousHash    :: !(Either GenesisHash HeaderHash)
   -- ^ GenesisHash for the previous hash of the zeroth boundary block and
@@ -197,7 +197,7 @@ initialChainValidationState config = do
     , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
     , DI.k           = configK config
     , DI.currentEpoch = EpochIndex 0
-    , DI.currentSlot = FlatSlotId 0
+    , DI.currentSlot = SlotNumber 0
     }
 
   pm = configProtocolMagicId config
@@ -447,7 +447,7 @@ data HeaderEnvironment = HeaderEnvironment
   , k             :: !BlockCount
   , numGenKeys    :: !Word8
   , delegationMap :: !Delegation.Map
-  , lastSlot      :: !FlatSlotId
+  , lastSlot      :: !SlotNumber
   }
 
 
@@ -500,7 +500,7 @@ epochTransition
   :: MonadError ChainValidationError m
   => EpochEnvironment
   -> UPI.State
-  -> FlatSlotId
+  -> SlotNumber
   -> m UPI.State
 epochTransition env st slot = if nextEpoch > currentEpoch
   then

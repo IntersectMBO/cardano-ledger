@@ -10,7 +10,7 @@ where
 import Cardano.Prelude hiding (State)
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId, twice)
+import Cardano.Chain.Slotting (EpochIndex, SlotNumber, twice)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -22,7 +22,7 @@ import Cardano.Chain.Update.Validation.Endorsement
 
 data Environment = Environment
   { k                         :: !BlockCount
-  , currentSlot               :: !FlatSlotId
+  , currentSlot               :: !SlotNumber
   , candidateProtocolVersions :: ![CandidateProtocolUpdate]
   }
 

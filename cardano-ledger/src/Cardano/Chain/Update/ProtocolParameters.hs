@@ -29,7 +29,7 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common
   (LovelacePortion, TxFeePolicy, lovelacePortionToDouble)
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId(..), isBootstrapEra)
+import Cardano.Chain.Slotting (EpochIndex, SlotNumber(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
 
@@ -45,7 +45,7 @@ data ProtocolParameters = ProtocolParameters
   , ppHeavyDelThd       :: !LovelacePortion
   , ppUpdateVoteThd     :: !LovelacePortion
   , ppUpdateProposalThd :: !LovelacePortion
-  , ppUpdateProposalTTL :: !FlatSlotId
+  , ppUpdateProposalTTL :: !SlotNumber
   -- ^ Time to live for a protocol update proposal. This used to be the number
   -- of slots after which the system made a decision regarding an update
   -- proposal confirmation, when a majority of votes was not reached in the

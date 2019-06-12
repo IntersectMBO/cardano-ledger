@@ -27,7 +27,7 @@ import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochIndex
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , addSlotNumber
   )
 import Cardano.Crypto (ProtocolMagicId)
@@ -41,7 +41,7 @@ data Environment = Environment
   { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators :: !(Set KeyHash)
   , currentEpoch      :: !EpochIndex
-  , currentSlot       :: !FlatSlotId
+  , currentSlot       :: !SlotNumber
   , k                 :: !BlockCount
   } deriving (Eq, Show, Generic, NFData)
 
@@ -51,7 +51,7 @@ data State = State
   } deriving (Eq, Show, Generic, NFData)
 
 data ScheduledDelegation = ScheduledDelegation
-  { sdSlot      :: !FlatSlotId
+  { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
   } deriving (Eq, Show, Generic, NFData)
@@ -64,7 +64,7 @@ data Error
   | MultipleDelegationsForEpoch EpochIndex KeyHash
   -- ^ This delegator has already delegated for the given epoch
 
-  | MultipleDelegationsForSlot FlatSlotId KeyHash
+  | MultipleDelegationsForSlot SlotNumber KeyHash
   -- ^ This delegator has already delgated in this slot
 
   | NonGenesisDelegator KeyHash

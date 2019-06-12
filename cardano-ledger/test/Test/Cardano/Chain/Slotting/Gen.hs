@@ -3,7 +3,7 @@
 
 module Test.Cardano.Chain.Slotting.Gen
   ( genEpochIndex
-  , genFlatSlotId
+  , genSlotNumber
   , genLocalSlotIndex
   , genEpochSlots
   , genWithEpochSlots
@@ -25,7 +25,7 @@ import qualified Hedgehog.Range as Range
 import Cardano.Chain.Slotting
   ( EpochIndex(..)
   , EpochSlots(..)
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , LocalSlotIndex
   , SlotCount(..)
   , SlotId(..)
@@ -43,8 +43,8 @@ import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 genEpochIndex :: Gen EpochIndex
 genEpochIndex = EpochIndex <$> Gen.word64 Range.constantBounded
 
-genFlatSlotId :: Gen FlatSlotId
-genFlatSlotId = FlatSlotId <$> Gen.word64 Range.constantBounded
+genSlotNumber :: Gen SlotNumber
+genSlotNumber = SlotNumber <$> Gen.word64 Range.constantBounded
 
 genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
 genLocalSlotIndex epochSlots = mkLocalSlotIndex'

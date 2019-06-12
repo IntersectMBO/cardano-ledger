@@ -55,7 +55,7 @@ import Test.Cardano.Chain.Common.Gen
   , genTxFeePolicy
   )
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochIndex, genFlatSlotId)
+  (genEpochIndex, genSlotNumber)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genHashRaw
@@ -83,7 +83,7 @@ genCanonicalProtocolParameters =
     <*> genLovelacePortion
     <*> genLovelacePortion
     <*> genLovelacePortion
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> genSoftforkRule
     <*> genCanonicalTxFeePolicy
     <*> genEpochIndex
@@ -108,7 +108,7 @@ genProtocolParameters =
     <*> genLovelacePortion
     <*> genLovelacePortion
     <*> genLovelacePortion
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> genSoftforkRule
     <*> genTxFeePolicy
     <*> genEpochIndex
@@ -126,7 +126,7 @@ genProtocolParametersUpdate =
     <*> Gen.maybe genLovelacePortion
     <*> Gen.maybe genLovelacePortion
     <*> Gen.maybe genLovelacePortion
-    <*> Gen.maybe genFlatSlotId
+    <*> Gen.maybe genSlotNumber
     <*> Gen.maybe genSoftforkRule
     <*> Gen.maybe genTxFeePolicy
     <*> Gen.maybe genEpochIndex

@@ -21,7 +21,7 @@ import qualified Data.Set as Set
 
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting (FlatSlotId, twice)
+import Cardano.Chain.Slotting (SlotNumber, twice)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -31,10 +31,10 @@ import qualified Cardano.Chain.Update.Validation.Registration as Registration
 data Environment = Environment
   { k                                 :: !BlockCount
   -- ^ Chain stability parameter.
-  , currentSlot                       :: !FlatSlotId
+  , currentSlot                       :: !SlotNumber
   , adoptionThreshold                 :: !Int
   , delegationMap                     :: !Delegation.Map
-  , confirmedProposals                :: !(Map UpId FlatSlotId)
+  , confirmedProposals                :: !(Map UpId SlotNumber)
   , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
   }
 
@@ -44,7 +44,7 @@ data State = State
   }
 
 data CandidateProtocolUpdate = CandidateProtocolUpdate
-  { cpuSlot               :: !FlatSlotId
+  { cpuSlot               :: !SlotNumber
     -- ^ Slot at which this protocol version and parameters gathered enough
     -- endorsements and became a candidate. This is used to check which
     -- versions became candidates 2k slots before the end of an epoch (and only

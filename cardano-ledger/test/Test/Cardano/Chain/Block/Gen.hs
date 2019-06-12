@@ -45,7 +45,7 @@ import Cardano.Crypto
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochIndex, genEpochSlots, genFlatSlotId, genSlotId)
+  (genEpochIndex, genEpochSlots, genSlotNumber, genSlotId)
 import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -93,7 +93,7 @@ genHeader pm epochSlots = do
     <$> genHeaderHash
     <*> genChainDifficulty
     <*> pure epochSlots
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> pure sk
     <*> pure cert
     <*> genBody pm
@@ -139,7 +139,7 @@ genBlock pm epochSlots = do
     <*> genHeaderHash
     <*> genChainDifficulty
     <*> pure epochSlots
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> pure sk
     <*> pure cert
     <*> genBody pm

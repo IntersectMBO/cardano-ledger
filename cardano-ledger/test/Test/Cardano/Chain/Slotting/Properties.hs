@@ -18,7 +18,7 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Slotting
   ( addSlotNumber
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , EpochSlots(..)
   , LocalSlotIndex(..)
   , LocalSlotIndexError(..)
@@ -33,7 +33,7 @@ import Cardano.Chain.Slotting
   )
 import Test.Cardano.Chain.Slotting.Gen
   ( genEpochSlots
-  , genFlatSlotId
+  , genSlotNumber
   , genLocalSlotIndex
   , genSlotCount
   , genSlotId
@@ -187,11 +187,11 @@ dummyLocSlotIndIndexOverflow =
 --------------------------------------------------------------------------------
 
 -- Check that `unflattenSlotId` does not panic for
--- allowed values of `EpochSlots` and `FlatSlotId`.
+-- allowed values of `EpochSlots` and `SlotNumber`.
 ts_prop_unflattenSlotId :: TSProperty
 ts_prop_unflattenSlotId = withTestsTS 100 . property $ do
   sc   <- forAll genEpochSlots
-  fsId <- forAll $ genFlatSlotId
+  fsId <- forAll $ genSlotNumber
   _    <- pure $ unflattenSlotId sc fsId
   success
 
@@ -213,7 +213,7 @@ ts_prop_genSlotId = withTestsTS 100 . property $ do
 ts_prop_flattenUnflattenSlotId :: TSProperty
 ts_prop_flattenUnflattenSlotId = withTestsTS 100 . property $ do
   sc   <- forAll genEpochSlots
-  fsId <- forAll genFlatSlotId
+  fsId <- forAll genSlotNumber
   let unflatFlat = flattenSlotId sc $ unflattenSlotId sc fsId
   fsId === unflatFlat
 
@@ -221,19 +221,19 @@ ts_prop_flattenUnflattenSlotId = withTestsTS 100 . property $ do
 ts_prop_addSlotNumber :: TSProperty
 ts_prop_addSlotNumber = withTestsTS 100 . property $ do
   sc <- forAll genSlotCount
-  fs <- forAll genFlatSlotId
-  let added = fs + (FlatSlotId $ unSlotCount sc)
+  fs <- forAll genSlotNumber
+  let added = fs + (SlotNumber $ unSlotCount sc)
   addSlotNumber sc fs === added
 
 -- Check that `subSlotNumber` actually subtracts.
 ts_prop_subSlotNumber :: TSProperty
 ts_prop_subSlotNumber = withTestsTS 100 . property $ do
   sc <- forAll genSlotCount
-  fs <- forAll genFlatSlotId
+  fs <- forAll genSlotNumber
   let
-    sc' = FlatSlotId $ unSlotCount sc
+    sc' = SlotNumber $ unSlotCount sc
     subtracted = fs - sc'
-  subSlotNumber sc fs === if fs > sc' then subtracted else FlatSlotId 0
+  subSlotNumber sc fs === if fs > sc' then subtracted else SlotNumber 0
 
 tests :: TSGroup
 tests = $$discoverPropArg

@@ -23,7 +23,7 @@ import qualified Data.Map.Strict as M
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
@@ -63,7 +63,7 @@ data Environment = Environment
   { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
-  , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
+  , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, SlotNumber))
   , delegationMap             :: !Delegation.Map
   }
 
@@ -77,7 +77,7 @@ data State = State
 type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameters)
 type SoftwareUpdateProposals = Map UpId SoftwareVersion
 
-type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, FlatSlotId)
+type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, SlotNumber)
 
 -- | Error captures the ways in which registration could fail
 data Error
