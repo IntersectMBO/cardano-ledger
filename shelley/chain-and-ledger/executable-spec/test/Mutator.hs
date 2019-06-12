@@ -9,8 +9,8 @@ data. Input values are mutated depending on their value.
 module Mutator
     ( mutateNat
     , mutateCoin
-    , mutateTxWits
     , mutateTx
+    , mutateTxBody
     , mutateDCert
     , getAnyStakeKey
     ) where
@@ -29,8 +29,8 @@ import Coin
 import           Delegation.Certificates  (DCert(..))
 import           Delegation.PoolParams
 import Keys
-import LedgerState (DWState(..), KeyPairs)
-import UTxO        (Tx(..), TxWits(..), TxIn(..), TxOut(..))
+import LedgerState (DPState(..), KeyPairs)
+import UTxO        (TxBody(..), Tx(..), TxIn(..), TxOut(..))
 import           Slot
 
 -- | Identity mutator that does not change the input value.
@@ -71,24 +71,25 @@ mutateInteger lower upper n =
 mutateCoin :: Integer -> Integer -> Coin -> Gen Coin
 mutateCoin lower upper (Coin val) = Coin <$> mutateInteger lower upper val
 
--- | Mutator of 'TxWits' which mutates the contained transaction
-mutateTxWits :: TxWits -> Gen TxWits
-mutateTxWits txwits = do
-  body' <- mutateTx $ _body txwits
-  pure $ TxWits body' (_witnessSet txwits)
+-- | Mutator of 'Tx' which mutates the contained transaction
+mutateTx :: Tx -> Gen Tx
+mutateTx txwits = do
+  body' <- mutateTxBody $ _body txwits
+  pure $ Tx body' (_witnessSet txwits)
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
-mutateTx :: Tx -> Gen Tx
-mutateTx tx = do
+mutateTxBody :: TxBody -> Gen TxBody
+mutateTxBody tx = do
   inputs'  <- mutateInputs  $ Set.toList (_inputs tx)
   outputs' <- mutateOutputs $ _outputs tx
-  pure $ Tx (Set.fromList inputs')
-            outputs'
-            (_certs tx)
-            (_wdrls tx)
-            (_txfee tx)
-            (_ttl tx)
+  pure $ TxBody (Set.fromList inputs')
+    outputs'
+    (_certs tx)
+    (_wdrls tx)
+    (_txfee tx)
+    (_ttl tx)
+    (_txeent tx)
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]
@@ -143,7 +144,7 @@ mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 -- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
-mutateDCert :: KeyPairs -> DWState -> DCert -> Gen DCert
+mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
 mutateDCert keys _ (RegKey _) = RegKey . vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (DeRegKey _) = DeRegKey . vKey . snd <$> Gen.element keys

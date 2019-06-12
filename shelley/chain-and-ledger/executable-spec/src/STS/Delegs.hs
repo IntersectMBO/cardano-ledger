@@ -22,7 +22,7 @@ import           STS.Delpl
 data DELEGS
 
 instance STS DELEGS where
-    type State DELEGS       = DWState
+    type State DELEGS       = DPState
     type Signal DELEGS      = [DCert]
     type Environment DELEGS = (Slot, Ix, PParams)
     data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)
@@ -36,7 +36,7 @@ delegsTransition = do
   TRC((slot, ix, pp), d, certificates) <- judgmentContext
   foldM (\d' (clx, c) ->
              trans @DELPL $
-                   TRC((Ptr slot ix clx, pp), d', c)) d $ zip [0..] certificates
+                   TRC((slot, Ptr slot ix clx, pp), d', c)) d $ zip [0..] certificates
 
 instance Embed DELPL DELEGS where
   wrapFailed = DelplFailure

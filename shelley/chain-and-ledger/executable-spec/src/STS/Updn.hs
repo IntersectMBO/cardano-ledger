@@ -5,6 +5,7 @@ module STS.Updn
   ( UPDN
   ) where
 
+import           BaseTypes
 import           BlockChain
 import           Slot
 

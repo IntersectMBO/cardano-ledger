@@ -9,6 +9,7 @@ import qualified Data.Map.Strict         as Map
 
 import           Lens.Micro              ((^.), (&), (.~), (%~))
 
+import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           LedgerState
@@ -27,7 +28,7 @@ instance STS SNAP where
   data PredicateFailure SNAP = FailureSNAP
                                deriving (Show, Eq)
   initialRules =
-    [pure (emptySnapShots, UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))]
+    [pure (emptySnapShots, UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty))]
   transitionRules = [snapTransition]
 
 snapTransition :: TransitionRule SNAP

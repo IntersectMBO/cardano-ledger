@@ -43,12 +43,12 @@ epochTransition :: TransitionRule EPOCH
 epochTransition = do
     TRC((ppNew, blocks), EpochState as pp ss ls, eNew) <- judgmentContext
     let us = _utxoState ls
-    let DWState ds ps = _delegationState ls
+    let DPState ds ps = _delegationState ls
     (ss', us') <- trans @SNAP $ TRC((pp, ds, ps, blocks), (ss, us), eNew)
     (as', ds', ps') <- trans @POOLREAP $ TRC(pp, (as, ds, ps), eNew)
     (us'', as'', pp')
         <- trans @NEWPP $ TRC((ppNew, ds', ps'), (us', as', pp), eNew)
-    pure $ EpochState as'' pp' ss' (ls { _utxoState = us'', _delegationState = DWState ds' ps'})
+    pure $ EpochState as'' pp' ss' (ls { _utxoState = us'', _delegationState = DPState ds' ps'})
 
 instance Embed SNAP EPOCH where
     wrapFailed = SnapFailure

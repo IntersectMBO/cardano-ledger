@@ -39,7 +39,7 @@ import           LedgerState     (LedgerState (..),
                                   LedgerValidation(..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
-                                  genesisState, DWState(..),
+                                  genesisState, DPState(..), DState(..),
                                   KeyPairs, utxoState, utxo, dstate,
                                   stKeys
                                  )
@@ -120,14 +120,14 @@ genNonemptyGenesisState = do
   keyPairs <- genKeyPairs 1 10
   (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
 
--- | Generator for a new 'TxWits' and fee value for executing the
+-- | Generator for a new 'Tx' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
 -- address associated to that input, selects a random subsequence of other valid
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTxWits :: KeyPairs -> UTxO -> Slot -> Gen (Coin, TxWits)
-genTxWits keyList (UTxO m) cslot = do
+genTx :: KeyPairs -> UTxO -> Slot -> Gen (Coin, Tx)
+genTx keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
   let !selectedAddr    = addr $ head selectedInputs
@@ -143,15 +143,16 @@ genTxWits keyList (UTxO m) cslot = do
   let !receipientAddrs      = fmap
           (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   txttl <- genNatural 1 100
-  let !txbody = Tx
+  let !txbody = TxBody
            (Map.keysSet selectedUTxO)
            ((\r -> TxOut r perReceipient) <$> receipientAddrs)
            []
            Map.empty -- TODO generate witdrawals
            txfee'
            (cslot + (Slot txttl))
+           (EEnt Map.empty)
   let !txwit = makeWitness txbody selectedKeyPair
-  pure (txfee', TxWits txbody $ Set.fromList [txwit])
+  pure (txfee', Tx txbody $ Set.fromList [txwit])
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
 
@@ -160,19 +161,20 @@ genTxWits keyList (UTxO m) cslot = do
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
 genLedgerStateTx :: KeyPairs -> Slot -> LedgerState ->
-                    Gen (Coin, TxWits, Either [ValidationError] LedgerState)
+                    Gen (Coin, Tx, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList (Slot slot) sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
+  let dms = _dms $ _dstate $ _delegationState sourceState
   slot' <- genNatural slot (slot + 100)
-  (txfee', tx) <- genTxWits keyList utxo' (Slot slot')
-  pure (txfee', tx, asStateTransition (Slot slot') sourceState tx)
+  (txfee', tx) <- genTx keyList utxo' (Slot slot')
+  pure (txfee', tx, asStateTransition (Slot slot') sourceState tx dms)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx
-  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], Either [ValidationError] LedgerState)
+  :: Gen (KeyPairs, Natural, Coin, LedgerState, [Tx], Either [ValidationError] LedgerState)
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
@@ -182,7 +184,7 @@ genNonEmptyAndAdvanceTx = do
 
 -- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
 genNonEmptyAndAdvanceTx'
-  :: Gen (KeyPairs, Natural, Coin, LedgerState, [TxWits], LedgerValidation)
+  :: Gen (KeyPairs, Natural, Coin, LedgerState, [Tx], LedgerValidation)
 genNonEmptyAndAdvanceTx' = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
@@ -200,8 +202,8 @@ repeatCollectTx
     -> Slot
     -> Coin
     -> LedgerState
-    -> [TxWits]
-    -> Gen (Coin, [TxWits], Either [ValidationError] LedgerState)
+    -> [Tx]
+    -> Gen (Coin, [Tx], Either [ValidationError] LedgerState)
 repeatCollectTx 0 _ _ fees ls txs = pure (fees, reverse txs, Right ls)
 repeatCollectTx n keyPairs (Slot slot) fees ls txs = do
   (txfee', tx, next) <- genLedgerStateTx keyPairs (Slot slot) ls
@@ -216,9 +218,9 @@ repeatCollectTx'
     -> KeyPairs
     -> Coin
     -> LedgerState
-    -> [TxWits]
+    -> [Tx]
     -> [ValidationError]
-    -> Gen (Coin, [TxWits], LedgerValidation)
+    -> Gen (Coin, [Tx], LedgerValidation)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
  | n == 0 || (utxoSize $ ls ^. utxoState . utxo) == 0 =
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
@@ -244,7 +246,7 @@ getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Gen (KeyPairs, Natural, [TxWits], LedgerState)
+genValidLedgerState :: Gen (KeyPairs, Natural, [Tx], LedgerState)
 genValidLedgerState = do
   (keyPairs, steps, _, _, txs, newState) <- genNonEmptyAndAdvanceTx
   case newState of
@@ -252,40 +254,41 @@ genValidLedgerState = do
     Right ls -> pure (keyPairs, steps, txs, ls)
 
 genValidSuccessorState :: KeyPairs -> Slot -> LedgerState ->
-  Gen (Coin, TxWits, LedgerState)
+  Gen (Coin, Tx, LedgerState)
 genValidSuccessorState keyPairs slot sourceState = do
   (txfee', entry, next) <- genLedgerStateTx keyPairs slot sourceState
   case next of
     Left _   -> Gen.discard
     Right ls -> pure (txfee', entry, ls)
 
-genValidStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState)
+genValidStateTx :: Gen (LedgerState, Natural, Coin, Tx, LedgerState)
 genValidStateTx = do
   (ls, steps, txfee', entry, ls', _) <- genValidStateTxKeys
   pure (ls, steps, txfee', entry, ls')
 
-genValidStateTxKeys :: Gen (LedgerState, Natural, Coin, TxWits, LedgerState, KeyPairs)
+genValidStateTxKeys :: Gen (LedgerState, Natural, Coin, Tx, LedgerState, KeyPairs)
 genValidStateTxKeys = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
   (txfee', entry, ls')     <- genValidSuccessorState keyPairs (Slot $ steps + 1) ls
   pure (ls, steps, txfee', entry, ls', keyPairs)
 
-genStateTx :: Gen (LedgerState, Natural, Coin, TxWits, LedgerValidation)
+genStateTx :: Gen (LedgerState, Natural, Coin, Tx, LedgerValidation)
 genStateTx = do
   (keyPairs, steps, _, ls) <- genValidLedgerState
   (txfee', entry, lv)      <- genLedgerStateTx' keyPairs ls
   pure (ls, steps, txfee', entry, lv)
 
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
-                    Gen (Coin, TxWits, LedgerValidation)
+                    Gen (Coin, Tx, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
+  let dms = _dms $ _dstate $ _delegationState sourceState
   slot <- genNatural 0 1000
-  (txfee', tx) <- genTxWits keyList utxo' (Slot slot)
-  tx'          <- mutateTxWits tx
+  (txfee', tx) <- genTx keyList utxo' (Slot slot)
+  tx'          <- mutateTx tx
   pure (txfee'
        , tx'
-       , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) tx')
+       , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) tx' dms)
 
 -- Generators for 'DelegationData'
 
@@ -320,7 +323,7 @@ genStakePool keys = do
                    Nothing -> interval0
   pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey) Set.empty
 
-genDelegation :: KeyPairs -> DWState -> Gen Delegation
+genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stKeys'
   delegatorKey <- getAnyStakeKey keys
@@ -330,5 +333,5 @@ genDelegation keys d = do
 genDCertRegPool :: KeyPairs -> Gen DCert
 genDCertRegPool keys = RegPool <$> genStakePool keys
 
-genDCertDelegate :: KeyPairs -> DWState -> Gen DCert
+genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
 genDCertDelegate keys ds = Delegate <$> genDelegation keys ds

@@ -22,7 +22,7 @@ data LEDGERS
 
 instance STS LEDGERS where
   type State LEDGERS = LedgerState
-  type Signal LEDGERS = [TxWits]
+  type Signal LEDGERS = [Tx]
   type Environment LEDGERS = (Slot, PParams)
   data PredicateFailure LEDGERS = LedgerFailure (PredicateFailure
                                                  LEDGER)
