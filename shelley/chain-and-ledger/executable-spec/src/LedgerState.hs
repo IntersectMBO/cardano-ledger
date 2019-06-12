@@ -18,7 +18,7 @@ as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module LedgerState
   ( LedgerState(..)
   , Ix
-  , DWState(..)
+  , DPState(..)
   , DState(..)
   , AccountState(..)
   , RewardUpdate(..)
@@ -229,8 +229,8 @@ data PState = PState
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
-data DWState =
-    DWState
+data DPState =
+    DPState
     {
       _dstate :: DState
     , _pstate :: PState
@@ -270,9 +270,9 @@ emptyLedgerState = LedgerState
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
 
-emptyDelegation :: DWState
+emptyDelegation :: DPState
 emptyDelegation =
-    DWState emptyDState emptyPState
+    DPState emptyDState emptyPState
 
 emptyDState :: DState
 emptyDState = DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty
@@ -303,7 +303,7 @@ data LedgerState =
   { -- |The current unspent transaction outputs.
     _utxoState         :: !UTxOState
     -- |The current delegation state
-  , _delegationState   :: !DWState
+  , _delegationState   :: !DPState
     -- | UPIState
   , _upiState          :: !UPIState
     -- |The current protocol constants.
@@ -313,7 +313,7 @@ data LedgerState =
   , _currentSlot       :: Slot
   } deriving (Show, Eq)
 
-makeLenses ''DWState
+makeLenses ''DPState
 makeLenses ''DState
 makeLenses ''PState
 makeLenses ''UTxOState
@@ -555,7 +555,7 @@ validStakeDelegation cert ds =
     _ -> Valid
 
 -- there is currently no requirement that could make this invalid
-validStakePoolRegister :: DCert -> DWState -> Validity
+validStakePoolRegister :: DCert -> DPState -> Validity
 validStakePoolRegister _ _ = Valid
 
 validStakePoolRetire :: DCert -> PState -> Validity
@@ -566,7 +566,7 @@ validStakePoolRetire cert ps =
                          where (StakePools stakePools) = ps ^. stPools
     _                -> Valid
 
-validDelegation :: DCert -> DWState -> Validity
+validDelegation :: DCert -> DPState -> Validity
 validDelegation cert ds =
      validKeyRegistration cert (ds ^. dstate)
   <> validKeyDeregistration cert (ds ^. dstate)
@@ -653,9 +653,9 @@ applyUTxOUpdate :: UTxOState -> Tx -> UTxOState
 applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
-applyDCert :: Ptr -> DCert -> DWState -> DWState
+applyDCert :: Ptr -> DCert -> DPState -> DPState
 
-applyDCert ptr dcert@(RegKey key) ds =
+applyDCert ptr dcert@(RegKey _) ds =
   ds & dstate %~ (applyDCertDState ptr dcert)
 
 applyDCert ptr dcert@(DeRegKey _) ds =
@@ -860,7 +860,7 @@ applyRUpd ru (EpochState as pp ss ls) = es'
         utxo'     = _utxoState ls
         ls'       =
           ls { _utxoState = utxo' { _fees = fees' }
-             , _delegationState = DWState
+             , _delegationState = DPState
                   (dstate' { _rewards = rewards'})
                   (_pstate $ _delegationState ls)}
         es' = EpochState (AccountState treasury' reserves')  pp ss ls'

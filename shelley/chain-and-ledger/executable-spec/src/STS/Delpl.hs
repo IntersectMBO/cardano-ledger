@@ -21,7 +21,7 @@ import           STS.Pool
 data DELPL
 
 instance STS DELPL where
-    type State DELPL       = DWState
+    type State DELPL       = DPState
     type Signal DELPL      = DCert
     type Environment DELPL = (Slot, Ptr, PParams)
     data PredicateFailure DELPL = PoolFailure (PredicateFailure POOL)
