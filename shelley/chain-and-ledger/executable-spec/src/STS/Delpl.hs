@@ -41,9 +41,15 @@ delplTransition = do
     RetirePool _ _ -> do
       ps <- trans @POOL  $ TRC ((slotIx, ptr, pp), _pstate d, c)
       pure $ d { _pstate = ps }
-    RegKey _       -> trans @DELEG $ TRC ((slotIx, ptr), d, c)
-    DeRegKey _     -> trans @DELEG $ TRC ((slotIx, ptr), d, c)
-    Delegate _     -> trans @DELEG $ TRC ((slotIx, ptr), d, c)
+    RegKey _       -> do
+      ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
+      pure $ d { _dstate = ds }
+    DeRegKey _     -> do
+      ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
+      pure $ d { _dstate = ds }
+    Delegate _     -> do
+      ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
+      pure $ d { _dstate = ds }
 
 instance Embed POOL DELPL where
   wrapFailed = PoolFailure

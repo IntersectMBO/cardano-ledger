@@ -51,6 +51,7 @@ module LedgerState
   , retirePools
   , emptyDelegation
   , applyDCert
+  , applyDCertDState
   , applyDCertPState
   , applyUTxOUpdate
   -- * Genesis State
@@ -528,29 +529,29 @@ validTx tx slot l =
 -- falsified hypothesis.
 
 -- | Checks whether a key registration certificat is valid.
-validKeyRegistration :: DCert -> DWState -> Validity
+validKeyRegistration :: DCert -> DState -> Validity
 validKeyRegistration cert ds =
   case cert of
     RegKey key -> if not $ Map.member (hashKey key) stakeKeys
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
-                   where (StakeKeys stakeKeys) = ds ^. dstate . stKeys
+                   where (StakeKeys stakeKeys) = ds ^. stKeys
     _          -> Valid
 
-validKeyDeregistration :: DCert -> DWState -> Validity
+validKeyDeregistration :: DCert -> DState -> Validity
 validKeyDeregistration cert ds =
   case cert of
     DeRegKey key -> if Map.member (hashKey key) stakeKeys
                     then Valid else Invalid [StakeKeyNotRegistered]
-                      where (StakeKeys stakeKeys) = ds ^. dstate . stKeys
+                      where (StakeKeys stakeKeys) = ds ^. stKeys
     _            -> Valid
 
-validStakeDelegation :: DCert -> DWState -> Validity
+validStakeDelegation :: DCert -> DState -> Validity
 validStakeDelegation cert ds =
   case cert of
     Delegate (Delegation source _)
       -> if Map.member (hashKey source) stakeKeys
          then Valid else Invalid [StakeDelegationImpossible]
-           where (StakeKeys stakeKeys) = ds ^. dstate . stKeys
+           where (StakeKeys stakeKeys) = ds ^. stKeys
     _ -> Valid
 
 -- there is currently no requirement that could make this invalid
@@ -567,9 +568,9 @@ validStakePoolRetire cert ps =
 
 validDelegation :: DCert -> DWState -> Validity
 validDelegation cert ds =
-     validKeyRegistration cert ds
-  <> validKeyDeregistration cert ds
-  <> validStakeDelegation cert ds
+     validKeyRegistration cert (ds ^. dstate)
+  <> validKeyDeregistration cert (ds ^. dstate)
+  <> validStakeDelegation cert (ds ^. dstate)
   <> validStakePoolRegister cert ds
   <> validStakePoolRetire cert (ds ^. pstate)
 
@@ -653,30 +654,42 @@ applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert :: Ptr -> DCert -> DWState -> DWState
-applyDCert (Ptr slot txIx clx) (RegKey key) ds =
-    ds & dstate . stKeys  .~ (StakeKeys $ Map.insert hksk slot stkeys')
-       & dstate . rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
-       & dstate . ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
-        where hksk = hashKey key
-              (StakeKeys stkeys') = ds ^. dstate . stKeys
 
-applyDCert (Ptr slot txIx clx) (DeRegKey key) ds =
-    ds & dstate . stKeys      .~ (StakeKeys $ Map.delete hksk stkeys')
-       & dstate . rewards     %~ Map.delete (RewardAcnt hksk)
-       & dstate . delegations %~ Map.delete hksk
-       & dstate . ptrs        %~ Map.delete (Ptr slot txIx clx)
-        where hksk = hashKey key
-              (StakeKeys stkeys') = ds ^. dstate . stKeys
+applyDCert ptr dcert@(RegKey key) ds =
+  ds & dstate %~ (applyDCertDState ptr dcert)
 
--- TODO do we also have to check hashKey target?
-applyDCert _ (Delegate (Delegation source target)) ds =
-    ds & dstate . delegations %~ Map.insert (hashKey source) (hashKey target)
+applyDCert ptr dcert@(DeRegKey _) ds =
+  ds & dstate %~ (applyDCertDState ptr dcert)
 
 applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ (applyDCertPState ptr dcert)
 
--- TODO check epoch (not in new doc atm.)
 applyDCert ptr dcert@(RetirePool _ _) ds =
   ds & pstate %~ (applyDCertPState ptr dcert)
+
+-- TODO do we also have to check hashKey target?
+applyDCert ptr dcert@(Delegate _) ds =
+  ds & dstate %~ (applyDCertDState ptr dcert)
+
+applyDCertDState :: Ptr -> DCert -> DState -> DState
+applyDCertDState (Ptr slot txIx clx) (DeRegKey key) ds =
+    ds & stKeys      .~ (StakeKeys $ Map.delete hksk stkeys')
+       & rewards     %~ Map.delete (RewardAcnt hksk)
+       & delegations %~ Map.delete hksk
+       & ptrs        %~ Map.delete (Ptr slot txIx clx)
+        where hksk = hashKey key
+              (StakeKeys stkeys') = ds ^. stKeys
+
+applyDCertDState (Ptr slot txIx clx) (RegKey key) ds =
+    ds & stKeys  .~ (StakeKeys $ Map.insert hksk slot stkeys')
+       & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
+       & ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
+        where hksk = hashKey key
+              (StakeKeys stkeys') = ds ^. stKeys
+
+applyDCertDState _ (Delegate (Delegation source target)) ds =
+    ds & delegations %~ Map.insert (hashKey source) (hashKey target)
+
+applyDCertDState _ _ ds = ds
 
 applyDCertPState :: Ptr -> DCert -> PState -> PState
 applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
@@ -687,6 +700,7 @@ applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
         (StakePools pools) = ps ^. stPools
         slot' = fromMaybe slot (Map.lookup hsk pools)
 
+-- TODO check epoch (not in new doc atm.)
 applyDCertPState _ (RetirePool key epoch) ps =
   ps & retiring %~ Map.insert hk_sp epoch
   where hk_sp = hashKey key
