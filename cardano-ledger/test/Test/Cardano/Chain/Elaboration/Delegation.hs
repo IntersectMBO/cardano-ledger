@@ -76,7 +76,7 @@ elaborateDCert pm cert = Concrete.mkCertificate
   pm
   (noPassSafeSigner delegatorSK)
   delegateVK
-  epochIndex
+  epochNo
  where
   VKeyGenesis delegatorVKey = delegator cert
   (_         , delegatorSK) = elaborateKeyPair $ vKeyPair delegatorVKey
@@ -84,8 +84,8 @@ elaborateDCert pm cert = Concrete.mkCertificate
 
   Epoch e = _depoch cert
 
-  epochIndex :: Concrete.EpochIndex
-  epochIndex = fromIntegral e
+  epochNo :: Concrete.EpochNumber
+  epochNo = fromIntegral e
 
 
 elaborateDCertAnnotated

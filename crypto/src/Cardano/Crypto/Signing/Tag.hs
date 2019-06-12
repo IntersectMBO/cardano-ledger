@@ -37,11 +37,11 @@ data SignTag
   | SignRedeemTx
   -- ^ Redeem tx:        @TxSigData@
   | SignVssCert
-  -- ^ Vss certificate:  @(VssVerificationKey, EpochIndex)@
+  -- ^ Vss certificate:  @(VssVerificationKey, EpochNumber)@
   | SignUSProposal
   -- ^ Update proposal:  @UpdateProposalToSign@
   | SignCommitment
-  -- ^ Commitment:       @(EpochIndex, Commitment)@
+  -- ^ Commitment:       @(EpochNumber, Commitment)@
   | SignUSVote
   -- ^ US proposal vote: @(UpId, Bool)@
   | SignBlock VerificationKey

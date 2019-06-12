@@ -14,9 +14,9 @@ import Cardano.Chain.Slotting
   (EpochSlots(..), SlotNumber (..), LocalSlotIndex (..))
 
 import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochIndex)
+  (exampleEpochNumber)
 import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochIndex
+  ( genEpochNumber
   , genSlotNumber
   , genLocalSlotIndex
   , genEpochSlots
@@ -26,14 +26,14 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
--- EpochIndex
+-- EpochNumber
 --------------------------------------------------------------------------------
 
-golden_EpochIndex :: Property
-golden_EpochIndex = goldenTestJSON exampleEpochIndex "test/golden/json/slotting/EpochIndex"
+golden_EpochNumber :: Property
+golden_EpochNumber = goldenTestJSON exampleEpochNumber "test/golden/json/slotting/EpochNumber"
 
-ts_roundTripEpochIndex :: TSProperty
-ts_roundTripEpochIndex = eachOfTS 1000 genEpochIndex roundTripsAesonBuildable
+ts_roundTripEpochNumber :: TSProperty
+ts_roundTripEpochNumber = eachOfTS 1000 genEpochNumber roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- SlotNumber

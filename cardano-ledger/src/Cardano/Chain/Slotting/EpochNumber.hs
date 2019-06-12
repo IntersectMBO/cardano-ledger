@@ -8,8 +8,8 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
-module Cardano.Chain.Slotting.EpochIndex
-  ( EpochIndex(..)
+module Cardano.Chain.Slotting.EpochNumber
+  ( EpochNumber(..)
   , isBootstrapEra
   )
 where
@@ -28,8 +28,8 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 -- | Index of epoch.
-newtype EpochIndex = EpochIndex
-  { getEpochIndex :: Word64
+newtype EpochNumber = EpochNumber
+  { getEpochNumber :: Word64
   } deriving ( Show
              , Data
              , Eq
@@ -44,26 +44,26 @@ newtype EpochIndex = EpochIndex
              , NFData
              )
 
-instance Buildable EpochIndex where
+instance Buildable EpochNumber where
   build = bprint ("#" . int)
 
-instance ToCBOR EpochIndex where
-  toCBOR (EpochIndex epoch) = toCBOR epoch
+instance ToCBOR EpochNumber where
+  toCBOR (EpochNumber epoch) = toCBOR epoch
 
-instance FromCBOR EpochIndex where
-  fromCBOR = EpochIndex <$> fromCBOR
+instance FromCBOR EpochNumber where
+  fromCBOR = EpochNumber <$> fromCBOR
 
--- Note that it will be encoded as string, because 'EpochIndex' doesn't
+-- Note that it will be encoded as string, because 'EpochNumber' doesn't
 -- necessary fit into JS number.
-instance Monad m => ToJSON m EpochIndex where
-  toJSON = toJSON . getEpochIndex
+instance Monad m => ToJSON m EpochNumber where
+  toJSON = toJSON . getEpochNumber
 
-deriving instance Aeson.FromJSON EpochIndex
+deriving instance Aeson.FromJSON EpochNumber
 
-deriving instance Aeson.ToJSON EpochIndex
+deriving instance Aeson.ToJSON EpochNumber
 
-instance MonadError SchemaError m => FromJSON m EpochIndex where
-  fromJSON = fmap EpochIndex . fromJSON
+instance MonadError SchemaError m => FromJSON m EpochNumber where
+  fromJSON = fmap EpochNumber . fromJSON
 
 -- | Bootstrap era is ongoing until stakes are unlocked. The reward era starts
 --   from the epoch specified as the epoch that unlocks stakes:
@@ -76,9 +76,9 @@ instance MonadError SchemaError m => FromJSON m EpochIndex where
 --               Bootstrap era   Reward era
 --   @
 isBootstrapEra
-  :: EpochIndex
+  :: EpochNumber
   -- ^ Unlock stake epoch
-  -> EpochIndex
+  -> EpochNumber
   -- ^ Epoch in question (for which we determine whether it belongs to the
   --   bootstrap era)
   -> Bool

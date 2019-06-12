@@ -179,9 +179,9 @@ dropVssCertificate = do
   enforceSize "VssCertificate" 4
   -- AsBinary VssVerificationKey
   dropBytes
-  -- EpochIndex
+  -- EpochNumber
   dropWord64
-  -- Signature (AsBinary VssVerificationKey, EpochIndex)
+  -- Signature (AsBinary VssVerificationKey, EpochNumber)
   dropBytes
   -- VerificationKey
   dropBytes

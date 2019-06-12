@@ -29,7 +29,7 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common
   (LovelacePortion, TxFeePolicy, lovelacePortionToDouble)
-import Cardano.Chain.Slotting (EpochIndex, SlotNumber(..), isBootstrapEra)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber(..), isBootstrapEra)
 import Cardano.Chain.Update.SoftforkRule
 
 
@@ -58,7 +58,7 @@ data ProtocolParameters = ProtocolParameters
   -- proposal is rejected.
   , ppSoftforkRule      :: !SoftforkRule
   , ppTxFeePolicy       :: !TxFeePolicy
-  , ppUnlockStakeEpoch  :: !EpochIndex
+  , ppUnlockStakeEpoch  :: !EpochNumber
   } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
 
@@ -175,7 +175,7 @@ deriveJSON S.defaultOptions ''ProtocolParameters
 
 -- | Version of 'isBootstrapEra' which takes 'ProtocolParameters' instead of
 --   unlock stake epoch
-isBootstrapEraPP :: ProtocolParameters -> EpochIndex -> Bool
+isBootstrapEraPP :: ProtocolParameters -> EpochNumber -> Bool
 isBootstrapEraPP adoptedPP = isBootstrapEra (ppUnlockStakeEpoch adoptedPP)
 
 -- | In Byron we do not have a @upAdptThd@ protocol parameter, so we have to

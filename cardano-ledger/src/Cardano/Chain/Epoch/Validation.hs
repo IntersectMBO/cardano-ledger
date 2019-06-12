@@ -38,7 +38,7 @@ import Cardano.Chain.Epoch.File
   )
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
-  (EpochIndex, SlotId, slotNumberEpoch, unflattenSlotId)
+  (EpochNumber, SlotId, slotNumberEpoch, unflattenSlotId)
 import Cardano.Chain.UTxO (UTxO)
 
 
@@ -93,7 +93,7 @@ validateEpochFile config ll cvs fp = do
    where
     (heapSize, utxoSize) = calcUTxOSize (cvsUtxo cvs')
 
-  epochValidationFormat :: Format r (EpochIndex -> r)
+  epochValidationFormat :: Format r (EpochNumber -> r)
   epochValidationFormat =
     "Succesfully validated epoch " . build . "\n"
 

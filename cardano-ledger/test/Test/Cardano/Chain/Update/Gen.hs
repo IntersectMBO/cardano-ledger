@@ -55,7 +55,7 @@ import Test.Cardano.Chain.Common.Gen
   , genTxFeePolicy
   )
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochIndex, genSlotNumber)
+  (genEpochNumber, genSlotNumber)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
   , genHashRaw
@@ -86,7 +86,7 @@ genCanonicalProtocolParameters =
     <*> genSlotNumber
     <*> genSoftforkRule
     <*> genCanonicalTxFeePolicy
-    <*> genEpochIndex
+    <*> genEpochNumber
 
 genProtocolVersion :: Gen ProtocolVersion
 genProtocolVersion =
@@ -111,7 +111,7 @@ genProtocolParameters =
     <*> genSlotNumber
     <*> genSoftforkRule
     <*> genTxFeePolicy
-    <*> genEpochIndex
+    <*> genEpochNumber
 
 genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
 genProtocolParametersUpdate =
@@ -129,7 +129,7 @@ genProtocolParametersUpdate =
     <*> Gen.maybe genSlotNumber
     <*> Gen.maybe genSoftforkRule
     <*> Gen.maybe genTxFeePolicy
-    <*> Gen.maybe genEpochIndex
+    <*> Gen.maybe genEpochNumber
 
 genSoftforkRule :: Gen SoftforkRule
 genSoftforkRule =

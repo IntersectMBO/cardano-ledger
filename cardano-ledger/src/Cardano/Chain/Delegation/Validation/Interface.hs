@@ -31,7 +31,7 @@ import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
-  ( EpochIndex
+  ( EpochNumber
   , SlotNumber(..)
   , addSlotNumber
   , subSlotNumber
@@ -47,7 +47,7 @@ data Environment = Environment
   { protocolMagic      :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators  :: !(Set KeyHash)
   , k                  :: !BlockCount
-  , currentEpoch       :: !EpochIndex
+  , currentEpoch       :: !EpochNumber
   , currentSlot        :: !SlotNumber
   } deriving (Eq, Show, Generic, NFData)
 

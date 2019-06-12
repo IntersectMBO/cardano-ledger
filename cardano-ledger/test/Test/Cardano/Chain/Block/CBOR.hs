@@ -48,7 +48,7 @@ import Cardano.Chain.Block
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
-  ( EpochIndex(..)
+  ( EpochNumber(..)
   , EpochSlots(EpochSlots)
   , WithEpochSlots(WithEpochSlots)
   , unWithEpochSlots
@@ -262,7 +262,7 @@ exampleHeader = mkHeaderExplicit
     pm
     (noPassSafeSigner issuerSk)
     (toVerification delegateSk)
-    (EpochIndex 5)
+    (EpochNumber 5)
 
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = ABlockSignature cert sig
@@ -271,7 +271,7 @@ exampleBlockSignature = ABlockSignature cert sig
     pm
     (noPassSafeSigner issuerSK)
     (toVerification delegateSK)
-    (EpochIndex 5)
+    (EpochNumber 5)
 
   sig = sign pm (SignBlock (toVerification issuerSK)) delegateSK exampleToSign
 

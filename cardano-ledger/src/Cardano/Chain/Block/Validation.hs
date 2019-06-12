@@ -94,7 +94,7 @@ import Cardano.Chain.Genesis as Genesis
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
-  (EpochIndex(..), SlotNumber(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
+  (EpochNumber(..), SlotNumber(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
 import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
@@ -196,7 +196,7 @@ initialChainValidationState config = do
     { DI.protocolMagic = Annotated pm (serialize' pm)
     , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
     , DI.k           = configK config
-    , DI.currentEpoch = EpochIndex 0
+    , DI.currentEpoch = EpochNumber 0
     , DI.currentSlot = SlotNumber 0
     }
 
@@ -338,7 +338,7 @@ data BodyEnvironment = BodyEnvironment
   , k                  :: !BlockCount
   , numGenKeys         :: !Word8
   , protocolParameters :: !Update.ProtocolParameters
-  , currentEpoch       :: !EpochIndex
+  , currentEpoch       :: !EpochNumber
   }
 
 data BodyState = BodyState
@@ -487,7 +487,7 @@ data EpochEnvironment = EpochEnvironment
   , k             :: !BlockCount
   , numGenKeys    :: !Word8
   , delegationMap :: !Delegation.Map
-  , currentEpoch  :: !EpochIndex
+  , currentEpoch  :: !EpochNumber
   }
 
 

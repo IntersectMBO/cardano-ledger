@@ -52,7 +52,7 @@ import Cardano.Chain.Genesis
   , mkConfig
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
-import Cardano.Chain.Slotting (EpochIndex(..), EpochSlots, SlotCount)
+import Cardano.Chain.Slotting (EpochNumber(..), EpochSlots, SlotCount)
 import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
 import Cardano.Crypto (SigningKey)
 
@@ -130,7 +130,7 @@ dummyProtocolParameters = ProtocolParameters
     (mkKnownLovelacePortion @50000000000000)
   , ppTxFeePolicy       = TxFeePolicyTxSizeLinear
     (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
-  , ppUnlockStakeEpoch  = EpochIndex maxBound
+  , ppUnlockStakeEpoch  = EpochNumber maxBound
   }
 
 dummyGenesisInitializer :: GenesisInitializer

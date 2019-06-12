@@ -39,7 +39,7 @@ import Cardano.Binary
   (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.BlockCount (BlockCount, unBlockCount)
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
-import Cardano.Chain.Slotting.EpochIndex (EpochIndex(..))
+import Cardano.Chain.Slotting.EpochNumber (EpochNumber(..))
 import Cardano.Chain.Slotting.EpochSlots (EpochSlots(..))
 import Cardano.Chain.Slotting.LocalSlotIndex
   ( LocalSlotIndex(..)
@@ -54,7 +54,7 @@ import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 --   this epoch. This is a global index, an index to a global
 --   slot position.
 data SlotId = SlotId
-  { siEpoch :: !EpochIndex
+  { siEpoch :: !EpochNumber
   , siSlot  :: !LocalSlotIndex
   } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
@@ -63,7 +63,7 @@ instance B.Buildable SlotId where
   build si = bprint
     (ords . " slot of " . ords . " epoch")
     (unLocalSlotIndex $ siSlot si)
-    (getEpochIndex $ siEpoch si)
+    (getEpochNumber $ siEpoch si)
 
 instance ToCBOR SlotId where
   toCBOR si = encodeListLen 2 <> toCBOR (siEpoch si) <> toCBOR (siSlot si)
@@ -138,11 +138,11 @@ flattenSlotId es si = SlotNumber $ pastSlots + lsi
   lsi :: Word64
   lsi = fromIntegral . unLocalSlotIndex $ siSlot si
   pastSlots :: Word64
-  pastSlots = unSlotNumber (flattenEpochIndex es $ siEpoch si)
+  pastSlots = unSlotNumber (flattenEpochNumber es $ siEpoch si)
 
--- | Flattens 'EpochIndex' into a single number
-flattenEpochIndex :: EpochSlots -> EpochIndex -> SlotNumber
-flattenEpochIndex es (EpochIndex i) = SlotNumber $ i * unEpochSlots es
+-- | Flattens 'EpochNumber' into a single number
+flattenEpochNumber :: EpochSlots -> EpochNumber -> SlotNumber
+flattenEpochNumber es (EpochNumber i) = SlotNumber $ i * unEpochSlots es
 
 -- | Construct a 'SlotId' from a flattened variant, using a given 'EpochSlots'
 --   modulus
@@ -152,7 +152,7 @@ unflattenSlotId (EpochSlots n) (SlotNumber fsId)
                        <> "passed to this function must be positive"
   | otherwise =
     SlotId
-      { siEpoch = EpochIndex epoch
+      { siEpoch = EpochNumber epoch
       , siSlot  = UnsafeLocalSlotIndex slotCount
       }
  where
@@ -176,12 +176,12 @@ subSlotNumber :: SlotCount -> SlotNumber -> SlotNumber
 subSlotNumber (SlotCount a) (SlotNumber b) =
   if a > b then SlotNumber 0 else SlotNumber (b - a)
 
-slotNumberEpoch :: EpochSlots -> SlotNumber -> EpochIndex
+slotNumberEpoch :: EpochSlots -> SlotNumber -> EpochNumber
 slotNumberEpoch epochSlots slot = siEpoch $ unflattenSlotId epochSlots slot
 
 -- | Slot such that at the beginning of epoch blocks with SlotId ≤ to this slot
 --   are stable
-crucialSlot :: BlockCount -> EpochIndex -> SlotId
+crucialSlot :: BlockCount -> EpochNumber -> SlotId
 crucialSlot _ 0        = SlotId {siEpoch = 0, siSlot = localSlotIndexMinBound}
 crucialSlot k epochIdx = SlotId {siEpoch = epochIdx - 1, siSlot = slot}
  where

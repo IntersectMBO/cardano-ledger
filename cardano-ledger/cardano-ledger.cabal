@@ -84,7 +84,7 @@ library
                        Cardano.Chain.Genesis.NonAvvmBalances
                        Cardano.Chain.Genesis.Spec
 
-                       Cardano.Chain.Slotting.EpochIndex
+                       Cardano.Chain.Slotting.EpochNumber
                        Cardano.Chain.Slotting.EpochSlots
                        Cardano.Chain.Slotting.LocalSlotIndex
                        Cardano.Chain.Slotting.SlotCount

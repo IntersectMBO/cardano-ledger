@@ -42,7 +42,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochIndex, SlotNumber)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -90,7 +90,7 @@ data Environment = Environment
 
 -- | Update interface state.
 data State = State
-  { currentEpoch                      :: !EpochIndex
+  { currentEpoch                      :: !EpochNumber
     -- ^ Current epoch
   , adoptedProtocolVersion            :: !ProtocolVersion
   , adoptedProtocolParameters         :: !ProtocolParameters
@@ -371,7 +371,7 @@ registerEpoch
   :: MonadError Error m
   => Environment
   -> State
-  -> EpochIndex
+  -> EpochNumber
   -- ^ Epoch seen on the block.
   -> m State
 registerEpoch env st lastSeenEpoch = do

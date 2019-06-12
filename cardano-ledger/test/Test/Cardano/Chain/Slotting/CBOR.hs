@@ -16,10 +16,10 @@ import Cardano.Chain.Slotting
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBOR, roundTripsCBORBuildable)
 import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochIndex, exampleSlotId)
+  (exampleEpochNumber, exampleSlotId)
 import Test.Cardano.Chain.Slotting.Gen
   ( feedPMEpochSlots
-  , genEpochIndex
+  , genEpochNumber
   , genSlotNumber
   , genSlotId
   , genLocalSlotIndex
@@ -29,14 +29,14 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
--- EpochIndex
+-- EpochNumber
 --------------------------------------------------------------------------------
-golden_EpochIndex :: Property
-golden_EpochIndex =
-  goldenTestCBOR exampleEpochIndex "test/golden/cbor/slotting/EpochIndex"
+golden_EpochNumber :: Property
+golden_EpochNumber =
+  goldenTestCBOR exampleEpochNumber "test/golden/cbor/slotting/EpochNumber"
 
-ts_roundTripEpochIndexCBOR :: TSProperty
-ts_roundTripEpochIndexCBOR = eachOfTS 1000 genEpochIndex roundTripsCBORBuildable
+ts_roundTripEpochNumberCBOR :: TSProperty
+ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- SlotNumber

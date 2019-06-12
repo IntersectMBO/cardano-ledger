@@ -43,7 +43,7 @@ import Cardano.Chain.Genesis
   , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
-import Cardano.Chain.Slotting (EpochIndex(..))
+import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId(..)
@@ -106,7 +106,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( hashKey issueVerKey
       , unsafeCertificate
-        (EpochIndex 68300481033)
+        (EpochNumber 68300481033)
         issueVerKey
         (VerificationKey
           (CC.XPub
@@ -122,7 +122,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
  where
   issueVerKey = VerificationKey
     (CC.XPub {CC.xpubPublicKey = pskVerKey, CC.xpubChaincode = pskChainCode})
-  sig :: Signature EpochIndex
+  sig :: Signature EpochNumber
   sig = Signature $ fromRight (panic "Something went wrong") $ CC.xsignature
     (hexToBS
       "bae5422af5405e3803154a4ad986da5d14cf624d670\

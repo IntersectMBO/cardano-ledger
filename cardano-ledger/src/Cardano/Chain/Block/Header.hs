@@ -90,7 +90,7 @@ import Cardano.Binary
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
-  (dropBoundaryConsensusDataRetainEpochIndex, dropBoundaryExtraHeaderData)
+  (dropBoundaryConsensusDataRetainEpochNumber, dropBoundaryExtraHeaderData)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
@@ -446,7 +446,7 @@ dropBoundaryHeader = do
   hh <- fromCBOR
   -- BoundaryBodyProof
   dropBytes
-  epoch <- dropBoundaryConsensusDataRetainEpochIndex
+  epoch <- dropBoundaryConsensusDataRetainEpochNumber
   dropBoundaryExtraHeaderData
   pure (hh, epoch)
 

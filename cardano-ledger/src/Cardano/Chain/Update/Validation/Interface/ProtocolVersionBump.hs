@@ -10,7 +10,7 @@ where
 import Cardano.Prelude hiding (State)
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
-import Cardano.Chain.Slotting (EpochIndex, SlotNumber, twice)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, twice)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -27,7 +27,7 @@ data Environment = Environment
   }
 
 data State = State
-  { currentEpoch              :: !EpochIndex
+  { currentEpoch              :: !EpochNumber
   , nextProtocolVersion       :: !ProtocolVersion
   , nextProtocolParameters    :: !ProtocolParameters
   }
@@ -40,7 +40,7 @@ data State = State
 tryBumpVersion
   :: Environment
   -> State
-  -> EpochIndex
+  -> EpochNumber
   -> State
 tryBumpVersion env st lastSeenEpoch =
   case (currentEpoch < lastSeenEpoch, stableCandidates) of

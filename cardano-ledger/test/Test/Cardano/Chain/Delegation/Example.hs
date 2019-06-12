@@ -8,7 +8,7 @@ import Cardano.Prelude
 import Data.List (zipWith4)
 
 import Cardano.Chain.Delegation (Certificate, mkCertificate)
-import Cardano.Chain.Slotting (EpochIndex(..))
+import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto (ProtocolMagicId(..))
 
 import Test.Cardano.Crypto.Example (exampleVerificationKeys, staticSafeSigners)
@@ -24,4 +24,4 @@ exampleCertificates = zipWith4
   staticSafeSigners
   (exampleVerificationKeys 1 6)
   exampleEpochIndices
-  where exampleEpochIndices = EpochIndex <$> [5, 1, 3, 27, 99, 247]
+  where exampleEpochIndices = EpochNumber <$> [5, 1, 3, 27, 99, 247]
