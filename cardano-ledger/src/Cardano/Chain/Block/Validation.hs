@@ -333,6 +333,27 @@ updateChainBoundary cvs bvd = do
     }
 
 
+validateBlockProofs
+  :: MonadError ChainValidationError m
+  => ABlock ByteString
+  -> m ()
+validateBlockProofs b = do
+  -- Validate the delegation payload signature
+  proofDelegation (blockProof b)
+    == hashDecoded (blockDlgPayload b)
+    `orThrowError` ChainValidationDelegationProofError
+
+  -- Validate the transaction payload proof
+  proofUTxO (blockProof b)
+    == recoverTxProof (blockTxPayload b)
+    `orThrowError` ChainValidationUTxOProofError
+
+  -- Validate the update payload proof
+  proofUpdate (blockProof b)
+    == hashDecoded (blockUpdatePayload b)
+    `orThrowError` ChainValidationUpdateProofError
+
+
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
   , k                  :: !BlockCount
@@ -363,30 +384,18 @@ updateBody env bs b = do
   blockLength b <= maxBlockSize
     `orThrowError` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
-  -- Validate the delegation payload signature
-  proofDelegation (blockProof b)
-    == hashDecoded (blockDlgPayload b)
-    `orThrowError` ChainValidationDelegationProofError
+  -- Validate the delegation, transaction, and update payload proofs.
+  validateBlockProofs b
 
   -- Update the delegation state
   delegationState' <-
     DI.updateDelegation delegationEnv delegationState certificates
       `wrapError` ChainValidationDelegationSchedulingError
 
-  -- Validate the transaction payload proof
-  proofUTxO (blockProof b)
-    == recoverTxProof (blockTxPayload b)
-    `orThrowError` ChainValidationUTxOProofError
-
   -- Update the UTxO
   utxo' <-
     UTxO.updateUTxO utxoEnv utxo txs
       `wrapError` ChainValidationUTxOValidationError
-
-  -- Validate the update payload proof
-  proofUpdate (blockProof b)
-    == hashDecoded (blockUpdatePayload b)
-    `orThrowError` ChainValidationUpdateProofError
 
   -- Update the update state
   updateState' <-
