@@ -231,7 +231,8 @@ propCheckMinimalWitnessSet = property $ do
   let tx                       = txwits ^. body
   let witness                  = makeWitness tx keyPair
   let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
-  let l''                      = asStateTransition (Slot (steps)) l txwits'
+  let dms                      = _dms $ _dstate $ _delegationState l
+  let l''                      = asStateTransition (Slot (steps)) l txwits' dms
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessSet))
   case l'' of
@@ -249,7 +250,8 @@ propCheckMissingWitness = property $ do
                                         Set.toList (txwits ^. witnessSet))
   let witnessSet''          = txwits ^. witnessSet
   let witnessSet'           = Set.fromList witnessList
-  let l'                    = asStateTransition (Slot steps) l (txwits & witnessSet .~ witnessSet')
+  let dms                   = _dms $ _dstate $ _delegationState l
+  let l'                    = asStateTransition (Slot steps) l (txwits & witnessSet .~ witnessSet') dms
   let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
                               witnessSet' /= witnessSet''
   classify "real subset" (isRealSubset)
