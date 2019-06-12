@@ -22,7 +22,7 @@ import           STS.Delpl
 data DELEGS
 
 instance STS DELEGS where
-    type State DELEGS       = DWState
+    type State DELEGS       = DPState
     type Signal DELEGS      = [DCert]
     type Environment DELEGS = (Slot, Ix, PParams)
     data PredicateFailure DELEGS = DelplFailure (PredicateFailure DELPL)

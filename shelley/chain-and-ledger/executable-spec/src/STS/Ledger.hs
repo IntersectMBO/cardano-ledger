@@ -25,7 +25,7 @@ import           STS.Utxow
 data LEDGER
 
 instance STS LEDGER where
-    type State LEDGER       = (UTxOState, DWState)
+    type State LEDGER       = (UTxOState, DPState)
     type Signal LEDGER      = TxWits
     type Environment LEDGER = (PParams, Slot, Ix)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
