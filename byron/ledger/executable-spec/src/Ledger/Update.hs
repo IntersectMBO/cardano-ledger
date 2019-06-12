@@ -9,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE StrictData                 #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -19,32 +20,41 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
+import Control.Arrow ((&&&))
 import Control.Lens
 import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
+import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
+import Data.List (notElem)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
-import Data.Set (Set, union)
+import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
+import Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 import Numeric.Natural
 
 import Control.State.Transition
+import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
 import Ledger.Core
   ( BlockCount(..)
   , HasHash
+  , KeyPair(KeyPair)
+  , Owner(Owner)
   , Relation(..)
   , Slot(..)
   , SlotCount(..)
-  , VKey
-  , VKeyGenesis
+  , VKey(VKey)
+  , VKeyGenesis(VKeyGenesis)
   , (*.)
   , (-.)
   , (∈)
@@ -55,11 +65,16 @@ import Ledger.Core
   , (▷>=)
   , (◁)
   , (⨃)
+  , dom
   , hash
+  , keyPair
   , minusSlotMaybe
+  , sKey
+  , skey
   , unSlot
   )
 import qualified Ledger.Core as Core
+import qualified Ledger.Core.Generators as CoreGen
 import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
@@ -764,6 +779,105 @@ instance STS UPIREG where
 
 instance Embed UPREG UPIREG where
   wrapFailed = UPREGFailure
+
+instance HasTrace UPIREG where
+
+  initEnvGen = (,,)
+             <$> CoreGen.slotGen 0 10 -- current slot
+             <*> dmapGen              -- delegation map
+             <*> blockCountGen        -- k
+    where
+      dmapGen = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+      vkgVkPairsGen = do
+        n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
+        let
+          vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
+          -- As delegation targets we choose twice the number of genesis keys.
+          -- Note that the genesis keys can delegate to themselves in the
+          -- generated delegation map.
+          vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
+        (vkgs,) <$> Gen.subsequence vks
+
+      -- TODO: use the generator in Core once PR 570 is merged.
+      blockCountGen = BlockCount <$> Gen.word64 (Range.linear 0 100)
+
+  sigGen (slot, dms, k) ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws)
+    = do
+    (vk, pv', pps', sv) <- (,,,) <$> issuerGen
+                                 <*> pvGen
+                                 <*> pparamsGen
+                                 <*> swVerGen
+    UProp
+      <$> idGen
+      <*> pure vk
+      <*> pure pps'
+      <*> pure pv'
+      <*> pure sv
+      <*> pure (Core.sign (skey vk) (pv, pps, sv))
+      <*> stTagsGen
+      <*> mdtGen
+
+    where
+      idGen :: Gen UpId
+      idGen = do
+        -- Chose an increment for the maximum version seen in the update
+        -- proposal id's.
+        inc <- Gen.integral (Range.constant 0 10)
+        case Set.toDescList $ dom rpus of
+          [] -> UpId <$> Gen.element [0 .. inc]
+          (UpId maxId:_) -> pure $ UpId (maxId + inc)
+
+      -- As issuer we chose a current delegate. The delegation map must not be
+      -- empty for this signal generator to succeed.
+      issuerGen :: Gen Core.VKey
+      issuerGen = if null delegates
+                  then Gen.element delegates
+                  else error "There are no delegates to issue an update proposal."
+        where
+          delegates = Set.toList (range dms)
+
+      pparamsGen :: Gen PParams
+      pparamsGen = undefined
+
+      pvGen :: Gen ProtVer
+      pvGen = undefined
+
+      swVerGen :: Gen SwVer
+      swVerGen =
+        -- First, we generate the possible version increment for the existing
+        -- software.
+        if null possibleNextVersions
+        then genNewApp
+        else Gen.choice [genANextVersion, genNewApp]
+        where
+          -- Generate the next version for an existing application
+          genANextVersion :: Gen SwVer
+          genANextVersion = uncurry SwVer <$> Gen.element possibleNextVersions
+          possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
+          nextVersions = Set.fromList $ zip appNames appNextVersions
+          appNames = Set.toList (dom avs)
+          appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+          registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
+
+          fst3 (x, _, _) = x
+          snd3 (_, y, _) = y
+
+          -- Generate a new application
+          genNewApp :: Gen SwVer
+          genNewApp
+            = ((`SwVer` 0) . ApName)
+            <$> Gen.filter ((`notElem` appNames) . ApName)
+                           (Gen.list (Range.constant 0 12) Gen.ascii)
+
+      upSig :: Core.Sig UpSD
+      upSig = undefined -- Core.sign
+
+      stTagsGen :: Gen (Set STag)
+      stTagsGen = undefined
+
+      mdtGen :: Gen Metadata
+      mdtGen = pure Metadata
+
 
 data UPIVOTE
 
