@@ -497,7 +497,7 @@ updateHeader bvmode env st h = do
       `orThrowError` ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
 
   -- Perform epoch transition
-  epochTransition epochEnv st (headerSlot h)
+  pure $! epochTransition epochEnv st (headerSlot h)
  where
   maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
 
@@ -530,16 +530,13 @@ data EpochEnvironment = EpochEnvironment
 --   confirmed proposals and cleans up the state. This corresponds to the EPOCH
 --   rules from the Byron chain specification.
 epochTransition
-  :: MonadError ChainValidationError m
-  => EpochEnvironment
+  :: EpochEnvironment
   -> UPI.State
   -> SlotNumber
-  -> m UPI.State
+  -> UPI.State
 epochTransition env st slot = if nextEpoch > currentEpoch
-  then
-    UPI.registerEpoch updateEnv st nextEpoch
-      `wrapError` ChainValidationUpdateError
-  else pure st
+  then UPI.registerEpoch updateEnv st nextEpoch
+  else st
  where
   EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
     = env
