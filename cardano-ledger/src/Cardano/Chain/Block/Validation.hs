@@ -47,6 +47,7 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Chain.Block.Body (ABody (..))
 import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
@@ -57,7 +58,6 @@ import Cardano.Chain.Block.Block
   , blockHeader
   , blockIssuer
   , blockLength
-  , blockProof
   , blockProtocolMagicId
   , blockProtocolVersion
   , blockSlot
@@ -65,10 +65,11 @@ import Cardano.Chain.Block.Block
   , blockUpdatePayload
   )
 import Cardano.Chain.Block.Header
-  ( AHeader
+  ( AHeader (..)
   , BlockSignature
   , HeaderHash
   , headerLength
+  , headerProof
   , headerSlot
   , wrapBoundaryBytes
   )
@@ -327,25 +328,37 @@ updateChainBoundary cvs bvd = do
     }
 
 
+validateHeaderMatchesBody
+  :: MonadError ProofValidationError m
+  => AHeader ByteString
+  -> ABody ByteString
+  -> m ()
+validateHeaderMatchesBody hdr body = do
+  let hdrProof = headerProof hdr
+
+  -- Validate the delegation payload signature
+  proofDelegation hdrProof == hashDecoded (bodyDlgPayload body)
+    `orThrowError` DelegationProofValidationError
+
+  -- Validate the transaction payload proof
+  proofUTxO hdrProof == recoverTxProof (bodyTxPayload body)
+    `orThrowError` UTxOProofValidationError
+
+  -- Validate the update payload proof
+  proofUpdate hdrProof == hashDecoded (bodyUpdatePayload body)
+    `orThrowError` UpdateProofValidationError
+
 validateBlockProofs
   :: MonadError ProofValidationError m
   => ABlock ByteString
   -> m ()
-validateBlockProofs b = do
-  -- Validate the delegation payload signature
-  proofDelegation (blockProof b)
-    == hashDecoded (blockDlgPayload b)
-    `orThrowError` DelegationProofValidationError
-
-  -- Validate the transaction payload proof
-  proofUTxO (blockProof b)
-    == recoverTxProof (blockTxPayload b)
-    `orThrowError` UTxOProofValidationError
-
-  -- Validate the update payload proof
-  proofUpdate (blockProof b)
-    == hashDecoded (blockUpdatePayload b)
-    `orThrowError` UpdateProofValidationError
+validateBlockProofs b =
+  validateHeaderMatchesBody blockHeader blockBody
+ where
+  ABlock
+    { blockHeader
+    , blockBody
+    } = b
 
 
 data BodyEnvironment = BodyEnvironment
