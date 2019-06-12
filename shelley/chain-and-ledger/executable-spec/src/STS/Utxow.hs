@@ -10,6 +10,7 @@ module STS.Utxow
 import           Lens.Micro               ((^.))
 
 import           Delegation.Certificates
+import           Keys
 import           LedgerState
 import           PParams
 import           Slot
@@ -23,8 +24,8 @@ data UTXOW
 
 instance STS UTXOW where
   type State UTXOW = UTxOState
-  type Signal UTXOW = TxWits
-  type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools)
+  type Signal UTXOW = Tx
+  type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools, Dms)
   data PredicateFailure UTXOW = InvalidWitnessesUTXOW
                             | MissingWitnessesUTXOW
                             | UnneededWitnessesUTXOW
@@ -35,16 +36,16 @@ instance STS UTXOW where
 
 initialLedgerStateUTXOW :: InitialRule UTXOW
 initialLedgerStateUTXOW = do
-  IRC (slots, pp, stakeKeys, stakePools) <- judgmentContext
-  trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools)
+  IRC (slots, pp, stakeKeys, stakePools, dms) <- judgmentContext
+  trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools, dms)
 
 utxoWitnessed :: TransitionRule UTXOW
 utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools), u, txwits) <- judgmentContext
-  verifiedWits txwits == Valid ?! InvalidWitnessesUTXOW
-  enoughWits txwits u == Valid ?! MissingWitnessesUTXOW
-  noUnneededWits txwits u == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools), u, txwits ^. body)
+  TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx) <- judgmentContext
+  verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
+  enoughWits tx dms u == Valid ?! MissingWitnessesUTXOW
+  noUnneededWits tx dms u == Valid ?! UnneededWitnessesUTXOW
+  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx)
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure

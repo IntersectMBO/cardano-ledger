@@ -1,8 +1,5 @@
 module BlockChain
-  ( Seed
-  , seedOp
-  , mkNonce
-  , HashHeader(..)
+  ( HashHeader(..)
   , BHBody(..)
   , BHeader(..)
   , Block(..)
@@ -46,20 +43,6 @@ instance BA.ByteArrayAccess BHeader where
   length = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack . show
 
--- | Tree like structure to represent nonce values and to support the binary
--- operation on values.
-data Seed
-  = Nonce Integer
-  | SeedOp Seed
-           Seed
-  deriving (Show, Eq)
-
-seedOp :: Seed -> Seed -> Seed
-seedOp = SeedOp
-
-mkNonce :: Integer -> Seed
-mkNonce = Nonce
-
 data Proof a =
   Proof Keys.VKey Seed
   deriving (Show, Eq)
@@ -85,29 +68,29 @@ data BHBody = BHBody
     -- | proof of leader election
   , bheaderPrfL           :: Proof UnitInterval
     -- | signature of block body
-  , bheaderBlockSignature :: Keys.Sig [U.TxWits]
+  , bheaderBlockSignature :: Keys.Sig [U.Tx]
     -- | operational certificate
   , bheaderOCert          :: OCert
   } deriving (Show, Eq)
 
 data Block =
   Block BHeader
-        [U.TxWits]
+        [U.Tx]
   deriving (Show, Eq)
 
 bHeaderSize :: BHeader -> Int
 bHeaderSize = BA.length . BS.pack . show
 
-bBodySize :: [U.TxWits] -> Int
+bBodySize :: [U.Tx] -> Int
 bBodySize txs = foldl (+) 0 (map (BA.length . BS.pack . show) txs)
 
 slotToSeed :: Slot.Slot -> Seed
-slotToSeed (Slot.Slot s) = Nonce (fromIntegral s)
+slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
 
 bheader :: Block -> BHeader
 bheader (Block bh _) = bh
 
-bbody :: Block -> [U.TxWits]
+bbody :: Block -> [U.Tx]
 bbody (Block _ txs) = txs
 
 bhbody :: BHeader -> BHBody
@@ -126,7 +109,7 @@ verifyVrf :: Keys.VKey -> Seed -> Proof a -> Bool
 verifyVrf vk seed (Proof k s) = vk == k && seed == s
 
 seedEta :: Seed
-seedEta = Nonce 0
+seedEta = mkNonce 0
 
 seedL :: Seed
-seedL = Nonce 1
+seedL = mkNonce 1
