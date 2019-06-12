@@ -71,18 +71,6 @@ deleg =
 
       pure (DState (Bimap.fromList []) [])
 
-      .- (s 4, (gk 1, k 2)) .-> DState (Bimap.fromList [(gk 1, k 2)])
-                                       [(gk 1, s 4)]
-
-      .- (s 10, (gk 1, k 0)) .-> DState (Bimap.fromList [(gk 1, k 0)])
-                                       [(gk 1, s 10)]
-
-      .- (s 13, (gk 2, k 0)) .-> DState (Bimap.fromList [(gk 1, k 0)])
-                                       [(gk 1, s 10)]
-    , testCase "Example 2" $ checkTrace @ADELEG genKeys $
-
-      pure (DState (Bimap.fromList []) [])
-
       .- (s 6, (gk 1, k 2)) .-> DState (Bimap.fromList [(gk 1, k 2)])
                                        [(gk 1, s 6)]
 
@@ -94,17 +82,6 @@ deleg =
 
       .- (s 19, (gk 2, k 0)) .-> DState (Bimap.fromList [(gk 1, k 0)])
                                         [(gk 1, s 16)]
-
-    , testCase "Example 3" $ checkTrace @ADELEG genKeys $
-
-      pure (DState (Bimap.fromList []) [])
-
-      .- (s 4, (gk 1, k 0)) .-> DState (Bimap.fromList [(gk 1, k 0)])
-                                       [(gk 1, s 4)]
-      .- (s 5, (gk 2, k 0)) .-> DState (Bimap.fromList [(gk 1, k 0)])
-                                       [(gk 1, s 4)]
-      .- (s 5, (gk 1, k 1)) .-> DState (Bimap.fromList [(gk 1, k 1)])
-                                       [(gk 1, s 5)]
 
     ]
 

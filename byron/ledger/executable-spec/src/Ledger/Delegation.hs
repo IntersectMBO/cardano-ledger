@@ -65,8 +65,6 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
-  , dcertGen'
-  , dcertsGen'
   -- * Functions on delegation state
   , delegatorOf
   )
@@ -126,7 +124,7 @@ import Control.State.Transition.Generator
   )
 import Ledger.Core
   ( BlockCount
-  , Epoch(Epoch)
+  , Epoch
   , HasHash
   , Hash(Hash)
   , Owner(Owner)
@@ -149,7 +147,6 @@ import Ledger.Core.Generators
   ( blockCountGen
   , epochGen
   , slotGen
-  , vkGen
   , vkgenesisGen
   )
 
@@ -297,8 +294,8 @@ instance STS SDELEG where
 
   data PredicateFailure SDELEG
     = IsNotGenesisKey
-    | IsPastEpoch
-    | EpochFarInTheFuture
+    | EpochInThePast
+    | EpochPastNextEpoch
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
@@ -318,8 +315,8 @@ instance STS SDELEG where
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
         let diff = cert ^. depoch - env ^. epoch
-        0 <= diff ?! IsPastEpoch
-        diff <= 1 ?! EpochFarInTheFuture
+        0 <= diff ?! EpochInThePast
+        diff <= 1 ?! EpochPastNextEpoch
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. dwho
@@ -522,29 +519,8 @@ instance Embed ADELEGS DELEG where
 -- Generators
 --------------------------------------------------------------------------------
 
--- | Generate delegation certificates, using the allowed delegators in the
--- environment passed as parameter.
-dcertGen :: DSEnv -> Gen DCert
-dcertGen env = do
-  -- The generated delegator must be one of the genesis keys in the
-  -- environment.
-  --
-  -- TODO: the delegator should be one of the allowed delegators that can
-  -- actually delegate (so it doens't have anything scheduled for this or next
-  -- epoch)
-  vkS <- Gen.element $ Set.toList (env ^. allowedDelegators)
-  vkD <- vkGen
-  let Epoch n = env ^. epoch
-  m   <- Gen.integral (linear 0 100)
-  let epo = Epoch (n + m)
-  return DCert { _dbody = (vkD, epo)
-               , _dwit = Sig vkS (owner vkS)
-               , _dwho = (vkS, vkD)
-               , _depoch = epo
-               }
-
-dcertGen' :: DSEnv -> DIState -> Gen (Maybe DCert)
-dcertGen' env st =
+dcertGen :: DSEnv -> DIState -> Gen (Maybe DCert)
+dcertGen env st =
   let
     allowed :: [VKeyGenesis]
     allowed = Set.toList (_dSEnvAllowedDelegators env)
@@ -573,27 +549,11 @@ dcertGen' env st =
     else Just <$> Gen.element (mkDCert' <$> zip candidates target)
 
 
--- | Generate a list of delegation certificates.
---
--- At the moment the size of the generated list is severely constrained since
--- the longer the list the higher the probability that it will contain
--- conflicting delegation certificates (that will be rejected by the
--- transition-system-rules).
-dcertsGen :: DSEnv -> Gen [DCert]
--- NOTE: at the moment we cannot use a linear range that depends on the
--- generator size: the problem is that the more delegation certificates in the
--- resulting list, the higher the probability that this list will be rejected
--- and the generator will have to retry.
---
-dcertsGen env = Gen.frequency
-  [(95, pure []), (10, Gen.list (constant 1 n) (dcertGen env))]
-  where n = env ^. allowedDelegators . to length
-
-dcertsGen' :: DSEnv -> DIState -> Gen [DCert]
-dcertsGen' env st =
-  -- TODO: alternatively we could define a HasTrace instance for SDELEG and use
+dcertsGen :: DSEnv -> DIState -> Gen [DCert]
+dcertsGen env st =
+  -- NOTE: alternatively we could define a HasTrace instance for SDELEG and use
   -- trace here.
-  catMaybes <$> Gen.list (constant 1 n) (dcertGen' env st)
+  catMaybes <$> Gen.list (constant 1 n) (dcertGen env st)
   where n = env ^. allowedDelegators . to length
 
 instance HasTrace DELEG where
@@ -615,4 +575,4 @@ instance HasTrace DELEG where
     <*> slotGen 0 100
     <*> blockCountGen 0 100
 
-  sigGen = dcertsGen'
+  sigGen = dcertsGen
