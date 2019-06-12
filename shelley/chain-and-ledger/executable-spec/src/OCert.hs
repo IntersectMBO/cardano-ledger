@@ -16,6 +16,8 @@ newtype KESPeriod = KESPeriod Natural
 data OCert = OCert
   { -- | The operational hot key
     ocertVkHot     :: Keys.VKey
+    -- | The cold key
+  , ocertVkCold    :: Keys.VKey
     -- | counter
   , ocertN         :: Natural
     -- | Start of key evolving signature period
