@@ -9,6 +9,7 @@ import qualified Data.Map.Strict as Map
 
 import           Lens.Micro              ((^.), (&), (.~))
 
+import           BaseTypes
 import           EpochBoundary
 import           LedgerState
 import           PParams
@@ -32,7 +33,9 @@ instance STS NEWPP where
 initialNewPp :: InitialRule NEWPP
 initialNewPp =
   pure
-    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0), emptyAccount, emptyPParams)
+    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty)
+    , emptyAccount
+    , emptyPParams)
 
 newPpTransition :: TransitionRule NEWPP
 newPpTransition = do

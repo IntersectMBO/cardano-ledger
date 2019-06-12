@@ -9,9 +9,16 @@ module BaseTypes
   , intervalValue
   , interval0
   , interval1
+  , Seed
+  , mkNonce
+  , seedOp
+  , EEnt(..)
   ) where
 
+import qualified Data.Map.Strict as Map
+
 import qualified Data.Fixed as FP
+import qualified Keys       as Keys
 
 data E34
 
@@ -45,3 +52,21 @@ interval0 = UnitInterval 0
 
 interval1 :: UnitInterval
 interval1 = UnitInterval 1
+
+-- | Tree like structure to represent nonce values and to support the binary
+-- operation on values.
+data Seed
+  = Nonce Integer
+  | SeedOp Seed
+           Seed
+  deriving (Show, Eq, Ord)
+
+seedOp :: Seed -> Seed -> Seed
+seedOp = SeedOp
+
+mkNonce :: Integer -> Seed
+mkNonce = Nonce
+
+-- | Extra entropy
+newtype EEnt = EEnt (Map.Map Keys.VKeyGenesis Seed)
+  deriving (Show, Ord, Eq)

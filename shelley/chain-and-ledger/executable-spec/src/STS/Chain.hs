@@ -9,6 +9,7 @@ module STS.Chain
 
 import qualified Data.Map.Strict          as Map
 
+import           BaseTypes
 import           BlockChain
 import           EpochBoundary
 import           LedgerState

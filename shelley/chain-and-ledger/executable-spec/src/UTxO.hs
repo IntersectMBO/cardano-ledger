@@ -47,6 +47,7 @@ module UTxO
   , wdrls
   , txfee
   , ttl
+  , txeent
     -- TxWits
   , body
   , witnessSet
@@ -65,6 +66,7 @@ import           Numeric.Natural         (Natural)
 import           Lens.Micro ((^.))
 import           Lens.Micro.TH (makeLenses)
 
+import           BaseTypes
 import           Coin                    (Coin (..))
 import           Keys
 import           PParams                 (PParams(..))
@@ -112,6 +114,7 @@ data Tx = Tx { _inputs  :: !(Set TxIn)
              , _wdrls   :: Wdrl
              , _txfee   :: Coin
              , _ttl     :: Slot
+             , _txeent  :: EEnt
              } deriving (Show, Eq, Ord)
 
 makeLenses ''Tx

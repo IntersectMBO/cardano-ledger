@@ -10,7 +10,7 @@ module STS.NewEpoch
 import qualified Data.Map.Strict          as Map
 import qualified Data.Maybe               as Maybe (fromMaybe)
 
-import           BlockChain
+import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           LedgerState

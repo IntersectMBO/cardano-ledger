@@ -29,6 +29,7 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
+  , dms
   , PState(..)
   , cCounters
   , LedgerValidation(..)
@@ -80,6 +81,7 @@ module LedgerState
   , utxo
   , deposited
   , fees
+  , eEntropy
   -- DelegationState
   , rewards
   , stKeys
@@ -215,6 +217,8 @@ data DState = DState
     , _delegations :: Map.Map HashKey HashKey
       -- |The pointed to hash keys.
     , _ptrs        :: Map.Map Ptr HashKey
+      -- |Genesis key delegations
+    , _dms         :: Dms
     } deriving (Show, Eq)
 
 data PState = PState
@@ -260,7 +264,7 @@ emptyEpochState =
 
 emptyLedgerState :: LedgerState
 emptyLedgerState = LedgerState
-                   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0))
+                   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty))
                    emptyDelegation
                    emptyUPIState
                    emptyPParams
@@ -275,7 +279,8 @@ emptyDelegation =
     DPState emptyDState emptyPState
 
 emptyDState :: DState
-emptyDState = DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty
+emptyDState =
+  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty (Dms Map.empty)
 
 emptyPState :: PState
 emptyPState =
@@ -287,6 +292,7 @@ data UTxOState =
       _utxo      :: !UTxO
     , _deposited :: Coin
     , _fees      :: Coin
+    , _eEntropy  :: EEnt
     } deriving (Show, Eq)
 
 -- | For now this contains the Byron `UPIState` and the Shelley PParams
@@ -322,7 +328,8 @@ makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
-genesisId = TxId $ hash (Tx Set.empty [] [] Map.empty (Coin 0) (Slot 0))
+genesisId =
+  TxId $ hash (Tx Set.empty [] [] Map.empty (Coin 0) (Slot 0) (EEnt Map.empty))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -332,7 +339,8 @@ genesisState pc outs = LedgerState
     (UTxO $ Map.fromList
               [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs])
     (Coin 0)
-    (Coin 0))
+    (Coin 0)
+    (EEnt Map.empty))
   emptyDelegation
   emptyUPIState
   pc
@@ -451,9 +459,13 @@ correctWithdrawals accs withdrawals =
 -- |Collect the set of hashes of keys that needs to sign a
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
-witsNeeded :: UTxO -> Tx -> Set HashKey
-witsNeeded utxo' tx =
-    inputAuthors `Set.union` wdrlAuthors `Set.union` certAuthors `Set.union` owners
+witsNeeded :: UTxO -> Tx -> Dms -> Set HashKey
+witsNeeded utxo' tx (Dms dms) =
+    inputAuthors `Set.union`
+    wdrlAuthors  `Set.union`
+    certAuthors  `Set.union`
+    owners       `Set.union`
+    genEEntropy
   where
     inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
     insertHK txin hkeys =
@@ -465,6 +477,9 @@ witsNeeded utxo' tx =
     owners = foldl Set.union Set.empty [pool ^. poolOwners | RegPool pool <- tx ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
+    EEnt eent = _txeent tx
+    genEEntropy = Set.fromList $
+      Map.elems $ Map.map hashKey $ Map.restrictKeys dms (Map.keysSet eent)
 
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
@@ -480,18 +495,18 @@ verifiedWits (TxWits tx wits) =
 -- We check that there are not more witnesses than inputs, if several inputs
 -- from the same address are used, it is not strictly necessary to include more
 -- than one witness.
-enoughWits :: TxWits -> UTxOState -> Validity
-enoughWits (TxWits tx wits) u =
-  if witsNeeded (u ^. utxo) tx `Set.isSubsetOf` signers
+enoughWits :: TxWits -> Dms -> UTxOState -> Validity
+enoughWits (TxWits tx wits) dms u =
+  if witsNeeded (u ^. utxo) tx dms `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
 -- |Check that there are no redundant witnesses.
-noUnneededWits :: TxWits -> UTxOState -> Validity
-noUnneededWits (TxWits tx wits) u =
-  if signers `Set.isSubsetOf` witsNeeded (u ^. utxo) tx
+noUnneededWits :: TxWits -> Dms -> UTxOState -> Validity
+noUnneededWits (TxWits tx wits) dms u =
+  if signers `Set.isSubsetOf` witsNeeded (u ^. utxo) tx dms
     then Valid
     else Invalid [UnneededWitnesses]
   where
@@ -507,13 +522,13 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> preserveBalance stakePools stakeKeys pc tx u
                        <> correctWithdrawals accs (tx ^. wdrls)
 
-validRuleUTXOW :: TxWits -> LedgerState -> Validity
-validRuleUTXOW tx l = verifiedWits tx
-                   <> enoughWits tx (l ^. utxoState)
-                   <> noUnneededWits tx (l ^. utxoState)
+validRuleUTXOW :: TxWits -> Dms -> LedgerState -> Validity
+validRuleUTXOW tx dms l = verifiedWits tx
+                   <> enoughWits tx dms (l ^. utxoState)
+                   <> noUnneededWits tx dms (l ^. utxoState)
 
-validTx :: TxWits -> Slot -> LedgerState -> Validity
-validTx tx slot l =
+validTx :: TxWits -> Dms -> Slot -> LedgerState -> Validity
+validTx tx dms slot l =
     validRuleUTXO  (l ^. delegationState . dstate . rewards)
                    (l ^. delegationState . pstate . stPools)
                    (l ^. delegationState . dstate . stKeys)
@@ -521,7 +536,7 @@ validTx tx slot l =
                    slot
                    (tx ^. body)
                    (l ^. utxoState)
- <> validRuleUTXOW tx l
+ <> validRuleUTXOW tx dms l
 
 -- The rules for checking validiy of stake delegation transitions return
 -- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
@@ -578,9 +593,9 @@ validDelegation cert ds =
 -- apply the transaction as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
 asStateTransition
-  :: Slot -> LedgerState -> TxWits -> Either [ValidationError] LedgerState
-asStateTransition slot ls tx =
-  case validTx tx slot ls of
+  :: Slot -> LedgerState -> TxWits -> Dms -> Either [ValidationError] LedgerState
+asStateTransition slot ls tx dms =
+  case validTx tx dms slot ls of
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
       where
@@ -600,10 +615,10 @@ certAsStateTransition slot txIx ls (clx, cert) =
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
 asStateTransition'
-  :: Slot -> LedgerValidation -> TxWits -> LedgerValidation
-asStateTransition' slot (LedgerValidation valErrors ls) tx =
+  :: Slot -> LedgerValidation -> TxWits -> Dms -> LedgerValidation
+asStateTransition' slot (LedgerValidation valErrors ls) tx dms =
     let ls' = applyTxBody slot ls (tx ^. body) in
-    case validTx tx slot ls of
+    case validTx tx dms slot ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
 
@@ -830,7 +845,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
 stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' = ds
+      DState (StakeKeys stkeys) rewards' delegs ptrs' _ = ds
       PState (StakePools stpools) _ _ _               = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
