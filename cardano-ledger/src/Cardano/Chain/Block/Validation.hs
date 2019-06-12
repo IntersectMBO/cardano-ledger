@@ -72,7 +72,7 @@ import Cardano.Chain.Block.Header
   , headerSlot
   , wrapBoundaryBytes
   )
-import Cardano.Chain.Block.Proof (Proof(..))
+import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , KeyHash
@@ -253,9 +253,6 @@ data ChainValidationError
   | ChainValidationInvalidSignature BlockSignature
   -- ^ The signature of the block is invalid
 
-  | ChainValidationDelegationProofError
-  -- ^ The delegation proof does not correspond to the delegation payload
-
   | ChainValidationDelegationSchedulingError Scheduling.Error
   -- ^ A delegation certificate failed validation in the ledger layer
 
@@ -271,14 +268,11 @@ data ChainValidationError
   | ChainValidationUpdateError UPI.Error
   -- ^ Something failed to register in the update interface
 
-  | ChainValidationUpdateProofError
-  -- ^ The update payload proof did not match
-
   | ChainValidationUTxOValidationError UTxO.UTxOValidationError
   -- ^ A transaction failed validation in the ledger layer
 
-  | ChainValidationUTxOProofError
-  -- ^ The UTxO payload proof did not match
+  | ChainValidationProofValidationError ProofValidationError
+  -- ^ A payload proof did not match.
 
   deriving (Eq, Show)
 
@@ -334,24 +328,24 @@ updateChainBoundary cvs bvd = do
 
 
 validateBlockProofs
-  :: MonadError ChainValidationError m
+  :: MonadError ProofValidationError m
   => ABlock ByteString
   -> m ()
 validateBlockProofs b = do
   -- Validate the delegation payload signature
   proofDelegation (blockProof b)
     == hashDecoded (blockDlgPayload b)
-    `orThrowError` ChainValidationDelegationProofError
+    `orThrowError` DelegationProofValidationError
 
   -- Validate the transaction payload proof
   proofUTxO (blockProof b)
     == recoverTxProof (blockTxPayload b)
-    `orThrowError` ChainValidationUTxOProofError
+    `orThrowError` UTxOProofValidationError
 
   -- Validate the update payload proof
   proofUpdate (blockProof b)
     == hashDecoded (blockUpdatePayload b)
-    `orThrowError` ChainValidationUpdateProofError
+    `orThrowError` UpdateProofValidationError
 
 
 data BodyEnvironment = BodyEnvironment
@@ -386,6 +380,7 @@ updateBody env bs b = do
 
   -- Validate the delegation, transaction, and update payload proofs.
   validateBlockProofs b
+    `wrapError` ChainValidationProofValidationError
 
   -- Update the delegation state
   delegationState' <-
