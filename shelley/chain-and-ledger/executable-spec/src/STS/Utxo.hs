@@ -47,24 +47,25 @@ initialLedgerState = do
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
   TRC ((slot, pp, stakeKeys, stakePools, Dms dms), u, tx) <- judgmentContext
-  validInputs tx u == Valid ?! BadInputsUTxO
-  current tx slot == Valid ?! ExpiredUTxO (tx ^. ttl) slot
-  validNoReplay tx == Valid ?! InputSetEmptyUTxO
-  let validateFee = validFee pp tx
+  let txbody = _body tx
+  validInputs txbody u == Valid ?! BadInputsUTxO
+  current txbody slot == Valid ?! ExpiredUTxO (txbody ^. ttl) slot
+  validNoReplay txbody == Valid ?! InputSetEmptyUTxO
+  let validateFee = validFee pp txbody
   validateFee == Valid ?! unwrapFailureUTXO validateFee
-  let validateBalance = preserveBalance stakePools stakeKeys pp tx u
+  let validateBalance = preserveBalance stakePools stakeKeys pp txbody u
   validateBalance == Valid ?! unwrapFailureUTXO validateBalance
-  let refunded = keyRefunds pp stakeKeys tx
-  let decayed = decayedTx pp stakeKeys tx
+  let refunded = keyRefunds pp stakeKeys txbody
+  let decayed = decayedTx pp stakeKeys txbody
   let depositChange =
-        deposits pp stakePools (tx ^. certs) - (refunded + decayed)
-  let u' = applyUTxOUpdate u tx  -- change UTxO
-  let EEnt h' = tx ^. txeent
+        deposits pp stakePools (txbody ^. certs) - (refunded + decayed)
+  let u' = applyUTxOUpdate u txbody  -- change UTxO
+  let EEnt h' = txbody ^. txeent
   Set.isSubsetOf (Map.keysSet h') (Map.keysSet dms) ?! BadExtraEntropyUTxO
   let EEnt h = _eEntropy u
   pure $
     u' & deposited %~ (+) depositChange
-       & fees      %~ (+) ((tx ^. txfee) + decayed)
+       & fees      %~ (+) ((txbody ^. txfee) + decayed)
        & eEntropy  .~ (EEnt $ Map.union h h')
 
 unwrapFailureUTXO :: Validity -> PredicateFailure UTXO

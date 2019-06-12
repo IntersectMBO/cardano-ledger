@@ -27,7 +27,7 @@ data LEDGER
 
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DPState)
-    type Signal LEDGER      = TxWits
+    type Signal LEDGER      = Tx
     type Environment LEDGER = (PParams, Slot, Ix)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
                                  | DelegsFailure (PredicateFailure DELEGS)

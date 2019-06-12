@@ -23,7 +23,7 @@ module UTxO
   , TxIn(..)
   , TxOut(..)
   , UTxO(..)
-  , Tx(..)
+  , TxBody(..)
   -- * Functions
   , txid
   , txins
@@ -38,9 +38,9 @@ module UTxO
   , makeWitness
   , makeWitnesses
   , Wit(..)
-  , TxWits(..)
+  , Tx(..)
   -- lenses
-    -- Tx
+    -- TxBody
   , inputs
   , outputs
   , certs
@@ -48,7 +48,7 @@ module UTxO
   , txfee
   , ttl
   , txeent
-    -- TxWits
+  -- Tx
   , body
   , witnessSet
   , verifyWit
@@ -108,27 +108,27 @@ newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
 type Wdrl = Map RewardAcnt Coin
 
 -- |A raw transaction
-data Tx = Tx { _inputs  :: !(Set TxIn)
-             , _outputs :: [TxOut]
-             , _certs   :: ![DCert]
-             , _wdrls   :: Wdrl
-             , _txfee   :: Coin
-             , _ttl     :: Slot
-             , _txeent  :: EEnt
-             } deriving (Show, Eq, Ord)
+data TxBody = TxBody { _inputs  :: !(Set TxIn)
+                     , _outputs :: [TxOut]
+                     , _certs   :: ![DCert]
+                     , _wdrls   :: Wdrl
+                     , _txfee   :: Coin
+                     , _ttl     :: Slot
+                     , _txeent  :: EEnt
+                     } deriving (Show, Eq, Ord)
 
-makeLenses ''Tx
+makeLenses ''TxBody
 
 -- |Compute the id of a transaction.
-txid :: Tx -> TxId
+txid :: TxBody -> TxId
 txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
-txins :: Tx -> Set TxIn
+txins :: TxBody -> Set TxIn
 txins = flip (^.) inputs
 
 -- |Compute the transaction outputs of a transaction.
-txouts :: Tx -> UTxO
+txouts :: TxBody -> UTxO
 txouts tx = UTxO $
   Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (tx ^. outputs) [0..]]
   where
@@ -139,28 +139,26 @@ txinLookup :: TxIn -> UTxO -> Maybe TxOut
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
+data Wit = Wit VKey !(Sig TxBody) deriving (Show, Eq, Ord)
 
 -- |Verify a transaction body witness
-verifyWit :: Tx -> Wit -> Bool
+verifyWit :: TxBody -> Wit -> Bool
 verifyWit tx (Wit vkey sig) = verify vkey tx sig
 
 -- |A fully formed transaction.
---
---     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
-data TxWits = TxWits
-              { _body       :: !Tx
-              , _witnessSet :: !(Set Wit)
-              } deriving (Show, Eq, Ord)
+data Tx = Tx
+          { _body       :: !TxBody
+          , _witnessSet :: !(Set Wit)
+          } deriving (Show, Eq, Ord)
 
-makeLenses ''TxWits
+makeLenses ''Tx
 
 -- |Create a witness for transaction
-makeWitness :: Tx -> KeyPair -> Wit
+makeWitness :: TxBody -> KeyPair -> Wit
 makeWitness tx keys = Wit (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
-makeWitnesses :: Tx -> [KeyPair] -> Set Wit
+makeWitnesses :: TxBody -> [KeyPair] -> Set Wit
 makeWitnesses tx = Set.fromList . fmap (makeWitness tx)
 
 -- |Domain restriction
@@ -198,6 +196,6 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
-instance BA.ByteArrayAccess Tx where
+instance BA.ByteArrayAccess TxBody where
   length        = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack  . show
