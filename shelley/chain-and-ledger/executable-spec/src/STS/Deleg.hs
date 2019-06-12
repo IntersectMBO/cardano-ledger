@@ -15,7 +15,7 @@ import           Control.State.Transition
 data DELEG
 
 instance STS DELEG where
-  type State DELEG = DWState
+  type State DELEG = DState
   type Signal DELEG = DCert
   type Environment DELEG = (Slot, Ptr)
   data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
@@ -23,7 +23,8 @@ instance STS DELEG where
                             | StakeDelegationImpossibleDELEG
                             | WrongCertificateTypeDELEG
                                 deriving (Show, Eq)
-  initialRules = [pure emptyDelegation]
+
+  initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
 delegationTransition :: TransitionRule DELEG
@@ -32,13 +33,13 @@ delegationTransition = do
   case c of
     RegKey _ -> do
       validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
-      pure $ applyDCert p c d
+      pure $ applyDCertDState p c d
     DeRegKey _ -> do
       validKeyDeregistration c d == Valid ?! StakeKeyNotRegisteredDELEG
-      pure $ applyDCert p c d
+      pure $ applyDCertDState p c d
     Delegate _ -> do
       validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
-      pure $ applyDCert p c d
+      pure $ applyDCertDState p c d
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure d
