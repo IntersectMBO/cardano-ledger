@@ -24,7 +24,7 @@ data UTXOW
 
 instance STS UTXOW where
   type State UTXOW = UTxOState
-  type Signal UTXOW = TxWits
+  type Signal UTXOW = Tx
   type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools, Dms)
   data PredicateFailure UTXOW = InvalidWitnessesUTXOW
                             | MissingWitnessesUTXOW
@@ -41,11 +41,11 @@ initialLedgerStateUTXOW = do
 
 utxoWitnessed :: TransitionRule UTXOW
 utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools, dms), u, txwits) <- judgmentContext
-  verifiedWits txwits == Valid ?! InvalidWitnessesUTXOW
-  enoughWits txwits dms u == Valid ?! MissingWitnessesUTXOW
-  noUnneededWits txwits dms u == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, dms), u, txwits ^. body)
+  TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx) <- judgmentContext
+  verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
+  enoughWits tx dms u == Valid ?! MissingWitnessesUTXOW
+  noUnneededWits tx dms u == Valid ?! UnneededWitnessesUTXOW
+  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx)
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure

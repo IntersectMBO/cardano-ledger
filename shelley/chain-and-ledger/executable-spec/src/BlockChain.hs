@@ -68,20 +68,20 @@ data BHBody = BHBody
     -- | proof of leader election
   , bheaderPrfL           :: Proof UnitInterval
     -- | signature of block body
-  , bheaderBlockSignature :: Keys.Sig [U.TxWits]
+  , bheaderBlockSignature :: Keys.Sig [U.Tx]
     -- | operational certificate
   , bheaderOCert          :: OCert
   } deriving (Show, Eq)
 
 data Block =
   Block BHeader
-        [U.TxWits]
+        [U.Tx]
   deriving (Show, Eq)
 
 bHeaderSize :: BHeader -> Int
 bHeaderSize = BA.length . BS.pack . show
 
-bBodySize :: [U.TxWits] -> Int
+bBodySize :: [U.Tx] -> Int
 bBodySize txs = foldl (+) 0 (map (BA.length . BS.pack . show) txs)
 
 slotToSeed :: Slot.Slot -> Seed
@@ -90,7 +90,7 @@ slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
 bheader :: Block -> BHeader
 bheader (Block bh _) = bh
 
-bbody :: Block -> [U.TxWits]
+bbody :: Block -> [U.Tx]
 bbody (Block _ txs) = txs
 
 bhbody :: BHeader -> BHBody
