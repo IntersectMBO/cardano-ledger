@@ -94,7 +94,7 @@ import Cardano.Chain.Genesis as Genesis
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
-  (EpochNumber(..), SlotNumber(..), SlotId(..), slotNumberEpoch, unflattenSlotId)
+  (EpochNumber(..), SlotNumber(..), EpochAndSlotCount(..), slotNumberEpoch, fromSlotNumber)
 import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import qualified Cardano.Chain.Update as Update
@@ -479,7 +479,7 @@ updateHeader env st h = do
     , currentEpoch
     }
 
-  currentEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) lastSlot
+  currentEpoch = slotNumberEpoch (kEpochSlots k) lastSlot
 
 
 data EpochEnvironment = EpochEnvironment
@@ -511,7 +511,7 @@ epochTransition env st slot = if nextEpoch > currentEpoch
   EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
     = env
 
-  nextEpoch = siEpoch $ unflattenSlotId (kEpochSlots k) slot
+  nextEpoch = slotNumberEpoch (kEpochSlots k) slot
 
   updateEnv = UPI.Environment
     { UPI.protocolMagic = protocolMagic
@@ -597,7 +597,7 @@ updateBlock config cvs b = do
 
 data Error
   = ErrorParseError ParseError
-  | ErrorUTxOValidationError SlotId UTxO.UTxOValidationError
+  | ErrorUTxOValidationError EpochAndSlotCount UTxO.UTxOValidationError
   deriving (Eq, Show)
 
 -- | Fold transaction validation over a 'Stream' of 'Block's
@@ -620,7 +620,7 @@ foldUTxOBlock
   -> ExceptT Error ResIO UTxO
 foldUTxOBlock env utxo block =
   withExceptT
-      (ErrorUTxOValidationError . unflattenSlotId mainnetEpochSlots $ blockSlot
+      (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
         block
       )
     $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)

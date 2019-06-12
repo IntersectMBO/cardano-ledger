@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
@@ -19,8 +18,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import qualified Data.Aeson.Options as S (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
 import Data.Time (NominalDiffTime)
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
@@ -170,8 +167,6 @@ instance FromCBOR ProtocolParameters where
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
-
-deriveJSON S.defaultOptions ''ProtocolParameters
 
 -- | Version of 'isBootstrapEra' which takes 'ProtocolParameters' instead of
 --   unlock stake epoch

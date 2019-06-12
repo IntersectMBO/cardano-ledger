@@ -17,27 +17,27 @@ import Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Slotting
-  ( addSlotNumber
-  , SlotNumber(..)
-  , EpochSlots(..)
+  ( EpochSlots(..)
   , LocalSlotIndex(..)
   , LocalSlotIndexError(..)
   , SlotCount(..)
-  , flattenSlotId
-  , unflattenSlotId
-  , localSlotIndexSucc
-  , localSlotIndexPred
-  , localSlotIndexToEnum
+  , SlotNumber(..)
+  , addSlotNumber
+  , toSlotNumber
   , localSlotIndexFromEnum
+  , localSlotIndexPred
+  , localSlotIndexSucc
+  , localSlotIndexToEnum
   , subSlotNumber
+  , fromSlotNumber
   )
 import Test.Cardano.Chain.Slotting.Gen
   ( genEpochSlots
   , genSlotNumber
   , genLocalSlotIndex
   , genSlotCount
-  , genSlotId
-  , genConsistentSlotIdEpochSlots
+  , genEpochAndSlotCount
+  , genConsistentEpochAndSlotCountEpochSlots
   )
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
@@ -183,39 +183,39 @@ dummyLocSlotIndIndexOverflow =
   toConstr $ LocalSlotIndexOverflow (EpochSlots 1) 1
 
 --------------------------------------------------------------------------------
--- SlotId
+-- EpochAndSlotCount
 --------------------------------------------------------------------------------
 
--- Check that `unflattenSlotId` does not panic for
+-- Check that `fromSlotNumber` does not panic for
 -- allowed values of `EpochSlots` and `SlotNumber`.
-ts_prop_unflattenSlotId :: TSProperty
-ts_prop_unflattenSlotId = withTestsTS 100 . property $ do
+ts_prop_fromSlotNumber :: TSProperty
+ts_prop_fromSlotNumber = withTestsTS 100 . property $ do
   sc   <- forAll genEpochSlots
   fsId <- forAll $ genSlotNumber
-  _    <- pure $ unflattenSlotId sc fsId
+  _    <- pure $ fromSlotNumber sc fsId
   success
 
--- Check that `unflattenSlotId . flattenSlotId == id`.
-ts_prop_unflattenFlattenSlotId :: TSProperty
-ts_prop_unflattenFlattenSlotId = withTestsTS 100 . property $ do
-  (sId, sc) <- forAll genConsistentSlotIdEpochSlots
-  sId === unflattenSlotId sc (flattenSlotId sc sId)
+-- Check that `fromSlotNumber . toSlotNumber == id`.
+ts_prop_unflattenFlattenEpochAndSlotCount :: TSProperty
+ts_prop_unflattenFlattenEpochAndSlotCount = withTestsTS 100 . property $ do
+  (sId, sc) <- forAll genConsistentEpochAndSlotCountEpochSlots
+  sId === fromSlotNumber sc (toSlotNumber sc sId)
 
--- Check that `genSlotId` does not panic for
+-- Check that `genEpochAndSlotCount` does not panic for
 -- allowed values of `EpochSlots`.
-ts_prop_genSlotId :: TSProperty
-ts_prop_genSlotId = withTestsTS 100 . property $ do
+ts_prop_genEpochAndSlotCount :: TSProperty
+ts_prop_genEpochAndSlotCount = withTestsTS 100 . property $ do
   sc <- forAll genEpochSlots
-  _  <- forAll $ genSlotId sc
+  _  <- forAll $ genEpochAndSlotCount sc
   success
 
--- Check that `flattenSlotId . unflattenSlotId == id`.
-ts_prop_flattenUnflattenSlotId :: TSProperty
-ts_prop_flattenUnflattenSlotId = withTestsTS 100 . property $ do
-  sc   <- forAll genEpochSlots
-  fsId <- forAll genSlotNumber
-  let unflatFlat = flattenSlotId sc $ unflattenSlotId sc fsId
-  fsId === unflatFlat
+-- Check that `toSlotNumber . fromSlotNumber == id`.
+ts_prop_fromToSlotNumber :: TSProperty
+ts_prop_fromToSlotNumber = withTestsTS 100 . property $ do
+  es   <- forAll genEpochSlots
+  slot <- forAll genSlotNumber
+  let fromTo = toSlotNumber es $ fromSlotNumber es slot
+  slot === fromTo
 
 -- Check that `addSlotNumber` actually adds.
 ts_prop_addSlotNumber :: TSProperty

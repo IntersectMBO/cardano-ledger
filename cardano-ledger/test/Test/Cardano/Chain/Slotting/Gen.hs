@@ -8,8 +8,8 @@ module Test.Cardano.Chain.Slotting.Gen
   , genEpochSlots
   , genWithEpochSlots
   , genSlotCount
-  , genSlotId
-  , genConsistentSlotIdEpochSlots
+  , genEpochAndSlotCount
+  , genConsistentEpochAndSlotCountEpochSlots
   , feedPMEpochSlots
   )
 where
@@ -28,7 +28,7 @@ import Cardano.Chain.Slotting
   , SlotNumber(..)
   , LocalSlotIndex
   , SlotCount(..)
-  , SlotId(..)
+  , EpochAndSlotCount(..)
   , WithEpochSlots(WithEpochSlots)
   , localSlotIndexMaxBound
   , localSlotIndexMinBound
@@ -84,18 +84,23 @@ genWithEpochSlots gen pm es = WithEpochSlots es <$> gen pm es
 genSlotCount :: Gen SlotCount
 genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
 
-genSlotId :: EpochSlots -> Gen SlotId
-genSlotId epochSlots =
-  SlotId <$> genEpochNumber <*> genLocalSlotIndex epochSlots
+genEpochAndSlotCount :: EpochSlots -> Gen EpochAndSlotCount
+genEpochAndSlotCount epochSlots =
+  EpochAndSlotCount <$> genEpochNumber <*> genEpochSlotCount epochSlots
 
--- Generates a `SlotId` and a `EpochSlots` that does not exceed
--- the `Word64` maximum boundary of `flattenSlotId` when flattened.
-genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
-genConsistentSlotIdEpochSlots = do
+-- | Generate a 'SlotCount' constrained by the number of 'EpochSlots'
+genEpochSlotCount :: EpochSlots -> Gen SlotCount
+genEpochSlotCount epochSlots =
+  SlotCount <$> Gen.word64 (Range.linear 0 (unEpochSlots epochSlots - 1))
+
+-- Generates a `EpochAndSlotCount` and a `EpochSlots` that does not exceed
+-- the `Word64` maximum boundary of `flattenEpochAndSlotCount` when flattened.
+genConsistentEpochAndSlotCountEpochSlots :: Gen (EpochAndSlotCount, EpochSlots)
+genConsistentEpochAndSlotCountEpochSlots = do
   es  <- genEpochSlots
-  lsi <- genLocalSlotIndex es
+  lsi <- genEpochSlotCount es
   eI  <- genRestrictedEpochNumber $ maxBound `div` unEpochSlots es
-  pure (SlotId eI lsi, es)
+  pure (EpochAndSlotCount eI lsi, es)
  where
   genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
   genRestrictedEpochNumber bound =

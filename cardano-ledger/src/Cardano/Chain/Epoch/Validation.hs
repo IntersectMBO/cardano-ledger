@@ -38,13 +38,13 @@ import Cardano.Chain.Epoch.File
   )
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
-  (EpochNumber, SlotId, slotNumberEpoch, unflattenSlotId)
+  (EpochNumber, EpochAndSlotCount, slotNumberEpoch, fromSlotNumber)
 import Cardano.Chain.UTxO (UTxO)
 
 
 data EpochError
   = EpochParseError ParseError
-  | EpochChainValidationError (Maybe SlotId) ChainValidationError
+  | EpochChainValidationError (Maybe EpochAndSlotCount) ChainValidationError
   | Initial
   deriving (Eq, Show)
 
@@ -128,7 +128,7 @@ foldChainValidationState config chainValState blocks = S.foldM_
   (pure chainValState)
   pure $ hoist (withExceptT EpochParseError) blocks
  where
-  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotId
+  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe EpochAndSlotCount
   blockOrBoundarySlot = \case
     ABOBBoundary _     -> Nothing
-    ABOBBlock    block -> Just . unflattenSlotId mainnetEpochSlots $ blockSlot block
+    ABOBBlock    block -> Just . fromSlotNumber mainnetEpochSlots $ blockSlot block

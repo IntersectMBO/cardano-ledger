@@ -16,12 +16,12 @@ import Cardano.Chain.Slotting
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBOR, roundTripsCBORBuildable)
 import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochNumber, exampleSlotId)
+  (exampleEpochNumber, exampleEpochAndSlotCount)
 import Test.Cardano.Chain.Slotting.Gen
   ( feedPMEpochSlots
   , genEpochNumber
   , genSlotNumber
-  , genSlotId
+  , genEpochAndSlotCount
   , genLocalSlotIndex
   , genEpochSlots
   )
@@ -73,16 +73,17 @@ ts_roundTripEpochSlotsCBOR :: TSProperty
 ts_roundTripEpochSlotsCBOR = eachOfTS 1000 genEpochSlots roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
--- SlotId
+-- EpochAndSlotCount
 --------------------------------------------------------------------------------
-golden_SlotId :: Property
-golden_SlotId = goldenTestCBOR (exampleSlotId (EpochSlots 777))
-                               "test/golden/cbor/slotting/SlotId"
+golden_EpochAndSlotCount :: Property
+golden_EpochAndSlotCount = goldenTestCBOR
+  exampleEpochAndSlotCount
+  "test/golden/cbor/slotting/EpochAndSlotCount"
 
-ts_roundTripSlotIdCBOR :: TSProperty
-ts_roundTripSlotIdCBOR = eachOfTS 1000 gen roundTripsCBORBuildable
+ts_roundTripEpochAndSlotCountCBOR :: TSProperty
+ts_roundTripEpochAndSlotCountCBOR = eachOfTS 1000 gen roundTripsCBORBuildable
  where
-  gen = feedPMEpochSlots (\_pm es -> genSlotId es)
+  gen = feedPMEpochSlots (\_pm es -> genEpochAndSlotCount es)
 
 --------------------------------------------------------------------------------
 -- Main test export

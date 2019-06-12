@@ -1,21 +1,17 @@
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
-
 module Test.Cardano.Chain.Slotting.Example
   ( exampleEpochNumber
-  , exampleSlotId
+  , exampleEpochAndSlotCount
   , exampleSlotNumber
   )
 where
 
-import Cardano.Prelude
-
 import Cardano.Chain.Slotting
   ( EpochNumber(..)
   , EpochSlots(..)
-  , SlotId(..)
+  , EpochAndSlotCount(..)
+  , SlotCount(..)
   , SlotNumber
-  , mkLocalSlotIndex
-  , flattenSlotId
+  , toSlotNumber
   )
 
 
@@ -23,9 +19,7 @@ exampleEpochNumber :: EpochNumber
 exampleEpochNumber = EpochNumber 14
 
 exampleSlotNumber :: EpochSlots -> SlotNumber
-exampleSlotNumber es =
-  flattenSlotId es (exampleSlotId es)
+exampleSlotNumber es = toSlotNumber es exampleEpochAndSlotCount
 
-exampleSlotId :: EpochSlots -> SlotId
-exampleSlotId es = SlotId (EpochNumber 11) lsi
-  where Right lsi = mkLocalSlotIndex es 47
+exampleEpochAndSlotCount :: EpochAndSlotCount
+exampleEpochAndSlotCount = EpochAndSlotCount (EpochNumber 11) (SlotCount 47)

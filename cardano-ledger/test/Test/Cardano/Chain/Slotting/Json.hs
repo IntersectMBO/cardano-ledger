@@ -10,17 +10,14 @@ import Test.Cardano.Prelude
 
 import Hedgehog (Property)
 
-import Cardano.Chain.Slotting
-  (EpochSlots(..), SlotNumber (..), LocalSlotIndex (..))
+import Cardano.Chain.Slotting (EpochSlots(..), LocalSlotIndex (..))
 
-import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochNumber)
+import Test.Cardano.Chain.Slotting.Example (exampleEpochNumber)
 import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochNumber
-  , genSlotNumber
-  , genLocalSlotIndex
+  ( feedPMEpochSlots
+  , genEpochNumber
   , genEpochSlots
-  , feedPMEpochSlots
+  , genLocalSlotIndex
   )
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -34,17 +31,6 @@ golden_EpochNumber = goldenTestJSON exampleEpochNumber "test/golden/json/slottin
 
 ts_roundTripEpochNumber :: TSProperty
 ts_roundTripEpochNumber = eachOfTS 1000 genEpochNumber roundTripsAesonBuildable
-
---------------------------------------------------------------------------------
--- SlotNumber
---------------------------------------------------------------------------------
-
-golden_SlotNumber :: Property
-golden_SlotNumber = goldenTestJSON fsi "test/golden/json/slotting/SlotNumber"
-  where fsi = 5001 :: SlotNumber
-
-ts_roundTripSlotNumber :: TSProperty
-ts_roundTripSlotNumber = eachOfTS 1000 genSlotNumber roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex

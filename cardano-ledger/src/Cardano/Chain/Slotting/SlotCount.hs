@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Chain.Slotting.SlotCount
@@ -10,8 +12,12 @@ import Cardano.Prelude
 
 import Formatting.Buildable (Buildable)
 
+import Cardano.Binary (FromCBOR, ToCBOR)
+
 
 -- | A number of slots
 newtype SlotCount = SlotCount
   { unSlotCount :: Word64
-  } deriving (Eq, Ord, Read, Show, Buildable, Generic)
+  } deriving stock (Read, Show, Generic)
+    deriving newtype (Eq, Ord, Buildable, ToCBOR, FromCBOR)
+    deriving anyclass (NFData)

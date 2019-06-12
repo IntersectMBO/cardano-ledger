@@ -45,7 +45,7 @@ import Cardano.Crypto
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochNumber, genEpochSlots, genSlotNumber, genSlotId)
+  (genEpochNumber, genEpochSlots, genSlotNumber, genEpochAndSlotCount)
 import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -113,7 +113,7 @@ genToSign pm epochSlots =
   ToSign
     <$> (mkAbstractHash <$> genHeader pm epochSlots)
     <*> genProof pm
-    <*> genSlotId epochSlots
+    <*> genEpochAndSlotCount epochSlots
     <*> genChainDifficulty
     <*> Update.genProtocolVersion
     <*> Update.genSoftwareVersion

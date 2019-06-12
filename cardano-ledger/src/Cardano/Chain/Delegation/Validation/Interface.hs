@@ -149,8 +149,7 @@ updateDelegation env is certificates = do
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env
 
-  inWindow s =
-    subSlotNumber d currentSlot <= s && s <= addSlotNumber d currentSlot
+  inWindow s = subSlotNumber d currentSlot <= s && s <= addSlotNumber d currentSlot
 
   d = kSlotSecurityParam k
 
