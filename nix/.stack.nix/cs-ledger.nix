@@ -54,6 +54,7 @@
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
+            (hsPkgs.Unique)
             (hsPkgs.cs-ledger)
             (hsPkgs.small-steps)
             ];
