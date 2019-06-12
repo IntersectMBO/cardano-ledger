@@ -18,6 +18,7 @@ import qualified Test.Cardano.Chain.Common.Compact
 import qualified Test.Cardano.Chain.Common.Json
 import qualified Test.Cardano.Chain.Common.Lovelace
 import qualified Test.Cardano.Chain.Delegation.CBOR
+import qualified Test.Cardano.Chain.Delegation.Certificate
 import qualified Test.Cardano.Chain.Delegation.Model
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
@@ -48,6 +49,7 @@ main =
         , Test.Cardano.Chain.Common.Json.tests
         , Test.Cardano.Chain.Common.Lovelace.tests
         , Test.Cardano.Chain.Delegation.CBOR.tests
+        , const Test.Cardano.Chain.Delegation.Certificate.tests
         , const Test.Cardano.Chain.Delegation.Model.tests
         , const Test.Cardano.Chain.Epoch.File.tests
         , Test.Cardano.Chain.Elaboration.Delegation.tests

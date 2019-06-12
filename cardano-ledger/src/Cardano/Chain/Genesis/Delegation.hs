@@ -17,7 +17,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson
 import Data.List (nub)
 import qualified Data.Map.Strict as M
 import Formatting (build, formatToString, bprint)
@@ -25,8 +24,10 @@ import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
 import Cardano.Chain.Common (KeyHash, hashKey)
-import Cardano.Chain.Delegation.Certificate (Certificate)
-import Cardano.Crypto (isSelfSignedPsk, pskDelegateVK, pskIssuerVK)
+import Cardano.Chain.Delegation.Certificate
+  ( ACertificate(delegateVK, issuerVK)
+  , Certificate
+  )
 
 
 -- | This type contains genesis state of heavyweight delegation. It wraps a map
@@ -48,24 +49,17 @@ instance Monad m => ToJSON m GenesisDelegation where
 
 instance MonadError SchemaError m => FromJSON m GenesisDelegation where
   fromJSON val = do
-    psks <- fromJSON val
-    case recreateGenesisDelegation psks of
-      Left err -> expected "GenesisDelegation" (Just $ "Error: " <> formatToString build err)
+    certs <- fromJSON val
+    case recreateGenesisDelegation certs of
+      Left err -> expected
+        "GenesisDelegation"
+        (Just $ "Error: " <> formatToString build err)
       Right delegation -> pure delegation
-
-instance Aeson.ToJSON GenesisDelegation where
-  toJSON = Aeson.toJSON . unGenesisDelegation
-
-instance Aeson.FromJSON GenesisDelegation where
-  parseJSON = Aeson.parseJSON >=> \v -> do
-    elems' <- mapM Aeson.parseJSON v
-    toAesonError $ recreateGenesisDelegation elems'
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer
   | GenesisDelegationInvalidKey KeyHash KeyHash
   | GenesisDelegationMultiLayerDelegation KeyHash
-  | GenesisDelegationSelfSignedPsk Certificate
   deriving (Eq, Show)
 
 instance B.Buildable GenesisDelegationError where
@@ -87,37 +81,30 @@ instance B.Buildable GenesisDelegationError where
       . " is a delegate and an issuer."
       )
       k
-    GenesisDelegationSelfSignedPsk psk -> bprint
-      ("Encountered self-signed ProxyVerificationKey while constructing GenesisDelegation.\n"
-      . build
-      )
-      psk
 
--- | Safe constructor of 'GenesisDelegation' from a list of PSKs.
+-- | Safe constructor of 'GenesisDelegation' from a list of 'Certificate's
 mkGenesisDelegation
   :: MonadError GenesisDelegationError m => [Certificate] -> m GenesisDelegation
-mkGenesisDelegation psks = do
-  ((length . nub $ pskIssuerVK <$> psks) == length psks)
+mkGenesisDelegation certs = do
+  ((length . nub $ issuerVK <$> certs) == length certs)
     `orThrowError` GenesisDelegationDuplicateIssuer
   let
-    res = M.fromList [ (hashKey $ pskIssuerVK psk, psk) | psk <- psks ]
+    res = M.fromList [ (hashKey $ issuerVK cert, cert) | cert <- certs ]
   recreateGenesisDelegation res
 
--- | Safe constructor of 'GenesisDelegation' from existing map.
+-- | Safe constructor of 'GenesisDelegation' from existing map
 recreateGenesisDelegation
   :: MonadError GenesisDelegationError m
   => Map KeyHash Certificate
   -> m GenesisDelegation
-recreateGenesisDelegation pskMap = do
-  forM_ (M.toList pskMap) $ \(k, psk) -> do
+recreateGenesisDelegation certMap = do
+  forM_ (M.toList certMap) $ \(k, cert) -> do
 
-    let k' = hashKey $ pskIssuerVK psk
+    let k' = hashKey $ issuerVK cert
     (k == k') `orThrowError` GenesisDelegationInvalidKey k k'
 
-    not (isSelfSignedPsk psk) `orThrowError` GenesisDelegationSelfSignedPsk psk
-
-    let delegateId = hashKey $ pskDelegateVK psk
-    (delegateId `M.notMember` pskMap)
+    let delegateId = hashKey $ delegateVK cert
+    (delegateId `M.notMember` certMap)
       `orThrowError` GenesisDelegationMultiLayerDelegation delegateId
 
-  pure $ UnsafeGenesisDelegation pskMap
+  pure $ UnsafeGenesisDelegation certMap

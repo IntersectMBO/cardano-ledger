@@ -4,7 +4,6 @@ module Cardano.Crypto.Signing
 where
 
 import Cardano.Crypto.Signing.KeyGen as X
-import Cardano.Crypto.Signing.Proxy as X
 import Cardano.Crypto.Signing.VerificationKey as X
 import Cardano.Crypto.Signing.Redeem as X
 import Cardano.Crypto.Signing.Safe as X

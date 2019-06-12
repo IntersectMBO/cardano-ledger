@@ -10,7 +10,6 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisNonAvvmBalances
   , genGenesisSpec
   , genGenesisKeyHashes
-  , genSafeProxyCert
   , genSignatureEpochIndex
   , genTestnetBalanceOptions
   , genStaticConfig
@@ -46,14 +45,7 @@ import Cardano.Chain.Genesis
   , mkGenesisSpec
   )
 import Cardano.Chain.Slotting (EpochIndex)
-import Cardano.Crypto
-  ( ProtocolMagicId
-  , ProxyCert(..)
-  , Signature(..)
-  , noPassSafeSigner
-  , safeCreateProxyCert
-  , toVerification
-  )
+import Cardano.Crypto (ProtocolMagicId, Signature(..))
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Gen
@@ -62,13 +54,11 @@ import Test.Cardano.Chain.Delegation.Gen
   (genCanonicalCertificateDistinctList, genCertificateDistinctList)
 import Test.Cardano.Chain.Update.Gen
   (genCanonicalProtocolParameters, genProtocolParameters)
-import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
 import Test.Cardano.Crypto.Gen
   ( genHashRaw
   , genProtocolMagic
   , genProtocolMagicId
   , genRedeemVerificationKey
-  , genSigningKey
   , genTextHash
   )
 
@@ -172,13 +162,6 @@ genGenesisAvvmBalances =
 genGenesisKeyHashes :: Gen GenesisKeyHashes
 genGenesisKeyHashes =
   GenesisKeyHashes <$> Gen.set (Range.constant 10 25) genKeyHash
-
-genSafeProxyCert :: Gen (ProxyCert EpochIndex)
-genSafeProxyCert = do
-  pmId   <- genProtocolMagicId
-  secKey <- genSigningKey
-  eI     <- genEpochIndex
-  pure $ safeCreateProxyCert pmId (noPassSafeSigner secKey) (toVerification secKey) eI
 
 genSignatureEpochIndex :: Gen (Signature EpochIndex)
 genSignatureEpochIndex = do

@@ -23,18 +23,14 @@ import qualified Data.Set as Set
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
+import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochIndex
   , FlatSlotId(..)
   , addSlotNumber
   )
-import Cardano.Crypto
-  ( AProxyVerificationKey(..)
-  , ProtocolMagicId
-  , pskOmega
-  , validateProxyVerificationKey
-  )
+import Cardano.Crypto (ProtocolMagicId)
 
 
 --------------------------------------------------------------------------------
@@ -62,7 +58,7 @@ data ScheduledDelegation = ScheduledDelegation
 
 data Error
 
-  = InvalidCertificate Text
+  = InvalidCertificate
   -- ^ The delegation certificate has an invalid signature
 
   | MultipleDelegationsForEpoch EpochIndex KeyHash
@@ -107,7 +103,7 @@ scheduleCertificate env st cert = do
     `orThrowError` MultipleDelegationsForSlot currentSlot delegator
 
   -- Check that the delegation certificate is valid
-  validateProxyVerificationKey protocolMagic cert `wrapError` InvalidCertificate
+  Certificate.isValid protocolMagic cert `orThrowError` InvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair
   pure $ State
@@ -122,10 +118,10 @@ scheduleCertificate env st cert = do
 
   State { scheduledDelegations, keyEpochDelegations } = st
 
-  delegator       = hashKey $ pskIssuerVK cert
-  delegate        = hashKey $ pskDelegateVK cert
+  delegator       = hashKey $ Certificate.issuerVK cert
+  delegate        = hashKey $ Certificate.delegateVK cert
 
-  delegationEpoch = pskOmega cert
+  delegationEpoch = Certificate.epoch cert
 
   activationSlot  = addSlotNumber (kSlotSecurityParam k) currentSlot
 

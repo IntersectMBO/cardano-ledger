@@ -11,43 +11,21 @@ import Test.Cardano.Prelude
 
 import Hedgehog (Property)
 
-import Test.Cardano.Chain.Genesis.Example
-  (exampleGenesisData0, exampleStaticConfig_GCSpec, exampleStaticConfig_GCSrc)
+import Test.Cardano.Chain.Genesis.Example (exampleGenesisData0)
 import Test.Cardano.Chain.Genesis.Gen
   ( genGenesisAvvmBalances
-  , genGenesisDelegation
   , genGenesisInitializer
   , genGenesisNonAvvmBalances
   , genGenesisKeyHashes
-  , genStaticConfig
   )
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Update.Gen
   (genProtocolVersion, genCanonicalProtocolParameters)
 import Test.Cardano.Chain.Genesis.Gen
-  (genCanonicalGenesisData, genCanonicalGenesisDelegation, genSafeProxyCert)
-import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic, genVerificationKey)
+  (genCanonicalGenesisData, genCanonicalGenesisDelegation)
+import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
-
-
-
---------------------------------------------------------------------------------
--- StaticConfig
---------------------------------------------------------------------------------
-
-goldenStaticConfig_GCSpec :: Property
-goldenStaticConfig_GCSpec = goldenTestJSONPretty
-  exampleStaticConfig_GCSpec
-  "test/golden/json/genesis/StaticConfig_GCSpec"
-
-goldenStaticConfig_GCSrc :: Property
-goldenStaticConfig_GCSrc = goldenTestJSONPretty
-  exampleStaticConfig_GCSrc
-  "test/golden/json/genesis/StaticConfig_GCSrc"
-
-ts_roundTripStaticConfig :: TSProperty
-ts_roundTripStaticConfig = eachOfTS 100 (feedPM genStaticConfig) roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- JSON Canonical Tests
@@ -81,10 +59,6 @@ ts_roundTripCanonicalProtocolParameters :: TSProperty
 ts_roundTripCanonicalProtocolParameters =
   eachOfTS 100 genCanonicalProtocolParameters roundTripsCanonicalJsonPretty
 
-ts_roundTripCanonicalSafeProxyCert :: TSProperty
-ts_roundTripCanonicalSafeProxyCert =
-  eachOfTS 100 genSafeProxyCert roundTripsCanonicalJsonPretty
-
 --------------------------------------------------------------------------------
 -- GenesisAvvmBalances
 --------------------------------------------------------------------------------
@@ -105,18 +79,6 @@ golden_GenesisData0Dec :: Property
 golden_GenesisData0Dec =
   goldenTestCanonicalJSONDec exampleGenesisData0
     "test/golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic"
-
---------------------------------------------------------------------------------
--- GenesisDelegation
---------------------------------------------------------------------------------
-
-ts_roundTripGenesisDelegation :: TSProperty
-ts_roundTripGenesisDelegation =
-  eachOfTS 100 (feedPM genGenesisDelegation) roundTripsAesonShow
-
-ts_roundTripCanonicalVerificationKey :: TSProperty
-ts_roundTripCanonicalVerificationKey =
-  eachOfTS 100 genVerificationKey roundTripsCanonicalJsonPretty
 
 --------------------------------------------------------------------------------
 -- GenesisInitializer

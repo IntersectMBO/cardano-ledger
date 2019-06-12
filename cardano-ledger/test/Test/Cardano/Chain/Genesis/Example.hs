@@ -30,6 +30,7 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , hashKey
   )
+import Cardano.Chain.Delegation (unsafeCertificate)
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisNonAvvmBalances(..)
@@ -47,12 +48,10 @@ import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId(..)
   , RequiresNetworkMagic(..)
-  , ProxyCert(..)
   , RedeemVerificationKey
   , Signature(..)
   , abstractHash
   , redeemDeterministicKeyGen
-  , unsafeProxyVerificationKey
   )
 import Cardano.Crypto.Signing (VerificationKey(..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -106,7 +105,7 @@ exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( hashKey issueVerKey
-      , unsafeProxyVerificationKey
+      , unsafeCertificate
         (EpochIndex 68300481033)
         issueVerKey
         (VerificationKey
@@ -116,7 +115,7 @@ exampleGenesisDelegation = UnsafeGenesisDelegation
             }
           )
         )
-        (ProxyCert sig)
+        sig
       )
     ]
   )

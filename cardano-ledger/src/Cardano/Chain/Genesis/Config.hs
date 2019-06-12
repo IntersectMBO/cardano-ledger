@@ -30,8 +30,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import Data.Aeson
-  (FromJSON, ToJSON, object, parseJSON, toJSON, withObject, (.:), (.:?), (.=))
 import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import Formatting (build, bprint, string)
@@ -49,7 +47,7 @@ import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
 import Cardano.Chain.Genesis.Generate
   (GeneratedSecrets, GenesisDataGenerationError, generateGenesisData)
-import Cardano.Chain.Genesis.Spec (GenesisSpec(..), mkGenesisSpec)
+import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
@@ -78,57 +76,6 @@ data StaticConfig
   -- ^ 'GenesisData' is stored in at 'FilePath' with expected 'Hash Raw'
   deriving (Eq, Show)
 
-instance ToJSON StaticConfig where
-  toJSON (GCSrc gcsFile gcsHash) =
-    object [ "src"    .= object [ "file" .= gcsFile
-                                , "hash" .= gcsHash
-                                ]
-             ]
-  toJSON (GCSpec
-           (UnsafeGenesisSpec
-             gsAvvmDistr'
-             gsHeavyDelegation'
-             gsProtocolParameters'
-             gsK'
-             gsProtocolMagic'
-             gsInitializer')) =
-    object ["spec" .= object
-             [ "protocolParameters" .= gsProtocolParameters'
-             , "k" .= gsK'
-             , "avvmDistr" .= gsAvvmDistr'
-             , "protocolMagic" .=  gsProtocolMagic'
-             , "initializer" .= gsInitializer'
-             , "heavyDelegation" .= gsHeavyDelegation'
-             ]
-           ]
-
-instance FromJSON StaticConfig where
-  parseJSON = withObject "StaticConfig" $ \o -> do
-    src <- o .:? "src"
-    case src of
-      Just src' -> GCSrc <$> src' .: "file" <*> src' .: "hash"
-      Nothing -> do
-        specO <- o .: "spec"
-        -- GenesisAvvmBalances
-        avvmDistrV <- specO .: "avvmDistr"
-        -- GenesisDelegation
-        heavyDelegationV <- specO .: "heavyDelegation"
-        -- ProtocolParameters
-        protocolParametersV <- specO .: "protocolParameters"
-        -- K
-        kV <- specO .: "k"
-        -- ProtocolMagic
-        protocolMagicV <- specO .: "protocolMagic"
-        -- GenesisInitializer
-        initializerV <- specO .: "initializer"
-
-        either panic (pure . GCSpec) $ mkGenesisSpec
-          avvmDistrV
-          heavyDelegationV
-          protocolParametersV
-          kV
-          protocolMagicV
-          initializerV
 
 --------------------------------------------------------------------------------
 -- Config

@@ -127,6 +127,7 @@ library
                      , bytestring
                      , canonical-json
                      , cardano-binary
+                     , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-shell
@@ -183,6 +184,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Config
 
                        Test.Cardano.Chain.Delegation.CBOR
+                       Test.Cardano.Chain.Delegation.Certificate
                        Test.Cardano.Chain.Delegation.Example
                        Test.Cardano.Chain.Delegation.Gen
                        Test.Cardano.Chain.Delegation.Model

@@ -20,10 +20,6 @@ module Test.Cardano.Crypto.Gen
   , genRedeemVerificationKey
   , genRedeemSigningKey
 
-  -- * Proxy Cert and Key Generators
-  , genProxyCert
-  , genProxyVerificationKey
-
   -- * Signature Generators
   , genSignature
   , genSignatureEncoded
@@ -71,18 +67,14 @@ import Cardano.Crypto.ProtocolMagic
   )
 import Cardano.Crypto.Signing
   ( EncryptedSigningKey
-  , ProxyCert
-  , ProxyVerificationKey
   , VerificationKey
   , SafeSigner(..)
   , SigningKey
   , SignTag(..)
   , Signature
-  , createPsk
   , deterministicKeyGen
   , emptyPassphrase
   , noPassEncrypt
-  , safeCreateProxyCert
   , sign
   , signRaw
   )
@@ -125,7 +117,7 @@ genSignTag = Gen.choice
   , pure SignCommitment
   , pure SignUSVote
   , SignBlock <$> genVerificationKey
-  , pure SignProxyVK
+  , pure SignCertificate
   ]
 
 
@@ -158,20 +150,6 @@ genRedeemVerificationKey = fst <$> genRedeemKeypair
 
 genRedeemSigningKey :: Gen RedeemSigningKey
 genRedeemSigningKey = snd <$> genRedeemKeypair
-
-
---------------------------------------------------------------------------------
--- Proxy Cert and Key Generators
---------------------------------------------------------------------------------
-
-genProxyCert :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyCert w)
-genProxyCert pm genW =
-  safeCreateProxyCert pm <$> genSafeSigner <*> genVerificationKey <*> genW
-
-genProxyVerificationKey
-  :: ToCBOR w => ProtocolMagicId -> Gen w -> Gen (ProxyVerificationKey w)
-genProxyVerificationKey pm genW =
-  createPsk pm <$> genSafeSigner <*> genVerificationKey <*> genW
 
 
 --------------------------------------------------------------------------------

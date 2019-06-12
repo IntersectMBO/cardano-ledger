@@ -62,7 +62,6 @@ import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
 import Cardano.Crypto
   ( EncryptedSigningKey
   , SigningKey
-  , createPsk
   , deterministic
   , emptyPassphrase
   , encToSigning
@@ -169,7 +168,7 @@ generateGenesisData startTime genesisSpec = do
   let
     genesisDlgList :: [Delegation.Certificate]
     genesisDlgList =
-      (\(issuerSK, delegateSK) -> createPsk
+      (\(issuerSK, delegateSK) -> Delegation.mkCertificate
           (getProtocolMagicId pm)
           (noPassSafeSigner issuerSK)
           (toVerification delegateSK)
