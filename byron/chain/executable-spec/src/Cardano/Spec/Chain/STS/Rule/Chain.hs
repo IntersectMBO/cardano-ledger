@@ -195,7 +195,7 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps) (Slot s
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
-      GenDelegation   -> dcertsGen dsEnv
+      GenDelegation   -> dcertsGen dsEnv ds
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of

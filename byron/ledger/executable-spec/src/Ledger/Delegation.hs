@@ -536,10 +536,10 @@ dcertGen env st =
     candidates = Set.toList $ preCandidates \\ eks st
     -- Next, we choose to whom these keys delegate.
     target :: [VKey]
-    -- TODO: we might want to make this configurable for now we chose an upper
-    -- bound equal to three time the number of genesis keys to increase the
+    -- NOTE: we might want to make this configurable for now we chose an upper
+    -- bound equal to two times the number of genesis keys to increase the
     -- chance of having two genesis keys delegating to the same key.
-    target = VKey . Owner <$> [0 .. (3 * fromIntegral (length allowed))]
+    target = VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
 
     mkDCert' ((e, vkg), vk) = DCert (vk, e) (Sig vkg (owner vkg)) (vkg, vk) e
   in

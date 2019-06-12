@@ -300,8 +300,8 @@ instance HasTrace DBLOCK where
       -- We scale the number of delegators linearly up to twice the number of
       -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
-        n <- integral (linear 1 14)
-        pure $! Set.fromAscList $ gk <$> [1 .. n]
+        n <- integral (linear 0 13)
+        pure $! Set.fromAscList $ gk <$> [0 .. n]
       gk = VKeyGenesis . VKey . Owner
 
   sigGen _ (env, st) =
@@ -335,105 +335,97 @@ traceDCerts :: Trace DBLOCK -> [DCert]
 traceDCerts tr = concat $ _blockCerts <$> traceSignals OldestFirst tr
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withTests 200 $ property $ do
+relevantCasesAreCovered = withTests 400 $ property $ do
   let tl = 1000
   tr <- forAll (trace @DBLOCK tl)
-  -- There are as many delegation certificates as blocks.
-  cover 60
+
+  -- 70% of the traces must contain are as many delegation certificates as
+  -- blocks.
+  cover 70
         "there are at least as many delegation certificates as blocks"
         (traceLength tr <= length (traceDCerts tr))
 
-  -- 80% of the traces do not contain more than 20% of blocks with empty
-  -- delegation payload.
+  -- 70% of the traces must contain at most 25% of blocks with empty delegation
+  -- payload.
   cover 70
         "at most 25% of the blocks can contain empty delegation payload"
-        (emptyDelegationPayloadPcnt tr <= 0.25)
+        (ratio emptyDelegationPayload tr <= 0.25)
 
-  -- There are delegations to the this epoch.
+  -- 50% of the traces must contain at least 30% of delegations to this epoch.
   cover 50
         "at least 30% of the certificates delegate in this epoch"
-        (0.3 <= thisEpochDelegationPcnt tr)
+        (0.3 <= ratio thisEpochDelegations tr)
 
-  -- There are delegations to the next epoch.
+  -- 50% of the traces must contain at least 50% of delegations to the next
+  -- epoch.
   cover 50
         "at least 50% of the certificates delegate in the next epoch"
-        (0.5 <= nextEpochDelegationPcnt tr)
+        (0.5 <= ratio nextEpochDelegations tr)
 
-  -- 25% of the cases must contain at least 20% of self-delegations.
-  cover 25
-       "at least 20% of the certificates self delegate"
-       (0.2 <= selfDelegationsPcnt tr)
-  -- 20% of the test cases must contain at least YY% of delegations to the same
+  -- 90% of the traces must contain at least 30% of self-delegations.
+  cover 90
+       "at least 30% of the certificates self delegate"
+       (0.3 <= ratio selfDelegations tr)
+
+  -- 20% of the traces must contain at least 10% of delegations to the same
   -- delegate.
   cover 20
         "at least 10% of the certificates delegate to the same key"
-        (0.1 <= multipleDelegationsPcnt tr)
+        (0.1 <= ratio multipleDelegations tr)
   where
-    selfDelegationsPcnt :: Trace DBLOCK -> Double
-    selfDelegationsPcnt tr =
-      fromIntegral selfDelegations / n
-      where
-        selfDelegations = length
-                        $ filter idDeleg
-                        $ fmap delegatorDelegate (traceDCerts tr)
+    ratio :: Integral a
+          => (Trace DBLOCK -> a)
+          -> Trace DBLOCK
+          -> Double
+    ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
 
+    selfDelegations tr = length
+                       $ filter idDeleg
+                       $ fmap delegatorDelegate (traceDCerts tr)
+      where
         idDeleg (vks, vk) = owner vks == owner vk
-        n = fromIntegral (traceLength tr)
 
-    multipleDelegationsPcnt :: Trace DBLOCK -> Double
-    multipleDelegationsPcnt tr =
-      fromIntegral multipleDelegations / n
-      where
-        multipleDelegations = length
-                            $ filter ((2 <=) . snd)
-                            -- Count the occurrences. If we have more than one
-                            -- occurrence for a key they we know that
-                            $ count
-                            -- Keep the delegators. Since we applied nub
-                            -- before, we know that if there are two keys in
-                            -- the result of 'fmap snd' then we know for sure
-                            -- that they were delegated by different keys.
-                            $ fmap snd
-                            -- Remove duplicated elements, since we're not
-                            -- interested in the same genesis key delegating to
-                            -- the same key.
-                            $ nub
-                            -- Get the (delegator, delegate) pairs
-                            $ fmap delegatorDelegate (traceDCerts tr)
-        n = fromIntegral (traceLength tr)
+    -- Count the number of delegations to the same key in a given trace.
+    multipleDelegations tr = -- Get the (delegator, delegate) pairs
+                             fmap delegatorDelegate (traceDCerts tr)
+                             -- Remove duplicated elements, since we're not
+                             -- interested in the same genesis key delegating
+                             -- to the same key, i.e. if we have more than one
+                             -- @(vkg, vk)@, for the same genesis key @vkg@ and
+                             -- key @vk@ we keep only one of them.
+                           & nub
+                             -- Keep the delegators. Since we applied nub
+                             -- before, we know that if there are two keys in
+                             -- the result of 'fmap snd' then we know for sure
+                             -- that they were delegated by different keys.
+                           & fmap snd
+                             -- Count the occurrences. If we have more than one
+                             -- occurrence of a key, then we know that it must
+                             -- be because two different genesis keys delegated
+                             -- to it.
+                           & count
+                           & filter ((2 <=) . snd)
+                           & length
 
-    emptyDelegationPayloadPcnt :: Trace DBLOCK -> Double
-    emptyDelegationPayloadPcnt tr =
-      fromIntegral emptyDelegationPayload / n
-      where
-        emptyDelegationPayload = length
-                               $ filter null
-                               $  _blockCerts <$> traceSignals OldestFirst tr
-        n = fromIntegral (traceLength tr)
+    emptyDelegationPayload tr =  _blockCerts <$> traceSignals OldestFirst tr
+                              & filter null
+                              & length
 
-    thisEpochDelegationPcnt :: Trace DBLOCK -> Double
-    thisEpochDelegationPcnt tr =
-      fromIntegral thisEpochDelegation / n
-      where
-        thisEpochDelegation = length
-                            $ filter (\(e0, e1) -> e0 == e1)
-                            $ epochDelegationEpoch tr
-        n = fromIntegral (traceLength tr)
+    thisEpochDelegations tr = epochDelegationEpoch tr
+                            & filter (\(e0, e1) -> e0 == e1)
+                            & length
 
+    -- Get the epoch in which the delegation certificates of the trace were
+    -- applied, paired with the epoch of the delegation certificate.
     epochDelegationEpoch :: Trace DBLOCK -> [(Epoch, Epoch)]
-    epochDelegationEpoch tr = concat
-                            $ fmap (\(e, es) -> zip (repeat e) es)
-                            $ fmap (_dSEnvEpoch . fst *** (fmap _depoch . _blockCerts))
-                            $ preStatesAndSignals @DBLOCK OldestFirst tr
+    epochDelegationEpoch tr = preStatesAndSignals @DBLOCK OldestFirst tr
+                            & fmap (_dSEnvEpoch . fst *** (fmap _depoch . _blockCerts))
+                            & fmap (\(e, es) -> zip (repeat e) es)
+                            & concat
 
-    nextEpochDelegationPcnt :: Trace DBLOCK -> Double
-    nextEpochDelegationPcnt tr =
-      fromIntegral thisEpochDelegation / n
-      where
-        thisEpochDelegation = length
-                            $ filter (\(e0, e1) -> e0 + 1 == e1)
-                            $ epochDelegationEpoch tr
-        n = fromIntegral (traceLength tr)
+    nextEpochDelegations tr =  epochDelegationEpoch tr
+                            & filter (\(e0, e1) -> e0 + 1 == e1)
+                            & length
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules
