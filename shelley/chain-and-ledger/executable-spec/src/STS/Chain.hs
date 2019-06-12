@@ -68,9 +68,8 @@ chainTransition = do
     trans @NEWEPOCH $ TRC ((etaC, ppN), (eL, eta0, b, es, ru, pd), e)
   ru'' <- trans @RUPD $ TRC ((b, es'), ru', s)
   let delegationState' = _delegationState ls'
-  let ps' = _pstate delegationState'
-  ps'' <- trans @OCERT $ TRC ((), ps', bhb)
-  let ls'' = ls' {_delegationState = delegationState' {_pstate = ps''}}
+  _ <- trans @OCERT $ TRC ((), Map.empty, bh) -- TODO: OVERLAY -> PRTCL
+  let ls'' = ls' -- {_delegationState = delegationState' {_pstate = ps''}}
   let sL' = sL
   -- TODO after removal of Vrf, add PRTCL to get sL'
   (ls''', b'') <- trans @BBODY $ TRC (pp', (ls'', b'), block)
