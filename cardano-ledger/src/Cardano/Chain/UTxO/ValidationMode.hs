@@ -1,6 +1,5 @@
 module Cardano.Chain.UTxO.ValidationMode
   ( TxValidationMode (..)
-  , whenTxValidation
   ) where
 
 import Cardano.Prelude
@@ -22,13 +21,3 @@ data TxValidationMode
   -- ^ No validations should be performed as we have already validated this
   -- transaction against this very same ledger state.
   deriving (Eq, Show)
-
--- | Perform an action only when in the 'TxValidation' mode. Otherwise, do
--- nothing.
-whenTxValidation
-  :: MonadError err m
-  => TxValidationMode
-  -> m ()
-  -> m ()
-whenTxValidation TxValidation action = action
-whenTxValidation _ _ = pure ()

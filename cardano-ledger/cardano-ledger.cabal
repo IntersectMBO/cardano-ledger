@@ -45,6 +45,7 @@ library
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
                        Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.ValidationMode
 
   other-modules:
                        Cardano.Chain.Block.Block

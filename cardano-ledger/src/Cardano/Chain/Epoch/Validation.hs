@@ -30,7 +30,6 @@ import Cardano.Chain.Block
   , calcUTxOSize
   , updateChainBlockOrBoundary
   )
-import Cardano.Chain.Block.ValidationMode (BlockValidationMode)
 import Cardano.Chain.Epoch.File
   ( ParseError
   , mainnetEpochSlots
@@ -41,6 +40,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   (EpochNumber, EpochAndSlotCount, slotNumberEpoch, fromSlotNumber)
 import Cardano.Chain.UTxO (UTxO)
+import Cardano.Chain.ValidationMode (ValidationMode)
 
 
 data EpochError
@@ -54,21 +54,18 @@ data EpochError
 validateEpochFile
   :: forall m
    . (MonadIO m, MonadError EpochError m)
-  => BlockValidationMode
+  => ValidationMode
   -> Genesis.Config
   -> LoggingLayer
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile bvmode config ll cvs fp = do
+validateEpochFile vMode config ll cvs fp = do
   subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
   utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
   res          <- llBracketMonadX ll subTrace Log.Info "benchmark" $
-      liftIO $ runResourceT $ runExceptT $ foldChainValidationState
-        bvmode
-        config
-        cvs
-        stream
+      liftIO $ runResourceT $ (`runReaderT` vMode) $ runExceptT $
+        foldChainValidationState config cvs stream
   either throwError (logResult subTrace utxoSubTrace) res
  where
   stream = parseEpochFileWithBoundary mainnetEpochSlots fp
@@ -108,30 +105,30 @@ validateEpochFile bvmode config ll cvs fp = do
 
 -- | Check that a list of epochs 'Block's are valid.
 validateEpochFiles
-  :: BlockValidationMode
+  :: ValidationMode
   -> Genesis.Config
   -> ChainValidationState
   -> [FilePath]
   -> IO (Either EpochError ChainValidationState)
-validateEpochFiles bvmode config cvs fps =
-    runResourceT . runExceptT $ foldChainValidationState bvmode config cvs stream
+validateEpochFiles vMode config cvs fps =
+    runResourceT $ (`runReaderT` vMode) $ runExceptT
+      (foldChainValidationState config cvs stream)
   where stream = parseEpochFilesWithBoundary mainnetEpochSlots fps
 
 
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
-  :: BlockValidationMode
-  -> Genesis.Config
+  :: Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT EpochError ResIO ChainValidationState
-foldChainValidationState bvmode config chainValState blocks = S.foldM_
+  -> ExceptT EpochError (ReaderT ValidationMode ResIO) ChainValidationState
+foldChainValidationState config chainValState blocks = S.foldM_
   (\cvs block ->
     withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
-      $ updateChainBlockOrBoundary bvmode config cvs block
+      $ updateChainBlockOrBoundary config cvs block
   )
   (pure chainValState)
-  pure $ hoist (withExceptT EpochParseError) blocks
+  pure (pure (hoist (withExceptT EpochParseError) blocks))
  where
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe EpochAndSlotCount
   blockOrBoundarySlot = \case

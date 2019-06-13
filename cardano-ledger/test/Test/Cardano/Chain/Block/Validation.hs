@@ -51,6 +51,7 @@ import Cardano.Chain.Common (BlockCount(..), hashKey)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (SlotNumber)
+import Cardano.Chain.ValidationMode (ValidationMode, fromBlockValidationMode)
 import Cardano.Crypto (VerificationKey)
 
 import Test.Cardano.Chain.Config (readMainetCfg)
@@ -102,8 +103,9 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
     <> "Otherwise, for some reason, the `ChainValidationState` is not in "
     <> "normal form.")
 
-  result <- (liftIO . runResourceT . runExceptT)
-    (foldChainValidationState shouldAssertNF BlockValidation config cvs stream)
+  let vMode = fromBlockValidationMode BlockValidation
+  result <- (liftIO . runResourceT . (`runReaderT` vMode) . runExceptT)
+    (foldChainValidationState shouldAssertNF config cvs stream)
 
   void $ evalEither result
 
@@ -117,16 +119,15 @@ data Error
 -- | Fold chain validation over a 'Stream' of 'Block's
 foldChainValidationState
   :: ShouldAssertNF
-  -> BlockValidationMode
   -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT Error ResIO ChainValidationState
-foldChainValidationState shouldAssertNF bvmode config cvs blocks =
-  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
+  -> ExceptT Error (ReaderT ValidationMode ResIO) ChainValidationState
+foldChainValidationState shouldAssertNF config cvs blocks =
+  S.foldM_ validate (pure cvs) pure (pure (hoist (withExceptT ErrorParseError) blocks))
  where
   validate
-    :: MonadIO m
+    :: (MonadIO m, MonadReader ValidationMode m)
     => ChainValidationState
     -> ABlockOrBoundary ByteString
     -> ExceptT Error m ChainValidationState
@@ -145,7 +146,7 @@ foldChainValidationState shouldAssertNF bvmode config cvs blocks =
                   )
               NoAssertNF -> pure ()
             updateChainBoundary c bvd
-          ABOBBlock block -> updateBlock bvmode config c block
+          ABOBBlock block -> updateBlock config c block
 
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotNumber
   blockOrBoundarySlot = \case

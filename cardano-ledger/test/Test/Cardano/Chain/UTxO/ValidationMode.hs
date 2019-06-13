@@ -15,6 +15,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 
 import Cardano.Binary (Annotated (..))
+import Cardano.Chain.Block (BlockValidationMode (..))
 import Cardano.Chain.Common
   ( TxFeePolicy (..)
   , calculateTxSizeLinear
@@ -30,6 +31,7 @@ import Cardano.Chain.UTxO
   , UTxOValidationError (..)
   )
 import qualified Cardano.Chain.UTxO as UTxO
+import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (getProtocolMagicId)
 
 import Hedgehog
@@ -78,8 +80,10 @@ ts_prop_updateUTxO_Valid =
       -- Validate the generated concrete transaction
       let pm = Dummy.aProtocolMagic
           env = Environment pm pparams
-      tvmode <- forAll $ genValidationMode
-      case UTxO.updateUTxO tvmode env utxo [tx] of
+      vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
+      updateRes <- (`runReaderT` vMode) . runExceptT $
+        UTxO.updateUTxO env utxo [tx]
+      case updateRes of
         Left _  -> failure
         Right _ -> success
 
@@ -120,12 +124,17 @@ ts_prop_updateUTxO_InvalidWit =
 
       -- Validate the generated concrete transaction
       let env = Environment pm pparams
-      tvmode <- forAll $ genValidationMode
-      case UTxO.updateUTxO tvmode env utxo [txInvalidWit] of
-        Left err -> if isInvalidWitnessError err && tvmode == TxValidation
+      vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
+      updateRes <- (`runReaderT` vMode) . runExceptT $
+        UTxO.updateUTxO env utxo [txInvalidWit]
+      case updateRes of
+        Left err -> if isInvalidWitnessError err
+                        && (txValidationMode vMode) == TxValidation
                     then success
                     else failure
-        Right _ -> if tvmode == TxValidation then failure else success
+        Right _ -> if (txValidationMode vMode) == TxValidation
+                   then failure
+                   else success
  where
   isInvalidWitnessError :: UTxOValidationError -> Bool
   isInvalidWitnessError (UTxOValidationTxValidationError err) = case err of

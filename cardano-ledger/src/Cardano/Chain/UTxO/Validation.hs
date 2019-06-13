@@ -48,11 +48,13 @@ import Cardano.Chain.UTxO.TxWitness
 import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
-import Cardano.Chain.UTxO.ValidationMode
-  ( TxValidationMode (..)
-  , whenTxValidation
-  )
 import Cardano.Chain.Update (ProtocolParameters(..))
+import Cardano.Chain.ValidationMode
+  ( ValidationMode
+  , whenTxValidation
+  , unlessNoTxValidation
+  , wrapErrorWithValidationMode
+  )
 import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId
@@ -86,13 +88,11 @@ data TxValidationError
 --   actually assume 3 by calculating the fee as output balance - input balance.
 validateTx
   :: MonadError TxValidationError m
-  => TxValidationMode
-  -> Environment
+  => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m ()
-validateTx NoTxValidation _ _ _ = pure ()
-validateTx tvmode env utxo (Annotated tx txBytes) = do
+validateTx env utxo (Annotated tx txBytes) = do
 
   -- Check that the size of the transaction is less than the maximum
   txSize <= maxTxSize
@@ -104,10 +104,10 @@ validateTx tvmode env utxo (Annotated tx txBytes) = do
 
   -- Check that outputs have valid NetworkMagic
   let nm = makeNetworkMagic protocolMagic
-  txOutputs tx `forM_` validateTxOutNM tvmode nm
+  txOutputs tx `forM_` validateTxOutNM nm
 
   -- Check that every input is in the domain of 'utxo'
-  txInputs tx `forM_` validateTxIn tvmode utxo
+  txInputs tx `forM_` validateTxIn utxo
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
   minFee <- if isRedeemUTxO inputUTxO
@@ -151,12 +151,10 @@ validateTx tvmode env utxo (Annotated tx txBytes) = do
 -- | Validate that 'TxIn' is in the domain of 'UTxO'
 validateTxIn
   :: MonadError TxValidationError m
-  => TxValidationMode
-  -> UTxO
+  => UTxO
   -> TxIn
   -> m ()
-validateTxIn NoTxValidation _ _ = pure ()
-validateTxIn _ utxo txIn
+validateTxIn utxo txIn
   | txIn `UTxO.member` utxo = pure ()
   | otherwise = throwError $ TxValidationMissingInput txIn
 
@@ -164,12 +162,10 @@ validateTxIn _ utxo txIn
 -- | Validate the NetworkMagic of a TxOut
 validateTxOutNM
   :: MonadError TxValidationError m
-  => TxValidationMode
-  -> NetworkMagic
+  => NetworkMagic
   -> TxOut
   -> m ()
-validateTxOutNM NoTxValidation _ _ = pure ()
-validateTxOutNM _ nm txOut = do
+validateTxOutNM nm txOut = do
   -- Make sure that the unknown attributes are less than the max size
   unknownAttributesLength (addrAttributes (txOutAddress txOut)) < 128
     `orThrowError` TxValidationUnknownAddressAttributes
@@ -182,15 +178,12 @@ validateTxOutNM _ nm txOut = do
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
   :: MonadError TxValidationError m
-  => TxValidationMode
-  -> Annotated ProtocolMagicId ByteString
+  => Annotated ProtocolMagicId ByteString
   -> Annotated TxSigData ByteString
   -> Address
   -> TxInWitness
   -> m ()
-validateWitness NoTxValidation _ _ _ _ = pure ()
-validateWitness TxValidationNoCrypto _ _ _ _ = pure ()
-validateWitness TxValidation pmi sigData addr witness = case witness of
+validateWitness pmi sigData addr witness = case witness of
   VKWitness vk sig ->
     (  verifySignatureDecoded pmi SignTx vk sigData sig
       && checkVerKeyAddress vk addr
@@ -217,16 +210,14 @@ data UTxOValidationError
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx
-  :: MonadError UTxOValidationError m
-  => TxValidationMode
-  -> Environment
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
+  => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m UTxO
-updateUTxOTx tvmode env utxo aTx@(Annotated tx _) = do
-
-  validateTx tvmode env utxo aTx
-    `wrapError` UTxOValidationTxValidationError
+updateUTxOTx env utxo aTx@(Annotated tx _) = do
+  unlessNoTxValidation (validateTx env utxo aTx)
+    `wrapErrorWithValidationMode` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
     `wrapError` UTxOValidationUTxOError
@@ -234,15 +225,13 @@ updateUTxOTx tvmode env utxo aTx@(Annotated tx _) = do
 
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
 updateUTxOTxWitness
-  :: MonadError UTxOValidationError m
-  => TxValidationMode
-  -> Environment
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
+  => Environment
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO
-updateUTxOTxWitness tvmode env utxo ta = do
-
-  whenTxValidation tvmode $ do
+updateUTxOTxWitness env utxo ta = do
+  whenTxValidation $ do
     -- Get the signing addresses for each transaction input from the 'UTxO'
     addresses <-
       mapM (`UTxO.lookupAddress` utxo) (NE.toList $ txInputs tx)
@@ -250,12 +239,12 @@ updateUTxOTxWitness tvmode env utxo ta = do
 
     -- Validate witnesses and their signing addresses
     mapM_
-        (uncurry $ validateWitness tvmode pmi sigData)
+        (uncurry $ validateWitness pmi sigData)
         (zip addresses (V.toList witness))
       `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxOTx tvmode env utxo aTx
+  updateUTxOTx env utxo aTx
  where
   Environment { protocolMagic } = env
   pmi = getAProtocolMagicId protocolMagic
@@ -267,10 +256,9 @@ updateUTxOTxWitness tvmode env utxo ta = do
 
 -- | Update UTxO with a list of transactions
 updateUTxO
-  :: MonadError UTxOValidationError m
-  => TxValidationMode
-  -> Environment
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
+  => Environment
   -> UTxO
   -> [ATxAux ByteString]
   -> m UTxO
-updateUTxO tvmode env as = foldM (updateUTxOTxWitness tvmode env) as
+updateUTxO env as = foldM (updateUTxOTxWitness env) as

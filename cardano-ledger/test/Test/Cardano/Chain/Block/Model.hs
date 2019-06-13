@@ -38,6 +38,8 @@ import Cardano.Chain.Block
   )
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as Concrete
+import Cardano.Chain.ValidationMode
+  (ValidationMode, fromBlockValidationMode)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (classifyTraceLength, trace)
@@ -74,7 +76,7 @@ passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
 passConcreteValidation tr = void $ evalEither res
  where
   res =
-    foldM (elaborateAndUpdate BlockValidation config) (initialState, txIdMap)
+    foldM (elaborateAndUpdate config) (initialState, txIdMap)
       $ preStatesAndSignals OldestFirst tr
 
   initialState = initialStateNoUTxO { cvsUtxo = initialUTxO }
@@ -90,18 +92,21 @@ passConcreteValidation tr = void $ evalEither res
 
 
 elaborateAndUpdate
-  :: BlockValidationMode
-  -> Genesis.Config
+  :: Genesis.Config
   -> (ChainValidationState, Map Abstract.TxId Concrete.TxId)
   -> (State CHAIN, Abstract.Block)
   -> Either
        ChainValidationError
        (ChainValidationState, Map Abstract.TxId Concrete.TxId)
-elaborateAndUpdate bvmode config (cvs, txIdMap) (ast, ab) =
-  (, txIdMap') <$> updateBlock bvmode config cvs concreteBlock
+elaborateAndUpdate config (cvs, txIdMap) (ast, ab) =
+  (, txIdMap') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
  where
   (concreteBlock, txIdMap') = elaborateBS txIdMap config dCert cvs ab
+
   dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) ast
+
+  vMode :: ValidationMode
+  vMode = fromBlockValidationMode BlockValidation
 
 
 classifyTransactions :: Trace CHAIN -> PropertyT IO ()

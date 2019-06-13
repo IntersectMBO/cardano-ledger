@@ -74,11 +74,6 @@ import Cardano.Chain.Block.Header
   , wrapBoundaryBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
-import Cardano.Chain.Block.ValidationMode
-  ( BlockValidationMode
-  , toTxValidationMode
-  , whenBlockValidation
-  )
 import Cardano.Chain.Common
   ( BlockCount(..)
   , KeyHash
@@ -112,6 +107,12 @@ import Cardano.Crypto
   , VerificationKey
   , hashRaw
   , hashDecoded
+  )
+import Cardano.Chain.ValidationMode
+  ( ValidationMode
+  , orThrowErrorInBlockValidationMode
+  , whenBlockValidation
+  , wrapErrorWithValidationMode
   )
 
 --------------------------------------------------------------------------------
@@ -288,15 +289,14 @@ data ChainValidationError
 --------------------------------------------------------------------------------
 
 updateChainBlockOrBoundary
-  :: MonadError ChainValidationError m
-  => BlockValidationMode
-  -> Genesis.Config
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => Genesis.Config
   -> ChainValidationState
   -> ABlockOrBoundary ByteString
   -> m ChainValidationState
-updateChainBlockOrBoundary bvmode config c b = case b of
+updateChainBlockOrBoundary config c b = case b of
   ABOBBoundary bvd   -> updateChainBoundary c bvd
-  ABOBBlock    block -> updateBlock bvmode config c block
+  ABOBBlock    block -> updateBlock config c block
 
 
 updateChainBoundary
@@ -387,37 +387,30 @@ data BodyState = BodyState
 --   nor does it carry out anything which might be considered part of the
 --   protocol.
 updateBody
-  :: MonadError ChainValidationError m
-  => BlockValidationMode
-  -> BodyEnvironment
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => BodyEnvironment
   -> BodyState
   -> ABlock ByteString
   -> m BodyState
-updateBody bvmode env bs b = do
+updateBody env bs b = do
   -- Validate the block size
-  whenBlockValidation bvmode $
-    blockLength b <= maxBlockSize
-      `orThrowError` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
+  blockLength b <= maxBlockSize
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
   -- Validate the delegation, transaction, and update payload proofs.
-  whenBlockValidation bvmode $
-    validateBlockProofs b
-      `wrapError` ChainValidationProofValidationError
+  whenBlockValidation (validateBlockProofs b)
+    `wrapErrorWithValidationMode` ChainValidationProofValidationError
 
-  -- @intricate: How should we deal with the `BlockValidationMode` here?
-  --             When in the 'NoBlockValidation' mode, it shouldn't be possible
-  --             to return an error. Perhaps there should also be a
-  --             'DelegationValidationMode'?
   -- Update the delegation state
   delegationState' <-
     DI.updateDelegation delegationEnv delegationState certificates
       `wrapError` ChainValidationDelegationSchedulingError
 
   -- Update the UTxO
-  let tvmode = toTxValidationMode bvmode
   utxo' <-
-    UTxO.updateUTxO tvmode utxoEnv utxo txs
-      `wrapError` ChainValidationUTxOValidationError
+    UTxO.updateUTxO utxoEnv utxo txs
+      `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
 
   -- Update the update state
   updateState' <-
@@ -484,17 +477,16 @@ data HeaderEnvironment = HeaderEnvironment
 
 -- | This is an implementation of the the BHEAD rule.
 updateHeader
-  :: MonadError ChainValidationError m
-  => BlockValidationMode
-  -> HeaderEnvironment
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => HeaderEnvironment
   -> UPI.State
   -> AHeader ByteString
   -> m UPI.State
-updateHeader bvmode env st h = do
+updateHeader env st h = do
   -- Validate the header size
-  whenBlockValidation bvmode $
-    headerLength h <= maxHeaderSize
-      `orThrowError` ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
+  headerLength h <= maxHeaderSize
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
 
   -- Perform epoch transition
   pure $! epochTransition epochEnv st (headerSlot h)
@@ -559,23 +551,22 @@ epochTransition env st slot = if nextEpoch > currentEpoch
 --   Note that this also updates the previous block hash, which would usually be
 --   done as part of the PBFT rule.
 updateBlock
-  :: MonadError ChainValidationError m
-  => BlockValidationMode
-  -> Genesis.Config
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
+  => Genesis.Config
   -> ChainValidationState
   -> ABlock ByteString
   -> m ChainValidationState
-updateBlock bvmode config cvs b = do
+updateBlock config cvs b = do
 
   -- Compare the block's 'ProtocolMagic' to the configured value
-  whenBlockValidation bvmode $
-    blockProtocolMagicId b == configProtocolMagicId config
-      `orThrowError` ChainValidationProtocolMagicMismatch
-                      (blockProtocolMagicId b)
-                      (configProtocolMagicId config)
+  blockProtocolMagicId b == configProtocolMagicId config
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationProtocolMagicMismatch
+        (blockProtocolMagicId b)
+        (configProtocolMagicId config)
 
   -- Update the header
-  updateState' <- updateHeader bvmode headerEnv (cvsUpdateState cvs) (blockHeader b)
+  updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
 
   let
     bodyEnv = BodyEnvironment
@@ -594,7 +585,7 @@ updateBlock bvmode config cvs b = do
       , delegationState = cvsDelegationState cvs
       }
 
-  BodyState { utxo, updateState, delegationState } <- updateBody bvmode bodyEnv bs b
+  BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
 
   pure $ cvs
     { cvsLastSlot     = blockSlot b
@@ -634,31 +625,28 @@ data Error
 
 -- | Fold transaction validation over a 'Stream' of 'Block's
 foldUTxO
-  :: BlockValidationMode
-  -> UTxO.Environment
+  :: UTxO.Environment
   -> UTxO
   -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT Error ResIO UTxO
-foldUTxO bvmode env utxo blocks = S.foldM_
-  (foldUTxOBlock bvmode env)
+  -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
+foldUTxO env utxo blocks = S.foldM_
+  (foldUTxOBlock env)
   (pure utxo)
   pure
-  (hoist (withExceptT ErrorParseError) blocks)
+  (pure (hoist (withExceptT ErrorParseError) blocks))
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Block'
 foldUTxOBlock
-  :: BlockValidationMode
-  -> UTxO.Environment
+  :: UTxO.Environment
   -> UTxO
   -> ABlock ByteString
-  -> ExceptT Error ResIO UTxO
-foldUTxOBlock bvmode env utxo block =
-  let tvmode = toTxValidationMode bvmode
-  in withExceptT
-      (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
-        block
-      )
-    $ UTxO.updateUTxO tvmode env utxo (aUnTxPayload $ blockTxPayload block)
+  -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
+foldUTxOBlock env utxo block =
+  withExceptT
+    (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
+      block
+    )
+  $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =

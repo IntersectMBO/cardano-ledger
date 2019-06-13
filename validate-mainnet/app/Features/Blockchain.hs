@@ -21,6 +21,7 @@ import Cardano.Chain.Block
 import Cardano.Chain.Conversion (convertConfig)
 import Cardano.Chain.Epoch.Validation (EpochError, validateEpochFile)
 import qualified Cardano.Chain.Genesis as Genesis
+import Cardano.Chain.ValidationMode (fromBlockValidationMode)
 import Cardano.Shell.Constants.Types (CardanoConfiguration(..))
 import Cardano.Shell.Features.Logging (LoggingLayer(..))
 import Cardano.Shell.Types
@@ -64,8 +65,9 @@ init config appEnv ll initialCVS cvsVar = do
     Production  -> liftIO mainnetEpochFiles
 
   -- Validate epoch files.
+  let vMode = fromBlockValidationMode BlockValidation
   result <- liftIO . runExceptT $ foldM
-    (validateEpochFile BlockValidation (genesisConfig config) ll)
+    (validateEpochFile vMode (genesisConfig config) ll)
     initialCVS
     files
 

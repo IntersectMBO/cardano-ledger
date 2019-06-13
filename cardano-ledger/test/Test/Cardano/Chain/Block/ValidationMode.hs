@@ -29,6 +29,8 @@ import Cardano.Chain.Block
   )
 import Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (TxProof)
+import Cardano.Chain.ValidationMode
+  (ValidationMode (..), fromBlockValidationMode)
 import Cardano.Crypto (Hash)
 
 import Hedgehog
@@ -54,7 +56,6 @@ import Ledger.GlobalParams (lovelaceCap)
 import qualified Ledger.Update as Abstract
 import qualified Ledger.UTxO as Abstract
 
-import Test.Cardano.Chain.Block.Model (elaborateAndUpdate)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Elaboration.Block (abEnvToCfg, elaborateBS, rcDCert)
 import qualified Test.Cardano.Chain.Update.Gen as Update
@@ -85,8 +86,13 @@ ts_prop_updateBlock_Valid =
       let config = abEnvToCfg chainEnv
           cvs = either (panic . show) (\a -> a) (initialChainValidationState config)
           (_, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
-      bvmode <- forAll $ genBlockValidationMode
-      case elaborateAndUpdate bvmode config (cvs, txIdMap) (chainState, abstractBlock) of
+          dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) chainState
+      vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
+      let (concreteBlock, _txIdMap') = elaborateBS txIdMap config dCert cvs abstractBlock
+      annotateShow concreteBlock
+      updateRes <- (`runReaderT` vMode) . runExceptT $
+        updateBlock config cvs concreteBlock
+      case updateRes of
         Left _  -> failure
         Right _ -> success
 
@@ -110,17 +116,19 @@ ts_prop_updateBlock_InvalidProof =
           cvs = either (panic . show) (\a -> a) (initialChainValidationState config)
           (_, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
           dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) chainState
-      bvmode <- forAll $ genBlockValidationMode
+      vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
       let (concreteBlock, _txIdMap') = elaborateBS txIdMap config dCert cvs abstractBlock
       annotateShow concreteBlock
       invalidBlock <- forAll $ invalidateABlockProof concreteBlock
-      case updateBlock bvmode config cvs invalidBlock of
+      updateRes <- (`runReaderT` vMode) . runExceptT $
+        updateBlock config cvs invalidBlock
+      case updateRes of
         Left _ ->
-          if bvmode == BlockValidation
+          if (blockValidationMode vMode) == BlockValidation
           then success
           else failure
         Right _ ->
-          if bvmode == NoBlockValidation
+          if (blockValidationMode vMode) == NoBlockValidation
           then success
           else failure
 
