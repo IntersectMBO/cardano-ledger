@@ -40,6 +40,11 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{pp}
+      & \PParams
+      & \Ppm \mapsto \Value
+      & \text{protocol parameter map}
+      \\
       \var{coin}
       & \Coin
       & \Z
@@ -57,10 +62,6 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
         \var{maxBlockSize} \mapsto \N & \PParams & \text{max block body size}\\
         \var{maxTxSize} \mapsto \N & \PParams & \text{max transaction size}\\
         \var{maxHeaderSize} \mapsto \N & \PParams & \text{max block header size}\\
-        \var{scriptVersion} \mapsto \N & \PParams & \text{script version}\\
-        \var{upAdptThd} \mapsto \R & \PParams & \text{update proposal adoption threshold}\\
-        \var{cfmThd} \mapsto \N & \PParams & \text{update proposal confirmation threshold}\\
-        \var{upropTTL} \mapsto \Slot & \PParams & \text{update proposal time-to-live}\\
         \var{keyDeposit} \mapsto \Coin & \PParams & \text{stake key deposit}\\
         \var{keyMinRefund} \mapsto \unitInterval & \PParams & \text{stake key min refund}\\
         \var{keyDecayRate} \mapsto \nonnegReals & \PParams & \text{stake key decay rate}\\
@@ -74,6 +75,8 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
         \rho \mapsto \unitInterval & \PParams & \text{monetary expansion}\\
         \var{activeSlotCoeff} \mapsto \unitInterval & \PParams & f\text{ in \cite{ouroboros_praos}}\\
         \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
+        \var{extraEntropy} \mapsto \Seed & \PParams & \text{extra entropy}\\
+        \var{pv} \mapsto \N\times\N\times\N & \PParams & \text{protocol version}\\
       \end{array}
   \end{equation*}
   %
@@ -85,10 +88,6 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \fun{maxBlockSize},
     \fun{maxTxSize},
     \fun{maxHeaderSize},
-    \fun{scriptVersion},
-    \fun{upAdptThd},
-    \fun{cfmThd},
-    \fun{upropTTL},
     \fun{keyDeposit},
     \fun{keyMinRefund},
     \fun{keyDecayRate},
@@ -102,6 +101,8 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \fun{rho},
     \fun{activeSlotCoeff},
     \fun{d},
+    \fun{extraEntropy},
+    \fun{pv},
   \end{center}
   %
   \emph{Abstract Functions}
@@ -131,8 +132,8 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   %
   \begin{align*}
     \fun{minfee} & \in \PParams \to \Tx \to \Coin & \text{minimum fee}\\
-    \fun{minfee} & ~\var{pps}~\var{tx} =
-    (\fun{a}~\var{pps}) * \fun{txSize}~\var{tx} + (\fun{b}~\var{pps})
+    \fun{minfee} & ~\var{pp}~\var{tx} =
+    (\fun{a}~\var{pp}) * \fun{txSize}~\var{tx} + (\fun{b}~\var{pp})
     \\
     \\
     \fun{epoch} & \in ~ \Slot \to \Epoch & \text{epoch of a slot}
