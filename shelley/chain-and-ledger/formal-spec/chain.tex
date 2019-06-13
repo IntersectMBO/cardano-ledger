@@ -4,12 +4,10 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
-\newcommand{\Bool}{\type{Bool}}
 \newcommand{\T}{\type{T}}
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
 \newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
@@ -45,6 +43,7 @@
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
+\newcommand{\BBodyEnv}{\type{BBodyEnv}}
 \newcommand{\BBodyState}{\type{BBodyState}}
 \newcommand{\RUpdEnv}{\type{RUpdEnv}}
 \newcommand{\ChainEnv}{\type{ChainEnv}}
@@ -159,6 +158,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
         \var{bsize} & \N & \text{size of the block body}\\
         \var{bhash} & \HashBBody & \text{block body hash}\\
         \var{oc} & \OCert & \text{operational certificate}\\
+        \var{pv} & \ProtVer & \text{protocol version}\\
       \end{array}
     \right)
   \end{equation*}
@@ -329,103 +329,36 @@ In the second case, the new epoch state is updated as follows:
 \item A new OBFT overlay schedule is created.
 \end{itemize}
 
-Figure~\ref{fig:funcs:new-epoch-helper} gives some helper functions for the
-$\mathsf{NEWEPOCH}$ transition.
-Three of the four functions help with the nested data structures.
-The other function, $\fun{extraEntropy}$, will return a seed value to be used as extra
-entropy for the next epoch nonce if the threshold of genesis keys are in agreement of the value,
-and zero otherwise.
-
-%%
-%% Figure - Helper Functions for New Epoch Rules
-%%
-\begin{figure}[htb]
-  \begin{align*}
-      & \fun{getEEnt} \in \EpochState \to \VKeyGen\mapsto\Seed \\
-      & \fun{getEEnt}~
-          (\wcard, ~\wcard,
-          ~((\wcard,~\wcard,~\wcard,~\var{H}),~\wcard,~\wcard))
-    = H
-  \end{align*}
-
-  \begin{align*}
-      & \fun{resetEEnt} \in \EpochState \to \EpochState \\
-      & \fun{resetEEnt}~
-          (\var{acnt},
-          ~\var{ss},
-          ~((\var{utxo},~\var{deposits},~\var{fees},~\wcard),~\var{dpstate},~\var{us}))
-    = \\
-      &~~
-          (\var{acnt},
-          ~\var{ss},
-          ~((\var{utxo},~\var{deposits},~\var{fees},~\emptyset),~\var{dpstate},~\var{us}))
-  \end{align*}
-
-  \begin{align*}
-      & \fun{extraEntropy} \in \EpochState \to \PParams \to \powerset{\VKeyGen} \to \Seed \\
-      & \fun{extraEntropy}~\var{es}~\var{pp}~\var{gkeys} =
-        \begin{cases}
-          \eta & \text{if}~\exists\eta(~|H\restrictrange \{\eta\}|/|gkeys|\geq t~)\\
-          0_{seed} & \text{otherwise} \\
-        \end{cases} \\
-      &
-        \where \\
-      & ~~~~ H = \fun{getEEnt}~\var{es} \\
-      & ~~~~ t = \fun{upAdptThd}~\var{pp}
-  \end{align*}
-
-  \begin{align*}
-      & \fun{setUPIState} \in \EpochState \to \UPIState \to \EpochState \\
-      & \fun{setUPIState}~(\var{acnt},~\var{ss},~(\var{utxoSt},~\var{dpstate},~\wcard))~\var{us} =
-      (\var{acnt},~\var{ss},~(\var{utxoSt},~\var{dpstate},~\var{us}))
-  \end{align*}
-
-  \caption{New Epoch Helper Functions}
-  \label{fig:funcs:new-epoch-helper}
-\end{figure}
-
 \begin{figure}[ht]
   \begin{equation}\label{eq:new-epoch}
     \inference[New-Epoch]
     {
       e = e_\ell + 1
-      &
-      (\wcard,~\wcard,~\var{ss}, (\wcard,~\wcard,~\var{us}))\leteq\var{es}
       \\
       {
-        \var{s}\vdash\var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
+        \var{b_{prev}} \\
+        \vdash
+        (\fun{applyRUpd}~\var{ru}~\var{es})
+          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
       }
-      &
-      \var{pp_n}\leteq\pps{us'}
-     \\
-     {
-        \left(
-          {\begin{array}{c}
-              \var{pp}_n \\
-              \var{b_{prev}} \\
-           \end{array}}
-       \right)
-       \vdash
-       (\fun{applyRUpd}~\var{ru}~\var{es})
-         \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
-     }
-     \\~\\~\\
-     {\begin{array}{r@{~\leteq~}l}
-        \var{pp} & \pps{us} \\
-         (\wcard,~\wcard,~\var{ss'}, \wcard) & \var{es'} \\
-        (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss'} \\
-        (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
-        total & \sum_{\_ \mapsto c\in\var{stake}} c \\
-         \var{pd'} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
-                    \left\{
-                    (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
-                    \var{c}) \in \var{stake}
-                \right\}\right) \\
-         \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
-         \eta_e & \fun{extraEntropy}~\var{es'}~\var{pp}~\var{gkeys} \\
-         \var{es''} & \fun{setUPIState}~\var{es'}~\var{us'} \\
-         \var{es'''} & \fun{resetEEnt}~\var{es''} \\
-      \end{array}}
+      \\~\\~\\
+      {\begin{array}{r@{~\leteq~}l}
+          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'} \\
+         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+         (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
+         total & \sum_{\_ \mapsto c\in\var{stake}} c \\
+          \var{pd'} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
+                     \left\{
+                     (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
+                     \var{c}) \in \var{stake}
+                 \right\}\right) \\
+          \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
+          \eta_e & \fun{extraEntropy}~\var{pp} \\
+          \var{es''} & (\var{acnt},
+                       ~\var{ss},
+                       ~\var{ls},
+                       ~\var{pp}\unionoverrideRight\{\var{extraEntropy}\mapsto 0_{seed}\}) \\
+       \end{array}}
     }
     {
       \left(
@@ -452,7 +385,7 @@ and zero otherwise.
             \varUpdate{\eta_1\seedOp\eta_e} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}'''} \\
+            \varUpdate{\var{es}''} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
@@ -538,7 +471,7 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
-      s < \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
+      slot < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
     }
     {
       \left(
@@ -1170,14 +1103,26 @@ The states for this transition consists of:
 \subsection{Block Body Transition}
 \label{sec:block-body-trans}
 
-The Block Body Transition updates the block body state which comprises the
-ledger state and the map describing the produced blocks. The environment of the
-$\mathsf{BBODY}$ transition are overlay schedule slots.
+The Block Body Transition updates the block body state which comprises the ledger state and the
+map describing the produced blocks.
+The environment of the $\mathsf{BBODY}$ transition are overlay schedule slots and the protocol
+parameters.
 The environments and states are defined in Figure~\ref{fig:ts-types:bbody}, along with
 a helper function $\fun{incrBlocks}$, which counts the number of non-overlay blocks
 produced by each stake pool.
 
 \begin{figure}
+  \emph{BBody environments}
+  \begin{equation*}
+    \BBodyEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{oslots} & \powerset{\Slot} & \text{overlay slots} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{BBody states}
   \begin{equation*}
     \BBodyState =
@@ -1192,7 +1137,7 @@ produced by each stake pool.
   \emph{BBody Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bbody}{\_} \var{\_} \subseteq
-    \powerset ((\powerset{\Slot)} \times \BBodyState \times \Block \times \BBodyState)
+    \powerset (\BBodyEnv \times \BBodyState \times \Block \times \BBodyState)
   \end{equation*}
   \caption{BBody transition-system types}
   \label{fig:ts-types:bbody}
@@ -1252,7 +1197,10 @@ current slot is not an overlay slot.
       \fun{hash}~{txs} = \bbodyhash{bhb}
       \\~\\
       {
-        \bslot{bhb}
+        {\left(\begin{array}{c}
+            \bslot{bhb} \\
+            \var{pp} \\
+        \end{array}\right)}
         \vdash
              \var{ls} \\
         \trans{\hyperref[fig:rules:ledger-sequence]{ledgers}}{\var{txs}}
@@ -1260,7 +1208,10 @@ current slot is not an overlay slot.
       }
     }
     {
-      \var{oslots}
+      {\left(\begin{array}{c}
+            \var{oslots} \\
+            \var{pp} \\
+      \end{array}\right)}
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1342,10 +1293,10 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\wcard,~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)
           & \var{nes}
           \\
-          & (\wcard,~\wcard,~\var{ls})
+          & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard),~\wcard)
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
@@ -1354,24 +1305,22 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       & \fun{setIssueNumbers} \in \LState \to (\HashKey\to\N) \to \LState \\
       & \fun{setIssueNumbers}~
           (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard))
-          ~\var{us})
+          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))
           ~\var{cs} = \\
       & ~~~~
           (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs}))
-          ~\var{us})
+          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})))
   \end{align*}
   %
   \begin{align*}
       & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
       & \fun{updateNES}~
-      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard),~\var{ru},
-       ~\var{pd},~\var{osched},~\var{us})
+      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
+       ~\var{ru},~\var{pd},~\var{osched})
           ~\var{b_{cur}}~\var{ls} = \\
       & ~~~~
-      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\var{b_{cur}},~(\var{acnt},~\var{ss},~\var{ls}),
-       ~\var{ru},~\var{pd},~\var{osched},~\var{us})
+      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\var{b_{cur}},
+       ~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}),~\var{ru},~\var{pd},~\var{osched})
   \end{align*}
   %
 
@@ -1398,16 +1347,15 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\
       (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
-        (\wcard,~\wcard,\var{ls})\leteq\var{es}\\
+        (\wcard,~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
-            (\wcard,~\wcard,~\wcard,~\var{cs})),
-          \var{us})\leteq\var{ls}\\
+            (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
       {
         \left(
           {\begin{array}{c}
               \left(\begin{array}{c}
-                 \pps{us} \\
+                 \var{pp} \\
                  \var{osched} \\
                  \var{dms} \\
                  \eta_0 \\
@@ -1435,7 +1383,10 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\~\\
       \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs} \\
       {
-        \dom{osched}
+        {\left(\begin{array}{c}
+              \dom{osched} \\
+              \var{pp} \\
+        \end{array}\right)}
         \vdash
         {\left(\begin{array}{c}
               \var{ls}' \\
@@ -1536,6 +1487,14 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                           \var{utxo} \\
                           0 \\
                           0 \\
+                          \left(
+                            \begin{array}{c}
+                              \emptyset \\
+                              \emptyset \\
+                              \emptyset \\
+                              \emptyset \\
+                            \end{array}
+                          \right) \\
                         \end{array}
                       \right) \\
                       \left(
@@ -1559,9 +1518,9 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                         \right) \\
                         \end{array}
                       \right) \\
-                      \var{us} \\
                     \end{array}
                   \right) \\
+                  \pps{us} \\
                 \end{array}
               \right) \\
               \\

@@ -35,6 +35,7 @@
 %%
 \newcommand{\Nothing}{\ensuremath{\Diamond}}
 \newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Bool}{\type{Bool}}
 \newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
 \newcommand{\Z}{\ensuremath{\mathbb{Z}}}
 \newcommand{\R}{\ensuremath{\mathbb{R}}}
@@ -46,10 +47,10 @@
 \newcommand{\Addr}{\type{Addr}}
 \newcommand{\UTxO}{\type{UTxO}}
 \newcommand{\Wdrl}{\type{Wdrl}}
-\newcommand{\Value}{\type{Value}}
 \newcommand{\Coin}{\type{Coin}}
 \newcommand{\PParams}{\type{PParams}}
 \newcommand{\Slot}{\type{Slot}}
+\newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
@@ -57,7 +58,16 @@
 \newcommand{\StakeKeys}{\type{StakeKeys}}
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
-\newcommand{\EEnt}{\type{EEnt}}
+\newcommand{\Ppm}{\type{Ppm}}
+\newcommand{\Value}{\type{Value}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+\newcommand{\ApName}{\ensuremath{\type{ApName}}}
+\newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
+\newcommand{\Metadata}{\ensuremath{\type{Mdt}}}
+\newcommand{\PPUpdate}{\type{PPUpdate}}
+\newcommand{\Applications}{\type{Applications}}
+\newcommand{\AVUpdate}{\type{AVUpdate}}
+\newcommand{\Update}{\type{Update}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -110,6 +120,11 @@
 \newcommand{\Gkeys}{\var{G_{keys}}}
 \newcommand{\Block}{\type{Block}}
 \newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\PPUpdateEnv}{\type{PPUpdateEnv}}
+\newcommand{\AVUpdateEnv}{\type{AVUpdateEnv}}
+\newcommand{\AVUpdateState}{\type{AVUpdateState}}
+\newcommand{\UpdateEnv}{\type{UpdateEnv}}
+\newcommand{\UpdateState}{\type{UpdateState}}
 \newcommand{\UTxOEnv}{\type{UTxOEnv}}
 \newcommand{\CEEnv}{\type{CEEnv}}
 \newcommand{\CEState}{\type{CEState}}
@@ -219,11 +234,13 @@
 \include{address}
 \include{protocol-parameters}
 \include{transactions}
+\include{update}
 \include{utxo}
 \include{delegation}
 \include{ledger}
 \include{epoch}
 \include{chain}
+\include{software-updates}
 \include{sts-overview}
 \include{properties}
 \include{non-integral}
