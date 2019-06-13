@@ -12,6 +12,7 @@ module BaseTypes
   , Seed
   , mkNonce
   , seedOp
+  , neutralSeed
   , EEnt(..)
   ) where
 
@@ -57,12 +58,18 @@ interval1 = UnitInterval 1
 -- operation on values.
 data Seed
   = Nonce Integer
+  | NeutralSeed
   | SeedOp Seed
            Seed
   deriving (Show, Eq, Ord)
 
 seedOp :: Seed -> Seed -> Seed
-seedOp = SeedOp
+seedOp NeutralSeed s = s
+seedOp s NeutralSeed = s
+seedOp a b = SeedOp a b
+
+neutralSeed :: Seed
+neutralSeed = NeutralSeed
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce
