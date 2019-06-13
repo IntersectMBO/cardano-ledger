@@ -14,7 +14,6 @@ as state transformations on a ledger state ('LedgerState'),
 as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 -}
 
-
 module LedgerState
   ( LedgerState(..)
   , Ix
@@ -105,6 +104,10 @@ module LedgerState
   , poolDistr
   , applyRUpd
   , createRUpd
+  --
+  , NewEpochState(..)
+  , NewEpochEnv(..)
+  , overlaySchedule
   ) where
 
 import           Control.Monad           (foldM)
@@ -129,7 +132,7 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  keyDecayRate, emptyPParams)
 import           EpochBoundary
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
+import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey, PoolDistr(..))
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          poolPubKey, poolSpec, poolPledge,
                                          RewardAcnt(..), poolRAcnt, poolOwners)
@@ -253,12 +256,12 @@ data AccountState = AccountState
   , _reserves  :: Coin
   } deriving (Show, Eq)
 
-data EpochState = EpochState AccountState PParams SnapShots LedgerState
+data EpochState = EpochState AccountState SnapShots LedgerState PParams
   deriving (Show, Eq)
 
 emptyEpochState :: EpochState
 emptyEpochState =
-  EpochState emptyAccount emptyPParams emptySnapShots emptyLedgerState
+  EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
 emptyLedgerState :: LedgerState
 emptyLedgerState = LedgerState
@@ -300,6 +303,26 @@ data UPIState = UPIState Byron.Update.UPIState PParams
 
 emptyUPIState :: UPIState
 emptyUPIState = UPIState Byron.Update.emptyUPIState emptyPParams
+
+-- | New Epoch state and environment
+data NewEpochState =
+  NewEpochState {
+    nesEL    :: Epoch
+  , nesEta0  :: Seed
+  , nesBprev :: BlocksMade
+  , nesBcur  :: BlocksMade
+  , nesEs    :: EpochState
+  , nesRu    :: Maybe RewardUpdate
+  , nesPd    :: PoolDistr
+  , nesOsched :: Map.Map Slot (Maybe VKeyGenesis)
+  } deriving (Show, Eq)
+
+data NewEpochEnv =
+  NewEpochEnv {
+    neeEta1  :: Seed
+  , neeS     :: Slot
+  , neeGkeys :: Set.Set VKeyGenesis
+  } deriving (Show, Eq)
 
 -- |The state associated with a 'Ledger'.
 data LedgerState =
@@ -877,7 +900,7 @@ poolDistr u ds ps = (stake, delegs)
 
 -- | Apply a reward update
 applyRUpd :: RewardUpdate -> EpochState -> EpochState
-applyRUpd ru (EpochState as pp ss ls) = es'
+applyRUpd ru (EpochState as ss ls pp) = es'
   where treasury' = _treasury as + deltaT ru
         reserves' = _reserves as + deltaR ru
         rew       = _rewards $ _dstate $ _delegationState ls
@@ -890,11 +913,11 @@ applyRUpd ru (EpochState as pp ss ls) = es'
              , _delegationState = DPState
                   (dstate' { _rewards = rewards'})
                   (_pstate $ _delegationState ls)}
-        es' = EpochState (AccountState treasury' reserves')  pp ss ls'
+        es' = EpochState (AccountState treasury' reserves') ss ls' pp
 
 -- | Create a reward update
 createRUpd :: BlocksMade -> EpochState -> RewardUpdate
-createRUpd (BlocksMade b) (EpochState acnt pp ss ls) =
+createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
   RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
   where Coin reserves' = _reserves acnt
         deltaR' =
@@ -911,3 +934,11 @@ createRUpd (BlocksMade b) (EpochState acnt pp ss ls) =
         blocksMade = fromIntegral $ Map.foldr (+) 0 b :: Integer
         expectedBlocks = (intervalValue $ _activeSlotCoeff pp) * fromIntegral slotsPerEpoch
         eta = (fromIntegral blocksMade) / expectedBlocks
+
+-- | Overlay schedule
+overlaySchedule
+  :: Set VKeyGenesis
+  -> Seed
+  -> PParams
+  -> Map.Map Slot (Maybe VKeyGenesis)
+overlaySchedule = undefined

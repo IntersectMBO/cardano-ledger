@@ -110,5 +110,5 @@ decayPool pc = (pval, pmin, lambdap)
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
 
-newtype PoolDistr = PoolDistr (Map.Map HashKey Coin)
+newtype PoolDistr = PoolDistr (Map.Map HashKey Rational)
   deriving (Show, Eq)

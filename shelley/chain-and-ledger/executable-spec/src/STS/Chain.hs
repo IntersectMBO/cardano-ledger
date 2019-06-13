@@ -8,10 +8,12 @@ module STS.Chain
   ) where
 
 import qualified Data.Map.Strict          as Map
+import qualified Data.Set                 as Set
 
 import           BaseTypes
 import           BlockChain
 import           EpochBoundary
+import           Keys
 import           LedgerState
 import           PParams
 import           Slot
@@ -64,8 +66,19 @@ chainTransition = do
   let s = bheaderSlot bhb
   let e = epochFromSlot s -- TODO where is Epoch `e` coming from?
   (etaV', etaC') <- trans @UPDN $ TRC (eta0, (etaV, etaC), s)
-  (eL', eta0', b', es'@(EpochState acnt' pp' ss' ls'), ru', pd') <-
-    trans @NEWEPOCH $ TRC ((etaC, ppN), (eL, eta0, b, es, ru, pd), e)
+  -- (eL', eta0', b', es'@(EpochState acnt' ls' ss' pp'), ru', pd') <-
+  --   trans @NEWEPOCH $ TRC (undefined, undefined, e) -- TODO:
+  -- TODO add PRTCL rule
+  let ls' = undefined
+  let pp' = undefined
+  let es' = undefined
+  let ru' = undefined
+  let b'  = undefined
+  let acnt' = undefined
+  let ss' = undefined
+  let eta0' = undefined
+  let eL' = undefined
+  let pd' = undefined
   ru'' <- trans @RUPD $ TRC ((b, es'), ru', s)
   let delegationState' = _delegationState ls'
   _ <- trans @OCERT $ TRC ((), Map.empty, bh) -- TODO: OVERLAY -> PRTCL
@@ -73,7 +86,7 @@ chainTransition = do
   let sL' = sL
   -- TODO after removal of Vrf, add PRTCL to get sL'
   (ls''', b'') <- trans @BBODY $ TRC (pp', (ls'', b'), block)
-  let es'' = EpochState acnt' pp' ss' ls'''
+  let es'' = EpochState acnt' ss' ls''' pp'
   pure $ ((eta0', etaC', etaV'), b'', sL', eL', es'', ru'', pd')
 
 instance Embed BBODY CHAIN where
