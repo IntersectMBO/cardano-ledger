@@ -149,6 +149,9 @@ instance HasTypeReps Char where
 instance HasTypeReps Int where
   typeReps x = [typeOf x]
 
+instance HasTypeReps Integer where
+  typeReps x = [typeOf x]
+
 instance HasTypeReps Double where
   typeReps x = [typeOf x]
 
