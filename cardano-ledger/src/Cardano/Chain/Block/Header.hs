@@ -203,11 +203,11 @@ mkHeaderExplicit
   -> ProtocolVersion
   -> SoftwareVersion
   -> Header
-mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
+mkHeaderExplicit pm prevHash difficulty epochSlots slotNumber sk dlgCert body pv sv
   = AHeader
     (Annotated pm ())
     (Annotated prevHash ())
-    (Annotated slotId ())
+    (Annotated slotNumber ())
     (Annotated difficulty ())
     pv
     sv
@@ -225,7 +225,7 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
 
   toSign    = ToSign prevHash proof epochAndSlotCount difficulty pv sv
 
-  epochAndSlotCount = fromSlotNumber epochSlots slotId
+  epochAndSlotCount = fromSlotNumber epochSlots slotNumber
 
 
 --------------------------------------------------------------------------------

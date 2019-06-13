@@ -33,8 +33,8 @@ import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochNumber
   , SlotNumber(..)
-  , addSlotNumber
-  , subSlotNumber
+  , addSlotCount
+  , subSlotCount
   )
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 
@@ -149,7 +149,7 @@ updateDelegation env is certificates = do
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env
 
-  inWindow s = subSlotNumber d currentSlot <= s && s <= addSlotNumber d currentSlot
+  inWindow s = subSlotCount d currentSlot <= s && s <= addSlotCount d currentSlot
 
   d = kSlotSecurityParam k
 

@@ -193,14 +193,14 @@ mkBlockExplicit
   -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
   -> Body
   -> Block
-mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotId sk dlgCert body
+mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert body
   = ABlock
     (mkHeaderExplicit
       pm
       prevHash
       difficulty
       epochSlots
-      slotId
+      slotNumber
       sk
       dlgCert
       body

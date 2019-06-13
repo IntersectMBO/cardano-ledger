@@ -4,7 +4,6 @@
 module Test.Cardano.Chain.Slotting.Gen
   ( genEpochNumber
   , genSlotNumber
-  , genLocalSlotIndex
   , genEpochSlots
   , genWithEpochSlots
   , genSlotCount
@@ -16,8 +15,6 @@ where
 
 import Cardano.Prelude
 
-import Formatting (build, sformat)
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -26,14 +23,9 @@ import Cardano.Chain.Slotting
   ( EpochNumber(..)
   , EpochSlots(..)
   , SlotNumber(..)
-  , LocalSlotIndex
   , SlotCount(..)
   , EpochAndSlotCount(..)
   , WithEpochSlots(WithEpochSlots)
-  , localSlotIndexMaxBound
-  , localSlotIndexMinBound
-  , mkLocalSlotIndex
-  , unLocalSlotIndex
   )
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -45,18 +37,6 @@ genEpochNumber = EpochNumber <$> Gen.word64 Range.constantBounded
 
 genSlotNumber :: Gen SlotNumber
 genSlotNumber = SlotNumber <$> Gen.word64 Range.constantBounded
-
-genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
-genLocalSlotIndex epochSlots = mkLocalSlotIndex'
-  <$> Gen.word16 (Range.constant lb ub)
- where
-  lb = unLocalSlotIndex localSlotIndexMinBound
-  ub = unLocalSlotIndex (localSlotIndexMaxBound epochSlots)
-  mkLocalSlotIndex' slot = case mkLocalSlotIndex epochSlots slot of
-    Left err -> panic $ sformat
-      ("The impossible happened in genLocalSlotIndex: " . build)
-      err
-    Right lsi -> lsi
 
 -- | Generator for slots-per-epoch. This will generate a positive number of
 -- slots per-epoch, and it will have an upper bound of @maxBound :: Word16 =

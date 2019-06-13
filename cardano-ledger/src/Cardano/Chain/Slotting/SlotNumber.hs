@@ -9,8 +9,8 @@
 
 module Cardano.Chain.Slotting.SlotNumber
   ( SlotNumber(..)
-  , addSlotNumber
-  , subSlotNumber
+  , addSlotCount
+  , subSlotCount
   , twice
   )
 where
@@ -54,12 +54,12 @@ instance B.Buildable SlotNumber where
   build s = bprint int (unSlotNumber s)
 
 -- | Increase a 'SlotNumber' by 'SlotCount'
-addSlotNumber :: SlotCount -> SlotNumber -> SlotNumber
-addSlotNumber (SlotCount a) (SlotNumber b) = SlotNumber $ a + b
+addSlotCount :: SlotCount -> SlotNumber -> SlotNumber
+addSlotCount (SlotCount a) (SlotNumber b) = SlotNumber $ a + b
 
 -- | Decrease a 'SlotNumber' by 'SlotCount', going no lower than 0
-subSlotNumber :: SlotCount -> SlotNumber -> SlotNumber
-subSlotNumber (SlotCount a) (SlotNumber b) =
+subSlotCount :: SlotCount -> SlotNumber -> SlotNumber
+subSlotCount (SlotCount a) (SlotNumber b) =
   if a > b then SlotNumber 0 else SlotNumber (b - a)
 
 -- | Compute the number of slots after which a block becomes stable as @2 * k@,
