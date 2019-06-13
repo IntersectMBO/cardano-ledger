@@ -15,6 +15,8 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
+import Data.Typeable (typeOf)
+import qualified Data.Sequence as Seq
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
@@ -31,8 +33,9 @@ import Data.AbstractSize
 -- | An encoded hash of part of the system.
 newtype Hash = Hash
   { unHash :: Int
-  } deriving stock (Show)
-    deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  } deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, Hashable)
+    deriving anyclass (HasTypeReps)
 
 -- | Hash part of the ledger payload
 class HasHash a where
@@ -45,24 +48,27 @@ class HasHash a where
 -- |Representation of the owner of key pair.
 newtype Owner = Owner
   { unOwner :: Natural
-  } deriving stock (Show)
-    deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  } deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, Hashable)
+    deriving anyclass (HasTypeReps)
 
 class HasOwner a where
   owner :: a -> Owner
 
 -- |Signing Key.
 newtype SKey = SKey Owner
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, HasTypeReps)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord)
+  deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
   owner (SKey o) = o
 
 -- |Verification Key.
 newtype VKey = VKey Owner
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
   hash = Hash . H.hash
@@ -72,8 +78,9 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis VKey
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
   owner (VKeyGenesis vk) = owner vk
@@ -93,7 +100,13 @@ keyPair o = KeyPair (SKey o) (VKey o)
 -- |A digital signature.
 data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable)
 
-instance HasTypeReps a => HasTypeReps (Sig a)
+-- | We need a custom instance here that returns only the top level type.
+--   A generic instance would have recursed into type 'a' and since we use
+--   'typeReps' to compute 'abstractSize', this would mean the size of
+--   'Sig a' would include the size of 'a' (e.g. 'Tx'). This would create an
+--   artificial coupling between the size of a type and it's "signature".
+instance HasTypeReps a => HasTypeReps (Sig a) where
+  typeReps x = typeOf x Seq.<| Seq.empty
 
 -- |Produce a digital signature
 sign :: SKey -> a -> Sig a
@@ -108,12 +121,14 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Word64
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  deriving stock (Show, Generic)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
 
 -- | A number of slots.
 --
@@ -175,6 +190,7 @@ instance HasTypeReps BlockCount
 newtype Addr = Addr VKey
   deriving stock (Show, Generic)
   deriving newtype (Eq, Ord, Hashable, HasOwner)
+  deriving anyclass (HasTypeReps)
 
 -- | Create an address from a number.
 mkAddr :: Natural -> Addr
@@ -187,10 +203,10 @@ instance HasHash Addr where
 --
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
-  } deriving stock (Show)
+  } deriving stock (Show, Generic)
     deriving newtype (Eq, Ord, Num, Hashable)
     deriving (Semigroup, Monoid) via (Sum Integer)
-
+    deriving anyclass (HasTypeReps)
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
