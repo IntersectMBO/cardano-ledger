@@ -11,13 +11,13 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 
 import Cardano.Chain.Slotting
-  (EpochSlots(..), FlatSlotId (..), LocalSlotIndex (..))
+  (EpochSlots(..), SlotNumber (..), LocalSlotIndex (..))
 
 import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochIndex)
+  (exampleEpochNumber)
 import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochIndex
-  , genFlatSlotId
+  ( genEpochNumber
+  , genSlotNumber
   , genLocalSlotIndex
   , genEpochSlots
   , feedPMEpochSlots
@@ -26,25 +26,25 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
--- EpochIndex
+-- EpochNumber
 --------------------------------------------------------------------------------
 
-golden_EpochIndex :: Property
-golden_EpochIndex = goldenTestJSON exampleEpochIndex "test/golden/json/slotting/EpochIndex"
+golden_EpochNumber :: Property
+golden_EpochNumber = goldenTestJSON exampleEpochNumber "test/golden/json/slotting/EpochNumber"
 
-ts_roundTripEpochIndex :: TSProperty
-ts_roundTripEpochIndex = eachOfTS 1000 genEpochIndex roundTripsAesonBuildable
+ts_roundTripEpochNumber :: TSProperty
+ts_roundTripEpochNumber = eachOfTS 1000 genEpochNumber roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
--- FlatSlotId
+-- SlotNumber
 --------------------------------------------------------------------------------
 
-golden_FlatSlotId :: Property
-golden_FlatSlotId = goldenTestJSON fsi "test/golden/json/slotting/FlatSlotId"
-  where fsi = 5001 :: FlatSlotId
+golden_SlotNumber :: Property
+golden_SlotNumber = goldenTestJSON fsi "test/golden/json/slotting/SlotNumber"
+  where fsi = 5001 :: SlotNumber
 
-ts_roundTripFlatSlotId :: TSProperty
-ts_roundTripFlatSlotId = eachOfTS 1000 genFlatSlotId roundTripsAesonShow
+ts_roundTripSlotNumber :: TSProperty
+ts_roundTripSlotNumber = eachOfTS 1000 genSlotNumber roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex

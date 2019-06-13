@@ -25,7 +25,7 @@ import qualified Data.Set as Set
 import Cardano.Binary (Annotated)
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.Vote
   ( AVote(..)
@@ -41,7 +41,7 @@ import Cardano.Crypto
 
 -- | Environment used to register votes and confirm proposals
 data Environment = Environment
-  { veCurrentSlot                   :: FlatSlotId
+  { veCurrentSlot                   :: SlotNumber
   , veConfirmationThreshold         :: Int
   , veVotingRegistrationEnvironment :: RegistrationEnvironment
   } deriving (Eq, Show, Generic)
@@ -57,7 +57,7 @@ data RegistrationEnvironment = RegistrationEnvironment
 -- | State keeps track of registered votes and confirmed proposals
 data State = State
   { vsVotes              :: !RegisteredVotes
-  , vsConfirmedProposals :: !(Map UpId FlatSlotId)
+  , vsConfirmedProposals :: !(Map UpId SlotNumber)
   }
 
 type RegisteredVotes = Map UpId (Set KeyHash)

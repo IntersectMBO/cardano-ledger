@@ -31,8 +31,8 @@ import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
-  ( EpochIndex
-  , FlatSlotId(..)
+  ( EpochNumber
+  , SlotNumber(..)
   , addSlotNumber
   , subSlotNumber
   )
@@ -47,8 +47,8 @@ data Environment = Environment
   { protocolMagic      :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators  :: !(Set KeyHash)
   , k                  :: !BlockCount
-  , currentEpoch       :: !EpochIndex
-  , currentSlot        :: !FlatSlotId
+  , currentEpoch       :: !EpochNumber
+  , currentSlot        :: !SlotNumber
   } deriving (Eq, Show, Generic, NFData)
 
 
@@ -87,7 +87,7 @@ initialState env genesisDelegation = updateDelegation env' is certificates
       { Activation.delegationMap   = Delegation.fromList
         $ zip (toList allowedDelegators) (toList allowedDelegators)
       , Activation.delegationSlots = M.fromList
-        $   (, FlatSlotId 0)
+        $   (, SlotNumber 0)
         <$> toList allowedDelegators
       }
     }

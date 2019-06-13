@@ -31,7 +31,7 @@ import Cardano.Chain.Block
   )
 import Cardano.Chain.Delegation (mkCertificate)
 import Cardano.Chain.Slotting
-  (EpochIndex(..), EpochSlots, WithEpochSlots(WithEpochSlots))
+  (EpochNumber(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagicId
@@ -45,7 +45,7 @@ import Cardano.Crypto
 import Test.Cardano.Chain.Common.Gen (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
-  (genEpochIndex, genEpochSlots, genFlatSlotId, genSlotId)
+  (genEpochNumber, genEpochSlots, genSlotNumber, genSlotId)
 import Test.Cardano.Chain.UTxO.Gen (genTxPayload, genTxProof)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen
@@ -61,7 +61,7 @@ genBlockSignature pm epochSlots =
   mkBlockSignature
     <$> genSafeSigner
     <*> genSigningKey
-    <*> genEpochIndex
+    <*> genEpochNumber
     <*> genToSign pm epochSlots
  where
   mkBlockSignature issuerSafeSigner delegateSK epoch toSign =
@@ -88,12 +88,12 @@ genHeader pm epochSlots = do
   sk <- genSigningKey
   let
     cert =
-      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
+      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochNumber 0)
   mkHeaderExplicit pm
     <$> genHeaderHash
     <*> genChainDifficulty
     <*> pure epochSlots
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> pure sk
     <*> pure cert
     <*> genBody pm
@@ -132,14 +132,14 @@ genBlock pm epochSlots = do
   sk <- genSigningKey
   let
     cert =
-      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochIndex 0)
+      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochNumber 0)
   mkBlockExplicit pm
     <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
     <*> genHeaderHash
     <*> genChainDifficulty
     <*> pure epochSlots
-    <*> genFlatSlotId
+    <*> genSlotNumber
     <*> pure sk
     <*> pure cert
     <*> genBody pm

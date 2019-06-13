@@ -11,16 +11,16 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 
 import Cardano.Chain.Slotting
-  (EpochSlots(..), FlatSlotId, LocalSlotIndex(..))
+  (EpochSlots(..), SlotNumber, LocalSlotIndex(..))
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBOR, roundTripsCBORBuildable)
 import Test.Cardano.Chain.Slotting.Example
-  (exampleEpochIndex, exampleSlotId)
+  (exampleEpochNumber, exampleSlotId)
 import Test.Cardano.Chain.Slotting.Gen
   ( feedPMEpochSlots
-  , genEpochIndex
-  , genFlatSlotId
+  , genEpochNumber
+  , genSlotNumber
   , genSlotId
   , genLocalSlotIndex
   , genEpochSlots
@@ -29,24 +29,24 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
 --------------------------------------------------------------------------------
--- EpochIndex
+-- EpochNumber
 --------------------------------------------------------------------------------
-golden_EpochIndex :: Property
-golden_EpochIndex =
-  goldenTestCBOR exampleEpochIndex "test/golden/cbor/slotting/EpochIndex"
+golden_EpochNumber :: Property
+golden_EpochNumber =
+  goldenTestCBOR exampleEpochNumber "test/golden/cbor/slotting/EpochNumber"
 
-ts_roundTripEpochIndexCBOR :: TSProperty
-ts_roundTripEpochIndexCBOR = eachOfTS 1000 genEpochIndex roundTripsCBORBuildable
+ts_roundTripEpochNumberCBOR :: TSProperty
+ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
--- FlatSlotId
+-- SlotNumber
 --------------------------------------------------------------------------------
-golden_FlatSlotId :: Property
-golden_FlatSlotId = goldenTestCBOR fsi "test/golden/cbor/slotting/FlatSlotId"
-  where fsi = 5001 :: FlatSlotId
+golden_SlotNumber :: Property
+golden_SlotNumber = goldenTestCBOR fsi "test/golden/cbor/slotting/SlotNumber"
+  where fsi = 5001 :: SlotNumber
 
-ts_roundTripFlatSlotIdCBOR :: TSProperty
-ts_roundTripFlatSlotIdCBOR = eachOfTS 1000 genFlatSlotId roundTripsCBORBuildable
+ts_roundTripSlotNumberCBOR :: TSProperty
+ts_roundTripSlotNumberCBOR = eachOfTS 1000 genSlotNumber roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- LocalSlotIndex

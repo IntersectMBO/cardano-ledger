@@ -98,7 +98,7 @@ elaborate txIdMap config dCert st ab =
   prevHash =
     either Concrete.genesisHeaderHash identity $ Concrete.cvsPreviousHash st
 
-  sid = Slotting.FlatSlotId
+  sid = Slotting.SlotNumber
     (ab ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
 
   issuer   = ab ^. Abstract.bHeader . Abstract.bhIssuer

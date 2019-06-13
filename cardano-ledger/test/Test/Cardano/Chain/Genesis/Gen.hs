@@ -10,7 +10,7 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisNonAvvmBalances
   , genGenesisSpec
   , genGenesisKeyHashes
-  , genSignatureEpochIndex
+  , genSignatureEpochNumber
   , genTestnetBalanceOptions
   , genStaticConfig
   )
@@ -44,7 +44,7 @@ import Cardano.Chain.Genesis
   , mkGenesisDelegation
   , mkGenesisSpec
   )
-import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto (ProtocolMagicId, Signature(..))
 import qualified Cardano.Crypto.Wallet as CC
 
@@ -163,8 +163,8 @@ genGenesisKeyHashes :: Gen GenesisKeyHashes
 genGenesisKeyHashes =
   GenesisKeyHashes <$> Gen.set (Range.constant 10 25) genKeyHash
 
-genSignatureEpochIndex :: Gen (Signature EpochIndex)
-genSignatureEpochIndex = do
+genSignatureEpochNumber :: Gen (Signature EpochNumber)
+genSignatureEpochNumber = do
   hex <- Gen.utf8 (Range.constant 64 64) Gen.hexit
   case CC.xsignature hex of
     Left  err -> panic $ T.pack err

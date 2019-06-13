@@ -42,7 +42,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochIndex, FlatSlotId)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -79,7 +79,7 @@ data Environment = Environment
   -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
   -- of our protocol parameters, so it seems that we need to pass it in the
   -- environment. However we need to double-check this with others.
-  , currentSlot   :: !FlatSlotId
+  , currentSlot   :: !SlotNumber
   , numGenKeys    :: !Word8
   -- ^ Number of genesis keys. This is used to calculate the proportion of
   -- genesis keys that need to endorse a new protocol version for it to be
@@ -90,26 +90,26 @@ data Environment = Environment
 
 -- | Update interface state.
 data State = State
-  { currentEpoch                      :: !EpochIndex
+  { currentEpoch                      :: !EpochNumber
     -- ^ Current epoch
   , adoptedProtocolVersion            :: !ProtocolVersion
   , adoptedProtocolParameters         :: !ProtocolParameters
     -- ^ Adopted protocol parameters
   , candidateProtocolUpdates          :: ![CandidateProtocolUpdate]
     -- ^ Candidate protocol versions
-  , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, FlatSlotId))
+  , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, SlotNumber))
     -- ^ Current application versions (by application name)
   , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameters))
     -- ^ Registered protocol update proposals
   , registeredSoftwareUpdateProposals :: !(Map UpId SoftwareVersion)
     -- ^ Registered software update proposals
-  , confirmedProposals                :: !(Map UpId FlatSlotId)
+  , confirmedProposals                :: !(Map UpId SlotNumber)
     -- ^ Confirmed update proposals
   , proposalVotes                     :: !(Map UpId (Set KeyHash))
     -- ^ Update proposals votes
   , registeredEndorsements            :: !(Set Endorsement)
     -- ^ Update proposals endorsements
-  , proposalRegistrationSlot          :: !(Map UpId FlatSlotId)
+  , proposalRegistrationSlot          :: !(Map UpId SlotNumber)
     -- ^ Slot at which an update proposal was registered
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
@@ -371,7 +371,7 @@ registerEpoch
   :: MonadError Error m
   => Environment
   -> State
-  -> EpochIndex
+  -> EpochNumber
   -- ^ Epoch seen on the block.
   -> m State
 registerEpoch env st lastSeenEpoch = do

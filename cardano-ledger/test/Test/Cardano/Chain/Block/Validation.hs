@@ -49,7 +49,7 @@ import Cardano.Chain.Block
 import Cardano.Chain.Common (BlockCount(..), hashKey)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
-import Cardano.Chain.Slotting (FlatSlotId)
+import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Crypto (VerificationKey)
 
 import Test.Cardano.Chain.Config (readMainetCfg)
@@ -109,7 +109,7 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
 
 data Error
   = ErrorParseError ParseError
-  | ErrorChainValidationError (Maybe FlatSlotId) ChainValidationError
+  | ErrorChainValidationError (Maybe SlotNumber) ChainValidationError
   deriving (Eq, Show)
 
 
@@ -148,7 +148,7 @@ foldChainValidationState shouldAssertNF config cvs blocks = S.foldM_
             updateChainBoundary c bvd
           ABOBBlock block -> updateBlock config c block
 
-  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe FlatSlotId
+  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotNumber
   blockOrBoundarySlot = \case
     ABOBBoundary _     -> Nothing
     ABOBBlock    block -> Just $ blockSlot block

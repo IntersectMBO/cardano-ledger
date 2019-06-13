@@ -26,8 +26,8 @@ import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
-  ( EpochIndex
-  , FlatSlotId(..)
+  ( EpochNumber
+  , SlotNumber(..)
   , addSlotNumber
   )
 import Cardano.Crypto (ProtocolMagicId)
@@ -40,18 +40,18 @@ import Cardano.Crypto (ProtocolMagicId)
 data Environment = Environment
   { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators :: !(Set KeyHash)
-  , currentEpoch      :: !EpochIndex
-  , currentSlot       :: !FlatSlotId
+  , currentEpoch      :: !EpochNumber
+  , currentSlot       :: !SlotNumber
   , k                 :: !BlockCount
   } deriving (Eq, Show, Generic, NFData)
 
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation)
-  , keyEpochDelegations  :: !(Set (EpochIndex, KeyHash))
+  , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
   } deriving (Eq, Show, Generic, NFData)
 
 data ScheduledDelegation = ScheduledDelegation
-  { sdSlot      :: !FlatSlotId
+  { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
   } deriving (Eq, Show, Generic, NFData)
@@ -61,16 +61,16 @@ data Error
   = InvalidCertificate
   -- ^ The delegation certificate has an invalid signature
 
-  | MultipleDelegationsForEpoch EpochIndex KeyHash
+  | MultipleDelegationsForEpoch EpochNumber KeyHash
   -- ^ This delegator has already delegated for the given epoch
 
-  | MultipleDelegationsForSlot FlatSlotId KeyHash
+  | MultipleDelegationsForSlot SlotNumber KeyHash
   -- ^ This delegator has already delgated in this slot
 
   | NonGenesisDelegator KeyHash
   -- ^ This delegator is not one of the allowed genesis keys
 
-  | PastEpoch EpochIndex EpochIndex
+  | PastEpoch EpochNumber EpochNumber
   -- ^ This delegation is for a past epoch
 
   deriving (Eq, Show)

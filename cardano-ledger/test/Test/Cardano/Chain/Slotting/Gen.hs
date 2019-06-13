@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Chain.Slotting.Gen
-  ( genEpochIndex
-  , genFlatSlotId
+  ( genEpochNumber
+  , genSlotNumber
   , genLocalSlotIndex
   , genEpochSlots
   , genWithEpochSlots
@@ -23,9 +23,9 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Slotting
-  ( EpochIndex(..)
+  ( EpochNumber(..)
   , EpochSlots(..)
-  , FlatSlotId(..)
+  , SlotNumber(..)
   , LocalSlotIndex
   , SlotCount(..)
   , SlotId(..)
@@ -40,11 +40,11 @@ import Cardano.Crypto (ProtocolMagicId)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 
-genEpochIndex :: Gen EpochIndex
-genEpochIndex = EpochIndex <$> Gen.word64 Range.constantBounded
+genEpochNumber :: Gen EpochNumber
+genEpochNumber = EpochNumber <$> Gen.word64 Range.constantBounded
 
-genFlatSlotId :: Gen FlatSlotId
-genFlatSlotId = FlatSlotId <$> Gen.word64 Range.constantBounded
+genSlotNumber :: Gen SlotNumber
+genSlotNumber = SlotNumber <$> Gen.word64 Range.constantBounded
 
 genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
 genLocalSlotIndex epochSlots = mkLocalSlotIndex'
@@ -86,7 +86,7 @@ genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
 
 genSlotId :: EpochSlots -> Gen SlotId
 genSlotId epochSlots =
-  SlotId <$> genEpochIndex <*> genLocalSlotIndex epochSlots
+  SlotId <$> genEpochNumber <*> genLocalSlotIndex epochSlots
 
 -- Generates a `SlotId` and a `EpochSlots` that does not exceed
 -- the `Word64` maximum boundary of `flattenSlotId` when flattened.
@@ -94,12 +94,12 @@ genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
 genConsistentSlotIdEpochSlots = do
   es  <- genEpochSlots
   lsi <- genLocalSlotIndex es
-  eI  <- genRestrictedEpochIndex $ maxBound `div` unEpochSlots es
+  eI  <- genRestrictedEpochNumber $ maxBound `div` unEpochSlots es
   pure (SlotId eI lsi, es)
  where
-  genRestrictedEpochIndex :: Word64 -> Gen EpochIndex
-  genRestrictedEpochIndex bound =
-    EpochIndex <$> Gen.word64 (Range.linear 0 bound)
+  genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
+  genRestrictedEpochNumber bound =
+    EpochNumber <$> Gen.word64 (Range.linear 0 bound)
 
 feedPMEpochSlots :: (ProtocolMagicId -> EpochSlots -> Gen a) -> Gen a
 feedPMEpochSlots genA = do

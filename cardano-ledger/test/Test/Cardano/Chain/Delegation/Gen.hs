@@ -20,11 +20,11 @@ import Cardano.Chain.Delegation
   , mkCertificate
   , unsafePayload
   )
-import Cardano.Chain.Slotting (EpochIndex(..))
+import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto (ProtocolMagicId)
 import Data.List (nub)
 
-import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
+import Test.Cardano.Chain.Slotting.Gen (genEpochNumber)
 import Test.Cardano.Crypto.Gen (genVerificationKey, genSafeSigner)
 
 
@@ -33,11 +33,11 @@ genCanonicalCertificate pm =
   mkCertificate pm
     <$> genSafeSigner
     <*> genVerificationKey
-    <*> (EpochIndex <$> Gen.word64 (Range.constant 0 1000000000000000))
+    <*> (EpochNumber <$> Gen.word64 (Range.constant 0 1000000000000000))
 
 genCertificate :: ProtocolMagicId -> Gen Certificate
 genCertificate pm =
-  mkCertificate pm <$> genSafeSigner <*> genVerificationKey <*> genEpochIndex
+  mkCertificate pm <$> genSafeSigner <*> genVerificationKey <*> genEpochNumber
 
 genCanonicalCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
 genCanonicalCertificateDistinctList pm = do

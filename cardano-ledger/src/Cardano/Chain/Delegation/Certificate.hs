@@ -49,7 +49,7 @@ import Cardano.Binary
   , enforceSize
   , serialize'
   )
-import Cardano.Chain.Slotting (EpochIndex)
+import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto
   ( ProtocolMagicId
   , SafeSigner
@@ -71,17 +71,17 @@ type Certificate = ACertificate ()
 -- | Delegation certificate allowing the @delegateVK@ to sign blocks on behalf
 --   of @issuerVK@
 --
---   Each delegator can publish at most one 'Certificate' per 'EpochIndex', and
---   that 'EpochIndex' must correspond to the current or next 'EpochIndex' at
+--   Each delegator can publish at most one 'Certificate' per 'EpochNumber', and
+--   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
 data ACertificate a = UnsafeACertificate
-  { aEpoch     :: Annotated EpochIndex a
+  { aEpoch     :: Annotated EpochNumber a
   -- ^ The epoch from which the delegation is valid
   , issuerVK   :: VerificationKey
   -- ^ The issuer of the certificate, who delegates their right to sign blocks
   , delegateVK :: VerificationKey
   -- ^ The delegate, who gains the right to sign blocks
-  , signature  :: Signature EpochIndex
+  , signature  :: Signature EpochNumber
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass NFData
@@ -96,7 +96,7 @@ mkCertificate
   :: ProtocolMagicId
   -> SafeSigner
   -> VerificationKey
-  -> EpochIndex
+  -> EpochNumber
   -> Certificate
 mkCertificate pm ss delegateVK e = UnsafeACertificate
   { aEpoch     = Annotated e ()
@@ -109,10 +109,10 @@ mkCertificate pm ss delegateVK e = UnsafeACertificate
     $ mconcat ["00", CC.unXPub (unVerificationKey delegateVK), serialize' e]
 
 unsafeCertificate
-  :: EpochIndex
+  :: EpochNumber
   -> VerificationKey
   -> VerificationKey
-  -> Signature EpochIndex
+  -> Signature EpochNumber
   -> Certificate
 unsafeCertificate e = UnsafeACertificate (Annotated e ())
 
@@ -121,7 +121,7 @@ unsafeCertificate e = UnsafeACertificate (Annotated e ())
 -- Certificate Accessor
 --------------------------------------------------------------------------------
 
-epoch :: ACertificate a -> EpochIndex
+epoch :: ACertificate a -> EpochNumber
 epoch = unAnnotated . aEpoch
 
 

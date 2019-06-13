@@ -4,7 +4,7 @@
 
 module Cardano.Chain.Block.Boundary
   ( dropBoundaryConsensusData
-  , dropBoundaryConsensusDataRetainEpochIndex
+  , dropBoundaryConsensusDataRetainEpochNumber
   , dropBoundaryExtraHeaderData
   , dropBoundaryBody
   , dropBoundaryExtraBodyData
@@ -24,10 +24,10 @@ import Cardano.Chain.Common (dropAttributes, dropChainDifficulty)
 --------------------------------------------------------------------------------
 
 dropBoundaryConsensusData :: Dropper s
-dropBoundaryConsensusData = void dropBoundaryConsensusDataRetainEpochIndex
+dropBoundaryConsensusData = void dropBoundaryConsensusDataRetainEpochNumber
 
-dropBoundaryConsensusDataRetainEpochIndex :: Decoder s Word64
-dropBoundaryConsensusDataRetainEpochIndex = do
+dropBoundaryConsensusDataRetainEpochNumber :: Decoder s Word64
+dropBoundaryConsensusDataRetainEpochNumber = do
   enforceSize "BoundaryConsensusData" 2
   w <- decodeWord64
   dropChainDifficulty

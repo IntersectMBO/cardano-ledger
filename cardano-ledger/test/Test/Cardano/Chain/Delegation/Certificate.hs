@@ -17,7 +17,7 @@ import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Chain.Delegation
   (ACertificate(delegateVK), Certificate, isValid, mkCertificate)
 
-import Test.Cardano.Chain.Slotting.Gen (genEpochIndex)
+import Test.Cardano.Chain.Slotting.Gen (genEpochNumber)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 import Test.Cardano.Crypto.Gen (genSafeSigner, genVerificationKey)
 
@@ -41,7 +41,7 @@ prop_certificateCorrect = property $ do
     $   mkCertificate Dummy.protocolMagicId
     <$> genSafeSigner
     <*> genVerificationKey
-    <*> genEpochIndex
+    <*> genEpochNumber
 
   let aCert = annotateCert cert
 
@@ -55,7 +55,7 @@ prop_certificateIncorrect = property $ do
     $   mkCertificate Dummy.protocolMagicId
     <$> genSafeSigner
     <*> genVerificationKey
-    <*> genEpochIndex
+    <*> genEpochNumber
   badDelegateVK <- forAll $ Gen.filter (/= delegateVK cert) genVerificationKey
 
   let
