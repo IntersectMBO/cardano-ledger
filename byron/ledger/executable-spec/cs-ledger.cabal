@@ -38,6 +38,7 @@ library
   build-depends:       base >=4.11 && <5
                      , bimap
                      , containers
+                     , deepseq
                      , hashable
                      , hedgehog >= 1.0
                      , lens
@@ -88,6 +89,7 @@ test-suite ledger-rules-test
   other-modules: Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.HasTypeReps.Properties
+               , Ledger.Update.Properties
                , Ledger.Pvbump.Properties
                , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
@@ -113,6 +115,6 @@ test-suite ledger-rules-test
                -- leaks in our generators (or test) code.
                --
                -- The 50 megabytes heap bound was determined ad-hoc.
-               "-with-rtsopts=-K1m -M50m"
+               "-with-rtsopts=-K10m -M150m"
   if (!flag(development))
     ghc-options: -Werror

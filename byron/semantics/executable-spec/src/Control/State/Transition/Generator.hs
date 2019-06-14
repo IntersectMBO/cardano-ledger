@@ -39,6 +39,8 @@ module Control.State.Transition.Generator
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Control.Monad (forM)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Foldable (traverse_)
@@ -152,7 +154,9 @@ genTrace ub env st0 aSigGen = do
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
-            Left _err  -> loop (d - 1) sti acc
+            Left _err  -> do
+--              Debug.traceShowM _err
+              loop (d - 1) sti acc
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
     interleaveSigs

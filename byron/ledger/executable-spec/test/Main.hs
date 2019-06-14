@@ -18,6 +18,7 @@ import           Ledger.HasTypeReps.Properties          (testTxHasTypeReps)
 import           Ledger.Pvbump.Properties               (beginningsNoUpdate,
                                                          emptyPVUpdate,
                                                          lastProposal)
+import qualified Ledger.Update.Properties               as UPDATE
 import           Ledger.UTxO.Properties                 (moneyIsConstant)
 import qualified Ledger.UTxO.Properties                 as UTxO
 
@@ -29,7 +30,7 @@ main = defaultMain tests
     "Ledger"
     [ testGroup "Delegation Examples" deleg
     , testGroup
-      "Delegation Properties"
+      "Delegation properties"
       [ testProperty "Certificates are triggered"           dcertsAreTriggered
       , testProperty "DBLOCK Traces are classified"         DELEG.dblockTracesAreClassified
       , testProperty "relevant DBLOCK traces generated"     DELEG.relevantCasesAreCovered
@@ -43,9 +44,12 @@ main = defaultMain tests
       , testProperty "State determined by last proposal" lastProposal
       ]
     , testGroup
-      "UTxO Properties"
+      "UTxO properties"
       [ testProperty "Money is constant" moneyIsConstant
       , testProperty "Traces are classified" UTxO.tracesAreClassified
       ]
     , testTxHasTypeReps
+    , testGroup
+      "Update properties"
+      [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified ]
     ]

@@ -11,6 +11,7 @@
 
 module Ledger.Core where
 
+import Control.DeepSeq (force, NFData)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
@@ -105,7 +106,7 @@ skey :: VKey -> SKey
 skey = SKey . owner
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable)
+data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable, NFData)
 
 -- | We need a custom instance here that returns only the top level type.
 --   A generic instance would have recursed into type 'a' and since we use
@@ -144,7 +145,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable)
+  deriving newtype (Eq, Ord, Num, Hashable, NFData)
 
 instance HasTypeReps SlotCount
 
@@ -184,7 +185,7 @@ minusSlotMaybe (Slot m) (SlotCount n)
 
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable)
+  deriving newtype (Eq, Ord, Num, Hashable, NFData)
 
 instance HasTypeReps BlockCount
 

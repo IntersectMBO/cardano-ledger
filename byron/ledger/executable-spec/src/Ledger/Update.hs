@@ -27,6 +27,7 @@ import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
+import Control.DeepSeq (force, NFData)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
@@ -83,13 +84,13 @@ import Prelude hiding (min)
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { _maxBkSz  :: Natural
+  { _maxBkSz  :: !Natural
   -- ^ Maximum (abstract) block size in words
-  , _maxHdrSz :: Natural
+  , _maxHdrSz :: !Natural
   -- ^ Maximum (abstract) block header size in words
-  , _maxTxSz :: Natural
+  , _maxTxSz :: !Natural
   -- ^ Maximum (abstract) transaction size in words
-  , _maxPropSz :: Natural
+  , _maxPropSz :: !Natural
   -- ^ Maximum (abstract) update proposal size in words
   , _bkSgnCntT :: Double
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
@@ -99,22 +100,22 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
                                        -- the number of slots per epoch should
                                        -- remain constant. ^ Number of slots in
                                        -- an epoch
-  , _upTtl :: Core.SlotCount
+  , _upTtl :: !Core.SlotCount
   -- ^ Update proposal TTL in slots
-  , _scriptVersion :: Natural
+  , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: Int -- TODO: this should be a double
+  , _cfmThd :: !Int -- TODO: this should be a double
   -- ^ Update proposal confirmation threshold (number of votes)
-  , _upAdptThd :: Double
+  , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _stableAfter :: Core.BlockCount
+  , _stableAfter :: !Core.BlockCount
   -- ^ Chain stability parameter
-  , _factorA :: Int -- TODO: this should be a double
+  , _factorA :: !Int -- TODO: this should be a double
   -- ^ Minimum fees per transaction
-  , _factorB :: Int
+  , _factorB :: !Int
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, NFData)
 
 makeLenses ''PParams
 
@@ -130,7 +131,7 @@ data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show, Hashable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, NFData)
 
 makeLenses ''ProtVer
 
@@ -138,21 +139,21 @@ instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NFData)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable)
+  deriving newtype (Eq, Ord, Num, Hashable, NFData)
 
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, NFData)
 
 makeLenses ''SwVer
 
@@ -170,7 +171,8 @@ type UpSD =
 type STag = String
 
 -- | For now we do not have any requirements on metadata.
-data Metadata = Metadata deriving (Eq, Ord, Show, Generic, Hashable)
+data Metadata = Metadata
+  deriving (Eq, Ord, Show, Generic, Hashable, NFData)
 
 -- | Update proposal
 data UProp = UProp
@@ -383,7 +385,7 @@ instance STS UPV where
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
         inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
-        return (rpus', raus)
+        return $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -392,7 +394,7 @@ instance STS UPV where
         pv == up ^. upPV ?! PVChangedInSVUpdate
         up ^. upParams == pps ?! ParamsChangedInSVUpdate
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return (rpus, raus')
+        return $! (rpus, raus')
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -400,7 +402,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return (rpus', raus')
+        return $! (rpus', raus')
     ]
     where
       swVer (x, _, _) = x
@@ -443,7 +445,7 @@ instance STS UPREG where
         let vk = up ^. upIssuer
         dms ▷ Set.singleton vk /= empty ?! NotGenesisDelegate
         Core.verify vk (up ^. upSigData) (up ^. upSig) ?! DoesNotVerify
-        return (rpus', raus')
+        return $! (rpus', raus')
 
 
     ]
@@ -806,7 +808,8 @@ instance STS UPIREG where
             , up) <- judgmentContext
         (rpus', raus') <- trans @UPREG $ TRC ((pv, pps, avs, dms), (rpus, raus), up)
         let pws' = pws ⨃ [(up ^. upId, sn)]
-        return ( (pv, pps)
+        return $!
+           ( (pv, pps)
                 , fads
                 , avs
                 , rpus'
@@ -925,7 +928,7 @@ instance HasTrace UPIREG where
                            (Gen.list (Range.constant 0 12) Gen.ascii)
 
       stTagsGen :: Gen (Set STag)
-      stTagsGen = Gen.set (Range.linear 0 20)
+      stTagsGen = Gen.set (Range.linear 0 10)
                 $ Gen.list (Range.constant 0 10) Gen.ascii
 
       mdtGen :: Gen Metadata
