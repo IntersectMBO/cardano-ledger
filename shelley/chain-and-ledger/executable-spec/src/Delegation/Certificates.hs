@@ -19,7 +19,7 @@ module Delegation.Certificates
 import           Coin (Coin(..))
 import           Keys
 import           Slot (Duration(..), Epoch(..), Slot(..))
-import           PParams (PParams(..), decayRate, minRefund,
+import           PParams (PParams(..), keyDecayRate, keyMinRefund,
                                  keyDeposit, poolDeposit, poolMinRefund,
                                  poolDecayRate)
 
@@ -101,8 +101,8 @@ allocating _           = False
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
     where dval    = fromIntegral $ pc ^. keyDeposit
-          dmin    = pc ^. minRefund
-          lambdad = pc ^. decayRate
+          dmin    = pc ^. keyMinRefund
+          lambdad = pc ^. keyDecayRate
 
 decayPool :: PParams -> (Coin, UnitInterval, Rational)
 decayPool pc = (pval, pmin, lambdap)
