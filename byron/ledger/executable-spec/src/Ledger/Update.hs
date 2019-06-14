@@ -838,14 +838,14 @@ instance HasTrace UPIREG where
           -- Note that the genesis keys can delegate to themselves in the
           -- generated delegation map.
           vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
-        (vkgs,) <$> Gen.subsequence vks
+        (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
 
       -- TODO: use the generator in Core once PR 570 is merged.
       blockCountGen = BlockCount <$> Gen.word64 (Range.linear 0 100)
 
   sigGen (slot, dms, k) ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws)
     = do
-    (vk, pv', pps', sv) <- (,,,) <$> issuerGen
+    (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                  <*> pvGen
                                  <*> pparamsGen
                                  <*> swVerGen
@@ -854,8 +854,8 @@ instance HasTrace UPIREG where
       <*> pure vk
       <*> pure pps'
       <*> pure pv'
-      <*> pure sv
-      <*> pure (Core.sign (skey vk) (pv, pps, sv))
+      <*> pure sv'
+      <*> pure (Core.sign (skey vk) (pv', pps', sv'))
       <*> stTagsGen
       <*> mdtGen
 
@@ -873,8 +873,9 @@ instance HasTrace UPIREG where
       -- empty for this signal generator to succeed.
       issuerGen :: Gen Core.VKey
       issuerGen = if null delegates
-                  then Gen.element delegates
-                  else error "There are no delegates to issue an update proposal."
+                  then error "There are no delegates to issue an update proposal."
+                  else Gen.element delegates
+
         where
           delegates = Set.toList (range dms)
 
@@ -887,7 +888,10 @@ instance HasTrace UPIREG where
 
       pvGen :: Gen ProtVer
       pvGen = do
-        inc <- Gen.integral (Range.constant 0 10)
+        -- We want to generate a large number of alternative versions so that
+        -- we have a low probability of collisions (remember that we're trying
+        -- to generate only valid signals)
+        inc <- Gen.integral (Range.constant 0 10000)
         Gen.element [ ProtVer (_pvMaj + 1) 0            (_pvAlt + inc)
                     , ProtVer _pvMaj       (_pvMin + 1) (_pvAlt + inc)
                     ]
