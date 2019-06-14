@@ -5,12 +5,11 @@ module Ledger.HasTypeReps.Properties
   where
 
 import           Data.AbstractSize
-
 import           Data.Map.Strict                    (Map)
 import qualified Data.Map.Strict                    as Map
 import           Data.Sequence                      (empty, (<|), (><))
 import qualified Data.Sequence                      as Seq
-import           Data.Typeable                      (TypeRep, typeOf)
+import           Data.Typeable                      (TypeRep, Typeable, typeOf)
 import           Numeric.Natural                    (Natural)
 
 import           Hedgehog                           (MonadTest, Property,
@@ -74,58 +73,36 @@ exampleTypeRepsTx =
 -- Properties of abstractSize of TxWits / TxIn /TxOut / Wit
 --------------------------------------------------------------------------------
 
--- | Since 'VKey' appears in both Wit and TxOut (as part of Addr), we
---   need to use the same "cost" for this type in the following tests.
-vKeyCost :: Size
-vKeyCost = 17
+-- | Make a singleton cost of "1" for the given term's type
+mkCost :: Typeable a => a -> Map TypeRep Size
+mkCost term = Map.singleton (typeOf term) 1
 
--- | Example costs for types in a 'TxIn'.
-costsTxIn :: Map TypeRep Size
-costsTxIn = Map.fromList [ (typeOf (undefined :: TxIn), 2)
-                         , (typeOf (undefined :: TxId), 3)
-                         , (typeOf (undefined :: Hash), 5) ]
+txInCost :: Map TypeRep Size
+txInCost = mkCost (undefined :: TxIn)
 
--- | Example costs for types in a 'TxOut'.
-costsTxOut :: Map TypeRep Size
-costsTxOut = Map.fromList [ (typeOf (undefined :: TxOut), 11)
-                          , (typeOf (undefined :: Addr), 13)
-                          , (typeOf (undefined :: VKey), vKeyCost)
-                          , (typeOf (undefined :: Lovelace), 23) ]
+txIdCost :: Map TypeRep Size
+txIdCost = mkCost (undefined :: TxId)
 
--- | Example costs for types in a 'Wit'.
-costsWit :: Map TypeRep Size
-costsWit = Map.fromList [ (typeOf (undefined :: Wit), 31)
-                        , (typeOf (undefined :: VKey), vKeyCost)
-                        , (typeOf (undefined :: Sig Tx), 41)]
+hashCost :: Map TypeRep Size
+hashCost = mkCost (undefined :: Hash)
 
--- | This property tests that 'abstractSize' accounts for multiple occurences
---   of any type represented in the given "cost map".
---
---   'abstractSize' uses a "cost map" to compute the size of a term.
---   For types that contain multiple occurrences of other types, 'abstractSize'
---   should count each occurence (e.g. a 'Tx' may contain multiple 'TxIn' and
---   when computing the size of Tx, we should account for the size of each
---   'TxIn' occurence).
---
---  Precondition: this test assumes that the "cost map" only accounts for types
---  that occur within the "inner" type of multiples that we are targeting, e.g.
---  if we include a type in the cost map that occurs in 'TxIn' _and_ 'Tx',
---  this property would have to be weakened to
---  abstractSize costs x - n * unitCost > 0
-propMultiplesOfSize
-  :: (MonadTest m, HasTypeReps a)
-  => Map TypeRep Size
-  -- ^ a "cost map" for some type that may occur multiple times in the
-  --   given term of type 'a'
-  -> a
-  -- ^ term for which we will compute 'abstractSize'
-  -> Int
-  -- ^ the number of occurences of the "costed types" in given the term
-  -> m ()
-propMultiplesOfSize costs x n
-  = abstractSize costs x === n * unitCost
-  where
-    unitCost = sum (Map.elems costs)
+txOutCost :: Map TypeRep Size
+txOutCost = mkCost (undefined :: TxOut)
+
+addrCost :: Map TypeRep Size
+addrCost = mkCost (undefined :: Addr)
+
+lovelaceCost :: Map TypeRep Size
+lovelaceCost = mkCost (undefined :: Lovelace)
+
+witCost :: Map TypeRep Size
+witCost = mkCost (undefined :: Wit)
+
+sigCost :: Map TypeRep Size
+sigCost = mkCost (undefined :: Sig Tx)
+
+vKeyCost :: Map TypeRep Size
+vKeyCost = mkCost (undefined :: VKey)
 
 -- | Tests that the size of a 'TxWits' term, computed with the combined costs
 --   of 'TxIn/TxOut/Wit', is the sum of costs of all 'TxIn/TxOut/Wit' contained
@@ -137,14 +114,57 @@ propSumOfSizesTxWits txw
          === abstractSize costsTxIn (body txw)
              + abstractSize costsTxOut (body txw)
              + abstractSize costsWit (witnesses txw)
+  where
+    costsTxIn = Map.unions [txInCost, txIdCost, hashCost]
+    costsTxOut = Map.unions [ txOutCost, addrCost, vKeyCost, lovelaceCost ]
+    costsWit = Map.unions [ witCost, vKeyCost, sigCost ]
 
--- | A combination of several properties
---   (1) If we "cost" just the 'TxIn' type, then the abstract size of a 'Tx'
---       term is a multiple of the unit cost for a 'TxIn'
---   (2) Similarly, for 'Tx' and 'TxOut'
---   (3) Similarly, for 'Tx' and 'Wit'
---   (4) The abstract size of a 'TxWits' term is the sum of sizes of
---       the 'TxIn/TxOut/Wit' parts.
+-- | A TxWits contains multiple inputs, outputs and witnesses.
+--   This property tests that
+--   - the abstractSize of TxWits varies with the number of items
+--   - the combined cost is the sum of individual costs
+--   - types that are shared (e.g. VKey appears in both TxOut and Wit)
+--     should be counted for each appearance
+propMultipleOfSizes
+  :: MonadTest m => TxWits -> m ()
+propMultipleOfSizes txw =
+  let
+    body_ = (body txw)
+    wits_ = witnesses txw
+  in
+    -- we should account for each TxIn/TxId/Hash in a TxWits's size
+    abstractSize txInCost txw === length (inputs body_)
+    >> abstractSize txIdCost txw === length (inputs body_)
+    >> abstractSize hashCost txw === length (inputs body_)
+    -- the combined cost is the sum of individual costs
+    >> abstractSize (Map.unions [txInCost, txIdCost, hashCost]) txw
+       === abstractSize txInCost txw
+           + abstractSize txIdCost txw
+           + abstractSize hashCost txw
+
+    -- we should account for each TxOut/Addr/Lovelace in a TxWits's size
+    >> abstractSize txOutCost txw === length (outputs body_)
+    >> abstractSize addrCost txw === length (outputs body_)
+    >> abstractSize lovelaceCost txw === length (outputs body_)
+    -- the combined cost is the sum of individual costs
+    >> abstractSize (Map.unions [ txOutCost, addrCost, lovelaceCost ]) txw
+       === abstractSize txOutCost txw
+           + abstractSize addrCost txw
+           + abstractSize lovelaceCost txw
+
+    -- we should account for each Wit/Sig in a TxWits's size
+    >> abstractSize witCost txw === length wits_
+    >> abstractSize sigCost txw === length wits_
+    -- the combined cost is the sum of individual costs
+    >> abstractSize (Map.unions [ witCost, sigCost ]) txw
+       === abstractSize witCost txw
+           + abstractSize sigCost txw
+
+    -- since Vkey appears in each input _and_ each witness, the size of
+    -- TxWits should be the total number of inputs and wits
+    >> abstractSize vKeyCost txw
+       === (length $ outputs body_) + (length $ wits_)
+
 propTxAbstractSize :: Property
 propTxAbstractSize
   = withTests 50 $ property $ do
@@ -152,14 +172,7 @@ propTxAbstractSize
     let txs = traceSignals OldestFirst tr :: [TxWits]
     mapM_ propSize txs
   where
-    propSize txw
-      = let
-          body_ = (body txw)
-          wits_ = witnesses txw
-        in propMultiplesOfSize costsTxIn body_ (length $ inputs body_) -- (1)
-           >> propMultiplesOfSize costsTxOut body_ (length $ outputs body_) -- (2)
-           >> propMultiplesOfSize costsWit wits_ (length wits_) -- (3)
-           >> propSumOfSizesTxWits txw -- (4)
+    propSize txw = propSumOfSizesTxWits txw >> propMultipleOfSizes txw
 
 testTxHasTypeReps :: TestTree
 testTxHasTypeReps = testGroup "Test HasTypeReps instances"
