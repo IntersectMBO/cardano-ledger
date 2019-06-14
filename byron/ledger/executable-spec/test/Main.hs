@@ -5,16 +5,21 @@ module Main
   )
 where
 
-import Test.Tasty (TestTree, defaultMain, testGroup, localOption)
-import Test.Tasty.Hedgehog (testProperty)
-import Test.Tasty.Ingredients.ConsoleReporter (UseColor(Auto))
+import           Test.Tasty                             (TestTree, defaultMain,
+                                                         localOption, testGroup)
+import           Test.Tasty.Hedgehog                    (testProperty)
+import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
-import Ledger.Delegation.Examples (deleg)
-import Ledger.Delegation.Properties (dcertsAreTriggered, rejectDupSchedDelegs)
-import Ledger.Pvbump.Properties (emptyPVUpdate, beginningsNoUpdate, lastProposal)
-import qualified Ledger.Delegation.Properties as DELEG
-import Ledger.UTxO.Properties (moneyIsConstant)
-import qualified Ledger.UTxO.Properties as UTxO
+import           Ledger.Delegation.Examples             (deleg)
+import           Ledger.Delegation.Properties           (dcertsAreTriggered,
+                                                         rejectDupSchedDelegs)
+import qualified Ledger.Delegation.Properties           as DELEG
+import           Ledger.HasTypeReps.Properties          (testTxHasTypeReps)
+import           Ledger.Pvbump.Properties               (beginningsNoUpdate,
+                                                         emptyPVUpdate,
+                                                         lastProposal)
+import           Ledger.UTxO.Properties                 (moneyIsConstant)
+import qualified Ledger.UTxO.Properties                 as UTxO
 
 main :: IO ()
 main = defaultMain tests
@@ -40,4 +45,5 @@ main = defaultMain tests
       [ testProperty "Money is constant" moneyIsConstant
       , testProperty "Traces are classified" UTxO.tracesAreClassified
       ]
+    , testTxHasTypeReps
     ]

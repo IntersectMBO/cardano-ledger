@@ -104,7 +104,8 @@ instance HasTypeReps PParams
 
 newtype UpId = UpId Int
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Hashable, HasTypeReps)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
 
 -- | Protocol version
 data ProtVer = ProtVer
