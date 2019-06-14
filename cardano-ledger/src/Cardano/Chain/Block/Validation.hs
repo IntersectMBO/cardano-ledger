@@ -47,6 +47,7 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Chain.Block.Body (ABody (..))
 import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
@@ -57,7 +58,6 @@ import Cardano.Chain.Block.Block
   , blockHeader
   , blockIssuer
   , blockLength
-  , blockProof
   , blockProtocolMagicId
   , blockProtocolVersion
   , blockSlot
@@ -65,14 +65,15 @@ import Cardano.Chain.Block.Block
   , blockUpdatePayload
   )
 import Cardano.Chain.Block.Header
-  ( AHeader
+  ( AHeader (..)
   , BlockSignature
   , HeaderHash
   , headerLength
+  , headerProof
   , headerSlot
   , wrapBoundaryBytes
   )
-import Cardano.Chain.Block.Proof (Proof(..))
+import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , KeyHash
@@ -253,9 +254,6 @@ data ChainValidationError
   | ChainValidationInvalidSignature BlockSignature
   -- ^ The signature of the block is invalid
 
-  | ChainValidationDelegationProofError
-  -- ^ The delegation proof does not correspond to the delegation payload
-
   | ChainValidationDelegationSchedulingError Scheduling.Error
   -- ^ A delegation certificate failed validation in the ledger layer
 
@@ -271,14 +269,11 @@ data ChainValidationError
   | ChainValidationUpdateError UPI.Error
   -- ^ Something failed to register in the update interface
 
-  | ChainValidationUpdateProofError
-  -- ^ The update payload proof did not match
-
   | ChainValidationUTxOValidationError UTxO.UTxOValidationError
   -- ^ A transaction failed validation in the ledger layer
 
-  | ChainValidationUTxOProofError
-  -- ^ The UTxO payload proof did not match
+  | ChainValidationProofValidationError ProofValidationError
+  -- ^ A payload proof did not match.
 
   deriving (Eq, Show)
 
@@ -333,6 +328,39 @@ updateChainBoundary cvs bvd = do
     }
 
 
+validateHeaderMatchesBody
+  :: MonadError ProofValidationError m
+  => AHeader ByteString
+  -> ABody ByteString
+  -> m ()
+validateHeaderMatchesBody hdr body = do
+  let hdrProof = headerProof hdr
+
+  -- Validate the delegation payload signature
+  proofDelegation hdrProof == hashDecoded (bodyDlgPayload body)
+    `orThrowError` DelegationProofValidationError
+
+  -- Validate the transaction payload proof
+  proofUTxO hdrProof == recoverTxProof (bodyTxPayload body)
+    `orThrowError` UTxOProofValidationError
+
+  -- Validate the update payload proof
+  proofUpdate hdrProof == hashDecoded (bodyUpdatePayload body)
+    `orThrowError` UpdateProofValidationError
+
+validateBlockProofs
+  :: MonadError ProofValidationError m
+  => ABlock ByteString
+  -> m ()
+validateBlockProofs b =
+  validateHeaderMatchesBody blockHeader blockBody
+ where
+  ABlock
+    { blockHeader
+    , blockBody
+    } = b
+
+
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
   , k                  :: !BlockCount
@@ -363,30 +391,19 @@ updateBody env bs b = do
   blockLength b <= maxBlockSize
     `orThrowError` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
-  -- Validate the delegation payload signature
-  proofDelegation (blockProof b)
-    == hashDecoded (blockDlgPayload b)
-    `orThrowError` ChainValidationDelegationProofError
+  -- Validate the delegation, transaction, and update payload proofs.
+  validateBlockProofs b
+    `wrapError` ChainValidationProofValidationError
 
   -- Update the delegation state
   delegationState' <-
     DI.updateDelegation delegationEnv delegationState certificates
       `wrapError` ChainValidationDelegationSchedulingError
 
-  -- Validate the transaction payload proof
-  proofUTxO (blockProof b)
-    == recoverTxProof (blockTxPayload b)
-    `orThrowError` ChainValidationUTxOProofError
-
   -- Update the UTxO
   utxo' <-
     UTxO.updateUTxO utxoEnv utxo txs
       `wrapError` ChainValidationUTxOValidationError
-
-  -- Validate the update payload proof
-  proofUpdate (blockProof b)
-    == hashDecoded (blockUpdatePayload b)
-    `orThrowError` ChainValidationUpdateProofError
 
   -- Update the update state
   updateState' <-

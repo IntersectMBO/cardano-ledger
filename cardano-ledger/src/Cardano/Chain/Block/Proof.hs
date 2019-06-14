@@ -5,6 +5,7 @@
 
 module Cardano.Chain.Block.Proof
   ( Proof(..)
+  , ProofValidationError (..)
   , mkProof
   , recoverProof
   )
@@ -70,3 +71,14 @@ recoverProof body = Proof
   , proofDelegation = hashDecoded $ bodyDlgPayload body
   , proofUpdate     = Update.recoverProof $ bodyUpdatePayload body
   }
+
+-- | Error which can result from attempting to validate an invalid payload
+-- proof.
+data ProofValidationError
+  = DelegationProofValidationError
+  -- ^ The delegation payload proof did not match
+  | UTxOProofValidationError
+  -- ^ The UTxO payload proof did not match
+  | UpdateProofValidationError
+  -- ^ The update payload proof did not match
+  deriving (Eq, Show)
