@@ -70,10 +70,10 @@ afterwards.
 
 Exponentiation is implemented using the law
 $a^{b} = e^{\ln(a^{b})}= e^{b\ln(a)}$. This therefore requires being able to
-calculate $e^{x}$ and $\ln(x)$. The approximation of the natural logarithm can
+calculate $e^{x}$ and $\ln(x)$. The the natural logarithm can
 be approximated using different approaches, again, depending on the desired
 accuracy. Most approximations work for $\ln(x), x \in [1, c)$ with some $c >
-0$. One then uses the law $\log_{b}(x) = \log_{b}(\frac{x}{b^{n}}b^{n})$ where
+1$. One then uses the law $\log_{b}(x) = \log_{b}(\frac{x}{b^{n}}b^{n})$ where
 $n \in \mathbb{N}$ is chosen in such a way that $\frac{x}{b^{n}} \in [1,
 c)$. Using this, one can separate the calculation of the integral and decimal
 part as follows:
@@ -111,7 +111,7 @@ $x \approx y \Leftrightarrow \lvert x - y\rvert < \epsilon$.
   \item $x, y \in [0,1] \implies x \star y \in [0, 1]$
   \item $x, y, z \in [0,1], x > 0 \implies
     (z\star\frac{1}{x})\star y \approx (z\star y)\star\frac{1}{x}$
-  \item $\exp'(x + y) = \exp'(x) + \exp'(y)$
+  \item $\exp'(x + y) = \exp'(x) \cdot \exp'(y)$
   \end{itemize}
 \end{property}
 
