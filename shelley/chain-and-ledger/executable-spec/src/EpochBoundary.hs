@@ -133,7 +133,8 @@ obligation pc (StakeKeys stakeKeys) (StakePools stakePools) cslot =
 maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
 maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
   where
-    (a0, nOpt) = pc ^. poolConsts
+    a0 = _a0 pc
+    nOpt = _nOpt pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0

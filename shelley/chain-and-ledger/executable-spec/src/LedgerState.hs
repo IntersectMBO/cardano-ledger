@@ -125,9 +125,8 @@ import           Slot                    (Slot (..), Epoch (..), (-*),
 import           Keys
 import           UTxO
 import           PParams                 (PParams(..), minfeeA, minfeeB,
-                                                 intervalValue,
-                                                 keyDeposit, minRefund,
-                                                 decayRate, emptyPParams)
+                                                 keyDeposit, keyMinRefund,
+                                                 keyDecayRate, emptyPParams)
 import           EpochBoundary
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey)
@@ -374,7 +373,7 @@ txsize = toEnum . length . show
 
 -- |Minimum fee calculation
 minfee :: PParams -> TxBody -> Coin
-minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + pc ^. minfeeB
+minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + (fromIntegral $ pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
 validFee :: PParams -> TxBody -> Validity
@@ -416,8 +415,8 @@ decayedKey pp stk@(StakeKeys stkeys) cslot cert =
           else let created'      = stkeys Map.! hashKey key in
                let start         = max (firstSlot $ epochFromSlot cslot) created' in
                let dval          = pp ^. keyDeposit in
-               let dmin          = pp ^. minRefund in
-               let lambda        = pp ^. decayRate in
+               let dmin          = pp ^. keyMinRefund in
+               let lambda        = pp ^. keyDecayRate in
                let epochRefund   = keyRefund dval dmin lambda stk start cert in
                let currentRefund = keyRefund dval dmin lambda stk cslot cert in
                epochRefund - currentRefund
