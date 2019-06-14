@@ -2,6 +2,6 @@
 ** TODO Update the formal spec with the new update mechanism.
    - [X] Issue #448
 ** TODO Update the formal spec to get the new header validation properties.
-   - [ ] Issue #565
+   - [X] Issue #565
 ** TODO update executable spec with changes not affected by changes to the update mechanism.
    - [ ] Issue #TBD
