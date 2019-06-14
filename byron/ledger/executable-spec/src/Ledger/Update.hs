@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions        #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE StrictData                 #-}
 {-# LANGUAGE TemplateHaskell            #-}
@@ -878,14 +879,19 @@ instance HasTrace UPIREG where
           delegates = Set.toList (range dms)
 
       pparamsGen :: Gen PParams
-      pparamsGen = undefined
+      pparamsGen = ppsUpdateFrom pps
         -- TODO: remember to generate update proposals where the maximum
         -- proposal size falls below the minimum abstract size that a proposal
         -- can have (this case shouldn't be generated often, but we want to
         -- cover it)
 
       pvGen :: Gen ProtVer
-      pvGen = undefined
+      pvGen = do
+        inc <- Gen.integral (Range.constant 0 10)
+        Gen.element [ ProtVer (_pvMaj + 1) 0            (_pvAlt + inc)
+                    , ProtVer _pvMaj       (_pvMin + 1) (_pvAlt + inc)
+                    ]
+        where ProtVer {_pvMaj, _pvMin, _pvAlt} = pv
 
       swVerGen :: Gen SwVer
       swVerGen =
@@ -914,15 +920,140 @@ instance HasTrace UPIREG where
             <$> Gen.filter ((`notElem` appNames) . ApName)
                            (Gen.list (Range.constant 0 12) Gen.ascii)
 
-      upSig :: Core.Sig UpSD
-      upSig = undefined -- Core.sign
-
       stTagsGen :: Gen (Set STag)
-      stTagsGen = undefined
+      stTagsGen = Gen.set (Range.linear 0 20)
+                $ Gen.list (Range.constant 0 10) Gen.ascii
 
       mdtGen :: Gen Metadata
       mdtGen = pure Metadata
 
+
+-- | Generate a protocol parameter update from a given set of current
+-- protocol-parameters, ensuring the consistency of the new protocol parameters
+-- w.r.t. the current ones, according to the @canUpdate@ predicate in the
+-- formal specification.
+--
+-- TODO: we can move this into a Generator's module, but first we need to
+-- disentangle the dependencies. Moving this to Ledger.Update.Generators will
+-- cause a circular dependency. I think the rules need to be moved into their
+-- own modules.
+ppsUpdateFrom :: PParams -> Gen PParams
+ppsUpdateFrom pps = do
+  -- Determine the change in the block size: a decrement or an increment that
+  -- is no more than twice the current block maximum size.
+  --
+  -- We don't expect the maximum block size to change often, so we generate
+  -- more values around the current block size (@_maxBkSz@).
+  newMaxBkSize <- Gen.integral (Range.exponentialFrom _maxBkSz 1 (2 * _maxBkSz))
+                  `increasingProbabilityAt`
+                  (1, 2 * _maxBkSz)
+
+  -- Similarly, we don't expect the transaction size to be changed often, so we
+  -- also generate more values around the current maximum transaction size.
+  newMaxTxSize <- Gen.integral (Range.exponentialFrom _maxTxSz 0 (newMaxBkSize - 1))
+                  `increasingProbabilityAt`
+                  (0, newMaxBkSize - 1)
+
+  PParams
+    <$> pure newMaxBkSize
+    <*> nextMaxHdrSzGen
+    <*> pure newMaxTxSize
+    <*> nextMaxPropSz
+    <*> nextBkSgnCntT
+    <*> pure _bkSlotsPerEpoch -- This parameter should be removed from 'PParams'
+    <*> nextUpTtl
+    <*> nextScriptVersion
+    <*> nextCfmThd
+    <*> nextUpAdptThd
+    <*> pure _stableAfter     -- This parameter should be removed from 'PParams'
+    <*> nextFactorA
+    <*> nextFactorB
+
+  where
+    PParams{ _maxBkSz
+           , _maxHdrSz
+           , _maxTxSz
+           , _maxPropSz
+           , _bkSgnCntT
+           , _bkSlotsPerEpoch
+           , _upTtl
+           , _scriptVersion
+           , _cfmThd
+           , _upAdptThd
+           , _stableAfter
+           , _factorA
+           , _factorB
+           } = pps
+
+    nextMaxHdrSzGen :: Gen Natural
+    nextMaxHdrSzGen =
+      Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
+      `increasingProbabilityAt` (0, (2 * _maxHdrSz))
+
+    nextMaxPropSz :: Gen Natural
+    nextMaxPropSz =
+      Gen.integral (Range.exponentialFrom _maxPropSz 0 (2 * _maxPropSz))
+      `increasingProbabilityAt` (0, 2 * _maxPropSz)
+
+    nextBkSgnCntT :: Gen Double
+    nextBkSgnCntT =
+      Gen.double (Range.exponentialFloatFrom _bkSgnCntT 0 1)
+      `increasingProbabilityAt` (0, 1)
+
+    nextUpTtl :: Gen SlotCount
+    nextUpTtl = SlotCount <$>
+      -- TODO: here we need to decide what is right the minimum value for the
+      -- update-proposal TTL, and maybe adapt the rules to check the value of
+      -- this parameter cannot change to anything below this value.
+      --
+      -- For now we choose an arbitrary constant.
+      Gen.integral (Range.exponentialFrom currUpTtl minTtl (2 * currUpTtl))
+      `increasingProbabilityAt` (minTtl, 2 * currUpTtl)
+      where
+        SlotCount currUpTtl = _upTtl
+        minTtl = 2
+
+    -- The new script version can be increased at most 1 unit
+    nextScriptVersion :: Gen Natural
+    nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
+
+    nextCfmThd :: Gen Int
+    nextCfmThd = Gen.integral (Range.exponentialFrom 0 _cfmThd (_cfmThd + 1))
+      `increasingProbabilityAt`
+      (0, _cfmThd + 1)
+
+    nextUpAdptThd :: Gen Double
+    nextUpAdptThd =
+      Gen.double (Range.exponentialFloatFrom _upAdptThd 0 1)
+      `increasingProbabilityAt` (0, 1)
+
+    nextFactorA :: Gen Int
+    nextFactorA =
+      -- TODO: we choose arbitrary numbers here for now.
+      Gen.integral (Range.exponentialFrom _factorA 0 10)
+      `increasingProbabilityAt` (0, 10)
+
+    nextFactorB :: Gen Int
+    nextFactorB =
+      -- TODO: we choose arbitrary numbers here for now.
+      Gen.integral (Range.exponentialFrom _factorB 0 10)
+      `increasingProbabilityAt` (0, 10)
+
+-- | Generate values the given distribution in 90% of the cases, and values at
+-- the bounds of the range in 10% of the cases.
+--
+-- This can be used to generate enough extreme values. The exponential and
+-- linear distributions provided by @hedgehog@ will generate a small percentage
+-- of these (0-1%).
+increasingProbabilityAt
+  :: Gen a
+  -> (a, a)
+  -> Gen a
+increasingProbabilityAt gen (lower, upper)
+  = Gen.frequency [ (5, pure lower)
+                  , (90, gen)
+                  , (5, pure upper)
+                  ]
 
 data UPIVOTE
 
