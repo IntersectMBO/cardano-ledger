@@ -15,19 +15,18 @@
 
 module Ledger.UTxO where
 
-import Data.AbstractSize (HasTypeReps, typeReps, abstractSize)
-import Data.Hashable (Hashable)
-import qualified Data.Hashable as H
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Sequence ((<|), empty)
-import Data.Typeable (typeOf)
-import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
+import           Data.AbstractSize (HasTypeReps, abstractSize)
+import           Data.Hashable     (Hashable)
+import qualified Data.Hashable     as H
+import           Data.Map.Strict   (Map)
+import qualified Data.Map.Strict   as Map
+import           Data.Maybe        (fromMaybe)
+import           Data.Typeable     (typeOf)
+import           GHC.Generics      (Generic)
+import           Numeric.Natural   (Natural)
 
-import Ledger.Core hiding ((<|))
-import Ledger.Update (PParams (PParams), _factorA, _factorB)
+import           Ledger.Core       hiding ((<|))
+import           Ledger.Update     (PParams (PParams), _factorA, _factorB)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
