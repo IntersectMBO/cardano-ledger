@@ -15,43 +15,35 @@
 
 module Ledger.UTxO where
 
-import Data.AbstractSize (HasTypeReps, typeReps, abstractSize)
-import Data.Hashable (Hashable)
-import qualified Data.Hashable as H
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Sequence ((<|), empty)
-import Data.Typeable (typeOf)
-import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
+import           Data.AbstractSize (HasTypeReps, abstractSize)
+import           Data.Hashable     (Hashable)
+import qualified Data.Hashable     as H
+import           Data.Map.Strict   (Map)
+import qualified Data.Map.Strict   as Map
+import           Data.Maybe        (fromMaybe)
+import           Data.Typeable     (typeOf)
+import           GHC.Generics      (Generic)
+import           Numeric.Natural   (Natural)
 
-import Ledger.Core hiding ((<|))
-import Ledger.Update (PParams (PParams), _factorA, _factorB)
+import           Ledger.Core       hiding ((<|))
+import           Ledger.Update     (PParams (PParams), _factorA, _factorB)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
-  deriving stock (Show)
+  deriving stock (Show, Generic)
   deriving newtype (Eq, Ord, Hashable)
-
-instance HasTypeReps TxId where
-  typeReps x = typeOf x <| typeOf (getTxId x) <| empty
+  deriving anyclass (HasTypeReps)
 
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord, Generic, Hashable)
-
-instance HasTypeReps TxIn where
-  typeReps x@(TxIn i' n) = typeOf x <| typeOf i' <| typeOf n <| empty
+data TxIn = TxIn TxId Natural
+  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
 
 -- |The output of a UTxO.
 data TxOut = TxOut { addr  :: Addr
                    , value :: Lovelace
-                   } deriving (Show, Eq, Ord, Generic, Hashable)
-
-instance HasTypeReps TxOut where
-  typeReps o = typeOf o <| empty
+                   } deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO
@@ -118,7 +110,8 @@ txsize = abstractSize costs
 ---------------------------------------------------------------------------------
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord, Generic, Hashable)
+data Wit = Wit VKey (Sig Tx)
+  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
 
 -- |A fully formed transaction.
 --
@@ -126,10 +119,7 @@ data Wit = Wit VKey (Sig Tx) deriving (Show, Eq, Ord, Generic, Hashable)
 data TxWits = TxWits
   { body      :: Tx
   , witnesses :: [Wit]
-  } deriving (Show, Eq, Generic, Hashable)
-
-instance HasTypeReps TxWits where
-  typeReps (TxWits b w) = typeOf b <| typeOf w <| empty
+  } deriving (Show, Eq, Generic, Hashable, HasTypeReps)
 
 instance HasHash [TxWits] where
   hash = Hash . H.hash
