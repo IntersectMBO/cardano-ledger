@@ -26,49 +26,54 @@ import           Control.State.Transition
 data NEWEPOCH
 
 instance STS NEWEPOCH where
-  type State NEWEPOCH = ( Epoch
-                        , Seed
-                        , BlocksMade
-                        , EpochState
-                        , Maybe RewardUpdate
-                        , PoolDistr)
+  type State NEWEPOCH = NewEpochState
   type Signal NEWEPOCH = Epoch
-  type Environment NEWEPOCH = (Seed, PParams)
+  type Environment NEWEPOCH = NewEpochEnv
   data PredicateFailure NEWEPOCH = EpochFailure (PredicateFailure
                                                  EPOCH)
                                    deriving (Show, Eq)
   initialRules =
     [ pure $
-      ( Epoch 0
-      , mkNonce 0
-      , BlocksMade Map.empty
-      , emptyEpochState
-      , Nothing
-      , PoolDistr Map.empty)
-    ]
+      NewEpochState
+        (Epoch 0)
+        (mkNonce 0)
+        (BlocksMade Map.empty)
+        (BlocksMade Map.empty)
+        (emptyEpochState)
+        (Nothing)
+        (PoolDistr Map.empty)
+        (Map.empty)]
   transitionRules = [ocertTransition]
 
 ocertTransition :: TransitionRule NEWEPOCH
 ocertTransition = do
-  TRC ((eta1, ppN), (Epoch eL, eta0, b, es, ru, pd), Epoch e) <- judgmentContext
-  if eL /= e + 1
-    then pure $ (Epoch eL, eta0, b, es, ru, pd)
+  TRC ( (NewEpochEnv eta1 s gkeys)
+      , src@(NewEpochState eL@(Epoch eL') _ bprev bcur es ru pd osched)
+      , e@(Epoch e')) <- judgmentContext
+  if eL' /= e' + 1
+    then pure src
     else do
-      let es' =
+      let es_ =
             case ru of
-              Nothing  -> es'
+              Nothing  -> es
               Just ru' -> applyRUpd ru' es
-      es'' <- trans @EPOCH $ TRC ((ppN, b), es', Epoch e)
-      let EpochState _ _ ss _ = es
+      es' <- trans @EPOCH $ TRC (bprev, es_, e)
+      let EpochState acnt ss ls pp = es'
       let (Stake stake, delegs) = _pstakeSet ss
+      let Coin total = Map.foldl (+) (Coin 0) stake
+      let etaE = _extraEntropy pp
+      let osched' = overlaySchedule gkeys eta1 pp
+      let es'' = EpochState acnt ss ls (pp { _extraEntropy = neutralSeed })
       let pd' =
             foldr
-              (\(hk, c) m -> Map.insertWith (+) hk c m)
+              (\(hk, (Coin c)) m ->
+                 Map.insertWith (+) hk ((fromIntegral c) / fromIntegral total) m)
               Map.empty
               [ (poolKey, Maybe.fromMaybe (Coin 0) (Map.lookup stakeKey stake))
               | (stakeKey, poolKey) <- Map.toList delegs
               ]
-      pure $ (Epoch e, eta1, BlocksMade Map.empty, es'', Nothing, PoolDistr pd')
+      pure $
+        NewEpochState e (seedOp eta1 etaE) bcur (BlocksMade Map.empty) es'' Nothing (PoolDistr pd') osched'
 
 instance Embed EPOCH NEWEPOCH where
   wrapFailed = EpochFailure
