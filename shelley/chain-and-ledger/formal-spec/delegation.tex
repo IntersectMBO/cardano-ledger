@@ -196,6 +196,7 @@ state transition types. We define two separate parts of the ledger state.
         pool to which is delegates.
       \item $\var{ptrs}$ maps stake keys to the position of the registration certificate
         in the blockchain. This is needed to lookup the stake hashkey of a pointer address.
+      \item $\var{fdms}$ future genesis keys delegations.
       \item $\var{dms}$ maps genesis keys to the cold key delegates.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
@@ -230,6 +231,7 @@ and the protocol parameters.
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \HashKey_{stake} \mapsto \HashKey_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \HashKey & \text{pointer to hashkey}\\
+      \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
       \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
     \end{array}\right)
     \\
@@ -331,7 +333,8 @@ a stake pool, though these concerns are independent of the ledger rules.
     There is a precondition that the genesis key is already in the mapping $\var{dms}$.
     Genesis delegation causes the following state transformation:
     \begin{itemize}
-      \item The genesis delegation relation is updated with the new pair.
+      \item The future genesis delegation relation is updated with the new delegate
+        to be adopted in $\SlotsPrior$-many slots.
     \end{itemize}
 \end{itemize}
 
@@ -359,6 +362,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -369,6 +373,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -393,6 +398,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -403,6 +409,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
         \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{ptrs}} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -426,6 +433,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -437,6 +445,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
                                       & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
         \var{ptrs} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -449,6 +458,8 @@ a stake pool, though these concerns are independent of the ledger rules.
       \var{c}\in \DCertGen
       & (\var{gkey},~\var{vk})\leteq\fun{genDel}~{c}
       & \var{gkey}\in\dom{dms}
+      \\
+      s'\leteq\var{slot}+\SlotsPrior
     }
     {
       \begin{array}{r}
@@ -462,6 +473,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
+        \var{fdms} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -472,8 +484,9 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
-        \varUpdate{\var{dms}} & \varUpdate{\unionoverrideRight}
-                              & \varUpdate{\{\var{gkey} \mapsto \var{vk}\}} \\
+        \varUpdate{\var{fdms}} & \varUpdate{\unionoverrideRight}
+                               & \varUpdate{\{(\var{s'},~\var{gkey}) \mapsto \var{vk}\}} \\
+        \var{dms} \\
       \end{array}
       \right)
     }
@@ -831,6 +844,10 @@ will be invalid.
     The base case triggers the following state transformation:
     \begin{itemize}
       \item Reward accounts are set to zero for each corresponding withdrawal.
+      \item The genesis key delegation mapping is updated accourding to the future delegation
+        mapping. For each genesis key, we take the most recent delegation in $\var{fdms}$
+        that is past the current slot.
+      \item The future genesis key delegation has any items past the current slots removed.
     \end{itemize}
   \item The inductive case, when the list is non-empty, is captured by \cref{eq:delegs-induct}.
     It constructs a certificate pointer given the current slot and transaction index,
@@ -853,10 +870,29 @@ will be invalid.
       \var{wdrls} \subseteq \var{rewards}
       \\
       \var{rewards'} \leteq \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
+      \\~\\
+      \var{curr}\leteq
+      \left\{
+        (\var{s},~\var{gkey})\mapsto\var{vkey}\in\var{fdms}
+        ~\mathrel{\Bigg|}~
+        {
+          \begin{array}{r}
+            \var{s}\geq\var{slot}\\
+            \var{s}=\max\{s'~\mid~(s',~\var{gkey})\in\dom{\var{fdms}}\}
+          \end{array}
+        }
+      \right\}
+      \\
+      \var{dms'}\leteq
+      \{
+        \var{gkey}\mapsto\var{vkey}
+        ~\mid~
+        (\var{s},~\var{gkey})\mapsto\var{vkey}\in\var{curr}
+      \}
     }
     {
       \left(
-      \begin{array}{r}
+      \begin{array}{c}
         \var{slot} \\
         \var{txIx} \\
         \var{pp} \\
@@ -864,17 +900,19 @@ will be invalid.
     \right)
       \vdash
       \left(
-      \begin{array}{r}
+      \begin{array}{c}
         \left(
         \begin{array}{r}
           \var{stkeys} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
+          \var{fdms} \\
+          \var{dms} \\
         \end{array}
         \right) \\~\\
         \left(
-        \begin{array}{r}
+        \begin{array}{c}
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
@@ -885,17 +923,19 @@ will be invalid.
       \right)
       \trans{delegs}{\epsilon}
       \left(
-      \begin{array}{r}
+      \begin{array}{c}
         \left(
-        \begin{array}{r}
+        \begin{array}{c}
           \var{stkeys} \\
           \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{ptrs} \\
+          \varUpdate{\var{fdms}\setminus\var{curr}} \\
+          \varUpdate{\var{dms}\unionoverrideRight\var{dms'}} \\
         \end{array}
         \right) \\~\\
         \left(
-        \begin{array}{r}
+        \begin{array}{c}
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
