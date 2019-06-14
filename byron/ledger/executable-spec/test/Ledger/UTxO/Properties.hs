@@ -1,33 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Ledger.UTxO.Properties where
 
-import Control.Lens ((^.))
-import Control.Monad (when)
-import Hedgehog
-  ( Property
-  , (===)
-  , classify
-  , forAll
-  , property
-  , success
-  , withTests
-  )
+import           Control.Lens                       ((^.))
+import           Control.Monad                      (when)
+import           Hedgehog                           (Property, classify, forAll,
+                                                     property, success,
+                                                     withTests, (===))
 
-import Control.State.Transition.Generator (classifyTraceLength, trace)
-import Control.State.Transition.Trace
-  ( TraceOrder(OldestFirst)
-  , firstAndLastState
-  , traceEnv
-  , traceLength
-  , traceSignals
-  )
+import           Control.State.Transition.Generator (classifyTraceLength, trace)
+import           Control.State.Transition.Trace     (TraceOrder (OldestFirst),
+                                                     firstAndLastState,
+                                                     traceEnv, traceLength,
+                                                     traceSignals)
 
-import Cardano.Ledger.Spec.STS.UTXO (pps, reserves, utxo)
-import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import Ledger.UTxO
-  (Tx(Tx), TxIn(TxIn), balance, body, inputs, outputs, pcMinFee)
+import           Cardano.Ledger.Spec.STS.UTXO       (pps, reserves, utxo)
+import           Cardano.Ledger.Spec.STS.UTXOW      (UTXOW)
+import           Ledger.UTxO                        (Tx (Tx), TxIn (TxIn),
+                                                     TxOut (TxOut), balance,
+                                                     body, inputs, outputs,
+                                                     pcMinFee)
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
@@ -59,7 +52,7 @@ tracesAreClassified = withTests 200 . property $ do
   let
     pparams = pps (tr ^. traceEnv)
     -- Transaction with one input and one output
-    unitTx = Tx [TxIn undefined undefined] [undefined]
+    unitTx = Tx [TxIn undefined 0] [TxOut undefined 100]
     unitTxFee = pcMinFee pparams unitTx
   classify "Unit transaction cost == 0" $ unitTxFee == 0
   classify "Unit transaction cost == 1" $ unitTxFee == 1
