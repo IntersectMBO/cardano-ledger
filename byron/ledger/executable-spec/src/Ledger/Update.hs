@@ -94,8 +94,10 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4
-  , _bkSlotsPerEpoch :: Core.SlotCount
-  -- ^ Number of slots in an epoch
+  , _bkSlotsPerEpoch :: Core.SlotCount -- TODO: this should be removed since
+                                       -- the number of slots per epoch should
+                                       -- remain constant. ^ Number of slots in
+                                       -- an epoch
   , _upTtl :: Core.SlotCount
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: Natural
@@ -107,7 +109,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- endorse a given version to become candidate for adoption
   , _stableAfter :: Core.BlockCount
   -- ^ Chain stability parameter
-  , _factorA :: Int
+  , _factorA :: Int -- TODO: this should be a double
   -- ^ Minimum fees per transaction
   , _factorB :: Int
   -- ^ Additional fees per transaction size
@@ -714,19 +716,58 @@ emptyUPIState :: UPIState
 emptyUPIState =
   (( ProtVer 0 0 0
    , PParams                    -- TODO: choose more sensible default values
-     (2^(20::Natural))          -- max sizes chosen as non-zero to allow progress
-     (2^(20::Natural))
-     (2^(20::Natural))
-     (2^(20::Natural))
-     0.2
-     0
-     0
-     0
-     0
-     0
-     0
-     0
-     0
+     { _maxBkSz = 100         -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 10
+     , _maxTxSz = 50
+     , _maxPropSz = 10
+     , _bkSgnCntT = 0.22    -- As defined in the spec.
+     , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this
+     , _upTtl = 10
+     , _scriptVersion = 0
+     , _cfmThd = 4 -- TODO: this should be a double
+     , _upAdptThd = 0.6 -- Value currently used in mainet
+     , _stableAfter = 5 -- TODO: the k stability parameter needs to be removed
+                        -- from here as well!
+
+     -- To calculate the factors @A@ and @B@ we need to know the constant @C@
+     -- that we use to bound the size of a transaction.
+     --
+     -- We have that for all transactions @tx@
+     --
+     -- > size (elaborate tx) <= C * abstractSize tx
+     --
+     -- where @elaborate@ elaborates an abstract transaction into a concrete
+     -- one.
+     --
+     -- Then we would expect that the concrete fee is also bounded by the
+     -- concrete fee, this is:
+     --
+     -- > A_C + B_C * size (elaborate tx) <= C * (A + B * abstractSize tx)
+     --
+     -- where @A_C@ and @B_C@ are the concrete factors that correspond to @A@
+     -- and @B@. Now consider:
+     --
+     -- > C * (A + B * abstractSize tx)
+     -- > =
+     -- > C * A + B * C * abstractSize tx
+     -- > >=
+     -- > C * A + B * size (elaborate tx)
+     -- = { Choosing A_C = C * A, B_C = B}
+     -- > A_C + B_C * size (elaborate tx)
+     --
+     -- Which means that given C, we should set:
+     --
+     -- > _factorA = A_C / C
+     -- > _factorB = B_C
+     --
+     -- TODO: But if the derivation above is correct the value of B would be
+     -- quite large (if we take the used value in mainet, i.e.
+     -- 155381000000000).
+     --
+     -- For now we choose arbitrary numbers here.
+     , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
+     , _factorB = 2 -- In mainet this value is set to 155381000000000
+     }
    )
   , []
   , Map.empty
@@ -838,6 +879,10 @@ instance HasTrace UPIREG where
 
       pparamsGen :: Gen PParams
       pparamsGen = undefined
+        -- TODO: remember to generate update proposals where the maximum
+        -- proposal size falls below the minimum abstract size that a proposal
+        -- can have (this case shouldn't be generated often, but we want to
+        -- cover it)
 
       pvGen :: Gen ProtVer
       pvGen = undefined
