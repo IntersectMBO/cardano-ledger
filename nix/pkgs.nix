@@ -45,6 +45,10 @@ let
         # Let's force it to accept out packageset.
         packages.katip.doExactConfig = true;
 
+        # The generated iohk-monitoring.nix doesn't turn off prometheus yet,
+        # because it doesn't respect the flags section of stack.yaml
+        packages.iohk-monitoring.flags.disable-prometheus = true;
+
         packages.cardano-ledger.preBuild =
           "export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror}/epochs";
 

@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/cca3c4f8da1de19321e96a5a7cca376bc6c37637/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/68648612f916e8adaf6c9ca5fe39bc6712470a6a/snapshot.yaml
 
 packages:
   - cardano-ledger
@@ -7,32 +7,36 @@ packages:
   - crypto/test
   - validate-mainnet
 
-
 extra-deps:
-  - git: https://github.com/input-output-hk/cardano-prelude
-    commit: cca3c4f8da1de19321e96a5a7cca376bc6c37637
-    subdirs:
-      - .
-      - test
-
-  - git: https://github.com/input-output-hk/cardano-base
-    commit: b676160954cea07d4378ccca870a61242bc188a2
-    subdirs:
-      - binary
-      - binary/test
-
-  - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: ad86dcb64e8a5f3bd7670655ab92b50921946479
-    subdirs:
-      - byron/semantics/executable-spec
-      - byron/ledger/executable-spec
-      - byron/chain/executable-spec
+  - libsystemd-journal-1.4.4
 
   # Currently Hackage only
   - tasty-hedgehog-1.0.0.1
 
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0
+
+  - git: https://github.com/input-output-hk/cardano-prelude
+    commit: 68648612f916e8adaf6c9ca5fe39bc6712470a6a
+    subdirs:
+      - .
+      - test
+
+  - git: https://github.com/input-output-hk/cardano-base
+    commit: 2d0e0747f1c17bedfc251406ca9b1a59501071b1
+    subdirs:
+      - binary
+      - binary/test
+
+  - git: https://github.com/input-output-hk/cardano-ledger-specs
+    commit: 423a7359049b0fd6fb2a931c50877cae2a96eaae
+    subdirs:
+      - byron/semantics/executable-spec
+      - byron/ledger/executable-spec
+      - byron/chain/executable-spec
+
+  # Not yet in Stack
+  - bimap-0.4.0
 
   # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
@@ -41,7 +45,7 @@ extra-deps:
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: f1c4ceef7d7ea6fb4425484c2b19b84048a3549d
+    commit: 6f4602f308fa7598cf660d5cf808fae4bd8cf70d
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -49,8 +53,6 @@ extra-deps:
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
     commit: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
-
-  - bimap-0.4.0
 
 flags:
   iohk-monitoring:
