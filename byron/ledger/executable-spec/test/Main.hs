@@ -50,6 +50,7 @@ main = defaultMain tests
       ]
     , testTxHasTypeReps
     , testGroup
-      "Update properties"
-      [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified ]
+      "Update UPIREG properties"
+      [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified
+      , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered]
     ]

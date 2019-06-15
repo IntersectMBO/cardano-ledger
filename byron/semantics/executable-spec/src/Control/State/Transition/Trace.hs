@@ -18,7 +18,9 @@ module Control.State.Transition.Trace
   , TraceOrder (NewestFirst, OldestFirst)
   , mkTrace
   , traceEnv
+  , _traceEnv
   , traceInitState
+  , _traceInitState
   , traceSignals
   , traceStates
   , preStatesAndSignals

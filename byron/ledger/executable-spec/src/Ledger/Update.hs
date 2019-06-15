@@ -23,11 +23,10 @@ where
 
 import Control.Arrow ((&&&))
 import Control.Lens
-import Data.AbstractSize (HasTypeReps)
+import Control.Monad (mzero)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
-import Control.DeepSeq (force, NFData)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
@@ -44,6 +43,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
 
+import Data.AbstractSize (HasTypeReps)
 import Control.State.Transition
 import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
@@ -115,7 +115,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable, NFData)
+  } deriving (Eq, Generic, Ord, Show, Hashable)
 
 makeLenses ''PParams
 
@@ -131,7 +131,7 @@ data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show, Hashable, NFData)
+  } deriving (Eq, Generic, Ord, Show, Hashable)
 
 makeLenses ''ProtVer
 
@@ -139,21 +139,21 @@ instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Hashable, NFData)
+  deriving newtype (Eq, Ord, Hashable)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable, NFData)
+  deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable, NFData)
+  } deriving (Eq, Generic, Show, Hashable)
 
 makeLenses ''SwVer
 
@@ -172,7 +172,7 @@ type STag = String
 
 -- | For now we do not have any requirements on metadata.
 data Metadata = Metadata
-  deriving (Eq, Ord, Show, Generic, Hashable, NFData)
+  deriving (Eq, Ord, Show, Generic, Hashable)
 
 -- | Update proposal
 data UProp = UProp
@@ -781,6 +781,12 @@ emptyUPIState =
   , Set.empty
   , Map.empty)
 
+protocolVersion :: UPIState -> ProtVer
+protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv
+
+avs :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
+avs ((_, _), _, avs, _, _, _, _, _, _) = avs
+
 data UPIREG
 
 instance STS UPIREG where
@@ -808,8 +814,7 @@ instance STS UPIREG where
             , up) <- judgmentContext
         (rpus', raus') <- trans @UPREG $ TRC ((pv, pps, avs, dms), (rpus, raus), up)
         let pws' = pws ⨃ [(up ^. upId, sn)]
-        return $!
-           ( (pv, pps)
+        pure $! ( (pv, pps)
                 , fads
                 , avs
                 , rpus'
@@ -849,18 +854,49 @@ instance HasTrace UPIREG where
   sigGen (slot, dms, k) ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
-                                 <*> pvGen
-                                 <*> pparamsGen
-                                 <*> swVerGen
-    UProp
-      <$> idGen
-      <*> pure vk
-      <*> pure pps'
-      <*> pure pv'
-      <*> pure sv'
-      <*> pure (Core.sign (skey vk) (pv', pps', sv'))
-      <*> stTagsGen
-      <*> mdtGen
+                                  <*> pvGen
+                                  <*> pparamsGen
+                                  <*> swVerGen
+
+    Gen.choice
+      [ -- Do not change the protocol version
+        UProp
+        <$> idGen
+        <*> pure vk
+        <*> pure pps
+        <*> pure pv
+        <*> pure sv'
+        <*> pure (Core.sign (skey vk) (pv, pps, sv'))
+        <*> stTagsGen
+        <*> mdtGen
+      , -- Do not change the software version (unless there are no software versions in @avs@)
+        do
+          -- Pick a current software version (if available)
+          let makeSoftwareVersion (apName, (apVersion, _, _)) = SwVer apName apVersion
+              avsList = Map.toList avs
+          swCurr <- if null avsList
+                    then pure $! sv'
+                    else makeSoftwareVersion <$> Gen.element avsList
+          UProp
+            <$> idGen
+            <*> pure vk
+            <*> pure pps'
+            <*> pure pv'
+            <*> pure swCurr
+            <*> pure (Core.sign (skey vk) (pv, pps, swCurr))
+            <*> stTagsGen
+            <*> mdtGen
+      , -- Change protocol and software version
+        UProp
+        <$> idGen
+        <*> pure vk
+        <*> pure pps'
+        <*> pure pv'
+        <*> pure sv'
+        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
+        <*> stTagsGen
+        <*> mdtGen
+      ]
 
     where
       idGen :: Gen UpId
@@ -928,8 +964,11 @@ instance HasTrace UPIREG where
                            (Gen.list (Range.constant 0 12) Gen.ascii)
 
       stTagsGen :: Gen (Set STag)
-      stTagsGen = Gen.set (Range.linear 0 10)
-                $ Gen.list (Range.constant 0 10) Gen.ascii
+      stTagsGen =
+        -- TODO: We need to benchmark this against @Gen.set@. This seems to be
+        -- slightly faster.
+        Set.fromList <$>
+          Gen.list (Range.linear 0 10) (Gen.list (Range.constant 0 10) Gen.ascii)
 
       mdtGen :: Gen Metadata
       mdtGen = pure Metadata

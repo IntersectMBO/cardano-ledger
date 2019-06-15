@@ -38,7 +38,6 @@ library
   build-depends:       base >=4.11 && <5
                      , bimap
                      , containers
-                     , deepseq
                      , hashable
                      , hedgehog >= 1.0
                      , lens
@@ -114,7 +113,8 @@ test-suite ledger-rules-test
                -- We set a bound here so that we're alerted of potential space
                -- leaks in our generators (or test) code.
                --
-               -- The 50 megabytes heap bound was determined ad-hoc.
-               "-with-rtsopts=-K10m -M150m"
+               -- The 4 megabytes stack bound and 50 megabytes heap bound were
+               -- determined ad-hoc.
+               "-with-rtsopts=-K4m -M150m"
   if (!flag(development))
     ghc-options: -Werror
