@@ -4,19 +4,26 @@
 module Ledger.Update.Properties
   ( upiregTracesAreClassified
   , upiregRelevantTracesAreCovered
+  , onlyValidSignalsAreGenerated
   ) where
 
+import Control.Monad (void)
+import qualified Data.Bimap as Bimap
 import Data.Function ((&))
+import Data.List.Unique (count)
 import qualified Data.Map as Map
-import Hedgehog (Property, cover, forAll, property, success, withTests)
+import Hedgehog (Property, cover, forAll, property, success, withTests, evalEither)
 
-import Control.State.Transition.Generator (trace, classifyTraceLength)
+import Control.State.Transition (TRC(TRC), Environment, State, applySTS)
+import Control.State.Transition.Generator (trace, classifyTraceLength, sigGen)
 import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
   , traceLength
+  , lastState
   , _traceInitState
   , traceSignals
+  , _traceEnv
   )
 
 import Ledger.Update (UPIREG, UProp, PParams, protocolParameters)
@@ -49,11 +56,23 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
     "at least 10% of the update proposals do not change the protocol version"
     (0.10 <= ratio dontChangeProtocolVersion sample)
 
-  -- TODO: OPTIONAL: we have an uniform distribution of issuers
+  -- We have a roughly fair distribution of issuers.
   --
-  -- Here we could simply compute how many up's a given issuer should have made
-  -- if everybody made the same number of proposals, and check that each issuer
-  -- didn't produce less than, say 50% of that.
+  -- Here we simply compute how many update proposals a given issuer should
+  -- have made if everybody made the same number of proposals, and check that
+  -- each issuer didn't produce less than a certain percentage of that. So for
+  -- instance, if we have 4 genesis keys and a trace length of 100, then in an
+  -- completely fair distribution of issuers we would expect to have 25 update
+  -- proposals per genesis key. For this example, in this test we would check
+  -- that in 50% of the generated traces, the deviation from the fair
+  -- distribution (25 update proposals per-key) is no greater than half its
+  -- expected value (25 * 0.5 = 12.5).
+  cover 50
+    "the distribution of the proposal issuers is roughly fair"
+    ( safeMaximum (issuersDeviationsWrtUniformDistribution sample)
+      <=
+      expectedNumberOfUpdateProposalsPerKey sample * 0.5
+    )
 
   -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max block size
   cover 50
@@ -152,7 +171,6 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
         check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
         check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
 
-
     isSetTo
       :: Eq v
       => (PParams -> v)
@@ -164,4 +182,50 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
       & filter (value ==)
       & length
 
+    expectedNumberOfUpdateProposalsPerKey :: Trace UPIREG -> Double
+    expectedNumberOfUpdateProposalsPerKey traceSample =
+      if numberOfGenesisKeys == 0
+      then 0
+      else fromIntegral $ traceLength traceSample `div` numberOfGenesisKeys
+      where
+        numberOfGenesisKeys :: Int
+        numberOfGenesisKeys = length
+                            $ Bimap.keys
+                            $ delegationMap (_traceEnv traceSample)
+
+    issuersDeviationsWrtUniformDistribution
+      :: Trace UPIREG
+      -> [Double]
+    issuersDeviationsWrtUniformDistribution traceSample
+      = fmap (Update._upIssuer) (traceSignals OldestFirst traceSample)
+      & count
+      -- Take the list of (issuer, count) pairs and keep the count only.
+      & fmap snd
+      & fmap deviationFromExpectation
+      where
+        deviationFromExpectation :: Int -> Double
+        deviationFromExpectation numberOfProposalsPerKey =
+          abs (fromIntegral numberOfProposalsPerKey - expectedNumberOfUpdateProposalsPerKey traceSample)
+
+    delegationMap (_, dms, _) = dms
+
+    safeMaximum xs = if null xs then 0 else maximum xs
+
 data Change = Increases | Decreases | RemainsTheSame
+
+
+-- TODO: write a test to check that the generated signals are valid.
+
+-- TODO: this tests can be abstracted over any STS that can produce traces.
+
+onlyValidSignalsAreGenerated :: Property
+onlyValidSignalsAreGenerated = property $ do
+  tr <- forAll (trace @UPIREG 100)
+  let
+    env :: Environment UPIREG
+    env = _traceEnv tr
+
+    st' :: State UPIREG
+    st' = lastState tr
+  sig <- forAll (sigGen @UPIREG env st')
+  void $ evalEither $ applySTS @UPIREG (TRC(env, st', sig))

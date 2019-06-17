@@ -52,5 +52,7 @@ main = defaultMain tests
     , testGroup
       "Update UPIREG properties"
       [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified
-      , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered]
+      , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered
+      , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
+      ]
     ]
