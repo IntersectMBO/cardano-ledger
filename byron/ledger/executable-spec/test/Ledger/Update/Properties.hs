@@ -8,7 +8,7 @@ module Ledger.Update.Properties
 
 import Data.Function ((&))
 import qualified Data.Map as Map
-import Hedgehog (Property, cover, forAll, property, success)
+import Hedgehog (Property, cover, forAll, property, success, withTests)
 
 import Control.State.Transition.Generator (trace, classifyTraceLength)
 import Control.State.Transition.Trace
@@ -19,7 +19,7 @@ import Control.State.Transition.Trace
   , traceSignals
   )
 
-import Ledger.Update (UPIREG)
+import Ledger.Update (UPIREG, UProp, _maxBkSz, PParams, protocolParameters)
 import qualified Ledger.Update as Update
 
 -- TODO: factor out duplication. Put this in Transition.Generator module!
@@ -31,7 +31,7 @@ upiregTracesAreClassified = property $ do
   success
 
 upiregRelevantTracesAreCovered :: Property
-upiregRelevantTracesAreCovered = property $ do
+upiregRelevantTracesAreCovered = withTests 200 $ property $ do
   sample <- forAll (trace @UPIREG 200)
 
   -- TODO:  increase the major version.
@@ -50,8 +50,15 @@ upiregRelevantTracesAreCovered = property $ do
     (0.30 <= ratio dontChangeProtocolVersion sample)
 
   -- TODO: OPTIONAL: we have an uniform distribution of issuers
+  --
+  -- Here we could simply compute how many up's a given issuer should have made
+  -- if everybody made the same number of proposals, and check that each issuer
+  -- didn't produce less than, say 50% of that.
 
   -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max block size
+  cover 50
+    "at least 20% of the update proposals decrease the maximum block size"
+    (0.2 <= ratio (wrtCurrentProtocolParameters _maxBkSz Decreases) sample)
 
   -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max header size
 
@@ -115,3 +122,22 @@ upiregRelevantTracesAreCovered = property $ do
       where
         fst3 (x, _, _) = x
         avs = Update.avs . _traceInitState $ traceSample
+
+    wrtCurrentProtocolParameters
+      :: Ord v
+      => (PParams -> v)
+      -> Change
+      -> Trace UPIREG
+      -> Int
+    wrtCurrentProtocolParameters parameterValue parameterValueChange traceSample
+      = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
+      & filter (check parameterValueChange)
+      & length
+      where
+        currentParameterValue = parameterValue . protocolParameters . _traceInitState $ traceSample
+        check Increases proposedParameterValue       = currentParameterValue  < proposedParameterValue
+        check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
+        check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
+
+
+data Change = Increases | Decreases | RemainsTheSame

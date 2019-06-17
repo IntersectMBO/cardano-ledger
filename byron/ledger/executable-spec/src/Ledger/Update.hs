@@ -784,6 +784,9 @@ emptyUPIState =
 protocolVersion :: UPIState -> ProtVer
 protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv
 
+protocolParameters :: UPIState -> PParams
+protocolParameters ((_, pps), _, _, _, _, _, _, _, _) = pps
+
 avs :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
 avs ((_, _), _, avs, _, _, _, _, _, _) = avs
 
@@ -990,7 +993,7 @@ ppsUpdateFrom pps = do
   --
   -- We don't expect the maximum block size to change often, so we generate
   -- more values around the current block size (@_maxBkSz@).
-  newMaxBkSize <- Gen.integral (Range.exponentialFrom _maxBkSz 1 (2 * _maxBkSz))
+  newMaxBkSize <- Gen.integral (Range.linearFrom _maxBkSz 1 (2 * _maxBkSz))
                   `increasingProbabilityAt`
                   (1, 2 * _maxBkSz)
 
