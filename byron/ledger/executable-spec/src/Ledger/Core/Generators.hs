@@ -4,6 +4,8 @@ module Ledger.Core.Generators
   , vkgenesisGen
   , addrGen
   , slotGen
+  , epochGen
+  , blockCountGen
   )
 where
 
@@ -14,10 +16,12 @@ import qualified Hedgehog.Range as Range
 
 import Ledger.Core
   ( Addr(Addr)
+  , BlockCount(BlockCount)
+  , Epoch(Epoch)
   , Owner(Owner)
+  , Slot(Slot)
   , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
-  , Slot(Slot)
   )
 
 vkGen :: Gen VKey
@@ -33,3 +37,13 @@ addrGen = Addr <$> vkGen
 slotGen :: Word64 -> Word64 -> Gen Slot
 slotGen lower upper =
   Slot <$> Gen.word64 (Range.linear lower upper)
+
+-- | Generates an epoch within the given bound
+epochGen :: Word64 -> Word64 -> Gen Epoch
+epochGen lower upper =
+  Epoch <$> Gen.word64 (Range.linear lower upper)
+
+-- | Generates a block count within the given bound
+blockCountGen :: Word64 -> Word64 -> Gen BlockCount
+blockCountGen lower upper =
+  BlockCount <$> Gen.word64 (Range.linear lower upper)

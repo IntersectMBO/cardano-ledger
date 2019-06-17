@@ -191,11 +191,11 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps) (Slot s
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dms)
+    vkI         <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dmsL)
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
-      GenDelegation   -> dcertsGen dsEnv
+      GenDelegation   -> dcertsGen dsEnv ds
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of

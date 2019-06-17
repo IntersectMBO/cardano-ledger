@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
@@ -55,11 +56,12 @@ module Ledger.Delegation
   , liveAfter
   -- * State lens fields
   , slot
+  , epoch
   , delegationMap
   -- * State lens type classes
   , HasScheduledDelegations
   , scheduledDelegations
-  , dms
+  , dmsL
   -- * Generators
   , dcertGen
   , dcertsGen
@@ -69,14 +71,15 @@ module Ledger.Delegation
 where
 
 import Data.AbstractSize
-import Data.Bimap (Bimap)
+import Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
+import Data.Maybe (catMaybes)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.Set (Set, (\\))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Hedgehog (Gen)
@@ -120,24 +123,32 @@ import Control.State.Transition.Generator
   , sigGen
   )
 import Ledger.Core
-  ( BlockCount(BlockCount)
-  , Epoch(Epoch)
+  ( BlockCount
+  , Epoch
   , HasHash
   , Hash(Hash)
+  , Owner(Owner)
   , Sig(Sig)
   , Slot(Slot)
   , SlotCount(SlotCount)
-  , VKey
+  , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
+  , (∈)
+  , (∉)
   , (⨃)
   , addSlot
   , hash
-  , minusSlot
   , owner
   , owner
+  , range
   , unBlockCount
   )
-import Ledger.Core.Generators (vkGen, vkgenesisGen)
+import Ledger.Core.Generators
+  ( blockCountGen
+  , epochGen
+  , slotGen
+  , vkgenesisGen
+  )
 
 
 --------------------------------------------------------------------------------
@@ -192,9 +203,13 @@ delegate c = c ^. dwho . _2
 -- | Delegation scheduling environment
 data DSEnv = DSEnv
   { _dSEnvAllowedDelegators :: Set VKeyGenesis
+  -- ^ Set of allowed delegators
   , _dSEnvEpoch :: Epoch
+  -- ^ Current epoch
   , _dSEnvSlot :: Slot
+  -- ^ Current slot
   , _dSEnvK :: BlockCount
+  -- ^ Chain stability parameter
   } deriving (Show, Eq)
 
 makeFields ''DSEnv
@@ -231,9 +246,13 @@ data DIState = DIState
 
 makeFields ''DIState
 
-dms :: HasDelegationMap a (Bimap VKeyGenesis VKey)
+-- | Epoch-genesis key delegation set of the delegation interface state.
+eks :: DIState -> Set (Epoch, VKeyGenesis)
+eks = _dIStateKeyEpochDelegations
+
+dmsL :: HasDelegationMap a (Bimap VKeyGenesis VKey)
     => Lens' a (Bimap VKeyGenesis VKey)
-dms = delegationMap
+dmsL = delegationMap
 
 dIStateDSState :: Lens' DIState DSState
 dIStateDSState = lens
@@ -275,7 +294,8 @@ instance STS SDELEG where
 
   data PredicateFailure SDELEG
     = IsNotGenesisKey
-    | IsPastEpoch
+    | EpochInThePast
+    | EpochPastNextEpoch
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
@@ -294,7 +314,9 @@ instance STS SDELEG where
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        env ^. epoch <= cert ^. depoch ?! IsPastEpoch
+        let diff = cert ^. depoch - env ^. epoch
+        0 <= diff ?! EpochInThePast
+        diff <= 1 ?! EpochPastNextEpoch
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. dwho
@@ -339,30 +361,53 @@ instance STS ADELEG where
     | NoLastDelegation
       -- | Not a failure; this should just pass the other rule
     | AfterExistingDelegation
+    -- | The given key is a delegate of the given genesis key.
+    | AlreadyADelegateOf VKey VKeyGenesis
+
     deriving (Eq, Show)
 
-  initialRules = [ do
-                     IRC env <- judgmentContext
-                     return DState
-                       { _dStateDelegationMap  = Bimap.fromList $ map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
-                       , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
-                       }
-                 ]
+  initialRules = [
+    do
+      IRC env <- judgmentContext
+      return DState
+        { _dStateDelegationMap  =
+            Bimap.fromList
+            $ map (\vkg@(VKeyGenesis key) -> (vkg, key)) (Set.toList env)
+        , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
+        }
+    ]
   transitionRules =
     [ do
-        TRC (_env, st, (slt, (vks, vkd))) <- judgmentContext
-        case Map.lookup vks (st ^. lastDelegation) of
-          Nothing -> True ?! BeforeExistingDelegation
-          Just sp -> sp < slt ?! BeforeExistingDelegation
-        return $ st
-          & delegationMap %~ (\sdm -> sdm ⨃ [(vks, vkd)])
-          & lastDelegation %~ (\ldm -> ldm ⨃ [(vks, slt)])
+        TRC ( _env
+            , DState { _dStateDelegationMap = dms
+                     , _dStateLastDelegation = dws
+                     }
+            , (s, (vks, vkd))
+            ) <- judgmentContext
+        vkd ∉ range dms ?! AlreadyADelegateOf vkd (dms !> vkd)
+        case Map.lookup vks dws of
+          Nothing -> pure () -- If vks hasn't delegated, then we proceed and
+                             -- update the @ADELEG@ state.
+          Just sp -> sp < s ?! BeforeExistingDelegation
+        return $!
+          DState { _dStateDelegationMap = dms ⨃ [(vks, vkd)]
+                 , _dStateLastDelegation = dws ⨃ [(vks, s)]
+                 }
     , do
-        (TRC (_env, st, (slt, (vks, _vkd)))) <- judgmentContext
-        case Map.lookup vks (st ^. lastDelegation) of
-          Just sp -> sp >= slt ?! AfterExistingDelegation
-          Nothing -> False ?! NoLastDelegation
-        return st
+        TRC ( _env
+            , st@DState { _dStateDelegationMap = dms
+                        , _dStateLastDelegation = dws
+                        }
+            , (s, (vks, vkd))
+            ) <- judgmentContext
+        if vkd ∈ range dms
+          then return st
+          else do
+            case Map.lookup vks dws of
+              Just sp -> sp >= s ?! AfterExistingDelegation
+              Nothing -> error $  "This can't happen since otherwise "
+                               ++ "the previous rule would have been triggered."
+            return st
     ]
 
 -- | Delegation scheduling sequencing
@@ -387,8 +432,8 @@ instance STS SDELEGS where
         case sig of
           [] -> return st
           (x:xs) -> do
-            dss' <- trans @SDELEGS $ TRC (env, st, xs)
-            dss'' <- trans @SDELEG $ TRC (env, dss', x)
+            dss'  <- trans @SDELEG $ TRC (env, st, x)
+            dss'' <- trans @SDELEGS $ TRC (env, dss', xs)
             return dss''
     ]
 
@@ -417,8 +462,8 @@ instance STS ADELEGS where
         case sig of
           [] -> return st
           (x:xs) -> do
-            ds' <- trans @ADELEGS $ TRC (env, st, xs)
-            ds'' <- trans @ADELEG $ TRC (env, ds', x)
+            ds'  <- trans @ADELEG $ TRC (env, st, x)
+            ds'' <- trans @ADELEGS $ TRC (env, ds', xs)
             return ds''
     ]
 
@@ -455,18 +500,14 @@ instance STS DELEG where
         sds <- trans @SDELEGS $ TRC (env, st ^. dIStateDSState, sig)
         let slots = filter ((<= (env ^. slot)) . fst) $ sds ^. scheduledDelegations
         as <- trans @ADELEGS $ TRC (env ^. allowedDelegators, st ^. dIStateDState, slots)
-        let d = liveAfter (env ^. k)
         return $ DIState
           (as ^. delegationMap)
           (as ^. lastDelegation)
-          (filter (aboutSlot (env ^. slot) d . fst)
+          (filter (((env ^. slot) `addSlot` 1 <=) . fst)
             $ sds ^. scheduledDelegations)
           (Set.filter ((env ^. epoch <=) . fst)
             $ sds ^. keyEpochDelegations)
     ]
-    where
-      aboutSlot :: Slot -> SlotCount -> (Slot -> Bool)
-      aboutSlot a b c = c >= (a `minusSlot` b) && c <= (a `addSlot` b)
 
 instance Embed SDELEGS DELEG where
   wrapFailed = SDelegSFailure
@@ -478,37 +519,45 @@ instance Embed ADELEGS DELEG where
 -- Generators
 --------------------------------------------------------------------------------
 
--- | Generate delegation certificates, using the allowed delegators in the
--- environment passed as parameter.
-dcertGen :: DSEnv -> Gen DCert
-dcertGen env = do
-  -- The generated delegator must be one of the genesis keys in the
-  -- environment.
-  vkS <- Gen.element $ Set.toList (env ^. allowedDelegators)
-  vkD <- vkGen
-  let Epoch n = env ^. epoch
-  m   <- Gen.integral (linear 0 100)
-  let epo = Epoch (n + m)
-  return DCert { _dbody = (vkD, epo)
-               , _dwit = Sig vkS (owner vkS)
-               , _dwho = (vkS, vkD)
-               , _depoch = epo
-               }
+dcertGen :: DSEnv -> DIState -> Gen (Maybe DCert)
+dcertGen env st =
+  let
+    allowed :: [VKeyGenesis]
+    allowed = Set.toList (_dSEnvAllowedDelegators env)
+    -- We can generate delegation certificates using the allowed delegators,
+    -- and we can delegate for the current or next epoch only.
+    preCandidates :: Set (Epoch, VKeyGenesis)
+    preCandidates = Set.fromList
+                  $  zip (repeat $ _dSEnvEpoch env) allowed
+                  ++ zip (repeat $ _dSEnvEpoch env + 1) allowed
+    -- We obtain the candidates by removing the ones that already delegated in
+    -- this or next epoch.
+    candidates :: [(Epoch, VKeyGenesis)]
+    candidates = Set.toList $ preCandidates \\ eks st
+    -- Next, we choose to whom these keys delegate.
+    target :: [VKey]
+    -- NOTE: we might want to make this configurable for now we chose an upper
+    -- bound equal to two times the number of genesis keys to increase the
+    -- chance of having two genesis keys delegating to the same key.
+    target = VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
 
--- | Generate a list of delegation certificates.
---
--- At the moment the size of the generated list is severely constrained since
--- the longer the list the higher the probability that it will contain
--- conflicting delegation certificates (that will be rejected by the
--- transition-system-rules).
-dcertsGen :: DSEnv -> Gen [DCert]
--- NOTE: at the moment we cannot use a linear range that depends on the
--- generator size: the problem is that the more delegation certificates in the
--- resulting list, the higher the probability that this list will be rejected
--- and the generator will have to retry.
---
-dcertsGen env = Gen.frequency
-  [(95, pure []), (10, Gen.list (constant 1 n) (dcertGen env))]
+    mkDCert' ((e, vkg), vk) = DCert (vk, e) (Sig vkg (owner vkg)) (vkg, vk) e
+  in
+
+  if null candidates
+    then return Nothing
+    else Just <$> Gen.element (mkDCert' <$> zip candidates target)
+
+
+dcertsGen :: DSEnv -> DIState -> Gen [DCert]
+dcertsGen env st =
+  -- NOTE: alternatively we could define a HasTrace instance for SDELEG and use
+  -- trace here.
+  --
+  -- This generator can result in an empty list of delegation certificates if
+  -- no delegation certificates can be produced, according to the delegation
+  -- rules, given the initial state and environment.
+  catMaybes <$> Gen.list (constant 1 n) (dcertGen env st)
   where n = env ^. allowedDelegators . to length
 
 instance HasTrace DELEG where
@@ -526,8 +575,8 @@ instance HasTrace DELEG where
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
     <$> Gen.set (linear 1 7) vkgenesisGen
-    <*> (Epoch <$> Gen.integral (linear 0 100))
-    <*> (Slot <$> Gen.integral (linear 0 10000))
-    <*> (BlockCount <$> Gen.integral (linear 1 10000))
+    <*> epochGen 0 10
+    <*> slotGen 0 100
+    <*> blockCountGen 0 100
 
-  sigGen e _st = dcertsGen e
+  sigGen = dcertsGen
