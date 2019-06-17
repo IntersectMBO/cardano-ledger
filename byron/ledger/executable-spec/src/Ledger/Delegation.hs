@@ -553,6 +553,10 @@ dcertsGen :: DSEnv -> DIState -> Gen [DCert]
 dcertsGen env st =
   -- NOTE: alternatively we could define a HasTrace instance for SDELEG and use
   -- trace here.
+  --
+  -- This generator can result in an empty list of delegation certificates if
+  -- no delegation certificates can be produced, according to the delegation
+  -- rules, given the initial state and environment.
   catMaybes <$> Gen.list (constant 1 n) (dcertGen env st)
   where n = env ^. allowedDelegators . to length
 

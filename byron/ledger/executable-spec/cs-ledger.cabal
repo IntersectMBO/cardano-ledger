@@ -100,7 +100,7 @@ test-suite ledger-rules-test
                , tasty
                , tasty-hunit
                , tasty-hedgehog
-               , Unique
+               , Unique >= 0.4.7.6
                -- Local deps
                , cs-ledger
                , small-steps

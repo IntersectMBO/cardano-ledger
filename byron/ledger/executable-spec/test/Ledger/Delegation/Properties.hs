@@ -29,15 +29,14 @@ import Hedgehog
   , Property
   , (===)
   , assert
---  , classify
   , cover
   , forAll
   , property
   , success
   , withTests
   )
-import Hedgehog.Gen (integral)
-import Hedgehog.Range (constant, linear)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import Control.State.Transition
   ( Environment
@@ -121,6 +120,7 @@ import Ledger.Delegation
   )
 
 import Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
+import Ledger.GlobalParams (slotsPerEpoch)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -188,7 +188,9 @@ instance STS DBLOCK where
           stNext <- trans @DELEG $ TRC (env, st, dblock ^. blockCerts)
           -- We fix the number of slots per epoch to 10. This is the same
           -- constant used in production.
-          let nextEpoch = Epoch $ unSlot nextSlot `div` 10
+          let nextEpoch = if _dSEnvK env == 0
+                          then 0
+                          else Epoch $ unSlot nextSlot `div` slotsPerEpoch (_dSEnvK env)
           return (env & slot .~ nextSlot
                       & epoch .~ nextEpoch
                  , stNext)
@@ -289,7 +291,7 @@ instance HasTrace DBLOCK where
     -- we chose a small value here.
     <*> epochGen 0 10
     -- As with epochs, the current slot should not have influence in the tests.
-    <*> slotGen 0 100
+    <*> slotGen 0 10
     -- 2160 the value of @k@ used in production. However, delegation
     -- certificates are activated @2*k@ slots from the slot in which they are
     -- issued. This means that if we want to see delegation activations, we
@@ -300,14 +302,20 @@ instance HasTrace DBLOCK where
       -- We scale the number of delegators linearly up to twice the number of
       -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
-        n <- integral (linear 0 13)
+        n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ gk <$> [0 .. n]
       gk = VKeyGenesis . VKey . Owner
 
   sigGen _ (env, st) =
     DBlock <$> nextSlotGen <*> sigGen @DELEG env st
     where
-      nextSlotGen = incSlot <$> integral (constant 1 10)
+      -- We want the resulting trace to include a large number of epoch
+      -- changes, so we generate an epoch change with higher frequency.
+      nextSlotGen =
+        incSlot <$> Gen.frequency
+                      [ (1, Gen.integral (Range.constant 1 10))
+                      , (2, pure $! slotsPerEpoch (_dSEnvK env))
+                      ]
       incSlot c = (env ^.slot) `addSlot` SlotCount c
 
 instance HasSizeInfo DBlock where
@@ -379,6 +387,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
           -> Double
     ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
 
+    selfDelegations :: Trace DBLOCK -> Int
     selfDelegations tr = length
                        $ filter idDeleg
                        $ fmap delegatorDelegate (traceDCerts tr)
@@ -386,6 +395,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         idDeleg (vks, vk) = owner vks == owner vk
 
     -- Count the number of delegations to the same key in a given trace.
+    multipleDelegations :: Trace DBLOCK -> Int
     multipleDelegations tr = -- Get the (delegator, delegate) pairs
                              fmap delegatorDelegate (traceDCerts tr)
                              -- Remove duplicated elements, since we're not
@@ -407,12 +417,14 @@ relevantCasesAreCovered = withTests 400 $ property $ do
                            & filter ((2 <=) . snd)
                            & length
 
+    emptyDelegationPayload  :: Trace DBLOCK -> Int
     emptyDelegationPayload tr =  _blockCerts <$> traceSignals OldestFirst tr
                               & filter null
                               & length
 
+    thisEpochDelegations  :: Trace DBLOCK -> Int
     thisEpochDelegations tr = epochDelegationEpoch tr
-                            & filter (\(e0, e1) -> e0 == e1)
+                            & filter (uncurry (==))
                             & length
 
     -- Get the epoch in which the delegation certificates of the trace were
@@ -423,6 +435,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
                             & fmap (\(e, es) -> zip (repeat e) es)
                             & concat
 
+
+    nextEpochDelegations  :: Trace DBLOCK -> Int
     nextEpochDelegations tr =  epochDelegationEpoch tr
                             & filter (\(e0, e1) -> e0 + 1 == e1)
                             & length
@@ -449,7 +463,7 @@ rejectDupSchedDelegs = property $ do
             _ -> error $  "This should not happen: "
                        ++ "tr is guaranteed to contain a non-empty sequence of scheduled delegations"
     vkD <- vkGen
-    epo <- Epoch <$> integral (linear 0 100)
+    epo <- Epoch <$> Gen.integral (Range.linear 0 100)
     let dcert
           = DCert
           { _dbody = (vkD, epo)
