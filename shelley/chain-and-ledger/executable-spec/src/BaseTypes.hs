@@ -9,7 +9,7 @@ module BaseTypes
   , intervalValue
   , interval0
   , interval1
-  , Seed
+  , Seed(..)
   , mkNonce
   , seedOp
   , neutralSeed
@@ -59,6 +59,8 @@ interval1 = UnitInterval 1
 data Seed
   = Nonce Integer
   | NeutralSeed
+  | SeedL
+  | SeedEta
   | SeedOp Seed
            Seed
   deriving (Show, Eq, Ord)

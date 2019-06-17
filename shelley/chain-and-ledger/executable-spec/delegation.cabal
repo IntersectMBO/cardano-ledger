@@ -36,6 +36,7 @@ library
                      STS.NewEpoch
                      STS.Newpp
                      STS.Ocert
+                     STS.Overlay
                      STS.Pool
                      STS.PoolReap
                      STS.Rupd
