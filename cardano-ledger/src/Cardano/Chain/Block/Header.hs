@@ -98,10 +98,10 @@ import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
   ( EpochSlots
   , SlotNumber(..)
-  , SlotId(..)
+  , EpochAndSlotCount(..)
   , WithEpochSlots(WithEpochSlots)
-  , flattenSlotId
-  , unflattenSlotId
+  , toSlotNumber
+  , fromSlotNumber
   )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
@@ -203,11 +203,11 @@ mkHeaderExplicit
   -> ProtocolVersion
   -> SoftwareVersion
   -> Header
-mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
+mkHeaderExplicit pm prevHash difficulty epochSlots slotNumber sk dlgCert body pv sv
   = AHeader
     (Annotated pm ())
     (Annotated prevHash ())
-    (Annotated slotId ())
+    (Annotated slotNumber ())
     (Annotated difficulty ())
     pv
     sv
@@ -225,7 +225,7 @@ mkHeaderExplicit pm prevHash difficulty epochSlots slotId sk dlgCert body pv sv
 
   toSign    = ToSign prevHash proof epochAndSlotCount difficulty pv sv
 
-  epochAndSlotCount = unflattenSlotId epochSlots slotId
+  epochAndSlotCount = fromSlotNumber epochSlots slotNumber
 
 
 --------------------------------------------------------------------------------
@@ -255,7 +255,7 @@ headerToSign :: EpochSlots -> AHeader a -> ToSign
 headerToSign epochSlots h = ToSign
   (headerPrevHash h)
   (headerProof h)
-  (unflattenSlotId epochSlots $ headerSlot h)
+  (fromSlotNumber epochSlots $ headerSlot h)
   (headerDifficulty h)
   (headerProtocolVersion h)
   (headerSoftwareVersion h)
@@ -277,7 +277,7 @@ toCBORHeader es h =
     <> toCBOR (headerPrevHash h)
     <> toCBOR (headerProof h)
     <> (  encodeListLen 4
-       <> toCBOR (unflattenSlotId es $ headerSlot h)
+       <> toCBOR (fromSlotNumber es $ headerSlot h)
        <> toCBOR (headerGenesisKey h)
        <> toCBOR (headerDifficulty h)
        <> toCBOR (headerSignature h)
@@ -316,10 +316,10 @@ fromCBORAHeader epochSlots = do
         <*> do
               enforceSize "ConsensusData" 4
               (,,,)
-                -- Next, we decode a 'SlotId' into a 'SlotNumber': the `SlotId`
+                -- Next, we decode a 'EpochAndSlotCount' into a 'SlotNumber': the `EpochAndSlotCount`
                 -- used in 'AConsensusData' is encoded as a epoch and slot-count
                 -- pair.
-                <$> fmap (first (flattenSlotId epochSlots)) fromCBORAnnotated
+                <$> fmap (first (toSlotNumber epochSlots)) fromCBORAnnotated
                 <*> fromCBOR
                 <*> fromCBORAnnotated
                 <*> fromCBOR
@@ -533,7 +533,7 @@ data ToSign = ToSign
   { tsHeaderHash      :: !HeaderHash
   -- ^ Hash of previous header in the chain
   , tsBodyProof       :: !Proof
-  , tsSlot            :: !SlotId
+  , tsSlot            :: !EpochAndSlotCount
   , tsDifficulty      :: !ChainDifficulty
   , tsProtocolVersion :: !ProtocolVersion
   , tsSoftwareVersion :: !SoftwareVersion

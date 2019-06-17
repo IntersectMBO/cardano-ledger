@@ -4,19 +4,16 @@
 module Test.Cardano.Chain.Slotting.Gen
   ( genEpochNumber
   , genSlotNumber
-  , genLocalSlotIndex
   , genEpochSlots
   , genWithEpochSlots
   , genSlotCount
-  , genSlotId
-  , genConsistentSlotIdEpochSlots
+  , genEpochAndSlotCount
+  , genConsistentEpochAndSlotCountEpochSlots
   , feedPMEpochSlots
   )
 where
 
 import Cardano.Prelude
-
-import Formatting (build, sformat)
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -26,14 +23,9 @@ import Cardano.Chain.Slotting
   ( EpochNumber(..)
   , EpochSlots(..)
   , SlotNumber(..)
-  , LocalSlotIndex
   , SlotCount(..)
-  , SlotId(..)
+  , EpochAndSlotCount(..)
   , WithEpochSlots(WithEpochSlots)
-  , localSlotIndexMaxBound
-  , localSlotIndexMinBound
-  , mkLocalSlotIndex
-  , unLocalSlotIndex
   )
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -45,18 +37,6 @@ genEpochNumber = EpochNumber <$> Gen.word64 Range.constantBounded
 
 genSlotNumber :: Gen SlotNumber
 genSlotNumber = SlotNumber <$> Gen.word64 Range.constantBounded
-
-genLocalSlotIndex :: EpochSlots -> Gen LocalSlotIndex
-genLocalSlotIndex epochSlots = mkLocalSlotIndex'
-  <$> Gen.word16 (Range.constant lb ub)
- where
-  lb = unLocalSlotIndex localSlotIndexMinBound
-  ub = unLocalSlotIndex (localSlotIndexMaxBound epochSlots)
-  mkLocalSlotIndex' slot = case mkLocalSlotIndex epochSlots slot of
-    Left err -> panic $ sformat
-      ("The impossible happened in genLocalSlotIndex: " . build)
-      err
-    Right lsi -> lsi
 
 -- | Generator for slots-per-epoch. This will generate a positive number of
 -- slots per-epoch, and it will have an upper bound of @maxBound :: Word16 =
@@ -84,18 +64,23 @@ genWithEpochSlots gen pm es = WithEpochSlots es <$> gen pm es
 genSlotCount :: Gen SlotCount
 genSlotCount = SlotCount <$> Gen.word64 Range.constantBounded
 
-genSlotId :: EpochSlots -> Gen SlotId
-genSlotId epochSlots =
-  SlotId <$> genEpochNumber <*> genLocalSlotIndex epochSlots
+genEpochAndSlotCount :: EpochSlots -> Gen EpochAndSlotCount
+genEpochAndSlotCount epochSlots =
+  EpochAndSlotCount <$> genEpochNumber <*> genEpochSlotCount epochSlots
 
--- Generates a `SlotId` and a `EpochSlots` that does not exceed
--- the `Word64` maximum boundary of `flattenSlotId` when flattened.
-genConsistentSlotIdEpochSlots :: Gen (SlotId, EpochSlots)
-genConsistentSlotIdEpochSlots = do
+-- | Generate a 'SlotCount' constrained by the number of 'EpochSlots'
+genEpochSlotCount :: EpochSlots -> Gen SlotCount
+genEpochSlotCount epochSlots =
+  SlotCount <$> Gen.word64 (Range.linear 0 (unEpochSlots epochSlots - 1))
+
+-- Generates a `EpochAndSlotCount` and a `EpochSlots` that does not exceed
+-- the `Word64` maximum boundary of `flattenEpochAndSlotCount` when flattened.
+genConsistentEpochAndSlotCountEpochSlots :: Gen (EpochAndSlotCount, EpochSlots)
+genConsistentEpochAndSlotCountEpochSlots = do
   es  <- genEpochSlots
-  lsi <- genLocalSlotIndex es
+  lsi <- genEpochSlotCount es
   eI  <- genRestrictedEpochNumber $ maxBound `div` unEpochSlots es
-  pure (SlotId eI lsi, es)
+  pure (EpochAndSlotCount eI lsi, es)
  where
   genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
   genRestrictedEpochNumber bound =

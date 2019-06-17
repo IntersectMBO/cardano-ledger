@@ -7,17 +7,9 @@ where
 
 import Test.Cardano.Prelude
 
-import Test.Cardano.Chain.Update.Gen (genProtocolParameters, genSoftforkRule)
+import Test.Cardano.Chain.Update.Gen (genSoftforkRule)
 import Test.Options (TSGroup, TSProperty, eachOfTS)
 
-
---------------------------------------------------------------------------------
--- ProtocolParameters
---------------------------------------------------------------------------------
-
-ts_roundTripProtocolParameters :: TSProperty
-ts_roundTripProtocolParameters =
-  eachOfTS 1000 genProtocolParameters roundTripsAesonBuildable
 
 --------------------------------------------------------------------------------
 -- SoftforkRule

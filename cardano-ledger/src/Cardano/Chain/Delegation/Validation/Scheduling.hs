@@ -28,7 +28,7 @@ import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochNumber
   , SlotNumber(..)
-  , addSlotNumber
+  , addSlotCount
   )
 import Cardano.Crypto (ProtocolMagicId)
 
@@ -123,7 +123,7 @@ scheduleCertificate env st cert = do
 
   delegationEpoch = Certificate.epoch cert
 
-  activationSlot  = addSlotNumber (kSlotSecurityParam k) currentSlot
+  activationSlot  = addSlotCount (kSlotSecurityParam k) currentSlot
 
   delegatesThisSlot sd =
     sdSlot sd == activationSlot && sdDelegator sd == delegator

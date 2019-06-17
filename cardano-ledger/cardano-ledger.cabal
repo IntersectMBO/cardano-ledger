@@ -84,11 +84,11 @@ library
                        Cardano.Chain.Genesis.NonAvvmBalances
                        Cardano.Chain.Genesis.Spec
 
+                       Cardano.Chain.Slotting.EpochAndSlotCount
                        Cardano.Chain.Slotting.EpochNumber
                        Cardano.Chain.Slotting.EpochSlots
-                       Cardano.Chain.Slotting.LocalSlotIndex
                        Cardano.Chain.Slotting.SlotCount
-                       Cardano.Chain.Slotting.SlotId
+                       Cardano.Chain.Slotting.SlotNumber
 
                        Cardano.Chain.UTxO.Compact
                        Cardano.Chain.UTxO.GenesisUTxO
