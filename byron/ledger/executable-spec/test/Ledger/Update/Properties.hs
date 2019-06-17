@@ -19,7 +19,7 @@ import Control.State.Transition.Trace
   , traceSignals
   )
 
-import Ledger.Update (UPIREG, UProp, _maxBkSz, PParams, protocolParameters)
+import Ledger.Update (UPIREG, UProp, PParams, protocolParameters)
 import qualified Ledger.Update as Update
 
 -- TODO: factor out duplication. Put this in Transition.Generator module!
@@ -46,8 +46,8 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
 
   -- TODO does not update the pv
   cover 40
-    "at least 50% of the update proposals do not change the protocol version"
-    (0.30 <= ratio dontChangeProtocolVersion sample)
+    "at least 10% of the update proposals do not change the protocol version"
+    (0.10 <= ratio dontChangeProtocolVersion sample)
 
   -- TODO: OPTIONAL: we have an uniform distribution of issuers
   --
@@ -57,8 +57,21 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
 
   -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max block size
   cover 50
-    "at least 20% of the update proposals decrease the maximum block size"
-    (0.2 <= ratio (wrtCurrentProtocolParameters _maxBkSz Decreases) sample)
+    "at least 30% of the update proposals decrease the maximum block size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
+
+  cover 50
+    "at least 30% of the update proposals increase the maximum block size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Increases) sample)
+
+  cover 50
+    "at least 10% of the update proposals do not change the maximum block size"
+    (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
+
+  -- TODO: we might need to change 1 to the minimum allowed protocol value.
+  cover 30
+    "at least 5% of the update proposals set the maximum block size to 1"
+    (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
 
   -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max header size
 
@@ -139,5 +152,16 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
         check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
         check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
 
+
+    isSetTo
+      :: Eq v
+      => (PParams -> v)
+      -> v
+      -> Trace UPIREG
+      -> Int
+    isSetTo parameterValue value traceSample
+      = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
+      & filter (value ==)
+      & length
 
 data Change = Increases | Decreases | RemainsTheSame

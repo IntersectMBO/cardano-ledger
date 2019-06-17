@@ -861,44 +861,27 @@ instance HasTrace UPIREG where
                                   <*> pparamsGen
                                   <*> swVerGen
 
-    Gen.choice
-      [ -- Do not change the protocol version
-        UProp
-        <$> idGen
-        <*> pure vk
-        <*> pure pps
-        <*> pure pv
-        <*> pure sv'
-        <*> pure (Core.sign (skey vk) (pv, pps, sv'))
-        <*> stTagsGen
-        <*> mdtGen
-      , -- Do not change the software version (unless there are no software versions in @avs@)
-        do
+    Gen.frequency
+      [ -- Do not change the protocol version. We generate a lower fraction of
+        -- these kind of update proposals since we want to have more test cases
+        -- in which the protocol parameters change. Software updates only do
+        -- not offer as many possible variations as protocol parameter updates
+        -- do.
+        (10, generateUpdateProposalWith vk pps pv sv')
+      , -- Do not change the software version (unless there are no software
+        -- versions in @avs@).
+        (45, do
           -- Pick a current software version (if available)
           let makeSoftwareVersion (apName, (apVersion, _, _)) = SwVer apName apVersion
               avsList = Map.toList avs
-          swCurr <- if null avsList
-                    then pure $! sv'
-                    else makeSoftwareVersion <$> Gen.element avsList
-          UProp
-            <$> idGen
-            <*> pure vk
-            <*> pure pps'
-            <*> pure pv'
-            <*> pure swCurr
-            <*> pure (Core.sign (skey vk) (pv, pps, swCurr))
-            <*> stTagsGen
-            <*> mdtGen
-      , -- Change protocol and software version
-        UProp
-        <$> idGen
-        <*> pure vk
-        <*> pure pps'
-        <*> pure pv'
-        <*> pure sv'
-        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
-        <*> stTagsGen
-        <*> mdtGen
+          currentSoftwareVersion <- if null avsList
+                                    then pure $! sv'
+                                    else makeSoftwareVersion <$> Gen.element avsList
+
+          generateUpdateProposalWith vk pps' pv' currentSoftwareVersion
+        )
+      , -- Change protocol and software version.
+        (45, generateUpdateProposalWith vk pps' pv' sv')
       ]
 
     where
@@ -965,6 +948,18 @@ instance HasTrace UPIREG where
             = ((`SwVer` 0) . ApName)
             <$> Gen.filter ((`notElem` appNames) . ApName)
                            (Gen.list (Range.constant 0 12) Gen.ascii)
+
+
+      generateUpdateProposalWith vk pps pv sv
+        = UProp
+        <$> idGen
+        <*> pure vk
+        <*> pure pps
+        <*> pure pv
+        <*> pure sv
+        <*> pure (Core.sign (skey vk) (pv, pps, sv))
+        <*> stTagsGen
+        <*> mdtGen
 
       stTagsGen :: Gen (Set STag)
       stTagsGen =
