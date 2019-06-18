@@ -223,7 +223,7 @@ editors, so make sure that your editor honors the configuration in
 
 Additionally, we use
 [`stylish-haskell`](https://github.com/jaspervdj/stylish-haskell/) to format
-grouped imports & language pragmas. There is a
+grouped imports and language pragmas. There is a
 [`.stylish-haskell.yaml`](.stylish-haskell.yaml) configuration file that
 determines how `stylish-haskell` formats the code. Make sure that your editor
 enforces the rules defined by the `.stylish-haskell.yaml` configuration file.
