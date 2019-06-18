@@ -475,7 +475,7 @@ rejectDupSchedDelegs = property $ do
   let pfs = case applySTS (TRC (tr ^. traceEnv, lastState tr, [dcert])) of
         Left res -> res
         Right _ -> []
-  assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` pfs
+  assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` concat pfs
 
 -- | Classify the traces.
 tracesAreClassified :: Property

@@ -312,7 +312,7 @@ checkTrace
   :: forall s
    . (STS s)
   => Environment s
-  -> ReaderT (State s -> Signal s -> Either [PredicateFailure s] (State s)) IO (State s)
+  -> ReaderT (State s -> Signal s -> Either [[PredicateFailure s]] (State s)) IO (State s)
   -> IO ()
 checkTrace env act =
   void $ runReaderT act (\st sig -> applySTS (TRC(env, st, sig)))

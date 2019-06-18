@@ -150,35 +150,47 @@ applyRuleIndifferently jc r = flip runState [] $ foldF runClause r
     pure val
   runClause (SubTrans subCtx next) = do
     let (ss, sfails) = applySTSIndifferently subCtx
-    traverse_ (\a -> modify (a :)) $ wrapFailed <$> sfails
+    traverse_ (\a -> modify (a :)) $ wrapFailed <$> concat sfails
     next <$> pure ss
 
 applySTSIndifferently
   :: forall s rtype
    . (STS s, RuleTypeRep rtype)
   => RuleContext rtype s
-  -> (State s, [PredicateFailure s])
+  -> (State s, [[PredicateFailure s]])
 applySTSIndifferently ctx =
   successOrFirstFailure $ applySTSIndifferently' @s @rtype rTypeRep ctx
  where
-  successOrFirstFailure xs = fromMaybe (headOrError xs) $ find (null . snd) xs
-  applySTSIndifferently'
-    :: forall s' rtype'
-     . STS s'
-    => SRuleType rtype'
-    -> RuleContext rtype' s'
-    -> [(State s', [PredicateFailure s'])]
-  applySTSIndifferently' SInitial env =
-    map (applyRuleIndifferently env) initialRules
-  applySTSIndifferently' STransition jc =
-    map (applyRuleIndifferently jc) transitionRules
-  headOrError [] = error "applySTSIndifferently was called with an empty set of rules"
-  headOrError (x:_) = x
+  successOrFirstFailure xs =
+    case find (null . snd) xs of
+      Nothing ->
+        case xs of
+          [] -> error "applySTSIndifferently was called with an empty set of rules"
+          (s, _): _ -> (s, snd <$> xs )
+      Just (s, _) -> (s, [])
+
+applySTSIndifferently'
+  :: forall s' rtype'
+   . STS s'
+  => SRuleType rtype'
+  -> RuleContext rtype' s'
+  -> [(State s', [PredicateFailure s'])]
+applySTSIndifferently' SInitial env =
+  applyRuleIndifferently env <$> initialRules
+applySTSIndifferently' STransition jc =
+  applyRuleIndifferently jc <$> transitionRules
+
+applySTSIndifferentlyAndGetResultsForEachRule
+  :: forall s rtype
+   . (STS s, RuleTypeRep rtype)
+  => RuleContext rtype s
+  -> [(State s, [PredicateFailure s])]
+applySTSIndifferentlyAndGetResultsForEachRule = applySTSIndifferently' @s @rtype rTypeRep
 
 applySTS :: forall s rtype
    . (STS s, RuleTypeRep rtype)
   => RuleContext rtype s
-  -> Either [PredicateFailure s] (State s)
+  -> Either [[PredicateFailure s]] (State s)
 applySTS ctx = case applySTSIndifferently ctx of
   (st, []) -> Right st
   (_, pfs) -> Left pfs

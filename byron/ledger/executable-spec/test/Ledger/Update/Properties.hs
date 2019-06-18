@@ -12,9 +12,15 @@ import qualified Data.Bimap as Bimap
 import Data.Function ((&))
 import Data.List.Unique (count)
 import qualified Data.Map as Map
-import Hedgehog (Property, cover, forAll, property, success, withTests, evalEither)
+import Hedgehog (Property, cover, forAll, property, success, withTests, evalEither, (===))
 
-import Control.State.Transition (TRC(TRC), Environment, State, applySTS)
+import Control.State.Transition
+  ( Environment
+  , State
+  , TRC(TRC)
+  , applySTS
+  , applySTSIndifferentlyAndGetResultsForEachRule
+  )
 import Control.State.Transition.Generator (trace, classifyTraceLength, sigGen)
 import Control.State.Transition.Trace
   ( Trace
@@ -229,3 +235,4 @@ onlyValidSignalsAreGenerated = property $ do
     st' = lastState tr
   sig <- forAll (sigGen @UPIREG env st')
   void $ evalEither $ applySTS @UPIREG (TRC(env, st', sig))
+--  fmap snd (applySTSIndifferentlyAndGetResultsForEachRule @UPIREG (TRC(env, st', sig))) === [[]]
