@@ -11,8 +11,15 @@ import Control.Monad (void)
 import qualified Data.Bimap as Bimap
 import Data.Function ((&))
 import Data.List.Unique (count)
-import qualified Data.Map as Map
-import Hedgehog (Property, cover, forAll, property, success, withTests, evalEither, (===))
+import Hedgehog
+  ( Property
+  , cover
+  , evalEither
+  , forAll
+  , property
+  , success
+  , withTests
+  )
 
 import Control.State.Transition
   ( Environment
@@ -31,7 +38,7 @@ import Control.State.Transition.Trace
   , _traceEnv
   )
 
-import Ledger.Update (UPIREG, UProp, PParams, protocolParameters)
+import Ledger.Update (UPIREG, PParams, protocolParameters)
 import qualified Ledger.Update as Update
 
 -- TODO: factor out duplication. Put this in Transition.Generator module!
@@ -105,13 +112,6 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
 
   -- And this might get boring soon ...
 
-  -- TODO does not change the software version
-  -- PROBLEM! In the initial state @avs@ is empty, so we will never be able to let the application version unchanged!
-  -- So we need to remove this!
-  -- cover 10
-  --   "at least ... % of the update proposals do not change the software version"
-  --   (0.1 <= ratio dontChangeSoftwareVersion sample)
-
   where
     -- TODO: factor out this duplication once 570 is merged
     ratio :: Integral a
@@ -149,16 +149,6 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
       = protocolVersions traceSample
       & filter (currentProtocolVersion traceSample ==)
       & length
-
-    dontChangeSoftwareVersion :: Trace UPIREG -> Int
-    dontChangeSoftwareVersion traceSample
-      = fmap Update._upSwVer (traceSignals OldestFirst traceSample)
-      -- TODO: abstract `maybe False ((Update._svVer sv ==) . fst3) $ Map.lookup (Update._svName sv) avs` pattern awayy!
-      & filter (\sv -> maybe False ((Update._svVer sv ==) . fst3) $ Map.lookup (Update._svName sv) avs)
-      & length
-      where
-        fst3 (x, _, _) = x
-        avs = Update.avs . _traceInitState $ traceSample
 
     wrtCurrentProtocolParameters
       :: Ord v

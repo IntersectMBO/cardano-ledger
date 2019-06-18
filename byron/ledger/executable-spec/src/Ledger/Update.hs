@@ -49,7 +49,6 @@ import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 import Ledger.Core
   ( BlockCount(..)
   , HasHash
-  , KeyPair(KeyPair)
   , Owner(Owner)
   , Relation(..)
   , Slot(..)
@@ -68,9 +67,7 @@ import Ledger.Core
   , (⨃)
   , dom
   , hash
-  , keyPair
   , minusSlotMaybe
-  , sKey
   , skey
   , unSlot
   )
@@ -83,7 +80,7 @@ import Prelude hiding (min)
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { _maxBkSz  :: !Natural
+  { _maxBkSz :: !Natural
   -- ^ Maximum (abstract) block size in words
   , _maxHdrSz :: !Natural
   -- ^ Maximum (abstract) block header size in words
@@ -95,10 +92,9 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4
-  , _bkSlotsPerEpoch :: Core.SlotCount -- TODO: this should be removed since
-                                       -- the number of slots per epoch should
-                                       -- remain constant. ^ Number of slots in
-                                       -- an epoch
+  , _bkSlotsPerEpoch :: !Core.SlotCount
+  -- ^ Number of slots in an epoch.
+  -- TODO: this should be removed since the number of slots per epoch should remain constant.
   , _upTtl :: !Core.SlotCount
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
@@ -110,7 +106,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- endorse a given version to become candidate for adoption
   , _stableAfter :: !Core.BlockCount
   -- ^ Chain stability parameter
-  , _factorA :: !Int -- TODO: this should be a double
+  , _factorA :: !Int
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
@@ -717,22 +713,25 @@ type UPIState =
 emptyUPIState :: UPIState
 emptyUPIState =
   (( ProtVer 0 0 0
-   , PParams                    -- TODO: choose more sensible default values
-     { _maxBkSz = 100         -- max sizes chosen as non-zero to allow progress
+   , PParams                 -- TODO: choose more sensible default values
+     { _maxBkSz = 100        -- max sizes chosen as non-zero to allow progress
      , _maxHdrSz = 10
      , _maxTxSz = 50
      , _maxPropSz = 10
-     , _bkSgnCntT = 0.22    -- As defined in the spec.
-     , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this
+     , _bkSgnCntT = 0.22     -- As defined in the spec.
+     , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
+                             -- be a constant. Also the name slots-per-epoch is
+                             -- wrong.
      , _upTtl = 10
      , _scriptVersion = 0
-     , _cfmThd = 4 -- TODO: this should be a double
-     , _upAdptThd = 0.6 -- Value currently used in mainet
-     , _stableAfter = 5 -- TODO: the k stability parameter needs to be removed
-                        -- from here as well!
+     , _cfmThd = 4           -- TODO: this should be a double
+     , _upAdptThd = 0.6      -- Value currently used in mainet
+     , _stableAfter = 5      -- TODO: the k stability parameter needs to be
+                             -- removed from here as well!
 
-     -- To calculate the factors @A@ and @B@ we need to know the constant @C@
-     -- that we use to bound the size of a transaction.
+     -- To determine the factors @A@ and @B@ used in the calculation of the
+     -- transaction fees we need to know the constant @C@ that we use to bound
+     -- the size of a transaction.
      --
      -- We have that for all transactions @tx@
      --
@@ -757,13 +756,13 @@ emptyUPIState =
      -- = { Choosing A_C = C * A, B_C = B}
      -- > A_C + B_C * size (elaborate tx)
      --
-     -- Which means that given C, we should set:
+     -- Which means that given C /= 0, we should set:
      --
      -- > _factorA = A_C / C
      -- > _factorB = B_C
      --
      -- TODO: But if the derivation above is correct the value of B would be
-     -- quite large (if we take the used value in mainet, i.e.
+     -- quite large (if we take the value used in mainet, i.e.
      -- 155381000000000).
      --
      -- For now we choose arbitrary numbers here.
@@ -786,8 +785,8 @@ protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv
 protocolParameters :: UPIState -> PParams
 protocolParameters ((_, pps), _, _, _, _, _, _, _, _) = pps
 
-avs :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
-avs ((_, _), _, avs, _, _, _, _, _, _) = avs
+applicationVersions :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
+applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
 
 data UPIREG
 
@@ -835,25 +834,27 @@ instance Embed UPREG UPIREG where
 instance HasTrace UPIREG where
 
   initEnvGen = (,,)
-             <$> CoreGen.slotGen 0 10 -- current slot
-             <*> dmapGen              -- delegation map
-             <*> blockCountGen        -- k
+             <$> CoreGen.slotGen 0 10        -- Current slot
+             <*> dmapGen                     -- Delegation map
+             <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
     where
+      -- Generate an initial delegation map, using a constant number of genesis
+      -- keys, which is determined in this generator.
+      dmapGen :: Gen (Bimap Core.VKeyGenesis Core.VKey)
       dmapGen = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
-      vkgVkPairsGen = do
-        n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
-        let
-          vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
-          -- As delegation targets we choose twice the number of genesis keys.
-          -- Note that the genesis keys can delegate to themselves in the
-          -- generated delegation map.
-          vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
-        (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+        where
+          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+          vkgVkPairsGen = do
+            n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
+            let
+              vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
+              -- As delegation targets we choose twice the number of genesis keys.
+              -- Note that the genesis keys can delegate to themselves in the
+              -- generated delegation map.
+              vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
+            (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
 
-      -- TODO: use the generator in Core once PR 570 is merged.
-      blockCountGen = BlockCount <$> Gen.word64 (Range.linear 0 100)
-
-  sigGen (slot, dms, k) ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws)
+  sigGen (_slot, dms, _k) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -863,7 +864,7 @@ instance HasTrace UPIREG where
     Gen.frequency
       [ -- Do not change the protocol version. We generate a lower fraction of
         -- these kind of update proposals since we want to have more test cases
-        -- in which the protocol parameters change. Software updates only do
+        -- in which the protocol parameters change. Software only updates do
         -- not offer as many possible variations as protocol parameter updates
         -- do.
         (10, generateUpdateProposalWith vk pps pv sv')
@@ -888,7 +889,7 @@ instance HasTrace UPIREG where
       idGen = do
         -- Chose an increment for the maximum version seen in the update
         -- proposal id's.
-        inc <- Gen.integral (Range.constant 0 10)
+        inc <- Gen.integral (Range.constant 1 10)
         case Set.toDescList $ dom rpus of
           [] -> UpId <$> Gen.element [0 .. inc]
           (UpId maxId:_) -> pure $ UpId (maxId + inc)
@@ -896,46 +897,39 @@ instance HasTrace UPIREG where
       -- As issuer we chose a current delegate. The delegation map must not be
       -- empty for this signal generator to succeed.
       issuerGen :: Gen Core.VKey
-      issuerGen = if null delegates
-                  then error "There are no delegates to issue an update proposal."
-                  else Gen.element delegates
-
+      issuerGen =
+        if null delegates
+        then error "There are no delegates to issue an update proposal."
+        else Gen.element delegates
         where
           delegates = Set.toList (range dms)
 
       pparamsGen :: Gen PParams
       pparamsGen = ppsUpdateFrom pps
-        -- TODO: remember to generate update proposals where the maximum
-        -- proposal size falls below the minimum abstract size that a proposal
-        -- can have (this case shouldn't be generated often, but we want to
-        -- cover it)
 
       pvGen :: Gen ProtVer
       pvGen =
         nextAltVersion <$> Gen.element [ (_pvMaj pv + 1, 0)
                                        , (_pvMaj pv, _pvMin pv + 1)
                                        ]
-
-
         where
           -- Get the next alternate version, alt, so that @(maj, min, alt)@
           -- is not part of the registered protocol-update proposals
           -- (@rpus@).
           nextAltVersion :: (Natural, Natural) -> ProtVer
           nextAltVersion (maj, min) = dom (range rpus)
-                                 & Set.filter (protocolVersionEqualsMajMin)
-                                 & Set.map _pvAlt
-                                 & Set.toDescList
-                                 & nextVersion
+                                    & Set.filter protocolVersionEqualsMajMin
+                                    & Set.map _pvAlt
+                                    & Set.toDescList
+                                    & nextVersion
             where
-              nextVersion :: [Natural] -> ProtVer
-              nextVersion [] = ProtVer maj min 0
-              nextVersion (x:_) = ProtVer maj min (1 + x)
-
               protocolVersionEqualsMajMin :: ProtVer -> Bool
               protocolVersionEqualsMajMin pv' =
                 _pvMaj pv' == maj && _pvMin pv' == min
 
+              nextVersion :: [Natural] -> ProtVer
+              nextVersion [] = ProtVer maj min 0
+              nextVersion (x:_) = ProtVer maj min (1 + x)
 
       -- Generate a software version update.
       swVerGen :: Gen SwVer
@@ -944,22 +938,22 @@ instance HasTrace UPIREG where
         then genNewApp
         else Gen.choice [genANextVersion, genNewApp]
         where
-
-          nextVersions = Set.fromList $ zip appNames appNextVersions
+          possibleNextVersions :: [(ApName, ApVer)]
+          possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
             where
-
-              appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
-
-          -- Registered application names
-          appNames = Set.toList (dom avs)
+              nextVersions :: Set (ApName, ApVer)
+              nextVersions = Set.fromList $ zip currentAppNames appNextVersions
+                where
+                  currentAppNames :: [ApName]
+                  currentAppNames = Set.toList (dom avs)
+                  appNextVersions :: [ApVer]
+                  appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+              registeredNextVersions :: Set (ApName, ApVer)
+              registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
 
           -- Generate the next version for an existing application
           genANextVersion :: Gen SwVer
           genANextVersion = uncurry SwVer <$> Gen.element possibleNextVersions
-
-          possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
-
-          registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
 
           fst3 (x, _, _) = x
           snd3 (_, y, _) = y
@@ -967,23 +961,28 @@ instance HasTrace UPIREG where
           -- Generate a new application
           genNewApp :: Gen SwVer
           genNewApp
-            = ((`SwVer` 0) . ApName)
-            <$> Gen.filter ((`notElem` usedNames) . ApName)
-                           (Gen.list (Range.constant 0 12) Gen.ascii)
+            =  (`SwVer` 0) . ApName
+           <$> Gen.filter ((`notElem` usedNames) . ApName)
+                          (Gen.list (Range.constant 0 12) Gen.ascii)
             where
               usedNames = Set.map fst3 (range raus)
                           `union`
                           dom avs
 
-
-      generateUpdateProposalWith vk pps pv sv
+      generateUpdateProposalWith
+        :: VKey
+        -> PParams
+        -> ProtVer
+        -> SwVer
+        -> Gen UProp
+      generateUpdateProposalWith vk pps' pv' sv'
         = UProp
         <$> idGen
         <*> pure vk
-        <*> pure pps
-        <*> pure pv
-        <*> pure sv
-        <*> pure (Core.sign (skey vk) (pv, pps, sv))
+        <*> pure pps'
+        <*> pure pv'
+        <*> pure sv'
+        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
         <*> stTagsGen
         <*> mdtGen
 
@@ -992,7 +991,7 @@ instance HasTrace UPIREG where
         -- TODO: We need to benchmark this against @Gen.set@. This seems to be
         -- slightly faster.
         Set.fromList <$>
-          Gen.list (Range.linear 0 10) (Gen.list (Range.constant 0 10) Gen.ascii)
+          Gen.list (Range.linear 0 5) (Gen.list (Range.constant 0 10) Gen.ascii)
 
       mdtGen :: Gen Metadata
       mdtGen = pure Metadata
