@@ -211,6 +211,7 @@ and error may be required to make substantive changes!
     <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
   </a>
 </p>
+
 # Contributing
 
 ## Code formatting
