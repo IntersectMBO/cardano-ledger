@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Test.Cardano.Crypto.Gen
   (
   -- * Protocol Magic Generator
@@ -219,9 +217,7 @@ genHashRaw :: Gen (Hash Raw)
 genHashRaw = genAbstractHash $ Raw <$> gen32Bytes
 
 genTextHash :: Gen (Hash Text)
-genTextHash = do
-  sampleText <- Gen.text (Range.linear 0 10) Gen.alphaNum
-  pure (hash sampleText :: Hash Text)
+genTextHash = hash <$> Gen.text (Range.linear 0 10) Gen.alphaNum
 
 feedPM :: (ProtocolMagicId -> Gen a) -> Gen a
 feedPM genA = genA =<< genProtocolMagicId

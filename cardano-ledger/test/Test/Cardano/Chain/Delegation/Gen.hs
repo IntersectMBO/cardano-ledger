@@ -40,10 +40,11 @@ genCertificate pm =
   mkCertificate pm <$> genSafeSigner <*> genVerificationKey <*> genEpochNumber
 
 genCanonicalCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
-genCanonicalCertificateDistinctList pm = do
-  let pSKList = Gen.list (Range.linear 0 5) (genCanonicalCertificate pm)
+genCanonicalCertificateDistinctList pm =
   noSelfSigningCerts <$> Gen.filter allDistinct pSKList
  where
+  pSKList = Gen.list (Range.linear 0 5) (genCanonicalCertificate pm)
+
   allDistinct :: Eq a => [a] -> Bool
   allDistinct ls = length (nub ls) == length ls
 
@@ -51,10 +52,11 @@ genCanonicalCertificateDistinctList pm = do
   noSelfSigningCerts = filter (\x -> issuerVK x /= delegateVK x)
 
 genCertificateDistinctList :: ProtocolMagicId -> Gen [Certificate]
-genCertificateDistinctList pm = do
-  let pSKList = Gen.list (Range.linear 0 5) (genCertificate pm)
+genCertificateDistinctList pm =
   noSelfSigningCerts <$> Gen.filter allDistinct pSKList
  where
+  pSKList = Gen.list (Range.linear 0 5) (genCertificate pm)
+
   allDistinct :: Eq a => [a] -> Bool
   allDistinct ls = length (nub ls) == length ls
 

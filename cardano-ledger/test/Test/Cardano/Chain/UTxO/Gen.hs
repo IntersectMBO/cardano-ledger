@@ -123,10 +123,10 @@ genTxOutList :: Gen (NonEmpty TxOut)
 genTxOutList = Gen.nonEmpty (Range.linear 1 100) genTxOut
 
 genUTxOConfiguration :: Gen UTxOConfiguration
-genUTxOConfiguration = do
-  limit <- Gen.int (Range.constant 0 200)
-  addrs <- Gen.list (Range.linear 0 50) genAddress
-  return (UTxOConfiguration limit (S.fromList addrs))
+genUTxOConfiguration =
+  UTxOConfiguration
+    <$> Gen.int (Range.constant 0 200)
+    <*> (S.fromList <$> Gen.list (Range.linear 0 50) genAddress)
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
 genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
