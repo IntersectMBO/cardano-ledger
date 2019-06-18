@@ -230,4 +230,4 @@ enforces the rules defined by the `.stylish-haskell.yaml` configuration file.
 For Emacs, we provide [directory
 variables](https://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html)
 to set the `stylish-haskell` options for this project, so that
-`stylish-haskell` does not need to be enabled globally (see [`.dir-locals`](.dir-locals)).
+`stylish-haskell` does not need to be enabled globally (see [`.dir-locals.el`](.dir-locals.el)).
