@@ -96,8 +96,13 @@ genProtocolMagic =
     <$> (Annotated <$> genProtocolMagicId <*> pure ())
     <*> genRequiresNetworkMagic
 
+-- | Whilst 'ProtocolMagicId' is represented as a 'Word32' in cardano-ledger,
+-- in @cardano-sl@ it was an 'Int32'. In order to tolerate this, and since we
+-- don't care about testing compatibility with negative values, we only
+-- generate values between @0@ and @(maxBound :: Int32) - 1@, inclusive.
 genProtocolMagicId :: Gen ProtocolMagicId
-genProtocolMagicId = ProtocolMagicId <$> Gen.word32 Range.constantBounded
+genProtocolMagicId = ProtocolMagicId
+  <$> Gen.word32 (Range.constant 0 $ fromIntegral (maxBound :: Int32) - 1)
 
 genRequiresNetworkMagic :: Gen RequiresNetworkMagic
 genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]

@@ -9,6 +9,7 @@ module Test.Cardano.Chain.Block.Gen
   , genToSign
   , genBlock
   , genBlockWithEpochSlots
+  , genBoundaryValidationData
   )
 where
 
@@ -16,12 +17,15 @@ import Cardano.Prelude
 
 import Data.Coerce (coerce)
 import Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
   ( ABlockSignature(..)
   , Block
   , BlockSignature
   , Body
+  , BoundaryValidationData(..)
   , pattern Body
   , Header
   , HeaderHash
@@ -32,6 +36,7 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Delegation (mkCertificate)
+import Cardano.Chain.Genesis (GenesisHash(..))
 import Cardano.Chain.Slotting
   (EpochNumber(..), EpochSlots, WithEpochSlots(WithEpochSlots))
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
@@ -182,3 +187,21 @@ genBlock protocolMagicId epochSlots =
           (EpochNumber 0)
         )
         body
+
+genBoundaryValidationData :: Gen (BoundaryValidationData ())
+genBoundaryValidationData = do
+    (epoch, hash) <- genBVDHash
+    BoundaryValidationData
+      <$> pure 0
+      <*> pure hash
+      <*> pure epoch
+      <*> genChainDifficulty
+      <*> pure ()
+  where
+    genBVDHash = Gen.choice
+      [ ((,) <$> Gen.word64 (Range.constantFrom 10 1 100)
+             <*> (Right <$> genHeaderHash))
+      , ((,) <$> pure 0
+             <*> (Left . GenesisHash . coerce <$> genTextHash)
+        )
+      ]

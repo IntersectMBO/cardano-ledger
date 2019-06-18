@@ -90,7 +90,7 @@ import Cardano.Binary
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
-  (dropBoundaryConsensusDataRetainEpochNumber, dropBoundaryExtraHeaderData)
+  (fromCBORBoundaryConsensusData, dropBoundaryExtraHeaderData)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
@@ -438,7 +438,7 @@ headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 -- BoundaryHeader
 --------------------------------------------------------------------------------
 
-dropBoundaryHeader :: Decoder s (HeaderHash, Word64)
+dropBoundaryHeader :: Decoder s (HeaderHash, Word64, ChainDifficulty)
 dropBoundaryHeader = do
   enforceSize "BoundaryHeader" 5
   dropInt32
@@ -446,9 +446,9 @@ dropBoundaryHeader = do
   hh <- fromCBOR
   -- BoundaryBodyProof
   dropBytes
-  epoch <- dropBoundaryConsensusDataRetainEpochNumber
+  (epoch, difficulty) <- fromCBORBoundaryConsensusData
   dropBoundaryExtraHeaderData
-  pure (hh, epoch)
+  pure (hh, epoch, difficulty)
 
 -- | These bytes must be prepended when hashing raw boundary header data
 --
