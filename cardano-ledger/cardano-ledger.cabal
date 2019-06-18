@@ -36,6 +36,7 @@ library
                        Cardano.Chain.Epoch.File
                        Cardano.Chain.Epoch.Validation
                        Cardano.Chain.Genesis
+                       Cardano.Chain.MempoolPayload
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
                        Cardano.Chain.Ssc
