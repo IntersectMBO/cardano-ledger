@@ -211,3 +211,40 @@ and error may be required to make substantive changes!
     <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
   </a>
 </p>
+# Contributing
+
+## Code formatting
+
+We use [`editorconfig`](https://editorconfig.org/) to ensure consistency in the
+format of our Haskell code. There are editorconfig plugins for several text
+editors, so make sure that your editor honors the configuration in
+[`.editorconfig`](.editorconfig).
+
+Additionally, we use
+[`stylish-haskell`](https://github.com/jaspervdj/stylish-haskell/) to format
+grouped imports & language pragmas. There is a
+[`.stylish-haskell.yaml`](.stylish-haskell.yaml) configuration file that
+determines how `stylish-haskell` formats the code. Make sure that your editor
+enforces the rules defined by the `.stylish-haskell.yaml` configuration file.
+
+On Emacs, the `stylish-haskell` options can be set on a per-project basis using
+the [directory
+variables](https://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html):
+at the root of the project one can add these lines:
+
+```lisp
+((nil
+  (haskell-mode-stylish-haskell-path . "cls-stylish-haskell")
+  )
+ (haskell-mode
+  (haskell-stylish-on-save . t)))
+```
+
+where `cls-stylish-haskell` is a wrapper script that calls `stylish-haskell`
+passing the path to the location of the configuration file that it must use:
+
+```sh
+#!/bin/bash
+
+stylish-haskell -c ~/path/to/cardano-ledger-specs/stylish-haskell.yaml
+```
