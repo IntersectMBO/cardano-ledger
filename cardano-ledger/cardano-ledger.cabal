@@ -36,6 +36,7 @@ library
                        Cardano.Chain.Epoch.File
                        Cardano.Chain.Epoch.Validation
                        Cardano.Chain.Genesis
+                       Cardano.Chain.MempoolPayload
                        Cardano.Chain.ProtocolConstants
                        Cardano.Chain.Slotting
                        Cardano.Chain.Ssc
@@ -200,6 +201,10 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Genesis.Example
                        Test.Cardano.Chain.Genesis.Gen
                        Test.Cardano.Chain.Genesis.Json
+
+                       Test.Cardano.Chain.MempoolPayload.CBOR
+                       Test.Cardano.Chain.MempoolPayload.Example
+                       Test.Cardano.Chain.MempoolPayload.Gen
 
                        Test.Cardano.Chain.Ssc.CBOR
 

@@ -22,6 +22,7 @@ import qualified Test.Cardano.Chain.Delegation.Certificate
 import qualified Test.Cardano.Chain.Delegation.Model
 import qualified Test.Cardano.Chain.Epoch.File
 import qualified Test.Cardano.Chain.Genesis.Json
+import qualified Test.Cardano.Chain.MempoolPayload.CBOR
 import qualified Test.Cardano.Chain.Slotting.CBOR
 import qualified Test.Cardano.Chain.Slotting.Properties
 import qualified Test.Cardano.Chain.Slotting.Json
@@ -54,6 +55,7 @@ main =
         , const Test.Cardano.Chain.Epoch.File.tests
         , Test.Cardano.Chain.Elaboration.Delegation.tests
         , Test.Cardano.Chain.Genesis.Json.tests
+        , Test.Cardano.Chain.MempoolPayload.CBOR.tests
         , Test.Cardano.Chain.Slotting.CBOR.tests
         , Test.Cardano.Chain.Slotting.Properties.tests
         , Test.Cardano.Chain.Slotting.Json.tests
