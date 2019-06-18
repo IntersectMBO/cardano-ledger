@@ -2,11 +2,8 @@
 
 module Main where
 
-import           Criterion.Main
 import           System.IO                (isEOF)
 
-import           Control.Exception        (evaluate)
-import           Control.Monad            (forM)
 import           NonIntegral
 
 import qualified Data.Fixed               as FP

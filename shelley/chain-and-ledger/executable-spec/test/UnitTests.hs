@@ -5,7 +5,6 @@ module UnitTests (unitTests) where
 import           Control.Monad           (foldM)
 import           Data.Map.Strict         (Map)
 import qualified Data.Map.Strict         as Map
-import           Data.Ratio
 import qualified Data.Set                as Set
 import           Data.Maybe              (fromMaybe)
 
