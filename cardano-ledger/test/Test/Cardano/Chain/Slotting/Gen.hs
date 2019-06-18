@@ -1,5 +1,4 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Test.Cardano.Chain.Slotting.Gen
   ( genEpochNumber
@@ -77,10 +76,11 @@ genEpochSlotCount epochSlots =
 -- the `Word64` maximum boundary of `flattenEpochAndSlotCount` when flattened.
 genConsistentEpochAndSlotCountEpochSlots :: Gen (EpochAndSlotCount, EpochSlots)
 genConsistentEpochAndSlotCountEpochSlots = do
-  es  <- genEpochSlots
-  lsi <- genEpochSlotCount es
-  eI  <- genRestrictedEpochNumber $ maxBound `div` unEpochSlots es
-  pure (EpochAndSlotCount eI lsi, es)
+  epochSlots <- genEpochSlots
+  fmap (, epochSlots)
+    $   EpochAndSlotCount
+    <$> genRestrictedEpochNumber (maxBound `div` unEpochSlots epochSlots)
+    <*> genEpochSlotCount epochSlots
  where
   genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
   genRestrictedEpochNumber bound =

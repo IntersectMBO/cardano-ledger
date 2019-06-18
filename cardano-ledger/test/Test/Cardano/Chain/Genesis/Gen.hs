@@ -75,14 +75,14 @@ genCanonicalGenesisData pm =
     <*> genGenesisAvvmBalances
  where
   genBlockCount' :: Gen BlockCount
-  genBlockCount' = BlockCount <$> (Gen.word64 $ Range.linear 0 1000000000)
+  genBlockCount' = BlockCount <$> Gen.word64 (Range.linear 0 1000000000)
 
 genCanonicalGenesisDelegation :: ProtocolMagicId -> Gen GenesisDelegation
-genCanonicalGenesisDelegation pm = do
-  certificates <- genCanonicalCertificateDistinctList pm
-  case mkGenesisDelegation certificates of
-    Left  err    -> panic $ sformat build err
-    Right genDel -> pure genDel
+genCanonicalGenesisDelegation pm =
+  mkGenesisDelegation' <$> genCanonicalCertificateDistinctList pm
+ where
+  mkGenesisDelegation' =
+    either (panic . sformat build) identity . mkGenesisDelegation
 
 genGenesisData :: ProtocolMagicId -> Gen GenesisData
 genGenesisData pm =
@@ -97,9 +97,7 @@ genGenesisData pm =
     <*> genGenesisAvvmBalances
 
 genGenesisHash :: Gen GenesisHash
-genGenesisHash = do
-  th <- genTextHash
-  pure (GenesisHash (coerce th))
+genGenesisHash = GenesisHash . coerce <$> genTextHash
 
 genStaticConfig :: ProtocolMagicId -> Gen StaticConfig
 genStaticConfig pm = Gen.choice
@@ -112,11 +110,10 @@ genFakeAvvmOptions =
   FakeAvvmOptions <$> Gen.word Range.constantBounded <*> genLovelace
 
 genGenesisDelegation :: ProtocolMagicId -> Gen GenesisDelegation
-genGenesisDelegation pm = do
-  certificates <- genCertificateDistinctList pm
-  case mkGenesisDelegation certificates of
-    Left  err    -> panic $ sformat build err
-    Right genDel -> pure genDel
+genGenesisDelegation pm = mkGenesisDelegation' <$> genCertificateDistinctList pm
+ where
+  mkGenesisDelegation' =
+    either (panic . sformat build) identity . mkGenesisDelegation
 
 genGenesisInitializer :: Gen GenesisInitializer
 genGenesisInitializer =
@@ -128,14 +125,12 @@ genGenesisInitializer =
     <*> Gen.integral (Range.constant 0 10)
 
 genGenesisNonAvvmBalances :: Gen GenesisNonAvvmBalances
-genGenesisNonAvvmBalances = do
-  hmSize    <- Gen.int $ Range.linear 1 10
-  addresses <- Gen.list (Range.singleton hmSize) genAddress
-  ll        <- Gen.list (Range.singleton hmSize) genLovelace
-  pure $ GenesisNonAvvmBalances $ M.fromList $ zip addresses ll
+genGenesisNonAvvmBalances = GenesisNonAvvmBalances . M.fromList <$> Gen.list
+  (Range.linear 1 10)
+  ((,) <$> genAddress <*> genLovelace)
 
 genGenesisSpec :: ProtocolMagicId -> Gen GenesisSpec
-genGenesisSpec pm = mkGenSpec >>= either (panic . toS) pure
+genGenesisSpec pm = either (panic . toS) identity <$> mkGenSpec
  where
   mkGenSpec =
     mkGenesisSpec
@@ -164,17 +159,18 @@ genGenesisKeyHashes =
   GenesisKeyHashes <$> Gen.set (Range.constant 10 25) genKeyHash
 
 genSignatureEpochNumber :: Gen (Signature EpochNumber)
-genSignatureEpochNumber = do
-  hex <- Gen.utf8 (Range.constant 64 64) Gen.hexit
-  case CC.xsignature hex of
-    Left  err -> panic $ T.pack err
-    Right sig -> pure $ Signature sig
+genSignatureEpochNumber =
+  either (panic . T.pack) Signature
+    .   CC.xsignature
+    <$> Gen.utf8 (Range.constant 64 64) Gen.hexit
 
 genUTCTime :: Gen UTCTime
-genUTCTime = do
-  jday    <- Gen.integral (Range.linear 0 1000000)
-  seconds <- Gen.integral (Range.linear 0 86401)
-  pure $ UTCTime (ModifiedJulianDay jday) (secondsToDiffTime seconds)
+genUTCTime
+  = (\jday seconds ->
+      UTCTime (ModifiedJulianDay jday) (secondsToDiffTime seconds)
+    )
+    <$> Gen.integral (Range.linear 0 1000000)
+    <*> Gen.integral (Range.linear 0 86401)
 
 --------------------------------------------------------------------------------
 -- Helper Generators
@@ -182,4 +178,4 @@ genUTCTime = do
 
 customMapGen :: Ord k => Gen k -> Gen v -> Gen (Map k v)
 customMapGen keyGen valGen =
-  M.fromList <$> (Gen.list (Range.linear 1 10) $ (,) <$> keyGen <*> valGen)
+  M.fromList <$> Gen.list (Range.linear 1 10) ((,) <$> keyGen <*> valGen)

@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Test.Cardano.Chain.Block.Gen
   ( genBlockSignature
   , genHeaderHash
@@ -20,11 +22,11 @@ import Cardano.Chain.Block
   , Block
   , BlockSignature
   , Body
+  , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
-  , body
   , hashHeader
   , mkBlockExplicit
   , mkHeaderExplicit
@@ -77,28 +79,47 @@ genHeaderHash = coerce <$> genTextHash
 
 genBody :: ProtocolMagicId -> Gen Body
 genBody pm =
-  body
+  Body
     <$> genTxPayload pm
     <*> pure SscPayload
     <*> Delegation.genPayload pm
     <*> Update.genPayload pm
 
 genHeader :: ProtocolMagicId -> EpochSlots -> Gen Header
-genHeader pm epochSlots = do
-  sk <- genSigningKey
-  let
-    cert =
-      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochNumber 0)
-  mkHeaderExplicit pm
+genHeader protocolMagicId epochSlots =
+  mkHeaderExplicit'
     <$> genHeaderHash
     <*> genChainDifficulty
-    <*> pure epochSlots
     <*> genSlotNumber
-    <*> pure sk
-    <*> pure cert
-    <*> genBody pm
+    <*> genBody protocolMagicId
     <*> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
+    <*> genSigningKey
+ where
+  mkHeaderExplicit'
+    headerHash
+    chainDifficulty
+    slotNumber
+    body
+    protocolVersion
+    softwareVersion
+    signingKey =
+      mkHeaderExplicit
+        protocolMagicId
+        headerHash
+        chainDifficulty
+        epochSlots
+        slotNumber
+        signingKey
+        (mkCertificate
+          protocolMagicId
+          (noPassSafeSigner signingKey)
+          (toVerification signingKey)
+          (EpochNumber 0)
+        )
+        body
+        protocolVersion
+        softwareVersion
 
 genProof :: ProtocolMagicId -> Gen Proof
 genProof pm =
@@ -124,22 +145,40 @@ genToSign pm epochSlots =
 genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
 genBlockWithEpochSlots pm = do
   epochSlots <- genEpochSlots
-  b          <- genBlock pm epochSlots
-  pure $! WithEpochSlots epochSlots b
+  WithEpochSlots epochSlots <$> genBlock pm epochSlots
 
 genBlock :: ProtocolMagicId -> EpochSlots -> Gen Block
-genBlock pm epochSlots = do
-  sk <- genSigningKey
-  let
-    cert =
-      mkCertificate pm (noPassSafeSigner sk) (toVerification sk) (EpochNumber 0)
-  mkBlockExplicit pm
+genBlock protocolMagicId epochSlots =
+  mkBlockExplicit'
     <$> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
     <*> genHeaderHash
     <*> genChainDifficulty
-    <*> pure epochSlots
     <*> genSlotNumber
-    <*> pure sk
-    <*> pure cert
-    <*> genBody pm
+    <*> genBody protocolMagicId
+    <*> genSigningKey
+ where
+  mkBlockExplicit'
+    protocolVersion
+    softwareVersion
+    headerHash
+    chainDifficulty
+    slotNumber
+    body
+    signingKey =
+      mkBlockExplicit
+        protocolMagicId
+        protocolVersion
+        softwareVersion
+        headerHash
+        chainDifficulty
+        epochSlots
+        slotNumber
+        signingKey
+        (mkCertificate
+          protocolMagicId
+          (noPassSafeSigner signingKey)
+          (toVerification signingKey)
+          (EpochNumber 0)
+        )
+        body

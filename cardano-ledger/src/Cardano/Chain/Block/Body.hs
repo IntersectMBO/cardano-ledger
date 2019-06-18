@@ -4,11 +4,12 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Block.Body
   ( Body
-  , body
+  , pattern Body
   , ABody(..)
   , bodyTxs
   , bodyWitnesses
@@ -30,8 +31,8 @@ import qualified Cardano.Chain.Update.Payload as Update
 type Body = ABody ()
 
 -- | Constructor for 'Body'
-body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
-body tx ssc dlg upd = ABody tx ssc dlg upd
+pattern Body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
+pattern Body tx ssc dlg upd = ABody tx ssc dlg upd
 
 -- | 'Body' consists of payloads of all block components
 data ABody a = ABody

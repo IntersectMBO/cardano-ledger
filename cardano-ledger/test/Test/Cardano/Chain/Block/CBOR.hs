@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -30,11 +31,11 @@ import Cardano.Chain.Block
   , Block
   , BlockSignature
   , Body
+  , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
-  , body
   , dropBoundaryBody
   , dropBoundaryConsensusData
   , dropBoundaryHeader
@@ -290,7 +291,7 @@ exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
-exampleBody = body exampleTxPayload SscPayload dp Update.examplePayload
+exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
   where dp = Delegation.unsafePayload (take 4 exampleCertificates)
 
 exampleToSign :: ToSign
