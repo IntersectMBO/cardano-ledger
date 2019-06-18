@@ -36,15 +36,15 @@ import qualified Ledger.Update as Update
 
 -- TODO: factor out duplication. Put this in Transition.Generator module!
 upiregTracesAreClassified :: Property
-upiregTracesAreClassified = property $ do
+upiregTracesAreClassified = withTests 100 $ property $ do
   let (tl, step) = (500, 50)
   tr <- forAll (trace @UPIREG tl)
   classifyTraceLength tr tl step
   success
 
 upiregRelevantTracesAreCovered :: Property
-upiregRelevantTracesAreCovered = withTests 200 $ property $ do
-  sample <- forAll (trace @UPIREG 200)
+upiregRelevantTracesAreCovered = withTests 300 $ property $ do
+  sample <- forAll (trace @UPIREG 400)
 
   -- TODO:  increase the major version.
   cover 40
@@ -57,7 +57,7 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
     (0.25 <= ratio increaseMinor sample)
 
   -- TODO does not update the pv
-  cover 40
+  cover 30
     "at least 10% of the update proposals do not change the protocol version"
     (0.10 <= ratio dontChangeProtocolVersion sample)
 
@@ -93,7 +93,7 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
   -- TODO: we might need to change 1 to the minimum allowed protocol value.
-  cover 30
+  cover 20
     "at least 5% of the update proposals set the maximum block size to 1"
     (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
 
@@ -218,11 +218,9 @@ upiregRelevantTracesAreCovered = withTests 200 $ property $ do
 
 data Change = Increases | Decreases | RemainsTheSame
 
-
--- TODO: write a test to check that the generated signals are valid.
-
+-- The generated signals are valid.
+--
 -- TODO: this tests can be abstracted over any STS that can produce traces.
-
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated = withTests 300 $ property $ do
   tr <- forAll (trace @UPIREG 100)

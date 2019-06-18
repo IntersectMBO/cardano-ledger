@@ -134,10 +134,9 @@ genTrace ub env st0 aSigGen = do
   -- Note that the length of the resulting trace might be less than the
   -- generated value if invalid signals (according to some current state) are
   -- generated in 'loop'.
-  let mid = ub `div` 2
-  n <- Gen.frequency [ (5, integral $ Range.singleton 0)
-                     , (90, integral_ $ Range.linearFrom mid 1 ub)
-                     , (5, integral $ Range.singleton 0)]
+  n <- Gen.frequency [ (5, integral_  $ Range.singleton 0)
+                     , (85, integral_ $ Range.linear 1 ub)
+                     , (10, integral_  $ Range.singleton ub)]
 
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
   where

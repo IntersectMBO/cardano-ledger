@@ -911,15 +911,31 @@ instance HasTrace UPIREG where
         -- cover it)
 
       pvGen :: Gen ProtVer
-      pvGen = do
-        -- We want to generate a large number of alternative versions so that
-        -- we have a low probability of collisions (remember that we're trying
-        -- to generate only valid signals)
-        inc <- Gen.integral (Range.constant 0 10000)
-        Gen.element [ ProtVer (_pvMaj + 1) 0            (_pvAlt + inc)
-                    , ProtVer _pvMaj       (_pvMin + 1) (_pvAlt + inc)
-                    ]
-        where ProtVer {_pvMaj, _pvMin, _pvAlt} = pv
+      pvGen =
+        nextAltVersion <$> Gen.element [ (_pvMaj pv + 1, 0)
+                                       , (_pvMaj pv, _pvMin pv + 1)
+                                       ]
+
+
+        where
+          -- Get the next alternate version, alt, so that @(maj, min, alt)@
+          -- is not part of the registered protocol-update proposals
+          -- (@rpus@).
+          nextAltVersion :: (Natural, Natural) -> ProtVer
+          nextAltVersion (maj, min) = dom (range rpus)
+                                 & Set.filter (protocolVersionEqualsMajMin)
+                                 & Set.map _pvAlt
+                                 & Set.toDescList
+                                 & nextVersion
+            where
+              nextVersion :: [Natural] -> ProtVer
+              nextVersion [] = ProtVer maj min 0
+              nextVersion (x:_) = ProtVer maj min (1 + x)
+
+              protocolVersionEqualsMajMin :: ProtVer -> Bool
+              protocolVersionEqualsMajMin pv' =
+                _pvMaj pv' == maj && _pvMin pv' == min
+
 
       -- Generate a software version update.
       swVerGen :: Gen SwVer
