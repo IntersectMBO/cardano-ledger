@@ -49,16 +49,12 @@ overlayTransition = do
   let gkey'' = Map.lookup (bheaderSlot bhb) osched
   let vk     = bvkcold bhb
   case gkey'' of
-    -- | Praos schedule
     Nothing -> do
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
       cs' <- trans @OCERT $ TRC ((), cs, bh)
       pure cs'
-    -- | Found in OBFT overlay schedule
     Just gkey' -> do
       case gkey' of
-        -- | osched is a mapping `Slot |-> Maybe VKeyGenesis`, so `gkey''` can
-        -- be `Just Nothing`
         Nothing   -> failBecause NotActiveSlotOVERLAY
         Just gkey -> do
           let dmsKey' = Map.lookup gkey dms

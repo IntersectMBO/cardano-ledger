@@ -10,7 +10,6 @@ import           Numeric.Natural          (Natural)
 
 import           BlockChain
 import           Keys
-import           LedgerState
 import           OCert
 
 import           Control.State.Transition

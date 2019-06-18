@@ -39,6 +39,7 @@ library
                      STS.Overlay
                      STS.Pool
                      STS.PoolReap
+                     STS.Prtcl
                      STS.Rupd
                      STS.Snap
                      STS.Updn
