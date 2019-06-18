@@ -58,14 +58,16 @@ import Control.State.Transition
 import Control.State.Transition.Generator
   ( HasSizeInfo
   , HasTrace
-  , classifyTraceLength
   , classifySize
+  , classifyTraceLength
   , initEnvGen
   , isTrivial
   , nonTrivialTrace
+  , ratio
   , sigGen
   , suchThatLastState
   , trace
+  , traceLengthsAreClassified
   )
 import Control.State.Transition.Trace
   ( Trace
@@ -371,7 +373,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         (0.5 <= ratio nextEpochDelegations tr)
 
   -- 90% of the traces must contain at least 30% of self-delegations.
-  cover 90
+  cover 80
        "at least 30% of the certificates self delegate"
        (0.3 <= ratio selfDelegations tr)
 
@@ -381,12 +383,6 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         "at least 10% of the certificates delegate to the same key"
         (0.1 <= ratio multipleDelegations tr)
   where
-    ratio :: Integral a
-          => (Trace DBLOCK -> a)
-          -> Trace DBLOCK
-          -> Double
-    ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
-
     selfDelegations :: Trace DBLOCK -> Int
     selfDelegations tr = length
                        $ filter idDeleg
@@ -479,8 +475,4 @@ rejectDupSchedDelegs = property $ do
 
 -- | Classify the traces.
 tracesAreClassified :: Property
-tracesAreClassified = property $ do
-  let (tl, step) = (1000, 100)
-  tr <- forAll (trace @DELEG tl)
-  classifyTraceLength tr tl step
-  success
+tracesAreClassified = traceLengthsAreClassified @DELEG 1000 100

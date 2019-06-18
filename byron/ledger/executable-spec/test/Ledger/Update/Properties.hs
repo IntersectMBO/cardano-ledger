@@ -11,13 +11,13 @@ import Control.Monad (void)
 import qualified Data.Bimap as Bimap
 import Data.Function ((&))
 import Data.List.Unique (count)
+import Numeric.Natural (Natural)
 import Hedgehog
   ( Property
   , cover
   , evalEither
   , forAll
   , property
-  , success
   , withTests
   )
 
@@ -27,7 +27,13 @@ import Control.State.Transition
   , TRC(TRC)
   , applySTS
   )
-import Control.State.Transition.Generator (trace, classifyTraceLength, sigGen)
+import Control.State.Transition.Generator
+  ( ratio
+  , sigGen
+  , trace
+  , traceLengthsAreClassified
+  )
+import qualified Control.State.Transition.Generator as TransitionGenerator
 import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
@@ -43,27 +49,21 @@ import qualified Ledger.Update as Update
 
 -- TODO: factor out duplication. Put this in Transition.Generator module!
 upiregTracesAreClassified :: Property
-upiregTracesAreClassified = withTests 100 $ property $ do
-  let (tl, step) = (500, 50)
-  tr <- forAll (trace @UPIREG tl)
-  classifyTraceLength tr tl step
-  success
+upiregTracesAreClassified =
+  withTests 100 $ traceLengthsAreClassified @UPIREG 500 50
 
 upiregRelevantTracesAreCovered :: Property
 upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   sample <- forAll (trace @UPIREG 400)
 
-  -- TODO:  increase the major version.
   cover 40
     "at least 30% of the update proposals increase the major version"
     (0.25 <= ratio increaseMajor sample)
 
-  -- TODO: increase the minor version
   cover 40
     "at least 30% of the update proposals increase the minor version"
     (0.25 <= ratio increaseMinor sample)
 
-  -- TODO does not update the pv
   cover 30
     "at least 10% of the update proposals do not change the protocol version"
     (0.10 <= ratio dontChangeProtocolVersion sample)
@@ -75,10 +75,10 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   -- each issuer didn't produce less than a certain percentage of that. So for
   -- instance, if we have 4 genesis keys and a trace length of 100, then in an
   -- completely fair distribution of issuers we would expect to have 25 update
-  -- proposals per genesis key. For this example, in this test we would check
-  -- that in 50% of the generated traces, the deviation from the fair
-  -- distribution (25 update proposals per-key) is no greater than half its
-  -- expected value (25 * 0.5 = 12.5).
+  -- proposals per-genesis key. So in this test we would check that in 50% of
+  -- the generated traces, the deviation from the fair distribution (25 update
+  -- proposals per-key) is no greater than half its expected value (25 * 0.5 =
+  -- 12.5).
   cover 50
     "the distribution of the proposal issuers is roughly fair"
     ( safeMaximum (issuersDeviationsWrtUniformDistribution sample)
@@ -86,7 +86,6 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
       expectedNumberOfUpdateProposalsPerKey sample * 0.5
     )
 
-  -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max block size
   cover 50
     "at least 30% of the update proposals decrease the maximum block size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
@@ -99,7 +98,8 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum block size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
-  -- TODO: we might need to change 1 to the minimum allowed protocol value.
+  -- TODO: in the future we should change 1 to the minimum allowed protocol
+  -- value. But first we need to determine what that value is.
   cover 20
     "at least 5% of the update proposals set the maximum block size to 1"
     (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
@@ -113,17 +113,10 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   -- And this might get boring soon ...
 
   where
-    -- TODO: factor out this duplication once 570 is merged
-    ratio :: Integral a
-          => (Trace UPIREG -> a)
-          -> Trace UPIREG
-          -> Double
-    ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
-
     increaseMajor :: Trace UPIREG -> Int
     increaseMajor traceSample
       = protocolVersions traceSample
-      & fmap (Update._pvMaj)
+      & fmap Update._pvMaj
       & filter (currPvMaj traceSample  <)
       & length
 
@@ -133,14 +126,16 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
 
     -- We can take the current protocol version from the initial state of
     -- UPIREG, since this transition does not change the protocol version.
+    currPvMaj :: Trace UPIREG -> Natural
     currPvMaj = Update._pvMaj . Update.protocolVersion . _traceInitState
 
+    currentProtocolVersion :: Trace UPIREG -> Update.ProtVer
     currentProtocolVersion = Update.protocolVersion . _traceInitState
 
     increaseMinor :: Trace UPIREG -> Int
     increaseMinor traceSample
       = protocolVersions traceSample
-      & fmap (Update._pvMin)
+      & fmap Update._pvMin
       & filter (currPvMaj traceSample  <)
       & length
 
@@ -150,6 +145,9 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
       & filter (currentProtocolVersion traceSample ==)
       & length
 
+    -- Given a accessor function for the protocol parameters, count the number
+    -- of update proposals that change the parameter value in the way specified
+    -- by the 'Change' parameter.
     wrtCurrentProtocolParameters
       :: Ord v
       => (PParams -> v)
@@ -166,6 +164,8 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
         check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
         check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
 
+    -- Count the number of times in the sequence of update proposals that the
+    -- given protocol value is set to the given value.
     isSetTo
       :: Eq v
       => (PParams -> v)
@@ -192,7 +192,7 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
       :: Trace UPIREG
       -> [Double]
     issuersDeviationsWrtUniformDistribution traceSample
-      = fmap (Update._upIssuer) (traceSignals OldestFirst traceSample)
+      = fmap Update._upIssuer (traceSignals OldestFirst traceSample)
       & count
       -- Take the list of (issuer, count) pairs and keep the count only.
       & fmap snd
@@ -206,19 +206,9 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
 
     safeMaximum xs = if null xs then 0 else maximum xs
 
+-- | Change of a value w.r.t. some other value.
 data Change = Increases | Decreases | RemainsTheSame
 
--- The generated signals are valid.
---
--- TODO: this tests can be abstracted over any STS that can produce traces.
 onlyValidSignalsAreGenerated :: Property
-onlyValidSignalsAreGenerated = withTests 300 $ property $ do
-  tr <- forAll (trace @UPIREG 100)
-  let
-    env :: Environment UPIREG
-    env = _traceEnv tr
-
-    st' :: State UPIREG
-    st' = lastState tr
-  sig <- forAll (sigGen @UPIREG env st')
-  void $ evalEither $ applySTS @UPIREG (TRC(env, st', sig))
+onlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UPIREG 100

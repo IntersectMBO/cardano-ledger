@@ -1003,7 +1003,7 @@ instance HasTrace UPIREG where
 -- formal specification.
 --
 -- TODO: we can move this into a Generator's module, but first we need to
--- disentangle the dependencies. Moving this to Ledger.Update.Generators will
+-- disentangle the dependencies. Moving this to @Ledger.Update.Generators@ will
 -- cause a circular dependency. I think the rules need to be moved into their
 -- own modules.
 ppsUpdateFrom :: PParams -> Gen PParams
