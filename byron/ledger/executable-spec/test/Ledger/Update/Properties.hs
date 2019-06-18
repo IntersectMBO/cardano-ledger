@@ -7,7 +7,6 @@ module Ledger.Update.Properties
   , onlyValidSignalsAreGenerated
   ) where
 
-import Control.Monad (void)
 import qualified Data.Bimap as Bimap
 import Data.Function ((&))
 import Data.List.Unique (count)
@@ -15,21 +14,13 @@ import Numeric.Natural (Natural)
 import Hedgehog
   ( Property
   , cover
-  , evalEither
   , forAll
   , property
   , withTests
   )
 
-import Control.State.Transition
-  ( Environment
-  , State
-  , TRC(TRC)
-  , applySTS
-  )
 import Control.State.Transition.Generator
   ( ratio
-  , sigGen
   , trace
   , traceLengthsAreClassified
   )
@@ -38,7 +29,6 @@ import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(OldestFirst)
   , traceLength
-  , lastState
   , _traceInitState
   , traceSignals
   , _traceEnv
@@ -47,7 +37,6 @@ import Control.State.Transition.Trace
 import Ledger.Update (UPIREG, PParams, protocolParameters)
 import qualified Ledger.Update as Update
 
--- TODO: factor out duplication. Put this in Transition.Generator module!
 upiregTracesAreClassified :: Property
 upiregTracesAreClassified =
   withTests 100 $ traceLengthsAreClassified @UPIREG 500 50
@@ -86,31 +75,86 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
       expectedNumberOfUpdateProposalsPerKey sample * 0.5
     )
 
+  --------------------------------------------------------------------------------
+  -- Maximum block-size checks
+  --------------------------------------------------------------------------------
   cover 50
-    "at least 30% of the update proposals decrease the maximum block size"
+    "at least 30% of the update proposals decrease the maximum block-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
 
   cover 50
-    "at least 30% of the update proposals increase the maximum block size"
+    "at least 30% of the update proposals increase the maximum block-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Increases) sample)
 
   cover 50
-    "at least 10% of the update proposals do not change the maximum block size"
+    "at least 10% of the update proposals do not change the maximum block-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
   -- TODO: in the future we should change 1 to the minimum allowed protocol
   -- value. But first we need to determine what that value is.
   cover 20
-    "at least 5% of the update proposals set the maximum block size to 1"
+    "at least 5% of the update proposals set the maximum block-size to 1"
     (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
 
-  -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max header size
+  --------------------------------------------------------------------------------
+  -- Maximum header-size checks
+  --------------------------------------------------------------------------------
+  cover 50
+    "at least 30% of the update proposals decrease the maximum header-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Decreases) sample)
 
-  -- TODO: OPTIONAL: proportion of update proposals that increase/decrease max transaction size
+  cover 50
+    "at least 30% of the update proposals increase the maximum header-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Increases) sample)
 
-  -- TODO: OPTIONAL: proportion of update proposals that increase/decrease ... all the rest ...
+  cover 50
+    "at least 10% of the update proposals do not change the maximum header-size"
+    (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz RemainsTheSame) sample)
 
-  -- And this might get boring soon ...
+  cover 20
+    "at least 5% of the update proposals set the maximum header-size to 0"
+    (0.05 <= ratio (Update._maxHdrSz `isSetTo` 0) sample)
+
+  --------------------------------------------------------------------------------
+  -- Maximum transaction-size checks
+  --------------------------------------------------------------------------------
+  cover 50
+    "at least 30% of the update proposals decrease the maximum transaction-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Decreases) sample)
+
+  cover 50
+    "at least 30% of the update proposals increase the maximum transaction-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Increases) sample)
+
+  cover 50
+    "at least 10% of the update proposals do not change the maximum transaction-size"
+    (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz RemainsTheSame) sample)
+
+  cover 20
+    "at least 5% of the update proposals set the maximum transaction-size to 0"
+    (0.05 <= ratio (Update._maxTxSz `isSetTo` 0) sample)
+
+  --------------------------------------------------------------------------------
+  -- Maximum proposal-size checks
+  --------------------------------------------------------------------------------
+  cover 50
+    "at least 30% of the update proposals decrease the maximum proposal-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Decreases) sample)
+
+  cover 50
+    "at least 30% of the update proposals increase the maximum proposal-size"
+    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Increases) sample)
+
+  cover 50
+    "at least 10% of the update proposals do not change the maximum proposal-size"
+    (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz RemainsTheSame) sample)
+
+  cover 20
+    "at least 5% of the update proposals set the maximum proposal-size to 0"
+    (0.05 <= ratio (Update._maxPropSz `isSetTo` 0) sample)
+
+  -- NOTE: after empirically determining the checks above are sensible, we can
+  -- add more coverage tests for the other protocol parameters.
 
   where
     increaseMajor :: Trace UPIREG -> Int
