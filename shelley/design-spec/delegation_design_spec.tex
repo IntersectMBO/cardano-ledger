@@ -331,6 +331,12 @@ We should provide addresses that can hold value, but do not contribute
 to the PoS protocol. Those might be appropriate for use by exchanges,
 which will hold large amounts of value, without legally owning it.
 
+\subsubsection{Multi-Sig Delegation}
+\label{multi-sig-delegation}
+
+We should provide the ability to declare that delegating the stake rights for
+certain funds should require multiple signatures.
+
 \subsection{Security Requirements}
 \label{security-requirements}
 
@@ -718,20 +724,62 @@ delegation:
 \subsection{Address Structure}
 \label{address-structure}
 
+To separate the concerns of moving funds and exercising rights to participate in
+the protocol, we discern between different types of addresses:
+\begin{description}
+\item[Value Addresses] are used to transfer value. Whenever a transaction spends
+  a UTxO entry, it has to contain a witness for the value address of that UTxO
+  entry.
+
+  In its simplest form, a value address is associated with a payment key pair
+  \((skp, vkp)\). The address then consists of a cryptographic hash
+  \(\hash{vkp}\) of the verification key \(vkp\). A witness for such an address
+  contains the verification key \(vkp\) and a signature of the signing key
+  \(skp\).
+
+  We also support value addresses that need signatures from multiple parties.
+  Those also contain a hash, not of a verification key, but of a validator
+  script. The script can be written either in Plutus, or in a mini-language for
+  expressing multi-sig conditions. In the latter case, the script will be
+  interpreted natively by Cardano\footnote{Note that the encoding of a script
+    that is hashed should include a tag for the language, so that the same
+    script text in different languages will result in different hashes.}.
+
+  A witness for a multi-sig value address contains the validator script matching
+  the hash in the address, and a set of single key witnesses (i.e., pairs of
+  verification keys and signatures of corresponding signing keys). The validator
+  script will determine whether those signatures are sufficient for the funds to
+  be spent. For details, and an example language, see~\citep{multi-sig-scripts}.
+
+  Note that this form of addresses, which in Shelley will only be used to
+  support multi-sig, is also a natural step in the direction of supporting full
+  Plutus scripts in Cardano, which is planned for Goguen.
+
+\item[Stake Addresses] are used to delegate stake, and to claim rewards for
+  participating in the protocol.
+
+  Just like value addresses, stake addresses can take the two forms of either the
+  hash of a verification key, or the hash of a validation script.
+
+\item[Addresses] combine value addresses and stake addresses. Each UTxO entry
+  belongs to an address that determines who is eligible to spend the contained
+  funds, and who (if anyone) can exercise the stake rights associated with those
+  funds.
+
+\end{description}
+
+
 Shelley will introduce four different types of addresses: \emph{base
 addresses}, \emph{pointer addresses}, \emph{enterprise addresses}, and
 \emph{reward account addresses}. Each address has the form
-\[
-\hash{vkp} \mathbin{||} \beta
-\]
-where \(\hash{vkp}\) is a cryptographic hash of the public spending
-key, and \(||\) denotes string concatenation. The types of addresses
-differ in the \emph{staking object} \(\beta\), which carries the
-staking information.
-
-A staking object is used to identify a \emph{staking key} (see
-Section~\ref{overview-of-delegation}) that has to be used to exercise the
-staking rights for funds in the address.
+\begin{equation}
+\mathcal{A} = \mathcal{A}_v \mathbin{||} \beta
+\label{eq:address-general}
+\end{equation}
+where \(\mathcal{A}_v\) is a value address, and \(||\) denotes string
+concatenation. The types of addresses differ in the \emph{staking object}
+\(\beta\), which carries the information of which stake address (if any) belongs
+to this address.
 
 In addition to those new addresses, the system will continue to support
 \emph{bootstrap addresses} as introduced in Byron. Only the new base
@@ -740,28 +788,26 @@ and pointer addresses carry stake rights however.
 \subsubsection{Base Address}
 \label{base-address}
 
-A base address directly specifies the staking key that should
-control the stake for the address. It references a staking key
-\((sks, vks)\) by its verification key hash.
+A base address directly specifies the stake address that should
+control the stake for the address,
 \[
-\beta = \mathcal{H}(vks)\,.
+\beta = \mathcal{A}_s\,,
 \]
-The staking rights associated with funds held in this address may be
-exercised by the owner of \(sks\).
+where \(\mathcal{A}_s\) is a stake address.
 
 Base addresses can be used in transactions without registering the
-staking key in advance. The stake rights can only be exercised by
-registering the stake key and delegating to a stake pool. Once the
-stake key is registered the stake rights can be exercised for base
+stake address in advance. The stake rights can only be exercised by
+registering the stake address and delegating to a stake pool. Once the
+stake address is registered, the stake rights can be exercised for base
 addresses used in transactions before or after the key registration.
 
 \subsubsection{Pointer Address}
 \label{pointer-address}
 
-A pointer address indirectly specifies the staking key that should
-control the stake for the address. It references a stake key by a
-\emph{stake key pointer} which is a location on the blockchain of the
-stake key registration certificate for that key. See
+A pointer address indirectly specifies the stake address that should
+control the stake for the address. It references a stake address by a
+\emph{stake address pointer} which is a location on the blockchain of the
+stake address registration certificate for that address. See
 \cref{certificates-on-the-blockchain} for details on certificates on the
 blockchain.
 
@@ -773,24 +819,24 @@ where \(N_\text{block}\) is the index of a block in the chain,
 \(N_\text{tx}\) is the index of a transaction within that block and
 \(N_\text{reg}\) is the index of the registration certificate within
 the list of certificates in the transaction. This identified
-transaction should have a stake key registration certificate at
+transaction should have a stake address registration certificate at
 index \(N_\text{reg}\) in its list of certificates. The certificate
-specifies a verification key \(vks\). The staking rights associated
-with funds held in this address may be exercised by the owner of the
-corresponding signing key \(sks\).
+specifies a stake address \(\mathcal{A}_s\). The staking rights associated
+with funds held in this address may be exercised by providing witnesses for
+\(\mathcal{A}_s\).
 
 Pointer addresses can be used in transactions even if their target is
-not an \emph{active} stake key registration. This covers the case that
+not an \emph{active} stake address registration. This covers the case that
 the key was unregistered after (or indeed before) the transaction, and
 also covers pointers to targets that are plainly invalid. The reason for
 allowing such invalid targets is so that nodes need only track the
-currently active stake keys.
+currently active stake addresses.
 
 In such cases however the stake rights cannot be exercised. To exercise
-the stake rights the stake key must be registered in advance of using
-the pointer address in the output of a transaction, and the stake key
+the stake rights the stake address must be registered in advance of using
+the pointer address in the output of a transaction, and the stake address
 must remain registered while the pointer address holds funds. This is a
-difference compared to base addresses where the stake key can be
+difference compared to base addresses where the stake address can be
 registered after the base address is used in a transaction.
 
 The primary advantage of pointer addresses is that they can be
@@ -800,7 +846,7 @@ the hash used in base addresses.
 
 \paragraph{Pointer Addresses and Rollback}
 There is a subtlety with pointer addresses: it might happen that a
-stake key registration certificate that is referenced by a pointer
+stake address registration certificate that is referenced by a pointer
 address might be lost due to a rollback. This should not lead to
 a loss of funds. To prevent that, the system should
 consider pointer addresses with an invalid pointer to be valid for the
@@ -826,7 +872,7 @@ The staking object for enterprise addresses is a fixed nullary constant
 \[
 \beta = \epsilon\,.
 \]
-Since enterprise addresses are not associated with any staking key, they
+Since enterprise addresses are not associated with any stake address, they
 are automatically excluded from the mechanisms that influence the slot
 leadership schedule.
 
@@ -850,21 +896,25 @@ properties:
 \item They use account-style accounting, not UTxO-style.
 \item They can not receive funds via transactions. Instead, their
   balance is only increased when rewards are distributed.
-\item They are not associated with a spending key. Instead, there is a
-  one-to-one correspondence between registered staking keys and reward
+\item They do not contain a value address. Instead, there is a
+  one-to-one correspondence between registered stake addresses and reward
   account addresses (see \cref{fig:er-relationship-delegation}). Whenever funds
-  are withdrawn from a reward account address, its staking key is used in the
-  witness.
+  are withdrawn from a reward account address, a witness for its stake address
+  has to be provided.
 \end{itemize}
 
-A reward address has the form
+A reward account address has the form
 \[
-\hash{vks} \mathbin{||} \beta
+\mathcal{A}_s \mathbin{||} \beta
 \]
-where \(\hash{vks}\) is a cryptographic hash of the public staking key
-of the address. This key is used whenever funds are withdrawn from the
-address. Furthermore, stake associated with funds in the address
-contributes to the stake of this key.
+where \(\mathcal{A}_s\) is a stake address\footnote{Strictly speaking, this is a
+deviation from the general form of an address in \cref{eq:address-general},
+where the first part of an address is always a value address, not a stake
+address. For reward account addresses, \(\mathcal{A}_s\) takes the part of both
+the value address and the stake address.}. Withdrawing funds from the reward
+account address requires a witness for this stake address. Furthermore, stake
+associated with funds in the address contribute to the stake of this stake
+address.
 
 Just as in the case of enterprise addresses, the staking object for a reward
 address does not need to carry any information, so it is set to a
@@ -873,8 +923,8 @@ nullary constant (though of course a different one):
 \beta = \rho, \quad \rho \neq \epsilon
 \]
 
-The terms \emph{reward address} and \emph{reward account} will be used
-interchangeably throughout this document.
+The terms \emph{reward address}, \emph{reward account}, and \emph{reward account
+  address} will be used interchangeably throughout this document.
 % And so from here on we don't need to keep saying "reward account address"!
 
 \subsubsection{Bootstrap Address}
@@ -3827,6 +3877,9 @@ In the following, we describe how the requirements listed in
 \item[\cref{neutral-addresses} Neutral Addresses] The design includes
   enterprise addresses (\cref{enterprise-address}), which are
   disregarded by the PoS protocol.
+
+\item[\cref{multi-sig-delegation} Multi-Sig Delegation] \todo{describe how we
+  add multi-sig delegation.}
 
 \item[\cref{sybil-attack-protection-at-stake-pool-level} Sybil Attack
   Protection at Stake Pool Level] Stake pool owners are expected to
