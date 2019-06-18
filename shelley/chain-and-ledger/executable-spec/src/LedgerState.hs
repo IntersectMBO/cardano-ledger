@@ -108,6 +108,7 @@ module LedgerState
   , NewEpochState(..)
   , NewEpochEnv(..)
   , overlaySchedule
+  , getGKeys
   ) where
 
 import           Control.Monad           (foldM)
@@ -316,6 +317,12 @@ data NewEpochState =
   , nesPd    :: PoolDistr
   , nesOsched :: Map.Map Slot (Maybe VKeyGenesis)
   } deriving (Show, Eq)
+
+getGKeys :: NewEpochState -> Set VKeyGenesis
+getGKeys nes = Map.keysSet dms
+  where NewEpochState _ _ _ _ es _ _ _ = nes
+        EpochState _ _ ls _ = es
+        LedgerState _ (DPState (DState _ _ _ _ (Dms dms)) _) _ _ _ _ = ls
 
 data NewEpochEnv =
   NewEpochEnv {

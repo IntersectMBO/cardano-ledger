@@ -45,7 +45,10 @@ chainTransition :: TransitionRule CHAIN
 chainTransition = do
   TRC (sNow, (nes, etaV, etaC, h, sL), block@(Block bh _)) <- judgmentContext
 
-  let nes'@(NewEpochState _ eta0 _ bCur es _ _pd osched) = nes -- TODO: converge BHEAD
+  let gkeys = getGKeys nes
+  nes' <- trans @BHEAD $ TRC((etaC, gkeys), nes, bh)
+
+  let NewEpochState _ eta0 _ bCur es _ _pd osched = nes'
   let EpochState _ _ ls pp = es
   let LedgerState _ (DPState (DState _ _ _ _ _dms) (PState _ _ _ cs)) _ _ _ _ = ls
 
