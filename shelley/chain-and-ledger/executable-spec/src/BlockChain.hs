@@ -8,6 +8,7 @@ module BlockChain
   , bHeaderSize
   , bBodySize
   , slotToSeed
+  , hBbsize
     -- accessor functions
   , bheader
   , bhbody
@@ -171,3 +172,6 @@ seedL = mkNonce 1
 
 bvkcold :: BHBody -> Keys.VKey
 bvkcold bhb = ocertVkCold $ bheaderOCert bhb
+
+hBbsize :: BHBody -> Natural
+hBbsize = bsize

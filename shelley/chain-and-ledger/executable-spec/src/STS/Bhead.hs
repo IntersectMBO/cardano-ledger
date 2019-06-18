@@ -1,61 +1,66 @@
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module STS.Bhead
   ( BHEAD
   ) where
 
 import qualified Data.Map.Strict          as Map
-
+import qualified Data.Set                 as Set
 import           Crypto.Hash              (hash)
 import qualified Data.ByteString.Char8    as BS
 
+import           BaseTypes
 import           BlockChain
 import           Keys
+import           LedgerState
 import           OCert
 import           PParams
 import           Slot
 
 import           Delegation.Certificates  (StakePools (..))
 
+import           STS.NewEpoch
+import           STS.Rupd
+
 import           Control.State.Transition
 
 data BHEAD
 
 instance STS BHEAD where
-  type State BHEAD = (HashHeader, Slot)
+  type State BHEAD = NewEpochState
   type Signal BHEAD = BHeader
-  type Environment BHEAD = (Slot, PParams, StakePools)
-  data PredicateFailure BHEAD = WrongPreviousHashBHEAD
-                            | SlotTooEarlyBHEAD
-                            | SlotTooLateBHEAD
-                            | InvalidHeaderKESBHEAD
-                            | HeaderSizeTooLargeBHEAD
-                            | KeyNotRegisteredBHEAD
-                            | KESPeriodInvalidBHEAD
+  type Environment BHEAD = (Seed, Set.Set VKeyGenesis)
+  data PredicateFailure BHEAD = HeaderSizeTooLargeBHEAD
+                              | BlockSizeTooLargeBHEAD
+                              | NewEpochFailure (PredicateFailure NEWEPOCH)
+                              | RupdFailure (PredicateFailure RUPD)
                                 deriving (Show, Eq)
-  initialRules = [pure (HashHeader $ hash (BS.pack "emptyBHeader"), Slot 0)]
+  initialRules = []
   transitionRules = [bheadTransition]
 
 bheadTransition :: TransitionRule BHEAD
 bheadTransition = do
-  TRC ((sNow, pp, StakePools stPools), (h, sL), bh@(BHeader bhb sigma)) <-
-    judgmentContext
+  TRC ( (etaC, gkeys)
+      , nes@(NewEpochState _ _ bprev _ es ru _ _)
+      , bh@(BHeader bhb _)) <- judgmentContext
   let slot = bheaderSlot bhb
-  sL >= slot ?! SlotTooEarlyBHEAD
-  slot > sNow ?! SlotTooLateBHEAD
-  h /= bheaderPrev bhb ?! WrongPreviousHashBHEAD
+  let EpochState _ _ _ pp = es
+
   fromIntegral (bHeaderSize bh) > _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
-  let vkHot = ocertVkHot $ bheaderOCert bhb
-  let hkEntry = Map.lookup (hashKey vkHot) stPools
-  case hkEntry of
-    Nothing -> do
-      failBecause KeyNotRegisteredBHEAD
-      pure (h, sL)
-    Just s0 -> do
-      let KESPeriod kps0 = kesPeriod s0
-      let KESPeriod kpslot = kesPeriod slot
-      kps0 > kpslot ?! KESPeriodInvalidBHEAD
-      let t = kpslot - kps0
-      not (verifyKES vkHot bhb sigma t) ?! InvalidHeaderKESBHEAD
-      pure (bhHash bh, slot)
+  fromIntegral (hBbsize bhb) > _maxBBSize pp ?! BlockSizeTooLargeBHEAD
+
+  nes' <- trans @NEWEPOCH
+    $ TRC((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
+
+  ru' <- trans @RUPD $ TRC((bprev, es), ru, slot)
+  let nes'' = nes' { nesRu = ru' }
+  pure nes''
+
+instance Embed NEWEPOCH BHEAD where
+  wrapFailed = NewEpochFailure
+
+instance Embed RUPD BHEAD where
+  wrapFailed = RupdFailure
