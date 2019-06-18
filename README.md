@@ -227,24 +227,7 @@ grouped imports & language pragmas. There is a
 determines how `stylish-haskell` formats the code. Make sure that your editor
 enforces the rules defined by the `.stylish-haskell.yaml` configuration file.
 
-On Emacs, the `stylish-haskell` options can be set on a per-project basis using
-the [directory
-variables](https://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html):
-at the root of the project one can add these lines:
-
-```lisp
-((nil
-  (haskell-mode-stylish-haskell-path . "cls-stylish-haskell")
-  )
- (haskell-mode
-  (haskell-stylish-on-save . t)))
-```
-
-where `cls-stylish-haskell` is a wrapper script that calls `stylish-haskell`
-passing the path to the location of the configuration file that it must use:
-
-```sh
-#!/bin/bash
-
-stylish-haskell -c ~/path/to/cardano-ledger-specs/stylish-haskell.yaml
-```
+For Emacs, we provide [directory
+variables](https://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html)
+to set the `stylish-haskell` options for this project, so that
+`stylish-haskell` does not need to be enabled globally.
