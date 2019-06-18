@@ -169,23 +169,16 @@ applySTSIndifferently ctx =
           (s, _): _ -> (s, snd <$> xs )
       Just (s, _) -> (s, [])
 
-applySTSIndifferently'
-  :: forall s' rtype'
-   . STS s'
-  => SRuleType rtype'
-  -> RuleContext rtype' s'
-  -> [(State s', [PredicateFailure s'])]
-applySTSIndifferently' SInitial env =
-  applyRuleIndifferently env <$> initialRules
-applySTSIndifferently' STransition jc =
-  applyRuleIndifferently jc <$> transitionRules
-
-applySTSIndifferentlyAndGetResultsForEachRule
-  :: forall s rtype
-   . (STS s, RuleTypeRep rtype)
-  => RuleContext rtype s
-  -> [(State s, [PredicateFailure s])]
-applySTSIndifferentlyAndGetResultsForEachRule = applySTSIndifferently' @s @rtype rTypeRep
+  applySTSIndifferently'
+    :: forall s' rtype'
+     . STS s'
+    => SRuleType rtype'
+    -> RuleContext rtype' s'
+    -> [(State s', [PredicateFailure s'])]
+  applySTSIndifferently' SInitial env =
+    applyRuleIndifferently env <$> initialRules
+  applySTSIndifferently' STransition jc =
+    applyRuleIndifferently jc <$> transitionRules
 
 applySTS :: forall s rtype
    . (STS s, RuleTypeRep rtype)

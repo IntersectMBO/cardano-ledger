@@ -19,7 +19,6 @@ import Control.State.Transition
   , State
   , TRC(TRC)
   , applySTS
-  , applySTSIndifferentlyAndGetResultsForEachRule
   )
 import Control.State.Transition.Generator (trace, classifyTraceLength, sigGen)
 import Control.State.Transition.Trace
@@ -225,7 +224,7 @@ data Change = Increases | Decreases | RemainsTheSame
 -- TODO: this tests can be abstracted over any STS that can produce traces.
 
 onlyValidSignalsAreGenerated :: Property
-onlyValidSignalsAreGenerated = property $ do
+onlyValidSignalsAreGenerated = withTests 300 $ property $ do
   tr <- forAll (trace @UPIREG 100)
   let
     env :: Environment UPIREG
@@ -235,4 +234,3 @@ onlyValidSignalsAreGenerated = property $ do
     st' = lastState tr
   sig <- forAll (sigGen @UPIREG env st')
   void $ evalEither $ applySTS @UPIREG (TRC(env, st', sig))
---  fmap snd (applySTSIndifferentlyAndGetResultsForEachRule @UPIREG (TRC(env, st', sig))) === [[]]

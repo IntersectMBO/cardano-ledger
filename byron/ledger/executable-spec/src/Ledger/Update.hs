@@ -23,7 +23,6 @@ where
 
 import Control.Arrow ((&&&))
 import Control.Lens
-import Control.Monad (mzero)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
@@ -922,21 +921,28 @@ instance HasTrace UPIREG where
                     ]
         where ProtVer {_pvMaj, _pvMin, _pvAlt} = pv
 
+      -- Generate a software version update.
       swVerGen :: Gen SwVer
       swVerGen =
-        -- First, we generate the possible version increment for the existing
-        -- software.
         if null possibleNextVersions
         then genNewApp
         else Gen.choice [genANextVersion, genNewApp]
         where
+
+          nextVersions = Set.fromList $ zip appNames appNextVersions
+            where
+
+              appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+
+          -- Registered application names
+          appNames = Set.toList (dom avs)
+
           -- Generate the next version for an existing application
           genANextVersion :: Gen SwVer
           genANextVersion = uncurry SwVer <$> Gen.element possibleNextVersions
+
           possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
-          nextVersions = Set.fromList $ zip appNames appNextVersions
-          appNames = Set.toList (dom avs)
-          appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+
           registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
 
           fst3 (x, _, _) = x
@@ -946,8 +952,12 @@ instance HasTrace UPIREG where
           genNewApp :: Gen SwVer
           genNewApp
             = ((`SwVer` 0) . ApName)
-            <$> Gen.filter ((`notElem` appNames) . ApName)
+            <$> Gen.filter ((`notElem` usedNames) . ApName)
                            (Gen.list (Range.constant 0 12) Gen.ascii)
+            where
+              usedNames = Set.map fst3 (range raus)
+                          `union`
+                          dom avs
 
 
       generateUpdateProposalWith vk pps pv sv
