@@ -146,9 +146,13 @@ genTrace ub env st0 aSigGen = do
   -- Note that the length of the resulting trace might be less than the
   -- generated value if invalid signals (according to some current state) are
   -- generated in 'loop'.
-  n <- Gen.frequency [ (5, integral_  $ Range.singleton 0)
+  --
+  -- A linear range will generate about one third of empty traces, which does
+  -- not seem sensible. Furthermore, in most cases it won't generate any trace
+  -- of size @ub@. Hence we need to tweak the frequency of the trace lengths.
+  n <- Gen.frequency [ (5,  integral_ $ Range.singleton 0)
                      , (85, integral_ $ Range.linear 1 ub)
-                     , (10, integral_  $ Range.singleton ub)]
+                     , (10, integral_ $ Range.singleton ub)]
 
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
   where

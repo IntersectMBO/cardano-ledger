@@ -23,7 +23,6 @@ import Control.Monad.Free.Church
 import Control.Monad.Trans.State.Strict (modify, runState)
 import qualified Control.Monad.Trans.State.Strict as MonadState
 import Data.Foldable (find, traverse_)
-import Data.Maybe (fromMaybe)
 import Data.Kind (Type)
 
 data RuleType
