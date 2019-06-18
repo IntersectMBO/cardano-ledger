@@ -3,3 +3,18 @@ packages: shelley/chain-and-ledger/executable-spec
           byron/ledger/executable-spec
           byron/chain/executable-spec
           shelley/chain-and-ledger/dependencies/non-integer
+
+package delegation
+  ghc-options: -Wall -Werror=unused-imports
+
+package cs-blockchain
+  ghc-options: -Wall -Werror=unused-imports
+
+package cs-ledger
+  ghc-options: -Wall -Werror=unused-imports
+
+package small-steps
+  ghc-options: -Wall -Werror=unused-imports
+
+package non-integer
+  ghc-options: -Wall -Werror=unused-imports

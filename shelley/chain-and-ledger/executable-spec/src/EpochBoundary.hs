@@ -45,7 +45,6 @@ import qualified Data.Set                as Set
 
 import           Numeric.Natural         (Natural)
 
-import           Lens.Micro              ((^.))
 import           Lens.Micro.TH           (makeLenses)
 
 -- | Blocks made

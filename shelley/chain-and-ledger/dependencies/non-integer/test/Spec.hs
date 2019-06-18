@@ -9,7 +9,7 @@ import           Data.Ratio ((%))
 import           Test.QuickCheck
 
 import           NonIntegral
-import           Debug.Trace
+
 data E16
 data E20
 data E34

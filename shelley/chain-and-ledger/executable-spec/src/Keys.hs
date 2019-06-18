@@ -18,8 +18,6 @@ module Keys
   )
 where
 
-import qualified Data.ByteArray        as BA
-import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
 
 import           Ledger.Core           (VKey(..)
