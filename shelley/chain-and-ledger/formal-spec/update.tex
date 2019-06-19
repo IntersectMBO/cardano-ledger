@@ -15,7 +15,7 @@ Therefore $\mathsf{UPDATE}$ is the combination of the
 $\mathsf{PPUP}$ transition for the protocol parameters and the
 the $\mathsf{AVUP}$ transition for the application versions.
 Recall that $\PPUpdate$, $\AVUpdate$, and $\Update$ were defined in
-Figure~\ref{fig:defs:utxo-shelley} 
+Figure~\ref{fig:defs:utxo-shelley}
 
 
 The signature for the keys in the proposal will be checked in the
@@ -244,7 +244,7 @@ Note that $\type{T}$ is an arbitrary type.
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup} % TODO: not needed here?
       &
       \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
       \\
