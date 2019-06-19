@@ -37,11 +37,11 @@ ledgersTransition = do
   (u'', dw'') <-
     foldM
       (\(u', dw') (ix, tx) ->
-         trans @LEDGER $ TRC ((pp, slot, ix), (u', dw'), tx))
+         trans @LEDGER $ TRC ((slot, ix, pp), (u', dw'), tx))
       (u, dw) $
     zip [0 ..] txwits
   pure $
-    LedgerState u'' dw'' (upiState ls) (_pcs ls) (_txSlotIx ls) (_currentSlot ls)
+    LedgerState u'' dw'' (_txSlotIx ls)
 
 instance Embed LEDGER LEDGERS where
   wrapFailed = LedgerFailure
