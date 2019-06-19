@@ -29,6 +29,7 @@ module UTxO
   , txins
   , txinLookup
   , txouts
+  , txUpdate
   , balance
   , deposits
   , (<|)
@@ -66,7 +67,6 @@ import           Numeric.Natural         (Natural)
 import           Lens.Micro ((^.))
 import           Lens.Micro.TH (makeLenses)
 
-import           BaseTypes
 import           Coin                    (Coin (..))
 import           Keys
 import           PParams                 (PParams(..))

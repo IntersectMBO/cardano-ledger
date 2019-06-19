@@ -3,7 +3,8 @@
 
 module STS.Updn
   ( UPDN
-  ) where
+  )
+where
 
 import           BaseTypes
 import           BlockChain

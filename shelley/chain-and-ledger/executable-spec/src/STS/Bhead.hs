@@ -5,22 +5,17 @@
 
 module STS.Bhead
   ( BHEAD
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict          as Map
-import qualified Data.Set                 as Set
-import           Crypto.Hash              (hash)
-import qualified Data.ByteString.Char8    as BS
+import qualified Data.Set                      as Set
 
 import           BaseTypes
 import           BlockChain
 import           Keys
 import           LedgerState
-import           OCert
 import           PParams
 import           Slot
-
-import           Delegation.Certificates  (StakePools (..))
 
 import           STS.NewEpoch
 import           STS.Rupd
@@ -43,19 +38,18 @@ instance STS BHEAD where
 
 bheadTransition :: TransitionRule BHEAD
 bheadTransition = do
-  TRC ( (etaC, gkeys)
-      , nes@(NewEpochState _ _ bprev _ es ru _ _)
-      , bh@(BHeader bhb _)) <- judgmentContext
-  let slot = bheaderSlot bhb
+  TRC ((etaC, gkeys), nes@(NewEpochState _ _ bprev _ es ru _ _), bh@(BHeader bhb _)) <-
+    judgmentContext
+  let slot                = bheaderSlot bhb
   let EpochState _ _ _ pp = es
 
   fromIntegral (bHeaderSize bh) > _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
   fromIntegral (hBbsize bhb) > _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
   nes' <- trans @NEWEPOCH
-    $ TRC((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
+    $ TRC ((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
 
-  ru' <- trans @RUPD $ TRC((bprev, es), ru, slot)
+  ru' <- trans @RUPD $ TRC ((bprev, es), ru, slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 

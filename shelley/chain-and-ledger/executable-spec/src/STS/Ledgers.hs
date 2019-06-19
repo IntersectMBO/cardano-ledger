@@ -5,9 +5,10 @@
 
 module STS.Ledgers
   ( LEDGERS
-  ) where
+  )
+where
 
-import           Control.Monad            (foldM)
+import           Control.Monad                  ( foldM )
 
 import           LedgerState
 import           PParams
@@ -36,12 +37,12 @@ ledgersTransition = do
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
-      (\(u', dw') (ix, tx) ->
-         trans @LEDGER $ TRC ((slot, ix, pp), (u', dw'), tx))
-      (u, dw) $
-    zip [0 ..] txwits
-  pure $
-    LedgerState u'' dw'' (_txSlotIx ls)
+        (\(u', dw') (ix, tx) ->
+          trans @LEDGER $ TRC ((slot, ix, pp), (u', dw'), tx)
+        )
+        (u, dw)
+      $ zip [0 ..] txwits
+  pure $ LedgerState u'' dw'' (_txSlotIx ls)
 
 instance Embed LEDGER LEDGERS where
   wrapFailed = LedgerFailure

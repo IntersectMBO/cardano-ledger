@@ -18,7 +18,8 @@ module Updates
 where
 
 import qualified Data.Map.Strict               as Map
-import qualified Data.List                     as List (group)
+import qualified Data.List                     as List
+                                                ( group )
 
 import           BaseTypes
 import           Coin
@@ -83,29 +84,27 @@ updatePPup :: PPUpdate -> PPUpdate -> PPUpdate
 updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ Map.union pup1' pup0'
 
 newAVs :: Applications -> Map.Map Slot Applications -> Applications
-newAVs avs favs =
-  if not $ Map.null favs
-   then let maxSlot = maximum $ Map.keys favs in
-        favs Map.! maxSlot  -- value exists because maxSlot is in keys
-   else avs
+newAVs avs favs = if not $ Map.null favs
+  then let maxSlot = maximum $ Map.keys favs in favs Map.! maxSlot  -- value exists because maxSlot is in keys
+  else avs
 
 votedValue :: Eq a => Map.Map VKeyGenesis a -> Maybe a
-votedValue vs
- | null elemLists = Nothing
- | otherwise = Just $ (head . head) elemLists  -- elemLists contains an element
+votedValue vs | null elemLists = Nothing
+              | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
                                                -- and that list contains at
                                                -- least 5 elements
-  where elemLists =
-          filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
+ where
+  elemLists =
+    filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
 
-emptyUpdateState :: ( Updates.PPUpdate
-                    , Updates.AVUpdate
-                    , Map.Map Slot Updates.Applications
-                    , Updates.Applications)
-emptyUpdateState = ( PPUpdate Map.empty
-                   , AVUpdate Map.empty
-                   , Map.empty
-                   , Applications Map.empty)
+emptyUpdateState
+  :: ( Updates.PPUpdate
+     , Updates.AVUpdate
+     , Map.Map Slot Updates.Applications
+     , Updates.Applications
+     )
+emptyUpdateState =
+  (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, Applications Map.empty)
 
 emptyUpdate :: Update
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)

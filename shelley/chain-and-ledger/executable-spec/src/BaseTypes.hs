@@ -15,10 +15,8 @@ module BaseTypes
   , neutralSeed
   ) where
 
-import qualified Data.Map.Strict as Map
 
 import qualified Data.Fixed as FP
-import qualified Keys       as Keys
 
 data E34
 

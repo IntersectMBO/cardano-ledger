@@ -5,11 +5,16 @@
 
 module STS.Utxo
   ( UTXO
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict          as Map
+import qualified Data.Map.Strict               as Map
 
-import           Lens.Micro               ((%~), (&), (^.), (.~))
+import           Lens.Micro                     ( (%~)
+                                                , (&)
+                                                , (^.)
+                                                , (.~)
+                                                )
 
 import           Coin
 import           Delegation.Certificates
@@ -50,11 +55,11 @@ initialLedgerState = do
 
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
-  TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx) <- judgmentContext
+  TRC ((_slot, pp, stakeKeys, stakePools, _dms), u, tx) <- judgmentContext
 
   let txbody = _body tx
   validInputs txbody u == Valid ?! BadInputsUTxO
-  _ttl txbody >= slot ?! ExpiredUTxO (_ttl txbody) slot
+  _ttl txbody >= _slot ?! ExpiredUTxO (_ttl txbody) _slot
   validNoReplay txbody == Valid ?! InputSetEmptyUTxO
 
   let validateFee = validFee pp txbody
@@ -64,19 +69,23 @@ utxoInductive = do
   validateBalance == Valid ?! unwrapFailureUTXO validateBalance
 
   let refunded = keyRefunds pp stakeKeys txbody
-  let decayed = decayedTx pp stakeKeys txbody
+  let decayed  = decayedTx pp stakeKeys txbody
   let depositChange =
         deposits pp stakePools (txbody ^. certs) - (refunded + decayed)
 
   let u' = applyUTxOUpdate u txbody  -- change UTxO
 
   -- process Update Proposals
-  ups' <- trans @UP $ TRC ((slot, dms), u ^. ups, txup tx)
+  ups' <- trans @UP $ TRC ((_slot, _dms), u ^. ups, txup tx)
 
-  pure $
-    u' & deposited %~ (+) depositChange
-       & fees      %~ (+) ((txbody ^. txfee) + decayed)
-       & ups       .~ ups'
+  pure
+    $  u'
+    &  deposited
+    %~ (+) depositChange
+    &  fees
+    %~ (+) ((txbody ^. txfee) + decayed)
+    &  ups
+    .~ ups'
 
 unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
 unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
@@ -87,7 +96,7 @@ unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
 unwrapFailureUTXO' BadInputs                = BadInputsUTxO
 unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
 unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
-unwrapFailureUTXO' (FeeTooSmall c c')       = FeeTooSmallUTxO c c'
+unwrapFailureUTXO' (FeeTooSmall       c c') = FeeTooSmallUTxO c c'
 unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
 unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
 

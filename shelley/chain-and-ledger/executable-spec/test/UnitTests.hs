@@ -70,8 +70,8 @@ stakePoolKey1 :: KeyPair
 stakePoolKey1 = keyPair (Owner 5)
 
 ledgerState :: [Tx] -> Either [ValidationError] LedgerState
-ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t dms) genesis
-  where dms = _dms $ _dstate $ _delegationState genesis
+ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t dms') genesis
+  where dms' = _dms $ _dstate $ _delegationState genesis
 
 
 testLedgerValidTransactions ::

@@ -91,7 +91,6 @@ mutateTxBody tx = do
     (_txfee tx)
     (_ttl tx)
     emptyUpdate
-    (_txeent tx)
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]

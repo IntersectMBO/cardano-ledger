@@ -5,10 +5,12 @@
 
 module STS.NewEpoch
   ( NEWEPOCH
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict          as Map
-import qualified Data.Maybe               as Maybe (fromMaybe)
+import qualified Data.Map.Strict               as Map
+import qualified Data.Maybe                    as Maybe
+                                                ( fromMaybe )
 
 import           BaseTypes
 import           Coin
@@ -53,27 +55,32 @@ ocertTransition = do
   if eL' /= e' + 1
     then pure src
     else do
-      let es_ =
-            case ru of
-              Nothing  -> es
-              Just ru' -> applyRUpd ru' es
+      let es_ = case ru of
+            Nothing  -> es
+            Just ru' -> applyRUpd ru' es
       es' <- trans @EPOCH $ TRC (bprev, es_, e)
       let EpochState acnt ss ls pp = es'
-      let (Stake stake, delegs) = _pstakeSet ss
-      let Coin total = Map.foldl (+) (Coin 0) stake
-      let etaE = _extraEntropy pp
-      let osched' = overlaySchedule gkeys eta1 pp
+      let (Stake stake, delegs)    = _pstakeSet ss
+      let Coin total               = Map.foldl (+) (Coin 0) stake
+      let etaE                     = _extraEntropy pp
+      let osched'                  = overlaySchedule gkeys eta1 pp
       let es'' = EpochState acnt ss ls (pp { _extraEntropy = neutralSeed })
-      let pd' =
-            foldr
-              (\(hk, (Coin c)) m ->
-                 Map.insertWith (+) hk ((fromIntegral c) / fromIntegral total) m)
-              Map.empty
-              [ (poolKey, Maybe.fromMaybe (Coin 0) (Map.lookup stakeKey stake))
-              | (stakeKey, poolKey) <- Map.toList delegs
-              ]
-      pure $
-        NewEpochState e (seedOp eta1 etaE) bcur (BlocksMade Map.empty) es'' Nothing (PoolDistr pd') osched'
+      let pd' = foldr
+            (\(hk, (Coin c)) m ->
+              Map.insertWith (+) hk ((fromIntegral c) / fromIntegral total) m
+            )
+            Map.empty
+            [ (poolKey, Maybe.fromMaybe (Coin 0) (Map.lookup stakeKey stake))
+            | (stakeKey, poolKey) <- Map.toList delegs
+            ]
+      pure $ NewEpochState e
+                           (seedOp eta1 etaE)
+                           bcur
+                           (BlocksMade Map.empty)
+                           es''
+                           Nothing
+                           (PoolDistr pd')
+                           osched'
 
 instance Embed EPOCH NEWEPOCH where
   wrapFailed = EpochFailure

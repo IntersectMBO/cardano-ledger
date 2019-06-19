@@ -5,18 +5,13 @@
 
 module STS.Chain
   ( CHAIN
-  ) where
-
-import qualified Data.Map.Strict          as Map
+  )
+where
 
 import           BaseTypes
 import           BlockChain
-import           EpochBoundary
 import           LedgerState
-import           PParams
 import           Slot
-
-import           Delegation.Certificates
 
 import           Control.State.Transition
 
@@ -43,17 +38,16 @@ instance STS CHAIN where
 
 chainTransition :: TransitionRule CHAIN
 chainTransition = do
-  TRC (sNow, (nes, etaV, etaC, h, sL), block@(Block bh _)) <- judgmentContext
+  TRC (sNow, (nes, etaV, etaC, h, sL), (Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
-  nes' <- trans @BHEAD $ TRC((etaC, gkeys), nes, bh)
+  nes' <- trans @BHEAD $ TRC ((etaC, gkeys), nes, bh)
 
-  let NewEpochState _ eta0 _ bCur es _ _pd osched = nes'
+  let NewEpochState _ eta0 _ _ es _ _pd osched = nes'
   let EpochState _ _ ls pp = es
   let LedgerState _ (DPState (DState _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
-  (cs', h', sL', etaV', etaC') <-
-    trans @PRTCL $ TRC(((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
+  _ <- trans @PRTCL $ TRC(((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
 
   pure undefined
 
