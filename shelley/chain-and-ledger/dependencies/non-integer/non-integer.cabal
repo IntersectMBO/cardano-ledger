@@ -15,6 +15,11 @@ source-repository head
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
   subdir:   dependencies/non-integer
 
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
 library
   exposed-modules:       NonIntegral
   hs-source-dirs: src
@@ -26,34 +31,47 @@ library
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
     -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:       -Werror
 
 executable nonInt
-    main-is:             Main.hs
-    hs-source-dirs:      app
+  main-is:             Main.hs
+  hs-source-dirs:      app
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -O2
+  if (!flag(development))
     ghc-options:
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -O2
-    build-depends:
-      base,
-      non-integer,
-      criterion
+      -Werror
+  build-depends:
+    base,
+    non-integer,
+    criterion
 
 test-suite non-integer-test
-    type:                exitcode-stdio-1.0
-    main-is:             Spec.hs
-    hs-source-dirs:      test
+  type:                exitcode-stdio-1.0
+  main-is:             Spec.hs
+  hs-source-dirs:      test
+  ghc-options:
+    -O2
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+  if (!flag(development))
     ghc-options:
-      -O2
-      -threaded
-      -rtsopts
-      -with-rtsopts=-N
-      -Wall
-      -Wcompat
-      -Wincomplete-record-updates
-      -Wincomplete-uni-patterns
-      -Wredundant-constraints
+      -Werror
     build-depends:
       base,
       non-integer,
