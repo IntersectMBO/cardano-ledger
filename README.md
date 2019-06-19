@@ -216,10 +216,9 @@ and error may be required to make substantive changes!
 
 ## Code formatting
 
-We use [`editorconfig`](https://editorconfig.org/) to ensure consistency in the
-format of our Haskell code. There are editorconfig plugins for several text
-editors, so make sure that your editor honors the configuration in
-[`.editorconfig`](.editorconfig).
+We use [`editorconfig`](https://editorconfig.org/) to ensure consistency in the format of our
+Haskell code. There are editorconfig plugins for several text editors, so make sure that your editor
+honors the configuration in [`.editorconfig`](.editorconfig).
 
 Additionally, we use [`stylish-haskell`](https://github.com/jaspervdj/stylish-haskell/) to format
 grouped imports and language pragmas. There is a [`.stylish-haskell.yaml`](.stylish-haskell.yaml)
