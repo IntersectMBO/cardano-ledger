@@ -3,13 +3,17 @@
 
 module STS.Snap
   ( SNAP
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict         as Map
+import qualified Data.Map.Strict               as Map
 
-import           Lens.Micro              ((^.), (&), (.~), (%~))
+import           Lens.Micro                     ( (^.)
+                                                , (&)
+                                                , (.~)
+                                                , (%~)
+                                                )
 
-import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           LedgerState
@@ -36,13 +40,23 @@ snapTransition :: TransitionRule SNAP
 snapTransition = do
   TRC ((pparams, d, p, blocks), (s, u), eNew) <- judgmentContext
   let pooledStake = poolDistr (u ^. utxo) d p
-  let slot = firstSlot eNew
-  let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) slot
-  let decayed = (u ^. deposited) - oblg
+  let _slot       = firstSlot eNew
+  let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) _slot
+  let decayed     = (u ^. deposited) - oblg
   pure
-    ( s & pstakeMark .~ pooledStake & pstakeSet .~ (s ^. pstakeMark) &
-      pstakeGo .~ (s ^. pstakeSet) &
-      poolsSS .~ (p ^. pParams) &
-      blocksSS .~ blocks &
-      feeSS .~ (u ^. fees) + decayed
-    , u & deposited .~ oblg & fees %~ (+) decayed)
+    ( s
+    &  pstakeMark
+    .~ pooledStake
+    &  pstakeSet
+    .~ (s ^. pstakeMark)
+    &  pstakeGo
+    .~ (s ^. pstakeSet)
+    &  poolsSS
+    .~ (p ^. pParams)
+    &  blocksSS
+    .~ blocks
+    &  feeSS
+    .~ (u ^. fees)
+    +  decayed
+    , u & deposited .~ oblg & fees %~ (+) decayed
+    )

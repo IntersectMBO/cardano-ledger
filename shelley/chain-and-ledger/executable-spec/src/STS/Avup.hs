@@ -33,16 +33,16 @@ instance STS AVUP where
 
 avupTransition :: TransitionRule AVUP
 avupTransition = do
-  TRC ((slot, Dms dms), src@(AVUpdate aupS, favs, avs), AVUpdate aup) <-
+  TRC ((_slot, Dms _dms), src@(AVUpdate aupS, favs, avs), AVUpdate _aup) <-
     judgmentContext
 
   if Map.null aupS
     then pure src
     else do
-      Map.keysSet aup `Set.isSubsetOf` Map.keysSet dms ?! NonGenesisUpdateAVUP
+      Map.keysSet _aup `Set.isSubsetOf` Map.keysSet _dms ?! NonGenesisUpdateAVUP
 
-      let aup'         = Map.union aup aupS
-      let (cur, favs') = Map.partitionWithKey (\s _ -> s >= slot) favs
+      let aup'         = Map.union _aup aupS
+      let (cur, favs') = Map.partitionWithKey (\s _ -> s >= _slot) favs
       let avs'         = newAVs avs cur
       let fav          = votedValue aup'
       case fav of
@@ -50,6 +50,6 @@ avupTransition = do
         Just fav' ->
           pure
             ( AVUpdate Map.empty
-            , Map.insert (slot +* slotsPrior) fav' favs'
+            , Map.insert (_slot +* slotsPrior) fav' favs'
             , avs'
             )

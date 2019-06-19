@@ -5,7 +5,8 @@
 
 module STS.Utxow
   ( UTXOW
-  ) where
+  )
+where
 
 import           Delegation.Certificates
 import           Keys

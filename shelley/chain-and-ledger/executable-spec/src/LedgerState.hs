@@ -364,7 +364,7 @@ genesisId =
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState :: PParams -> [TxOut] -> LedgerState
-genesisState pc outs = LedgerState
+genesisState _ outs = LedgerState
   (UTxOState
     (UTxO $ Map.fromList
               [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs])
@@ -493,7 +493,7 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsNeeded :: UTxO -> TxBody -> Dms -> Set HashKey
-witsNeeded utxo' tx (Dms d) =
+witsNeeded utxo' tx _ =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`

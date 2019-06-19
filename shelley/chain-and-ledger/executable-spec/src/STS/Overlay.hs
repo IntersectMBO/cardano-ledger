@@ -45,7 +45,8 @@ instance STS OVERLAY where
 
 overlayTransition :: TransitionRule OVERLAY
 overlayTransition = do
-  TRC ((pp, osched, eta0, pd, Dms dms), cs, bh@(BHeader bhb _)) <- judgmentContext
+  TRC ((pp, osched, eta0, pd, Dms dms), cs, bh@(BHeader bhb _)) <-
+    judgmentContext
   let gkey'' = Map.lookup (bheaderSlot bhb) osched
   let vk     = bvkcold bhb
   case gkey'' of

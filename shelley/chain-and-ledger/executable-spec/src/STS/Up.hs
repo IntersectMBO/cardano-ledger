@@ -35,10 +35,10 @@ instance STS UP where
 
 upTransition :: TransitionRule UP
 upTransition = do
-  TRC (env, (pupS, aupS, favs, avs), Update pup aup) <- judgmentContext
+  TRC (env, (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
 
   pup'                <- trans @PPUP $ TRC (env, pupS, pup)
-  (aup', favs', avs') <- trans @AVUP $ TRC (env, (aupS, favs, avs), aup)
+  (aup', favs', avs') <- trans @AVUP $ TRC (env, (aupS, favs, avs), _aup)
 
   pure (pup', aup', favs', avs')
 

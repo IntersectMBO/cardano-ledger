@@ -148,7 +148,7 @@ instance VrfProof UnitInterval where
     where r = intervalValue u
 
 vrfChecks :: Seed -> PoolDistr -> UnitInterval -> BHBody -> Bool
-vrfChecks eta0 pd'@(PoolDistr pd) f bhb =
+vrfChecks eta0 (PoolDistr pd) f bhb =
   let sigma' = Map.lookup hk pd in
     case sigma' of
       Nothing -> False
