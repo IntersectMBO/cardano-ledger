@@ -949,33 +949,6 @@ It is worth noting that initially bootstrap addresses and enterprise addresses
 have essentially identical behaviour. This might change in the future, if new
 features are added to enterprise addresses.
 
-\subsubsection{Script Address}
-\label{script-address}
-
-Byron does not support scripts. Scripts are \emph{not} included in the
-Shelley design described in this document.
-
-Scripts will however be introduced in future as an extension of the
-Shelley design and we will briefly describe the interaction between the
-future script addresses and stake rights.
-
-Script addresses will have the form
-\[
-\hash{vs} \mathbin{||} \beta
-\]
-where \(\hash{vs}\) is a cryptographic hash of the validation script.
-
-The staking object \(\beta\) can take the same three forms as normal
-pubkey addresses: base, pointer and none. The use of stake rights with
-script addresses is otherwise identical to that of normal addresses.
-
-The use of script addresses with no stake rights has the same behaviour
-as normal addresses with no stake rights, but has different motivating
-use cases. For many scripts it is hard to determine to whom the funds
-actually belong and in such cases the simplest solution is to use an
-address with no stake rights whatsoever. For this reason we do not call
-such addresses enterprise addresses.
-
 \subsubsection{HD Wallet Structure in Shelley}
 \label{hd-wallet-structure-in-shelley}
 
