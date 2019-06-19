@@ -47,7 +47,6 @@ module UTxO
   , wdrls
   , txfee
   , ttl
-  , txeent
   -- Tx
   , body
   , witnessSet
@@ -117,7 +116,6 @@ data TxBody = TxBody { _inputs  :: !(Set TxIn)
                      , _txfee   :: Coin
                      , _ttl     :: Slot
                      , _txUpdate:: Update
-                     , _txeent  :: EEnt
                      } deriving (Show, Eq, Ord)
 
 makeLenses ''TxBody

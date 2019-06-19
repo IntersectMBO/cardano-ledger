@@ -13,7 +13,6 @@ module BaseTypes
   , mkNonce
   , seedOp
   , neutralSeed
-  , EEnt(..)
   ) where
 
 import qualified Data.Map.Strict as Map
@@ -75,7 +74,3 @@ neutralSeed = NeutralSeed
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce
-
--- | Extra entropy
-newtype EEnt = EEnt (Map.Map Keys.VKeyGenesis Seed)
-  deriving (Show, Ord, Eq)

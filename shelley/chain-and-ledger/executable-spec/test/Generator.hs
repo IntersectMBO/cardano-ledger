@@ -151,7 +151,6 @@ genTx keyList (UTxO m) cslot = do
            txfee'
            (cslot + (Slot txttl))
            emptyUpdate
-           (EEnt Map.empty)
   let !txwit = makeWitness txbody selectedKeyPair
   pure (txfee', Tx txbody $ Set.fromList [txwit])
             where utxoInputs = Map.keys m
