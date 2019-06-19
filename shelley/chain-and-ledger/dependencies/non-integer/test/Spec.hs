@@ -23,8 +23,6 @@ instance FP.HasResolution E20 where
 instance FP.HasResolution E34 where
     resolution _ = 10000000000000000000000000000000000
 
-type Digits16 = FP.Fixed E16
-type Digits20 = FP.Fixed E20
 type Digits34 = FP.Fixed E34
 
 type FixedPoint = Digits34
@@ -116,20 +114,6 @@ prop_FPIdemPotent' :: PosInt -> PosInt -> Property
 prop_FPIdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
     where (a'', b'') = normalizeInts a b
-
-prop_FPIdemPotent'' :: Positive FixedPoint -> Property
-prop_FPIdemPotent'' (Positive a) =
-    a > 0 ==> (exp' $ ln' a) - a < epsFP
-
-prop_FPIdemPotent''' :: PosInt -> PosInt -> Property
-prop_FPIdemPotent''' (Positive a) (Positive b) =
-    b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
-    where (a'', b'') = normalizeInts a b
-
-prop_FPfindD :: Positive FixedPoint -> Property
-prop_FPfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
-    where e = exp' 1
-          n = findE e a
 
 prop_FPlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_FPlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
@@ -223,6 +207,11 @@ prop_DfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
     where e = exp' 1
           n = findE e a
 
+prop_FPfindD :: Positive FixedPoint -> Property
+prop_FPfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+    where e = exp' 1
+          n = findE e a
+
 prop_DlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_DlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
     ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < epsD) === True
@@ -261,16 +250,6 @@ prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
               x' = fromIntegral x''
               y' = fromIntegral y''
 
-prop_ExpLaw'' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_ExpLaw'' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp' (a'/b' + x'/y') - (exp' (a'/b') * exp' (x'/y'))) < eps) === True
-        where (b'', a'') = normalizeInts a b
-              (y'', x'') = normalizeInts x y
-              a' = fromIntegral a''
-              b' = fromIntegral b''
-              x' = fromIntegral x''
-              y' = fromIntegral y''
-
 expdiff :: Integer -> Integer -> Integer -> Integer -> Rational
 expdiff x'' y'' a'' b'' =
     abs(e1 - e2)
@@ -293,8 +272,8 @@ prop_IdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::Rational) - ((fromIntegral b'' / fromIntegral a'')::Rational) < eps
     where (a'', b'') = normalizeInts a b
 
-prop_findD :: Positive Rational -> Property
-prop_findD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+prop_RfindD :: Positive Rational -> Property
+prop_RfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
     where e = exp' 1
           n = findE e a
 
@@ -332,8 +311,12 @@ main = do
   quickCheck (withMaxSuccess 1000 prop_DExpLaw')
   putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
   quickCheck (withMaxSuccess 1000 prop_DlnLaw)
-  putStrLn "check bound of `findE`"
+  putStrLn "check bound of `findE` :: Double"
   quickCheck (withMaxSuccess 1000 prop_DfindD)
+  putStrLn "check bound of `findE` :: Rational"
+  quickCheck (withMaxSuccess 1000 prop_RfindD)
+  putStrLn "check bound of `findE` :: FixedPoint"
+  quickCheck (withMaxSuccess 1000 prop_FPfindD)
   putStrLn ""
 
   putStrLn "-------------------------------------------"
