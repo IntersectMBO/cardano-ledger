@@ -7,7 +7,6 @@ module PropertyTests (propertyTests) where
 import qualified Data.Map.Strict         as Map
 import           Data.MultiSet           (unions, fromSet, occur, filter, size)
 import qualified Data.Set                as Set
-import           Data.Text               (pack)
 
 import           Lens.Micro              ((^.), (&), (%~), (.~))
 
