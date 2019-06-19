@@ -11,7 +11,7 @@ import           Control.Monad           (foldM)
 
 import           LedgerState
 import           Delegation.Certificates
-import           PParams
+import           PParams hiding (d)
 import           Slot
 import           UTxO
 

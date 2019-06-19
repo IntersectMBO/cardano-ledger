@@ -13,7 +13,7 @@ import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           LedgerState
-import           PParams
+import           PParams hiding (d)
 import           Slot
 import           UTxO
 

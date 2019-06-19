@@ -34,7 +34,7 @@ import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
 import           Delegation.PoolParams   (RewardAcnt (..), PoolParams(..))
 import           Keys
-import           PParams
+import           PParams hiding (a0, nOpt)
 import           Slot
 import           UTxO
 

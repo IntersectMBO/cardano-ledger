@@ -11,7 +11,7 @@ import           Lens.Micro              ((^.))
 
 import           BaseTypes
 import           EpochBoundary
-import           LedgerState
+import           LedgerState hiding (reserves)
 import           PParams
 import           Slot
 import           UTxO
