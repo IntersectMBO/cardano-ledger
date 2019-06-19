@@ -650,7 +650,8 @@ Figure~\ref{fig:er-relationship-delegation} shows the entity-relationship
 diagram of the system level entities involved in the implementation of
 delegation:
 \begin{itemize}
-\item Each normal pubkey address\footnote{As opposed to script addresses}
+\item Each normal pubkey address\footnote{As opposed to script
+  addresses}\todo{update to the new address nomenclature}
   contains a single payment key. However, the same payment key
   can be used by multiple addresses (where addresses differ among each other in
   the delegation information).
@@ -950,23 +951,38 @@ features are added to enterprise addresses.
 \subsubsection{HD Wallet Structure in Shelley}
 \label{hd-wallet-structure-in-shelley}
 
-All the Shelley address formats (other than script addresses) support
-hierarchical deterministic wallets, as per BIP-32 \citep{bip32}.
+The Shelley addresses where the value address is a single public key hash
+support hierarchical deterministic wallets, as per BIP-32~\citep{bip32}.
+
+For multi-sig value addresses, we can use a slight generalisation of
+BIP-45~\citep{bip45}\todo{Lay out the necessary generalisation of BIP-45}.
 
 In particular this kind of wallet scheme allows implementations that can
 do wallet restoration from seed in time that is better than linear in
 the total number of addresses in the blockchain. For details, see
 \cref{wallet-recovery-process}.
 
-\subsection{Address Recognition}
+\subsubsection{Address Recognition}
 \label{address-recognition-1}
 
-Wallets will recognise addresses that belong to them just as they would
-without delegation, by looking only at the \(\hash{vkp}\) part
-of the address.
+Wallets will recognise addresses (other than reward addresses) that belong to
+them just as they would without delegation, by looking only at the
+value part of the address (see \cref{wallet-recovery-process} for how to find
+addresses efficiently).
 
-After a wallet recognises an address for which it controls the payment
-key, it will check whether the staking object \(\beta\) is set according
+Finding a wallets stake addresses (and in particular the corresponding reward
+addresses) can be done either by just reading off all the stake addresses of
+addresses found via their value address, or by performing a second search, this
+time over all the registered stake addresses\footnote{As explained in
+  \cref{stake-key-registration-certificates}, stake addresses need to be
+  registered on-chain.}. The former option is quicker and easier to implement.
+However, it is conceivable to construct addresses where the value address
+belongs to one wallet, but the stake address belongs to another. The stake
+address of such addresses would only be found by the wallet that controls it via
+a dedicated search on the registered stake addresses.
+
+Once a wallet recognises an address via its payment address, it will read its
+staking object \(\beta\), and check whether it is set according
 to the current delegation preference of the wallet. If there is a
 discrepancy, it will alert the user, and ask them whether they want to
 re-delegate according to their current delegation preferences.
