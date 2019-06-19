@@ -30,6 +30,7 @@ library
                      Delegation.Certificates
                      OCert
                      Updates
+                     STS.Avup
                      STS.Bbody
                      STS.Bhead
                      STS.Chain
@@ -49,6 +50,7 @@ library
                      STS.Prtcl
                      STS.Rupd
                      STS.Snap
+                     STS.Up
                      STS.Updn
                      STS.Utxo
                      STS.Utxow
