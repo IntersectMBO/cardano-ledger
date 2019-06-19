@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 -- | Generators for transition systems.
 --
 --   How should these work?
@@ -36,15 +37,28 @@ module Control.State.Transition.Generator
   , classifyTraceLength
   , classifySize
   , mkIntervals
+  , ratio
+  -- * Trace properties
+  , traceLengthsAreClassified
+  , onlyValidSignalsAreGenerated
   )
 where
 
-import Control.Monad (forM)
+import Control.Monad (forM, void)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity)
 import Data.String (fromString)
-import Hedgehog (Gen, PropertyT, classify)
+import Hedgehog
+  ( Gen
+  , Property
+  , PropertyT
+  , classify
+  , evalEither
+  , forAll
+  , property
+  , success
+  )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Hedgehog.Range (Size(Size))
@@ -68,7 +82,7 @@ import Control.State.Transition
   , applySTS
   )
 import Control.State.Transition.Trace
-  ( Trace
+  ( Trace, _traceEnv
   , TraceOrder(OldestFirst)
   , lastState
   , mkTrace
@@ -132,7 +146,14 @@ genTrace ub env st0 aSigGen = do
   -- Note that the length of the resulting trace might be less than the
   -- generated value if invalid signals (according to some current state) are
   -- generated in 'loop'.
-  n <- integral_ $ Range.linear 0 ub
+  --
+  -- A linear range will generate about one third of empty traces, which does
+  -- not seem sensible. Furthermore, in most cases it won't generate any trace
+  -- of size @ub@. Hence we need to tweak the frequency of the trace lengths.
+  n <- Gen.frequency [ (5,  integral_ $ Range.singleton 0)
+                     , (85, integral_ $ Range.linear 1 ub)
+                     , (10, integral_ $ Range.singleton ub)]
+
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
   where
     loop
@@ -331,7 +352,50 @@ mkIntervals low high step
     highNorm = high - low
     n = highNorm `div` step + 1 `min` (highNorm `mod` step)
 
+-- | Given a function that computes an integral value from a trace, return that
+-- value as a ratio of the trace length.
+ratio :: Integral a
+  => (Trace s -> a)
+  -> Trace s
+  -> Double
+ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
 
+--------------------------------------------------------------------------------
+-- Trace properties
+--------------------------------------------------------------------------------
+
+-- | Property that simply classifies the lengths of the generated traces.
+traceLengthsAreClassified
+  :: forall s
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
+  => Int
+  -- ^ Maximum trace length that the signal generator of 's' can generate.
+  -> Int
+  -- ^ Lengths of the intervals in which the lengths range should be split.
+  -> Property
+traceLengthsAreClassified maximumTraceLength intervalSize =
+  property $ do
+    traceSample <- forAll (trace @s maximumTraceLength)
+    classifyTraceLength traceSample maximumTraceLength intervalSize
+    success
+
+-- | Check that the signal generator of 's' only generate valid signals.
+onlyValidSignalsAreGenerated
+  :: forall s
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
+  => Int
+  -- ^ Maximum trace length.
+  -> Property
+onlyValidSignalsAreGenerated maximumTraceLength = property $ do
+  tr <- forAll (trace @s maximumTraceLength)
+  let
+    env :: Environment s
+    env = _traceEnv tr
+
+    st' :: State s
+    st' = lastState tr
+  sig <- forAll (sigGen @s env st')
+  void $ evalEither $ applySTS @s (TRC(env, st', sig))
 
 --------------------------------------------------------------------------------
 -- Temporary definitions till hedgehog exposes these

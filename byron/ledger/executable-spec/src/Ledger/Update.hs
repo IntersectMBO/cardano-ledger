@@ -6,9 +6,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonadComprehensions        #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE StrictData                 #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -19,32 +21,40 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
+import Control.Arrow ((&&&))
 import Control.Lens
-import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
+import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
+import Data.List (notElem)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
-import Data.Set (Set, union)
+import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
 import GHC.Generics (Generic)
+import Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 import Numeric.Natural
 
+import Data.AbstractSize (HasTypeReps)
 import Control.State.Transition
+import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
 
 import Ledger.Core
   ( BlockCount(..)
   , HasHash
+  , Owner(Owner)
   , Relation(..)
   , Slot(..)
   , SlotCount(..)
-  , VKey
-  , VKeyGenesis
+  , VKey(VKey)
+  , VKeyGenesis(VKeyGenesis)
   , (*.)
   , (-.)
   , (∈)
@@ -55,11 +65,14 @@ import Ledger.Core
   , (▷>=)
   , (◁)
   , (⨃)
+  , dom
   , hash
   , minusSlotMaybe
+  , skey
   , unSlot
   )
 import qualified Ledger.Core as Core
+import qualified Ledger.Core.Generators as CoreGen
 import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
@@ -67,34 +80,35 @@ import Prelude hiding (min)
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
-  { _maxBkSz  :: Natural
+  { _maxBkSz :: !Natural
   -- ^ Maximum (abstract) block size in words
-  , _maxHdrSz :: Natural
+  , _maxHdrSz :: !Natural
   -- ^ Maximum (abstract) block header size in words
-  , _maxTxSz :: Natural
+  , _maxTxSz :: !Natural
   -- ^ Maximum (abstract) transaction size in words
-  , _maxPropSz :: Natural
+  , _maxPropSz :: !Natural
   -- ^ Maximum (abstract) update proposal size in words
   , _bkSgnCntT :: Double
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4
-  , _bkSlotsPerEpoch :: Core.SlotCount
-  -- ^ Number of slots in an epoch
-  , _upTtl :: Core.SlotCount
+  , _bkSlotsPerEpoch :: !Core.SlotCount
+  -- ^ Number of slots in an epoch.
+  -- TODO: this should be removed since the number of slots per epoch should remain constant.
+  , _upTtl :: !Core.SlotCount
   -- ^ Update proposal TTL in slots
-  , _scriptVersion :: Natural
+  , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: Int -- TODO: this should be a double
+  , _cfmThd :: !Int -- TODO: this should be a double
   -- ^ Update proposal confirmation threshold (number of votes)
-  , _upAdptThd :: Double
+  , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _stableAfter :: Core.BlockCount
+  , _stableAfter :: !Core.BlockCount
   -- ^ Chain stability parameter
-  , _factorA :: Int
+  , _factorA :: !Int
   -- ^ Minimum fees per transaction
-  , _factorB :: Int
+  , _factorB :: !Int
   -- ^ Additional fees per transaction size
   } deriving (Eq, Generic, Ord, Show, Hashable)
 
@@ -152,7 +166,8 @@ type UpSD =
 type STag = String
 
 -- | For now we do not have any requirements on metadata.
-data Metadata = Metadata deriving (Eq, Ord, Show, Generic, Hashable)
+data Metadata = Metadata
+  deriving (Eq, Ord, Show, Generic, Hashable)
 
 -- | Update proposal
 data UProp = UProp
@@ -365,7 +380,7 @@ instance STS UPV where
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
         inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
-        return (rpus', raus)
+        return $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -374,7 +389,7 @@ instance STS UPV where
         pv == up ^. upPV ?! PVChangedInSVUpdate
         up ^. upParams == pps ?! ParamsChangedInSVUpdate
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return (rpus, raus')
+        return $! (rpus, raus')
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -382,7 +397,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return (rpus', raus')
+        return $! (rpus', raus')
     ]
     where
       swVer (x, _, _) = x
@@ -425,7 +440,7 @@ instance STS UPREG where
         let vk = up ^. upIssuer
         dms ▷ Set.singleton vk /= empty ?! NotGenesisDelegate
         Core.verify vk (up ^. upSigData) (up ^. upSig) ?! DoesNotVerify
-        return (rpus', raus')
+        return $! (rpus', raus')
 
 
     ]
@@ -698,20 +713,62 @@ type UPIState =
 emptyUPIState :: UPIState
 emptyUPIState =
   (( ProtVer 0 0 0
-   , PParams                    -- TODO: choose more sensible default values
-     (2^(20::Natural))          -- max sizes chosen as non-zero to allow progress
-     (2^(20::Natural))
-     (2^(20::Natural))
-     (2^(20::Natural))
-     0.2
-     0
-     0
-     0
-     0
-     0
-     0
-     0
-     0
+   , PParams                 -- TODO: choose more sensible default values
+     { _maxBkSz = 100        -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 10
+     , _maxTxSz = 50
+     , _maxPropSz = 10
+     , _bkSgnCntT = 0.22     -- As defined in the spec.
+     , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
+                             -- be a constant. Also the name slots-per-epoch is
+                             -- wrong.
+     , _upTtl = 10
+     , _scriptVersion = 0
+     , _cfmThd = 4           -- TODO: this should be a double
+     , _upAdptThd = 0.6      -- Value currently used in mainet
+     , _stableAfter = 5      -- TODO: the k stability parameter needs to be
+                             -- removed from here as well!
+
+     -- To determine the factors @A@ and @B@ used in the calculation of the
+     -- transaction fees we need to know the constant @C@ that we use to bound
+     -- the size of a transaction.
+     --
+     -- We have that for all transactions @tx@
+     --
+     -- > size (elaborate tx) <= C * abstractSize tx
+     --
+     -- where @elaborate@ elaborates an abstract transaction into a concrete
+     -- one.
+     --
+     -- Then we would expect that the concrete fee is also bounded by the
+     -- concrete fee, this is:
+     --
+     -- > A_C + B_C * size (elaborate tx) <= C * (A + B * abstractSize tx)
+     --
+     -- where @A_C@ and @B_C@ are the concrete factors that correspond to @A@
+     -- and @B@. Now consider:
+     --
+     -- > C * (A + B * abstractSize tx)
+     -- > =
+     -- > C * A + B * C * abstractSize tx
+     -- > >=
+     -- > C * A + B * size (elaborate tx)
+     -- = { Choosing A_C = C * A, B_C = B}
+     -- > A_C + B_C * size (elaborate tx)
+     --
+     -- Which means that given C /= 0, we should set:
+     --
+     -- > _factorA = A_C / C
+     -- > _factorB = B_C
+     --
+     -- TODO: But if the derivation above is correct the value of B would be
+     -- quite large (if we take the value used in mainet, i.e.
+     -- 155381000000000).
+     --
+     -- For now we choose arbitrary numbers here.
+     , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
+     , _factorB = 2 -- In mainet this value is set to 155381000000000
+     }
    )
   , []
   , Map.empty
@@ -721,6 +778,15 @@ emptyUPIState =
   , Set.empty
   , Set.empty
   , Map.empty)
+
+protocolVersion :: UPIState -> ProtVer
+protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv
+
+protocolParameters :: UPIState -> PParams
+protocolParameters ((_, pps), _, _, _, _, _, _, _, _) = pps
+
+applicationVersions :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
+applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
 
 data UPIREG
 
@@ -749,7 +815,7 @@ instance STS UPIREG where
             , up) <- judgmentContext
         (rpus', raus') <- trans @UPREG $ TRC ((pv, pps, avs, dms), (rpus, raus), up)
         let pws' = pws ⨃ [(up ^. upId, sn)]
-        return ( (pv, pps)
+        pure $! ( (pv, pps)
                 , fads
                 , avs
                 , rpus'
@@ -764,6 +830,299 @@ instance STS UPIREG where
 
 instance Embed UPREG UPIREG where
   wrapFailed = UPREGFailure
+
+instance HasTrace UPIREG where
+
+  initEnvGen = (,,)
+             <$> CoreGen.slotGen 0 10        -- Current slot
+             <*> dmapGen                     -- Delegation map
+             <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+    where
+      -- Generate an initial delegation map, using a constant number of genesis
+      -- keys, which is determined in this generator.
+      dmapGen :: Gen (Bimap Core.VKeyGenesis Core.VKey)
+      dmapGen = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+        where
+          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+          vkgVkPairsGen = do
+            n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
+            let
+              vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
+              -- As delegation targets we choose twice the number of genesis keys.
+              -- Note that the genesis keys can delegate to themselves in the
+              -- generated delegation map.
+              vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
+            (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+
+  sigGen (_slot, dms, _k) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+    = do
+    (vk, pv', pps', sv') <- (,,,) <$> issuerGen
+                                  <*> pvGen
+                                  <*> pparamsGen
+                                  <*> swVerGen
+
+    Gen.frequency
+      [ -- Do not change the protocol version. We generate a lower fraction of
+        -- these kind of update proposals since we want to have more test cases
+        -- in which the protocol parameters change. Software only updates do
+        -- not offer as many possible variations as protocol parameter updates
+        -- do.
+        (10, generateUpdateProposalWith vk pps pv sv')
+      , -- Do not change the software version (unless there are no software
+        -- versions in @avs@).
+        (45, do
+          -- Pick a current software version (if available)
+          let makeSoftwareVersion (apName, (apVersion, _, _)) = SwVer apName apVersion
+              avsList = Map.toList avs
+          currentSoftwareVersion <- if null avsList
+                                    then pure $! sv'
+                                    else makeSoftwareVersion <$> Gen.element avsList
+
+          generateUpdateProposalWith vk pps' pv' currentSoftwareVersion
+        )
+      , -- Change protocol and software version.
+        (45, generateUpdateProposalWith vk pps' pv' sv')
+      ]
+
+    where
+      idGen :: Gen UpId
+      idGen = do
+        -- Chose an increment for the maximum version seen in the update
+        -- proposal IDs.
+        inc <- Gen.integral (Range.constant 1 10)
+        case Set.toDescList $ dom rpus of
+          [] -> UpId <$> Gen.element [0 .. inc]
+          (UpId maxId:_) -> pure $ UpId (maxId + inc)
+
+      -- As issuer we chose a current delegate. The delegation map must not be
+      -- empty for this signal generator to succeed.
+      issuerGen :: Gen Core.VKey
+      issuerGen =
+        if null delegates
+        then error "There are no delegates to issue an update proposal."
+        else Gen.element delegates
+        where
+          delegates = Set.toList (range dms)
+
+      pparamsGen :: Gen PParams
+      pparamsGen = ppsUpdateFrom pps
+
+      pvGen :: Gen ProtVer
+      pvGen =
+        nextAltVersion <$> Gen.element [ (_pvMaj pv + 1, 0)
+                                       , (_pvMaj pv, _pvMin pv + 1)
+                                       ]
+        where
+          -- Get the next alternate version, alt, so that @(maj, min, alt)@
+          -- is not part of the registered protocol-update proposals
+          -- (@rpus@).
+          nextAltVersion :: (Natural, Natural) -> ProtVer
+          nextAltVersion (maj, min) = dom (range rpus)
+                                    & Set.filter protocolVersionEqualsMajMin
+                                    & Set.map _pvAlt
+                                    & Set.toDescList
+                                    & nextVersion
+            where
+              protocolVersionEqualsMajMin :: ProtVer -> Bool
+              protocolVersionEqualsMajMin pv' =
+                _pvMaj pv' == maj && _pvMin pv' == min
+
+              nextVersion :: [Natural] -> ProtVer
+              nextVersion [] = ProtVer maj min 0
+              nextVersion (x:_) = ProtVer maj min (1 + x)
+
+      -- Generate a software version update.
+      swVerGen :: Gen SwVer
+      swVerGen =
+        if null possibleNextVersions
+        then genNewApp
+        else Gen.choice [genANextVersion, genNewApp]
+        where
+          possibleNextVersions :: [(ApName, ApVer)]
+          possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
+            where
+              nextVersions :: Set (ApName, ApVer)
+              nextVersions = Set.fromList $ zip currentAppNames appNextVersions
+                where
+                  currentAppNames :: [ApName]
+                  currentAppNames = Set.toList (dom avs)
+                  appNextVersions :: [ApVer]
+                  appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+              registeredNextVersions :: Set (ApName, ApVer)
+              registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
+
+          -- Generate the next version for an existing application
+          genANextVersion :: Gen SwVer
+          genANextVersion = uncurry SwVer <$> Gen.element possibleNextVersions
+
+          fst3 (x, _, _) = x
+          snd3 (_, y, _) = y
+
+          -- Generate a new application
+          genNewApp :: Gen SwVer
+          genNewApp
+            =  (`SwVer` 0) . ApName
+           <$> Gen.filter ((`notElem` usedNames) . ApName)
+                          (Gen.list (Range.constant 0 12) Gen.ascii)
+            where
+              usedNames = Set.map fst3 (range raus)
+                          `union`
+                          dom avs
+
+      generateUpdateProposalWith
+        :: VKey
+        -> PParams
+        -> ProtVer
+        -> SwVer
+        -> Gen UProp
+      generateUpdateProposalWith vk pps' pv' sv'
+        = UProp
+        <$> idGen
+        <*> pure vk
+        <*> pure pps'
+        <*> pure pv'
+        <*> pure sv'
+        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
+        <*> stTagsGen
+        <*> mdtGen
+
+      stTagsGen :: Gen (Set STag)
+      stTagsGen =
+        -- TODO: We need to benchmark this against @Gen.set@. This seems to be
+        -- slightly faster.
+        Set.fromList <$>
+          Gen.list (Range.linear 0 5) (Gen.list (Range.constant 0 10) Gen.ascii)
+
+      mdtGen :: Gen Metadata
+      mdtGen = pure Metadata
+
+
+-- | Generate a protocol parameter update from a given set of current
+-- protocol-parameters, ensuring the consistency of the new protocol parameters
+-- w.r.t. the current ones, according to the @canUpdate@ predicate in the
+-- formal specification.
+--
+-- TODO: we can move this into a Generator's module, but first we need to
+-- disentangle the dependencies. Moving this to @Ledger.Update.Generators@ will
+-- cause a circular dependency. I think the rules need to be moved into their
+-- own modules.
+ppsUpdateFrom :: PParams -> Gen PParams
+ppsUpdateFrom pps = do
+  -- Determine the change in the block size: a decrement or an increment that
+  -- is no more than twice the current block maximum size.
+  --
+  -- We don't expect the maximum block size to change often, so we generate
+  -- more values around the current block size (@_maxBkSz@).
+  newMaxBkSize <- Gen.integral (Range.linearFrom _maxBkSz 1 (2 * _maxBkSz))
+                  `increasingProbabilityAt`
+                  (1, 2 * _maxBkSz)
+
+  -- Similarly, we don't expect the transaction size to be changed often, so we
+  -- also generate more values around the current maximum transaction size.
+  newMaxTxSize <- Gen.integral (Range.exponentialFrom _maxTxSz 0 (newMaxBkSize - 1))
+                  `increasingProbabilityAt`
+                  (0, newMaxBkSize - 1)
+
+  PParams
+    <$> pure newMaxBkSize
+    <*> nextMaxHdrSzGen
+    <*> pure newMaxTxSize
+    <*> nextMaxPropSz
+    <*> nextBkSgnCntT
+    <*> pure _bkSlotsPerEpoch -- This parameter should be removed from 'PParams'
+    <*> nextUpTtl
+    <*> nextScriptVersion
+    <*> nextCfmThd
+    <*> nextUpAdptThd
+    <*> pure _stableAfter     -- This parameter should be removed from 'PParams'
+    <*> nextFactorA
+    <*> nextFactorB
+
+  where
+    PParams{ _maxBkSz
+           , _maxHdrSz
+           , _maxTxSz
+           , _maxPropSz
+           , _bkSgnCntT
+           , _bkSlotsPerEpoch
+           , _upTtl
+           , _scriptVersion
+           , _cfmThd
+           , _upAdptThd
+           , _stableAfter
+           , _factorA
+           , _factorB
+           } = pps
+
+    nextMaxHdrSzGen :: Gen Natural
+    nextMaxHdrSzGen =
+      Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
+      `increasingProbabilityAt` (0, (2 * _maxHdrSz))
+
+    nextMaxPropSz :: Gen Natural
+    nextMaxPropSz =
+      Gen.integral (Range.exponentialFrom _maxPropSz 0 (2 * _maxPropSz))
+      `increasingProbabilityAt` (0, 2 * _maxPropSz)
+
+    nextBkSgnCntT :: Gen Double
+    nextBkSgnCntT =
+      Gen.double (Range.exponentialFloatFrom _bkSgnCntT 0 1)
+      `increasingProbabilityAt` (0, 1)
+
+    nextUpTtl :: Gen SlotCount
+    nextUpTtl = SlotCount <$>
+      -- TODO: here we need to decide what is right the minimum value for the
+      -- update-proposal TTL, and maybe adapt the rules to check the value of
+      -- this parameter cannot change to anything below this value.
+      --
+      -- For now we choose an arbitrary constant.
+      Gen.integral (Range.exponentialFrom currUpTtl minTtl (2 * currUpTtl))
+      `increasingProbabilityAt` (minTtl, 2 * currUpTtl)
+      where
+        SlotCount currUpTtl = _upTtl
+        minTtl = 2
+
+    -- The new script version can be increased at most 1 unit
+    nextScriptVersion :: Gen Natural
+    nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
+
+    nextCfmThd :: Gen Int
+    nextCfmThd = Gen.integral (Range.exponentialFrom 0 _cfmThd (_cfmThd + 1))
+      `increasingProbabilityAt`
+      (0, _cfmThd + 1)
+
+    nextUpAdptThd :: Gen Double
+    nextUpAdptThd =
+      Gen.double (Range.exponentialFloatFrom _upAdptThd 0 1)
+      `increasingProbabilityAt` (0, 1)
+
+    nextFactorA :: Gen Int
+    nextFactorA =
+      -- TODO: we choose arbitrary numbers here for now.
+      Gen.integral (Range.exponentialFrom _factorA 0 10)
+      `increasingProbabilityAt` (0, 10)
+
+    nextFactorB :: Gen Int
+    nextFactorB =
+      -- TODO: we choose arbitrary numbers here for now.
+      Gen.integral (Range.exponentialFrom _factorB 0 10)
+      `increasingProbabilityAt` (0, 10)
+
+-- | Generate values the given distribution in 90% of the cases, and values at
+-- the bounds of the range in 10% of the cases.
+--
+-- This can be used to generate enough extreme values. The exponential and
+-- linear distributions provided by @hedgehog@ will generate a small percentage
+-- of these (0-1%).
+increasingProbabilityAt
+  :: Gen a
+  -> (a, a)
+  -> Gen a
+increasingProbabilityAt gen (lower, upper)
+  = Gen.frequency [ (5, pure lower)
+                  , (90, gen)
+                  , (5, pure upper)
+                  ]
 
 data UPIVOTE
 
