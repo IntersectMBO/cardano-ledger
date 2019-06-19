@@ -44,6 +44,7 @@ import           LedgerState     (LedgerState (..),
                                   stKeys
                                  )
 import           Slot
+import           Updates
 import           UTxO
 import           PParams              (PParams(..), emptyPParams)
 import           Delegation.Certificates  (DCert(..), StakeKeys(..))
@@ -149,6 +150,7 @@ genTx keyList (UTxO m) cslot = do
            Map.empty -- TODO generate witdrawals
            txfee'
            (cslot + (Slot txttl))
+           emptyUpdate
            (EEnt Map.empty)
   let !txwit = makeWitness txbody selectedKeyPair
   pure (txfee', Tx txbody $ Set.fromList [txwit])
@@ -166,7 +168,7 @@ genLedgerStateTx keyList (Slot slot) sourceState = do
   let dms = _dms $ _dstate $ _delegationState sourceState
   slot' <- genNatural slot (slot + 100)
   (txfee', tx) <- genTx keyList utxo' (Slot slot')
-  pure (txfee', tx, asStateTransition (Slot slot') sourceState tx dms)
+  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx dms)
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -287,7 +289,7 @@ genLedgerStateTx' keyList sourceState = do
   tx'          <- mutateTx tx
   pure (txfee'
        , tx'
-       , asStateTransition' (Slot slot) (LedgerValidation [] sourceState) tx' dms)
+       , asStateTransition' (Slot slot) defPCs (LedgerValidation [] sourceState) tx' dms)
 
 -- Generators for 'DelegationData'
 

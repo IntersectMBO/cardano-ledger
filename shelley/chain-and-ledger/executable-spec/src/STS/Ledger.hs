@@ -28,7 +28,7 @@ data LEDGER
 instance STS LEDGER where
     type State LEDGER       = (UTxOState, DPState)
     type Signal LEDGER      = Tx
-    type Environment LEDGER = (PParams, Slot, Ix)
+    type Environment LEDGER = (Slot, Ix, PParams)
     data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
                                  | DelegsFailure (PredicateFailure DELEGS)
                     deriving (Show, Eq)
@@ -38,7 +38,7 @@ instance STS LEDGER where
 
 initialLedgerStateLEDGER :: InitialRule LEDGER
 initialLedgerStateLEDGER = do
-  IRC (pp, slot, ix) <- judgmentContext
+  IRC (slot, ix, pp) <- judgmentContext
   utxo' <- trans @UTXOW
     $ IRC (slot, pp, StakeKeys Map.empty, StakePools Map.empty, Dms Map.empty)
   deleg <- trans @DELEGS $ IRC (slot, ix, pp)
@@ -46,7 +46,7 @@ initialLedgerStateLEDGER = do
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
-  TRC ((pp, slot, ix), (u, d), txwits) <- judgmentContext
+  TRC ((slot, ix, pp), (u, d), txwits) <- judgmentContext
   utxo'  <- trans @UTXOW
     $ TRC (( slot
            , pp, d ^. dstate . stKeys

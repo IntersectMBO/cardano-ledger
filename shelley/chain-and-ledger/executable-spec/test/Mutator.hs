@@ -30,6 +30,7 @@ import           Delegation.Certificates  (DCert(..))
 import           Delegation.PoolParams
 import Keys
 import LedgerState (DPState(..), KeyPairs)
+import Updates
 import UTxO        (TxBody(..), Tx(..), TxIn(..), TxOut(..))
 import           Slot
 
@@ -89,6 +90,7 @@ mutateTxBody tx = do
     (_wdrls tx)
     (_txfee tx)
     (_ttl tx)
+    emptyUpdate
     (_txeent tx)
 
 -- | Mutator for a list of 'TxIn'.

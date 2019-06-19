@@ -22,6 +22,7 @@ import           Generator
 import           Coin
 import           LedgerState hiding (dms)
 import           Slot
+import           PParams
 import           UTxO
 
 
@@ -231,7 +232,7 @@ propCheckMinimalWitnessSet = property $ do
   let witness                  = makeWitness tx keyPair
   let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
   let dms                      = _dms $ _dstate $ _delegationState l
-  let l''                      = asStateTransition (Slot (steps)) l txwits' dms
+  let l''                      = asStateTransition (Slot (steps)) emptyPParams l txwits' dms
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessSet))
   case l'' of
@@ -250,7 +251,7 @@ propCheckMissingWitness = property $ do
   let witnessSet''          = txwits ^. witnessSet
   let witnessSet'           = Set.fromList witnessList
   let dms                   = _dms $ _dstate $ _delegationState l
-  let l'                    = asStateTransition (Slot steps) l (txwits & witnessSet .~ witnessSet') dms
+  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessSet .~ witnessSet') dms
   let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
                               witnessSet' /= witnessSet''
   classify "real subset" (isRealSubset)
@@ -266,9 +267,9 @@ propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
            (balance (l ^. utxoState . utxo))
-        + (keyRefunds (l ^. pcs) (l ^. delegationState . dstate . stKeys) $ tx ^. body)
+        + (keyRefunds emptyPParams (l ^. delegationState . dstate . stKeys) $ tx ^. body)
   let created =
            (balance (l' ^. utxoState . utxo))
         + fee
-        + (deposits (l' ^. pcs) (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
+        + (deposits emptyPParams (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
   destroyed === created

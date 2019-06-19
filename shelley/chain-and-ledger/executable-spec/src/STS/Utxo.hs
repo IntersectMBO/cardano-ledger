@@ -8,11 +8,9 @@ module STS.Utxo
   ) where
 
 import qualified Data.Map.Strict          as Map
-import qualified Data.Set                 as Set
 
 import           Lens.Micro               ((%~), (&), (^.), (.~))
 
-import           BaseTypes
 import           Coin
 import           Delegation.Certificates
 import           Keys
@@ -56,7 +54,7 @@ utxoInductive = do
 
   let txbody = _body tx
   validInputs txbody u == Valid ?! BadInputsUTxO
-  current txbody slot == Valid ?! ExpiredUTxO (txbody ^. ttl) slot
+  _ttl txbody >= slot ?! ExpiredUTxO (_ttl txbody) slot
   validNoReplay txbody == Valid ?! InputSetEmptyUTxO
 
   let validateFee = validFee pp txbody
