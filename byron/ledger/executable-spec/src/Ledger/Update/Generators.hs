@@ -1,6 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
-
+{-# LANGUAGE TupleSections       #-}
 
 -- | Generators for the 'Ledger.Update' values.
 module Ledger.Update.Generators
@@ -18,12 +17,12 @@ where
 import           Control.State.Transition (Environment, State)
 import           Data.Word (Word64)
 import           Hedgehog
-import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Gen.Aux (doubleInc)
-import qualified Hedgehog.Range as Range
-import           Ledger.Core (BlockCount (..), Slot (..), SlotCount (..))
+import qualified Hedgehog.Gen    as Gen
+import qualified Hedgehog.Range  as Range
+import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
 import           Ledger.Core.Generators (slotGen)
-import           Ledger.Update (PParams (..), PVBUMP, ProtVer (..))
+import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
 import           Numeric.Natural (Natural)
 
 
