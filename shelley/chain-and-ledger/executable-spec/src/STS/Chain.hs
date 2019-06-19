@@ -8,12 +8,10 @@ module STS.Chain
   ) where
 
 import qualified Data.Map.Strict          as Map
-import qualified Data.Set                 as Set
 
 import           BaseTypes
 import           BlockChain
 import           EpochBoundary
-import           Keys
 import           LedgerState
 import           PParams
 import           Slot

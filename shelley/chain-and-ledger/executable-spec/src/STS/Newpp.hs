@@ -7,7 +7,7 @@ module STS.Newpp
 
 import qualified Data.Map.Strict as Map
 
-import           Lens.Micro              ((^.), (&), (.~))
+import           Lens.Micro              ((^.))
 
 import           BaseTypes
 import           EpochBoundary

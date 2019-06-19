@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Hedgehog (checkParallel, Group (Group))
-import Test.Tasty (TestTree, defaultMain, testGroup, localOption)
+import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.ExpectedFailure (expectFailBecause)
 import Test.Tasty.Hedgehog (testProperty)
 

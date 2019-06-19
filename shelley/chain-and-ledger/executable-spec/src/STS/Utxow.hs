@@ -7,8 +7,6 @@ module STS.Utxow
   ( UTXOW
   ) where
 
-import           Lens.Micro               ((^.))
-
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
