@@ -132,7 +132,9 @@ prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
     let result = taylorExpCmp 3 (1/(1 - p_)) (-sigma*c) in
       (case result of
         ABOVE _ _ -> p_ >= (1 - ((1 - f) *** sigma))
-        BELOW _ _ -> p_ < (1 - ((1 - f) *** sigma)))
+        BELOW _ _ -> p_ < (1 - ((1 - f) *** sigma))
+        UNKNOWN -> False
+        )
   where (p, p') = normalizeInts q q'
         (s, s') = normalizeInts a a'
         p'''    = fromIntegral p' :: FixedPoint
