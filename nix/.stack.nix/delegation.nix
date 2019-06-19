@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = {};
+    flags = { development = false; };
     package = {
       specVersion = "1.8";
       identifier = { name = "delegation"; version = "0.1.0.0"; };
@@ -31,7 +31,7 @@
         };
       tests = {
         "delegation-test" = {
-          depends = [
+          depends = (pkgs.lib).optionals (!flags.development) [
             (hsPkgs.base)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
