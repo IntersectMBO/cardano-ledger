@@ -18,7 +18,10 @@ import           Ledger.HasTypeReps.Properties          (testTxHasTypeReps)
 import           Ledger.Pvbump.Properties               (beginningsNoUpdate,
                                                          emptyPVUpdate,
                                                          lastProposal)
+
 import qualified Ledger.Update.Properties               as UPDATE
+
+import           Ledger.Relation.Properties             (testRelation)
 import           Ledger.UTxO.Properties                 (moneyIsConstant)
 import qualified Ledger.UTxO.Properties                 as UTxO
 
@@ -55,4 +58,5 @@ main = defaultMain tests
       , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered
       , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
       ]
+    , testRelation
     ]
