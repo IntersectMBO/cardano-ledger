@@ -59,7 +59,7 @@ verifyKES :: Eq a => VKey -> a -> KESig a -> Natural -> Bool
 verifyKES (VKey vk) vd (KESig (Sig sd sk) m) n = vk == sk && vd == sd && m == n
 
 newtype Dms = Dms (Map.Map VKeyGenesis VKey)
-  deriving (Show, Eq)
+  deriving (Show, Ord, Eq)
 
 newtype GKeys = GKeys (Set.Set VKeyGenesis)
-  deriving (Show, Eq)
+  deriving (Show, Ord, Eq)
