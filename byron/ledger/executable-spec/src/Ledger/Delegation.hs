@@ -1,13 +1,13 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DeriveGeneric          #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE NamedFieldPuns         #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ledger.Delegation
   ( -- * Delegation scheduling
@@ -70,85 +70,38 @@ module Ledger.Delegation
   )
 where
 
-import Data.AbstractSize
-import Data.Bimap (Bimap, (!>))
+import           Control.Lens (Lens', lens, makeFields, makeLenses, to, (%~),
+                     (&), (.~), (<>~), (^.), _1, _2)
+import           Data.AbstractSize
+import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
-import Data.Hashable (Hashable)
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
-import Data.Maybe (catMaybes)
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set, (\\))
+import           Data.Maybe (catMaybes)
+import           Data.Set (Set, (\\))
 import qualified Data.Set as Set
-import GHC.Generics (Generic)
-import Hedgehog (Gen)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (constant, linear)
-import Control.Lens
-  ( Lens'
-  , (%~)
-  , (&)
-  , (.~)
-  , (<>~)
-  , (^.)
-  , _1
-  , _2
-  , lens
-  , makeFields
-  , makeLenses
-  , to
-  )
+import           Hedgehog.Range (constant, linear)
 
 
-import Control.State.Transition
-  ( Embed
-  , Environment
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , IRC(IRC)
-  , TRC(TRC)
-  , (?!)
-  , initialRules
-  , judgmentContext
-  , trans
-  , transitionRules
-  , wrapFailed
-  )
-import Control.State.Transition.Generator
-  ( HasTrace
-  , initEnvGen
-  , sigGen
-  )
-import Ledger.Core
-  ( BlockCount
-  , Epoch
-  , HasHash
-  , Hash(Hash)
-  , Owner(Owner)
-  , Sig(Sig)
-  , Slot(Slot)
-  , SlotCount(SlotCount)
-  , VKey(VKey)
-  , VKeyGenesis(VKeyGenesis)
-  , (∈)
-  , (∉)
-  , (⨃)
-  , addSlot
-  , hash
-  , owner
-  , owner
-  , range
-  , unBlockCount
-  )
-import Ledger.Core.Generators
-  ( blockCountGen
-  , epochGen
-  , slotGen
-  , vkgenesisGen
-  )
+import           Control.State.Transition (Embed, Environment, IRC (IRC),
+                     PredicateFailure, STS, Signal, State, TRC (TRC),
+                     initialRules, judgmentContext, trans, transitionRules,
+                     wrapFailed, (?!))
+import           Control.State.Transition.Generator (HasTrace, initEnvGen,
+                     sigGen)
+import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash),
+                     Owner (Owner), Sig (Sig), Slot (Slot),
+                     SlotCount (SlotCount), VKey (VKey),
+                     VKeyGenesis (VKeyGenesis), addSlot, hash, owner, owner,
+                     range, unBlockCount, (∈), (∉), (⨃))
+import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen,
+                     vkgenesisGen)
 
 
 --------------------------------------------------------------------------------
@@ -158,7 +111,7 @@ import Ledger.Core.Generators
 -- | A delegation certificate.
 data DCert = DCert
   { -- | Body of the delegation certificate
-    _dbody :: (VKey, Epoch)
+    _dbody :: (VKey, Epoch )
     -- | Witness for the delegation cerfiticate
   , _dwit :: Sig VKeyGenesis
     -- | Who delegates to whom
