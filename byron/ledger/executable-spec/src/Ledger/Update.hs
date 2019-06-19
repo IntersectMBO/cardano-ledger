@@ -1168,7 +1168,7 @@ instance STS UPIVOTE where
           stblCps = dom (cps' ▷<= sn -. 2 *. k)
           stblRaus = stblCps ◁ raus
           avsnew = [ (an, (av, sn, m))
-                   | (an, av, m) <- toList $ stblRaus
+                   | (an, av, m) <- toList stblRaus
                    ]
         pure $! ( (pv, pps)
                 , fads
