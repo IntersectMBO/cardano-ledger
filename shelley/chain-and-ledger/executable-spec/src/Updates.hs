@@ -12,6 +12,8 @@ module Updates
   , Update(..)
   , newAVs
   , votedValue
+  , emptyUpdateState
+  , emptyUpdate
   )
 where
 
@@ -95,3 +97,15 @@ votedValue vs
                                                -- least 5 elements
   where elemLists =
           filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
+
+emptyUpdateState :: ( Updates.PPUpdate
+                    , Updates.AVUpdate
+                    , Map.Map Slot Updates.Applications
+                    , Updates.Applications)
+emptyUpdateState = ( PPUpdate Map.empty
+                   , AVUpdate Map.empty
+                   , Map.empty
+                   , Applications Map.empty)
+
+emptyUpdate :: Update
+emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)

@@ -14,6 +14,7 @@ import           Coin
 import           EpochBoundary
 import           LedgerState
 import           PParams hiding (d)
+import           Updates
 import           Slot
 import           UTxO
 
@@ -28,7 +29,7 @@ instance STS SNAP where
   data PredicateFailure SNAP = FailureSNAP
                                deriving (Show, Eq)
   initialRules =
-    [pure (emptySnapShots, UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty))]
+    [pure (emptySnapShots, UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
   transitionRules = [snapTransition]
 
 snapTransition :: TransitionRule SNAP

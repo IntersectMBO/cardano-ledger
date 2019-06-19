@@ -52,6 +52,7 @@ module UTxO
   , body
   , witnessSet
   , verifyWit
+  , txup
   ) where
 
 import           Crypto.Hash             (Digest, SHA256, hash)
@@ -71,6 +72,7 @@ import           Coin                    (Coin (..))
 import           Keys
 import           PParams                 (PParams(..))
 import           Slot (Slot(..))
+import           Updates                 (Update)
 
 import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
 import           Delegation.PoolParams (poolPubKey, RewardAcnt(..))
@@ -114,6 +116,7 @@ data TxBody = TxBody { _inputs  :: !(Set TxIn)
                      , _wdrls   :: Wdrl
                      , _txfee   :: Coin
                      , _ttl     :: Slot
+                     , _txUpdate:: Update
                      , _txeent  :: EEnt
                      } deriving (Show, Eq, Ord)
 
@@ -199,3 +202,6 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
 instance BA.ByteArrayAccess TxBody where
   length        = BA.length . BS.pack . show
   withByteArray = BA.withByteArray . BS.pack  . show
+
+txup :: Tx -> Update
+txup (Tx txbody _ ) = _txUpdate txbody

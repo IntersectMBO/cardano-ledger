@@ -80,7 +80,7 @@ module LedgerState
   , utxo
   , deposited
   , fees
-  , eEntropy
+  , ups
   -- DelegationState
   , rewards
   , stKeys
@@ -132,6 +132,7 @@ import           PParams                 (PParams(..), minfeeA, minfeeB,
                                                  keyDeposit, keyMinRefund,
                                                  keyDecayRate, emptyPParams)
 import           EpochBoundary
+import qualified Updates
 
 import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey, PoolDistr(..))
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
@@ -265,13 +266,14 @@ emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
 emptyLedgerState :: LedgerState
-emptyLedgerState = LedgerState
-                   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty))
-                   emptyDelegation
-                   emptyUPIState
-                   emptyPParams
-                   0
-                   (Slot 0)
+emptyLedgerState =
+  LedgerState
+  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) Updates.emptyUpdateState)
+  emptyDelegation
+  emptyUPIState
+  emptyPParams
+  0
+  (Slot 0)
 
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
@@ -290,11 +292,13 @@ emptyPState =
 
 data UTxOState =
     UTxOState
-    {
-      _utxo      :: !UTxO
+    { _utxo      :: !UTxO
     , _deposited :: Coin
     , _fees      :: Coin
-    , _eEntropy  :: EEnt
+    , _ups       :: ( Updates.PPUpdate
+                    , Updates.AVUpdate
+                    , Map.Map Slot Updates.Applications
+                    , Updates.Applications)
     } deriving (Show, Eq)
 
 -- | For now this contains the Byron `UPIState` and the Shelley PParams
@@ -357,7 +361,16 @@ makeLenses ''LedgerState
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId
 genesisId =
-  TxId $ hash (TxBody Set.empty [] [] Map.empty (Coin 0) (Slot 0) (EEnt Map.empty))
+  TxId $ hash
+  (TxBody
+   Set.empty
+   []
+   []
+   Map.empty
+   (Coin 0)
+   (Slot 0)
+   Updates.emptyUpdate
+   (EEnt Map.empty))
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -368,7 +381,7 @@ genesisState pc outs = LedgerState
               [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs])
     (Coin 0)
     (Coin 0)
-    (EEnt Map.empty))
+    Updates.emptyUpdateState)
   emptyDelegation
   emptyUPIState
   pc
