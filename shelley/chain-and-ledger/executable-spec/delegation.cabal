@@ -29,6 +29,7 @@ library
                      Delegation.PoolParams
                      Delegation.Certificates
                      OCert
+                     Updates
                      STS.Bbody
                      STS.Bhead
                      STS.Chain
