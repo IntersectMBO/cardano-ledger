@@ -14,6 +14,7 @@ import           EpochBoundary
 import           LedgerState hiding (reserves)
 import           PParams
 import           Slot
+import           Updates
 import           UTxO
 import           Coin
 
@@ -33,7 +34,7 @@ instance STS NEWPP where
 initialNewPp :: InitialRule NEWPP
 initialNewPp =
   pure
-    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty)
+    (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (emptyUpdateState)
     , emptyAccount
     , emptyPParams)
 
