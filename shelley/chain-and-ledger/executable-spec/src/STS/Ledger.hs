@@ -14,7 +14,7 @@ import           Lens.Micro              ((^.))
 import           Keys
 import           LedgerState
 import           UTxO
-import           PParams
+import           PParams hiding (d)
 import           Slot
 import           Delegation.Certificates
 

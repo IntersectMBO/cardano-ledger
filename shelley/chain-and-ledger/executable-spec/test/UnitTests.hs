@@ -19,7 +19,7 @@ import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(
 import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                                      RewardAcnt(..))
 import           Keys
-import           LedgerState
+import           LedgerState hiding (dms)
 import           PParams
 import           Slot
 import           UTxO
@@ -41,10 +41,6 @@ bobStake = keyPair (Owner 4)
 
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
-
-oneFourth :: UnitInterval
-oneFourth =
-    fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.25
 
 testPCs :: PParams
 testPCs = emptyPParams {

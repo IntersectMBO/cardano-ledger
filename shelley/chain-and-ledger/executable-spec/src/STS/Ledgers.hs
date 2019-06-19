@@ -41,7 +41,7 @@ ledgersTransition = do
       (u, dw) $
     zip [0 ..] txwits
   pure $
-    LedgerState u'' dw'' (_upiState ls) (_pcs ls) (_txSlotIx ls) (_currentSlot ls)
+    LedgerState u'' dw'' (upiState ls) (_pcs ls) (_txSlotIx ls) (_currentSlot ls)
 
 instance Embed LEDGER LEDGERS where
   wrapFailed = LedgerFailure

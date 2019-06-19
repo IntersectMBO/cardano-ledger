@@ -58,11 +58,11 @@ instance STS CHAIN where
 
 chainTransition :: TransitionRule CHAIN
 chainTransition = do
-  TRC ((_, ppN), ((eta0, etaC, etaV), b, sL, eL, es, ru, pd), block@(Block bh _)) <-
+  TRC ((_, _ppN), ((eta0, etaC, etaV), b, sL, _eL, _es, _ru, _pd), block@(Block bh _)) <-
     judgmentContext
   let bhb = bhbody bh
   let s = bheaderSlot bhb
-  let e = epochFromSlot s -- TODO where is Epoch `e` coming from?
+  let _e = epochFromSlot s -- TODO where is Epoch `e` coming from?
   (etaV', etaC') <- trans @UPDN $ TRC (eta0, (etaV, etaC), s)
   -- (eL', eta0', b', es'@(EpochState acnt' ls' ss' pp'), ru', pd') <-
   --   trans @NEWEPOCH $ TRC (undefined, undefined, e) -- TODO:
@@ -78,7 +78,7 @@ chainTransition = do
   let eL' = undefined
   let pd' = undefined
   ru'' <- trans @RUPD $ TRC ((b, es'), ru', s)
-  let delegationState' = _delegationState ls'
+  let _delegationState' = _delegationState ls'
   _ <- trans @OCERT $ TRC ((), Map.empty, bh) -- TODO: OVERLAY -> PRTCL
   let ls'' = ls' -- {_delegationState = delegationState' {_pstate = ps''}}
   let sL' = sL

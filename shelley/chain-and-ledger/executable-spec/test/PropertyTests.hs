@@ -20,7 +20,7 @@ import qualified Hedgehog.Gen    as Gen
 import           Generator
 
 import           Coin
-import           LedgerState
+import           LedgerState hiding (dms)
 import           Slot
 import           UTxO
 
