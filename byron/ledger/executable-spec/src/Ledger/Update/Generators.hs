@@ -5,11 +5,11 @@
 module Ledger.Update.Generators
   ( pparamsGen
   , protVerGen
-  -- PVBUMP environment generators
+  -- * PVBUMP environment generators
   , pvbumpAfter2kEnvGen
   , pvbumpEmptyListEnvGen
   , pvbumpBeginningsEnvGen
-  -- PVBUMP state generators
+  -- * PVBUMP state generators
   , pvbumpStateGen
   )
 where
