@@ -18,6 +18,7 @@ import qualified Data.Hashable as H
 import qualified Data.Map as Map
 import Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
+import Data.Word (Word8)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -52,6 +53,7 @@ instance STS CHAIN where
     , DSEnv           -- Needed by the initial rules for delegation.
     , PParams         -- Needed to bootstrap this part of the chain state,
                       -- which is used in the delegation rules
+    , Word8           -- Number of genesis keys.
     )
 
   type State CHAIN =
@@ -76,7 +78,7 @@ instance STS CHAIN where
 
   initialRules =
     [ do
-        IRC (_slot, utxo0', dsenv, pps') <- judgmentContext
+        IRC (_slot, utxo0', dsenv, pps', _ngk) <- judgmentContext
         let s0 = Slot 0
             -- Since we only test the delegation state we initialize the
             -- remaining fields of the update interface state to (m)empty. Once
@@ -94,13 +96,13 @@ instance STS CHAIN where
                         )
         utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
         ds      <- trans @DELEG $ IRC dsenv
-        return $! ( s0
-                  , ds ^. delegationMap . to Bimap.keys . to fromList
-                  , genesisHash
-                  , utxoSt0
-                  , ds
-                  , upiState0
-                  )
+        pure $! ( s0
+                , ds ^. delegationMap . to Bimap.keys . to fromList
+                , genesisHash
+                , utxoSt0
+                , ds
+                , upiState0
+                )
     ]
 
   transitionRules =
@@ -113,14 +115,14 @@ instance STS CHAIN where
    where
     isEBBRule :: TransitionRule CHAIN
     isEBBRule = do
-      TRC ((_sNow, _, _, _), (sLast, sgs, _, utxo, ds, us), b) <- judgmentContext
+      TRC ((_sNow, _, _, _, _), (sLast, sgs, _, utxo, ds, us), b) <- judgmentContext
       bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
       let h' = bhHash (b ^. bHeader)
       return $! (sLast, sgs, h', utxo, ds, us)
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC ((sNow, utxoGenesis, _, pps), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
+      TRC ((sNow, utxoGenesis, _, pps, ngk), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
         trans @BHEAD $ TRC ((dm, sLast, pps ^. stableAfter), us, b ^. bHeader)
@@ -132,6 +134,7 @@ instance STS CHAIN where
           ( ppsUs'
           , sEpoch (b ^. bHeader ^. bhSlot)
           , utxoGenesis
+          , ngk
           )
         , (utxoSt, ds, us')
         , b
@@ -164,11 +167,14 @@ disL = _5
 
 instance HasTrace CHAIN where
 
-  initEnvGen = (,,,)
-            <$> gCurrentSlot
-            <*> (utxo0 <$> initEnvGen @UTXOWS)
-            <*> initEnvGen @DELEG
-            <*> UpdateGen.pparamsGen
+  initEnvGen = do
+    ngk <- Gen.integral (Range.linear 1 14)
+    (,,,,)
+      <$> gCurrentSlot
+      <*> (utxo0 <$> initEnvGen @UTXOWS)
+      <*> initialEnviromentFromNumberOfGenesisKeys ngk
+      <*> UpdateGen.pparamsGen
+      <*> pure ngk
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
@@ -186,7 +192,7 @@ sigGenChain
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps) (Slot s, _sgs, h, utxo, ds, _us)
+sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk) (Slot s, _sgs, h, utxo, ds, _us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide

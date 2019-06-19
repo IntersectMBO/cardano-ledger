@@ -36,6 +36,7 @@ import Data.Maybe (maybeToList)
 import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -73,7 +74,6 @@ import Ledger.Core
   )
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
-import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
 
@@ -691,9 +691,12 @@ instance Embed FADS UPEND where
 type UPIEnv =
   ( Core.Slot
   , Bimap Core.VKeyGenesis Core.VKey
-  , BlockCount -- this is a global constant in the formal
+  , BlockCount -- This is a global constant in the formal
                -- specification, which we put in this environment so
                -- that we can test with different values of it.
+  , Word8  -- Number of genesis keys, @ngk@. Also a global constant in the
+           -- formal specification which is placed here so that we can test
+           -- with different values.
   )
 
 -- | The update interface state is shared amongst various rules, so we define it
@@ -802,7 +805,7 @@ instance STS UPIREG where
 
   transitionRules =
     [ do
-        TRC ( (sn, dms, _k)
+        TRC ( (sn, dms, _k, _ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -833,28 +836,30 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = (,,)
-             <$> CoreGen.slotGen 0 10        -- Current slot
-             <*> dmapGen                     -- Delegation map
-             <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+  initEnvGen = do
+    ngk <- Gen.integral (Range.linear 1 14)
+    (,,,)
+      <$> CoreGen.slotGen 0 10        -- Current slot
+      <*> dmapGen ngk                 -- Delegation map
+      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+      <*> pure ngk
     where
       -- Generate an initial delegation map, using a constant number of genesis
       -- keys, which is determined in this generator.
-      dmapGen :: Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
         where
           vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = do
-            n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
-            let
-              vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
+          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+            where
+              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
               -- As delegation targets we choose twice the number of genesis keys.
               -- Note that the genesis keys can delegate to themselves in the
               -- generated delegation map.
-              vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
-            (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
-  sigGen (_slot, dms, _k) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+
+  sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -1137,7 +1142,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms, k)
+        TRC ( (sn, dms, k, _ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1215,7 +1220,7 @@ instance STS UPIEND where
 
   transitionRules =
     [ do
-        TRC ( (sn, dms, k)
+        TRC ( (sn, dms, k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1227,7 +1232,7 @@ instance STS UPIEND where
               , pws)
             , (bv,vk)) <- judgmentContext
         let
-          t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
+          t = floor $ pps ^. upAdptThd * fromIntegral ngk
         (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus, k), (fads, bvs), (bv,vk))
         let
           u        = pps ^. upTtl
