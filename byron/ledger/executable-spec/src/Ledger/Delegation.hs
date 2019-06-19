@@ -65,7 +65,7 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
-  , initialEnviromentFromNumberOfGenesisKeys
+  , initialEnvFromGenesisKeys
   -- * Functions on delegation state
   , delegatorOf
   )
@@ -566,14 +566,17 @@ instance HasTrace DELEG where
 
   initEnvGen = do
     ngk <- Gen.integral (linear 1 14)
-    initialEnviromentFromNumberOfGenesisKeys ngk
+    initialEnvFromGenesisKeys ngk
 
   sigGen = dcertsGen
 
 -- | Generate an initial 'DELEG' environment from the given number of genesis
 -- keys.
-initialEnviromentFromNumberOfGenesisKeys :: Word8 -> Gen DSEnv
-initialEnviromentFromNumberOfGenesisKeys ngk =
+initialEnvFromGenesisKeys
+  :: Word8
+  -- ^ Number of genesis keys.
+  -> Gen DSEnv
+initialEnvFromGenesisKeys ngk =
   DSEnv
     -- We need at least one delegator in the environment to be able to generate
     -- delegation certificates.

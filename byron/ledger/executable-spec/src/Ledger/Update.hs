@@ -26,13 +26,13 @@ import Control.Lens
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
+import Data.Foldable (toList)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
 import Data.List (notElem)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (maybeToList)
 import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
@@ -52,7 +52,6 @@ import Ledger.Core
   , HasHash
   , Owner(Owner)
   , Relation(..)
-  , Slot(..)
   , SlotCount(..)
   , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
@@ -70,7 +69,6 @@ import Ledger.Core
   , hash
   , minusSlotMaybe
   , skey
-  , unSlot
   )
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
@@ -99,8 +97,9 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: !Int -- TODO: this should be a double
+  , _cfmThd :: !Double
   -- ^ Update proposal confirmation threshold (number of votes)
+  -- TODO: we should merge @upAdptThd@ and @cfmThd@ into one.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
@@ -504,7 +503,7 @@ data UPVOTE
 instance STS UPVOTE where
   type Environment UPVOTE =
     ( Core.Slot
-    , PParams
+    , Word8
     , Set UpId
     , Bimap Core.VKeyGenesis Core.VKey
     )
@@ -523,24 +522,28 @@ instance STS UPVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_, pps, rups, dms)
+        TRC ( (_, t, rups, dms)
             , (cps, vts)
             , vote
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        size (Set.singleton pid ◁ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! HigherThanThdAndNotAlreadyConfirmed
-        return (cps, vts')
+        size ([pid] ◁ vts') < t || pid ∈ dom cps ?! HigherThanThdAndNotAlreadyConfirmed
+        pure $! ( cps
+                , vts'
+                )
     , do
-        TRC ( (sn, pps, rups, dms)
+        TRC ( (sn, t, rups, dms)
             , (cps, vts)
             , vote
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        (pps ^. cfmThd) <= size (Set.singleton pid ◁ vts') ?! CfmThdNotReached
-        pid `Set.notMember` dom cps ?! AlreadyConfirmed
-        return (cps ⨃ [(pid, sn)], vts')
+        t <= size ([pid] ◁ vts') ?! CfmThdNotReached
+        pid ∉ dom cps ?! AlreadyConfirmed
+        pure $! ( cps ⨃ [(pid, sn)]
+                , vts'
+                )
 
     ]
 
@@ -1091,10 +1094,8 @@ ppsUpdateFrom pps = do
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
 
-    nextCfmThd :: Gen Int
-    nextCfmThd = Gen.integral (Range.exponentialFrom 0 _cfmThd (_cfmThd + 1))
-      `increasingProbabilityAt`
-      (0, _cfmThd + 1)
+    nextCfmThd :: Gen Double
+    nextCfmThd = nextUpAdptThd  -- Using the same generator since we want to unify these parameters.
 
     nextUpAdptThd :: Gen Double
     nextUpAdptThd =
@@ -1142,7 +1143,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms, k, _ngk)
+        TRC ( (sn, dms, k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1153,19 +1154,27 @@ instance STS UPIVOTE where
               , bvs
               , pws)
             , v) <- judgmentContext
-        (cps', vts') <- trans @UPVOTE $ TRC ((sn, pps, dom pws, dms), (cps, vts), v)
+        let q = pps ^. cfmThd
+        (cps', vts') <- trans @UPVOTE $ TRC (( sn
+                                             , floor $ q * fromIntegral ngk
+                                             , dom pws
+                                             , dms
+                                             )
+                                            , ( cps
+                                              , vts
+                                              )
+                                            , v)
         let
-          stblCps  = Map.keys $ Map.filter stable cps'
-          stable s = unSlot s <= unSlot sn - 2 * unBlockCount k
-          avsnew   = [ (an, (av, sn, m))
-                     | pid <- stblCps
-                     , (an, av, m) <- maybeToList $ Map.lookup pid raus
-                     ]
-        return ( (pv, pps)
+          stblCps = dom (cps' ▷<= sn -. 2 *. k)
+          stblRaus = stblCps ◁ raus
+          avsnew = [ (an, (av, sn, m))
+                   | (an, av, m) <- toList $ stblRaus
+                   ]
+        pure $! ( (pv, pps)
                 , fads
                 , avs ⨃ avsnew
                 , rpus
-                , Set.fromList stblCps ⋪ raus
+                , stblCps ⋪ raus
                 , cps'
                 , vts'
                 , bvs
