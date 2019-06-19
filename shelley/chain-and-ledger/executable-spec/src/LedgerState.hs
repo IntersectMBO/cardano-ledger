@@ -359,8 +359,7 @@ genesisId =
    Map.empty
    (Coin 0)
    (Slot 0)
-   Updates.emptyUpdate
-   (EEnt Map.empty))
+   Updates.emptyUpdate)
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -498,8 +497,7 @@ witsNeeded utxo' tx (Dms d) =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
-    owners       `Set.union`
-    genEEntropy
+    owners
   where
     inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
     insertHK txin hkeys =
@@ -511,10 +509,6 @@ witsNeeded utxo' tx (Dms d) =
     owners = foldl Set.union Set.empty [pool ^. poolOwners | RegPool pool <- tx ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
-    EEnt eent = _txeent tx
-    genEEntropy = Set.fromList $
-      Map.elems $ Map.map hashKey $ Map.restrictKeys d (Map.keysSet eent)
-
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
