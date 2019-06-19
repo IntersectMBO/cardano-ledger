@@ -31,10 +31,10 @@ epsD :: Double
 epsD   = 1.0 / 10.0^(12::Integer)
 
 epsFP :: FixedPoint
-epsFP = (fromIntegral 1) / fromIntegral 10^16
+epsFP = 1 / 10^(16::Integer)
 
 eps :: Rational
-eps = (fromIntegral 1) / fromIntegral 10^16
+eps = 1 / 10^(16::Integer)
 
 -- | Normalizes the integers, return a pair of integers, both non-negative and
 -- fst >= snd.
@@ -141,7 +141,7 @@ prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
         s''     = fromIntegral s
         p_      = p''' / p''
         sigma   = s''' / s''
-        f       = fromIntegral 1 / fromIntegral 10 :: FixedPoint
+        f       = 1 / (10 :: FixedPoint)
         c       = ln' (1 - f)
 
 -----------------------------------
