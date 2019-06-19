@@ -8,6 +8,8 @@ module Updates
   , ApVer(..)
   , Metadata
   , Applications(..)
+  , AVUpdate(..)
+  , Update(..)
   , newAVs
   , votedValue
   )
