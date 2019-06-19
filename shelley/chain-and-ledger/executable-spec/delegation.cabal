@@ -11,6 +11,11 @@ source-repository head
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
   subdir:   hs
 
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
 library
   exposed-modules:   BaseTypes
                      BlockChain
@@ -50,6 +55,9 @@ library
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
     -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror
   build-depends:
     base >= 4.7 && < 5,
     bytestring,
@@ -79,6 +87,9 @@ test-suite delegation-test
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
       -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror
     build-depends:
       base,
       tasty,

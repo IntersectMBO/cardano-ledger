@@ -14,7 +14,7 @@ import           BaseTypes
 import           Coin
 import           Delegation.Certificates
 import           Keys
-import           LedgerState
+import           LedgerState hiding (dms)
 import           PParams
 import           Slot
 import           UTxO

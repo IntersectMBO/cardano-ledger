@@ -14,10 +14,3 @@ extra-deps:
 
 nix:
   shell-file: nix/stack-shell.nix
-
-ghc-options:
-  delegation:       -Wall -Werror=unused-imports
-  cs-blockchain:    -Wall -Werror=unused-imports
-  cs-ledger:        -Wall -Werror=unused-imports
-  small-steps:      -Wall -Werror=unused-imports
-  non-integer:      -Wall -Werror=unused-imports

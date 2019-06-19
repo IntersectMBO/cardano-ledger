@@ -332,7 +332,7 @@ data LedgerState =
     -- |The current delegation state
   , _delegationState   :: !DPState
     -- | UPIState
-  , _upiState          :: !UPIState
+  , upiState          :: !UPIState
     -- |The current protocol constants.
   , _pcs               :: !PParams
     -- | The current transaction index in the current slot.
@@ -828,14 +828,14 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
     Coin pstake = Map.foldl (+) (Coin 0) stake
     Coin ostake = stake Map.! poolHK
     sigma = fromIntegral pstake % fromIntegral total
-    expectedSlots = sigma * fromIntegral slotsPerEpoch
+    _expectedSlots = sigma * fromIntegral slotsPerEpoch
     Coin pledge = pool ^. poolPledge
     pr = fromIntegral pledge % fromIntegral total
     maxP =
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    Just s' = mkUnitInterval sigma
+    s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
     poolR = poolRewards poolHK s' blocksN blocksTotal maxP
     tot = fromIntegral total
     mRewards = Map.fromList

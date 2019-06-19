@@ -47,8 +47,8 @@ instance STS NEWEPOCH where
 
 ocertTransition :: TransitionRule NEWEPOCH
 ocertTransition = do
-  TRC ( (NewEpochEnv eta1 s gkeys)
-      , src@(NewEpochState eL@(Epoch eL') _ bprev bcur es ru pd osched)
+  TRC ( (NewEpochEnv eta1 _s gkeys)
+      , src@(NewEpochState (Epoch eL') _ bprev bcur es ru _pd _osched)
       , e@(Epoch e')) <- judgmentContext
   if eL' /= e' + 1
     then pure src
