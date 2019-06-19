@@ -92,5 +92,12 @@ test-suite examples
                      , tasty-expected-failure
                      --
                      , small-steps
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -threaded
+
   if (!flag(development))
     ghc-options:      -Werror

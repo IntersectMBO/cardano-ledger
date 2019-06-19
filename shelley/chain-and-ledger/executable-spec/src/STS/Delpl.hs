@@ -10,7 +10,7 @@ module STS.Delpl
 import           LedgerState
 import           Delegation.Certificates
 import           UTxO
-import           PParams
+import           PParams hiding (d)
 import           Slot
 
 import           Control.State.Transition
