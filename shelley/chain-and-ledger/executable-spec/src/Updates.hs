@@ -4,10 +4,17 @@ module Updates
   ( PPUpdateEnv(..)
   , PPUpdate(..)
   , updatePPup
+  , ApName(..)
+  , ApVer(..)
+  , Metadata
+  , Applications(..)
+  , newAVs
+  , votedValue
   )
 where
 
 import qualified Data.Map.Strict               as Map
+import qualified Data.List                     as List (group)
 
 import           BaseTypes
 import           Coin
@@ -16,10 +23,31 @@ import           Slot
 
 import           Numeric.Natural
 
+newtype ApVer = ApVer Natural
+  deriving (Show, Ord, Eq)
+
+newtype ApName = ApName String
+  deriving (Show, Ord, Eq)
+
+data Metadata = Metadata -- for now, there are no requirements on Metadata
+  deriving (Show, Ord, Eq)
+
+data Applications = Applications {
+  apps :: Map.Map ApName (ApVer, Metadata)
+  } deriving (Show, Ord, Eq)
+
+data AVUpdate = AVUpdate {
+  aup :: Map.Map VKeyGenesis Applications
+  } deriving (Show, Ord, Eq)
+
+-- | Update Proposal
+data Update = Update PPUpdate AVUpdate
+  deriving (Show, Ord, Eq)
+
 data PPUpdateEnv = PPUpdateEnv {
     slot :: Slot
   , dms  :: Dms
-  } deriving Show
+  } deriving (Show, Ord, Eq)
 
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
@@ -40,12 +68,28 @@ data Ppm = MinFeeA Integer
   | D UnitInterval
   | ExtraEntropy Seed
   | ProtocolVersion (Natural, Natural, Natural)
-  deriving Show
+  deriving (Show, Ord, Eq)
 
 data PPUpdate = PPUpdate (Map.Map VKeyGenesis (Map.Map Ppm Seed))
- deriving Show
+ deriving (Show, Ord, Eq)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
 -- in case of already existing value in `pup0`
 updatePPup :: PPUpdate -> PPUpdate -> PPUpdate
 updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ Map.union pup1' pup0'
+
+newAVs :: Applications -> Map.Map Slot Applications -> Applications
+newAVs avs favs =
+  if not $ Map.null favs
+   then let maxSlot = maximum $ Map.keys favs in
+        favs Map.! maxSlot  -- value exists because maxSlot is in keys
+   else avs
+
+votedValue :: Eq a => Map.Map VKeyGenesis a -> Maybe a
+votedValue vs
+ | null elemLists = Nothing
+ | otherwise = Just $ (head . head) elemLists  -- elemLists contains an element
+                                               -- and that list contains at
+                                               -- least 5 elements
+  where elemLists =
+          filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
