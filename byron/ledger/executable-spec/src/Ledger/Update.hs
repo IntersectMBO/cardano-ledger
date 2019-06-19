@@ -75,6 +75,9 @@ import qualified Ledger.Core.Generators as CoreGen
 
 import Prelude hiding (min)
 
+-- TODO: remove after PR 591 is merged.
+import Data.Word (Word8)
+
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
@@ -1213,6 +1216,55 @@ instance STS UPIVOTES where
 
 instance Embed UPIVOTE UPIVOTES where
   wrapFailed = UpivoteFailure
+
+instance HasTrace UPIVOTES where
+
+  initEnvGen = undefined -- TODO: factor out the 'initEnvGen' of UPUREG and use it here.
+
+  sigGen (_slot, _dms, _k) ((_pv, _pps), _fads, _avs, _rpus, _raus, _cps, _vts, _bvs, _pws) =
+    undefined
+
+--------------------------------------------------------------------------------
+-- TODO: TMP: sigGen UPIVOTES auxiliary defs
+--------------------------------------------------------------------------------
+
+-- | Determine the votes needed for confirming the unconfirmed update
+-- proposals.
+votesNeededForConfirmation
+  :: Word8
+  -- ^ Total number of genesis keys.
+  -> Double
+  -- ^ Confirmation threshold.
+  -> Set UpId
+  -- ^ Update proposals registered so far
+  -> Set (UpId, Core.VKeyGenesis)
+  -- ^ Votes for the update registered proposals.
+  -> [(UpId, [Core.VKeyGenesis])]
+votesNeededForConfirmation _ngk _cfmThd _rups _vts = undefined
+
+-- | Given a sequence of update proposals ID's and the votes needed for
+-- confirmation, generate a sequence of votes that will confirm a subsequence
+-- of the given proposal ID's.
+genVotesTillConfirmation :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
+genVotesTillConfirmation = undefined
+
+-- | Given a sequence of update proposals ID's and the votes needed for
+-- confirmation, generate votes on the most voted proposals.
+--
+--  Given a sequence of update proposals ID's and the votes needed for
+-- confirmation, a proposal is said to be most voted, if it is associated to
+-- the minimal number of votes needed for confirmation.
+--
+-- This basically takes the top @n@ most voted proposals (for some arbitrary
+-- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
+-- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
+genVotesOnMostVotedProposals :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
+genVotesOnMostVotedProposals = undefined
+
+--------------------------------------------------------------------------------
+-- End TODO: TMP: sigGen UPIVOTES auxiliary defs
+--------------------------------------------------------------------------------
+
 
 
 data UPIEND
