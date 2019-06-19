@@ -888,7 +888,7 @@ instance HasTrace UPIREG where
       idGen :: Gen UpId
       idGen = do
         -- Chose an increment for the maximum version seen in the update
-        -- proposal id's.
+        -- proposal IDs.
         inc <- Gen.integral (Range.constant 1 10)
         case Set.toDescList $ dom rpus of
           [] -> UpId <$> Gen.element [0 .. inc]
