@@ -23,8 +23,6 @@ instance FP.HasResolution E20 where
 instance FP.HasResolution E34 where
     resolution _ = 10000000000000000000000000000000000
 
-type Digits16 = FP.Fixed E16
-type Digits20 = FP.Fixed E20
 type Digits34 = FP.Fixed E34
 
 type FixedPoint = Digits34
@@ -33,10 +31,10 @@ epsD :: Double
 epsD   = 1.0 / 10.0^(12::Integer)
 
 epsFP :: FixedPoint
-epsFP = (fromIntegral 1) / fromIntegral 10^16
+epsFP = 1 / 10^(16::Integer)
 
 eps :: Rational
-eps = (fromIntegral 1) / fromIntegral 10^16
+eps = 1 / 10^(16::Integer)
 
 -- | Normalizes the integers, return a pair of integers, both non-negative and
 -- fst >= snd.
@@ -117,20 +115,6 @@ prop_FPIdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
     where (a'', b'') = normalizeInts a b
 
-prop_FPIdemPotent'' :: Positive FixedPoint -> Property
-prop_FPIdemPotent'' (Positive a) =
-    a > 0 ==> (exp' $ ln' a) - a < epsFP
-
-prop_FPIdemPotent''' :: PosInt -> PosInt -> Property
-prop_FPIdemPotent''' (Positive a) (Positive b) =
-    b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::FixedPoint) - ((fromIntegral b'' / fromIntegral a'')::FixedPoint) < epsFP
-    where (a'', b'') = normalizeInts a b
-
-prop_FPfindD :: Positive FixedPoint -> Property
-prop_FPfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
-    where e = exp' 1
-          n = findE e a
-
 prop_FPlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_FPlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
     ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < epsFP) === True
@@ -148,7 +132,9 @@ prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
     let result = taylorExpCmp 3 (1/(1 - p_)) (-sigma*c) in
       (case result of
         ABOVE _ _ -> p_ >= (1 - ((1 - f) *** sigma))
-        BELOW _ _ -> p_ < (1 - ((1 - f) *** sigma)))
+        BELOW _ _ -> p_ < (1 - ((1 - f) *** sigma))
+        UNKNOWN -> False
+        )
   where (p, p') = normalizeInts q q'
         (s, s') = normalizeInts a a'
         p'''    = fromIntegral p' :: FixedPoint
@@ -157,7 +143,7 @@ prop_LeaderCmp (Positive q) (Positive q') (Positive a) (Positive a') =
         s''     = fromIntegral s
         p_      = p''' / p''
         sigma   = s''' / s''
-        f       = fromIntegral 1 / fromIntegral 10 :: FixedPoint
+        f       = 1 / (10 :: FixedPoint)
         c       = ln' (1 - f)
 
 -----------------------------------
@@ -223,6 +209,11 @@ prop_DfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
     where e = exp' 1
           n = findE e a
 
+prop_FPfindD :: Positive FixedPoint -> Property
+prop_FPfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+    where e = exp' 1
+          n = findE e a
+
 prop_DlnLaw :: PosInt -> PosInt -> PosInt -> PosInt -> Property
 prop_DlnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
     ((ln' ((a''/b'') *** (x''/y'')) - (x''/y'') * ln' (a''/b'')) < epsD) === True
@@ -261,16 +252,6 @@ prop_ExpLaw' (Positive x) (Positive y) (Positive a) (Positive b) =
               x' = fromIntegral x''
               y' = fromIntegral y''
 
-prop_ExpLaw'' :: PosInt -> PosInt -> PosInt -> PosInt -> Property
-prop_ExpLaw'' (Positive x) (Positive y) (Positive a) (Positive b) =
-    (abs (exp' (a'/b' + x'/y') - (exp' (a'/b') * exp' (x'/y'))) < eps) === True
-        where (b'', a'') = normalizeInts a b
-              (y'', x'') = normalizeInts x y
-              a' = fromIntegral a''
-              b' = fromIntegral b''
-              x' = fromIntegral x''
-              y' = fromIntegral y''
-
 expdiff :: Integer -> Integer -> Integer -> Integer -> Rational
 expdiff x'' y'' a'' b'' =
     abs(e1 - e2)
@@ -293,8 +274,8 @@ prop_IdemPotent' (Positive a) (Positive b) =
     b'' > 0 && a'' > 0 ==> (ln' $ exp' (fromIntegral b'' / fromIntegral a'')::Rational) - ((fromIntegral b'' / fromIntegral a'')::Rational) < eps
     where (a'', b'') = normalizeInts a b
 
-prop_findD :: Positive Rational -> Property
-prop_findD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
+prop_RfindD :: Positive Rational -> Property
+prop_RfindD (Positive a) = (e ^^ n <= a && e ^^ (n + 1) > a) === True
     where e = exp' 1
           n = findE e a
 
@@ -309,6 +290,18 @@ prop_lnLaw (Positive x) (Positive y) (Positive a) (Positive b) =
           y'' = fromIntegral y'
 
 
+qcWithLabel :: Testable prop => String -> prop -> IO ()
+qcWithLabel str prop = do
+  putStrLn str
+  quickCheck prop
+
+qcWithLabelDisabled :: Testable prop => String -> prop -> IO ()
+qcWithLabelDisabled str prop = do
+  putStrLn str
+  if False
+    then quickCheck prop
+    else putStrLn "skipped, takes too long"
+
 main :: IO ()
 main = do
   putStrLn "quickcheck properties for non-integral calculation\n"
@@ -316,68 +309,70 @@ main = do
   putStrLn "------------------------"
   putStrLn "-- Test of `Double` --"
   putStrLn "------------------------"
-  putStrLn "property exp is monotonic"
-  quickCheck (withMaxSuccess 1000 $ prop_DMonotonic (const True) exp')
-  putStrLn "property ln is monotonic"
-  quickCheck (withMaxSuccess 1000 $ prop_DMonotonic (> 0) ln')
-  putStrLn "property p,q in (0,1) -> p^q in (0,1)"
-  quickCheck (withMaxSuccess 1000 prop_DExpUnitInterval)
-  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_DIdemPotent)
-  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_DIdemPotent')
-  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
-  quickCheck (withMaxSuccess 1000 prop_DExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
-  quickCheck (withMaxSuccess 1000 prop_DExpLaw')
-  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
-  quickCheck (withMaxSuccess 1000 prop_DlnLaw)
-  putStrLn "check bound of `findE`"
-  quickCheck (withMaxSuccess 1000 prop_DfindD)
+  qcWithLabel "property exp is monotonic"
+    (withMaxSuccess 1000 $ prop_DMonotonic (const True) exp')
+  qcWithLabel "property ln is monotonic"
+    (withMaxSuccess 1000 $ prop_DMonotonic (> 0) ln')
+  qcWithLabel "property p,q in (0,1) -> p^q in (0,1)"
+    (withMaxSuccess 1000 prop_DExpUnitInterval)
+  qcWithLabel "property q > 0 -> exp(ln(q)) - q < eps"
+    (withMaxSuccess 1000 prop_DIdemPotent)
+  qcWithLabel "property q > 0 -> ln(exp(q)) - q < eps"
+    (withMaxSuccess 1000 prop_DIdemPotent')
+  qcWithLabel "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+    (withMaxSuccess 1000 prop_DExpLaw)
+  qcWithLabel "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
+    (withMaxSuccess 1000 prop_DExpLaw')
+  qcWithLabel "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+    (withMaxSuccess 1000 prop_DlnLaw)
+  qcWithLabel "check bound of `findE` :: Double"
+    (withMaxSuccess 1000 prop_DfindD)
+  qcWithLabel "check bound of `findE` :: Rational"
+    (withMaxSuccess 1000 prop_RfindD)
+  qcWithLabel "check bound of `findE` :: FixedPoint"
+    (withMaxSuccess 1000 prop_FPfindD)
   putStrLn ""
 
   putStrLn "-------------------------------------------"
   putStrLn "-- Test of 34 Decimal Digits Fixed Point --"
   putStrLn "-------------------------------------------"
-  putStrLn "property exp is monotonic"
-  quickCheck (withMaxSuccess 1000 $ prop_FPMonotonic (const True) exp')
-  putStrLn "property ln is monotonic"
-  quickCheck (withMaxSuccess 1000 $ prop_FPMonotonic (> 0) ln')
-  putStrLn "property p,q in (0,1) -> p^q in (0,1)"
-  quickCheck (withMaxSuccess 1000 prop_FPExpUnitInterval)
-  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent)
-  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 1000 prop_FPIdemPotent')
-  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
-  quickCheck (withMaxSuccess 1000 prop_FPExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
-  quickCheck (withMaxSuccess 1000 prop_FPExpLaw')
-  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
-  quickCheck (withMaxSuccess 1000 prop_FPlnLaw)
-  putStrLn "property σ, p ∈ [0,1]: p < 1 - (1 - f)^σ <=> taylorExpCmp 3 (1/(1 - p)) (-sigma * ln (1 - f))"
-  quickCheck (withMaxSuccess 10000 prop_LeaderCmp)
+  qcWithLabel "property exp is monotonic"
+    (withMaxSuccess 1000 $ prop_FPMonotonic (const True) exp')
+  qcWithLabel "property ln is monotonic"
+    (withMaxSuccess 1000 $ prop_FPMonotonic (> 0) ln')
+  qcWithLabel "property p,q in (0,1) -> p^q in (0,1)"
+    (withMaxSuccess 1000 prop_FPExpUnitInterval)
+  qcWithLabel "property q > 0 -> exp(ln(q)) - q < eps"
+    (withMaxSuccess 1000 prop_FPIdemPotent)
+  qcWithLabel "property q > 0 -> ln(exp(q)) - q < eps"
+    (withMaxSuccess 1000 prop_FPIdemPotent')
+  qcWithLabel "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+    (withMaxSuccess 1000 prop_FPExpLaw)
+  qcWithLabel "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
+    (withMaxSuccess 1000 prop_FPExpLaw')
+  qcWithLabel "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+    (withMaxSuccess 1000 prop_FPlnLaw)
+  qcWithLabel "property σ, p ∈ [0,1]: p < 1 - (1 - f)^σ <=> taylorExpCmp 3 (1/(1 - p)) (-sigma * ln (1 - f))"
+    (withMaxSuccess 10000 prop_LeaderCmp)
   putStrLn ""
 
   putStrLn "------------------------------"
   putStrLn "-- Test of Rational Numbers --"
   putStrLn "------------------------------"
-  putStrLn "property exp is monotonic"
-  quickCheck (withMaxSuccess 10 $ prop_Monotonic (const True) exp')
-  putStrLn "property ln is monotonic"
-  quickCheck (withMaxSuccess 10 $ prop_Monotonic (> 0) ln')
-  putStrLn "property p,q in (0,1) -> p^q in (0,1)"
-  quickCheck (withMaxSuccess 10 prop_ExpUnitInterval)
-  putStrLn "property q > 0 -> exp(ln(q)) - q < eps"
-  quickCheck (withMaxSuccess 10 prop_IdemPotent)
-  putStrLn "property q > 0 -> ln(exp(q)) - q < eps"
-  quickCheck (withMaxSuccess 10 prop_IdemPotent')
-  putStrLn "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
-  putStrLn "skipped, takes too long"
-  -- quickCheck (withMaxSuccess 5 prop_ExpLaw)
-  putStrLn "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
-  quickCheck (withMaxSuccess 10 prop_ExpLaw')
-  putStrLn "property ln law in [0,1]: ln(q^p) = p*ln(q)"
-  putStrLn "skipped, takes too long"
-  -- quickCheck (withMaxSuccess 100 prop_lnLaw)
+  qcWithLabel "property exp is monotonic"
+    (withMaxSuccess 10 $ prop_Monotonic (const True) exp')
+  qcWithLabel "property ln is monotonic"
+    (withMaxSuccess 10 $ prop_Monotonic (> 0) ln')
+  qcWithLabel "property p,q in (0,1) -> p^q in (0,1)"
+    (withMaxSuccess 10 prop_ExpUnitInterval)
+  qcWithLabel "property q > 0 -> exp(ln(q)) - q < eps"
+    (withMaxSuccess 10 prop_IdemPotent)
+  qcWithLabel "property q > 0 -> ln(exp(q)) - q < eps"
+    (withMaxSuccess 10 prop_IdemPotent')
+  qcWithLabelDisabled "property exponential law in [0,1]: (((a/b)^1/x)^y) = (((a/b)^y)^1/x)"
+    (withMaxSuccess 5 prop_ExpLaw)
+  qcWithLabel "property exponential law in [0,1]: exp(q + p) = exp(q) * exp(p)"
+    (withMaxSuccess 10 prop_ExpLaw')
+  qcWithLabelDisabled "property ln law in [0,1]: ln(q^p) = p*ln(q)"
+    (withMaxSuccess 100 prop_lnLaw)
   putStrLn ""
