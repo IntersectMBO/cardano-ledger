@@ -1247,6 +1247,9 @@ votesNeededForConfirmation _ngk _cfmThd _rups _vts = undefined
 -- of the given proposal ID's.
 genVotesTillConfirmation :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
 genVotesTillConfirmation = undefined
+  -- To implement this we might want to use the same approach as
+  -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
+  -- need, instead of a subsequence.
 
 -- | Given a sequence of update proposals ID's and the votes needed for
 -- confirmation, generate votes on the most voted proposals.
@@ -1259,7 +1262,12 @@ genVotesTillConfirmation = undefined
 -- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
 -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
 genVotesOnMostVotedProposals :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
-genVotesOnMostVotedProposals = undefined
+genVotesOnMostVotedProposals _votesNeeded = undefined
+  -- A way to implement this:
+  --
+  -- - Sort @_votesNeeded@ increasingly by @length . snd@.
+  -- - Pick a number @n@
+  -- - traverse @_votesNeeded@ applying @Gen.subsequence@
 
 --------------------------------------------------------------------------------
 -- End TODO: TMP: sigGen UPIVOTES auxiliary defs
