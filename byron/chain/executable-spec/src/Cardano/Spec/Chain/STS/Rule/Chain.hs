@@ -172,7 +172,7 @@ instance HasTrace CHAIN where
     (,,,,)
       <$> gCurrentSlot
       <*> (utxo0 <$> initEnvGen @UTXOWS)
-      <*> initialEnviromentFromNumberOfGenesisKeys ngk
+      <*> initialEnvFromGenesisKeys ngk
       <*> UpdateGen.pparamsGen
       <*> pure ngk
     where
