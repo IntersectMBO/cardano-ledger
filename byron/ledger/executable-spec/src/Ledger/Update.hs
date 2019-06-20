@@ -30,7 +30,7 @@ import Data.Foldable (toList)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
-import Data.List (notElem)
+import Data.List (notElem, sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, union, (\\))
@@ -77,7 +77,7 @@ import Prelude hiding (min)
 
 
 -- TODO: remove after PR 591 is merged.
-import Data.Word (Word8)
+-- import Data.Word (Word8)
 
 -- | Protocol parameters.
 --
@@ -1229,19 +1229,17 @@ instance HasTrace UPIVOTES where
 -- TODO: TMP: sigGen UPIVOTES auxiliary defs
 --------------------------------------------------------------------------------
 
--- | Determine the votes needed for confirming the unconfirmed update
--- proposals.
-votesNeededForConfirmation
-  :: [Core.VKeyGenesis]
+-- | Add the missing votes w.r.t. a set of votes casted so far and registered
+-- update proposals.
+--
+completeVotes
+  :: Set Core.VKeyGenesis
   -- ^ Genesis keys that can vote
-  -> Set UpId
-  -- ^ Update proposals registered so far
-  -> Set (UpId, Core.VKeyGenesis)
-  -- ^ Votes for the update registered proposals
-  -> Word8
-  -- ^ Number of votes needed for confirmation
-  -> [(UpId, [Core.VKeyGenesis])]
-votesNeededForConfirmation _ngk _cfmThd _rups _vts = undefined
+  -> Map UpId (Set Core.VKeyGenesis)
+  -- ^ Votes for the registered update proposals
+  -> Map UpId (Set Core.VKeyGenesis)
+completeVotes _genesisKeys _votes =
+  undefined
 
 -- | Given a sequence of update proposals ID's and the votes needed for
 -- confirmation, generate a sequence of votes that will confirm a subsequence
@@ -1252,24 +1250,27 @@ genVotesTillConfirmation = undefined
   -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
   -- need, instead of a subsequence.
 
--- | Given a sequence of update proposals ID's and the votes needed for
--- confirmation, generate votes on the most voted proposals.
+-- | Given a sequence of update proposals ID's and the genesis keys that need
+-- to vote for confirmation, generate votes on the most voted proposals.
 --
---  Given a sequence of update proposals ID's and the votes needed for
--- confirmation, a proposal is said to be most voted, if it is associated to
+-- A proposal is said to be most voted, if it is associated to
 -- the minimal number of votes needed for confirmation.
 --
 -- This basically takes the top @n@ most voted proposals (for some arbitrary
 -- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
 -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
-genVotesOnMostVotedProposals :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
-genVotesOnMostVotedProposals _votesNeeded = undefined
-  -- A way to implement this:
-  --
-  -- - Sort @_votesNeeded@ increasingly by @length . snd@.
-  -- - Pick a number @n@
-  -- - traverse @_votesNeeded@ applying @Gen.subsequence@
+genVotesOnMostVotedProposals
+  :: [(UpId, [Core.VKeyGenesis])]
+  -> Gen [(UpId, [Core.VKeyGenesis])]
+genVotesOnMostVotedProposals votesNeeded = do
+  -- Determine on how many proposals we will vote
+  numberOfProposals <- Gen.int (Range.constant 0 (length votesNeeded))
+  let
+    votes :: [(UpId, [Core.VKeyGenesis])]
+    votes = take numberOfProposals $ sortOn (length. snd) votesNeeded
+  zip (fst <$> votes) <$> traverse Gen.subsequence (snd <$> votes)
 
+--  undefined votes
 --------------------------------------------------------------------------------
 -- End TODO: TMP: sigGen UPIVOTES auxiliary defs
 --------------------------------------------------------------------------------
