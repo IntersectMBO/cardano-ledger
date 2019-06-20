@@ -75,6 +75,7 @@ import qualified Ledger.Core.Generators as CoreGen
 
 import Prelude hiding (min)
 
+
 -- TODO: remove after PR 591 is merged.
 import Data.Word (Word8)
 
@@ -1231,14 +1232,14 @@ instance HasTrace UPIVOTES where
 -- | Determine the votes needed for confirming the unconfirmed update
 -- proposals.
 votesNeededForConfirmation
-  :: Word8
-  -- ^ Total number of genesis keys.
-  -> Double
-  -- ^ Confirmation threshold.
+  :: [Core.VKeyGenesis]
+  -- ^ Genesis keys that can vote
   -> Set UpId
   -- ^ Update proposals registered so far
   -> Set (UpId, Core.VKeyGenesis)
-  -- ^ Votes for the update registered proposals.
+  -- ^ Votes for the update registered proposals
+  -> Word8
+  -- ^ Number of votes needed for confirmation
   -> [(UpId, [Core.VKeyGenesis])]
 votesNeededForConfirmation _ngk _cfmThd _rups _vts = undefined
 
