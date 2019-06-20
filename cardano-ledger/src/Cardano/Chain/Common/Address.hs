@@ -46,12 +46,6 @@ module Cardano.Chain.Common.Address
   , makeRedeemAddress
   , createHDAddressNH
   , createHDAddressH
-
-  -- * Maximal sizes (needed for tx creation)
-  , largestVerKeyAddress
-  , maxVerKeyAddressSize
-  , largestHDAddress
-  , maxHDAddressSize
   )
 where
 
@@ -66,7 +60,6 @@ import qualified Data.Aeson as Aeson
   , ToJSONKey(..)
   )
 import qualified Data.Aeson.Types as Aeson (toJSONKeyText)
-import qualified Data.ByteString as BS
 import Data.ByteString.Base58
   (Alphabet(..), bitcoinAlphabet, decodeBase58, encodeBase58)
 import Data.Text.Internal.Builder (Builder)
@@ -87,7 +80,6 @@ import Cardano.Binary
   , Encoding
   , FromCBOR(..)
   , ToCBOR(..)
-  , biSize
   , decodeCrcProtected
   , decodeFull'
   , decodeListLenCanonical
@@ -118,11 +110,7 @@ import Cardano.Crypto.Signing
   , PassPhrase
   , VerificationKey
   , RedeemVerificationKey
-  , SigningKey
-  , deterministicKeyGen
-  , emptyPassphrase
   , encToVerification
-  , noPassEncrypt
   )
 
 
@@ -405,52 +393,6 @@ isRedeemAddress :: Address -> Bool
 isRedeemAddress addr = case addrType addr of
   ATRedeem -> True
   _        -> False
-
-
---------------------------------------------------------------------------------
--- Maximal size
---------------------------------------------------------------------------------
-
--- | Largest (considering size of serialized data) VerKey address. Actual size
---   depends on CRC32 value which is serialized using var-length encoding.
-largestVerKeyAddress :: Address
-largestVerKeyAddress = makeVerKeyAddress (NetworkTestnet maxBound) goodVK
-
--- | Maximal size of VerKey address.
-maxVerKeyAddressSize :: Natural
-maxVerKeyAddressSize = biSize largestVerKeyAddress
-
--- | Largest (considering size of serialized data) HD address with. Actual size
---   depends on CRC32 value which is serialized using var-length encoding.
-largestHDAddress :: Address
-largestHDAddress = case lvl2KeyPair of
-  Nothing        -> panic "largestHDAddressBoot failed"
-  Just (addr, _) -> addr
- where
-  lvl2KeyPair = deriveLvl2KeyPair
-    (NetworkTestnet maxBound)
-    (ShouldCheckPassphrase False)
-    emptyPassphrase
-    encSK
-    maxBound
-    maxBound
-  encSK = noPassEncrypt goodSk
-
--- | Maximal size of HD address
-maxHDAddressSize :: Natural
-maxHDAddressSize = biSize largestHDAddress
-
--- Public key and signing key for which we know that they produce
--- largest addresses in all cases we are interested in. It was checked
--- manually.
-goodSkAndVK :: (VerificationKey, SigningKey)
-goodSkAndVK = deterministicKeyGen $ BS.replicate 32 0
-
-goodVK :: VerificationKey
-goodVK = fst goodSkAndVK
-
-goodSk :: SigningKey
-goodSk = snd goodSkAndVK
 
 
 -- Encodes the `Address` __without__ the CRC32.
