@@ -246,7 +246,7 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
         deviationFromExpectation numberOfProposalsPerKey =
           abs (fromIntegral numberOfProposalsPerKey - expectedNumberOfUpdateProposalsPerKey traceSample)
 
-    delegationMap (_, dms, _) = dms
+    delegationMap (_, dms, _, _) = dms
 
     safeMaximum xs = if null xs then 0 else maximum xs
 

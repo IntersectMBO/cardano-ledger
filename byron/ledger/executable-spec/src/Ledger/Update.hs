@@ -26,16 +26,17 @@ import Control.Lens
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
+import Data.Foldable (toList)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
 import Data.List (notElem)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (maybeToList)
 import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -51,7 +52,6 @@ import Ledger.Core
   , HasHash
   , Owner(Owner)
   , Relation(..)
-  , Slot(..)
   , SlotCount(..)
   , VKey(VKey)
   , VKeyGenesis(VKeyGenesis)
@@ -69,11 +69,9 @@ import Ledger.Core
   , hash
   , minusSlotMaybe
   , skey
-  , unSlot
   )
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
-import qualified Ledger.GlobalParams as GP
 
 import Prelude hiding (min)
 
@@ -99,8 +97,9 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: !Int -- TODO: this should be a double
+  , _cfmThd :: !Double
   -- ^ Update proposal confirmation threshold (number of votes)
+  -- TODO: we should merge @upAdptThd@ and @cfmThd@ into one.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
@@ -504,7 +503,7 @@ data UPVOTE
 instance STS UPVOTE where
   type Environment UPVOTE =
     ( Core.Slot
-    , PParams
+    , Word8
     , Set UpId
     , Bimap Core.VKeyGenesis Core.VKey
     )
@@ -523,24 +522,28 @@ instance STS UPVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (_, pps, rups, dms)
+        TRC ( (_, t, rups, dms)
             , (cps, vts)
             , vote
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        size (Set.singleton pid ◁ vts') < (pps ^. cfmThd) || pid `Set.member` (dom cps) ?! HigherThanThdAndNotAlreadyConfirmed
-        return (cps, vts')
+        size ([pid] ◁ vts') < t || pid ∈ dom cps ?! HigherThanThdAndNotAlreadyConfirmed
+        pure $! ( cps
+                , vts'
+                )
     , do
-        TRC ( (sn, pps, rups, dms)
+        TRC ( (sn, t, rups, dms)
             , (cps, vts)
             , vote
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        (pps ^. cfmThd) <= size (Set.singleton pid ◁ vts') ?! CfmThdNotReached
-        pid `Set.notMember` dom cps ?! AlreadyConfirmed
-        return (cps ⨃ [(pid, sn)], vts')
+        t <= size ([pid] ◁ vts') ?! CfmThdNotReached
+        pid ∉ dom cps ?! AlreadyConfirmed
+        pure $! ( cps ⨃ [(pid, sn)]
+                , vts'
+                )
 
     ]
 
@@ -691,9 +694,12 @@ instance Embed FADS UPEND where
 type UPIEnv =
   ( Core.Slot
   , Bimap Core.VKeyGenesis Core.VKey
-  , BlockCount -- this is a global constant in the formal
+  , BlockCount -- This is a global constant in the formal
                -- specification, which we put in this environment so
                -- that we can test with different values of it.
+  , Word8  -- Number of genesis keys, @ngk@. Also a global constant in the
+           -- formal specification which is placed here so that we can test
+           -- with different values.
   )
 
 -- | The update interface state is shared amongst various rules, so we define it
@@ -802,7 +808,7 @@ instance STS UPIREG where
 
   transitionRules =
     [ do
-        TRC ( (sn, dms, _k)
+        TRC ( (sn, dms, _k, _ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -833,28 +839,30 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = (,,)
-             <$> CoreGen.slotGen 0 10        -- Current slot
-             <*> dmapGen                     -- Delegation map
-             <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+  initEnvGen = do
+    ngk <- Gen.integral (Range.linear 1 14)
+    (,,,)
+      <$> CoreGen.slotGen 0 10        -- Current slot
+      <*> dmapGen ngk                 -- Delegation map
+      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+      <*> pure ngk
     where
       -- Generate an initial delegation map, using a constant number of genesis
       -- keys, which is determined in this generator.
-      dmapGen :: Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
         where
           vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = do
-            n <- Gen.integral (Range.linear 1 14) -- number of genesis keys
-            let
-              vkgs = VKeyGenesis . VKey . Owner <$> [0 .. n - 1]
+          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+            where
+              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
               -- As delegation targets we choose twice the number of genesis keys.
               -- Note that the genesis keys can delegate to themselves in the
               -- generated delegation map.
-              vks = VKey . Owner <$> [0 .. 2 * (n - 1)]
-            (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
-  sigGen (_slot, dms, _k) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+
+  sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -1086,10 +1094,8 @@ ppsUpdateFrom pps = do
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
 
-    nextCfmThd :: Gen Int
-    nextCfmThd = Gen.integral (Range.exponentialFrom 0 _cfmThd (_cfmThd + 1))
-      `increasingProbabilityAt`
-      (0, _cfmThd + 1)
+    nextCfmThd :: Gen Double
+    nextCfmThd = nextUpAdptThd  -- Using the same generator since we want to unify these parameters.
 
     nextUpAdptThd :: Gen Double
     nextUpAdptThd =
@@ -1137,7 +1143,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms, k)
+        TRC ( (sn, dms, k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1148,19 +1154,27 @@ instance STS UPIVOTE where
               , bvs
               , pws)
             , v) <- judgmentContext
-        (cps', vts') <- trans @UPVOTE $ TRC ((sn, pps, dom pws, dms), (cps, vts), v)
+        let q = pps ^. cfmThd
+        (cps', vts') <- trans @UPVOTE $ TRC (( sn
+                                             , floor $ q * fromIntegral ngk
+                                             , dom pws
+                                             , dms
+                                             )
+                                            , ( cps
+                                              , vts
+                                              )
+                                            , v)
         let
-          stblCps  = Map.keys $ Map.filter stable cps'
-          stable s = unSlot s <= unSlot sn - 2 * unBlockCount k
-          avsnew   = [ (an, (av, sn, m))
-                     | pid <- stblCps
-                     , (an, av, m) <- maybeToList $ Map.lookup pid raus
-                     ]
-        return ( (pv, pps)
+          stblCps = dom (cps' ▷<= sn -. 2 *. k)
+          stblRaus = stblCps ◁ raus
+          avsnew = [ (an, (av, sn, m))
+                   | (an, av, m) <- toList stblRaus
+                   ]
+        pure $! ( (pv, pps)
                 , fads
                 , avs ⨃ avsnew
                 , rpus
-                , Set.fromList stblCps ⋪ raus
+                , stblCps ⋪ raus
                 , cps'
                 , vts'
                 , bvs
@@ -1215,7 +1229,7 @@ instance STS UPIEND where
 
   transitionRules =
     [ do
-        TRC ( (sn, dms, k)
+        TRC ( (sn, dms, k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1227,7 +1241,7 @@ instance STS UPIEND where
               , pws)
             , (bv,vk)) <- judgmentContext
         let
-          t = floor $ pps ^. upAdptThd * fromIntegral GP.ngk
+          t = floor $ pps ^. upAdptThd * fromIntegral ngk
         (fads', bvs') <- trans @UPEND $ TRC ((sn, t, dms, cps, rpus, k), (fads, bvs), (bv,vk))
         let
           u        = pps ^. upTtl

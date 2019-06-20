@@ -227,6 +227,7 @@ class Relation m where
 
   -- | Domain
   dom :: Ord (Domain m) => m -> Set (Domain m)
+
   -- | Range
   range :: Ord (Range m) => m -> Set (Range m)
 

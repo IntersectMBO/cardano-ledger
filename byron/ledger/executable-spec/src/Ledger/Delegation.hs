@@ -65,6 +65,7 @@ module Ledger.Delegation
   -- * Generators
   , dcertGen
   , dcertsGen
+  , initialEnvFromGenesisKeys
   -- * Functions on delegation state
   , delegatorOf
   )
@@ -81,6 +82,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, (\\))
 import qualified Data.Set as Set
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -562,8 +564,20 @@ dcertsGen env st =
 
 instance HasTrace DELEG where
 
-  initEnvGen
-    = DSEnv
+  initEnvGen = do
+    ngk <- Gen.integral (linear 1 14)
+    initialEnvFromGenesisKeys ngk
+
+  sigGen = dcertsGen
+
+-- | Generate an initial 'DELEG' environment from the given number of genesis
+-- keys.
+initialEnvFromGenesisKeys
+  :: Word8
+  -- ^ Number of genesis keys.
+  -> Gen DSEnv
+initialEnvFromGenesisKeys ngk =
+  DSEnv
     -- We need at least one delegator in the environment to be able to generate
     -- delegation certificates.
     --
@@ -574,9 +588,7 @@ instance HasTrace DELEG where
     --
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
-    <$> Gen.set (linear 1 7) vkgenesisGen
+    <$> Gen.set (linear 1 (fromIntegral ngk)) vkgenesisGen
     <*> epochGen 0 10
     <*> slotGen 0 100
     <*> blockCountGen 0 100
-
-  sigGen = dcertsGen

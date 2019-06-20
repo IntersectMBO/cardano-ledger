@@ -44,7 +44,7 @@ pparamsGen =
     (bkSgnCntT :: Double)
     ((bkSlotsPerEpoch, upTtl, stableAfter) :: (SlotCount, SlotCount, BlockCount))
     (scriptVersion :: Natural)
-    (cfmThd :: Int)
+    (_cfmThd :: Double)
     (upAdptThd :: Double)
     (factorA :: Int)
     (factorB :: Int)
@@ -57,7 +57,7 @@ pparamsGen =
       bkSlotsPerEpoch
       upTtl
       scriptVersion
-      cfmThd
+      upAdptThd -- We want to unify @cfmThd@ and @upAdptThd@.
       upAdptThd
       stableAfter
       factorA
@@ -67,7 +67,7 @@ pparamsGen =
     <*> doubleInc                                       -- bkSgnCntT
     <*> slotBlockGen
     <*> Gen.integral (Range.linear (0 :: Natural) 1000) -- scriptVersion
-    <*> Gen.integral (Range.linear 0 1000)              -- cfmThd
+    <*> Gen.double (Range.constant 0 1)                 -- cfmThd
     <*> Gen.double (Range.constant 0 1)                 -- upAdptThd
     <*> Gen.int (Range.linear 0 100)                    -- factor @a@
     <*> Gen.int (Range.linear 0 10)                     -- factor @b@

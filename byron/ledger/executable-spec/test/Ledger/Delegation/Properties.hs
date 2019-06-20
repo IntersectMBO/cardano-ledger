@@ -372,14 +372,14 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         "at least 50% of the certificates delegate in the next epoch"
         (0.5 <= ratio nextEpochDelegations tr)
 
-  -- 90% of the traces must contain at least 30% of self-delegations.
+  -- 80% of the traces must contain at least 30% of self-delegations.
   cover 80
        "at least 30% of the certificates self delegate"
        (0.3 <= ratio selfDelegations tr)
 
-  -- 20% of the traces must contain at least 10% of delegations to the same
+  -- 15% of the traces must contain at least 10% of delegations to the same
   -- delegate.
-  cover 20
+  cover 15
         "at least 10% of the certificates delegate to the same key"
         (0.1 <= ratio multipleDelegations tr)
   where
