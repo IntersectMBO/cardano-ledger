@@ -399,12 +399,12 @@ given application name $\var{an}$.
           \end{array}
         \right)
       }\\
-      \var{stbl_{cps}} \leteq \dom~(cps' \restrictrange [.., s_n - 2 \cdot k])
-      \\
-      \var{avs_{new}} \leteq \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
-      \mid \var{pid} \mapsto (\var{an}, \var{av}, m) \in \var{raus}
-      ,~ \var{pid} \in \var{stbl_{cps}}
-      \}
+      {\begin{array}{r@{~\leteq~}l}
+        \var{stbl_{cps}} & \dom~(cps' \restrictrange [.., s_n - 2 \cdot k])\\
+        \var{stbl_{raus}} & \var{stbl_{cps}} \restrictdom \var{raus}\\
+        \var{avs_{new}} & \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
+        \mid (\var{an}, \var{av}, m) \in \var{stbl_{raus}} \}
+      \end{array}}
     }
     {
       {\left(

@@ -9,6 +9,7 @@ import Cardano.Spec.Chain.STS.Rule.Bupi
 import Control.Lens ((^.))
 import Data.Bimap (keys)
 import Data.Set (fromList)
+import Data.Word (Word8)
 
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
 import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
@@ -51,6 +52,7 @@ instance STS BBODY where
     ( PParams
     , Epoch
     , UTxO
+    , Word8
     )
 
   type State BBODY =
@@ -75,7 +77,7 @@ instance STS BBODY where
 
   transitionRules =
     [ do
-        TRC ((ppsVal, e_n, utxoGenesis), (utxoSt, ds, us), b) <- judgmentContext
+        TRC ((ppsVal, e_n, utxoGenesis, ngk), (utxoSt, ds, us), b) <- judgmentContext
         let bMax = ppsVal ^. maxBkSz
         bSize b <= bMax ?! InvalidBlockSize
         let bh = b ^. bHeader
@@ -84,7 +86,7 @@ instance STS BBODY where
         hash (bUpdPayload b)         == bh ^. bhUpdHash  ?! InvalidUpdateProposalHash
 
         us' <- trans @BUPI $ TRC (
-            (bh ^. bhSlot, _dIStateDelegationMap ds, ppsVal ^. stableAfter)
+            (bh ^. bhSlot, _dIStateDelegationMap ds, ppsVal ^. stableAfter, ngk)
           , us
           , (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes, bEndorsment b) )
         ds' <- trans @DELEG $ TRC
