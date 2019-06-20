@@ -736,7 +736,9 @@ the protocol, we discern between different types of addresses:
   \((skp, vkp)\). The address then consists of a cryptographic hash
   \(\hash{vkp}\) of the verification key \(vkp\). A witness for such an address
   contains the verification key \(vkp\) and a signature of the signing key
-  \(skp\).
+  \(skp\). We call those addresses \emph{single key addresses} or simply
+  \emph{key addresses}, and the corresponding witnesses \emph{single key
+    witnesses} or \emph{key witnesses}.
 
   We also support value addresses that need signatures from multiple parties.
   Those also contain a hash, not of a verification key, but of a validator
@@ -744,23 +746,23 @@ the protocol, we discern between different types of addresses:
   expressing multi-sig conditions. In the latter case, the script will be
   interpreted natively by Cardano\footnote{Note that the encoding of a script
     that is hashed should include a tag for the language, so that the same
-    script text in different languages will result in different hashes.}.
+    script text in different languages will result in different hashes.}. We
+  will call those addresses \emph{multi-sig addresses}.
 
-  A witness for a multi-sig value address contains the validator script matching
-  the hash in the address, and a set of single key witnesses (i.e., pairs of
-  verification keys and signatures of corresponding signing keys). The validator
-  script will determine whether those signatures are sufficient for the funds to
-  be spent. For details, and an example language, see~\citep{multi-sig-scripts}.
+  A witness for a multi-sig address (called \emph{multi-sig witness}) contains
+  the validator script matching the hash in the address, and a set of single key
+  witnesses. The validator script will determine whether those signatures
+  are sufficient for the funds to be spent. For details, and an example
+  language, see~\citep{multi-sig-scripts}.
 
-  Note that this form of addresses, which in Shelley will only be used to
-  support multi-sig, is also a natural step in the direction of supporting full
-  Plutus scripts in Cardano, which is planned for Goguen.
+  Note that multi-sig addresses are also a natural step in the direction of
+  supporting full Plutus scripts in Cardano, which is planned for Goguen.
 
 \item[Stake Addresses] are used to delegate stake, and to claim rewards for
   participating in the protocol.
 
-  Just like value addresses, stake addresses can take the two forms of either the
-  hash of a verification key, or the hash of a validation script.
+  Just like value addresses, stake addresses can be either single key addresses
+  or multi-sig addresses.
 
 \item[Addresses] combine value addresses and stake addresses. Each UTxO entry
   belongs to an address that determines who is eligible to spend the contained
@@ -768,7 +770,6 @@ the protocol, we discern between different types of addresses:
   funds.
 
 \end{description}
-
 
 Shelley will introduce four different types of addresses: \emph{base
 addresses}, \emph{pointer addresses}, \emph{enterprise addresses}, and
@@ -974,7 +975,7 @@ Finding a wallets stake addresses (and in particular the corresponding reward
 addresses) can be done either by just reading off all the stake addresses of
 addresses found via their value address, or by performing a second search, this
 time over all the registered stake addresses\footnote{As explained in
-  \cref{stake-key-registration-certificates}, stake addresses need to be
+  \cref{stake-address-registration-certificates}, stake addresses need to be
   registered on-chain.}. The former option is quicker and easier to implement.
 However, it is conceivable to construct addresses where the value address
 belongs to one wallet, but the stake address belongs to another. The stake
@@ -1152,45 +1153,45 @@ In order to have all transactions (and by extension, all certificates), be
 protected from replay attacks, we will explicitly require at least one UTxO
 entry as an input to any transaction.
 
-\subsubsection{Stake key Registration Certificates}
-\label{stake-key-registration-certificates}
+\subsubsection{Stake Address Registration Certificates}
+\label{stake-address-registration-certificates}
 
-Users wishing to exercise their rights of participation in the PoS
-protocol can register a stake key by posting a \emph{stake key
-registration certificate} to the blockchain.
+Users wishing to exercise their rights of participation in the PoS protocol can
+register a stake address by posting a \emph{stake address registration
+  certificate} to the blockchain.
 
 \begin{description}
-\item[Stake key registration certificate]
-This certificate contains:
+\item[Stake address registration certificate] This certificate contains a stake
+  address (see \cref{address-structure}), which can take the form of either a
+  single key, or a multi-sig address.
 
-\begin{itemize}
-\item
-  the public staking key \(vks\)
-\end{itemize}
+  We do not require a witness to register a stake address (besides, of course,
+  any witnesses needed for the transaction that is used to post the
+  certificate).
 
 We do not require a witness to register a stake key (besides, of course,
 any witnesses needed for the transaction that is used to post the
 certificate).
-\item[Stake key de-registration certificate]
-This certificate contains:
 
-\begin{itemize}
-\item
-  the public staking key hash \(\mathcal{H}(vks)\)
-\end{itemize}
+\item[Stake address de-registration certificate]
+This certificate contains the stake address that should be de-registered.
 
-The certificate witness must contain a signature by \(sks\).
+The certificate requires a witness for the stake address that should be
+de-registered. As stated in \cref{address-structure}, this will be a single key
+or multi-sig witness, depending on the type of stake address in the certificate.
+
 \end{description}
 
-Registering a stake key introduces a corresponding reward account.
-The account is deleted when the stake key is de-registered. See
+Registering a stake address introduces a corresponding reward account.
+The account is deleted when the stake address is de-registered. See
 \cref{reward-accounts-per-stake-key} for details on reward accounts.
 
-In addition to a transaction fee, registering a stake key requires a deposit, as
-explained in \cref{fees-deposits} and \cref{deposits}. The deposit is to account
-for the costs of tracking the stake key and maintaining the corresponding stake
-reward account. It also incentivises de-registering stake keys that are no
-longer required, so that the corresponding resources can be released.
+In addition to a transaction fee, registering a stake address requires a
+deposit, as explained in \cref{fees-deposits} and \cref{deposits}. The deposit
+is to account for the costs of tracking the stake address and maintaining the
+corresponding stake reward account. It also incentivises de-registering stake
+addresses that are no longer required, so that the corresponding resources can
+be released.
 
 \subsubsection{Stake Pool Registration Certificates}
 \label{stake-pool-registration-certificates}
