@@ -7,6 +7,7 @@
 module Test.Cardano.Chain.Elaboration.UTxO
   ( elaborateUTxOEnv
   , elaborateUTxO
+  , elaborateTx
   , elaborateTxWitsBS
   , elaborateTxOut
   )

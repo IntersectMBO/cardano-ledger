@@ -11,9 +11,9 @@ module Cardano.Chain.UTxO.Validation
   , updateUTxO
   , updateUTxOTxWitness
   , updateUTxOTx
-  , TxValidationError
+  , TxValidationError (..)
   , Environment(..)
-  , UTxOValidationError
+  , UTxOValidationError (..)
   )
 where
 
@@ -49,6 +49,12 @@ import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters(..))
+import Cardano.Chain.ValidationMode
+  ( ValidationMode
+  , whenTxValidation
+  , unlessNoTxValidation
+  , wrapErrorWithValidationMode
+  )
 import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId
@@ -143,7 +149,11 @@ validateTx env utxo (Annotated tx txBytes) = do
 
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'
-validateTxIn :: MonadError TxValidationError m => UTxO -> TxIn -> m ()
+validateTxIn
+  :: MonadError TxValidationError m
+  => UTxO
+  -> TxIn
+  -> m ()
 validateTxIn utxo txIn
   | txIn `UTxO.member` utxo = pure ()
   | otherwise = throwError $ TxValidationMissingInput txIn
@@ -151,7 +161,10 @@ validateTxIn utxo txIn
 
 -- | Validate the NetworkMagic of a TxOut
 validateTxOutNM
-  :: MonadError TxValidationError m => NetworkMagic -> TxOut -> m ()
+  :: MonadError TxValidationError m
+  => NetworkMagic
+  -> TxOut
+  -> m ()
 validateTxOutNM nm txOut = do
   -- Make sure that the unknown attributes are less than the max size
   unknownAttributesLength (addrAttributes (txOutAddress txOut)) < 128
@@ -171,7 +184,6 @@ validateWitness
   -> TxInWitness
   -> m ()
 validateWitness pmi sigData addr witness = case witness of
-
   VKWitness vk sig ->
     (  verifySignatureDecoded pmi SignTx vk sigData sig
       && checkVerKeyAddress vk addr
@@ -198,15 +210,14 @@ data UTxOValidationError
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx
-  :: MonadError UTxOValidationError m
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m UTxO
 updateUTxOTx env utxo aTx@(Annotated tx _) = do
-
-  validateTx env utxo aTx
-    `wrapError` UTxOValidationTxValidationError
+  unlessNoTxValidation (validateTx env utxo aTx)
+    `wrapErrorWithValidationMode` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
     `wrapError` UTxOValidationUTxOError
@@ -214,23 +225,23 @@ updateUTxOTx env utxo aTx@(Annotated tx _) = do
 
 -- | Validate a transaction with a witness and use it to update the 'UTxO'
 updateUTxOTxWitness
-  :: MonadError UTxOValidationError m
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
   -> ATxAux ByteString
   -> m UTxO
 updateUTxOTxWitness env utxo ta = do
+  whenTxValidation $ do
+    -- Get the signing addresses for each transaction input from the 'UTxO'
+    addresses <-
+      mapM (`UTxO.lookupAddress` utxo) (NE.toList $ txInputs tx)
+        `wrapError` UTxOValidationUTxOError
 
-  -- Get the signing addresses for each transaction input from the 'UTxO'
-  addresses <-
-    mapM (`UTxO.lookupAddress` utxo) (NE.toList $ txInputs tx)
-      `wrapError` UTxOValidationUTxOError
-
-  -- Validate witnesses and their signing addresses
-  mapM_
-      (uncurry $ validateWitness pmi sigData)
-      (zip addresses (V.toList witness))
-    `wrapError` UTxOValidationTxValidationError
+    -- Validate witnesses and their signing addresses
+    mapM_
+        (uncurry $ validateWitness pmi sigData)
+        (zip addresses (V.toList witness))
+      `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
   updateUTxOTx env utxo aTx
@@ -245,9 +256,9 @@ updateUTxOTxWitness env utxo ta = do
 
 -- | Update UTxO with a list of transactions
 updateUTxO
-  :: MonadError UTxOValidationError m
+  :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
   -> [ATxAux ByteString]
   -> m UTxO
-updateUTxO = foldM . updateUTxOTxWitness
+updateUTxO env as = foldM (updateUTxOTxWitness env) as

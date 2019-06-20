@@ -45,6 +45,7 @@ library
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
                        Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.ValidationMode
 
   other-modules:
                        Cardano.Chain.Block.Block
@@ -53,6 +54,7 @@ library
                        Cardano.Chain.Block.Header
                        Cardano.Chain.Block.Proof
                        Cardano.Chain.Block.Validation
+                       Cardano.Chain.Block.ValidationMode
 
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
@@ -99,6 +101,7 @@ library
                        Cardano.Chain.UTxO.UTxOConfiguration
                        Cardano.Chain.UTxO.TxProof
                        Cardano.Chain.UTxO.TxWitness
+                       Cardano.Chain.UTxO.ValidationMode
 
                        Cardano.Chain.Update.ApplicationName
                        Cardano.Chain.Update.InstallerHash
@@ -174,6 +177,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Model
                        Test.Cardano.Chain.Block.Validation
+                       Test.Cardano.Chain.Block.ValidationMode
 
                        Test.Cardano.Chain.Common.Address
                        Test.Cardano.Chain.Common.CBOR
@@ -193,6 +197,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Elaboration.Block
                        Test.Cardano.Chain.Elaboration.Delegation
                        Test.Cardano.Chain.Elaboration.Keys
+                       Test.Cardano.Chain.Elaboration.Update
                        Test.Cardano.Chain.Elaboration.UTxO
 
                        Test.Cardano.Chain.Epoch.File
@@ -220,6 +225,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.UTxO.Gen
                        Test.Cardano.Chain.UTxO.Json
                        Test.Cardano.Chain.UTxO.Model
+                       Test.Cardano.Chain.UTxO.ValidationMode
 
                        Test.Cardano.Chain.Update.CBOR
                        Test.Cardano.Chain.Update.Example

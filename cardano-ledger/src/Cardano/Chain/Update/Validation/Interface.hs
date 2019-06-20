@@ -368,12 +368,11 @@ registerEndorsement env st endorsement = do
 --
 -- This corresponds to the @UPIEC@ rules in the Byron ledger specification.
 registerEpoch
-  :: MonadError Error m
-  => Environment
+  :: Environment
   -> State
   -> EpochNumber
   -- ^ Epoch seen on the block.
-  -> m State
+  -> State
 registerEpoch env st lastSeenEpoch = do
   let PVBump.State
         currentEpoch'
@@ -387,22 +386,21 @@ registerEpoch env st lastSeenEpoch = do
       -- therefore the protocol parameters cannot change) or there are no
       -- update proposals that can be adopted (either because there are no
       -- candidates or they do not fulfill the requirements for adoption).
-      pure $! st
+      st
     else
       -- We have a new protocol version, so we update the current protocol
       -- version and parameters, and we perform a cleanup of the state
       -- variables.
-      pure $!
-        st { currentEpoch = currentEpoch'
-           , adoptedProtocolVersion = adoptedProtocolVersion'
-           , adoptedProtocolParameters = nextProtocolParameters'
-           , candidateProtocolUpdates = []
-           , registeredProtocolUpdateProposals = M.empty
-           , confirmedProposals = M.empty
-           , proposalVotes = M.empty
-           , registeredEndorsements = S.empty
-           , proposalRegistrationSlot = M.empty
-           }
+      st { currentEpoch = currentEpoch'
+         , adoptedProtocolVersion = adoptedProtocolVersion'
+         , adoptedProtocolParameters = nextProtocolParameters'
+         , candidateProtocolUpdates = []
+         , registeredProtocolUpdateProposals = M.empty
+         , confirmedProposals = M.empty
+         , proposalVotes = M.empty
+         , registeredEndorsements = S.empty
+         , proposalRegistrationSlot = M.empty
+         }
   where
     subEnv = PVBump.Environment k currentSlot candidateProtocolUpdates
 

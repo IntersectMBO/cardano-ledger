@@ -18,6 +18,7 @@
 --
 module Test.Cardano.Chain.Block.Model
   ( tests
+  , elaborateAndUpdate
   , passConcreteValidation
   )
 where
@@ -29,13 +30,16 @@ import Control.Lens ((^.))
 import Hedgehog (MonadTest, PropertyT, collect, evalEither, forAll, property)
 
 import Cardano.Chain.Block
-  ( ChainValidationError
+  ( BlockValidationMode (..)
+  , ChainValidationError
   , ChainValidationState(cvsUtxo)
   , initialChainValidationState
   , updateBlock
   )
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as Concrete
+import Cardano.Chain.ValidationMode
+  (ValidationMode, fromBlockValidationMode)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (classifyTraceLength, trace)
@@ -89,16 +93,20 @@ passConcreteValidation tr = void $ evalEither res
 
 elaborateAndUpdate
   :: Genesis.Config
- -> (ChainValidationState, Map Abstract.TxId Concrete.TxId)
+  -> (ChainValidationState, Map Abstract.TxId Concrete.TxId)
   -> (State CHAIN, Abstract.Block)
   -> Either
        ChainValidationError
        (ChainValidationState, Map Abstract.TxId Concrete.TxId)
 elaborateAndUpdate config (cvs, txIdMap) (ast, ab) =
-  (, txIdMap') <$> updateBlock config cvs concreteBlock
+  (, txIdMap') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
  where
   (concreteBlock, txIdMap') = elaborateBS txIdMap config dCert cvs ab
+
   dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) ast
+
+  vMode :: ValidationMode
+  vMode = fromBlockValidationMode BlockValidation
 
 
 classifyTransactions :: Trace CHAIN -> PropertyT IO ()

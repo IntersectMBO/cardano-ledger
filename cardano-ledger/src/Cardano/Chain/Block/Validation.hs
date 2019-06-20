@@ -108,6 +108,12 @@ import Cardano.Crypto
   , hashRaw
   , hashDecoded
   )
+import Cardano.Chain.ValidationMode
+  ( ValidationMode
+  , orThrowErrorInBlockValidationMode
+  , whenBlockValidation
+  , wrapErrorWithValidationMode
+  )
 
 --------------------------------------------------------------------------------
 -- SigningHistory
@@ -283,7 +289,7 @@ data ChainValidationError
 --------------------------------------------------------------------------------
 
 updateChainBlockOrBoundary
-  :: MonadError ChainValidationError m
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => Genesis.Config
   -> ChainValidationState
   -> ABlockOrBoundary ByteString
@@ -381,7 +387,7 @@ data BodyState = BodyState
 --   nor does it carry out anything which might be considered part of the
 --   protocol.
 updateBody
-  :: MonadError ChainValidationError m
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => BodyEnvironment
   -> BodyState
   -> ABlock ByteString
@@ -389,11 +395,12 @@ updateBody
 updateBody env bs b = do
   -- Validate the block size
   blockLength b <= maxBlockSize
-    `orThrowError` ChainValidationBlockTooLarge maxBlockSize (blockLength b)
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
   -- Validate the delegation, transaction, and update payload proofs.
-  validateBlockProofs b
-    `wrapError` ChainValidationProofValidationError
+  whenBlockValidation (validateBlockProofs b)
+    `wrapErrorWithValidationMode` ChainValidationProofValidationError
 
   -- Update the delegation state
   delegationState' <-
@@ -403,7 +410,7 @@ updateBody env bs b = do
   -- Update the UTxO
   utxo' <-
     UTxO.updateUTxO utxoEnv utxo txs
-      `wrapError` ChainValidationUTxOValidationError
+      `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
 
   -- Update the update state
   updateState' <-
@@ -470,7 +477,7 @@ data HeaderEnvironment = HeaderEnvironment
 
 -- | This is an implementation of the the BHEAD rule.
 updateHeader
-  :: MonadError ChainValidationError m
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => HeaderEnvironment
   -> UPI.State
   -> AHeader ByteString
@@ -478,10 +485,11 @@ updateHeader
 updateHeader env st h = do
   -- Validate the header size
   headerLength h <= maxHeaderSize
-    `orThrowError` ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
 
   -- Perform epoch transition
-  epochTransition epochEnv st (headerSlot h)
+  pure $! epochTransition epochEnv st (headerSlot h)
  where
   maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
 
@@ -514,16 +522,13 @@ data EpochEnvironment = EpochEnvironment
 --   confirmed proposals and cleans up the state. This corresponds to the EPOCH
 --   rules from the Byron chain specification.
 epochTransition
-  :: MonadError ChainValidationError m
-  => EpochEnvironment
+  :: EpochEnvironment
   -> UPI.State
   -> SlotNumber
-  -> m UPI.State
+  -> UPI.State
 epochTransition env st slot = if nextEpoch > currentEpoch
-  then
-    UPI.registerEpoch updateEnv st nextEpoch
-      `wrapError` ChainValidationUpdateError
-  else pure st
+  then UPI.registerEpoch updateEnv st nextEpoch
+  else st
  where
   EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
     = env
@@ -546,7 +551,7 @@ epochTransition env st slot = if nextEpoch > currentEpoch
 --   Note that this also updates the previous block hash, which would usually be
 --   done as part of the PBFT rule.
 updateBlock
-  :: MonadError ChainValidationError m
+  :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => Genesis.Config
   -> ChainValidationState
   -> ABlock ByteString
@@ -555,9 +560,10 @@ updateBlock config cvs b = do
 
   -- Compare the block's 'ProtocolMagic' to the configured value
   blockProtocolMagicId b == configProtocolMagicId config
-    `orThrowError` ChainValidationProtocolMagicMismatch
-                    (blockProtocolMagicId b)
-                    (configProtocolMagicId config)
+    `orThrowErrorInBlockValidationMode`
+      ChainValidationProtocolMagicMismatch
+        (blockProtocolMagicId b)
+        (configProtocolMagicId config)
 
   -- Update the header
   updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
@@ -622,25 +628,25 @@ foldUTxO
   :: UTxO.Environment
   -> UTxO
   -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT Error ResIO UTxO
+  -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
 foldUTxO env utxo blocks = S.foldM_
   (foldUTxOBlock env)
   (pure utxo)
   pure
-  (hoist (withExceptT ErrorParseError) blocks)
+  (pure (hoist (withExceptT ErrorParseError) blocks))
 
 -- | Fold 'updateUTxO' over the transactions in a single 'Block'
 foldUTxOBlock
   :: UTxO.Environment
   -> UTxO
   -> ABlock ByteString
-  -> ExceptT Error ResIO UTxO
+  -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
 foldUTxOBlock env utxo block =
   withExceptT
-      (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
-        block
-      )
-    $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
+    (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
+      block
+    )
+  $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =

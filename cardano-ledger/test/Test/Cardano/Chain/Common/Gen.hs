@@ -16,6 +16,7 @@ module Test.Cardano.Chain.Common.Gen
   , genCompactAddress
   , genCustomLovelace
   , genLovelace
+  , genLovelaceWithRange
   , genLovelacePortion
   , genMerkleRoot
   , genMerkleTree
@@ -124,14 +125,14 @@ genCompactAddress :: Gen CompactAddress
 genCompactAddress = toCompactAddress <$> genAddress
 
 genCustomLovelace :: Word64 -> Gen Lovelace
-genCustomLovelace size =
-  mkLovelace <$> Gen.word64 (Range.linear 0 size) >>= \case
-    Right lovelace -> pure lovelace
-    Left  err      -> panic $ sformat build err
+genCustomLovelace size = genLovelaceWithRange (Range.linear 0 size)
 
 genLovelace :: Gen Lovelace
-genLovelace =
-  mkLovelace <$> Gen.word64 (Range.constant 0 maxLovelaceVal) >>= \case
+genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
+
+genLovelaceWithRange :: Range Word64 -> Gen Lovelace
+genLovelaceWithRange r =
+  mkLovelace <$> Gen.word64 r >>= \case
     Right lovelace -> pure lovelace
     Left err ->
       panic $ sformat ("The impossible happened in genLovelace: " . build) err

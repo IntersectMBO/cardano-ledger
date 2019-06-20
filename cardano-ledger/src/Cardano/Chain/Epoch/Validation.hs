@@ -40,6 +40,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting
   (EpochNumber, EpochAndSlotCount, slotNumberEpoch, fromSlotNumber)
 import Cardano.Chain.UTxO (UTxO)
+import Cardano.Chain.ValidationMode (ValidationMode)
 
 
 data EpochError
@@ -53,19 +54,18 @@ data EpochError
 validateEpochFile
   :: forall m
    . (MonadIO m, MonadError EpochError m)
-  => Genesis.Config
+  => ValidationMode
+  -> Genesis.Config
   -> LoggingLayer
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile config ll cvs fp = do
+validateEpochFile vMode config ll cvs fp = do
   subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
   utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
   res          <- llBracketMonadX ll subTrace Log.Info "benchmark" $
-      liftIO $ runResourceT $ runExceptT $ foldChainValidationState
-        config
-        cvs
-        stream
+      liftIO $ runResourceT $ (`runReaderT` vMode) $ runExceptT $
+        foldChainValidationState config cvs stream
   either throwError (logResult subTrace utxoSubTrace) res
  where
   stream = parseEpochFileWithBoundary mainnetEpochSlots fp
@@ -105,12 +105,14 @@ validateEpochFile config ll cvs fp = do
 
 -- | Check that a list of epochs 'Block's are valid.
 validateEpochFiles
-  :: Genesis.Config
+  :: ValidationMode
+  -> Genesis.Config
   -> ChainValidationState
   -> [FilePath]
   -> IO (Either EpochError ChainValidationState)
-validateEpochFiles config cvs fps =
-    runResourceT . runExceptT $ foldChainValidationState config cvs stream
+validateEpochFiles vMode config cvs fps =
+    runResourceT $ (`runReaderT` vMode) $ runExceptT
+      (foldChainValidationState config cvs stream)
   where stream = parseEpochFilesWithBoundary mainnetEpochSlots fps
 
 
@@ -119,14 +121,14 @@ foldChainValidationState
   :: Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT EpochError ResIO ChainValidationState
+  -> ExceptT EpochError (ReaderT ValidationMode ResIO) ChainValidationState
 foldChainValidationState config chainValState blocks = S.foldM_
   (\cvs block ->
     withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
       $ updateChainBlockOrBoundary config cvs block
   )
   (pure chainValState)
-  pure $ hoist (withExceptT EpochParseError) blocks
+  pure (pure (hoist (withExceptT EpochParseError) blocks))
  where
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe EpochAndSlotCount
   blockOrBoundarySlot = \case
