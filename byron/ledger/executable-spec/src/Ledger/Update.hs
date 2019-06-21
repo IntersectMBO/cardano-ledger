@@ -844,28 +844,7 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = do
-    ngk <- Gen.integral (Range.linear 1 14)
-    (,,,)
-      <$> CoreGen.slotGen 0 10        -- Current slot
-      <*> dmapGen ngk                 -- Delegation map
-      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
-      <*> pure ngk
-    where
-      -- Generate an initial delegation map, using a constant number of genesis
-      -- keys, which is determined in this generator.
-      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
-        where
-          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
-            where
-              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
-              -- As delegation targets we choose twice the number of genesis keys.
-              -- Note that the genesis keys can delegate to themselves in the
-              -- generated delegation map.
-              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
-
+  initEnvGen = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
@@ -1009,6 +988,29 @@ instance HasTrace UPIREG where
       mdtGen :: Gen Metadata
       mdtGen = pure Metadata
 
+
+upiEnvGen :: Gen UPIEnv
+upiEnvGen = do
+    ngk <- Gen.integral (Range.linear 1 14)
+    (,,,)
+      <$> CoreGen.slotGen 0 10        -- Current slot
+      <*> dmapGen ngk                 -- Delegation map
+      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+      <*> pure ngk
+    where
+      -- Generate an initial delegation map, using a constant number of genesis
+      -- keys, which is determined in this generator.
+      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+        where
+          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+            where
+              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
+              -- As delegation targets we choose twice the number of genesis keys.
+              -- Note that the genesis keys can delegate to themselves in the
+              -- generated delegation map.
+              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
 -- | Generate a protocol parameter update from a given set of current
 -- protocol-parameters, ensuring the consistency of the new protocol parameters
@@ -1221,14 +1223,15 @@ instance Embed UPIVOTE UPIVOTES where
 
 instance HasTrace UPIVOTES where
 
-  initEnvGen = undefined -- TODO: factor out the 'initEnvGen' of UPUREG and use it here.
+  initEnvGen = upiEnvGen
 
-  sigGen (_slot, dms, _k) ((_pv, _pps), _fads, _avs, _rpus, _raus, _cps, vts, _bvs, _pws) =
+  sigGen (_slot, dms, _k) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (uncurry mkVote <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where
         completedVotes :: [(UpId, [Core.VKeyGenesis])]
-        completedVotes = completeVotes (dom dms) (groupVotesPerIssuer vts)
+        completedVotes = completeVotes (dom dms)
+                                       (groupVotesPerProposalId vts)
                        & fmap Set.toList
                        & Map.toList
 
@@ -1244,12 +1247,17 @@ instance HasTrace UPIVOTES where
                 err = error $  "Ledger.Update.mkVote: "
                             ++ "the genesis key was not found in the delegation map"
 
-        -- Group the votes issuing key.
-        groupVotesPerIssuer
+        -- Group the votes issuing proposal id, taking into account the
+        -- proposals with no votes.
+        groupVotesPerProposalId
           :: Set (UpId, Core.VKeyGenesis)
           -> Map UpId (Set Core.VKeyGenesis)
-        groupVotesPerIssuer = foldl' addVote Map.empty
+        groupVotesPerProposalId =
+          foldl' addVote proposalIdsWithNoVotes
           where
+            proposalIdsWithNoVotes :: Map UpId (Set Core.VKeyGenesis)
+            proposalIdsWithNoVotes = Map.fromList $ (, Set.empty) <$> Set.toList (dom rpus)
+
             addVote
               :: Map UpId (Set Core.VKeyGenesis)
               -> (UpId, Core.VKeyGenesis)
