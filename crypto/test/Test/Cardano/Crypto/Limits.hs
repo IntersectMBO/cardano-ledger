@@ -1,5 +1,8 @@
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Test.Cardano.Crypto.Limits
   ( tests
@@ -12,8 +15,11 @@ import Test.Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256)
 import qualified Data.ByteString as BS
 
-import Cardano.Binary (Limit, ToCBOR, serialize')
-import Cardano.Crypto.Limits (mlAbstractHash, mlVerificationKey, mlSignature)
+import qualified Cardano.Crypto.Wallet as CC
+import Crypto.Hash.IO (HashAlgorithm, hashDigestSize)
+
+import Cardano.Binary (ToCBOR, serialize')
+import Cardano.Crypto (AbstractHash, VerificationKey, Signature(..))
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -30,6 +36,38 @@ import Test.Cardano.Crypto.Gen
 tests :: IO Bool
 tests = checkParallel $$discover
 
+---------------------------------------------------------------------------
+-- Limit
+---------------------------------------------------------------------------
+-- | A limit on the length of something (in bytes).
+--   TODO should check for overflow in the Num instance.
+--   Although, if the limit is anywhere near maxBound :: Word32 then something
+--   is almost certainly amiss.
+
+newtype Limit t = Limit
+  { getLimit :: Word32 
+  } deriving (Eq, Ord, Show, Num, Enum, Real, Integral)
+
+instance Functor Limit where
+  fmap _ (Limit x) = Limit x
+
+--------------------------------------------------------------------------------
+-- Helper Functions
+--------------------------------------------------------------------------------
+
+mlAbstractHash
+  :: forall algo a . HashAlgorithm algo => Limit (AbstractHash algo a)
+mlAbstractHash =
+  fromIntegral (hashDigestSize (panic "AbstractHash limit" :: algo) + 4)
+
+mlVerificationKey :: Limit VerificationKey
+mlVerificationKey = 66
+
+mlXSignature :: Limit CC.XSignature
+mlXSignature = 66
+
+mlSignature :: Limit (Signature a)
+mlSignature = Signature <$> mlXSignature
 
 --------------------------------------------------------------------------------
 -- Message Length Properties
