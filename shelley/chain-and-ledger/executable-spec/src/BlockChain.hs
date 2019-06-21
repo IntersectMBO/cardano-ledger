@@ -22,23 +22,29 @@ module BlockChain
   , seedL
   , bvkcold
   , vrfChecks
-  ) where
+  , incrBlocks
+  )
+where
 
-import           Crypto.Hash           (Digest, SHA256, hash)
-import qualified Data.ByteArray        as BA
-import qualified Data.ByteString.Char8 as BS
-import           Numeric.Natural       (Natural)
+import           Crypto.Hash                    ( Digest
+                                                , SHA256
+                                                , hash
+                                                )
+import qualified Data.ByteArray                as BA
+import qualified Data.ByteString.Char8         as BS
+import           Numeric.Natural                ( Natural )
 import           Data.Ratio
-import qualified Data.Map.Strict       as Map
+import qualified Data.Map.Strict               as Map
 
 import           BaseTypes
 import           Delegation.Certificates
-import qualified Keys                  as Keys
+import           EpochBoundary
+import qualified Keys                          as Keys
 import           OCert
-import qualified Slot                  as Slot
-import qualified UTxO                  as U
+import qualified Slot                          as Slot
+import qualified UTxO                          as U
 
-import           NonIntegral           ((***))
+import           NonIntegral                    ( (***) )
 
 -- |The hash of a Block Header
 newtype HashHeader =
@@ -149,20 +155,24 @@ instance VrfProof UnitInterval where
 
 vrfChecks :: Seed -> PoolDistr -> UnitInterval -> BHBody -> Bool
 vrfChecks eta0 (PoolDistr pd) f bhb =
-  let sigma' = Map.lookup hk pd in
-    case sigma' of
-      Nothing -> False
-      Just sigma ->
+  let sigma' = Map.lookup hk pd
+  in  case sigma' of
+        Nothing -> False
+        Just sigma ->
           verifyVrf vk ((eta0 `seedOp` ss) `seedOp` SeedEta) (bheaderPrfEta bhb)
-       && verifyVrf vk ((eta0 `seedOp` ss) `seedOp` SeedL) (bheaderPrfL bhb)
-       && intervalValue (bheaderL bhb) <
-           1 - ((1 - activeSlotsCoeff) *** (fromRational sigma))
-  where vk = bvkcold bhb
-        hk = Keys.hashKey vk
-        ss = slotToSeed $ bheaderSlot bhb
-        f' = intervalValue f
-        activeSlotsCoeff =
-          (fromIntegral $ numerator f') / (fromIntegral $ denominator f')
+            && verifyVrf vk
+                         ((eta0 `seedOp` ss) `seedOp` SeedL)
+                         (bheaderPrfL bhb)
+            && intervalValue (bheaderL bhb)
+            <  1
+            -  ((1 - activeSlotsCoeff) *** (fromRational sigma))
+ where
+  vk = bvkcold bhb
+  hk = Keys.hashKey vk
+  ss = slotToSeed $ bheaderSlot bhb
+  f' = intervalValue f
+  activeSlotsCoeff =
+    (fromIntegral $ numerator f') / (fromIntegral $ denominator f')
 
 seedEta :: Seed
 seedEta = mkNonce 0
@@ -175,3 +185,11 @@ bvkcold bhb = ocertVkCold $ bheaderOCert bhb
 
 hBbsize :: BHBody -> Natural
 hBbsize = bsize
+
+incrBlocks :: Bool -> Keys.HashKey -> BlocksMade -> BlocksMade
+incrBlocks isOverlay hk b'@(BlocksMade b)
+  | isOverlay = b'
+  | otherwise = BlocksMade $ case hkVal of
+    Nothing -> Map.insert hk 1 b
+    Just n  -> Map.insert hk (n + 1) b
+  where hkVal = Map.lookup hk b
