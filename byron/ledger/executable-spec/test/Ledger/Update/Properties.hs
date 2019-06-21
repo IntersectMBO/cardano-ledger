@@ -256,3 +256,22 @@ data Change = Increases | Decreases | RemainsTheSame
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UPIREG 100
+
+
+-- | Dummy transition system to test blocks with update payload only.
+data UBLOCK
+
+-- | An update block
+data UBlock
+  = UBlock
+    { slot :: Slot
+    , optionalUpdateProposal :: Maybe UProp
+    , votes :: [Vote]
+    }
+
+-- | Update block state
+data State
+  = State
+    { upienv :: UPIEnv
+    , upist :: UPIState
+    }
