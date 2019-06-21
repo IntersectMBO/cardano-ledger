@@ -1238,17 +1238,8 @@ completeVotes
   -> Map UpId (Set Core.VKeyGenesis)
   -- ^ Votes for the registered update proposals
   -> Map UpId (Set Core.VKeyGenesis)
-completeVotes _genesisKeys _votes =
-  undefined
-
--- | Given a sequence of update proposals ID's and the votes needed for
--- confirmation, generate a sequence of votes that will confirm a subsequence
--- of the given proposal ID's.
-genVotesTillConfirmation :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
-genVotesTillConfirmation = undefined
-  -- To implement this we might want to use the same approach as
-  -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
-  -- need, instead of a subsequence.
+completeVotes genesisKeys votes =
+  (genesisKeys \\) <$> votes
 
 -- | Given a sequence of update proposals ID's and the genesis keys that need
 -- to vote for confirmation, generate votes on the most voted proposals.
@@ -1269,6 +1260,19 @@ genVotesOnMostVotedProposals votesNeeded = do
     votes :: [(UpId, [Core.VKeyGenesis])]
     votes = take numberOfProposals $ sortOn (length. snd) votesNeeded
   zip (fst <$> votes) <$> traverse Gen.subsequence (snd <$> votes)
+
+
+-- TODO: we might want to do this only if we don't get enough coverage.
+--
+-- -- | Given a sequence of update proposals ID's and the votes needed for
+-- -- confirmation, generate a sequence of votes that will confirm a subsequence
+-- -- of the given proposal ID's.
+-- genVotesTillConfirmation :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
+-- genVotesTillConfirmation = undefined
+--   -- To implement this we might want to use the same approach as
+--   -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
+--   -- need, instead of a subsequence.
+
 
 --  undefined votes
 --------------------------------------------------------------------------------
