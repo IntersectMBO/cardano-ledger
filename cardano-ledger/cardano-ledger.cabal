@@ -126,7 +126,7 @@ library
                      , aeson
                      , base58-bytestring
                      , base64-bytestring-type
-                     , bimap
+                     , bimap >=0.4 && <0.5
                      , binary
                      , bytestring
                      , canonical-json
@@ -241,7 +241,7 @@ test-suite cardano-ledger-test
 
   build-depends:       base
                      , base16-bytestring
-                     , bimap
+                     , bimap >=0.4 && <0.5
                      , bytestring
                      , cardano-binary
                      , cardano-binary-test

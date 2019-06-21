@@ -36,9 +36,7 @@
           (hsPkgs.stm)
           (hsPkgs.text)
           (hsPkgs.transformers)
-          ] ++ (if system.isWindows
-          then [ (hsPkgs.Win32) ]
-          else [ (hsPkgs.unix) ]);
+          ];
         };
       exes = {
         "cardano-shell-exe" = {
@@ -72,9 +70,7 @@
             (hsPkgs.formatting)
             (hsPkgs.safe-exceptions)
             (hsPkgs.turtle)
-            ] ++ (if system.isWindows
-            then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) ]);
+            ];
           };
         };
       tests = {
@@ -102,7 +98,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-shell";
-      rev = "de45bf135fc0c575753613ee157378a28f9261e2";
-      sha256 = "0j3imc9c80904ybhbrl4mb0v6h9j3c7c9l6pij6idg3adh0rla9z";
+      rev = "f6fcda280ddd1d4ef87e5203d65d132f924a6e39";
+      sha256 = "0chfvj84gsjilk0n8bkyv20inwmanpf1xg5vzm1d0npdbv0317wz";
       });
     }

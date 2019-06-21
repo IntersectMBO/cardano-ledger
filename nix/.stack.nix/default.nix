@@ -5,6 +5,7 @@
         "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.1").revisions).default;
         "haskell-src-exts" = (((hackage.haskell-src-exts)."1.21.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
+        "bimap" = (((hackage.bimap)."0.4.0").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
@@ -29,7 +30,6 @@
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
-        bimap = ./bimap.nix;
         cborg = ./cborg.nix;
         cardano-crypto = ./cardano-crypto.nix;
         canonical-json = ./canonical-json.nix;
