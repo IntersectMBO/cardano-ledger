@@ -107,6 +107,8 @@ module LedgerState
   , NewEpochEnv(..)
   , overlaySchedule
   , getGKeys
+  , setIssueNumbers
+  , updateNES
   ) where
 
 import           Control.Monad           (foldM)
@@ -947,3 +949,16 @@ overlaySchedule
   -> PParams
   -> Map.Map Slot (Maybe VKeyGenesis)
 overlaySchedule = undefined
+
+-- | Set issue numbers
+setIssueNumbers :: LedgerState -> Map.Map HashKey Natural -> LedgerState
+setIssueNumbers (LedgerState u
+                 (DPState _dstate
+                  (PState stpools poolParams _retiring _ )) i) cs =
+  LedgerState u (DPState _dstate (PState stpools poolParams _retiring cs)) i
+
+-- | Update new epoch state
+updateNES :: NewEpochState -> BlocksMade -> LedgerState ->NewEpochState
+updateNES (NewEpochState eL eta0 bprev _
+           (EpochState acnt ss _ pp) ru pd osched) bcur ls =
+  NewEpochState eL eta0 bprev bcur (EpochState acnt ss ls pp) ru pd osched

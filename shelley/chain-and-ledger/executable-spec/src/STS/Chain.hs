@@ -8,6 +8,8 @@ module STS.Chain
   )
 where
 
+import qualified Data.Map.Strict               as Map
+
 import           BaseTypes
 import           BlockChain
 import           LedgerState
@@ -38,18 +40,25 @@ instance STS CHAIN where
 
 chainTransition :: TransitionRule CHAIN
 chainTransition = do
-  TRC (sNow, (nes, etaV, etaC, h, sL), (Block bh _)) <- judgmentContext
+  TRC (sNow, (nes, etaV, etaC, h, sL), block@(Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
   nes' <- trans @BHEAD $ TRC ((etaC, gkeys), nes, bh)
 
-  let NewEpochState _ eta0 _ _ es _ _pd osched = nes'
-  let EpochState _ _ ls pp = es
+  let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
+  let EpochState _ _ ls pp                        = es
   let LedgerState _ (DPState (DState _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
-  _ <- trans @PRTCL $ TRC(((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
+  (cs', h', sL', etaV', etaC') <- trans @PRTCL
+    $ TRC (((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
 
-  pure undefined
+  let ls' = setIssueNumbers ls cs'
+  (ls'', bcur') <- trans @BBODY
+    $ TRC ((Map.keysSet osched, pp), (ls', bcur), block)
+
+  let nes'' = updateNES nes' bcur' ls''
+
+  pure (nes'', etaV', etaC', h', sL')
 
 instance Embed BBODY CHAIN where
   wrapFailed = BbodyFailure
