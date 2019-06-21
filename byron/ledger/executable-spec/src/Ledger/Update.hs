@@ -26,13 +26,14 @@ import Control.Lens
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
-import Data.Foldable (toList)
+import Data.Foldable (toList, foldl')
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
 import Data.List (notElem, sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
@@ -1222,45 +1223,80 @@ instance HasTrace UPIVOTES where
 
   initEnvGen = undefined -- TODO: factor out the 'initEnvGen' of UPUREG and use it here.
 
-  sigGen (_slot, _dms, _k) ((_pv, _pps), _fads, _avs, _rpus, _raus, _cps, _vts, _bvs, _pws) =
-    undefined
+  sigGen (_slot, dms, _k) ((_pv, _pps), _fads, _avs, _rpus, _raus, _cps, vts, _bvs, _pws) =
+    (uncurry mkVote <$>) . concatMap replicateFst
+      <$> genVotesOnMostVotedProposals completedVotes
+      where
+        completedVotes :: [(UpId, [Core.VKeyGenesis])]
+        completedVotes = completeVotes (dom dms) (groupVotesPerIssuer vts)
+                       & fmap Set.toList
+                       & Map.toList
 
---------------------------------------------------------------------------------
--- TODO: TMP: sigGen UPIVOTES auxiliary defs
---------------------------------------------------------------------------------
+        mkVote
+          :: UpId
+          -> Core.VKeyGenesis
+          -> Vote
+        mkVote proposalId vkg =
+          Vote vk proposalId (Core.sign (skey vk) proposalId)
+          where
+            vk = fromMaybe err $ Bimap.lookup vkg dms
+              where
+                err = error $  "Ledger.Update.mkVote: "
+                            ++ "the genesis key was not found in the delegation map"
 
--- | Add the missing votes w.r.t. a set of votes casted so far and registered
--- update proposals.
---
-completeVotes
-  :: Set Core.VKeyGenesis
-  -- ^ Genesis keys that can vote
-  -> Map UpId (Set Core.VKeyGenesis)
-  -- ^ Votes for the registered update proposals
-  -> Map UpId (Set Core.VKeyGenesis)
-completeVotes genesisKeys votes =
-  (genesisKeys \\) <$> votes
+        -- Group the votes issuing key.
+        groupVotesPerIssuer
+          :: Set (UpId, Core.VKeyGenesis)
+          -> Map UpId (Set Core.VKeyGenesis)
+        groupVotesPerIssuer = foldl' addVote Map.empty
+          where
+            addVote
+              :: Map UpId (Set Core.VKeyGenesis)
+              -> (UpId, Core.VKeyGenesis)
+              -> Map UpId (Set Core.VKeyGenesis)
+            addVote m (proposalId, genesisKey) =
+              case Map.lookup proposalId m of
+                Nothing ->
+                  Map.insert proposalId (Set.singleton genesisKey) m
+                Just votesForProposalId ->
+                  Map.insert proposalId (Set.insert genesisKey votesForProposalId) m
 
--- | Given a sequence of update proposals ID's and the genesis keys that need
--- to vote for confirmation, generate votes on the most voted proposals.
---
--- A proposal is said to be most voted, if it is associated to
--- the minimal number of votes needed for confirmation.
---
--- This basically takes the top @n@ most voted proposals (for some arbitrary
--- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
--- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
-genVotesOnMostVotedProposals
-  :: [(UpId, [Core.VKeyGenesis])]
-  -> Gen [(UpId, [Core.VKeyGenesis])]
-genVotesOnMostVotedProposals votesNeeded = do
-  -- Determine on how many proposals we will vote
-  numberOfProposals <- Gen.int (Range.constant 0 (length votesNeeded))
-  let
-    votes :: [(UpId, [Core.VKeyGenesis])]
-    votes = take numberOfProposals $ sortOn (length. snd) votesNeeded
-  zip (fst <$> votes) <$> traverse Gen.subsequence (snd <$> votes)
+        -- Add the missing votes w.r.t. a set of votes cast so far and registered
+        -- update proposals.
+        --
+        completeVotes
+          :: Set Core.VKeyGenesis
+          -- ^ Genesis keys that can vote
+          -> Map UpId (Set Core.VKeyGenesis)
+          -- ^ Votes for the registered update proposals
+          -> Map UpId (Set Core.VKeyGenesis)
+        completeVotes genesisKeys votes =
+          (genesisKeys \\) <$> votes
 
+        -- Given a sequence of update proposals ID's and the genesis keys that need
+        -- to vote for confirmation, generate votes on the most voted proposals.
+        --
+        -- A proposal is said to be most voted, if it is associated to
+        -- the minimal number of votes needed for confirmation.
+        --
+        -- This basically takes the top @n@ most voted proposals (for some arbitrary
+        -- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
+        -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
+        genVotesOnMostVotedProposals
+          :: [(UpId, [Core.VKeyGenesis])]
+          -> Gen [(UpId, [Core.VKeyGenesis])]
+        genVotesOnMostVotedProposals votesNeeded = do
+          -- Determine on how many proposals we will vote
+          numberOfProposals <- Gen.int (Range.constant 0 (length votesNeeded))
+          let
+            votes :: [(UpId, [Core.VKeyGenesis])]
+            votes = take numberOfProposals $ sortOn (length. snd) votesNeeded
+          zip (fst <$> votes) <$> traverse Gen.subsequence (snd <$> votes)
+
+        replicateFst
+          :: (a, [b])
+          -> [(a, b)]
+        replicateFst (a, bs) = zip (repeat a) bs
 
 -- TODO: we might want to do this only if we don't get enough coverage.
 --
@@ -1273,8 +1309,6 @@ genVotesOnMostVotedProposals votesNeeded = do
 --   -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
 --   -- need, instead of a subsequence.
 
-
---  undefined votes
 --------------------------------------------------------------------------------
 -- End TODO: TMP: sigGen UPIVOTES auxiliary defs
 --------------------------------------------------------------------------------
