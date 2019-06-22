@@ -10,13 +10,17 @@ module Ledger.Update.Properties
   , onlyValidSignalsAreGenerated
   , ublockTraceLengthsAreClassified
   , ublockOnlyValidSignalsAreGenerated
+  , ublockRelevantTracesAreCovered
   ) where
 
 import GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
+import Data.Foldable (fold)
 import Data.Function ((&))
 import Data.List.Unique (count)
+import Data.Maybe (catMaybes)
+import qualified Data.Set as Set
 import Numeric.Natural (Natural)
 import Hedgehog
   ( Property
@@ -61,8 +65,10 @@ import Control.State.Transition.Trace
   , _traceInitState
   , traceSignals
   , _traceEnv
+  , traceStates
   )
 
+import Ledger.Core (dom)
 import qualified Ledger.Core as Core
 import Ledger.GlobalParams (slotsPerEpoch)
 import Ledger.Update (UPIREG, UPIVOTES, PParams, protocolParameters, UPIEnv, UPIState, UProp, Vote, emptyUPIState)
@@ -395,3 +401,33 @@ ublockTraceLengthsAreClassified =
 ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
 ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
+
+ublockRelevantTracesAreCovered :: Property
+ublockRelevantTracesAreCovered = withTests 100 $ property $ do
+  sample <- forAll (trace @UBLOCK 500)
+
+  cover 10
+    "at least 50% of the proposals get confirmed"
+    (0.01 <= confirmedProposals sample / totalProposals sample)
+
+  cover 90
+    "at least 50% of the proposals get unconfirmed"
+    (0.50 <= 1 - (confirmedProposals sample / totalProposals sample))
+
+    where
+      confirmedProposals :: Trace UBLOCK -> Double
+      confirmedProposals sample = traceStates OldestFirst sample
+                                & fmap upistate
+                                & fmap Update.confirmedProposals
+                                & fmap dom
+                                & fold
+                                & Set.size
+                                & fromIntegral
+
+      totalProposals :: Trace UBLOCK -> Double
+      totalProposals sample = traceSignals OldestFirst sample
+                            & fmap optionalUpdateProposal
+                            & catMaybes
+                            & fmap Update._upId
+                            & length
+                            & fromIntegral

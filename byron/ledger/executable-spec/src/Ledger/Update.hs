@@ -735,7 +735,7 @@ emptyUPIState =
                              -- wrong.
      , _upTtl = 10
      , _scriptVersion = 0
-     , _cfmThd = 4           -- TODO: this should be a double
+     , _cfmThd = 0.6         -- TODO: this should be a double
      , _upAdptThd = 0.6      -- Value currently used in mainet
      , _stableAfter = 5      -- TODO: the k stability parameter needs to be
                              -- removed from here as well!
@@ -798,6 +798,10 @@ protocolParameters ((_, pps), _, _, _, _, _, _, _, _) = pps
 
 applicationVersions :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
 applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
+
+confirmedProposals :: UPIState -> Map UpId Core.Slot
+confirmedProposals ((_, _), _, _, _, _, cps, _, _, _) = cps
+
 
 data UPIREG
 
