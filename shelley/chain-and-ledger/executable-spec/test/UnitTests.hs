@@ -170,23 +170,6 @@ testInvalidWintess =
     wits = makeWitnesses tx' [alicePay]
   in ledgerState [Tx tx wits] @?= Left [InvalidWitness]
 
-
-testTooManyWintesses :: Assertion
-testTooManyWintesses =
-  let
-    tx = TxBody
-           (Set.fromList [TxIn genesisId 0])
-           [ TxOut aliceAddr (Coin 6000)
-           , TxOut bobAddr (Coin 3000) ]
-           []
-           Map.empty
-           (Coin 1000)
-           (Slot 1)
-           emptyUpdate
-    wits = makeWitnesses tx [alicePay, bobStake]
-  in ledgerState [Tx tx wits] @?= Left [UnneededWitnesses]
-
-
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let
@@ -427,9 +410,7 @@ testSpendNonexistentInput =
            [alicePay]
   in ledgerState [tx] @?=
        Left [ BadInputs
-            , ValueNotConserved (Coin 0) (Coin 10000)
-            , UnneededWitnesses]
-  -- Note that BadInputs implies UnneededWitnesses
+            , ValueNotConserved (Coin 0) (Coin 10000)]
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -459,7 +440,7 @@ testSpendNotOwnedUTxO =
               emptyUpdate
     aliceWit = makeWitness txbody alicePay
     tx = Tx txbody (Set.fromList [aliceWit])
-  in ledgerState [tx] @?= Left [MissingWitnesses, UnneededWitnesses]
+  in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
@@ -483,8 +464,7 @@ testWitnessWrongUTxO =
     aliceWit = makeWitness  tx2body alicePay
     tx = Tx txbody (Set.fromList [aliceWit])
   in ledgerState [tx] @?= Left [ InvalidWitness
-                               , MissingWitnesses
-                               , UnneededWitnesses ]
+                               , MissingWitnesses]
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
@@ -537,7 +517,6 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   , testCase "Invalid Ledger - Alice's fee is too small" testFeeTooSmall
   , testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx
   , testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess
-  , testCase "Invalid Ledger - Too many witnesses" testTooManyWintesses
   , testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit
   , testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt
   ]
