@@ -398,9 +398,12 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
     st' :: State s
     st' = lastState tr
   sig <- forAll (sigGen @s env st')
-  -- snd (applySTSIndifferently @s (TRC(env, st', sig))) === []
-  -- footnoteShow $ snd (applySTSIndifferently @s (TRC(env, st', sig)))
-  True === False
+  let result = applySTS @s (TRC(env, st', sig))
+  -- TODO: For some reason the result that led to the failure is not shown
+  -- (even without using tasty, and setting the condition to True === False)
+  footnoteShow result
+  void $ evalEither $ result
+
 
 --------------------------------------------------------------------------------
 -- Temporary definitions till hedgehog exposes these

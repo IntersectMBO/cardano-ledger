@@ -381,7 +381,7 @@ instance HasTrace UBLOCK where
           -- TODO: factor out duplication w.r.t. Ledger.Delegation.Properties
           incSlot <$> Gen.frequency
                       [ (1, Gen.integral (Range.constant 1 10))
-                      , (2, pure $! slotsPerEpoch k)
+                      , (2, pure $! slotsPerEpoch k + 1)
                       ]
           where
             incSlot c = sn `Core.addSlot` Core.SlotCount c
