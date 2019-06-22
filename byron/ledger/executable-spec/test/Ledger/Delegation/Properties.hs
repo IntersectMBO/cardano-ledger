@@ -188,8 +188,6 @@ instance STS DBLOCK where
           let nextSlot = dblock ^. blockSlot
           env ^. slot < nextSlot ?! NotIncreasingBlockSlot
           stNext <- trans @DELEG $ TRC (env, st, dblock ^. blockCerts)
-          -- We fix the number of slots per epoch to 10. This is the same
-          -- constant used in production.
           let nextEpoch = if _dSEnvK env == 0
                           then 0
                           else Epoch $ unSlot nextSlot `div` slotsPerEpoch (_dSEnvK env)

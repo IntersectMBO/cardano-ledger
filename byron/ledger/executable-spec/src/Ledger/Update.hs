@@ -1225,7 +1225,7 @@ instance HasTrace UPIVOTES where
 
   initEnvGen = upiEnvGen
 
-  sigGen (_slot, dms, _k) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
+  sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (uncurry mkVote <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where

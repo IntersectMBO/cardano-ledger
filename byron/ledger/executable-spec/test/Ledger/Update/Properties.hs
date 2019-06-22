@@ -1,5 +1,8 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ledger.Update.Properties
   ( upiregTracesAreClassified
@@ -19,6 +22,23 @@ import Hedgehog
   , withTests
   )
 
+import Control.State.Transition
+  ( Environment
+  , PredicateFailure
+  , STS
+  , Signal
+  , State
+  , initialRules
+  , transitionRules
+  , TRC (TRC)
+  , IRC (IRC)
+  , judgmentContext
+  , (?!)
+  , trans
+  , Embed
+  , wrapFailed
+  , applySTS
+  )
 import Control.State.Transition.Generator
   ( ratio
   , trace
@@ -34,7 +54,8 @@ import Control.State.Transition.Trace
   , _traceEnv
   )
 
-import Ledger.Update (UPIREG, PParams, protocolParameters)
+import qualified Ledger.Core as Core
+import Ledger.Update (UPIREG, UPIVOTES, PParams, protocolParameters, UPIEnv, UPIState, UProp, Vote, emptyUPIState)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -264,14 +285,56 @@ data UBLOCK
 -- | An update block
 data UBlock
   = UBlock
-    { slot :: Slot
+    { slot :: Core.Slot
     , optionalUpdateProposal :: Maybe UProp
     , votes :: [Vote]
-    }
+    } deriving (Eq, Show)
 
 -- | Update block state
-data State
-  = State
+data UBlockState
+  = UBlockState
     { upienv :: UPIEnv
-    , upist :: UPIState
-    }
+    , upistate :: UPIState
+    } deriving (Eq, Show)
+
+instance STS UBLOCK where
+  type Environment UBLOCK = UPIEnv
+
+  type State UBLOCK = UBlockState
+
+  type Signal UBLOCK = UBlock
+
+  data PredicateFailure UBLOCK
+    = UPIREGFailure (PredicateFailure UPIREG)
+    | UPIVOTESFailure (PredicateFailure UPIVOTES)
+    | NotIncreasingBlockSlot
+    deriving (Eq, Show)
+
+  initialRules
+    = [ do
+          IRC env <- judgmentContext
+          pure UBlockState { upienv = env
+                           , upistate = emptyUPIState }
+      ]
+
+  transitionRules
+    = [ do
+          TRC (_, UBlockState {upienv, upistate}, ublock) <- judgmentContext
+          let (sn, dms, k, ngk) = upienv
+          sn < slot ublock ?! NotIncreasingBlockSlot
+          upistateAfterRegistration <-
+            case optionalUpdateProposal ublock of
+              Nothing -> pure upistate
+              Just updateProposal ->
+                trans @UPIREG $ TRC (upienv, upistate, updateProposal)
+          upistateAfterVoting <-
+            trans @UPIVOTES $ TRC (upienv, upistateAfterRegistration, votes ublock)
+          pure UBlockState { upienv = (slot ublock, dms, k, ngk )
+                           , upistate = upistateAfterVoting }
+      ]
+
+instance Embed UPIREG UBLOCK where
+  wrapFailed = UPIREGFailure
+
+instance Embed UPIVOTES UBLOCK where
+  wrapFailed = UPIVOTESFailure
