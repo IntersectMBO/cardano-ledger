@@ -8,6 +8,7 @@ module Ledger.Update.Properties
   ( upiregTracesAreClassified
   , upiregRelevantTracesAreCovered
   , onlyValidSignalsAreGenerated
+  , ublockTraceLengthsAreClassified
   ) where
 
 import qualified Data.Bimap as Bimap
@@ -21,6 +22,8 @@ import Hedgehog
   , property
   , withTests
   )
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import Control.State.Transition
   ( Environment
@@ -43,6 +46,9 @@ import Control.State.Transition.Generator
   ( ratio
   , trace
   , traceLengthsAreClassified
+  , HasTrace
+  , sigGen
+  , initEnvGen
   )
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import Control.State.Transition.Trace
@@ -55,6 +61,7 @@ import Control.State.Transition.Trace
   )
 
 import qualified Ledger.Core as Core
+import Ledger.GlobalParams (slotsPerEpoch)
 import Ledger.Update (UPIREG, UPIVOTES, PParams, protocolParameters, UPIEnv, UPIState, UProp, Vote, emptyUPIState)
 import qualified Ledger.Update as Update
 
@@ -338,3 +345,46 @@ instance Embed UPIREG UBLOCK where
 
 instance Embed UPIVOTES UBLOCK where
   wrapFailed = UPIVOTESFailure
+
+instance HasTrace UBLOCK where
+  initEnvGen = Update.upiEnvGen
+
+  sigGen _env UBlockState {upienv, upistate} =
+    Gen.frequency [ (4, generateOnlyVotes)
+                  , (1, generateUpdateProposalAndVotes)
+                  ]
+      where
+        generateOnlyVotes =
+          UBlock
+            <$> nextSlotGen
+            <*> pure Nothing
+            <*> sigGen @UPIVOTES upienv upistate
+        generateUpdateProposalAndVotes = do
+          updateProposal <- sigGen @UPIREG upienv upistate
+          -- We want to have the possibility of generating votes for the proposal we
+          -- registered.
+          case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
+            Left _ ->
+              UBlock
+                <$> nextSlotGen
+                <*> pure (Just updateProposal)
+                <*> sigGen @UPIVOTES upienv upistate
+            Right upistateAfterRegistration ->
+              UBlock
+                <$> nextSlotGen
+                <*> pure (Just updateProposal)
+                <*> sigGen @UPIVOTES upienv upistateAfterRegistration
+        nextSlotGen =
+          -- TODO: factor out duplication w.r.t. Ledger.Delegation.Properties
+          incSlot <$> Gen.frequency
+                      [ (1, Gen.integral (Range.constant 1 10))
+                      , (2, pure $! slotsPerEpoch k)
+                      ]
+          where
+            incSlot c = sn `Core.addSlot` Core.SlotCount c
+            (sn, _, k, _) = upienv
+
+
+ublockTraceLengthsAreClassified :: Property
+ublockTraceLengthsAreClassified =
+  withTests 100 $ traceLengthsAreClassified @UBLOCK 500 50

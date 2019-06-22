@@ -54,7 +54,8 @@ main = defaultMain tests
     , testTxHasTypeReps
     , testGroup
       "Update UPIREG properties"
-      [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified
+      [ testProperty "UPIREG traces are classified" UPDATE.upiregTracesAreClassified
+      , testProperty "UBLOCK traces are classified" UPDATE.ublockTraceLengthsAreClassified
       , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered
       , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
       ]

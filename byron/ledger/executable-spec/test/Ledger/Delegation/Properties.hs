@@ -316,7 +316,8 @@ instance HasTrace DBLOCK where
                       [ (1, Gen.integral (Range.constant 1 10))
                       , (2, pure $! slotsPerEpoch (_dSEnvK env))
                       ]
-      incSlot c = (env ^.slot) `addSlot` SlotCount c
+        where
+          incSlot c = (env ^.slot) `addSlot` SlotCount c
 
 instance HasSizeInfo DBlock where
   isTrivial = null . view blockCerts
