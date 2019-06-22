@@ -8,6 +8,8 @@ module STS.Utxow
   )
 where
 
+import qualified Data.Set                  as Set
+
 import           Delegation.Certificates
 import           Keys
 import           LedgerState hiding (dms)
@@ -27,7 +29,6 @@ instance STS UTXOW where
   type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools, Dms)
   data PredicateFailure UTXOW = InvalidWitnessesUTXOW
                             | MissingWitnessesUTXOW
-                            | UnneededWitnessesUTXOW
                             | UtxoFailure (PredicateFailure UTXO)
                                 deriving (Eq, Show)
   transitionRules = [utxoWitnessed]
@@ -40,11 +41,12 @@ initialLedgerStateUTXOW = do
 
 utxoWitnessed :: TransitionRule UTXOW
 utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx) <- judgmentContext
+  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits))
+    <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
-  enoughWits tx dms u == Valid ?! MissingWitnessesUTXOW
-  noUnneededWits tx dms u == Valid ?! UnneededWitnessesUTXOW
-  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, dms), u, tx)
+  let witnessKeys = Set.map (\(Wit vk _) -> hashKey vk) wits
+  witsNeeded (_utxo u) tx _dms == witnessKeys  ?! MissingWitnessesUTXOW
+  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure

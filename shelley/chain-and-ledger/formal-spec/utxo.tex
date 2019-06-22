@@ -551,9 +551,9 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to \powerset{\HashKey}
+    & \fun{propWits} \in \Update \to (\VKeyGen\mapsto\VKey) \to \powerset{\HashKey}
     & \text{hashkeys for proposals} \\
-    & \fun{propWits}~(\var{pup},~\var{aup}) = \\
+    & \fun{propWits}~(\var{pup},~\var{aup}) \var{dms} = \\
     & ~~\left\{
       \hashKey{vkey}
       \mid
