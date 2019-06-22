@@ -170,8 +170,8 @@ propertyTests = testGroup "Property-Based Testing"
                     "No Double Spend in valid ledger states"
                     propNoDoubleSpend
                   , testProperty
-                    "changing witness set"
-                    propCheckMinimalWitnessSet
+                    "adding redundant witness"
+                    propCheckRedundantWitnessSet
                   , testProperty
                     "using subset of witness set"
                     propCheckMissingWitness
@@ -219,13 +219,13 @@ propBalanceTxInTxOut' =
         ))
   success
 
--- | Check that we correctly report redundant witnesses. We get the list of the
+-- | Check that we correctly test redundant witnesses. We get the list of the
 -- keys from the generator and use one to generate a new witness. If that key
--- was used to sign the transaction, then the transaction must validate. If the
--- witness was not already used to sign the transaction, a `UnneededWitnesses`
--- validation error must be reported.
-propCheckMinimalWitnessSet :: Property
-propCheckMinimalWitnessSet = property $ do
+-- was used to sign the transaction, then the transaction must validate. If a
+-- new, redundant witness signature is added, the transaction must still
+-- validate.
+propCheckRedundantWitnessSet :: Property
+propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = txwits ^. body
@@ -236,10 +236,9 @@ propCheckMinimalWitnessSet = property $ do
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessSet))
   case l'' of
-    Left [UnneededWitnesses]  ->
-        (witness `Set.member` (txwits ^. witnessSet)) === False
     Right _                    ->
-        (witness `Set.member` (txwits ^. witnessSet)) === True
+        True === (Set.null $
+         Set.filter (\wit -> not $ verifyWit tx wit) (_witnessSet txwits'))
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.

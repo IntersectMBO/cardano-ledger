@@ -169,8 +169,6 @@ data ValidationError =
   | InvalidWitness
   -- | The transaction does not have the required witnesses.
   | MissingWitnesses
-  -- | The transaction includes a redundant witness.
-  | UnneededWitnesses
   -- | Missing Replay Attack Protection, at least one input must be spent.
   | InputSetEmpty
   -- | A stake key cannot be registered again.
