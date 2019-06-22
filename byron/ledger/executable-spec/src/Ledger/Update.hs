@@ -384,7 +384,7 @@ instance STS UPV where
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
         inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
-        return $! (rpus', raus)
+        pure $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -393,7 +393,7 @@ instance STS UPV where
         pv == up ^. upPV ?! PVChangedInSVUpdate
         up ^. upParams == pps ?! ParamsChangedInSVUpdate
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return $! (rpus, raus')
+        pure $! (rpus, raus')
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -401,7 +401,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return $! (rpus', raus')
+        pure $! (rpus', raus')
     ]
     where
       swVer (x, _, _) = x
@@ -938,12 +938,11 @@ instance HasTrace UPIREG where
           possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
             where
               nextVersions :: Set (ApName, ApVer)
-              nextVersions = Set.fromList $ zip currentAppNames appNextVersions
+              nextVersions = Set.fromList $ zip currentAppNames nextAppVersions
                 where
-                  currentAppNames :: [ApName]
-                  currentAppNames = Set.toList (dom avs)
-                  appNextVersions :: [ApVer]
-                  appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+                  (currentAppNames, currentAppVersions) = unzip $ Map.toList avs
+                  nextAppVersions :: [ApVer]
+                  nextAppVersions = (+1) . fst3 <$> currentAppVersions
               registeredNextVersions :: Set (ApName, ApVer)
               registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
 
