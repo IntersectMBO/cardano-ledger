@@ -69,8 +69,7 @@ module LedgerState
   , validStakeDelegation
   , preserveBalance
   , verifiedWits
-  , enoughWits
-  , noUnneededWits
+  , witsNeeded
   -- lenses
   , utxoState
   , delegationState
@@ -494,23 +493,26 @@ correctWithdrawals accs withdrawals =
 -- |Collect the set of hashes of keys that needs to sign a
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
-witsNeeded :: UTxO -> TxBody -> Dms -> Set HashKey
-witsNeeded utxo' tx _ =
+witsNeeded :: UTxO -> Tx -> Dms -> Set HashKey
+witsNeeded utxo' tx@(Tx txbody _) _dms =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
+    updateKeys   `Set.union`
     owners
   where
-    inputAuthors = Set.foldr insertHK Set.empty (tx ^. inputs)
+    inputAuthors = Set.foldr insertHK Set.empty (txbody ^. inputs)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
         Just (TxOut (AddrTxin pay _) _) -> Set.insert pay hkeys
         _                               -> hkeys
 
-    wdrlAuthors = Set.map getRwdHK (Map.keysSet (tx ^. wdrls))
-    owners = foldl Set.union Set.empty [pool ^. poolOwners | RegPool pool <- tx ^. certs]
-    certAuthors = Set.fromList (fmap getCertHK (tx ^. certs))
+    wdrlAuthors = Set.map getRwdHK (Map.keysSet (txbody ^. wdrls))
+    owners = foldl Set.union Set.empty
+               [pool ^. poolOwners | RegPool pool <- txbody ^. certs]
+    certAuthors = Set.fromList (fmap getCertHK (txbody ^. certs))
     getCertHK cert = hashKey $ getRequiredSigningKey cert
+    updateKeys = propWits (txup tx) _dms
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
@@ -526,19 +528,10 @@ verifiedWits (Tx tx wits) =
 -- from the same address are used, it is not strictly necessary to include more
 -- than one witness.
 enoughWits :: Tx -> Dms -> UTxOState -> Validity
-enoughWits (Tx tx wits) d u =
+enoughWits tx@(Tx _ wits) d u =
   if witsNeeded (u ^. utxo) tx d `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
-  where
-    signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
-
--- |Check that there are no redundant witnesses.
-noUnneededWits :: Tx -> Dms -> UTxOState -> Validity
-noUnneededWits (Tx tx wits) d u =
-  if signers `Set.isSubsetOf` witsNeeded (u ^. utxo) tx d
-    then Valid
-    else Invalid [UnneededWitnesses]
   where
     signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
 
@@ -562,7 +555,14 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
 validRuleUTXOW :: Tx -> Dms -> LedgerState -> Validity
 validRuleUTXOW tx d l = verifiedWits tx
                    <> enoughWits tx d (l ^. utxoState)
-                   <> noUnneededWits tx d (l ^. utxoState)
+
+-- | Calculate the set of hash keys of the required witnesses for update
+-- proposals.
+propWits :: Updates.Update -> Dms -> Set.Set HashKey
+propWits (Updates.Update (Updates.PPUpdate pup) (Updates.AVUpdate aup)) (Dms _dms) =
+  Set.fromList $ Map.elems $ Map.map hashKey updateKeys
+  where updateKeys =
+          Map.restrictKeys _dms (Map.keysSet pup `Set.union` Map.keysSet aup)
 
 validTx :: Tx -> Dms -> Slot -> PParams -> LedgerState -> Validity
 validTx tx d slot pp l =
