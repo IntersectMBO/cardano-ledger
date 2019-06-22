@@ -406,13 +406,13 @@ ublockRelevantTracesAreCovered :: Property
 ublockRelevantTracesAreCovered = withTests 100 $ property $ do
   sample <- forAll (trace @UBLOCK 500)
 
-  cover 10
+  cover 75
     "at least 50% of the proposals get confirmed"
-    (0.01 <= confirmedProposals sample / totalProposals sample)
+    (0.50 <= confirmedProposals sample / totalProposals sample)
 
-  cover 90
-    "at least 50% of the proposals get unconfirmed"
-    (0.50 <= 1 - (confirmedProposals sample / totalProposals sample))
+  cover 30
+    "at least 20% of the proposals get unconfirmed"
+    (0.20 <= 1 - (confirmedProposals sample / totalProposals sample))
 
     where
       confirmedProposals :: Trace UBLOCK -> Double
