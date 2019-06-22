@@ -1213,8 +1213,8 @@ instance STS UPIVOTES where
         case (sig :: [Vote]) of
           []     -> return us
           (x:xs) -> do
-            us'  <- trans @UPIVOTES $ TRC (env, us, xs)
-            us'' <- trans @UPIVOTE  $ TRC (env, us', x)
+            us'  <- trans @UPIVOTE $ TRC (env, us, x)
+            us'' <- trans @UPIVOTES  $ TRC (env, us', xs)
             return us''
     ]
 

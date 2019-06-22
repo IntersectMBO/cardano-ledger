@@ -58,6 +58,7 @@ main = defaultMain tests
       , testProperty "UBLOCK traces are classified" UPDATE.ublockTraceLengthsAreClassified
       , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered
       , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
+      , testProperty "Only valid signals are generated for UBLOCK" UPDATE.ublockOnlyValidSignalsAreGenerated
       ]
     -- TODO move this out of here (these are not properties of the transition
     -- systems) and also move the Relation class and instances out of Ledger.Core

@@ -9,7 +9,10 @@ module Ledger.Update.Properties
   , upiregRelevantTracesAreCovered
   , onlyValidSignalsAreGenerated
   , ublockTraceLengthsAreClassified
+  , ublockOnlyValidSignalsAreGenerated
   ) where
+
+import GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
 import Data.Function ((&))
@@ -388,3 +391,7 @@ instance HasTrace UBLOCK where
 ublockTraceLengthsAreClassified :: Property
 ublockTraceLengthsAreClassified =
   withTests 100 $ traceLengthsAreClassified @UBLOCK 500 50
+
+ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
+ublockOnlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100

@@ -49,8 +49,9 @@ import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity)
 import Data.String (fromString)
+import GHC.Stack (HasCallStack)
 import Hedgehog
-  ( Gen
+  ( Gen, footnoteShow
   , Property
   , PropertyT
   , classify
@@ -58,6 +59,7 @@ import Hedgehog
   , forAll
   , property
   , success
+  , (===)
   )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -80,6 +82,7 @@ import Control.State.Transition
   , State
   , TRC(TRC)
   , applySTS
+  , applySTSIndifferently
   )
 import Control.State.Transition.Trace
   ( Trace, _traceEnv
@@ -382,7 +385,7 @@ traceLengthsAreClassified maximumTraceLength intervalSize =
 -- | Check that the signal generator of 's' only generate valid signals.
 onlyValidSignalsAreGenerated
   :: forall s
-   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
   => Int
   -- ^ Maximum trace length.
   -> Property
@@ -395,7 +398,9 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
     st' :: State s
     st' = lastState tr
   sig <- forAll (sigGen @s env st')
-  void $ evalEither $ applySTS @s (TRC(env, st', sig))
+  -- snd (applySTSIndifferently @s (TRC(env, st', sig))) === []
+  -- footnoteShow $ snd (applySTSIndifferently @s (TRC(env, st', sig)))
+  True === False
 
 --------------------------------------------------------------------------------
 -- Temporary definitions till hedgehog exposes these
