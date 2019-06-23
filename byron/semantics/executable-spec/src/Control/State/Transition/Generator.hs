@@ -357,7 +357,8 @@ mkIntervals low high step
 
 -- | Given a function that computes an integral value from a trace, return that
 -- value as a ratio of the trace length.
-ratio :: Integral a
+ratio
+  :: Integral a
   => (Trace s -> a)
   -> Trace s
   -> Double

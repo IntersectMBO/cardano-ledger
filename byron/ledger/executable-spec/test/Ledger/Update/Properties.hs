@@ -19,7 +19,7 @@ import qualified Data.Bimap as Bimap
 import Data.Foldable (fold)
 import Data.Function ((&))
 import Data.List.Unique (count)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, isNothing)
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
 import Hedgehog
@@ -403,8 +403,8 @@ ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 100 $ property $ do
-  sample <- forAll (trace @UBLOCK 500)
+ublockRelevantTracesAreCovered = withTests 200 $ property $ do
+  sample <- forAll (trace @UBLOCK 1000)
 
   cover 75
     "at least 50% of the proposals get confirmed"
@@ -413,6 +413,18 @@ ublockRelevantTracesAreCovered = withTests 100 $ property $ do
   cover 30
     "at least 20% of the proposals get unconfirmed"
     (0.20 <= 1 - (confirmedProposals sample / totalProposals sample))
+
+  cover 10
+    "at least 2% of the blocks contain votes for proposals issued in the same block "
+    (0.02 <= ratio numberOfVotesForBlockProposal sample)
+
+  cover 50
+    "at least 10% of blocks contain no votes"
+    (0.1 <= ratio numberOfBlocksWithoutVotes sample)
+
+  cover 50
+    "at least 20% of the blocks contain no update proposals"
+    (0.1 <= ratio numberOfBlocksWithoutUpdateProposals sample)
 
     where
       confirmedProposals :: Trace UBLOCK -> Double
@@ -431,3 +443,31 @@ ublockRelevantTracesAreCovered = withTests 100 $ property $ do
                             & fmap Update._upId
                             & length
                             & fromIntegral
+
+      -- Count the number of votes for proposals that were included in the same
+      -- block as the votes.
+      numberOfVotesForBlockProposal :: Trace UBLOCK -> Int
+      numberOfVotesForBlockProposal sample
+        = traceSignals OldestFirst sample
+        & filter voteForBlockProposal
+        & length
+        where
+          voteForBlockProposal :: UBlock -> Bool
+          voteForBlockProposal UBlock {optionalUpdateProposal, votes} =
+            case optionalUpdateProposal of
+              Nothing ->
+                False
+              Just updateProposal ->
+                Update._upId updateProposal `elem` (Update._vPropId <$> votes)
+
+      numberOfBlocksWithoutVotes :: Trace UBLOCK -> Int
+      numberOfBlocksWithoutVotes sample
+        = traceSignals OldestFirst sample
+        & filter (null . votes)
+        & length
+
+      numberOfBlocksWithoutUpdateProposals :: Trace UBLOCK -> Int
+      numberOfBlocksWithoutUpdateProposals sample
+        = traceSignals OldestFirst sample
+        & filter (isNothing . optionalUpdateProposal)
+        & length
