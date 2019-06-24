@@ -708,8 +708,8 @@ If the size checks pass, then three transitions are done:
         \var{nes}'
       }
       \\~\\
-      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\var{ru},~\wcard,~\wcard)\leteq\var{nes}
-      % TODO: is es = (_ _ _ pp) ?
+      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\var{ru},~\wcard,~\wcard)\leteq\var{nes} \\
+      (\wcard,~\wcard,~\wcard,~\var{es})\leteq \var{es}
       \\
       {
         \left(
@@ -853,7 +853,7 @@ parameters. The function checks:
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
       & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      % TODO : is vk = bvkcold bhb ?
+      & ~~~~~~~~~~\var{vk} \leteq \fun{bvkcold}~\var{bhb} \\
   \end{align*}
   \label{fig:vrf-checks}
 \end{figure}
@@ -1383,8 +1383,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \eta_c' \\
         \end{array}\right)}
       } \\~\\~\\
-      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs} \\ % TODO should
-                                % this be cs' ?
+      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\
       {
         {\left(\begin{array}{c}
               \dom{osched} \\

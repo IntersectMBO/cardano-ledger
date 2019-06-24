@@ -244,7 +244,7 @@ Note that $\type{T}$ is an arbitrary type.
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup} % TODO: not needed here?
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
       &
       \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
       \\
@@ -327,8 +327,7 @@ Note that $\type{T}$ is an arbitrary type.
   \begin{equation}\label{eq:update}
     \inference[Update]
     {
-      (\var{pup},~\var{aup})\leteq\var{up} % TODO: duplicate of state names in
-                                           % signal
+      (\var{pup_{u}},~\var{aup_{u}})\leteq\var{up}
       \\~\\
       {
         \left(
@@ -340,7 +339,7 @@ Note that $\type{T}$ is an arbitrary type.
       }
       \vdash
       \left(\var{pup}\right)
-      \trans{\hyperref[fig:rules:pp-update]{ppup}}{\var{pup}}
+      \trans{\hyperref[fig:rules:pp-update]{ppup}}{\var{pup_{u}}}
       \left(\var{pup'}\right)
       &
       {
@@ -361,7 +360,7 @@ Note that $\type{T}$ is an arbitrary type.
           \end{array}
         \right)
       }
-      \trans{\hyperref[fig:rules:av-update]{avup}}{\var{aup}}
+      \trans{\hyperref[fig:rules:av-update]{avup}}{\var{aup_{u}}}
       {
         \left(
           \begin{array}{r}
