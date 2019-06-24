@@ -5,9 +5,10 @@
 
 module STS.Delegs
   ( DELEGS
-  ) where
+  )
+where
 
-import           Control.Monad           (foldM)
+import           Control.Monad                  ( foldM )
 
 import           LedgerState
 import           Delegation.Certificates
@@ -33,10 +34,11 @@ instance STS DELEGS where
 
 delegsTransition :: TransitionRule DELEGS
 delegsTransition = do
-  TRC((slot, ix, pp), d, certificates) <- judgmentContext
-  foldM (\d' (clx, c) ->
-             trans @DELPL $
-                   TRC((slot, Ptr slot ix clx, pp), d', c)) d $ zip [0..] certificates
+  TRC ((slot, ix, pp), d, certificates) <- judgmentContext
+  foldM
+      (\d' (clx, c) -> trans @DELPL $ TRC ((slot, Ptr slot ix clx, pp), d', c))
+      d
+    $ zip [0 ..] certificates
 
 instance Embed DELPL DELEGS where
   wrapFailed = DelplFailure

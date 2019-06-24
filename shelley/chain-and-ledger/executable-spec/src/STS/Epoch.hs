@@ -5,7 +5,8 @@
 
 module STS.Epoch
   ( EPOCH
-  ) where
+  )
+where
 
 import           LedgerState
 import           PParams
@@ -33,23 +34,23 @@ instance STS EPOCH where
     transitionRules = [ epochTransition ]
 
 initialEpoch :: InitialRule EPOCH
-initialEpoch = pure $ EpochState
-                        emptyAccount
-                        emptySnapShots
-                        emptyLedgerState
-                        emptyPParams
+initialEpoch =
+  pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
 
 epochTransition :: TransitionRule EPOCH
 epochTransition = do
-    TRC(blocks, EpochState as ss ls pp, e) <- judgmentContext
-    let us = _utxoState ls
-    let DPState ds ps = _delegationState ls
-    (ss', us') <- trans @SNAP $ TRC((pp, ds, ps, blocks), (ss, us), e)
-    (as', ds', ps') <- trans @POOLREAP $ TRC(pp, (as, ds, ps), e)
-    let ppNew = undefined -- TODO: result from votedValuePParams
-    (us'', as'', pp')
-        <- trans @NEWPP $ TRC((ppNew, ds', ps'), (us', as', pp), e)
-    pure $ EpochState as'' ss' (ls { _utxoState = us'', _delegationState = DPState ds' ps'}) pp'
+  TRC (blocks, EpochState as ss ls pp, e) <- judgmentContext
+  let us            = _utxoState ls
+  let DPState ds ps = _delegationState ls
+  (ss', us')      <- trans @SNAP $ TRC ((pp, ds, ps, blocks), (ss, us), e)
+  (as', ds', ps') <- trans @POOLREAP $ TRC (pp, (as, ds, ps), e)
+  let ppNew = undefined -- TODO: result from votedValuePParams
+  (us'', as'', pp') <- trans @NEWPP $ TRC ((ppNew, ds', ps'), (us', as', pp), e)
+  pure $ EpochState
+    as''
+    ss'
+    (ls { _utxoState = us'', _delegationState = DPState ds' ps' })
+    pp'
 
 instance Embed SNAP EPOCH where
     wrapFailed = SnapFailure

@@ -1,25 +1,33 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies   #-}
 
 module STS.Utxo
   ( UTXO
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict          as Map
-import qualified Data.Set                 as Set
+import qualified Data.Map.Strict               as Map
 
-import           Lens.Micro               ((%~), (&), (^.), (.~))
+import           Lens.Micro                     ( (%~)
+                                                , (&)
+                                                , (^.)
+                                                , (.~)
+                                                )
 
-import           BaseTypes
 import           Coin
 import           Delegation.Certificates
 import           Keys
 import           LedgerState hiding (dms)
 import           PParams
 import           Slot
+import           Updates
 import           UTxO
 
 import           Control.State.Transition
+
+import           STS.Up
 
 data UTXO
 
@@ -35,6 +43,7 @@ instance STS UTXO where
                            | UnexpectedFailureUTXO [ValidationError]
                            | UnexpectedSuccessUTXO
                            | BadExtraEntropyUTxO
+                           | UpdateFailure (PredicateFailure UP)
                                deriving (Eq, Show)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -42,31 +51,41 @@ instance STS UTXO where
 initialLedgerState :: InitialRule UTXO
 initialLedgerState = do
   IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (EEnt Map.empty)
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
 utxoInductive :: TransitionRule UTXO
 utxoInductive = do
-  TRC ((slot, pp, stakeKeys, stakePools, Dms dms), u, tx) <- judgmentContext
+  TRC ((_slot, pp, stakeKeys, stakePools, _dms), u, tx) <- judgmentContext
+
   let txbody = _body tx
   validInputs txbody u == Valid ?! BadInputsUTxO
-  current txbody slot == Valid ?! ExpiredUTxO (txbody ^. ttl) slot
+  _ttl txbody >= _slot ?! ExpiredUTxO (_ttl txbody) _slot
   validNoReplay txbody == Valid ?! InputSetEmptyUTxO
+
   let validateFee = validFee pp txbody
   validateFee == Valid ?! unwrapFailureUTXO validateFee
+
   let validateBalance = preserveBalance stakePools stakeKeys pp txbody u
   validateBalance == Valid ?! unwrapFailureUTXO validateBalance
+
   let refunded = keyRefunds pp stakeKeys txbody
-  let decayed = decayedTx pp stakeKeys txbody
+  let decayed  = decayedTx pp stakeKeys txbody
   let depositChange =
         deposits pp stakePools (txbody ^. certs) - (refunded + decayed)
+
   let u' = applyUTxOUpdate u txbody  -- change UTxO
-  let EEnt h' = txbody ^. txeent
-  Set.isSubsetOf (Map.keysSet h') (Map.keysSet dms) ?! BadExtraEntropyUTxO
-  let EEnt h = _eEntropy u
-  pure $
-    u' & deposited %~ (+) depositChange
-       & fees      %~ (+) ((txbody ^. txfee) + decayed)
-       & eEntropy  .~ (EEnt $ Map.union h h')
+
+  -- process Update Proposals
+  ups' <- trans @UP $ TRC ((_slot, _dms), u ^. ups, txup tx)
+
+  pure
+    $  u'
+    &  deposited
+    %~ (+) depositChange
+    &  fees
+    %~ (+) ((txbody ^. txfee) + decayed)
+    &  ups
+    .~ ups'
 
 unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
 unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
@@ -77,6 +96,9 @@ unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
 unwrapFailureUTXO' BadInputs                = BadInputsUTxO
 unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
 unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
-unwrapFailureUTXO' (FeeTooSmall c c')       = FeeTooSmallUTxO c c'
+unwrapFailureUTXO' (FeeTooSmall       c c') = FeeTooSmallUTxO c c'
 unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
 unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
+
+instance Embed UP UTXO where
+  wrapFailed = UpdateFailure

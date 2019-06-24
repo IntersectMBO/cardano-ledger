@@ -3,9 +3,10 @@
 
 module STS.Pool
   ( POOL
-  ) where
+  )
+where
 
-import           Lens.Micro              ((^.))
+import           Lens.Micro                     ( (^.) )
 
 import           Delegation.Certificates
 import           LedgerState
@@ -32,10 +33,10 @@ poolDelegationTransition :: TransitionRule POOL
 poolDelegationTransition = do
   TRC ((slot, p@(Ptr _ _ _), pp), ps, c) <- judgmentContext
   case c of
-    RegPool _ -> pure $ applyDCertPState p c ps
+    RegPool _              -> pure $ applyDCertPState p c ps
     RetirePool _ (Epoch e) -> do
       validStakePoolRetire c ps == Valid ?! StakePoolNotRegisteredOnKeyPOOL
-      let Epoch cepoch = epochFromSlot slot
+      let Epoch cepoch   = epochFromSlot slot
       let Epoch maxEpoch = pp ^. eMax
       cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
       pure $ applyDCertPState p c ps
