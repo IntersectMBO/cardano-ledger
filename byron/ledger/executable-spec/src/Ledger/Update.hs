@@ -77,9 +77,6 @@ import qualified Ledger.Core.Generators as CoreGen
 import Prelude hiding (min)
 
 
--- TODO: remove after PR 591 is merged.
--- import Data.Word (Word8)
-
 -- | Protocol parameters.
 --
 data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
@@ -735,7 +732,7 @@ emptyUPIState =
                              -- wrong.
      , _upTtl = 10
      , _scriptVersion = 0
-     , _cfmThd = 0.6         -- TODO: this should be a double
+     , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
      , _stableAfter = 5      -- TODO: the k stability parameter needs to be
                              -- removed from here as well!
@@ -996,9 +993,9 @@ upiEnvGen :: Gen UPIEnv
 upiEnvGen = do
     ngk <- Gen.integral (Range.linear 1 14)
     (,,,)
-      <$> CoreGen.slotGen 0 10        -- Current slot
-      <*> dmapGen ngk                 -- Delegation map
-      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
+      <$> CoreGen.slotGen 0 10 -- Current slot
+      <*> dmapGen ngk  -- Delegation map
+      <*> (BlockCount <$> Gen.word64 (Range.constant 0 100)) -- Chain stability parameter (k)
       <*> pure ngk
     where
       -- Generate an initial delegation map, using a constant number of genesis
@@ -1229,9 +1226,10 @@ instance HasTrace UPIVOTES where
   initEnvGen = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
-    (uncurry mkVote <$>) . concatMap replicateFst
+    (mkVote <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where
+        -- Votes needed for confirmation, per proposal ID.
         completedVotes :: [(UpId, [Core.VKeyGenesis])]
         completedVotes = completeVotes (dom dms)
                                        (groupVotesPerProposalId vts)
@@ -1239,16 +1237,17 @@ instance HasTrace UPIVOTES where
                        & Map.toList
 
         mkVote
-          :: UpId
-          -> Core.VKeyGenesis
+          :: (UpId, Core.VKeyGenesis)
           -> Vote
-        mkVote proposalId vkg =
+        mkVote (proposalId, vkg) =
           Vote vk proposalId (Core.sign (skey vk) proposalId)
           where
             vk = fromMaybe err $ Bimap.lookup vkg dms
               where
                 err = error $  "Ledger.Update.mkVote: "
-                            ++ "the genesis key was not found in the delegation map"
+                            ++ "the genesis key was not found in the delegation map, "
+                            ++ "but it should be since we used `dms` to get the keys"
+                            ++ "that can vote (and so they should have a pre-image in `dms`)."
 
         -- Group the votes issuing proposal id, taking into account the
         -- proposals with no votes.
@@ -1272,9 +1271,8 @@ instance HasTrace UPIVOTES where
                 Just votesForProposalId ->
                   Map.insert proposalId (Set.insert genesisKey votesForProposalId) m
 
-        -- Add the missing votes w.r.t. a set of votes cast so far and registered
-        -- update proposals.
-        --
+        -- Add the missing votes w.r.t. a set of votes cast so far and genesis
+        -- keys that can vote.
         completeVotes
           :: Set Core.VKeyGenesis
           -- ^ Genesis keys that can vote
@@ -1287,12 +1285,12 @@ instance HasTrace UPIVOTES where
         -- Given a sequence of update proposals ID's and the genesis keys that need
         -- to vote for confirmation, generate votes on the most voted proposals.
         --
-        -- A proposal is said to be most voted, if it is associated to
-        -- the minimal number of votes needed for confirmation.
+        -- A proposal is said to be most voted if it is associated to the
+        -- minimal number of votes needed for confirmation.
         --
         -- This basically takes the top @n@ most voted proposals (for some arbitrary
         -- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
-        -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary element of @vs_i@.
+        -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary subsequence of @vs_i@.
         genVotesOnMostVotedProposals
           :: [(UpId, [Core.VKeyGenesis])]
           -> Gen [(UpId, [Core.VKeyGenesis])]
@@ -1308,22 +1306,6 @@ instance HasTrace UPIVOTES where
           :: (a, [b])
           -> [(a, b)]
         replicateFst (a, bs) = zip (repeat a) bs
-
--- TODO: we might want to do this only if we don't get enough coverage.
---
--- -- | Given a sequence of update proposals ID's and the votes needed for
--- -- confirmation, generate a sequence of votes that will confirm a subsequence
--- -- of the given proposal ID's.
--- genVotesTillConfirmation :: [(UpId, [Core.VKeyGenesis])] -> Gen [Vote]
--- genVotesTillConfirmation = undefined
---   -- To implement this we might want to use the same approach as
---   -- @genVotesOnMostVotedProposals@, but taking the whole bunch of votes we
---   -- need, instead of a subsequence.
-
---------------------------------------------------------------------------------
--- End TODO: TMP: sigGen UPIVOTES auxiliary defs
---------------------------------------------------------------------------------
-
 
 
 data UPIEND

@@ -384,7 +384,10 @@ instance HasTrace UBLOCK where
                 <*> pure (Just updateProposal)
                 <*> sigGen @UPIVOTES upienv upistateAfterRegistration
         nextSlotGen =
-          -- TODO: factor out duplication w.r.t. Ledger.Delegation.Properties
+          -- NOTE: in the future, we might want to factor out duplication
+          -- w.r.t. @Ledger.Delegation.Properties@ if we find out that no
+          -- adaptations to 'nextSlotGen' are needed. For now we duplicate this
+          -- here to avoid an early coupling that might be unnecessary.
           incSlot <$> Gen.frequency
                       [ (1, Gen.integral (Range.constant 1 10))
                       , (2, pure $! slotsPerEpoch k + 1)
@@ -419,8 +422,16 @@ ublockRelevantTracesAreCovered = withTests 300 $ property $ do
     (0.02 <= ratio numberOfVotesForBlockProposal sample)
 
   cover 50
-    "at least 10% of blocks contain no votes"
-    (0.1 <= ratio numberOfBlocksWithoutVotes sample)
+    "at least 30% of blocks contain no votes"
+    (0.3 <= ratio numberOfBlocksWithoutVotes sample)
+
+  cover 50
+    "at least 10% of blocks contain votes"
+    (0.1 <= 1 - ratio numberOfBlocksWithoutVotes sample)
+
+  cover 10
+    "at least 20% of blocks contain votes"
+    (0.2 <= 1 - ratio numberOfBlocksWithoutVotes sample)
 
   cover 50
     "at least 20% of the blocks contain no update proposals"
