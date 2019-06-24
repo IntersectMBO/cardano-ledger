@@ -90,6 +90,7 @@ test-suite ledger-rules-test
                , Ledger.HasTypeReps.Properties
                , Ledger.Update.Properties
                , Ledger.Pvbump.Properties
+               , Ledger.Relation.Properties
                , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
