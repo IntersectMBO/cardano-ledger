@@ -13,6 +13,7 @@ import qualified Test.Cardano.Chain.Block.CBOR
 import qualified Test.Cardano.Chain.Block.Model
 import qualified Test.Cardano.Chain.Block.Validation
 import qualified Test.Cardano.Chain.Block.ValidationMode
+import qualified Test.Cardano.Chain.Buildable
 import qualified Test.Cardano.Chain.Common.Address
 import qualified Test.Cardano.Chain.Common.CBOR
 import qualified Test.Cardano.Chain.Common.Compact
@@ -47,6 +48,7 @@ main =
         , Test.Cardano.Chain.Block.Model.tests
         , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
         , Test.Cardano.Chain.Block.ValidationMode.tests
+        , Test.Cardano.Chain.Buildable.tests
         , Test.Cardano.Chain.Common.Address.tests
         , Test.Cardano.Chain.Common.CBOR.tests
         , Test.Cardano.Chain.Common.Compact.tests
