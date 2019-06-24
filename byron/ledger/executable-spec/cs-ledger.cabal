@@ -36,7 +36,7 @@ library
                      , Cardano.Ledger.Spec.STS.UTXOW
                      , Cardano.Ledger.Spec.STS.UTXOWS
   build-depends:       base >=4.11 && <5
-                     , bimap
+                     , bimap >=0.4 && <0.5
                      , containers
                      , hashable
                      , hedgehog >= 1.0
@@ -95,7 +95,7 @@ test-suite ledger-rules-test
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends: base
-               , bimap
+               , bimap >=0.4 && <0.5
                , containers
                , lens
                , hedgehog >= 1.0
