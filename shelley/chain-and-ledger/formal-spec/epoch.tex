@@ -281,7 +281,8 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
       (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
-      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard) = \var{dstate} \\
+      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+        = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
@@ -397,7 +398,7 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
-        (\var{stkeys},~\wcard,~\var{delegations},~\wcard,~\wcard) & \var{dstate}\\
+        (\var{stkeys},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
