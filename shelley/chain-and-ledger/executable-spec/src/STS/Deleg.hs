@@ -17,23 +17,29 @@ import           UTxO
 
 import           Control.State.Transition
 
-data DELEG
+data DELEG hashAlgo dsignAlgo
 
-instance STS DELEG where
-  type State DELEG = DState
-  type Signal DELEG = DCert
-  type Environment DELEG = (Slot, Ptr)
-  data PredicateFailure DELEG = StakeKeyAlreadyRegisteredDELEG
-                            | StakeKeyNotRegisteredDELEG
-                            | StakeDelegationImpossibleDELEG
-                            | WrongCertificateTypeDELEG
-                            | GenesisKeyNotInpMappingDELEG
-                                deriving (Show, Eq)
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => STS (DELEG hashAlgo dsignAlgo)
+ where
+  type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
+  type Signal (DELEG hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
+  type Environment (DELEG hashAlgo dsignAlgo) = (Slot, Ptr)
+  data PredicateFailure (DELEG hashAlgo dsignAlgo)
+    = StakeKeyAlreadyRegisteredDELEG
+    | StakeKeyNotRegisteredDELEG
+    | StakeDelegationImpossibleDELEG
+    | WrongCertificateTypeDELEG
+    | GenesisKeyNotInpMappingDELEG
+    deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-delegationTransition :: TransitionRule DELEG
+delegationTransition
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => TransitionRule (DELEG hashAlgo dsignAlgo)
 delegationTransition = do
   TRC ((_slot, p), d@(DState _ _ _ _ genMap (Dms _dms)), c) <- judgmentContext
   case c of

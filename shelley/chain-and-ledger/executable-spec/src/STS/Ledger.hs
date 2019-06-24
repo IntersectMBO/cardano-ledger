@@ -1,7 +1,9 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Ledger
   ( LEDGER
@@ -10,6 +12,7 @@ where
 
 import           Lens.Micro ((^.))
 
+import           Keys
 import           LedgerState
 import           PParams hiding (d)
 import           Slot
@@ -20,32 +23,60 @@ import           Control.State.Transition
 import           STS.Delegs
 import           STS.Utxow
 
-data LEDGER
+data LEDGER hashAlgo dsignAlgo
 
-instance STS LEDGER where
-    type State LEDGER       = (UTxOState, DPState)
-    type Signal LEDGER      = Tx
-    type Environment LEDGER = (Slot, Ix, PParams)
-    data PredicateFailure LEDGER = UtxowFailure (PredicateFailure UTXOW)
-                                 | DelegsFailure (PredicateFailure DELEGS)
-                    deriving (Show, Eq)
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => STS (LEDGER hashAlgo dsignAlgo)
+ where
+  type State (LEDGER hashAlgo dsignAlgo)
+    = (UTxOState hashAlgo dsignAlgo, DPState hashAlgo dsignAlgo)
+  type Signal (LEDGER hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
+  type Environment (LEDGER hashAlgo dsignAlgo) = (Slot, Ix, PParams)
+  data PredicateFailure (LEDGER hashAlgo dsignAlgo)
+    = UtxowFailure (PredicateFailure (UTXOW hashAlgo dsignAlgo))
+    | DelegsFailure (PredicateFailure (DELEGS hashAlgo dsignAlgo))
+    deriving (Show, Eq)
 
-    initialRules    = [ ]
-    transitionRules = [ ledgerTransition         ]
+  initialRules    = []
+  transitionRules = [ledgerTransition]
 
-ledgerTransition :: TransitionRule LEDGER
+ledgerTransition
+  :: forall hashAlgo dsignAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TransitionRule (LEDGER hashAlgo dsignAlgo)
 ledgerTransition = do
   TRC ((slot, ix, pp), (u, d), tx) <- judgmentContext
-  utxo' <- trans @UTXOW $ TRC
+  utxo' <- trans @(UTXOW hashAlgo dsignAlgo) $ TRC
     ( (slot, pp, d ^. dstate . stKeys, d ^. pstate . stPools, d ^. dstate . dms)
     , u
     , tx
     )
-  deleg' <- trans @DELEGS $ TRC ((slot, ix, pp, tx), d, tx ^. body . certs)
+  deleg' <-
+    trans @(DELEGS hashAlgo dsignAlgo)
+      $ TRC ((slot, ix, pp, tx), d, tx ^. body . certs)
   pure (utxo', deleg')
 
-instance Embed DELEGS LEDGER where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => Embed (DELEGS hashAlgo dsignAlgo) (LEDGER hashAlgo dsignAlgo)
+ where
   wrapFailed = DelegsFailure
 
-instance Embed UTXOW LEDGER where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => Embed (UTXOW hashAlgo dsignAlgo) (LEDGER hashAlgo dsignAlgo)
+ where
   wrapFailed = UtxowFailure

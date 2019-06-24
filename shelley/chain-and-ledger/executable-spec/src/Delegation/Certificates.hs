@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Delegation.Certificates
   (
     DCert(..)
@@ -15,6 +17,8 @@ module Delegation.Certificates
   , decayPool
   ) where
 
+import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
+
 import           Coin (Coin (..))
 import           Keys
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
@@ -28,31 +32,75 @@ import           NonIntegral (exp')
 
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (approxRational)
+import           Data.Word (Word8)
 
 import           Lens.Micro ((^.))
 
-newtype StakeKeys  = StakeKeys  (Map.Map HashKey Slot)
-    deriving (Show, Eq)
-newtype StakePools = StakePools (Map.Map HashKey Slot)
-    deriving (Show, Eq)
+newtype StakeKeys hashAlgo dsignAlgo =
+  StakeKeys (Map.Map (HashKey hashAlgo dsignAlgo) Slot)
+  deriving (Show, Eq)
+
+newtype StakePools hashAlgo dsignAlgo =
+  StakePools (Map.Map (HashKey hashAlgo dsignAlgo) Slot)
+  deriving (Show, Eq)
 
 -- | A heavyweight certificate.
-data DCert = -- | A stake key registration certificate.
-            RegKey VKey
-            -- | A stake key deregistration certificate.
-          | DeRegKey VKey --TODO this is actually HashKey on page 13, is that what we want?
-            -- | A stake pool registration certificate.
-          | RegPool PoolParams
-            -- | A stake pool retirement certificate.
-          | RetirePool VKey Epoch
-            -- | A stake delegation certificate.
-          | Delegate Delegation
-            -- | Genesis key delegation certificate
-          | GenesisDelegate (VKeyGenesis, VKey)
+data DCert hashAlgo dsignAlgo
+    -- | A stake key registration certificate.
+  = RegKey (VKey dsignAlgo)
+    -- | A stake key deregistration certificate.
+  | DeRegKey (VKey dsignAlgo) --TODO this is actually HashKey on page 13, is that what we want?
+    -- | A stake pool registration certificate.
+  | RegPool (PoolParams hashAlgo dsignAlgo)
+    -- | A stake pool retirement certificate.
+  | RetirePool (VKey dsignAlgo) Epoch
+    -- | A stake delegation certificate.
+  | Delegate (Delegation dsignAlgo)
+    -- | Genesis key delegation certificate
+  | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
   deriving (Show, Eq, Ord)
 
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => ToCBOR (DCert hashAlgo dsignAlgo)
+ where
+  toCBOR = \case
+    RegKey vk ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR vk
+
+    DeRegKey vk ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR vk
+
+    RegPool poolParams ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> toCBOR poolParams
+
+    RetirePool vk epoch ->
+      encodeListLen 3
+        <> toCBOR (3 :: Word8)
+        <> toCBOR vk
+        <> toCBOR epoch
+
+    Delegate delegation ->
+      encodeListLen 2
+        <> toCBOR (4 :: Word8)
+        <> toCBOR delegation
+
+    GenesisDelegate keys ->
+      encodeListLen 2
+        <> toCBOR (5 :: Word8)
+        <> toCBOR keys
+
 -- |Determine the certificate author
-cwitness :: DCert -> HashKey
+cwitness
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => DCert hashAlgo dsignAlgo
+  -> HashKey hashAlgo dsignAlgo
 cwitness (RegKey k)            = hashKey k
 cwitness (DeRegKey k)          = hashKey k
 cwitness (RegPool pool)        = hashKey $ pool ^. poolPubKey
@@ -61,7 +109,7 @@ cwitness (Delegate delegation) = hashKey $ delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = hashGenesisKey gk
 
 -- |Retrieve the deposit amount for a certificate
-dvalue :: DCert -> PParams -> Coin
+dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin
 dvalue (RegKey _)  = flip (^.) keyDeposit
 dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
@@ -77,20 +125,20 @@ refund (Coin dval) dmin lambda delta = floor refund'
 
 -- | Check whether certificate is of releasing type, i.e., key deregistration or
 -- pool retirement.
-releasing :: DCert -> Bool
+releasing :: DCert hashAlgo dsignAlgo -> Bool
 releasing c = dderegister c || dretire c
 
-dderegister :: DCert -> Bool
+dderegister :: DCert hashAlgo dsignAlgo -> Bool
 dderegister (DeRegKey _) = True
 dderegister _            = False
 
-dretire :: DCert -> Bool
+dretire :: DCert hashAlgo dsignAlgo -> Bool
 dretire (RetirePool _ _) = True
 dretire _                = False
 
 -- | Check whether certificate is of allocating type, i.e, key or pool
 -- registration.
-allocating :: DCert -> Bool
+allocating :: DCert hashAlgo dsignAlgo -> Bool
 allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
@@ -107,5 +155,6 @@ decayPool pc = (pval, pmin, lambdap)
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
 
-newtype PoolDistr = PoolDistr (Map.Map HashKey Rational)
+newtype PoolDistr hashAlgo dsignAlgo =
+  PoolDistr (Map.Map (HashKey hashAlgo dsignAlgo) Rational)
   deriving (Show, Eq)
