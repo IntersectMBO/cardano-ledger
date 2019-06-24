@@ -59,7 +59,6 @@ import Hedgehog
   , forAll
   , property
   , success
-  , (===)
   )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -82,7 +81,6 @@ import Control.State.Transition
   , State
   , TRC(TRC)
   , applySTS
-  , applySTSIndifferently
   )
 import Control.State.Transition.Trace
   ( Trace, _traceEnv
