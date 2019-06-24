@@ -3,7 +3,8 @@
 
 module STS.Deleg
   ( DELEG
-  ) where
+  )
+where
 
 import           LedgerState
 import           Delegation.Certificates

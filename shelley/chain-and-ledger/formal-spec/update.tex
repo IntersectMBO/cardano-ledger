@@ -15,7 +15,7 @@ Therefore $\mathsf{UPDATE}$ is the combination of the
 $\mathsf{PPUP}$ transition for the protocol parameters and the
 the $\mathsf{AVUP}$ transition for the application versions.
 Recall that $\PPUpdate$, $\AVUpdate$, and $\Update$ were defined in
-Figure~\ref{fig:defs:utxo-shelley} 
+Figure~\ref{fig:defs:utxo-shelley}
 
 
 The signature for the keys in the proposal will be checked in the
@@ -327,7 +327,7 @@ Note that $\type{T}$ is an arbitrary type.
   \begin{equation}\label{eq:update}
     \inference[Update]
     {
-      (\var{pup},~\var{aup})\leteq\var{up}
+      (\var{pup_{u}},~\var{aup_{u}})\leteq\var{up}
       \\~\\
       {
         \left(
@@ -339,7 +339,7 @@ Note that $\type{T}$ is an arbitrary type.
       }
       \vdash
       \left(\var{pup}\right)
-      \trans{\hyperref[fig:rules:pp-update]{ppup}}{\var{pup}}
+      \trans{\hyperref[fig:rules:pp-update]{ppup}}{\var{pup_{u}}}
       \left(\var{pup'}\right)
       &
       {
@@ -360,7 +360,7 @@ Note that $\type{T}$ is an arbitrary type.
           \end{array}
         \right)
       }
-      \trans{\hyperref[fig:rules:av-update]{avup}}{\var{aup}}
+      \trans{\hyperref[fig:rules:av-update]{avup}}{\var{aup_{u}}}
       {
         \left(
           \begin{array}{r}

@@ -4,7 +4,7 @@
 module Slot
   ( Slot(..)
   , Duration(..)
-  , (-*), (+*)
+  , (-*), (+*), (*-)
   , Epoch(..)
   -- conversion functions
   , slotFromEpoch
@@ -35,6 +35,10 @@ newtype Duration = Duration Natural
 
 (+*) :: Slot -> Duration -> Slot
 (Slot s) +* (Duration d) = Slot (s + d)
+
+-- | Subtract a duration from a slot
+(*-) :: Slot -> Duration -> Slot
+(Slot s) *- (Duration d) = Slot (if s > d then s - d else 0)
 
 -- |An Epoch
 newtype Epoch = Epoch Natural

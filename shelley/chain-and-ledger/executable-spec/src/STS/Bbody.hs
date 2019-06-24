@@ -5,16 +5,18 @@
 
 module STS.Bbody
   ( BBODY
-  ) where
+  )
+where
 
-import qualified Data.Map.Strict          as Map
-import           Data.Maybe               (fromMaybe)
+import qualified Data.Map.Strict               as Map
+import qualified Data.Set                      as Set
 
 import           BlockChain
 import           EpochBoundary
 import           Keys
 import           LedgerState
 import           PParams
+import           Slot
 
 import           Control.State.Transition
 
@@ -25,9 +27,8 @@ data BBODY
 instance STS BBODY where
   type State BBODY = (LedgerState, BlocksMade)
   type Signal BBODY = Block
-  type Environment BBODY = PParams
-  data PredicateFailure BBODY = BodySizeTooLargeBBODY
-                            | InvalidTxsSignatureBBODY
+  type Environment BBODY = (Set.Set Slot, PParams)
+  data PredicateFailure BBODY = WrongBlockBodySizeBBODY
                             | LedgersFailure (PredicateFailure LEDGERS)
                                 deriving (Show, Eq)
   initialRules = [pure (emptyLedgerState, BlocksMade Map.empty)]
@@ -35,16 +36,15 @@ instance STS BBODY where
 
 bbodyTransition :: TransitionRule BBODY
 bbodyTransition = do
-  TRC (pp, (ls, BlocksMade b), (Block (BHeader bhb _) txs)) <-
-    judgmentContext
-  let vk = bheaderVk bhb
-  let sigma = bheaderBlockSignature bhb
-  not (verify vk txs sigma) ?! InvalidTxsSignatureBBODY
-  bBodySize txs < (fromIntegral $ _maxBBSize pp) ?! BodySizeTooLargeBBODY
-  let hk = hashKey vk
-  let n = fromMaybe 0 (Map.lookup hk b)
+  TRC ((oslots, pp), (ls, b), (Block (BHeader bhb _) txs)) <- judgmentContext
+  let hk = hashKey $ bvkcold bhb
+  bBodySize txs == (fromIntegral $ hBbsize bhb) ?! WrongBlockBodySizeBBODY
+
   ls' <- trans @LEDGERS $ TRC ((bheaderSlot bhb, pp), ls, txs)
-  pure (ls', BlocksMade $ Map.insert hk (n + 1) b)
+
+  let b' = incrBlocks (Set.member (bheaderSlot bhb) oslots) hk b
+
+  pure (ls', b')
 
 instance Embed LEDGERS BBODY where
   wrapFailed = LedgersFailure

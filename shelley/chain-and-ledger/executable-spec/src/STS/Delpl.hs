@@ -5,7 +5,8 @@
 
 module STS.Delpl
   ( DELPL
-  ) where
+  )
+where
 
 import           LedgerState
 import           Delegation.Certificates
@@ -33,21 +34,21 @@ instance STS DELPL where
 
 delplTransition :: TransitionRule DELPL
 delplTransition = do
-  TRC((slotIx, ptr, pp), d, c) <- judgmentContext
+  TRC ((slotIx, ptr, pp), d, c) <- judgmentContext
   case c of
-    RegPool    _   -> do
-      ps <- trans @POOL  $ TRC ((slotIx, ptr, pp), _pstate d, c)
+    RegPool _ -> do
+      ps <- trans @POOL $ TRC ((slotIx, ptr, pp), _pstate d, c)
       pure $ d { _pstate = ps }
     RetirePool _ _ -> do
-      ps <- trans @POOL  $ TRC ((slotIx, ptr, pp), _pstate d, c)
+      ps <- trans @POOL $ TRC ((slotIx, ptr, pp), _pstate d, c)
       pure $ d { _pstate = ps }
-    RegKey _       -> do
+    RegKey _ -> do
       ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
-    DeRegKey _     -> do
+    DeRegKey _ -> do
       ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
-    Delegate _     -> do
+    Delegate _ -> do
       ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
 

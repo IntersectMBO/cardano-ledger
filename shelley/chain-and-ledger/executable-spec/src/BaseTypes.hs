@@ -9,17 +9,14 @@ module BaseTypes
   , intervalValue
   , interval0
   , interval1
-  , Seed
+  , Seed(..)
   , mkNonce
   , seedOp
   , neutralSeed
-  , EEnt(..)
   ) where
 
-import qualified Data.Map.Strict as Map
 
 import qualified Data.Fixed as FP
-import qualified Keys       as Keys
 
 data E34
 
@@ -59,6 +56,8 @@ interval1 = UnitInterval 1
 data Seed
   = Nonce Integer
   | NeutralSeed
+  | SeedL
+  | SeedEta
   | SeedOp Seed
            Seed
   deriving (Show, Eq, Ord)
@@ -73,7 +72,3 @@ neutralSeed = NeutralSeed
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce
-
--- | Extra entropy
-newtype EEnt = EEnt (Map.Map Keys.VKeyGenesis Seed)
-  deriving (Show, Ord, Eq)

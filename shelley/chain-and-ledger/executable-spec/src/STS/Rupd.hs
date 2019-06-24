@@ -3,7 +3,8 @@
 
 module STS.Rupd
   ( RUPD
-  ) where
+  )
+where
 
 import           BlockChain
 import           EpochBoundary
@@ -30,5 +31,5 @@ rupdTransition = do
   if s <= slot
     then pure ru
     else case ru of
-           Nothing -> pure $ Just (createRUpd b es)
-           Just _  -> pure $ ru
+      Nothing -> pure $ Just (createRUpd b es)
+      Just _  -> pure $ ru
