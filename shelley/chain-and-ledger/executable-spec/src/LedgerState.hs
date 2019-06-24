@@ -40,7 +40,6 @@ module LedgerState
   , emptyAccount
   , emptyPState
   , emptyDState
-  , emptyUPIState
   , poolRAcnt
   , treasury
   , reserves
@@ -139,8 +138,6 @@ import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
                                          RewardAcnt(..), poolRAcnt, poolOwners)
 
 import           BaseTypes
-
-import qualified Ledger.Update as Byron.Update (UPIState, emptyUPIState)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs = [(KeyPair, KeyPair)]
@@ -294,14 +291,6 @@ data UTxOState =
                     , Map.Map Slot Updates.Applications
                     , Updates.Applications)
     } deriving (Show, Eq)
-
--- | For now this contains the Byron `UPIState` and the Shelley PParams
--- separately.
-data UPIState = UPIState Byron.Update.UPIState PParams
-  deriving (Show, Eq)
-
-emptyUPIState :: UPIState
-emptyUPIState = UPIState Byron.Update.emptyUPIState emptyPParams
 
 -- | New Epoch state and environment
 data NewEpochState =
