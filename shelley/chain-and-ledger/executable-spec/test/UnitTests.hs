@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module UnitTests (unitTests) where
 
@@ -15,30 +16,42 @@ import           Test.Tasty.HUnit
 
 import           BaseTypes
 import           Coin
-import           Delegation.Certificates (DCert (..), StakePools(..), StakeKeys(..))
-import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
-                                                     RewardAcnt(..))
-import           Keys
-import           LedgerState hiding (dms)
+import           Delegation.Certificates (pattern Delegate, pattern RegKey,
+                     pattern RegPool, pattern RetirePool, StakePools(..),
+                     StakeKeys(..))
+import           Delegation.PoolParams (Delegation (..), pattern PoolParams,
+                     pattern RewardAcnt, _poolAltAcnt, _poolCost, _poolMargin,
+                     _poolOwners, _poolPubKey, _poolPledge, _poolPledges,
+                     _poolRAcnt)
+import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
+import           LedgerState (pattern LedgerState, pattern UTxOState,
+                     ValidationError(..), _delegationState, _dms, _dstate,
+                     asStateTransition, delegations, delegationState, dstate,
+                     emptyDelegation, genesisId, genesisState, minfee, pParams,
+                     pstate, ptrs, retiring, rewards, stKeys, stPools)
 import           PParams
 import           Slot
 import           Updates
-import           UTxO
+import           UTxO (pattern AddrTxin, pattern Ptr, pattern Tx,
+                     pattern TxBody, pattern TxIn, pattern TxOut, pattern UTxO,
+                     body, makeWitness, makeWitnesses, mkRwdAcnt, ttl, txid)
+
+import           MockTypes
 
 alicePay :: KeyPair
-alicePay = keyPair (Owner 1)
+alicePay = KeyPair 1 1
 
 aliceStake :: KeyPair
-aliceStake = keyPair (Owner 2)
+aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
 aliceAddr = AddrTxin (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
 
 bobPay :: KeyPair
-bobPay = keyPair (Owner 3)
+bobPay = KeyPair 3 3
 
 bobStake :: KeyPair
-bobStake = keyPair (Owner 4)
+bobStake = KeyPair 4 4
 
 bobAddr :: Addr
 bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
@@ -67,7 +80,7 @@ changeReward ls acnt c = ls & delegationState . dstate . rewards .~ newAccounts
   where newAccounts = Map.insert acnt c (ls ^. delegationState . dstate. rewards)
 
 stakePoolKey1 :: KeyPair
-stakePoolKey1 = keyPair (Owner 5)
+stakePoolKey1 = KeyPair 5 5
 
 ledgerState :: [Tx] -> Either [ValidationError] LedgerState
 ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t dms') genesis

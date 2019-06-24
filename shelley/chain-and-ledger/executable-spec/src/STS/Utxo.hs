@@ -1,7 +1,8 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Utxo
   ( UTXO
@@ -29,31 +30,44 @@ import           Control.State.Transition
 
 import           STS.Up
 
-data UTXO
+data UTXO hashAlgo dsignAlgo
 
-instance STS UTXO where
-  type State UTXO = UTxOState
-  type Signal UTXO = Tx
-  type Environment UTXO = (Slot, PParams, StakeKeys, StakePools, Dms)
-  data PredicateFailure UTXO = BadInputsUTxO
-                           | ExpiredUTxO Slot Slot
-                           | InputSetEmptyUTxO
-                           | FeeTooSmallUTxO Coin Coin
-                           | ValueNotConservedUTxO Coin Coin
-                           | UnexpectedFailureUTXO [ValidationError]
-                           | UnexpectedSuccessUTXO
-                           | BadExtraEntropyUTxO
-                           | UpdateFailure (PredicateFailure UP)
-                               deriving (Eq, Show)
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => STS (UTXO hashAlgo dsignAlgo)
+ where
+  type State (UTXO hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
+  type Signal (UTXO hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
+  type Environment (UTXO hashAlgo dsignAlgo)
+    = ( Slot
+      , PParams
+      , StakeKeys hashAlgo dsignAlgo
+      , StakePools hashAlgo dsignAlgo
+      , Dms dsignAlgo
+      )
+  data PredicateFailure (UTXO hashAlgo dsignAlgo)
+    = BadInputsUTxO
+    | ExpiredUTxO Slot Slot
+    | InputSetEmptyUTxO
+    | FeeTooSmallUTxO Coin Coin
+    | ValueNotConservedUTxO Coin Coin
+    | UnexpectedFailureUTXO [ValidationError]
+    | UnexpectedSuccessUTXO
+    | BadExtraEntropyUTxO
+    | UpdateFailure (PredicateFailure (UP dsignAlgo))
+    deriving (Eq, Show)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
-initialLedgerState :: InitialRule UTXO
+initialLedgerState :: InitialRule (UTXO hashAlgo dsignAlgo)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
-utxoInductive :: TransitionRule UTXO
+utxoInductive
+  :: forall hashAlgo dsignAlgo
+   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => TransitionRule (UTXO hashAlgo dsignAlgo)
 utxoInductive = do
   TRC ((_slot, pp, stakeKeys, stakePools, _dms), u, tx) <- judgmentContext
 
@@ -76,7 +90,7 @@ utxoInductive = do
   let u' = applyUTxOUpdate u txbody  -- change UTxO
 
   -- process Update Proposals
-  ups' <- trans @UP $ TRC ((_slot, _dms), u ^. ups, txup tx)
+  ups' <- trans @(UP dsignAlgo) $ TRC ((_slot, _dms), u ^. ups, txup tx)
 
   pure
     $  u'
@@ -87,12 +101,14 @@ utxoInductive = do
     &  ups
     .~ ups'
 
-unwrapFailureUTXO :: Validity -> PredicateFailure UTXO
+unwrapFailureUTXO :: Validity -> PredicateFailure (UTXO hashAlgo dsignAlgo)
 unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
 unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
 unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
 
-unwrapFailureUTXO' :: ValidationError -> PredicateFailure UTXO
+unwrapFailureUTXO'
+  :: ValidationError
+  -> PredicateFailure (UTXO hashAlgo dsignAlgo)
 unwrapFailureUTXO' BadInputs                = BadInputsUTxO
 unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
 unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
@@ -100,5 +116,8 @@ unwrapFailureUTXO' (FeeTooSmall       c c') = FeeTooSmallUTxO c c'
 unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
 unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
 
-instance Embed UP UTXO where
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => Embed (UP dsignAlgo) (UTXO hashAlgo dsignAlgo)
+ where
   wrapFailed = UpdateFailure

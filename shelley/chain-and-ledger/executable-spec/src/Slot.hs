@@ -19,11 +19,13 @@ module Slot
 import           Data.Monoid             (Sum(..))
 import           Numeric.Natural         (Natural)
 
+import           Cardano.Binary          (ToCBOR)
+
 import qualified Ledger.Core           as Byron (Slot(..))
 
 -- |A Slot
 newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord, Num)
+  deriving (Show, Eq, Ord, Num, ToCBOR)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
 newtype Duration = Duration Natural
@@ -42,7 +44,7 @@ newtype Duration = Duration Natural
 
 -- |An Epoch
 newtype Epoch = Epoch Natural
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, ToCBOR)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
 slotFromEpoch :: Epoch -> Slot

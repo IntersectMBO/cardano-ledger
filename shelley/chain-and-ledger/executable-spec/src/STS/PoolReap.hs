@@ -23,18 +23,20 @@ import           Coin
 
 import           Control.State.Transition
 
-data POOLREAP
+data POOLREAP hashAlgo dsignAlgo
 
-instance STS POOLREAP where
-  type State POOLREAP = (AccountState, DState, PState)
-  type Signal POOLREAP = Epoch
-  type Environment POOLREAP = PParams
-  data PredicateFailure POOLREAP = FailurePOOLREAP
-                                   deriving (Show, Eq)
+instance STS (POOLREAP hashAlgo dsignAlgo) where
+  type State (POOLREAP hashAlgo dsignAlgo)
+    = (AccountState, DState hashAlgo dsignAlgo, PState hashAlgo dsignAlgo)
+  type Signal (POOLREAP hashAlgo dsignAlgo) = Epoch
+  type Environment (POOLREAP hashAlgo dsignAlgo) = PParams
+  data PredicateFailure (POOLREAP hashAlgo dsignAlgo)
+    = FailurePOOLREAP
+    deriving (Show, Eq)
   initialRules = [pure (emptyAccount, emptyDState, emptyPState)]
   transitionRules = [poolReapTransition]
 
-poolReapTransition :: TransitionRule POOLREAP
+poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo)
 poolReapTransition = do
   TRC (pp, (a, ds, ps), e) <- judgmentContext
   let retired  = Map.keysSet $ Map.filter (== e) $ ps ^. retiring

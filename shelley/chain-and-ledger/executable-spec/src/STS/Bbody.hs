@@ -1,7 +1,9 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module STS.Bbody
   ( BBODY
@@ -17,34 +19,61 @@ import           Keys
 import           LedgerState
 import           PParams
 import           Slot
+import           UTxO
 
 import           Control.State.Transition
 
 import           STS.Ledgers
 
-data BBODY
+data BBODY hashAlgo dsignAlgo kesAlgo
 
-instance STS BBODY where
-  type State BBODY = (LedgerState, BlocksMade)
-  type Signal BBODY = Block
-  type Environment BBODY = (Set.Set Slot, PParams)
-  data PredicateFailure BBODY = WrongBlockBodySizeBBODY
-                            | LedgersFailure (PredicateFailure LEDGERS)
-                                deriving (Show, Eq)
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => STS (BBODY hashAlgo dsignAlgo kesAlgo)
+ where
+  type State (BBODY hashAlgo dsignAlgo kesAlgo)
+    = (LedgerState hashAlgo dsignAlgo, BlocksMade hashAlgo dsignAlgo)
+
+  type Signal (BBODY hashAlgo dsignAlgo kesAlgo)
+    = Block hashAlgo dsignAlgo kesAlgo
+
+  type Environment (BBODY hashAlgo dsignAlgo kesAlgo) = (Set.Set Slot, PParams)
+
+  data PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo)
+    = WrongBlockBodySizeBBODY
+    | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo))
+    deriving (Show, Eq)
+
   initialRules = [pure (emptyLedgerState, BlocksMade Map.empty)]
   transitionRules = [bbodyTransition]
 
-bbodyTransition :: TransitionRule BBODY
+bbodyTransition
+  :: forall hashAlgo dsignAlgo kesAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
 bbodyTransition = do
   TRC ((oslots, pp), (ls, b), (Block (BHeader bhb _) txs)) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
   bBodySize txs == (fromIntegral $ hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
-  ls' <- trans @LEDGERS $ TRC ((bheaderSlot bhb, pp), ls, txs)
+  ls' <-
+    trans @(LEDGERS hashAlgo dsignAlgo) $ TRC ((bheaderSlot bhb, pp), ls, txs)
 
   let b' = incrBlocks (Set.member (bheaderSlot bhb) oslots) hk b
 
   pure (ls', b')
 
-instance Embed LEDGERS BBODY where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => Embed (LEDGERS hashAlgo dsignAlgo) (BBODY hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = LedgersFailure

@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module OCert
   ( OCert(..)
   , KESPeriod(..)
@@ -5,26 +7,40 @@ module OCert
   , kesPeriod)
 where
 
-import qualified Keys         as Keys
-import qualified Slot         as Slot
+import           Cardano.Binary
+
+import           Keys
+import qualified Slot
 
 import           Numeric.Natural (Natural)
 
 newtype KESPeriod = KESPeriod Natural
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, ToCBOR)
 
-data OCert = OCert
+data OCert dsignAlgo kesAlgo = OCert
   { -- | The operational hot key
-    ocertVkHot     :: Keys.VKey
+    ocertVkHot     :: VKeyES kesAlgo
     -- | The cold key
-  , ocertVkCold    :: Keys.VKey
+  , ocertVkCold    :: VKey dsignAlgo
     -- | counter
   , ocertN         :: Natural
     -- | Start of key evolving signature period
   , ocertKESPeriod :: KESPeriod
     -- | Signature of block operational certificate content
-  , ocertSigma     :: Keys.Sig (Keys.VKey, Natural, KESPeriod)
+  , ocertSigma     :: Sig dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
   } deriving (Show, Eq)
+
+instance
+  (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => ToCBOR (OCert dsignAlgo kesAlgo)
+ where
+  toCBOR ocert =
+    encodeListLen 5
+      <> toCBOR (ocertVkHot ocert)
+      <> toCBOR (ocertVkCold ocert)
+      <> toCBOR (ocertN ocert)
+      <> toCBOR (ocertKESPeriod ocert)
+      <> toCBOR (ocertSigma ocert)
 
 slotsPerKESPeriod :: Natural
 slotsPerKESPeriod = 90

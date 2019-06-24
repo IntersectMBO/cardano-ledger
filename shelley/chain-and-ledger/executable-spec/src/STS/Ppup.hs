@@ -18,20 +18,22 @@ import           Updates
 
 import           Control.State.Transition
 
-data PPUP
+data PPUP dsignAlgo
 
-instance STS PPUP where
-  type State PPUP = PPUpdate
-  type Signal PPUP = PPUpdate
-  type Environment PPUP = (Slot, Dms)
-  data PredicateFailure PPUP = NonGenesisUpdatePPUP
-                             | PPUpdateTooLatePPUP
-                             deriving (Show, Eq)
+instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
+  type State (PPUP dsignAlgo) = PPUpdate dsignAlgo
+  type Signal (PPUP dsignAlgo) = PPUpdate dsignAlgo
+  type Environment (PPUP dsignAlgo) = (Slot, Dms dsignAlgo)
+  data PredicateFailure (PPUP dsignAlgo)
+    = NonGenesisUpdatePPUP
+    | PPUpdateTooLatePPUP
+    deriving (Show, Eq)
+
   initialRules = []
 
   transitionRules = [ppupTransition]
 
-ppupTransition :: TransitionRule PPUP
+ppupTransition :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
 ppupTransition = do
   TRC ((s, Dms _dms), pupS@(PPUpdate pupS'), pup@(PPUpdate pup')) <-
     judgmentContext
