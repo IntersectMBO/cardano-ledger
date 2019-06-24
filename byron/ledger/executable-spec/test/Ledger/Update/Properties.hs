@@ -403,14 +403,14 @@ ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 200 $ property $ do
-  sample <- forAll (trace @UBLOCK 1000)
+ublockRelevantTracesAreCovered = withTests 300 $ property $ do
+  sample <- forAll (trace @UBLOCK 600)
 
   cover 75
     "at least 50% of the proposals get confirmed"
     (0.50 <= confirmedProposals sample / totalProposals sample)
 
-  cover 30
+  cover 20
     "at least 20% of the proposals get unconfirmed"
     (0.20 <= 1 - (confirmedProposals sample / totalProposals sample))
 
