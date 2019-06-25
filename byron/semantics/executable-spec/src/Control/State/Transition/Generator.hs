@@ -49,8 +49,9 @@ import Control.Monad.Trans.Maybe (MaybeT)
 import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity)
 import Data.String (fromString)
+import GHC.Stack (HasCallStack)
 import Hedgehog
-  ( Gen
+  ( Gen, footnoteShow
   , Property
   , PropertyT
   , classify
@@ -354,7 +355,8 @@ mkIntervals low high step
 
 -- | Given a function that computes an integral value from a trace, return that
 -- value as a ratio of the trace length.
-ratio :: Integral a
+ratio
+  :: Integral a
   => (Trace s -> a)
   -> Trace s
   -> Double
@@ -382,7 +384,7 @@ traceLengthsAreClassified maximumTraceLength intervalSize =
 -- | Check that the signal generator of 's' only generate valid signals.
 onlyValidSignalsAreGenerated
   :: forall s
-   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
   => Int
   -- ^ Maximum trace length.
   -> Property
@@ -395,7 +397,12 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
     st' :: State s
     st' = lastState tr
   sig <- forAll (sigGen @s env st')
-  void $ evalEither $ applySTS @s (TRC(env, st', sig))
+  let result = applySTS @s (TRC(env, st', sig))
+  -- TODO: For some reason the result that led to the failure is not shown
+  -- (even without using tasty, and setting the condition to True === False)
+  footnoteShow result
+  void $ evalEither $ result
+
 
 --------------------------------------------------------------------------------
 -- Temporary definitions till hedgehog exposes these
