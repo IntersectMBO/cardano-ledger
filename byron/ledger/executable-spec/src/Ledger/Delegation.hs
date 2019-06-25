@@ -66,8 +66,7 @@ module Ledger.Delegation
 where
 
 import           Control.Arrow ((&&&))
-import           Control.Lens (Lens', lens, makeFields, makeLenses, to, (%~), (&), (.~), (<>~),
-                     (^.), _1)
+import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>~), (^.), _1)
 import           Data.AbstractSize
 import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
@@ -90,10 +89,9 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
-import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig (Sig),
+import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, owner, range, sign, skey, unBlockCount, unVKeyGenesis, (∈),
-                     (∉), (⨃))
+                     addSlot, hash, range, sign, skey, unBlockCount, unVKeyGenesis, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkgenesisGen)
 
 
