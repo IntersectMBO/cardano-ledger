@@ -1,15 +1,19 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Deleg
   ( DELEG
   )
 where
 
-import           LedgerState
+import qualified Data.Map.Strict as Map
+
+import           BlockChain (slotsPrior)
 import           Delegation.Certificates
-import           UTxO
+import           Keys
+import           LedgerState
 import           Slot
+import           UTxO
 
 import           Control.State.Transition
 
@@ -23,6 +27,7 @@ instance STS DELEG where
                             | StakeKeyNotRegisteredDELEG
                             | StakeDelegationImpossibleDELEG
                             | WrongCertificateTypeDELEG
+                            | GenesisKeyNotInpMappingDELEG
                                 deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -30,7 +35,7 @@ instance STS DELEG where
 
 delegationTransition :: TransitionRule DELEG
 delegationTransition = do
-  TRC ((_, p), d, c) <- judgmentContext
+  TRC ((_slot, p), d@(DState _ _ _ _ genMap (Dms _dms)), c) <- judgmentContext
   case c of
     RegKey _ -> do
       validKeyRegistration c d == Valid ?! StakeKeyAlreadyRegisteredDELEG
@@ -41,6 +46,10 @@ delegationTransition = do
     Delegate _ -> do
       validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
       pure $ applyDCertDState p c d
+    GenesisDelegate (gkey, vk) -> do
+      Map.member gkey _dms ?! GenesisKeyNotInpMappingDELEG
+      let s' = _slot +* slotsPrior
+      pure $ d { _fdms = Map.insert (s', gkey) vk genMap}
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure d

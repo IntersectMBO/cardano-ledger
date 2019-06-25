@@ -1,9 +1,8 @@
-{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-|
 Module      : LedgerState
@@ -28,6 +27,7 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
+  , fdms
   , dms
   , PState(..)
   , cCounters
@@ -109,33 +109,31 @@ module LedgerState
   , updateNES
   ) where
 
-import           Control.Monad           (foldM)
-import           Crypto.Hash             (hash)
-import qualified Data.Map.Strict         as Map
-import           Data.Maybe              (mapMaybe, fromMaybe)
-import           Numeric.Natural         (Natural)
-import           Data.Set                (Set)
-import qualified Data.Set                as Set
+import           Control.Monad (foldM)
+import           Crypto.Hash (hash)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ratio
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Numeric.Natural (Natural)
 
-import           Lens.Micro              ((^.), (&), (.~), (%~))
-import           Lens.Micro.TH           (makeLenses)
+import           Lens.Micro ((%~), (&), (.~), (^.))
+import           Lens.Micro.TH (makeLenses)
 
-import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*),
-                                          slotsPerEpoch, firstSlot, epochFromSlot)
-import           Keys
-import           UTxO
-import           PParams                 (PParams(..), minfeeA, minfeeB,
-                                                 keyDeposit, keyMinRefund,
-                                                 keyDecayRate, emptyPParams)
+import           Coin (Coin (..))
 import           EpochBoundary
+import           Keys
+import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, keyMinRefund,
+                     minfeeA, minfeeB)
+import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
 import qualified Updates
+import           UTxO
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey, PoolDistr(..))
-import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
-                                         poolPubKey, poolSpec, poolPledge,
-                                         RewardAcnt(..), poolRAcnt, poolOwners)
+import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeKeys (..),
+                     StakePools (..), cwitness, decayKey, refund)
+import           Delegation.PoolParams (Delegation (..), PoolParams (..), RewardAcnt (..),
+                     poolOwners, poolPledge, poolPubKey, poolRAcnt, poolSpec)
 
 import           BaseTypes
 
@@ -214,6 +212,8 @@ data DState = DState
     , _delegations :: Map.Map HashKey HashKey
       -- |The pointed to hash keys.
     , _ptrs        :: Map.Map Ptr HashKey
+      -- | future genesis key delegations
+    , _fdms        :: Map.Map (Slot, VKeyGenesis) VKey
       -- |Genesis key delegations
     , _dms         :: Dms
     } deriving (Show, Eq)
@@ -275,7 +275,7 @@ emptyDelegation =
 
 emptyDState :: DState
 emptyDState =
-  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty (Dms Map.empty)
+  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty)
 
 emptyPState :: PState
 emptyPState =
@@ -309,7 +309,7 @@ getGKeys :: NewEpochState -> Set VKeyGenesis
 getGKeys nes = Map.keysSet dms
   where NewEpochState _ _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ (Dms dms)) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms)) _) _ = ls
 
 data NewEpochEnv =
   NewEpochEnv {
@@ -498,7 +498,7 @@ witsNeeded utxo' tx@(Tx txbody _) _dms =
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners | RegPool pool <- txbody ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (txbody ^. certs))
-    getCertHK cert = hashKey $ getRequiredSigningKey cert
+    getCertHK cert = cwitness cert
     updateKeys = propWits (txup tx) _dms
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
@@ -710,6 +710,8 @@ applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ (applyDCertPState ptr dcert
 applyDCert ptr dcert@(RetirePool _ _) ds =
   ds & pstate %~ (applyDCertPState ptr dcert)
 
+applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
+
 -- TODO do we also have to check hashKey target?
 applyDCert ptr dcert@(Delegate _) ds =
   ds & dstate %~ (applyDCertDState ptr dcert)
@@ -874,7 +876,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
 stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' _ = ds
+      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _               = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'

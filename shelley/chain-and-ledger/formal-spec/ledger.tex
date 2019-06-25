@@ -66,11 +66,12 @@ then calls the $\mathsf{DELEGS}$ transition.
           \var{slot} \\
           \var{txIx} \\
           \var{pp} \\
+          \var{tx}
         \end{array}
       \right)
       }
       \vdash
-      dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{\var{tx}} dpstate'
+      dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{\fun{dcerts}~\var{tx}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate'} \\
       (\var{stkeys}, \_, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
