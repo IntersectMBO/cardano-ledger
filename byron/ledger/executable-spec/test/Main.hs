@@ -5,25 +5,20 @@ module Main
   )
 where
 
-import           Test.Tasty                             (TestTree, defaultMain,
-                                                         localOption, testGroup)
-import           Test.Tasty.Hedgehog                    (testProperty)
+import           Test.Tasty (TestTree, defaultMain, localOption, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
-import           Ledger.Delegation.Examples             (deleg)
-import           Ledger.Delegation.Properties           (dcertsAreTriggered,
-                                                         rejectDupSchedDelegs)
-import qualified Ledger.Delegation.Properties           as DELEG
-import           Ledger.HasTypeReps.Properties          (testTxHasTypeReps)
-import           Ledger.Pvbump.Properties               (beginningsNoUpdate,
-                                                         emptyPVUpdate,
-                                                         lastProposal)
+import           Ledger.Delegation.Examples (deleg)
+import qualified Ledger.Delegation.Properties as DELEG
+import           Ledger.HasTypeReps.Properties (testTxHasTypeReps)
+import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, lastProposal)
 
-import qualified Ledger.Update.Properties               as UPDATE
+import qualified Ledger.Update.Properties as UPDATE
 
-import           Ledger.Relation.Properties             (testRelation)
-import           Ledger.UTxO.Properties                 (moneyIsConstant)
-import qualified Ledger.UTxO.Properties                 as UTxO
+import           Ledger.Relation.Properties (testRelation)
+import           Ledger.UTxO.Properties (moneyIsConstant)
+import qualified Ledger.UTxO.Properties as UTxO
 
 main :: IO ()
 main = defaultMain tests
@@ -34,10 +29,11 @@ main = defaultMain tests
     [ testGroup "Delegation Examples" deleg
     , testGroup
       "Delegation properties"
-      [ testProperty "Certificates are triggered"           dcertsAreTriggered
+      [ testProperty "Certificates are triggered"           DELEG.dcertsAreTriggered
+      , testProperty "No certificates are replayed"         DELEG.dcertsAreNotReplayed
       , testProperty "DBLOCK Traces are classified"         DELEG.dblockTracesAreClassified
-      , testProperty "Relevant DBLOCK traces covered"     DELEG.relevantCasesAreCovered
-      , testProperty "Duplicated certificates are rejected" rejectDupSchedDelegs
+      , testProperty "Relevant DBLOCK traces covered"       DELEG.relevantCasesAreCovered
+      , testProperty "Duplicated certificates are rejected" DELEG.rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       ]
     , testGroup

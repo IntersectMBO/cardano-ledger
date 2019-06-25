@@ -109,7 +109,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Generic, Hashable)
+  } deriving (Show, Eq, Ord, Generic, Hashable)
 
 instance HasTypeReps DCert
 
@@ -480,7 +480,7 @@ dcertGen env st =
     target = VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
 
     mkDCert' ((e, vkg), vk) = DCert vkg vk e (signWithGenesisKey vkg (vk, e))
-    signWithGenesisKey vkg a = sign (skey (unVKeyGenesis vkg)) a
+    signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
   in
 
   if null candidates

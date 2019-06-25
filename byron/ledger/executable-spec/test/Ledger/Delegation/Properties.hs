@@ -8,6 +8,7 @@
 -- associated with this aspect of the ledger.
 module Ledger.Delegation.Properties
   ( dcertsAreTriggered
+  , dcertsAreNotReplayed
   , rejectDupSchedDelegs
   , tracesAreClassified
   , dblockTracesAreClassified
@@ -21,7 +22,7 @@ import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.List (foldl', last, nub)
-import           Data.List.Unique (count)
+import           Data.List.Unique (count, repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Hedgehog (MonadTest, Property, assert, cover, forAll, property, success, withTests,
@@ -209,6 +210,26 @@ expectedDms s d sbs =
 
 delegatorDelegate :: DCert -> (VKeyGenesis, VKey)
 delegatorDelegate = delegator &&& delegate
+
+-- | Check that there are no duplicated certificates in the trace.
+dcertsAreNotReplayed :: Property
+dcertsAreNotReplayed = withTests 300 $ property $
+  forAll (trace @DBLOCK 1000) >>= dcertsAreNotReplayedInTrace
+  where
+    dcertsAreNotReplayedInTrace
+      :: MonadTest m
+      => Trace DBLOCK
+      -> m ()
+    dcertsAreNotReplayedInTrace traceSample
+      = repeated traceDelegationCertificates === []
+      where
+        traceDelegationCertificates = traceSignals OldestFirst traceSample
+                                    & fmap _blockCerts
+                                    & concat
+                                    & repeated
+
+
+
 
 instance HasTrace DBLOCK where
 
