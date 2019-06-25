@@ -1,9 +1,8 @@
-{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-|
 Module      : LedgerState
@@ -110,33 +109,31 @@ module LedgerState
   , updateNES
   ) where
 
-import           Control.Monad           (foldM)
-import           Crypto.Hash             (hash)
-import qualified Data.Map.Strict         as Map
-import           Data.Maybe              (mapMaybe, fromMaybe)
-import           Numeric.Natural         (Natural)
-import           Data.Set                (Set)
-import qualified Data.Set                as Set
+import           Control.Monad (foldM)
+import           Crypto.Hash (hash)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ratio
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Numeric.Natural (Natural)
 
-import           Lens.Micro              ((^.), (&), (.~), (%~))
-import           Lens.Micro.TH           (makeLenses)
+import           Lens.Micro ((%~), (&), (.~), (^.))
+import           Lens.Micro.TH (makeLenses)
 
-import           Coin                    (Coin (..))
-import           Slot                    (Slot (..), Epoch (..), (-*),
-                                          slotsPerEpoch, firstSlot, epochFromSlot)
-import           Keys
-import           UTxO
-import           PParams                 (PParams(..), minfeeA, minfeeB,
-                                                 keyDeposit, keyMinRefund,
-                                                 keyDecayRate, emptyPParams)
+import           Coin (Coin (..))
 import           EpochBoundary
+import           Keys
+import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, keyMinRefund,
+                     minfeeA, minfeeB)
+import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
 import qualified Updates
+import           UTxO
 
-import           Delegation.Certificates (DCert (..), refund, getRequiredSigningKey, StakeKeys(..), StakePools(..), decayKey, PoolDistr(..))
-import           Delegation.PoolParams   (Delegation (..), PoolParams (..),
-                                         poolPubKey, poolSpec, poolPledge,
-                                         RewardAcnt(..), poolRAcnt, poolOwners)
+import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeKeys (..),
+                     StakePools (..), cwitness, decayKey, refund)
+import           Delegation.PoolParams (Delegation (..), PoolParams (..), RewardAcnt (..),
+                     poolOwners, poolPledge, poolPubKey, poolRAcnt, poolSpec)
 
 import           BaseTypes
 
@@ -501,7 +498,7 @@ witsNeeded utxo' tx@(Tx txbody _) _dms =
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners | RegPool pool <- txbody ^. certs]
     certAuthors = Set.fromList (fmap getCertHK (txbody ^. certs))
-    getCertHK cert = hashKey $ getRequiredSigningKey cert
+    getCertHK cert = cwitness cert
     updateKeys = propWits (txup tx) _dms
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given

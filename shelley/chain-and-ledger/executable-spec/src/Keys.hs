@@ -10,6 +10,7 @@ module Keys
   , HashKey(..)
   , Sig
   , hashKey
+  , hashGenesisKey
   , sign
   , verify
   , KESig
@@ -63,3 +64,6 @@ newtype Dms = Dms (Map.Map VKeyGenesis VKey)
 
 newtype GKeys = GKeys (Set.Set VKeyGenesis)
   deriving (Show, Ord, Eq)
+
+hashGenesisKey :: VKeyGenesis -> HashKey
+hashGenesisKey = HashKey . hash
