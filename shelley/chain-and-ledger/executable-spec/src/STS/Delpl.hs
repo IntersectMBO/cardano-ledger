@@ -51,6 +51,9 @@ delplTransition = do
     Delegate _ -> do
       ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
+    GenesisDelegate _ -> do
+      ds <- trans @DELEG $ TRC ((slotIx, ptr), _dstate d, c)
+      pure $ d { _dstate = ds }
 
 instance Embed POOL DELPL where
   wrapFailed = PoolFailure

@@ -166,3 +166,7 @@ mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
   pure $ Delegate $ Delegation delegator' delegatee'
+
+mutateDCert keys _ (GenesisDelegate (gk, _)) = do
+  _delegatee <- getAnyStakeKey keys
+  pure $ GenesisDelegate (gk, _delegatee)

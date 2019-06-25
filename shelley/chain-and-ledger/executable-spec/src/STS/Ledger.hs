@@ -1,23 +1,19 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Ledger
   ( LEDGER
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import           Lens.Micro ((^.))
 
-import           Lens.Micro                     ( (^.) )
-
-import           Keys
 import           LedgerState
-import           UTxO
 import           PParams hiding (d)
 import           Slot
-import           Delegation.Certificates
+import           UTxO
 
 import           Control.State.Transition
 
@@ -34,26 +30,18 @@ instance STS LEDGER where
                                  | DelegsFailure (PredicateFailure DELEGS)
                     deriving (Show, Eq)
 
-    initialRules    = [ initialLedgerStateLEDGER ]
+    initialRules    = [ ]
     transitionRules = [ ledgerTransition         ]
-
-initialLedgerStateLEDGER :: InitialRule LEDGER
-initialLedgerStateLEDGER = do
-  IRC (slot, ix, pp) <- judgmentContext
-  utxo'              <- trans @UTXOW
-    $ IRC (slot, pp, StakeKeys Map.empty, StakePools Map.empty, Dms Map.empty)
-  deleg <- trans @DELEGS $ IRC (slot, ix, pp)
-  pure (utxo', deleg)
 
 ledgerTransition :: TransitionRule LEDGER
 ledgerTransition = do
-  TRC ((slot, ix, pp), (u, d), txwits) <- judgmentContext
+  TRC ((slot, ix, pp), (u, d), tx) <- judgmentContext
   utxo' <- trans @UTXOW $ TRC
     ( (slot, pp, d ^. dstate . stKeys, d ^. pstate . stPools, d ^. dstate . dms)
     , u
-    , txwits
+    , tx
     )
-  deleg' <- trans @DELEGS $ TRC ((slot, ix, pp), d, txwits ^. body . certs)
+  deleg' <- trans @DELEGS $ TRC ((slot, ix, pp, tx), d, tx ^. body . certs)
   pure (utxo', deleg')
 
 instance Embed DELEGS LEDGER where

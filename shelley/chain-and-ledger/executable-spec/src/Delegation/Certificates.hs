@@ -4,8 +4,7 @@ module Delegation.Certificates
   , StakeKeys(..)
   , StakePools(..)
   , PoolDistr(..)
-  , authDCert
-  , getRequiredSigningKey
+  , cwitness
   , dvalue
   , refund
   , releasing
@@ -16,22 +15,21 @@ module Delegation.Certificates
   , decayPool
   ) where
 
-import           Coin (Coin(..))
+import           Coin (Coin (..))
 import           Keys
-import           Slot (Duration(..), Epoch(..), Slot(..))
-import           PParams (PParams(..), keyDecayRate, keyMinRefund,
-                                 keyDeposit, poolDeposit, poolMinRefund,
-                                 poolDecayRate)
+import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
+                     poolDeposit, poolMinRefund)
+import           Slot (Duration (..), Epoch (..), Slot (..))
 
 import           Delegation.PoolParams
 
-import           NonIntegral (exp')
 import           BaseTypes
+import           NonIntegral (exp')
 
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (approxRational)
 
-import Lens.Micro ((^.))
+import           Lens.Micro ((^.))
 
 newtype StakeKeys  = StakeKeys  (Map.Map HashKey Slot)
     deriving (Show, Eq)
@@ -49,19 +47,18 @@ data DCert = -- | A stake key registration certificate.
           | RetirePool VKey Epoch
             -- | A stake delegation certificate.
           | Delegate Delegation
+            -- | Genesis key delegation certificate
+          | GenesisDelegate (VKeyGenesis, VKey)
   deriving (Show, Eq, Ord)
 
 -- |Determine the certificate author
-getRequiredSigningKey :: DCert -> VKey
-getRequiredSigningKey (RegKey k)            = k
-getRequiredSigningKey (DeRegKey k)          = k
-getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
-getRequiredSigningKey (RetirePool k _)      = k
-getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
-
--- |Determine if a certificate is authorized by the given key.
-authDCert :: VKey -> DCert -> Bool
-authDCert key cert = getRequiredSigningKey cert == key
+cwitness :: DCert -> HashKey
+cwitness (RegKey k)            = hashKey k
+cwitness (DeRegKey k)          = hashKey k
+cwitness (RegPool pool)        = hashKey $ pool ^. poolPubKey
+cwitness (RetirePool k _)      = hashKey k
+cwitness (Delegate delegation) = hashKey $ delegation ^. delegator
+cwitness (GenesisDelegate (gk, _)) = hashGenesisKey gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert -> PParams -> Coin

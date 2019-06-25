@@ -896,6 +896,7 @@ will be invalid.
         \var{slot} \\
         \var{txIx} \\
         \var{pp} \\
+        \var{tx}
       \end{array}
     \right)
       \vdash
@@ -954,13 +955,14 @@ will be invalid.
     \inference[Seq-delg-ind]
     {
       \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
-        ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma - 1) \\~\\
+      ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma) \\~\\
         {
           \left(
             \begin{array}{r}
               \var{slot}\\
               \var{txIx}\\
               \var{pp}\\
+              \var{tx}
             \end{array}
           \right)
         }
@@ -990,6 +992,7 @@ will be invalid.
         \var{slot}\\
         \var{txIx}\\
         \var{pp}\\
+        \var{tx}
       \end{array}
     \right)
     }
