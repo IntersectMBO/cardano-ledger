@@ -1,15 +1,26 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ledger.Update.Properties
   ( upiregTracesAreClassified
   , upiregRelevantTracesAreCovered
   , onlyValidSignalsAreGenerated
+  , ublockTraceLengthsAreClassified
+  , ublockOnlyValidSignalsAreGenerated
+  , ublockRelevantTracesAreCovered
   ) where
 
+import GHC.Stack (HasCallStack)
+
 import qualified Data.Bimap as Bimap
+import Data.Foldable (fold)
 import Data.Function ((&))
 import Data.List.Unique (count)
+import Data.Maybe (catMaybes, isNothing)
+import qualified Data.Set as Set
 import Numeric.Natural (Natural)
 import Hedgehog
   ( Property
@@ -18,11 +29,33 @@ import Hedgehog
   , property
   , withTests
   )
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
+import Control.State.Transition
+  ( Environment
+  , PredicateFailure
+  , STS
+  , Signal
+  , State
+  , initialRules
+  , transitionRules
+  , TRC (TRC)
+  , IRC (IRC)
+  , judgmentContext
+  , (?!)
+  , trans
+  , Embed
+  , wrapFailed
+  , applySTS
+  )
 import Control.State.Transition.Generator
   ( ratio
   , trace
   , traceLengthsAreClassified
+  , HasTrace
+  , sigGen
+  , initEnvGen
   )
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import Control.State.Transition.Trace
@@ -32,9 +65,13 @@ import Control.State.Transition.Trace
   , _traceInitState
   , traceSignals
   , _traceEnv
+  , traceStates
   )
 
-import Ledger.Update (UPIREG, PParams, protocolParameters)
+import Ledger.Core (dom)
+import qualified Ledger.Core as Core
+import Ledger.GlobalParams (slotsPerEpoch)
+import Ledger.Update (UPIREG, UPIVOTES, PParams, protocolParameters, UPIEnv, UPIState, UProp, Vote, emptyUPIState)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -256,3 +293,192 @@ data Change = Increases | Decreases | RemainsTheSame
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UPIREG 100
+
+
+-- | Dummy transition system to test blocks with update payload only.
+data UBLOCK
+
+-- | An update block
+data UBlock
+  = UBlock
+    { slot :: Core.Slot
+    , optionalUpdateProposal :: Maybe UProp
+    , votes :: [Vote]
+    } deriving (Eq, Show)
+
+-- | Update block state
+data UBlockState
+  = UBlockState
+    { upienv :: UPIEnv
+    , upistate :: UPIState
+    } deriving (Eq, Show)
+
+instance STS UBLOCK where
+  type Environment UBLOCK = UPIEnv
+
+  type State UBLOCK = UBlockState
+
+  type Signal UBLOCK = UBlock
+
+  data PredicateFailure UBLOCK
+    = UPIREGFailure (PredicateFailure UPIREG)
+    | UPIVOTESFailure (PredicateFailure UPIVOTES)
+    | NotIncreasingBlockSlot
+    deriving (Eq, Show)
+
+  initialRules
+    = [ do
+          IRC env <- judgmentContext
+          pure UBlockState { upienv = env
+                           , upistate = emptyUPIState }
+      ]
+
+  transitionRules
+    = [ do
+          TRC (_, UBlockState {upienv, upistate}, ublock) <- judgmentContext
+          let (sn, dms, k, ngk) = upienv
+          sn < slot ublock ?! NotIncreasingBlockSlot
+          upistateAfterRegistration <-
+            case optionalUpdateProposal ublock of
+              Nothing -> pure upistate
+              Just updateProposal ->
+                trans @UPIREG $ TRC (upienv, upistate, updateProposal)
+          upistateAfterVoting <-
+            trans @UPIVOTES $ TRC (upienv, upistateAfterRegistration, votes ublock)
+          pure UBlockState { upienv = (slot ublock, dms, k, ngk )
+                           , upistate = upistateAfterVoting }
+      ]
+
+instance Embed UPIREG UBLOCK where
+  wrapFailed = UPIREGFailure
+
+instance Embed UPIVOTES UBLOCK where
+  wrapFailed = UPIVOTESFailure
+
+instance HasTrace UBLOCK where
+  initEnvGen = Update.upiEnvGen
+
+  sigGen _env UBlockState {upienv, upistate} =
+    Gen.frequency [ (4, generateOnlyVotes)
+                  , (1, generateUpdateProposalAndVotes)
+                  ]
+      where
+        generateOnlyVotes =
+          UBlock
+            <$> nextSlotGen
+            <*> pure Nothing
+            <*> sigGen @UPIVOTES upienv upistate
+        generateUpdateProposalAndVotes = do
+          updateProposal <- sigGen @UPIREG upienv upistate
+          -- We want to have the possibility of generating votes for the proposal we
+          -- registered.
+          case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
+            Left _ ->
+              UBlock
+                <$> nextSlotGen
+                <*> pure (Just updateProposal)
+                <*> sigGen @UPIVOTES upienv upistate
+            Right upistateAfterRegistration ->
+              UBlock
+                <$> nextSlotGen
+                <*> pure (Just updateProposal)
+                <*> sigGen @UPIVOTES upienv upistateAfterRegistration
+        nextSlotGen =
+          -- NOTE: in the future, we might want to factor out duplication
+          -- w.r.t. @Ledger.Delegation.Properties@ if we find out that no
+          -- adaptations to 'nextSlotGen' are needed. For now we duplicate this
+          -- here to avoid an early coupling that might be unnecessary.
+          incSlot <$> Gen.frequency
+                      [ (1, Gen.integral (Range.constant 1 10))
+                      , (2, pure $! slotsPerEpoch k + 1)
+                      ]
+          where
+            incSlot c = sn `Core.addSlot` Core.SlotCount c
+            (sn, _, k, _) = upienv
+
+
+ublockTraceLengthsAreClassified :: Property
+ublockTraceLengthsAreClassified =
+  withTests 100 $ traceLengthsAreClassified @UBLOCK 500 50
+
+ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
+ublockOnlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
+
+ublockRelevantTracesAreCovered :: Property
+ublockRelevantTracesAreCovered = withTests 300 $ property $ do
+  sample <- forAll (trace @UBLOCK 600)
+
+  cover 75
+    "at least 50% of the proposals get confirmed"
+    (0.50 <= confirmedProposals sample / totalProposals sample)
+
+  cover 20
+    "at least 20% of the proposals get unconfirmed"
+    (0.20 <= 1 - (confirmedProposals sample / totalProposals sample))
+
+  cover 10
+    "at least 2% of the blocks contain votes for proposals issued in the same block "
+    (0.02 <= ratio numberOfVotesForBlockProposal sample)
+
+  cover 50
+    "at least 30% of blocks contain no votes"
+    (0.3 <= ratio numberOfBlocksWithoutVotes sample)
+
+  cover 50
+    "at least 10% of blocks contain votes"
+    (0.1 <= 1 - ratio numberOfBlocksWithoutVotes sample)
+
+  cover 10
+    "at least 20% of blocks contain votes"
+    (0.2 <= 1 - ratio numberOfBlocksWithoutVotes sample)
+
+  cover 50
+    "at least 20% of the blocks contain no update proposals"
+    (0.1 <= ratio numberOfBlocksWithoutUpdateProposals sample)
+
+    where
+      confirmedProposals :: Trace UBLOCK -> Double
+      confirmedProposals sample = traceStates OldestFirst sample
+                                & fmap upistate
+                                & fmap Update.confirmedProposals
+                                & fmap dom
+                                & fold
+                                & Set.size
+                                & fromIntegral
+
+      totalProposals :: Trace UBLOCK -> Double
+      totalProposals sample = traceSignals OldestFirst sample
+                            & fmap optionalUpdateProposal
+                            & catMaybes
+                            & fmap Update._upId
+                            & length
+                            & fromIntegral
+
+      -- Count the number of votes for proposals that were included in the same
+      -- block as the votes.
+      numberOfVotesForBlockProposal :: Trace UBLOCK -> Int
+      numberOfVotesForBlockProposal sample
+        = traceSignals OldestFirst sample
+        & filter voteForBlockProposal
+        & length
+        where
+          voteForBlockProposal :: UBlock -> Bool
+          voteForBlockProposal UBlock {optionalUpdateProposal, votes} =
+            case optionalUpdateProposal of
+              Nothing ->
+                False
+              Just updateProposal ->
+                Update._upId updateProposal `elem` (Update._vPropId <$> votes)
+
+      numberOfBlocksWithoutVotes :: Trace UBLOCK -> Int
+      numberOfBlocksWithoutVotes sample
+        = traceSignals OldestFirst sample
+        & filter (null . votes)
+        & length
+
+      numberOfBlocksWithoutUpdateProposals :: Trace UBLOCK -> Int
+      numberOfBlocksWithoutUpdateProposals sample
+        = traceSignals OldestFirst sample
+        & filter (isNothing . optionalUpdateProposal)
+        & length

@@ -26,13 +26,14 @@ import Control.Lens
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
-import Data.Foldable (toList)
+import Data.Foldable (toList, foldl')
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
-import Data.List (notElem)
+import Data.List (notElem, sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import Data.Tuple (swap)
@@ -74,6 +75,7 @@ import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
 import Prelude hiding (min)
+
 
 -- | Protocol parameters.
 --
@@ -379,7 +381,7 @@ instance STS UPV where
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
         inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
-        return $! (rpus', raus)
+        pure $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -388,7 +390,7 @@ instance STS UPV where
         pv == up ^. upPV ?! PVChangedInSVUpdate
         up ^. upParams == pps ?! ParamsChangedInSVUpdate
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return $! (rpus, raus')
+        pure $! (rpus, raus')
     , do
         TRC ( (pv, pps, avs)
             , (rpus, raus)
@@ -396,7 +398,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         raus' <- trans @UPSVV $ TRC (avs, raus, up)
-        return $! (rpus', raus')
+        pure $! (rpus', raus')
     ]
     where
       swVer (x, _, _) = x
@@ -730,7 +732,7 @@ emptyUPIState =
                              -- wrong.
      , _upTtl = 10
      , _scriptVersion = 0
-     , _cfmThd = 4           -- TODO: this should be a double
+     , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
      , _stableAfter = 5      -- TODO: the k stability parameter needs to be
                              -- removed from here as well!
@@ -794,6 +796,10 @@ protocolParameters ((_, pps), _, _, _, _, _, _, _, _) = pps
 applicationVersions :: UPIState -> Map ApName (ApVer, Core.Slot, Metadata)
 applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
 
+confirmedProposals :: UPIState -> Map UpId Core.Slot
+confirmedProposals ((_, _), _, _, _, _, cps, _, _, _) = cps
+
+
 data UPIREG
 
 instance STS UPIREG where
@@ -839,28 +845,7 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = do
-    ngk <- Gen.integral (Range.linear 1 14)
-    (,,,)
-      <$> CoreGen.slotGen 0 10        -- Current slot
-      <*> dmapGen ngk                 -- Delegation map
-      <*> CoreGen.blockCountGen 0 100 -- Chain stability parameter (k)
-      <*> pure ngk
-    where
-      -- Generate an initial delegation map, using a constant number of genesis
-      -- keys, which is determined in this generator.
-      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
-        where
-          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
-            where
-              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
-              -- As delegation targets we choose twice the number of genesis keys.
-              -- Note that the genesis keys can delegate to themselves in the
-              -- generated delegation map.
-              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
-
+  initEnvGen = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
@@ -950,12 +935,11 @@ instance HasTrace UPIREG where
           possibleNextVersions = Set.toList $ nextVersions \\ registeredNextVersions
             where
               nextVersions :: Set (ApName, ApVer)
-              nextVersions = Set.fromList $ zip currentAppNames appNextVersions
+              nextVersions = Set.fromList $ zip currentAppNames nextAppVersions
                 where
-                  currentAppNames :: [ApName]
-                  currentAppNames = Set.toList (dom avs)
-                  appNextVersions :: [ApVer]
-                  appNextVersions = (+1) . fst3 <$> Set.toList (range avs)
+                  (currentAppNames, currentAppVersions) = unzip $ Map.toList avs
+                  nextAppVersions :: [ApVer]
+                  nextAppVersions = (+1) . fst3 <$> currentAppVersions
               registeredNextVersions :: Set (ApName, ApVer)
               registeredNextVersions = Set.map (fst3 &&& snd3) (range raus)
 
@@ -1004,6 +988,29 @@ instance HasTrace UPIREG where
       mdtGen :: Gen Metadata
       mdtGen = pure Metadata
 
+
+upiEnvGen :: Gen UPIEnv
+upiEnvGen = do
+    ngk <- Gen.integral (Range.linear 1 14)
+    (,,,)
+      <$> CoreGen.slotGen 0 10 -- Current slot
+      <*> dmapGen ngk  -- Delegation map
+      <*> (BlockCount <$> Gen.word64 (Range.constant 0 100)) -- Chain stability parameter (k)
+      <*> pure ngk
+    where
+      -- Generate an initial delegation map, using a constant number of genesis
+      -- keys, which is determined in this generator.
+      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+        where
+          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+            where
+              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
+              -- As delegation targets we choose twice the number of genesis keys.
+              -- Note that the genesis keys can delegate to themselves in the
+              -- generated delegation map.
+              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
 -- | Generate a protocol parameter update from a given set of current
 -- protocol-parameters, ensuring the consistency of the new protocol parameters
@@ -1206,13 +1213,99 @@ instance STS UPIVOTES where
         case (sig :: [Vote]) of
           []     -> return us
           (x:xs) -> do
-            us'  <- trans @UPIVOTES $ TRC (env, us, xs)
-            us'' <- trans @UPIVOTE  $ TRC (env, us', x)
+            us'  <- trans @UPIVOTE $ TRC (env, us, x)
+            us'' <- trans @UPIVOTES  $ TRC (env, us', xs)
             return us''
     ]
 
 instance Embed UPIVOTE UPIVOTES where
   wrapFailed = UpivoteFailure
+
+instance HasTrace UPIVOTES where
+
+  initEnvGen = upiEnvGen
+
+  sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
+    (mkVote <$>) . concatMap replicateFst
+      <$> genVotesOnMostVotedProposals completedVotes
+      where
+        -- Votes needed for confirmation, per proposal ID.
+        completedVotes :: [(UpId, [Core.VKeyGenesis])]
+        completedVotes = completeVotes (dom dms)
+                                       (groupVotesPerProposalId vts)
+                       & fmap Set.toList
+                       & Map.toList
+
+        mkVote
+          :: (UpId, Core.VKeyGenesis)
+          -> Vote
+        mkVote (proposalId, vkg) =
+          Vote vk proposalId (Core.sign (skey vk) proposalId)
+          where
+            vk = fromMaybe err $ Bimap.lookup vkg dms
+              where
+                err = error $  "Ledger.Update.mkVote: "
+                            ++ "the genesis key was not found in the delegation map, "
+                            ++ "but it should be since we used `dms` to get the keys"
+                            ++ "that can vote (and so they should have a pre-image in `dms`)."
+
+        -- Group the votes issuing proposal id, taking into account the
+        -- proposals with no votes.
+        groupVotesPerProposalId
+          :: Set (UpId, Core.VKeyGenesis)
+          -> Map UpId (Set Core.VKeyGenesis)
+        groupVotesPerProposalId =
+          foldl' addVote proposalIdsWithNoVotes
+          where
+            proposalIdsWithNoVotes :: Map UpId (Set Core.VKeyGenesis)
+            proposalIdsWithNoVotes = Map.fromList $ (, Set.empty) <$> Set.toList (dom rpus)
+
+            addVote
+              :: Map UpId (Set Core.VKeyGenesis)
+              -> (UpId, Core.VKeyGenesis)
+              -> Map UpId (Set Core.VKeyGenesis)
+            addVote m (proposalId, genesisKey) =
+              case Map.lookup proposalId m of
+                Nothing ->
+                  Map.insert proposalId (Set.singleton genesisKey) m
+                Just votesForProposalId ->
+                  Map.insert proposalId (Set.insert genesisKey votesForProposalId) m
+
+        -- Add the missing votes w.r.t. a set of votes cast so far and genesis
+        -- keys that can vote.
+        completeVotes
+          :: Set Core.VKeyGenesis
+          -- ^ Genesis keys that can vote
+          -> Map UpId (Set Core.VKeyGenesis)
+          -- ^ Votes for the registered update proposals
+          -> Map UpId (Set Core.VKeyGenesis)
+        completeVotes genesisKeys votes =
+          (genesisKeys \\) <$> votes
+
+        -- Given a sequence of update proposals ID's and the genesis keys that need
+        -- to vote for confirmation, generate votes on the most voted proposals.
+        --
+        -- A proposal is said to be most voted if it is associated to the
+        -- minimal number of votes needed for confirmation.
+        --
+        -- This basically takes the top @n@ most voted proposals (for some arbitrary
+        -- @n@), say @[(p_0, vs_0), ..., (p_n-1, vs_(n-1))]@ and generates votes of the
+        -- form, @(p_i, vs_i_j)@, where @vs_i_j@ is an arbitrary subsequence of @vs_i@.
+        genVotesOnMostVotedProposals
+          :: [(UpId, [Core.VKeyGenesis])]
+          -> Gen [(UpId, [Core.VKeyGenesis])]
+        genVotesOnMostVotedProposals votesNeeded = do
+          -- Determine on how many proposals we will vote
+          numberOfProposals <- Gen.int (Range.constant 0 (length votesNeeded))
+          let
+            votes :: [(UpId, [Core.VKeyGenesis])]
+            votes = take numberOfProposals $ sortOn (length. snd) votesNeeded
+          zip (fst <$> votes) <$> traverse Gen.subsequence (snd <$> votes)
+
+        replicateFst
+          :: (a, [b])
+          -> [(a, b)]
+        replicateFst (a, bs) = zip (repeat a) bs
 
 
 data UPIEND
@@ -1294,10 +1387,10 @@ instance STS PVBUMP where
                 Nothing -> []
                 Just s  -> filter ((<= s) . fst) fads
         if r == []
-          then return $! (pv, pps)
+          then pure $! (pv, pps)
           else do
             let (_, (pv_c, pps_c)) = last r
-            return $! (pv_c, pps_c)
+            pure $! (pv_c, pps_c)
     ]
 
 data UPIEC

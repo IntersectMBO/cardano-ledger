@@ -36,7 +36,7 @@ main = defaultMain tests
       "Delegation properties"
       [ testProperty "Certificates are triggered"           dcertsAreTriggered
       , testProperty "DBLOCK Traces are classified"         DELEG.dblockTracesAreClassified
-      , testProperty "relevant DBLOCK traces generated"     DELEG.relevantCasesAreCovered
+      , testProperty "Relevant DBLOCK traces covered"     DELEG.relevantCasesAreCovered
       , testProperty "Duplicated certificates are rejected" rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       ]
@@ -54,9 +54,12 @@ main = defaultMain tests
     , testTxHasTypeReps
     , testGroup
       "Update UPIREG properties"
-      [ testProperty "Traces are classified" UPDATE.upiregTracesAreClassified
-      , testProperty "Relevant cases are classified" UPDATE.upiregRelevantTracesAreCovered
+      [ testProperty "UPIREG traces are classified" UPDATE.upiregTracesAreClassified
+      , testProperty "UBLOCK traces are classified" UPDATE.ublockTraceLengthsAreClassified
+      , testProperty "Relevant UPIREG traces are covered" UPDATE.upiregRelevantTracesAreCovered
       , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
+      , testProperty "Only valid signals are generated for UBLOCK" UPDATE.ublockOnlyValidSignalsAreGenerated
+      , testProperty "Relevant UBLOCK traces are covered" UPDATE.ublockRelevantTracesAreCovered
       ]
     -- TODO move this out of here (these are not properties of the transition
     -- systems) and also move the Relation class and instances out of Ledger.Core
