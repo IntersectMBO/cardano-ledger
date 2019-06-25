@@ -179,6 +179,8 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
 
+                       Test.Cardano.Chain.Buildable
+
                        Test.Cardano.Chain.Common.Address
                        Test.Cardano.Chain.Common.CBOR
                        Test.Cardano.Chain.Common.Compact
