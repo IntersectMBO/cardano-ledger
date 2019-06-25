@@ -47,7 +47,7 @@ chainTransition = do
 
   let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
   let EpochState _ _ ls pp                        = es
-  let LedgerState _ (DPState (DState _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
+  let LedgerState _ (DPState (DState _ _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
   (cs', h', sL', etaV', etaC') <- trans @PRTCL
     $ TRC (((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
