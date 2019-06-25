@@ -49,6 +49,8 @@ data DCert = -- | A stake key registration certificate.
           | RetirePool VKey Epoch
             -- | A stake delegation certificate.
           | Delegate Delegation
+            -- | Genesis key delegation certificate
+          | GenesisDelegate (VKeyGenesis, VKey)
   deriving (Show, Eq, Ord)
 
 -- |Determine the certificate author
@@ -58,6 +60,8 @@ getRequiredSigningKey (DeRegKey k)          = k
 getRequiredSigningKey (RegPool pool)        = pool ^. poolPubKey
 getRequiredSigningKey (RetirePool k _)      = k
 getRequiredSigningKey (Delegate delegation) = delegation ^. delegator
+getRequiredSigningKey (GenesisDelegate (_, k)) = k -- TODO check whether that
+                                                   -- makes sense
 
 -- |Determine if a certificate is authorized by the given key.
 authDCert :: VKey -> DCert -> Bool

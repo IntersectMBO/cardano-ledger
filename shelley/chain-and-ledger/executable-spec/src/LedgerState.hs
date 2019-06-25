@@ -28,6 +28,7 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
+  , fdms
   , dms
   , PState(..)
   , cCounters
@@ -214,6 +215,8 @@ data DState = DState
     , _delegations :: Map.Map HashKey HashKey
       -- |The pointed to hash keys.
     , _ptrs        :: Map.Map Ptr HashKey
+      -- | future genesis key delegations
+    , _fdms        :: Map.Map (Slot, VKeyGenesis) VKey
       -- |Genesis key delegations
     , _dms         :: Dms
     } deriving (Show, Eq)
@@ -275,7 +278,7 @@ emptyDelegation =
 
 emptyDState :: DState
 emptyDState =
-  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty (Dms Map.empty)
+  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty)
 
 emptyPState :: PState
 emptyPState =
@@ -309,7 +312,7 @@ getGKeys :: NewEpochState -> Set VKeyGenesis
 getGKeys nes = Map.keysSet dms
   where NewEpochState _ _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ (Dms dms)) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms)) _) _ = ls
 
 data NewEpochEnv =
   NewEpochEnv {
@@ -710,6 +713,8 @@ applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ (applyDCertPState ptr dcert
 applyDCert ptr dcert@(RetirePool _ _) ds =
   ds & pstate %~ (applyDCertPState ptr dcert)
 
+applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
+
 -- TODO do we also have to check hashKey target?
 applyDCert ptr dcert@(Delegate _) ds =
   ds & dstate %~ (applyDCertDState ptr dcert)
@@ -874,7 +879,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
 stakeDistr :: UTxO -> DState -> PState -> Stake
 stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' _ = ds
+      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _               = ps
       outs = consolidate u
       stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
