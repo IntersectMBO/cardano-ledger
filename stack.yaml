@@ -45,7 +45,7 @@ extra-deps:
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 6f4602f308fa7598cf660d5cf808fae4bd8cf70d
+    commit: 0ebeacf643153a88fe0c23527449ca21b985d7d4
     subdirs:
       - contra-tracer
       - iohk-monitoring
