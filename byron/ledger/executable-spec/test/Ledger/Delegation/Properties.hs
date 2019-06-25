@@ -16,113 +16,41 @@ module Ledger.Delegation.Properties
   )
 where
 
-import Control.Arrow ((&&&), first, (***))
-import Control.Lens ((^.), makeLenses, (&), (.~), view, to)
-import Data.Bimap (Bimap)
+import           Control.Arrow (first, (&&&), (***))
+import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
+import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.List (last, foldl', nub)
-import Data.List.Unique (count)
+import           Data.List (foldl', last, nub)
+import           Data.List.Unique (count)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Hedgehog
-  ( MonadTest
-  , Property
-  , (===)
-  , assert
-  , cover
-  , forAll
-  , property
-  , success
-  , withTests
-  )
+import           Hedgehog (MonadTest, Property, assert, cover, forAll, property, success, withTests,
+                     (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Control.State.Transition
-  ( Environment
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , initialRules
-  , transitionRules
-  , TRC (TRC)
-  , IRC (IRC)
-  , judgmentContext
-  , (?!)
-  , trans
-  , Embed
-  , wrapFailed
-  , applySTS
-  )
-import Control.State.Transition.Generator
-  ( HasSizeInfo
-  , HasTrace
-  , classifySize
-  , classifyTraceLength
-  , initEnvGen
-  , isTrivial
-  , nonTrivialTrace
-  , ratio
-  , sigGen
-  , suchThatLastState
-  , trace
-  , traceLengthsAreClassified
-  )
-import Control.State.Transition.Trace
-  ( Trace
-  , TraceOrder(OldestFirst)
-  , lastState
-  , preStatesAndSignals
-  , traceEnv
-  , traceSignals
-  , traceLength
-  )
-import Ledger.Core
-  ( Epoch(Epoch)
-  , Owner(Owner)
-  , Sig(Sig)
-  , Slot
-  , SlotCount(SlotCount)
-  , VKey(VKey)
-  , VKeyGenesis
-  , VKeyGenesis(VKeyGenesis)
-  , addSlot
-  , owner
-  , unSlot
-  , unSlotCount
-  )
-import Ledger.Delegation
-  ( DCert
-  , DCert(DCert)
-  , DELEG
-  , DIState(DIState)
-  , DSEnv(DSEnv, _dSEnvK, _dSEnvEpoch)
-  , DSEnv
-  , DSState(DSState)
-  , DState(DState, _dStateDelegationMap, _dStateLastDelegation)
-  , PredicateFailure(IsAlreadyScheduled, SDelegFailure, SDelegSFailure)
-  , _dIStateDelegationMap
-  , _dIStateKeyEpochDelegations
-  , _dIStateLastDelegation
-  , _dIStateScheduledDelegations
-  , _dSStateKeyEpochDelegations
-  , _dSStateScheduledDelegations
-  , _dbody
-  , _depoch
-  , _dwho
-  , _dwit
-  , delegate
-  , delegationMap
-  , delegator
-  , liveAfter
-  , scheduledDelegations
-  , slot
-  , epoch
-  )
+import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
+                     Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!))
+import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, classifySize,
+                     classifyTraceLength, initEnvGen, isTrivial, nonTrivialTrace, ratio, sigGen,
+                     suchThatLastState, trace, traceLengthsAreClassified)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
+                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
+import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
+                     VKey (VKey), VKeyGenesis (VKeyGenesis), addSlot, owner, unSlot, unSlotCount)
+import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
+                     DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
+                     DState (DState, _dStateDelegationMap, _dStateLastDelegation),
+                     PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
+                     delegate, delegationMap, delegator, depoch, epoch, liveAfter, mkDCert,
+                     scheduledDelegations, slot, _dIStateDelegationMap,
+                     _dIStateKeyEpochDelegations, _dIStateLastDelegation,
+                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
+                     _dSStateScheduledDelegations)
 
-import Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
-import Ledger.GlobalParams (slotsPerEpoch)
+import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
+import           Ledger.GlobalParams (slotsPerEpoch)
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests
@@ -426,7 +354,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
     -- applied, paired with the epoch of the delegation certificate.
     epochDelegationEpoch :: Trace DBLOCK -> [(Epoch, Epoch)]
     epochDelegationEpoch tr = preStatesAndSignals @DBLOCK OldestFirst tr
-                            & fmap (_dSEnvEpoch . fst *** (fmap _depoch . _blockCerts))
+                            & fmap (_dSEnvEpoch . fst *** (fmap depoch . _blockCerts))
                             & fmap (\(e, es) -> zip (repeat e) es)
                             & concat
 
@@ -459,13 +387,7 @@ rejectDupSchedDelegs = property $ do
                        ++ "tr is guaranteed to contain a non-empty sequence of scheduled delegations"
     vkD <- vkGen
     epo <- Epoch <$> Gen.integral (Range.linear 0 100)
-    let dcert
-          = DCert
-          { _dbody = (vkD, epo)
-          , _dwit = Sig vkS (owner vkS)
-          , _dwho = (vkS, vkD)
-          , _depoch = epo
-          }
+    let dcert = mkDCert vkS (Sig (vkD, epo) (owner vkS)) vkD epo
     return (tr, dcert)
   let pfs = case applySTS (TRC (tr ^. traceEnv, lastState tr, [dcert])) of
         Left res -> res
