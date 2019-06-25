@@ -51,7 +51,7 @@ import Cardano.Chain.Common (BlockCount(..), hashKey)
 import Cardano.Chain.Epoch.File (ParseError, parseEpochFilesWithBoundary)
 import Cardano.Chain.Genesis as Genesis (Config(..), configEpochSlots)
 import Cardano.Chain.Slotting (SlotNumber)
-import Cardano.Chain.ValidationMode (ValidationMode, fromBlockValidationMode)
+import Cardano.Chain.ValidationMode (fromBlockValidationMode)
 import Cardano.Crypto (VerificationKey)
 
 import Test.Cardano.Chain.Config (readMainetCfg)
@@ -103,8 +103,7 @@ ts_prop_mainnetEpochsValid shouldAssertNF scenario = withTests 1 . property $ do
     <> "Otherwise, for some reason, the `ChainValidationState` is not in "
     <> "normal form.")
 
-  let vMode = fromBlockValidationMode BlockValidation
-  result <- (liftIO . runResourceT . (`runReaderT` vMode) . runExceptT)
+  result <- (liftIO . runResourceT . runExceptT)
     (foldChainValidationState shouldAssertNF config cvs stream)
 
   void $ evalEither result
@@ -122,17 +121,18 @@ foldChainValidationState
   -> Genesis.Config
   -> ChainValidationState
   -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
-  -> ExceptT Error (ReaderT ValidationMode ResIO) ChainValidationState
+  -> ExceptT Error ResIO ChainValidationState
 foldChainValidationState shouldAssertNF config cvs blocks =
-  S.foldM_ validate (pure cvs) pure (pure (hoist (withExceptT ErrorParseError) blocks))
+  S.foldM_ validate (pure cvs) pure (hoist (withExceptT ErrorParseError) blocks)
  where
   validate
-    :: (MonadIO m, MonadReader ValidationMode m)
+    :: MonadIO m
     => ChainValidationState
     -> ABlockOrBoundary ByteString
     -> ExceptT Error m ChainValidationState
   validate c b =
     withExceptT (ErrorChainValidationError (blockOrBoundarySlot b))
+      . (`runReaderT` fromBlockValidationMode BlockValidation)
       $ case b of
           ABOBBoundary bvd -> do
             case shouldAssertNF of
