@@ -1387,10 +1387,10 @@ instance STS PVBUMP where
                 Nothing -> []
                 Just s  -> filter ((<= s) . fst) fads
         if r == []
-          then return $! (pv, pps)
+          then pure $! (pv, pps)
           else do
             let (_, (pv_c, pps_c)) = last r
-            return $! (pv_c, pps_c)
+            pure $! (pv_c, pps_c)
     ]
 
 data UPIEC
