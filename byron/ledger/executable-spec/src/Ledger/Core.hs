@@ -79,7 +79,7 @@ instance HasOwner VKey where
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis VKey
   deriving stock (Show, Generic)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, HasHash)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
