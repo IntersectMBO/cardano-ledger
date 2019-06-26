@@ -1,37 +1,22 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeApplications #-}
 -- | Examples of the application of the delegation rules.
 module Ledger.Delegation.Examples
   ( deleg
   )
 where
 
-import Data.Set (fromList, Set)
-import Data.Word (Word64)
-import Numeric.Natural (Natural)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import           Data.Set (Set, fromList)
+import           Data.Word (Word64)
+import           Numeric.Natural (Natural)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.HUnit (testCase)
 
-import Ledger.Core
-  ( BlockCount(BlockCount)
-  , Epoch(Epoch)
-  , Owner(Owner)
-  , Sig(Sig)
-  , Slot(Slot)
-  , VKey(VKey)
-  , VKeyGenesis(VKeyGenesis)
-  , owner
-  )
-import Ledger.Delegation
-  ( ADELEG
-  , ADELEGS
-  , DCert(DCert)
-  , DSEnv(DSEnv)
-  , DSState(DSState)
-  , DState(DState)
-  , SDELEG
-  )
-import Control.State.Transition.Trace ((.-), (.->), checkTrace)
+import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import           Ledger.Core (BlockCount (BlockCount), Epoch (Epoch), Owner (Owner), Sig (Sig),
+                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis), owner)
+import           Ledger.Delegation (ADELEG, ADELEGS, DCert (DCert), DSEnv (DSEnv),
+                     DSState (DSState), DState (DState), SDELEG)
 
 -- | Delegation examples.
 deleg :: [TestTree]
@@ -128,7 +113,7 @@ deleg =
     bk = BlockCount
 
     dc :: VKeyGenesis -> VKey -> Epoch -> DCert
-    dc vkg vk ep = DCert (vk, ep) (Sig vkg (owner vkg)) (vkg, vk) ep
+    dc vkg vk ep = DCert vkg vk ep (Sig (vk, ep) (owner vkg))
 
     genKeys :: Set VKeyGenesis
     genKeys = fromList $ map (VKeyGenesis . VKey . Owner) [0 .. 6]
