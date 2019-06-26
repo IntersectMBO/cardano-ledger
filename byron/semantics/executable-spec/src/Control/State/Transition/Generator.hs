@@ -44,53 +44,31 @@ module Control.State.Transition.Generator
   )
 where
 
-import Control.Monad (forM, void)
-import Control.Monad.Trans.Maybe (MaybeT)
-import Data.Foldable (traverse_)
-import Data.Functor.Identity (Identity)
-import Data.String (fromString)
-import GHC.Stack (HasCallStack)
-import Hedgehog
-  ( Gen, footnoteShow
-  , Property
-  , PropertyT
-  , classify
-  , evalEither
-  , forAll
-  , property
-  , success
-  )
+import           Control.Monad (forM, void)
+import           Control.Monad.Trans.Maybe (MaybeT)
+import           Data.Foldable (traverse_)
+import           Data.Functor.Identity (Identity)
+import           Data.String (fromString)
+import           GHC.Stack (HasCallStack)
+import           Hedgehog (Gen, Property, PropertyT, classify, evalEither, footnoteShow, forAll,
+                     property, success)
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
-import Hedgehog.Range (Size(Size))
 
 --------------------------------------------------------------------------------
 -- Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
-import Hedgehog.Internal.Gen
-import Hedgehog.Internal.Tree
+import           Hedgehog.Internal.Gen
+import           Hedgehog.Internal.Tree
 --------------------------------------------------------------------------------
 -- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
 
-import Control.State.Transition
-  ( Environment
-  , IRC(IRC)
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , applySTS
-  )
-import Control.State.Transition.Trace
-  ( Trace, _traceEnv
-  , TraceOrder(OldestFirst)
-  , lastState
-  , mkTrace
-  , traceLength
-  , traceSignals
-  , closure
-  )
+import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
+                     applySTS)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
+                     lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 
 
 class STS s => HasTrace s where
@@ -151,9 +129,9 @@ genTrace ub env st0 aSigGen = do
   -- A linear range will generate about one third of empty traces, which does
   -- not seem sensible. Furthermore, in most cases it won't generate any trace
   -- of size @ub@. Hence we need to tweak the frequency of the trace lengths.
-  n <- Gen.frequency [ (5,  integral_ $ Range.singleton 0)
-                     , (85, integral_ $ Range.linear 1 ub)
-                     , (10, integral_ $ Range.singleton ub)]
+  n <- Gen.frequency [ --(5,  integral_ $ Range.singleton 0)
+--                     , (85, integral_ $ Range.linear 1 ub)
+                      (1, integral_ $ Range.singleton ub)] -- TODO: revert this: we might want to have a genTrace variant where the trace size is fixed, which might help reasoning with traces samples and cverage.
 
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
   where

@@ -21,7 +21,7 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
-import           Control.Arrow ((&&&))
+import           Control.Arrow (second, (&&&))
 import           Control.Lens
 import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
@@ -638,7 +638,7 @@ instance STS UPEND where
                 pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
                 return $! (fads, bvs')
               Nothing -> do
-                True ?! TryNextRule
+                False ?! TryNextRule
                 return $! (fads, bvs')
 
     , do
@@ -659,7 +659,7 @@ instance STS UPEND where
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
                 return $! (fads', bvs')
               Nothing -> do
-                True ?! ProtVerUnknown bv
+                False ?! ProtVerUnknown bv
                 return $! (fads, bvs')
 
     ]
@@ -683,6 +683,9 @@ type UPIEnv =
            -- formal specification which is placed here so that we can test
            -- with different values.
   )
+
+delegationMap :: UPIEnv -> Bimap Core.VKeyGenesis Core.VKey
+delegationMap (_, dms, _, _) = dms
 
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
@@ -710,7 +713,7 @@ emptyUPIState =
      , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
                              -- be a constant. Also the name slots-per-epoch is
                              -- wrong.
-     , _upTtl = 10
+     , _upTtl = 500        -- TODO: find out why we don't get enough coverage if we set this to 1000 (or even a shorter value). It seems the proposals get expired too soon.
      , _scriptVersion = 0
      , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
@@ -781,6 +784,12 @@ confirmedProposals ((_, _), _, _, _, _, cps, _, _, _) = cps
 
 futureAdoptions :: UPIState -> [(Core.Slot, (ProtVer, PParams))]
 futureAdoptions ((_, _), fads, _, _, _, _, _, _, _) = fads
+
+endorsements :: UPIState -> Set (ProtVer, Core.VKeyGenesis)
+endorsements ((_, _), _, _, _, _, _, _, bvs, _) = bvs
+
+registeredProtocolUpdateProposals :: UPIState -> Map UpId (ProtVer, PParams)
+registeredProtocolUpdateProposals ((_, _), _, _, rpus, _, _, _, _, _) = rpus
 
 
 data UPIREG
@@ -1339,6 +1348,25 @@ instance STS UPIEND where
 
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
+
+-- | Generate a protocol version endorsement for a given key, or 'Nothing' if no stable and
+-- confirmed protocol version update can be found.
+protocolVersionEndorsementGen
+  :: [(ProtVer, Set Core.VKeyGenesis)]
+  -- ^ Current set of endorsements
+  -> Gen (Maybe ProtVer)
+protocolVersionEndorsementGen endorsementsList =
+  if null mostEndorsedProposals
+  then pure Nothing
+  else Just <$> Gen.element mostEndorsedProposals
+  -- Take the top 10 most voted proposals, and endorse them. The constant 10 is determined
+  -- arbitrarily here.
+  where
+    mostEndorsedProposals :: [ProtVer]
+    mostEndorsedProposals = sortOn (second length) endorsementsList
+                          & reverse
+                          & take 10
+                          & fmap fst
 
 data PVBUMP
 
