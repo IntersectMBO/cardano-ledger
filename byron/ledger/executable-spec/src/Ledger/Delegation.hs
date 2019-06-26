@@ -1,13 +1,13 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DeriveGeneric          #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE NamedFieldPuns         #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ledger.Delegation
   ( -- * Delegation scheduling
@@ -17,17 +17,11 @@ module Ledger.Delegation
   , _dSStateScheduledDelegations
   , _dSStateKeyEpochDelegations
   , DCert(DCert)
-  , _dbody
-  , _dwit
-  , _dwho
-  , _depoch
-  , mkDCert
   , delegator
   , delegate
-  , dbody
-  , dwit
-  , dwho
   , depoch
+  , dwho
+  , mkDCert
     -- * Delegation activation
   , ADELEG
   , ADELEGS
@@ -71,86 +65,34 @@ module Ledger.Delegation
   )
 where
 
-import Data.AbstractSize
-import Data.Bimap (Bimap, (!>))
+import           Control.Arrow ((&&&))
+import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>~), (^.), _1)
+import           Data.AbstractSize
+import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
-import Data.Hashable (Hashable)
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
-import Data.Maybe (catMaybes)
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set, (\\))
+import           Data.Maybe (catMaybes)
+import           Data.Set (Set, (\\))
 import qualified Data.Set as Set
-import Data.Word (Word8)
-import GHC.Generics (Generic)
-import Hedgehog (Gen)
+import           Data.Word (Word8)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (constant, linear)
-import Control.Lens
-  ( Lens'
-  , (%~)
-  , (&)
-  , (.~)
-  , (<>~)
-  , (^.)
-  , _1
-  , _2
-  , lens
-  , makeFields
-  , makeLenses
-  , to
-  )
+import           Hedgehog.Range (constant, linear)
 
 
-import Control.State.Transition
-  ( Embed
-  , Environment
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , IRC(IRC)
-  , TRC(TRC)
-  , (?!)
-  , initialRules
-  , judgmentContext
-  , trans
-  , transitionRules
-  , wrapFailed
-  )
-import Control.State.Transition.Generator
-  ( HasTrace
-  , initEnvGen
-  , sigGen
-  )
-import Ledger.Core
-  ( BlockCount
-  , Epoch
-  , HasHash
-  , Hash(Hash)
-  , Owner(Owner)
-  , Sig(Sig)
-  , Slot(Slot)
-  , SlotCount(SlotCount)
-  , VKey(VKey)
-  , VKeyGenesis(VKeyGenesis)
-  , (∈)
-  , (∉)
-  , (⨃)
-  , addSlot
-  , hash
-  , owner
-  , owner
-  , range
-  , unBlockCount
-  )
-import Ledger.Core.Generators
-  ( blockCountGen
-  , epochGen
-  , slotGen
-  , vkgenesisGen
-  )
+import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
+                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!))
+import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
+                     Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
+                     addSlot, hash, range, sign, skey, unBlockCount, unVKeyGenesis, (∈), (∉), (⨃))
+import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkgenesisGen)
 
 
 --------------------------------------------------------------------------------
@@ -159,44 +101,38 @@ import Ledger.Core.Generators
 
 -- | A delegation certificate.
 data DCert = DCert
-  { -- | Body of the delegation certificate
-    _dbody :: (VKey, Epoch)
-    -- | Witness for the delegation cerfiticate
-  , _dwit :: Sig VKeyGenesis
-    -- | Who delegates to whom
-  , _dwho :: (VKeyGenesis, VKey)
+  { -- | Key that delegates
+    delegator :: VKeyGenesis
+    -- | Key that the delegator is delegating to
+  , delegate :: VKey
     -- | Certificate epoch
-  , _depoch :: Epoch
-  } deriving (Show, Eq, Generic, Hashable)
+  , depoch :: Epoch
+    -- | Witness for the delegation certificate
+  , signature :: Sig (VKey, Epoch)
+  } deriving (Show, Eq, Ord, Generic, Hashable)
 
 instance HasTypeReps DCert
 
 instance HasHash [DCert] where
   hash = Hash . H.hash
 
-makeLenses ''DCert
-
 mkDCert
   :: VKeyGenesis
-  -> Sig VKeyGenesis
+  -> Sig (VKey, Epoch)
   -> VKey
   -> Epoch
   -> DCert
-mkDCert vkg sigVkg vkd e
+mkDCert vkg s vkd e
   = DCert
-  { _dbody = (vkd, e)
-  , _dwit = sigVkg
-  , _dwho = (vkg, vkd)
-  , _depoch = e
+  { delegator = vkg
+  , delegate = vkd
+  , depoch = e
+  , signature = s
   }
 
--- | Key that is delegating.
-delegator :: DCert -> VKeyGenesis
-delegator c = c ^. dwho . _1
-
--- | Key being delegated to.
-delegate :: DCert -> VKey
-delegate c = c ^. dwho . _2
+-- | Who is delegating to whom.
+dwho :: DCert -> (VKeyGenesis, VKey)
+dwho = delegator &&& delegate
 
 --------------------------------------------------------------------------------
 -- Derived types
@@ -315,13 +251,13 @@ instance STS SDELEG where
         notAlreadyDelegated st cert ?! HasAlreadyDelegated
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
-        Set.member (cert ^. dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        let diff = cert ^. depoch - env ^. epoch
+        Set.member (cert ^. to dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
+        let diff = cert ^. to depoch - env ^. epoch
         0 <= diff ?! EpochInThePast
         diff <= 1 ?! EpochPastNextEpoch
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
-                                      , cert ^. dwho
+                                      , cert ^. to dwho
                                       )]
           & keyEpochDelegations %~ Set.insert (epochDelegator cert)
     ]
@@ -335,13 +271,13 @@ instance STS SDELEG where
         Set.notMember (epochDelegator cert) (st ^. keyEpochDelegations)
 
       epochDelegator :: DCert -> (Epoch, VKeyGenesis)
-      epochDelegator cert = (cert ^. depoch, cert ^. dwho . _1)
+      epochDelegator cert = (cert ^. to depoch, cert ^. to dwho . _1)
 
       -- Check whether there is a scheduled delegation from this key
       notAlreadyScheduled :: SlotCount -> DSEnv -> DSState -> DCert -> Bool
       notAlreadyScheduled d env st cert =
         List.notElem
-          ((env ^. slot) `addSlot` d, cert ^. dwho . _1)
+          ((env ^. slot) `addSlot` d, cert ^. to dwho . _1)
           (st ^. scheduledDelegations . to (fmap $ fmap fst))
 
 -- | Compute after which slot the delegation certificate will become live,
@@ -543,7 +479,8 @@ dcertGen env st =
     -- chance of having two genesis keys delegating to the same key.
     target = VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
 
-    mkDCert' ((e, vkg), vk) = DCert (vk, e) (Sig vkg (owner vkg)) (vkg, vk) e
+    mkDCert' ((e, vkg), vk) = DCert vkg vk e (signWithGenesisKey vkg (vk, e))
+    signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
   in
 
   if null candidates

@@ -212,6 +212,38 @@ money in the system (counted as Lovelaces) remains constant.
   $$ \var{reserves} + \balance{utxo} =  \var{reserves_0} + \balance{utxo_0} $$
 \end{property}
 
+\subsection{Delegation Properties}
+\label{sec:delegation-props}
+
+Property~\ref{prop:no-dcert-replay} states that delegation certificates cannot be replayed. Remember
+that $\Delta_i$ is the $i^{\text{th}}$ element of $\Delta$, which is a sequence of sequences of
+delegation certificates, so $\Delta_i \in \seqof{\DCert}$ and $\Delta_{i_j} \in \DCert$ (assuming
+$j$ is a valid index of $\Delta_i$).
+
+\begin{property}[No replay of delegation certificates]\label{prop:no-dcert-replay}
+  For all
+  %
+  $$
+  \left(
+    \begin{array}{l}
+      \var{delegSt}
+    \end{array}
+  \right)
+  \transtar{\hyperref[fig:rules:delegation-interface]{deleg}}{\Delta}
+  \left(
+    \begin{array}{l}
+      \var{delegSt'}
+    \end{array}
+  \right)
+  $$
+  %
+  we have:
+  %
+  $$
+  \forall i, j, k, l \cdot j < l \Rightarrow \Delta_{i_j} \neq \Delta_{k_l}
+  $$
+\end{property}
+
 \subsection{Update Properties}
 \label{sec:update-properties}
 
