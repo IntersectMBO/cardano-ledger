@@ -76,7 +76,7 @@ exactly when the results of $\fun{consumed}$ equal the results of $\fun{produced
 Moreover, when the property holds, value is only moved between transaction outputs,
 the reward accounts, the fee pot and the deposit pot.
 
-Note that the $\fun{consumed}$ function takes the registered stake pools ($\var{stpools}$)
+Note that the $\fun{produced}$ function takes the registered stake pools ($\var{stpools}$)
 as a parameter only in order to determine which pool registration certificates are
 new (and thus require a deposit) and which ones are updates.
 Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
@@ -111,7 +111,7 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{value produced} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
     &~~\ubalance{(\outs{tx})}
-    + \txfee{tx} + \deposits{pp}{stpools}~{(\dcerts{tx})}\\
+    + \txfee{tx} + \deposits{pp}{stpools}~{(\txcerts{tx})}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
@@ -320,7 +320,7 @@ requests).
       \var{decayed} \leteq \decayedTx{pp}{stkeys}~{tx}
       \\
       \var{depositChange} \leteq
-        (\deposits{pp}~{stpools}~{\fun{dcerts}~tx}) - (\var{refunded} + \var{decayed})
+        (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{l}
@@ -472,7 +472,7 @@ Section~\ref{sec:epoch}.
       & \fun{keyRefunds} \in \PParams \to \StakeKeys \to \Tx \to \Coin
       & \text{key refunds for a transaction} \\
       & \keyRefunds{pp}{stkeys}{tx} =\\
-      & ~~~~~ \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c\in\DCertDeRegKey}}
+      & ~~~~~ \sum\limits_{\substack{c \in \txcerts{tx} \\ c\in\DCertDeRegKey}}
               \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\txttl{tx})}{c}\\
       &
       \begin{array}{lr@{~=~}l}
@@ -512,7 +512,7 @@ Section~\ref{sec:epoch}.
       & \fun{decayedTx} \in \PParams \to \StakeKeys \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
       & \decayedTx{pp}{stkeys}{tx} =\\
-      &   \sum\limits_{\substack{c \in \fun{dcerts}~tx \\ c \in\DCertDeRegKey}}
+      &   \sum\limits_{\substack{c \in \txcerts{tx} \\ c \in\DCertDeRegKey}}
           \decayedKey{pp}{stkeys}{(\txttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
