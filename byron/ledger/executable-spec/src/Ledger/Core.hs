@@ -335,6 +335,10 @@ instance Relation (Map k v) where
 
   size = fromIntegral . Map.size
 
+-- | Union override plus is (A\B)∪(B\A)∪{k|->v1+v2 | k|->v1 : A /\ k|->v2 : B}
+(∪+) :: (Ord a, Ord b, Num b) => Map a b -> Map a b -> Map a b
+a ∪+ b = ((dom a) ⋪ b) ∪ ((dom b) ⋪ a) ∪ (Map.unionWith (+) a b)
+
 instance Relation (Set (a, b)) where
   type Domain (Set (a, b)) = a
   type Range (Set (a, b))  = b
