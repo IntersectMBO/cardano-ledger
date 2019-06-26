@@ -136,7 +136,7 @@ import           Delegation.PoolParams (Delegation (..), PoolParams (..), Reward
 
 import           BaseTypes
 
-import           Ledger.Core ((◁), (▷))
+import           Ledger.Core ((◁), (▷), (∪+))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs dsignAlgo = [(KeyPair dsignAlgo, KeyPair dsignAlgo)]
@@ -1104,7 +1104,7 @@ applyRUpd ru (EpochState as ss ls pp) = es'
   where treasury' = _treasury as + deltaT ru
         reserves' = _reserves as + deltaR ru
         rew       = _rewards $ _dstate $ _delegationState ls
-        rewards'  = Map.union (rs ru) rew  -- prefer rs
+        rewards'  = rew ∪+ (rs ru)
         fees'     = (_fees $ _utxoState ls) + deltaF ru
         dstate'   = _dstate $ _delegationState ls
         utxo'     = _utxoState ls
