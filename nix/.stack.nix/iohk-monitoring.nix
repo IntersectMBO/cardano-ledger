@@ -3,14 +3,17 @@
     flags = {
       disable-aggregation = false;
       disable-ekg = false;
-      disable-prometheus = true;
+      disable-graylog = false;
+      disable-prometheus = false;
       disable-gui = false;
       disable-monitoring = false;
       disable-observables = false;
+      disable-syslog = false;
+      disable-examples = false;
       };
     package = {
       specVersion = "1.10";
-      identifier = { name = "iohk-monitoring"; version = "0.1.8.0"; };
+      identifier = { name = "iohk-monitoring"; version = "0.1.9.0"; };
       license = "MIT";
       copyright = "2018 IOHK";
       maintainer = "";
@@ -23,7 +26,7 @@
       };
     components = {
       "library" = {
-        depends = ((([
+        depends = ((((([
           (hsPkgs.base)
           (hsPkgs.contra-tracer)
           (hsPkgs.aeson)
@@ -61,9 +64,14 @@
           (hsPkgs.ekg-prometheus-adapter)
           (hsPkgs.prometheus)
           (hsPkgs.warp)
-          ]) ++ (pkgs.lib).optional (!flags.disable-gui) (hsPkgs.threepenny-gui)) ++ (if system.isWindows
+          ]) ++ (pkgs.lib).optional (!flags.disable-graylog) (hsPkgs.network)) ++ (pkgs.lib).optional (!flags.disable-gui) (hsPkgs.threepenny-gui)) ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
-          else [ (hsPkgs.unix) ]);
+          else [
+            (hsPkgs.unix)
+            ])) ++ (pkgs.lib).optionals (system.isLinux && !flags.disable-syslog) [
+          (hsPkgs.hsyslog)
+          (hsPkgs.libsystemd-journal)
+          ];
         };
       exes = {
         "example-simple" = {
@@ -86,6 +94,7 @@
             (hsPkgs.mtl)
             (hsPkgs.random)
             (hsPkgs.text)
+            (hsPkgs.unordered-containers)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [
@@ -134,8 +143,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/iohk-monitoring-framework";
-      rev = "f1c4ceef7d7ea6fb4425484c2b19b84048a3549d";
-      sha256 = "0vyy18cbi2axcv6qck1mljiwk8vqc5p33ay05fpp8db26ykgw1nx";
+      rev = "0ebeacf643153a88fe0c23527449ca21b985d7d4";
+      sha256 = "1nc7yzd9wlmabs79v35bn91rh990ag7dwrf2p1xacwqy2abpz4hz";
       });
     postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to \$sourceRoot";
     }

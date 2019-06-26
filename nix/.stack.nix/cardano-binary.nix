@@ -51,6 +51,7 @@
             (hsPkgs.quickcheck-instances)
             (hsPkgs.tagged)
             (hsPkgs.text)
+            (hsPkgs.vector)
             ];
           };
         };
@@ -58,8 +59,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "b676160954cea07d4378ccca870a61242bc188a2";
-      sha256 = "0928hwdyj82wnzra6kfpaf60z738h0ay6mkq9rahd9s21972i4nd";
+      rev = "2d0e0747f1c17bedfc251406ca9b1a59501071b1";
+      sha256 = "1rhlgs8zvc7g0f7d9sqvx0kcz9i4i1drqhcf1lg1cicqb2higv16";
       });
     postUnpack = "sourceRoot+=/binary; echo source root reset to \$sourceRoot";
     }

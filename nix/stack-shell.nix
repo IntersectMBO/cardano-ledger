@@ -7,7 +7,7 @@ let
 
 in haskell.lib.buildStackProject {
   name = "cardano-ledger-env";
-  buildInputs = [ zlib openssl gmp libffi git ];
+  buildInputs = [ zlib openssl gmp libffi git systemd.dev systemd.lib ];
   ghc = haskell.packages.${compiler}.ghc;
   CARDANO_MAINNET_MIRROR =
     "${import ./cardano-mainnet-mirror.nix {inherit pkgs;}}/epochs";
