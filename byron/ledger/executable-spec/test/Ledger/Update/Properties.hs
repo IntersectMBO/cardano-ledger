@@ -437,6 +437,10 @@ ublockRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 20% of the blocks contain no update proposals"
     (0.1 <= ratio numberOfBlocksWithoutUpdateProposals sample)
 
+  cover 75
+    "at least 50% of the proposals get enough endorsements"
+    (0.5 <= proposalsScheduledForAdoption sample / totalProposals sample)
+
     where
       confirmedProposals :: Trace UBLOCK -> Double
       confirmedProposals sample = traceStates OldestFirst sample
@@ -482,3 +486,18 @@ ublockRelevantTracesAreCovered = withTests 300 $ property $ do
         = traceSignals OldestFirst sample
         & filter (isNothing . optionalUpdateProposal)
         & length
+
+      proposalsScheduledForAdoption :: Trace UBLOCK -> Double
+      proposalsScheduledForAdoption sample = traceStates OldestFirst sample
+                                           & fmap upistate
+                                           -- We concat all the future adoptions together
+                                           & concatMap Update.futureAdoptions
+                                           -- Get the protocol versions of the future adoptions
+                                           & fmap (fst . snd)
+                                           -- Turn the list of versions into a list, since we're
+                                           -- interested in the number of unique protocol-versions
+                                           -- that are scheduled for adoption through the trace
+                                           -- states.
+                                           & Set.fromList
+                                           & Set.size
+                                           & fromIntegral

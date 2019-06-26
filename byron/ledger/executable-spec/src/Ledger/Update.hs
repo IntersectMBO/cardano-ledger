@@ -1,18 +1,18 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE EmptyDataDeriving          #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MonadComprehensions        #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE StrictData                 #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE MonadComprehensions #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- This is for the Hashable Set instance
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -21,60 +21,40 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
-import Control.Arrow ((&&&))
-import Control.Lens
-import Data.Bimap (Bimap, empty, lookupR)
+import           Control.Arrow ((&&&))
+import           Control.Lens
+import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
-import Data.Char (isAscii)
-import Data.Foldable (toList, foldl')
-import Data.Hashable (Hashable)
+import           Data.Char (isAscii)
+import           Data.Foldable (foldl', toList)
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
-import Data.Ix (inRange)
-import Data.List (notElem, sortOn)
-import Data.Map.Strict (Map)
+import           Data.Ix (inRange)
+import           Data.List (notElem, sortOn)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Set (Set, union, (\\))
+import           Data.Maybe (fromMaybe)
+import           Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
-import Data.Tuple (swap)
-import Data.Word (Word8)
-import GHC.Generics (Generic)
-import Hedgehog (Gen)
+import           Data.Tuple (swap)
+import           Data.Word (Word8)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Numeric.Natural
+import           Numeric.Natural
 
-import Data.AbstractSize (HasTypeReps)
-import Control.State.Transition
-import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Data.AbstractSize (HasTypeReps)
 
-import Ledger.Core
-  ( BlockCount(..)
-  , HasHash
-  , Owner(Owner)
-  , Relation(..)
-  , SlotCount(..)
-  , VKey(VKey)
-  , VKeyGenesis(VKeyGenesis)
-  , (*.)
-  , (-.)
-  , (∈)
-  , (∉)
-  , (⋪)
-  , (▷)
-  , (▷<=)
-  , (▷>=)
-  , (◁)
-  , (⨃)
-  , dom
-  , hash
-  , minusSlotMaybe
-  , skey
-  )
+import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
+                     minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
-import Prelude hiding (min)
+import           Prelude hiding (min)
 
 
 -- | Protocol parameters.
@@ -798,6 +778,9 @@ applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
 
 confirmedProposals :: UPIState -> Map UpId Core.Slot
 confirmedProposals ((_, _), _, _, _, _, cps, _, _, _) = cps
+
+futureAdoptions :: UPIState -> [(Core.Slot, (ProtVer, PParams))]
+futureAdoptions ((_, _), fads, _, _, _, _, _, _, _) = fads
 
 
 data UPIREG
