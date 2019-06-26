@@ -23,6 +23,8 @@ import           Control.State.Transition
 
 import           STS.Delpl
 
+import           Ledger.Core ((∪))
+
 data DELEGS hashAlgo dsignAlgo
 
 instance
@@ -67,7 +69,7 @@ delegsTransition = do
       let dms'' = Map.fromList [(gk, vk) | ((_, gk), vk) <- Map.toList curr]
       pure $ dpstate { _dstate = ds { _rewards = rewards'
                                     , _fdms = fdms''
-                                    , _dms = Dms $ Map.union dms'' dms'}}
+                                    , _dms = Dms $ dms'' ∪ dms'}}
     cert:_certs -> do
       let ptr = Ptr _slot txIx (fromIntegral $ length _certs)
       let isDelegationRegistered = case cert of

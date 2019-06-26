@@ -9,11 +9,7 @@ where
 import qualified Data.Map.Strict               as Map
 import qualified Data.Set                      as Set
 
-import           Lens.Micro                     ( (^.)
-                                                , (&)
-                                                , (.~)
-                                                , (%~)
-                                                )
+import           Lens.Micro                     ((^.))
 
 import           LedgerState
 import           PParams
@@ -23,7 +19,7 @@ import           Coin
 
 import           Control.State.Transition
 
-import           Ledger.Core ((◁))
+import           Ledger.Core ((◁), (⋪), (∪+))
 
 data POOLREAP hashAlgo dsignAlgo
 
@@ -60,18 +56,21 @@ poolReapTransition = do
         Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
   let unclaimed             = Map.foldl (+) (Coin 0) unclaimed'
   let StakePools stakePools = ps ^. stPools
+
+  let treasury' = (_treasury a) + unclaimed
+
+  let rewards'  = (_rewards ds) ∪+ refunds
+  let delegations' = Map.filter (flip Set.notMember retired) (_delegations ds)
+
+  let stPools' = StakePools $ retired ⋪ stakePools
+  let pParams' = retired ⋪ (_pParams ps)
+  let retiring' = retired ⋪ (_retiring ps)
+  let cs' = retired ⋪ (_cCounters ps)
   pure
-    ( a & treasury %~ (+) unclaimed
-    , ds
-    &  rewards
-    %~ flip Map.union refunds
-    &  delegations
-    %~ flip Map.withoutKeys retired
-    , ps
-    &  stPools
-    .~ (StakePools $ Map.withoutKeys stakePools retired)
-    &  pParams
-    %~ flip Map.withoutKeys retired
-    &  retiring
-    %~ flip Map.withoutKeys retired
-    )
+    ( a { _treasury = treasury' }
+    , ds { _rewards = rewards'
+         , _delegations = delegations' }
+    , ps { _stPools = stPools'
+         , _pParams = pParams'
+         , _retiring = retiring'
+         , _cCounters = cs'})
