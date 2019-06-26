@@ -6,7 +6,6 @@ module Ledger.Delegation.Examples
   )
 where
 
-import qualified Data.Bimap as Bimap (fromList)
 import           Data.Set (Set, fromList)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
