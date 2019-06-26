@@ -37,7 +37,7 @@ import           Delegation.PoolParams   (RewardAcnt (..), PoolParams(..))
 import           Keys
 import           PParams hiding (a0, nOpt)
 import           Slot
-import           UTxO
+import           UTxO hiding (dom)
 
 import qualified Data.Map.Strict         as Map
 import           Data.Maybe              (mapMaybe)
@@ -47,6 +47,8 @@ import qualified Data.Set                as Set
 import           Numeric.Natural         (Natural)
 
 import           Lens.Micro.TH           (makeLenses)
+
+import           Ledger.Core ((◁), (▷), dom)
 
 -- | Blocks made
 newtype BlocksMade hashAlgo dsignAlgo
@@ -117,8 +119,7 @@ poolStake
   -> Stake hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
-  Stake $ Map.restrictKeys stake (Map.keysSet restricted)
-  where restricted = Map.filter (== hk) delegs
+  Stake $ (dom (delegs ▷ (Set.singleton hk))) ◁ stake
 
 -- | Calculate pool refunds
 poolRefunds
@@ -172,7 +173,7 @@ groupByPool
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (delegs Map.! hk, Map.restrictKeys active (Set.singleton hk))
+    [ (delegs Map.! hk, (Set.singleton hk) ◁ active)
     | hk <- Map.keys delegs
     ]
 

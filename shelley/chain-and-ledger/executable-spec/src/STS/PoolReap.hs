@@ -23,6 +23,8 @@ import           Coin
 
 import           Control.State.Transition
 
+import           Ledger.Core ((◁))
+
 data POOLREAP hashAlgo dsignAlgo
 
 instance STS (POOLREAP hashAlgo dsignAlgo) where
@@ -41,14 +43,14 @@ poolReapTransition = do
   TRC (pp, (a, ds, ps), e) <- judgmentContext
   let retired  = Map.keysSet $ Map.filter (== e) $ ps ^. retiring
   let pr       = poolRefunds pp (ps ^. retiring) (firstSlot e)
-  let relevant = Map.restrictKeys (ps ^. pParams) retired
+  let relevant = retired ◁ (ps ^. pParams)
   let rewardAcnts = Map.mapMaybeWithKey
         (\k v -> case Map.lookup k relevant of
           Nothing -> Nothing
           Just _  -> Just (v ^. poolRAcnt)
         )
         (ps ^. pParams)
-  let rewardAcnts' = Map.restrictKeys rewardAcnts (Map.keysSet pr)
+  let rewardAcnts' = (Map.keysSet pr) ◁ rewardAcnts
   let refunds' = Map.foldlWithKey
         (\m k addr -> Map.insert addr (pr Map.! k) m)
         Map.empty
