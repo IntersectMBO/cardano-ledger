@@ -24,7 +24,6 @@ library
 
                        Cardano.Crypto.Hashing
                        Cardano.Crypto.HD
-                       Cardano.Crypto.Limits
                        Cardano.Crypto.Orphans
                        Cardano.Crypto.ProtocolMagic
                        Cardano.Crypto.Random
