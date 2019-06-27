@@ -14,8 +14,9 @@ The adoption of new application versions is what triggers software updates.
 Therefore $\mathsf{UPDATE}$ is the combination of the
 $\mathsf{PPUP}$ transition for the protocol parameters and the
 the $\mathsf{AVUP}$ transition for the application versions.
-Recall that $\PPUpdate$, $\AVUpdate$, and $\Update$ were defined in
-Figure~\ref{fig:defs:utxo-shelley}
+Note that $\PPUpdate$, $\AVUpdate$, and $\Update$ were defined in
+Figure~\ref{fig:defs:utxo-shelley}, and that $\fun{pvCanFollow}$
+was defined in \cite{byron_ledger_spec}.
 
 
 The signature for the keys in the proposal will be checked in the
@@ -69,6 +70,8 @@ $\mathsf{UTXOW}$ transition.
       &
       \dom{pup}\subseteq\dom{dms}
       \\
+      \var{ppv}\mapsto\var{v}\in\var{pup}\implies\fun{pvCanFollow}~(\fun{ppv}~\var{pup_s})~\var{v}
+      \\
       \var{slot} < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
     }
     {
@@ -96,6 +99,8 @@ the consensus value of update proposals in the event that at least five
 genesis keys agree.
 This function will also be used for the protocol parameters later in Section~\ref{sec:epoch}.
 Note that $\type{T}$ is an arbitrary type.
+The function $\fun{validAV}$ uses three functions from \cite{byron_ledger_spec}, namely
+$\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
 
 %%
 %% Figure - Helper Function for Consensus of Update Proposals
@@ -111,12 +116,24 @@ Note that $\type{T}$ is an arbitrary type.
   \end{align*}
 
   \begin{align*}
+      & \fun{validAV} \in \ApName \to \ApVer \to \Metadata \to \Applications \to \Bool\\
+      & \fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs} = \\
+      & ~~~~\fun{apNameValid}~\var{an}
+        ~\land~\fun{svCanFollow}~\var{avs}~(\var{an},~\var{av})
+        ~\land~\forall\var{st}\in\dom{md},~\fun{sTagValid}~\var{st}
+  \end{align*}
+
+  \begin{align*}
       & \fun{newAVs} \in \Applications \to (\Slot\mapsto\Applications) \to \Applications \\
       & \fun{newAVs}~\var{avs}~\var{favs} =
         \begin{cases}
-          \var{avs}' & \var{favs}\neq\emptyset
-                       ,~s_m\mapsto\var{avs'}\in\var{favs}
-                       ,~s_m=\max(\dom{\var{favs}})\\
+          \var{avs}\unionoverrideRight\var{avs}'
+                     & \var{favs}\neq\emptyset \\
+                     & ~\land~s_m\mapsto\var{avs'}\in\var{favs} \\
+                     & ~\land~s_m=\max(\dom{\var{favs}}) \\
+                     & ~\land~\forall(an\mapsto(av, mdt)\in\var{avs}'),
+                         ~\fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs}
+          \\
           \var{avs} & \text{otherwise}
         \end{cases}
   \end{align*}
