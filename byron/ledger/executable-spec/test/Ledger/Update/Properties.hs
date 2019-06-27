@@ -43,7 +43,7 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
-                     range)
+                     range, unBlockCount, (*.), (-.), (▷<=), (◁))
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
@@ -313,7 +313,8 @@ instance STS UBLOCK where
               ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = emptyUPIState
           -- We overwrite 'upTtl' in the UBLOCK initial rule, so that we have a system where update
           -- proposals can live long enough to allow for confirmation and consideration for
-          -- adoption.
+          -- adoption. We set the time to live of a proposal to half the number of slots in an
+          -- epoch, which about the value we use in production.
           pure UBlockState { upienv = env
                            , upistate = ( (pv, pps { Update._upTtl = SlotCount $ slotsPerEpoch k `div` 2 })
                                         , fads
@@ -364,7 +365,8 @@ instance HasTrace UBLOCK where
       dms <- Update.dmapGen numberOfGenesisKeys
       pure ( Slot 0
            , dms
-           , BlockCount 10
+           , BlockCount 50 -- TODO: We don't want a large value of K, otherwise we won't see many
+                           -- confirmed proposals.
            , numberOfGenesisKeys
            )
 
@@ -375,7 +377,7 @@ instance HasTrace UBLOCK where
       -- any proposals or votes.
       if Set.null (dom rpus)
       then generateUpdateProposalAndVotes
-      else Gen.frequency [ (3, generateOnlyVotes)
+      else Gen.frequency [ (5, generateOnlyVotes)
                          , (1, generateUpdateProposalAndVotes)
                                                               ]
     -- Don't shrink the issuer as this won't give us additional insight on a test failure.
@@ -383,15 +385,30 @@ instance HasTrace UBLOCK where
       -- Pick a delegate from the delegation map
       Gen.element $ Bimap.elems (Update.delegationMap upienv)
 
-    -- Generate a protocol version endorsement
     let
+      -- Generate a list of protocol version endorsements. For this we look at the current
+      -- endorsements, and confirmed and stable proposals.
+      --
+      -- If there are no endorsements, then the confirmed and stable proposals provide fresh
+      -- protocol versions that can be endorsed.
       endorsementsList :: [(ProtVer, Set Core.VKeyGenesis)]
       endorsementsList = endorsementsMap `Map.union` emptyEndorsements
                        & Map.toList
         where
           emptyEndorsements :: Map ProtVer (Set Core.VKeyGenesis)
-          emptyEndorsements = zip (fmap fst $ Set.toList $ range rpus) (repeat Set.empty)
+          emptyEndorsements = zip stableAndConfirmedVersions (repeat Set.empty)
                             & Map.fromList
+            where
+              stableAndConfirmedVersions
+                :: [ProtVer]
+              stableAndConfirmedVersions = stableAndConfirmedProposalIDs ◁ rpus
+                                         & Map.elems
+                                         & fmap fst
+                where
+                  stableAndConfirmedProposalIDs =
+                    dom (Update.confirmedProposals upistate ▷<= sn  -. 2 *. k)
+                    where
+                      (sn, _, k, _) = upienv
 
           endorsementsMap :: Map ProtVer (Set Core.VKeyGenesis)
           endorsementsMap = Set.toList (Update.endorsements upistate)
@@ -424,11 +441,9 @@ instance HasTrace UBLOCK where
           -- adaptations to 'nextSlotGen' are needed. For now we duplicate this
           -- here to avoid an early coupling that might be unnecessary.
           --
-          -- TODO: we might want to make the increments depend on k, so the range could be [1, k
-          -- `div` 100] (so we don't want to increase more than a small fraction of `k`)
           incSlot <$> Gen.frequency
-                      [ (1, Gen.integral (Range.constant 1 2))
-                   --   , (1, pure $! slotsPerEpoch k + 1)
+                      [ (5, Gen.integral (Range.constant 1 10))
+                      , (1, Gen.integral (Range.linear 10 (unBlockCount k)))
                       ]
           where
             incSlot c = sn `Core.addSlot` Core.SlotCount c
@@ -444,49 +459,45 @@ ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 100 $ property $ do
+ublockRelevantTracesAreCovered = withTests 200 $ property $ do
   sample <- forAll (trace @UBLOCK 500)
 
-  cover 75
-    "at least 50% of the proposals get confirmed"
-    (0.50 <= confirmedProposals sample / totalProposals sample)
+  cover 80
+    "at least 30% of the proposals get confirmed"
+    (0.3 <= confirmedProposals sample / totalProposals sample)
 
-  cover 20
+  cover 80
     "at least 20% of the proposals get unconfirmed"
-    (0.20 <= 1 - (confirmedProposals sample / totalProposals sample))
+    (0.2 <= 1 - (confirmedProposals sample / totalProposals sample))
 
-  cover 10
-    "at least 2% of the blocks contain votes for proposals issued in the same block "
-    (0.02 <= ratio numberOfVotesForBlockProposal sample)
+  cover 75
+    "at least 2% of the proposals get voted in the same block "
+    (0.02 <= fromIntegral (numberOfVotesForBlockProposal sample) / totalProposals sample)
 
-  cover 50
+  cover 80
     "at least 30% of blocks contain no votes"
     (0.3 <= ratio numberOfBlocksWithoutVotes sample)
 
-  cover 50
+  -- Once the most voted update proposals get votes from all the genesis keys there is no
+  -- possibility of generating any more votes. So we do not expect a large percentage of blocks with
+  -- votes.
+  cover 80
     "at least 10% of blocks contain votes"
     (0.1 <= 1 - ratio numberOfBlocksWithoutVotes sample)
 
-  cover 10
-    "at least 20% of blocks contain votes"
-    (0.2 <= 1 - ratio numberOfBlocksWithoutVotes sample)
-
   -- We generate an update proposal with a probability 1/4, but we're conservative about the
   -- coverage requirements, since we have variable trace lengths.
-  cover 50
+  cover 80
     "at least 70% of the blocks contain no update proposals"
     (0.7 <= ratio numberOfBlocksWithoutUpdateProposals sample)
 
-  cover 50
-    "at least 20% of the blocks contain an update proposals"
-    (0.2 <= 1 - ratio numberOfBlocksWithoutUpdateProposals sample)
+  cover 80
+    "at least 10% of the blocks contain an update proposals"
+    (0.1 <= 1 - ratio numberOfBlocksWithoutUpdateProposals sample)
 
-  -- TODO: Since we do not generate epoch changes and we endorse the top 5 most endorsed proposals we
-  -- cannot expect a large number here... We could change this once we generate epoch changes (via
-  -- the UPIEC TS) in the UBLOCK traces.
-  cover 50
+  cover 80
     "at least 10% of the proposals get enough endorsements"
-    (3 <= proposalsScheduledForAdoption sample)
+    (0.1 <= proposalsScheduledForAdoption sample / totalProposals sample)
 
 confirmedProposals :: Trace UBLOCK -> Double
 confirmedProposals sample = traceStates OldestFirst sample
@@ -565,14 +576,22 @@ ublockSampleTraceMetrics maxTraceSize = do
                     ++ show (totalProposals sample)
                   , "confirmed proposals = "
                     ++ show (confirmedProposals sample)
+                  , "scheduled proposals = "
+                    ++ show (proposalsScheduledForAdoption sample)
                   , "total number of votes = "
                     ++ show (numberOfVotes sample)
                   , "blocks without votes = "
                     ++ show (numberOfBlocksWithoutVotes sample)
+                  , "votes for block proposal in same block = "
+                    ++ show (numberOfVotesForBlockProposal sample)
+                  , "ratio of votes for block proposal in same block = "
+                    ++ show (fromIntegral (numberOfVotesForBlockProposal sample) / totalProposals sample)
                   , "proposals scheduled for adoption = "
                     ++ show (proposalsScheduledForAdoption sample)
                   , "confirmed / total proposals = "
                     ++ show (confirmedProposals sample / totalProposals sample)
+                  , "scheduled / total proposals = "
+                    ++ show (proposalsScheduledForAdoption sample / totalProposals sample)
                   , "scheduled / confirmed proposals = "
                     ++ show (proposalsScheduledForAdoption sample / confirmedProposals sample)
                   ]

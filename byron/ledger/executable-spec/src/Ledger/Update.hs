@@ -609,7 +609,7 @@ instance STS UPEND where
             -- If we found the proposal id that corresponds to 'bv' then we
             -- have to check that it isn't confirmed for this rule to succeed.
             pid ∉ dom (cps ▷<= sn  -. 2 *. k) ?! TryNextRule
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Nothing ->
             -- If we didn't find the proposal id that corresponds to 'bv' then
             -- this rule succeeds.
@@ -619,7 +619,7 @@ instance STS UPEND where
             -- failure if the condition of the '!?' operator is not met. Since
             -- even on failure we _need_ to return a state, the case above also
             -- returns the state unchanged in this case.
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
 
     , do
         TRC ( (sn, t, dms, cps, rpus, k)
@@ -629,17 +629,17 @@ instance STS UPEND where
         case lookupR vk dms of
           Nothing  -> do
             False ?! TryNextRule
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
             size ([bv] ◁ bvs) < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
                 pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
-                return $! (fads, bvs')
+                pure $! (fads, bvs')
               Nothing -> do
                 False ?! TryNextRule
-                return $! (fads, bvs')
+                pure $! (fads, bvs')
 
     , do
         TRC ( (sn, t, dms, cps, rpus, k)
@@ -649,7 +649,7 @@ instance STS UPEND where
         case lookupR vk dms of
           Nothing  -> do
             False ?! NotADelegate vk
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
             t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
@@ -657,10 +657,10 @@ instance STS UPEND where
               Just (pid, (_, ppsc)) -> do
                 pid ∈ dom (cps  ▷<= sn -. 2 *. k) ?! UnconfirmedProposal pid
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
-                return $! (fads', bvs')
+                pure $! (fads', bvs')
               Nothing -> do
                 False ?! ProtVerUnknown bv
-                return $! (fads, bvs')
+                pure $! (fads, bvs')
 
     ]
 
@@ -1064,7 +1064,7 @@ ppsUpdateFrom pps = do
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
       Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
-      `increasingProbabilityAt` (0, (2 * _maxHdrSz))
+      `increasingProbabilityAt` (0, 2 * _maxHdrSz)
 
     nextMaxPropSz :: Gen Natural
     nextMaxPropSz =
