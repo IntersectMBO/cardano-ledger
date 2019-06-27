@@ -9,6 +9,7 @@ where
 import           Lens.Micro                     ( (^.) )
 
 import           Delegation.Certificates
+import           Keys
 import           LedgerState
 import           PParams
 import           Slot
@@ -16,20 +17,27 @@ import           UTxO
 
 import           Control.State.Transition
 
-data POOL
+data POOL hashAlgo dsignAlgo
 
-instance STS POOL where
-  type State POOL = PState
-  type Signal POOL = DCert
-  type Environment POOL = (Slot, Ptr, PParams)
-  data PredicateFailure POOL = StakePoolNotRegisteredOnKeyPOOL
-                           | StakePoolRetirementWrongEpochPOOL
-                           | WrongCertificateTypePOOL
-                               deriving (Show, Eq)
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => STS (POOL hashAlgo dsignAlgo)
+ where
+  type State (POOL hashAlgo dsignAlgo) = PState hashAlgo dsignAlgo
+  type Signal (POOL hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
+  type Environment (POOL hashAlgo dsignAlgo) = (Slot, Ptr, PParams)
+  data PredicateFailure (POOL hashAlgo dsignAlgo)
+    = StakePoolNotRegisteredOnKeyPOOL
+    | StakePoolRetirementWrongEpochPOOL
+    | WrongCertificateTypePOOL
+    deriving (Show, Eq)
+
   initialRules = [pure emptyPState]
   transitionRules = [poolDelegationTransition]
 
-poolDelegationTransition :: TransitionRule POOL
+poolDelegationTransition
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => TransitionRule (POOL hashAlgo dsignAlgo)
 poolDelegationTransition = do
   TRC ((slot, p@(Ptr _ _ _), pp), ps, c) <- judgmentContext
   case c of

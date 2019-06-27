@@ -1,5 +1,6 @@
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE EmptyDataDecls       #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Ocert
   ( OCERT
@@ -15,23 +16,42 @@ import           OCert
 
 import           Control.State.Transition
 
-data OCERT
+data OCERT hashAlgo dsignAlgo kesAlgo
 
-instance STS OCERT where
-  type State OCERT = Map.Map HashKey Natural
-  type Signal OCERT = BHeader
-  type Environment OCERT = ()
-  data PredicateFailure OCERT = KESBeforeStartOCERT
-                            | KESAfterEndOCERT
-                            | KESPeriodWrongOCERT
-                            | InvalidSignatureOCERT
-                            | InvalidKesSignatureOCERT
-                            | NoCounterForHashKeyOCERT
-                                deriving (Show, Eq)
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => STS (OCERT hashAlgo dsignAlgo kesAlgo)
+ where
+  type State (OCERT hashAlgo dsignAlgo kesAlgo)
+    = Map.Map (HashKey hashAlgo dsignAlgo) Natural
+  type Signal (OCERT hashAlgo dsignAlgo kesAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo
+  type Environment (OCERT hashAlgo dsignAlgo kesAlgo) = ()
+  data PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo)
+    = KESBeforeStartOCERT
+    | KESAfterEndOCERT
+    | KESPeriodWrongOCERT
+    | InvalidSignatureOCERT
+    | InvalidKesSignatureOCERT
+    | NoCounterForHashKeyOCERT
+    deriving (Show, Eq)
+
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
-ocertTransition :: TransitionRule OCERT
+ocertTransition
+  :: ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+     , KESAlgorithm kesAlgo
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     )
+  => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo)
 ocertTransition = do
   TRC (_, cs, BHeader bhb sigma) <- judgmentContext
   let OCert vk_hot vk_cold n c0@(KESPeriod c0') tau = bheaderOCert bhb

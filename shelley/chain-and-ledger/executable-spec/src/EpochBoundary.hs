@@ -1,5 +1,6 @@
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 
 {-|
 Module      : EpochBoundary
@@ -48,50 +49,60 @@ import           Numeric.Natural         (Natural)
 import           Lens.Micro.TH           (makeLenses)
 
 -- | Blocks made
-newtype BlocksMade =
-    BlocksMade (Map.Map HashKey Natural)
-               deriving (Show, Eq)
+newtype BlocksMade hashAlgo dsignAlgo
+  = BlocksMade (Map.Map (HashKey hashAlgo dsignAlgo) Natural)
+  deriving (Show, Eq)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake =
-  Stake (Map.Map HashKey Coin)
+newtype Stake hashAlgo dsignAlgo
+  = Stake (Map.Map (HashKey hashAlgo dsignAlgo) Coin)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr -> Maybe HashKey
+getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (HashKey hashAlgo dsignAlgo)
 getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
 
-consolidate :: UTxO -> Map.Map Addr Coin
+consolidate :: UTxO hashAlgo dsignAlgo -> Map.Map (Addr hashAlgo dsignAlgo) Coin
 consolidate (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: Map.Map Addr Coin -> Stake
+baseStake :: Map.Map (Addr hashAlgo dsignAlgo) Coin -> Stake hashAlgo dsignAlgo
 baseStake vals =
   Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
  where
-   convert :: (Addr, Coin) -> Maybe (HashKey, Coin)
+   convert
+     :: (Addr hashAlgo dsignAlgo, Coin)
+     -> Maybe (HashKey hashAlgo dsignAlgo, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
 -- | Extract pointer from pointer address.
-getStakePtr :: Addr -> Maybe Ptr
+getStakePtr :: Addr hashAlgo dsignAlgo -> Maybe Ptr
 getStakePtr (AddrPtr ptr) = Just ptr
 getStakePtr _             = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
-ptrStake :: Map.Map Addr Coin -> Map.Map Ptr HashKey -> Stake
+ptrStake
+  :: forall hashAlgo dsignAlgo
+   . Map.Map (Addr hashAlgo dsignAlgo) Coin
+  -> Map.Map Ptr (HashKey hashAlgo dsignAlgo)
+  -> Stake hashAlgo dsignAlgo
 ptrStake vals pointers =
   Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
   where
-    convert :: (Addr, Coin) -> Maybe (HashKey, Coin)
+    convert
+      :: (Addr hashAlgo dsignAlgo, Coin)
+      -> Maybe (HashKey hashAlgo dsignAlgo, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
         Just s -> (,c) <$> Map.lookup s pointers
 
-rewardStake :: Map.Map RewardAcnt Coin -> Stake
+rewardStake
+  :: Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> Stake hashAlgo dsignAlgo
 rewardStake rewards =
   Stake $
   Map.foldlWithKey
@@ -100,17 +111,21 @@ rewardStake rewards =
     rewards
 
 -- | Get stake of one pool
-poolStake ::
-     HashKey
-  -> Map.Map HashKey HashKey
-  -> Stake
-  -> Stake
+poolStake
+  :: HashKey hashAlgo dsignAlgo
+  -> Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+  -> Stake hashAlgo dsignAlgo
+  -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
   Stake $ Map.restrictKeys stake (Map.keysSet restricted)
   where restricted = Map.filter (== hk) delegs
 
 -- | Calculate pool refunds
-poolRefunds :: PParams -> Map.Map HashKey Epoch -> Slot -> Map.Map HashKey Coin
+poolRefunds
+  :: PParams
+  -> Map.Map (HashKey hashAlgo dsignAlgo) Epoch
+  -> Slot
+  -> Map.Map (HashKey hashAlgo dsignAlgo) Coin
 poolRefunds pp retirees cslot =
   Map.map
     (\e ->
@@ -120,7 +135,12 @@ poolRefunds pp retirees cslot =
     (pval, pmin, lambda) = decayPool pp
 
 -- | Calculate total possible refunds.
-obligation :: PParams -> StakeKeys -> StakePools -> Slot -> Coin
+obligation
+  :: PParams
+  -> StakeKeys hashAlgo dsignAlgo
+  -> StakePools hashAlgo dsignAlgo
+  -> Slot
+  -> Coin
 obligation pc (StakeKeys stakeKeys) (StakePools stakePools) cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
   sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
@@ -143,10 +163,12 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
     factor4 = (z0 - sigma') / z0
 
 -- | Pool individual reward
-groupByPool ::
-     Map.Map HashKey Coin
-  -> Map.Map HashKey HashKey
-  -> Map.Map HashKey (Map.Map HashKey Coin)
+groupByPool
+  :: Map.Map (HashKey hashAlgo dsignAlgo) Coin
+  -> Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+  -> Map.Map
+       (HashKey hashAlgo dsignAlgo)
+       (Map.Map (HashKey hashAlgo dsignAlgo) Coin)
 groupByPool active delegs =
   Map.fromListWith
     Map.union
@@ -154,19 +176,29 @@ groupByPool active delegs =
     | hk <- Map.keys delegs
     ]
 
-data SnapShots =
-    SnapShots
-    { _pstakeMark :: (Stake, Map.Map HashKey HashKey)
-    , _pstakeSet  :: (Stake, Map.Map HashKey HashKey)
-    , _pstakeGo   :: (Stake, Map.Map HashKey HashKey)
-    , _poolsSS    :: Map.Map HashKey PoolParams
-    , _blocksSS   :: BlocksMade
-    , _feeSS      :: Coin
+data SnapShots hashAlgo dsignAlgo
+  = SnapShots
+    { _pstakeMark
+      :: ( Stake hashAlgo dsignAlgo
+         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         )
+    , _pstakeSet
+      :: ( Stake hashAlgo dsignAlgo
+         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         )
+    , _pstakeGo
+      :: ( Stake hashAlgo dsignAlgo
+         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         )
+    , _poolsSS
+      :: Map.Map (HashKey hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
+    , _blocksSS :: BlocksMade hashAlgo dsignAlgo
+    , _feeSS :: Coin
     } deriving (Show, Eq)
 
 makeLenses ''SnapShots
 
-emptySnapShots :: SnapShots
+emptySnapShots :: SnapShots hashAlgo dsignAlgo
 emptySnapShots =
     SnapShots snapEmpty snapEmpty snapEmpty Map.empty blocksEmpty (Coin 0)
     where pooledEmpty = Map.empty

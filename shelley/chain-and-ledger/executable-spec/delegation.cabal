@@ -74,12 +74,15 @@ library
     microlens,
     microlens-th,
     non-integer,
-    cs-ledger
+    cs-ledger,
+    cardano-binary,
+    cardano-crypto-class
 
 test-suite delegation-test
     type:                exitcode-stdio-1.0
     main-is:             Tests.hs
     other-modules:       UnitTests
+                         MockTypes
                          Mutator
                          Generator
                          PropertyTests
@@ -107,4 +110,5 @@ test-suite delegation-test
       multiset,
       text,
       microlens,
-      cs-ledger
+      cs-ledger,
+      cardano-crypto-class

@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 {-|
 Module
 Description : Generators for mutating data.
@@ -24,15 +26,20 @@ import Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import BaseTypes
-import Coin
-import           Delegation.Certificates  (DCert(..))
+import           BaseTypes
+import           Coin
+import           Delegation.Certificates  (pattern Delegate, pattern DeRegKey,
+                     pattern GenesisDelegate, pattern RegKey, pattern RegPool,
+                     pattern RetirePool)
 import           Delegation.PoolParams
-import Keys
-import LedgerState (DPState(..), KeyPairs)
-import Updates
-import UTxO        (TxBody(..), Tx(..), TxIn(..), TxOut(..))
+import           Keys (vKey)
+import           Updates
+import           UTxO (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                     _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
+                     _witnessSet)
 import           Slot
+
+import           MockTypes
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a

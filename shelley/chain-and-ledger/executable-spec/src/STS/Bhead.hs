@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
@@ -22,21 +23,32 @@ import           STS.Rupd
 
 import           Control.State.Transition
 
-data BHEAD
+data BHEAD hashAlgo dsignAlgo kesAlgo
 
-instance STS BHEAD where
-  type State BHEAD = NewEpochState
-  type Signal BHEAD = BHeader
-  type Environment BHEAD = (Seed, Set.Set VKeyGenesis)
-  data PredicateFailure BHEAD = HeaderSizeTooLargeBHEAD
-                              | BlockSizeTooLargeBHEAD
-                              | NewEpochFailure (PredicateFailure NEWEPOCH)
-                              | RupdFailure (PredicateFailure RUPD)
-                                deriving (Show, Eq)
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => STS (BHEAD hashAlgo dsignAlgo kesAlgo)
+ where
+  type State (BHEAD hashAlgo dsignAlgo kesAlgo)
+    = NewEpochState hashAlgo dsignAlgo
+  type Signal (BHEAD hashAlgo dsignAlgo kesAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo
+  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo)
+    = (Seed, Set.Set (VKeyGenesis dsignAlgo))
+  data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo)
+    = HeaderSizeTooLargeBHEAD
+    | BlockSizeTooLargeBHEAD
+    | NewEpochFailure (PredicateFailure (NEWEPOCH hashAlgo dsignAlgo))
+    | RupdFailure (PredicateFailure (RUPD hashAlgo dsignAlgo))
+    deriving (Show, Eq)
+
   initialRules = []
   transitionRules = [bheadTransition]
 
-bheadTransition :: TransitionRule BHEAD
+bheadTransition
+  :: forall hashAlgo dsignAlgo kesAlgo
+   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo)
 bheadTransition = do
   TRC ((etaC, gkeys), nes@(NewEpochState _ _ bprev _ es ru _ _), bh@(BHeader bhb _)) <-
     judgmentContext
@@ -46,15 +58,21 @@ bheadTransition = do
   fromIntegral (bHeaderSize bh) > _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
   fromIntegral (hBbsize bhb) > _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
-  nes' <- trans @NEWEPOCH
+  nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
     $ TRC ((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
 
-  ru' <- trans @RUPD $ TRC ((bprev, es), ru, slot)
+  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), ru, slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 
-instance Embed NEWEPOCH BHEAD where
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => Embed (NEWEPOCH hashAlgo dsignAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = NewEpochFailure
 
-instance Embed RUPD BHEAD where
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => Embed (RUPD hashAlgo dsignAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = RupdFailure

@@ -1,7 +1,9 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module STS.Overlay
   ( OVERLAY
@@ -15,6 +17,7 @@ import           BaseTypes
 import           BlockChain
 import           Delegation.Certificates
 import           Keys
+import           OCert
 import           PParams
 import           Slot
 
@@ -22,28 +25,52 @@ import           STS.Ocert
 
 import           Control.State.Transition
 
-data OVERLAY
+data OVERLAY hashAlgo dsignAlgo kesAlgo
 
-instance STS OVERLAY where
-  type State OVERLAY = Map.Map HashKey Natural
-  type Signal OVERLAY = BHeader
-  type Environment OVERLAY =
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => STS (OVERLAY hashAlgo dsignAlgo kesAlgo)
+ where
+  type State (OVERLAY hashAlgo dsignAlgo kesAlgo)
+    = Map.Map (HashKey hashAlgo dsignAlgo) Natural
+
+  type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo
+
+  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo) =
     ( PParams
-    , Map.Map Slot (Maybe VKeyGenesis)
+    , Map.Map Slot (Maybe (VKeyGenesis dsignAlgo))
     , Seed
-    , PoolDistr
-    , Dms)
-  data PredicateFailure OVERLAY = NotPraosLeaderOVERLAY
-                                | NotActiveSlotOVERLAY
-                                | WrongGenesisColdKeyOVERLAY
-                                | NoGenesisStakingOVERLAY
-                                | OcertFailure (PredicateFailure OCERT)
-                                   deriving (Show, Eq)
+    , PoolDistr hashAlgo dsignAlgo
+    , Dms dsignAlgo
+    )
+
+  data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo)
+    = NotPraosLeaderOVERLAY
+    | NotActiveSlotOVERLAY
+    | WrongGenesisColdKeyOVERLAY
+    | NoGenesisStakingOVERLAY
+    | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo))
+    deriving (Show, Eq)
+
   initialRules = []
 
   transitionRules = [overlayTransition]
 
-overlayTransition :: TransitionRule OVERLAY
+overlayTransition
+  :: forall hashAlgo dsignAlgo kesAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+     , KESAlgorithm kesAlgo
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     )
+  => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo)
 overlayTransition = do
   TRC ((pp, osched, eta0, pd, Dms dms), cs, bh@(BHeader bhb _)) <-
     judgmentContext
@@ -52,7 +79,7 @@ overlayTransition = do
   case gkey'' of
     Nothing -> do
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
-      cs' <- trans @OCERT $ TRC ((), cs, bh)
+      cs' <- trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
       pure cs'
     Just gkey' -> do
       case gkey' of
@@ -62,8 +89,16 @@ overlayTransition = do
           case dmsKey' of
             Nothing     -> failBecause NoGenesisStakingOVERLAY
             Just dmsKey -> vk == dmsKey ?! WrongGenesisColdKeyOVERLAY
-      cs' <- trans @OCERT $ TRC ((), cs, bh)
+      cs' <- trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
       pure cs'
 
-instance Embed OCERT OVERLAY where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => Embed (OCERT hashAlgo dsignAlgo kesAlgo) (OVERLAY hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = OcertFailure

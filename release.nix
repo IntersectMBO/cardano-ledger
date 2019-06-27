@@ -69,15 +69,15 @@ localLib.nix-tools.release-nix {
 
     # Windows cross-compilation targets
 
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cs-blockchain.x86_64-linux
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cs-ledger.x86_64-linux
-    jobs.nix-tools.libs.x86_64-pc-mingw32-small-steps.x86_64-linux
+    # jobs.nix-tools.libs.x86_64-pc-mingw32-cs-blockchain.x86_64-linux
+    # jobs.nix-tools.libs.x86_64-pc-mingw32-cs-ledger.x86_64-linux
+    # jobs.nix-tools.libs.x86_64-pc-mingw32-small-steps.x86_64-linux
 
     ## Doctests don't work in Windows.
     # jobs.nix-tools.tests.x86_64-pc-mingw32-small-steps.doctests.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-small-steps.examples.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cs-blockchain.chain-rules-test.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-rules-test.x86_64-linux
+    # jobs.nix-tools.tests.x86_64-pc-mingw32-small-steps.examples.x86_64-linux
+    # jobs.nix-tools.tests.x86_64-pc-mingw32-cs-blockchain.chain-rules-test.x86_64-linux
+    # jobs.nix-tools.tests.x86_64-pc-mingw32-cs-ledger.ledger-rules-test.x86_64-linux
     ];
 
 } (builtins.removeAttrs args ["cardano-ledger-specs"])

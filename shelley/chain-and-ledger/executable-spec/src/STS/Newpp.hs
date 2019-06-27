@@ -20,25 +20,29 @@ import           Coin
 
 import           Control.State.Transition
 
-data NEWPP
+data NEWPP hashAlgo dsignAlgo
 
-instance STS NEWPP where
-  type State NEWPP = (UTxOState, AccountState, PParams)
-  type Signal NEWPP = Epoch
-  type Environment NEWPP = (Maybe PParams, DState, PState)
-  data PredicateFailure NEWPP = FailureNEWPP
-                                deriving (Show, Eq)
+instance STS (NEWPP hashAlgo dsignAlgo) where
+  type State (NEWPP hashAlgo dsignAlgo)
+    = (UTxOState hashAlgo dsignAlgo, AccountState, PParams)
+  type Signal (NEWPP hashAlgo dsignAlgo) = Epoch
+  type Environment (NEWPP hashAlgo dsignAlgo)
+    = (Maybe PParams, DState hashAlgo dsignAlgo, PState hashAlgo dsignAlgo)
+  data PredicateFailure (NEWPP hashAlgo dsignAlgo)
+    = FailureNEWPP
+    deriving (Show, Eq)
+
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-initialNewPp :: InitialRule NEWPP
+initialNewPp :: InitialRule (NEWPP hashAlgo dsignAlgo)
 initialNewPp = pure
   ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (emptyUpdateState)
   , emptyAccount
   , emptyPParams
   )
 
-newPpTransition :: TransitionRule NEWPP
+newPpTransition :: TransitionRule (NEWPP hashAlgo dsignAlgo)
 newPpTransition = do
   TRC ((ppNew, ds, ps), (utxoSt, acnt, pp), e) <- judgmentContext
 

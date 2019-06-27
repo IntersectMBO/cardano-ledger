@@ -27,6 +27,8 @@
           (hsPkgs.microlens-th)
           (hsPkgs.non-integer)
           (hsPkgs.cs-ledger)
+          (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-crypto-class)
           ];
         };
       tests = {
@@ -43,6 +45,7 @@
             (hsPkgs.text)
             (hsPkgs.microlens)
             (hsPkgs.cs-ledger)
+            (hsPkgs.cardano-crypto-class)
             ];
           };
         };

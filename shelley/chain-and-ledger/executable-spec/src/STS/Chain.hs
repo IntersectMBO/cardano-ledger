@@ -1,19 +1,25 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module STS.Chain
   ( CHAIN
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import qualified Data.Map.Strict as Map
+import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
+import           Keys
 import           LedgerState
+import           OCert
 import           Slot
+import           UTxO
 
 import           Control.State.Transition
 
@@ -21,50 +27,104 @@ import           STS.Bbody
 import           STS.Bhead
 import           STS.Prtcl
 
-data CHAIN
+data CHAIN hashAlgo dsignAlgo kesAlgo
 
-instance STS CHAIN where
-  type State CHAIN = ( NewEpochState
-                     , Seed
-                     , Seed
-                     , HashHeader
-                     , Slot)
-  type Signal CHAIN = Block
-  type Environment CHAIN = Slot
-  data PredicateFailure CHAIN = BbodyFailure (PredicateFailure BBODY)
-                              | BheadFailure (PredicateFailure BHEAD)
-                              | PrtclFailure (PredicateFailure PRTCL)
-                                deriving (Show, Eq)
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => STS (CHAIN hashAlgo dsignAlgo kesAlgo)
+ where
+  type State (CHAIN hashAlgo dsignAlgo kesAlgo)
+    = ( NewEpochState hashAlgo dsignAlgo
+      , Seed
+      , Seed
+      , HashHeader hashAlgo dsignAlgo kesAlgo
+      , Slot
+      )
+
+  type Signal (CHAIN hashAlgo dsignAlgo kesAlgo)
+    = Block hashAlgo dsignAlgo kesAlgo
+
+  type Environment (CHAIN hashAlgo dsignAlgo kesAlgo) = Slot
+
+  data PredicateFailure (CHAIN hashAlgo dsignAlgo kesAlgo)
+    = BbodyFailure (PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo))
+    | BheadFailure (PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo))
+    | PrtclFailure (PredicateFailure (PRTCL hashAlgo dsignAlgo kesAlgo))
+    deriving (Show, Eq)
+
   initialRules = []
   transitionRules = [chainTransition]
 
-chainTransition :: TransitionRule CHAIN
+chainTransition
+  :: forall hashAlgo dsignAlgo kesAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , KESAlgorithm kesAlgo
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     )
+  => TransitionRule (CHAIN hashAlgo dsignAlgo kesAlgo)
 chainTransition = do
   TRC (sNow, (nes, etaV, etaC, h, sL), block@(Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
-  nes' <- trans @BHEAD $ TRC ((etaC, gkeys), nes, bh)
+  nes' <-
+    trans @(BHEAD hashAlgo dsignAlgo kesAlgo) $ TRC ((etaC, gkeys), nes, bh)
 
   let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
   let EpochState _ _ ls pp                        = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
-  (cs', h', sL', etaV', etaC') <- trans @PRTCL
+  (cs', h', sL', etaV', etaC') <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo)
     $ TRC (((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
 
   let ls' = setIssueNumbers ls cs'
-  (ls'', bcur') <- trans @BBODY
+  (ls'', bcur') <- trans @(BBODY hashAlgo dsignAlgo kesAlgo)
     $ TRC ((Map.keysSet osched, pp), (ls', bcur), block)
 
   let nes'' = updateNES nes' bcur' ls''
 
   pure (nes'', etaV', etaC', h', sL')
 
-instance Embed BBODY CHAIN where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => Embed (BBODY hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = BbodyFailure
 
-instance Embed BHEAD CHAIN where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => Embed (BHEAD hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = BheadFailure
 
-instance Embed PRTCL CHAIN where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , KESAlgorithm kesAlgo
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  )
+  => Embed (PRTCL hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+ where
   wrapFailed = PrtclFailure
