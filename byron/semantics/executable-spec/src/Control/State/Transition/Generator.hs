@@ -254,15 +254,16 @@ classifyTraceLength tr = classifySize "trace length:" tr traceLength
 --   number of intervals are determined by the @step@ parameter.
 --
 classifySize
-  :: String
+  :: (Ord n, Show n, Integral n)
+  => String
   -- ^ Prefix to be added to the label intervals
   -> a
   -- ^ Value to classify
-  -> (a -> Int)
+  -> (a -> n)
   -- ^ Size function
-  -> Int
+  -> n
   -- ^ Maximum value size
-  -> Int
+  -> n
   -- ^ Steps used to divide the size interval
   -> PropertyT IO ()
 classifySize prefixLabel value sizeF upBound step = do

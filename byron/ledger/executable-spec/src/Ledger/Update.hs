@@ -989,20 +989,20 @@ upiEnvGen = do
       <*> dmapGen ngk  -- Delegation map
       <*> (BlockCount <$> Gen.word64 (Range.constant 0 100)) -- Chain stability parameter (k)
       <*> pure ngk
-    where
-      -- Generate an initial delegation map, using a constant number of genesis
-      -- keys, which is determined in this generator.
-      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
-        where
-          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
-            where
-              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
-              -- As delegation targets we choose twice the number of genesis keys.
-              -- Note that the genesis keys can delegate to themselves in the
-              -- generated delegation map.
-              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
+
+-- Generate an initial delegation map, using a constant number of genesis
+-- keys, which is determined in this generator.
+dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+  where
+    vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+    vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+      where
+        vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
+        -- As delegation targets we choose twice the number of genesis keys.
+        -- Note that the genesis keys can delegate to themselves in the
+        -- generated delegation map.
+        vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
 -- | Generate a protocol parameter update from a given set of current
 -- protocol-parameters, ensuring the consistency of the new protocol parameters
@@ -1359,13 +1359,13 @@ protocolVersionEndorsementGen endorsementsList =
   if null mostEndorsedProposals
   then pure Nothing
   else Just <$> Gen.element mostEndorsedProposals
-  -- Take the top 10 most voted proposals, and endorse them. The constant 10 is determined
+  -- Take the top 5 most voted proposals, and endorse them. The constant 10 is determined
   -- arbitrarily here.
   where
     mostEndorsedProposals :: [ProtVer]
     mostEndorsedProposals = sortOn (second length) endorsementsList
                           & reverse
-                          & take 10
+                          & take 5
                           & fmap fst
 
 data PVBUMP

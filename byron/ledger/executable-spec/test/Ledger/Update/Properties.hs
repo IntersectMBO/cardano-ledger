@@ -13,13 +13,14 @@ module Ledger.Update.Properties
   , ublockTraceLengthsAreClassified
   , ublockOnlyValidSignalsAreGenerated
   , ublockRelevantTracesAreCovered
+  , ublockSampleTraceMetrics
   ) where
 
 import           GHC.Stack (HasCallStack)
 
 import           Control.Arrow (second)
 import qualified Data.Bimap as Bimap
-import           Data.Foldable (fold)
+import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
 import           Data.Map.Strict (Map)
@@ -27,7 +28,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, isNothing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Hedgehog (Property, cover, forAll, property, withTests)
+import           Hedgehog (Property, collect, cover, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
@@ -35,13 +36,14 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, ratio, sigGen, trace,
-                     traceLengthsAreClassified)
+import           Control.State.Transition.Generator (HasTrace, classifySize, initEnvGen,
+                     randomTrace, ratio, sigGen, trace, traceLengthsAreClassified)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
-import           Ledger.Core (BlockCount (BlockCount), SlotCount (SlotCount), dom, range)
+import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
+                     range)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
@@ -306,14 +308,14 @@ instance STS UBLOCK where
   initialRules
     = [ do
           IRC env <- judgmentContext
-          let (_, _, BlockCount k, _) = env
+          let (_, _, k, _) = env
               -- TODO: dnadales should have used records for the UPIState :/
               ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = emptyUPIState
           -- We overwrite 'upTtl' in the UBLOCK initial rule, so that we have a system where update
           -- proposals can live long enough to allow for confirmation and consideration for
           -- adoption.
           pure UBlockState { upienv = env
-                           , upistate = ( (pv, pps { Update._upTtl = SlotCount $ 2 * k })
+                           , upistate = ( (pv, pps { Update._upTtl = SlotCount $ slotsPerEpoch k `div` 2 })
                                         , fads
                                         , avs
                                         , rpus
@@ -356,7 +358,15 @@ instance Embed UPIEND UBLOCK where
   wrapFailed = UPIENDFailure
 
 instance HasTrace UBLOCK where
-  initEnvGen = Update.upiEnvGen
+  initEnvGen = -- Update.upiEnvGen
+    do
+      let numberOfGenesisKeys = 7
+      dms <- Update.dmapGen numberOfGenesisKeys
+      pure ( Slot 0
+           , dms
+           , BlockCount 10
+           , numberOfGenesisKeys
+           )
 
   sigGen _env UBlockState {upienv, upistate} = do
     let rpus = Update.registeredProtocolUpdateProposals upistate
@@ -434,8 +444,8 @@ ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 300 $ property $ do
-  sample <- forAll (trace @UBLOCK 600)
+ublockRelevantTracesAreCovered = withTests 100 $ property $ do
+  sample <- forAll (trace @UBLOCK 500)
 
   cover 75
     "at least 50% of the proposals get confirmed"
@@ -478,63 +488,97 @@ ublockRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the proposals get enough endorsements"
     (3 <= proposalsScheduledForAdoption sample)
 
-    where
-      confirmedProposals :: Trace UBLOCK -> Double
-      confirmedProposals sample = traceStates OldestFirst sample
-                                & fmap upistate
-                                & fmap Update.confirmedProposals
-                                & fmap dom
-                                & fold
-                                & Set.size
-                                & fromIntegral
+confirmedProposals :: Trace UBLOCK -> Double
+confirmedProposals sample = traceStates OldestFirst sample
+                          & fmap upistate
+                          & fmap Update.confirmedProposals
+                          & fmap dom
+                          & fold
+                          & Set.size
+                          & fromIntegral
 
-      totalProposals :: Trace UBLOCK -> Double
-      totalProposals sample = traceSignals OldestFirst sample
-                            & fmap optionalUpdateProposal
-                            & catMaybes
-                            & fmap Update._upId
-                            & length
-                            & fromIntegral
+totalProposals :: Trace UBLOCK -> Double
+totalProposals sample = traceSignals OldestFirst sample
+                      & fmap optionalUpdateProposal
+                      & catMaybes
+                      & fmap Update._upId
+                      & length
+                      & fromIntegral
 
-      -- Count the number of votes for proposals that were included in the same
-      -- block as the votes.
-      numberOfVotesForBlockProposal :: Trace UBLOCK -> Int
-      numberOfVotesForBlockProposal sample
-        = traceSignals OldestFirst sample
-        & filter voteForBlockProposal
-        & length
-        where
-          voteForBlockProposal :: UBlock -> Bool
-          voteForBlockProposal UBlock {optionalUpdateProposal, votes} =
-            case optionalUpdateProposal of
-              Nothing ->
-                False
-              Just updateProposal ->
-                Update._upId updateProposal `elem` (Update._vPropId <$> votes)
+-- Count the number of votes for proposals that were included in the same
+-- block as the votes.
+numberOfVotesForBlockProposal :: Trace UBLOCK -> Int
+numberOfVotesForBlockProposal sample
+  = traceSignals OldestFirst sample
+  & filter voteForBlockProposal
+  & length
+  where
+    voteForBlockProposal :: UBlock -> Bool
+    voteForBlockProposal UBlock {optionalUpdateProposal, votes} =
+      case optionalUpdateProposal of
+        Nothing ->
+          False
+        Just updateProposal ->
+          Update._upId updateProposal `elem` (Update._vPropId <$> votes)
 
-      numberOfBlocksWithoutVotes :: Trace UBLOCK -> Int
-      numberOfBlocksWithoutVotes sample
-        = traceSignals OldestFirst sample
-        & filter (null . votes)
-        & length
+numberOfBlocksWithoutVotes :: Trace UBLOCK -> Int
+numberOfBlocksWithoutVotes sample
+  = traceSignals OldestFirst sample
+  & filter (null . votes)
+  & length
 
-      numberOfBlocksWithoutUpdateProposals :: Trace UBLOCK -> Int
-      numberOfBlocksWithoutUpdateProposals sample
-        = traceSignals OldestFirst sample
-        & filter (isNothing . optionalUpdateProposal)
-        & length
+numberOfBlocksWithoutUpdateProposals :: Trace UBLOCK -> Int
+numberOfBlocksWithoutUpdateProposals sample
+  = traceSignals OldestFirst sample
+  & filter (isNothing . optionalUpdateProposal)
+  & length
 
-      proposalsScheduledForAdoption :: Trace UBLOCK -> Double
-      proposalsScheduledForAdoption sample = traceStates OldestFirst sample
-                                           & fmap upistate
-                                           -- We concat all the future adoptions together
-                                           & concatMap Update.futureAdoptions
-                                           -- Get the protocol versions of the future adoptions
-                                           & fmap (fst . snd)
-                                           -- Turn the list of versions into a list, since we're
-                                           -- interested in the number of unique protocol-versions
-                                           -- that are scheduled for adoption through the trace
-                                           -- states.
-                                           & Set.fromList
-                                           & Set.size
-                                           & fromIntegral
+proposalsScheduledForAdoption :: Trace UBLOCK -> Double
+proposalsScheduledForAdoption sample = traceStates OldestFirst sample
+                                     & fmap upistate
+                                     -- We concat all the future adoptions together
+                                     & concatMap Update.futureAdoptions
+                                     -- Get the protocol versions of the future adoptions
+                                     & fmap (fst . snd)
+                                     -- Turn the list of versions into a list, since we're
+                                     -- interested in the number of unique protocol-versions
+                                     -- that are scheduled for adoption through the trace
+                                     -- states.
+                                     & Set.fromList
+                                     & Set.size
+                                     & fromIntegral
+
+-- | Sample a 'UBLOCK' trace, and print different metrics. This can be used in the REPL, and it is
+-- useful to understand the traces produced by the 'UBLOCK' transition system.
+ublockSampleTraceMetrics :: Int -> IO ()
+ublockSampleTraceMetrics maxTraceSize = do
+  sample <- randomTrace @UBLOCK maxTraceSize
+  let
+    (_slot, _dms, k, numberOfGenesisKeys) = _traceEnv sample
+  traverse_ print [ "k = "
+                    ++ show k
+                  , "genesis keys = "
+                    ++ show numberOfGenesisKeys
+                  , "trace length = "
+                    ++ show (traceLength sample)
+                  , "proposals = "
+                    ++ show (totalProposals sample)
+                  , "confirmed proposals = "
+                    ++ show (confirmedProposals sample)
+                  , "total number of votes = "
+                    ++ show (numberOfVotes sample)
+                  , "blocks without votes = "
+                    ++ show (numberOfBlocksWithoutVotes sample)
+                  , "proposals scheduled for adoption = "
+                    ++ show (proposalsScheduledForAdoption sample)
+                  , "confirmed / total proposals = "
+                    ++ show (confirmedProposals sample / totalProposals sample)
+                  , "scheduled / confirmed proposals = "
+                    ++ show (proposalsScheduledForAdoption sample / confirmedProposals sample)
+                  ]
+
+numberOfVotes :: Trace UBLOCK -> Int
+numberOfVotes sample
+  = traceSignals OldestFirst sample
+  & concatMap votes
+  & length
