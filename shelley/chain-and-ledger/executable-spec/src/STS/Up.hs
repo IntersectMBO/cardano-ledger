@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
@@ -19,31 +20,41 @@ import           Control.State.Transition
 import           STS.Avup
 import           STS.Ppup
 
-data UP
+data UP dsignAlgo
 
-instance STS UP where
-  type State UP = (PPUpdate, AVUpdate, Map.Map Slot Applications, Applications)
-  type Signal UP = Update
-  type Environment UP = (Slot, Dms)
-  data PredicateFailure UP = NonGenesisUpdateUP
-                           | AvupFailure (PredicateFailure AVUP)
-                           | PpupFailure (PredicateFailure PPUP)
-                             deriving (Show, Eq)
+instance DSIGNAlgorithm dsignAlgo => STS (UP dsignAlgo) where
+  type State (UP dsignAlgo)
+    = ( PPUpdate dsignAlgo
+      , AVUpdate dsignAlgo
+      , Map.Map Slot Applications
+      , Applications
+      )
+  type Signal (UP dsignAlgo) = Update dsignAlgo
+  type Environment (UP dsignAlgo) = (Slot, Dms dsignAlgo)
+  data PredicateFailure (UP dsignAlgo)
+    = NonGenesisUpdateUP
+    | AvupFailure (PredicateFailure (AVUP dsignAlgo))
+    | PpupFailure (PredicateFailure (PPUP dsignAlgo))
+    deriving (Show, Eq)
+
   initialRules = []
-
   transitionRules = [upTransition]
 
-upTransition :: TransitionRule UP
+upTransition
+  :: forall dsignAlgo
+   . DSIGNAlgorithm dsignAlgo
+  => TransitionRule (UP dsignAlgo)
 upTransition = do
   TRC (env, (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
 
-  pup'                <- trans @PPUP $ TRC (env, pupS, pup)
-  (aup', favs', avs') <- trans @AVUP $ TRC (env, (aupS, favs, avs), _aup)
+  pup' <- trans @(PPUP dsignAlgo) $ TRC (env, pupS, pup)
+  (aup', favs', avs') <-
+    trans @(AVUP dsignAlgo) $ TRC (env, (aupS, favs, avs), _aup)
 
   pure (pup', aup', favs', avs')
 
-instance Embed AVUP UP where
+instance DSIGNAlgorithm dsignAlgo => Embed (AVUP dsignAlgo) (UP dsignAlgo) where
   wrapFailed = AvupFailure
 
-instance Embed PPUP UP where
+instance DSIGNAlgorithm dsignAlgo => Embed (PPUP dsignAlgo) (UP dsignAlgo) where
   wrapFailed = PpupFailure

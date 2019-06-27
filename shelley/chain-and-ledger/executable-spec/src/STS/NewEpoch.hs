@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
@@ -25,15 +26,16 @@ import           Delegation.Certificates
 
 import           Control.State.Transition
 
-data NEWEPOCH
+data NEWEPOCH hashAlgo dsignAlgo
 
-instance STS NEWEPOCH where
-  type State NEWEPOCH = NewEpochState
-  type Signal NEWEPOCH = Epoch
-  type Environment NEWEPOCH = NewEpochEnv
-  data PredicateFailure NEWEPOCH = EpochFailure (PredicateFailure
-                                                 EPOCH)
-                                   deriving (Show, Eq)
+instance STS (NEWEPOCH hashAlgo dsignAlgo) where
+  type State (NEWEPOCH hashAlgo dsignAlgo) = NewEpochState hashAlgo dsignAlgo
+  type Signal (NEWEPOCH hashAlgo dsignAlgo) = Epoch
+  type Environment (NEWEPOCH hashAlgo dsignAlgo) = NewEpochEnv dsignAlgo
+  data PredicateFailure (NEWEPOCH hashAlgo dsignAlgo)
+    = EpochFailure (PredicateFailure (EPOCH hashAlgo dsignAlgo))
+    deriving (Show, Eq)
+
   initialRules =
     [ pure $
       NewEpochState
@@ -47,7 +49,7 @@ instance STS NEWEPOCH where
         (Map.empty)]
   transitionRules = [ocertTransition]
 
-ocertTransition :: TransitionRule NEWEPOCH
+ocertTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
 ocertTransition = do
   TRC ( (NewEpochEnv eta1 _s gkeys)
       , src@(NewEpochState (Epoch eL') _ bprev bcur es ru _pd _osched)
@@ -58,7 +60,7 @@ ocertTransition = do
       let es_ = case ru of
             Nothing  -> es
             Just ru' -> applyRUpd ru' es
-      es' <- trans @EPOCH $ TRC (bprev, es_, e)
+      es' <- trans @(EPOCH hashAlgo dsignAlgo) $ TRC (bprev, es_, e)
       let EpochState acnt ss ls pp = es'
       let (Stake stake, delegs)    = _pstakeSet ss
       let Coin total               = Map.foldl (+) (Coin 0) stake
@@ -82,5 +84,5 @@ ocertTransition = do
                            (PoolDistr pd')
                            osched'
 
-instance Embed EPOCH NEWEPOCH where
+instance Embed (EPOCH hashAlgo dsignAlgo) (NEWEPOCH hashAlgo dsignAlgo) where
   wrapFailed = EpochFailure

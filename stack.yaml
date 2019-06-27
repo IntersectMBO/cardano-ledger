@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a21f83d9407b2955fbaea4ce8a79b262361112aa/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -12,6 +12,15 @@ extra-deps:
 - tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
 - Unique-0.4.7.6
 - bimap-0.4.0
+
+- git: https://github.com/input-output-hk/cardano-prelude
+  commit: a21f83d9407b2955fbaea4ce8a79b262361112aa
+
+- git: https://github.com/input-output-hk/cardano-base
+  commit: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+  subdirs:
+    - binary
+    - cardano-crypto-class
 
 nix:
   shell-file: nix/stack-shell.nix

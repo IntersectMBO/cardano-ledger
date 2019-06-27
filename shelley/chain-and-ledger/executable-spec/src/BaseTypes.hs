@@ -1,4 +1,6 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 
 module BaseTypes
   ( FixedPoint
@@ -17,6 +19,9 @@ module BaseTypes
 
 
 import qualified Data.Fixed as FP
+import           Data.Word (Word8)
+
+import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
 
 data E34
 
@@ -35,7 +40,7 @@ fpEpsilon = (10::FixedPoint)^(17::Integer)
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnitInterval Rational
-    deriving(Show, Ord, Eq)
+    deriving (Show, Ord, Eq, ToCBOR)
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Rational -> Maybe UnitInterval
@@ -61,6 +66,15 @@ data Seed
   | SeedOp Seed
            Seed
   deriving (Show, Eq, Ord)
+
+instance ToCBOR Seed where
+  toCBOR = \case
+    Nonce nonce -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR nonce
+    NeutralSeed -> encodeListLen 1 <> toCBOR (1 :: Word8)
+    SeedL -> encodeListLen 1 <> toCBOR (2 :: Word8)
+    SeedEta -> encodeListLen 1 <> toCBOR (3 :: Word8)
+    SeedOp s1 s2 ->
+      encodeListLen 3 <> toCBOR (4 :: Word8) <> toCBOR s1 <> toCBOR s2
 
 seedOp :: Seed -> Seed -> Seed
 seedOp NeutralSeed s = s

@@ -1,7 +1,9 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module STS.Utxow
   ( UTXOW
@@ -21,32 +23,65 @@ import           Control.State.Transition
 
 import           STS.Utxo
 
-data UTXOW
+data UTXOW hashAlgo dsignAlgo
 
-instance STS UTXOW where
-  type State UTXOW = UTxOState
-  type Signal UTXOW = Tx
-  type Environment UTXOW = (Slot, PParams, StakeKeys, StakePools, Dms)
-  data PredicateFailure UTXOW = InvalidWitnessesUTXOW
-                            | MissingWitnessesUTXOW
-                            | UtxoFailure (PredicateFailure UTXO)
-                                deriving (Eq, Show)
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => STS (UTXOW hashAlgo dsignAlgo)
+ where
+  type State (UTXOW hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
+  type Signal (UTXOW hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
+  type Environment (UTXOW hashAlgo dsignAlgo)
+    = ( Slot
+      , PParams
+      , StakeKeys hashAlgo dsignAlgo
+      , StakePools hashAlgo dsignAlgo
+      , Dms dsignAlgo
+      )
+  data PredicateFailure (UTXOW hashAlgo dsignAlgo)
+    = InvalidWitnessesUTXOW
+    | MissingWitnessesUTXOW
+    | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo))
+    deriving (Eq, Show)
+
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
-initialLedgerStateUTXOW :: InitialRule UTXOW
+initialLedgerStateUTXOW
+  :: forall hashAlgo dsignAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+   => InitialRule (UTXOW hashAlgo dsignAlgo)
 initialLedgerStateUTXOW = do
   IRC (slots, pp, stakeKeys, stakePools, dms) <- judgmentContext
-  trans @UTXO $ IRC (slots, pp, stakeKeys, stakePools, dms)
+  trans @(UTXO hashAlgo dsignAlgo) $ IRC (slots, pp, stakeKeys, stakePools, dms)
 
-utxoWitnessed :: TransitionRule UTXOW
+utxoWitnessed
+  :: forall hashAlgo dsignAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+   => TransitionRule (UTXOW hashAlgo dsignAlgo)
 utxoWitnessed = do
   TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map (\(Wit vk _) -> hashKey vk) wits
   witsNeeded (_utxo u) tx _dms == witnessKeys  ?! MissingWitnessesUTXOW
-  trans @UTXO $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)
+  trans @(UTXO hashAlgo dsignAlgo)
+    $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)
 
-instance Embed UTXO UTXOW where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  )
+  => Embed (UTXO hashAlgo dsignAlgo) (UTXOW hashAlgo dsignAlgo)
+ where
   wrapFailed = UtxoFailure

@@ -1,6 +1,5 @@
 {-# LANGUAGE EmptyDataDecls        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 module STS.Avup
@@ -18,20 +17,22 @@ import           Updates
 
 import           Control.State.Transition
 
-data AVUP
+data AVUP dsignAlgo
 
-instance STS AVUP where
-  type State AVUP = (AVUpdate, Map.Map Slot Applications, Applications)
-  type Signal AVUP = AVUpdate
-  type Environment AVUP = (Slot, Dms)
-  data PredicateFailure AVUP = NonGenesisUpdateAVUP
+instance DSIGNAlgorithm dsignAlgo => STS (AVUP dsignAlgo) where
+  type State (AVUP dsignAlgo)
+    = (AVUpdate dsignAlgo, Map.Map Slot Applications, Applications)
+  type Signal (AVUP dsignAlgo) = AVUpdate dsignAlgo
+  type Environment (AVUP dsignAlgo) = (Slot, Dms dsignAlgo)
+  data PredicateFailure (AVUP dsignAlgo)
+    = NonGenesisUpdateAVUP
+    deriving (Show, Eq)
 
-                             deriving (Show, Eq)
   initialRules = []
 
   transitionRules = [avupTransition]
 
-avupTransition :: TransitionRule AVUP
+avupTransition :: DSIGNAlgorithm dsignAlgo => TransitionRule (AVUP dsignAlgo)
 avupTransition = do
   TRC ((_slot, Dms _dms), src@(AVUpdate aupS, favs, avs), AVUpdate _aup) <-
     judgmentContext

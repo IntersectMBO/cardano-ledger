@@ -1,6 +1,6 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DoAndIfThenElse   #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE DoAndIfThenElse #-}
 
 module PropertyTests (propertyTests) where
 
@@ -17,13 +17,16 @@ import           Hedgehog.Internal.Property (LabelName(..))
 import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 
-import           Generator
-
 import           Coin
 import           LedgerState hiding (dms)
 import           Slot
 import           PParams
-import           UTxO
+import           UTxO (pattern TxIn, pattern TxOut, (<|), _body, _witnessSet,
+                     balance, body, certs, deposits, inputs, makeWitness,
+                     outputs, txid, txins, txouts, verifyWit, witnessSet)
+
+import           Generator
+import           MockTypes
 
 
 -- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value

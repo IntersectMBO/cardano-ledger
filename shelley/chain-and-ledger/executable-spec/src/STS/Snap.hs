@@ -24,19 +24,27 @@ import           UTxO
 
 import           Control.State.Transition
 
-data SNAP
+data SNAP hashAlgo dsignAlgo
 
-instance STS SNAP where
-  type State SNAP = (SnapShots, UTxOState)
-  type Signal SNAP = Epoch
-  type Environment SNAP = (PParams, DState, PState, BlocksMade)
-  data PredicateFailure SNAP = FailureSNAP
-                               deriving (Show, Eq)
+instance STS (SNAP hashAlgo dsignAlgo) where
+  type State (SNAP hashAlgo dsignAlgo)
+    = (SnapShots hashAlgo dsignAlgo, UTxOState hashAlgo dsignAlgo)
+  type Signal (SNAP hashAlgo dsignAlgo) = Epoch
+  type Environment (SNAP hashAlgo dsignAlgo)
+    = ( PParams
+      , DState hashAlgo dsignAlgo
+      , PState hashAlgo dsignAlgo
+      , BlocksMade hashAlgo dsignAlgo
+      )
+  data PredicateFailure (SNAP hashAlgo dsignAlgo)
+    = FailureSNAP
+    deriving (Show, Eq)
+
   initialRules =
     [pure (emptySnapShots, UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
   transitionRules = [snapTransition]
 
-snapTransition :: TransitionRule SNAP
+snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo)
 snapTransition = do
   TRC ((pparams, d, p, blocks), (s, u), eNew) <- judgmentContext
   let pooledStake = poolDistr (u ^. utxo) d p

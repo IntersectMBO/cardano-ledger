@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -22,21 +23,29 @@ import           Control.State.Transition
 
 import           STS.Delpl
 
-data DELEGS
+data DELEGS hashAlgo dsignAlgo
 
-instance STS DELEGS where
-    type State DELEGS       = DPState
-    type Signal DELEGS      = [DCert]
-    type Environment DELEGS = (Slot, Ix, PParams, Tx)
-    data PredicateFailure DELEGS = DelegateeNotRegisteredDELEG
-                                 | WithrawalsNotInRewardsDELEGS
-                                 | DelplFailure (PredicateFailure DELPL)
-                    deriving (Show, Eq)
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => STS (DELEGS hashAlgo dsignAlgo)
+ where
+  type State (DELEGS hashAlgo dsignAlgo) = DPState hashAlgo dsignAlgo
+  type Signal (DELEGS hashAlgo dsignAlgo) = [DCert hashAlgo dsignAlgo]
+  type Environment (DELEGS hashAlgo dsignAlgo)
+    = (Slot, Ix, PParams, Tx hashAlgo dsignAlgo)
+  data PredicateFailure (DELEGS hashAlgo dsignAlgo)
+    = DelegateeNotRegisteredDELEG
+    | WithrawalsNotInRewardsDELEGS
+    | DelplFailure (PredicateFailure (DELPL hashAlgo dsignAlgo))
+    deriving (Show, Eq)
 
-    initialRules    = [ pure emptyDelegation ]
-    transitionRules = [ delegsTransition     ]
+  initialRules    = [ pure emptyDelegation ]
+  transitionRules = [ delegsTransition     ]
 
-delegsTransition :: TransitionRule DELEGS
+delegsTransition
+  :: forall hashAlgo dsignAlgo
+   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => TransitionRule (DELEGS hashAlgo dsignAlgo)
 delegsTransition = do
   TRC (env@(_slot, txIx, pp, Tx txbody _), dpstate, certificates) <- judgmentContext
   case certificates of
@@ -67,10 +76,15 @@ delegsTransition = do
               Map.member (hashKey $ _delegatee deleg) sp
             _ -> True
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
-      dpstate' <- trans @DELEGS $ TRC (env, dpstate, _certs)
-      dpstate'' <- trans @DELPL $ TRC ((_slot, ptr, pp), dpstate', cert)
+      dpstate' <-
+        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
+      dpstate'' <-
+        trans @(DELPL hashAlgo dsignAlgo)
+          $ TRC ((_slot, ptr, pp), dpstate', cert)
       pure dpstate''
 
-
-instance Embed DELPL DELEGS where
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => Embed (DELPL hashAlgo dsignAlgo) (DELEGS hashAlgo dsignAlgo)
+ where
   wrapFailed = DelplFailure

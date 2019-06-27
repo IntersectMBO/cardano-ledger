@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Generator
     (
@@ -34,22 +35,23 @@ import qualified Hedgehog.Range  as Range
 
 import           BaseTypes
 import           Coin
-import           Keys
-import           LedgerState     (LedgerState (..),
-                                  LedgerValidation(..),
-                                  ValidationError (..), asStateTransition,
-                                  asStateTransition',
-                                  genesisState, DPState(..), DState(..),
-                                  KeyPairs, utxoState, utxo, dstate,
-                                  stKeys
-                                 )
+import           Keys (pattern KeyPair, hashKey, vKey)
+import           LedgerState (pattern LedgerValidation, ValidationError (..),
+                     _delegationState, _dstate, asStateTransition,
+                     asStateTransition', genesisState, DState(..), utxoState,
+                     utxo, dstate, stKeys)
 import           Slot
 import           Updates
-import           UTxO
-import           PParams              (PParams(..), emptyPParams)
-import           Delegation.Certificates  (DCert(..), StakeKeys(..))
-import           Delegation.PoolParams (PoolParams(..), Delegation(..), RewardAcnt(..))
+import           UTxO (pattern AddrTxin, pattern Tx, pattern TxBody,
+                     pattern TxOut, pattern UTxO, balance, makeWitness)
+import           PParams (PParams(..), emptyPParams)
+import           Delegation.Certificates (pattern Delegate, pattern DeRegKey,
+                     pattern RegKey, pattern RegPool, pattern RetirePool,
+                     StakeKeys(..))
+import           Delegation.PoolParams (pattern Delegation, pattern PoolParams,
+                     RewardAcnt(..))
 
+import           MockTypes
 import           Mutator
 
 -- | Returns the number of entries of the UTxO set.
@@ -60,18 +62,19 @@ utxoSize (UTxO m) = Map.size m
 utxoMap :: UTxO -> Map.Map TxIn TxOut
 utxoMap (UTxO m) = m
 
--- | Generator for '(Owner, Owner)' pairs, 'fst even', 'snd' is 'fst + 1'
-genOwnerList :: Int -> Int -> Gen [(Owner, Owner)]
-genOwnerList lower upper = do
-  xs <- Gen.list (Range.linear lower upper)
-        $ Gen.integral (Range.linear (1 :: Natural) 1000)
-  return $ fmap (\n -> (Owner $ 2*n, Owner $2*n+1)) xs
-
 -- | Generates a list of '(pay, stake)' key pairs.
 genKeyPairs :: Int -> Int -> Gen KeyPairs
-genKeyPairs lower upper =
-    fmap (\(a, b) -> (keyPair a, keyPair b))
-             <$> genOwnerList lower upper
+genKeyPairs lower upper = do
+  xs <- Gen.list (Range.linear lower upper)
+        $ Gen.integral (Range.linear (1 :: Natural) 1000)
+  return
+    $ fmap
+      (\n ->
+         ( KeyPair (fromIntegral $ 2*n) (fromIntegral $ 2*n)
+         , KeyPair (fromIntegral $ 2*n+1) (fromIntegral $ 2*n+1)
+         )
+      )
+      xs
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
