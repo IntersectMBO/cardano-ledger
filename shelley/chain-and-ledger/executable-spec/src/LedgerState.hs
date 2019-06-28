@@ -136,6 +136,8 @@ import           Delegation.PoolParams (Delegation (..), PoolParams (..), Reward
 
 import           BaseTypes
 
+import           Ledger.Core ((◁), (▷), (∪+))
+
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs dsignAlgo = [(KeyPair dsignAlgo, KeyPair dsignAlgo)]
 
@@ -642,8 +644,7 @@ propWits
   -> Set.Set (HashKey hashAlgo dsignAlgo)
 propWits (Updates.Update (Updates.PPUpdate pup) (Updates.AVUpdate aup)) (Dms _dms) =
   Set.fromList $ Map.elems $ Map.map hashKey updateKeys
-  where updateKeys =
-          Map.restrictKeys _dms (Map.keysSet pup `Set.union` Map.keysSet aup)
+  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup) ◁ _dms
 
 validTx
   :: ( HashAlgorithm hashAlgo
@@ -1033,7 +1034,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
     Coin hkStake = stake Map.! poolHK
     iReward  = leaderRew poolR pool (StakeShare $ fromIntegral hkStake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
-    rewards' = Map.restrictKeys potentialRewards addrsRew
+    rewards' = addrsRew ◁ potentialRewards
 
 reward
   :: PParams
@@ -1070,7 +1071,7 @@ stakeDistr
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
-stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
+stakeDistr u ds ps = Stake $ (Map.keysSet activeDelegs) ◁ stake
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _               = ps
@@ -1079,9 +1080,7 @@ stakeDistr u ds ps = Stake $ Map.restrictKeys stake (Map.keysSet activeDelegs)
       Stake baseStake'   = baseStake outs
       Stake pointerStake = ptrStake outs ptrs'
       Stake rewardStake' = rewardStake rewards'
-      activeDelegs       = Map.filter
-                 (`Set.member` Map.keysSet stpools)
-                 (Map.restrictKeys delegs (Map.keysSet stkeys))
+      activeDelegs       = (Map.keysSet stpools) ◁ delegs ▷ (Map.keysSet stkeys)
 
 -- | Pool distribution
 poolDistr
@@ -1105,7 +1104,7 @@ applyRUpd ru (EpochState as ss ls pp) = es'
   where treasury' = _treasury as + deltaT ru
         reserves' = _reserves as + deltaR ru
         rew       = _rewards $ _dstate $ _delegationState ls
-        rewards'  = Map.union (rs ru) rew  -- prefer rs
+        rewards'  = rew ∪+ (rs ru)
         fees'     = (_fees $ _utxoState ls) + deltaF ru
         dstate'   = _dstate $ _delegationState ls
         utxo'     = _utxoState ls

@@ -33,6 +33,8 @@ import           Slot
 
 import           Numeric.Natural
 
+import           Ledger.Core ((∪))
+
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, ToCBOR)
 
@@ -151,7 +153,7 @@ updatePPup
   => PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
-updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ Map.union pup1' pup0'
+updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ (pup1' ∪ pup0')
 
 newAVs :: Applications -> Map.Map Slot Applications -> Applications
 newAVs avs favs = if not $ Map.null favs
