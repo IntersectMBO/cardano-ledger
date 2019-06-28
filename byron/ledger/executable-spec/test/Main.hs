@@ -45,7 +45,7 @@ main = defaultMain tests
     , testGroup
       "UTxO properties"
       [ testProperty "Money is constant" moneyIsConstant
-      , testProperty "relevant UTxO traces are generated" UTxO.relevantCasesAreCovered
+      , testProperty "Relevant UTxO traces are generated" UTxO.relevantCasesAreCovered
       ]
     , testTxHasTypeReps
     , testGroup
