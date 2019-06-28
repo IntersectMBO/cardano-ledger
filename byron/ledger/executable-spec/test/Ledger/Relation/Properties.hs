@@ -10,7 +10,7 @@ module Ledger.Relation.Properties
 import           Data.Bimap          (Bimap)
 import qualified Data.Bimap          as Bimap
 import           Data.Map.Strict     (Map)
-import           Data.Set            (Set, intersection, union, (\\))
+import           Data.Set            (Set, union, (\\))
 
 import           Hedgehog            (Gen, MonadTest, Property, PropertyT,
                                       forAll, property, withTests, (===))
@@ -27,9 +27,6 @@ import           Test.Tasty          (TestTree, testGroup)
 --------------------------------------------------------------------------------
 -- Properties on Relations
 --------------------------------------------------------------------------------
-
-(∩) :: Ord a => Set a -> Set a -> Set a
-(∩) = intersection
 
 -- | (dom r) ∩ s == dom (s ◁ r)
 --

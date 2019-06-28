@@ -1,27 +1,33 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Ledger.UTxO.Properties where
 
-import           Control.Lens                       ((^.))
+import           Control.Lens                       (view, (&), (^.), _2)
 import           Control.Monad                      (when)
-import           Hedgehog                           (Property, classify, forAll,
-                                                     property, success,
+import           Hedgehog                           (Property, classify, cover,
+                                                     forAll, property, success,
                                                      withTests, (===))
 
 import           Control.State.Transition.Generator (classifyTraceLength, trace)
-import           Control.State.Transition.Trace     (TraceOrder (OldestFirst),
+import           Control.State.Transition.Trace     (Trace,
+                                                     TraceOrder (OldestFirst),
                                                      firstAndLastState,
+                                                     preStatesAndSignals,
                                                      traceEnv, traceLength,
                                                      traceSignals)
 
-import           Cardano.Ledger.Spec.STS.UTXO       (pps, reserves, utxo)
+import           Cardano.Ledger.Spec.STS.UTXO       (UTxOState, pps, reserves,
+                                                     utxo)
 import           Cardano.Ledger.Spec.STS.UTXOW      (UTXOW)
+import           Ledger.Core                        (Lovelace, unLovelace, (◁))
 import           Ledger.UTxO                        (Tx (Tx), TxIn (TxIn),
-                                                     TxOut (TxOut), balance,
-                                                     body, inputs, outputs,
-                                                     pcMinFee)
-
+                                                     TxOut (TxOut), TxWits,
+                                                     balance, body, inputs,
+                                                     outputs, pcMinFee, txins,
+                                                     txouts)
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
 moneyIsConstant = withTests 200 . property $ do
@@ -43,7 +49,6 @@ moneyIsConstant = withTests 200 . property $ do
 -- containing exactly 3 inputs, and only one output.
 
 tracesAreClassified :: Property
--- TODO: we might want to run this only while developing, and not on CI.
 tracesAreClassified = withTests 200 . property $ do
   let (tl, step) = (500, 50)
   tr <- forAll (trace @UTXOW tl)
@@ -90,3 +95,54 @@ tracesAreClassified = withTests 200 . property $ do
     classify "avg nr. outputs [25, 100)" $ 25 <= avgOutputs && avgOutputs < 100
     classify ">= 100"                    $ 100 <= avgOutputs
   success
+
+relevantCasesAreCovered :: Property
+relevantCasesAreCovered = withTests 400 $ property $ do
+  let tl = 100
+  tr <- forAll (trace @UTXOW tl)
+  let n :: Integer
+      n = fromIntegral $ traceLength tr
+
+  when (n > 0) $ do
+    let
+        ss = preStatesAndSignals OldestFirst tr
+        txs = (body . view _2) <$> ss
+
+        nrInputs, nrOutputs :: Double
+        nrInputs = fromIntegral $ sum (length . inputs <$> txs)
+        nrOutputs = fromIntegral $ sum (length . outputs <$> txs)
+        avgInputs = nrInputs / (fromIntegral n)
+        avgOutputs = nrOutputs / (fromIntegral n)
+
+    cover 20 "all txs have zero fee surplus" (avgFeeSurplus tr n == 0)
+    cover 20 "avg. tx fee surplus (0,10]" (0 < avgFeeSurplus tr n && avgFeeSurplus tr n <= 10)
+    cover 20 "avg. tx fee surplus (10,30]" (10 < avgFeeSurplus tr n && avgFeeSurplus tr n <= 30)
+    cover 1 "avg. tx fee surplus (30,...)" (30 < avgFeeSurplus tr n)
+
+    cover 20 "avg. nr. of tx inputs (1,5]" (1 <= avgInputs && avgInputs <= 5)
+    cover 20 "avg. nr. of tx inputs (5,10]" (5 < avgInputs && avgInputs <= 10)
+
+    cover 20 "avg. nr. of tx outputs (1,5]" (1 <= avgOutputs && avgOutputs <= 5)
+    cover 20 "avg. nr. of tx outputs (5,10]" (5 < avgOutputs && avgOutputs <= 10)
+  where
+    -- | The average "fee surplus" for transactions in the trace.
+    --   Could be zero if all the transactions had zero surplus fee.
+    avgFeeSurplus :: Trace UTXOW -> Integer -> Int
+    avgFeeSurplus tr_ n_
+      = preStatesAndSignals OldestFirst tr_
+      & map (txFeeSurplus (pcMinFee pps_))
+      & sum
+      & (`div` n_)
+      & fromIntegral
+      where
+        pps_ = pps (tr_ ^. traceEnv)
+
+    -- | The difference between the Tx Fee and the Min Fee
+    txFeeSurplus :: (Tx -> Lovelace) -> (UTxOState, TxWits) -> Integer
+    txFeeSurplus txMinFee (st, txw)
+      = fee - minFee
+      where
+          tx_ = body txw
+          utxo_ = utxo st
+          fee = unLovelace $ balance (txins tx_ ◁ utxo_) - balance (txouts tx_)
+          minFee = unLovelace $ txMinFee tx_
