@@ -1,32 +1,98 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ledger.UTxO.Properties where
 
-import           Control.Lens                       ((^.))
-import           Control.Monad                      (when)
-import           Hedgehog                           (Property, classify, forAll,
-                                                     property, success,
-                                                     withTests, (===))
+import           Control.Lens (view, (&), (^.), _2)
+import           Control.Monad (when)
+import           Hedgehog (Property, classify, cover, forAll, property, success, withTests, (===))
 
 import           Control.State.Transition.Generator (classifyTraceLength, trace)
-import           Control.State.Transition.Trace     (TraceOrder (OldestFirst),
-                                                     firstAndLastState,
-                                                     traceEnv, traceLength,
-                                                     traceSignals)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState,
+                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
 
-import           Cardano.Ledger.Spec.STS.UTXO       (pps, reserves, utxo)
-import           Cardano.Ledger.Spec.STS.UTXOW      (UTXOW)
-import           Ledger.UTxO                        (Tx (Tx), TxIn (TxIn),
-                                                     TxOut (TxOut), balance,
-                                                     body, inputs, outputs,
-                                                     pcMinFee)
+import           Cardano.Ledger.Spec.STS.UTXO (UTxOState, pps, reserves, utxo)
+import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
+import           Ledger.Core (Lovelace, unLovelace, (◁))
+import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, balance, body, inputs,
+                     outputs, pcMinFee, txins, txouts)
+
+--------------------------------------------------------------------------------
+-- UTxO Properties
+--------------------------------------------------------------------------------
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
 moneyIsConstant = withTests 200 . property $ do
   (st0, st) <- firstAndLastState <$> forAll (trace @UTXOW 500)
   reserves st0 + balance (utxo st0) === reserves st + balance (utxo st)
+
+--------------------------------------------------------------------------------
+-- Coverage guarantees for UTxO traces
+--------------------------------------------------------------------------------
+
+relevantCasesAreCovered :: Property
+relevantCasesAreCovered = withTests 400 $ property $ do
+  let tl = 100
+  tr <- forAll (trace @UTXOW tl)
+  let n :: Integer
+      n = fromIntegral $ traceLength tr
+
+  when (n > 0) $ do
+    let
+        ss = preStatesAndSignals OldestFirst tr
+        txs = (body . view _2) <$> ss
+        (avgInputs, avgOutputs) = avgInputsOutputs txs
+
+    cover 20 "all txs have zero fee surplus" (avgFeeSurplus tr n == 0)
+    cover 20 "avg. tx fee surplus (0,10]" (0 < avgFeeSurplus tr n && avgFeeSurplus tr n <= 10)
+    cover 20 "avg. tx fee surplus (10,30]" (10 < avgFeeSurplus tr n && avgFeeSurplus tr n <= 30)
+    cover 1 "avg. tx fee surplus (30,...)" (30 < avgFeeSurplus tr n)
+
+    cover 20 "avg. nr. of tx inputs (1,5]" (1 <= avgInputs && avgInputs <= 5)
+    cover 20 "avg. nr. of tx inputs (5,10]" (5 < avgInputs && avgInputs <= 10)
+
+    cover 20 "avg. nr. of tx outputs (1,5]" (1 <= avgOutputs && avgOutputs <= 5)
+    cover 20 "avg. nr. of tx outputs (5,10]" (5 < avgOutputs && avgOutputs <= 10)
+  where
+    -- | The average "fee surplus" for transactions in the trace.
+    --   Could be zero if all the transactions had zero surplus fee.
+    avgFeeSurplus :: Trace UTXOW -> Integer -> Int
+    avgFeeSurplus tr n
+      = preStatesAndSignals OldestFirst tr
+      & map (txFeeSurplus (pcMinFee pps_))
+      & sum
+      & (`div` n)
+      & fromIntegral
+      where
+        pps_ = pps (tr ^. traceEnv)
+
+    -- | The difference between the Tx Fee and the Min Fee
+    txFeeSurplus :: (Tx -> Lovelace) -> (UTxOState, TxWits) -> Integer
+    txFeeSurplus txMinFee (st, txw)
+      = fee - minFee
+      where
+          tx_ = body txw
+          utxo_ = utxo st
+          fee = unLovelace $ balance (txins tx_ ◁ utxo_) - balance (txouts tx_)
+          minFee = unLovelace $ txMinFee tx_
+
+-- | Returns the average number of inputs and outputs for a list of transactions.
+avgInputsOutputs :: [Tx] -> (Double, Double)
+avgInputsOutputs txs
+  = case length txs of
+      0 -> (0,0)
+      n -> ( nrInputs  / (fromIntegral n)
+           , nrOutputs / (fromIntegral n))
+  where
+    nrInputs = fromIntegral $ sum (length . inputs <$> txs)
+    nrOutputs = fromIntegral $ sum (length . outputs <$> txs)
+
+--------------------------------------------------------------------------------
+-- Classified Traces (not included in CI test runs, but useful for development)
+--------------------------------------------------------------------------------
 
 -- To test the performance of the integrated shrinker for UTxO traces one could
 -- replace the return statement of the 'UTXO' @transitionRule@ by:
@@ -41,9 +107,7 @@ moneyIsConstant = withTests 200 . property $ do
 --
 -- This should give a minimal counterexample of a trace with a signal
 -- containing exactly 3 inputs, and only one output.
-
 tracesAreClassified :: Property
--- TODO: we might want to run this only while developing, and not on CI.
 tracesAreClassified = withTests 200 . property $ do
   let (tl, step) = (500, 50)
   tr <- forAll (trace @UTXOW tl)
@@ -69,10 +133,8 @@ tracesAreClassified = withTests 200 . property $ do
   let actualTl = traceLength tr
   when (0 < actualTl) $ do
     let txs = body <$> traceSignals OldestFirst tr
-        nrInputs = fromIntegral $ sum (length . inputs <$> txs)
-        nrOutputs = fromIntegral $ sum (length . outputs <$> txs)
-        avgInputs = nrInputs / fromIntegral actualTl
-        avgOutputs = nrOutputs / fromIntegral actualTl
+        (avgInputs, avgOutputs) = avgInputsOutputs txs
+
     -- Classify the average number of inputs
     classify "avg nr. inputs == 0"      $ (0 :: Double) == avgInputs
     classify "avg nr. inputs == 1"      $ 1 == avgInputs

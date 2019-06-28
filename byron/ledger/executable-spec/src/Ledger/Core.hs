@@ -20,7 +20,7 @@ import qualified Data.Sequence as Seq
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
-import Data.Set (Set, isSubsetOf)
+import Data.Set (Set, isSubsetOf, intersection)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Data.Foldable (toList, elem)
@@ -380,3 +380,6 @@ x ⊆ y = toSet x `isSubsetOf` toSet y
 
 toSet :: (Foldable f, Ord a) => f a -> Set a
 toSet = Set.fromList . toList
+
+(∩) :: Ord a => Set a -> Set a -> Set a
+(∩) = intersection
