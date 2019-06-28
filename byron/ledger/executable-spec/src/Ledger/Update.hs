@@ -34,6 +34,7 @@ import           Data.List (notElem, sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Ord (Down (Down))
 import           Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
 import           Data.Tuple (swap)
@@ -1364,8 +1365,7 @@ protocolVersionEndorsementGen endorsementsList =
   -- here.
   where
     mostEndorsedProposals :: [ProtVer]
-    mostEndorsedProposals = sortOn (second length) endorsementsList
-                          & reverse
+    mostEndorsedProposals = sortOn (Down . second length) endorsementsList
                           & take 5
                           & fmap fst
 
