@@ -37,7 +37,8 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, classifySize, initEnvGen,
-                     randomTrace, ratio, sigGen, trace, traceLengthsAreClassified)
+                     randomTraceOfSize, ratio, sigGen, trace, traceLengthsAreClassified,
+                     traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
                      traceSignals, traceStates, _traceEnv, _traceInitState)
@@ -363,12 +364,10 @@ instance HasTrace UBLOCK where
     do
       let numberOfGenesisKeys = 7
       dms <- Update.dmapGen numberOfGenesisKeys
-      pure ( Slot 0
-           , dms
-           , BlockCount 50 -- TODO: We don't want a large value of K, otherwise we won't see many
-                           -- confirmed proposals.
-           , numberOfGenesisKeys
-           )
+      -- We don't want a large value of @k@, otherwise we won't see many confirmed proposals. The
+      -- problem here is that the initial environment does not know anything about the trace size,
+      -- and the maximum trace size should be a function of it.
+      pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
   sigGen _env UBlockState {upienv, upistate} = do
     let rpus = Update.registeredProtocolUpdateProposals upistate
@@ -379,7 +378,7 @@ instance HasTrace UBLOCK where
       then generateUpdateProposalAndVotes
       else Gen.frequency [ (5, generateOnlyVotes)
                          , (1, generateUpdateProposalAndVotes)
-                                                              ]
+                         ]
     -- Don't shrink the issuer as this won't give us additional insight on a test failure.
     aBlockIssuer <- Gen.prune $
       -- Pick a delegate from the delegation map
@@ -459,45 +458,54 @@ ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 200 $ property $ do
-  sample <- forAll (trace @UBLOCK 500)
+ublockRelevantTracesAreCovered = withTests 150 $ property $ do
+  sample <- forAll (traceOfLength @UBLOCK 500)
 
-  cover 80
-    "at least 30% of the proposals get confirmed"
-    (0.3 <= confirmedProposals sample / totalProposals sample)
+  -- Since we generate votes on the most voted proposals, we do not expect a very large percentage
+  -- of confirmed proposals. As a reference, in the runs that were performed manually, for a trace
+  -- of 500 blocks, 80-90 update proposals and 20-30 confirmed proposals were observed.
+  cover 75
+    "at least 20% of the proposals get confirmed"
+    (0.2 <= confirmedProposals sample / totalProposals sample)
 
-  cover 80
-    "at least 20% of the proposals get unconfirmed"
-    (0.2 <= 1 - (confirmedProposals sample / totalProposals sample))
+  cover 75
+    "at least 30% of the proposals get unconfirmed"
+    (0.3 <= 1 - (confirmedProposals sample / totalProposals sample))
 
   cover 75
     "at least 2% of the proposals get voted in the same block "
     (0.02 <= fromIntegral (numberOfVotesForBlockProposal sample) / totalProposals sample)
 
-  cover 80
+  cover 75
     "at least 30% of blocks contain no votes"
     (0.3 <= ratio numberOfBlocksWithoutVotes sample)
 
   -- Once the most voted update proposals get votes from all the genesis keys there is no
   -- possibility of generating any more votes. So we do not expect a large percentage of blocks with
   -- votes.
-  cover 80
+  cover 70
     "at least 10% of blocks contain votes"
     (0.1 <= 1 - ratio numberOfBlocksWithoutVotes sample)
 
   -- We generate an update proposal with a probability 1/4, but we're conservative about the
   -- coverage requirements, since we have variable trace lengths.
-  cover 80
+  cover 75
     "at least 70% of the blocks contain no update proposals"
     (0.7 <= ratio numberOfBlocksWithoutUpdateProposals sample)
 
-  cover 80
+  cover 75
     "at least 10% of the blocks contain an update proposals"
     (0.1 <= 1 - ratio numberOfBlocksWithoutUpdateProposals sample)
 
-  cover 80
+  -- With traces of length 500, we expect to see about 80-90 proposals, which means that we will
+  -- have about 8 to 9 proposals scheduled for adoption.
+  cover 70
     "at least 10% of the proposals get enough endorsements"
     (0.1 <= proposalsScheduledForAdoption sample / totalProposals sample)
+
+  cover 80
+    "at least 5% of the proposals get enough endorsements"
+    (0.05 <= proposalsScheduledForAdoption sample / totalProposals sample)
 
 confirmedProposals :: Trace UBLOCK -> Double
 confirmedProposals sample = traceStates OldestFirst sample
@@ -563,7 +571,7 @@ proposalsScheduledForAdoption sample = traceStates OldestFirst sample
 -- useful to understand the traces produced by the 'UBLOCK' transition system.
 ublockSampleTraceMetrics :: Int -> IO ()
 ublockSampleTraceMetrics maxTraceSize = do
-  sample <- randomTrace @UBLOCK maxTraceSize
+  sample <- randomTraceOfSize @UBLOCK maxTraceSize
   let
     (_slot, _dms, k, numberOfGenesisKeys) = _traceEnv sample
   traverse_ print [ "k = "
