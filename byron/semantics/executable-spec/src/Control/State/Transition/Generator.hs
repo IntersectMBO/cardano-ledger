@@ -35,6 +35,7 @@ module Control.State.Transition.Generator
   , sampleMaxTraceSize
   , randomTrace
   , randomTraceOfSize
+  , TraceLength (Maximum, Desired)
   -- * Trace classification
   , classifyTraceLength
   , classifySize

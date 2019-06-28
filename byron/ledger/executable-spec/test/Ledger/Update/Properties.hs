@@ -314,7 +314,7 @@ instance STS UBLOCK where
           -- We overwrite 'upTtl' in the UBLOCK initial rule, so that we have a system where update
           -- proposals can live long enough to allow for confirmation and consideration for
           -- adoption. We set the time to live of a proposal to half the number of slots in an
-          -- epoch, which about the value we use in production.
+          -- epoch, which is about the same value we use in production.
           pure UBlockState { upienv = env
                            , upistate = ( (pv, pps { Update._upTtl = SlotCount $ slotsPerEpoch k `div` 2 })
                                         , fads

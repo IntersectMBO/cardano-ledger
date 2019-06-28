@@ -1,44 +1,44 @@
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedLists       #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens (Lens', (&), (.~), (^.), _1, _5, to)
+import           Control.Lens (Lens', to, (&), (.~), (^.), _1, _5)
+import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Bimap (Bimap)
-import Data.Bits (shift)
-import Data.ByteString (ByteString)
+import           Data.Bits (shift)
+import           Data.ByteString (ByteString)
 import qualified Data.Hashable as H
 import qualified Data.Map as Map
-import Data.Sequence (Seq, fromList)
+import           Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
-import Data.Word (Word8)
-import Hedgehog (Gen)
+import           Data.Word (Word8)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Numeric.Natural (Natural)
+import           Numeric.Natural (Natural)
 
-import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
-import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
-import Control.State.Transition
-import Control.State.Transition.Generator
-import Ledger.Core
-import Ledger.Delegation
-import Ledger.Update
+import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
+import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
+import           Control.State.Transition
+import           Control.State.Transition.Generator
+import           Ledger.Core
+import           Ledger.Delegation
+import           Ledger.Update hiding (delegationMap)
 import qualified Ledger.Update.Generators as UpdateGen
-import Ledger.UTxO (UTxO)
+import           Ledger.UTxO (UTxO)
 
-import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.Rule.BHead
-import Cardano.Spec.Chain.STS.Rule.BBody
-import Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
-import Cardano.Spec.Chain.STS.Rule.Pbft
+import           Cardano.Spec.Chain.STS.Block
+import           Cardano.Spec.Chain.STS.Rule.BBody
+import           Cardano.Spec.Chain.STS.Rule.BHead
+import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Cardano.Spec.Chain.STS.Rule.Pbft
 
 
 data CHAIN
