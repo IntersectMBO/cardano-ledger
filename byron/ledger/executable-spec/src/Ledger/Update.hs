@@ -713,7 +713,8 @@ emptyUPIState =
      , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
                              -- be a constant. Also the name slots-per-epoch is
                              -- wrong.
-     , _upTtl = 500        -- TODO: find out why we don't get enough coverage if we set this to 1000 (or even a shorter value). It seems the proposals get expired too soon.
+     , _upTtl = 10           -- The proposal time to live needs to be related to @k@ (or the number
+                             -- of slots in an epoch). We pick an arbitrary value here.
      , _scriptVersion = 0
      , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
@@ -1359,8 +1360,8 @@ protocolVersionEndorsementGen endorsementsList =
   if null mostEndorsedProposals
   then pure Nothing
   else Just <$> Gen.element mostEndorsedProposals
-  -- Take the top 5 most voted proposals, and endorse them. The constant 10 is determined
-  -- arbitrarily here.
+  -- Take the top 5 most voted proposals, and endorse them. The constant 5 is determined arbitrarily
+  -- here.
   where
     mostEndorsedProposals :: [ProtVer]
     mostEndorsedProposals = sortOn (second length) endorsementsList

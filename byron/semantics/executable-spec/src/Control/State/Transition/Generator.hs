@@ -150,39 +150,6 @@ genTrace ub env st0 aSigGen = do
                      ]
   genTraceOfLength n env st0 aSigGen
 
-  -- mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
-  -- where
-  --   loop
-  --     :: Int
-  --     -> State s
-  --     -> [(State s, TreeT (MaybeT Identity) (Signal s))]
-  --     -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
-  --   loop 0 _ acc = pure acc
-  --   loop d sti acc = do
-  --     sigTree :: TreeT (MaybeT Identity) (Signal s)
-  --       <- toTreeMaybeT $ aSigGen env sti
-  --     let
-  --       --  Take the root of the next-state signal tree.
-  --       mSig = treeValue $ runDiscardEffectT sigTree
-  --     case mSig of
-  --       Nothing ->
-  --         loop (d - 1) sti acc
-  --       Just sig ->
-  --         case applySTS @s (TRC(env, sti, sig)) of
-  --           Left _err  -> loop (d - 1) sti acc
-  --           Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
-
-  --   interleaveSigs
-  --     :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
-  --     -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
-  --   interleaveSigs mst = do
-  --     nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
-  --     let (rootStates, trees) = unzip (nodeValue nodeT)
-  --     NodeT rootSignals children <- interleaveTreeT trees
-  --     pure $! NodeT
-  --       (mkTrace env st0 (zip rootStates rootSignals))
-  --       (fmap (fmap (closure @s env st0)) children)
-
 -- | Return a (valid) trace generator that generates traces of the given size. If the signal
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
 --

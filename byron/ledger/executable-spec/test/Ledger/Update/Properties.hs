@@ -28,7 +28,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, isNothing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Hedgehog (Property, collect, cover, forAll, property, withTests)
+import           Hedgehog (Property, cover, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
@@ -36,15 +36,14 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, classifySize, initEnvGen,
-                     randomTraceOfSize, ratio, sigGen, trace, traceLengthsAreClassified,
-                     traceOfLength)
+import           Control.State.Transition.Generator (HasTrace, initEnvGen, randomTraceOfSize, ratio,
+                     sigGen, trace, traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
-                     range, unBlockCount, (*.), (-.), (▷<=), (◁))
+                     unBlockCount, (*.), (-.), (▷<=), (◁))
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
@@ -310,7 +309,7 @@ instance STS UBLOCK where
     = [ do
           IRC env <- judgmentContext
           let (_, _, k, _) = env
-              -- TODO: dnadales should have used records for the UPIState :/
+              -- TODO: I (dnadales) should have used records for the UPIState :/
               ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = emptyUPIState
           -- We overwrite 'upTtl' in the UBLOCK initial rule, so that we have a system where update
           -- proposals can live long enough to allow for confirmation and consideration for
@@ -360,13 +359,13 @@ instance Embed UPIEND UBLOCK where
   wrapFailed = UPIENDFailure
 
 instance HasTrace UBLOCK where
-  initEnvGen = -- Update.upiEnvGen
+  initEnvGen =
     do
       let numberOfGenesisKeys = 7
       dms <- Update.dmapGen numberOfGenesisKeys
-      -- We don't want a large value of @k@, otherwise we won't see many confirmed proposals. The
-      -- problem here is that the initial environment does not know anything about the trace size,
-      -- and the maximum trace size should be a function of it.
+      -- We don't want a large value of @k@, otherwise we won't see many confirmed proposals or
+      -- epoch changes. The problem here is that the initial environment does not know anything
+      -- about the trace size, and @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
   sigGen _env UBlockState {upienv, upistate} = do
@@ -435,11 +434,6 @@ instance HasTrace UBLOCK where
             Right upistateAfterRegistration ->
               (Just updateProposal, ) <$> sigGen @UPIVOTES upienv upistateAfterRegistration
         nextSlotGen =
-          -- NOTE: in the future, we might want to factor out duplication
-          -- w.r.t. @Ledger.Delegation.Properties@ if we find out that no
-          -- adaptations to 'nextSlotGen' are needed. For now we duplicate this
-          -- here to avoid an early coupling that might be unnecessary.
-          --
           incSlot <$> Gen.frequency
                       [ (5, Gen.integral (Range.constant 1 10))
                       , (1, Gen.integral (Range.linear 10 (unBlockCount k)))
@@ -568,7 +562,7 @@ proposalsScheduledForAdoption sample = traceStates OldestFirst sample
                                      & fromIntegral
 
 -- | Sample a 'UBLOCK' trace, and print different metrics. This can be used in the REPL, and it is
--- useful to understand the traces produced by the 'UBLOCK' transition system.
+-- useful for understanding the traces produced by the 'UBLOCK' transition system.
 ublockSampleTraceMetrics :: Int -> IO ()
 ublockSampleTraceMetrics maxTraceSize = do
   sample <- randomTraceOfSize @UBLOCK maxTraceSize
