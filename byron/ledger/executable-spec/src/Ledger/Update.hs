@@ -1,18 +1,18 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE EmptyDataDeriving          #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MonadComprehensions        #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE StrictData                 #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE MonadComprehensions #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- This is for the Hashable Set instance
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -21,60 +21,41 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
-import Control.Arrow ((&&&))
-import Control.Lens
-import Data.Bimap (Bimap, empty, lookupR)
+import           Control.Arrow (second, (&&&))
+import           Control.Lens
+import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
-import Data.Char (isAscii)
-import Data.Foldable (toList, foldl')
-import Data.Hashable (Hashable)
+import           Data.Char (isAscii)
+import           Data.Foldable (foldl', toList)
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
-import Data.Ix (inRange)
-import Data.List (notElem, sortOn)
-import Data.Map.Strict (Map)
+import           Data.Ix (inRange)
+import           Data.List (notElem, sortOn)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Set (Set, union, (\\))
+import           Data.Maybe (fromMaybe)
+import           Data.Ord (Down (Down))
+import           Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
-import Data.Tuple (swap)
-import Data.Word (Word8)
-import GHC.Generics (Generic)
-import Hedgehog (Gen)
+import           Data.Tuple (swap)
+import           Data.Word (Word8)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Numeric.Natural
+import           Numeric.Natural
 
-import Data.AbstractSize (HasTypeReps)
-import Control.State.Transition
-import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Data.AbstractSize (HasTypeReps)
 
-import Ledger.Core
-  ( BlockCount(..)
-  , HasHash
-  , Owner(Owner)
-  , Relation(..)
-  , SlotCount(..)
-  , VKey(VKey)
-  , VKeyGenesis(VKeyGenesis)
-  , (*.)
-  , (-.)
-  , (∈)
-  , (∉)
-  , (⋪)
-  , (▷)
-  , (▷<=)
-  , (▷>=)
-  , (◁)
-  , (⨃)
-  , dom
-  , hash
-  , minusSlotMaybe
-  , skey
-  )
+import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
+                     minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
-import Prelude hiding (min)
+import           Prelude hiding (min)
 
 
 -- | Protocol parameters.
@@ -629,7 +610,7 @@ instance STS UPEND where
             -- If we found the proposal id that corresponds to 'bv' then we
             -- have to check that it isn't confirmed for this rule to succeed.
             pid ∉ dom (cps ▷<= sn  -. 2 *. k) ?! TryNextRule
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Nothing ->
             -- If we didn't find the proposal id that corresponds to 'bv' then
             -- this rule succeeds.
@@ -639,7 +620,7 @@ instance STS UPEND where
             -- failure if the condition of the '!?' operator is not met. Since
             -- even on failure we _need_ to return a state, the case above also
             -- returns the state unchanged in this case.
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
 
     , do
         TRC ( (sn, t, dms, cps, rpus, k)
@@ -649,17 +630,17 @@ instance STS UPEND where
         case lookupR vk dms of
           Nothing  -> do
             False ?! TryNextRule
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
             size ([bv] ◁ bvs) < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
                 pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
-                return $! (fads, bvs')
+                pure $! (fads, bvs')
               Nothing -> do
-                True ?! TryNextRule
-                return $! (fads, bvs')
+                False ?! TryNextRule
+                pure $! (fads, bvs')
 
     , do
         TRC ( (sn, t, dms, cps, rpus, k)
@@ -669,7 +650,7 @@ instance STS UPEND where
         case lookupR vk dms of
           Nothing  -> do
             False ?! NotADelegate vk
-            return $! (fads, bvs)
+            pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
             t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
@@ -677,10 +658,10 @@ instance STS UPEND where
               Just (pid, (_, ppsc)) -> do
                 pid ∈ dom (cps  ▷<= sn -. 2 *. k) ?! UnconfirmedProposal pid
                 fads' <- trans @FADS $ TRC ((), fads, (sn, (bv, ppsc)))
-                return $! (fads', bvs')
+                pure $! (fads', bvs')
               Nothing -> do
-                True ?! ProtVerUnknown bv
-                return $! (fads, bvs')
+                False ?! ProtVerUnknown bv
+                pure $! (fads, bvs')
 
     ]
 
@@ -703,6 +684,9 @@ type UPIEnv =
            -- formal specification which is placed here so that we can test
            -- with different values.
   )
+
+delegationMap :: UPIEnv -> Bimap Core.VKeyGenesis Core.VKey
+delegationMap (_, dms, _, _) = dms
 
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
@@ -730,7 +714,8 @@ emptyUPIState =
      , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
                              -- be a constant. Also the name slots-per-epoch is
                              -- wrong.
-     , _upTtl = 10
+     , _upTtl = 10           -- The proposal time to live needs to be related to @k@ (or the number
+                             -- of slots in an epoch). We pick an arbitrary value here.
      , _scriptVersion = 0
      , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
@@ -798,6 +783,15 @@ applicationVersions ((_, _), _, avs, _, _, _, _, _, _) = avs
 
 confirmedProposals :: UPIState -> Map UpId Core.Slot
 confirmedProposals ((_, _), _, _, _, _, cps, _, _, _) = cps
+
+futureAdoptions :: UPIState -> [(Core.Slot, (ProtVer, PParams))]
+futureAdoptions ((_, _), fads, _, _, _, _, _, _, _) = fads
+
+endorsements :: UPIState -> Set (ProtVer, Core.VKeyGenesis)
+endorsements ((_, _), _, _, _, _, _, _, bvs, _) = bvs
+
+registeredProtocolUpdateProposals :: UPIState -> Map UpId (ProtVer, PParams)
+registeredProtocolUpdateProposals ((_, _), _, _, rpus, _, _, _, _, _) = rpus
 
 
 data UPIREG
@@ -997,20 +991,20 @@ upiEnvGen = do
       <*> dmapGen ngk  -- Delegation map
       <*> (BlockCount <$> Gen.word64 (Range.constant 0 100)) -- Chain stability parameter (k)
       <*> pure ngk
-    where
-      -- Generate an initial delegation map, using a constant number of genesis
-      -- keys, which is determined in this generator.
-      dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
-      dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
-        where
-          vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
-          vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
-            where
-              vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
-              -- As delegation targets we choose twice the number of genesis keys.
-              -- Note that the genesis keys can delegate to themselves in the
-              -- generated delegation map.
-              vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
+
+-- Generate an initial delegation map, using a constant number of genesis
+-- keys, which is determined in this generator.
+dmapGen :: Word8 -> Gen (Bimap Core.VKeyGenesis Core.VKey)
+dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
+  where
+    vkgVkPairsGen :: Gen ([Core.VKeyGenesis], [Core.VKey])
+    vkgVkPairsGen = (vkgs,) <$> Gen.filter (not . null) (Gen.subsequence vks)
+      where
+        vkgs = VKeyGenesis . VKey . Owner . fromIntegral <$> [0 .. ngk - 1]
+        -- As delegation targets we choose twice the number of genesis keys.
+        -- Note that the genesis keys can delegate to themselves in the
+        -- generated delegation map.
+        vks = VKey . Owner . fromIntegral <$> [0 .. 2 * (ngk - 1)]
 
 -- | Generate a protocol parameter update from a given set of current
 -- protocol-parameters, ensuring the consistency of the new protocol parameters
@@ -1072,7 +1066,7 @@ ppsUpdateFrom pps = do
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
       Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
-      `increasingProbabilityAt` (0, (2 * _maxHdrSz))
+      `increasingProbabilityAt` (0, 2 * _maxHdrSz)
 
     nextMaxPropSz :: Gen Natural
     nextMaxPropSz =
@@ -1356,6 +1350,24 @@ instance STS UPIEND where
 
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
+
+-- | Generate a protocol version endorsement for a given key, or 'Nothing' if no stable and
+-- confirmed protocol version update can be found.
+protocolVersionEndorsementGen
+  :: [(ProtVer, Set Core.VKeyGenesis)]
+  -- ^ Current set of endorsements
+  -> Gen (Maybe ProtVer)
+protocolVersionEndorsementGen endorsementsList =
+  if null mostEndorsedProposals
+  then pure Nothing
+  else Just <$> Gen.element mostEndorsedProposals
+  -- Take the top 5 most voted proposals, and endorse them. The constant 5 is determined arbitrarily
+  -- here.
+  where
+    mostEndorsedProposals :: [ProtVer]
+    mostEndorsedProposals = sortOn (Down . second length) endorsementsList
+                          & take 5
+                          & fmap fst
 
 data PVBUMP
 

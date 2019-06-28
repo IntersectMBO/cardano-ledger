@@ -26,6 +26,7 @@ module Control.State.Transition.Generator
   , trace
   , traceSigGen
   , genTrace
+  , traceOfLength
   , traceSuchThat
   , suchThatLastState
   , nonTrivialTrace
@@ -33,6 +34,8 @@ module Control.State.Transition.Generator
   , isTrivial
   , sampleMaxTraceSize
   , randomTrace
+  , randomTraceOfSize
+  , TraceLength (Maximum, Desired)
   -- * Trace classification
   , classifyTraceLength
   , classifySize
@@ -44,53 +47,31 @@ module Control.State.Transition.Generator
   )
 where
 
-import Control.Monad (forM, void)
-import Control.Monad.Trans.Maybe (MaybeT)
-import Data.Foldable (traverse_)
-import Data.Functor.Identity (Identity)
-import Data.String (fromString)
-import GHC.Stack (HasCallStack)
-import Hedgehog
-  ( Gen, footnoteShow
-  , Property
-  , PropertyT
-  , classify
-  , evalEither
-  , forAll
-  , property
-  , success
-  )
+import           Control.Monad (forM, void)
+import           Control.Monad.Trans.Maybe (MaybeT)
+import           Data.Foldable (traverse_)
+import           Data.Functor.Identity (Identity)
+import           Data.String (fromString)
+import           GHC.Stack (HasCallStack)
+import           Hedgehog (Gen, Property, PropertyT, classify, evalEither, footnoteShow, forAll,
+                     property, success)
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
-import Hedgehog.Range (Size(Size))
 
 --------------------------------------------------------------------------------
 -- Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
-import Hedgehog.Internal.Gen
-import Hedgehog.Internal.Tree
+import           Hedgehog.Internal.Gen
+import           Hedgehog.Internal.Tree
 --------------------------------------------------------------------------------
 -- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
 
-import Control.State.Transition
-  ( Environment
-  , IRC(IRC)
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , applySTS
-  )
-import Control.State.Transition.Trace
-  ( Trace, _traceEnv
-  , TraceOrder(OldestFirst)
-  , lastState
-  , mkTrace
-  , traceLength
-  , traceSignals
-  , closure
-  )
+import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
+                     applySTS)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
+                     lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 
 
 class STS s => HasTrace s where
@@ -100,26 +81,39 @@ class STS s => HasTrace s where
 
   trace
     :: Int
-    -- ^ Length of the generated trace.
+    -- ^ Maximum length of the generated traces. The actual length will be between 0 and this
+    -- maximum.
     -> Gen (Trace s)
-  trace n = traceSigGen n (sigGen @s)
+  trace n = traceSigGen (Maximum n) (sigGen @s)
+
+  traceOfLength
+    :: Int
+    -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
+    -- then the resulting trace might not have the given length.
+    -> Gen (Trace s)
+  traceOfLength n = traceSigGen (Desired n) (sigGen @s)
+
+data TraceLength = Maximum Int | Desired Int
 
 traceSigGen
   :: forall s
    . HasTrace s
-  => Int
+  => TraceLength
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
-traceSigGen n gen = do
+traceSigGen aTraceLength gen = do
   env <- initEnvGen @s
   case applySTS @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite
     -- recursion.
-    Left _pf  -> trace n
+    Left _pf  -> traceSigGen aTraceLength gen
     -- Applying an initial rule with an environment and state will simply
     -- validate that state, so we do not care which state 'applySTS' returns.
-    Right st -> genTrace n env st gen
+    Right st ->
+      case aTraceLength of
+        Maximum n -> genTrace n env st gen
+        Desired n -> genTraceOfLength n env st gen
 
 
 -- | Return a (valid) trace generator given an initial state, environment, and
@@ -151,11 +145,30 @@ genTrace ub env st0 aSigGen = do
   -- A linear range will generate about one third of empty traces, which does
   -- not seem sensible. Furthermore, in most cases it won't generate any trace
   -- of size @ub@. Hence we need to tweak the frequency of the trace lengths.
-  n <- Gen.frequency [ (5,  integral_ $ Range.singleton 0)
+  n <- Gen.frequency [ (5, pure 0)
                      , (85, integral_ $ Range.linear 1 ub)
-                     , (10, integral_ $ Range.singleton ub)]
+                     , (5, pure ub)
+                     ]
+  genTraceOfLength n env st0 aSigGen
 
-  mapGenT (TreeT . interleaveSigs . runTreeT) $ loop n st0 []
+-- | Return a (valid) trace generator that generates traces of the given size. If the signal
+-- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
+--
+genTraceOfLength
+  :: forall s
+   . STS s
+  => Int
+  -- ^ Desired trace length.
+  -> Environment s
+  -- ^ Environment, which remains constant in the system.
+  -> State s
+  -- ^ Initial state.
+  -> (Environment s -> State s -> Gen (Signal s))
+  -- ^ Signal generator. This generator relies on an environment and a state to
+  -- generate a signal.
+  -> Gen (Trace s)
+genTraceOfLength aTraceLength env st0 aSigGen =
+  mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
   where
     loop
       :: Int
@@ -246,6 +259,15 @@ randomTrace
   -> IO (Trace s)
 randomTrace ub = Gen.sample (trace ub)
 
+
+randomTraceOfSize
+  :: forall s
+   . HasTrace s
+  => Int
+  -> IO (Trace s)
+randomTraceOfSize desiredTraceLength = Gen.sample (traceOfLength desiredTraceLength)
+
+
 --------------------------------------------------------------------------------
 -- Trace classification
 --------------------------------------------------------------------------------
@@ -276,15 +298,16 @@ classifyTraceLength tr = classifySize "trace length:" tr traceLength
 --   number of intervals are determined by the @step@ parameter.
 --
 classifySize
-  :: String
+  :: (Ord n, Show n, Integral n)
+  => String
   -- ^ Prefix to be added to the label intervals
   -> a
   -- ^ Value to classify
-  -> (a -> Int)
+  -> (a -> n)
   -- ^ Size function
-  -> Int
+  -> n
   -- ^ Maximum value size
-  -> Int
+  -> n
   -- ^ Steps used to divide the size interval
   -> PropertyT IO ()
 classifySize prefixLabel value sizeF upBound step = do
