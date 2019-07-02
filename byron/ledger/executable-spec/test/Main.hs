@@ -10,13 +10,12 @@ import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
 import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
+import qualified Ledger.Core.Generators.Properties as CoreGen
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
 import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, lastProposal)
-
-import qualified Ledger.Update.Properties as UPDATE
-
 import           Ledger.Relation.Properties (testRelation)
+import qualified Ledger.Update.Properties as UPDATE
 import           Ledger.UTxO.Properties (moneyIsConstant)
 import qualified Ledger.UTxO.Properties as UTxO
 
@@ -26,7 +25,9 @@ main = defaultMain tests
   tests :: TestTree
   tests = localOption Auto $ testGroup
     "Ledger"
-    [ testGroup "Delegation Examples" deleg
+    [ testGroup "Core generators properties"
+      [ testProperty "Relevant k values are generated"  CoreGen.relevantKValuesAreGenerated ]
+    , testGroup "Delegation Examples" deleg
     , testGroup
       "Delegation properties"
       [ testProperty "Certificates are triggered"           DELEG.dcertsAreTriggered

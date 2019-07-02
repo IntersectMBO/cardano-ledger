@@ -85,7 +85,8 @@ test-suite doctests
 test-suite ledger-rules-test
   hs-source-dirs: test
   main-is: Main.hs
-  other-modules: Ledger.Delegation.Examples
+  other-modules: Ledger.Core.Generators.Properties
+               , Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.AbstractSize.Properties
                , Ledger.Update.Properties
