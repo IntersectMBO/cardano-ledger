@@ -78,8 +78,10 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
 class STS s => HasTrace s where
   initEnvGen :: Gen (Environment s)
 
+  -- | Generate an initial environment that is based on the given trace length.
   initEnvForTraceLengthGen
-    :: TraceLength
+    :: Int
+    -- ^ Trace length that will be used by 'trace' or 'traceOfLength'.
     -> Gen (Environment s)
   initEnvForTraceLengthGen _  = initEnvGen @s
 

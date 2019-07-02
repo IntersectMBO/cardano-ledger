@@ -3,6 +3,7 @@
 module Ledger.GlobalParams
   ( lovelaceCap
   , slotsPerEpoch
+  , slotsPerEpochToK
   )
 where
 
@@ -20,3 +21,8 @@ lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
 -- epoch.
 slotsPerEpoch :: Integral n => BlockCount -> n
 slotsPerEpoch (BlockCount c) = fromIntegral $ c * 10
+
+-- | The inverse of 'slotsPerEpoch': given a number of slots per-epoch, return the chain stability
+-- parameter @k@. This function does not check for underflow or overflow.
+slotsPerEpochToK :: (Integral n) => n -> BlockCount
+slotsPerEpochToK n = BlockCount $ floor $ (fromIntegral n :: Double) / 10
