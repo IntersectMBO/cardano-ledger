@@ -22,6 +22,7 @@
 module Control.State.Transition.Generator
   ( HasTrace
   , initEnvGen
+  , initEnvForTraceLengthGen
   , sigGen
   , trace
   , traceSigGen
@@ -76,6 +77,11 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
 
 class STS s => HasTrace s where
   initEnvGen :: Gen (Environment s)
+
+  initEnvForTraceLengthGen
+    :: TraceLength
+    -> Gen (Environment s)
+  initEnvForTraceLengthGen _  = initEnvGen @s
 
   sigGen :: Environment s -> State s -> Gen (Signal s)
 
