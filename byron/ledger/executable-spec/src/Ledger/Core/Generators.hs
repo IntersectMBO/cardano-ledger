@@ -6,7 +6,7 @@ module Ledger.Core.Generators
   , slotGen
   , epochGen
   , blockCountGen
-  , kFromChainLength
+  , k
   )
 where
 
@@ -60,13 +60,13 @@ blockCountGen lower upper =
 --
 -- When the number of epochs is greater or equal than the @chainLength@ the resulting @k@ parameter
 -- will be 0.
-kFromChainLength
+k
   :: Word64
   -- ^ Chain length
   -> Word64
   -- ^ Maximum number of epochs
   -> Gen BlockCount
-kFromChainLength chainLength maxNumberOfEpochs =
+k chainLength maxNumberOfEpochs =
   slotsPerEpochToK <$> slotsPerEpoch
     where
       slotsPerEpoch :: Gen Word64
