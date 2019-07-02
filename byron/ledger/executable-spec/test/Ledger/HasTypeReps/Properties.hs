@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Ledger.HasTypeReps.Properties
@@ -5,29 +7,25 @@ module Ledger.HasTypeReps.Properties
   where
 
 import           Data.AbstractSize
-import           Data.Map.Strict                    (Map)
-import qualified Data.Map.Strict                    as Map
-import           Data.Sequence                      (empty, (<|), (><))
-import qualified Data.Sequence                      as Seq
-import           Data.Typeable                      (TypeRep, Typeable, typeOf)
-import           Numeric.Natural                    (Natural)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Sequence (empty, (<|), (><))
+import qualified Data.Sequence as Seq
+import           Data.Typeable (TypeRep, Typeable, typeOf)
+import           Numeric.Natural (Natural)
 
-import           Hedgehog                           (MonadTest, Property,
-                                                     forAll, property,
-                                                     withTests, (===))
+import           Hedgehog (MonadTest, Property, forAll, property, withTests, (===))
 import           Test.Tasty.Hedgehog
 
 import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace     (TraceOrder (OldestFirst),
-                                                     traceSignals)
-
-import           Ledger.Core                        hiding ((<|))
+import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import           Ledger.Core hiding ((<|))
 import           Ledger.UTxO
 
-import           Cardano.Ledger.Spec.STS.UTXOW      (UTXOW)
+import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
 
-import           Test.Tasty                         (TestTree, testGroup)
-import           Test.Tasty.HUnit                   (Assertion, testCase, (@?=))
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 --------------------------------------------------------------------------------
 -- Example HasTypeReps.typeReps for TxIn, Tx
@@ -74,35 +72,8 @@ exampleTypeRepsTx =
 --------------------------------------------------------------------------------
 
 -- | Make a singleton cost of "1" for the given term's type
-mkCost :: Typeable a => a -> Map TypeRep Size
-mkCost term = Map.singleton (typeOf term) 1
-
-txInCost :: Map TypeRep Size
-txInCost = mkCost (undefined :: TxIn)
-
-txIdCost :: Map TypeRep Size
-txIdCost = mkCost (undefined :: TxId)
-
-hashCost :: Map TypeRep Size
-hashCost = mkCost (undefined :: Hash)
-
-txOutCost :: Map TypeRep Size
-txOutCost = mkCost (undefined :: TxOut)
-
-addrCost :: Map TypeRep Size
-addrCost = mkCost (undefined :: Addr)
-
-lovelaceCost :: Map TypeRep Size
-lovelaceCost = mkCost (undefined :: Lovelace)
-
-witCost :: Map TypeRep Size
-witCost = mkCost (undefined :: Wit)
-
-sigCost :: Map TypeRep Size
-sigCost = mkCost (undefined :: Sig Tx)
-
-vKeyCost :: Map TypeRep Size
-vKeyCost = mkCost (undefined :: VKey)
+mkCost :: forall a. Typeable a => Map TypeRep Size
+mkCost = Map.singleton (typeOf (undefined::a)) 1
 
 -- | Tests that the size of a 'TxWits' term, computed with the combined costs
 --   of 'TxIn/TxOut/Wit', is the sum of costs of all 'TxIn/TxOut/Wit' contained
@@ -110,14 +81,19 @@ vKeyCost = mkCost (undefined :: VKey)
 propSumOfSizesTxWits
   :: MonadTest m => TxWits -> m ()
 propSumOfSizesTxWits txw
-  = (abstractSize (costsTxIn <> costsTxOut <> costsWit) txw)
-         === abstractSize costsTxIn (body txw)
-             + abstractSize costsTxOut (body txw)
-             + abstractSize costsWit (witnesses txw)
+  = (abstractSize (txInCosts <> txOutCosts <> witCosts) txw)
+         === abstractSize txInCosts (body txw)
+             + abstractSize txOutCosts (body txw)
+             + abstractSize witCosts (witnesses txw)
   where
-    costsTxIn = Map.unions [txInCost, txIdCost, hashCost]
-    costsTxOut = Map.unions [ txOutCost, addrCost, vKeyCost, lovelaceCost ]
-    costsWit = Map.unions [ witCost, vKeyCost, sigCost ]
+    txInCosts :: Map TypeRep Size
+    txInCosts = Map.unions [ mkCost @TxIn, mkCost @TxId, mkCost @Hash ]
+
+    txOutCosts :: Map TypeRep Size
+    txOutCosts = Map.unions [ mkCost @TxOut, mkCost @Addr, mkCost @VKey, mkCost @Lovelace ]
+
+    witCosts :: Map TypeRep Size
+    witCosts = Map.unions [ mkCost @Wit, mkCost @VKey, mkCost @(Sig Tx) ]
 
 -- | A TxWits contains multiple inputs, outputs and witnesses.
 --   This property tests that
@@ -131,38 +107,38 @@ propMultipleOfSizes txw =
   let
     body_ = (body txw)
     wits_ = witnesses txw
-  in
+  in do
     -- we should account for each TxIn/TxId/Hash in a TxWits's size
-    abstractSize txInCost txw === length (inputs body_)
-    >> abstractSize txIdCost txw === length (inputs body_)
-    >> abstractSize hashCost txw === length (inputs body_)
+    abstractSize (mkCost @TxIn) txw === length (inputs body_)
+    abstractSize (mkCost @TxId) txw === length (inputs body_)
+    abstractSize (mkCost @Hash) txw === length (inputs body_)
     -- the combined cost is the sum of individual costs
-    >> abstractSize (Map.unions [txInCost, txIdCost, hashCost]) txw
-       === abstractSize txInCost txw
-           + abstractSize txIdCost txw
-           + abstractSize hashCost txw
+    abstractSize (Map.unions [mkCost @TxIn, mkCost @TxId, mkCost @Hash]) txw
+       === abstractSize (mkCost @TxIn) txw
+           + abstractSize (mkCost @TxId) txw
+           + abstractSize (mkCost @Hash) txw
 
     -- we should account for each TxOut/Addr/Lovelace in a TxWits's size
-    >> abstractSize txOutCost txw === length (outputs body_)
-    >> abstractSize addrCost txw === length (outputs body_)
-    >> abstractSize lovelaceCost txw === length (outputs body_)
+    abstractSize (mkCost @TxOut)    txw === length (outputs body_)
+    abstractSize (mkCost @Addr)     txw === length (outputs body_)
+    abstractSize (mkCost @Lovelace) txw === length (outputs body_)
     -- the combined cost is the sum of individual costs
-    >> abstractSize (Map.unions [ txOutCost, addrCost, lovelaceCost ]) txw
-       === abstractSize txOutCost txw
-           + abstractSize addrCost txw
-           + abstractSize lovelaceCost txw
+    abstractSize (Map.unions [ mkCost @TxOut, mkCost @Addr, mkCost @Lovelace ]) txw
+       === abstractSize (mkCost @TxOut) txw
+           + abstractSize (mkCost @Addr) txw
+           + abstractSize (mkCost @Lovelace) txw
 
     -- we should account for each Wit/Sig in a TxWits's size
-    >> abstractSize witCost txw === length wits_
-    >> abstractSize sigCost txw === length wits_
+    abstractSize (mkCost @Wit)      txw === length wits_
+    abstractSize (mkCost @(Sig Tx)) txw === length wits_
     -- the combined cost is the sum of individual costs
-    >> abstractSize (Map.unions [ witCost, sigCost ]) txw
-       === abstractSize witCost txw
-           + abstractSize sigCost txw
+    abstractSize (Map.unions [ mkCost @Wit, mkCost @(Sig Tx) ]) txw
+       === abstractSize (mkCost @Wit) txw
+           + abstractSize (mkCost @(Sig Tx)) txw
 
     -- since Vkey appears in each input _and_ each witness, the size of
     -- TxWits should be the total number of inputs and wits
-    >> abstractSize vKeyCost txw
+    abstractSize (mkCost @VKey) txw
        === (length $ outputs body_) + (length $ wits_)
 
 propTxAbstractSize :: Property

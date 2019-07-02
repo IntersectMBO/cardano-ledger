@@ -32,11 +32,13 @@
         "chain-rules-test" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.containers)
             (hsPkgs.data-ordlist)
             (hsPkgs.hedgehog)
             (hsPkgs.lens)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hedgehog)
+            (hsPkgs.tasty-hunit)
             (hsPkgs.cs-blockchain)
             (hsPkgs.cs-ledger)
             (hsPkgs.small-steps)

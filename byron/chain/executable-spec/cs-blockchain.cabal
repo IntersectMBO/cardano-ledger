@@ -56,14 +56,17 @@ test-suite chain-rules-test
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Cardano.Spec.Chain.STS.Properties
+                     , Cardano.AbstractSize.Properties
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
+                     , containers
                      , data-ordlist
                      , hedgehog >= 1.0
                      , lens
                      , tasty
                      , tasty-hedgehog
+                     , tasty-hunit
                      -- local deps
                      , cs-blockchain
                      , cs-ledger
