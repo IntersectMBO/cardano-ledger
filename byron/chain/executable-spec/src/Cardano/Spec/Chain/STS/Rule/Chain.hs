@@ -31,7 +31,6 @@ import           Control.State.Transition.Generator
 import           Ledger.Core
 import           Ledger.Delegation
 import           Ledger.Update hiding (delegationMap)
-import qualified Ledger.Update.Generators as UpdateGen
 import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
@@ -39,7 +38,8 @@ import           Cardano.Spec.Chain.STS.Rule.BBody
 import           Cardano.Spec.Chain.STS.Rule.BHead
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
-
+-- TODO: do not use this transition system, but use rather BHEAD (which could call SIGCNT)
+import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCnt
 
 data CHAIN
 
@@ -175,7 +175,13 @@ instance HasTrace CHAIN where
       <$> gCurrentSlot
       <*> (utxo0 <$> envGen @UTXOWS chainLength)
       <*> pure dsEnv
-      <*> UpdateGen.pparamsGen
+      <*> pure
+          initialPParams
+          { _bkSgnCntT = (1 / fromIntegral ngk) `max` _bkSgnCntT initialPParams
+            -- We need to make sure we can issue a block, and for this we need to signature count
+            -- threshold not to be less than 1 / ngk
+            }
+          -- TODO: for now we're returning a constant set of parameters
       <*> pure ngk
       <*> pure (_dSEnvK dsEnv)
     where
@@ -183,7 +189,7 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-  sigGen = sigGenChain GenDelegation GenUTxO
+  sigGen = sigGenChain NoGenDelegation NoGenUTxO --TODO: remove the No's
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
@@ -195,12 +201,12 @@ sigGenChain
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk, _k) (Slot s, _sgs, h, utxo, ds, _us)
+sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk, k) (Slot s, sgs, h, utxo, ds, _us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dmsL)
+    vkI         <- SigCnt.genIssuer (pps, ds ^. dmsL, k) sgs
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
@@ -235,8 +241,8 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk, _
 
     pure $ Block signedHeader bb
    where
-    -- We'd expect the slot increment to be close to 1, even for large
-    -- Gen's size numbers.
-    gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
+     -- We'd expect the slot increment to be close to 1, even for large
+     -- Gen's size numbers.
+     gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
 
-    utxoEnv   = UTxOEnv {utxo0, pps}
+     utxoEnv   = UTxOEnv {utxo0, pps}

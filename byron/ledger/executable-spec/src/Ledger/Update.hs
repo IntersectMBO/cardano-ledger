@@ -703,7 +703,20 @@ type UPIState =
 emptyUPIState :: UPIState
 emptyUPIState =
   (( ProtVer 0 0 0
-   , PParams                 -- TODO: choose more sensible default values
+   , initialPParams
+   )
+  , []
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Set.empty
+  , Set.empty
+  , Map.empty)
+
+initialPParams :: PParams
+initialPParams =
+  PParams                 -- TODO: choose more sensible default values
      { _maxBkSz = 100        -- max sizes chosen as non-zero to allow progress
      , _maxHdrSz = 10
      , _maxTxSz = 50
@@ -758,15 +771,6 @@ emptyUPIState =
      , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
      , _factorB = 2 -- In mainet this value is set to 155381000000000
      }
-   )
-  , []
-  , Map.empty
-  , Map.empty
-  , Map.empty
-  , Map.empty
-  , Set.empty
-  , Set.empty
-  , Map.empty)
 
 protocolVersion :: UPIState -> ProtVer
 protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv

@@ -1,12 +1,16 @@
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
+import           Control.Arrow ((|||))
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import           Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
+import           Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
 
 import           Control.State.Transition
 
@@ -50,3 +54,28 @@ instance STS SIGCNT where
             failBecause NotADelegate
             return sgs -- TODO: this is a quite inconvenient encoding for this transition system!
     ]
+
+-- | Generate an issuer that can still issue blocks according to the @SIGCNT@ rule. The issuers are
+-- taken from the range of the delegation map passed as parameter.
+--
+-- This generator can fail if no suitable issuer can be found.
+genIssuer
+  :: Environment SIGCNT
+  -> State SIGCNT
+  -> Gen VKey
+genIssuer (pps, dms, k) sgs =
+  if null validIssuers
+  then error $ "No valid issuers!" ++ "\n"
+             ++ "k = " ++ show k ++ "\n"
+             ++ "keys = " ++ show (Bimap.elems dms) ++ "\n"
+             ++ "sgs = " ++ show sgs ++ "\n"
+             ++ "length sgs = " ++ show (length sgs) ++ "\n"
+             ++ "pps = " ++ show pps
+  else Gen.element validIssuers
+  where
+    validIssuers =
+      filter canIssueABlock anyIssuer
+    anyIssuer = Bimap.elems dms
+    canIssueABlock :: VKey -> Bool
+    canIssueABlock vk =
+      (const False ||| const True) $ applySTS @SIGCNT (TRC ((pps, dms, k), sgs, vk))
