@@ -1,0 +1,163 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+module Cardano.AbstractSize.Properties
+    (testAbstractSize)
+  where
+
+import           Data.AbstractSize
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (maybeToList)
+import           Data.Sequence ((<|), (><))
+import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
+import           Data.Typeable (TypeRep, Typeable, typeOf)
+import           Data.Word (Word64)
+import           Numeric.Natural (Natural)
+
+import           Hedgehog (MonadTest, Property, forAll, property, withTests, (===))
+import           Test.Tasty.Hedgehog
+
+import           Control.State.Transition.Generator (trace)
+import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import           Ledger.Core hiding ((<|))
+import           Ledger.Delegation (DCert)
+import           Ledger.Update (ProtVer (..), STag, UProp (..), Vote)
+import           Ledger.UTxO
+
+import           Cardano.Spec.Chain.STS.Block (Block (..), BlockBody (..), BlockHeader (..))
+import           Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
+
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
+
+--------------------------------------------------------------------------------
+-- Example typeReps for Block/Header/Body
+--------------------------------------------------------------------------------
+
+aTx :: Tx
+aTx = undefined
+
+aTxId :: TxId
+aTxId = TxId (hash aTx)
+
+aHeader :: BlockHeader
+aHeader = MkBlockHeader {
+          _bhPrevHash = undefined :: Hash
+        , _bhSlot = undefined :: Slot
+        , _bhIssuer = undefined :: VKey
+        , _bhSig = undefined :: Sig Hash
+        , _bhUtxoHash = undefined :: Hash
+        , _bhDlgHash = undefined :: Hash
+        , _bhUpdHash = undefined :: Hash
+     }
+
+aTxWits :: TxWits
+aTxWits =
+  let (in0,in1) = (TxIn aTxId 0, TxIn aTxId 1)
+      outs = []
+      wits = []
+   in TxWits (Tx [in0, in1] outs) wits
+
+aBody :: BlockBody
+aBody = BlockBody
+      { _bDCerts  = []
+      , _bUtxo  = [aTxWits, aTxWits]
+      , _bUpdProp = Nothing
+      , _bUpdVotes = []
+      , _bProtVer = ProtVer
+                      { _pvMaj = 0
+                      , _pvMin = 1
+                      , _pvAlt = 1
+                      }
+      }
+
+aBlock :: Block
+aBlock = Block { _bHeader = aHeader
+               , _bBody = aBody
+               }
+
+-- | A BlockHeader term has fixed typeReps
+exampleTypeRepsBlockHeader :: Assertion
+exampleTypeRepsBlockHeader =
+  typeReps aHeader @?= Seq.fromList [ typeOf (undefined::BlockHeader)
+        , typeOf (undefined::Hash), typeOf (undefined::Hash)
+        , typeOf (undefined::Hash), typeOf (undefined::Hash)
+        , typeOf (undefined::Slot), typeOf (undefined::Word64)
+        , typeOf (undefined::VKey), typeOf (undefined::Owner)
+        , typeOf (undefined::Natural), typeOf (undefined::Sig Hash) ]
+
+-- | A BlockBody has variable typeReps, depending on the collections
+-- [DCert], [TxWits], [Vote] and [STag] (in UProp)
+--
+--   In this example, we can see the repetition of typeReps for 2 TxWits
+exampleTypeRepsBlockBody :: Assertion
+exampleTypeRepsBlockBody =
+     typeReps aBody @?=
+        Seq.fromList [
+            typeOf (undefined::BlockBody)
+          , typeOf (undefined::[DCert])
+          , typeOf (undefined::[TxWits]) ]
+        >< typeReps aTxWits
+        >< typeReps aTxWits
+        >< Seq.fromList [
+              typeOf (undefined::Maybe UProp), typeOf (undefined::[Vote])
+            , typeOf (undefined::ProtVer), typeOf (undefined::Natural)
+            , typeOf (undefined::Natural), typeOf (undefined::Natural) ]
+
+-- | The typeReps for a 'Block' is a combination of typeReps for
+-- the header and body in the block.
+exampleTypeRepsBlock :: Assertion
+exampleTypeRepsBlock =
+     typeReps aBlock @?= typeOf (undefined::Block)
+                           <| typeReps aHeader
+                           >< typeReps aBody
+
+--------------------------------------------------------------------------------
+-- Properties of abstractSize for Block/Header/Body
+--------------------------------------------------------------------------------
+
+-- | Make a singleton cost of "1" for the given term's type
+mkCost :: forall a. Typeable a => Map TypeRep Size
+mkCost = Map.singleton (typeOf (undefined::a)) 1
+
+-- | This property tests that for abstractSize
+--   - we should account for each DCert/TxWits/Vote/UProp/STag in a Block Body
+--   - the BlockHeader and BlockBody should each be counted only once
+propMultipleOfSizesBlock
+  :: MonadTest m => Block -> m ()
+propMultipleOfSizesBlock b =
+  let
+    body_ = _bBody b
+  in do
+    abstractSize (mkCost @DCert)  b === length (_bDCerts body_)
+    abstractSize (mkCost @TxWits) b === length (_bUtxo body_)
+    abstractSize (mkCost @Vote)   b === length (_bUpdVotes body_)
+    abstractSize (mkCost @UProp)  b === length (maybeToList (_bUpdProp body_))
+    abstractSize (mkCost @STag)   b
+      === case _bUpdProp body_ of
+            Just uprop -> Set.size (_upSTags uprop)
+            Nothing -> 0
+
+    -- BlockHeader appears only once
+    abstractSize (mkCost @BlockHeader) b === 1
+    -- BlockBody appears only once
+    abstractSize (mkCost @BlockBody) b === 1
+
+propBlockAbstractSize :: Property
+propBlockAbstractSize
+  = withTests 50 $ property $ do
+    tr <- forAll (trace @CHAIN 100)
+    let blocks = traceSignals OldestFirst tr :: [Block]
+    mapM_ propMultipleOfSizesBlock blocks
+
+testAbstractSize :: TestTree
+testAbstractSize = testGroup "Test abstractSize"
+  [ testCase "AbstractSize - example - BlockHeader" exampleTypeRepsBlockHeader
+  , testCase "AbstractSize - example - BlockBody" exampleTypeRepsBlockBody
+  , testCase "AbstractSize - example - Block" exampleTypeRepsBlock
+
+  , testProperty "AbstractSize - Block/Header/Body" propBlockAbstractSize
+  ]

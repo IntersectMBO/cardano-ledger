@@ -1,10 +1,11 @@
 
 module Main (main) where
 
-import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty (TestTree, defaultMain, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
-import Cardano.Spec.Chain.STS.Properties
+import           Cardano.AbstractSize.Properties
+import           Cardano.Spec.Chain.STS.Properties
 
 main :: IO ()
 main = defaultMain tests
@@ -15,5 +16,7 @@ main = defaultMain tests
     [ testGroup "Properties"
       [ testProperty "Increasing slots" slotsIncrease
       , testProperty "Block issuers are delegates" blockIssuersAreDelegates
+
+      , testAbstractSize
       ]
     ]
