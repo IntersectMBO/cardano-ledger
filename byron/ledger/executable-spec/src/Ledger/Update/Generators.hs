@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Generators for the 'Ledger.Update' values.
 module Ledger.Update.Generators
@@ -17,12 +17,12 @@ where
 import           Control.State.Transition (Environment, State)
 import           Data.Word (Word64)
 import           Hedgehog
+import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Gen.Aux (doubleInc)
-import qualified Hedgehog.Gen    as Gen
-import qualified Hedgehog.Range  as Range
-import           Ledger.Core (Slot(..), SlotCount(..), BlockCount(..))
+import qualified Hedgehog.Range as Range
+import           Ledger.Core (BlockCount (..), Slot (..), SlotCount (..))
 import           Ledger.Core.Generators (slotGen)
-import           Ledger.Update (ProtVer(..), PParams(..), PVBUMP)
+import           Ledger.Update (PParams (..), PVBUMP, ProtVer (..))
 import           Numeric.Natural (Natural)
 
 
@@ -42,7 +42,7 @@ pparamsGen :: Gen PParams
 pparamsGen =
   (\((maxBkSz, maxHdrSz, maxTxSz, maxPropSz) :: (Natural, Natural, Natural, Natural))
     (bkSgnCntT :: Double)
-    ((bkSlotsPerEpoch, upTtl, stableAfter) :: (SlotCount, SlotCount, BlockCount))
+    ((bkSlotsPerEpoch, upTtl) :: (SlotCount, SlotCount))
     (scriptVersion :: Natural)
     (_cfmThd :: Double)
     (upAdptThd :: Double)
@@ -59,7 +59,6 @@ pparamsGen =
       scriptVersion
       upAdptThd -- We want to unify @cfmThd@ and @upAdptThd@.
       upAdptThd
-      stableAfter
       factorA
       factorB
   )
@@ -90,15 +89,14 @@ pparamsGen =
     gRange upper = Gen.integral (Range.linear lo upper)
 
   -- | Generates bkSlotsPerEpoch, upTtl and stableAfter
-  slotBlockGen :: Gen (SlotCount, SlotCount, BlockCount)
+  slotBlockGen :: Gen (SlotCount, SlotCount)
   slotBlockGen = do
     -- The number of slots per epoch is computed from 'k':
     -- slots per-epoch = k * 10
     k <- BlockCount <$> Gen.integral (Range.linear 1 10000)
-    let perEpoch = SlotCount $ (unBlockCount k) * 10
-    (perEpoch,,)
+    let perEpoch = SlotCount $ unBlockCount k * 10
+    (perEpoch,)
       <$> (SlotCount  <$> gRange perEpoch)
-      <*> (BlockCount <$> gRange perEpoch)
    where
     gRange :: SlotCount -> Gen Word64
     gRange hi = Gen.word64 (Range.linear 1 (unSlotCount hi))
@@ -130,7 +128,7 @@ pvbumpBeginningsEnvGen =
   ksGen :: Gen (BlockCount, Slot)
   ksGen = do
     k <- BlockCount <$> Gen.integral (Range.linear 1 10000)
-    s <- slotGen 0 $ 2 * (unBlockCount k)
+    s <- slotGen 0 $ 2 * unBlockCount k
     pure (k, s)
 
 -- | Generates an environment for the PVBUMP STS such that s_n > 2 *

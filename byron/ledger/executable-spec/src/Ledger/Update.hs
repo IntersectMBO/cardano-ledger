@@ -86,8 +86,6 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _stableAfter :: !Core.BlockCount
-  -- ^ Chain stability parameter
   , _factorA :: !Int
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
@@ -719,8 +717,6 @@ emptyUPIState =
      , _scriptVersion = 0
      , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
-     , _stableAfter = 5      -- TODO: the k stability parameter needs to be
-                             -- removed from here as well!
 
      -- To determine the factors @A@ and @B@ used in the calculation of the
      -- transaction fees we need to know the constant @C@ that we use to bound
@@ -1043,7 +1039,6 @@ ppsUpdateFrom pps = do
     <*> nextScriptVersion
     <*> nextCfmThd
     <*> nextUpAdptThd
-    <*> pure _stableAfter     -- This parameter should be removed from 'PParams'
     <*> nextFactorA
     <*> nextFactorB
 
@@ -1058,7 +1053,6 @@ ppsUpdateFrom pps = do
            , _scriptVersion
            , _cfmThd
            , _upAdptThd
-           , _stableAfter
            , _factorA
            , _factorB
            } = pps
