@@ -16,7 +16,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Ledger.Core (Addr (Addr), BlockCount (BlockCount), Epoch (Epoch), Owner (Owner),
-                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis))
+                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis), unBlockCount)
 import           Ledger.GlobalParams (slotsPerEpochToK)
 
 
@@ -71,5 +71,10 @@ k chainLength maxNumberOfEpochs =
     where
       slotsPerEpoch :: Gen Word64
       slotsPerEpoch = do
-        numberOfEpochs <- Gen.integral $ Range.constant 1 (maxNumberOfEpochs `max` 1)
-        pure $! floor $ fromIntegral chainLength / (fromIntegral numberOfEpochs :: Double)
+--        numberOfEpochs <- Gen.integral $ Range.constant 1 (maxNumberOfEpochs `max` 1)
+--        numberOfEpochs <- Gen.integral $ Range.exponential 1 (maxNumberOfEpochs `max` 1)
+        let maxNumberOfEpochsToK = unBlockCount $ slotsPerEpochToK maxNumberOfEpochs
+        numberOfEpochs <- Gen.frequency [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1))
+                                        , (1, pure 1)
+                                        ]
+        pure $! round $ fromIntegral chainLength / (fromIntegral numberOfEpochs :: Double)
