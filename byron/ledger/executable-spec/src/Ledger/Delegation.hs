@@ -78,7 +78,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Data.Set (Set, (\\))
 import qualified Data.Set as Set
-import           Data.Word (Word8)
+import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -88,11 +88,12 @@ import           Hedgehog.Range (constant, linear)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
                      addSlot, hash, range, sign, skey, unBlockCount, unVKeyGenesis, (∈), (∉), (⨃))
-import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkgenesisGen)
+import           Ledger.Core.Generators (epochGen, slotGen, vkgenesisGen)
+import qualified Ledger.Core.Generators as CoreGen
 
 
 --------------------------------------------------------------------------------
@@ -501,9 +502,9 @@ dcertsGen env st =
 
 instance HasTrace DELEG where
 
-  initEnvGen = do
+  envGen chainLength = do
     ngk <- Gen.integral (linear 1 14)
-    initialEnvFromGenesisKeys ngk
+    initialEnvFromGenesisKeys ngk chainLength
 
   sigGen = dcertsGen
 
@@ -512,8 +513,10 @@ instance HasTrace DELEG where
 initialEnvFromGenesisKeys
   :: Word8
   -- ^ Number of genesis keys.
+  -> Word64
+  -- ^ Chain length
   -> Gen DSEnv
-initialEnvFromGenesisKeys ngk =
+initialEnvFromGenesisKeys ngk chainLength =
   DSEnv
     -- We need at least one delegator in the environment to be able to generate
     -- delegation certificates.
@@ -528,4 +531,4 @@ initialEnvFromGenesisKeys ngk =
     <$> Gen.set (linear 1 (fromIntegral ngk)) vkgenesisGen
     <*> epochGen 0 10
     <*> slotGen 0 100
-    <*> blockCountGen 0 100
+    <*> CoreGen.k chainLength (chainLength `div` 10)

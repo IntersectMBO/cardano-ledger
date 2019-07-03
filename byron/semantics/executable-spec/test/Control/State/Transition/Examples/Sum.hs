@@ -1,18 +1,18 @@
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE TypeFamilies #-}
 
  -- | Simple example of a transition system whose states contain the sum of the
 -- integers seen in the signals.
 --
 module Control.State.Transition.Examples.Sum where
 
-import Hedgehog (Property, forAll, property, withTests, assert)
+import           Hedgehog (Property, assert, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Control.State.Transition
-import Control.State.Transition.Generator
-import Control.State.Transition.Trace
+import           Control.State.Transition
+import           Control.State.Transition.Generator
+import           Control.State.Transition.Trace
 
 
 data SUM
@@ -36,7 +36,7 @@ instance STS SUM where
     ]
 
 instance HasTrace SUM where
-  initEnvGen = pure ()
+  envGen _ = pure ()
 
   sigGen _ _ =
     Gen.list (Range.constant 1 100) (Gen.integral (Range.constant (-3) 3))

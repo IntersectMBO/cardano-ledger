@@ -21,8 +21,7 @@
 --
 module Control.State.Transition.Generator
   ( HasTrace
-  , initEnvGen
-  , envForTraceLengthGen
+  , envGen
   , sigGen
   , trace
   , traceSigGen
@@ -53,6 +52,7 @@ import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
 import           Data.String (fromString)
+import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (Gen, Property, PropertyT, classify, evalEither, footnoteShow, forAll,
                      property, success)
@@ -76,35 +76,32 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
 
 
 class STS s => HasTrace s where
-  initEnvGen :: Gen (Environment s)
-
   -- | Generate an initial environment that is based on the given trace length.
-  envForTraceLengthGen
-    :: Int
+  envGen
+    :: Word64
     -- ^ Trace length that will be used by 'trace' or 'traceOfLength'.
     -> Gen (Environment s)
-  envForTraceLengthGen _  = initEnvGen @s
 
   sigGen :: Environment s -> State s -> Gen (Signal s)
 
   trace
-    :: Int
+    :: Word64
     -- ^ Maximum length of the generated traces. The actual length will be between 0 and this
     -- maximum.
     -> Gen (Trace s)
   trace n = traceSigGen (Maximum n) (sigGen @s)
 
   traceOfLength
-    :: Int
+    :: Word64
     -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
     -- then the resulting trace might not have the given length.
     -> Gen (Trace s)
   traceOfLength n = traceSigGen (Desired n) (sigGen @s)
 
-data TraceLength = Maximum Int | Desired Int
+data TraceLength = Maximum Word64 | Desired Word64
 
 -- | Extract the maximum or desired integer value of the trace length.
-traceLengthValue :: TraceLength -> Int
+traceLengthValue :: TraceLength -> Word64
 traceLengthValue (Maximum n) = n
 traceLengthValue (Desired n) = n
 
@@ -115,7 +112,7 @@ traceSigGen
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
 traceSigGen aTraceLength gen = do
-  env <- envForTraceLengthGen @s (traceLengthValue aTraceLength)
+  env <- envGen @s (traceLengthValue aTraceLength)
   case applySTS @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite
@@ -135,7 +132,7 @@ traceSigGen aTraceLength gen = do
 genTrace
   :: forall s
    . STS s
-  => Int
+  => Word64
   -- ^ Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
   -> Environment s
@@ -170,7 +167,7 @@ genTrace ub env st0 aSigGen = do
 genTraceOfLength
   :: forall s
    . STS s
-  => Int
+  => Word64
   -- ^ Desired trace length.
   -> Environment s
   -- ^ Environment, which remains constant in the system.
@@ -184,7 +181,7 @@ genTraceOfLength aTraceLength env st0 aSigGen =
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
   where
     loop
-      :: Int
+      :: Word64
       -> State s
       -> [(State s, TreeT (MaybeT Identity) (Signal s))]
       -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
@@ -217,7 +214,7 @@ genTraceOfLength aTraceLength env st0 aSigGen =
 traceSuchThat
   :: forall s
    . HasTrace s
-  => Int
+  => Word64
   -> (Trace s -> Bool)
   -> Gen (Trace s)
 traceSuchThat n cond = Gen.filter cond (trace @s n)
@@ -234,7 +231,7 @@ suchThatLastState traceGen cond = Gen.filter (cond . lastState) traceGen
 nonTrivialTrace
   :: forall s
    . (HasTrace s, HasSizeInfo (Signal s))
-  => Int
+  => Word64
   -> Gen (Trace s)
 nonTrivialTrace ub =
   Gen.filter (any (not . isTrivial) . traceSignals OldestFirst) (trace ub)
@@ -254,11 +251,11 @@ instance HasSizeInfo [a] where
 sampleMaxTraceSize
   :: forall s
    . HasTrace s
-  => Int
+  => Word64
   -- ^ Trace's upper bound
   -> Int
   -- ^ Generator size
-  -> Int
+  -> Word64
   -- ^ Number of samples to take
   -> IO Int
 sampleMaxTraceSize ub d n =
@@ -268,7 +265,7 @@ sampleMaxTraceSize ub d n =
 randomTrace
   :: forall s
    . HasTrace s
-  => Int
+  => Word64
   -> IO (Trace s)
 randomTrace ub = Gen.sample (trace ub)
 
@@ -276,7 +273,7 @@ randomTrace ub = Gen.sample (trace ub)
 randomTraceOfSize
   :: forall s
    . HasTrace s
-  => Int
+  => Word64
   -> IO (Trace s)
 randomTraceOfSize desiredTraceLength = Gen.sample (traceOfLength desiredTraceLength)
 
@@ -295,12 +292,12 @@ randomTraceOfSize desiredTraceLength = Gen.sample (traceOfLength desiredTraceLen
 --
 classifyTraceLength
   :: Trace s
-  -> Int
+  -> Word64
   -- ^ Maximum size of the traces
-  -> Int
+  -> Word64
   -- ^ Steps used to divide the interval
   -> PropertyT IO ()
-classifyTraceLength tr = classifySize "trace length:" tr traceLength
+classifyTraceLength tr = classifySize "trace length:" tr (fromIntegral . traceLength)
 
 -- | Classify the value size as either:
 --
@@ -406,9 +403,9 @@ ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
 traceLengthsAreClassified
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
-  => Int
+  => Word64
   -- ^ Maximum trace length that the signal generator of 's' can generate.
-  -> Int
+  -> Word64
   -- ^ Lengths of the intervals in which the lengths range should be split.
   -> Property
 traceLengthsAreClassified maximumTraceLength intervalSize =
@@ -421,7 +418,7 @@ traceLengthsAreClassified maximumTraceLength intervalSize =
 onlyValidSignalsAreGenerated
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
-  => Int
+  => Word64
   -- ^ Maximum trace length.
   -> Property
 onlyValidSignalsAreGenerated maximumTraceLength = property $ do

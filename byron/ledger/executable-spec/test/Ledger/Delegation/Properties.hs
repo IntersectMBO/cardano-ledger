@@ -34,7 +34,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, classifySize,
-                     classifyTraceLength, initEnvGen, isTrivial, nonTrivialTrace, ratio, sigGen,
+                     classifyTraceLength, envGen, isTrivial, nonTrivialTrace, ratio, sigGen,
                      suchThatLastState, trace, traceLengthsAreClassified)
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
@@ -50,7 +50,8 @@ import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
                      _dSStateScheduledDelegations)
 
-import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
+import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
+import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.GlobalParams (slotsPerEpoch)
 
 --------------------------------------------------------------------------------
@@ -233,7 +234,8 @@ dcertsAreNotReplayed = withTests 300 $ property $
 
 instance HasTrace DBLOCK where
 
-  initEnvGen
+  envGen
+    chainLength
     = DSEnv
     <$> allowedDelegators
     -- We do not expect the current epoch to have an influence on the tests, so
@@ -241,15 +243,19 @@ instance HasTrace DBLOCK where
     <*> epochGen 0 10
     -- As with epochs, the current slot should not have influence in the tests.
     <*> slotGen 0 10
-    -- 2160 the value of @k@ used in production. However, delegation
-    -- certificates are activated @2*k@ slots from the slot in which they are
-    -- issued. This means that if we want to see delegation activations, we
-    -- need to choose a small value for @k@ since we do not want to blow up the
-    -- testing time by using large trace lengths.
-    <*> blockCountGen 0 100
+    -- 2160 the value of @k@ used in production. However, delegation certificates are activated
+    -- @2*k@ slots from the slot in which they are issued. This means that if we want to see
+    -- delegation activations, we need to choose a small value for @k@ since we do not want to blow
+    -- up the testing time by using large trace lengths.
+    --
+    -- Choosing a small @k@ value amounts to picking a large number of epochs. Given a trace length
+    -- of @n@, if we have @10k@ slots per-epoch, we can have at most @n `div` 10@ epochs (by
+    -- choosing @k == 1@).
+    --
+    <*> CoreGen.k chainLength (chainLength `div` 10)
     where
-      -- We scale the number of delegators linearly up to twice the number of
-      -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
+      -- We scale the number of delegators linearly up to twice the number of genesis keys we use in
+      -- production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
         n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ gk <$> [0 .. n]
@@ -284,7 +290,7 @@ dblockTracesAreClassified = withTests 200 $ property $ do
   classifyTraceLength tr tl step
   -- Classify the traces by the total number of delegation certificates on
   -- them.
-  classifySize "total dcerts" (traceDCerts tr) length tl step
+  classifySize "total dcerts" (traceDCerts tr) (fromIntegral . length) tl step
   success
 
 -- | Extract the delegation certificates in the blocks, in the order they would

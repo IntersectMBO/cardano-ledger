@@ -46,7 +46,7 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
@@ -839,7 +839,7 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = upiEnvGen
+  envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
@@ -1217,7 +1217,7 @@ instance Embed UPIVOTE UPIVOTES where
 
 instance HasTrace UPIVOTES where
 
-  initEnvGen = upiEnvGen
+  envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (mkVote <$>) . concatMap replicateFst
