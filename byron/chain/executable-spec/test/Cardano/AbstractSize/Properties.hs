@@ -45,13 +45,13 @@ aTxId = TxId (hash aTx)
 
 aHeader :: BlockHeader
 aHeader = MkBlockHeader {
-          _bhPrevHash = (undefined :: Hash)
-        , _bhSlot = (undefined :: Slot)
-        , _bhIssuer = (undefined :: VKey)
-        , _bhSig = (undefined :: Sig Hash)
-        , _bhUtxoHash = (undefined :: Hash)
-        , _bhDlgHash = (undefined :: Hash)
-        , _bhUpdHash = (undefined :: Hash)
+          _bhPrevHash = undefined :: Hash
+        , _bhSlot = undefined :: Slot
+        , _bhIssuer = undefined :: VKey
+        , _bhSig = undefined :: Sig Hash
+        , _bhUtxoHash = undefined :: Hash
+        , _bhDlgHash = undefined :: Hash
+        , _bhUpdHash = undefined :: Hash
      }
 
 aTxWits :: TxWits
@@ -82,12 +82,12 @@ aBlock = Block { _bHeader = aHeader
 -- | A BlockHeader term has fixed typeReps
 exampleTypeRepsBlockHeader :: Assertion
 exampleTypeRepsBlockHeader =
-  (typeReps aHeader) @?= Seq.fromList [ typeOf (undefined::BlockHeader),
-        typeOf (undefined::Hash), typeOf (undefined::Hash),
-        typeOf (undefined::Hash), typeOf (undefined::Hash),
-        typeOf (undefined::Slot), typeOf (undefined::Word64),
-        typeOf (undefined::VKey), typeOf (undefined::Owner),
-        typeOf (undefined::Natural), typeOf (undefined::Sig Hash) ]
+  typeReps aHeader @?= Seq.fromList [ typeOf (undefined::BlockHeader)
+        , typeOf (undefined::Hash), typeOf (undefined::Hash)
+        , typeOf (undefined::Hash), typeOf (undefined::Hash)
+        , typeOf (undefined::Slot), typeOf (undefined::Word64)
+        , typeOf (undefined::VKey), typeOf (undefined::Owner)
+        , typeOf (undefined::Natural), typeOf (undefined::Sig Hash) ]
 
 -- | A BlockBody has variable typeReps, depending on the collections
 -- [DCert], [TxWits], [Vote] and [STag] (in UProp)
@@ -95,13 +95,13 @@ exampleTypeRepsBlockHeader =
 --   In this example, we can see the repetition of typeReps for 2 TxWits
 exampleTypeRepsBlockBody :: Assertion
 exampleTypeRepsBlockBody =
-     (typeReps aBody) @?=
+     typeReps aBody @?=
         Seq.fromList [
             typeOf (undefined::BlockBody)
           , typeOf (undefined::[DCert])
           , typeOf (undefined::[TxWits]) ]
-        >< (typeReps aTxWits)
-        >< (typeReps aTxWits)
+        >< typeReps aTxWits
+        >< typeReps aTxWits
         >< Seq.fromList [
               typeOf (undefined::Maybe UProp), typeOf (undefined::[Vote])
             , typeOf (undefined::ProtVer), typeOf (undefined::Natural)
@@ -111,7 +111,7 @@ exampleTypeRepsBlockBody =
 -- the header and body in the block.
 exampleTypeRepsBlock :: Assertion
 exampleTypeRepsBlock =
-     (typeReps aBlock) @?= typeOf (undefined::Block)
+     typeReps aBlock @?= typeOf (undefined::Block)
                            <| typeReps aHeader
                            >< typeReps aBody
 
@@ -130,7 +130,7 @@ propMultipleOfSizesBlock
   :: MonadTest m => Block -> m ()
 propMultipleOfSizesBlock b =
   let
-    body_ = (_bBody b)
+    body_ = _bBody b
   in do
     abstractSize (mkCost @DCert)  b === length (_bDCerts body_)
     abstractSize (mkCost @TxWits) b === length (_bUtxo body_)
@@ -155,9 +155,9 @@ propBlockAbstractSize
 
 testAbstractSize :: TestTree
 testAbstractSize = testGroup "Test abstractSize"
-  [ testCase "abstractSize - example - BlockHeader" exampleTypeRepsBlockHeader
-  , testCase "abstractSize - example - BlockBody" exampleTypeRepsBlockBody
-  , testCase "abstractSize - example - Block" exampleTypeRepsBlock
+  [ testCase "AbstractSize - example - BlockHeader" exampleTypeRepsBlockHeader
+  , testCase "AbstractSize - example - BlockBody" exampleTypeRepsBlockBody
+  , testCase "AbstractSize - example - Block" exampleTypeRepsBlock
 
-  , testProperty "abstractSize - Block/Header/Body" propBlockAbstractSize
+  , testProperty "AbstractSize - Block/Header/Body" propBlockAbstractSize
   ]

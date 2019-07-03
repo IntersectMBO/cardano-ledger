@@ -9,9 +9,9 @@ import           Test.Tasty (TestTree, defaultMain, localOption, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
+import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
-import           Ledger.HasTypeReps.Properties (testTxHasTypeReps)
 import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, lastProposal)
 
 import qualified Ledger.Update.Properties as UPDATE
