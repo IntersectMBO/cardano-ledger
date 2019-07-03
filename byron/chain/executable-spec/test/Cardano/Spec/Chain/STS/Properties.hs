@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 module Cardano.Spec.Chain.STS.Properties where
 
@@ -8,7 +9,9 @@ import           Data.Ord (Down (Down), comparing)
 import           Hedgehog (MonadTest, Property, failure, forAll, property, withTests, (===))
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator
+import           Control.State.Transition.Generator (TraceLength (Maximum), classifyTraceLength,
+                     traceSigGen)
+import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace
 
 import           Ledger.Delegation
@@ -18,8 +21,9 @@ import           Cardano.Spec.Chain.STS.Rule.Chain
 
 slotsIncrease :: Property
 slotsIncrease = property $ do
-  tr <- forAll $ traceSigGen (Maximum 200) (sigGenChain NoGenDelegation NoGenUTxO)
-  classifyTraceLength tr 200 50
+  let (maxTraceLength, step) = (1000, 100)
+  tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain NoGenDelegation NoGenUTxO)
+  classifyTraceLength tr maxTraceLength step
   slotsIncreaseInTrace tr
 
 slotsIncreaseInTrace :: MonadTest m => Trace CHAIN -> m ()
@@ -47,3 +51,7 @@ blockIssuersAreDelegates =
            where
              issuer = bk ^. bHeader . bhIssuer
              dm = st ^. disL . delegationMap
+
+onlyValidSignalsAreGenerated :: Property
+onlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
