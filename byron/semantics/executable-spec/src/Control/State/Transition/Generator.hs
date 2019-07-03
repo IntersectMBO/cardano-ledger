@@ -22,7 +22,7 @@
 module Control.State.Transition.Generator
   ( HasTrace
   , initEnvGen
-  , initEnvForTraceLengthGen
+  , envForTraceLengthGen
   , sigGen
   , trace
   , traceSigGen
@@ -79,11 +79,11 @@ class STS s => HasTrace s where
   initEnvGen :: Gen (Environment s)
 
   -- | Generate an initial environment that is based on the given trace length.
-  initEnvForTraceLengthGen
+  envForTraceLengthGen
     :: Int
     -- ^ Trace length that will be used by 'trace' or 'traceOfLength'.
     -> Gen (Environment s)
-  initEnvForTraceLengthGen _  = initEnvGen @s
+  envForTraceLengthGen _  = initEnvGen @s
 
   sigGen :: Environment s -> State s -> Gen (Signal s)
 
@@ -103,6 +103,11 @@ class STS s => HasTrace s where
 
 data TraceLength = Maximum Int | Desired Int
 
+-- | Extract the maximum or desired integer value of the trace length.
+traceLengthValue :: TraceLength -> Int
+traceLengthValue (Maximum n) = n
+traceLengthValue (Desired n) = n
+
 traceSigGen
   :: forall s
    . HasTrace s
@@ -110,7 +115,7 @@ traceSigGen
   -> (Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
 traceSigGen aTraceLength gen = do
-  env <- initEnvGen @s
+  env <- envForTraceLengthGen @s (traceLengthValue aTraceLength)
   case applySTS @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite

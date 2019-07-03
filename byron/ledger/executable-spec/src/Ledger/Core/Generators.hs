@@ -7,6 +7,7 @@ module Ledger.Core.Generators
   , epochGen
   , blockCountGen
   , k
+  , kForNumberOfEpochs
   )
 where
 
@@ -16,7 +17,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Ledger.Core (Addr (Addr), BlockCount (BlockCount), Epoch (Epoch), Owner (Owner),
-                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis), unBlockCount)
+                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis))
 import           Ledger.GlobalParams (slotsPerEpochToK)
 
 
@@ -47,6 +48,24 @@ blockCountGen lower upper =
 -- | Generate a chain stability parameter value (@k@) using the given chain length and desired
 -- number of epochs.
 --
+k
+  :: Word64
+  -- ^ Chain length
+  -> Word64
+  -- ^ Maximum number of epochs
+  -> Gen BlockCount
+k chainLength maxNumberOfEpochs =
+  kForNumberOfEpochs chainLength <$> numberOfEpochsGen
+    where
+      numberOfEpochsGen :: Gen Word64
+      numberOfEpochsGen =
+         Gen.frequency [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1))
+                       , (1, pure 1)
+                       ]
+
+-- | Given a chain length, determine the @k@ value that will split the chain length into the desired
+-- number of epochs.
+--
 -- We have that:
 --
 -- > chainLength = slotsPerEpoch k * numberOfEpochs
@@ -60,21 +79,14 @@ blockCountGen lower upper =
 --
 -- When the number of epochs is greater or equal than the @chainLength@ the resulting @k@ parameter
 -- will be 0.
-k
+kForNumberOfEpochs
   :: Word64
   -- ^ Chain length
   -> Word64
-  -- ^ Maximum number of epochs
-  -> Gen BlockCount
-k chainLength maxNumberOfEpochs =
-  slotsPerEpochToK <$> slotsPerEpoch
-    where
-      slotsPerEpoch :: Gen Word64
-      slotsPerEpoch = do
---        numberOfEpochs <- Gen.integral $ Range.constant 1 (maxNumberOfEpochs `max` 1)
---        numberOfEpochs <- Gen.integral $ Range.exponential 1 (maxNumberOfEpochs `max` 1)
-        let maxNumberOfEpochsToK = unBlockCount $ slotsPerEpochToK maxNumberOfEpochs
-        numberOfEpochs <- Gen.frequency [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1))
-                                        , (1, pure 1)
-                                        ]
-        pure $! round $ fromIntegral chainLength / (fromIntegral numberOfEpochs :: Double)
+  -- ^ Desired number of epochs
+  -> BlockCount
+kForNumberOfEpochs chainLength numberOfEpochs =
+  slotsPerEpochToK slotsPerEpoch
+  where
+    slotsPerEpoch :: Word64
+    slotsPerEpoch = round $ fromIntegral chainLength / (fromIntegral numberOfEpochs :: Double)
