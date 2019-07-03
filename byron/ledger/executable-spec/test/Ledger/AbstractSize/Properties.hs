@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Ledger.HasTypeReps.Properties
+module Ledger.AbstractSize.Properties
     (testTxHasTypeReps)
   where
 
@@ -42,7 +42,7 @@ aTxId = TxId (hash aTx)
 exampleTypeRepsTxIn :: Assertion
 exampleTypeRepsTxIn =
   let txIn = TxIn aTxId 0
-  in (typeReps txIn) @?= typeOf (undefined::TxIn)
+  in typeReps txIn @?= typeOf (undefined::TxIn)
                          <| typeOf (undefined::TxId)
                          <| typeOf (undefined::Hash)
                          <| typeOf (undefined::Int)
@@ -59,7 +59,7 @@ exampleTypeRepsTx =
     outs = []
     wits = []
     tx = TxWits (Tx [in0, in1] outs) wits
-  in (typeReps tx) @?= typeOf (undefined::TxWits)
+  in typeReps tx @?= typeOf (undefined::TxWits)
                        <| typeOf (undefined::Tx)
                        <| typeOf (undefined::[TxIn])
                        <| typeReps in0
@@ -81,7 +81,7 @@ mkCost = Map.singleton (typeOf (undefined::a)) 1
 propSumOfSizesTxWits
   :: MonadTest m => TxWits -> m ()
 propSumOfSizesTxWits txw
-  = (abstractSize (txInCosts <> txOutCosts <> witCosts) txw)
+  = abstractSize (txInCosts <> txOutCosts <> witCosts) txw
          === abstractSize txInCosts (body txw)
              + abstractSize txOutCosts (body txw)
              + abstractSize witCosts (witnesses txw)
@@ -105,7 +105,7 @@ propMultipleOfSizes
   :: MonadTest m => TxWits -> m ()
 propMultipleOfSizes txw =
   let
-    body_ = (body txw)
+    body_ = body txw
     wits_ = witnesses txw
   in do
     -- we should account for each TxIn/TxId/Hash in a TxWits's size
@@ -139,7 +139,7 @@ propMultipleOfSizes txw =
     -- since Vkey appears in each input _and_ each witness, the size of
     -- TxWits should be the total number of inputs and wits
     abstractSize (mkCost @VKey) txw
-       === (length $ outputs body_) + (length $ wits_)
+       === length (outputs body_) + length wits_
 
 propTxAbstractSize :: Property
 propTxAbstractSize
@@ -152,8 +152,8 @@ propTxAbstractSize
 
 testTxHasTypeReps :: TestTree
 testTxHasTypeReps = testGroup "Test HasTypeReps instances"
-  [ testCase "exampleTypeRepsTxIn - HasTypeReps" exampleTypeRepsTxIn
-  , testCase "exampleTypeRepsTx - HasTypeReps" exampleTypeRepsTx
+  [ testCase "AbstractSize - example - TxIn" exampleTypeRepsTxIn
+  , testCase "AbstractSize - example - Tx" exampleTypeRepsTx
 
-  , testProperty "AbstractSize and HasTypeReps" propTxAbstractSize
+  , testProperty "AbstractSize and HasTypeReps - Tx*" propTxAbstractSize
   ]

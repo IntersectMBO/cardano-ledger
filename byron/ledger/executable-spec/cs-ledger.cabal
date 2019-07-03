@@ -87,7 +87,7 @@ test-suite ledger-rules-test
   main-is: Main.hs
   other-modules: Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
-               , Ledger.HasTypeReps.Properties
+               , Ledger.AbstractSize.Properties
                , Ledger.Update.Properties
                , Ledger.Pvbump.Properties
                , Ledger.Relation.Properties
