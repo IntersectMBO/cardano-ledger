@@ -1,20 +1,20 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.Pbft where
 
-import Control.Lens ((^.))
-import Data.Sequence (Seq)
-import Data.Bimap (Bimap)
+import           Control.Lens ((^.))
+import           Data.Bimap (Bimap)
+import           Data.Sequence (Seq)
 
-import Control.State.Transition
+import           Control.State.Transition
 
-import Ledger.Core
-import Ledger.Update
+import           Ledger.Core
+import           Ledger.Update
 
-import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.Rule.SigCnt
+import           Cardano.Spec.Chain.STS.Block
+import           Cardano.Spec.Chain.STS.Rule.SigCnt
 
 data PBFT
 
@@ -24,6 +24,7 @@ instance STS PBFT where
     , Bimap VKeyGenesis VKey
     , Slot
     , Slot
+    , BlockCount -- Chain stability parameter
     )
 
   type State PBFT = (Hash, Seq VKeyGenesis)
@@ -42,7 +43,7 @@ instance STS PBFT where
 
   transitionRules =
     [ do
-        TRC ((pps, ds, sLast, sNow), (h, sgs), bh) <- judgmentContext
+        TRC ((pps, ds, sLast, sNow, k), (h, sgs), bh) <- judgmentContext
         let
           vkd = bh ^. bhIssuer :: VKey
           s = bh ^. bhSlot :: Slot
@@ -50,8 +51,8 @@ instance STS PBFT where
         s <= sNow ?! SlotInTheFuture s sNow
         (bh ^. bhPrevHash) == h ?! PrevHashNotMatching (bh ^. bhPrevHash) h
         verify vkd (bhToSign bh) (bh ^. bhSig) ?! InvalidHeaderSignature vkd (bh ^. bhSig)
-        sgs' <- trans @SIGCNT $ TRC ((pps, ds), sgs, vkd)
-        return $! (bhHash bh, sgs')
+        sgs' <- trans @SIGCNT $ TRC ((pps, ds, k), sgs, vkd)
+        pure $! (bhHash bh, sgs')
     ]
 
 instance Embed SIGCNT PBFT where

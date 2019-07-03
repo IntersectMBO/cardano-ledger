@@ -2,16 +2,16 @@
 
 module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
-import Control.Lens ((^.))
+import           Control.Lens ((^.))
+import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Bimap (Bimap)
-import Data.Sequence (Seq, (|>))
+import           Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 
-import Control.State.Transition
+import           Control.State.Transition
 
-import Ledger.Core hiding ((|>))
-import Ledger.Update hiding (NotADelegate)
+import           Ledger.Core hiding ((|>))
+import           Ledger.Update hiding (NotADelegate)
 
 data SIGCNT
 
@@ -19,6 +19,7 @@ instance STS SIGCNT where
   type Environment SIGCNT
     = ( PParams
       , Bimap VKeyGenesis VKey
+      , BlockCount -- Chain stability parameter
       )
 
   type State SIGCNT = Seq VKeyGenesis
@@ -36,10 +37,9 @@ instance STS SIGCNT where
 
   transitionRules =
     [ do
-        TRC ((pps, dms), sgs, vk) <- judgmentContext
+        TRC ((pps, dms, k), sgs, vk) <- judgmentContext
         let
           t' = pps ^. bkSgnCntT
-          k  = pps ^. stableAfter
         case Bimap.lookupR vk dms of
           Just vkG -> do
             let sgs' = S.drop (S.length sgs + 1 - (fromIntegral . unBlockCount $ k)) (sgs |> vkG)

@@ -30,8 +30,9 @@ slotsIncreaseInTrace tr = slots === nubSortBy (comparing Down) slots
 blockIssuersAreDelegates :: Property
 blockIssuersAreDelegates =
   withTests 200 $ property $ do
-    tr <- forAll $ traceSigGen (Maximum 200) (sigGenChain GenDelegation NoGenUTxO)
-    classifyTraceLength tr 200 50
+    let (maxTraceLength, step) = (1000, 100)
+    tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain GenDelegation NoGenUTxO)
+    classifyTraceLength tr maxTraceLength step
     checkBlockIssuersAreDelegates tr
   where
     checkBlockIssuersAreDelegates :: MonadTest m => Trace CHAIN -> m ()

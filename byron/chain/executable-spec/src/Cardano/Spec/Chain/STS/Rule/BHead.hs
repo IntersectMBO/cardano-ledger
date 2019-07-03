@@ -1,18 +1,18 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.BHead where
 
-import Control.Lens ((^.), _1)
-import Data.Bimap (Bimap)
+import           Control.Lens ((^.), _1)
+import           Data.Bimap (Bimap)
 
-import Control.State.Transition
-import Ledger.Core
-import Ledger.Update
+import           Control.State.Transition
+import           Ledger.Core
+import           Ledger.Update
 
-import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.Rule.Epoch
+import           Cardano.Spec.Chain.STS.Block
+import           Cardano.Spec.Chain.STS.Rule.Epoch
 
 data BHEAD
 
@@ -45,7 +45,7 @@ instance STS BHEAD where
   transitionRules =
     [ do
         TRC ((_, sLast, k), us, bh) <- judgmentContext
-        us' <- trans @EPOCH $ TRC ((sEpoch sLast, k), us, bh ^. bhSlot)
+        us' <- trans @EPOCH $ TRC ((sEpoch sLast k, k), us, bh ^. bhSlot)
         let sMax = snd (us' ^. _1) ^. maxHdrSz
         bHeaderSize bh <= sMax ?! HeaderSizeTooBig
         return $! us'
