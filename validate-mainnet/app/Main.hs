@@ -13,7 +13,12 @@ import Formatting (build, sformat)
 
 import Control.Concurrent (threadDelay)
 import Features.Blockchain (BlockchainLayer(..), createBlockchainFeature)
-import Cardano.Shell.Features.Logging (LoggingLayer(..), Trace, createLoggingFeature)
+import Cardano.Shell.Features.Logging
+  ( LoggingCLIArguments (..)
+  , LoggingLayer(..)
+  , Trace
+  , createLoggingFeature
+  )
 import Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import Cardano.Shell.Presets (mainnetConfiguration)
 import Cardano.Shell.Types
@@ -34,6 +39,7 @@ main = do
   (loggingLayer, loggingFeature) <- createLoggingFeature
     cardanoEnvironment
     cardanoConfiguration
+    (LoggingCLIArguments "")
 
   bChainLayerAndFeature <- runExceptT $ createBlockchainFeature
     cardanoEnvironment
@@ -57,7 +63,7 @@ main = do
 -- defined in 'init'
 blockchainApp :: LoggingLayer -> BlockchainLayer -> IO ()
 blockchainApp ll bcl = do
-  mainTrace <- llAppendName ll "validate-mainnet" (llBasicTrace ll)
+  let mainTrace = llAppendName ll "validate-mainnet" (llBasicTrace ll)
 
   -- Bulk chain validation
   bulkChainValidation mainTrace bcl ll

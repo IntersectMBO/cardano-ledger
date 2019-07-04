@@ -61,9 +61,9 @@ validateEpochFile
   -> FilePath
   -> m ChainValidationState
 validateEpochFile vMode config ll cvs fp = do
-  subTrace     <- llAppendName ll "epoch-validation" (llBasicTrace ll)
-  utxoSubTrace <- llAppendName ll "utxo-stats" subTrace
-  res          <- llBracketMonadX ll subTrace Log.Info "benchmark" $
+  let subTrace :: Trace m Text = llAppendName ll "epoch-validation" (llBasicTrace ll)
+      utxoSubTrace = llAppendName ll "utxo-stats" subTrace
+  res <- llBracketMonadX ll subTrace Log.Info "benchmark" $
       liftIO $ runResourceT $ (`runReaderT` vMode) $ runExceptT $
         foldChainValidationState config cvs stream
   either throwError (logResult subTrace utxoSubTrace) res
