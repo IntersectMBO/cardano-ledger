@@ -91,8 +91,9 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, range, sign, skey, unBlockCount, unVKeyGenesis, (∈), (∉), (⨃))
-import           Ledger.Core.Generators (epochGen, slotGen, vkgenesisGen)
+                     addSlot, hash, mkVKeyGenesis, range, sign, skey, unBlockCount, unVKeyGenesis,
+                     (∈), (∉), (⨃))
+import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
 
 
@@ -528,7 +529,7 @@ initialEnvFromGenesisKeys ngk chainLength =
     --
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
-    <$> Gen.set (linear 1 (fromIntegral ngk)) vkgenesisGen
+    <$> pure (Set.fromAscList $ mkVKeyGenesis <$> [1 .. fromIntegral ngk])
     <*> epochGen 0 10
     <*> slotGen 0 100
     <*> CoreGen.k chainLength (chainLength `div` 10)

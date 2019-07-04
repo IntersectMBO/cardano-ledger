@@ -3,6 +3,9 @@
 
 module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
+
+import           Data.Word
+
 import           Control.Arrow ((|||))
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
@@ -49,10 +52,10 @@ instance STS SIGCNT where
             let sgs' = S.drop (S.length sgs + 1 - (fromIntegral . unBlockCount $ k)) (sgs |> vkG)
                 nrSignedBks = fromIntegral (S.length (S.filter (==vkG) sgs'))
             nrSignedBks <= fromIntegral (unBlockCount k) * t' ?! TooManyIssuedBlocks vkG
-            return $! sgs'
+            pure $! sgs'
           Nothing -> do
             failBecause NotADelegate
-            return sgs -- TODO: this is a quite inconvenient encoding for this transition system!
+            pure $! sgs -- TODO: this is a quite inconvenient encoding for this transition system!
     ]
 
 -- | Generate an issuer that can still issue blocks according to the @SIGCNT@ rule. The issuers are
@@ -62,15 +65,18 @@ instance STS SIGCNT where
 genIssuer
   :: Environment SIGCNT
   -> State SIGCNT
+  -> Word8 -- TODO: remove
   -> Gen VKey
-genIssuer (pps, dms, k) sgs =
+genIssuer (pps, dms, k) sgs ngk =
   if null validIssuers
   then error $ "No valid issuers!" ++ "\n"
              ++ "k = " ++ show k ++ "\n"
+             ++ "ngk = " ++ show ngk ++ "\n"
              ++ "keys = " ++ show (Bimap.elems dms) ++ "\n"
              ++ "sgs = " ++ show sgs ++ "\n"
              ++ "length sgs = " ++ show (length sgs) ++ "\n"
-             ++ "pps = " ++ show pps
+             ++ "_bkSgnCntT = " ++ show (_bkSgnCntT pps) ++ "\n"
+             ++ "dms = " ++ show dms
   else Gen.element validIssuers
   where
     validIssuers =

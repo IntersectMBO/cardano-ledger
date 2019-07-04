@@ -39,7 +39,8 @@ import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, clas
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
-                     VKey (VKey), VKeyGenesis (VKeyGenesis), addSlot, owner, unSlot, unSlotCount)
+                     VKey (VKey), VKeyGenesis (VKeyGenesis), addSlot, mkVKeyGenesis, owner, unSlot,
+                     unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
@@ -258,8 +259,7 @@ instance HasTrace DBLOCK where
       -- production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
         n <- Gen.integral (Range.linear 0 13)
-        pure $! Set.fromAscList $ gk <$> [0 .. n]
-      gk = VKeyGenesis . VKey . Owner
+        pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 
   sigGen _ (env, st) =
     DBlock <$> nextSlotGen <*> sigGen @DELEG env st

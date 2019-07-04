@@ -85,6 +85,9 @@ newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey}
 instance HasOwner VKeyGenesis where
   owner (VKeyGenesis vk) = owner vk
 
+mkVKeyGenesis :: Natural -> VKeyGenesis
+mkVKeyGenesis = VKeyGenesis . VKey . Owner
+
 -- |Key Pair.
 data KeyPair = KeyPair
   { sKey :: SKey

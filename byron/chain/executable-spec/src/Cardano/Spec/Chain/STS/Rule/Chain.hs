@@ -9,14 +9,13 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import           Control.Lens (Lens', to, (&), (.~), (^.), _1, _5)
+import           Control.Lens (Lens', (&), (.~), (^.), _1, _5)
 import           Data.Bimap (Bimap)
-import qualified Data.Bimap as Bimap
 import           Data.Bits (shift)
 import           Data.ByteString (ByteString)
 import qualified Data.Hashable as H
 import qualified Data.Map as Map
-import           Data.Sequence (Seq, fromList)
+import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           Hedgehog (Gen)
@@ -98,7 +97,7 @@ instance STS CHAIN where
         utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
         ds      <- trans @DELEG $ IRC dsEnv
         pure $! ( s0
-                , ds ^. delegationMap . to Bimap.keys . to fromList
+                , []
                 , genesisHash
                 , utxoSt0
                 , ds
@@ -177,10 +176,9 @@ instance HasTrace CHAIN where
       <*> pure dsEnv
       <*> pure
           initialPParams
-          { _bkSgnCntT = (1 / fromIntegral ngk) `max` _bkSgnCntT initialPParams
-            -- We need to make sure we can issue a block, and for this we need to signature count
-            -- threshold not to be less than 1 / ngk
-            }
+          { _bkSgnCntT =
+              mkSigCntT (_dSEnvK dsEnv) ngk
+          }
           -- TODO: for now we're returning a constant set of parameters
       <*> pure ngk
       <*> pure (_dSEnvK dsEnv)
@@ -188,6 +186,39 @@ instance HasTrace CHAIN where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
+
+      -- | Generate a signature count threshold given a chain stability parameter @k@ and number of
+      -- genesis keys @ngk@.
+      --
+      -- This threshold must allow that all the (honest) genesis keys can issue enough blocks to
+      -- fill the rolling window of @k@. If this is not possible, then the block production will
+      -- halt, since there will not be valid issuers. So the threshold must make it possible to find
+      -- an integer @n@ such that:
+      --
+      -- > n <= k * t
+      --
+      -- and
+      --
+      -- > k < ngk * n
+      -- > = { algebra }
+      -- > k / ngk < n
+      --
+      -- We know there must be an integer in the interval
+      --
+      -- > (k/ngk, k/ngk + 1]
+      --
+      -- So to satisfy the requirements above, we can pick a @t@ such that:
+      --
+      -- > k/ngk + 1 <= k * t
+      -- > = { algebra }
+      -- > 1/ngk + 1/k <= t
+      --
+      -- To pick a range for we vary the proportion of honest keys.
+      --
+      -- TODO: put this in  Cardano.Spec.Chain.STS.Rule.SigCnt
+      mkSigCntT :: BlockCount -> Word8 -> Double
+      mkSigCntT (BlockCount k) ngk =
+        1 / fromIntegral ngk + 1 / fromIntegral k
 
   sigGen = sigGenChain NoGenDelegation NoGenUTxO --TODO: remove the No's
 
@@ -206,7 +237,7 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk, k
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- SigCnt.genIssuer (pps, ds ^. dmsL, k) sgs
+    vkI         <- SigCnt.genIssuer (pps, ds ^. dmsL, k) sgs _ngk
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
