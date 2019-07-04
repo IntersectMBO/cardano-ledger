@@ -29,6 +29,7 @@
 .stack-work-local/
 */dist
 *~
+dist-newstyle/
 
 # Editors
 TAGS
