@@ -40,12 +40,12 @@ extra-deps:
 
   # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: f6fcda280ddd1d4ef87e5203d65d132f924a6e39
+    commit: 2a937f5ae133565c1af2ee5cb09cd430662eecab
 
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 0ebeacf643153a88fe0c23527449ca21b985d7d4
+    commit: e67ac43fc26e3a47ffcf1a10666f2ccd34ce8b1a
     subdirs:
       - contra-tracer
       - iohk-monitoring
