@@ -40,7 +40,7 @@ extra-deps:
 
   # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 2a937f5ae133565c1af2ee5cb09cd430662eecab
+    commit: 92e6b42167d1399971df788b691423222722c2f6
 
   - time-units-1.0.0
 

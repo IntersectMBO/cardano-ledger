@@ -30,6 +30,7 @@
           (hsPkgs.directory)
           (hsPkgs.formatting)
           (hsPkgs.iohk-monitoring)
+          (hsPkgs.optparse-applicative)
           (hsPkgs.process)
           (hsPkgs.QuickCheck)
           (hsPkgs.safe-exceptions)
@@ -44,6 +45,7 @@
             (hsPkgs.base)
             (hsPkgs.cardano-shell)
             (hsPkgs.cardano-prelude)
+            (hsPkgs.optparse-applicative)
             (hsPkgs.safe-exceptions)
             (hsPkgs.stm)
             (hsPkgs.iohk-monitoring)
@@ -54,6 +56,8 @@
             (hsPkgs.base)
             (hsPkgs.cardano-shell)
             (hsPkgs.cardano-prelude)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.safe-exceptions)
             ];
           };
         "cardano-launcher" = {
@@ -69,7 +73,7 @@
             (hsPkgs.filepath)
             (hsPkgs.formatting)
             (hsPkgs.safe-exceptions)
-            (hsPkgs.turtle)
+            (hsPkgs.optparse-applicative)
             ];
           };
         };
@@ -98,7 +102,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-shell";
-      rev = "2a937f5ae133565c1af2ee5cb09cd430662eecab";
-      sha256 = "0chfvj84gsjilk0n8bkyv20inwmanpf1xg5vzm1d0npdbv0317wz";
+      rev = "92e6b42167d1399971df788b691423222722c2f6";
+      sha256 = "059m0hd1hjf96g9l1qzh7imawvgwc813l0xggwlb5n47cab2dvhd";
       });
     }
