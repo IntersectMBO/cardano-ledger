@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a21f83d9407b2955fbaea4ce8a79b262361112aa/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fda38e60007a019c0c8569e8a0fc08f2102c92cc/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -14,10 +14,10 @@ extra-deps:
 - bimap-0.4.0
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: a21f83d9407b2955fbaea4ce8a79b262361112aa
+  commit: fda38e60007a019c0c8569e8a0fc08f2102c92cc
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+  commit: 14f9b09920813447a4060b6810bf17fc4ea35840
   subdirs:
     - binary
     - cardano-crypto-class
