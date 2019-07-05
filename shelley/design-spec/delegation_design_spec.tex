@@ -726,52 +726,51 @@ delegation:
 
 \subsection{Address Structure}
 \label{address-structure}
+In Shelley, an address has to provide information on two things: who has the
+right to spend funds in that address, and who has the right to delegate the
+stake associated with funds in that address to a stake pool. To separate those
+two concerns, we distinguish between \emph{value addresses} and \emph{stake
+  addresses}. Value addresses and stake addresses are building blocks for
+(overall) addresses: an address contains a value address, and may also contain a
+stake address.
 
-To separate the concerns of moving funds and exercising rights to participate in
-the protocol, we discern between different types of addresses:
+Both value and stake addresses can take one of two forms:
 \begin{description}
-\item[Value Addresses] are used to transfer value. Whenever a transaction spends
-  a UTxO entry, it has to contain a witness for the value address of that UTxO
-  entry.
+\item[Single Key Addresses], or simply \emph{key addresses}, are associated with
+  a single key pair \((sk, vk)\). The address consists of a cryptographic hash
+  \(\hash{vk}\) of the verification key \(vk\). A witness for the address
+  contains the verification key \(vk\) itself, as well as a signature of the
+  signign key \(sk\). We call this a \emph{single key witness}, or simply a
+  \emph{key witness}.
 
-  In its simplest form, a value address is associated with a payment key pair
-  \((skp, vkp)\). The address then consists of a cryptographic hash
-  \(\hash{vkp}\) of the verification key \(vkp\). A witness for such an address
-  contains the verification key \(vkp\) and a signature of the signing key
-  \(skp\). We call those addresses \emph{single key addresses} or simply
-  \emph{key addresses}, and the corresponding witnesses \emph{single key
-    witnesses} or \emph{key witnesses}.
+\item[Script Addresses] defer authorisation to a \emph{validator script}. The
+  address contains a cryptographic hash of this script. In the future, Cardano
+  will support multiple languages, with Plutus being the most prominent example,
+  and the type of witness provided for a script address will depend on the
+  language of the script.
 
-  We also support value addresses that need signatures from multiple parties.
-  Those also contain a hash, not of a verification key, but of a validator
-  script. The script can be written either in Plutus, or in a mini-language for
-  expressing multi-sig conditions. In the latter case, the script will be
-  interpreted natively by Cardano\footnote{Note that the encoding of a script
-    that is hashed should include a tag for the language, so that the same
-    script text in different languages will result in different hashes.}. We
-  will call those addresses \emph{multi-sig addresses}.
+  In Shelley, we will only support script addresses for a narrower purpose,
+  namely for providing a mechanism for requiring multiple signatures to
+  authorise a transaction, known as multi signature or multi-sig.
+
+  Cardano-Shelley will feature a minimalistic scripting language capable of
+  expressing the requirement of having a specified subset of a given set of keys
+  provide a signature. Examples include \emph{M of N} schemes, where a
+  transaction can be authorised if at least \(N\) distinct keys, from a set of
+  \(M\) keys, sign the transaction. We will also call this special instance of
+  script addresses \emph{multi-sig addresses}.
 
   A witness for a multi-sig address (called \emph{multi-sig witness}) contains
   the validator script matching the hash in the address, and a set of single key
-  witnesses. The validator script will determine whether those signatures
-  are sufficient for the funds to be spent. For details, and an example
-  language, see~\citep{multi-sig-scripts}.
+  witnesses. The validator script will determine whether those signatures are
+  sufficient for the funds to be spent. For details, and an example of a multi
+  signature scripting language, see~\citep{multi-sig-scripts}.
 
-  Note that multi-sig addresses are also a natural step in the direction of
-  supporting full Plutus scripts in Cardano, which is planned for Goguen.
-
-\item[Stake Addresses] are used to delegate stake, and to claim rewards for
-  participating in the protocol.
-
-  Just like value addresses, stake addresses can be either single key addresses
-  or multi-sig addresses.
-
-\item[Addresses] combine value addresses and stake addresses. Each UTxO entry
-  belongs to an address that determines who is eligible to spend the contained
-  funds, and who (if anyone) can exercise the stake rights associated with those
-  funds.
-
+  In Goguen, the next major release of Cardano after Shelley, we will expand
+  script addresses to also contain addresses for Plutus scripts.
 \end{description}
+Thus, in Shelley, it will be possible to require single or multiple signatures
+both for the spending of funds and for the delegation of stake, independently.
 
 Shelley will introduce four different types of addresses: \emph{base
 addresses}, \emph{pointer addresses}, \emph{enterprise addresses}, and
