@@ -16,6 +16,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.Hashable as H
 import qualified Data.Map as Map
 import           Data.Sequence (Seq)
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           Hedgehog (Gen)
@@ -28,6 +29,7 @@ import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Ledger.Core
+import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Delegation
 import           Ledger.Update hiding (delegationMap)
 import           Ledger.UTxO (UTxO)
@@ -49,10 +51,10 @@ instance STS CHAIN where
     -- Components needed to be able to bootstrap the traces generator. They are
     -- not part of the formal spec. These might be removed once we have decided
     -- on how do we want to model initial states.
-    , DSEnv           -- Needed by the initial rules for delegation.
+    , Set VKeyGenesis -- Allowed delegators. Needed by the initial delegation rules. The number of
+                      -- genesis keys is the size of this set.
     , PParams         -- Needed to bootstrap this part of the chain state,
                       -- which is used in the delegation rules
-    , Word8           -- Number of genesis keys.
     , BlockCount      -- Chain stability parameter
     )
 
@@ -78,7 +80,7 @@ instance STS CHAIN where
 
   initialRules =
     [ do
-        IRC (_slot, utxo0', dsEnv, pps', _ngk, _k) <- judgmentContext
+        IRC (_sNow, utxo0', ads, pps', k) <- judgmentContext
         let s0 = Slot 0
             -- Since we only test the delegation state we initialize the
             -- remaining fields of the update interface state to (m)empty. Once
@@ -95,6 +97,12 @@ instance STS CHAIN where
                         , Map.empty
                         )
         utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
+        let dsEnv = DSEnv
+                    { _dSEnvAllowedDelegators = ads
+                    , _dSEnvEpoch = sEpoch s0 k
+                    , _dSEnvSlot = s0
+                    , _dSEnvK = k
+                    }
         ds      <- trans @DELEG $ IRC dsEnv
         pure $! ( s0
                 , []
@@ -115,14 +123,14 @@ instance STS CHAIN where
    where
     isEBBRule :: TransitionRule CHAIN
     isEBBRule = do
-      TRC ((_sNow, _, _, _, _, _), (sLast, sgs, _, utxo, ds, us), b) <- judgmentContext
+      TRC ((_sNow, _, _, _, _), (sLast, sgs, _, utxo, ds, us), b) <- judgmentContext
       bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
       let h' = bhHash (b ^. bHeader)
       pure $! (sLast, sgs, h', utxo, ds, us)
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC ((sNow, utxoGenesis, _, _pps, ngk, k), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
+      TRC ((sNow, utxoGenesis, ads, _pps, k), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
         trans @BHEAD $ TRC ((dm, sLast, k), us, b ^. bHeader)
@@ -134,7 +142,7 @@ instance STS CHAIN where
           ( ppsUs'
           , sEpoch (b ^. bHeader ^. bhSlot) k
           , utxoGenesis
-          , ngk
+          , fromIntegral (Set.size ads)
           , k
           )
         , (utxoSt, ds, us')
@@ -169,19 +177,18 @@ instance HasTrace CHAIN where
 
   envGen chainLength = do
     ngk <- Gen.integral (Range.linear 1 14)
-    dsEnv <- initialEnvFromGenesisKeys ngk chainLength
-    (,,,,,)
+    k <- CoreGen.k chainLength (chainLength `div` 10)
+    (,,,,)
       <$> gCurrentSlot
       <*> (utxo0 <$> envGen @UTXOWS chainLength)
-      <*> pure dsEnv
+      <*> pure (mkVkGenesisSet ngk)
       <*> pure
           initialPParams
           { _bkSgnCntT =
-              mkSigCntT (_dSEnvK dsEnv) ngk
+              mkSigCntT k ngk
           }
           -- TODO: for now we're returning a constant set of parameters
-      <*> pure ngk
-      <*> pure (_dSEnvK dsEnv)
+      <*> pure k
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
@@ -220,7 +227,7 @@ instance HasTrace CHAIN where
       mkSigCntT (BlockCount k) ngk =
         1 / fromIntegral ngk + 1 / fromIntegral k
 
-  sigGen = sigGenChain NoGenDelegation NoGenUTxO --TODO: remove the No's
+  sigGen = sigGenChain GenDelegation GenUTxO
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
@@ -232,16 +239,24 @@ sigGenChain
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk, k) (Slot s, sgs, h, utxo, ds, _us)
+sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- SigCnt.genIssuer (pps, ds ^. dmsL, k) sgs _ngk
+    vkI         <- SigCnt.genIssuer (pps, ds ^. dmsL, k) sgs
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
-      GenDelegation   -> dcertsGen dsEnv ds
+      GenDelegation   ->
+        let dsEnv = DSEnv
+                    { _dSEnvAllowedDelegators = ads
+                    , _dSEnvEpoch = sEpoch nextSlot k
+                    , _dSEnvSlot = nextSlot
+                    , _dSEnvK = k
+                    }
+        in
+        dcertsGen dsEnv ds
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of

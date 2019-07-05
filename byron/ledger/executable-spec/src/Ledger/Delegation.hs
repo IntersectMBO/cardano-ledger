@@ -92,7 +92,7 @@ import           Control.State.Transition.Generator (HasTrace, envGen, genTrace,
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVKeyGenesis, range, sign, skey, unBlockCount, unVKeyGenesis,
+                     addSlot, hash, mkVkGenesisSet, range, sign, skey, unBlockCount, unVKeyGenesis,
                      (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -224,6 +224,9 @@ dIStateDState = lens
 -- | Delegation scheduling rules
 data SDELEG
 
+data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
+  deriving (Eq, Show)
+
 instance STS SDELEG where
   type State SDELEG = DSState
   type Signal SDELEG = DCert
@@ -231,8 +234,8 @@ instance STS SDELEG where
 
   data PredicateFailure SDELEG
     = IsNotGenesisKey
-    | EpochInThePast
-    | EpochPastNextEpoch
+    | EpochInThePast EpochDiff
+    | EpochPastNextEpoch EpochDiff
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
@@ -251,9 +254,16 @@ instance STS SDELEG where
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. to dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        let diff = cert ^. to depoch - env ^. epoch
-        0 <= diff ?! EpochInThePast
-        diff <= 1 ?! EpochPastNextEpoch
+        env ^. epoch <= cert ^. to depoch
+          ?! EpochInThePast EpochDiff
+               { currentEpoch = env ^. epoch
+               , certEpoch = cert ^. to depoch
+               }
+        cert ^. to depoch <= env ^. epoch + 1
+          ?! EpochPastNextEpoch EpochDiff
+               { currentEpoch = env ^. epoch
+               , certEpoch = cert ^. to depoch
+               }
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. to dwho
@@ -562,7 +572,7 @@ initialEnvFromGenesisKeys ngk chainLength =
     --
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
-    <$> pure (Set.fromAscList $ mkVKeyGenesis <$> [1 .. fromIntegral ngk])
+    <$> pure (mkVkGenesisSet ngk)
     <*> epochGen 0 10
     <*> slotGen 0 100
     <*> CoreGen.k chainLength (chainLength `div` 10)

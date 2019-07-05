@@ -3,9 +3,6 @@
 
 module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
-
-import           Data.Word
-
 import           Control.Arrow ((|||))
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
@@ -65,13 +62,11 @@ instance STS SIGCNT where
 genIssuer
   :: Environment SIGCNT
   -> State SIGCNT
-  -> Word8 -- TODO: remove
   -> Gen VKey
-genIssuer (pps, dms, k) sgs ngk =
+genIssuer (pps, dms, k) sgs =
   if null validIssuers
   then error $ "No valid issuers!" ++ "\n"
              ++ "k = " ++ show k ++ "\n"
-             ++ "ngk = " ++ show ngk ++ "\n"
              ++ "keys = " ++ show (Bimap.elems dms) ++ "\n"
              ++ "sgs = " ++ show sgs ++ "\n"
              ++ "length sgs = " ++ show (length sgs) ++ "\n"

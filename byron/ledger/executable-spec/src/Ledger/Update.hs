@@ -717,9 +717,9 @@ emptyUPIState =
 initialPParams :: PParams
 initialPParams =
   PParams                 -- TODO: choose more sensible default values
-     { _maxBkSz = 100        -- max sizes chosen as non-zero to allow progress
-     , _maxHdrSz = 10
-     , _maxTxSz = 50
+     { _maxBkSz = 1000        -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 100
+     , _maxTxSz = 500
      , _maxPropSz = 10
      , _bkSgnCntT = 0.22     -- As defined in the spec.
      , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should

@@ -10,7 +10,7 @@ import           Hedgehog (MonadTest, Property, assert, failure, forAll, propert
 
 import           Control.State.Transition
 import           Control.State.Transition.Generator (TraceLength (Maximum), classifyTraceLength,
-                     trace, traceSigGen)
+                     traceSigGen)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace
 
@@ -55,19 +55,19 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
+  withTests 200 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 200
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK = property $ do
   let maxTraceLength = 1000
-  tr <- forAll $ trace @CHAIN maxTraceLength
+  tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain GenDelegation NoGenUTxO)
   signersListIsBoundedByKInTrace tr
   where
     signersListIsBoundedByKInTrace :: MonadTest m => Trace CHAIN -> m ()
     signersListIsBoundedByKInTrace tr =
       traverse_ (signersListIsBoundedByKInState k) $ traceStates OldestFirst tr
       where
-        (_, _, _, _, _, k) = _traceEnv @CHAIN tr
+        (_, _, _, _, k) = _traceEnv @CHAIN tr
 
         signersListIsBoundedByKInState :: MonadTest m => BlockCount -> State CHAIN -> m ()
         signersListIsBoundedByKInState (BlockCount k') (_sLast, sgs, _h, _utxoSt, _ds, _us) =

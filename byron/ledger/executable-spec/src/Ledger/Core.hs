@@ -22,7 +22,7 @@ import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum(..))
 import Data.Set (Set, isSubsetOf, intersection)
 import qualified Data.Set as Set
-import Data.Word (Word64)
+import Data.Word (Word64, Word8)
 import Data.Foldable (toList, elem)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
@@ -87,6 +87,14 @@ instance HasOwner VKeyGenesis where
 
 mkVKeyGenesis :: Natural -> VKeyGenesis
 mkVKeyGenesis = VKeyGenesis . VKey . Owner
+
+-- | Make a set of genesis keys. The genesis keys are continuously numbered from 0 to the given
+-- number of genesis keys minus 1.
+mkVkGenesisSet
+  :: Word8
+  -- ^ Number of genesis keys
+  -> Set VKeyGenesis
+mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk - 1)]
 
 -- |Key Pair.
 data KeyPair = KeyPair
