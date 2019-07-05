@@ -1002,7 +1002,7 @@ delegation choice.
 \subsubsection{Certificates on the Blockchain}
 \label{certificates-on-the-blockchain}
 
-The registering of staking keys and stake pools, and delegating
+The registering of stake addresses and stake pools, and delegating
 involves posting appropriate signed registration and delegation certificates to
 the blockchain as part of the set of certificates included in
 transactions. This makes the certificates part of
@@ -1014,8 +1014,8 @@ until explicitly overwritten or revoked, as an automatic expiry would
 likely increase the amount of undelegated, offline stake. The following
 certificates can be posted to the blockchain:
 \begin{itemize}
-\item Stake key registration certificate
-\item Stake key de-registration certificate
+\item Stake address registration certificate
+\item Stake address de-registration certificate
 \item Delegation certificate
 \item Stake pool registration certificate
 \item Stake pool retirement certificate
@@ -1207,44 +1207,44 @@ The certificate contains the following:
 
 \begin{itemize}
 \item
-  The public key of the pool, \(vks_\text{pool}\).
+  The public key of the pool, \(vk_\text{pool}\).
 
 \item
-  A hash \(\mathcal{H}(vks_\text{reward})\) of a staking key. Usually, this will
-  be a \emph{registered} staking key, controlled by the pool operator. The
-  rewards for the pool operator will be paid to the reward account associated
-  with this \emph{reward staking key} \(vks_\text{reward}\)\footnote{We do
-    \emph{not} want rewards to be paid to the key of the pool itself. An
-    important reason for this is that for security reasons, stake pool
-    operators are required to use operational keys as described in
-    \cref{operational-key-certificates}, while storing the key of the pool
-    securely offline. Requiring the pool key for withdrawing rewards would be
-    detrimental to this.}.
+  A stake address \(\mathcal{A}_{s,\text{reward}}\), called the \emph{reward
+    address} for the pool. Usually, this will be a \emph{registered} stake
+  address, controlled by the pool operator. The rewards for the pool operator
+  will be paid to the reward account of
+  \(\mathcal{A}_{s,\text{reward}}\)\footnote{We do \emph{not} want to associate
+    the reward account with the key of the pool itself. An important reason for
+    this is that for security reasons, stake pool operators are required to use
+    operational keys as described in \cref{operational-key-certificates}, while
+    storing the key of the pool securely offline. Requiring the pool key for
+    withdrawing rewards would be detrimental to this.}.
 
   If a pool operator wants to donate their rewards to a charity, they can do so
-  by supplying the hash of a staking key that is controlled by that charity as
-  the reward staking key. They can then advertise to other stakeholders that
-  they are doing so (although evidence that the staking key does indeed belong
-  to the charity has to be provided out of band).
+  by using a stake address that is controlled by that charity as the reward
+  address. They can then advertise to other stakeholders that they are doing so
+  (although evidence that the stake address does indeed belong to the charity
+  has to be provided out of band).
 
-  Should the reward staking key be unregistered, the stake pool operator will be
+  Should the reward address be unregistered, the stake pool operator will be
   unable to receive rewards. In that case, any rewards that they would be due
   are instead paid to the treasury (but the stake pool members would still get
   their usual rewards).
 
 \item
-  A list of hashes of public staking keys controlled by the pool owner(s),
-  \(\mathcal{H}(vks_\text{owner})\). If any of these \emph{owner staking keys}
-  \(vks_\text{owner}\) delegate to this pool, the stake that they delegate will
-  be counted towards the stake pledged to the pool by the owner(s), see
+  A list of stake addresses controlled by the pool owner(s),
+  \(\mathcal{A}_{s,\text{owner}}\). If any of these \emph{owner stake addresses}
+  delegate to this pool, the stake that they delegate will be counted towards
+  the stake pledged to the pool by the owner(s), see
   \cref{stake-pool-registration,overview-of-incentives,reward-splitting}. Note
-  that adding a key as \(vks_\text{owner}\) in itself does not actually delegate
-  the stake controlled by that key to the pool -- an additional delegation
-  certificate is required to do so.
+  that adding a stake address to the set of owner stake addresses in itself does
+  not actually delegate the stake controlled by that address to the pool -- an
+  additional delegation certificate is required to do so.
 
   During reward distribution, there will be no rewards paid to the reward
-  accounts of the owner staking keys. Instead, the stake delegated by all owner
-  staking keys will be counted as the stake contributed by the pool owner(s),
+  accounts of the owner stake addresses. Instead, the stake delegated by all owner
+  stake addresses will be counted as the stake contributed by the pool owner(s),
   and their reward will be paid to the reward account of the reward staking key.
 
 \item
@@ -1272,8 +1272,11 @@ The certificate contains the following:
   new stake pool registration certificate with the new content hash.
 \end{itemize}
 
-The certificate must be signed by all \(sks_\text{owner}\), as well as
-by \(sks_\text{pool}\).
+Validating the certificate requires witneses from all owner stake addresses, as
+well as a signature from the pool signing key \(sk_\text{pool}\)\todo{We could
+  also just include the public pool key hash in the certificate, and have the
+  key itself be provided in the witness, which would make the certificates a bit
+  smaller. I think we should do that.}.
 
 \end{description}
 
@@ -1287,15 +1290,14 @@ It contains
 
 \begin{itemize}
 \item
-  The public staking key hash \(\mathcal{H}(vks_\text{pool})\) of the
-  pool.
+  The public key hash \(\mathcal{H}(vk_\text{pool})\) of the pool.
 \item
   The epoch number, starting from which the stake pool will cease to
   operate.
 \end{itemize}
 
-It must be signed by the staking key \(sks_\text{pool}\) of the pool
-(particularly, it need not be signed by any of the pool owners).
+It must be signed by the pool key \(sk_\text{pool}\) (particularly, it need not
+be signed by any of the pool owners).
 
 After the retirement epoch, any stake that is delegated to this stake
 pool will be disregarded for the PoS protocol. It will not take part in
@@ -1334,8 +1336,8 @@ pool itself. In addition to signing blocks, this key also holds the power to
 retire the stake pool, or to post updated registration certificates without the
 keys of all owners (in which case some of the owners are kicked off the stake
 pool). Also, the rewards for all owners will be paid to the reward account
-associated with the reward staking key of the pool, and it will be the
-responsibility of the person holding that key (usually the pool operator) to
+associated with the reward address of the pool, and it will be the
+responsibility of the person(s) owning that address (usually the pool operator) to
 distribute the rewards amongst the owners.
 That is a conscious design decision: collaborating to form a stake pool should
 require significant trust between the owners. Otherwise, everyone could choose
