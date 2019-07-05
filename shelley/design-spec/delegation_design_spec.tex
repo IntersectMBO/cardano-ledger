@@ -970,10 +970,10 @@ them just as they would without delegation, by looking only at the
 value part of the address (see \cref{wallet-recovery-process} for how to find
 addresses efficiently).
 
-Finding a wallets stake addresses (and in particular the corresponding reward
-addresses) can be done either by just reading off all the stake addresses of
-addresses found via their value address, or by performing a second search, this
-time over all the registered stake addresses\footnote{As explained in
+Finding the stake addresses of a wallet (and in particular the corresponding
+reward addresses) can be done either by just reading off all the stake addresses
+of addresses found via their value address, or by performing a second search,
+this time over all the registered stake addresses\footnote{As explained in
   \cref{stake-address-registration-certificates}, stake addresses need to be
   registered on-chain.}. The former option is quicker and easier to implement.
 However, it is conceivable to construct addresses where the value address
