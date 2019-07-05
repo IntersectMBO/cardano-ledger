@@ -2382,19 +2382,18 @@ competitive stake pool, and protects against Sybil attacks on the
 stake pool level
 (\cref{sybil-attack-protection-at-stake-pool-level}). In order to
 differentiate between delegated and pledged stake, the stake pool
-operator will include a list of staking key hashes
-\(\mathcal{H}(vks_\text{owner})\)
-in the certificate. Stake delegated from any of those keys will be
+operator will include a list of stake addresses, the owner stake addresses,
+in the certificate. Stake delegated from any of the owner stake addresses will be
 counted towards the stake pledged by the owner(s). Note that this
 still requires delegation certificates to be posted\footnote{We also
   contemplated \emph{automatically} counting the stake controlled by
-  any \(vks_\text{owner}\)
+  any owner stake address
   towards the pledge, but that complicates the design, since we had
-  to forbid any of those keys from posting valid delegation
+  to forbid any of those addresses from posting valid delegation
   certificates to prevent double delegation. Imposing a special
-  treatment of those keys would also be a violation of the design goal
+  treatment of those addresses would also be a violation of the design goal
   from \cref{no-special-wallet-for-stake-pool-operators}.}.
-Using a \emph{list} of owner keys allows for stake pool operators
+Using a \emph{list} of owner stake addresses allows for stake pool operators
 to use multiple accounts/wallets for delegating the stake they
 pledged. It also allows a group of people combining their stake to
 form a competitive pool, without losing any control over their funds
@@ -2409,7 +2408,7 @@ of the pledge mechanism, by pledging stake to a pool until it attracted stake,
 and then simply pledging the stake to the next pool. The pledge will be
 enforced at the point of leader election; stake pools that do not
 honour their pledge (i.e., pools where the amount of stake delegated
-to the pool from the set of owner keys is less than the pledge listed
+to the pool from the set of owner stake addresses is less than the pledge listed
 in its stake pool registration certificate) will be excluded from the election,
 and as a consequence forfeit their rewards for that epoch.
 
@@ -2489,8 +2488,8 @@ from their wallet.
 \label{display-of-stake-pools-in-the-wallet}
 
 The wallet software will maintain a set of all the active stake pools. For each,
-it will perform a lookup of the contained \(sks\) to retrieve the corresponding
-metadata to display to the user.
+it will perform a lookup of the contained \(\mathcal{H}(sk_\text{pool})\) to
+retrieve the corresponding metadata to display to the user.
 
 In order for stakeholders to be able to delegate their stake to a pool, the
 wallet will provide a listing of stake pools, in a section of the UI called the
