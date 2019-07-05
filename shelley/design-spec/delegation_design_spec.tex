@@ -1398,13 +1398,13 @@ In this situation the network layer has the state of the ledger up to
 but not including these next 10 block headers. So it cannot rely on
 any information in the 10 corresponding block bodies.
 
-Without this information, the validity of the staking keys that signed
+Without this information, the validity of the hot key that signed
 the headers cannot be verified. If the network layer sees one of the
-10 new blocks signed by a key it doesn't recognise, it might be
+10 new blocks signed by a hot key it doesn't recognise, it might be
 because there is a delegation certificate in the block bodies (which
 the network layer has not seen yet), that shows that the key is valid
-because some other key deferred its staking rights to it. Similarly,
-if the network layer sees a known staking key, how can it know that it
+because some stake pool key deferred its staking rights to it. Similarly,
+if the network layer sees a known hot key, how can it know that it
 is still valid? There could be a new certificate in the block bodies
 that defers the rights of this key to a different one (which would
 invalidate the key the network layer saw).
@@ -1412,7 +1412,7 @@ invalidate the key the network layer saw).
 To address this problem, a new type of certificate is introduced:
 \emph{operational key certificates}. These certificates are provided
 in the block header itself, as part of the witness, thus solving the
-problem of determining the validity of staking keys. In other words,
+problem of determining the validity of hot keys. In other words,
 operational key certificates are \textbf{not included in
   the ledger}, but instead they are \textbf{included in a witness} by
 stake pools at the point of exercising stake rights including:
@@ -1434,10 +1434,10 @@ key\footnote{This is much the same setup as with TLS certificates:
   certificate is presented inband.}.
 
 Specifically, an operational key certificate specifies that the
-staking rights are transferred from a cold key \(vks_\text{cold}\)
-to a hot key \(vks_\text{hot}\).
+staking rights are transferred from a cold stake poo key \(vk_\text{pool}\)
+to a hot key \(vk_\text{hot}\).
 They are included in the message (e.g.~block header) and the message
-itself is signed with \(sks_\text{hot}\).
+itself is signed with \(sk_\text{hot}\).
 
 Operational keys will use key evolving signatures (KES). To be precise, we will
 use keys according to the MMM scheme \citep{cryptoeprint:2001:034}, regular
@@ -1453,26 +1453,26 @@ In detail, the hot/cold key setup is as follows:
 
 \begin{itemize}
 \item
-  The stake pool operator registers their stake pool, using a key
-  \(vks_\text{cold}\). This \emph{cold key} is kept securely and
+  The stake pool operator registers their stake pool, using a cold stake pool key
+  \(vk_\text{pool}\). This \emph{cold key} is kept securely and
   off-line.
-\item The stake pool operator uses \(sks_\text{cold}\)
+\item The stake pool operator uses \(sk_\text{pool}\)
   to sign an operational key certificate \(C\),
   transferring the staking rights to a \emph{hot key}
-  \(vks_\text{hot}\).
+  \(vk_\text{hot}\).
 \item
-  The stake pool operator keeps \(sks_\text{hot}\), as well as \(C\), on
+  The stake pool operator keeps \(sk_\text{hot}\), as well as \(C\), on
   a node that is on-line, and can sign blocks. A block signed with
-  \(sks_\text{hot}\) will be considered valid, provided that \(C\) is
+  \(sk_\text{hot}\) will be considered valid, provided that \(C\) is
   included in its header.
 \item
   Should the node get hacked, and the hot key compromised, the stake
   pool operator will create a new operational key certificate
   \(C'\), delegating the staking rights to a new hot key
-  \(vks_{\text{hot}'}\).
+  \(vk_{\text{hot}'}\).
 \end{itemize}
 
-In order to render \(sks_\text{hot}\) useless, it must be established
+In order to render \(sk_\text{hot}\) useless, it must be established
 that \(C'\) takes precedence over \(C\). For this purpose, the
 operational key certificate will have an additional integer
 field, and certificates with a larger value for this field will take
