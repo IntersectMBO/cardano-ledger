@@ -1035,17 +1035,16 @@ staking rights between different entities.
 Figure~\ref{fig:relationship-keys-certificates} shows the relationships between
 the different types of certificates and keys.
 %
-Dashed arrows represent relationships between the different keys: the owner of
-a staking key delegates their staking rights to the owner of a stake pool cold
-key, using a delegation certificate.
+Dashed arrows represent relationships between the different keys and addresses:
+the owner(s) of a stake address delegates their staking rights to the owner of a
+stake pool cold key, using a delegation certificate.
 %
 The owner of a cold and hot key grants the staking rights of their cold key to their
 hot key, using an operational key certificate.
 %
 Incoming solid arrows represent the components of the delegation certificates.
-So, for instance, a heavyweight delegation certificate contains the (verifying
-part of) staking key of the delegator, and the (verifying part of) the stake
-pool key.
+So, for instance, a delegation certificate contains the stake address of the
+delegator, and the (verifying part of) the stake pool key.
 %
 Subsequent sections provide more details.
 
@@ -1071,11 +1070,11 @@ Subsequent sections provide more details.
           , dummy/.style={draw=none}
           }
 
-  \node (skeys) [key] {Staking keys};
+  \node (skeys) [key] {Stake addresses};
   \node (scold) [key, right = of skeys] {Stake pool keys (cold)};
   \node (shot) [key, right = of scold] {Stake pool keys (hot)};
-  \node (skeyr) [cert, above = of skeys] {Stake key registration};
-  \node (skeyd) [cert, below = of skeys] {Stake key retirement};
+  \node (skeyr) [cert, above = of skeys] {Stake address registration};
+  \node (skeyd) [cert, below = of skeys] {Stake address retirement};
   \node (pr) [cert, above = of scold] {Pool\\ registration};
   \node (pd) [cert, below = of scold] {Pool\\ retirement};
   \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation certificate};
@@ -1110,7 +1109,7 @@ Subsequent sections provide more details.
             (lwdcert);
   \end{tikzpicture}
 
-  \caption{Relationships between the different keys and certificates}
+  \caption{Relationships between the keys, addresses, and certificates}
   \label{fig:relationship-keys-certificates}
 \end{figure}
 
