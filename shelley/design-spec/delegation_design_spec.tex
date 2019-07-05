@@ -1344,7 +1344,7 @@ threshold of necessary trust that owners of the pool must have in the operator.
 \label{delegation-certificates}
 
 Users can transfer the rights of participation in the PoS protocol from
-their staking key to a stake pool, by posting a \emph{delegation
+their stake address to a stake pool, by posting a \emph{delegation
 certificate} to the blockchain.
 
 \begin{description}
@@ -1353,15 +1353,15 @@ A delegation certificate is a tuple containing
 
 \begin{itemize}
 \item
-  the public staking key hash delegating its staking rights,
-  \(\mathcal{H}(vks_\text{source})\)
+  the stake address delegating its staking rights,
+  \(\mathcal{A}{s,_\text{source}}\)
 \item
   the public stake pool key hash to which stake is delegated,
-  \(\mathcal{H}(vks_\text{pool})\)
+  \(\mathcal{H}(vk_\text{pool})\)
 \end{itemize}
 
-The witness for the certificate must contain a signature of
-\(sks_\text{source}\).
+Posting a delegation certificate requires a witness for
+\(\mathcal{A}{s,_\text{source}}\).
 \end{description}
 
 Note that there is no corresponding delegation revocation certificate.
