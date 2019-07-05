@@ -1541,38 +1541,37 @@ purpose of establishing precedence:
 \label{delegation-relations}
 
 As stated in the delegation overview: delegating stake rights involves
-two indirections: from addresses to staking keys, and from staking keys to
+two indirections: from addresses to stake addresses, and from stake addresses to
 stake pools.
 
 Equivalently, there are two relations: a relation between addresses and
-staking keys, and a relation between staking keys and stake pools. The base
+stake addresses, and a relation between stake addresses and stake pools. The base
 and pointer addresses form the entries of the first relation. The second
-relation consists of registered staking keys, registered stake pools and
+relation consists of registered stake addresses, registered stake pools and
 delegation certificates as the entries relating the two.
 
 \subsubsection{Address Delegation Relation}
 \label{address-delegation-relation}
 
 The address delegation relation is a relation between addresses and
-staking keys, specifically staking key hashes.
+stake addresses.
 
 This relation can be defined in terms of the current UTxO and the
-current set of registered staking keys. For all base addresses in the
-UTxO, the staking key hash is given directly, so this need only be
-filtered by the current set of registered staking keys. For pointer
+current set of registered stake addresses. For all base addresses in the
+UTxO, the stake address is given directly, so this need only be
+filtered by the current set of registered stake addresses. For pointer
 addresses in the UTxO we select those where their pointer points to a
-currently registered staking key and select the associated staking key hash.
+currently registered stake address and select this stake address.
 
-\subsubsection{Staking Key Delegation Relation}
-\label{stake-key-delegation-relation}
+\subsubsection{Stake Pool Delegation Relation}
+\label{stake-pool-delegation-relation}
 
-The staking key delegation relation is a relation between staking keys and
-stake pools, or more specifically staking key hashes and stake pool key
-hashes.
+The stake pool delegation relation is a relation between stake addresses and
+stake pools.
 
 The relation is defined by the active set of delegation certificates,
 filtered by the set of active stake pools. The active delegation
-certificates already excludes those where the source staking key has
+certificates already excludes those where the source stake address has
 been de-registered.
 
 \subsubsection{Overall Stake Distribution}
@@ -1586,7 +1585,7 @@ The overall stake distribution is the set of all registered stake pools
 and their aggregate stake from all addresses that are delegated to them.
 
 This can be defined by taking the composition of the address delegation
-relation and the staking key delegation relation, giving the relation
+relation and the stake pool delegation relation, giving the relation
 between addresses and stake pools. The final distribution is formed by
 taking the transaction outputs from the UTxO and selecting all the
 addresses related to each stake pool and aggregating all the coins.
@@ -1617,7 +1616,7 @@ the following, in order:
 
 \begin{enumerate}
 \item
-  a base or pointer address;
+  a stake address
 \item
   a delegation certificate; and
 \item
@@ -2034,7 +2033,7 @@ will be based on
 \item The finite map giving the total stake for each registered
   staking key, \emph{taken at the point in time that was relevant for
     creating the leader schedule for that epoch}.
-\item The staking key delegation relation.
+\item The stake pool delegation relation.
 \item The leader schedule and list of empty slots for that epoch.
 \end{itemize}
 For each registered staking key, the rewards thus calculated are added
