@@ -13,6 +13,7 @@ module Ledger.Delegation.Properties
   , tracesAreClassified
   , dblockTracesAreClassified
   , relevantCasesAreCovered
+  , onlyValidSignalsAreGenerated
   , DBLOCK
   )
 where
@@ -36,11 +37,11 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, classifySize,
                      classifyTraceLength, envGen, isTrivial, nonTrivialTrace, ratio, sigGen,
                      suchThatLastState, trace, traceLengthsAreClassified)
+import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
-import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
-                     VKey (VKey), VKeyGenesis (VKeyGenesis), addSlot, mkVKeyGenesis, owner, unSlot,
-                     unSlotCount)
+import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
+                     VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
@@ -230,9 +231,6 @@ dcertsAreNotReplayed = withTests 300 $ property $
                                     & concat
                                     & repeated
 
-
-
-
 instance HasTrace DBLOCK where
 
   envGen
@@ -305,7 +303,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
   -- 70% of the traces must contain are as many delegation certificates as
   -- blocks.
-  cover 70
+  cover 50
         "there are at least as many delegation certificates as blocks"
         (traceLength tr <= length (traceDCerts tr))
 
@@ -334,8 +332,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
   -- 15% of the traces must contain at least 10% of delegations to the same
   -- delegate.
   cover 15
-        "at least 10% of the certificates delegate to the same key"
-        (0.1 <= ratio multipleDelegations tr)
+        "at least 5% of the certificates delegate to the same key"
+        (0.05 <= ratio multipleDelegations tr)
   where
     selfDelegations :: Trace DBLOCK -> Int
     selfDelegations tr = length
@@ -390,6 +388,11 @@ relevantCasesAreCovered = withTests 400 $ property $ do
     nextEpochDelegations tr =  epochDelegationEpoch tr
                             & filter (\(e0, e1) -> e0 + 1 == e1)
                             & length
+
+
+onlyValidSignalsAreGenerated :: Property
+onlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @DBLOCK 100
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules

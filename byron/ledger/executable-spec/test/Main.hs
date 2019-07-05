@@ -36,6 +36,7 @@ main = defaultMain tests
       , testProperty "Relevant DBLOCK traces covered"       DELEG.relevantCasesAreCovered
       , testProperty "Duplicated certificates are rejected" DELEG.rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
+      , testProperty "Only valid DBLOCK signals are generated" DELEG.onlyValidSignalsAreGenerated
       ]
     , testGroup
       "PVBUMP properties"
@@ -54,8 +55,8 @@ main = defaultMain tests
       [ testProperty "UPIREG traces are classified" UPDATE.upiregTracesAreClassified
       , testProperty "UBLOCK traces are classified" UPDATE.ublockTraceLengthsAreClassified
       , testProperty "Relevant UPIREG traces are covered" UPDATE.upiregRelevantTracesAreCovered
-      , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
-      , testProperty "Only valid signals are generated for UBLOCK" UPDATE.ublockOnlyValidSignalsAreGenerated
+      , testProperty "Only valid UPIREG signals are generated" UPDATE.onlyValidSignalsAreGenerated
+      , testProperty "Only valid UBLOCK signals are generated" UPDATE.ublockOnlyValidSignalsAreGenerated
       , testProperty "Relevant UBLOCK traces are covered" UPDATE.ublockRelevantTracesAreCovered
       ]
     -- TODO move this out of here (these are not properties of the transition
