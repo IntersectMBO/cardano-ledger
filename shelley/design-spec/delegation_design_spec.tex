@@ -666,7 +666,7 @@ delegation:
   point in time. A stake pool has exactly one staking key that controls the pool
   (though it has to use further operational keys to mitigate key theft as described
   in \cref{operational-key-certificates}, and there can
-  be multiple staking keys delegating or pledging to the pool).
+  be multiple stake addresses delegating or pledging to the pool).
 \end{itemize}
 
 \begin{figure*}[ht]
@@ -931,10 +931,10 @@ The terms \emph{reward address}, \emph{reward account}, and \emph{reward account
 \subsubsection{Bootstrap Address}
 \label{bootstrap-address}
 
-Bootstrap addresses were introduced in Byron. In Byron they were
-interpreted as having stake rights but those stake rights were always
-delegated to a fixed set of staking keys specified in the genesis block,
-controlled by the Cardano Foundation, Emurgo, and IOHK.
+Bootstrap addresses were introduced in Byron. In Byron they were interpreted as
+having stake rights but those stake rights were always delegated to a fixed set
+of single key stake addresses specified in the genesis block, controlled by the
+Cardano Foundation, Emurgo, and IOHK.
 
 Bootstrap addresses continue to exist in Shelley, but their
 interpretation is changed subtly and their use is disincentivised.
@@ -1025,7 +1025,7 @@ in advance, but is presented when it is used:
   Operational key certificate
 \end{itemize}
 Although this last kind is similar to delegation certificates in that
-it uses one staking key to grant the right to sign blocks to another
+it uses one key to grant the right to sign blocks to another
 key, it is quite different from the other certificates which are used
 to define the delegation relation. Operational key certificates are
 used by stake pool operators as a safety measure to mitigate key
