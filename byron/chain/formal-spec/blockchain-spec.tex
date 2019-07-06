@@ -626,7 +626,7 @@ During PBFT processing of the block header, we do the following:
 \newcommand{\ETEnv}{\type{ETEnv}}
 
 \newcommand{\sepochname}{sEpoch}
-\newcommand{\sepoch}[1]{\fun{\sepochname}\ #1}
+\newcommand{\sepoch}[2]{\fun{\sepochname}\ #1\ #2}
 
 During each block transition, we must determine whether that block sits on an
 epoch boundary and, if so, carry out various actions which are done on that
@@ -660,7 +660,7 @@ updates the update state to the correct version.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{\sepochname}
-      & \Slot \totalf \Epoch
+      & \Slot \totalf \mathbb{N} \totalf \Epoch
       & \text{epoch containing this slot} \\
       \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
     \end{array}
@@ -703,7 +703,7 @@ updates the update state to the correct version.
   \begin{equation*}
     \inference
     {
-      \var{e_c} \geq \sepoch{s}
+      \var{e_c} \geq \sepoch{s}{k}
     }
     {\var{e_c}
       \vdash
@@ -726,7 +726,7 @@ updates the update state to the correct version.
 \begin{equation*}
   \inference
   {
-    \var{e_c} < \sepoch{s}
+    \var{e_c} < \sepoch{s}{k}
     &
     s\vdash \var{us} \trans{\hyperlink{byron_ledger_spec_link}{upiec}}{} \var{us'}
   }
@@ -886,7 +886,7 @@ rules. During header processing we verify the following things:
       {\left(
         \begin{array}{l}
           \var{dms}\\
-          \sepoch{s_{last}}\\
+          \sepoch{s_{last}}{k}\\
         \end{array}
       \right)}
       \vdash
@@ -1248,7 +1248,7 @@ body according to the rules in figures \ref{fig:rules:bhead} and
         {\left(
         \begin{array}{l}
           \fun{pps} ~  us' \\
-          \sepoch{(\bslot{b})} \\
+          \sepoch{(\bslot{b})}{k} \\
           \var{utxo_0}
         \end{array}
         \right)}
