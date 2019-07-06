@@ -38,7 +38,6 @@ import           Cardano.Spec.Chain.STS.Rule.BBody
 import           Cardano.Spec.Chain.STS.Rule.BHead
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
--- TODO: do not use this transition system, but use rather BHEAD (which could call SIGCNT)
 import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
 data CHAIN
@@ -182,8 +181,8 @@ instance HasTrace CHAIN where
       <$> gCurrentSlot
       <*> (utxo0 <$> envGen @UTXOWS chainLength)
       <*> pure (mkVkGenesisSet ngk)
+      -- TODO: for now we're returning a constant set of parameters, where only '_bkSgnCntT' varies.
       <*> pure initialPParams { _bkSgnCntT = sigCntT }
-          -- TODO: for now we're returning a constant set of parameters
       <*> pure k
     where
       -- If we want to generate large traces, we need to set up the value of the

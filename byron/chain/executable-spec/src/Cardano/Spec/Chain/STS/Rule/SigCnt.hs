@@ -64,7 +64,8 @@ instance STS SIGCNT where
 -- | Generate an issuer that can still issue blocks according to the @SIGCNT@ rule. The issuers are
 -- taken from the range of the delegation map passed as parameter.
 --
--- This generator can fail if no suitable issuer can be found.
+-- This generator will throw an error if no suitable issuer can be found, which means that the block
+-- production halted.
 issuer
   :: Environment SIGCNT
   -> State SIGCNT
@@ -92,7 +93,7 @@ issuer (pps, dms, k) sgs =
 -- genesis keys @ngk@.
 --
 -- This threshold must allow that all the (honest) genesis keys can issue enough blocks to fill the
--- rolling window of @k@. If this is not possible, then the block production will halt, since there
+-- rolling window of @k@. If this is not possible, then the block production will halt since there
 -- will not be valid issuers. So the threshold must make it possible to find an integer @n@ such
 -- that:
 --
