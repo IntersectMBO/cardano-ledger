@@ -47,7 +47,7 @@ blockIssuersAreDelegates =
          checkIssuer :: MonadTest m => (State CHAIN, Signal CHAIN) -> m ()
          checkIssuer (st, bk) =
            case delegatorOf dm issuer of
-             Just _ -> pure $! ()
+             Just _ -> pure ()
              Nothing -> failure
            where
              issuer = bk ^. bHeader . bhIssuer
@@ -55,7 +55,7 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 200 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 200
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK = property $ do
