@@ -40,6 +40,7 @@ import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteArray as BA (convert)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common.Compact
   (CompactAddress, fromCompactAddress, toCompactAddress)
 import Cardano.Chain.Common.Lovelace (Lovelace)
@@ -76,6 +77,19 @@ instance HeapWords CompactTxIn where
     -- +---------------------------------------------+
     --
     = 6
+
+instance FromCBOR CompactTxIn where
+  fromCBOR = do
+    enforceSize "CompactTxIn" 2
+    CompactTxInUtxo
+      <$> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR CompactTxIn where
+  toCBOR (CompactTxInUtxo txId txIndex) =
+    encodeListLen 2
+      <> toCBOR txId
+      <> toCBOR txIndex
 
 toCompactTxIn :: TxIn -> CompactTxIn
 toCompactTxIn (TxInUtxo txId txIndex) =
@@ -124,6 +138,23 @@ instance HeapWords CompactTxId where
     -- +-----------------------------------+
     --
     = 5
+
+instance FromCBOR CompactTxId where
+  fromCBOR = do
+    enforceSize "CompactTxId" 4
+    CompactTxId
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR CompactTxId where
+  toCBOR (CompactTxId a b c d) =
+    encodeListLen 4
+      <> toCBOR a
+      <> toCBOR b
+      <> toCBOR c
+      <> toCBOR d
 
 getCompactTxId :: Get CompactTxId
 getCompactTxId =
@@ -193,6 +224,19 @@ instance HeapWords CompactTxOut where
     --                +--------------+
     --
     = 3 + heapWordsUnpacked compactAddr
+
+instance FromCBOR CompactTxOut where
+  fromCBOR = do
+    enforceSize "CompactTxOut" 2
+    CompactTxOut
+      <$> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR CompactTxOut where
+  toCBOR (CompactTxOut compactAddr lovelace) =
+    encodeListLen 2
+      <> toCBOR compactAddr
+      <> toCBOR lovelace
 
 toCompactTxOut :: TxOut -> CompactTxOut
 toCompactTxOut (TxOut addr lovelace) =

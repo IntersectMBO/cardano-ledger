@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 -- | Blockchain interface validation rules.
 --
@@ -37,7 +38,13 @@ import qualified Data.Map.Strict as M
 import Data.Set (union)
 import qualified Data.Set as S
 
-import Cardano.Binary (Annotated)
+import Cardano.Binary
+  ( Annotated
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
@@ -113,6 +120,37 @@ data State = State
     -- ^ Slot at which an update proposal was registered
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
+
+instance FromCBOR State where
+  fromCBOR = do
+    enforceSize "State" 11
+    State
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR State where
+    toCBOR s =
+      encodeListLen 11
+        <> toCBOR (currentEpoch s)
+        <> toCBOR (adoptedProtocolVersion s)
+        <> toCBOR (adoptedProtocolParameters s)
+        <> toCBOR (candidateProtocolUpdates s)
+        <> toCBOR (appVersions s)
+        <> toCBOR (registeredProtocolUpdateProposals s)
+        <> toCBOR (registeredSoftwareUpdateProposals s)
+        <> toCBOR (confirmedProposals s)
+        <> toCBOR (proposalVotes s)
+        <> toCBOR (registeredEndorsements s)
+        <> toCBOR (proposalRegistrationSlot s)
 
 data Error
   = Registration Registration.Error

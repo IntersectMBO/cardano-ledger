@@ -25,6 +25,7 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import qualified Data.Set as Set
 
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.Common.KeyHash (KeyHash)
 
 
@@ -33,6 +34,11 @@ newtype Map = Map
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
+instance FromCBOR Map where
+  fromCBOR = Map . Bimap.fromList <$> fromCBOR
+
+instance ToCBOR Map where
+  toCBOR = toCBOR . Bimap.toList . unMap
 
 --------------------------------------------------------------------------------
 -- Query

@@ -1,6 +1,7 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Delegation.Validation.Activation
   (
@@ -14,6 +15,7 @@ import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
 
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation(..))
@@ -30,6 +32,19 @@ data State = State
   { delegationMap   :: !Delegation.Map
   , delegationSlots :: !(Map KeyHash SlotNumber)
   } deriving (Eq, Show, Generic, NFData)
+
+instance FromCBOR State where
+  fromCBOR = do
+    enforceSize "State" 2
+    State
+      <$> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR State where
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (delegationMap s)
+      <> toCBOR (delegationSlots s)
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
 --   previous delegation slot for this delegate, otherwise discard it. This is

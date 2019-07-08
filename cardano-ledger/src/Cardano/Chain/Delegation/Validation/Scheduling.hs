@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveAnyClass   #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Delegation.Validation.Scheduling
   (
@@ -20,7 +21,13 @@ import Data.Sequence (Seq, (<|))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
-import Cardano.Binary (Annotated)
+import Cardano.Binary
+  ( Annotated(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
@@ -50,11 +57,39 @@ data State = State
   , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
   } deriving (Eq, Show, Generic, NFData)
 
+instance FromCBOR State where
+  fromCBOR = do
+    enforceSize "State" 2
+    State
+      <$> (Seq.fromList <$> fromCBOR)
+      <*> fromCBOR
+
+instance ToCBOR State where
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (toList (scheduledDelegations s))
+      <> toCBOR (keyEpochDelegations s)
+
 data ScheduledDelegation = ScheduledDelegation
   { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
   } deriving (Eq, Show, Generic, NFData)
+
+instance FromCBOR ScheduledDelegation where
+  fromCBOR = do
+    enforceSize "ScheduledDelegation" 3
+    ScheduledDelegation
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR ScheduledDelegation where
+  toCBOR sd =
+    encodeListLen 3
+      <> toCBOR (sdSlot sd)
+      <> toCBOR (sdDelegator sd)
+      <> toCBOR (sdDelegate sd)
 
 data Error
 
