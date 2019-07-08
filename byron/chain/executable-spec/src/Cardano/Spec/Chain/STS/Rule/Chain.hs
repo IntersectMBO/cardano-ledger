@@ -9,16 +9,15 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import           Control.Lens (Lens', to, (&), (.~), (^.), _1, _5)
+import           Control.Lens (Lens', (&), (.~), (^.), _1, _5)
 import           Data.Bimap (Bimap)
-import qualified Data.Bimap as Bimap
 import           Data.Bits (shift)
 import           Data.ByteString (ByteString)
 import qualified Data.Hashable as H
 import qualified Data.Map as Map
-import           Data.Sequence (Seq, fromList)
+import           Data.Sequence (Seq)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Word (Word8)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -29,9 +28,9 @@ import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Ledger.Core
+import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Delegation
 import           Ledger.Update hiding (delegationMap)
-import qualified Ledger.Update.Generators as UpdateGen
 import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
@@ -39,7 +38,7 @@ import           Cardano.Spec.Chain.STS.Rule.BBody
 import           Cardano.Spec.Chain.STS.Rule.BHead
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
-
+import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
 data CHAIN
 
@@ -50,10 +49,11 @@ instance STS CHAIN where
     -- Components needed to be able to bootstrap the traces generator. They are
     -- not part of the formal spec. These might be removed once we have decided
     -- on how do we want to model initial states.
-    , DSEnv           -- Needed by the initial rules for delegation.
+    , Set VKeyGenesis -- Allowed delegators. Needed by the initial delegation rules. The number of
+                      -- genesis keys is the size of this set.
     , PParams         -- Needed to bootstrap this part of the chain state,
                       -- which is used in the delegation rules
-    , Word8           -- Number of genesis keys.
+    , BlockCount      -- Chain stability parameter
     )
 
   type State CHAIN =
@@ -78,7 +78,7 @@ instance STS CHAIN where
 
   initialRules =
     [ do
-        IRC (_slot, utxo0', dsenv, pps', _ngk) <- judgmentContext
+        IRC (_sNow, utxo0', ads, pps', k) <- judgmentContext
         let s0 = Slot 0
             -- Since we only test the delegation state we initialize the
             -- remaining fields of the update interface state to (m)empty. Once
@@ -95,9 +95,15 @@ instance STS CHAIN where
                         , Map.empty
                         )
         utxoSt0 <- trans @UTXOWS $ IRC UTxOEnv {utxo0 = utxo0', pps = pps' }
-        ds      <- trans @DELEG $ IRC dsenv
+        let dsEnv = DSEnv
+                    { _dSEnvAllowedDelegators = ads
+                    , _dSEnvEpoch = sEpoch s0 k
+                    , _dSEnvSlot = s0
+                    , _dSEnvK = k
+                    }
+        ds      <- trans @DELEG $ IRC dsEnv
         pure $! ( s0
-                , ds ^. delegationMap . to Bimap.keys . to fromList
+                , []
                 , genesisHash
                 , utxoSt0
                 , ds
@@ -118,29 +124,29 @@ instance STS CHAIN where
       TRC ((_sNow, _, _, _, _), (sLast, sgs, _, utxo, ds, us), b) <- judgmentContext
       bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
       let h' = bhHash (b ^. bHeader)
-      return $! (sLast, sgs, h', utxo, ds, us)
+      pure $! (sLast, sgs, h', utxo, ds, us)
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC ((sNow, utxoGenesis, _, pps, ngk), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
+      TRC ((sNow, utxoGenesis, ads, _pps, k), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
-        trans @BHEAD $ TRC ((dm, sLast, pps ^. stableAfter), us, b ^. bHeader)
+        trans @BHEAD $ TRC ((dm, sLast, k), us, b ^. bHeader)
       let ppsUs' = snd (us' ^. _1)
       (h', sgs') <-
-        trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow), (h, sgs), b ^. bHeader)
+        trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow, k), (h, sgs), b ^. bHeader)
       (utxoSt', ds', us'') <- trans @BBODY $ TRC
         (
           ( ppsUs'
-          , sEpoch (b ^. bHeader ^. bhSlot)
+          , sEpoch (b ^. bHeader ^. bhSlot) k
           , utxoGenesis
-          , ngk
+          , fromIntegral (Set.size ads)
+          , k
           )
         , (utxoSt, ds, us')
         , b
         )
-      return $! (b ^. bHeader ^. bhSlot, sgs', h', utxoSt', ds', us'')
-
+      pure $! (b ^. bHeader ^. bhSlot, sgs', h', utxoSt', ds', us'')
 
 instance Embed BHEAD CHAIN where
   wrapFailed = BHeadFailure
@@ -167,14 +173,17 @@ disL = _5
 
 instance HasTrace CHAIN where
 
-  initEnvGen = do
+  envGen chainLength = do
     ngk <- Gen.integral (Range.linear 1 14)
+    k <- CoreGen.k chainLength (chainLength `div` 10)
+    sigCntT <- SigCntGen.sigCntT k ngk
     (,,,,)
       <$> gCurrentSlot
-      <*> (utxo0 <$> initEnvGen @UTXOWS)
-      <*> initialEnvFromGenesisKeys ngk
-      <*> UpdateGen.pparamsGen
-      <*> pure ngk
+      <*> (utxo0 <$> envGen @UTXOWS chainLength)
+      <*> pure (mkVkGenesisSet ngk)
+      -- TODO: for now we're returning a constant set of parameters, where only '_bkSgnCntT' varies.
+      <*> pure initialPParams { _bkSgnCntT = sigCntT }
+      <*> pure k
     where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
@@ -192,16 +201,24 @@ sigGenChain
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk) (Slot s, _sgs, h, utxo, ds, _us)
+sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- Gen.prune $ Gen.element $ Bimap.elems (ds ^. dmsL)
+    vkI         <- SigCntGen.issuer (pps, ds ^. dmsL, k) sgs
     nextSlot    <- gNextSlot
 
     delegationPayload <- case shouldGenDelegation of
-      GenDelegation   -> dcertsGen dsEnv ds
+      GenDelegation   ->
+        let dsEnv = DSEnv
+                    { _dSEnvAllowedDelegators = ads
+                    , _dSEnvEpoch = sEpoch nextSlot k
+                    , _dSEnvSlot = nextSlot
+                    , _dSEnvK = k
+                    }
+        in
+        dcertsGen dsEnv ds
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of
@@ -232,8 +249,8 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, dsEnv, pps, _ngk) (
 
     pure $ Block signedHeader bb
    where
-    -- We'd expect the slot increment to be close to 1, even for large
-    -- Gen's size numbers.
-    gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
+     -- We'd expect the slot increment to be close to 1, even for large
+     -- Gen's size numbers.
+     gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
 
-    utxoEnv   = UTxOEnv {utxo0, pps}
+     utxoEnv   = UTxOEnv {utxo0, pps}

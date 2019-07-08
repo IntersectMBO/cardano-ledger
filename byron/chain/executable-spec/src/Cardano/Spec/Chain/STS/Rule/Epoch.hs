@@ -1,19 +1,20 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.Epoch where
 
--- import Control.Lens ((^.), _2)
-import Control.State.Transition
-import Ledger.Core
-import Ledger.Update
+import           Control.State.Transition
+import           Ledger.Core
+import           Ledger.GlobalParams (slotsPerEpoch)
+import           Ledger.Update
 
-
--- | Compute the epoch for the given _absolute_ slot
-sEpoch :: Slot -> Epoch
-sEpoch (Slot s) = Epoch $ s `div` 21600
-
+-- | Compute the epoch for the given _absolute_ slot and chain stability parameter.
+sEpoch
+  :: Slot
+  -> BlockCount
+  -> Epoch
+sEpoch (Slot s) k = Epoch $ s `div` slotsPerEpoch k
 
 data EPOCH
 
@@ -36,8 +37,8 @@ instance STS EPOCH where
 
   transitionRules =
     [ do
-        TRC ((e_c, _), _, s) <- judgmentContext
-        case e_c >= sEpoch s of
+        TRC ((e_c, k), _, s) <- judgmentContext
+        case e_c >= sEpoch s k of
           True  -> onOrAfterCurrentEpoch
           False -> beforeCurrentEpoch
     ]

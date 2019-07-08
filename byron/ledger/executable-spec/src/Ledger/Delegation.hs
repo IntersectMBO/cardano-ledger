@@ -78,21 +78,24 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Data.Set (Set, (\\))
 import qualified Data.Set as Set
-import           Data.Word (Word8)
+import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Range (constant, linear)
+import           Hedgehog.Range (linear)
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
+import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, range, sign, skey, unBlockCount, unVKeyGenesis, (∈), (∉), (⨃))
-import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkgenesisGen)
+                     addSlot, hash, mkVkGenesisSet, range, sign, skey, unBlockCount, unVKeyGenesis,
+                     (∈), (∉), (⨃))
+import           Ledger.Core.Generators (epochGen, slotGen)
+import qualified Ledger.Core.Generators as CoreGen
 
 
 --------------------------------------------------------------------------------
@@ -184,10 +187,6 @@ data DIState = DIState
 
 makeFields ''DIState
 
--- | Epoch-genesis key delegation set of the delegation interface state.
-eks :: DIState -> Set (Epoch, VKeyGenesis)
-eks = _dIStateKeyEpochDelegations
-
 dmsL :: HasDelegationMap a (Bimap VKeyGenesis VKey)
     => Lens' a (Bimap VKeyGenesis VKey)
 dmsL = delegationMap
@@ -225,6 +224,9 @@ dIStateDState = lens
 -- | Delegation scheduling rules
 data SDELEG
 
+data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
+  deriving (Eq, Show)
+
 instance STS SDELEG where
   type State SDELEG = DSState
   type Signal SDELEG = DCert
@@ -232,8 +234,8 @@ instance STS SDELEG where
 
   data PredicateFailure SDELEG
     = IsNotGenesisKey
-    | EpochInThePast
-    | EpochPastNextEpoch
+    | EpochInThePast EpochDiff
+    | EpochPastNextEpoch EpochDiff
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
@@ -252,9 +254,16 @@ instance STS SDELEG where
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
         Set.member (cert ^. to dwho . _1) (env ^. allowedDelegators) ?! IsNotGenesisKey
-        let diff = cert ^. to depoch - env ^. epoch
-        0 <= diff ?! EpochInThePast
-        diff <= 1 ?! EpochPastNextEpoch
+        env ^. epoch <= cert ^. to depoch
+          ?! EpochInThePast EpochDiff
+               { currentEpoch = env ^. epoch
+               , certEpoch = cert ^. to depoch
+               }
+        cert ^. to depoch <= env ^. epoch + 1
+          ?! EpochPastNextEpoch EpochDiff
+               { currentEpoch = env ^. epoch
+               , certEpoch = cert ^. to depoch
+               }
         return $ st
           & scheduledDelegations <>~ [((env ^. slot) `addSlot` d
                                       , cert ^. to dwho
@@ -457,8 +466,8 @@ instance Embed ADELEGS DELEG where
 -- Generators
 --------------------------------------------------------------------------------
 
-dcertGen :: DSEnv -> DIState -> Gen (Maybe DCert)
-dcertGen env st =
+dcertGen :: DSEnv -> Set (Epoch, VKeyGenesis) -> Gen (Maybe DCert)
+dcertGen env eks =
   let
     allowed :: [VKeyGenesis]
     allowed = Set.toList (_dSEnvAllowedDelegators env)
@@ -471,7 +480,7 @@ dcertGen env st =
     -- We obtain the candidates by removing the ones that already delegated in
     -- this or next epoch.
     candidates :: [(Epoch, VKeyGenesis)]
-    candidates = Set.toList $ preCandidates \\ eks st
+    candidates = Set.toList $ preCandidates \\ eks
     -- Next, we choose to whom these keys delegate.
     target :: [VKey]
     -- NOTE: we might want to make this configurable for now we chose an upper
@@ -490,30 +499,68 @@ dcertGen env st =
 
 dcertsGen :: DSEnv -> DIState -> Gen [DCert]
 dcertsGen env st =
-  -- NOTE: alternatively we could define a HasTrace instance for SDELEG and use
-  -- trace here.
-  --
   -- This generator can result in an empty list of delegation certificates if
   -- no delegation certificates can be produced, according to the delegation
   -- rules, given the initial state and environment.
-  catMaybes <$> Gen.list (constant 1 n) (dcertGen env st)
-  where n = env ^. allowedDelegators . to length
+  catMaybes . traceSignals OldestFirst <$> genTrace @MSDELEG n env subSt (sigGen @MSDELEG)
+  where n = env ^. allowedDelegators . to length . to fromIntegral
+        subSt = DSState
+          { _dSStateScheduledDelegations = _dIStateScheduledDelegations st
+          , _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
+          }
+
+-- | Dummy transition system needed for generating sequences of delegation certificates.
+data MSDELEG
+
+instance STS MSDELEG where
+
+  type Environment MSDELEG = DSEnv
+  type State MSDELEG = DSState
+  type Signal MSDELEG = Maybe DCert
+
+  data PredicateFailure MSDELEG = SDELEGFailure (PredicateFailure SDELEG)
+    deriving (Eq, Show)
+
+  initialRules = []
+
+  transitionRules =
+    [ do
+        TRC (env, st, msig) <- judgmentContext
+        case msig of
+          Nothing -> pure st
+          Just sig -> trans @SDELEG $ TRC (env, st, sig)
+    ]
+
+instance Embed SDELEG MSDELEG where
+  wrapFailed = SDELEGFailure
+
+instance HasTrace MSDELEG where
+
+  envGen = delegEnvGen
+
+  sigGen env st = dcertGen env (_dSStateKeyEpochDelegations st)
+
 
 instance HasTrace DELEG where
 
-  initEnvGen = do
-    ngk <- Gen.integral (linear 1 14)
-    initialEnvFromGenesisKeys ngk
+  envGen = delegEnvGen
 
   sigGen = dcertsGen
+
+delegEnvGen :: Word64 -> Gen DSEnv
+delegEnvGen chainLength = do
+  ngk <- Gen.integral (linear 1 14)
+  initialEnvFromGenesisKeys ngk chainLength
 
 -- | Generate an initial 'DELEG' environment from the given number of genesis
 -- keys.
 initialEnvFromGenesisKeys
   :: Word8
   -- ^ Number of genesis keys.
+  -> Word64
+  -- ^ Chain length
   -> Gen DSEnv
-initialEnvFromGenesisKeys ngk =
+initialEnvFromGenesisKeys ngk chainLength =
   DSEnv
     -- We need at least one delegator in the environment to be able to generate
     -- delegation certificates.
@@ -525,7 +572,7 @@ initialEnvFromGenesisKeys ngk =
     --
     -- A similar remark applies to the ranges chosen for slot and slot count
     -- generators.
-    <$> Gen.set (linear 1 (fromIntegral ngk)) vkgenesisGen
+    <$> pure (mkVkGenesisSet ngk)
     <*> epochGen 0 10
     <*> slotGen 0 100
-    <*> blockCountGen 0 100
+    <*> CoreGen.k chainLength (chainLength `div` 10)

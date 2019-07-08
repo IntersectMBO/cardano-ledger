@@ -13,6 +13,7 @@ module Ledger.Delegation.Properties
   , tracesAreClassified
   , dblockTracesAreClassified
   , relevantCasesAreCovered
+  , onlyValidSignalsAreGenerated
   , DBLOCK
   )
 where
@@ -34,12 +35,13 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, classifySize,
-                     classifyTraceLength, initEnvGen, isTrivial, nonTrivialTrace, ratio, sigGen,
+                     classifyTraceLength, envGen, isTrivial, nonTrivialTrace, ratio, sigGen,
                      suchThatLastState, trace, traceLengthsAreClassified)
+import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
-import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
-                     VKey (VKey), VKeyGenesis (VKeyGenesis), addSlot, owner, unSlot, unSlotCount)
+import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
+                     VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
@@ -50,7 +52,8 @@ import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
                      _dSStateScheduledDelegations)
 
-import           Ledger.Core.Generators (blockCountGen, epochGen, slotGen, vkGen)
+import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
+import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.GlobalParams (slotsPerEpoch)
 
 --------------------------------------------------------------------------------
@@ -228,12 +231,10 @@ dcertsAreNotReplayed = withTests 300 $ property $
                                     & concat
                                     & repeated
 
-
-
-
 instance HasTrace DBLOCK where
 
-  initEnvGen
+  envGen
+    chainLength
     = DSEnv
     <$> allowedDelegators
     -- We do not expect the current epoch to have an influence on the tests, so
@@ -241,19 +242,22 @@ instance HasTrace DBLOCK where
     <*> epochGen 0 10
     -- As with epochs, the current slot should not have influence in the tests.
     <*> slotGen 0 10
-    -- 2160 the value of @k@ used in production. However, delegation
-    -- certificates are activated @2*k@ slots from the slot in which they are
-    -- issued. This means that if we want to see delegation activations, we
-    -- need to choose a small value for @k@ since we do not want to blow up the
-    -- testing time by using large trace lengths.
-    <*> blockCountGen 0 100
+    -- 2160 the value of @k@ used in production. However, delegation certificates are activated
+    -- @2*k@ slots from the slot in which they are issued. This means that if we want to see
+    -- delegation activations, we need to choose a small value for @k@ since we do not want to blow
+    -- up the testing time by using large trace lengths.
+    --
+    -- Choosing a small @k@ value amounts to picking a large number of epochs. Given a trace length
+    -- of @n@, if we have @10k@ slots per-epoch, we can have at most @n `div` 10@ epochs (by
+    -- choosing @k == 1@).
+    --
+    <*> CoreGen.k chainLength (chainLength `div` 10)
     where
-      -- We scale the number of delegators linearly up to twice the number of
-      -- genesis keys we use in production. Factor 2 is chosen ad-hoc here.
+      -- We scale the number of delegators linearly up to twice the number of genesis keys we use in
+      -- production. Factor 2 is chosen ad-hoc here.
       allowedDelegators = do
         n <- Gen.integral (Range.linear 0 13)
-        pure $! Set.fromAscList $ gk <$> [0 .. n]
-      gk = VKeyGenesis . VKey . Owner
+        pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 
   sigGen _ (env, st) =
     DBlock <$> nextSlotGen <*> sigGen @DELEG env st
@@ -284,7 +288,7 @@ dblockTracesAreClassified = withTests 200 $ property $ do
   classifyTraceLength tr tl step
   -- Classify the traces by the total number of delegation certificates on
   -- them.
-  classifySize "total dcerts" (traceDCerts tr) length tl step
+  classifySize "total dcerts" (traceDCerts tr) (fromIntegral . length) tl step
   success
 
 -- | Extract the delegation certificates in the blocks, in the order they would
@@ -299,7 +303,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
   -- 70% of the traces must contain are as many delegation certificates as
   -- blocks.
-  cover 70
+  cover 50
         "there are at least as many delegation certificates as blocks"
         (traceLength tr <= length (traceDCerts tr))
 
@@ -328,8 +332,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
   -- 15% of the traces must contain at least 10% of delegations to the same
   -- delegate.
   cover 15
-        "at least 10% of the certificates delegate to the same key"
-        (0.1 <= ratio multipleDelegations tr)
+        "at least 5% of the certificates delegate to the same key"
+        (0.05 <= ratio multipleDelegations tr)
   where
     selfDelegations :: Trace DBLOCK -> Int
     selfDelegations tr = length
@@ -384,6 +388,11 @@ relevantCasesAreCovered = withTests 400 $ property $ do
     nextEpochDelegations tr =  epochDelegationEpoch tr
                             & filter (\(e0, e1) -> e0 + 1 == e1)
                             & length
+
+
+onlyValidSignalsAreGenerated :: Property
+onlyValidSignalsAreGenerated =
+  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @DBLOCK 100
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules

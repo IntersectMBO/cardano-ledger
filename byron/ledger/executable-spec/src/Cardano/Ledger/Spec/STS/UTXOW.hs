@@ -1,9 +1,9 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | UTXO transition system with witnessing
 
@@ -11,50 +11,19 @@ module Cardano.Ledger.Spec.STS.UTXOW where
 
 import qualified Data.Map as Map
 
-import Control.State.Transition
-  ( Embed
-  , Environment
-  , IRC(IRC)
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , (?!)
-  , initialRules
-  , judgmentContext
-  , trans
-  , transitionRules
-  , wrapFailed
-  )
-import Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
+                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!))
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
-import Ledger.Core
-  ( Addr(Addr)
-  , KeyPair(KeyPair)
-  , VKey
-  , keyPair
-  , mkAddr
-  , owner
-  , sign
-  , verify
-  )
+import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
+                     verify)
 import qualified Ledger.Update.Generators as UpdateGen
-import Ledger.UTxO
-  ( Tx
-  , TxIn
-  , TxOut(TxOut)
-  , TxWits(TxWits)
-  , UTxO(UTxO)
-  , Wit(Wit)
-  , body
-  , fromTxOuts
-  , inputs
-  , pcMinFee
-  )
+import           Ledger.UTxO (Tx, TxIn, TxOut (TxOut), TxWits (TxWits), UTxO (UTxO), Wit (Wit),
+                     body, fromTxOuts, inputs, pcMinFee)
 import qualified Ledger.UTxO.Generators as UTxOGen
 
-import Cardano.Ledger.Spec.STS.UTXO
+import           Cardano.Ledger.Spec.STS.UTXO
 
 data UTXOW
 
@@ -108,7 +77,7 @@ traceAddrs :: [Addr]
 traceAddrs = mkAddr <$> [0 .. 10]
 
 instance HasTrace UTXOW where
-  initEnvGen
+  envGen _
     = UTxOEnv <$> genUTxO <*> UpdateGen.pparamsGen
     where
       genUTxO = do

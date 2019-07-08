@@ -28,6 +28,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, isNothing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word64)
 import           Hedgehog (Property, cover, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -36,7 +37,7 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, randomTraceOfSize, ratio,
+import           Control.State.Transition.Generator (HasTrace, envGen, randomTraceOfSize, ratio,
                      sigGen, trace, traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
@@ -99,7 +100,7 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 30% of the update proposals increase the maximum block-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Increases) sample)
 
-  cover 50
+  cover 40
     "at least 10% of the update proposals do not change the maximum block-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
@@ -359,7 +360,7 @@ instance Embed UPIEND UBLOCK where
   wrapFailed = UPIENDFailure
 
 instance HasTrace UBLOCK where
-  initEnvGen =
+  envGen _ =
     do
       let numberOfGenesisKeys = 7
       dms <- Update.dmapGen numberOfGenesisKeys
@@ -563,7 +564,7 @@ proposalsScheduledForAdoption sample = traceStates OldestFirst sample
 
 -- | Sample a 'UBLOCK' trace, and print different metrics. This can be used in the REPL, and it is
 -- useful for understanding the traces produced by the 'UBLOCK' transition system.
-ublockSampleTraceMetrics :: Int -> IO ()
+ublockSampleTraceMetrics :: Word64 -> IO ()
 ublockSampleTraceMetrics maxTraceSize = do
   sample <- randomTraceOfSize @UBLOCK maxTraceSize
   let
