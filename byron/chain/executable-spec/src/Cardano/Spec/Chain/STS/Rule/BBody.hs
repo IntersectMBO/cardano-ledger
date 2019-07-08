@@ -1,49 +1,28 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.BBody where
 
-import Cardano.Spec.Chain.STS.Rule.Bupi
-import Control.Lens ((^.))
-import Data.Bimap (keys)
-import Data.Set (fromList)
-import Data.Word (Word8)
+import           Cardano.Spec.Chain.STS.Rule.Bupi
+import           Control.Lens ((^.))
+import           Data.Bimap (keys)
+import           Data.Set (fromList)
+import           Data.Word (Word8)
 
-import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(UTxOEnv, pps, utxo0), UTxOState)
-import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
-import Control.State.Transition
-  ( Embed
-  , Environment
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , (?!)
-  , initialRules
-  , judgmentContext
-  , trans
-  , transitionRules
-  , wrapFailed
-  )
-import Ledger.Core
-  (Epoch, hash)
-import Ledger.Delegation
-  ( DELEG
-  , DIState
-  , _dIStateDelegationMap
-  , DSEnv(DSEnv)
-  , _dSEnvAllowedDelegators
-  , _dSEnvEpoch
-  , _dSEnvSlot
-  , _dSEnvK
-  )
-import Ledger.Update (PParams, maxBkSz, UPIState, stableAfter)
-import Ledger.UTxO (UTxO)
+import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
+import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
+import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
+                     TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
+                     (?!))
+import           Ledger.Core (BlockCount, Epoch, hash)
+import           Ledger.Delegation (DELEG, DIState, DSEnv (DSEnv), _dIStateDelegationMap,
+                     _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK, _dSEnvSlot)
+import           Ledger.Update (PParams, UPIState, maxBkSz)
+import           Ledger.UTxO (UTxO)
 
-import Cardano.Spec.Chain.STS.Block
+import           Cardano.Spec.Chain.STS.Block
 
 data BBODY
 
@@ -53,6 +32,7 @@ instance STS BBODY where
     , Epoch
     , UTxO
     , Word8
+    , BlockCount -- Chain stability parameter
     )
 
   type State BBODY =
@@ -77,7 +57,7 @@ instance STS BBODY where
 
   transitionRules =
     [ do
-        TRC ((ppsVal, e_n, utxoGenesis, ngk), (utxoSt, ds, us), b) <- judgmentContext
+        TRC ((ppsVal, e_n, utxoGenesis, ngk, k), (utxoSt, ds, us), b) <- judgmentContext
         let bMax = ppsVal ^. maxBkSz
         bSize b <= bMax ?! InvalidBlockSize
         let bh = b ^. bHeader
@@ -86,7 +66,7 @@ instance STS BBODY where
         hash (bUpdPayload b)         == bh ^. bhUpdHash  ?! InvalidUpdateProposalHash
 
         us' <- trans @BUPI $ TRC (
-            (bh ^. bhSlot, _dIStateDelegationMap ds, ppsVal ^. stableAfter, ngk)
+            (bh ^. bhSlot, _dIStateDelegationMap ds, k, ngk)
           , us
           , (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes, bEndorsment b) )
         ds' <- trans @DELEG $ TRC
@@ -95,7 +75,7 @@ instance STS BBODY where
                     (fromList . keys . _dIStateDelegationMap) ds
                 , _dSEnvEpoch = e_n
                 , _dSEnvSlot = bh ^. bhSlot
-                , _dSEnvK = ppsVal ^. stableAfter
+                , _dSEnvK = k
                 }
             )
           , ds

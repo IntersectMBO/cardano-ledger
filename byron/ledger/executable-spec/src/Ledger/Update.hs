@@ -46,7 +46,7 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, initEnvGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
@@ -86,8 +86,6 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _stableAfter :: !Core.BlockCount
-  -- ^ Chain stability parameter
   , _factorA :: !Int
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
@@ -705,10 +703,23 @@ type UPIState =
 emptyUPIState :: UPIState
 emptyUPIState =
   (( ProtVer 0 0 0
-   , PParams                 -- TODO: choose more sensible default values
-     { _maxBkSz = 100        -- max sizes chosen as non-zero to allow progress
-     , _maxHdrSz = 10
-     , _maxTxSz = 50
+   , initialPParams
+   )
+  , []
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Map.empty
+  , Set.empty
+  , Set.empty
+  , Map.empty)
+
+initialPParams :: PParams
+initialPParams =
+  PParams                 -- TODO: choose more sensible default values
+     { _maxBkSz = 1000        -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 100
+     , _maxTxSz = 500
      , _maxPropSz = 10
      , _bkSgnCntT = 0.22     -- As defined in the spec.
      , _bkSlotsPerEpoch = 10 -- TODO: we need to remove this, since this should
@@ -719,8 +730,6 @@ emptyUPIState =
      , _scriptVersion = 0
      , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
-     , _stableAfter = 5      -- TODO: the k stability parameter needs to be
-                             -- removed from here as well!
 
      -- To determine the factors @A@ and @B@ used in the calculation of the
      -- transaction fees we need to know the constant @C@ that we use to bound
@@ -762,15 +771,6 @@ emptyUPIState =
      , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
      , _factorB = 2 -- In mainet this value is set to 155381000000000
      }
-   )
-  , []
-  , Map.empty
-  , Map.empty
-  , Map.empty
-  , Map.empty
-  , Set.empty
-  , Set.empty
-  , Map.empty)
 
 protocolVersion :: UPIState -> ProtVer
 protocolVersion ((pv, _), _, _, _, _, _, _, _, _) = pv
@@ -839,7 +839,7 @@ instance Embed UPREG UPIREG where
 
 instance HasTrace UPIREG where
 
-  initEnvGen = upiEnvGen
+  envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
@@ -1043,7 +1043,6 @@ ppsUpdateFrom pps = do
     <*> nextScriptVersion
     <*> nextCfmThd
     <*> nextUpAdptThd
-    <*> pure _stableAfter     -- This parameter should be removed from 'PParams'
     <*> nextFactorA
     <*> nextFactorB
 
@@ -1058,7 +1057,6 @@ ppsUpdateFrom pps = do
            , _scriptVersion
            , _cfmThd
            , _upAdptThd
-           , _stableAfter
            , _factorA
            , _factorB
            } = pps
@@ -1217,7 +1215,7 @@ instance Embed UPIVOTE UPIVOTES where
 
 instance HasTrace UPIVOTES where
 
-  initEnvGen = upiEnvGen
+  envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (mkVote <$>) . concatMap replicateFst

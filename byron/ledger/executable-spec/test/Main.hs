@@ -10,13 +10,12 @@ import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
 import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
+import qualified Ledger.Core.Generators.Properties as CoreGen
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
 import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, lastProposal)
-
-import qualified Ledger.Update.Properties as UPDATE
-
 import           Ledger.Relation.Properties (testRelation)
+import qualified Ledger.Update.Properties as UPDATE
 import           Ledger.UTxO.Properties (moneyIsConstant)
 import qualified Ledger.UTxO.Properties as UTxO
 
@@ -26,7 +25,9 @@ main = defaultMain tests
   tests :: TestTree
   tests = localOption Auto $ testGroup
     "Ledger"
-    [ testGroup "Delegation Examples" deleg
+    [ testGroup "Core generators properties"
+      [ testProperty "Relevant k values are generated"  CoreGen.relevantKValuesAreGenerated ]
+    , testGroup "Delegation Examples" deleg
     , testGroup
       "Delegation properties"
       [ testProperty "Certificates are triggered"           DELEG.dcertsAreTriggered
@@ -35,6 +36,7 @@ main = defaultMain tests
       , testProperty "Relevant DBLOCK traces covered"       DELEG.relevantCasesAreCovered
       , testProperty "Duplicated certificates are rejected" DELEG.rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
+      , testProperty "Only valid DBLOCK signals are generated" DELEG.onlyValidSignalsAreGenerated
       ]
     , testGroup
       "PVBUMP properties"
@@ -53,8 +55,8 @@ main = defaultMain tests
       [ testProperty "UPIREG traces are classified" UPDATE.upiregTracesAreClassified
       , testProperty "UBLOCK traces are classified" UPDATE.ublockTraceLengthsAreClassified
       , testProperty "Relevant UPIREG traces are covered" UPDATE.upiregRelevantTracesAreCovered
-      , testProperty "Only valid signals are generated" UPDATE.onlyValidSignalsAreGenerated
-      , testProperty "Only valid signals are generated for UBLOCK" UPDATE.ublockOnlyValidSignalsAreGenerated
+      , testProperty "Only valid UPIREG signals are generated" UPDATE.onlyValidSignalsAreGenerated
+      , testProperty "Only valid UBLOCK signals are generated" UPDATE.ublockOnlyValidSignalsAreGenerated
       , testProperty "Relevant UBLOCK traces are covered" UPDATE.ublockRelevantTracesAreCovered
       ]
     -- TODO move this out of here (these are not properties of the transition
