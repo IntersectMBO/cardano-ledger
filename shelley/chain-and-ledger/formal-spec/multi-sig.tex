@@ -53,7 +53,7 @@
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeKeys}{\type{StakeKeys}}
+\newcommand{\StakeDelegs}{\type{StakeDelegs}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -66,6 +66,8 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\AddrRWDVKey}{\type{Addr_{rwd}^{vkey}}}
+\newcommand{\AddrRWDScr}{\type{Addr_{rwd}^{script}}}
 \newcommand{\AddrVKeyB}{\type{Addr^{vkey}_{base}}}
 \newcommand{\AddrVKeyP}{\type{Addr^{vkey}_{ptr}}}
 \newcommand{\AddrVKeyE}{\type{Addr^{vkey}_{enterprise}}}
@@ -312,7 +314,9 @@ required signatures for a specific unspent transaction output.
                                     & \AddrVKeyBS
                            \end{array}
                                 & \text{VKey address}\\
-      \var{addr} & \Addr & \AddrScr \uniondistinct \AddrVKey
+      \var{addr} & \Addr & \AddrScr \uniondistinct \AddrVKey \\
+      \var{addr_{rwd}} & \AddrRWD & (\AddrRWDVKey \uniondistinct \AddrRWDScr)
+                                                         & \text{Reward address}
     \end{array}
   \end{equation*}
 
@@ -453,6 +457,36 @@ those that are locked via a script. The helper function $\fun{validators}$
 constructs a map from transaction inputs to scripts where for each input, the
 corresponding output of the UTxO can only be spent if the script validates the
 transaction.
+
+\begin{figure}
+  \emph{Delegation Types}
+    \begin{equation*}
+      \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+        \var{stakeDelegator} & \StakeDelegs & \KeyHash_{stake} \uniondistinct
+                                            \HashScr \\
+      \end{array}
+    \end{equation*}
+    %
+  \emph{Delegation States}
+  %
+  \begin{equation*}
+    \begin{array}{l}
+    \DState =
+    \left(\begin{array}{r@{~\in~}lr}
+      \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
+      \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+      \var{delegations} & \StakeDelegs \mapsto \KeyHash_{pool} & \text{delegations}\\
+      \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to key hash}\\
+      \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
+      \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
+          \end{array}\right)
+    \end{array}
+  \end{equation*}
+  %
+  \caption{Delegation State type}
+  \label{fig:delegation-state type}
+\end{figure}
+
 
 \section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
