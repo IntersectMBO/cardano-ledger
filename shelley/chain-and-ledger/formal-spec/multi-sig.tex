@@ -454,12 +454,111 @@ constructs a map from transaction inputs to scripts where for each input, the
 corresponding output of the UTxO can only be spent if the script validates the
 transaction.
 
-\section{Ledger Transition for Multi-Signature}
+\section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
 
-The main change for the ledger transitions when using script based
-multi-signature is the validation of the UTXOW transition
-of~\cite{shelley_formal_spec}. Its extended transition system is shown in
+There are two different types of ledger transitions that are impacted by
+multi-signature. The first type is changing delegation of stake which requires
+multi-signature. This impacts the DELEG transition with its different cases
+depending on the kind of delegation certificate as described
+in~\cite{shelley_formal_spec}. The second type is spending an element of the
+UTxO which required a multi-signature for unlocking. This impacts the UTXOW
+transition.
+
+\subsection{Delegation Transitions Rules}
+\label{sec:deleg-trans-rules}
+
+In order to validate a multi-signature for delegation, each delegation
+certificate in a transaction has to be checked for correct signature
+combinations. This requires the transaction $\var{tx}$ to be available in the
+environment of the DELPL transition rule, as this rule is called with a single
+certificate as its signal.
+
+\begin{figure}[hbt]
+  \emph{Delegation and Pool Combined Environment}
+  \begin{equation*}
+    \DPEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{slot}\\
+        \var{ptr} & \Ptr & \text{certificate pointer}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{tx} & \Tx & \text{current transaction}
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation and Pool Combined State}
+  \begin{equation*}
+    \DPState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation and Pool Combined Transition}
+  \begin{equation*}
+    \_ \vdash \_ \trans{delpl}{\_} \_ \in
+      \powerset (
+        \DPEnv \times \DPState \times \DCert \times \DPState)
+  \end{equation*}
+  \caption{Delegation and Pool Combined Transition Type}
+  \label{fig:defs:delpl}
+\end{figure}
+
+\begin{figure}[hbt]
+  \emph{Delegation and Pool Combined Rules}
+  \begin{equation}
+    \label{eq:delpl-d}
+    \inference[Delpl-Del]
+    {
+      &
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot} \\
+            \var{ptr} \\
+          \end{array}
+        \right)
+      }
+      \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
+    }
+    { \left(
+        \begin{array}{r}
+          \var{slot} \\
+          \var{ptr} \\
+          \var{pp} \\
+          \var{tx}
+        \end{array}
+      \right)
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{dstate} \\
+        \var{pstate}
+      \end{array}
+      \right)
+      \trans{delpl}{c}
+      \left(
+      \begin{array}{rcl}
+        \varUpdate{\var{dstate'}} \\
+        \var{pstate}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Delegation and Pool Combined Transition Rules}
+  \label{fig:rules:delpl}
+\end{figure}
+
+
+\subsection{UTXOW Transition Rule}
+\label{sec:utxow-transition}
+
+The UTXOW extended transition system is shown in
 Figure~\ref{fig:rules:utxow-multi-sig}, in the format described
 in~\cite{small_step_semantics}. The constraint on the set of required witnesses
 is relaxed in such a way that ``redundant'' signatures can be supplied in the
