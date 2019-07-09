@@ -17,9 +17,7 @@
     components = {
       "library" = { depends = [ (hsPkgs.base) ]; };
       exes = {
-        "nonInt" = {
-          depends = [ (hsPkgs.base) (hsPkgs.non-integer) (hsPkgs.criterion) ];
-          };
+        "nonInt" = { depends = [ (hsPkgs.base) (hsPkgs.non-integer) ]; };
         };
       tests = {
         "non-integer-test" = {
