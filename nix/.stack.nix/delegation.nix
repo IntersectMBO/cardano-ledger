@@ -21,7 +21,6 @@
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
-          (hsPkgs.memory)
           (hsPkgs.small-steps)
           (hsPkgs.microlens)
           (hsPkgs.microlens-th)
