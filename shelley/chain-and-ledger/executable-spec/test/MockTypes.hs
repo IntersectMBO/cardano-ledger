@@ -17,7 +17,7 @@ type PoolParams = Delegation.PoolParams.PoolParams ShortHash MockDSIGN
 
 type RewardAcnt = Delegation.PoolParams.RewardAcnt ShortHash MockDSIGN
 
-type HashKey = Keys.HashKey ShortHash MockDSIGN
+type KeyHash = Keys.KeyHash ShortHash MockDSIGN
 
 type KeyPair = Keys.KeyPair MockDSIGN
 

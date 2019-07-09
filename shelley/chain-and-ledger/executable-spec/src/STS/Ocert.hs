@@ -28,7 +28,7 @@ instance
   => STS (OCERT hashAlgo dsignAlgo kesAlgo)
  where
   type State (OCERT hashAlgo dsignAlgo kesAlgo)
-    = Map.Map (HashKey hashAlgo dsignAlgo) Natural
+    = Map.Map (KeyHash hashAlgo dsignAlgo) Natural
   type Signal (OCERT hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
   type Environment (OCERT hashAlgo dsignAlgo kesAlgo) = ()
@@ -38,7 +38,7 @@ instance
     | KESPeriodWrongOCERT
     | InvalidSignatureOCERT
     | InvalidKesSignatureOCERT
-    | NoCounterForHashKeyOCERT
+    | NoCounterForKeyHashOCERT
     deriving (Show, Eq)
 
   initialRules = [pure Map.empty]
@@ -66,7 +66,7 @@ ocertTransition = do
   let hkEntry = Map.lookup hk cs
   case hkEntry of
     Nothing -> do
-      failBecause NoCounterForHashKeyOCERT
+      failBecause NoCounterForKeyHashOCERT
       pure cs
     Just m -> do
       m > n ?! KESPeriodWrongOCERT

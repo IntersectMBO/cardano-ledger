@@ -37,11 +37,11 @@ import           Data.Word (Word8)
 import           Lens.Micro ((^.))
 
 newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map.Map (HashKey hashAlgo dsignAlgo) Slot)
+  StakeKeys (Map.Map (KeyHash hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq)
 
 newtype StakePools hashAlgo dsignAlgo =
-  StakePools (Map.Map (HashKey hashAlgo dsignAlgo) Slot)
+  StakePools (Map.Map (KeyHash hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq)
 
 -- | A heavyweight certificate.
@@ -49,7 +49,7 @@ data DCert hashAlgo dsignAlgo
     -- | A stake key registration certificate.
   = RegKey (VKey dsignAlgo)
     -- | A stake key deregistration certificate.
-  | DeRegKey (VKey dsignAlgo) --TODO this is actually HashKey on page 13, is that what we want?
+  | DeRegKey (VKey dsignAlgo) --TODO this is actually KeyHash on page 13, is that what we want?
     -- | A stake pool registration certificate.
   | RegPool (PoolParams hashAlgo dsignAlgo)
     -- | A stake pool retirement certificate.
@@ -100,7 +100,7 @@ instance
 cwitness
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => DCert hashAlgo dsignAlgo
-  -> HashKey hashAlgo dsignAlgo
+  -> KeyHash hashAlgo dsignAlgo
 cwitness (RegKey k)            = hashKey k
 cwitness (DeRegKey k)          = hashKey k
 cwitness (RegPool pool)        = hashKey $ pool ^. poolPubKey
@@ -156,5 +156,5 @@ decayPool pc = (pval, pmin, lambdap)
           lambdap = pc ^. poolDecayRate
 
 newtype PoolDistr hashAlgo dsignAlgo =
-  PoolDistr (Map.Map (HashKey hashAlgo dsignAlgo) Rational)
+  PoolDistr (Map.Map (KeyHash hashAlgo dsignAlgo) Rational)
   deriving (Show, Eq)

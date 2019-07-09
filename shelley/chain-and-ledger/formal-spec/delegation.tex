@@ -116,15 +116,15 @@ It does the following:
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
       \StakeKeys
-      & \HashKey \mapsto \Slot
+      & \KeyHash \mapsto \Slot
       & \text{registered stake keys} \\
       %
       \StakePools
-      & \HashKey \mapsto \Slot
+      & \KeyHash \mapsto \Slot
       & \text{registered stake pools} \\
       %
       \PoolParam
-      & \powerset{\HashKey} \times \Coin \times \unitInterval \times \Coin \times \AddrRWD
+      & \powerset{\KeyHash} \times \Coin \times \unitInterval \times \Coin \times \AddrRWD
       & \text{stake pool parameters} \\
     \end{array}
   \end{equation*}
@@ -133,10 +133,10 @@ It does the following:
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-    \cwitness{} & \DCert \to \HashKey
+    \cwitness{} & \DCert \to \KeyHash
   & \text{certificate witness}
   \\
-  \fun{dpool} & \DCertDeleg \to \HashKey
+  \fun{dpool} & \DCertDeleg \to \KeyHash
   & \text{pool being delegated to}
   \\
   \fun{poolParam} & \DCertRegPool \to \PoolParam
@@ -154,7 +154,7 @@ It does the following:
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-    \fun{poolOwners} & \PoolParam \to \powerset{\HashKey}
+    \fun{poolOwners} & \PoolParam \to \powerset{\KeyHash}
                      & \text{stake pool owners}
     \\
     \fun{poolCost} & \PoolParam \to \Coin
@@ -229,8 +229,8 @@ and the protocol parameters.
     \left(\begin{array}{r@{~\in~}lr}
       \var{stkeys} & \StakeKeys & \text{registered stake keys}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \HashKey_{stake} \mapsto \HashKey_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \HashKey & \text{pointer to hashkey}\\
+      \var{delegations} & \KeyHash_{stake} \mapsto \KeyHash_{pool} & \text{delegations}\\
+      \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
       \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
       \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
     \end{array}\right)
@@ -239,10 +239,10 @@ and the protocol parameters.
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
       \var{stpools} & \StakePools & \text{registered pools to creation time}\\
-      \var{poolParams} & \HashKey_{pool} \mapsto \PoolParam
+      \var{poolParams} & \KeyHash_{pool} \mapsto \PoolParam
         & \text{registered pools to pool parameters}\\
-      \var{retiring} & \HashKey_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
-      \var{cs} & \HashKey_{pool} \mapsto \N & \text{certificate issue numbers}\\
+      \var{retiring} & \KeyHash_{pool} \mapsto \Epoch & \text{retiring stake pools}\\
+      \var{cs} & \KeyHash_{pool} \mapsto \N & \text{certificate issue numbers}\\
     \end{array}\right)
     \end{array}
   \end{equation*}

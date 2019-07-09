@@ -89,7 +89,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \emph{Derived Types}
   \begin{align*}
-    \PoolDistr = \HashKey \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
+    \PoolDistr = \KeyHash \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
   \end{align*}
   %
 
@@ -749,7 +749,7 @@ operation certificate issue numbers.  Its signal is a block header.
   \emph{Operational Certificate Transitions}
   \begin{equation*}
     \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\HashKey_{pool} \mapsto \N \times \BHeader \times \HashKey_{pool} \mapsto \N)
+    \powerset (\KeyHash_{pool} \mapsto \N \times \BHeader \times \KeyHash_{pool} \mapsto \N)
   \end{equation*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
@@ -906,8 +906,8 @@ The states for this transition consist only of the mapping of certificate issue 
   \emph{Overlay Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{overlay}{\_} \var{\_} \subseteq
-    \powerset (\OverlayEnv \times (\HashKey_{pool} \mapsto \N) \times \BHeader \times
-    (\HashKey_{pool} \mapsto \N))
+    \powerset (\OverlayEnv \times (\KeyHash_{pool} \mapsto \N) \times \BHeader \times
+    (\KeyHash_{pool} \mapsto \N))
   \end{equation*}
   \caption{Overlay transition-system types}
   \label{fig:ts-types:overlay}
@@ -1008,7 +1008,7 @@ followed by the transition to update the evolving and candidate nonces.
     \PrtclState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{cs} & \HashKey_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
+        \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
         \var{s_\ell} & \Slot & \text{last slot} \\
         \eta_v & \Seed & \text{evolving nonce} \\
@@ -1146,7 +1146,7 @@ produced by each stake pool.
   %
   \emph{BBody helper function}
   \begin{align*}
-      & \fun{incrBlocks} \in \Bool \to \HashKey \to
+      & \fun{incrBlocks} \in \Bool \to \KeyHash \to
           \BlocksMade \to \BlocksMade \\
       & \fun{incrBlocks}~\var{isOverlay}~\var{hk}~\var{b} =
         \begin{cases}
@@ -1304,7 +1304,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \end{align*}
   %
   \begin{align*}
-      & \fun{setIssueNumbers} \in \LState \to (\HashKey\to\N) \to \LState \\
+      & \fun{setIssueNumbers} \in \LState \to (\KeyHash\to\N) \to \LState \\
       & \fun{setIssueNumbers}~
           (\var{utxoSt},
           ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))

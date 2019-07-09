@@ -41,7 +41,7 @@ organization chosen for an implementation.
     \begin{array}{r@{~\in~}lr}
       \var{sk} & \SKey & \text{private signing key}\\
       \var{vk} & \VKey & \text{public verifying key}\\
-      \var{hk} & \HashKey & \text{hash of a key}\\
+      \var{hk} & \KeyHash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
     \end{array}
@@ -56,7 +56,7 @@ organization chosen for an implementation.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hashKey{} & \VKey \to \HashKey
+      \hashKey{} & \VKey \to \KeyHash
                  & \text{hashKey function} \\
                  %
       \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}

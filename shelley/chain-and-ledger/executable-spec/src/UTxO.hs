@@ -101,8 +101,8 @@ instance ToCBOR Ptr where
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
   = AddrTxin
-      { _payHK :: HashKey hashAlgo dsignAlgo
-      , _stakeHK :: HashKey hashAlgo dsignAlgo
+      { _payHK :: KeyHash hashAlgo dsignAlgo
+      , _stakeHK :: KeyHash hashAlgo dsignAlgo
       }
   | AddrPtr
       { _stakePtr :: Ptr

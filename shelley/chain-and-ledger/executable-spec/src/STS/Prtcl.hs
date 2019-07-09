@@ -38,7 +38,7 @@ instance
   => STS (PRTCL hashAlgo dsignAlgo kesAlgo)
  where
   type State (PRTCL hashAlgo dsignAlgo kesAlgo)
-    = ( Map.Map (HashKey hashAlgo dsignAlgo) Natural
+    = ( Map.Map (KeyHash hashAlgo dsignAlgo) Natural
       , HashHeader hashAlgo dsignAlgo kesAlgo
       , Slot
       , Seed

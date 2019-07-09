@@ -35,7 +35,7 @@ import           Keys
 
 -- |An account based address for a rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: HashKey hashAlgo signAlgo
+  { getRwdHK :: KeyHash hashAlgo signAlgo
   } deriving (Show, Eq, Ord, ToCBOR)
 
 
@@ -47,9 +47,9 @@ data PoolParams hashAlgo dsignAlgo =
     , _poolPledges :: Map (VKey dsignAlgo) Coin -- TODO not updated currently
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
-    , _poolAltAcnt :: Maybe (HashKey hashAlgo dsignAlgo)
+    , _poolAltAcnt :: Maybe (KeyHash hashAlgo dsignAlgo)
     , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
-    , _poolOwners  :: Set (HashKey hashAlgo dsignAlgo)
+    , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
     } deriving (Show, Eq, Ord)
 
 makeLenses ''PoolParams

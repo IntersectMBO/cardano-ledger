@@ -236,7 +236,7 @@ hBbsize = bsize
 
 incrBlocks
   :: Bool
-  -> HashKey hashAlgo dsignAlgo
+  -> KeyHash hashAlgo dsignAlgo
   -> BlocksMade hashAlgo dsignAlgo
   -> BlocksMade hashAlgo dsignAlgo
 incrBlocks isOverlay hk b'@(BlocksMade b)
