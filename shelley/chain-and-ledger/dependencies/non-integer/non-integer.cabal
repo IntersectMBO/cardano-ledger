@@ -52,8 +52,7 @@ executable nonInt
       -Werror
   build-depends:
     base,
-    non-integer,
-    criterion
+    non-integer
 
 test-suite non-integer-test
   type:                exitcode-stdio-1.0

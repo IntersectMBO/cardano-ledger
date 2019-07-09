@@ -69,7 +69,6 @@ library
     bytestring,
     containers,
     cryptonite,
-    memory,
     small-steps,
     microlens,
     microlens-th,
