@@ -23,7 +23,6 @@
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
-          (hsPkgs.memory)
           (hsPkgs.small-steps)
           ];
         };

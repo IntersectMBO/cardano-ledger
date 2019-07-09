@@ -14,7 +14,6 @@ module Ledger.Delegation.Properties
   , dblockTracesAreClassified
   , relevantCasesAreCovered
   , onlyValidSignalsAreGenerated
-  , DBLOCK
   )
 where
 
