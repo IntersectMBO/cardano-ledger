@@ -551,7 +551,7 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to (\VKeyGen\mapsto\VKey) \to \powerset{\HashKey}
+    & \fun{propWits} \in \Update \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
     & \fun{propWits}~(\var{pup},~\var{aup}) \var{dms} = \\
     & ~~\left\{
@@ -563,7 +563,7 @@ This consists of:
   \end{align*}
 
   \begin{align*}
-    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\HashKey}
+    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for needed witnesses} \\
     & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\

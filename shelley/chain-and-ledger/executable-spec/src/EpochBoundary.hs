@@ -52,16 +52,16 @@ import           Ledger.Core ((◁), (▷), dom)
 
 -- | Blocks made
 newtype BlocksMade hashAlgo dsignAlgo
-  = BlocksMade (Map.Map (HashKey hashAlgo dsignAlgo) Natural)
+  = BlocksMade (Map.Map (KeyHash hashAlgo dsignAlgo) Natural)
   deriving (Show, Eq)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake hashAlgo dsignAlgo
-  = Stake (Map.Map (HashKey hashAlgo dsignAlgo) Coin)
+  = Stake (Map.Map (KeyHash hashAlgo dsignAlgo) Coin)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (HashKey hashAlgo dsignAlgo)
+getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (KeyHash hashAlgo dsignAlgo)
 getStakeHK (AddrTxin _ hk) = Just hk
 getStakeHK _               = Nothing
 
@@ -76,7 +76,7 @@ baseStake vals =
  where
    convert
      :: (Addr hashAlgo dsignAlgo, Coin)
-     -> Maybe (HashKey hashAlgo dsignAlgo, Coin)
+     -> Maybe (KeyHash hashAlgo dsignAlgo, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
@@ -89,14 +89,14 @@ getStakePtr _             = Nothing
 ptrStake
   :: forall hashAlgo dsignAlgo
    . Map.Map (Addr hashAlgo dsignAlgo) Coin
-  -> Map.Map Ptr (HashKey hashAlgo dsignAlgo)
+  -> Map.Map Ptr (KeyHash hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
 ptrStake vals pointers =
   Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
   where
     convert
       :: (Addr hashAlgo dsignAlgo, Coin)
-      -> Maybe (HashKey hashAlgo dsignAlgo, Coin)
+      -> Maybe (KeyHash hashAlgo dsignAlgo, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
@@ -114,8 +114,8 @@ rewardStake rewards =
 
 -- | Get stake of one pool
 poolStake
-  :: HashKey hashAlgo dsignAlgo
-  -> Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+  :: KeyHash hashAlgo dsignAlgo
+  -> Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
@@ -124,9 +124,9 @@ poolStake hk delegs (Stake stake) =
 -- | Calculate pool refunds
 poolRefunds
   :: PParams
-  -> Map.Map (HashKey hashAlgo dsignAlgo) Epoch
+  -> Map.Map (KeyHash hashAlgo dsignAlgo) Epoch
   -> Slot
-  -> Map.Map (HashKey hashAlgo dsignAlgo) Coin
+  -> Map.Map (KeyHash hashAlgo dsignAlgo) Coin
 poolRefunds pp retirees cslot =
   Map.map
     (\e ->
@@ -165,11 +165,11 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
 
 -- | Pool individual reward
 groupByPool
-  :: Map.Map (HashKey hashAlgo dsignAlgo) Coin
-  -> Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+  :: Map.Map (KeyHash hashAlgo dsignAlgo) Coin
+  -> Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
   -> Map.Map
-       (HashKey hashAlgo dsignAlgo)
-       (Map.Map (HashKey hashAlgo dsignAlgo) Coin)
+       (KeyHash hashAlgo dsignAlgo)
+       (Map.Map (KeyHash hashAlgo dsignAlgo) Coin)
 groupByPool active delegs =
   Map.fromListWith
     Map.union
@@ -181,18 +181,18 @@ data SnapShots hashAlgo dsignAlgo
   = SnapShots
     { _pstakeMark
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _pstakeSet
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _pstakeGo
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (HashKey hashAlgo dsignAlgo) (HashKey hashAlgo dsignAlgo)
+         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _poolsSS
-      :: Map.Map (HashKey hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
+      :: Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
     , _blocksSS :: BlocksMade hashAlgo dsignAlgo
     , _feeSS :: Coin
     } deriving (Show, Eq)

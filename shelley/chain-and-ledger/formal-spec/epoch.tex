@@ -153,8 +153,8 @@ throughout the rest of the section.
   \end{align*}
   \emph{Pool refunds}
   \begin{align*}
-      & \fun{poolRefunds} \in \PParams \to (\HashKey_{pool} \mapsto \Epoch) \to \Slot \to
-      (\HashKey_{pool} \mapsto \Coin) \\
+      & \fun{poolRefunds} \in \PParams \to (\KeyHash_{pool} \mapsto \Epoch) \to \Slot \to
+      (\KeyHash_{pool} \mapsto \Coin) \\
       & \poolRefunds{pp}{retiring}{cslot} = \left\{
         \var{hk}\mapsto
           \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{(\fun{slot}~e)})}
@@ -167,7 +167,7 @@ throughout the rest of the section.
 
   \emph{Filter Stake to one Pool}
   \begin{align*}
-      & \fun{poolStake} \in \HashKey_{pool} \to (\HashKey_{stake} \mapsto \HashKey_{pool})
+      & \fun{poolStake} \in \KeyHash_{pool} \to (\KeyHash_{stake} \mapsto \KeyHash_{pool})
         \to \Stake \to \Stake \\
       & \poolStake{hk}{delegs}{stake} =
         \dom{(\var{delegs}\restrictrange\{hk\})\restrictdom\var{stake}}
@@ -230,11 +230,11 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{blocks}
       & \BlocksMade
-      & \HashKey_{pool} \mapsto \N
+      & \KeyHash_{pool} \mapsto \N
       & \text{blocks made by stake pools} \\
       \var{stake}
       & \Stake
-      & \HashKey_{stake} \mapsto \Coin
+      & \KeyHash_{stake} \mapsto \Coin
       & \text{stake} \\
     \end{array}
   \end{equation*}
@@ -336,13 +336,13 @@ information needing to be saved on the epoch boundary:
     \Snapshots =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{pstake_{mark}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+        \var{pstake_{mark}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
                             & \text{newest stake}\\
-        \var{pstake_{set}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+        \var{pstake_{set}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
                            & \text{middle stake}\\
-        \var{pstake_{go}} & \Stake\times(\HashKey_{stake}\mapsto\HashKey_{pool})
+        \var{pstake_{go}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
                           & \text{oldest stake}\\
-        \var{poolsSS} & \HashKey \mapsto \PoolParam & \text{pool parameters }\\
+        \var{poolsSS} & \KeyHash \mapsto \PoolParam & \text{pool parameters }\\
         \var{blocksSS} & \BlocksMade & \text{blocks made }\\
         \var{feeSS} & \Coin & \text{fee snapshot}\\
       \end{array}
@@ -1111,7 +1111,7 @@ The calculation is done pool-by-pool.
   \emph{Calculation to reward a single stake pool}
   %
   \begin{align*}
-    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \HashKey \to \PoolParam\\
+    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \KeyHash \to \PoolParam\\
       & ~~~\to \Stake \to \Coin \to \powerset{\AddrRWD}
            \to (\AddrRWD \mapsto \Coin) \\
       & \rewardOnePool{pp}{R}{n}{\overline{N}}{poolHK}{pool}{stake}{tot}{addrs_{rew}} =
@@ -1148,8 +1148,8 @@ The calculation is done pool-by-pool.
   %
   \begin{align*}
       & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \powerset{\AddrRWD}
-      \to (\HashKey \mapsto \PoolParam) \\
-      & ~~~\to \Stake \to (\HashKey_{stake} \mapsto \HashKey_{pool}) \to
+      \to (\KeyHash \mapsto \PoolParam) \\
+      & ~~~\to \Stake \to (\KeyHash_{stake} \mapsto \KeyHash_{pool}) \to
       (\AddrRWD \mapsto \Coin)\\
       & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}
           = \var{rewards}\\

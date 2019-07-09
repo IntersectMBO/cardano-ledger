@@ -105,7 +105,7 @@
 \newcommand{\VKeyGen}{\type{VKey_G}}
 \newcommand{\SKey}{\type{SKey}}
 \newcommand{\SKeyEv}{\type{SKey_{ev}}}
-\newcommand{\HashKey}{\type{HashKey}}
+\newcommand{\KeyHash}{\type{KeyHash}}
 \newcommand{\KeyPair}{\type{KeyPair}}
 \newcommand{\KeyPairEv}{\type{KeyPair_{ev}}}
 \newcommand{\Sig}{\type{Sig}}
@@ -320,12 +320,12 @@ required signatures for a specific unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{paymentHK} & \AddrVKey \to \HashKey_{pay}
+      \fun{paymentHK} & \AddrVKey \to \KeyHash_{pay}
       & \text{hash of payment key from addr}\\
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
                                                      script} \\
       \fun{stakeHK_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
-                          \HashKey_{stake} & \text{hash of stake key for base
+                          \KeyHash_{stake} & \text{hash of stake key for base
                                              addresses}\\
       \fun{addrPtr} & (\AddrVKeyP \uniondistinct \AddrScrPtr) \to \Ptr &
                                                                      \text{pointer
@@ -609,7 +609,7 @@ according to Figure~\ref{fig:types_defs_plutus}.
 
   \begin{equation*}
     \begin{array}{rll}
-      \var{msig} & \in \ScriptMSig = & \,\,\,\type{SingleSig}~\HashKey \\
+      \var{msig} & \in \ScriptMSig = & \,\,\,\type{SingleSig}~\KeyHash \\
        && \vert\,\,\type{MultSig}~Int~[\ScriptMSig]
     \end{array}
   \end{equation*}
@@ -625,7 +625,7 @@ according to Figure~\ref{fig:types_defs_plutus}.
                          & \fun{evalMultiSigScript}~msig~vhks\\
   \end{align*}
   \begin{align*}
-    \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\HashKey\to\Bool & \\
+    \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\KeyHash\to\Bool & \\
     \fun{evalMultiSigScript} & ~(\type{SingleSig}~hk)~\var{vhks} =  hk \in vhks \\
     \fun{evalMultiSigScript} & ~(\type{MultiSig}~m~ts)~\var{vhks} = \\
                              & m \leq \Sigma
