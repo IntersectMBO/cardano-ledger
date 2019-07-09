@@ -14,7 +14,7 @@ type suffix, and use simply $\serialised{\wcard}$.
     \begin{array}{r@{~\in~}lr}
       \var{vk} & \SKey & \text{signing key}\\
       \var{vk} & \VKey & \text{verifying key}\\
-      \var{hk} & \HashKey & \text{hash of a key}\\
+      \var{hk} & \KeyHash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
     \end{array}
@@ -29,7 +29,7 @@ type suffix, and use simply $\serialised{\wcard}$.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \hash{} & \VKey \to \HashKey
+      \hash{} & \VKey \to \KeyHash
       & \text{hash function} \\
       %
       \fun{verify} & \VKey \times \Data \times \Sig
