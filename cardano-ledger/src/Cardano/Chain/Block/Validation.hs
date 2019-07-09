@@ -135,7 +135,7 @@ import Cardano.Chain.ValidationMode
 data SigningHistory = SigningHistory
   { shK                 :: !BlockCount
   , shSigningQueue      :: !(Seq KeyHash)
-  , shKeyHashCounts :: !(Map KeyHash BlockCount)
+  , shKeyHashCounts     :: !(Map KeyHash BlockCount)
   } deriving (Eq, Show, Generic, NFData)
 
 instance FromCBOR SigningHistory where
