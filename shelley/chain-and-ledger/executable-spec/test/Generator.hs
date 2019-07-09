@@ -78,7 +78,7 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: KeyPairs -> [(HashKey, HashKey)]
+hashKeyPairs :: KeyPairs -> [(KeyHash, KeyHash)]
 hashKeyPairs keyPairs =
     (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
 
@@ -239,7 +239,7 @@ findPayKeyPair (AddrTxin addr _) keyList =
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: HashKey -> KeyPairs -> KeyPair
+findStakeKeyPair :: KeyHash -> KeyPairs -> KeyPair
 findStakeKeyPair addr keyList =
     snd $ head $ filter (\(_, stake) -> addr == (hashKey $ vKey stake)) keyList
 

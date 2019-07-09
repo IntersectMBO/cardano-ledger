@@ -190,7 +190,7 @@ each output of a transition is spent at most once.
 \begin{figure}[ht]
   \centering
   \begin{align*}
-    \fun{getStKeys} & \in & \ledgerState \to \powerset \HashKey \\
+    \fun{getStKeys} & \in & \ledgerState \to \powerset \KeyHash \\
     \fun{getStKeys} & \coloneqq & (\wcard, (\var{stKeys}, \wcard, \wcard),
                                   \wcard) \to \var{stkeys} \\
                     &&\\
@@ -198,16 +198,16 @@ each output of a transition is spent at most once.
     \fun{getRewards} & \coloneqq & (\wcard, (\wcard, \var{rewards}, \wcard),
                                    \wcard) \to \var{rewards} \\
                     &&\\
-    \fun{getDelegations} & \in & \ledgerState \to \HashKey \mapsto \HashKey \\
+    \fun{getDelegations} & \in & \ledgerState \to \KeyHash \mapsto \KeyHash \\
     \fun{getDelegations} & \coloneqq & (\wcard, (\wcard, \wcard,
                                        \var{delegations}), \wcard) \to
                                        \var{delegations} \\
                     &&\\
-    \fun{getStPools} & \in & \ledgerState \to \HashKey \mapsto \DCertRegPool \\
+    \fun{getStPools} & \in & \ledgerState \to \KeyHash \mapsto \DCertRegPool \\
     \fun{getStPools} & \coloneqq & (\wcard, \wcard,
                                    (\var{stpools}, \wcard)) \to \var{stpools} \\
                     &&\\
-    \fun{getRetiring} & \in & \ledgerState \to \HashKey \mapsto \Epoch \\
+    \fun{getRetiring} & \in & \ledgerState \to \KeyHash \mapsto \Epoch \\
     \fun{getRetiring} & \coloneqq & (\wcard, \wcard,
                                     (\wcard, \var{retiring})) \to \var{retiring} \\
   \end{align*}

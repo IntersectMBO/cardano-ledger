@@ -14,7 +14,7 @@ module Keys
   , Signable
   , SKey(..)
   , VKey(..)
-  , HashKey(..)
+  , KeyHash(..)
   , KeyPair(..)
   , VKeyGenesis(..)
   , Sig
@@ -30,7 +30,7 @@ module Keys
   , KESignable
   , SKeyES(..)
   , VKeyES(..)
-  , HashKeyES(..)
+  , KeyHashES(..)
   , KESig
   , hashKeyES
   , signKES
@@ -121,8 +121,8 @@ instance (DSIGNAlgorithm dsignAlgo, Typeable a) => ToCBOR (Sig dsignAlgo a) wher
 
 
 -- |The hash of public Key
-newtype HashKey hashAlgo dsignAlgo =
-  HashKey (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
+newtype KeyHash hashAlgo dsignAlgo =
+  KeyHash (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
   deriving (Show, Eq, Ord, ToCBOR)
 
 
@@ -130,8 +130,8 @@ newtype HashKey hashAlgo dsignAlgo =
 hashKey
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => VKey dsignAlgo
-  -> HashKey hashAlgo dsignAlgo
-hashKey (VKey vk) = HashKey $ hashWithSerialiser encodeVerKeyDSIGN vk
+  -> KeyHash hashAlgo dsignAlgo
+hashKey (VKey vk) = KeyHash $ hashWithSerialiser encodeVerKeyDSIGN vk
 
 -- |Produce a digital signature
 sign
@@ -186,8 +186,8 @@ instance (KESAlgorithm kesAlgo, Typeable a) => ToCBOR (KESig kesAlgo a) where
 
 
 -- |The hash of KES verification Key
-newtype HashKeyES hashAlgo kesAlgo =
-  HashKeyES (Hash hashAlgo (VerKeyKES kesAlgo))
+newtype KeyHashES hashAlgo kesAlgo =
+  KeyHashES (Hash hashAlgo (VerKeyKES kesAlgo))
   deriving (Show, Eq, Ord, ToCBOR)
 
 
@@ -195,9 +195,9 @@ newtype HashKeyES hashAlgo kesAlgo =
 hashKeyES
   :: (HashAlgorithm hashAlgo, KESAlgorithm kesAlgo)
   => VKeyES kesAlgo
-  -> HashKeyES hashAlgo kesAlgo
+  -> KeyHashES hashAlgo kesAlgo
 hashKeyES (VKeyES vKeyES) =
-  HashKeyES $ hashWithSerialiser encodeVerKeyKES vKeyES
+  KeyHashES $ hashWithSerialiser encodeVerKeyKES vKeyES
 
 -- |Produce a key evolving signature
 signKES
@@ -236,6 +236,6 @@ newtype GKeys dsignAlgo = GKeys (Set.Set (VKeyGenesis dsignAlgo))
 hashGenesisKey
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => VKeyGenesis dsignAlgo
-  -> HashKey hashAlgo dsignAlgo
+  -> KeyHash hashAlgo dsignAlgo
 hashGenesisKey (VKeyGenesis vKeyGenesis) =
-  HashKey $ hashWithSerialiser encodeVerKeyDSIGN vKeyGenesis
+  KeyHash $ hashWithSerialiser encodeVerKeyDSIGN vKeyGenesis

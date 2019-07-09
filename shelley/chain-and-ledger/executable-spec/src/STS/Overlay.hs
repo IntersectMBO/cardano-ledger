@@ -37,7 +37,7 @@ instance
   => STS (OVERLAY hashAlgo dsignAlgo kesAlgo)
  where
   type State (OVERLAY hashAlgo dsignAlgo kesAlgo)
-    = Map.Map (HashKey hashAlgo dsignAlgo) Natural
+    = Map.Map (KeyHash hashAlgo dsignAlgo) Natural
 
   type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
