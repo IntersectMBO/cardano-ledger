@@ -38,7 +38,7 @@ instance STS SUM where
 instance HasTrace SUM where
   envGen _ = pure ()
 
-  sigGen _ _ =
+  sigGen _ _ _ =
     Gen.list (Range.constant 1 100) (Gen.integral (Range.constant (-3) 3))
 
 -- | This property is intended to be used to manually inspect the

@@ -49,8 +49,8 @@ instance Embed UTXOW UTXOWS where
   wrapFailed = UtxowFailure
 
 instance HasTrace UTXOWS where
-  envGen n = envGen @UTXOW n
+  envGen = envGen @UTXOW
 
   -- We generate signal for UTXOWS as a list of signals from UTXOW
-  sigGen env st =
+  sigGen _ env st =
     traceSignals NewestFirst <$> genTrace @UTXOW 20 env st (sigGen @UTXOW)
