@@ -487,17 +487,15 @@ transaction.
   \label{fig:delegation-state type}
 \end{figure}
 
-
 \section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
 
 There are two different types of ledger transitions that are impacted by
 multi-signature. The first type is changing delegation of stake which requires
-multi-signature. This impacts the DELEG transition with its different cases
-depending on the kind of delegation certificate as described
-in~\cite{shelley_formal_spec}. The second type is spending an element of the
-UTxO which required a multi-signature for unlocking. This impacts the UTXOW
-transition.
+multi-signature. This impacts the DELPL transition which calls either its POOL
+or DELEG subrule depending on the type of delegation certificate signal. The
+second type is spending an element of the UTxO which required a multi-signature
+for unlocking. This impacts the UTXOW transition.
 
 \subsection{Delegation Transitions Rules}
 \label{sec:deleg-trans-rules}
@@ -507,6 +505,11 @@ certificate in a transaction has to be checked for correct signature
 combinations. This requires the transaction $\var{tx}$ to be available in the
 environment of the DELPL transition rule, as this rule is called with a single
 certificate as its signal.
+
+Multi-signature staking also requires a change to the type of delegators from
+being just a hashed key to being either a hashed key or a hashed script. This is
+reflected in the type of $\StakeDelegs$ with replaces the previous
+$\type{StakeKeys}$ type as shown in Figure~\ref{fig:defs:delpl}.
 
 \begin{figure}[hbt]
   \emph{Delegation and Pool Combined Environment}
@@ -543,13 +546,25 @@ certificate as its signal.
   \label{fig:defs:delpl}
 \end{figure}
 
+Before executing a DELPL subrule, it is necessary to check whether the
+certificate concerns a multi-signature. This is checked via checking whether the
+delegator is a hashed script and that the certificate is of one of the types
+that do require a witness.
+
 \begin{figure}[hbt]
   \emph{Delegation and Pool Combined Rules}
   \begin{equation}
     \label{eq:delpl-d}
     \inference[Delpl-Del]
     {
-      &
+      scriptWits \leteq \fun{txwitsScript}~tx\\
+      delegator \leteq \fun{cwitness}~\var{c} \\
+      \\~\\
+      delegator \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
+      \DCertDeRegKey \uniondistinct \DCertDeleg)\implies\\
+      \exists validator,~delegator \mapsto validator \in scriptWits \wedge
+      \fun{validateScript}~\var{validator}~\var{tx}
+      \\~\\
       {
         \left(
           \begin{array}{r}
