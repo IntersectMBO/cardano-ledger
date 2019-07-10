@@ -44,6 +44,7 @@ let
         # implies that it's incompatible with ghc-8.6 (on windows).
         # Let's force it to accept out packageset.
         packages.katip.doExactConfig = true;
+        packages.ekg-core.doExactConfig = true;
 
         # The generated iohk-monitoring.nix doesn't turn off prometheus yet,
         # because it doesn't respect the flags section of stack.yaml
