@@ -476,13 +476,20 @@ transaction.
       \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \StakeDelegs \mapsto \KeyHash_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to key hash}\\
+      \var{ptrs} & \Ptr \mapsto \StakeDelegs & \text{pointer to delegator}\\
       \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
       \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
           \end{array}\right)
     \end{array}
   \end{equation*}
   %
+  \emph{Certificate Accessor functions}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness}
+  \end{array}
+  \end{equation*}
   \caption{Delegation State type}
   \label{fig:delegation-state type}
 \end{figure}
