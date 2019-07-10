@@ -1,11 +1,10 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/68648612f916e8adaf6c9ca5fe39bc6712470a6a/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fda38e60007a019c0c8569e8a0fc08f2102c92cc/snapshot.yaml
 
 packages:
   - cardano-ledger
   - cardano-ledger/test
   - crypto
   - crypto/test
-  - validate-mainnet
 
 extra-deps:
   - libsystemd-journal-1.4.4
@@ -17,13 +16,13 @@ extra-deps:
   - haskell-src-exts-1.21.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 68648612f916e8adaf6c9ca5fe39bc6712470a6a
+    commit: fda38e60007a019c0c8569e8a0fc08f2102c92cc
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 2d0e0747f1c17bedfc251406ca9b1a59501071b1
+    commit: 14f9b09920813447a4060b6810bf17fc4ea35840
     subdirs:
       - binary
       - binary/test
@@ -45,14 +44,14 @@ extra-deps:
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e67ac43fc26e3a47ffcf1a10666f2ccd34ce8b1a
+    commit: 3ac2191fc4c68b46b7f6c08e2873f71949cc68e7
     subdirs:
       - contra-tracer
       - iohk-monitoring
 
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
-    commit: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
+    commit: ec96c64c665b741c17b4e38f611315bae9b0b054
 
 flags:
   iohk-monitoring:
