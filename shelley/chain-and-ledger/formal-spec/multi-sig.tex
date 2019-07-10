@@ -327,14 +327,16 @@ required signatures for a specific unspent transaction output.
       \fun{paymentHK} & \AddrVKey \to \KeyHash_{pay}
       & \text{hash of payment key from addr}\\
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
-                                                     script} \\
+                                                    script} \\
       \fun{stakeHK_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
-                          \KeyHash_{stake} & \text{hash of stake key for base
-                                             addresses}\\
+                          \StakeDelegs & \text{hash of delegator for base
+                                         addresses}\\
+      \fun{stakeHK_{r}} & \AddrRWD \to \StakeDelegs & \text{hash of delegator
+                                                      for reward addresses}\\
       \fun{addrPtr} & (\AddrVKeyP \uniondistinct \AddrScrPtr) \to \Ptr &
-                                                                     \text{pointer
-                                                                     from
-                                                                     pointer addresses}
+                                                                         \text{pointer
+                                                                         from
+                                                                         pointer addresses}
     \end{array}
   \end{equation*}
 
@@ -646,6 +648,10 @@ for each script-locked output there exists a corresponding validation script.
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~scriptWits,
       \\ \fun{validateScript}~validator~tx
       \\~\\
+      \forall \var{reward}\mapsto\var{validator} \in
+      \AddrRWDScr\restrictdom\fun{txwdrls}~tx,
+      \fun{validateScript}~validator~tx
+      \\~\\
       scriptIns = \dom(\fun{validators}~scriptIns~utxo~scriptWits)
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
@@ -668,6 +674,30 @@ for each script-locked output there exists a corresponding validation script.
   \caption{UTxO with Witnesses and Multi-Sig}
   \label{fig:rules:utxow-multi-sig}
 \end{figure}
+
+Multi-signature staking also incurs a reward account which is locked with a
+multi-signature scheme. This means that in order to allow spending of rewards
+accumulated in a multi-signature rewards account, we also need to validate the
+required script. This is done in the $\fun{witsNeeded}$ function as shown in
+Figure~\ref{fig:functions-witnesses}.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \text{hashkeys for needed witnesses} \\
+    & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
+    & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\}~\cup \\
+    & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\cup \\
+    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+  \end{align*}
+  \caption{Functions used in witness rule}
+  \label{fig:functions-witnesses}
+\end{figure}
+
+
 
 \section{Implementation of Script-Based Multi-Signature}
 \label{sec:altern-impl}
