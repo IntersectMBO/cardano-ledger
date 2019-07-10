@@ -54,6 +54,7 @@
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
 \newcommand{\StakeDelegs}{\type{StakeDelegs}}
+\newcommand{\StakeObject}{\type{StakeObj}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -329,10 +330,10 @@ required signatures for a specific unspent transaction output.
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
                                                     script} \\
       \fun{stakeHK_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
-                          \StakeDelegs & \text{hash of delegator for base
-                                         addresses}\\
-      \fun{stakeHK_{r}} & \AddrRWD \to \StakeDelegs & \text{hash of delegator
-                                                      for reward addresses}\\
+                          \StakeObject & \text{stake object for base
+                                      addresses}\\
+      \fun{stakeHK_{r}} & \AddrRWD \to \StakeObject & \text{stake object
+                                                   for reward addresses}\\
       \fun{addrPtr} & (\AddrVKeyP \uniondistinct \AddrScrPtr) \to \Ptr &
                                                                          \text{pointer
                                                                          from
@@ -464,8 +465,9 @@ transaction.
   \emph{Delegation Types}
     \begin{equation*}
       \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-        \var{stakeDelegator} & \StakeDelegs & \KeyHash_{stake} \uniondistinct
-                                            \HashScr \\
+        \var{stakeObj} & \StakeObject & (\KeyHash_{stake} \uniondistinct
+                                            \HashScr) \\
+        \var{stakeDelegator} & \StakeDelegs & \StakeObject \mapsto \Slot \\
       \end{array}
     \end{equation*}
     %
@@ -477,8 +479,8 @@ transaction.
     \left(\begin{array}{r@{~\in~}lr}
       \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \StakeDelegs \mapsto \KeyHash_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \StakeDelegs & \text{pointer to delegator}\\
+      \var{delegations} & \StakeObject \mapsto \KeyHash_{pool} & \text{delegations}\\
+      \var{ptrs} & \Ptr \mapsto \StakeObject & \text{pointer to stake object}\\
       \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
       \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
           \end{array}\right)
@@ -515,10 +517,11 @@ combinations. This requires the transaction $\var{tx}$ to be available in the
 environment of the DELPL transition rule, as this rule is called with a single
 certificate as its signal.
 
-Multi-signature staking also requires a change to the type of delegators from
+Multi-signature staking also requires a change to the type of stake object from
 being just a hashed key to being either a hashed key or a hashed script. This is
 reflected in the type of $\StakeDelegs$ with replaces the previous
-$\type{StakeKeys}$ type as shown in Figure~\ref{fig:defs:delpl}.
+$\type{StakeKeys}$ type and the type $\StakeObject$ which describes either a key
+or a script used for staking, as shown in Figure~\ref{fig:defs:delpl}.
 
 \begin{figure}[hbt]
   \emph{Delegation and Pool Combined Environment}
@@ -556,8 +559,8 @@ $\type{StakeKeys}$ type as shown in Figure~\ref{fig:defs:delpl}.
 \end{figure}
 
 Before executing a DELPL subrule, it is necessary to check whether the
-certificate concerns a multi-signature. This is checked via checking whether the
-delegator is a hashed script and that the certificate is of one of the types
+certificate concerns a multi-signature. This is done via checking whether the
+stake object is a hashed script and that the certificate is of one of the types
 that do require a witness.
 
 \begin{figure}[hbt]
@@ -567,11 +570,11 @@ that do require a witness.
     \inference[Delpl-Del]
     {
       scriptWits \leteq \fun{txwitsScript}~tx\\
-      delegator \leteq \fun{cwitness}~\var{c} \\
+      stakeObj \leteq \fun{cwitness}~\var{c} \\
       \\~\\
-      delegator \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
+      stakeObj \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
       \DCertDeRegKey \uniondistinct \DCertDeleg)\implies\\
-      \exists validator,~delegator \mapsto validator \in scriptWits \wedge
+      \exists validator,~stakeObj \mapsto validator \in scriptWits \wedge
       \fun{validateScript}~\var{validator}~\var{tx}
       \\~\\
       {
