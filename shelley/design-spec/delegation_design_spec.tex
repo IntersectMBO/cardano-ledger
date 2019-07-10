@@ -52,7 +52,6 @@
 % For making figures
 \usepackage{tikz}
 \usetikzlibrary{positioning}
-\usetikzlibrary{arrows}
 \usetikzlibrary{arrows.meta}
 \usetikzlibrary{calc}
 
@@ -612,14 +611,13 @@ system entities.
     %% Nodes
     %%
     \node (owner)   [concept]                    {Owner};
-    \node (addr)    [entity, left = of owner]    {Pubkey address};
-    \node (skey)    [entity, below = of owner]   {Staking key};
-    \node (pkey)    [entity, left = of skey]     {Payment key};
-    \node (racc)    [entity, right = of skey]    {Reward account /
-      Reward address};
+    \node (valaddr)    [entity, left = of owner]    {Value address};
+    \node (registeredStakeAddr)    [entity, below = of owner]   {Registered stake address};
+    \node (pkey)    [entity, left = of registeredStakeAddr]     {Payment key (hash)\\or script (hash)};
+    \node (racc)    [entity, right = of registeredStakeAddr]    {Reward account};
     \node (rewards) [concept, below = of racc]   {Rewards};
     \node (funds)   [concept, below = of pkey]   {Funds};
-    \node (srights) [concept, below = of skey]   {Staking rights};
+    \node (srights) [concept, below = of registeredStakeAddr]   {Staking rights};
     \node (spool)   [entity, below = of srights] {Stake pool};
     \node (pos)     [concept, right = of spool]  {PoS};
 
@@ -627,16 +625,16 @@ system entities.
     %%
     %% Relationship between nodes (arrows)
     %%
-    \draw[->] (owner) edge node[above] {owns} (addr);
-    \draw[->] (addr) edge node[left] {contains a} (pkey);
-    \draw[->] (addr) edge node [above, rotate=-40]{contains a} (skey);
-    \draw[->] (owner) edge node[left] {owns} (skey);
+    \draw[->] (owner) edge node[above] {owns} (valaddr);
+    \draw[->] (valaddr) edge node[left] {contains} (pkey);
+    \draw[->] (valaddr) edge node [above, rotate=-40]{refers to} (registeredStakeAddr);
+    \draw[->] (owner) edge node[left] {owns} (registeredStakeAddr);
     \draw[->] (owner) edge node[left] {owns} (racc);
-    \draw[->] (pkey) edge node[anchor=south] {is associated\\ with a} (skey);
-    \draw[->] (skey) edge node[anchor=south] {is associated\\ with a} (racc);
+
+    \draw[<->] (registeredStakeAddr) edge node[anchor=south] {is associated\\ with a} (racc);
     \draw[->] (racc) edge node[above, rotate=90] {collects} (rewards);
     \draw[->] (pkey) edge node[anchor=west] {has} (funds);
-    \draw[->] (skey) edge node[anchor=west] {has} (srights);
+    \draw[->] (registeredStakeAddr) edge node[anchor=west] {has} (srights);
     \draw[->] (srights) edge node[anchor=north] {associated with} (funds);
     \draw[->] (pos) edge[bend left] node[left] {pays to} (racc);
     \draw[->] (srights) edge node[anchor=east] {delegated to} (spool);
@@ -655,14 +653,14 @@ delegation:
   contains a single payment key. However, the same payment key
   can be used by multiple addresses (where addresses differ among each other in
   the delegation information).
-\item Many addresses can refer to the same stake key. For instance, different
-  outputs of a transaction can specify the that the stake associated with those
-  output should be transferred to the same stake key.
-\item Each stake key has a unique reward account associated with it, and a
-  reward account is only associated with the one stake key.
+\item Many value addresses can refer to the same stake address. For instance,
+  different outputs of a transaction can specify the that the stake associated
+  with those output should be transferred to the same stake key.
+\item Each stake address has a unique reward account associated with it, and a
+  reward account is only associated with one stake key.
 \item There can be many UTxO entries (funds) for a single address. However, a
   UTxO entry refers an available input address to use.
-\item A stake key is associated with exactly zero or one stake pools at any
+\item A stake address is associated with exactly zero or one stake pools at any
   point in time. A stake pool has exactly one staking key that controls the pool
   (though it has to use further operational keys to mitigate key theft as described
   in \cref{operational-key-certificates}, and there can
@@ -686,12 +684,15 @@ delegation:
   %%
   %% Nodes
   %%
-  \node (addr) [] {Address};
-  \node (utxo) [left = of addr] {UTxO};
-  \node (pkey) [right = of addr] {Payment key};
-  \node (skey) [below = of addr] {Stake key};
-  \node (spool) [left = of skey] {Stake pool};
-  \node (racc) [right = of skey] {Reward account};
+  \node (valueAddr) [] {Value address};
+  \node (singleKeyAddr) [above = of valueAddr] {Single key address};
+  \node (scriptAddr) [right = of singleKeyAddr] {Script address};
+  \node (utxo) [left = of valueAddr] {UTxO};
+  \node (pkey) [above = of singleKeyAddr] {Payment key};
+  \node (registeredStakeAddr) [below = of valueAddr] {Registerd stake address};
+  \node (spool) [left = of registeredStakeAddr] {Stake pool};
+  \node (racc) [right = of registeredStakeAddr] {Reward account};
+  \node (script) [above = of scriptAddr] {Script};
 
   \tikzset{every node/.style={align=center, text width=6em, above}}
   %%
@@ -701,21 +702,28 @@ delegation:
   % the node attributes (such as `align`) every time.
   \draw[-] (utxo) edge node[pos=0.1]  {$n$}
                        node[pos=0.85] {$1$}
-           (addr);
-  \draw[-] (addr) edge node[pos=0.1]  {$n$}
-                       node[pos=0.85] {$1$}
-           (pkey);
-  \draw[-] (skey) edge node[pos=0.1]  {$1$}
+           (valueAddr);
+  \draw[{Triangle[open]}-] (valueAddr) edge
+                           (singleKeyAddr);
+  \draw[{Triangle[open]}-] (valueAddr) edge
+                           (scriptAddr);
+  \draw[-] (registeredStakeAddr) edge node[pos=0.1]  {$1$}
                        node[pos=0.85] {$0 \ldots 1$}
            (spool);
-  \draw[-] (skey) edge node[pos=0.1] {$1$}
+  \draw[-] (registeredStakeAddr) edge node[pos=0.1] {$1$}
                        node[pos=0.9] {$1$}
            (racc);
   % Horizontal lines.
   \tikzset{every node/.style={align=left, right}}
-  \draw[-] (addr) edge node[pos=0.1] {$n$}
-                       node[pos=0.9] {$0 \ldots 1$}
-           (skey);
+  \draw[-] (valueAddr) edge node[pos=0.1] {$n$}
+                            node[pos=0.9] {$0 \ldots 1$}
+           (registeredStakeAddr);
+  \draw[-] (singleKeyAddr) edge node[pos=0.1]  {$n$}
+                       node[pos=0.85] {$1$}
+           (pkey);
+  \draw[-] (scriptAddr) edge node[pos=0.1]  {$1$}
+                       node[pos=0.85] {$1$}
+           (script);
   \end{tikzpicture}
 
   \caption{Entity-relationship diagram for delegation}
