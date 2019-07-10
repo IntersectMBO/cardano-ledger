@@ -204,7 +204,7 @@
 \newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
 \newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
 \newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
-\newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
+\newcommand{\emax}{\ensuremath{\mathsf{E_{\max}}}}
 
 \newcommand{\unitInterval}{\ensuremath{[0,~1]}}
 \newcommand{\unitIntervalNonNull}{\ensuremath{(0,~1]}}
@@ -563,6 +563,12 @@ certificate concerns a multi-signature. This is done via checking whether the
 stake object is a hashed script and that the certificate is of one of the types
 that do require a witness.
 
+\textbf{Note:} pool delegation certificates cannot use multi-signature
+schemes. Else, the lightweight certificates for delegation from the pool to the
+KES hot key would have to be scripts witnesses. These certificates have to be
+included in each header, but those headers are required to have a fixed size and
+be as small as possible.
+
 \begin{figure}[hbt]
   \emph{Delegation and Pool Combined Rules}
   \begin{equation}
@@ -699,8 +705,6 @@ Figure~\ref{fig:functions-witnesses}.
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}
 \end{figure}
-
-
 
 \section{Implementation of Script-Based Multi-Signature}
 \label{sec:altern-impl}
@@ -841,6 +845,22 @@ transaction as the base case and compares the number of validating nodes in the
 list with the threshold in the recursion case. The
 Appendix~\ref{sec:native-multi-sign} provides some examples of how this scheme
 can be used.
+
+\subsection{Lower Level Implementation Details}
+\label{sec:lower-level-impl}
+
+For each new type of witness, there will be a requirement to represent such a
+witness on-chain and allow for identification when deserializing such a
+witness. For this, there will be a language specific tag for each witness (and
+staking object) in its serialized form. This tag will also be part of the hash
+to allow for easy identification of the language type.
+
+As an example, one could tag key hash payment and staking objects with a tag
+$0$, native multi-sig payment and staking objects with a tag $1$ and simple
+Plutus objects with a tag $2$. Every new language would incur using a new tag,
+changes to the details of how payment or staking objects are treated
+\emph{within} an existing language framework will be changed via a software
+update, not an additional, new tag.
 
 \section{Summary}
 \label{sec:summary}
