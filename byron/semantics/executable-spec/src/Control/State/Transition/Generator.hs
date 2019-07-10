@@ -86,8 +86,8 @@ class STS s => HasTrace s where
     -> Gen (Environment s)
 
   -- | Generate a signal that __might__ result in the given failure, given an environment and a
-  -- pre-state. Note that the failure generation algorithm might be probabilistic, so the signal is
-  -- not guaranteed to generate a given failure.
+  -- pre-state. Note that the failure generation algorithm can be probabilistic, so the signal is
+  -- not guaranteed to generate the given failure.
   --
   -- If 'Nothing' is passed, then the generator should produce a valid signal (according to the
   -- environment, pre-state, and operational rules of the @sts@ transition system).

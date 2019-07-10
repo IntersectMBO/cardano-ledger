@@ -274,9 +274,9 @@ instance HasTrace DBLOCK where
   sigGen (Just InvalidDelegationCertificate) _ (env, _st) =
     DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) randomDCertGen
     where
-      -- | Generate a random delegation certificate, which has a probability of failing, since we do
-      -- not consider the current delegation state. So for instance, we could generate a delegation
-      -- dedicate for a genesis key that already delegated in this epoch.
+      -- | Generate a random delegation certificate, which has a high probability of failing since
+      -- we do not consider the current delegation state. So for instance, we could generate a
+      -- delegation certificate for a genesis key that already delegated in this epoch.
       randomDCertGen :: Gen DCert
       randomDCertGen = do
         (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
@@ -285,9 +285,8 @@ instance HasTrace DBLOCK where
           vkgGen' = Gen.element $ Set.toList allowed
           allowed = _dSEnvAllowedDelegators env
           vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
-          -- | Delegate in an epoch past the next one with probability 1/2.
           epochGen' =  Epoch
-                    .  fromIntegral
+                    .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
                     .  (fromIntegral n +)
                    <$> Gen.integral (Range.constant (-2 :: Int) 2)
             where Epoch n = _dSEnvEpoch env
@@ -295,8 +294,8 @@ instance HasTrace DBLOCK where
     DBlock <$> nextSlotGen env <*> sigGen @DELEG Nothing env st
 
 
--- We want the resulting trace to include a large number of epoch
--- changes, so we generate an epoch change with higher frequency.
+-- | Generate a next slot. We want the resulting trace to include a large number of epoch changes,
+-- so we generate an epoch change with higher frequency.
 nextSlotGen :: DSEnv -> Gen Slot
 nextSlotGen env =
   incSlot <$> Gen.frequency
