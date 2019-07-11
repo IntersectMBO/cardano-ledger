@@ -25,22 +25,25 @@ import           Data.List (foldl', last, nub)
 import           Data.List.Unique (count, repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Hedgehog (MonadTest, Property, assert, cover, forAll, property, success, withTests,
-                     (===))
+import           Hedgehog (Gen, MonadTest, Property, assert, cover, forAll, property, success,
+                     withTests, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, classifySize,
-                     classifyTraceLength, envGen, isTrivial, nonTrivialTrace, ratio, sigGen,
-                     suchThatLastState, trace, traceLengthsAreClassified)
+import           Control.State.Transition.Generator (HasSizeInfo, HasTrace,
+                     TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
+                     failures, isTrivial, nonTrivialTrace, proportionOfInvalidSignals,
+                     proportionOfValidSignals, ratio, sigGen, suchThatLastState, trace,
+                     traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
-import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
-                     VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
+import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
+                     VKey (VKey), VKeyGenesis, addSlot, mkVKeyGenesis, owner, signWithGenesisKey,
+                     unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
@@ -48,8 +51,8 @@ import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      delegate, delegationMap, delegator, depoch, epoch, liveAfter, mkDCert,
                      scheduledDelegations, slot, _dIStateDelegationMap,
                      _dIStateKeyEpochDelegations, _dIStateLastDelegation,
-                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
-                     _dSStateScheduledDelegations)
+                     _dIStateScheduledDelegations, _dSEnvAllowedDelegators,
+                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -105,6 +108,7 @@ instance STS DBLOCK where
   data PredicateFailure DBLOCK
     = DPF (PredicateFailure DELEG)
     | NotIncreasingBlockSlot
+    | InvalidDelegationCertificate -- We need this to be able to use the trace profile.
     deriving (Eq, Show)
 
   initialRules
@@ -215,8 +219,11 @@ delegatorDelegate = delegator &&& delegate
 
 -- | Check that there are no duplicated certificates in the trace.
 dcertsAreNotReplayed :: Property
-dcertsAreNotReplayed = withTests 300 $ property $
-  forAll (trace @DBLOCK 1000) >>= dcertsAreNotReplayedInTrace
+dcertsAreNotReplayed = withTests 300 $ property $ do
+  let (thisTraceLength, step) = (1000, 100)
+  sample <- forAll (traceWithProfile @DBLOCK thisTraceLength profile)
+  classifyTraceLength sample thisTraceLength step
+  dcertsAreNotReplayedInTrace sample
   where
     dcertsAreNotReplayedInTrace
       :: MonadTest m
@@ -228,7 +235,12 @@ dcertsAreNotReplayed = withTests 300 $ property $
         traceDelegationCertificates = traceSignals OldestFirst traceSample
                                     & fmap _blockCerts
                                     & concat
-                                    & repeated
+    profile
+      = TraceProfile
+        { proportionOfValidSignals = 95
+        , proportionOfInvalidSignals = 5
+        , failures = [(1, InvalidDelegationCertificate)]
+        }
 
 instance HasTrace DBLOCK where
 
@@ -258,18 +270,39 @@ instance HasTrace DBLOCK where
         n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 
-  sigGen _ (env, st) =
-    DBlock <$> nextSlotGen <*> sigGen @DELEG env st
+  sigGen (Just InvalidDelegationCertificate) _ (env, _st) =
+    DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) randomDCertGen
     where
-      -- We want the resulting trace to include a large number of epoch
-      -- changes, so we generate an epoch change with higher frequency.
-      nextSlotGen =
-        incSlot <$> Gen.frequency
-                      [ (1, Gen.integral (Range.constant 1 10))
-                      , (2, pure $! slotsPerEpoch (_dSEnvK env))
-                      ]
+      -- | Generate a random delegation certificate, which has a high probability of failing since
+      -- we do not consider the current delegation state. So for instance, we could generate a
+      -- delegation certificate for a genesis key that already delegated in this epoch.
+      randomDCertGen :: Gen DCert
+      randomDCertGen = do
+        (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
+        pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
         where
-          incSlot c = (env ^.slot) `addSlot` SlotCount c
+          vkgGen' = Gen.element $ Set.toList allowed
+          allowed = _dSEnvAllowedDelegators env
+          vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
+          epochGen' =  Epoch
+                    .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
+                    .  (fromIntegral n +)
+                   <$> Gen.integral (Range.constant (-2 :: Int) 2)
+            where Epoch n = _dSEnvEpoch env
+  sigGen _ _ (env, st) =
+    DBlock <$> nextSlotGen env <*> sigGen @DELEG Nothing env st
+
+
+-- | Generate a next slot. We want the resulting trace to include a large number of epoch changes,
+-- so we generate an epoch change with higher frequency.
+nextSlotGen :: DSEnv -> Gen Slot
+nextSlotGen env =
+  incSlot <$> Gen.frequency
+                [ (1, Gen.integral (Range.constant 1 10))
+                , (2, pure $! slotsPerEpoch (_dSEnvK env))
+                ]
+  where
+    incSlot c = (env ^.slot) `addSlot` SlotCount c
 
 instance HasSizeInfo DBlock where
   isTrivial = null . view blockCerts

@@ -841,7 +841,7 @@ instance HasTrace UPIREG where
 
   envGen _ = upiEnvGen
 
-  sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -1217,7 +1217,7 @@ instance HasTrace UPIVOTES where
 
   envGen _ = upiEnvGen
 
-  sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
+  sigGen _ (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (mkVote <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where

@@ -87,7 +87,7 @@ instance HasTrace UTXOW where
         -- come from we use the hash of the address as transaction id.
         pure $ fromTxOuts txOuts
 
-  sigGen UTxOEnv { pps } st = do
+  sigGen _ UTxOEnv { pps } st = do
     tx <- UTxOGen.genTxFromUTxO traceAddrs (pcMinFee pps) (utxo st)
     let wits = witnessForTxIn tx (utxo st) <$> inputs tx
     pure $ TxWits tx wits

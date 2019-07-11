@@ -96,6 +96,9 @@ mkVkGenesisSet
   -> Set VKeyGenesis
 mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk - 1)]
 
+signWithGenesisKey :: VKeyGenesis -> a -> Sig a
+signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
+
 -- |Key Pair.
 data KeyPair = KeyPair
   { sKey :: SKey

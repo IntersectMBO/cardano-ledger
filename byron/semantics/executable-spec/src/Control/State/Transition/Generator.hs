@@ -23,9 +23,10 @@ module Control.State.Transition.Generator
   ( HasTrace
   , envGen
   , sigGen
-  , trace
   , traceSigGen
   , genTrace
+  , trace
+  , traceWithProfile
   , traceOfLength
   , traceSuchThat
   , suchThatLastState
@@ -36,6 +37,7 @@ module Control.State.Transition.Generator
   , randomTrace
   , randomTraceOfSize
   , TraceLength (Maximum, Desired)
+  , TraceProfile (TraceProfile, proportionOfValidSignals, proportionOfInvalidSignals, failures)
   -- * Trace classification
   , classifyTraceLength
   , classifySize
@@ -47,6 +49,7 @@ module Control.State.Transition.Generator
   )
 where
 
+import           Control.Arrow (second)
 import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Foldable (traverse_)
@@ -69,8 +72,8 @@ import           Hedgehog.Internal.Tree
 -- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
 
-import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
-                     applySTS)
+import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+                     State, TRC (TRC), applySTS)
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
                      lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 
@@ -82,23 +85,71 @@ class STS s => HasTrace s where
     -- ^ Trace length that will be used by 'trace' or 'traceOfLength'.
     -> Gen (Environment s)
 
-  sigGen :: Environment s -> State s -> Gen (Signal s)
+  -- | Generate a signal that __might__ result in the given failure, given an environment and a
+  -- pre-state. Note that the failure generation algorithm can be probabilistic, so the signal is
+  -- not guaranteed to generate the given failure.
+  --
+  -- If 'Nothing' is passed, then the generator should produce a valid signal (according to the
+  -- environment, pre-state, and operational rules of the @sts@ transition system).
+  sigGen
+    :: Maybe (PredicateFailure s)
+    -- ^ Failure that should be generated.
+    -> Environment s
+    -> State s
+    -> Gen (Signal s)
 
   trace
     :: Word64
     -- ^ Maximum length of the generated traces. The actual length will be between 0 and this
     -- maximum.
     -> Gen (Trace s)
-  trace n = traceSigGen (Maximum n) (sigGen @s)
+  trace n = traceWithProfile @s n allValid
+
+  traceWithProfile
+    :: Word64
+    -> TraceProfile s
+    -> Gen (Trace s)
+  traceWithProfile n p = traceSigGenWithProfile (Maximum n) p (sigGen @s)
 
   traceOfLength
     :: Word64
     -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
     -- then the resulting trace might not have the given length.
     -> Gen (Trace s)
-  traceOfLength n = traceSigGen (Desired n) (sigGen @s)
+  traceOfLength n = traceSigGenWithProfile (Desired n) allValid (sigGen @s)
 
 data TraceLength = Maximum Word64 | Desired Word64
+
+data TraceProfile sts
+  = TraceProfile
+  { proportionOfValidSignals :: Int
+    -- ^ Proportion of valid signals to generate.
+  , proportionOfInvalidSignals :: Int
+    -- ^ Proportion of invalid signals to generate.
+  , failures :: [(Int, PredicateFailure sts)]
+    -- ^ List of failure conditions to try generate when generating an invalid signal, and the
+    -- proportion of each failure.
+  }
+
+allValid :: TraceProfile sts
+allValid
+  = TraceProfile
+    { proportionOfValidSignals = 1
+    , proportionOfInvalidSignals = 0
+    , failures = []
+    }
+
+generateSignalWithFailureProportions
+  :: [(Int, PredicateFailure s)]
+  -- ^ Failure proportions. See 'failures' in 'TraceProfile'.
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> Environment s
+  -> State s
+  -> Gen (Signal s)
+generateSignalWithFailureProportions proportions aSigGen env st =
+  Gen.frequency $ second aSigGenWithFailure <$> proportions
+  where
+    aSigGenWithFailure predicateFailure = aSigGen (Just predicateFailure) env st
 
 -- | Extract the maximum or desired integer value of the trace length.
 traceLengthValue :: TraceLength -> Word64
@@ -109,9 +160,18 @@ traceSigGen
   :: forall s
    . HasTrace s
   => TraceLength
-  -> (Environment s -> State s -> Gen (Signal s))
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
   -> Gen (Trace s)
-traceSigGen aTraceLength gen = do
+traceSigGen aTraceLength = traceSigGenWithProfile aTraceLength allValid
+
+traceSigGenWithProfile
+  :: forall s
+   . HasTrace s
+  => TraceLength
+  -> TraceProfile s
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> Gen (Trace s)
+traceSigGenWithProfile aTraceLength profile gen = do
   env <- envGen @s (traceLengthValue aTraceLength)
   case applySTS @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
@@ -122,8 +182,8 @@ traceSigGen aTraceLength gen = do
     -- validate that state, so we do not care which state 'applySTS' returns.
     Right st ->
       case aTraceLength of
-        Maximum n -> genTrace n env st gen
-        Desired n -> genTraceOfLength n env st gen
+        Maximum n -> genTraceWithProfile n profile env st gen
+        Desired n -> genTraceOfLength n profile env st gen
 
 
 -- | Return a (valid) trace generator given an initial state, environment, and
@@ -139,11 +199,31 @@ genTrace
   -- ^ Environment, which remains constant in the system.
   -> State s
   -- ^ Initial state.
-  -> (Environment s -> State s -> Gen (Signal s))
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
-genTrace ub env st0 aSigGen = do
+genTrace ub = genTraceWithProfile ub allValid
+
+-- | Return a trace generator given an initial state, environment, and signal generator.
+--
+genTraceWithProfile
+  :: forall s
+   . STS s
+  => Word64
+  -- ^ Trace upper bound. This will be linearly scaled as a function of the
+  -- generator size.
+  -> TraceProfile s
+  -> Environment s
+  -- ^ Environment, which remains constant in the system.
+  -> State s
+  -- ^ Initial state.
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -- ^ Signal generator. This generator relies on an environment and a state to
+  -- generate a signal.
+  -> Gen (Trace s)
+genTraceWithProfile ub profile env st0 aSigGen =
+  do
   -- Generate the initial size of the trace, but don't shrink it (notice the
   -- use of 'integral_') since we will be shrinking the traces manually (so it
   -- doesn't make sense to shrink the trace size).
@@ -159,7 +239,7 @@ genTrace ub env st0 aSigGen = do
                      , (85, integral_ $ Range.linear 1 ub)
                      , (5, pure ub)
                      ]
-  genTraceOfLength n env st0 aSigGen
+  genTraceOfLength n profile env st0 aSigGen
 
 -- | Return a (valid) trace generator that generates traces of the given size. If the signal
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
@@ -169,15 +249,16 @@ genTraceOfLength
    . STS s
   => Word64
   -- ^ Desired trace length.
+  -> TraceProfile s
   -> Environment s
   -- ^ Environment, which remains constant in the system.
   -> State s
   -- ^ Initial state.
-  -> (Environment s -> State s -> Gen (Signal s))
+  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
-genTraceOfLength aTraceLength env st0 aSigGen =
+genTraceOfLength aTraceLength profile env st0 aSigGen =
   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
   where
     loop
@@ -188,7 +269,15 @@ genTraceOfLength aTraceLength env st0 aSigGen =
     loop 0 _ acc = pure acc
     loop d sti acc = do
       sigTree :: TreeT (MaybeT Identity) (Signal s)
-        <- toTreeMaybeT $ aSigGen env sti
+        <- toTreeMaybeT $
+             Gen.frequency
+               [ ( proportionOfValidSignals profile
+                 , aSigGen Nothing env sti
+                 )
+               , ( proportionOfInvalidSignals profile
+                 , generateSignalWithFailureProportions @s (failures profile) aSigGen env sti
+                 )
+               ]
       let
         --  Take the root of the next-state signal tree.
         mSig = treeValue $ runDiscardEffectT sigTree
@@ -429,12 +518,12 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
 
     st' :: State s
     st' = lastState tr
-  sig <- forAll (sigGen @s env st')
+  sig <- forAll (sigGen @s Nothing env st')
   let result = applySTS @s (TRC(env, st', sig))
   -- TODO: For some reason the result that led to the failure is not shown
   -- (even without using tasty, and setting the condition to True === False)
   footnoteShow result
-  void $ evalEither $ result
+  void $ evalEither result
 
 
 --------------------------------------------------------------------------------
