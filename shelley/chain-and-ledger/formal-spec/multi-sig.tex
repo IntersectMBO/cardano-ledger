@@ -53,7 +53,8 @@
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeKeys}{\type{StakeKeys}}
+\newcommand{\StakeDelegs}{\type{StakeDelegs}}
+\newcommand{\StakeObject}{\type{StakeObj}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -66,6 +67,8 @@
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\AddrRWDVKey}{\type{Addr_{rwd}^{vkey}}}
+\newcommand{\AddrRWDScr}{\type{Addr_{rwd}^{script}}}
 \newcommand{\AddrVKeyB}{\type{Addr^{vkey}_{base}}}
 \newcommand{\AddrVKeyP}{\type{Addr^{vkey}_{ptr}}}
 \newcommand{\AddrVKeyE}{\type{Addr^{vkey}_{enterprise}}}
@@ -201,7 +204,7 @@
 \newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
 \newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
 \newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
-\newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
+\newcommand{\emax}{\ensuremath{\mathsf{E_{\max}}}}
 
 \newcommand{\unitInterval}{\ensuremath{[0,~1]}}
 \newcommand{\unitIntervalNonNull}{\ensuremath{(0,~1]}}
@@ -243,7 +246,7 @@
   based on a simple script model which uses only single step script execution
   and does not require data scripts. We provide two different ways to implement
   such a scheme on top of the Shelley formal ledger specification. One based on
-  Plutus script, the other based on a simple script language for which a native
+  Plutus script, the other based on a simple script DSL for which a native
   interpreter can be used.
 
   A multi-signature scheme allows an unspent transaction output to be used as an
@@ -271,18 +274,20 @@ on~\cite{shelley_formal_spec} which formally specifies the Shelley Cardano
 ledger. The main changes are the following:
 
 \begin{itemize}
-\item Add a new address type that for outputs locked by scripts.
+\item Add a new address type for outputs, stake and rewards locked by scripts.
 \item Add a new witness type to the transaction.
 \item Adapt the transaction validation in such a way that funds locked by a
   multi-signature script can be spent.
+\item Adapt the delegation rules in such a way that multi-signature delegation
+  is supported.
 \item Adapt the functions used in the validation for the extended types of
-  addresses and transaction inputs with scripts.
+  addresses, transaction inputs and delegation certificates with scripts.
 \end{itemize}
 
-In this approach for multi-signature, the scripts receive the set of keys which
-were used to sign the transaction. The script can then check those against its
-own representation of which keys in which combination can unlock the unspent
-output.
+In this approach for multi-signature, the scripts receive as input the set of
+keys which were used to sign the transaction. The script can then check those
+against its own representation of which keys in which combination can unlock the
+unspent output.
 
 This means that the scripts are completely stateless and no data needs to be
 supplied to the script apart from the information about which keys and in which
@@ -312,7 +317,9 @@ required signatures for a specific unspent transaction output.
                                     & \AddrVKeyBS
                            \end{array}
                                 & \text{VKey address}\\
-      \var{addr} & \Addr & \AddrScr \uniondistinct \AddrVKey
+      \var{addr} & \Addr & \AddrScr \uniondistinct \AddrVKey \\
+      \var{addr_{rwd}} & \AddrRWD & (\AddrRWDVKey \uniondistinct \AddrRWDScr)
+                                                         & \text{Reward address}
     \end{array}
   \end{equation*}
 
@@ -323,14 +330,16 @@ required signatures for a specific unspent transaction output.
       \fun{paymentHK} & \AddrVKey \to \KeyHash_{pay}
       & \text{hash of payment key from addr}\\
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
-                                                     script} \\
+                                                    script} \\
       \fun{stakeHK_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
-                          \KeyHash_{stake} & \text{hash of stake key for base
-                                             addresses}\\
+                          \StakeObject & \text{stake object for base
+                                      addresses}\\
+      \fun{stakeHK_{r}} & \AddrRWD \to \StakeObject & \text{stake object
+                                                   for reward addresses}\\
       \fun{addrPtr} & (\AddrVKeyP \uniondistinct \AddrScrPtr) \to \Ptr &
-                                                                     \text{pointer
-                                                                     from
-                                                                     pointer addresses}
+                                                                         \text{pointer
+                                                                         from
+                                                                         pointer addresses}
     \end{array}
   \end{equation*}
 
@@ -352,8 +361,9 @@ sub-types $\AddrVKey$ and $\AddrScr$. The new script addresses contain the hash
 of the validator script. In accordance with the extended UTxO
 specification~\cite{plutus_eutxo}, the producer signs the script when creating
 and the consumer provides it later when spending the output. The type $\Script$
-is partitioned into Plutus scripts, $\ScriptPlutus$ and msig scripts
-$\ScriptMSig$ for the native interpreter, see Sections~\ref{sec:plutus-scripts}
+is partitioned into subtypes for each language, in this case for illustration:
+Plutus scripts, $\ScriptPlutus$ and msig scripts $\ScriptMSig$ for the native
+interpreter, see Sections~\ref{sec:plutus-scripts}
 and~\ref{sec:native-script-interp} for details.
 
 A transaction output that is locked by a script carries the hash of the
@@ -364,15 +374,19 @@ information and can therefore be part of a transaction output that consists of a
 pair of $\Addr\times\Coin$. Analogously to $\AddrVKey$, $\AddrScr$ also has an
 \emph{enterprise} script address sub-type which does not allow for using the
 locked funds in staking, as well as \emph{base} and \emph{pointer} script
-address sub-types which allow for staking in the same way as $\AddrVKeyB$ and
-$\AddrVKeyP$.
+address sub-types. We will refer to the parts of an address used for payment as
+\emph{payment object} and the part used for staking as \emph{staking
+  object}. Analogous to the payment object, the staking object for an $\AddrScr$
+is also a script, i.e., staking can also require a combination of signatures
+which can be different from the combination required for payment.
 
 The $\fun{hashScript}$ function calculates the hash of a script by serializing
 and then hashing it. The accessor function $\fun{validatorHash}$ returns the
 hash of a script of a script address. The domain of the accessor function
 $\fun{paymentHK}$ is changed to pubkey addresses. The domains of the accessor
-functions $\fun{stakeHK_b}$ and $\fun{addrPtr}$ are extended to also include the
-respective script address variants.
+functions $\fun{stakeHK_b}$, $\fun{stakeHK_{r}}$ and $\fun{addrPtr}$ are
+extended to also include the respective script address variants. The return
+types are adapted to be a stake object.
 
 \begin{figure*}[hbt]
   \emph{Transaction Type}
@@ -454,24 +468,197 @@ constructs a map from transaction inputs to scripts where for each input, the
 corresponding output of the UTxO can only be spent if the script validates the
 transaction.
 
-\section{Ledger Transition for Multi-Signature}
+\section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
 
-The main change for the ledger transitions when using script based
-multi-signature is the validation of the UTXOW transition
-of~\cite{shelley_formal_spec}. Its extended transition system is shown in
-Figure~\ref{fig:rules:utxow-multi-sig}, in the format described
-in~\cite{small_step_semantics}. The constraint on the set of required witnesses
-is relaxed in such a way that ``redundant'' signatures can be supplied in the
-transaction. The set of verification keys is passed to the validator script via
-the concrete implementation of $\fun{validateScript}$ for the specific script
-type.
+There are two different types of ledger transitions that are impacted by
+multi-signature. The first type is changing delegation of stake which requires
+multi-signature. This impacts the DELPL transition which calls either its POOL
+or DELEG subrule depending on the type of delegation certificate signal. The
+second type is spending an element of the UTxO which required a multi-signature
+for unlocking. This impacts the UTXOW transition.
+
+\subsection{Delegation Transitions Rules}
+\label{sec:deleg-trans-rules}
+
+In order to validate a multi-signature for delegation, each delegation
+certificate in a transaction has to be checked for correct signature
+combinations. This requires the transaction $\var{tx}$ to be available in the
+environment of the DELPL transition rule, as this rule is called with a single
+certificate as its signal, this is reflected in the DELPL environment as shown
+in Figure~\ref{fig:defs:delpl}.
+
+\begin{figure}[hbt]
+  \emph{Delegation and Pool Combined Environment}
+  \begin{equation*}
+    \DPEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{slot} & \Slot & \text{slot}\\
+        \var{ptr} & \Ptr & \text{certificate pointer}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{tx} & \Tx & \text{current transaction}
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation and Pool Combined State}
+  \begin{equation*}
+    \DPState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{dstate} & \DState & \text{delegation state}\\
+        \var{pstate} & \PState & \text{pool state}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Delegation and Pool Combined Transition}
+  \begin{equation*}
+    \_ \vdash \_ \trans{delpl}{\_} \_ \in
+      \powerset (
+        \DPEnv \times \DPState \times \DCert \times \DPState)
+  \end{equation*}
+  \caption{Delegation and Pool Combined Transition Type}
+  \label{fig:defs:delpl}
+\end{figure}
+
+Multi-signature staking also requires a change to the type of stake object from
+being just a hashed key to being either a hashed key or a hashed script. This is
+reflected in the type of $\StakeDelegs$ with replaces the previous
+$\type{StakeKeys}$ type and the type $\StakeObject$ which describes either a key
+or a script used for staking, as shown in Figure~\ref{fig:delegation-state-type}.
+
+\begin{figure}
+  \emph{Delegation Types}
+    \begin{equation*}
+      \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+        \var{stakeObj} & \StakeObject & (\KeyHash_{stake} \uniondistinct
+                                            \HashScr) \\
+        \var{stakeDelegator} & \StakeDelegs & \StakeObject \mapsto \Slot \\
+      \end{array}
+    \end{equation*}
+    %
+  \emph{Delegation States}
+  %
+  \begin{equation*}
+    \begin{array}{l}
+    \DState =
+    \left(\begin{array}{r@{~\in~}lr}
+      \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
+      \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+      \var{delegations} & \StakeObject \mapsto \KeyHash_{pool} & \text{delegations}\\
+      \var{ptrs} & \Ptr \mapsto \StakeObject & \text{pointer to stake object}\\
+      \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
+      \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
+          \end{array}\right)
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Certificate Accessor functions}
+  %
+  \begin{equation*}
+  \begin{array}{r@{~\in~}lr}
+    \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness}
+  \end{array}
+  \end{equation*}
+  \caption{Delegation State type}
+  \label{fig:delegation-state-type}
+\end{figure}
+
+Before executing a DELPL subrule, it is necessary to check whether the
+certificate concerns a multi-signature. This is done via checking whether the
+stake object is a hashed script and that the certificate is of one of the types
+that do require a witness. This is shown in the extended transition system for
+DELPL in Figure~\ref{fig:rules:delpl}, in the format described
+in~\cite{small_step_semantics}
+
+If the staking object is a hashed script and the delegation certificate type is
+one which requires a witness, the DELEG subrule is only called if
+
+\begin{itemize}
+\item There exists a validator script in the set of witnesses of the transaction
+  \var{tx} which corresponds to the staking object,
+\item the staking object matches the hash of this script, and
+\item the valdiator script validates the delegation certificate in the
+  transaction.
+\end{itemize}
+
+\begin{figure}[hbt]
+  \emph{Delegation and Pool Combined Rules}
+  \begin{equation}
+    \label{eq:delpl-d}
+    \inference[Delpl-Del]
+    {
+      scriptWits \leteq \fun{txwitsScript}~tx\\
+      stakeObj \leteq \fun{cwitness}~\var{c} \\
+      \\~\\
+      stakeObj \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
+      \DCertDeRegKey \uniondistinct \DCertDeleg)\implies\\
+      \exists validator,~stakeObj \mapsto validator \in scriptWits,
+      \\ \fun{validateScript}~\var{validator}~\var{tx}
+         \wedge \var{stakeObj} = \fun{hashScript}~\var{validator}
+      \\~\\
+      {
+        \left(
+          \begin{array}{r}
+            \var{slot} \\
+            \var{ptr} \\
+          \end{array}
+        \right)
+      }
+      \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
+    }
+    { \left(
+        \begin{array}{r}
+          \var{slot} \\
+          \var{ptr} \\
+          \var{pp} \\
+          \var{tx}
+        \end{array}
+      \right)
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{dstate} \\
+        \var{pstate}
+      \end{array}
+      \right)
+      \trans{delpl}{c}
+      \left(
+      \begin{array}{rcl}
+        \varUpdate{\var{dstate'}} \\
+        \var{pstate}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Delegation Transition Rule}
+  \label{fig:rules:delpl}
+\end{figure}
+
+\textbf{Note:} In contrast to stake object delegation, staking pools temselves
+cannot use multi-signature schemes. Else, the lightweight certificates for
+delegation from the pool to the KES hot key would have to be script
+witnesses. These certificates have to be included in each header, but those
+headers are required to have a fixed size and be as small as possible.
+
+\subsection{UTXOW Transition Rule}
+\label{sec:utxow-transition}
+
+The UTXOW extended transition system is shown in
+Figure~\ref{fig:rules:utxow-multi-sig}. The constraint on the set of required
+witnesses is relaxed in such a way that \emph{redundant} signatures can be
+supplied in the transaction. The set of verification keys is passed to the
+validator script via the concrete implementation of $\fun{validateScript}$ for
+the specific script type.
 
 The set of all validator scripts of $\fun{txinsScript}~(\fun{txins}~tx)$ is
 checked for:
+
 \begin{itemize}
-\item the script hash being equal to the hash stored in the output to spent
-  (done in the function $\fun{validators}$) and
+\item the hashed script being equal to the hash stored in the output to spent
+  (done in the function $\fun{validators}$), and
 \item the validator script validating the transaction.
 \end{itemize}
 
@@ -490,6 +677,14 @@ for each script-locked output there exists a corresponding validation script.
       \forall \var{inp}\mapsto\var{validator} \in
       \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~scriptWits,
       \\ \fun{validateScript}~validator~tx
+      \\~\\
+      \forall \var{addr^{script}_{rwd}} \in
+      \dom (\AddrRWDScr\restrictdom\fun{txwdrls}~tx), \\
+      \exists (\fun{stakeHK_{r}}~\var{addr^{script}_{rwd}}) \mapsto validator
+      \in \var{scriptWits},\\
+      \fun{stakeHK_{r}}~\var{addr^{script}_{rwd}} =
+      \fun{hashScript}~\var{validator}
+      \wedge \fun{validateScript}~validator~tx
       \\~\\
       scriptIns = \dom(\fun{validators}~scriptIns~utxo~scriptWits)
       \\~\\
@@ -514,6 +709,32 @@ for each script-locked output there exists a corresponding validation script.
   \label{fig:rules:utxow-multi-sig}
 \end{figure}
 
+Multi-signature staking also incurs reward accounts locked by a multi-signature
+scheme. This means that in order to allow for spending of rewards accumulated in
+a multi-signature rewards account, we also need to validate the required
+script. This is done in a predicate in the UTXOW rule which checks that for each
+withdrawal of a transaction which uses a multi-script rewards account, there
+exists a corresponding script matching the hash in the reward address and which
+validates the transaction. Because of the changes to the staking object type,
+the original function $\fun{witsNeeded}$ is changed as shown in
+Figure~\ref{fig:functions-witnesses}.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \text{hashkeys for needed witnesses} \\
+    & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
+    & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\}~\cup \\
+    & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\cup \\
+    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+  \end{align*}
+  \caption{Functions used in witness rule}
+  \label{fig:functions-witnesses}
+\end{figure}
+
 \section{Implementation of Script-Based Multi-Signature}
 \label{sec:altern-impl}
 
@@ -521,7 +742,7 @@ There are different implementation possibilities for the introduced
 multi-signature scheme. Section~\ref{sec:plutus-scripts} describes an
 implementation based on Plutus~\cite{plutus_eutxo} which uses only simple
 scripts, without redeemer or data
-scripts. Section~\ref{sec:native-script-interp} describes and alternative
+scripts. Section~\ref{sec:native-script-interp} describes an alternative
 implementation based on a script-like DSL that allows for validation using a
 native implementation.
 
@@ -654,20 +875,36 @@ list with the threshold in the recursion case. The
 Appendix~\ref{sec:native-multi-sign} provides some examples of how this scheme
 can be used.
 
+\subsection{Lower Level Implementation Details}
+\label{sec:lower-level-impl}
+
+For each new type of witness, there will be a requirement to represent such a
+witness on-chain and allow for identification when deserializing such a
+witness. For this, there will be a language specific tag for each witness (and
+staking object) in its serialized form. This tag will also be part of the hash
+to allow for easy identification of the language type.
+
+As an example, one could tag key hash payment and staking objects with a tag
+$0$, native multi-sig payment and staking objects with a tag $1$ and simple
+Plutus objects with a tag $2$. Every new language would incur using a new tag,
+changes to the details of how payment or staking objects are treated
+\emph{within} an existing language framework will be changed via a software
+update, not an additional tag.
+
 \section{Summary}
 \label{sec:summary}
 
 The presented script based multi-signature scheme does not require the scripts
 to use any cryptographic primitives. It requires only the ability to compare the
-required keys to those that actually signed the transaction. Potential gas cost
-can therefore be calculated statically in advance. The scripts can be realized
-as smart contracts with only limited requirements on functionality on the script
-language.
+required keys to those that actually signed the transaction. The worst case
+potential calculation cost can therefore be calculated statically in advance and
+can be added to the transaction fees or as gas cost. The scripts can be realized
+with only limited requirements on functionality on the script language.
 
 The necessary extensions to the data types in the Shelley
 specification~\cite{shelley_formal_spec} are relatively simple. They consist
-mainly of the introduction of additional optional data for scripts or hashed
-scripts.
+mainly of the introduction of additional optional data for payment objects or
+staking objects.
 
 The relaxation on accepting a superset of the strictly required signatures
 allows the creation of transactions with an arbitrary number of signatures. This
