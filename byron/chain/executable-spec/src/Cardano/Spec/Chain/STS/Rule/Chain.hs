@@ -189,7 +189,7 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-  sigGen = sigGenChain GenDelegation GenUTxO
+  sigGen _ = sigGenChain GenDelegation GenUTxO Nothing
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
@@ -198,10 +198,11 @@ data ShouldGenUTxO = GenUTxO | NoGenUTxO
 sigGenChain
   :: ShouldGenDelegation
   -> ShouldGenUTxO
+  -> Maybe (PredicateFailure CHAIN)
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
+sigGenChain shouldGenDelegation shouldGenUTxO _ (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
@@ -222,7 +223,7 @@ sigGenChain shouldGenDelegation shouldGenUTxO (_sNow, utxo0, ads, pps, k) (Slot 
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of
-      GenUTxO   -> sigGen @UTXOWS utxoEnv utxo
+      GenUTxO   -> sigGen @UTXOWS Nothing utxoEnv utxo
       NoGenUTxO -> pure []
 
     let

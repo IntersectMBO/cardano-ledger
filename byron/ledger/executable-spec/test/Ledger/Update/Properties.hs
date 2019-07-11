@@ -369,7 +369,7 @@ instance HasTrace UBLOCK where
       -- about the trace size, and @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
-  sigGen _env UBlockState {upienv, upistate} = do
+  sigGen _ _env UBlockState {upienv, upistate} = do
     let rpus = Update.registeredProtocolUpdateProposals upistate
     (anOptionalUpdateProposal, aListOfVotes) <-
       -- We want to generate update proposals when there is none registered. Otherwise we won't get
@@ -424,16 +424,16 @@ instance HasTrace UBLOCK where
       <*> pure anOptionalUpdateProposal
       <*> pure aListOfVotes
       where
-        generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES upienv upistate
+        generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
         generateUpdateProposalAndVotes = do
-          updateProposal <- sigGen @UPIREG upienv upistate
+          updateProposal <- sigGen @UPIREG Nothing upienv upistate
           -- We want to have the possibility of generating votes for the proposal we
           -- registered.
           case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
             Left _ ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES upienv upistate
+              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistate
             Right upistateAfterRegistration ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES upienv upistateAfterRegistration
+              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
         nextSlotGen =
           incSlot <$> Gen.frequency
                       [ (5, Gen.integral (Range.constant 1 10))

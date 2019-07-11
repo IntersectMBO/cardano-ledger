@@ -92,8 +92,8 @@ import           Control.State.Transition.Generator (HasTrace, envGen, genTrace,
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVkGenesisSet, range, sign, skey, unBlockCount, unVKeyGenesis,
-                     (∈), (∉), (⨃))
+                     addSlot, hash, mkVkGenesisSet, range, signWithGenesisKey, unBlockCount, (∈),
+                     (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
 
@@ -488,8 +488,7 @@ dcertGen env eks =
     -- chance of having two genesis keys delegating to the same key.
     target = VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
 
-    mkDCert' ((e, vkg), vk) = DCert vkg vk e (signWithGenesisKey vkg (vk, e))
-    signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
+    mkDCert' ((e, vkg), vk) = mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
   in
 
   if null candidates
@@ -538,14 +537,14 @@ instance HasTrace MSDELEG where
 
   envGen = delegEnvGen
 
-  sigGen env st = dcertGen env (_dSStateKeyEpochDelegations st)
+  sigGen _ env st = dcertGen env (_dSStateKeyEpochDelegations st)
 
 
 instance HasTrace DELEG where
 
   envGen = delegEnvGen
 
-  sigGen = dcertsGen
+  sigGen _ = dcertsGen
 
 delegEnvGen :: Word64 -> Gen DSEnv
 delegEnvGen chainLength = do
