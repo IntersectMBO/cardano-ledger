@@ -12,15 +12,22 @@ module Test.Cardano.Chain.Elaboration.Block
   , elaborate
   , elaborateBS
   , rcDCert
+  , AbstractToConcreteIdMaps
+    ( AbstractToConcreteIdMaps
+    , proposalIds
+    , transactionIds
+    )
   )
 where
 
 import Cardano.Prelude hiding (to)
 
+import Control.Arrow ((&&&))
 import Control.Lens ((^.), to, (^..))
 import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 
@@ -43,8 +50,9 @@ import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL)
 import qualified Cardano.Spec.Chain.STS.Rule.Epoch as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation
-  (DCert, allowedDelegators, delegationMap, delegatorOf, mkDCert)
-import Ledger.Update (maxBkSz, maxHdrSz, maxTxSz, stableAfter)
+  (DCert, delegationMap, delegatorOf, mkDCert)
+import Ledger.Update (maxBkSz, maxHdrSz, maxTxSz)
+import qualified Ledger.Update as Abstract.Update
 import qualified Ledger.UTxO as Abstract
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
@@ -57,30 +65,54 @@ import Cardano.Chain.Common
   )
 
 import Test.Cardano.Chain.Elaboration.Keys
-  (elaborateKeyPair, elaborateVKeyGenesis, vKeyPair)
+  (elaborateVKeyGenesis, vKeyPair, vKeyToSKey)
 import Test.Cardano.Chain.Elaboration.Delegation (elaborateDCert)
+import Test.Cardano.Chain.Elaboration.Update
+  ( elaborateProtocolVersion
+  , elaborateSoftwareVersion
+  , elaborateUpdateProposal
+  , elaborateVote
+  )
 import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
+data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
+  { transactionIds :: !(Map Abstract.TxId UTxO.TxId)
+  , proposalIds :: !(Map Abstract.Update.UpId Update.UpId)
+  } deriving (Eq, Show)
+
+instance Semigroup AbstractToConcreteIdMaps where
+  (AbstractToConcreteIdMaps tids0 pids0) <> (AbstractToConcreteIdMaps tids1 pids1) =
+    AbstractToConcreteIdMaps (tids0 <> tids1) (pids0 <> pids1)
+
+instance Monoid AbstractToConcreteIdMaps where
+  mempty = AbstractToConcreteIdMaps Map.empty Map.empty
+
+
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate
-  :: Map Abstract.TxId UTxO.TxId
+  :: AbstractToConcreteIdMaps
   -> Genesis.Config
   -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
-  -> (Concrete.Block, Map Abstract.TxId UTxO.TxId)
-elaborate txIdMap config dCert st ab =
+  -> (Concrete.Block, AbstractToConcreteIdMaps)
+elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   ( Concrete.ABlock
     { Concrete.blockHeader     = bh0
     , Concrete.blockBody       = bb0
     , Concrete.blockAnnotation = ()
     }
-  , txIdMap'
+  , AbstractToConcreteIdMaps
+    { transactionIds = txIdMap'
+    , proposalIds = proposalsIdMap'
+    }
   )
  where
-  pm  = Genesis.configProtocolMagicId config
+  AbstractToConcreteIdMaps txIdMap proposalsIdMap = abstractToConcreteIdMaps
+
+  pm = Genesis.configProtocolMagicId config
 
   bh0 = Concrete.mkHeaderExplicit
     pm
@@ -91,19 +123,20 @@ elaborate txIdMap config dCert st ab =
     ssk
     cDCert
     bb0
-    (Update.ProtocolVersion 0 0 0)
-    (Update.SoftwareVersion (Update.ApplicationName "baz") 0)
+    (elaborateProtocolVersion $ Abstract._bProtVer $ Abstract._bBody abstractBlock)
+    -- TODO: the Byron spec needs to incorporate a software version in the blocks
+    (elaborateSoftwareVersion $ Abstract.Update.SwVer (Abstract.Update.ApName "") (Abstract.Update.ApVer 0))
 
   prevHash :: Concrete.HeaderHash
   prevHash =
     either Concrete.genesisHeaderHash identity $ Concrete.cvsPreviousHash st
 
   sid = Slotting.SlotNumber
-    (ab ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
+    (abstractBlock ^. Abstract.bHeader . Abstract.bhSlot . to Abstract.unSlot)
 
-  issuer   = ab ^. Abstract.bHeader . Abstract.bhIssuer
+  issuer = abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer
 
-  (_, ssk) = elaborateKeyPair $ vKeyPair issuer
+  ssk = vKeyToSKey issuer
 
   cDCert :: Delegation.Certificate
   cDCert = elaborateDCert pm dCert
@@ -112,28 +145,54 @@ elaborate txIdMap config dCert st ab =
     { Concrete.bodyTxPayload     = UTxO.ATxPayload txPayload
     , Concrete.bodySscPayload    = Ssc.SscPayload
     , Concrete.bodyDlgPayload    = Delegation.UnsafeAPayload dcerts ()
-    , Concrete.bodyUpdatePayload = Update.APayload Nothing [] ()
+    , Concrete.bodyUpdatePayload = updatePayload
     }
 
   dcerts =
-    ab
+    abstractBlock
       ^.. (Abstract.bBody . Abstract.bDCerts . traverse . to
             (elaborateDCert pm)
           )
 
   (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
     txIdMap
-    (reverse $ ab ^. Abstract.bBody . Abstract.bUtxo)
+    (reverse $ abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
+
+  updatePayload :: Update.APayload ()
+  updatePayload =
+    Update.APayload
+      (fmap snd maybeProposals)
+      (fmap (elaborateVote pm proposalsIdMap')
+      $ Abstract._bUpdVotes
+      $ Abstract._bBody abstractBlock
+      )
+      () -- Update payload annotation
+
+  maybeProposals :: Maybe (Abstract.Update.UProp, Update.Proposal)
+  maybeProposals
+    = fmap (identity &&& elaborateUpdateProposal pm)
+    $ Abstract._bUpdProp
+    $ Abstract._bBody abstractBlock
+
+  proposalsIdMap' :: Map Abstract.Update.UpId Update.UpId
+  proposalsIdMap' = maybe proposalsIdMap addUpdateProposalId maybeProposals
+    where
+      addUpdateProposalId (abstractProposal, concreteProposal) =
+        Map.insert
+          (Abstract.Update._upId abstractProposal)
+          (H.hash concreteProposal)
+          proposalsIdMap
+
 
 elaborateBS
-  :: Map Abstract.TxId UTxO.TxId
+  :: AbstractToConcreteIdMaps
   -> Genesis.Config -- TODO: Do we want this to come from the abstract
                     -- environment? (in such case we wouldn't need this
                     -- parameter)
   -> DCert
   -> Concrete.ChainValidationState
   -> Abstract.Block
-  -> (Concrete.ABlock ByteString, Map Abstract.TxId UTxO.TxId)
+  -> (Concrete.ABlock ByteString, AbstractToConcreteIdMaps)
 elaborateBS txIdMap config dCert st ab =
   first (annotateBlock (Genesis.configEpochSlots config))
     $ elaborate txIdMap config dCert st ab
@@ -167,28 +226,32 @@ annotateBlock epochSlots block =
 rcDCert
   :: Abstract.VKey
   -- ^ Key for which the delegation certificate is being constructed.
+  -> Abstract.BlockCount
+  -- ^ Chain stability parameter
   -> Transition.State CHAIN
   -> DCert
-rcDCert vk ast@(slot, _, _, _, _, _) =
-  mkDCert vkg sigVkg vk (Abstract.sEpoch slot)
+rcDCert vk k ast@(slot, _, _, _, _, _) =
+  mkDCert vkg sigVkgEpoch vk epoch
  where
   dm :: Bimap Abstract.VKeyGenesis Abstract.VKey
-  dm  = ast ^. disL . delegationMap
+  dm = ast ^. disL . delegationMap
 
   vkg = fromMaybe err $ delegatorOf dm vk
 
   err :: Abstract.VKeyGenesis
-  err    = panic $ "No delegator found for key " <> show vk
+  err = panic $ "No delegator found for key " <> show vk
 
-  vkp    = vKeyPair $ coerce vkg
+  vkp = vKeyPair $ coerce vkg
 
-  sigVkg = Abstract.sign (Abstract.sKey vkp) vkg
+  sigVkgEpoch = Abstract.sign (Abstract.sKey vkp) (vk, epoch)
+
+  epoch = Abstract.sEpoch slot k
 
 -- | Make a genesis configuration from an initial abstract environment of the
 --   trace.
 --
 abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
-abEnvToCfg (_, _, dsEnv, pps) =
+abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stableAfter) =
   Genesis.Config genesisData genesisHash Nothing rnm
  where
   rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
@@ -199,11 +262,7 @@ abEnvToCfg (_, _, dsEnv, pps) =
     , Genesis.gdStartTime = UTCTime (ModifiedJulianDay 0) 0
     , Genesis.gdNonAvvmBalances = Genesis.GenesisNonAvvmBalances []
     , Genesis.gdProtocolParameters = gPps
-    , Genesis.gdK =
-        -- TODO: this should be a different protocol parameter once we have
-        -- an abstract protocol parameter for k. Then we need to solve the
-        -- problem that in the concrete implementation k and w are the same.
-                    BlockCount (Abstract.unBlockCount $ pps ^. stableAfter)
+    , Genesis.gdK = BlockCount $ Abstract.unBlockCount stableAfter
     , Genesis.gdProtocolMagicId = Dummy.protocolMagicId
     , Genesis.gdAvvmDistr = Genesis.GenesisAvvmBalances []
     }
@@ -216,9 +275,9 @@ abEnvToCfg (_, _, dsEnv, pps) =
   gPps        = Update.ProtocolParameters
     { Update.ppScriptVersion    = 0
     , Update.ppSlotDuration     = 0
-    , Update.ppMaxBlockSize     = 832 * pps ^. maxBkSz
-    , Update.ppMaxHeaderSize    = 569 * pps ^. maxHdrSz
-    , Update.ppMaxTxSize        = 318 * pps ^. maxTxSz
+    , Update.ppMaxBlockSize     = 832 * protocolParams ^. maxBkSz
+    , Update.ppMaxHeaderSize    = 569 * protocolParams ^. maxHdrSz
+    , Update.ppMaxTxSize        = 318 * protocolParams ^. maxTxSz
     , Update.ppMaxProposalSize  = 0
     , Update.ppMpcThd           = LovelacePortion 0
     , Update.ppHeavyDelThd      = LovelacePortion 0
@@ -236,4 +295,4 @@ abEnvToCfg (_, _, dsEnv, pps) =
 
   genesisKeyHashes :: Set Common.KeyHash
   genesisKeyHashes =
-    Set.map (hashKey . elaborateVKeyGenesis) (dsEnv ^. allowedDelegators)
+    Set.map (hashKey . elaborateVKeyGenesis) allowedDelegators

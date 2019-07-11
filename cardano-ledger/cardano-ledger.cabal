@@ -44,6 +44,7 @@ library
                        Cardano.Chain.UTxO.UTxO
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
+                       Cardano.Chain.Update.Proposal
                        Cardano.Chain.Update.Validation.Interface
                        Cardano.Chain.ValidationMode
 
@@ -107,7 +108,6 @@ library
                        Cardano.Chain.Update.InstallerHash
                        Cardano.Chain.Update.Payload
                        Cardano.Chain.Update.Proof
-                       Cardano.Chain.Update.Proposal
                        Cardano.Chain.Update.ProtocolParameters
                        Cardano.Chain.Update.ProtocolParametersUpdate
                        Cardano.Chain.Update.ProtocolVersion
