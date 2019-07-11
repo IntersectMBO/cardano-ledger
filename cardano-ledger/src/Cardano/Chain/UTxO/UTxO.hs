@@ -33,6 +33,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
+import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Chain.Common
   (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
 import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
@@ -50,7 +51,7 @@ import Cardano.Crypto (hash)
 newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   } deriving (Eq, Show, Generic)
-    deriving newtype HeapWords
+    deriving newtype (HeapWords, FromCBOR, ToCBOR)
     deriving anyclass NFData
 
 data UTxOError

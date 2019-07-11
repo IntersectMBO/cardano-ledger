@@ -31,19 +31,22 @@ import Cardano.Chain.Block
   , Block
   , BlockSignature
   , Body
+  , BoundaryValidationData(boundaryBlockLength)
   , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
   , dropBoundaryBody
-  , dropBoundaryConsensusData
+  , dropBoundaryBlock
+  , fromCBORBoundaryConsensusData
   , dropBoundaryHeader
   , fromCBORABOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
   , toCBORABOBBlock
+  , toCBORBoundaryBlock
   , toCBORHeader
   , toCBORHeaderToHash
   )
@@ -159,6 +162,25 @@ goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   (void dropBoundaryHeader)
   "test/golden/cbor/block/BoundaryBlockHeader"
 
+ts_roundTripBoundaryBlock :: TSProperty
+ts_roundTripBoundaryBlock = eachOfTS
+    10
+    (feedPM genBVDWithPM)
+    roundTripsBVD
+  where
+    -- We ignore the size of the BVD here, since calculating it is annoying.
+    roundTripsBVD :: (ProtocolMagicId, BoundaryValidationData ()) -> H.PropertyT IO ()
+    roundTripsBVD (pm, bvd) = trippingBuildable
+      bvd
+      (serializeEncoding . toCBORBoundaryBlock pm)
+      (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryValidationData" dropBoundaryBlock)
+
+    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, BoundaryValidationData ())
+    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryValidationData
+
+    dropSize :: BoundaryValidationData a -> BoundaryValidationData a
+    dropSize bvd = bvd { boundaryBlockLength = 0 }
+
 
 --------------------------------------------------------------------------------
 -- BoundaryBody
@@ -178,7 +200,7 @@ goldenDeprecatedBoundaryBody = deprecatedGoldenDecode
 goldenDeprecatedBoundaryConsensusData :: Property
 goldenDeprecatedBoundaryConsensusData = deprecatedGoldenDecode
   "BoundaryConsensusData"
-  dropBoundaryConsensusData
+  (void fromCBORBoundaryConsensusData)
   "test/golden/cbor/block/BoundaryConsensusData"
 
 
@@ -226,6 +248,20 @@ goldenProof = goldenTestCBOR exampleProof "test/golden/cbor/block/Proof"
 
 ts_roundTripProofCBOR :: TSProperty
 ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
+
+
+--------------------------------------------------------------------------------
+-- SigningHistory
+--------------------------------------------------------------------------------
+
+-- TODO:
+-- goldenSigningHistory :: Property
+-- goldenSigningHistory =
+--   goldenTestCBOR exampleSigningHistory "test/golden/cbor/block/SigningHistory"
+
+ts_roundTripSigningHistoryCBOR :: TSProperty
+ts_roundTripSigningHistoryCBOR =
+  eachOfTS 20 genSigningHistory roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------

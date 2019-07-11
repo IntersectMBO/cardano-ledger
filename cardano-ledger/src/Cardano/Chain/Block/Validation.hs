@@ -42,11 +42,19 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq(..), (<|))
+import qualified Data.Sequence as Seq
 import Formatting.Buildable (Buildable)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
-import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Binary
+  ( Annotated(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  , serialize'
+  )
 import Cardano.Chain.Block.Body (ABody (..))
 import Cardano.Chain.Block.Block
   ( ABlock(..)
@@ -127,8 +135,23 @@ import Cardano.Chain.ValidationMode
 data SigningHistory = SigningHistory
   { shK                 :: !BlockCount
   , shSigningQueue      :: !(Seq KeyHash)
-  , shKeyHashCounts :: !(Map KeyHash BlockCount)
+  , shKeyHashCounts     :: !(Map KeyHash BlockCount)
   } deriving (Eq, Show, Generic, NFData)
+
+instance FromCBOR SigningHistory where
+  fromCBOR = do
+    enforceSize "SigningHistory" 3
+    SigningHistory
+      <$> fromCBOR
+      <*> (Seq.fromList <$> fromCBOR)
+      <*> fromCBOR
+
+instance ToCBOR SigningHistory where
+  toCBOR sh =
+    encodeListLen 3
+      <> toCBOR (shK sh)
+      <> toCBOR (toList (shSigningQueue sh))
+      <> toCBOR (shKeyHashCounts sh)
 
 -- | Update the `SigningHistory` with a new signer, removing the oldest value if
 --   the sequence is @K@ blocks long
@@ -174,6 +197,27 @@ data ChainValidationState = ChainValidationState
   , cvsUpdateState     :: !UPI.State
   , cvsDelegationState :: !DI.State
   } deriving (Eq, Show, Generic, NFData)
+
+instance FromCBOR ChainValidationState where
+  fromCBOR = do
+    enforceSize "ChainValidationState" 6
+    ChainValidationState
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR ChainValidationState where
+  toCBOR c =
+    encodeListLen 6
+      <> toCBOR (cvsLastSlot c)
+      <> toCBOR (cvsSigningHistory c)
+      <> toCBOR (cvsPreviousHash c)
+      <> toCBOR (cvsUtxo c)
+      <> toCBOR (cvsUpdateState c)
+      <> toCBOR (cvsDelegationState c)
 
 -- | Create the state needed to validate the zeroth epoch of the chain. The
 --   zeroth epoch starts with a boundary block where the previous hash is the

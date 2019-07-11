@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveAnyClass   #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Cardano.Chain.Delegation.Validation.Interface
   (
@@ -22,7 +23,14 @@ import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
-import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Binary
+  ( Annotated(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  , serialize'
+  )
 import Cardano.Chain.Common (BlockCount(..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
@@ -58,6 +66,18 @@ data State = State
   , activationState :: !Activation.State
   } deriving (Eq, Show, Generic, NFData)
 
+instance FromCBOR State where
+  fromCBOR = do
+    enforceSize "State" 2
+    State
+      <$> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR State where
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (schedulingState s)
+      <> toCBOR (activationState s)
 
 delegationMap :: State -> Delegation.Map
 delegationMap = Activation.delegationMap . activationState

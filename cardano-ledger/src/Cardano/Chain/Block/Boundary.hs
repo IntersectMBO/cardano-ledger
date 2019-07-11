@@ -3,36 +3,31 @@
 -- | Boundary blocks have been deprecated, but we keep functions to decode them
 
 module Cardano.Chain.Block.Boundary
-  ( dropBoundaryConsensusData
-  , dropBoundaryConsensusDataRetainEpochNumber
+  ( fromCBORBoundaryConsensusData
   , dropBoundaryExtraHeaderData
   , dropBoundaryBody
   , dropBoundaryExtraBodyData
   )
 where
 
-import Control.Monad (return, void)
+import Control.Monad (return)
 import Data.Word (Word64)
 
 import Cardano.Binary
-  (Decoder, Dropper, decodeWord64, dropBytes, dropList, enforceSize)
-import Cardano.Chain.Common (dropAttributes, dropChainDifficulty)
+  (Decoder, Dropper, decodeWord64, dropBytes, dropList, enforceSize, fromCBOR)
+import Cardano.Chain.Common (ChainDifficulty, dropAttributes)
 
 
 --------------------------------------------------------------------------------
 -- BoundaryConsensusData
 --------------------------------------------------------------------------------
 
-dropBoundaryConsensusData :: Dropper s
-dropBoundaryConsensusData = void dropBoundaryConsensusDataRetainEpochNumber
-
-dropBoundaryConsensusDataRetainEpochNumber :: Decoder s Word64
-dropBoundaryConsensusDataRetainEpochNumber = do
+fromCBORBoundaryConsensusData :: Decoder s (Word64, ChainDifficulty)
+fromCBORBoundaryConsensusData = do
   enforceSize "BoundaryConsensusData" 2
   w <- decodeWord64
-  dropChainDifficulty
-  return w
-
+  cd <- fromCBOR
+  return (w, cd)
 
 --------------------------------------------------------------------------------
 -- BoundaryExtraHeaderData

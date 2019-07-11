@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Cardano.Chain.Update.Validation.Endorsement
   ( Environment (..)
@@ -19,6 +20,7 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber, twice)
@@ -56,11 +58,39 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
+instance FromCBOR CandidateProtocolUpdate where
+  fromCBOR = do
+    enforceSize "CandidateProtocolUpdate" 3
+    CandidateProtocolUpdate
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR CandidateProtocolUpdate where
+  toCBOR cpu =
+    encodeListLen 3
+      <> toCBOR (cpuSlot cpu)
+      <> toCBOR (cpuProtocolVersion cpu)
+      <> toCBOR (cpuProtocolParameters cpu)
+
 data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion
   , endorsementKeyHash         :: !KeyHash
   } deriving (Eq, Show, Ord, Generic)
     deriving anyclass NFData
+
+instance FromCBOR Endorsement where
+  fromCBOR = do
+    enforceSize "Endorsement" 2
+    Endorsement
+      <$> fromCBOR
+      <*> fromCBOR
+
+instance ToCBOR Endorsement where
+  toCBOR sh =
+    encodeListLen 2
+      <> toCBOR (endorsementProtocolVersion sh)
+      <> toCBOR (endorsementKeyHash sh)
 
 data Error
   = MultipleProposalsForProtocolVersion ProtocolVersion
