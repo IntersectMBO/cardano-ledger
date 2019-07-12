@@ -23,7 +23,21 @@ in
 # important so that the release.nix file can properly
 # parameterize this file when targetting different
 # hosts.
-{ ... }@args:
+{ withHoogle ? true
+, ... }@args:
 # We will instantiate the default-nix template with the
 # nix/pkgs.nix file...
-localLib.nix-tools.default-nix ./nix/pkgs.nix args
+let
+  defaultNix = localLib.nix-tools.default-nix ./nix/pkgs.nix args;
+in defaultNix //
+{
+  shell = defaultNix.nix-tools.shellFor {
+    inherit withHoogle;
+    # env will provide the dependencies of cardano-shell
+    packages = ps: with ps; [ cardano-ledger ];
+    # This adds git to the shell, which is used by stack.
+    buildInputs = [
+      defaultNix.nix-tools._raw.cabal-install.components.exes.cabal
+    ];
+  };
+}
