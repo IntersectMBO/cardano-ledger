@@ -85,6 +85,7 @@ test-suite delegation-test
                          Mutator
                          Generator
                          PropertyTests
+                         STSTests
     hs-source-dirs:      test
     ghc-options:
       -threaded
@@ -100,6 +101,7 @@ test-suite delegation-test
       -Werror
     build-depends:
       base,
+      cryptonite,
       tasty,
       tasty-hunit,
       tasty-hedgehog,
@@ -110,4 +112,5 @@ test-suite delegation-test
       text,
       microlens,
       cs-ledger,
-      cardano-crypto-class
+      cardano-crypto-class,
+      small-steps

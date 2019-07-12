@@ -43,7 +43,7 @@ instance
     = ( NewEpochState hashAlgo dsignAlgo
       , Seed
       , Seed
-      , HashHeader hashAlgo dsignAlgo kesAlgo
+      , Maybe (HashHeader hashAlgo dsignAlgo kesAlgo)
       , Slot
       )
 

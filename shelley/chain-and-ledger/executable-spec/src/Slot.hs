@@ -51,7 +51,7 @@ slotFromEpoch :: Epoch -> Slot
 slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n
 
 epochFromSlot :: Slot -> Epoch
-epochFromSlot (Slot n) = Epoch $ n `rem` slotsPerEpoch
+epochFromSlot (Slot n) = Epoch $ n `div` slotsPerEpoch
 
 firstSlot :: Epoch -> Slot
 firstSlot = slotFromEpoch
