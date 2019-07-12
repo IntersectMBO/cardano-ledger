@@ -34,6 +34,7 @@
         "delegation-test" = {
           depends = (pkgs.lib).optionals (!flags.development) [
             (hsPkgs.base)
+            (hsPkgs.cryptonite)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
             (hsPkgs.tasty-hedgehog)
@@ -45,6 +46,7 @@
             (hsPkgs.microlens)
             (hsPkgs.cs-ledger)
             (hsPkgs.cardano-crypto-class)
+            (hsPkgs.small-steps)
             ];
           };
         };
