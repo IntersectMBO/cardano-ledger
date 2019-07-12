@@ -38,9 +38,10 @@ module UTxO
   , (</|)
   , dom
   , union
-  , makeWitness
-  , makeWitnesses
-  , Wit(..)
+  , makeWitnessVKey
+  , makeWitnessesVKey
+  , WitVKey(..)
+  , txwitsVKey
   , Tx(..)
   -- lenses
     -- TxBody
@@ -53,7 +54,7 @@ module UTxO
   -- Tx
   , body
   , witnessSet
-  , verifyWit
+  , verifyWitVKey
   , txup
   ) where
 
@@ -224,35 +225,35 @@ txinLookup
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit hashAlgo dsignAlgo
-  = Wit (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
+data WitVKey hashAlgo dsignAlgo
+  = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
   deriving (Show, Eq, Ord)
 
 instance
   (Typeable hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (Wit hashAlgo dsignAlgo)
+  => ToCBOR (WitVKey hashAlgo dsignAlgo)
  where
-  toCBOR (Wit vk sig) =
+  toCBOR (WitVKey vk sig) =
     encodeListLen 2
       <> toCBOR vk
       <> toCBOR sig
 
 -- |Verify a transaction body witness
-verifyWit
+verifyWitVKey
   :: ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
-  -> Wit hashAlgo dsignAlgo
+  -> WitVKey hashAlgo dsignAlgo
   -> Bool
-verifyWit tx (Wit vkey sig) = verify vkey tx sig
+verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
 
 -- |A fully formed transaction.
 data Tx hashAlgo dsignAlgo
   = Tx
       { _body       :: !(TxBody hashAlgo dsignAlgo)
-      , _witnessSet :: !(Set (Wit hashAlgo dsignAlgo))
+      , _witnessSet :: !(Set (WitVKey hashAlgo dsignAlgo))
       } deriving (Show, Eq, Ord)
 
 makeLenses ''Tx
@@ -267,26 +268,34 @@ instance
       <> toCBOR (_witnessSet tx)
 
 -- |Create a witness for transaction
-makeWitness
+makeWitnessVKey
   :: ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
   -> KeyPair dsignAlgo
-  -> Wit hashAlgo dsignAlgo
-makeWitness tx keys = Wit (vKey keys) (sign (sKey keys) tx)
+  -> WitVKey hashAlgo dsignAlgo
+makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
-makeWitnesses
+makeWitnessesVKey
   :: ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
   -> [KeyPair dsignAlgo]
-  -> Set (Wit hashAlgo dsignAlgo)
-makeWitnesses tx = Set.fromList . fmap (makeWitness tx)
+  -> Set (WitVKey hashAlgo dsignAlgo)
+makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
+
+-- | Witness accessor function for Transactions
+txwitsVKey
+  :: (DSIGNAlgorithm dsignAlgo)
+  => Tx hashAlgo dsignAlgo
+  -> Map.Map (VKey dsignAlgo) (Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
+txwitsVKey tx =
+  Map.fromList $ map (\(WitVKey vk sig) -> (vk, sig)) (Set.toList $ _witnessSet tx)
 
 -- |Domain restriction
 (<|)

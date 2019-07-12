@@ -22,8 +22,8 @@ import           LedgerState hiding (dms)
 import           Slot
 import           PParams
 import           UTxO (pattern TxIn, pattern TxOut, (<|), _body, _witnessSet,
-                     balance, body, certs, deposits, inputs, makeWitness,
-                     outputs, txid, txins, txouts, verifyWit, witnessSet)
+                     balance, body, certs, deposits, inputs, makeWitnessVKey,
+                     outputs, txid, txins, txouts, verifyWitVKey, witnessSet)
 
 import           Generator
 import           MockTypes
@@ -232,7 +232,7 @@ propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = txwits ^. body
-  let witness                  = makeWitness tx keyPair
+  let witness                  = makeWitnessVKey tx keyPair
   let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
   let dms                      = _dms $ _dstate $ _delegationState l
   let l''                      = asStateTransition (Slot (steps)) emptyPParams l txwits' dms
@@ -241,7 +241,7 @@ propCheckRedundantWitnessSet = property $ do
   case l'' of
     Right _                    ->
         True === (Set.null $
-         Set.filter (\wit -> not $ verifyWit tx wit) (_witnessSet txwits'))
+         Set.filter (\wit -> not $ verifyWitVKey tx wit) (_witnessSet txwits'))
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.
