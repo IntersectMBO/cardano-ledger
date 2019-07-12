@@ -10,9 +10,6 @@ where
 
 import Cardano.Prelude
 
-import Text.Megaparsec
-import Text.Megaparsec.Char (string)
-
 import Cardano.Binary (Raw)
 import Cardano.Chain.Genesis.Config
   ( Config
@@ -40,29 +37,13 @@ convertConfig cc = do
     let mainnetGenFp = geSrc . coGenesis $ ccCore cc
     gHash <- decodeGenesisHash genesisHash `wrapError` GenesisHashDecodeError
 
-    -- RequiresNetworkMagic
-    reqNM <- reqNetworkMagic `wrapError` ConfigParsingError
-
-    mkConfigFromFile reqNM mainnetGenFp gHash
+    mkConfigFromFile (cvtRNM . coRequiresNetworkMagic $ ccCore cc) mainnetGenFp gHash
 
  where
   decodeGenesisHash :: Text -> Either Text (Hash Raw)
   decodeGenesisHash genHash = decodeAbstractHash genHash
   genesisHash :: Text
   genesisHash = geGenesisHash . coGenesis $ ccCore cc
-  reqNetworkMagic :: Either (ParseErrorBundle Text Void) RequiresNetworkMagic
-  reqNetworkMagic = runParser
-    pRequiresNetworkMagic
-    "Cardano.Chain.Conversion"
-    (coRequiresNetworkMagic $ ccCore cc)
-
---------------------------------------------------------------------------------
--- Parsers
---------------------------------------------------------------------------------
-
-pRequiresNetworkMagic :: Parsec Void Text RequiresNetworkMagic
-pRequiresNetworkMagic = choice
-  [ RequiresNoMagic <$ string "RequiresNoMagic"
-  , RequiresMagic <$ string "RequiresMagic"
-  ]
-
+  cvtRNM :: Shell.RequireNetworkMagic -> RequiresNetworkMagic
+  cvtRNM Shell.NoRequireNetworkMagic = RequiresNoMagic
+  cvtRNM Shell.RequireNetworkMagic   = RequiresMagic
