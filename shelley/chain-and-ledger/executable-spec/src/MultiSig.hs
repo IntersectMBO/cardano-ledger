@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module MultiSig
@@ -11,21 +11,17 @@ module MultiSig
   )
 where
 
-import           UTxO                 (Tx(..), WitVKey(..))
+import           UTxO (Tx (..), WitVKey (..))
 
-import qualified Data.Set             as Set
+import qualified Data.Set as Set
 
 import           Keys
 
-import           Cardano.Binary       ( ToCBOR(toCBOR)
-                                      , FromCBOR(fromCBOR)
-                                      , encodeListLen
-                                      , encodeWord
-                                      , decodeListLen
-                                      , decodeWord)
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
+                     encodeListLen, encodeWord)
 
-import           Cardano.Crypto.Hash   ( HashAlgorithm)
-import           Cardano.Crypto.DSIGN  ( DSIGNAlgorithm)
+import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
+import           Cardano.Crypto.Hash (HashAlgorithm)
 
 data MultiSig hashAlgo dsignAlgo =
     SingleSig (KeyHash hashAlgo dsignAlgo)
