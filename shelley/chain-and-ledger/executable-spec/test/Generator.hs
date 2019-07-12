@@ -43,7 +43,7 @@ import           LedgerState (pattern LedgerValidation, ValidationError (..),
 import           Slot
 import           Updates
 import           UTxO (pattern AddrTxin, pattern Tx, pattern TxBody,
-                     pattern TxOut, pattern UTxO, balance, makeWitness)
+                     pattern TxOut, pattern UTxO, balance, makeWitnessVKey)
 import           PParams (PParams(..), emptyPParams)
 import           Delegation.Certificates (pattern Delegate, pattern DeRegKey,
                      pattern RegKey, pattern RegPool, pattern RetirePool,
@@ -154,7 +154,7 @@ genTx keyList (UTxO m) cslot = do
            txfee'
            (cslot + (Slot txttl))
            emptyUpdate
-  let !txwit = makeWitness txbody selectedKeyPair
+  let !txwit = makeWitnessVKey txbody selectedKeyPair
   pure (txfee', Tx txbody $ Set.fromList [txwit])
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp

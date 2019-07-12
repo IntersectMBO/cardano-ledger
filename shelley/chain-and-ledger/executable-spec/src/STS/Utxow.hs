@@ -72,7 +72,7 @@ utxoWitnessed = do
   TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
-  let witnessKeys = Set.map (\(Wit vk _) -> hashKey vk) wits
+  let witnessKeys = Set.map (\(WitVKey vk _) -> hashKey vk) wits
   witsNeeded (_utxo u) tx _dms == witnessKeys  ?! MissingWitnessesUTXOW
   trans @(UTXO hashAlgo dsignAlgo)
     $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)

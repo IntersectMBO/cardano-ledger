@@ -11,7 +11,7 @@ module MultiSig
   )
 where
 
-import           UTxO                 (Tx(..), Wit(..))
+import           UTxO                 (Tx(..), WitVKey(..))
 
 import qualified Data.Set             as Set
 
@@ -72,7 +72,7 @@ validateNativeMultiSigScript
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
   where witsSet = _witnessSet tx
-        vhks    = Set.map (\(Wit vk _) -> hashKey vk) witsSet
+        vhks    = Set.map (\(WitVKey vk _) -> hashKey vk) witsSet
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
   MultiSignatureScript (MultiSig hashAlgo dsignAlgo) hashAlgo dsignAlgo where

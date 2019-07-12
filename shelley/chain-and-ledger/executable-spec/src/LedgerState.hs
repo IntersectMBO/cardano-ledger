@@ -583,7 +583,7 @@ verifiedWits
   => Tx hashAlgo dsignAlgo
   -> Validity
 verifiedWits (Tx tx wits) =
-  if all (verifyWit tx) wits
+  if all (verifyWitVKey tx) wits
     then Valid
     else Invalid [InvalidWitness]
 
@@ -603,7 +603,7 @@ enoughWits tx@(Tx _ wits) d u =
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map (\(Wit vkey _) -> hashKey vkey) wits
+    signers = Set.map (\(WitVKey vkey _) -> hashKey vkey) wits
 
 validRuleUTXO
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
