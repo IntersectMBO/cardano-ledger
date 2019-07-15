@@ -4,26 +4,26 @@
 module STSTests (stsTests) where
 
 import           Data.Either (isLeft)
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map (empty)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes
+import           MockTypes (CHAIN, SKeyES, VKeyES)
 
 import           BaseTypes (Seed (..), mkUnitInterval)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof, bhbHash)
-import           Control.State.Transition
+import           Control.State.Transition (TRC (..), applySTS)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (pattern KeyPair, pattern SKeyES, pattern VKeyES, sKey, sign, signKES, vKey)
 import           LedgerState (pattern NewEpochState, emptyEpochState)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Slot (Epoch (..), Slot (..))
-import           STS.Updn
+import           STS.Updn (UPDN)
 
 
 -- | The UPDN transition should update both the evolving nonce and
