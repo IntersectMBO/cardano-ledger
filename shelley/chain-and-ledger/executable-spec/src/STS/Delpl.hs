@@ -15,6 +15,7 @@ import           LedgerState
 import           Delegation.Certificates
 import           PParams hiding (d)
 import           Slot
+import           Tx
 
 import           Control.State.Transition
 
@@ -29,7 +30,8 @@ instance
  where
   type State (DELPL hashAlgo dsignAlgo)       = DPState hashAlgo dsignAlgo
   type Signal (DELPL hashAlgo dsignAlgo)      = DCert hashAlgo dsignAlgo
-  type Environment (DELPL hashAlgo dsignAlgo) = (Slot, Ptr, PParams)
+  type Environment (DELPL hashAlgo dsignAlgo) =
+    (Slot, Ptr, PParams, Tx hashAlgo dsignAlgo)
   data PredicateFailure (DELPL hashAlgo dsignAlgo)
     = PoolFailure (PredicateFailure (POOL hashAlgo dsignAlgo))
     | DelegFailure (PredicateFailure (DELEG hashAlgo dsignAlgo))
@@ -43,7 +45,7 @@ delplTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELPL hashAlgo dsignAlgo)
 delplTransition = do
-  TRC ((slotIx, ptr, pp), d, c) <- judgmentContext
+  TRC ((slotIx, ptr, pp, _), d, c) <- judgmentContext
   case c of
     RegPool _ -> do
       ps <-
