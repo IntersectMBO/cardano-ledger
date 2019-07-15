@@ -203,19 +203,10 @@ genBlock protocolMagicId epochSlots =
         body
 
 genBoundaryValidationData :: Gen (BoundaryValidationData ())
-genBoundaryValidationData = do
-    (epoch, hash) <- genBVDHash
-    BoundaryValidationData
-      <$> pure 0
-      <*> pure hash
-      <*> pure epoch
-      <*> genChainDifficulty
-      <*> pure ()
-  where
-    genBVDHash = Gen.choice
-      [ ((,) <$> Gen.word64 (Range.constantFrom 10 1 100)
-             <*> (Right <$> genHeaderHash))
-      , ((,) <$> pure 0
-             <*> (Left . GenesisHash . coerce <$> genTextHash)
-        )
-      ]
+genBoundaryValidationData = 
+  BoundaryValidationData
+    <$> pure 0
+    <*> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
+    <*> (Gen.word64 (Range.constantFrom 10 0 1000))
+    <*> genChainDifficulty
+    <*> pure ()
