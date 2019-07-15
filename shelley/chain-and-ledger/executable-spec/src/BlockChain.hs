@@ -5,6 +5,7 @@ module BlockChain
   , BHBody(..)
   , BHeader(..)
   , Block(..)
+  , Proof(..)
   , bhHash
   , bhbHash
   , bHeaderSize
@@ -101,7 +102,11 @@ instance
 
 data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
   { -- | Hash of the previous block header
-    bheaderPrev           :: HashHeader hashAlgo dsignAlgo kesAlgo
+    -- The first block in a chain will set this field to Nothing.
+    -- TODO Since the Shelley chain will begins with blocks from
+    -- the Byron era, we should probably use a sum type here,
+    -- so that the first shelley block can point to the last Byron block.
+    bheaderPrev           :: Maybe (HashHeader hashAlgo dsignAlgo kesAlgo)
     -- | verification key of block issuer
   , bheaderVk             :: VKey dsignAlgo
     -- | block slot

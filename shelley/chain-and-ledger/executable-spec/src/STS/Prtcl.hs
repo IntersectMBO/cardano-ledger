@@ -39,7 +39,7 @@ instance
  where
   type State (PRTCL hashAlgo dsignAlgo kesAlgo)
     = ( Map.Map (KeyHash hashAlgo dsignAlgo) Natural
-      , HashHeader hashAlgo dsignAlgo kesAlgo
+      , Maybe (HashHeader hashAlgo dsignAlgo kesAlgo)
       , Slot
       , Seed
       , Seed
@@ -89,7 +89,7 @@ prtclTransition = do
   cs'            <- trans @(OVERLAY hashAlgo dsignAlgo kesAlgo) $ TRC (oe, cs, bh)
   (etaV', etaC') <- trans @UPDN $ TRC (eta, (etaV, etaC), slot)
 
-  pure (cs', bhHash bh, slot, etaV', etaC')
+  pure (cs', Just $ bhHash bh, slot, etaV', etaC')
 
 instance
   ( HashAlgorithm hashAlgo

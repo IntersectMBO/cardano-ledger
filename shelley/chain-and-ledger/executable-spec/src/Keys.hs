@@ -202,11 +202,11 @@ hashKeyES (VKeyES vKeyES) =
 -- |Produce a key evolving signature
 signKES
   :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a, ToCBOR a)
-  => SignKeyKES kesAlgo
+  => SKeyES kesAlgo
   -> a
   -> Natural
   -> KESig kesAlgo a
-signKES k d n =
+signKES (SKeyES k) d n =
   KESig
     . fst
     . fromJust
