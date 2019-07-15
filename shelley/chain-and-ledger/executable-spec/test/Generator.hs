@@ -33,6 +33,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
+import           Address (pattern AddrTxin)
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -42,8 +43,8 @@ import           LedgerState (pattern LedgerValidation, ValidationError (..),
                      utxo, dstate, stKeys)
 import           Slot
 import           Updates
-import           UTxO (pattern AddrTxin, pattern Tx, pattern TxBody,
-                     pattern TxOut, pattern UTxO, balance, makeWitnessVKey)
+import           Tx(pattern Tx, pattern TxBody, pattern TxOut)
+import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           PParams (PParams(..), emptyPParams)
 import           Delegation.Certificates (pattern Delegate, pattern DeRegKey,
                      pattern RegKey, pattern RegPool, pattern RetirePool,
@@ -155,7 +156,7 @@ genTx keyList (UTxO m) cslot = do
            (cslot + (Slot txttl))
            emptyUpdate
   let !txwit = makeWitnessVKey txbody selectedKeyPair
-  pure (txfee', Tx txbody $ Set.fromList [txwit])
+  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty)
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
 

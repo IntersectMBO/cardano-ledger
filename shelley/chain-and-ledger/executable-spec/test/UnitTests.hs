@@ -14,6 +14,7 @@ import           Lens.Micro              ((^.), (&), (.~))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import           Address (pattern AddrTxin, pattern Ptr, mkRwdAcnt)
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey,
@@ -32,9 +33,9 @@ import           LedgerState (pattern LedgerState, pattern UTxOState,
 import           PParams
 import           Slot
 import           Updates
-import           UTxO (pattern AddrTxin, pattern Ptr, pattern Tx,
-                     pattern TxBody, pattern TxIn, pattern TxOut, pattern UTxO,
-                     body, makeWitnessVKey, makeWitnessesVKey, mkRwdAcnt, ttl, txid)
+import           UTxO
+                     (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
+import           Tx (pattern TxBody, pattern TxIn, pattern TxOut, pattern Tx, body, ttl)
 
 import           MockTypes
 
@@ -159,7 +160,7 @@ testValidWithdrawal =
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
     expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
                    Map.singleton (mkRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
@@ -181,7 +182,7 @@ testInvalidWintess =
            emptyUpdate
     tx' = tx & ttl .~ Slot 2
     wits = makeWitnessesVKey tx' [alicePay]
-  in ledgerState [Tx tx wits] @?= Left [InvalidWitness]
+  in ledgerState [Tx tx wits Map.empty] @?= Left [InvalidWitness]
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -196,7 +197,7 @@ testWithdrawalNoWit =
            (Slot 0)
            emptyUpdate
     wits = Set.singleton $ makeWitnessVKey tx alicePay
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [MissingWitnesses]
 
 testWithdrawalWrongAmt :: Assertion
@@ -212,12 +213,12 @@ testWithdrawalWrongAmt =
            (Slot 0)
            emptyUpdate
     wits = makeWitnessesVKey tx [alicePay, bobStake]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [IncorrectRewards]
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
   [DCert] -> Slot -> [KeyPair] -> Tx
-aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits
+aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty
   where
     aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
     txbody = TxBody
@@ -286,7 +287,7 @@ tx3Body = TxBody
           emptyUpdate
 
 tx3 :: Tx
-tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys)
+tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty
       where keys = [alicePay, aliceStake, stakePoolKey1]
 
 utxoSt3 :: UTxOState
@@ -356,7 +357,7 @@ tx4Body = TxBody
           emptyUpdate
 
 tx4 :: Tx
-tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1])
+tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1]) Map.empty
 
 utxoSt4 :: UTxOState
 utxoSt4 = UTxOState
@@ -389,7 +390,7 @@ tx5Body e = TxBody
           emptyUpdate
 
 tx5 :: Epoch -> Tx
-tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1])
+tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1]) Map.empty
 
 
 testsValidLedger :: TestTree
@@ -437,7 +438,7 @@ testWitnessNotIncluded =
               (Coin 596)
               (Slot 100)
               emptyUpdate
-    tx = Tx txbody Set.empty
+    tx = Tx txbody Set.empty Map.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testSpendNotOwnedUTxO :: Assertion
@@ -452,7 +453,7 @@ testSpendNotOwnedUTxO =
               (Slot 100)
               emptyUpdate
     aliceWit = makeWitnessVKey txbody alicePay
-    tx = Tx txbody (Set.fromList [aliceWit])
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testWitnessWrongUTxO :: Assertion
@@ -475,7 +476,7 @@ testWitnessWrongUTxO =
               (Slot 101)
               emptyUpdate
     aliceWit = makeWitnessVKey  tx2body alicePay
-    tx = Tx txbody (Set.fromList [aliceWit])
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty
   in ledgerState [tx] @?= Left [ InvalidWitness
                                , MissingWitnesses]
 
@@ -493,7 +494,7 @@ testEmptyInputSet =
            emptyUpdate
     wits = makeWitnessesVKey tx [aliceStake]
     genesisWithReward' = changeReward genesis (mkRwdAcnt aliceStake) (Coin 2000)
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [ InputSetEmpty ]
 
 testFeeTooSmall :: Assertion

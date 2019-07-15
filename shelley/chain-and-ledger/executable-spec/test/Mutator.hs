@@ -34,10 +34,11 @@ import           Delegation.Certificates  (pattern Delegate, pattern DeRegKey,
 import           Delegation.PoolParams
 import           Keys (vKey)
 import           Updates
-import           UTxO (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
-                     _witnessSet)
+
 import           Slot
+import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                      _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
+                      _witnessVKeySet, _witnessMSigMap)
 
 import           MockTypes
 
@@ -83,7 +84,7 @@ mutateCoin lower upper (Coin val) = Coin <$> mutateInteger lower upper val
 mutateTx :: Tx -> Gen Tx
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
-  pure $ Tx body' (_witnessSet txwits)
+  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits)
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.

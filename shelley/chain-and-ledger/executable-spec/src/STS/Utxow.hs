@@ -17,7 +17,7 @@ import           Keys
 import           LedgerState hiding (dms)
 import           PParams
 import           Slot
-import           UTxO
+import           Tx
 
 import           Control.State.Transition
 
@@ -69,7 +69,7 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo)
 utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits))
+  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map (\(WitVKey vk _) -> hashKey vk) wits
