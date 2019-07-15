@@ -120,12 +120,14 @@ import           Numeric.Natural (Natural)
 import           Lens.Micro ((%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
+import           Address
 import           Coin (Coin (..))
 import           EpochBoundary
 import           Keys
 import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, keyMinRefund,
                      minfeeA, minfeeB)
 import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
+import           Tx
 import qualified Updates
 import           UTxO
 
@@ -553,7 +555,7 @@ witsNeeded
   -> Tx hashAlgo dsignAlgo
   -> Dms dsignAlgo
   -> Set (KeyHash hashAlgo dsignAlgo)
-witsNeeded utxo' tx@(Tx txbody _) _dms =
+witsNeeded utxo' tx@(Tx txbody _ _) _dms =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
@@ -582,7 +584,7 @@ verifiedWits
      )
   => Tx hashAlgo dsignAlgo
   -> Validity
-verifiedWits (Tx tx wits) =
+verifiedWits (Tx tx wits _) =
   if all (verifyWitVKey tx) wits
     then Valid
     else Invalid [InvalidWitness]
@@ -598,7 +600,7 @@ enoughWits
   -> Dms dsignAlgo
   -> UTxOState hashAlgo dsignAlgo
   -> Validity
-enoughWits tx@(Tx _ wits) d u =
+enoughWits tx@(Tx _ wits _) d u =
   if witsNeeded (u ^. utxo) tx d `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]

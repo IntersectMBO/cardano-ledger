@@ -9,10 +9,10 @@ module STS.Delpl
   )
 where
 
+import           Address
 import           Keys
 import           LedgerState
 import           Delegation.Certificates
-import           UTxO
 import           PParams hiding (d)
 import           Slot
 

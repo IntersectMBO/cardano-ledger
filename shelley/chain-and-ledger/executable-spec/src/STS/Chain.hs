@@ -19,7 +19,7 @@ import           Keys
 import           LedgerState
 import           OCert
 import           Slot
-import           UTxO
+import           Tx
 
 import           Control.State.Transition
 

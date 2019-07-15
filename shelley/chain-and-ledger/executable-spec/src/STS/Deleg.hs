@@ -8,12 +8,12 @@ where
 
 import qualified Data.Map.Strict as Map
 
+import           Address
 import           BlockChain (slotsPrior)
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
 import           Slot
-import           UTxO
 
 import           Control.State.Transition
 

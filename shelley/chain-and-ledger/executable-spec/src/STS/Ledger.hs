@@ -16,7 +16,7 @@ import           Keys
 import           LedgerState
 import           PParams hiding (d)
 import           Slot
-import           UTxO
+import           Tx
 
 import           Control.State.Transition
 
