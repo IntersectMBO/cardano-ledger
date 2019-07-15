@@ -1,8 +1,8 @@
-import Test.Tasty
+import           Test.Tasty
 
-import UnitTests     (unitTests)
-import PropertyTests (propertyTests)
-import STSTests      (stsTests)
+import           PropertyTests (propertyTests)
+import           STSTests (stsTests)
+import           UnitTests (unitTests)
 
 tests :: TestTree
 tests = testGroup "Ledger with Delegation" [unitTests, propertyTests, stsTests]
