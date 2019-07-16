@@ -1349,13 +1349,15 @@ instance STS UPIEND where
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
 
--- | Generate a protocol version endorsement for a given key, or 'Nothing' if no stable and
--- confirmed protocol version update can be found.
-protocolVersionEndorsementGen
+-- | Given a list of protocol versions and keys endorsing those versions,
+-- generate a protocol-version endorsement, or 'Nothing' if the list of
+-- endorsements is empty. The version to be endorsed will be selected from those
+-- versions that have the most endorsements.
+pickHighlyEndorsedProtocolVersion
   :: [(ProtVer, Set Core.VKeyGenesis)]
   -- ^ Current set of endorsements
   -> Gen (Maybe ProtVer)
-protocolVersionEndorsementGen endorsementsList =
+pickHighlyEndorsedProtocolVersion endorsementsList =
   if null mostEndorsedProposals
   then pure Nothing
   else Just <$> Gen.element mostEndorsedProposals
@@ -1444,3 +1446,75 @@ instance STS UPIEC where
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
+
+-- | Generate an optional update-proposal and a list of votes, given an update
+-- environment and state.
+--
+-- The update proposal and votes need to be generated at the same time, since
+-- this allow us to generate update votes for update proposals issued in the
+-- same block as the votes.
+updateProposalAndVotesGen
+  :: UPIEnv
+  -> UPIState
+  -> Gen (Maybe UProp, [Vote])
+updateProposalAndVotesGen upienv upistate = do
+  let rpus = registeredProtocolUpdateProposals upistate
+  if Set.null (dom rpus)
+    then generateUpdateProposalAndVotes
+    else Gen.frequency [ (5, generateOnlyVotes)
+                       , (1, generateUpdateProposalAndVotes)
+                       ]
+  where
+    generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
+    generateUpdateProposalAndVotes = do
+      updateProposal <- sigGen @UPIREG Nothing upienv upistate
+      -- We want to have the possibility of generating votes for the proposal we
+      -- registered.
+      case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
+        Left _ ->
+          (Just updateProposal, )
+            <$> sigGen @UPIVOTES Nothing upienv upistate
+        Right upistateAfterRegistration ->
+          (Just updateProposal, )
+            <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
+
+
+-- | Generate an endorsement given an update environment and state.
+protocolVersionEndorsementGen
+  :: UPIEnv
+  -> UPIState
+  -> Gen ProtVer
+protocolVersionEndorsementGen upienv upistate =
+  fromMaybe (protocolVersion upistate)
+    <$> pickHighlyEndorsedProtocolVersion endorsementsList
+  where
+    -- Generate a list of protocol version endorsements. For this we look at the
+    -- current endorsements, and confirmed and stable proposals.
+    --
+    -- If there are no endorsements, then the confirmed and stable proposals
+    -- provide fresh protocol versions that can be endorsed.
+    endorsementsList :: [(ProtVer, Set Core.VKeyGenesis)]
+    endorsementsList = endorsementsMap `Map.union` emptyEndorsements
+                     & Map.toList
+      where
+        emptyEndorsements :: Map ProtVer (Set Core.VKeyGenesis)
+        emptyEndorsements = zip stableAndConfirmedVersions (repeat Set.empty)
+                          & Map.fromList
+          where
+            stableAndConfirmedVersions
+              :: [ProtVer]
+            stableAndConfirmedVersions = stableAndConfirmedProposalIDs ◁ rpus
+                                       & Map.elems
+                                       & fmap fst
+              where
+                stableAndConfirmedProposalIDs =
+                  dom (confirmedProposals upistate ▷<= sn  -. 2 *. k)
+                  where
+                    (sn, _, k, _) = upienv
+
+                rpus = registeredProtocolUpdateProposals upistate
+
+        endorsementsMap :: Map ProtVer (Set Core.VKeyGenesis)
+        endorsementsMap = Set.toList (endorsements upistate)
+                        & fmap (second Set.singleton)
+                        & Map.fromListWith Set.union

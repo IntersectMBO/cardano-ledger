@@ -18,15 +18,11 @@ module Ledger.Update.Properties
 
 import           GHC.Stack (HasCallStack)
 
-import           Control.Arrow (second)
 import qualified Data.Bimap as Bimap
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, isNothing)
-import           Data.Set (Set)
+import           Data.Maybe (catMaybes, isNothing)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Hedgehog (Property, cover, forAll, property, withTests)
@@ -35,7 +31,7 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                     Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
+                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, randomTraceOfSize, ratio,
                      sigGen, trace, traceLengthsAreClassified, traceOfLength)
@@ -44,7 +40,7 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
-                     unBlockCount, (*.), (-.), (▷<=), (◁))
+                     unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
@@ -364,58 +360,24 @@ instance HasTrace UBLOCK where
     do
       let numberOfGenesisKeys = 7
       dms <- Update.dmapGen numberOfGenesisKeys
-      -- We don't want a large value of @k@, otherwise we won't see many confirmed proposals or
-      -- epoch changes. The problem here is that the initial environment does not know anything
-      -- about the trace size, and @k@ should be a function of it.
+      -- We don't want a large value of @k@, otherwise we won't see many
+      -- confirmed proposals or epoch changes. The problem here is that the
+      -- initial environment does not know anything about the trace size, and
+      -- @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
   sigGen _ _env UBlockState {upienv, upistate} = do
-    let rpus = Update.registeredProtocolUpdateProposals upistate
     (anOptionalUpdateProposal, aListOfVotes) <-
-      -- We want to generate update proposals when there is none registered. Otherwise we won't get
-      -- any proposals or votes.
-      if Set.null (dom rpus)
-      then generateUpdateProposalAndVotes
-      else Gen.frequency [ (5, generateOnlyVotes)
-                         , (1, generateUpdateProposalAndVotes)
-                         ]
-    -- Don't shrink the issuer as this won't give us additional insight on a test failure.
+      Update.updateProposalAndVotesGen upienv upistate
+
+    -- Don't shrink the issuer as this won't give us additional insight on a
+    -- test failure.
     aBlockIssuer <- Gen.prune $
       -- Pick a delegate from the delegation map
       Gen.element $ Bimap.elems (Update.delegationMap upienv)
 
-    let
-      -- Generate a list of protocol version endorsements. For this we look at the current
-      -- endorsements, and confirmed and stable proposals.
-      --
-      -- If there are no endorsements, then the confirmed and stable proposals provide fresh
-      -- protocol versions that can be endorsed.
-      endorsementsList :: [(ProtVer, Set Core.VKeyGenesis)]
-      endorsementsList = endorsementsMap `Map.union` emptyEndorsements
-                       & Map.toList
-        where
-          emptyEndorsements :: Map ProtVer (Set Core.VKeyGenesis)
-          emptyEndorsements = zip stableAndConfirmedVersions (repeat Set.empty)
-                            & Map.fromList
-            where
-              stableAndConfirmedVersions
-                :: [ProtVer]
-              stableAndConfirmedVersions = stableAndConfirmedProposalIDs ◁ rpus
-                                         & Map.elems
-                                         & fmap fst
-                where
-                  stableAndConfirmedProposalIDs =
-                    dom (Update.confirmedProposals upistate ▷<= sn  -. 2 *. k)
-                    where
-                      (sn, _, k, _) = upienv
-
-          endorsementsMap :: Map ProtVer (Set Core.VKeyGenesis)
-          endorsementsMap = Set.toList (Update.endorsements upistate)
-                          & fmap (second Set.singleton)
-                          & Map.fromListWith Set.union
-
     aBlockVersion <-
-      fromMaybe (Update.protocolVersion upistate) <$> Update.protocolVersionEndorsementGen endorsementsList
+      Update.protocolVersionEndorsementGen upienv upistate
 
     UBlock
       <$> pure aBlockIssuer
@@ -424,16 +386,6 @@ instance HasTrace UBLOCK where
       <*> pure anOptionalUpdateProposal
       <*> pure aListOfVotes
       where
-        generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
-        generateUpdateProposalAndVotes = do
-          updateProposal <- sigGen @UPIREG Nothing upienv upistate
-          -- We want to have the possibility of generating votes for the proposal we
-          -- registered.
-          case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
-            Left _ ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistate
-            Right upistateAfterRegistration ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
         nextSlotGen =
           incSlot <$> Gen.frequency
                       [ (5, Gen.integral (Range.constant 1 10))

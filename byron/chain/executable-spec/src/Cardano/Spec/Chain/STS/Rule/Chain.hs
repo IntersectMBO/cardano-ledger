@@ -202,7 +202,12 @@ sigGenChain
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO _ (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
+sigGenChain
+  shouldGenDelegation
+  shouldGenUTxO
+  _
+  (_sNow, utxo0, ads, pps, k)
+  (Slot s, sgs, h, utxo, ds, us)
   = do
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
@@ -244,9 +249,9 @@ sigGenChain shouldGenDelegation shouldGenUTxO _ (_sNow, utxo0, ads, pps, k) (Slo
         BlockBody
           delegationPayload
           utxoPayload
-          Nothing -- Update proposal
-          []      -- Votes on update proposals
-          (ProtVer 0 0 0)
+          Nothing -- TODO: Update proposal
+          []      -- TODO: Votes on update proposals
+          (ProtVer 0 0 0) -- TODO: Generate a protocol version
 
     pure $ Block signedHeader bb
    where
