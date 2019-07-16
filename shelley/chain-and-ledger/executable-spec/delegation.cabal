@@ -31,6 +31,7 @@ library
                      Delegation.Certificates
                      OCert
                      Tx
+                     TxData
                      Updates
                      STS.Avup
                      STS.Bbody
