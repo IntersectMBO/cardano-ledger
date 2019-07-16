@@ -26,8 +26,9 @@ module Tx
   , validateScript
   , hashScript
   , txwitsVKey
-  , txwitsScripts
+  , txwitsScript
   , extractKeyHash
+  , extractScriptHash
   )
 where
 
@@ -107,13 +108,19 @@ txwitsVKey tx =
   Map.fromList $ map (\(WitVKey vk sig) -> (vk, sig)) (Set.toList $ _witnessVKeySet tx)
 
 -- | Multi-signature script witness accessor function for Transactions
-txwitsScripts
+txwitsScript
   :: Tx hashAlgo dsignAlgo
   -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
-txwitsScripts tx = _witnessMSigMap tx
+txwitsScript tx = _witnessMSigMap tx
 
 extractKeyHash :: [StakeObject hashAlgo dsignAlgo] -> [KeyHash hashAlgo dsignAlgo]
 extractKeyHash l =
   Maybe.catMaybes $ map (\so -> case so of
                                  KeyHashStake hk -> Just hk
+                                 _ -> Nothing) l
+
+extractScriptHash :: [StakeObject hashAlgo dsignAlgo] -> [ScriptHash hashAlgo dsignAlgo]
+extractScriptHash l =
+  Maybe.catMaybes $ map (\so -> case so of
+                                 ScriptHashStake hk -> Just hk
                                  _ -> Nothing) l
