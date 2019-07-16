@@ -16,12 +16,29 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Numeric.Natural (Natural)
 
-import           Address
 import           Coin
 import           Delegation.PoolParams
 import           Keys
 import           Slot
 import           Updates
+
+-- |An address for UTxO.
+data Addr hashAlgo dsignAlgo
+  = AddrTxin
+      { _payHK :: KeyHash hashAlgo dsignAlgo
+      , _stakeHK :: KeyHash hashAlgo dsignAlgo
+      }
+  | AddrPtr
+      { _stakePtr :: Ptr
+      }
+  deriving (Show, Eq, Ord)
+
+type Ix  = Natural
+
+-- | Pointer to a slot, transaction index and index in certificate list.
+data Ptr
+  = Ptr Slot Ix Ix
+  deriving (Show, Eq, Ord)
 
 data MultiSig hashAlgo dsignAlgo =
     SingleSig (KeyHash hashAlgo dsignAlgo)
@@ -226,3 +243,26 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
        th <- fromCBOR
        msigs <- fromCBOR
        pure $ MultiSig th msigs
+
+
+instance
+  (Typeable dsignAlgo, HashAlgorithm hashAlgo)
+  => ToCBOR (Addr hashAlgo dsignAlgo)
+ where
+  toCBOR = \case
+    AddrTxin payHK stakeHK ->
+      encodeListLen 3
+        <> toCBOR (0 :: Word8)
+        <> toCBOR payHK
+        <> toCBOR stakeHK
+    AddrPtr stakePtr ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR stakePtr
+
+instance ToCBOR Ptr where
+  toCBOR (Ptr sl txIx certIx) =
+    encodeListLen 3
+      <> toCBOR sl
+      <> toCBOR txIx
+      <> toCBOR certIx

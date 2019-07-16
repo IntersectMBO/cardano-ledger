@@ -8,12 +8,12 @@ where
 
 import           Lens.Micro                     ( (^.) )
 
-import           Address
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
 import           PParams
 import           Slot
+import           TxData
 
 import           Control.State.Transition
 
