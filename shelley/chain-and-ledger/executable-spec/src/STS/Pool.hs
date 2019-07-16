@@ -13,7 +13,7 @@ import           Keys
 import           LedgerState
 import           PParams
 import           Slot
-import           UTxO
+import           TxData
 
 import           Control.State.Transition
 

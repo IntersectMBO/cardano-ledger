@@ -12,12 +12,12 @@ where
 import qualified Data.Map.Strict as Map
 
 import           Delegation.Certificates
-import           Delegation.PoolParams
 import           Keys
 import           LedgerState
 import           PParams hiding (d)
 import           Slot
-import           UTxO
+import           Tx
+import           TxData
 
 import           Control.State.Transition
 
@@ -49,7 +49,7 @@ delegsTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEGS hashAlgo dsignAlgo)
 delegsTransition = do
-  TRC (env@(_slot, txIx, pp, Tx txbody _), dpstate, certificates) <- judgmentContext
+  TRC (env@(_slot, txIx, pp, tx@(Tx txbody _ _)), dpstate, certificates) <- judgmentContext
   case certificates of
     [] -> do
       let wdrls' = _wdrls txbody
@@ -75,14 +75,14 @@ delegsTransition = do
       let isDelegationRegistered = case cert of
             Delegate deleg ->
               let StakePools sp = _stPools $ _pstate dpstate in
-              Map.member (hashKey $ _delegatee deleg) sp
+              Map.member (_delegatee deleg) sp
             _ -> True
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
       dpstate' <-
         trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
       dpstate'' <-
         trans @(DELPL hashAlgo dsignAlgo)
-          $ TRC ((_slot, ptr, pp), dpstate', cert)
+          $ TRC ((_slot, ptr, pp, tx), dpstate', cert)
       pure dpstate''
 
 instance
