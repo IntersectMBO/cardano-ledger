@@ -9,13 +9,13 @@ module STS.Delpl
   )
 where
 
-import           Address
 import           Keys
 import           LedgerState
 import           Delegation.Certificates
 import           PParams hiding (d)
 import           Slot
 import           Tx
+import           TxData
 
 import           Control.State.Transition
 

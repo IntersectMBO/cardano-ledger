@@ -120,7 +120,6 @@ import           Numeric.Natural (Natural)
 import           Lens.Micro ((%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
-import           Address
 import           Coin (Coin (..))
 import           EpochBoundary
 import           Keys
@@ -128,6 +127,7 @@ import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, 
                      minfeeA, minfeeB)
 import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
 import           Tx
+import           TxData
 import qualified Updates
 import           UTxO
 

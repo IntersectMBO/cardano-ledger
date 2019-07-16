@@ -30,7 +30,6 @@ module EpochBoundary
   , groupByPool
   ) where
 
-import           Address
 import           Coin
 import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
@@ -39,6 +38,7 @@ import           Keys
 import           PParams hiding (a0, nOpt)
 import           Slot
 import           Tx
+import           TxData
 import           UTxO hiding (dom)
 
 import qualified Data.Map.Strict         as Map

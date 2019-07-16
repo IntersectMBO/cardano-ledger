@@ -11,7 +11,6 @@ where
 
 import qualified Data.Map.Strict as Map
 
-import           Address
 import           Delegation.Certificates
 import           Delegation.PoolParams
 import           Keys
@@ -19,6 +18,7 @@ import           LedgerState
 import           PParams hiding (d)
 import           Slot
 import           Tx
+import           TxData
 
 import           Control.State.Transition
 
