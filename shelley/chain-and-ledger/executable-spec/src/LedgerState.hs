@@ -444,8 +444,7 @@ produced pp stakePools tx =
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> StakeKeys hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo
   -> Coin
@@ -455,8 +454,7 @@ keyRefunds pp stk tx =
 
 -- | Key refund for a deregistration certificate.
 keyRefund
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Coin
+  :: Coin
   -> UnitInterval
   -> Rational
   -> StakeKeys hashAlgo dsignAlgo
@@ -465,25 +463,24 @@ keyRefund
   -> Coin
 keyRefund dval dmin lambda (StakeKeys stkeys) slot c =
     case c of
-      DeRegKey key -> case Map.lookup (hashKey key) stkeys of
+      DeRegKey (KeyHashStake key) -> case Map.lookup key stkeys of -- TODO
                         Nothing -> Coin 0
                         Just  s -> refund dval dmin lambda $ slot -* s
       _ -> Coin 0
 
 -- | Functions to calculate decayed deposits
 decayedKey
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> StakeKeys hashAlgo dsignAlgo
   -> Slot
   -> DCert hashAlgo dsignAlgo
   -> Coin
 decayedKey pp stk@(StakeKeys stkeys) cslot cert =
     case cert of
-      DeRegKey key ->
-          if Map.notMember (hashKey key) stkeys
+      DeRegKey (KeyHashStake key) -> -- TODO
+          if Map.notMember key stkeys
           then 0
-          else let created'      = stkeys Map.! hashKey key in
+          else let created'      = stkeys Map.! key in
                let start         = max (firstSlot $ epochFromSlot cslot) created' in
                let dval          = pp ^. keyDeposit in
                let dmin          = pp ^. keyMinRefund in
@@ -495,8 +492,7 @@ decayedKey pp stk@(StakeKeys stkeys) cslot cert =
 
 -- | Decayed deposit portions
 decayedTx
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> StakeKeys hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo
   -> Coin
@@ -505,8 +501,7 @@ decayedTx pp stk tx =
 
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> UTxO hashAlgo dsignAlgo
   -> StakeKeys hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo
@@ -676,25 +671,23 @@ validTx tx d slot pp l =
 
 -- | Checks whether a key registration certificat is valid.
 validKeyRegistration
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DCert hashAlgo dsignAlgo
+  :: DCert hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
   -> Validity
 validKeyRegistration cert ds =
   case cert of
-    RegKey key -> if not $ Map.member (hashKey key) stakeKeys
+    RegKey (KeyHashStake key) -> if not $ Map.member key stakeKeys -- TODO
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
                    where (StakeKeys stakeKeys) = ds ^. stKeys
     _          -> Valid
 
 validKeyDeregistration
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DCert hashAlgo dsignAlgo
+  :: DCert hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
   -> Validity
 validKeyDeregistration cert ds =
   case cert of
-    DeRegKey key -> if Map.member (hashKey key) stakeKeys
+    DeRegKey (KeyHashStake key) -> if Map.member key stakeKeys -- TODO
                     then Valid else Invalid [StakeKeyNotRegistered]
                       where (StakeKeys stakeKeys) = ds ^. stKeys
     _            -> Valid
@@ -720,13 +713,12 @@ validStakePoolRegister
 validStakePoolRegister _ _ = Valid
 
 validStakePoolRetire
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DCert hashAlgo dsignAlgo
+  :: DCert hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> Validity
 validStakePoolRetire cert ps =
   case cert of
-    RetirePool key _ -> if Map.member (hashKey key) stakePools
+    RetirePool key _ -> if Map.member key stakePools
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
                          where (StakePools stakePools) = ps ^. stPools
     _                -> Valid
@@ -895,20 +887,22 @@ applyDCertDState
   -> DCert hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
-applyDCertDState (Ptr slot txIx clx) (DeRegKey key) ds =
+applyDCertDState (Ptr slot txIx clx) (DeRegKey (KeyHashStake key)) ds = -- TODO
     ds & stKeys      .~ (StakeKeys $ Map.delete hksk stkeys')
        & rewards     %~ Map.delete (RewardAcnt hksk)
        & delegations %~ Map.delete hksk
        & ptrs        %~ Map.delete (Ptr slot txIx clx)
-        where hksk = hashKey key
+        where hksk = key
               (StakeKeys stkeys') = ds ^. stKeys
+applyDCertDState _ (DeRegKey (ScriptHashStake _)) _ = undefined
 
-applyDCertDState (Ptr slot txIx clx) (RegKey key) ds =
+applyDCertDState (Ptr slot txIx clx) (RegKey (KeyHashStake key)) ds = -- TODO
     ds & stKeys  .~ (StakeKeys $ Map.insert hksk slot stkeys')
        & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
        & ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
-        where hksk = hashKey key
+        where hksk = key
               (StakeKeys stkeys') = ds ^. stKeys
+applyDCertDState _ (RegKey (ScriptHashStake _)) _ = undefined
 
 applyDCertDState _ (Delegate (Delegation source target)) ds =
     ds & delegations %~ Map.insert (hashKey source) (hashKey target)
@@ -931,8 +925,7 @@ applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
 
 -- TODO check epoch (not in new doc atm.)
 applyDCertPState _ (RetirePool key epoch) ps =
-  ps & retiring %~ Map.insert hk_sp epoch
-  where hk_sp = hashKey key
+  ps & retiring %~ Map.insert key epoch
 
 -- | Use onlt pool registration or retirement certificates
 applyDCertPState _ _ ps = ps

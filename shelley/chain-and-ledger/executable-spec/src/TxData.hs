@@ -70,16 +70,21 @@ data TxOut hashAlgo dsignAlgo
   = TxOut (Addr hashAlgo dsignAlgo) Coin
   deriving (Show, Eq, Ord)
 
+data StakeObject hashAlgo dsignAlgo =
+    KeyHashStake (KeyHash hashAlgo dsignAlgo)
+  | ScriptHashStake (ScriptHash hashAlgo dsignAlgo)
+  deriving (Show, Eq, Ord)
+
 -- | A heavyweight certificate.
 data DCert hashAlgo dsignAlgo
     -- | A stake key registration certificate.
-  = RegKey (VKey dsignAlgo)
+  = RegKey (StakeObject hashAlgo dsignAlgo)
     -- | A stake key deregistration certificate.
-  | DeRegKey (VKey dsignAlgo) --TODO this is actually KeyHash on page 13, is that what we want?
+  | DeRegKey (StakeObject hashAlgo dsignAlgo) --TODO this is actually KeyHash on page 13, is that what we want?
     -- | A stake pool registration certificate.
   | RegPool (PoolParams hashAlgo dsignAlgo)
     -- | A stake pool retirement certificate.
-  | RetirePool (VKey dsignAlgo) Epoch
+  | RetirePool (KeyHash hashAlgo dsignAlgo) Epoch
     -- | A stake delegation certificate.
   | Delegate (Delegation dsignAlgo)
     -- | Genesis key delegation certificate
@@ -115,11 +120,6 @@ data Tx hashAlgo dsignAlgo
       } deriving (Show, Eq, Ord)
 
 makeLenses ''Tx
-
-data StakeObject hashAlgo dsignAlgo =
-    KeyHashStake (KeyHash hashAlgo dsignAlgo)
-  | ScriptHashStake (ScriptHash hashAlgo dsignAlgo)
-  deriving (Show, Eq, Ord)
 
 -- newtype StakePools hashAlgo dsignAlgo =
 --   StakePools (Map (KeyHash hashAlgo dsignAlgo) Slot)
@@ -275,3 +275,15 @@ instance ToCBOR Ptr where
       <> toCBOR sl
       <> toCBOR txIx
       <> toCBOR certIx
+
+instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
+  => ToCBOR (StakeObject hashAlgo dsignAlgo) where
+  toCBOR = \case
+     KeyHashStake kh ->
+       encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR kh
+     ScriptHashStake sc ->
+       encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR sc
