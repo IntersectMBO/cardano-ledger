@@ -33,7 +33,10 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import           TxData (pattern AddrVKey, StakeObject(..))
+import           TxData (pattern AddrVKey, pattern KeyHashStake, pattern Delegation,
+                         pattern PoolParams, RewardAcnt(..), pattern Delegate,
+                         pattern DeRegKey, pattern RegKey, pattern RegPool,
+                         pattern RetirePool, StakeKeys(..))
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -46,11 +49,6 @@ import           Updates
 import           Tx(pattern Tx, pattern TxBody, pattern TxOut)
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           PParams (PParams(..), emptyPParams)
-import           Delegation.Certificates (pattern Delegate, pattern DeRegKey,
-                     pattern RegKey, pattern RegPool, pattern RetirePool,
-                     StakeKeys(..))
-import           Delegation.PoolParams (pattern Delegation, pattern PoolParams,
-                     RewardAcnt(..))
 
 import           MockTypes
 import           Mutator
@@ -240,9 +238,10 @@ findPayKeyPair (AddrVKey addr _) keyList =
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: KeyHash -> KeyPairs -> KeyPair
-findStakeKeyPair addr keyList =
-    snd $ head $ filter (\(_, stake) -> addr == (hashKey $ vKey stake)) keyList
+findStakeKeyPair :: StakeObject -> KeyPairs -> KeyPair
+findStakeKeyPair (KeyHashStake hk) keyList =
+    snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
+findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr
@@ -325,13 +324,13 @@ genStakePool keys = do
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey) Set.empty
+  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ KeyHashStake $ hashKey acntKey) Set.empty
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stKeys'
   delegatorKey <- getAnyStakeKey keys
-  pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
+  pure $ Delegation (KeyHashStake $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeKeys stKeys') = d ^. dstate . stKeys
 
 genDCertRegPool :: KeyPairs -> Gen DCert

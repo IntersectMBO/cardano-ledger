@@ -31,7 +31,6 @@ import           Coin
 import           Delegation.Certificates  (pattern Delegate, pattern DeRegKey,
                      pattern GenesisDelegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool)
-import           Delegation.PoolParams
 import           Keys (vKey, hashKey)
 import           Updates
 
@@ -39,7 +38,7 @@ import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                       _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
                       _witnessVKeySet, _witnessMSigMap)
-import           TxData (StakeObject(..))
+import           TxData (StakeObject(..), PoolParams(..), pattern Delegation)
 
 import           MockTypes
 
@@ -176,7 +175,7 @@ mutateDCert keys _ (RegPool (PoolParams _ pledge pledges cost margin altacnt rwd
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ Delegate $ Delegation delegator' delegatee'
+  pure $ Delegate $ Delegation (KeyHashStake $ hashKey delegator') (hashKey delegatee')
 
 mutateDCert keys _ (GenesisDelegate (gk, _)) = do
   _delegatee <- getAnyStakeKey keys
