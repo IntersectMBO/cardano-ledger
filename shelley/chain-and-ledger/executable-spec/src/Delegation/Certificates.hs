@@ -24,8 +24,6 @@ import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, 
 import           Slot (Duration (..))
 import           TxData
 
-import           Delegation.PoolParams
-
 import           BaseTypes
 import           NonIntegral (exp')
 
@@ -38,15 +36,13 @@ import           Lens.Micro ((^.))
 cwitness
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => DCert hashAlgo dsignAlgo
-  -> KeyHash hashAlgo dsignAlgo
-cwitness (RegKey (KeyHashStake hk))           = hk
-cwitness (DeRegKey (KeyHashStake hk))         = hk
-cwitness (RegKey (ScriptHashStake _))         = undefined
-cwitness (DeRegKey (ScriptHashStake _))       = undefined
-cwitness (RegPool pool)        = hashKey $ pool ^. poolPubKey
-cwitness (RetirePool k _)      = k
-cwitness (Delegate delegation) = hashKey $ delegation ^. delegator
-cwitness (GenesisDelegate (gk, _)) = hashGenesisKey gk
+  -> StakeObject hashAlgo dsignAlgo
+cwitness (RegKey hk)           = hk
+cwitness (DeRegKey hk)         = hk
+cwitness (RegPool pool)        = KeyHashStake $ hashKey $ pool ^. poolPubKey
+cwitness (RetirePool k _)      = KeyHashStake k
+cwitness (Delegate delegation) = delegation ^. delegator
+cwitness (GenesisDelegate (gk, _)) = KeyHashStake $ hashGenesisKey gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin

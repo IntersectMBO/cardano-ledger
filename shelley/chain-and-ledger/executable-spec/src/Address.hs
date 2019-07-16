@@ -7,8 +7,8 @@ where
 
 import           Cardano.Crypto.Hash   (HashAlgorithm)
 
-import           Delegation.PoolParams (RewardAcnt(..))
 import           Keys
+import           TxData
 
 mkRwdAcnt
   :: ( HashAlgorithm hashAlgo
@@ -16,4 +16,4 @@ mkRwdAcnt
      )
   => KeyPair dsignAlgo
   -> RewardAcnt hashAlgo dsignAlgo
-mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
+mkRwdAcnt keys = RewardAcnt $ KeyHashStake (hashKey $ vKey keys)

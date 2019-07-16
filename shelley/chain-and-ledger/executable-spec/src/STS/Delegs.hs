@@ -12,7 +12,6 @@ where
 import qualified Data.Map.Strict as Map
 
 import           Delegation.Certificates
-import           Delegation.PoolParams
 import           Keys
 import           LedgerState
 import           PParams hiding (d)
@@ -76,7 +75,7 @@ delegsTransition = do
       let isDelegationRegistered = case cert of
             Delegate deleg ->
               let StakePools sp = _stPools $ _pstate dpstate in
-              Map.member (hashKey $ _delegatee deleg) sp
+              Map.member (_delegatee deleg) sp
             _ -> True
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
       dpstate' <-
