@@ -52,7 +52,8 @@ data Addr hashAlgo dsignAlgo
       { _payHK   :: KeyHash hashAlgo dsignAlgo
       , _stakeHK :: KeyHash hashAlgo dsignAlgo
       }
-  | AddrScr
+  | AddrScr                     -- TODO generalize to any type of script
+                                -- add `validatorHash` function
     { _payScr   :: ScriptHash hashAlgo dsignAlgo
     , _stakeScr :: ScriptHash hashAlgo dsignAlgo
     }

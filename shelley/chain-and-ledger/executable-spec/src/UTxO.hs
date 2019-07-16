@@ -32,6 +32,7 @@ module UTxO
   , makeWitnessVKey
   , makeWitnessesVKey
   , verifyWitVKey
+  , validators
   ) where
 
 import           Lens.Micro ((^.))
@@ -167,3 +168,23 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
 
 txup :: Tx hashAlgo dsignAlgo -> Update dsignAlgo
 txup (Tx txbody _ _) = _txUpdate txbody
+
+validators
+  :: (MultiSignatureScript a hashAlgo dsignAlgo)
+  => Set (TxIn hashAlgo dsignAlgo)
+  -> UTxO hashAlgo dsignAlgo
+  -> Map (ScriptHash hashAlgo dsignAlgo) a
+  -> Map (TxIn hashAlgo dsignAlgo) a
+validators txInputs utxo scripts =
+  Map.mapMaybe (\(TxOut a _) ->
+                   case a of
+                     AddrScr hs _ ->
+                       (let s = Map.lookup hs scripts in
+                           case s of
+                             Just s' ->
+                               if hs == hashScript s'
+                               then Just s'
+                               else Nothing
+                             Nothing -> Nothing)
+                     _            -> Nothing) txInRestricted
+  where UTxO txInRestricted = txInputs <| utxo
