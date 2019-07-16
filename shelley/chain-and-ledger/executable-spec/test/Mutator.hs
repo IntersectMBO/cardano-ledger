@@ -32,13 +32,14 @@ import           Delegation.Certificates  (pattern Delegate, pattern DeRegKey,
                      pattern GenesisDelegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool)
 import           Delegation.PoolParams
-import           Keys (vKey)
+import           Keys (vKey, hashKey)
 import           Updates
 
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                       _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
                       _witnessVKeySet, _witnessMSigMap)
+import           TxData (StakeObject(..))
 
 import           MockTypes
 
@@ -154,14 +155,16 @@ mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
 mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
-mutateDCert keys _ (RegKey _) = RegKey . vKey . snd <$> Gen.element keys
+mutateDCert keys _ (RegKey _) =
+  RegKey . KeyHashStake . hashKey . vKey . snd <$> Gen.element keys
 
-mutateDCert keys _ (DeRegKey _) = DeRegKey . vKey . snd <$> Gen.element keys
+mutateDCert keys _ (DeRegKey _) =
+  DeRegKey . KeyHashStake . hashKey . vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     epoch' <- mutateEpoch 0 e epoch
     key'   <- getAnyStakeKey keys
-    pure $ RetirePool key' epoch'
+    pure $ RetirePool (hashKey key') epoch'
 
 mutateDCert keys _ (RegPool (PoolParams _ pledge pledges cost margin altacnt rwdacnt owners)) = do
   key'    <- getAnyStakeKey keys

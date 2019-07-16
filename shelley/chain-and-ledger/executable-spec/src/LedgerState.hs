@@ -560,7 +560,7 @@ witsNeeded utxo' tx@(Tx txbody _ _) _dms =
     inputAuthors = Set.foldr insertHK Set.empty (txbody ^. inputs)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (AddrTxin pay _) _) -> Set.insert pay hkeys
+        Just (TxOut (AddrVKey pay _) _) -> Set.insert pay hkeys
         _                               -> hkeys
 
     wdrlAuthors = Set.map getRwdHK (Map.keysSet (txbody ^. wdrls))
@@ -937,7 +937,7 @@ delegatedStake
 delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
-    addStake delegs (TxOut (AddrTxin _ hsk) c) = do
+    addStake delegs (TxOut (AddrVKey _ hsk) c) = do
       pool <- Map.lookup hsk delegs
       return (pool, c)
     addStake _ (TxOut (AddrScr _ _) _) = undefined -- TODO: script addresses

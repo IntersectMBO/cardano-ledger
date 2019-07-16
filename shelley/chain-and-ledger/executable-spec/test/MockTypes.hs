@@ -4,7 +4,6 @@ import           Cardano.Crypto.DSIGN (MockDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
 
-import qualified Address
 import qualified BlockChain
 import qualified Delegation.Certificates
 import qualified Delegation.PoolParams
@@ -13,6 +12,7 @@ import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
 import qualified Tx
+import qualified TxData
 import qualified UTxO
 
 type DCert = Delegation.Certificates.DCert ShortHash MockDSIGN
@@ -39,7 +39,7 @@ type UTxOState = LedgerState.UTxOState ShortHash MockDSIGN
 
 type DPState = LedgerState.DPState ShortHash MockDSIGN
 
-type Addr = Address.Addr ShortHash MockDSIGN
+type Addr = TxData.Addr ShortHash MockDSIGN
 
 type Tx = Tx.Tx ShortHash MockDSIGN
 
