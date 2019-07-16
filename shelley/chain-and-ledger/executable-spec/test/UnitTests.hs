@@ -15,16 +15,16 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Address
-import           TxData (pattern AddrVKey, pattern Ptr, StakeObject(..))
+import           TxData (pattern AddrVKey, pattern Ptr, StakeObject(..),
+                         Delegation (..), pattern PoolParams, pattern RewardAcnt,
+                         _poolAltAcnt, _poolCost, _poolMargin, _poolOwners,
+                         _poolPubKey, _poolPledge, _poolPledges, _poolRAcnt)
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey,
                      pattern RegPool, pattern RetirePool, StakePools(..),
                      StakeKeys(..))
-import           Delegation.PoolParams (Delegation (..), pattern PoolParams,
-                     pattern RewardAcnt, _poolAltAcnt, _poolCost, _poolMargin,
-                     _poolOwners, _poolPubKey, _poolPledge, _poolPledges,
-                     _poolRAcnt)
+
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState,
                      ValidationError(..), _delegationState, _dms, _dstate,
@@ -117,7 +117,8 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & dstate . delegations .~
+                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           (fromIntegral $ length txs))
@@ -132,7 +133,8 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & dstate . delegations .~
+                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
@@ -281,7 +283,9 @@ tx3Body = TxBody
           (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
           [ TxOut aliceAddr (Coin 3950) ]
           [ RegPool stakePool
-          , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))]
+          , Delegate (Delegation
+                       (KeyHashStake $ hashKey $ vKey aliceStake)
+                       (hashKey $ vKey stakePoolKey1))]
           Map.empty
           (Coin 1200)
           (Slot 100)
@@ -308,13 +312,13 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
   & dstate . stKeys .~ (StakeKeys $
-      Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
-                   , (hashKey $ vKey bobStake, Slot 0)
-                   , (hashKey $ vKey stakePoolKey1, Slot 0)])
+      Map.fromList [ (KeyHashStake $ hashKey $ vKey aliceStake, Slot 0)
+                   , (KeyHashStake $ hashKey $ vKey bobStake, Slot 0)
+                   , (KeyHashStake $ hashKey $ vKey stakePoolKey1, Slot 0)])
   & dstate . ptrs .~
-      Map.fromList [ (Ptr (Slot 0) 0 0, hashKey $ vKey aliceStake)
-                   , (Ptr (Slot 0) 0 1, hashKey $ vKey bobStake)
-                   , (Ptr (Slot 0) 0 2, hashKey $ vKey stakePoolKey1)
+      Map.fromList [ (Ptr (Slot 0) 0 0, KeyHashStake $ hashKey $ vKey aliceStake)
+                   , (Ptr (Slot 0) 0 1, KeyHashStake $ hashKey $ vKey bobStake)
+                   , (Ptr (Slot 0) 0 2, KeyHashStake $ hashKey $ vKey stakePoolKey1)
                    ]
 
 stakePool :: PoolParams
@@ -326,7 +330,7 @@ stakePool = PoolParams
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
-            , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+            , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
             }
 
@@ -343,7 +347,7 @@ stakePoolUpdate = PoolParams
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
-                   , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+                   , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
                    }
 
