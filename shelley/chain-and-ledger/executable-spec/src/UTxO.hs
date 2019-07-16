@@ -33,6 +33,7 @@ module UTxO
   , makeWitnessesVKey
   , verifyWitVKey
   , validators
+  , txinsScript
   ) where
 
 import           Lens.Micro ((^.))
@@ -169,6 +170,9 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
 txup :: Tx hashAlgo dsignAlgo -> Update dsignAlgo
 txup (Tx txbody _ _) = _txUpdate txbody
 
+-- | Computes the set of validator scripts that are necessary to spent the
+-- 'txInputs' from the 'utxo' which are locked with scripts. 'scripts' is the
+-- set of available scripts which are checkd for matching hashes and validation.
 validators
   :: (MultiSignatureScript a hashAlgo dsignAlgo)
   => Set (TxIn hashAlgo dsignAlgo)
@@ -188,3 +192,15 @@ validators txInputs utxo scripts =
                              Nothing -> Nothing)
                      _            -> Nothing) txInRestricted
   where UTxO txInRestricted = txInputs <| utxo
+
+-- | Compute the subset of inputs of the set 'txInps' for which each input is
+-- locked by a script in the UTxO 'u'.
+txinsScript
+  :: Set (TxIn hashAlgo dsignAlgo)
+  -> UTxO hashAlgo dsignAlgo
+  -> Set (TxIn hashAlgo dsignAlgo)
+txinsScript txInps (UTxO u) =
+  txInps `Set.intersection`
+  (Map.keysSet $ Map.filter (\(TxOut a _) -> case a of
+                                               AddrScr _ _ -> True
+                                               _           -> False) u)

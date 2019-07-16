@@ -70,7 +70,7 @@ delplTransition = do
         trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
     RegKey (ScriptHashStake stakeObj) -> do
-      let scriptWits = txwitsScripts tx
+      let scriptWits = txwitsScript tx
       let validator' = Map.lookup stakeObj scriptWits
       case validator' of
         Nothing        -> do
@@ -88,7 +88,7 @@ delplTransition = do
         trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
     DeRegKey (ScriptHashStake stakeObj) -> do
-      let scriptWits = txwitsScripts tx
+      let scriptWits = txwitsScript tx
       let validator' = Map.lookup stakeObj scriptWits
       case validator' of
         Nothing        -> do
@@ -106,7 +106,7 @@ delplTransition = do
         trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
     Delegate (Delegation (ScriptHashStake stakeObj) _) -> do
-      let scriptWits = txwitsScripts tx
+      let scriptWits = txwitsScript tx
       let validator' = Map.lookup stakeObj scriptWits
       case validator' of
         Nothing        -> do
