@@ -25,9 +25,13 @@ import           Updates
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
   = AddrTxin
-      { _payHK :: KeyHash hashAlgo dsignAlgo
+      { _payHK   :: KeyHash hashAlgo dsignAlgo
       , _stakeHK :: KeyHash hashAlgo dsignAlgo
       }
+  | AddrScr
+    { _payScr   :: ScriptHash hashAlgo dsignAlgo
+    , _stakeScr :: ScriptHash hashAlgo dsignAlgo
+    }
   | AddrPtr
       { _stakePtr :: Ptr
       }
@@ -255,9 +259,14 @@ instance
         <> toCBOR (0 :: Word8)
         <> toCBOR payHK
         <> toCBOR stakeHK
+    AddrScr payScr stakeScr ->
+      encodeListLen 3
+        <> toCBOR (1 :: Word8)
+        <> toCBOR payScr
+        <> toCBOR stakeScr
     AddrPtr stakePtr ->
       encodeListLen 2
-        <> toCBOR (1 :: Word8)
+        <> toCBOR (2 :: Word8)
         <> toCBOR stakePtr
 
 instance ToCBOR Ptr where

@@ -947,6 +947,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
     addStake delegs (TxOut (AddrTxin _ hsk) c) = do
       pool <- Map.lookup hsk delegs
       return (pool, c)
+    addStake _ (TxOut (AddrScr _ _) _) = undefined -- TODO: script addresses
     addStake delegs (TxOut (AddrPtr ptr) c) = do
       key  <- Map.lookup ptr $ ds ^. dstate . ptrs
       pool <- Map.lookup key delegs
