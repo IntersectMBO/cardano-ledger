@@ -21,9 +21,11 @@ import           Coin
 import           LedgerState hiding (dms)
 import           Slot
 import           PParams
-import           UTxO (pattern TxIn, pattern TxOut, (<|), _body, _witnessSet,
-                     balance, body, certs, deposits, inputs, makeWitness,
-                     outputs, txid, txins, txouts, verifyWit, witnessSet)
+import           Tx (pattern TxIn, pattern TxOut, _body, _witnessVKeySet, body
+                    , certs, inputs, outputs, witnessVKeySet)
+import           UTxO ( (<|),
+                     balance, deposits, makeWitnessVKey,
+                     txid, txins, txouts, verifyWitVKey)
 
 import           Generator
 import           MockTypes
@@ -232,16 +234,16 @@ propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = txwits ^. body
-  let witness                  = makeWitness tx keyPair
-  let txwits'                  = txwits & witnessSet %~ (Set.insert witness)
+  let witness                  = makeWitnessVKey tx keyPair
+  let txwits'                  = txwits & witnessVKeySet %~ (Set.insert witness)
   let dms                      = _dms $ _dstate $ _delegationState l
   let l''                      = asStateTransition (Slot (steps)) emptyPParams l txwits' dms
   classify "unneeded signature added"
-    (not $ witness `Set.member` (txwits ^. witnessSet))
+    (not $ witness `Set.member` (txwits ^. witnessVKeySet))
   case l'' of
     Right _                    ->
         True === (Set.null $
-         Set.filter (\wit -> not $ verifyWit tx wit) (_witnessSet txwits'))
+         Set.filter (\wit -> not $ verifyWitVKey tx wit) (_witnessVKeySet txwits'))
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.
@@ -249,18 +251,18 @@ propCheckMissingWitness :: Property
 propCheckMissingWitness = property $ do
   (l, steps, _, txwits, _) <- forAll genValidStateTx
   witnessList              <- forAll (Gen.subsequence $
-                                        Set.toList (txwits ^. witnessSet))
-  let witnessSet''          = txwits ^. witnessSet
-  let witnessSet'           = Set.fromList witnessList
+                                        Set.toList (txwits ^. witnessVKeySet))
+  let witnessVKeySet''          = txwits ^. witnessVKeySet
+  let witnessVKeySet'           = Set.fromList witnessList
   let dms                   = _dms $ _dstate $ _delegationState l
-  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessSet .~ witnessSet') dms
-  let isRealSubset          = witnessSet' `Set.isSubsetOf` witnessSet'' &&
-                              witnessSet' /= witnessSet''
+  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') dms
+  let isRealSubset          = witnessVKeySet' `Set.isSubsetOf` witnessVKeySet'' &&
+                              witnessVKeySet' /= witnessVKeySet''
   classify "real subset" (isRealSubset)
-  label $ LabelName ("witnesses:" ++ show (Set.size witnessSet''))
+  label $ LabelName ("witnesses:" ++ show (Set.size witnessVKeySet''))
   case l' of
     Left [MissingWitnesses] -> isRealSubset === True
-    Right _                 -> (witnessSet' == witnessSet'') === True
+    Right _                 -> (witnessVKeySet' == witnessVKeySet'') === True
     _                       -> failure
 
 -- | Property (Preserve Balance)

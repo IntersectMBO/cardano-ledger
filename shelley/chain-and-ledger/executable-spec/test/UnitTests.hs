@@ -14,15 +14,17 @@ import           Lens.Micro              ((^.), (&), (.~))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import           Address
+import           TxData (pattern AddrVKey, pattern Ptr, StakeObject(..),
+                         Delegation (..), pattern PoolParams, pattern RewardAcnt,
+                         _poolAltAcnt, _poolCost, _poolMargin, _poolOwners,
+                         _poolPubKey, _poolPledge, _poolPledges, _poolRAcnt)
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey,
                      pattern RegPool, pattern RetirePool, StakePools(..),
                      StakeKeys(..))
-import           Delegation.PoolParams (Delegation (..), pattern PoolParams,
-                     pattern RewardAcnt, _poolAltAcnt, _poolCost, _poolMargin,
-                     _poolOwners, _poolPubKey, _poolPledge, _poolPledges,
-                     _poolRAcnt)
+
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState,
                      ValidationError(..), _delegationState, _dms, _dstate,
@@ -32,9 +34,9 @@ import           LedgerState (pattern LedgerState, pattern UTxOState,
 import           PParams
 import           Slot
 import           Updates
-import           UTxO (pattern AddrTxin, pattern Ptr, pattern Tx,
-                     pattern TxBody, pattern TxIn, pattern TxOut, pattern UTxO,
-                     body, makeWitness, makeWitnesses, mkRwdAcnt, ttl, txid)
+import           UTxO
+                     (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
+import           Tx (pattern TxBody, pattern TxIn, pattern TxOut, pattern Tx, body, ttl)
 
 import           MockTypes
 
@@ -45,7 +47,7 @@ aliceStake :: KeyPair
 aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
-aliceAddr = AddrTxin (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
+aliceAddr = AddrVKey (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
 
 bobPay :: KeyPair
 bobPay = KeyPair 3 3
@@ -54,7 +56,7 @@ bobStake :: KeyPair
 bobStake = KeyPair 4 4
 
 bobAddr :: Addr
-bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
+bobAddr = AddrVKey (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 testPCs :: PParams
 testPCs = emptyPParams {
@@ -115,7 +117,8 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & dstate . delegations .~
+                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           (fromIntegral $ length txs))
@@ -130,7 +133,8 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~ Map.fromList [(hashKey $ vKey aliceStake, poolhk)]
+           & dstate . delegations .~
+                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
@@ -154,12 +158,12 @@ testValidWithdrawal =
            (Coin 1000)
            (Slot 0)
            emptyUpdate
-    wits = makeWitnesses tx [alicePay, bobStake]
+    wits = makeWitnessesVKey tx [alicePay, bobStake]
     utxo' = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
     expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
                    Map.singleton (mkRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
@@ -180,8 +184,8 @@ testInvalidWintess =
            (Slot 1)
            emptyUpdate
     tx' = tx & ttl .~ Slot 2
-    wits = makeWitnesses tx' [alicePay]
-  in ledgerState [Tx tx wits] @?= Left [InvalidWitness]
+    wits = makeWitnessesVKey tx' [alicePay]
+  in ledgerState [Tx tx wits Map.empty] @?= Left [InvalidWitness]
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -195,8 +199,8 @@ testWithdrawalNoWit =
            (Coin 1000)
            (Slot 0)
            emptyUpdate
-    wits = Set.singleton $ makeWitness tx alicePay
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    wits = Set.singleton $ makeWitnessVKey tx alicePay
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [MissingWitnesses]
 
 testWithdrawalWrongAmt :: Assertion
@@ -211,13 +215,13 @@ testWithdrawalWrongAmt =
            (Coin 1000)
            (Slot 0)
            emptyUpdate
-    wits = makeWitnesses tx [alicePay, bobStake]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits) (Dms Map.empty)
+    wits = makeWitnessesVKey tx [alicePay, bobStake]
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [IncorrectRewards]
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
   [DCert] -> Slot -> [KeyPair] -> Tx
-aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits
+aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty
   where
     aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
     txbody = TxBody
@@ -229,7 +233,7 @@ aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits
                fee
                s
                emptyUpdate
-    wits = makeWitnesses txbody signers
+    wits = makeWitnessesVKey txbody signers
 
 tx1 :: Tx
 tx1 = aliceGivesBobLovelace
@@ -257,9 +261,9 @@ tx2 :: Tx
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
-        [ RegKey $ vKey aliceStake
-        , RegKey $ vKey bobStake
-        , RegKey $ vKey stakePoolKey1]
+        [ RegKey $ (KeyHashStake . hashKey) $ vKey aliceStake
+        , RegKey $ (KeyHashStake . hashKey) $ vKey bobStake
+        , RegKey $ (KeyHashStake . hashKey) $ vKey stakePoolKey1]
         (Slot 100)
         [alicePay, aliceStake, bobStake, stakePoolKey1]
 
@@ -279,14 +283,16 @@ tx3Body = TxBody
           (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
           [ TxOut aliceAddr (Coin 3950) ]
           [ RegPool stakePool
-          , Delegate (Delegation (vKey aliceStake) (vKey stakePoolKey1))]
+          , Delegate (Delegation
+                       (KeyHashStake $ hashKey $ vKey aliceStake)
+                       (hashKey $ vKey stakePoolKey1))]
           Map.empty
           (Coin 1200)
           (Slot 100)
           emptyUpdate
 
 tx3 :: Tx
-tx3 = Tx tx3Body (makeWitnesses tx3Body keys)
+tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty
       where keys = [alicePay, aliceStake, stakePoolKey1]
 
 utxoSt3 :: UTxOState
@@ -306,13 +312,13 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
                    , (mkRwdAcnt bobStake, Coin 0)
                    , (mkRwdAcnt stakePoolKey1, Coin 0)]
   & dstate . stKeys .~ (StakeKeys $
-      Map.fromList [ (hashKey $ vKey aliceStake, Slot 0)
-                   , (hashKey $ vKey bobStake, Slot 0)
-                   , (hashKey $ vKey stakePoolKey1, Slot 0)])
+      Map.fromList [ (KeyHashStake $ hashKey $ vKey aliceStake, Slot 0)
+                   , (KeyHashStake $ hashKey $ vKey bobStake, Slot 0)
+                   , (KeyHashStake $ hashKey $ vKey stakePoolKey1, Slot 0)])
   & dstate . ptrs .~
-      Map.fromList [ (Ptr (Slot 0) 0 0, hashKey $ vKey aliceStake)
-                   , (Ptr (Slot 0) 0 1, hashKey $ vKey bobStake)
-                   , (Ptr (Slot 0) 0 2, hashKey $ vKey stakePoolKey1)
+      Map.fromList [ (Ptr (Slot 0) 0 0, KeyHashStake $ hashKey $ vKey aliceStake)
+                   , (Ptr (Slot 0) 0 1, KeyHashStake $ hashKey $ vKey bobStake)
+                   , (Ptr (Slot 0) 0 2, KeyHashStake $ hashKey $ vKey stakePoolKey1)
                    ]
 
 stakePool :: PoolParams
@@ -324,7 +330,7 @@ stakePool = PoolParams
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
-            , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+            , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
             }
 
@@ -341,7 +347,7 @@ stakePoolUpdate = PoolParams
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
-                   , _poolRAcnt   = RewardAcnt (hashKey . vKey $ stakePoolKey1)
+                   , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
                    }
 
@@ -356,7 +362,7 @@ tx4Body = TxBody
           emptyUpdate
 
 tx4 :: Tx
-tx4 = Tx tx4Body (makeWitnesses tx4Body [alicePay, stakePoolKey1])
+tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1]) Map.empty
 
 utxoSt4 :: UTxOState
 utxoSt4 = UTxOState
@@ -382,14 +388,14 @@ tx5Body :: Epoch -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ]
-          [ RetirePool (vKey stakePoolKey1) e ]
+          [ RetirePool (hashKey $ vKey stakePoolKey1) e ]
           Map.empty
           (Coin 1000)
           (Slot 100)
           emptyUpdate
 
 tx5 :: Epoch -> Tx
-tx5 e = Tx (tx5Body e) (makeWitnesses (tx5Body e) [alicePay, stakePoolKey1])
+tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1]) Map.empty
 
 
 testsValidLedger :: TestTree
@@ -437,7 +443,7 @@ testWitnessNotIncluded =
               (Coin 596)
               (Slot 100)
               emptyUpdate
-    tx = Tx txbody Set.empty
+    tx = Tx txbody Set.empty Map.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testSpendNotOwnedUTxO :: Assertion
@@ -451,8 +457,8 @@ testSpendNotOwnedUTxO =
               (Coin 768)
               (Slot 100)
               emptyUpdate
-    aliceWit = makeWitness txbody alicePay
-    tx = Tx txbody (Set.fromList [aliceWit])
+    aliceWit = makeWitnessVKey txbody alicePay
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testWitnessWrongUTxO :: Assertion
@@ -474,8 +480,8 @@ testWitnessWrongUTxO =
               (Coin 770)
               (Slot 101)
               emptyUpdate
-    aliceWit = makeWitness  tx2body alicePay
-    tx = Tx txbody (Set.fromList [aliceWit])
+    aliceWit = makeWitnessVKey  tx2body alicePay
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty
   in ledgerState [tx] @?= Left [ InvalidWitness
                                , MissingWitnesses]
 
@@ -491,9 +497,9 @@ testEmptyInputSet =
            (Coin 1000)
            (Slot 0)
            emptyUpdate
-    wits = makeWitnesses tx [aliceStake]
+    wits = makeWitnessesVKey tx [aliceStake]
     genesisWithReward' = changeReward genesis (mkRwdAcnt aliceStake) (Coin 2000)
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [ InputSetEmpty ]
 
 testFeeTooSmall :: Assertion

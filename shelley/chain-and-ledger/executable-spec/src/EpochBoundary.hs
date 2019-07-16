@@ -33,10 +33,11 @@ module EpochBoundary
 import           Coin
 import           Delegation.Certificates (StakeKeys (..), StakePools (..),
                                           decayKey, decayPool, refund)
-import           Delegation.PoolParams   (RewardAcnt (..), PoolParams(..))
 import           Keys
 import           PParams hiding (a0, nOpt)
 import           Slot
+import           Tx
+import           TxData
 import           UTxO hiding (dom)
 
 import qualified Data.Map.Strict         as Map
@@ -57,12 +58,13 @@ newtype BlocksMade hashAlgo dsignAlgo
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake hashAlgo dsignAlgo
-  = Stake (Map.Map (KeyHash hashAlgo dsignAlgo) Coin)
+  = Stake (Map.Map (StakeObject hashAlgo dsignAlgo) Coin)
   deriving (Show, Eq, Ord)
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (KeyHash hashAlgo dsignAlgo)
-getStakeHK (AddrTxin _ hk) = Just hk
+getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (StakeObject hashAlgo dsignAlgo)
+getStakeHK (AddrVKey _ hk) = Just $ KeyHashStake hk
+getStakeHK (AddrScr _ hs) = Just $ ScriptHashStake hs
 getStakeHK _               = Nothing
 
 consolidate :: UTxO hashAlgo dsignAlgo -> Map.Map (Addr hashAlgo dsignAlgo) Coin
@@ -76,7 +78,7 @@ baseStake vals =
  where
    convert
      :: (Addr hashAlgo dsignAlgo, Coin)
-     -> Maybe (KeyHash hashAlgo dsignAlgo, Coin)
+     -> Maybe (StakeObject hashAlgo dsignAlgo, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
@@ -89,14 +91,14 @@ getStakePtr _             = Nothing
 ptrStake
   :: forall hashAlgo dsignAlgo
    . Map.Map (Addr hashAlgo dsignAlgo) Coin
-  -> Map.Map Ptr (KeyHash hashAlgo dsignAlgo)
+  -> Map.Map Ptr (StakeObject hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
 ptrStake vals pointers =
   Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
   where
     convert
       :: (Addr hashAlgo dsignAlgo, Coin)
-      -> Maybe (KeyHash hashAlgo dsignAlgo, Coin)
+      -> Maybe (StakeObject hashAlgo dsignAlgo, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
@@ -115,7 +117,7 @@ rewardStake rewards =
 -- | Get stake of one pool
 poolStake
   :: KeyHash hashAlgo dsignAlgo
-  -> Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+  -> Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
@@ -181,15 +183,15 @@ data SnapShots hashAlgo dsignAlgo
   = SnapShots
     { _pstakeMark
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+         , Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _pstakeSet
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+         , Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _pstakeGo
       :: ( Stake hashAlgo dsignAlgo
-         , Map.Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+         , Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _poolsSS
       :: Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)

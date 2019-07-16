@@ -23,6 +23,7 @@ import           Keys
 import           LedgerState hiding (dms)
 import           PParams
 import           Slot
+import           Tx
 import           Updates
 import           UTxO
 

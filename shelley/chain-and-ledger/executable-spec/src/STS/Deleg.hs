@@ -13,14 +13,14 @@ import           Delegation.Certificates
 import           Keys
 import           LedgerState
 import           Slot
-import           UTxO
+import           TxData
 
 import           Control.State.Transition
 
 data DELEG hashAlgo dsignAlgo
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  (DSIGNAlgorithm dsignAlgo)
   => STS (DELEG hashAlgo dsignAlgo)
  where
   type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
@@ -38,7 +38,7 @@ instance
   transitionRules = [delegationTransition]
 
 delegationTransition
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  :: (DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEG hashAlgo dsignAlgo)
 delegationTransition = do
   TRC ((_slot, p), d@(DState _ _ _ _ genMap (Dms _dms)), c) <- judgmentContext

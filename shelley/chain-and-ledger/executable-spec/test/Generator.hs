@@ -33,6 +33,10 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
+import           TxData (pattern AddrVKey, pattern KeyHashStake, pattern Delegation,
+                         pattern PoolParams, RewardAcnt(..), pattern Delegate,
+                         pattern DeRegKey, pattern RegKey, pattern RegPool,
+                         pattern RetirePool, StakeKeys(..))
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -42,14 +46,9 @@ import           LedgerState (pattern LedgerValidation, ValidationError (..),
                      utxo, dstate, stKeys)
 import           Slot
 import           Updates
-import           UTxO (pattern AddrTxin, pattern Tx, pattern TxBody,
-                     pattern TxOut, pattern UTxO, balance, makeWitness)
+import           Tx(pattern Tx, pattern TxBody, pattern TxOut)
+import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           PParams (PParams(..), emptyPParams)
-import           Delegation.Certificates (pattern Delegate, pattern DeRegKey,
-                     pattern RegKey, pattern RegPool, pattern RetirePool,
-                     StakeKeys(..))
-import           Delegation.PoolParams (pattern Delegation, pattern PoolParams,
-                     RewardAcnt(..))
 
 import           MockTypes
 import           Mutator
@@ -85,7 +84,7 @@ hashKeyPairs keyPairs =
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
-addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry AddrVKey <$> hashKeyPairs keyPairs
 
 genBool :: Gen Bool
 genBool = Gen.enumBounded
@@ -144,7 +143,7 @@ genTx keyList (UTxO m) cslot = do
   let realN                = length receipients
   let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
-          (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
+          (\(p, d) -> AddrVKey (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   txttl <- genNatural 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
@@ -154,8 +153,8 @@ genTx keyList (UTxO m) cslot = do
            txfee'
            (cslot + (Slot txttl))
            emptyUpdate
-  let !txwit = makeWitness txbody selectedKeyPair
-  pure (txfee', Tx txbody $ Set.fromList [txwit])
+  let !txwit = makeWitnessVKey txbody selectedKeyPair
+  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty)
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
 
@@ -234,14 +233,15 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrTxin addr _) keyList =
+findPayKeyPair (AddrVKey addr _) keyList =
     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: KeyHash -> KeyPairs -> KeyPair
-findStakeKeyPair addr keyList =
-    snd $ head $ filter (\(_, stake) -> addr == (hashKey $ vKey stake)) keyList
+findStakeKeyPair :: StakeObject -> KeyPairs -> KeyPair
+findStakeKeyPair (KeyHashStake hk) keyList =
+    snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
+findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
 getTxOutAddr :: TxOut -> Addr
@@ -303,16 +303,16 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> getAnyStakeKey keys
+  RegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> getAnyStakeKey keys
+    DeRegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
-  pure $ RetirePool key epoch
+  pure $ RetirePool (hashKey key) epoch
 
 genStakePool :: KeyPairs -> Gen PoolParams
 genStakePool keys = do
@@ -324,13 +324,13 @@ genStakePool keys = do
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ hashKey acntKey) Set.empty
+  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ KeyHashStake $ hashKey acntKey) Set.empty
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stKeys'
   delegatorKey <- getAnyStakeKey keys
-  pure $ Delegation delegatorKey $ (vKey $ findStakeKeyPair poolKey keys)
+  pure $ Delegation (KeyHashStake $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeKeys stKeys') = d ^. dstate . stKeys
 
 genDCertRegPool :: KeyPairs -> Gen DCert

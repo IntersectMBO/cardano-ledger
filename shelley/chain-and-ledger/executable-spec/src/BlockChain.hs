@@ -42,7 +42,7 @@ import           EpochBoundary
 import           Keys
 import           OCert
 import qualified Slot
-import qualified UTxO                          as U
+import           Tx
 
 import           NonIntegral                    ( (***) )
 
@@ -53,7 +53,7 @@ newtype HashHeader hashAlgo dsignAlgo kesAlgo =
 
 -- | Hash of block body
 newtype HashBBody hashAlgo dsignAlgo kesAlgo =
-  HashBBody (Hash hashAlgo [U.Tx hashAlgo dsignAlgo])
+  HashBBody (Hash hashAlgo [Tx hashAlgo dsignAlgo])
   deriving (Show, Eq, Ord, ToCBOR)
 
 -- |Hash a given block header
@@ -66,7 +66,7 @@ bhHash = HashHeader . hash
 -- |Hash a given block body
 bhbHash
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => [U.Tx hashAlgo dsignAlgo]
+  => [Tx hashAlgo dsignAlgo]
   -> HashBBody hashAlgo dsignAlgo kesAlgo
 bhbHash = HashBBody . hash
 
@@ -120,7 +120,7 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
     -- | proof of leader election
   , bheaderPrfL           :: Proof dsignAlgo UnitInterval
     -- | signature of block body
-  , bheaderBlockSignature :: Sig dsignAlgo [U.Tx hashAlgo dsignAlgo]
+  , bheaderBlockSignature :: Sig dsignAlgo [Tx hashAlgo dsignAlgo]
     -- | Size of the block body
   , bsize                 :: Natural
     -- | Hash of block body
@@ -133,24 +133,24 @@ instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
   => ToCBOR (BHBody hashAlgo dsignAlgo kesAlgo)
  where
-  toCBOR body =
+  toCBOR bhBody =
     encodeListLen 11
-      <> toCBOR (bheaderPrev body)
-      <> toCBOR (bheaderVk body)
-      <> toCBOR (bheaderSlot body)
-      <> toCBOR (bheaderEta body)
-      <> toCBOR (bheaderPrfEta body)
-      <> toCBOR (bheaderL body)
-      <> toCBOR (bheaderPrfL body)
-      <> toCBOR (bheaderBlockSignature body)
-      <> toCBOR (bsize body)
-      <> toCBOR (bhash body)
-      <> toCBOR (bheaderOCert body)
+      <> toCBOR (bheaderPrev bhBody)
+      <> toCBOR (bheaderVk bhBody)
+      <> toCBOR (bheaderSlot bhBody)
+      <> toCBOR (bheaderEta bhBody)
+      <> toCBOR (bheaderPrfEta bhBody)
+      <> toCBOR (bheaderL bhBody)
+      <> toCBOR (bheaderPrfL bhBody)
+      <> toCBOR (bheaderBlockSignature bhBody)
+      <> toCBOR (bsize bhBody)
+      <> toCBOR (bhash bhBody)
+      <> toCBOR (bheaderOCert bhBody)
 
 data Block hashAlgo dsignAlgo kesAlgo
   = Block
     (BHeader hashAlgo dsignAlgo kesAlgo)
-    [U.Tx hashAlgo dsignAlgo]
+    [Tx hashAlgo dsignAlgo]
   deriving (Show, Eq)
 
 bHeaderSize
@@ -159,7 +159,7 @@ bHeaderSize
   -> Int
 bHeaderSize = BS.length . BS.pack . show
 
-bBodySize :: DSIGNAlgorithm dsignAlgo => [U.Tx hashAlgo dsignAlgo] -> Int
+bBodySize :: DSIGNAlgorithm dsignAlgo => [Tx hashAlgo dsignAlgo] -> Int
 bBodySize txs = foldl (+) 0 (map (BS.length . BS.pack . show) txs)
 
 slotToSeed :: Slot.Slot -> Seed
@@ -168,7 +168,7 @@ slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
 bheader :: Block hashAlgo dsignAlgo kesAlgo -> BHeader hashAlgo dsignAlgo kesAlgo
 bheader (Block bh _) = bh
 
-bbody :: Block hashAlgo dsignAlgo kesAlgo -> [U.Tx hashAlgo dsignAlgo]
+bbody :: Block hashAlgo dsignAlgo kesAlgo -> [Tx hashAlgo dsignAlgo]
 bbody (Block _ txs) = txs
 
 bhbody :: BHeader hashAlgo dsignAlgo kesAlgo -> BHBody hashAlgo dsignAlgo kesAlgo

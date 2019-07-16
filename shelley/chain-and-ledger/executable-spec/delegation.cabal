@@ -17,7 +17,8 @@ flag development
     manual: True
 
 library
-  exposed-modules:   BaseTypes
+  exposed-modules:   Address
+                     BaseTypes
                      BlockChain
                      Coin
                      Keys
@@ -29,6 +30,8 @@ library
                      Delegation.PoolParams
                      Delegation.Certificates
                      OCert
+                     Tx
+                     TxData
                      Updates
                      STS.Avup
                      STS.Bbody
