@@ -55,6 +55,8 @@ let
 
         packages.cardano-ledger.flags.test-normal-form = true;
 
+        packages.cardano-ledger.components.all.postInstall = pkgs.lib.mkForce "";
+
         packages.cardano-ledger.components.tests.cardano-ledger-test = {
           build-tools = [ pkgs.makeWrapper ];
           testFlags = [ "--scenario=ContinuousIntegration" ];
