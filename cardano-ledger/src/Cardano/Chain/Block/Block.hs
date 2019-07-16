@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Chain.Block.Block
   (
@@ -67,6 +66,7 @@ import Cardano.Prelude
 
 import Data.Coerce (coerce)
 import qualified Data.ByteString as BS
+import qualified Data.Map.Strict as Map
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
 import qualified Formatting.Buildable as B
@@ -96,7 +96,7 @@ import Cardano.Chain.Block.Body
   , bodyUpdatePayload
   )
 import Cardano.Chain.Block.Boundary
-  (dropBoundaryBody, dropBoundaryExtraBodyData)
+  (dropBoundaryBody, dropBoundaryExtraBodyDataRetainGenesisTag)
 import Cardano.Chain.Block.Header
   ( ABlockSignature
   , AHeader(..)
@@ -403,17 +403,17 @@ boundaryHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
 --   the header for hashing
 dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
 dropBoundaryBlock = do
-  Annotated (Annotated (hh, epoch, difficulty) bs) (ByteSpan start end) <- annotatedDecoder $ do
+  Annotated (isGen, (Annotated (hh, epoch, difficulty) bs)) (ByteSpan start end) <- annotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
     aHeaderStuff <- annotatedDecoder dropBoundaryHeader
     dropBoundaryBody
-    dropBoundaryExtraBodyData
-    pure aHeaderStuff
+    isGen <- dropBoundaryExtraBodyDataRetainGenesisTag
+    pure (isGen, aHeaderStuff)
   pure $ BoundaryValidationData
     { boundaryBlockLength = end - start
     -- For the zeroth boundary block this field needs to be a 'GenesisHash'
     -- and for all subsequent blocks it's a 'HeaderHash'.
-    , boundaryPrevHash    = if epoch == 0 then Left (coerce hh) else Right hh
+    , boundaryPrevHash    = if epoch == 0 || isGen then Left (coerce hh) else Right hh
     , boundaryEpoch       = epoch
     , boundaryDifficulty  = difficulty
     , boundaryHeaderBytes = bs
@@ -429,6 +429,12 @@ toCBORABOBBoundary pm bvd =
 toCBORBoundaryBlock :: ProtocolMagicId -> BoundaryValidationData a -> Encoding
 toCBORBoundaryBlock pm bvd = let
     bodyProof = hash (mempty :: LByteString)
+    -- Genesis tag to indicate the presence of a genesis hash in a non-zero
+    -- epoch. See 'dropBoundaryExtraBodyDataRetainGenesisTag' for more details
+    -- on this.
+    genesisTag = case (boundaryPrevHash bvd, boundaryEpoch bvd) of
+      (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
+      _ -> mempty :: Map Word8 LByteString
   in encodeListLen 3
     -- Header
     <> ( encodeListLen 5
@@ -455,7 +461,7 @@ toCBORBoundaryBlock pm bvd = let
     <> (encodeListLenIndef <> encodeBreak)
     -- Attributes
     <> ( encodeListLen 1
-        <> toCBOR (mempty :: Map Word8 LByteString)
+        <> toCBOR genesisTag
        )
 
 instance B.Buildable (BoundaryValidationData a) where
