@@ -17,13 +17,12 @@ module Delegation.Certificates
   , decayPool
   ) where
 
-import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
-
 import           Coin (Coin (..))
 import           Keys
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
-import           Slot (Duration (..), Epoch (..), Slot (..))
+import           Slot (Duration (..))
+import           TxData
 
 import           Delegation.PoolParams
 
@@ -32,69 +31,8 @@ import           NonIntegral (exp')
 
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (approxRational)
-import           Data.Word (Word8)
 
 import           Lens.Micro ((^.))
-
-newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map.Map (KeyHash hashAlgo dsignAlgo) Slot)
-  deriving (Show, Eq)
-
-newtype StakePools hashAlgo dsignAlgo =
-  StakePools (Map.Map (KeyHash hashAlgo dsignAlgo) Slot)
-  deriving (Show, Eq)
-
--- | A heavyweight certificate.
-data DCert hashAlgo dsignAlgo
-    -- | A stake key registration certificate.
-  = RegKey (VKey dsignAlgo)
-    -- | A stake key deregistration certificate.
-  | DeRegKey (VKey dsignAlgo) --TODO this is actually KeyHash on page 13, is that what we want?
-    -- | A stake pool registration certificate.
-  | RegPool (PoolParams hashAlgo dsignAlgo)
-    -- | A stake pool retirement certificate.
-  | RetirePool (VKey dsignAlgo) Epoch
-    -- | A stake delegation certificate.
-  | Delegate (Delegation dsignAlgo)
-    -- | Genesis key delegation certificate
-  | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
-  deriving (Show, Eq, Ord)
-
-instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (DCert hashAlgo dsignAlgo)
- where
-  toCBOR = \case
-    RegKey vk ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR vk
-
-    DeRegKey vk ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR vk
-
-    RegPool poolParams ->
-      encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR poolParams
-
-    RetirePool vk epoch ->
-      encodeListLen 3
-        <> toCBOR (3 :: Word8)
-        <> toCBOR vk
-        <> toCBOR epoch
-
-    Delegate delegation ->
-      encodeListLen 2
-        <> toCBOR (4 :: Word8)
-        <> toCBOR delegation
-
-    GenesisDelegate keys ->
-      encodeListLen 2
-        <> toCBOR (5 :: Word8)
-        <> toCBOR keys
 
 -- |Determine the certificate author
 cwitness
