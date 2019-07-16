@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word8)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -31,6 +32,7 @@ import           Ledger.Core
 import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Delegation
 import           Ledger.Update hiding (delegationMap)
+import qualified Ledger.Update as Update
 import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
@@ -231,6 +233,25 @@ sigGenChain
       GenUTxO   -> sigGen @UTXOWS Nothing utxoEnv utxo
       NoGenUTxO -> pure []
 
+    let upienv =
+          ( Slot s
+          , _dIStateDelegationMap ds
+          , k
+          , toNumberOfGenesisKeys $ Set.size ads
+          )
+        -- TODO: we might need to make the number of genesis keys a newtype, and
+        -- provide this function in the same module where this newtype is
+        -- defined.
+        toNumberOfGenesisKeys n
+          | fromIntegral (maxBound :: Word8) < n =
+              error $ "sigGenChain: too many genesis keys: " ++ show  n
+          | otherwise = fromIntegral n
+    aBlockVersion <- --pure $! (ProtVer 0 0 0) -- TODO: Generate a protocol version
+      Update.protocolVersionEndorsementGen upienv us
+
+    (anOptionalUpdateProposal, aListOfVotes) <-
+      Update.updateProposalAndVotesGen upienv us
+
     let
       dummySig       = Sig genesisHash (owner vkI)
       unsignedHeader = MkBlockHeader
@@ -249,9 +270,9 @@ sigGenChain
         BlockBody
           delegationPayload
           utxoPayload
-          Nothing -- TODO: Update proposal
-          []      -- TODO: Votes on update proposals
-          (ProtVer 0 0 0) -- TODO: Generate a protocol version
+          anOptionalUpdateProposal
+          aListOfVotes
+          aBlockVersion
 
     pure $ Block signedHeader bb
    where

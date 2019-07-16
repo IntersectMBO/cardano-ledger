@@ -225,15 +225,18 @@ invertBijection
 a ==> b = not a || b
 infix 1 ==>
 
+-- | Check whether a protocol version can follow the current protocol version.
 pvCanFollow
   :: ProtVer
+  -- ^ Next protocol version
   -> ProtVer
+  -- ^ Previous protocol version
   -> Bool
 pvCanFollow (ProtVer mjn min an) (ProtVer mjp mip ap)
   = (mjp, mip, ap) < (mjn, min, an)
   && (inRange (0,1) (mjn - mjp))
-  && ((mjp == mjn) ==> (mip +1 == min))
-  && ((mjp +1 == mjn) ==> (min == 0))
+  && ((mjp == mjn) ==> (mip + 1 == min))
+  && ((mjp + 1 == mjn) ==> (min == 0))
 
 -- | Check whether an update proposal marks a valid update
 --
@@ -245,6 +248,7 @@ canUpdate
 canUpdate pps prop =
   (prop ^. upParams . maxBkSz <= 2 * pps ^. maxBkSz)
   && (prop ^. upParams . maxBkSz > prop ^. upParams . maxTxSz)
+  && pps ^. scriptVersion <= prop ^. upParams . scriptVersion
   && (inRange (0,1) $ prop ^. upParams . scriptVersion - pps ^. scriptVersion)
 
 svCanFollow
