@@ -33,7 +33,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import           Address (pattern AddrTxin)
+import           TxData (pattern AddrVKey, StakeObject(..))
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -86,7 +86,7 @@ hashKeyPairs keyPairs =
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
-addrTxins keyPairs = uncurry AddrTxin <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry AddrVKey <$> hashKeyPairs keyPairs
 
 genBool :: Gen Bool
 genBool = Gen.enumBounded
@@ -145,7 +145,7 @@ genTx keyList (UTxO m) cslot = do
   let realN                = length receipients
   let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
-          (\(p, d) -> AddrTxin (hashKey $ vKey p) (hashKey $ vKey d)) receipients
+          (\(p, d) -> AddrVKey (hashKey $ vKey p) (hashKey $ vKey d)) receipients
   txttl <- genNatural 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
@@ -235,7 +235,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrTxin addr _) keyList =
+findPayKeyPair (AddrVKey addr _) keyList =
     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
@@ -304,16 +304,16 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> getAnyStakeKey keys
+  RegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> getAnyStakeKey keys
+    DeRegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
-  pure $ RetirePool key epoch
+  pure $ RetirePool (hashKey key) epoch
 
 genStakePool :: KeyPairs -> Gen PoolParams
 genStakePool keys = do

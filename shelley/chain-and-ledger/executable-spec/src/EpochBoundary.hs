@@ -64,7 +64,7 @@ newtype Stake hashAlgo dsignAlgo
 
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (KeyHash hashAlgo dsignAlgo)
-getStakeHK (AddrTxin _ hk) = Just hk
+getStakeHK (AddrVKey _ hk) = Just hk
 getStakeHK _               = Nothing
 
 consolidate :: UTxO hashAlgo dsignAlgo -> Map.Map (Addr hashAlgo dsignAlgo) Coin

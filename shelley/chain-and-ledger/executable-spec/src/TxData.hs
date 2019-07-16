@@ -24,7 +24,7 @@ import           Updates
 
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
-  = AddrTxin
+  = AddrVKey
       { _payHK   :: KeyHash hashAlgo dsignAlgo
       , _stakeHK :: KeyHash hashAlgo dsignAlgo
       }
@@ -254,7 +254,7 @@ instance
   => ToCBOR (Addr hashAlgo dsignAlgo)
  where
   toCBOR = \case
-    AddrTxin payHK stakeHK ->
+    AddrVKey payHK stakeHK ->
       encodeListLen 3
         <> toCBOR (0 :: Word8)
         <> toCBOR payHK

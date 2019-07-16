@@ -14,7 +14,8 @@ import           Lens.Micro              ((^.), (&), (.~))
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           Address (pattern AddrTxin, pattern Ptr, mkRwdAcnt)
+import           Address
+import           TxData (pattern AddrVKey, pattern Ptr, StakeObject(..))
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey,
@@ -46,7 +47,7 @@ aliceStake :: KeyPair
 aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
-aliceAddr = AddrTxin (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
+aliceAddr = AddrVKey (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
 
 bobPay :: KeyPair
 bobPay = KeyPair 3 3
@@ -55,7 +56,7 @@ bobStake :: KeyPair
 bobStake = KeyPair 4 4
 
 bobAddr :: Addr
-bobAddr = AddrTxin (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
+bobAddr = AddrVKey (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
 
 testPCs :: PParams
 testPCs = emptyPParams {
@@ -258,9 +259,9 @@ tx2 :: Tx
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
-        [ RegKey $ vKey aliceStake
-        , RegKey $ vKey bobStake
-        , RegKey $ vKey stakePoolKey1]
+        [ RegKey $ (KeyHashStake . hashKey) $ vKey aliceStake
+        , RegKey $ (KeyHashStake . hashKey) $ vKey bobStake
+        , RegKey $ (KeyHashStake . hashKey) $ vKey stakePoolKey1]
         (Slot 100)
         [alicePay, aliceStake, bobStake, stakePoolKey1]
 
@@ -383,7 +384,7 @@ tx5Body :: Epoch -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ]
-          [ RetirePool (vKey stakePoolKey1) e ]
+          [ RetirePool (hashKey $ vKey stakePoolKey1) e ]
           Map.empty
           (Coin 1000)
           (Slot 100)
