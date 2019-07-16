@@ -39,10 +39,12 @@ cwitness
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => DCert hashAlgo dsignAlgo
   -> KeyHash hashAlgo dsignAlgo
-cwitness (RegKey k)            = hashKey k
-cwitness (DeRegKey k)          = hashKey k
+cwitness (RegKey (KeyHashStake hk))           = hk
+cwitness (DeRegKey (KeyHashStake hk))         = hk
+cwitness (RegKey (ScriptHashStake _))         = undefined
+cwitness (DeRegKey (ScriptHashStake _))       = undefined
 cwitness (RegPool pool)        = hashKey $ pool ^. poolPubKey
-cwitness (RetirePool k _)      = hashKey k
+cwitness (RetirePool k _)      = k
 cwitness (Delegate delegation) = hashKey $ delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = hashGenesisKey gk
 
