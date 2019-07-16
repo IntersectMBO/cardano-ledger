@@ -16,11 +16,35 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Numeric.Natural (Natural)
 
+import           BaseTypes
 import           Coin
-import           Delegation.PoolParams
 import           Keys
 import           Slot
 import           Updates
+
+-- |The delegation of one stake key to another.
+data Delegation hashAlgo dsignAlgo = Delegation
+  { _delegator :: StakeObject hashAlgo dsignAlgo
+  , _delegatee :: KeyHash hashAlgo dsignAlgo
+  } deriving (Show, Eq, Ord)
+
+-- |A stake pool.
+data PoolParams hashAlgo dsignAlgo =
+  PoolParams
+    { _poolPubKey  :: VKey dsignAlgo
+    , _poolPledge  :: Coin
+    , _poolPledges :: Map (VKey dsignAlgo) Coin -- TODO not updated currently
+    , _poolCost    :: Coin
+    , _poolMargin  :: UnitInterval
+    , _poolAltAcnt :: Maybe (KeyHash hashAlgo dsignAlgo)
+    , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
+    , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
+    } deriving (Show, Eq, Ord)
+
+-- |An account based address for a rewards
+newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
+  { getRwdHK :: StakeObject hashAlgo signAlgo
+  } deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
@@ -80,13 +104,13 @@ data DCert hashAlgo dsignAlgo
     -- | A stake key registration certificate.
   = RegKey (StakeObject hashAlgo dsignAlgo)
     -- | A stake key deregistration certificate.
-  | DeRegKey (StakeObject hashAlgo dsignAlgo) --TODO this is actually KeyHash on page 13, is that what we want?
+  | DeRegKey (StakeObject hashAlgo dsignAlgo)
     -- | A stake pool registration certificate.
   | RegPool (PoolParams hashAlgo dsignAlgo)
     -- | A stake pool retirement certificate.
   | RetirePool (KeyHash hashAlgo dsignAlgo) Epoch
     -- | A stake delegation certificate.
-  | Delegate (Delegation dsignAlgo)
+  | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
   | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
   deriving (Show, Eq, Ord)
@@ -103,8 +127,6 @@ data TxBody hashAlgo dsignAlgo
       , _txUpdate :: Update dsignAlgo
       } deriving (Show, Eq, Ord)
 
-makeLenses ''TxBody
-
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey hashAlgo dsignAlgo
   = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
@@ -119,18 +141,8 @@ data Tx hashAlgo dsignAlgo
           Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
       } deriving (Show, Eq, Ord)
 
-makeLenses ''Tx
-
--- newtype StakePools hashAlgo dsignAlgo =
---   StakePools (Map (KeyHash hashAlgo dsignAlgo) Slot)
---   deriving (Show, Eq)
-
--- newtype StakeKeys hashAlgo dsignAlgo =
---   StakeKeys (Map (StakeObject hashAlgo dsignAlgo) Slot)
---   deriving (Show, Eq)
-
 newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map (KeyHash hashAlgo dsignAlgo) Slot)
+  StakeKeys (Map (StakeObject hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq)
 
 newtype StakePools hashAlgo dsignAlgo =
@@ -287,3 +299,43 @@ instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
        encodeListLen 2
         <> toCBOR (1 :: Word8)
         <> toCBOR sc
+
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
+  ToCBOR (Delegation hashAlgo dsignAlgo) where
+  toCBOR delegation =
+    encodeListLen 2
+      <> toCBOR (_delegator delegation)
+      <> toCBOR (_delegatee delegation)
+
+
+instance
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => ToCBOR (PoolParams hashAlgo dsignAlgo)
+ where
+  toCBOR poolParams =
+    encodeListLen 8
+      <> toCBOR (_poolPubKey poolParams)
+      <> toCBOR (_poolPledge poolParams)
+      <> toCBOR (_poolPledges poolParams)
+      <> toCBOR (_poolCost poolParams)
+      <> toCBOR (_poolMargin poolParams)
+      <> toCBOR (_poolAltAcnt poolParams)
+      <> toCBOR (_poolRAcnt poolParams)
+      <> toCBOR (_poolOwners poolParams)
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => ToCBOR (RewardAcnt hashAlgo dsignAlgo) where
+  toCBOR rwdAcnt =
+    encodeListLen 1
+      <> toCBOR (getRwdHK rwdAcnt)
+
+-- Lenses
+
+makeLenses ''TxBody
+
+makeLenses ''Tx
+
+makeLenses ''Delegation
+
+makeLenses ''PoolParams

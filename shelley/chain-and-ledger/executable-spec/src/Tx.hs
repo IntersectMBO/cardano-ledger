@@ -27,6 +27,7 @@ module Tx
   , hashScript
   , txwitsVKey
   , txwitsScripts
+  , extractKeyHash
   )
 where
 
@@ -41,6 +42,7 @@ import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
 
 import           Data.Word (Word8)
 
+import qualified Data.Maybe      as Maybe
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -109,3 +111,9 @@ txwitsScripts
   :: Tx hashAlgo dsignAlgo
   -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
 txwitsScripts tx = _witnessMSigMap tx
+
+extractKeyHash :: [StakeObject hashAlgo dsignAlgo] -> [KeyHash hashAlgo dsignAlgo]
+extractKeyHash l =
+  Maybe.catMaybes $ map (\so -> case so of
+                                 KeyHashStake hk -> Just hk
+                                 _ -> Nothing) l

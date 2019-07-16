@@ -46,9 +46,9 @@ import           Keys
 import           PParams                 (PParams(..))
 import           Updates                 (Update)
 import           Tx
+import           TxData
 
 import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
-import           Delegation.PoolParams (poolPubKey)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo
