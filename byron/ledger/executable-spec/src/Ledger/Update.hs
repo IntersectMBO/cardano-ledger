@@ -721,8 +721,8 @@ emptyUPIState =
 initialPParams :: PParams
 initialPParams =
   PParams                 -- TODO: choose more sensible default values
-     { _maxBkSz = 1000        -- max sizes chosen as non-zero to allow progress
-     , _maxHdrSz = 100
+     { _maxBkSz = 10000       -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 1000
      , _maxTxSz = 500
      , _maxPropSz = 10
      , _bkSgnCntT = 0.22     -- As defined in the spec.
@@ -1021,20 +1021,31 @@ dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
 -- own modules.
 ppsUpdateFrom :: PParams -> Gen PParams
 ppsUpdateFrom pps = do
+  -- NOTE: we only generate small changes in the parameters to avoid leaving the
+  -- protocol parameters in a state that won't allow to produce any valid blocks
+  -- anymore (for instance if the maximum block size drops to a very small
+  -- value).
+
   -- Determine the change in the block size: a decrement or an increment that
   -- is no more than twice the current block maximum size.
   --
   -- We don't expect the maximum block size to change often, so we generate
   -- more values around the current block size (@_maxBkSz@).
-  newMaxBkSize <- Gen.integral (Range.linearFrom _maxBkSz 1 (2 * _maxBkSz))
-                  `increasingProbabilityAt`
-                  (1, 2 * _maxBkSz)
+  newMaxBkSize <-
+    Gen.integral (Range.linearFrom
+                    _maxBkSz
+                    (_maxBkSz - 100) -- Decrement value was determined ad-hoc
+                    (2 * _maxBkSz)
+                 )
 
   -- Similarly, we don't expect the transaction size to be changed often, so we
   -- also generate more values around the current maximum transaction size.
-  newMaxTxSize <- Gen.integral (Range.exponentialFrom _maxTxSz 0 (newMaxBkSize - 1))
-                  `increasingProbabilityAt`
-                  (0, newMaxBkSize - 1)
+  newMaxTxSize <-
+    Gen.integral (Range.exponentialFrom
+                    _maxTxSz
+                    (_maxTxSz - 10) -- Decrement value determined ad-hoc
+                    (newMaxBkSize - 1)
+                 )
 
   PParams
     <$> pure newMaxBkSize
@@ -1067,18 +1078,27 @@ ppsUpdateFrom pps = do
 
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
-      Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
-      `increasingProbabilityAt` (0, 2 * _maxHdrSz)
+      Gen.integral (Range.exponentialFrom
+                      _maxHdrSz
+                      (_maxHdrSz - 10)
+                      (2 * _maxHdrSz)
+                   )
 
     nextMaxPropSz :: Gen Natural
     nextMaxPropSz =
-      Gen.integral (Range.exponentialFrom _maxPropSz 0 (2 * _maxPropSz))
-      `increasingProbabilityAt` (0, 2 * _maxPropSz)
+      Gen.integral (Range.exponentialFrom
+                      _maxPropSz
+                      (_maxPropSz - 1)
+                      (2 * _maxPropSz)
+                   )
 
     nextBkSgnCntT :: Gen Double
     nextBkSgnCntT =
-      Gen.double (Range.exponentialFloatFrom _bkSgnCntT 0 1)
-      `increasingProbabilityAt` (0, 1)
+      Gen.double (Range.exponentialFloatFrom
+                    _bkSgnCntT
+                    (_bkSgnCntT - 0.01)
+                    (_bkSgnCntT + 0.01)
+                 )
 
     nextUpTtl :: Gen SlotCount
     nextUpTtl = SlotCount <$>
@@ -1106,7 +1126,7 @@ ppsUpdateFrom pps = do
       `increasingProbabilityAt` (0, 1)
 
     nextFactorA :: Gen Int
-    nextFactorA =
+    nextFactorA = --pure _factorA
       -- TODO: we choose arbitrary numbers here for now.
       Gen.integral (Range.exponentialFrom _factorA 0 10)
       `increasingProbabilityAt` (0, 10)

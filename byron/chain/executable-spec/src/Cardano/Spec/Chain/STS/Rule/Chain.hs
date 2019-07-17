@@ -38,7 +38,7 @@ import           Ledger.UTxO (UTxO)
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.BBody
 import           Cardano.Spec.Chain.STS.Rule.BHead
-import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Cardano.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
 import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
@@ -208,14 +208,46 @@ sigGenChain
   shouldGenDelegation
   shouldGenUTxO
   _
-  (_sNow, utxo0, ads, pps, k)
+  (_sNow, utxo0, ads, _pps, k)
   (Slot s, sgs, h, utxo, ds, us)
   = do
+    -- We'd expect the slot increment to be close to 1, even for large Gen's
+    -- size numbers.
+    nextSlot <- Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
+
+    -- We need to generate delegation, update proposals, votes, and transactions
+    -- after a potential update in the protocol parameters (which is triggered
+    -- only at epoch boundaries).
+    --
+    -- And this is not compositional BTW ...
+    let (us', _) = applySTSIndifferently @EPOCH $ TRC ( (sEpoch (Slot s) k, k)
+                                                      , us
+                                                      , nextSlot
+                                                      )
+        pps' = protocolParameters us'
+
+        upienv =
+          ( Slot s
+          , _dIStateDelegationMap ds
+          , k
+          , toNumberOfGenesisKeys $ Set.size ads
+          )
+
+        -- TODO: we might need to make the number of genesis keys a newtype, and
+        -- provide this function in the same module where this newtype is
+        -- defined.
+        toNumberOfGenesisKeys n
+          | fromIntegral (maxBound :: Word8) < n =
+              error $ "sigGenChain: too many genesis keys: " ++ show  n
+          | otherwise = fromIntegral n
+
+    aBlockVersion <-
+      Update.protocolVersionEndorsementGen upienv us'
+
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- SigCntGen.issuer (pps, ds ^. dmsL, k) sgs
-    nextSlot    <- gNextSlot
+    vkI <- SigCntGen.issuer (pps', ds ^. dmsL, k) sgs
 
     delegationPayload <- case shouldGenDelegation of
       GenDelegation   ->
@@ -230,27 +262,13 @@ sigGenChain
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of
-      GenUTxO   -> sigGen @UTXOWS Nothing utxoEnv utxo
+      GenUTxO   ->
+        let utxoEnv   = UTxOEnv utxo0 pps' in
+          sigGen @UTXOWS Nothing utxoEnv utxo
       NoGenUTxO -> pure []
 
-    let upienv =
-          ( Slot s
-          , _dIStateDelegationMap ds
-          , k
-          , toNumberOfGenesisKeys $ Set.size ads
-          )
-        -- TODO: we might need to make the number of genesis keys a newtype, and
-        -- provide this function in the same module where this newtype is
-        -- defined.
-        toNumberOfGenesisKeys n
-          | fromIntegral (maxBound :: Word8) < n =
-              error $ "sigGenChain: too many genesis keys: " ++ show  n
-          | otherwise = fromIntegral n
-    aBlockVersion <- --pure $! (ProtVer 0 0 0) -- TODO: Generate a protocol version
-      Update.protocolVersionEndorsementGen upienv us
-
     (anOptionalUpdateProposal, aListOfVotes) <-
-      Update.updateProposalAndVotesGen upienv us
+      Update.updateProposalAndVotesGen upienv us'
 
     let
       dummySig       = Sig genesisHash (owner vkI)
@@ -276,8 +294,3 @@ sigGenChain
 
     pure $ Block signedHeader bb
    where
-     -- We'd expect the slot increment to be close to 1, even for large
-     -- Gen's size numbers.
-     gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
-
-     utxoEnv   = UTxOEnv {utxo0, pps}
