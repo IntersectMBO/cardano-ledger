@@ -1037,6 +1037,7 @@ ppsUpdateFrom pps = do
                     (_maxBkSz - 100) -- Decrement value was determined ad-hoc
                     (2 * _maxBkSz)
                  )
+    `increasingProbabilityAt` (_maxBkSz - 100, 2 * _maxBkSz)
 
   -- Similarly, we don't expect the transaction size to be changed often, so we
   -- also generate more values around the current maximum transaction size.
@@ -1046,6 +1047,7 @@ ppsUpdateFrom pps = do
                     (_maxTxSz - 10) -- Decrement value determined ad-hoc
                     (newMaxBkSize - 1)
                  )
+    `increasingProbabilityAt` (_maxTxSz - 10, newMaxBkSize - 1)
 
   PParams
     <$> pure newMaxBkSize

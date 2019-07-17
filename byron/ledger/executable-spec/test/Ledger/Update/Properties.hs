@@ -88,9 +88,11 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   --------------------------------------------------------------------------------
   -- Maximum block-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum block-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
+  -- NOTE: since we want to generate valid signals, we cannot decrease the block
+  -- size in most of the cases.
+  cover 20
+    "at least 5% of the update proposals decrease the maximum block-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum block-size"
@@ -100,18 +102,12 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum block-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
-  -- TODO: in the future we should change 1 to the minimum allowed protocol
-  -- value. But first we need to determine what that value is.
-  cover 20
-    "at least 5% of the update proposals set the maximum block-size to 1"
-    (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
-
   --------------------------------------------------------------------------------
   -- Maximum header-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum header-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Decreases) sample)
+  cover 20
+    "at least 5% of the update proposals decrease the maximum header-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum header-size"
@@ -121,16 +117,12 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum header-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz RemainsTheSame) sample)
 
-  cover 20
-    "at least 5% of the update proposals set the maximum header-size to 0"
-    (0.05 <= ratio (Update._maxHdrSz `isSetTo` 0) sample)
-
   --------------------------------------------------------------------------------
   -- Maximum transaction-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum transaction-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Decreases) sample)
+  cover 20
+    "at least 5% of the update proposals decrease the maximum transaction-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum transaction-size"
@@ -140,16 +132,12 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum transaction-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz RemainsTheSame) sample)
 
-  cover 20
-    "at least 5% of the update proposals set the maximum transaction-size to 0"
-    (0.05 <= ratio (Update._maxTxSz `isSetTo` 0) sample)
-
   --------------------------------------------------------------------------------
   -- Maximum proposal-size checks
   --------------------------------------------------------------------------------
-  cover 50
+  cover 20
     "at least 30% of the update proposals decrease the maximum proposal-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Decreases) sample)
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum proposal-size"
@@ -158,10 +146,6 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   cover 50
     "at least 10% of the update proposals do not change the maximum proposal-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz RemainsTheSame) sample)
-
-  cover 20
-    "at least 5% of the update proposals set the maximum proposal-size to 0"
-    (0.05 <= ratio (Update._maxPropSz `isSetTo` 0) sample)
 
   -- NOTE: after empirically determining the checks above are sensible, we can
   -- add more coverage tests for the other protocol parameters.
@@ -218,18 +202,28 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
         check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
         check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
 
+    -- TODO: leaving this here as it might be useful in the future. Remove if it
+    -- isn't (dnadales - 07/17/2019). We use git, but nobody will see if it sits
+    -- in our history.
+    --
     -- Count the number of times in the sequence of update proposals that the
     -- given protocol value is set to the given value.
-    isSetTo
-      :: Eq v
-      => (PParams -> v)
-      -> v
-      -> Trace UPIREG
-      -> Int
-    isSetTo parameterValue value traceSample
-      = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
-      & filter (value ==)
-      & length
+    --
+    -- Example usage:
+    --
+    -- > cover 20
+    -- >    "at least 5% of the update proposals set the maximum proposal-size to 0"
+    -- > (0.05 <= ratio (Update._maxPropSz `isSetTo` 0) sample)
+    -- isSetTo
+    --   :: Eq v
+    --   => (PParams -> v)
+    --   -> v
+    --   -> Trace UPIREG
+    --   -> Int
+    -- isSetTo parameterValue value traceSample
+    --   = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
+    --   & filter (value ==)
+    --   & length
 
     expectedNumberOfUpdateProposalsPerKey :: Trace UPIREG -> Double
     expectedNumberOfUpdateProposalsPerKey traceSample =
