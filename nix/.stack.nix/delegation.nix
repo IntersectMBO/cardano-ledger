@@ -32,7 +32,7 @@
         };
       tests = {
         "delegation-test" = {
-          depends = (pkgs.lib).optionals (!flags.development) [
+          depends = [
             (hsPkgs.base)
             (hsPkgs.cryptonite)
             (hsPkgs.tasty)
