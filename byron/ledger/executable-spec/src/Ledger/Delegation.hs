@@ -62,6 +62,19 @@ module Ledger.Delegation
   , initialEnvFromGenesisKeys
   -- * Functions on delegation state
   , delegatorOf
+  -- * Support Functions for delegation properties
+  , delegatorDelegate
+  , emptyDelegationPayloadRatio
+  , thisEpochDelegationsRatio
+  , nextEpochDelegationsRatio
+  , selfDelegationsRatio
+  , multipleDelegationsRatio
+  , maxDelegationsTo
+  , changedDelegationsRatio
+  , maxChangedDelegations
+  , repeatedDelegationsRatio
+  , maxRepeatedDelegations
+  , maxCertsPerBlock
   )
 where
 
@@ -73,6 +86,7 @@ import qualified Data.Bimap as Bimap
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
+import           Data.List.Unique (count)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
@@ -86,14 +100,14 @@ import           Hedgehog.Range (linear)
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, (?!))
+                                           Signal, State, TRC (TRC), initialRules, judgmentContext,
+                                           trans, transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
-                     Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVkGenesisSet, range, signWithGenesisKey, unBlockCount, (∈),
-                     (∉), (⨃))
+                              Slot (Slot), SlotCount (SlotCount), VKey (VKey),
+                              VKeyGenesis (VKeyGenesis), addSlot, hash, mkVkGenesisSet, owner,
+                              range, signWithGenesisKey, unBlockCount, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
 
@@ -575,3 +589,124 @@ initialEnvFromGenesisKeys ngk chainLength =
     <*> epochGen 0 10
     <*> slotGen 0 100
     <*> CoreGen.k chainLength (chainLength `div` 10)
+
+--------------------------------------------------------------------------------
+-- Shared support functions for Delegation Properties
+--------------------------------------------------------------------------------
+
+delegatorDelegate :: DCert -> (VKeyGenesis, VKey)
+delegatorDelegate = delegator &&& delegate
+
+ratioInt :: Int -> Int -> Double
+ratioInt x y
+  = fromIntegral x / fromIntegral y
+
+-- | Filters the list with the predicate and returns
+-- the ratio of filtered to original list lengths.
+lenRatio :: ([a] -> [b]) -> [a] -> Double
+lenRatio p xs
+  = ratioInt (length (p xs))
+             (length xs)
+
+maxInt :: [Int] -> Int
+maxInt [] = 0
+maxInt xs = List.maximum xs
+
+-- | True if the tuple count (snd item) is >= 2
+multiple :: (a,Int) -> Bool
+multiple = (2 <=) . snd
+
+-- | Count the number of delegates in the given certificates
+delegateCounts :: [DCert] -> [(VKey, Int)]
+delegateCounts certs
+  = fmap delegatorDelegate certs
+    -- Remove duplicated elements, since we're not
+    -- interested in repeated delegations
+    & List.nub
+    -- Select the (unique) delegates
+    & fmap snd
+    -- If we have more than one occurrence of a delegate,
+    -- then we know that there were multiple delegations
+    -- to that delegate
+    & count
+
+-- | Count the number of delegators in the given certificates
+delegatorCounts :: [DCert] -> [(VKeyGenesis, Int)]
+delegatorCounts dcerts
+  = fmap delegatorDelegate dcerts
+    -- Remove duplicated elements, since we're not
+    -- interested in repeated delegations
+    & List.nub
+    -- Select the (unique) delegators
+    & fmap fst
+    -- If we have more than one occurrence of a delegator,
+    -- then we know that the delegator changed their delegation
+    & count
+
+-- | Ratio of certificate groups that are empty
+emptyDelegationPayloadRatio :: [[DCert]] -> Double
+emptyDelegationPayloadRatio
+  = lenRatio (filter null)
+
+-- | Ratio of certificates that delegate to _this_ epoch, where
+--   each certificate is represented by (current epoch,cert epoch)
+thisEpochDelegationsRatio :: [(Epoch, Epoch)] -> Double
+thisEpochDelegationsRatio
+  = lenRatio (filter thisEpoch)
+  where
+    thisEpoch = uncurry (==)
+
+-- | Ratio of certificates that delegate to the _next_ epoch, where
+--   each certificate is represented by (current epoch,cert epoch)
+nextEpochDelegationsRatio :: [(Epoch, Epoch)] -> Double
+nextEpochDelegationsRatio
+  = lenRatio (filter nextEpoch)
+  where
+    nextEpoch (e0, e1) = e0 + 1 == e1
+
+-- | Ratio of certificates that "delegate to self", that is,
+-- where the delegator and delegate are the same
+selfDelegationsRatio :: [DCert] -> Double
+selfDelegationsRatio
+  = lenRatio (filter selfDeleg . fmap delegatorDelegate)
+  where
+    selfDeleg (vks, vk) = owner vks == owner vk
+
+-- | Ratio of delegates that have multiple delegators
+-- that are delegating to them
+multipleDelegationsRatio :: [DCert] -> Double
+multipleDelegationsRatio dcerts
+  = lenRatio (filter multiple) (delegateCounts dcerts)
+
+-- | The maximum number of delegators to any particular delegate
+maxDelegationsTo :: [DCert] -> Int
+maxDelegationsTo dcerts
+  =  maxInt (snd <$> filter multiple (delegateCounts dcerts))
+
+-- | Ratio of delegators that have changed their delegations
+changedDelegationsRatio :: [DCert] -> Double
+changedDelegationsRatio dcerts
+  = lenRatio (filter multiple) (delegatorCounts dcerts)
+
+-- | The maximum number of change-of-delegate for any particular delegator
+maxChangedDelegations :: [DCert] -> Int
+maxChangedDelegations dcerts
+  = maxInt (snd <$> filter multiple (delegateCounts dcerts))
+
+-- | Ratio of repeated delegations to all delegations
+repeatedDelegationsRatio :: [DCert] -> Double
+repeatedDelegationsRatio dcerts
+  = fmap delegatorDelegate dcerts
+  & count
+  & lenRatio (filter multiple)
+
+-- | The maximum number of repeated delegations in the given certificates
+maxRepeatedDelegations :: [DCert] -> Int
+maxRepeatedDelegations dcerts
+  = maxInt (snd <$> filter multiple ds)
+  where
+    ds = count (fmap delegatorDelegate dcerts)
+
+maxCertsPerBlock :: [[DCert]] -> Int
+maxCertsPerBlock groupedCerts
+  = maxInt (map length groupedCerts)
