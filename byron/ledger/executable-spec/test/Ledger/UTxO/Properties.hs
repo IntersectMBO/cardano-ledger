@@ -5,18 +5,22 @@
 
 module Ledger.UTxO.Properties where
 
+import           Control.Arrow ((***))
 import           Control.Lens (view, (&), (^.), _2)
 import           Control.Monad (when)
-import           Hedgehog (Property, classify, cover, forAll, property, success, withTests, (===))
+import           Data.Foldable (foldl', traverse_)
+import           Hedgehog (Property, classify, cover, forAll, property, success, withTests, (===), MonadTest)
 
 import           Control.State.Transition.Generator (classifyTraceLength, trace)
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState,
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState, _traceInitState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
 
-import           Cardano.Ledger.Spec.STS.UTXO (UTxOState, pps, reserves, utxo)
+import           Cardano.Ledger.Spec.STS.UTXO (UTxOState(UTxOState), pps, reserves, utxo)
 import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
-import           Ledger.Core (Lovelace, unLovelace, (◁))
-import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, balance, body, inputs,
+import qualified Data.Map.Strict as Map
+import           Data.Set (Set, empty, fromList, union)
+import           Ledger.Core (Lovelace, unLovelace, (◁), (⋪), (∪), (∩), dom)
+import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, UTxO(UTxO), balance, body, inputs,
                      outputs, pcMinFee, txins, txouts)
 
 --------------------------------------------------------------------------------
@@ -28,6 +32,39 @@ moneyIsConstant :: Property
 moneyIsConstant = withTests 200 . property $ do
   (st0, st) <- firstAndLastState <$> forAll (trace @UTXOW 500)
   reserves st0 + balance (utxo st0) === reserves st + balance (utxo st)
+
+-- | Check that there is no double spending
+noDoubleSpending :: Property
+noDoubleSpending = property $ do
+  t <- forAll (trace @UTXOW 300)
+  let
+    UTxOState {utxo = utxo0} = _traceInitState t
+    txs = body <$> traceSignals OldestFirst t
+  when (all (\ti -> dom (txouts ti) ∩ dom utxo0 == empty) txs) $
+    traverse_ (noCommonInputsTxs txs) (zip txs [0 .. ])
+   where
+    noCommonInputsTxs :: MonadTest m => [Tx] -> (Tx, Int) -> m ()
+    noCommonInputsTxs txs (tx, i) =
+      traverse_ (\txj -> txins' txj ∩ txins' tx === empty) (take i txs)
+
+    txins' :: Tx -> Set TxIn
+    txins' = fromList . txins
+
+-- | Check that UTxO is outputs minus inputs
+utxoDiff :: Property
+utxoDiff = property $ do
+  t <- forAll (trace @UTXOW 500)
+  let
+    (utxo0, utxoSt) = (utxo *** utxo) . firstAndLastState $ t
+    txs = body <$> traceSignals OldestFirst t
+  when (all (\ti -> dom (txouts ti) ∩ dom utxo0 == empty) txs) $
+    foldl' union' empty txs ⋪ (utxo0 ∪ allTxOuts txs) === utxoSt
+ where
+  union' :: Set TxIn -> Tx -> Set TxIn
+  union' s tx = s `union` fromList (txins tx)
+
+  allTxOuts :: [Tx] -> UTxO
+  allTxOuts txs = foldl' (∪) (UTxO Map.empty) (map txouts txs)
 
 --------------------------------------------------------------------------------
 -- Coverage guarantees for UTxO traces
@@ -56,6 +93,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
     cover 20 "avg. nr. of tx outputs (1,5]" (1 <= avgOutputs && avgOutputs <= 5)
     cover 20 "avg. nr. of tx outputs (5,10]" (5 < avgOutputs && avgOutputs <= 10)
+
+    cover 80 "starting UTxO has no future outputs" (all (== empty) (futureOutputs tr))
   where
     -- | The average "fee surplus" for transactions in the trace.
     --   Could be zero if all the transactions had zero surplus fee.
@@ -78,6 +117,16 @@ relevantCasesAreCovered = withTests 400 $ property $ do
           utxo_ = utxo st
           fee = unLovelace $ balance (txins tx_ ◁ utxo_) - balance (txouts tx_)
           minFee = unLovelace $ txMinFee tx_
+
+    -- | The intersection of the starting UTxO and each transaction in
+    -- a trace
+    futureOutputs :: Trace UTXOW -> [Set TxIn]
+    futureOutputs tr =
+      let
+        UTxOState {utxo = utxo0} = _traceInitState tr
+        txs = body <$> traceSignals OldestFirst tr
+      in
+        (\ti -> dom (txouts ti) ∩ dom utxo0) <$> txs
 
 -- | Returns the average number of inputs and outputs for a list of transactions.
 avgInputsOutputs :: [Tx] -> (Double, Double)

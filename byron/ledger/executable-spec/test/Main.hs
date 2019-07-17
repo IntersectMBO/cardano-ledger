@@ -48,6 +48,8 @@ main = defaultMain tests
       "UTxO properties"
       [ testProperty "Money is constant" moneyIsConstant
       , testProperty "Relevant UTxO traces are generated" UTxO.relevantCasesAreCovered
+      , testProperty "No double spending" UTxO.noDoubleSpending
+      , testProperty "UTxO is outputs minus inputs" UTxO.utxoDiff
       ]
     , testTxHasTypeReps
     , testGroup
