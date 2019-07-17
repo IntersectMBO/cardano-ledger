@@ -57,17 +57,17 @@ ocertTransition = do
   let OCert vk_hot vk_cold n c0@(KESPeriod c0') tau = bheaderOCert bhb
   let hk = hashKey vk_cold
   let s  = bheaderSlot bhb
-  not (verify vk_cold (vk_hot, n, c0) tau) ?! InvalidSignatureOCERT
+  verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
   let kp@(KESPeriod kp') = kesPeriod s
-  c0 > kp ?! KESBeforeStartOCERT
-  kp' >= c0' + 90 ?! KESAfterEndOCERT
+  c0 <= kp ?! KESBeforeStartOCERT
+  kp' < c0' + 90 ?! KESAfterEndOCERT
   let t = kp' - c0'
-  not (verifyKES vk_hot bhb sigma t) ?! InvalidKesSignatureOCERT
+  verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
   let hkEntry = Map.lookup hk cs
   case hkEntry of
     Nothing -> do
       failBecause NoCounterForKeyHashOCERT
       pure cs
     Just m -> do
-      m > n ?! KESPeriodWrongOCERT
+      m <= n ?! KESPeriodWrongOCERT
       pure $ Map.insert hk n cs
