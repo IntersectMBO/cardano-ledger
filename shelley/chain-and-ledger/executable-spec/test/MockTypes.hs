@@ -10,6 +10,7 @@ import qualified Keys
 import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
+import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
 import qualified UTxO
@@ -27,6 +28,8 @@ type KeyHash = Keys.KeyHash ShortHash MockDSIGN
 type KeyPair = Keys.KeyPair MockDSIGN
 
 type VKey = Keys.VKey MockDSIGN
+
+type SKey = Keys.SKey MockDSIGN
 
 type KeyPairs = LedgerState.KeyPairs MockDSIGN
 
@@ -47,6 +50,8 @@ type TxBody = Tx.TxBody ShortHash MockDSIGN
 type TxIn = Tx.TxIn ShortHash MockDSIGN
 
 type TxOut = Tx.TxOut ShortHash MockDSIGN
+
+type TxId = TxData.TxId ShortHash MockDSIGN
 
 type UTxO = UTxO.UTxO ShortHash MockDSIGN
 
@@ -74,4 +79,12 @@ type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
 
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
+type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
+
 type StakeObject = TxData.StakeObject ShortHash MockDSIGN
+
+type MultiSig = TxData.MultiSig ShortHash MockDSIGN
+
+type ScriptHash = TxData.ScriptHash ShortHash MockDSIGN
+
+type WitVKey = TxData.WitVKey ShortHash MockDSIGN
