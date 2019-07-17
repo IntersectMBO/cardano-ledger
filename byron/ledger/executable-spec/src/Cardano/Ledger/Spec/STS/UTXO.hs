@@ -3,7 +3,16 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 -- | UTXO transition system
-module Cardano.Ledger.Spec.STS.UTXO where
+module Cardano.Ledger.Spec.STS.UTXO
+  ( UTXO
+  , UTxOEnv (UTxOEnv)
+  , UTxOState (UTxOState)
+  , utxo
+  , utxo0
+  , pps
+  , reserves
+  )
+where
 
 import qualified Data.Set as Set
 
@@ -20,7 +29,6 @@ import Control.State.Transition
   , (?!)
   , judgmentContext
   )
-
 import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams)
