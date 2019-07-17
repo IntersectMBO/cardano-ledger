@@ -51,6 +51,7 @@ instance
     | MissingScriptWitnessesUTXOW
     | MissingScriptWitnessesRwdUTXOW
     | ScriptWitnessNotValidatingUTXOW
+    | ScriptWitnessNotValidatingRwdUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo))
     deriving (Eq, Show)
 
@@ -80,14 +81,18 @@ utxoWitnessed = do
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map (\(WitVKey vk _) -> hashKey vk) wits
-  witsNeeded (_utxo u) tx _dms `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
+  let needed = witsNeeded (_utxo u) tx _dms
+  needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
 
   -- check multi-signature scripts
   let utxo' = _utxo u
   let scriptWits = txwitsScript tx
   let scriptIns = txinsScript (txins txbody) utxo'
-  scriptIns == (Map.keysSet $ validators scriptIns utxo' scriptWits)
+  let validatorScripts = validators scriptIns utxo' scriptWits
+  scriptIns == Map.keysSet validatorScripts
     ?! MissingScriptWitnessesUTXOW
+  Map.foldr' (\scr b -> b && validateScript scr tx) True validatorScripts
+    ?! ScriptWitnessNotValidatingUTXOW
 
   -- script locked reward accounts
   let withdrawals = _wdrls txbody
