@@ -7,6 +7,7 @@
 
 module STS.Utxow
   ( UTXOW
+  , PredicateFailure(..)
   )
 where
 
@@ -106,7 +107,7 @@ utxoWitnessed = do
     ?! MissingScriptWitnessesRwdUTXOW
   let scriptValidators = mapMaybe (flip Map.lookup scriptWits) addrRwdScrHash
   (all (\(hs, scr) -> hs == hashScript scr && validateScript scr tx) $
-    zip addrRwdScrHash scriptValidators) ?! ScriptWitnessNotValidatingUTXOW
+    zip addrRwdScrHash scriptValidators) ?! ScriptWitnessNotValidatingRwdUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo)
     $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)
