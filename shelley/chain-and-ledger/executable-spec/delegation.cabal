@@ -99,9 +99,9 @@ test-suite delegation-test
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
       -Wredundant-constraints
-  if (!flag(development))
-    ghc-options:
-      -Werror
+    if (!flag(development))
+      ghc-options:
+        -Werror
     build-depends:
       base,
       cryptonite,
