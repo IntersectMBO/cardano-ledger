@@ -389,6 +389,8 @@ data BoundaryValidationData a = BoundaryValidationData
   -- ^ Block number
   , boundaryHeaderBytes :: !a
   -- ^ Annotation representing the header bytes
+  , boundaryBlockBytes  :: !a
+  -- ^ Annotation representing the bytes that encode the entire boundary block
   } deriving (Eq, Show, Functor)
 
 instance Decoded (BoundaryValidationData ByteString) where
@@ -403,7 +405,7 @@ boundaryHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
 --   the header for hashing
 dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
 dropBoundaryBlock = do
-  Annotated (isGen, (Annotated (hh, epoch, difficulty) bs)) (ByteSpan start end) <- annotatedDecoder $ do
+  Annotated (isGen, (Annotated (hh, epoch, difficulty) hbs)) bs@(ByteSpan start end) <- annotatedDecoder $ do
     enforceSize "BoundaryBlock" 3
     aHeaderStuff <- annotatedDecoder dropBoundaryHeader
     dropBoundaryBody
@@ -416,7 +418,8 @@ dropBoundaryBlock = do
     , boundaryPrevHash    = if epoch == 0 || isGen then Left (coerce hh) else Right hh
     , boundaryEpoch       = epoch
     , boundaryDifficulty  = difficulty
-    , boundaryHeaderBytes = bs
+    , boundaryHeaderBytes = hbs
+    , boundaryBlockBytes  = bs
     }
 
 toCBORABOBBoundary :: ProtocolMagicId -> BoundaryValidationData a -> Encoding
