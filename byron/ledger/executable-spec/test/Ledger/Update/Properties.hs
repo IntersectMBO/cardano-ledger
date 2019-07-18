@@ -440,7 +440,7 @@ ublockRelevantTracesAreCovered = withTests 150 $ property $ do
 
   -- With traces of length 500, we expect to see about 80-90 proposals, which means that we will
   -- have about 8 to 9 proposals scheduled for adoption.
-  cover 70
+  cover 60
     "at least 10% of the proposals get enough endorsements"
     (0.1 <= proposalsScheduledForAdoption sample / totalProposals sample)
 
