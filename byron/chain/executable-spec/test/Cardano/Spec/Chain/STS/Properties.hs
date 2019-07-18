@@ -55,7 +55,7 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
+  withTests 100 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 250
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK = property $ do
