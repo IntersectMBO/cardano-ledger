@@ -55,8 +55,8 @@ bheadTransition = do
   let slot                = bheaderSlot bhb
   let EpochState _ _ _ pp = es
 
-  fromIntegral (bHeaderSize bh) > _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
-  fromIntegral (hBbsize bhb) > _maxBBSize pp ?! BlockSizeTooLargeBHEAD
+  fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
+  fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
     $ TRC ((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)

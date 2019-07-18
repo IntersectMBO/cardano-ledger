@@ -99,6 +99,12 @@ test-suite delegation-test
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
       -Wredundant-constraints
+      -- We set a bound here so that we're alerted of potential space
+      -- leaks in our generators (or test) code.
+      --
+      -- The 4 megabytes stack bound and 150 megabytes heap bound were
+      -- determined ad-hoc.
+      "-with-rtsopts=-K4m -M150m"
     if (!flag(development))
       ghc-options:
         -Werror
