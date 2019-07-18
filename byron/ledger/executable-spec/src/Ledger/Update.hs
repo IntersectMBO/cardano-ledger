@@ -1045,7 +1045,7 @@ ppsUpdateFrom pps = do
     Gen.integral (Range.exponentialFrom
                     _maxTxSz
                     (_maxTxSz -? 10) -- Decrement value determined ad-hoc
-                    (newMaxBkSize - 1)
+                    (newMaxBkSize -? 1)
                  )
     `increasingProbabilityAt` (_maxTxSz -? 10, newMaxBkSize -? 1)
 
