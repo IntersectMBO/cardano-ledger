@@ -217,13 +217,16 @@ sigGenChain
 
     -- We need to generate delegation, update proposals, votes, and transactions
     -- after a potential update in the protocol parameters (which is triggered
-    -- only at epoch boundaries).
+    -- only at epoch boundaries). Otherwise the generators will use a state that
+    -- won't hold when the rules that correspond to these generators are
+    -- applied. For instance, the fees might change, which will render the
+    -- transaction as invalid.
     --
-    -- And this is not compositional BTW ...
     let (us', _) = applySTSIndifferently @EPOCH $ TRC ( (sEpoch (Slot s) k, k)
                                                       , us
                                                       , nextSlot
                                                       )
+
         pps' = protocolParameters us'
 
         upienv =
@@ -251,19 +254,29 @@ sigGenChain
 
     delegationPayload <- case shouldGenDelegation of
       GenDelegation   ->
-        let dsEnv = DSEnv
-                    { _dSEnvAllowedDelegators = ads
-                    , _dSEnvEpoch = sEpoch nextSlot k
-                    , _dSEnvSlot = nextSlot
-                    , _dSEnvK = k
-                    }
-        in
-        dcertsGen dsEnv ds
+        -- In practice there won't be a delegation payload in every block, so we
+        -- make this payload sparse.
+        --
+        -- NOTE: We arbitrarily chose to generate delegation payload in 30% of
+        -- the cases. We could make this configurable.
+        Gen.frequency
+          [ (7, pure [])
+          , (3,
+              let dsEnv =
+                    DSEnv
+                      { _dSEnvAllowedDelegators = ads
+                      , _dSEnvEpoch = sEpoch nextSlot k
+                      , _dSEnvSlot = nextSlot
+                      , _dSEnvK = k
+                      }
+              in dcertsGen dsEnv ds
+            )
+          ]
       NoGenDelegation -> pure []
 
     utxoPayload <- case shouldGenUTxO of
       GenUTxO   ->
-        let utxoEnv   = UTxOEnv utxo0 pps' in
+        let utxoEnv = UTxOEnv utxo0 pps' in
           sigGen @UTXOWS Nothing utxoEnv utxo
       NoGenUTxO -> pure []
 
@@ -271,7 +284,7 @@ sigGenChain
       Update.updateProposalAndVotesGen upienv us'
 
     let
-      dummySig       = Sig genesisHash (owner vkI)
+      dummySig = Sig genesisHash (owner vkI)
       unsignedHeader = MkBlockHeader
         h
         nextSlot
@@ -293,4 +306,3 @@ sigGenChain
           aBlockVersion
 
     pure $ Block signedHeader bb
-   where

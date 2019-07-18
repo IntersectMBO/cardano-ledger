@@ -1034,20 +1034,20 @@ ppsUpdateFrom pps = do
   newMaxBkSize <-
     Gen.integral (Range.linearFrom
                     _maxBkSz
-                    (_maxBkSz - 100) -- Decrement value was determined ad-hoc
+                    (_maxBkSz -? 100) -- Decrement value was determined ad-hoc
                     (2 * _maxBkSz)
                  )
-    `increasingProbabilityAt` (_maxBkSz - 100, 2 * _maxBkSz)
+    `increasingProbabilityAt` (_maxBkSz -? 100, 2 * _maxBkSz)
 
   -- Similarly, we don't expect the transaction size to be changed often, so we
   -- also generate more values around the current maximum transaction size.
   newMaxTxSize <-
     Gen.integral (Range.exponentialFrom
                     _maxTxSz
-                    (_maxTxSz - 10) -- Decrement value determined ad-hoc
+                    (_maxTxSz -? 10) -- Decrement value determined ad-hoc
                     (newMaxBkSize - 1)
                  )
-    `increasingProbabilityAt` (_maxTxSz - 10, newMaxBkSize - 1)
+    `increasingProbabilityAt` (_maxTxSz -? 10, newMaxBkSize -? 1)
 
   PParams
     <$> pure newMaxBkSize
@@ -1082,7 +1082,7 @@ ppsUpdateFrom pps = do
     nextMaxHdrSzGen =
       Gen.integral (Range.exponentialFrom
                       _maxHdrSz
-                      (_maxHdrSz - 10)
+                      (_maxHdrSz -? 10)
                       (2 * _maxHdrSz)
                    )
 
@@ -1090,7 +1090,7 @@ ppsUpdateFrom pps = do
     nextMaxPropSz =
       Gen.integral (Range.exponentialFrom
                       _maxPropSz
-                      (_maxPropSz - 1)
+                      (_maxPropSz -? 1)
                       (2 * _maxPropSz)
                    )
 
@@ -1138,6 +1138,9 @@ ppsUpdateFrom pps = do
       -- TODO: we choose arbitrary numbers here for now.
       Gen.integral (Range.exponentialFrom _factorB 0 10)
       `increasingProbabilityAt` (0, 10)
+
+    (-?) :: Natural -> Natural -> Natural
+    n -? m = if n < m then 0 else n - m
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.
