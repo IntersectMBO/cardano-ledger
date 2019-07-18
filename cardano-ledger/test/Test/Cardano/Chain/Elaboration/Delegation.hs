@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Elaboration.Delegation
@@ -12,7 +13,7 @@ import Cardano.Prelude
 import Test.Cardano.Prelude
 
 import qualified Data.Set as Set
-import Hedgehog (assert, forAll, property)
+import Hedgehog (assert, forAll, property, success, cover)
 
 import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (hashKey)
@@ -55,11 +56,22 @@ ts_prop_elaboratedCertsValid =
         let pm = Genesis.configProtocolMagicId config
 
         -- Generate and elaborate a certificate
-        cert <- forAll $ elaborateDCertAnnotated pm <$> dcertGen env
+        mCert <- forAll $ dcertGen env Set.empty
+
+        cover 95
+          "A certificate was generated"
+          (isJust mCert)
 
         -- Validate the certificate
-        assert
-          $ Concrete.Certificate.isValid (Annotated pm (serialize' pm)) cert
+        case mCert of
+          Nothing ->
+            success -- We ignore 'Nothing' values when we the signal generator
+                    -- fails. Coverage testing ensures we will not generate a
+                    -- large portion of 'Nothing'.
+          Just cert ->
+            let concreteCert = elaborateDCertAnnotated pm cert in
+            assert
+              $ Concrete.Certificate.isValid (Annotated pm (serialize' pm)) concreteCert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -82,7 +94,7 @@ elaborateDCert pm cert = Concrete.mkCertificate
   (_         , delegatorSK) = elaborateKeyPair $ vKeyPair delegatorVKey
   (delegateVK, _          ) = elaborateKeyPair . vKeyPair $ delegate cert
 
-  Epoch e = _depoch cert
+  Epoch e = depoch cert
 
   epochNo :: Concrete.EpochNumber
   epochNo = fromIntegral e

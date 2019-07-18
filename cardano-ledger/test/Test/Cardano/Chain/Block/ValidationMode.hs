@@ -8,14 +8,14 @@ module Test.Cardano.Chain.Block.ValidationMode
   )
 where
 
-import Cardano.Prelude hiding (State)
+import Cardano.Prelude hiding (State, trace)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
 import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
-import qualified Data.Sequence as Seq
 import qualified Data.Set as S
+import Data.Word (Word64)
 
 import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block
@@ -43,21 +43,25 @@ import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (..), UTxOState (..))
 import Control.State.Transition
-import Control.State.Transition.Generator
+import Control.State.Transition.Generator (trace)
+import qualified Control.State.Transition.Trace as Trace
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation
   ( ADELEGS
   , DELEG
   , DIState (..)
-  , DSEnv (..)
   , DState (..)
   )
 import Ledger.GlobalParams (lovelaceCap)
-import qualified Ledger.Update as Abstract
 import qualified Ledger.UTxO as Abstract
 
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
-import Test.Cardano.Chain.Elaboration.Block (abEnvToCfg, elaborateBS, rcDCert)
+import Test.Cardano.Chain.Elaboration.Block
+  ( transactionIds
+  , abEnvToCfg
+  , elaborateBS
+  , rcDCert
+  )
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Chain.UTxO.Gen (genTxProof)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
@@ -75,20 +79,40 @@ ts_prop_updateBlock_Valid =
   withTestsTS 100
     . property
     $ do
-      chainEnv@(_, abstractInitialUTxO, _, _) <- forAll $ initEnvGen @CHAIN
-      chainState <- forAll $ genInitialChainState chainEnv
+      let traceLength = 10 :: Word64 -- TODO: check that the @k@ value is not important
+                           -- in this test, in that case we can get away with
+                           -- generating small traces.
+      sampleTrace <- forAll $ trace @CHAIN traceLength
+      let
+        lastState = Trace.lastState sampleTrace
+        chainEnv@( _currentSlot
+                 , abstractInitialUTxO
+                 , _allowedDelegators
+                 , _protocolParamaters
+                 , stableAfter
+                 ) = Trace._traceEnv sampleTrace
       abstractBlock <- forAll $
         Abstract.sigGenChain
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
+          Nothing
           chainEnv
-          chainState
+          lastState
       let config = abEnvToCfg chainEnv
           cvs = either (panic . show) (\a -> a) (initialChainValidationState config)
           (_, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
-          dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) chainState
+          dCert = rcDCert
+                    (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer)
+                    stableAfter
+                    lastState
       vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
-      let (concreteBlock, _txIdMap') = elaborateBS txIdMap config dCert cvs abstractBlock
+      let (concreteBlock, _txIdMap') =
+            elaborateBS
+              mempty { transactionIds = txIdMap }
+              config
+              dCert
+              cvs
+              abstractBlock
       annotateShow concreteBlock
       updateRes <- (`runReaderT` vMode) . runExceptT $
         updateBlock config cvs concreteBlock
@@ -104,20 +128,31 @@ ts_prop_updateBlock_InvalidProof =
   withTestsTS 100
     . property
     $ do
-      chainEnv@(_, abstractInitialUTxO, _, _) <- forAll $ initEnvGen @CHAIN
-      chainState <- forAll $ genInitialChainState chainEnv
+      let traceLength = 10 :: Word64
+      sampleTrace <- forAll $ trace @CHAIN traceLength
+      let
+        chainEnv@(_, abstractInitialUTxO, _, _, stableAfter) = Trace._traceEnv sampleTrace
+        lastState = Trace.lastState sampleTrace
       abstractBlock <- forAll $
         Abstract.sigGenChain
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
+          Nothing
           chainEnv
-          chainState
+          lastState
       let config = abEnvToCfg chainEnv
           cvs = either (panic . show) (\a -> a) (initialChainValidationState config)
           (_, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
-          dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) chainState
+          dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) stableAfter lastState
       vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
-      let (concreteBlock, _txIdMap') = elaborateBS txIdMap config dCert cvs abstractBlock
+      let (concreteBlock, _abstractToConcreteIdMaps') =
+            elaborateBS
+              initialAbstractToConcreteIdMaps
+              config
+              dCert
+              cvs
+              abstractBlock
+          initialAbstractToConcreteIdMaps = mempty { transactionIds = txIdMap }
       annotateShow concreteBlock
       invalidBlock <- forAll $ invalidateABlockProof concreteBlock
       updateRes <- (`runReaderT` vMode) . runExceptT $
@@ -135,25 +170,6 @@ ts_prop_updateBlock_InvalidProof =
 --------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
-
-genInitialChainState
-  :: Environment CHAIN
-  -> Gen (State CHAIN)
-genInitialChainState env = do
-  let (_slot, utxo0', _dsenv, pps') = env
-      utxoEnv = UTxOEnv { utxo0 = utxo0', pps = pps' }
-      s0 = Abstract.Slot 0
-      utxoSt0 = createInitialUTxOState utxoEnv
-  initialDelegEnv <- initEnvGen @DELEG
-  let initialADelegsEnv = _dSEnvAllowedDelegators initialDelegEnv
-  let ds = createInitialDIState (createInitialDState initialADelegsEnv)
-  pure $! ( s0
-          , (Seq.fromList . BM.keys . _dIStateDelegationMap) ds
-          , Abstract.genesisHash
-          , utxoSt0
-          , ds
-          , Abstract.emptyUPIState
-          )
 
 genHash :: Gen Abstract.Hash
 genHash = Abstract.Hash <$> Gen.int Range.constantBounded

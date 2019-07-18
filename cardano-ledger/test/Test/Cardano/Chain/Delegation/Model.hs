@@ -12,12 +12,16 @@ where
 
 import Cardano.Prelude
 
+import Control.Arrow (left)
+import Control.Monad (mzero)
 import Data.Coerce
 import Data.IORef
+import Data.Word (Word64)
 
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+
 
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import qualified Control.State.Transition as STS
@@ -37,10 +41,12 @@ prop_commandSDELEG :: Property
 prop_commandSDELEG = withTests 25 . property $ do
   concreteRef <- liftIO $ newIORef initialConcreteState
 
-  abstractEnv <- forAll $ STS.initEnvGen @DELEG
+  let traceLength = 20 :: Word64
+
+  abstractEnv <- forAll $ STS.envGen @DELEG traceLength
 
   actions     <- forAll $ Gen.sequential
-    (Range.linear 1 20)
+    (Range.linear 1 (fromIntegral traceLength))
     initialState
     [commandSDELEG concreteRef abstractEnv]
 
@@ -92,7 +98,14 @@ commandSDELEG
 commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
  where
   gen :: StateSDELEG v -> Maybe (Gen (SignalSDELEG v))
-  gen _ = Just $ SignalSDELEG <$> Abstract.dcertGen abstractEnv
+  gen st = Just $ SignalSDELEG <$> do
+    mDCert <- Abstract.dcertGen abstractEnv keyEpochDelegations
+    case mDCert of
+      Nothing -> mzero
+      Just dCert -> pure $! dCert
+
+    where
+      keyEpochDelegations = Abstract._dSStateKeyEpochDelegations $ abstractState $ st
 
   execute
     :: SignalSDELEG v
@@ -122,7 +135,7 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
       let
         result =
           STS.applySTS @SDELEG (STS.TRC (abstractEnv, abstractState, cert))
-      in StateSDELEG (fromRight abstractState result) result
+      in StateSDELEG (fromRight abstractState result) (left concat result)
     , Ensure $ \_ StateSDELEG { lastAbstractResult } _ result -> do
       annotateShow lastAbstractResult
       annotateShow result

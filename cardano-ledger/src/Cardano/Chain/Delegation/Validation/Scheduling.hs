@@ -122,20 +122,20 @@ scheduleCertificate
   -> m State
 scheduleCertificate env st cert = do
   -- Check that the delegator is a genesis key
-  delegator `Set.member` allowedDelegators
-    `orThrowError` NonGenesisDelegator delegator
+  delegatorHash `Set.member` allowedDelegators
+    `orThrowError` NonGenesisDelegator delegatorHash
 
   -- Check that the delegation epoch is greater than or equal to the current one
   currentEpoch <= delegationEpoch
     `orThrowError` PastEpoch currentEpoch delegationEpoch
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
-  (delegationEpoch, delegator) `Set.notMember` keyEpochDelegations
-    `orThrowError` MultipleDelegationsForEpoch delegationEpoch delegator
+  (delegationEpoch, delegatorHash) `Set.notMember` keyEpochDelegations
+    `orThrowError` MultipleDelegationsForEpoch delegationEpoch delegatorHash
 
   -- Check that the delegator hasn't issued a certificate in this slot
   isNothing (Seq.findIndexL delegatesThisSlot scheduledDelegations)
-    `orThrowError` MultipleDelegationsForSlot currentSlot delegator
+    `orThrowError` MultipleDelegationsForSlot currentSlot delegatorHash
 
   -- Check that the delegation certificate is valid
   Certificate.isValid protocolMagic cert `orThrowError` InvalidCertificate
@@ -144,7 +144,7 @@ scheduleCertificate env st cert = do
   pure $ State
     { scheduledDelegations = delegation <| scheduledDelegations
     , keyEpochDelegations  = Set.insert
-      (delegationEpoch, delegator)
+      (delegationEpoch, delegatorHash)
       keyEpochDelegations
     }
  where
@@ -153,14 +153,14 @@ scheduleCertificate env st cert = do
 
   State { scheduledDelegations, keyEpochDelegations } = st
 
-  delegator       = hashKey $ Certificate.issuerVK cert
-  delegate        = hashKey $ Certificate.delegateVK cert
+  delegatorHash = hashKey $ Certificate.issuerVK cert
+  delegateHash = hashKey $ Certificate.delegateVK cert
 
   delegationEpoch = Certificate.epoch cert
 
   activationSlot  = addSlotCount (kSlotSecurityParam k) currentSlot
 
   delegatesThisSlot sd =
-    sdSlot sd == activationSlot && sdDelegator sd == delegator
+    sdSlot sd == activationSlot && sdDelegator sd == delegatorHash
 
-  delegation = ScheduledDelegation activationSlot delegator delegate
+  delegation = ScheduledDelegation activationSlot delegatorHash delegateHash

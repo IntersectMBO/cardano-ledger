@@ -38,7 +38,7 @@ data ProtocolParametersUpdate = ProtocolParametersUpdate
   , ppuHeavyDelThd       :: !(Maybe LovelacePortion)
   , ppuUpdateVoteThd     :: !(Maybe LovelacePortion)
   , ppuUpdateProposalThd :: !(Maybe LovelacePortion)
-  , ppuUpdateImplicit    :: !(Maybe SlotNumber)
+  , ppuUpdateProposalTTL :: !(Maybe SlotNumber)
   , ppuSoftforkRule      :: !(Maybe SoftforkRule)
   , ppuTxFeePolicy       :: !(Maybe TxFeePolicy)
   , ppuUnlockStakeEpoch  :: !(Maybe EpochNumber)
@@ -73,7 +73,7 @@ instance B.Buildable ProtocolParametersUpdate where
     (ppuHeavyDelThd ppu)
     (ppuUpdateVoteThd ppu)
     (ppuUpdateProposalThd ppu)
-    (ppuUpdateImplicit ppu)
+    (ppuUpdateProposalTTL ppu)
     (ppuSoftforkRule ppu)
     (ppuTxFeePolicy ppu)
     (ppuUnlockStakeEpoch ppu)
@@ -97,7 +97,7 @@ instance ToCBOR ProtocolParametersUpdate where
       <> toCBOR (ppuHeavyDelThd ppu)
       <> toCBOR (ppuUpdateVoteThd ppu)
       <> toCBOR (ppuUpdateProposalThd ppu)
-      <> toCBOR (ppuUpdateImplicit ppu)
+      <> toCBOR (ppuUpdateProposalTTL ppu)
       <> toCBOR (ppuSoftforkRule ppu)
       <> toCBOR (ppuTxFeePolicy ppu)
       <> toCBOR (ppuUnlockStakeEpoch ppu)
@@ -133,7 +133,7 @@ empty = ProtocolParametersUpdate
   , ppuHeavyDelThd      = Nothing
   , ppuUpdateVoteThd    = Nothing
   , ppuUpdateProposalThd = Nothing
-  , ppuUpdateImplicit   = Nothing
+  , ppuUpdateProposalTTL   = Nothing
   , ppuSoftforkRule     = Nothing
   , ppuTxFeePolicy      = Nothing
   , ppuUnlockStakeEpoch = Nothing
@@ -159,7 +159,7 @@ apply ppu pp = ProtocolParameters
   , ppUpdateProposalThd = fromMaybe
     (ppUpdateProposalThd pp)
     (ppuUpdateProposalThd ppu)
-  , ppUpdateProposalTTL = fromMaybe (ppUpdateProposalTTL pp) (ppuUpdateImplicit ppu)
+  , ppUpdateProposalTTL = fromMaybe (ppUpdateProposalTTL pp) (ppuUpdateProposalTTL ppu)
   , ppSoftforkRule      = fromMaybe (ppSoftforkRule pp) (ppuSoftforkRule ppu)
   , ppTxFeePolicy       = fromMaybe (ppTxFeePolicy pp) (ppuTxFeePolicy ppu)
   , ppUnlockStakeEpoch  = fromMaybe

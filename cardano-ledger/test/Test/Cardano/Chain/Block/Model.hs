@@ -27,7 +27,17 @@ import Cardano.Prelude hiding (trace, State)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
-import Hedgehog (MonadTest, PropertyT, collect, evalEither, forAll, property)
+import qualified Data.Set as Set
+import Data.Word (Word64)
+import Hedgehog
+  ( MonadTest
+  , PropertyT
+  , collect
+  , evalEither
+  , footnote
+  , forAll
+  , property
+  )
 
 import Cardano.Chain.Block
   ( BlockValidationMode (..)
@@ -36,8 +46,8 @@ import Cardano.Chain.Block
   , initialChainValidationState
   , updateBlock
   )
+import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.UTxO as Concrete
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
@@ -49,11 +59,19 @@ import Control.State.Transition.Trace
   , TraceOrder(NewestFirst, OldestFirst)
   , preStatesAndSignals
   , traceEnv
+  , _traceEnv
   , traceSignals
   )
-import qualified Ledger.UTxO as Abstract
+import qualified Ledger.Core as AbstractCore
 
-import Test.Cardano.Chain.Elaboration.Block (elaborateBS, abEnvToCfg, rcDCert)
+import Test.Cardano.Chain.Elaboration.Block
+  ( AbstractToConcreteIdMaps
+  , abEnvToCfg
+  , elaborateBS
+  , rcDCert
+  , transactionIds
+  )
+import Test.Cardano.Chain.Elaboration.Keys (elaborateVKeyGenesisHash)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
@@ -67,43 +85,60 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 100 $ property $ do
-    tr <- forAll $ trace @CHAIN 100
-    classifyTraceLength tr 100 50
+    let (traceLength, step) = (100 :: Word64, 10 :: Word64)
+    tr <- forAll $ trace @CHAIN traceLength
+    classifyTraceLength tr traceLength step
+    printAdditionalInfoOnFailure tr
     passConcreteValidation tr
+  where
+    printAdditionalInfoOnFailure :: MonadTest m => Trace CHAIN -> m ()
+    printAdditionalInfoOnFailure tr =
+      footnote $ "Allowed delegators hashes: " ++ show allowedDelegatorHashes
+      where
+        allowedDelegatorHashes = elaborateVKeyGenesisHash <$> Set.toList allowedDelegators
+        (_, _, allowedDelegators, _, _) = _traceEnv tr
 
 
 passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
 passConcreteValidation tr = void $ evalEither res
  where
   res =
-    foldM (elaborateAndUpdate config) (initialState, txIdMap)
+    foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps)
       $ preStatesAndSignals OldestFirst tr
 
   initialState = initialStateNoUTxO { cvsUtxo = initialUTxO }
+
+  initialAbstractToConcreteIdMaps = mempty { transactionIds = txIdMap }
 
   initialStateNoUTxO =
     either (panic . show) identity $ initialChainValidationState config
 
   config = abEnvToCfg abstractEnv
 
-  abstractEnv@(_, abstractInitialUTxO, _, _) = tr ^. traceEnv
+  abstractEnv@( _currentSlot
+              , abstractInitialUTxO
+              , _allowedDelegators
+              , _protocolParams
+              , _stableAfter) = tr ^. traceEnv
 
   (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
 
 
 elaborateAndUpdate
   :: Genesis.Config
-  -> (ChainValidationState, Map Abstract.TxId Concrete.TxId)
+  -> (ChainValidationState, AbstractToConcreteIdMaps)
   -> (State CHAIN, Abstract.Block)
   -> Either
        ChainValidationError
-       (ChainValidationState, Map Abstract.TxId Concrete.TxId)
-elaborateAndUpdate config (cvs, txIdMap) (ast, ab) =
-  (, txIdMap') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
+       (ChainValidationState, AbstractToConcreteIdMaps)
+elaborateAndUpdate config (cvs, abstractToConcreteIdMaps) (ast, ab) =
+  (, abstractToConcreteIdMaps') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
  where
-  (concreteBlock, txIdMap') = elaborateBS txIdMap config dCert cvs ab
+  (concreteBlock, abstractToConcreteIdMaps') = elaborateBS abstractToConcreteIdMaps config dCert cvs ab
 
-  dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) ast
+  dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) stableAfter ast
+
+  stableAfter = AbstractCore.BlockCount $ unBlockCount $ Genesis.configK config
 
   vMode :: ValidationMode
   vMode = fromBlockValidationMode BlockValidation

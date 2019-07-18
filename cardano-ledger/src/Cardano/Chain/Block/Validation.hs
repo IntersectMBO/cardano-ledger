@@ -43,6 +43,7 @@ import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq(..), (<|))
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import Formatting.Buildable (Buildable)
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
@@ -414,7 +415,7 @@ validateBlockProofs b =
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
   , k                  :: !BlockCount
-  , numGenKeys         :: !Word8
+  , allowedDelegators  :: !(Set KeyHash)
   , protocolParameters :: !Update.ProtocolParameters
   , currentEpoch       :: !EpochNumber
   }
@@ -467,7 +468,7 @@ updateBody env bs b = do
     , delegationState = delegationState'
     }
  where
-  BodyEnvironment { protocolMagic, k, numGenKeys, currentEpoch } = env
+  BodyEnvironment { protocolMagic, k, allowedDelegators, currentEpoch } = env
 
   BodyState { utxo, updateState, delegationState } = bs
 
@@ -482,9 +483,8 @@ updateBody env bs b = do
 
   delegationEnv = DI.Environment
     { DI.protocolMagic = getAProtocolMagicId protocolMagic
-    , DI.allowedDelegators = Delegation.keysSet
-      (DI.delegationMap delegationState)
-    , DI.k           = k
+    , DI.allowedDelegators = allowedDelegators
+    , DI.k = k
     , DI.currentEpoch = currentEpoch
     , DI.currentSlot = currentSlot
     }
@@ -496,12 +496,11 @@ updateBody env bs b = do
 
   updateEnv = UPI.Environment
     { UPI.protocolMagic = getAProtocolMagicId protocolMagic
-    , UPI.k           = k
+    , UPI.k = k
     , UPI.currentSlot = currentSlot
-    , UPI.numGenKeys  = numGenKeys
+    , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
     , UPI.delegationMap = DI.delegationMap delegationState
     }
-
   updateSignal   = UPI.Signal updateProposal updateVotes updateEndorsement
 
   updateProposal = Update.payloadProposal $ blockUpdatePayload b
@@ -510,12 +509,17 @@ updateBody env bs b = do
     Endorsement (blockProtocolVersion b) (hashKey $ blockIssuer b)
 
 
+toNumGenKeys :: Integral n => n -> Word8
+toNumGenKeys n
+  | n > fromIntegral (maxBound :: Word8) = panic  "updateBody: Too many genesis keys"
+  | otherwise = fromIntegral n
+
 data HeaderEnvironment = HeaderEnvironment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
-  , k             :: !BlockCount
-  , numGenKeys    :: !Word8
-  , delegationMap :: !Delegation.Map
-  , lastSlot      :: !SlotNumber
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
+  , k                 :: !BlockCount
+  , allowedDelegators :: !(Set KeyHash)
+  , delegationMap     :: !Delegation.Map
+  , lastSlot          :: !SlotNumber
   }
 
 
@@ -537,13 +541,13 @@ updateHeader env st h = do
  where
   maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
 
-  HeaderEnvironment { protocolMagic, k, numGenKeys, delegationMap, lastSlot }
+  HeaderEnvironment { protocolMagic, k, allowedDelegators, delegationMap, lastSlot }
     = env
 
   epochEnv = EpochEnvironment
     { protocolMagic
     , k
-    , numGenKeys
+    , allowedDelegators
     , delegationMap
     , currentEpoch
     }
@@ -552,11 +556,11 @@ updateHeader env st h = do
 
 
 data EpochEnvironment = EpochEnvironment
-  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
-  , k             :: !BlockCount
-  , numGenKeys    :: !Word8
-  , delegationMap :: !Delegation.Map
-  , currentEpoch  :: !EpochNumber
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
+  , k                 :: !BlockCount
+  , allowedDelegators :: !(Set KeyHash)
+  , delegationMap     :: !Delegation.Map
+  , currentEpoch      :: !EpochNumber
   }
 
 
@@ -574,7 +578,7 @@ epochTransition env st slot = if nextEpoch > currentEpoch
   then UPI.registerEpoch updateEnv st nextEpoch
   else st
  where
-  EpochEnvironment { protocolMagic, k, numGenKeys, delegationMap, currentEpoch }
+  EpochEnvironment { protocolMagic, k, allowedDelegators, delegationMap, currentEpoch }
     = env
 
   nextEpoch = slotNumberEpoch (kEpochSlots k) slot
@@ -583,7 +587,7 @@ epochTransition env st slot = if nextEpoch > currentEpoch
     { UPI.protocolMagic = protocolMagic
     , UPI.k           = k
     , UPI.currentSlot = slot
-    , UPI.numGenKeys  = numGenKeys
+    , UPI.numGenKeys  = toNumGenKeys $ Set.size allowedDelegators
     , UPI.delegationMap = delegationMap
     }
 
@@ -618,7 +622,7 @@ updateBlock config cvs b = do
         (blockAProtocolMagicId b)
         (configReqNetMagic config)
       , k          = configK config
-      , numGenKeys
+      , allowedDelegators
       , protocolParameters = UPI.adoptedProtocolParameters updateState'
       , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
       }
@@ -642,18 +646,13 @@ updateBlock config cvs b = do
   headerEnv = HeaderEnvironment
     { protocolMagic = blockAProtocolMagicId b
     , k          = configK config
-    , numGenKeys
+    , allowedDelegators
     , delegationMap
     , lastSlot   = cvsLastSlot cvs
     }
 
-  numGenKeys :: Word8
-  numGenKeys =
-    case length (unGenesisKeyHashes $ configGenesisKeyHashes config) of
-      n
-        | n > fromIntegral (maxBound :: Word8) -> panic
-          "updateBody: Too many genesis keys"
-        | otherwise -> fromIntegral n
+  allowedDelegators :: Set KeyHash
+  allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
 
   delegationMap = DI.delegationMap $ cvsDelegationState cvs
 
