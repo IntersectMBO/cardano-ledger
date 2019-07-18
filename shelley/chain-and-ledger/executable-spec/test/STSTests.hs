@@ -5,7 +5,7 @@ module STSTests (stsTests) where
 
 import           Data.Either (isRight)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, singleton)
+import qualified Data.Map.Strict as Map (empty, singleton, fromList)
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
@@ -247,22 +247,20 @@ aliceAndBobOrCarlOrDaria =
   MultiSig 1 [aliceAndBob, MultiSig 1 [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]]
 
 
-initTxBody :: Addr -> Coin -> Coin -> Coin -> Coin -> TxBody
-initTxBody addr keepAlice keepBob fromAlice fromBob  = TxBody
+initTxBody :: [(Addr, Coin)] -> TxBody
+initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
-        [ TxOut addr (fromAlice + fromBob)
-        , TxOut aliceAddr keepAlice
-        , TxOut bobAddr keepBob]
+        (map (\(a, c) -> TxOut a c) addrs)
         []
         Map.empty
         (Coin 0)
         (Slot 0)
         emptyUpdate
 
-scriptTxBody :: TxIn -> Addr -> Coin -> TxBody
+scriptTxBody :: [TxIn] -> Addr -> Coin -> TxBody
 scriptTxBody inp addr c =
   TxBody
-    (Set.fromList [inp])
+    (Set.fromList inp)
     [TxOut addr c]
     []
     Map.empty
@@ -286,12 +284,18 @@ genesis = genesisState
            [ TxOut aliceAddr aliceInitCoin
            , TxOut bobAddr bobInitCoin]
 
-initialUTxOState :: MultiSig -> (TxId, Either [[PredicateFailure UTXOW]] UTxOState)
-initialUTxOState msig =
-  let scriptAddress = AddrScr (hashScript msig) (hashScript msig) in
-  let tx = makeTx (initTxBody scriptAddress 0 0 aliceInitCoin bobInitCoin)
+initialUTxOState
+  :: Coin
+  -> [(MultiSig, Coin)]
+  -> (TxId, Either [[PredicateFailure UTXOW]] UTxOState)
+initialUTxOState aliceKeep msigs =
+  let addresses =
+        (if aliceKeep > 0 then [(aliceAddr, aliceKeep)] else []) ++
+        (map (\(msig, c) -> (AddrScr (hashScript msig) (hashScript msig), c)) msigs)
+  in
+  let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
-                  (Map.singleton (hashScript msig) msig) in
+                  (Map.fromList $ map (\(scr, _) -> (hashScript scr, scr)) msigs) in
   (txid $ _body tx, applySTS @UTXOW (TRC( (Slot 0
                                            , emptyPParams
                                            , StakeKeys Map.empty
@@ -303,7 +307,7 @@ initialUTxOState msig =
 testInitialUTXO :: Assertion
 testInitialUTXO =
   assertBool s (isRight utxoSt')
-  where (_, utxoSt') = initialUTxOState aliceOnly
+  where (_, utxoSt') = initialUTxOState 0 [(aliceOnly, 11000)]
         s = "problem: " ++ show utxoSt'
 
 
@@ -312,20 +316,24 @@ testInitialUTXO =
 -- create an transaction that uses 'unlockScript' to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript
-  :: MultiSig
-  -> MultiSig
+  :: [(MultiSig, Coin)]
+  -> [MultiSig]
+  -> Coin
   -> [KeyPair]
   -> Either [[PredicateFailure UTXOW]] UTxOState
-applyTxWithScript lockScript unlockScript signers = utxoSt'
-  where (txId, initUtxo) = initialUTxOState lockScript
+applyTxWithScript lockScripts unlockScripts aliceKeep signers = utxoSt'
+  where (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
         utxoSt = case initUtxo of
                    Right utxoSt'' -> utxoSt''
                    _                      -> error "must fail test before"
-        txbody = scriptTxBody (TxIn txId 0) aliceAddr (aliceInitCoin + bobInitCoin)
+        txbody = scriptTxBody inputs aliceAddr (aliceInitCoin + bobInitCoin)
+        inputs = [TxIn txId (fromIntegral n) | n <-
+                     [0..(length lockScripts) - (if aliceKeep > 0 then 0 else 1)]]
+                                 -- alice? + scripts
         tx = makeTx
               txbody
               signers
-              (Map.singleton (hashScript unlockScript) unlockScript)
+              (Map.fromList $ map (\scr -> (hashScript scr, scr)) unlockScripts)
         utxoSt' = applySTS @UTXOW (TRC( (Slot 0
                                         , emptyPParams
                                         , StakeKeys Map.empty
@@ -338,106 +346,106 @@ testAliceSignsAlone :: Assertion
 testAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceOnly aliceOnly [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript aliceOnly aliceOnly [bobPay, carlPay, dariaPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] 0 [bobPay, carlPay, dariaPay]
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceOnly aliceOnly [alicePay, bobPay, carlPay, dariaPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] 0 [alicePay, bobPay, carlPay, dariaPay]
         s = "problem: " ++ show utxoSt'
 
 testWrongScript :: Assertion
 testWrongScript =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
   where utxoSt' =
-          applyTxWithScript aliceOnly aliceOrBob [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] 0 [alicePay, bobPay]
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceOrBob aliceOrBob [alicePay]
+          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testAliceOrBob' :: Assertion
 testAliceOrBob' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceOrBob aliceOrBob [bobPay]
+          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] 0 [bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBob :: Assertion
 testAliceAndBob =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBob aliceAndBob [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript aliceAndBob aliceAndBob [alicePay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] 0 [alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript aliceAndBob aliceAndBob [bobPay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] 0 [bobPay]
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarl aliceAndBobOrCarl [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarl' :: Assertion
 testAliceAndBobOrCarl' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarl aliceAndBobOrCarl [carlPay]
+          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] 0 [carlPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria :: Assertion
 testAliceAndBobOrCarlAndDaria =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarlAndDaria aliceAndBobOrCarlAndDaria [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria' :: Assertion
 testAliceAndBobOrCarlAndDaria' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarlAndDaria aliceAndBobOrCarlAndDaria [carlPay, dariaPay]
+          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] 0 [carlPay, dariaPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria :: Assertion
 testAliceAndBobOrCarlOrDaria =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarlOrDaria aliceAndBobOrCarlOrDaria [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria' :: Assertion
 testAliceAndBobOrCarlOrDaria' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarlOrDaria aliceAndBobOrCarlOrDaria [carlPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] 0 [carlPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria'' :: Assertion
 testAliceAndBobOrCarlOrDaria'' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript aliceAndBobOrCarlOrDaria aliceAndBobOrCarlOrDaria [dariaPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] 0 [dariaPay]
         s = "problem: " ++ show utxoSt'
