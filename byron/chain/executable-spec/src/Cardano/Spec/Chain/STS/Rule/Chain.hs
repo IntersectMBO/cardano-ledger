@@ -191,15 +191,18 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-  sigGen _ = sigGenChain GenDelegation GenUTxO Nothing
+  sigGen _ = sigGenChain GenDelegation GenUTxO GenUpdate Nothing
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
 data ShouldGenUTxO = GenUTxO | NoGenUTxO
 
+data ShouldGenUpdate = GenUpdate | NoGenUpdate
+
 sigGenChain
   :: ShouldGenDelegation
   -> ShouldGenUTxO
+  -> ShouldGenUpdate
   -> Maybe (PredicateFailure CHAIN)
   -> Environment CHAIN
   -> State CHAIN
@@ -207,6 +210,7 @@ sigGenChain
 sigGenChain
   shouldGenDelegation
   shouldGenUTxO
+  shouldGenUpdate
   _
   (_sNow, utxo0, ads, _pps, k)
   (Slot s, sgs, h, utxo, ds, us)
@@ -252,36 +256,42 @@ sigGenChain
     -- us with better shrinks.
     vkI <- SigCntGen.issuer (pps', ds ^. dmsL, k) sgs
 
-    delegationPayload <- case shouldGenDelegation of
-      GenDelegation   ->
-        -- In practice there won't be a delegation payload in every block, so we
-        -- make this payload sparse.
-        --
-        -- NOTE: We arbitrarily chose to generate delegation payload in 30% of
-        -- the cases. We could make this configurable.
-        Gen.frequency
-          [ (7, pure [])
-          , (3,
-              let dsEnv =
+    delegationPayload <-
+      case shouldGenDelegation of
+        GenDelegation   ->
+          -- In practice there won't be a delegation payload in every block, so we
+          -- make this payload sparse.
+          --
+          -- NOTE: We arbitrarily chose to generate delegation payload in 30% of
+          -- the cases. We could make this configurable.
+          Gen.frequency
+            [ (7, pure [])
+            , (3,
+               let dsEnv =
                     DSEnv
                       { _dSEnvAllowedDelegators = ads
                       , _dSEnvEpoch = sEpoch nextSlot k
                       , _dSEnvSlot = nextSlot
                       , _dSEnvK = k
                       }
-              in dcertsGen dsEnv ds
-            )
-          ]
-      NoGenDelegation -> pure []
+               in dcertsGen dsEnv ds
+              )
+            ]
+        NoGenDelegation -> pure []
 
-    utxoPayload <- case shouldGenUTxO of
-      GenUTxO   ->
-        let utxoEnv = UTxOEnv utxo0 pps' in
-          sigGen @UTXOWS Nothing utxoEnv utxo
-      NoGenUTxO -> pure []
+    utxoPayload <-
+      case shouldGenUTxO of
+        GenUTxO   ->
+          let utxoEnv = UTxOEnv utxo0 pps' in
+            sigGen @UTXOWS Nothing utxoEnv utxo
+        NoGenUTxO -> pure []
 
     (anOptionalUpdateProposal, aListOfVotes) <-
-      Update.updateProposalAndVotesGen upienv us'
+      case shouldGenUpdate of
+        GenUpdate ->
+          Update.updateProposalAndVotesGen upienv us'
+        NoGenUpdate ->
+          pure (Nothing, [])
 
     let
       dummySig = Sig genesisHash (owner vkI)

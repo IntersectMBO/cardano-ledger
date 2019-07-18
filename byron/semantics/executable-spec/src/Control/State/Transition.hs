@@ -1,29 +1,29 @@
-{-# LANGUAGE AllowAmbiguousTypes    #-}
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE DeriveFunctor          #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE PolyKinds              #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE StandaloneDeriving     #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Small step state transition systems.
 module Control.State.Transition where
 
-import Control.Monad (unless)
-import Control.Monad.Free.Church
-import Control.Monad.Trans.State.Strict (modify, runState)
+import           Control.Monad (unless)
+import           Control.Monad.Free.Church
+import           Control.Monad.Trans.State.Strict (modify, runState)
 import qualified Control.Monad.Trans.State.Strict as MonadState
-import Data.Foldable (find, traverse_)
-import Data.Kind (Type)
+import           Data.Foldable (find, traverse_)
+import           Data.Kind (Type)
 
 data RuleType
   = Initial
@@ -186,3 +186,12 @@ applySTS :: forall s rtype
 applySTS ctx = case applySTSIndifferently ctx of
   (st, []) -> Right st
   (_, pfs) -> Left pfs
+
+-- | ADT that specifies that a given value is larger than a maximum threshold.
+-- This can be used to specify predicate failures in STS rules where this kind
+-- of ordering constraint is involved.
+data TooLarge a =
+  TooLarge { actualValue :: a
+           , maximumTreshold :: a
+           }
+  deriving (Eq, Ord, Show)

@@ -1128,7 +1128,7 @@ ppsUpdateFrom pps = do
       `increasingProbabilityAt` (0, 1)
 
     nextFactorA :: Gen Int
-    nextFactorA = --pure _factorA
+    nextFactorA =
       -- TODO: we choose arbitrary numbers here for now.
       Gen.integral (Range.exponentialFrom _factorA 0 10)
       `increasingProbabilityAt` (0, 10)

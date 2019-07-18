@@ -23,7 +23,9 @@ import           Ledger.Core (BlockCount (BlockCount))
 slotsIncrease :: Property
 slotsIncrease = property $ do
   let (maxTraceLength, step) = (1000, 100)
-  tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain NoGenDelegation NoGenUTxO)
+  tr <- forAll $ traceSigGen
+                   (Maximum maxTraceLength)
+                   (sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate)
   classifyTraceLength tr maxTraceLength step
   slotsIncreaseInTrace tr
 
@@ -36,7 +38,9 @@ blockIssuersAreDelegates :: Property
 blockIssuersAreDelegates =
   withTests 200 $ property $ do
     let (maxTraceLength, step) = (1000, 100)
-    tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain GenDelegation NoGenUTxO)
+    tr <- forAll $ traceSigGen
+                     (Maximum maxTraceLength)
+                     (sigGenChain GenDelegation NoGenUTxO GenUpdate)
     classifyTraceLength tr maxTraceLength step
     checkBlockIssuersAreDelegates tr
   where
@@ -60,7 +64,9 @@ onlyValidSignalsAreGenerated =
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK = property $ do
   let maxTraceLength = 1000
-  tr <- forAll $ traceSigGen (Maximum maxTraceLength) (sigGenChain GenDelegation NoGenUTxO)
+  tr <- forAll $ traceSigGen
+                   (Maximum maxTraceLength)
+                   (sigGenChain GenDelegation NoGenUTxO GenUpdate)
   signersListIsBoundedByKInTrace tr
   where
     signersListIsBoundedByKInTrace :: MonadTest m => Trace CHAIN -> m ()

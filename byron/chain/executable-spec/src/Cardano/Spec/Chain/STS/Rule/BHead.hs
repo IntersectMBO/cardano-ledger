@@ -32,7 +32,7 @@ instance STS BHEAD where
 
   data PredicateFailure BHEAD
     = HashesDontMatch -- TODO: Add fields so that users know the two hashes that don't match
-    | HeaderSizeTooBig BlockHeader Natural Natural
+    | HeaderSizeTooBig BlockHeader (TooLarge Natural)
     | SlotDidNotIncrease
     -- ^ The block header slot number did not increase w.r.t the last seen slot
     | SlotInTheFuture
@@ -48,7 +48,8 @@ instance STS BHEAD where
         TRC ((_, sLast, k), us, bh) <- judgmentContext
         us' <- trans @EPOCH $ TRC ((sEpoch sLast k, k), us, bh ^. bhSlot)
         let sMax = snd (us' ^. _1) ^. maxHdrSz
-        bHeaderSize bh <= sMax ?! HeaderSizeTooBig bh (bHeaderSize bh) sMax
+        bHeaderSize bh <= sMax
+          ?! HeaderSizeTooBig bh TooLarge { actualValue = bHeaderSize bh, maximumTreshold = sMax }
         return $! us'
     ]
 
