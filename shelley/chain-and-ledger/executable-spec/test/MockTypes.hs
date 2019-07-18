@@ -90,3 +90,5 @@ type MultiSig = TxData.MultiSig ShortHash MockDSIGN
 type ScriptHash = TxData.ScriptHash ShortHash MockDSIGN
 
 type WitVKey = TxData.WitVKey ShortHash MockDSIGN
+
+type Wdrl = TxData.Wdrl ShortHash MockDSIGN
