@@ -164,7 +164,13 @@ stsTests = testGroup "STS Tests"
   , testCase "Alice && Bob || Carl && Daria, Carl && Daria sign" testAliceAndBobOrCarlAndDaria'
   , testCase "Alice && Bob || Carl || Daria, Alice && Bob sign" testAliceAndBobOrCarlOrDaria
   , testCase "Alice && Bob || Carl || Daria, Carl signs" testAliceAndBobOrCarlOrDaria'
- , testCase "Alice && Bob || Carl || Daria, Daria signs" testAliceAndBobOrCarlOrDaria''
+  , testCase "Alice && Bob || Carl || Daria, Daria signs" testAliceAndBobOrCarlOrDaria''
+  , testCase "two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts
+  , testCase "FAIL: two scripts: Alice Or Bob / alice And Bob Or Carl" testTwoScripts'
+  , testCase "script and Key: Alice And Bob and alicePay" testScriptAndSKey
+  , testCase "FAIL: script and Key: Alice And Bob and alicePay" testScriptAndSKey'
+  , testCase "script and Key: Alice Or Bob and alicePay, only Alice" testScriptAndSKey''
+  , testCase "script and Key: Alice And Bob Or Carl and alicePay, Alice and Carl sign" testScriptAndSKey'''
   ]
 
 -- Multi-Signature tests
@@ -284,6 +290,10 @@ genesis = genesisState
            [ TxOut aliceAddr aliceInitCoin
            , TxOut bobAddr bobInitCoin]
 
+-- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
+-- 'bobInitCoin' to spend. Then create and apply a transaction which, if
+-- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
+-- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState
   :: Coin
   -> [(MultiSig, Coin)]
@@ -312,8 +322,11 @@ testInitialUTXO =
 
 
 -- | Start from genesis, consume Alice's and Bob's coins, create an output
--- locked by 'lockedScript', sign the transaction with keys in 'signers'. Then
--- create an transaction that uses 'unlockScript' to spend all funds back to
+-- spendable by Alice if 'aliceKeep' is greater than 0. For each pair of script
+-- and coin value in 'lockScripts' create an output of that value locked by the
+-- script. Sign the transaction with keys in 'signers'. Then create an
+-- transaction that uses the scripts in 'unlockScripts' (and the output for
+-- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript
   :: [(MultiSig, Coin)]
@@ -325,7 +338,8 @@ applyTxWithScript lockScripts unlockScripts aliceKeep signers = utxoSt'
   where (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
         utxoSt = case initUtxo of
                    Right utxoSt'' -> utxoSt''
-                   _                      -> error "must fail test before"
+                   _                      -> error ("must fail test before"
+                                                   ++ show initUtxo)
         txbody = scriptTxBody inputs aliceAddr (aliceInitCoin + bobInitCoin)
         inputs = [TxIn txId (fromIntegral n) | n <-
                      [0..(length lockScripts) - (if aliceKeep > 0 then 0 else 1)]]
@@ -448,4 +462,58 @@ testAliceAndBobOrCarlOrDaria'' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
           applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] 0 [dariaPay]
+        s = "problem: " ++ show utxoSt'
+
+-- multiple script-locked outputs
+
+testTwoScripts :: Assertion
+testTwoScripts =
+  assertBool s (isRight utxoSt')
+  where utxoSt' = applyTxWithScript
+                   [ (aliceOrBob, 10000)
+                   , (aliceAndBobOrCarl, 1000)]
+                   [ aliceOrBob
+                   , aliceAndBobOrCarl] 0 [bobPay, carlPay]
+        s = "problem: " ++ show utxoSt'
+
+testTwoScripts' :: Assertion
+testTwoScripts' =
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  where utxoSt' = applyTxWithScript
+                   [ (aliceAndBob, 10000)
+                   , (aliceAndBobOrCarl, 1000)]
+                   [ aliceAndBob
+                   , aliceAndBobOrCarl] 0 [bobPay, carlPay]
+
+-- script and skey locked
+
+testScriptAndSKey :: Assertion
+testScriptAndSKey =
+  assertBool s (isRight utxoSt')
+  where utxoSt' = applyTxWithScript
+                   [(aliceAndBob, 10000)]
+                   [aliceAndBob] 1000 [alicePay, bobPay]
+        s = "problem: " ++ show utxoSt'
+
+testScriptAndSKey' :: Assertion
+testScriptAndSKey' =
+  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW]]
+  where utxoSt' = applyTxWithScript
+                   [(aliceOrBob, 10000)]
+                   [aliceOrBob] 1000 [bobPay]
+
+testScriptAndSKey'' :: Assertion
+testScriptAndSKey'' =
+  assertBool s (isRight utxoSt')
+  where utxoSt' = applyTxWithScript
+                   [(aliceOrBob, 10000)]
+                   [aliceOrBob] 1000 [alicePay]
+        s = "problem: " ++ show utxoSt'
+
+testScriptAndSKey''' :: Assertion
+testScriptAndSKey''' =
+  assertBool s (isRight utxoSt')
+  where utxoSt' = applyTxWithScript
+                   [(aliceAndBobOrCarl, 10000)]
+                   [aliceAndBobOrCarl] 1000 [alicePay, carlPay]
         s = "problem: " ++ show utxoSt'
