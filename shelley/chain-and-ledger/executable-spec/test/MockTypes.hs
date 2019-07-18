@@ -33,6 +33,8 @@ type SKey = Keys.SKey MockDSIGN
 
 type KeyPairs = LedgerState.KeyPairs MockDSIGN
 
+type VKeyGenesis = Keys.VKeyGenesis MockDSIGN
+
 type LedgerState = LedgerState.LedgerState ShortHash MockDSIGN
 
 type LedgerValidation = LedgerState.LedgerValidation ShortHash MockDSIGN

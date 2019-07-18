@@ -3,43 +3,45 @@
 
 module STSTests (stsTests) where
 
-import           Data.Either (isLeft, isRight)
+import           Data.Either (isRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import           Data.Maybe (fromMaybe)
-import           Data.Word (Word64)
 import qualified Data.Set as Set
+import           Data.Word (Word64)
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.HUnit (Assertion, testCase, (@?=), assertBool)
+import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
+import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
-import           Cardano.Crypto.DSIGN (genKeyDSIGN, deriveVerKeyDSIGN)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (CHAIN, SKeyES, VKeyES, KeyPair, VKey, SKey, Addr,
-                            MultiSig, Tx, TxBody, LedgerState,
-                            ScriptHash, UTXOW, UTxOState, TxId, TxIn)
+import           MockTypes (Addr, CHAIN, KeyPair, LedgerState, MultiSig, SKey, SKeyES, ScriptHash,
+                     Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, VKey, VKeyES, VKeyGenesis)
 
 import           BaseTypes (Seed (..), mkUnitInterval)
+import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof, bhHash,
+                     bhbHash)
 import           Coin
-import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof, bhbHash)
-import           Control.State.Transition (TRC (..), applySTS, PredicateFailure)
+import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 import           Delegation.Certificates (PoolDistr (..))
-import           EpochBoundary (BlocksMade (..))
-import           Keys (pattern KeyPair, pattern SKeyES, pattern VKeyES, sKey, sign, signKES, vKey, pattern SKey, pattern VKey, hashKey, pattern Dms)
-import           LedgerState (pattern NewEpochState, emptyEpochState, _utxoState,
-                              genesisState, genesisId)
+import           EpochBoundary (BlocksMade (..), emptySnapShots)
+import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
+                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
+import           LedgerState (pattern DPState, pattern EpochState, pattern LedgerState,
+                     pattern NewEpochState, pattern UTxOState, emptyAccount, emptyDState,
+                     emptyPState, genesisId, genesisState, _cCounters, _dms, _utxoState)
 import           OCert (KESPeriod (..), pattern OCert)
+import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
 import           STS.Updn (UPDN)
-import           STS.Utxow (PredicateFailure(..))
+import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
-import           TxData (pattern AddrVKey, pattern AddrScr, pattern SingleSig,
-                         pattern MultiSig, pattern TxBody, pattern TxOut,
-                         pattern TxIn, pattern Tx, pattern StakeKeys,
-                         pattern StakePools, _body)
-import           UTxO (makeWitnessesVKey, txid)
-import           PParams(emptyPParams)
-import           Updates(emptyUpdate)
+import           TxData (pattern AddrScr, pattern AddrVKey, pattern MultiSig, pattern SingleSig,
+                     pattern StakeKeys, pattern StakePools, pattern Tx, pattern TxBody,
+                     pattern TxIn, pattern TxOut, _body)
+import           Updates (emptyUpdate, emptyUpdateState)
+import           UTxO (UTxO (..), makeWitnessesVKey, txid)
+
 
 -- | The UPDN transition should update both the evolving nonce and
 -- the candidate nonce during the first two-thirds of the epoch.
@@ -67,40 +69,50 @@ mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyKES 90
   return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
 
--- | This is a very simple test demonstrating that we have everything in place
--- in order to run the CHAIN STS transition.
--- TODO replace this test with one that does more than just apply the rule.
+-- | Apply the top-level CHAIN transition to the simplest possible initial
+-- state which yields a valid transition.
 testApplyChain :: Assertion
 testApplyChain =
   let
+    -- We set up one genesis key holder, Gerolamo,
+    -- who will produce a block with no transitions.
+    gerolamo = VKeyGenesis 1501 :: VKeyGenesis
+    kp = KeyPair 1 1 -- Gerolamo's cold keys.
+    us = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+    ds = emptyDState { _dms = Dms (Map.singleton gerolamo (vKey kp)) }
+    ps = emptyPState { _cCounters = Map.singleton (hashKey $ vKey kp) 0}
+    ls = LedgerState us (DPState ds ps) 0
+    pps = emptyPParams { _maxBBSize = 1000
+                       , _maxBHSize = 1000 }
+    es = EpochState emptyAccount emptySnapShots ls pps
     initChainSt =
       ( NewEpochState
           (Epoch 0)
           (Nonce 0)
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
-          emptyEpochState
+          es
           Nothing
           (PoolDistr Map.empty)
-          Map.empty
+          (Map.singleton (Slot 1) (Just gerolamo))
+          -- The overlay schedule has one entry, setting Gerolamo to slot 1.
       , Nonce 0
       , Nonce 0
       , Nothing
       , Slot 0
       )
-    kp = KeyPair 1 1
-    half = fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.5
-    (sKeyES, vKeyES) = mkKESKeyPair (0, 0, 0, 0, 0)
+    zero = fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0
+    (sKeyES, vKeyES) = mkKESKeyPair (0, 0, 0, 0, 0) -- Gerolamo's hot keys.
     bhb = BHBody
             Nothing
             (vKey kp)
-            (Slot 0)
-            (Nonce 0)
+            (Slot 1)
+            (Nonce 1)
             (Proof (vKey kp) (Nonce 0))
-            half
-            (Proof (vKey kp) half)
+            zero
+            (Proof (vKey kp) zero)
             (sign (sKey kp) [])
-            100
+            0
             (bhbHash [])
             (OCert
               vKeyES
@@ -109,10 +121,27 @@ testApplyChain =
               (KESPeriod 0)
               (sign (sKey kp) (vKeyES, 0, KESPeriod 0))
             )
-    block = Block (BHeader bhb (Keys.signKES sKeyES bhb 0)) []
-    newSt = applySTS @CHAIN (TRC (Slot 0, initChainSt, block))
+    bh = BHeader bhb (Keys.signKES sKeyES bhb 0)
+    block = Block bh []
+    slotNow = Slot 1
+    expectedSt =
+      ( NewEpochState
+          (Epoch 0)
+          (Nonce 0)
+          (BlocksMade Map.empty)
+          (BlocksMade Map.empty)
+          -- Note that blocks in the overlay schedule do not add to this count.
+          es
+          Nothing
+          (PoolDistr Map.empty)
+          (Map.singleton (Slot 1) (Just gerolamo))
+      , SeedOp (Nonce 0) (Nonce 1)
+      , SeedOp (Nonce 0) (Nonce 1)
+      , Just (bhHash bh)
+      , Slot 1
+      )
   in
-    isLeft newSt @?= True
+    applySTS @CHAIN (TRC (slotNow, initChainSt, block)) @?= Right expectedSt
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
@@ -242,8 +271,8 @@ scriptTxBody inp addr c =
     emptyUpdate
 
 makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Tx
-makeTx txBody keyPairs scriptWitnesses =
-  Tx txBody (makeWitnessesVKey txBody keyPairs) scriptWitnesses
+makeTx txBody keyPairs =
+  Tx txBody (makeWitnessesVKey txBody keyPairs)
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000
