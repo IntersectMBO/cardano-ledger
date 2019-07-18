@@ -210,3 +210,4 @@ genBoundaryValidationData =
     <*> (Gen.word64 (Range.constantFrom 10 0 1000))
     <*> genChainDifficulty
     <*> pure ()
+    <*> pure ()
