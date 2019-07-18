@@ -9,11 +9,12 @@ packages:
 extra-deps:
   - libsystemd-journal-1.4.4
 
-  # Currently Hackage only
   - tasty-hedgehog-1.0.0.1
 
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0
+
+  - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
     commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a

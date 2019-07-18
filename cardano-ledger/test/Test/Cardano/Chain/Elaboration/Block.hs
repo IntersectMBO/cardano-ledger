@@ -1,8 +1,11 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia        #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE OverloadedLists    #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -28,8 +31,10 @@ import Data.Bimap (Bimap)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
+import Data.Monoid.Generic (GenericSemigroup (GenericSemigroup), GenericMonoid (GenericMonoid))
 import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
+import GHC.Generics (Generic)
 
 import qualified Cardano.Binary as Binary
 import qualified Cardano.Crypto.Hashing as H
@@ -80,15 +85,9 @@ import qualified Test.Cardano.Crypto.Dummy as Dummy
 data AbstractToConcreteIdMaps = AbstractToConcreteIdMaps
   { transactionIds :: !(Map Abstract.TxId UTxO.TxId)
   , proposalIds :: !(Map Abstract.Update.UpId Update.UpId)
-  } deriving (Eq, Show)
-
-instance Semigroup AbstractToConcreteIdMaps where
-  (AbstractToConcreteIdMaps tids0 pids0) <> (AbstractToConcreteIdMaps tids1 pids1) =
-    AbstractToConcreteIdMaps (tids0 <> tids1) (pids0 <> pids1)
-
-instance Monoid AbstractToConcreteIdMaps where
-  mempty = AbstractToConcreteIdMaps Map.empty Map.empty
-
+  } deriving (Eq, Show, Generic)
+  deriving Semigroup via GenericSemigroup AbstractToConcreteIdMaps
+  deriving Monoid via GenericMonoid AbstractToConcreteIdMaps
 
 -- | Elaborate an abstract block into a concrete block (without annotations).
 elaborate

@@ -72,6 +72,7 @@
             (hsPkgs.directory)
             (hsPkgs.filepath)
             (hsPkgs.formatting)
+            (hsPkgs.generic-monoid)
             (hsPkgs.hedgehog)
             (hsPkgs.lens)
             (hsPkgs.mtl)

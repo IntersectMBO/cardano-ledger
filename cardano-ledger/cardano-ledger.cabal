@@ -258,6 +258,7 @@ test-suite cardano-ledger-test
                      , directory
                      , filepath
                      , formatting
+                     , generic-monoid
                      , hedgehog
                      , lens
                      , mtl
