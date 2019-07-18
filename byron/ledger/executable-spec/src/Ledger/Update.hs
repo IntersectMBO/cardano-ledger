@@ -240,7 +240,10 @@ pvCanFollow (ProtVer mjn min an) (ProtVer mjp mip ap)
 
 -- | Check whether an update proposal marks a valid update
 --
---   TODO At the moment we don't check size in here - should we?
+-- TODO: At the moment we don't check size in here - should we?
+--
+-- TODO: we might need to return a predicate failure that specifies why we
+-- cannot update.
 canUpdate
   :: PParams
   -> UProp
