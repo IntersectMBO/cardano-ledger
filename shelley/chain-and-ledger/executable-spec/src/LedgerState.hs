@@ -213,9 +213,9 @@ data DState hashAlgo dsignAlgo = DState
       -- |The active accounts.
     ,  _rewards    :: RewardAccounts hashAlgo dsignAlgo
       -- |The current delegations.
-    , _delegations :: Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _delegations :: Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |The pointed to hash keys.
-    , _ptrs        :: Map.Map Ptr (StakeObject hashAlgo dsignAlgo)
+    , _ptrs        :: Map.Map Ptr (StakeCredential hashAlgo dsignAlgo)
       -- | future genesis key delegations
     , _fdms        :: Map.Map (Slot, VKeyGenesis dsignAlgo) (VKey dsignAlgo)
       -- |Genesis key delegations
@@ -949,7 +949,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
 
 -- | Calculate pool reward
 poolRewards
-  :: StakeObject hashAlgo dsignAlgo -- TODO check why this paramater is not used
+  :: StakeCredential hashAlgo dsignAlgo -- TODO check why this paramater is not used
   -> UnitInterval
   -> Natural
   -> Natural
@@ -996,7 +996,7 @@ rewardOnePool
   -> Coin
   -> Natural
   -> Natural
-  -> StakeObject hashAlgo dsignAlgo
+  -> StakeCredential hashAlgo dsignAlgo
   -> PoolParams hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
   -> Coin
@@ -1034,7 +1034,7 @@ reward
   -> Set.Set (RewardAcnt hashAlgo dsignAlgo)
   -> Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
-  -> Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+  -> Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
   -> Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
 reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
   rewards'
@@ -1079,7 +1079,7 @@ poolDistr
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> ( Stake hashAlgo dsignAlgo
-     , Map.Map (StakeObject hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+     , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
      )
 poolDistr u ds ps = (stake, delegs)
     where
