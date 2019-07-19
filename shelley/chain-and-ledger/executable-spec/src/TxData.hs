@@ -24,7 +24,7 @@ import           Updates
 
 -- |The delegation of one stake key to another.
 data Delegation hashAlgo dsignAlgo = Delegation
-  { _delegator :: StakeObject hashAlgo dsignAlgo
+  { _delegator :: StakeCredential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
   } deriving (Show, Eq, Ord)
 
@@ -43,7 +43,7 @@ data PoolParams hashAlgo dsignAlgo =
 
 -- |An account based address for a rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: StakeObject hashAlgo signAlgo
+  { getRwdHK :: StakeCredential hashAlgo signAlgo
   } deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
@@ -120,7 +120,7 @@ data TxOut hashAlgo dsignAlgo
   = TxOut (Addr hashAlgo dsignAlgo) Coin
   deriving (Show, Eq, Ord)
 
-data StakeObject hashAlgo dsignAlgo =
+data StakeCredential hashAlgo dsignAlgo =
     KeyHashStake (KeyHash hashAlgo dsignAlgo)
   | ScriptHashStake (ScriptHash hashAlgo dsignAlgo)
   deriving (Show, Eq, Ord)
@@ -128,9 +128,9 @@ data StakeObject hashAlgo dsignAlgo =
 -- | A heavyweight certificate.
 data DCert hashAlgo dsignAlgo
     -- | A stake key registration certificate.
-  = RegKey (StakeObject hashAlgo dsignAlgo)
+  = RegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake key deregistration certificate.
-  | DeRegKey (StakeObject hashAlgo dsignAlgo)
+  | DeRegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake pool registration certificate.
   | RegPool (PoolParams hashAlgo dsignAlgo)
     -- | A stake pool retirement certificate.
@@ -168,7 +168,7 @@ data Tx hashAlgo dsignAlgo
       } deriving (Show, Eq, Ord)
 
 newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map (StakeObject hashAlgo dsignAlgo) Slot)
+  StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq)
 
 newtype StakePools hashAlgo dsignAlgo =
@@ -327,7 +327,7 @@ instance ToCBOR Ptr where
       <> toCBOR certIx
 
 instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (StakeObject hashAlgo dsignAlgo) where
+  => ToCBOR (StakeCredential hashAlgo dsignAlgo) where
   toCBOR = \case
      KeyHashStake kh ->
        encodeListLen 2

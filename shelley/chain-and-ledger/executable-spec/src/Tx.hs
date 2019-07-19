@@ -117,13 +117,17 @@ txwitsScript
   -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
 txwitsScript tx = _witnessMSigMap tx
 
-extractKeyHash :: [StakeObject hashAlgo dsignAlgo] -> [KeyHash hashAlgo dsignAlgo]
+extractKeyHash
+  :: [StakeCredential hashAlgo dsignAlgo]
+  -> [KeyHash hashAlgo dsignAlgo]
 extractKeyHash l =
   Maybe.catMaybes $ map (\so -> case so of
                                  KeyHashStake hk -> Just hk
                                  _ -> Nothing) l
 
-extractScriptHash :: [StakeObject hashAlgo dsignAlgo] -> [ScriptHash hashAlgo dsignAlgo]
+extractScriptHash
+  :: [StakeCredential hashAlgo dsignAlgo]
+  -> [ScriptHash hashAlgo dsignAlgo]
 extractScriptHash l =
   Maybe.catMaybes $ map (\so -> case so of
                                  ScriptHashStake hk -> Just hk
