@@ -313,7 +313,7 @@ initialUTxOState aliceKeep msigs =
   in
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
-                  (Map.fromList $ map (\(scr, _) -> (hashScript scr, scr)) msigs) in
+                  Map.empty in
   (txid $ _body tx, applySTS @UTXOW (TRC( (Slot 0
                                            , emptyPParams
                                            , StakeKeys Map.empty
@@ -538,7 +538,7 @@ testRwdAliceSignsAlone =
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingRwdUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
           applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript bobOnly)) 1000) 0 [alicePay]
         bobOnly = singleKeyOnly bobAddr
@@ -553,7 +553,7 @@ testRwdAliceSignsAlone'' =
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt' @?= Left [[MissingScriptWitnessesRwdUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
   where utxoSt' =
           applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
         bobOnly = singleKeyOnly bobAddr
