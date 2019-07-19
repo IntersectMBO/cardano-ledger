@@ -276,10 +276,9 @@ ledger. The main changes are the following:
 \begin{itemize}
 \item Add a new address type for outputs, stake and rewards locked by scripts.
 \item Add a new witness type to the transaction.
-\item Adapt the transaction validation in such a way that funds locked by a
-  multi-signature script can be spent.
-\item Adapt the delegation rules in such a way that multi-signature delegation
-  is supported.
+\item Adapt the signature validation in such a way that funds locked by a
+  multi-signature script can be spent and delegation certificates locked by
+  multi-signature scripts can be used.
 \item Adapt the functions used in the validation for the extended types of
   addresses, transaction inputs and delegation certificates with scripts.
 \end{itemize}
@@ -443,17 +442,6 @@ for it to be accepted.
     \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{Script Tx inputs}\\
     \fun{txinsScript} & ~\var{txins}~\var{utxo} =
                         \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
-    \\
-    \\
-    \fun{validators} & \in \powerset\TxIn \to \UTxO \to (\HashScr\mapsto\Script) \to
-                       (\TxIn \mapsto \Script) \\
-    \fun{validators} &~\var{txins}~\var{utxo}~\var{scripts} = \\
-                       & \{
-                         i\mapsto s \vert
-                         i\mapsto (a,\wcard) \in \var{txins}\restrictdom(utxo
-                         \restrictrange (\AddrScr\times\Coin)) \\
-                    & \wedge (\fun{validatorHash}~a) \mapsto s \in scripts
-                      \wedge \fun{validatorHash}~a = \fun{hashScript}~s\}
   \end{align*}
   %
   \caption{Helper Functions for Transaction Inputs}
@@ -463,71 +451,26 @@ for it to be accepted.
 Figure~\ref{fig:defs:functions-txins} shows the helper functions
 $\fun{txinsVKey}$ and $\fun{txinsScript}$ which partition the set of transaction
 inputs of the transaction into those that are locked with a private key and
-those that are locked via a script. The helper function $\fun{validators}$
-constructs a map from transaction inputs to scripts where for each input, the
-corresponding output of the UTxO can only be spent if the script validates the
-transaction.
+those that are locked via a script.
 
 \section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
 
-There are two different types of ledger transitions that are impacted by
-multi-signature. The first type is changing delegation of stake which requires
-multi-signature. This impacts the DELPL transition which calls either its POOL
-or DELEG subrule depending on the type of delegation certificate signal. The
-second type is spending an element of the UTxO which required a multi-signature
-for unlocking. This impacts the UTXOW transition.
+While both spending values and changing delegation decisions can be locked by
+multi-signature scripts, the checks for script validation of both cases can be
+treated in the same way. The validation of all witnesses is done in the UTXOW
+STS rule, using function \fun{witsVKeyNeeded} to collect all necessary key
+signatures and the function \fun{scriptsNeeded} to collect all necessary
+multi-signature scripts.
 
-\subsection{Delegation Transitions Rules}
+\subsection{Delegation Specific Changes}
 \label{sec:deleg-trans-rules}
 
-In order to validate a multi-signature for delegation, each delegation
-certificate in a transaction has to be checked for correct signature
-combinations. This requires the transaction $\var{tx}$ to be available in the
-environment of the DELPL transition rule, as this rule is called with a single
-certificate as its signal, this is reflected in the DELPL environment as shown
-in Figure~\ref{fig:defs:delpl}.
-
-\begin{figure}[hbt]
-  \emph{Delegation and Pool Combined Environment}
-  \begin{equation*}
-    \DPEnv =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{slot} & \Slot & \text{slot}\\
-        \var{ptr} & \Ptr & \text{certificate pointer}\\
-        \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{tx} & \Tx & \text{current transaction}
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Delegation and Pool Combined State}
-  \begin{equation*}
-    \DPState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \emph{Delegation and Pool Combined Transition}
-  \begin{equation*}
-    \_ \vdash \_ \trans{delpl}{\_} \_ \in
-      \powerset (
-        \DPEnv \times \DPState \times \DCert \times \DPState)
-  \end{equation*}
-  \caption{Delegation and Pool Combined Transition Type}
-  \label{fig:defs:delpl}
-\end{figure}
-
-Multi-signature staking also requires a change to the type of staking reference
-from being just a hashed key to being either a hashed key or a hashed
-script. This is reflected in the type of $\StakeDelegs$ with replaces the
-previous $\type{StakeKeys}$ type and the type $\StakeObject$ which describes
-either a key or a script used for staking, as shown in
+Multi-signature staking requires a change to the type of staking reference from
+being just a hashed key to being either a hashed key or a hashed script. This is
+reflected in the type of $\StakeDelegs$ with replaces the previous
+$\type{StakeKeys}$ type and the type $\StakeObject$ which describes either a key
+or a script used for staking, as shown in
 Figure~\ref{fig:delegation-state-type}.
 
 \begin{figure}
@@ -567,82 +510,11 @@ Figure~\ref{fig:delegation-state-type}.
   \label{fig:delegation-state-type}
 \end{figure}
 
-Before executing a DELPL subrule, it is necessary to check whether the
-certificate concerns a multi-signature. This is done via checking whether the
-staking reference is a hashed script and that the certificate is of one of the
-types that do require a witness. This is shown in the extended transition system
-for DELPL in Figure~\ref{fig:rules:delpl}, in the format described
-in~\cite{small_step_semantics}
-
-If the staking reference is a hashed script and the delegation certificate type
-is one which requires a witness, the DELEG subrule is only called if
-
-\begin{itemize}
-\item There exists a validator script in the set of witnesses of the transaction
-  \var{tx} which corresponds to the staking reference,
-\item the staking reference matches the hash of this script, and
-\item the valdiator script validates the delegation certificate in the
-  transaction.
-\end{itemize}
-
-\begin{figure}[hbt]
-  \emph{Delegation and Pool Combined Rules}
-  \begin{equation}
-    \label{eq:delpl-d}
-    \inference[Delpl-Del]
-    {
-      scriptWits \leteq \fun{txwitsScript}~tx\\
-      stakeCred \leteq \fun{cwitness}~\var{c} \\
-      \\~\\
-      stakeCred \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
-      \DCertDeRegKey \uniondistinct \DCertDeleg)\implies\\
-      \exists validator,~stakeCred \mapsto validator \in scriptWits,
-      \\ \fun{validateScript}~\var{validator}~\var{tx}
-         \wedge \var{stakeCred} = \fun{hashScript}~\var{validator}
-      \\~\\
-      {
-        \left(
-          \begin{array}{r}
-            \var{slot} \\
-            \var{ptr} \\
-          \end{array}
-        \right)
-      }
-      \vdash \var{dstate} \trans{deleg}{c} \var{dstate'}
-    }
-    { \left(
-        \begin{array}{r}
-          \var{slot} \\
-          \var{ptr} \\
-          \var{pp} \\
-          \var{tx}
-        \end{array}
-      \right)
-      \vdash
-      \left(
-      \begin{array}{r}
-        \var{dstate} \\
-        \var{pstate}
-      \end{array}
-      \right)
-      \trans{delpl}{c}
-      \left(
-      \begin{array}{rcl}
-        \varUpdate{\var{dstate'}} \\
-        \var{pstate}
-      \end{array}
-      \right)
-    }
-  \end{equation}
-  \caption{Delegation Transition Rule}
-  \label{fig:rules:delpl}
-\end{figure}
-
 \textbf{Note:} In contrast to staking reference delegation, staking pools
-temselves cannot use multi-signature schemes. Else, the lightweight certificates
-for delegation from the pool to the KES hot key would have to be script
-witnesses. These certificates have to be included in each header, but those
-headers are required to have a fixed size and be as small as possible.
+themselves cannot use multi-signature schemes. Else, the lightweight
+certificates for delegation from the pool to the KES hot key would have to be
+script witnesses. These certificates have to be included in each header, but
+those headers are required to have a fixed size and be as small as possible.
 
 \subsection{UTXOW Transition Rule}
 \label{sec:utxow-transition}
@@ -658,9 +530,11 @@ The set of all validator scripts of $\fun{txinsScript}~(\fun{txins}~tx)$ is
 checked for:
 
 \begin{itemize}
-\item the hashed script being equal to the hash stored in the output to spent
-  (done in the function $\fun{validators}$), and
-\item the validator script validating the transaction.
+\item the hashed script being equal to the hash stored in the output to spent,
+  and
+\item the validator script validating the transaction, and
+\item being equal to the set of the scripts required for the transaction (as
+  returned from $\fun{scriptsNeeded}$).
 \end{itemize}
 
 We also check that the set of spent outputs locked by a script is equal to the
@@ -672,22 +546,11 @@ for each script-locked output there exists a corresponding validation script.
     \inference[UTxO-wit]
     {
       (utxo, \wcard, \wcard) \leteq \var{utxoSt}\\
-      scriptWits \leteq \fun{txwitsScript}~tx\\
-      scriptIns \leteq \fun{txinsScript}~(\fun{txins}~tx)~utxo\\
       \\~\\
-      \forall \var{inp}\mapsto\var{validator} \in
-      \fun{validators}~(\fun{txinsScript}~(\fun{txins}~tx))~utxo~scriptWits,
-      \\ \fun{validateScript}~validator~tx
-      \\~\\
-      \forall \var{addr^{script}_{rwd}} \in
-      \dom (\AddrRWDScr\restrictdom\fun{txwdrls}~tx), \\
-      \exists (\fun{stakeHK_{r}}~\var{addr^{script}_{rwd}}) \mapsto validator
-      \in \var{scriptWits},\\
-      \fun{stakeHK_{r}}~\var{addr^{script}_{rwd}} =
-      \fun{hashScript}~\var{validator}
-      \wedge \fun{validateScript}~validator~tx
-      \\~\\
-      scriptIns = \dom(\fun{validators}~scriptIns~utxo~scriptWits)
+      \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx},\\
+      \fun{hashScript}~\var{validator} = \var{hs} \wedge
+      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
+      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
@@ -718,7 +581,9 @@ withdrawal of a transaction which uses a multi-script rewards account, there
 exists a corresponding script matching the hash in the reward address and which
 validates the transaction. Because of the changes to the staking reference type,
 the original function $\fun{witsNeeded}$ is changed as shown in
-Figure~\ref{fig:functions-witnesses}.
+Figure~\ref{fig:functions-witnesses}. It also shows the function
+$\fun{scriptNeeded}$ which computes the requires script hashes from the set of
+spent inputs locked by scripts and consumed withdrawals locked by scripts.
 
 \begin{figure}[htb]
   \begin{align*}
@@ -727,13 +592,24 @@ Figure~\ref{fig:functions-witnesses}.
     & \text{required keyhashes} \\
     &  \hspace{-1cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \} \\
-    \cup & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
+    \cup & ~~\{\fun{stakeCred_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\} \\
     \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
     \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
-    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
-  \caption{Functions used in witness rule}
+  \begin{align*}
+    & \hspace{-1.5cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
+      \powerset{\HashScr}
+    & \text{required script hashes} \\
+    &  \hspace{-1.5cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
+    & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{tx}})}~{utxo}\} \\
+    \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{tx}) \} \\
+    \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in \fun{txcerts}~\var{tx}\}
+  \end{align*}
+  \caption{Required Witnesses}
   \label{fig:functions-witnesses}
 \end{figure}
 
