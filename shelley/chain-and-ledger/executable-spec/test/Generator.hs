@@ -238,7 +238,7 @@ findPayKeyPair (AddrVKey addr _) keyList =
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: StakeObject -> KeyPairs -> KeyPair
+findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair
 findStakeKeyPair (KeyHashStake hk) keyList =
     snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case

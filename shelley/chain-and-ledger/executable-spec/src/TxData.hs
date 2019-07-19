@@ -24,7 +24,7 @@ import           Updates
 
 -- |The delegation of one stake key to another.
 data Delegation hashAlgo dsignAlgo = Delegation
-  { _delegator :: StakeObject hashAlgo dsignAlgo
+  { _delegator :: StakeCredential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
   } deriving (Show, Eq, Ord)
 
@@ -43,19 +43,19 @@ data PoolParams hashAlgo dsignAlgo =
 
 -- |An account based address for a rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: StakeObject hashAlgo signAlgo
+  { getRwdHK :: StakeCredential hashAlgo signAlgo
   } deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
   = AddrVKey
-      { _payHK   :: KeyHash hashAlgo dsignAlgo
-      , _stakeHK :: KeyHash hashAlgo dsignAlgo
+      { _payHK       :: KeyHash hashAlgo dsignAlgo
+      , _stakeCredHK :: KeyHash hashAlgo dsignAlgo
       }
   | AddrScr                     -- TODO generalize to any type of script
                                 -- add `validatorHash` function
-    { _payScr   :: ScriptHash hashAlgo dsignAlgo
-    , _stakeScr :: ScriptHash hashAlgo dsignAlgo
+    { _payScr       :: ScriptHash hashAlgo dsignAlgo
+    , _stakeCredScr :: ScriptHash hashAlgo dsignAlgo
     }
   | AddrPtr
       { _stakePtr :: Ptr
@@ -69,9 +69,34 @@ data Ptr
   = Ptr Slot Ix Ix
   deriving (Show, Eq, Ord)
 
+-- | A simple language for expressing conditions under which it is valid to
+-- withdraw from a normal UTxO payment address or to use a stake address.
+--
+-- The use case is for expressing multi-signature payment addresses and
+-- multi-signature stake addresses. These can be combined arbitrarily using
+-- logical operations:
+--
+-- * multi-way \"and\";
+-- * multi-way \"or\";
+-- * multi-way \"N of M\".
+--
+-- This makes it easy to express multi-signature addresses, and provides an
+-- extension point to express other validity conditions, e.g., as needed for
+-- locking funds used with lightning.
+--
 data MultiSig hashAlgo dsignAlgo =
-    SingleSig (KeyHash hashAlgo dsignAlgo)
-  | MultiSig Int [MultiSig hashAlgo dsignAlgo]
+       -- | Require the redeeming transaction be witnessed by the spending key
+       --   corresponding to the given verification key hash.
+       RequireSignature   (KeyHash hashAlgo dsignAlgo)
+
+       -- | Require all the sub-terms to be satisfied.
+     | RequireAllOf      [MultiSig hashAlgo dsignAlgo]
+
+       -- | Require any one of the sub-terms to be satisfied.
+     | RequireAnyOf      [MultiSig hashAlgo dsignAlgo]
+
+       -- | Require M of the given sub-terms to be satisfied.
+     | RequireMOf    Int [MultiSig hashAlgo dsignAlgo]
   deriving (Show, Eq, Ord)
 
 newtype ScriptHash hashAlgo dsignAlgo =
@@ -95,7 +120,7 @@ data TxOut hashAlgo dsignAlgo
   = TxOut (Addr hashAlgo dsignAlgo) Coin
   deriving (Show, Eq, Ord)
 
-data StakeObject hashAlgo dsignAlgo =
+data StakeCredential hashAlgo dsignAlgo =
     KeyHashStake (KeyHash hashAlgo dsignAlgo)
   | ScriptHashStake (ScriptHash hashAlgo dsignAlgo)
   deriving (Show, Eq, Ord)
@@ -103,9 +128,9 @@ data StakeObject hashAlgo dsignAlgo =
 -- | A heavyweight certificate.
 data DCert hashAlgo dsignAlgo
     -- | A stake key registration certificate.
-  = RegKey (StakeObject hashAlgo dsignAlgo)
+  = RegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake key deregistration certificate.
-  | DeRegKey (StakeObject hashAlgo dsignAlgo)
+  | DeRegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake pool registration certificate.
   | RegPool (PoolParams hashAlgo dsignAlgo)
     -- | A stake pool retirement certificate.
@@ -143,7 +168,7 @@ data Tx hashAlgo dsignAlgo
       } deriving (Show, Eq, Ord)
 
 newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map (StakeObject hashAlgo dsignAlgo) Slot)
+  StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq)
 
 newtype StakePools hashAlgo dsignAlgo =
@@ -243,23 +268,35 @@ instance
 
 instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
   ToCBOR (MultiSig hashAlgo dsignAlgo) where
-  toCBOR (SingleSig hk) = encodeListLen 2 <> encodeWord 0 <> toCBOR hk
-  toCBOR (MultiSig th msigs) =
-    encodeListLen 3 <> encodeWord 1 <> toCBOR th <> toCBOR msigs
+  toCBOR (RequireSignature hk) =
+    encodeListLen 2 <> encodeWord 0 <> toCBOR hk
+  toCBOR (RequireAllOf msigs) =
+    encodeListLen 2 <> encodeWord 1 <> toCBOR msigs
+  toCBOR (RequireAnyOf msigs) =
+    encodeListLen 2 <> encodeWord 2 <> toCBOR msigs
+  toCBOR (RequireMOf m msigs) =
+    encodeListLen 3 <> encodeWord 3 <> toCBOR m <> toCBOR msigs
 
 instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
   FromCBOR (MultiSig hashAlgo dsignAlgo) where
   fromCBOR = do
     _ <- decodeListLen
     ctor <- decodeWord
-    if ctor == 0
-      then do
+    case ctor of
+      0 -> do
        hk <- KeyHash <$> fromCBOR
-       pure $ SingleSig hk
-      else do
-       th <- fromCBOR
-       msigs <- fromCBOR
-       pure $ MultiSig th msigs
+       pure $ RequireSignature hk
+      1 -> do
+        msigs <- fromCBOR
+        pure $ RequireAllOf msigs
+      2 -> do
+        msigs <- fromCBOR
+        pure $ RequireAnyOf msigs
+      3 -> do
+        m     <- fromCBOR
+        msigs <- fromCBOR
+        pure $ RequireMOf m msigs
+      _ -> error "pattern no supported"
 
 
 instance
@@ -290,7 +327,7 @@ instance ToCBOR Ptr where
       <> toCBOR certIx
 
 instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (StakeObject hashAlgo dsignAlgo) where
+  => ToCBOR (StakeCredential hashAlgo dsignAlgo) where
   toCBOR = \case
      KeyHashStake kh ->
        encodeListLen 2

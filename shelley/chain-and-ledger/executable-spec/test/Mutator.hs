@@ -38,7 +38,7 @@ import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                       _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
                       _witnessVKeySet, _witnessMSigMap)
-import           TxData (StakeObject(..), PoolParams(..), pattern Delegation)
+import           TxData (StakeCredential(..), PoolParams(..), pattern Delegation)
 
 import           MockTypes
 
