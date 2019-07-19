@@ -36,7 +36,7 @@ import           Lens.Micro ((^.))
 cwitness
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => DCert hashAlgo dsignAlgo
-  -> StakeObject hashAlgo dsignAlgo
+  -> StakeCredential hashAlgo dsignAlgo
 cwitness (RegKey hk)           = hk
 cwitness (DeRegKey hk)         = hk
 cwitness (RegPool pool)        = KeyHashStake $ hashKey $ pool ^. poolPubKey

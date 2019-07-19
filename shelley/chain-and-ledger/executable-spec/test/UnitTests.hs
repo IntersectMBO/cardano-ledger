@@ -15,7 +15,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Address
-import           TxData (pattern AddrVKey, pattern Ptr, StakeObject(..),
+import           TxData (pattern AddrVKey, pattern Ptr, StakeCredential(..),
                          Delegation (..), pattern PoolParams, pattern RewardAcnt,
                          _poolAltAcnt, _poolCost, _poolMargin, _poolOwners,
                          _poolPubKey, _poolPledge, _poolPledges, _poolRAcnt)

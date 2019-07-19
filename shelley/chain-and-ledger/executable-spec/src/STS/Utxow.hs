@@ -11,7 +11,6 @@ module STS.Utxow
   )
 where
 
-import           Data.Maybe (mapMaybe)
 import qualified Data.Set                  as Set
 import qualified Data.Map.Strict           as Map
 
@@ -21,7 +20,6 @@ import           LedgerState hiding (dms)
 import           PParams
 import           Slot
 import           Tx
-import           TxData
 import           UTxO
 
 import           Control.State.Transition
@@ -50,9 +48,7 @@ instance
     = InvalidWitnessesUTXOW
     | MissingVKeyWitnessesUTXOW
     | MissingScriptWitnessesUTXOW
-    | MissingScriptWitnessesRwdUTXOW
     | ScriptWitnessNotValidatingUTXOW
-    | ScriptWitnessNotValidatingRwdUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo))
     deriving (Eq, Show)
 
@@ -78,36 +74,22 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo)
 utxoWitnessed = do
-  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx txbody wits _))
+  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map (\(WitVKey vk _) -> hashKey vk) wits
-  let needed = witsNeeded (_utxo u) tx _dms
+  let needed = witsVKeyNeeded (_utxo u) tx _dms
   needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
 
   -- check multi-signature scripts
   let utxo' = _utxo u
-  let scriptWits = txwitsScript tx
-  let scriptIns = txinsScript (txins txbody) utxo'
-  let validatorScripts = validators scriptIns utxo' scriptWits
-  scriptIns == Map.keysSet validatorScripts
-    ?! MissingScriptWitnessesUTXOW
-  Map.foldr' (\scr b -> b && validateScript scr tx) True validatorScripts
-    ?! ScriptWitnessNotValidatingUTXOW
 
-  -- script locked reward accounts
-  let withdrawals = _wdrls txbody
-  let addrRwdScr  =
-        Map.keysSet $ Map.filterWithKey (\rwd _ ->
-                                           case getRwdHK rwd of
-                                             ScriptHashStake _ -> True
-                                             _                 -> False) withdrawals
-  let addrRwdScrHash = extractScriptHash $ map getRwdHK $ Set.toList addrRwdScr
-  all (flip Map.member scriptWits) addrRwdScrHash
-    ?! MissingScriptWitnessesRwdUTXOW
-  let scriptValidators = mapMaybe (flip Map.lookup scriptWits) addrRwdScrHash
-  (all (\(hs, scr) -> hs == hashScript scr && validateScript scr tx) $
-    zip addrRwdScrHash scriptValidators) ?! ScriptWitnessNotValidatingRwdUTXOW
+  (all (\(hs, validator) -> hashScript validator == hs
+      && validateScript validator tx) $ Map.toList $ txwitsScript tx)
+    ?!ScriptWitnessNotValidatingUTXOW
+
+  scriptsNeeded utxo' tx == (Map.keysSet $ txwitsScript tx)
+    ?! MissingScriptWitnessesUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo)
     $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)

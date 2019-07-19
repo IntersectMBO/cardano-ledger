@@ -43,8 +43,8 @@ import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
 
 import           Data.Word (Word8)
 
-import qualified Data.Maybe      as Maybe
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -63,9 +63,13 @@ evalNativeMultiSigScript
   :: MultiSig hashAlgo dsignAlgo
   -> Set (KeyHash hashAlgo dsignAlgo)
   -> Bool
-evalNativeMultiSigScript (SingleSig hk) vhks = Set.member hk vhks
-evalNativeMultiSigScript (MultiSig th msigs) vhks =
-  th <= sum [if evalNativeMultiSigScript msig vhks then 1 else 0 | msig <- msigs]
+evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
+evalNativeMultiSigScript (RequireAllOf msigs) vhks =
+  all (flip evalNativeMultiSigScript vhks) msigs
+evalNativeMultiSigScript (RequireAnyOf msigs) vhks =
+  any (flip evalNativeMultiSigScript vhks) msigs
+evalNativeMultiSigScript (RequireMOf m msigs) vhks =
+  m <= sum [if evalNativeMultiSigScript msig vhks then 1 else 0 | msig <- msigs]
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript
@@ -113,13 +117,17 @@ txwitsScript
   -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
 txwitsScript tx = _witnessMSigMap tx
 
-extractKeyHash :: [StakeObject hashAlgo dsignAlgo] -> [KeyHash hashAlgo dsignAlgo]
+extractKeyHash
+  :: [StakeCredential hashAlgo dsignAlgo]
+  -> [KeyHash hashAlgo dsignAlgo]
 extractKeyHash l =
   Maybe.catMaybes $ map (\so -> case so of
                                  KeyHashStake hk -> Just hk
                                  _ -> Nothing) l
 
-extractScriptHash :: [StakeObject hashAlgo dsignAlgo] -> [ScriptHash hashAlgo dsignAlgo]
+extractScriptHash
+  :: [StakeCredential hashAlgo dsignAlgo]
+  -> [ScriptHash hashAlgo dsignAlgo]
 extractScriptHash l =
   Maybe.catMaybes $ map (\so -> case so of
                                  ScriptHashStake hk -> Just hk
