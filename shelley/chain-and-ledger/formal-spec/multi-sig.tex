@@ -691,7 +691,7 @@ for each script-locked output there exists a corresponding validation script.
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
+      \fun{witsVKeyNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
       {
         \begin{array}{l}
         \var{utxoEnv}
@@ -722,15 +722,16 @@ Figure~\ref{fig:functions-witnesses}.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
-    & \text{hashkeys for needed witnesses} \\
-    & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
-    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
-    & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
-      \restrictdom \txwdrls{tx}\}~\cup \\
-    & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
-    & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\cup \\
-    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+    & \hspace{-1cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
+      \powerset{\KeyHash}
+    & \text{required keyhashes} \\
+    &  \hspace{-1cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \} \\
+    \cup & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\} \\
+    \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
+    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
   \end{align*}
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}
