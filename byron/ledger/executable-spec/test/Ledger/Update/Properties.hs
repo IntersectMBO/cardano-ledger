@@ -128,7 +128,7 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 30% of the update proposals increase the maximum transaction-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Increases) sample)
 
-  cover 50
+  cover 40
     "at least 10% of the update proposals do not change the maximum transaction-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz RemainsTheSame) sample)
 
