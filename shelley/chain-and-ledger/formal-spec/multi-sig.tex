@@ -54,7 +54,7 @@
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
 \newcommand{\StakeDelegs}{\type{StakeDelegs}}
-\newcommand{\StakeObject}{\type{StakeObj}}
+\newcommand{\StakeObject}{\type{StakeCredential}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -77,7 +77,7 @@
 \newcommand{\AddrScrBase}{\type{Addr_{base}^{script}}}
 \newcommand{\AddrScrEnterprise}{\type{Addr_{enterprise}^{script}}}
 \newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
-\newcommand{\HashScr}{\type{Hash_{script}}}
+\newcommand{\HashScr}{\type{ScriptHash}}
 
 \newcommand{\Ptr}{\type{Ptr}}
 \newcommand{\DState}{\type{DState}}
@@ -302,7 +302,7 @@ required signatures for a specific unspent transaction output.
 
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      script & \Script & \ScriptPlutus\uniondistinct\ScriptMSig  & \text{Representation of a script}
+      script & \Script & \ScriptPlutus\uniondistinct\ScriptMSig\uniondistinct\,\,\cdots  & \text{Representation of a script}
     \end{array}
   \end{equation*}
 
@@ -316,7 +316,7 @@ required signatures for a specific unspent transaction output.
                              \AddrVKeyB & \AddrVKeyP \uniondistinct \AddrVKeyE \\
                                     & \AddrVKeyBS
                            \end{array}
-                                & \text{VKey address}\\
+                                & \text{Key address}\\
       \var{addr} & \Addr & \AddrScr \uniondistinct \AddrVKey \\
       \var{addr_{rwd}} & \AddrRWD & (\AddrRWDVKey \uniondistinct \AddrRWDScr)
                                                          & \text{Reward address}
@@ -331,15 +331,15 @@ required signatures for a specific unspent transaction output.
       & \text{hash of payment key from addr}\\
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
                                                     script} \\
-      \fun{stakeHK_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
-                          \StakeObject & \text{stake object for base
-                                      addresses}\\
-      \fun{stakeHK_{r}} & \AddrRWD \to \StakeObject & \text{stake object
-                                                   for reward addresses}\\
+      \fun{stakeCred_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
+                          \StakeObject & \text{stake credential from base
+                                      addr}\\
+      \fun{stakeCred_{r}} & \AddrRWD \to \StakeObject & \text{stake credential
+                                                   from reward addr}\\
       \fun{addrPtr} & (\AddrVKeyP \uniondistinct \AddrScrPtr) \to \Ptr &
                                                                          \text{pointer
                                                                          from
-                                                                         pointer addresses}
+                                                                         pointer addr}
     \end{array}
   \end{equation*}
 
@@ -376,17 +376,17 @@ pair of $\Addr\times\Coin$. Analogously to $\AddrVKey$, $\AddrScr$ also has an
 locked funds in staking, as well as \emph{base} and \emph{pointer} script
 address sub-types. We will refer to the parts of an address used for payment as
 \emph{payment object} and the part used for staking as \emph{staking
-  object}. Analogous to the payment object, the staking object for an $\AddrScr$
-is also a script, i.e., staking can also require a combination of signatures
-which can be different from the combination required for payment.
+  reference}. Analogous to the payment object, the staking reference for an
+$\AddrScr$ is also a script, i.e., staking can also require a combination of
+signatures which can be different from the combination required for payment.
 
-The $\fun{hashScript}$ function calculates the hash of a script by serializing
-and then hashing it. The accessor function $\fun{validatorHash}$ returns the
-hash of a script of a script address. The domain of the accessor function
-$\fun{paymentHK}$ is changed to pubkey addresses. The domains of the accessor
-functions $\fun{stakeHK_b}$, $\fun{stakeHK_{r}}$ and $\fun{addrPtr}$ are
-extended to also include the respective script address variants. The return
-types are adapted to be a stake object.
+The $\fun{hashScript}$ function calculates the hash of the serialized
+script. The accessor function $\fun{validatorHash}$ returns the hash of a script
+of a script address. The domain of the accessor function $\fun{paymentHK}$ is
+changed to pubkey addresses. The domains of the accessor functions
+$\fun{stakeHK_b}$, $\fun{stakeHK_{r}}$ and $\fun{addrPtr}$ are extended to also
+include the respective script address variants. The return types are adapted to
+be a staking reference.
 
 \begin{figure*}[hbt]
   \emph{Transaction Type}
@@ -397,7 +397,7 @@ types are adapted to be a stake object.
       \\
       \var{tx}
       & \Tx
-      & \TxBody \times \TxWitness \times \UpdatePayload
+      & \TxBody \times \TxWitness
       \\
     \end{array}
   \end{equation*}
@@ -523,17 +523,18 @@ in Figure~\ref{fig:defs:delpl}.
   \label{fig:defs:delpl}
 \end{figure}
 
-Multi-signature staking also requires a change to the type of stake object from
-being just a hashed key to being either a hashed key or a hashed script. This is
-reflected in the type of $\StakeDelegs$ with replaces the previous
-$\type{StakeKeys}$ type and the type $\StakeObject$ which describes either a key
-or a script used for staking, as shown in Figure~\ref{fig:delegation-state-type}.
+Multi-signature staking also requires a change to the type of staking reference
+from being just a hashed key to being either a hashed key or a hashed
+script. This is reflected in the type of $\StakeDelegs$ with replaces the
+previous $\type{StakeKeys}$ type and the type $\StakeObject$ which describes
+either a key or a script used for staking, as shown in
+Figure~\ref{fig:delegation-state-type}.
 
 \begin{figure}
   \emph{Delegation Types}
     \begin{equation*}
       \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-        \var{stakeObj} & \StakeObject & (\KeyHash_{stake} \uniondistinct
+        \var{stakeCred} & \StakeObject & (\KeyHash_{stake} \uniondistinct
                                             \HashScr) \\
         \var{stakeDelegator} & \StakeDelegs & \StakeObject \mapsto \Slot \\
       \end{array}
@@ -548,7 +549,7 @@ or a script used for staking, as shown in Figure~\ref{fig:delegation-state-type}
       \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \StakeObject \mapsto \KeyHash_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \StakeObject & \text{pointer to stake object}\\
+      \var{ptrs} & \Ptr \mapsto \StakeObject & \text{pointer to staking reference}\\
       \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
       \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
           \end{array}\right)
@@ -568,18 +569,18 @@ or a script used for staking, as shown in Figure~\ref{fig:delegation-state-type}
 
 Before executing a DELPL subrule, it is necessary to check whether the
 certificate concerns a multi-signature. This is done via checking whether the
-stake object is a hashed script and that the certificate is of one of the types
-that do require a witness. This is shown in the extended transition system for
-DELPL in Figure~\ref{fig:rules:delpl}, in the format described
+staking reference is a hashed script and that the certificate is of one of the
+types that do require a witness. This is shown in the extended transition system
+for DELPL in Figure~\ref{fig:rules:delpl}, in the format described
 in~\cite{small_step_semantics}
 
-If the staking object is a hashed script and the delegation certificate type is
-one which requires a witness, the DELEG subrule is only called if
+If the staking reference is a hashed script and the delegation certificate type
+is one which requires a witness, the DELEG subrule is only called if
 
 \begin{itemize}
 \item There exists a validator script in the set of witnesses of the transaction
-  \var{tx} which corresponds to the staking object,
-\item the staking object matches the hash of this script, and
+  \var{tx} which corresponds to the staking reference,
+\item the staking reference matches the hash of this script, and
 \item the valdiator script validates the delegation certificate in the
   transaction.
 \end{itemize}
@@ -591,13 +592,13 @@ one which requires a witness, the DELEG subrule is only called if
     \inference[Delpl-Del]
     {
       scriptWits \leteq \fun{txwitsScript}~tx\\
-      stakeObj \leteq \fun{cwitness}~\var{c} \\
+      stakeCred \leteq \fun{cwitness}~\var{c} \\
       \\~\\
-      stakeObj \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
+      stakeCred \in \HashScr \wedge c \in (\DCertRegKey \uniondistinct
       \DCertDeRegKey \uniondistinct \DCertDeleg)\implies\\
-      \exists validator,~stakeObj \mapsto validator \in scriptWits,
+      \exists validator,~stakeCred \mapsto validator \in scriptWits,
       \\ \fun{validateScript}~\var{validator}~\var{tx}
-         \wedge \var{stakeObj} = \fun{hashScript}~\var{validator}
+         \wedge \var{stakeCred} = \fun{hashScript}~\var{validator}
       \\~\\
       {
         \left(
@@ -637,9 +638,9 @@ one which requires a witness, the DELEG subrule is only called if
   \label{fig:rules:delpl}
 \end{figure}
 
-\textbf{Note:} In contrast to stake object delegation, staking pools temselves
-cannot use multi-signature schemes. Else, the lightweight certificates for
-delegation from the pool to the KES hot key would have to be script
+\textbf{Note:} In contrast to staking reference delegation, staking pools
+temselves cannot use multi-signature schemes. Else, the lightweight certificates
+for delegation from the pool to the KES hot key would have to be script
 witnesses. These certificates have to be included in each header, but those
 headers are required to have a fixed size and be as small as possible.
 
@@ -715,7 +716,7 @@ a multi-signature rewards account, we also need to validate the required
 script. This is done in a predicate in the UTXOW rule which checks that for each
 withdrawal of a transaction which uses a multi-script rewards account, there
 exists a corresponding script matching the hash in the reward address and which
-validates the transaction. Because of the changes to the staking object type,
+validates the transaction. Because of the changes to the staking reference type,
 the original function $\fun{witsNeeded}$ is changed as shown in
 Figure~\ref{fig:functions-witnesses}.
 
@@ -881,15 +882,14 @@ can be used.
 For each new type of witness, there will be a requirement to represent such a
 witness on-chain and allow for identification when deserializing such a
 witness. For this, there will be a language specific tag for each witness (and
-staking object) in its serialized form. This tag will also be part of the hash
-to allow for easy identification of the language type.
+staking reference) in its serialized form. This tag will also be part of the
+hash to allow for easy identification of the language type.
 
-As an example, one could tag key hash payment and staking objects with a tag
-$0$, native multi-sig payment and staking objects with a tag $1$ and simple
-Plutus objects with a tag $2$. Every new language would incur using a new tag,
-changes to the details of how payment or staking objects are treated
-\emph{within} an existing language framework will be changed via a software
-update, not an additional tag.
+As an example, one could tag key hash payment object and staking reference with
+a tag $0$, for native multi-sig with tag $1$ and simple Plutus scripts with tag
+$2$. Every new language would incur using a new tag, changes to the details of
+how payment or staking references are treated \emph{within} an existing language
+framework will be changed via a software update, not an additional tag.
 
 \section{Summary}
 \label{sec:summary}
@@ -904,7 +904,7 @@ with only limited requirements on functionality on the script language.
 The necessary extensions to the data types in the Shelley
 specification~\cite{shelley_formal_spec} are relatively simple. They consist
 mainly of the introduction of additional optional data for payment objects or
-staking objects.
+staking references.
 
 The relaxation on accepting a superset of the strictly required signatures
 allows the creation of transactions with an arbitrary number of signatures. This
