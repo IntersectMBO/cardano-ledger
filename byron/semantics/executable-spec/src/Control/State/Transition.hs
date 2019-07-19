@@ -187,11 +187,7 @@ applySTS ctx = case applySTSIndifferently ctx of
   (st, []) -> Right st
   (_, pfs) -> Left pfs
 
--- | ADT that specifies that a given value is larger than a maximum threshold.
--- This can be used to specify predicate failures in STS rules where this kind
--- of ordering constraint is involved.
-data TooLarge a =
-  TooLarge { actualValue :: a
-           , maximumTreshold :: a
-           }
+-- | This can be used to specify predicate failures in STS rules where a value
+-- is beyond a certain threshold.
+newtype Threshold a = Threshold a
   deriving (Eq, Ord, Show)

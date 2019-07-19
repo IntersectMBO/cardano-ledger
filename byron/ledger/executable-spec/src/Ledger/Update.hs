@@ -33,7 +33,7 @@ import           Data.Ix (inRange)
 import           Data.List (notElem, sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.Ord (Down (Down))
 import           Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
@@ -49,13 +49,13 @@ import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
-import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
+import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
                      SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
                      minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
-import           Prelude hiding (min)
+import           Prelude
 
 
 -- | Protocol parameters.
@@ -232,27 +232,50 @@ pvCanFollow
   -> ProtVer
   -- ^ Previous protocol version
   -> Bool
-pvCanFollow (ProtVer mjn min an) (ProtVer mjp mip ap)
-  = (mjp, mip, ap) < (mjn, min, an)
+pvCanFollow (ProtVer mjn mn an) (ProtVer mjp mip ap)
+  = (mjp, mip, ap) < (mjn, mn, an)
   && (inRange (0,1) (mjn - mjp))
-  && ((mjp == mjn) ==> (mip + 1 == min))
-  && ((mjp + 1 == mjn) ==> (min == 0))
+  && ((mjp == mjn) ==> (mip + 1 == mn))
+  && ((mjp + 1 == mjn) ==> (mn == 0))
 
 -- | Check whether an update proposal marks a valid update
 --
--- TODO: At the moment we don't check size in here - should we?
---
--- TODO: we might need to return a predicate failure that specifies why we
--- cannot update.
-canUpdate
+checkUpdateConstraints
   :: PParams
   -> UProp
-  -> Bool
-canUpdate pps prop =
-  (prop ^. upParams . maxBkSz <= 2 * pps ^. maxBkSz)
-  && (prop ^. upParams . maxBkSz > prop ^. upParams . maxTxSz)
-  && pps ^. scriptVersion <= prop ^. upParams . scriptVersion
-  && (inRange (0,1) $ prop ^. upParams . scriptVersion - pps ^. scriptVersion)
+  -> [UpdateConstraintViolation]
+checkUpdateConstraints pps prop =
+  catMaybes
+    [ (prop ^. upParams . maxBkSz <=? 2 * pps ^. maxBkSz)
+        `orError` BlockSizeTooLarge
+    , (prop ^. upParams . maxTxSz + 1 <=? prop ^. upParams . maxBkSz)
+        `orError` TransactionSizeTooLarge
+    , (pps ^. scriptVersion <=? prop ^. upParams . scriptVersion)
+        `orError` ScriptVersionTooSmall
+    , (prop ^. upParams . scriptVersion <=? pps ^. scriptVersion + 1)
+        `orError` ScriptVersionTooLarge
+    ]
+
+(<=?) :: Ord a => a -> a -> Maybe (a, Threshold a)
+x <=? y = if x <= y then Nothing else Just (x, Threshold y)
+
+infix 4 <=?
+
+orError :: Maybe (a, b) -> (a -> b -> e) -> Maybe e
+orError mab ferr = uncurry ferr <$> mab
+
+canUpdate :: PParams -> UProp -> Rule UPPVV ctx ()
+canUpdate pps prop = violations == [] ?! CannotUpdatePv violations
+  where violations = checkUpdateConstraints pps prop
+
+-- | Violations on the constraints of the allowed values for new protocol
+-- parameters.
+data UpdateConstraintViolation
+  = BlockSizeTooLarge Natural (Threshold Natural)
+  | TransactionSizeTooLarge Natural (Threshold Natural)
+  | ScriptVersionTooLarge Natural (Threshold Natural)
+  | ScriptVersionTooSmall Natural (Threshold Natural)
+  deriving (Eq, Ord, Show)
 
 svCanFollow
   :: Map ApName (ApVer, Core.Slot, Metadata)
@@ -310,7 +333,7 @@ instance STS UPPVV where
 
   data PredicateFailure UPPVV
     = CannotFollowPv
-    | CannotUpdatePv
+    | CannotUpdatePv [UpdateConstraintViolation]
     | AlreadyProposedPv
     | InvalidSystemTags
     deriving (Eq, Show)
@@ -323,7 +346,7 @@ instance STS UPPVV where
             nv = up ^. upPV
             ppsn = up ^. upParams
         pvCanFollow nv pv ?! CannotFollowPv
-        canUpdate pps up ?! CannotUpdatePv
+        canUpdate pps up
         nv `notElem` (fst <$> Map.elems rpus) ?! AlreadyProposedPv
         all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! rpus ⨃ [(pid, (nv, ppsn))]
@@ -352,7 +375,7 @@ instance STS UPV where
   data PredicateFailure UPV
     = UPPVVFailure (PredicateFailure UPPVV)
     | UPSVVFailure (PredicateFailure UPSVV)
-    | AVChangedInPVUpdate ApName ApVer
+    | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
     | ParamsChangedInSVUpdate
     | PVChangedInSVUpdate
     deriving (Eq, Show)
@@ -366,7 +389,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
-        inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
+        inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av (Map.lookup an avs)
         pure $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
@@ -911,7 +934,7 @@ instance HasTrace UPIREG where
           -- is not part of the registered protocol-update proposals
           -- (@rpus@).
           nextAltVersion :: (Natural, Natural) -> ProtVer
-          nextAltVersion (maj, min) = dom (range rpus)
+          nextAltVersion (maj, mn) = dom (range rpus)
                                     & Set.filter protocolVersionEqualsMajMin
                                     & Set.map _pvAlt
                                     & Set.toDescList
@@ -919,11 +942,11 @@ instance HasTrace UPIREG where
             where
               protocolVersionEqualsMajMin :: ProtVer -> Bool
               protocolVersionEqualsMajMin pv' =
-                _pvMaj pv' == maj && _pvMin pv' == min
+                _pvMaj pv' == maj && _pvMin pv' == mn
 
               nextVersion :: [Natural] -> ProtVer
-              nextVersion [] = ProtVer maj min 0
-              nextVersion (x:_) = ProtVer maj min (1 + x)
+              nextVersion [] = ProtVer maj mn 0
+              nextVersion (x:_) = ProtVer maj mn (1 + x)
 
       -- Generate a software version update.
       swVerGen :: Gen SwVer
@@ -1044,13 +1067,12 @@ ppsUpdateFrom pps = do
 
   -- Similarly, we don't expect the transaction size to be changed often, so we
   -- also generate more values around the current maximum transaction size.
+  let minTxSzBound = _maxTxSz `min` newMaxBkSize -? 1
   newMaxTxSize <-
-    Gen.integral (Range.exponentialFrom
-                    _maxTxSz
-                    (_maxTxSz -? 10) -- Decrement value determined ad-hoc
+    Gen.integral (Range.exponential
+                    (minTxSzBound -? 10) -- Decrement value determined ad-hoc
                     (newMaxBkSize -? 1)
                  )
-    `increasingProbabilityAt` (_maxTxSz -? 10, newMaxBkSize -? 1)
 
   PParams
     <$> pure newMaxBkSize
