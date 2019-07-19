@@ -100,14 +100,14 @@ import           Hedgehog.Range (linear)
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                                           Signal, State, TRC (TRC), initialRules, judgmentContext,
-                                           trans, transitionRules, wrapFailed, (?!))
+                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
-                              Slot (Slot), SlotCount (SlotCount), VKey (VKey),
-                              VKeyGenesis (VKeyGenesis), addSlot, hash, mkVkGenesisSet, owner,
-                              range, signWithGenesisKey, unBlockCount, (∈), (∉), (⨃))
+                     Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
+                     addSlot, hash, mkVkGenesisSet, owner, range, signWithGenesisKey, unBlockCount,
+                     (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
 
@@ -601,47 +601,41 @@ ratioInt :: Int -> Int -> Double
 ratioInt x y
   = fromIntegral x / fromIntegral y
 
--- | Filters the list with the predicate and returns
--- the ratio of filtered to original list lengths.
+-- | Transforms the list and returns the ratio of lengths of
+-- the transformed and original lists.
 lenRatio :: ([a] -> [b]) -> [a] -> Double
-lenRatio p xs
-  = ratioInt (length (p xs))
+lenRatio f xs
+  = ratioInt (length (f xs))
              (length xs)
 
-maxInt :: [Int] -> Int
-maxInt [] = 0
-maxInt xs = List.maximum xs
-
 -- | True if the tuple count (snd item) is >= 2
-multiple :: (a,Int) -> Bool
+multiple :: (a, Int) -> Bool
 multiple = (2 <=) . snd
 
--- | Count the number of delegates in the given certificates
-delegateCounts :: [DCert] -> [(VKey, Int)]
-delegateCounts certs
+-- | Count the number of delegates/delegators in the given certificates
+delegateCounter
+  :: Ord a
+  => ((VKeyGenesis,VKey) -> a)
+  -> [DCert]
+  -> [(a, Int)]
+delegateCounter pick certs
   = fmap delegatorDelegate certs
     -- Remove duplicated elements, since we're not
     -- interested in repeated delegations
     & List.nub
-    -- Select the (unique) delegates
-    & fmap snd
-    -- If we have more than one occurrence of a delegate,
-    -- then we know that there were multiple delegations
-    -- to that delegate
+    -- Select the (unique) delegate/delegators
+    & fmap pick
+    -- If we have more than one occurrence, then there were
+    -- multiple delegations from/to that delegate
     & count
 
--- | Count the number of delegators in the given certificates
+-- | Count the number of times each delegate was delegated to
+delegateCounts :: [DCert] -> [(VKey, Int)]
+delegateCounts = delegateCounter snd
+
+-- | Count the number of times each delegator changed their delegation
 delegatorCounts :: [DCert] -> [(VKeyGenesis, Int)]
-delegatorCounts dcerts
-  = fmap delegatorDelegate dcerts
-    -- Remove duplicated elements, since we're not
-    -- interested in repeated delegations
-    & List.nub
-    -- Select the (unique) delegators
-    & fmap fst
-    -- If we have more than one occurrence of a delegator,
-    -- then we know that the delegator changed their delegation
-    & count
+delegatorCounts = delegateCounter fst
 
 -- | Ratio of certificate groups that are empty
 emptyDelegationPayloadRatio :: [[DCert]] -> Double
@@ -681,7 +675,9 @@ multipleDelegationsRatio dcerts
 -- | The maximum number of delegators to any particular delegate
 maxDelegationsTo :: [DCert] -> Int
 maxDelegationsTo dcerts
-  =  maxInt (snd <$> filter multiple (delegateCounts dcerts))
+  = case filter multiple (delegateCounts dcerts) of
+      [] -> 1
+      xs -> List.maximum (snd <$> xs)
 
 -- | Ratio of delegators that have changed their delegations
 changedDelegationsRatio :: [DCert] -> Double
@@ -691,7 +687,9 @@ changedDelegationsRatio dcerts
 -- | The maximum number of change-of-delegate for any particular delegator
 maxChangedDelegations :: [DCert] -> Int
 maxChangedDelegations dcerts
-  = maxInt (snd <$> filter multiple (delegateCounts dcerts))
+  = case filter multiple (delegateCounts dcerts) of
+     [] -> 1
+     xs -> List.maximum (snd <$> xs)
 
 -- | Ratio of repeated delegations to all delegations
 repeatedDelegationsRatio :: [DCert] -> Double
@@ -703,10 +701,14 @@ repeatedDelegationsRatio dcerts
 -- | The maximum number of repeated delegations in the given certificates
 maxRepeatedDelegations :: [DCert] -> Int
 maxRepeatedDelegations dcerts
-  = maxInt (snd <$> filter multiple ds)
+  = case filter multiple ds of
+     [] -> 1
+     xs -> List.maximum (snd <$> xs)
   where
     ds = count (fmap delegatorDelegate dcerts)
 
 maxCertsPerBlock :: [[DCert]] -> Int
 maxCertsPerBlock groupedCerts
-  = maxInt (map length groupedCerts)
+  = case groupedCerts of
+      [] -> 0
+      _  -> List.maximum (length <$> groupedCerts)

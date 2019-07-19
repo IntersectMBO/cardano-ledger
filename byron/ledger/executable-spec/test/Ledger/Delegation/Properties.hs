@@ -26,42 +26,35 @@ import           Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Hedgehog (Gen, MonadTest, Property, assert, cover, forAll, property, success,
-                           withTests, (===))
+                     withTests, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                                           Signal, State, TRC (TRC), applySTS, initialRules,
-                                           judgmentContext, trans, transitionRules, wrapFailed,
-                                           (?!))
+                     Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace,
-                                                     TraceProfile (TraceProfile), classifySize,
-                                                     classifyTraceLength, envGen, failures,
-                                                     isTrivial, nonTrivialTrace,
-                                                     proportionOfInvalidSignals,
-                                                     proportionOfValidSignals, sigGen,
-                                                     suchThatLastState, trace,
-                                                     traceLengthsAreClassified, traceWithProfile)
+                     TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
+                     failures, isTrivial, nonTrivialTrace, proportionOfInvalidSignals,
+                     proportionOfValidSignals, sigGen, suchThatLastState, trace,
+                     traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
-                                                 preStatesAndSignals, traceEnv, traceLength,
-                                                 traceSignals)
+                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
-                              VKey (VKey), VKeyGenesis, addSlot, mkVKeyGenesis, owner,
-                              signWithGenesisKey, unSlot, unSlotCount)
+                     VKey (VKey), VKeyGenesis, addSlot, mkVKeyGenesis, owner, signWithGenesisKey,
+                     unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
-                                    DSEnv (DSEnv, _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK),
-                                    DSState (DSState),
-                                    DState (DState, _dStateDelegationMap, _dStateLastDelegation),
-                                    PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
-                                    delegationMap, delegatorDelegate, depoch,
-                                    emptyDelegationPayloadRatio, epoch, liveAfter, mkDCert,
-                                    multipleDelegationsRatio, nextEpochDelegationsRatio,
-                                    scheduledDelegations, selfDelegationsRatio, slot,
-                                    thisEpochDelegationsRatio, _dIStateDelegationMap,
-                                    _dIStateKeyEpochDelegations, _dIStateLastDelegation,
-                                    _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
-                                    _dSStateScheduledDelegations)
+                     DSEnv (DSEnv, _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK),
+                     DSState (DSState),
+                     DState (DState, _dStateDelegationMap, _dStateLastDelegation),
+                     PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
+                     delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
+                     liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
+                     scheduledDelegations, selfDelegationsRatio, slot, thisEpochDelegationsRatio,
+                     _dIStateDelegationMap, _dIStateKeyEpochDelegations, _dIStateLastDelegation,
+                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
+                     _dSStateScheduledDelegations)
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
