@@ -77,6 +77,7 @@ import Test.Cardano.Chain.Elaboration.Update
   , elaborateSoftwareVersion
   , elaborateUpdateProposal
   , elaborateVote
+  , elaboratePParams
   )
 import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -271,26 +272,28 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
   -- implemented.
   genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
 
-  gPps        = Update.ProtocolParameters
-    { Update.ppScriptVersion    = 0
-    , Update.ppSlotDuration     = 0
-    , Update.ppMaxBlockSize     = 832 * protocolParams ^. maxBkSz
-    , Update.ppMaxHeaderSize    = 569 * protocolParams ^. maxHdrSz
-    , Update.ppMaxTxSize        = 318 * protocolParams ^. maxTxSz
-    , Update.ppMaxProposalSize  = 0
-    , Update.ppMpcThd           = LovelacePortion 0
-    , Update.ppHeavyDelThd      = LovelacePortion 0
-    , Update.ppUpdateVoteThd    = LovelacePortion 0
-    , Update.ppUpdateProposalThd = LovelacePortion 0
-    , Update.ppUpdateProposalTTL = 0
-    , Update.ppSoftforkRule      = Update.SoftforkRule
-      (LovelacePortion 0)
-      (LovelacePortion 0)
-      (LovelacePortion 0)
-    , Update.ppTxFeePolicy       = TxFeePolicyTxSizeLinear
-      $ TxSizeLinear (mkKnownLovelace @0) (mkKnownLovelace @0)
-    , Update.ppUnlockStakeEpoch  = 0
-    }
+  gPps = elaboratePParams protocolParams
+
+    -- Update.ProtocolParameters
+    -- { Update.ppScriptVersion    = 0
+    -- , Update.ppSlotDuration     = 0
+    -- , Update.ppMaxBlockSize     = 832 * protocolParams ^. maxBkSz
+    -- , Update.ppMaxHeaderSize    = 569 * protocolParams ^. maxHdrSz
+    -- , Update.ppMaxTxSize        = 318 * protocolParams ^. maxTxSz
+    -- , Update.ppMaxProposalSize  = 0
+    -- , Update.ppMpcThd           = LovelacePortion 0
+    -- , Update.ppHeavyDelThd      = LovelacePortion 0
+    -- , Update.ppUpdateVoteThd    = LovelacePortion 0
+    -- , Update.ppUpdateProposalThd = LovelacePortion 0
+    -- , Update.ppUpdateProposalTTL = 0
+    -- , Update.ppSoftforkRule      = Update.SoftforkRule
+    --   (LovelacePortion 0)
+    --   (LovelacePortion 0)
+    --   (LovelacePortion 0)
+    -- , Update.ppTxFeePolicy       = TxFeePolicyTxSizeLinear
+    --   $ TxSizeLinear (mkKnownLovelace @0) (mkKnownLovelace @0)
+    -- , Update.ppUnlockStakeEpoch  = 0
+    -- }
 
   genesisKeyHashes :: Set Common.KeyHash
   genesisKeyHashes =

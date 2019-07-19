@@ -95,6 +95,7 @@ ts_prop_updateBlock_Valid =
         Abstract.sigGenChain
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
+          Abstract.NoGenUpdate
           Nothing
           chainEnv
           lastState
@@ -137,6 +138,7 @@ ts_prop_updateBlock_InvalidProof =
         Abstract.sigGenChain
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
+          Abstract.NoGenUpdate
           Nothing
           chainEnv
           lastState

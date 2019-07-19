@@ -13,6 +13,7 @@ where
 
 import Cardano.Prelude
 
+import Control.Arrow ((|||))
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -26,7 +27,9 @@ import qualified Cardano.Chain.Slotting as Concrete
 import qualified Cardano.Chain.Update as Concrete
 import qualified Cardano.Chain.Update.Proposal as Proposal
 
+import Ledger.Core (unSlotCount)
 import qualified Ledger.Update as Abstract
+
 
 import Test.Cardano.Chain.Elaboration.Keys (vKeyToSafeSigner)
 import Test.Cardano.Chain.Genesis.Dummy (dummyProtocolParameters)
@@ -34,20 +37,28 @@ import Test.Cardano.Chain.Genesis.Dummy (dummyProtocolParameters)
 elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
 elaboratePParams pps = Concrete.ProtocolParameters
   { Concrete.ppScriptVersion      = fromIntegral $ Abstract._scriptVersion pps
-  , Concrete.ppSlotDuration       = Concrete.ppSlotDuration dummyProtocolParameters
+  , Concrete.ppSlotDuration       = 0 -- TODO: was Concrete.ppSlotDuration dummyProtocolParameters
   , Concrete.ppMaxBlockSize       = 748 * Abstract._maxBkSz pps
   , Concrete.ppMaxHeaderSize      = 95 * Abstract._maxHdrSz pps
   , Concrete.ppMaxTxSize          = 4096 * Abstract._maxTxSz pps
-  , Concrete.ppMaxProposalSize    = 0
+  , Concrete.ppMaxProposalSize    = 4096 * Abstract._maxPropSz pps
   , Concrete.ppMpcThd             = Concrete.mkKnownLovelacePortion @0
   , Concrete.ppHeavyDelThd        = Concrete.mkKnownLovelacePortion @0
   , Concrete.ppUpdateVoteThd      = Concrete.mkKnownLovelacePortion @0
   , Concrete.ppUpdateProposalThd  = Concrete.mkKnownLovelacePortion @0
-  , Concrete.ppUpdateProposalTTL  = 0
-  , Concrete.ppSoftforkRule       = Concrete.SoftforkRule
-    (Concrete.mkKnownLovelacePortion @0)
-    (Concrete.mkKnownLovelacePortion @0)
-    (Concrete.mkKnownLovelacePortion @0)
+  , Concrete.ppUpdateProposalTTL  = Concrete.SlotNumber
+                                  $ unSlotCount
+                                  $ Abstract._upTtl pps
+  , Concrete.ppSoftforkRule       =
+    Concrete.SoftforkRule
+      { Concrete.srInitThd = Concrete.mkKnownLovelacePortion @0
+      -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
+      , Concrete.srMinThd = panic . show ||| identity
+                          $ Concrete.mkLovelacePortion
+                          $ floor
+                          $ Abstract._cfmThd pps * 1e15
+      , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
+      }
   , Concrete.ppTxFeePolicy        = Concrete.TxFeePolicyTxSizeLinear
     (Concrete.TxSizeLinear
       (intToLovelace (Abstract._factorA pps))

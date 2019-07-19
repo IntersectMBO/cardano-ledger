@@ -15,6 +15,8 @@ module Cardano.Chain.Update.Validation.Registration
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Cardano.Prelude hiding (State)
 
 import qualified Data.ByteString as BS
