@@ -68,7 +68,7 @@ module LedgerState
   , validStakeDelegation
   , preserveBalance
   , verifiedWits
-  , witsNeeded
+  , witsVKeyNeeded
   -- lenses
   , utxoState
   , delegationState
@@ -543,13 +543,13 @@ correctWithdrawals accs withdrawals =
 -- |Collect the set of hashes of keys that needs to sign a
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
-witsNeeded
+witsVKeyNeeded
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => UTxO hashAlgo dsignAlgo
   -> Tx hashAlgo dsignAlgo
   -> Dms dsignAlgo
   -> Set (KeyHash hashAlgo dsignAlgo)
-witsNeeded utxo' tx@(Tx txbody _ _) _dms =
+witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
@@ -596,7 +596,7 @@ enoughWits
   -> UTxOState hashAlgo dsignAlgo
   -> Validity
 enoughWits tx@(Tx _ wits _) d u =
-  if witsNeeded (u ^. utxo) tx d `Set.isSubsetOf` signers
+  if witsVKeyNeeded (u ^. utxo) tx d `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where

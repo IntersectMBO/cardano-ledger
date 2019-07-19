@@ -32,7 +32,7 @@ module UTxO
   , makeWitnessVKey
   , makeWitnessesVKey
   , verifyWitVKey
-  , validators
+  , scriptsNeeded
   , txinsScript
   ) where
 
@@ -40,6 +40,7 @@ import           Lens.Micro ((^.))
 
 import           Data.Map.Strict         (Map)
 import qualified Data.Map.Strict         as Map
+import qualified Data.Maybe              as Maybe
 import           Data.Set                (Set)
 import qualified Data.Set                as Set
 
@@ -50,7 +51,7 @@ import           Updates                 (Update)
 import           Tx
 import           TxData
 
-import           Delegation.Certificates (StakePools(..), DCert (..), dvalue)
+import           Delegation.Certificates (StakePools(..), DCert (..), dvalue, cwitness)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo
@@ -170,28 +171,34 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
 txup :: Tx hashAlgo dsignAlgo -> Update dsignAlgo
 txup (Tx txbody _ _) = _txUpdate txbody
 
--- | Computes the set of validator scripts that are necessary to spent the
--- 'txInputs' from the 'utxo' which are locked with scripts. 'scripts' is the
--- set of available scripts which are checkd for matching hashes and validation.
-validators
-  :: (MultiSignatureScript a hashAlgo dsignAlgo)
-  => Set (TxIn hashAlgo dsignAlgo)
-  -> UTxO hashAlgo dsignAlgo
-  -> Map (ScriptHash hashAlgo dsignAlgo) a
-  -> Map (TxIn hashAlgo dsignAlgo) a
-validators txInputs utxo scripts =
-  Map.mapMaybe (\(TxOut a _) ->
-                   case a of
-                     AddrScr hs _ ->
-                       (let s = Map.lookup hs scripts in
-                           case s of
-                             Just s' ->
-                               if hs == hashScript s'
-                               then Just s'
-                               else Nothing
-                             Nothing -> Nothing)
-                     _            -> Nothing) txInRestricted
-  where UTxO txInRestricted = txInputs <| utxo
+-- | Extract script hash from value address with script.
+getScriptHash :: Addr hashAlgo dsignAlgo -> Maybe (ScriptHash hashAlgo dsignAlgo)
+getScriptHash (AddrScr hs _) = Just hs
+getScriptHash _              = Nothing
+
+scriptStakeCred
+  :: StakeCredential hashAlgo dsignAlgo
+  -> Maybe (ScriptHash hashAlgo dsignAlgo)
+scriptStakeCred (KeyHashStake _ )    =  Nothing
+scriptStakeCred (ScriptHashStake hs) = Just hs
+
+-- | Computes the set of script hashes required to unlock the transcation inputs
+-- and the withdrawals.
+scriptsNeeded
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => UTxO hashAlgo dsignAlgo
+  -> Tx hashAlgo dsignAlgo
+  -> Set (ScriptHash hashAlgo dsignAlgo)
+scriptsNeeded u tx =
+  (Set.fromList $ Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  `Set.union`
+  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  `Set.union`
+  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
+  where unTxOut (TxOut a _) = a
+        withdrawals = _wdrls $ _body tx
+        UTxO u'' = (txinsScript (txins $ _body tx) u) <| u
+        certificates = _certs $ _body tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
