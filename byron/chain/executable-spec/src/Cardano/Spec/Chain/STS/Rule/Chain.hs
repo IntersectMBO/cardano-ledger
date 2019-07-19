@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word8)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -31,12 +32,13 @@ import           Ledger.Core
 import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Delegation
 import           Ledger.Update hiding (delegationMap)
+import qualified Ledger.Update as Update
 import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.BBody
 import           Cardano.Spec.Chain.STS.Rule.BHead
-import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Cardano.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
 import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
@@ -189,45 +191,110 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-  sigGen _ = sigGenChain GenDelegation GenUTxO Nothing
+  sigGen _ = sigGenChain GenDelegation GenUTxO GenUpdate Nothing
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
 data ShouldGenUTxO = GenUTxO | NoGenUTxO
 
+data ShouldGenUpdate = GenUpdate | NoGenUpdate
+
 sigGenChain
   :: ShouldGenDelegation
   -> ShouldGenUTxO
+  -> ShouldGenUpdate
   -> Maybe (PredicateFailure CHAIN)
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
-sigGenChain shouldGenDelegation shouldGenUTxO _ (_sNow, utxo0, ads, pps, k) (Slot s, sgs, h, utxo, ds, _us)
+sigGenChain
+  shouldGenDelegation
+  shouldGenUTxO
+  shouldGenUpdate
+  _
+  (_sNow, utxo0, ads, _pps, k)
+  (Slot s, sgs, h, utxo, ds, us)
   = do
+    -- We'd expect the slot increment to be close to 1, even for large Gen's
+    -- size numbers.
+    nextSlot <- Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
+
+    -- We need to generate delegation, update proposals, votes, and transactions
+    -- after a potential update in the protocol parameters (which is triggered
+    -- only at epoch boundaries). Otherwise the generators will use a state that
+    -- won't hold when the rules that correspond to these generators are
+    -- applied. For instance, the fees might change, which will render the
+    -- transaction as invalid.
+    --
+    let (us', _) = applySTSIndifferently @EPOCH $ TRC ( (sEpoch (Slot s) k, k)
+                                                      , us
+                                                      , nextSlot
+                                                      )
+
+        pps' = protocolParameters us'
+
+        upienv =
+          ( Slot s
+          , _dIStateDelegationMap ds
+          , k
+          , toNumberOfGenesisKeys $ Set.size ads
+          )
+
+        -- TODO: we might need to make the number of genesis keys a newtype, and
+        -- provide this function in the same module where this newtype is
+        -- defined.
+        toNumberOfGenesisKeys n
+          | fromIntegral (maxBound :: Word8) < n =
+              error $ "sigGenChain: too many genesis keys: " ++ show  n
+          | otherwise = fromIntegral n
+
+    aBlockVersion <-
+      Update.protocolVersionEndorsementGen upienv us'
+
     -- Here we do not want to shrink the issuer, since @Gen.element@ shrinks
     -- towards the first element of the list, which in this case won't provide
     -- us with better shrinks.
-    vkI         <- SigCntGen.issuer (pps, ds ^. dmsL, k) sgs
-    nextSlot    <- gNextSlot
+    vkI <- SigCntGen.issuer (pps', ds ^. dmsL, k) sgs
 
-    delegationPayload <- case shouldGenDelegation of
-      GenDelegation   ->
-        let dsEnv = DSEnv
-                    { _dSEnvAllowedDelegators = ads
-                    , _dSEnvEpoch = sEpoch nextSlot k
-                    , _dSEnvSlot = nextSlot
-                    , _dSEnvK = k
-                    }
-        in
-        dcertsGen dsEnv ds
-      NoGenDelegation -> pure []
+    delegationPayload <-
+      case shouldGenDelegation of
+        GenDelegation   ->
+          -- In practice there won't be a delegation payload in every block, so we
+          -- make this payload sparse.
+          --
+          -- NOTE: We arbitrarily chose to generate delegation payload in 30% of
+          -- the cases. We could make this configurable.
+          Gen.frequency
+            [ (7, pure [])
+            , (3,
+               let dsEnv =
+                    DSEnv
+                      { _dSEnvAllowedDelegators = ads
+                      , _dSEnvEpoch = sEpoch nextSlot k
+                      , _dSEnvSlot = nextSlot
+                      , _dSEnvK = k
+                      }
+               in dcertsGen dsEnv ds
+              )
+            ]
+        NoGenDelegation -> pure []
 
-    utxoPayload <- case shouldGenUTxO of
-      GenUTxO   -> sigGen @UTXOWS Nothing utxoEnv utxo
-      NoGenUTxO -> pure []
+    utxoPayload <-
+      case shouldGenUTxO of
+        GenUTxO   ->
+          let utxoEnv = UTxOEnv utxo0 pps' in
+            sigGen @UTXOWS Nothing utxoEnv utxo
+        NoGenUTxO -> pure []
+
+    (anOptionalUpdateProposal, aListOfVotes) <-
+      case shouldGenUpdate of
+        GenUpdate ->
+          Update.updateProposalAndVotesGen upienv us'
+        NoGenUpdate ->
+          pure (Nothing, [])
 
     let
-      dummySig       = Sig genesisHash (owner vkI)
+      dummySig = Sig genesisHash (owner vkI)
       unsignedHeader = MkBlockHeader
         h
         nextSlot
@@ -244,14 +311,8 @@ sigGenChain shouldGenDelegation shouldGenUTxO _ (_sNow, utxo0, ads, pps, k) (Slo
         BlockBody
           delegationPayload
           utxoPayload
-          Nothing -- Update proposal
-          []      -- Votes on update proposals
-          (ProtVer 0 0 0)
+          anOptionalUpdateProposal
+          aListOfVotes
+          aBlockVersion
 
     pure $ Block signedHeader bb
-   where
-     -- We'd expect the slot increment to be close to 1, even for large
-     -- Gen's size numbers.
-     gNextSlot = Slot . (s +) <$> Gen.integral (Range.exponential 1 10)
-
-     utxoEnv   = UTxOEnv {utxo0, pps}

@@ -18,15 +18,11 @@ module Ledger.Update.Properties
 
 import           GHC.Stack (HasCallStack)
 
-import           Control.Arrow (second)
 import qualified Data.Bimap as Bimap
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, isNothing)
-import           Data.Set (Set)
+import           Data.Maybe (catMaybes, isNothing)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Hedgehog (Property, cover, forAll, property, withTests)
@@ -35,7 +31,7 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                     Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
+                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, randomTraceOfSize, ratio,
                      sigGen, trace, traceLengthsAreClassified, traceOfLength)
@@ -44,7 +40,7 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
-                     unBlockCount, (*.), (-.), (▷<=), (◁))
+                     unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
@@ -92,9 +88,11 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   --------------------------------------------------------------------------------
   -- Maximum block-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum block-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
+  -- NOTE: since we want to generate valid signals, we cannot decrease the block
+  -- size in most of the cases.
+  cover 20
+    "at least 5% of the update proposals decrease the maximum block-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum block-size"
@@ -104,18 +102,12 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum block-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
-  -- TODO: in the future we should change 1 to the minimum allowed protocol
-  -- value. But first we need to determine what that value is.
-  cover 20
-    "at least 5% of the update proposals set the maximum block-size to 1"
-    (0.05 <= ratio (Update._maxBkSz `isSetTo` 1) sample)
-
   --------------------------------------------------------------------------------
   -- Maximum header-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum header-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Decreases) sample)
+  cover 20
+    "at least 5% of the update proposals decrease the maximum header-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum header-size"
@@ -125,35 +117,27 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 10% of the update proposals do not change the maximum header-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxHdrSz RemainsTheSame) sample)
 
-  cover 20
-    "at least 5% of the update proposals set the maximum header-size to 0"
-    (0.05 <= ratio (Update._maxHdrSz `isSetTo` 0) sample)
-
   --------------------------------------------------------------------------------
   -- Maximum transaction-size checks
   --------------------------------------------------------------------------------
-  cover 50
-    "at least 30% of the update proposals decrease the maximum transaction-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Decreases) sample)
+  cover 20
+    "at least 5% of the update proposals decrease the maximum transaction-size"
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum transaction-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz Increases) sample)
 
-  cover 50
+  cover 40
     "at least 10% of the update proposals do not change the maximum transaction-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxTxSz RemainsTheSame) sample)
-
-  cover 20
-    "at least 5% of the update proposals set the maximum transaction-size to 0"
-    (0.05 <= ratio (Update._maxTxSz `isSetTo` 0) sample)
 
   --------------------------------------------------------------------------------
   -- Maximum proposal-size checks
   --------------------------------------------------------------------------------
-  cover 50
+  cover 20
     "at least 30% of the update proposals decrease the maximum proposal-size"
-    (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Decreases) sample)
+    (0.05 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz Decreases) sample)
 
   cover 50
     "at least 30% of the update proposals increase the maximum proposal-size"
@@ -162,10 +146,6 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
   cover 50
     "at least 10% of the update proposals do not change the maximum proposal-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxPropSz RemainsTheSame) sample)
-
-  cover 20
-    "at least 5% of the update proposals set the maximum proposal-size to 0"
-    (0.05 <= ratio (Update._maxPropSz `isSetTo` 0) sample)
 
   -- NOTE: after empirically determining the checks above are sensible, we can
   -- add more coverage tests for the other protocol parameters.
@@ -222,18 +202,28 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
         check Decreases proposedParameterValue       = proposedParameterValue < currentParameterValue
         check RemainsTheSame proposedParameterValue  = currentParameterValue == proposedParameterValue
 
+    -- TODO: leaving this here as it might be useful in the future. Remove if it
+    -- isn't (dnadales - 07/17/2019). We use git, but nobody will see if it sits
+    -- in our history.
+    --
     -- Count the number of times in the sequence of update proposals that the
     -- given protocol value is set to the given value.
-    isSetTo
-      :: Eq v
-      => (PParams -> v)
-      -> v
-      -> Trace UPIREG
-      -> Int
-    isSetTo parameterValue value traceSample
-      = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
-      & filter (value ==)
-      & length
+    --
+    -- Example usage:
+    --
+    -- > cover 20
+    -- >    "at least 5% of the update proposals set the maximum proposal-size to 0"
+    -- > (0.05 <= ratio (Update._maxPropSz `isSetTo` 0) sample)
+    -- isSetTo
+    --   :: Eq v
+    --   => (PParams -> v)
+    --   -> v
+    --   -> Trace UPIREG
+    --   -> Int
+    -- isSetTo parameterValue value traceSample
+    --   = fmap (parameterValue . Update._upParams) (traceSignals OldestFirst traceSample)
+    --   & filter (value ==)
+    --   & length
 
     expectedNumberOfUpdateProposalsPerKey :: Trace UPIREG -> Double
     expectedNumberOfUpdateProposalsPerKey traceSample =
@@ -364,58 +354,24 @@ instance HasTrace UBLOCK where
     do
       let numberOfGenesisKeys = 7
       dms <- Update.dmapGen numberOfGenesisKeys
-      -- We don't want a large value of @k@, otherwise we won't see many confirmed proposals or
-      -- epoch changes. The problem here is that the initial environment does not know anything
-      -- about the trace size, and @k@ should be a function of it.
+      -- We don't want a large value of @k@, otherwise we won't see many
+      -- confirmed proposals or epoch changes. The problem here is that the
+      -- initial environment does not know anything about the trace size, and
+      -- @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
   sigGen _ _env UBlockState {upienv, upistate} = do
-    let rpus = Update.registeredProtocolUpdateProposals upistate
     (anOptionalUpdateProposal, aListOfVotes) <-
-      -- We want to generate update proposals when there is none registered. Otherwise we won't get
-      -- any proposals or votes.
-      if Set.null (dom rpus)
-      then generateUpdateProposalAndVotes
-      else Gen.frequency [ (5, generateOnlyVotes)
-                         , (1, generateUpdateProposalAndVotes)
-                         ]
-    -- Don't shrink the issuer as this won't give us additional insight on a test failure.
+      Update.updateProposalAndVotesGen upienv upistate
+
+    -- Don't shrink the issuer as this won't give us additional insight on a
+    -- test failure.
     aBlockIssuer <- Gen.prune $
       -- Pick a delegate from the delegation map
       Gen.element $ Bimap.elems (Update.delegationMap upienv)
 
-    let
-      -- Generate a list of protocol version endorsements. For this we look at the current
-      -- endorsements, and confirmed and stable proposals.
-      --
-      -- If there are no endorsements, then the confirmed and stable proposals provide fresh
-      -- protocol versions that can be endorsed.
-      endorsementsList :: [(ProtVer, Set Core.VKeyGenesis)]
-      endorsementsList = endorsementsMap `Map.union` emptyEndorsements
-                       & Map.toList
-        where
-          emptyEndorsements :: Map ProtVer (Set Core.VKeyGenesis)
-          emptyEndorsements = zip stableAndConfirmedVersions (repeat Set.empty)
-                            & Map.fromList
-            where
-              stableAndConfirmedVersions
-                :: [ProtVer]
-              stableAndConfirmedVersions = stableAndConfirmedProposalIDs ◁ rpus
-                                         & Map.elems
-                                         & fmap fst
-                where
-                  stableAndConfirmedProposalIDs =
-                    dom (Update.confirmedProposals upistate ▷<= sn  -. 2 *. k)
-                    where
-                      (sn, _, k, _) = upienv
-
-          endorsementsMap :: Map ProtVer (Set Core.VKeyGenesis)
-          endorsementsMap = Set.toList (Update.endorsements upistate)
-                          & fmap (second Set.singleton)
-                          & Map.fromListWith Set.union
-
     aBlockVersion <-
-      fromMaybe (Update.protocolVersion upistate) <$> Update.protocolVersionEndorsementGen endorsementsList
+      Update.protocolVersionEndorsementGen upienv upistate
 
     UBlock
       <$> pure aBlockIssuer
@@ -424,16 +380,6 @@ instance HasTrace UBLOCK where
       <*> pure anOptionalUpdateProposal
       <*> pure aListOfVotes
       where
-        generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
-        generateUpdateProposalAndVotes = do
-          updateProposal <- sigGen @UPIREG Nothing upienv upistate
-          -- We want to have the possibility of generating votes for the proposal we
-          -- registered.
-          case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
-            Left _ ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistate
-            Right upistateAfterRegistration ->
-              (Just updateProposal, ) <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
         nextSlotGen =
           incSlot <$> Gen.frequency
                       [ (5, Gen.integral (Range.constant 1 10))
@@ -494,7 +440,7 @@ ublockRelevantTracesAreCovered = withTests 150 $ property $ do
 
   -- With traces of length 500, we expect to see about 80-90 proposals, which means that we will
   -- have about 8 to 9 proposals scheduled for adoption.
-  cover 70
+  cover 60
     "at least 10% of the proposals get enough endorsements"
     (0.1 <= proposalsScheduledForAdoption sample / totalProposals sample)
 

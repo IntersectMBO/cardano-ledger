@@ -76,5 +76,8 @@ test-suite chain-rules-test
                        -Wincomplete-record-updates
                        -Wincomplete-uni-patterns
                        -Wredundant-constraints
+                       -- See `cs-ledger.cabal` for an explanation of the
+                       -- options below.
+                       "-with-rtsopts=-K4m -M300m"
   if (!flag(development))
     ghc-options:       -Werror

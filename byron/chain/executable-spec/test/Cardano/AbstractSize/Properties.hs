@@ -17,14 +17,14 @@ import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
-import           Hedgehog (MonadTest, Property, forAll, property, withTests, (===))
+import           Hedgehog (MonadTest, Property, diff, forAll, property, withTests, (===))
 import           Test.Tasty.Hedgehog
 
 import           Control.State.Transition.Generator (trace)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core hiding ((<|))
 import           Ledger.Delegation (DCert)
-import           Ledger.Update (ProtVer (..), STag, UProp (..), Vote)
+import           Ledger.Update (ProtVer (..), UProp (..), Vote)
 import           Ledger.UTxO
 
 import           Cardano.Spec.Chain.STS.Block (Block (..), BlockBody (..), BlockHeader (..))
@@ -136,10 +136,13 @@ propMultipleOfSizesBlock b =
     abstractSize (mkCost @TxWits) b === length (_bUtxo body_)
     abstractSize (mkCost @Vote)   b === length (_bUpdVotes body_)
     abstractSize (mkCost @UProp)  b === length (maybeToList (_bUpdProp body_))
-    abstractSize (mkCost @STag)   b
-      === case _bUpdProp body_ of
-            Just uprop -> Set.size (_upSTags uprop)
-            Nothing -> 0
+    -- A STag is a string, so we need to make sure that all the characters are
+    -- accounted for in the size computation. We cannot use equality, since
+    -- characters might appear in other parts of the block.
+    diff
+      (maybe 0 (sum . fmap length . Set.toList . _upSTags) (_bUpdProp body_))
+      (<=)
+      (abstractSize (mkCost @Char) b)
 
     -- BlockHeader appears only once
     abstractSize (mkCost @BlockHeader) b === 1
