@@ -14,8 +14,8 @@ import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, 
                      (===))
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (TraceLength (Maximum), classifyTraceLength,
-                     traceSigGen)
+import           Control.State.Transition.Generator (TraceLength (Desired, Maximum),
+                     classifyTraceLength, traceSigGen)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace
 
@@ -89,76 +89,76 @@ signersListIsBoundedByK = property $ do
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
-  tr <- forAll $ traceSigGen (Maximum 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
+  tr <- forAll $ traceSigGen (Desired 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
   let certs = traceDCerts tr
 
-  -- for at least 5% of traces...
-  cover 5
+  -- for at least 1% of traces...
+  cover 1
         "there are more certificates than blocks"
         (traceLength tr <= length certs)
 
   -- for at least 10% of traces...
-  cover 5
-        "at most 70% of blocks have no certificates"
-        (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.7)
-
-  -- for at least 50% of traces...
-  cover 50
-        "at least 15% of delegates will delegate to this epoch"
-        (0.15 <= thisEpochDelegationsRatio (epochDelegationEpoch tr))
-
-  -- for at least 50% of traces...
-  cover 50
-        "at least 50% of delegations will delegate to the next epoch"
-        (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
-
-  -- for at least 10% of traces...
   cover 10
-       "at most 25% of certificates will self-delegate"
-       (selfDelegationsRatio certs <= 0.25)
-
-  -- for at least 50% of traces...
-  cover 50
-        "at least 25% delegates have multiple delegators"
-        (0.25 <= multipleDelegationsRatio certs)
-
-  -- for at least 10% of traces...
-  cover 10
-        "some delegates have at least 5 corresponding delegators"
-        (5 <= maxDelegationsTo certs)
-
-  -- for at least 8% of traces...
-  cover 8
-        "at most 25% of delegators change their delegation"
-        (changedDelegationsRatio certs <= 0.25)
-
-  -- for at least 10% of traces...
-  cover 10
-        "some delegators have changed their delegation 5 or more times"
-        (5 <= maxChangedDelegations certs)
-
-  -- for at least 20% of traces...
-  cover 20
-        "at most 25% of delegations are repeats"
-        (repeatedDelegationsRatio certs <= 0.25)
-
-  -- for at least 5% of traces...
-  cover 5
-        "some delegations are repeated 10 or more times"
-        (10 <= maxRepeatedDelegations certs)
-
-  -- for at least 10% of traces...
-  cover 10
-        "some blocks have 5 or more certificates"
-        (5 <= maxCertsPerBlock (traceDCertsByBlock tr))
+        "at most 75% of blocks have no certificates"
+        (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.75)
 
   -- for at least 25% of traces...
   cover 25
+        "at least 25% of delegates will delegate to this epoch"
+        (0.25 <= thisEpochDelegationsRatio (epochDelegationEpoch tr))
+
+  -- for at least 60% of traces...
+  cover 60
+        "at least 50% of delegations will delegate to the next epoch"
+        (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
+
+  -- for at least 20% of traces...
+  cover 20
+       "at most 30% of certificates will self-delegate"
+       (selfDelegationsRatio certs <= 0.3)
+
+  -- for at least 60% of traces...
+  cover 60
+        "at least 25% delegates have multiple delegators"
+        (0.25 <= multipleDelegationsRatio certs)
+
+  -- for at least 20% of traces...
+  cover 20
+        "some delegates have at least 5 corresponding delegators"
+        (5 <= maxDelegationsTo certs)
+
+  -- for at least ?% of traces...
+  cover 5
+        "at most 50% of delegators change their delegation"
+        (changedDelegationsRatio certs <= 0.5)
+
+  -- for at least 20% of traces...
+  cover 20
+        "some delegators have changed their delegation 5 or more times"
+        (5 <= maxChangedDelegations certs)
+
+  -- for at least 2% of traces...
+  cover 2
+        "at most 25% of delegations are repeats"
+        (repeatedDelegationsRatio certs <= 0.25)
+
+  -- for at least 30% of traces...
+  cover 30
+        "some delegations are repeated 10 or more times"
+        (10 <= maxRepeatedDelegations certs)
+
+  -- for at least 15% of traces...
+  cover 15
+        "some blocks have 5 or more certificates"
+        (5 <= maxCertsPerBlock (traceDCertsByBlock tr))
+
+  -- for at least 50% of traces...
+  cover 50
         "there is at least one change of epoch in the trace"
         (2 <= epochBoundariesInTrace tr)
 
-  -- for at least 10% of traces...
-  cover 10
+  -- for at least 30% of traces...
+  cover 30
         "there are at least 5 epoch changes in the trace"
         (5 <= epochBoundariesInTrace tr)
   where
