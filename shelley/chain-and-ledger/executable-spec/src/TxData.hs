@@ -49,13 +49,13 @@ newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
   = AddrVKey
-      { _payHK   :: KeyHash hashAlgo dsignAlgo
-      , _stakeHK :: KeyHash hashAlgo dsignAlgo
+      { _payHK       :: KeyHash hashAlgo dsignAlgo
+      , _stakeCredHK :: KeyHash hashAlgo dsignAlgo
       }
   | AddrScr                     -- TODO generalize to any type of script
                                 -- add `validatorHash` function
-    { _payScr   :: ScriptHash hashAlgo dsignAlgo
-    , _stakeScr :: ScriptHash hashAlgo dsignAlgo
+    { _payScr       :: ScriptHash hashAlgo dsignAlgo
+    , _stakeCredScr :: ScriptHash hashAlgo dsignAlgo
     }
   | AddrPtr
       { _stakePtr :: Ptr
