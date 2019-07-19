@@ -6,7 +6,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Common.KeyHash
-  ( KeyHash
+  ( KeyHash (..)
   , hashKey
   )
 where
