@@ -11,11 +11,11 @@ import           Data.List.Ordered (nubSortBy)
 import           Data.Ord (Down (Down), comparing)
 
 import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, property, withTests,
-                           (===))
+                     (===))
 
 import           Control.State.Transition
 import           Control.State.Transition.Generator (TraceLength (Maximum), classifyTraceLength,
-                                                     traceSigGen)
+                     traceSigGen)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace
 
@@ -99,27 +99,27 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
   -- for at least 5% of traces...
   cover 5
-        "the majority of blocks (at least 75%) have certificates"
+        "at least 75% of blocks have certificates"
         (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.25)
 
   -- for at least 50% of traces...
   cover 50
-        "some delegations (at least 15%) delegate to this epoch"
+        "at least 15% of delegates will delegate to this epoch"
         (0.15 <= thisEpochDelegationsRatio (epochDelegationEpoch tr))
 
   -- for at least 50% of traces...
   cover 50
-        "the majority of delegations (at least 50%) delegate to the next epoch"
+        "at least 50% of delegations will delegate to the next epoch"
         (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
 
   -- for at least 10% of traces...
   cover 10
-       "not too many certificates (at most 25%) self-delegate"
+       "at most 25% of certificates will self-delegate"
        (selfDelegationsRatio certs <= 0.25)
 
   -- for at least 50% of traces...
   cover 50
-        "some delegates (at least 25%) have multiple delegators"
+        "at least 25% delegates have multiple delegators"
         (0.25 <= multipleDelegationsRatio certs)
 
   -- for at least 10% of traces...
@@ -129,7 +129,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
   -- for at least 8% of traces...
   cover 8
-        "not too many delegators (at most 25%) change their delegation"
+        "at most 25% of delegators change their delegation"
         (changedDelegationsRatio certs <= 0.25)
 
   -- for at least 10% of traces...
@@ -139,7 +139,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
   -- for at least 20% of traces...
   cover 20
-        "not too many delegations (at most 25%) are repeats"
+        "at most 25% of delegations are repeats"
         (repeatedDelegationsRatio certs <= 0.25)
 
   -- for at least 10% of traces...
