@@ -33,7 +33,7 @@ import           Data.Ix (inRange)
 import           Data.List (notElem, sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.Ord (Down (Down))
 import           Data.Set (Set, union, (\\))
 import qualified Data.Set as Set
@@ -49,13 +49,13 @@ import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
-import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..),
+import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
                      SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
                      minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
-import           Prelude hiding (min)
+import           Prelude
 
 
 -- | Protocol parameters.
@@ -225,27 +225,57 @@ invertBijection
 a ==> b = not a || b
 infix 1 ==>
 
+-- | Check whether a protocol version can follow the current protocol version.
 pvCanFollow
   :: ProtVer
+  -- ^ Next protocol version
   -> ProtVer
+  -- ^ Previous protocol version
   -> Bool
-pvCanFollow (ProtVer mjn min an) (ProtVer mjp mip ap)
-  = (mjp, mip, ap) < (mjn, min, an)
+pvCanFollow (ProtVer mjn mn an) (ProtVer mjp mip ap)
+  = (mjp, mip, ap) < (mjn, mn, an)
   && (inRange (0,1) (mjn - mjp))
-  && ((mjp == mjn) ==> (mip +1 == min))
-  && ((mjp +1 == mjn) ==> (min == 0))
+  && ((mjp == mjn) ==> (mip + 1 == mn))
+  && ((mjp + 1 == mjn) ==> (mn == 0))
 
 -- | Check whether an update proposal marks a valid update
 --
---   TODO At the moment we don't check size in here - should we?
-canUpdate
+checkUpdateConstraints
   :: PParams
   -> UProp
-  -> Bool
-canUpdate pps prop =
-  (prop ^. upParams . maxBkSz <= 2 * pps ^. maxBkSz)
-  && (prop ^. upParams . maxBkSz > prop ^. upParams . maxTxSz)
-  && (inRange (0,1) $ prop ^. upParams . scriptVersion - pps ^. scriptVersion)
+  -> [UpdateConstraintViolation]
+checkUpdateConstraints pps prop =
+  catMaybes
+    [ (prop ^. upParams . maxBkSz <=? 2 * pps ^. maxBkSz)
+        `orError` BlockSizeTooLarge
+    , (prop ^. upParams . maxTxSz + 1 <=? prop ^. upParams . maxBkSz)
+        `orError` TransactionSizeTooLarge
+    , (pps ^. scriptVersion <=? prop ^. upParams . scriptVersion)
+        `orError` ScriptVersionTooSmall
+    , (prop ^. upParams . scriptVersion <=? pps ^. scriptVersion + 1)
+        `orError` ScriptVersionTooLarge
+    ]
+
+(<=?) :: Ord a => a -> a -> Maybe (a, Threshold a)
+x <=? y = if x <= y then Nothing else Just (x, Threshold y)
+
+infix 4 <=?
+
+orError :: Maybe (a, b) -> (a -> b -> e) -> Maybe e
+orError mab ferr = uncurry ferr <$> mab
+
+canUpdate :: PParams -> UProp -> Rule UPPVV ctx ()
+canUpdate pps prop = violations == [] ?! CannotUpdatePv violations
+  where violations = checkUpdateConstraints pps prop
+
+-- | Violations on the constraints of the allowed values for new protocol
+-- parameters.
+data UpdateConstraintViolation
+  = BlockSizeTooLarge Natural (Threshold Natural)
+  | TransactionSizeTooLarge Natural (Threshold Natural)
+  | ScriptVersionTooLarge Natural (Threshold Natural)
+  | ScriptVersionTooSmall Natural (Threshold Natural)
+  deriving (Eq, Ord, Show)
 
 svCanFollow
   :: Map ApName (ApVer, Core.Slot, Metadata)
@@ -303,7 +333,7 @@ instance STS UPPVV where
 
   data PredicateFailure UPPVV
     = CannotFollowPv
-    | CannotUpdatePv
+    | CannotUpdatePv [UpdateConstraintViolation]
     | AlreadyProposedPv
     | InvalidSystemTags
     deriving (Eq, Show)
@@ -316,7 +346,7 @@ instance STS UPPVV where
             nv = up ^. upPV
             ppsn = up ^. upParams
         pvCanFollow nv pv ?! CannotFollowPv
-        canUpdate pps up ?! CannotUpdatePv
+        canUpdate pps up
         nv `notElem` (fst <$> Map.elems rpus) ?! AlreadyProposedPv
         all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! rpus ⨃ [(pid, (nv, ppsn))]
@@ -345,7 +375,7 @@ instance STS UPV where
   data PredicateFailure UPV
     = UPPVVFailure (PredicateFailure UPPVV)
     | UPSVVFailure (PredicateFailure UPSVV)
-    | AVChangedInPVUpdate ApName ApVer
+    | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
     | ParamsChangedInSVUpdate
     | PVChangedInSVUpdate
     deriving (Eq, Show)
@@ -359,7 +389,7 @@ instance STS UPV where
             ) <- judgmentContext
         rpus' <- trans @UPPVV $ TRC ((pv, pps), rpus, up)
         let SwVer an av = up ^. upSwVer
-        inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av
+        inMap an av (swVer <$> avs) ?! AVChangedInPVUpdate an av (Map.lookup an avs)
         pure $! (rpus', raus)
     , do
         TRC ( (pv, pps, avs)
@@ -717,8 +747,8 @@ emptyUPIState =
 initialPParams :: PParams
 initialPParams =
   PParams                 -- TODO: choose more sensible default values
-     { _maxBkSz = 1000        -- max sizes chosen as non-zero to allow progress
-     , _maxHdrSz = 100
+     { _maxBkSz = 10000       -- max sizes chosen as non-zero to allow progress
+     , _maxHdrSz = 1000
      , _maxTxSz = 500
      , _maxPropSz = 10
      , _bkSgnCntT = 0.22     -- As defined in the spec.
@@ -904,7 +934,7 @@ instance HasTrace UPIREG where
           -- is not part of the registered protocol-update proposals
           -- (@rpus@).
           nextAltVersion :: (Natural, Natural) -> ProtVer
-          nextAltVersion (maj, min) = dom (range rpus)
+          nextAltVersion (maj, mn) = dom (range rpus)
                                     & Set.filter protocolVersionEqualsMajMin
                                     & Set.map _pvAlt
                                     & Set.toDescList
@@ -912,11 +942,11 @@ instance HasTrace UPIREG where
             where
               protocolVersionEqualsMajMin :: ProtVer -> Bool
               protocolVersionEqualsMajMin pv' =
-                _pvMaj pv' == maj && _pvMin pv' == min
+                _pvMaj pv' == maj && _pvMin pv' == mn
 
               nextVersion :: [Natural] -> ProtVer
-              nextVersion [] = ProtVer maj min 0
-              nextVersion (x:_) = ProtVer maj min (1 + x)
+              nextVersion [] = ProtVer maj mn 0
+              nextVersion (x:_) = ProtVer maj mn (1 + x)
 
       -- Generate a software version update.
       swVerGen :: Gen SwVer
@@ -1017,20 +1047,32 @@ dmapGen ngk = Bimap.fromList . uncurry zip <$> vkgVkPairsGen
 -- own modules.
 ppsUpdateFrom :: PParams -> Gen PParams
 ppsUpdateFrom pps = do
+  -- NOTE: we only generate small changes in the parameters to avoid leaving the
+  -- protocol parameters in a state that won't allow to produce any valid blocks
+  -- anymore (for instance if the maximum block size drops to a very small
+  -- value).
+
   -- Determine the change in the block size: a decrement or an increment that
   -- is no more than twice the current block maximum size.
   --
   -- We don't expect the maximum block size to change often, so we generate
   -- more values around the current block size (@_maxBkSz@).
-  newMaxBkSize <- Gen.integral (Range.linearFrom _maxBkSz 1 (2 * _maxBkSz))
-                  `increasingProbabilityAt`
-                  (1, 2 * _maxBkSz)
+  newMaxBkSize <-
+    Gen.integral (Range.linearFrom
+                    _maxBkSz
+                    (_maxBkSz -? 100) -- Decrement value was determined ad-hoc
+                    (2 * _maxBkSz)
+                 )
+    `increasingProbabilityAt` (_maxBkSz -? 100, 2 * _maxBkSz)
 
   -- Similarly, we don't expect the transaction size to be changed often, so we
   -- also generate more values around the current maximum transaction size.
-  newMaxTxSize <- Gen.integral (Range.exponentialFrom _maxTxSz 0 (newMaxBkSize - 1))
-                  `increasingProbabilityAt`
-                  (0, newMaxBkSize - 1)
+  let minTxSzBound = _maxTxSz `min` newMaxBkSize -? 1
+  newMaxTxSize <-
+    Gen.integral (Range.exponential
+                    (minTxSzBound -? 10) -- Decrement value determined ad-hoc
+                    (newMaxBkSize -? 1)
+                 )
 
   PParams
     <$> pure newMaxBkSize
@@ -1063,18 +1105,27 @@ ppsUpdateFrom pps = do
 
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
-      Gen.integral (Range.exponentialFrom _maxHdrSz 0 (2 * _maxHdrSz))
-      `increasingProbabilityAt` (0, 2 * _maxHdrSz)
+      Gen.integral (Range.exponentialFrom
+                      _maxHdrSz
+                      (_maxHdrSz -? 10)
+                      (2 * _maxHdrSz)
+                   )
 
     nextMaxPropSz :: Gen Natural
     nextMaxPropSz =
-      Gen.integral (Range.exponentialFrom _maxPropSz 0 (2 * _maxPropSz))
-      `increasingProbabilityAt` (0, 2 * _maxPropSz)
+      Gen.integral (Range.exponentialFrom
+                      _maxPropSz
+                      (_maxPropSz -? 1)
+                      (2 * _maxPropSz)
+                   )
 
     nextBkSgnCntT :: Gen Double
     nextBkSgnCntT =
-      Gen.double (Range.exponentialFloatFrom _bkSgnCntT 0 1)
-      `increasingProbabilityAt` (0, 1)
+      Gen.double (Range.exponentialFloatFrom
+                    _bkSgnCntT
+                    (_bkSgnCntT - 0.01)
+                    (_bkSgnCntT + 0.01)
+                 )
 
     nextUpTtl :: Gen SlotCount
     nextUpTtl = SlotCount <$>
@@ -1112,6 +1163,9 @@ ppsUpdateFrom pps = do
       -- TODO: we choose arbitrary numbers here for now.
       Gen.integral (Range.exponentialFrom _factorB 0 10)
       `increasingProbabilityAt` (0, 10)
+
+    (-?) :: Natural -> Natural -> Natural
+    n -? m = if n < m then 0 else n - m
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.
@@ -1349,13 +1403,15 @@ instance STS UPIEND where
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
 
--- | Generate a protocol version endorsement for a given key, or 'Nothing' if no stable and
--- confirmed protocol version update can be found.
-protocolVersionEndorsementGen
+-- | Given a list of protocol versions and keys endorsing those versions,
+-- generate a protocol-version endorsement, or 'Nothing' if the list of
+-- endorsements is empty. The version to be endorsed will be selected from those
+-- versions that have the most endorsements.
+pickHighlyEndorsedProtocolVersion
   :: [(ProtVer, Set Core.VKeyGenesis)]
   -- ^ Current set of endorsements
   -> Gen (Maybe ProtVer)
-protocolVersionEndorsementGen endorsementsList =
+pickHighlyEndorsedProtocolVersion endorsementsList =
   if null mostEndorsedProposals
   then pure Nothing
   else Just <$> Gen.element mostEndorsedProposals
@@ -1444,3 +1500,75 @@ instance STS UPIEC where
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
+
+-- | Generate an optional update-proposal and a list of votes, given an update
+-- environment and state.
+--
+-- The update proposal and votes need to be generated at the same time, since
+-- this allow us to generate update votes for update proposals issued in the
+-- same block as the votes.
+updateProposalAndVotesGen
+  :: UPIEnv
+  -> UPIState
+  -> Gen (Maybe UProp, [Vote])
+updateProposalAndVotesGen upienv upistate = do
+  let rpus = registeredProtocolUpdateProposals upistate
+  if Set.null (dom rpus)
+    then generateUpdateProposalAndVotes
+    else Gen.frequency [ (5, generateOnlyVotes)
+                       , (1, generateUpdateProposalAndVotes)
+                       ]
+  where
+    generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
+    generateUpdateProposalAndVotes = do
+      updateProposal <- sigGen @UPIREG Nothing upienv upistate
+      -- We want to have the possibility of generating votes for the proposal we
+      -- registered.
+      case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
+        Left _ ->
+          (Just updateProposal, )
+            <$> sigGen @UPIVOTES Nothing upienv upistate
+        Right upistateAfterRegistration ->
+          (Just updateProposal, )
+            <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
+
+
+-- | Generate an endorsement given an update environment and state.
+protocolVersionEndorsementGen
+  :: UPIEnv
+  -> UPIState
+  -> Gen ProtVer
+protocolVersionEndorsementGen upienv upistate =
+  fromMaybe (protocolVersion upistate)
+    <$> pickHighlyEndorsedProtocolVersion endorsementsList
+  where
+    -- Generate a list of protocol version endorsements. For this we look at the
+    -- current endorsements, and confirmed and stable proposals.
+    --
+    -- If there are no endorsements, then the confirmed and stable proposals
+    -- provide fresh protocol versions that can be endorsed.
+    endorsementsList :: [(ProtVer, Set Core.VKeyGenesis)]
+    endorsementsList = endorsementsMap `Map.union` emptyEndorsements
+                     & Map.toList
+      where
+        emptyEndorsements :: Map ProtVer (Set Core.VKeyGenesis)
+        emptyEndorsements = zip stableAndConfirmedVersions (repeat Set.empty)
+                          & Map.fromList
+          where
+            stableAndConfirmedVersions
+              :: [ProtVer]
+            stableAndConfirmedVersions = stableAndConfirmedProposalIDs ◁ rpus
+                                       & Map.elems
+                                       & fmap fst
+              where
+                stableAndConfirmedProposalIDs =
+                  dom (confirmedProposals upistate ▷<= sn  -. 2 *. k)
+                  where
+                    (sn, _, k, _) = upienv
+
+                rpus = registeredProtocolUpdateProposals upistate
+
+        endorsementsMap :: Map ProtVer (Set Core.VKeyGenesis)
+        endorsementsMap = Set.toList (endorsements upistate)
+                        & fmap (second Set.singleton)
+                        & Map.fromListWith Set.union

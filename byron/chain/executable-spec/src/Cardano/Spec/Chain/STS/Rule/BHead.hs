@@ -6,6 +6,7 @@ module Cardano.Spec.Chain.STS.Rule.BHead where
 
 import           Control.Lens ((^.), _1)
 import           Data.Bimap (Bimap)
+import           Numeric.Natural
 
 import           Control.State.Transition
 import           Ledger.Core
@@ -31,7 +32,7 @@ instance STS BHEAD where
 
   data PredicateFailure BHEAD
     = HashesDontMatch -- TODO: Add fields so that users know the two hashes that don't match
-    | HeaderSizeTooBig -- TODO: Add more information here as well.
+    | HeaderSizeTooBig BlockHeader Natural (Threshold Natural)
     | SlotDidNotIncrease
     -- ^ The block header slot number did not increase w.r.t the last seen slot
     | SlotInTheFuture
@@ -47,7 +48,8 @@ instance STS BHEAD where
         TRC ((_, sLast, k), us, bh) <- judgmentContext
         us' <- trans @EPOCH $ TRC ((sEpoch sLast k, k), us, bh ^. bhSlot)
         let sMax = snd (us' ^. _1) ^. maxHdrSz
-        bHeaderSize bh <= sMax ?! HeaderSizeTooBig
+        bHeaderSize bh <= sMax
+          ?! HeaderSizeTooBig bh (bHeaderSize bh) (Threshold sMax)
         return $! us'
     ]
 

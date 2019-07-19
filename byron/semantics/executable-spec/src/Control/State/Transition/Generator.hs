@@ -522,6 +522,8 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   let result = applySTS @s (TRC(env, st', sig))
   -- TODO: For some reason the result that led to the failure is not shown
   -- (even without using tasty, and setting the condition to True === False)
+  footnoteShow st'
+  footnoteShow sig
   footnoteShow result
   void $ evalEither result
 

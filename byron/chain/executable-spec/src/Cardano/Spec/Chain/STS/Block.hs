@@ -1,22 +1,22 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Spec.Chain.STS.Block where
 
-import Control.Lens ((^.), makeLenses, view)
+import           Control.Lens (makeLenses, view, (^.))
+import           Control.State.Transition.Generator
+import           Data.AbstractSize
 import qualified Data.Hashable as H
-import Data.AbstractSize
 import qualified Data.Map.Strict as Map
-import Data.Sequence ((<|))
-import Data.Typeable (typeOf)
-import Numeric.Natural (Natural)
-import GHC.Generics (Generic)
-import Control.State.Transition.Generator
-import Ledger.Core (Hash(Hash), VKey, Slot, Sig)
-import Ledger.Delegation
-import Ledger.Update (STag, ProtVer, UProp, Vote)
-import Ledger.UTxO (TxWits, TxIn, TxOut, Wit)
+import           Data.Sequence ((<|))
+import           Data.Typeable (typeOf)
+import           GHC.Generics (Generic)
+import           Ledger.Core (Hash (Hash), Sig, Slot, VKey)
+import           Ledger.Delegation
+import           Ledger.Update (ProtVer, STag, UProp, Vote)
+import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
+import           Numeric.Natural (Natural)
 
 data BlockHeader
   = MkBlockHeader
@@ -39,7 +39,7 @@ data BlockHeader
     -- TODO: BlockVersion – the protocol (block) version that created the block
 
     -- TODO: SoftwareVersion – the software version that created the block
-  } deriving (Generic, Show)
+  } deriving (Eq, Generic, Show)
 
 makeLenses ''BlockHeader
 
