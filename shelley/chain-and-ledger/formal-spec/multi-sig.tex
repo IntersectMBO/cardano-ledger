@@ -708,8 +708,13 @@ according to Figure~\ref{fig:types_defs_plutus}.
 
   \begin{equation*}
     \begin{array}{rll}
-      \var{msig} & \in \ScriptMSig = & \,\,\,\type{SingleSig}~\KeyHash \\
-       && \vert\,\,\type{MultSig}~Int~[\ScriptMSig]
+      \var{msig} & \in & \type{RequireSig}~\KeyHash\\
+      & \uniondistinct &
+         \type{RequireAllOf}~[\ScriptMSig] \\
+      & \uniondistinct&
+         \type{RequireAnyOf}~[\ScriptMSig] \\
+      & \uniondistinct&
+        \type{RequireMOf}~\N~[\ScriptMSig]
     \end{array}
   \end{equation*}
 
@@ -725,8 +730,12 @@ according to Figure~\ref{fig:types_defs_plutus}.
   \end{align*}
   \begin{align*}
     \fun{evalMultiSigScript} & \in\ScriptMSig\to\powerset\KeyHash\to\Bool & \\
-    \fun{evalMultiSigScript} & ~(\type{SingleSig}~hk)~\var{vhks} =  hk \in vhks \\
-    \fun{evalMultiSigScript} & ~(\type{MultiSig}~m~ts)~\var{vhks} = \\
+    \fun{evalMultiSigScript} & ~(\type{RequireSig}~hk)~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & ~(\type{RequireAllOf}~ts)~\var{vhks} =
+                              \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireAnyOf}~ts)~\var{vhks} =
+                              \exists t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireMOf}~m~ts)~\var{vhks} = \\
                              & m \leq \Sigma
                                \left(
                                [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
