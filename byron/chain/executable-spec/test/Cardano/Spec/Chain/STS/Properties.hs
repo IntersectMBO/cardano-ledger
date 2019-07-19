@@ -89,18 +89,18 @@ signersListIsBoundedByK = property $ do
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
-  tr <- forAll $ traceSigGen (Maximum 250) (sigGenChain GenDelegation NoGenUTxO)
+  tr <- forAll $ traceSigGen (Maximum 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
   let certs = traceDCerts tr
-
-  -- for at least 15% of traces...
-  cover 15
-        "there are more certificates than blocks"
-        (traceLength tr <= length certs)
 
   -- for at least 5% of traces...
   cover 5
-        "at least 75% of blocks have certificates"
-        (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.25)
+        "there are more certificates than blocks"
+        (traceLength tr <= length certs)
+
+  -- for at least 10% of traces...
+  cover 5
+        "at most 70% of blocks have no certificates"
+        (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.7)
 
   -- for at least 50% of traces...
   cover 50
@@ -142,8 +142,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         "at most 25% of delegations are repeats"
         (repeatedDelegationsRatio certs <= 0.25)
 
-  -- for at least 10% of traces...
-  cover 10
+  -- for at least 5% of traces...
+  cover 5
         "some delegations are repeated 10 or more times"
         (10 <= maxRepeatedDelegations certs)
 
