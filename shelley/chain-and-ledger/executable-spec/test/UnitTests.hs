@@ -77,7 +77,6 @@ bobInitCoin = Coin 1000
 
 genesis :: LedgerState
 genesis = genesisState
-            testPCs
             [ TxOut aliceAddr aliceInitCoin
             , TxOut bobAddr bobInitCoin ]
 

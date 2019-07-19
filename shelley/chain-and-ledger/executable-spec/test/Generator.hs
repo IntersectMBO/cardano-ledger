@@ -120,7 +120,7 @@ defPCs = emptyPParams
 genNonemptyGenesisState :: Gen LedgerState
 genNonemptyGenesisState = do
   keyPairs <- genKeyPairs 1 10
-  (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
+  genesisState <$> genTxOut (addrTxins keyPairs)
 
 -- | Generator for a new 'Tx' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
@@ -180,7 +180,7 @@ genNonEmptyAndAdvanceTx
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
+  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, txs, ls') <- repeatCollectTx steps keyPairs (Slot 1) (Coin 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
@@ -190,7 +190,7 @@ genNonEmptyAndAdvanceTx'
 genNonEmptyAndAdvanceTx' = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- (genesisState defPCs) <$> genTxOut (addrTxins keyPairs)
+  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
   (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Coin 0) ls [] []
   pure (keyPairs, steps, fees, ls, txs, lv')
 
