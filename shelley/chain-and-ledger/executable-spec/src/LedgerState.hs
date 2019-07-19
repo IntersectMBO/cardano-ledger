@@ -55,6 +55,7 @@ module LedgerState
   , applyUTxOUpdate
   -- * Genesis State
   , genesisId
+  , genesisCoins
   , genesisState
   -- * Validation
   , ValidationError (..)
@@ -360,17 +361,23 @@ genesisId =
    (Slot 0)
    Updates.emptyUpdate)
 
+-- |Creates the UTxO for a new ledger with the specified transaction outputs.
+genesisCoins
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => [TxOut hashAlgo dsignAlgo]
+  -> UTxO hashAlgo dsignAlgo
+genesisCoins outs = UTxO $
+  Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
+
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
-  -> [TxOut hashAlgo dsignAlgo]
+  => [TxOut hashAlgo dsignAlgo]
   -> LedgerState hashAlgo dsignAlgo
-genesisState _ outs = LedgerState
+genesisState outs = LedgerState
   (UTxOState
-    (UTxO $ Map.fromList
-              [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs])
+    (genesisCoins outs)
     (Coin 0)
     (Coin 0)
     Updates.emptyUpdateState)
