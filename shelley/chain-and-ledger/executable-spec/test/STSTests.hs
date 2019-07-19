@@ -36,7 +36,8 @@ import           Slot (Epoch (..), Slot (..))
 import           STS.Updn (UPDN)
 import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
-import           TxData (pattern AddrScr, pattern AddrVKey, pattern MultiSig, pattern SingleSig,
+import           TxData (pattern AddrScr, pattern AddrVKey, pattern RequireAllOf,
+                     pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
                      pattern StakeKeys, pattern StakePools, pattern Tx, pattern TxBody,
                      pattern TxIn, pattern TxOut, _body, pattern ScriptHashStake,
                      pattern RewardAcnt)
@@ -234,28 +235,30 @@ dariaAddr = AddrVKey (hashKey (vKey dariaPay)) (hashKey (vKey dariaStake))
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (AddrVKey pk _ ) = SingleSig pk
+singleKeyOnly (AddrVKey pk _ ) = RequireSignature pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
 aliceOnly = singleKeyOnly aliceAddr
 
 aliceOrBob :: MultiSig
-aliceOrBob = MultiSig 1 [aliceOnly, singleKeyOnly bobAddr]
+aliceOrBob = RequireAnyOf [aliceOnly, singleKeyOnly bobAddr]
 
 aliceAndBob :: MultiSig
-aliceAndBob = MultiSig 2 [aliceOnly, singleKeyOnly bobAddr]
+aliceAndBob = RequireAllOf [aliceOnly, singleKeyOnly bobAddr]
 
 aliceAndBobOrCarl :: MultiSig
-aliceAndBobOrCarl = MultiSig 1 [aliceAndBob, singleKeyOnly carlAddr]
+aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly carlAddr]
 
 aliceAndBobOrCarlAndDaria :: MultiSig
 aliceAndBobOrCarlAndDaria =
-  MultiSig 1 [aliceAndBob, MultiSig 2 [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]]
+  RequireAnyOf [aliceAndBob,
+                RequireAllOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]]
 
 aliceAndBobOrCarlOrDaria :: MultiSig
 aliceAndBobOrCarlOrDaria =
-  MultiSig 1 [aliceAndBob, MultiSig 1 [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]]
+  RequireMOf 1 [aliceAndBob,
+                RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]]
 
 
 initTxBody :: [(Addr, Coin)] -> TxBody
