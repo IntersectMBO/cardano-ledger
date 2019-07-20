@@ -751,16 +751,10 @@ An alternative implementation for multi-signature scripts is an embedding of the
 script as data type which can then be interpreted
 natively. Figure~\ref{fig:types-msig} shows the types and necessary functions
 for such a native script implementation. The type $\ScriptMSig$ is defined as a
-tree-structure which is either a single signature leaf node or a list of
-values of type $\ScriptMSig$ together with an integral threshold value.
-
-The validation of such a term is done as shown in the specialization of
-\fun{validateScript} for $\ScriptMSig$ as shown in Figure~\ref{fig:types-msig}.
-It checks for presence of a single signature in the set of signatures of a
-transaction as the base case and compares the number of validating nodes in the
-list with the threshold in the recursion case. The
-Appendix~\ref{sec:native-multi-sign} provides some examples of how this scheme
-can be used.
+tree-structure which is either a single signature leaf node or a list of values
+of type $\ScriptMSig$, which either requires all signatures to validate, at
+least one of the signatures to validate or at least the threshold value of $m$
+signatures to validate.
 
 \subsection{Lower Level Implementation Details}
 \label{sec:lower-level-impl}
@@ -803,94 +797,6 @@ strategy for integration: extending addresses, defining witnesses and
 specializing the script validation function. If the Plutus approach is not
 viable for any reason, e.g., script size or readiness of library, only the
 native script implementation could be pursued instead.
-
-\appendix
-
-\section{Native Multi-Signature Examples}
-\label{sec:native-multi-sign}
-
-\begin{verbatim}
-verifyCases :: ScriptMSig -> [(Set VKeyHash, Bool)] -> Bool
-verifyCases script cases =
-    and [ evalMultiSigScript script keyset == expected
-        | (keyset, expected) <- cases]
-
-mkVKeyHashSet :: [Int] -> Set VKeyHash
-mkVKeyHashSet = Set.fromList . map VKeyHash
-
-example1Of2 =
-  MultiSig 1 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
-
-example1Of2_verify =
-    verifyCases
-      example1Of2
-      [ (mkVKeyHashSet [],    False)
-      , (mkVKeyHashSet [1],   True)
-      , (mkVKeyHashSet [2],   True)
-      , (mkVKeyHashSet [1,2], True)
-      , (mkVKeyHashSet [3],   False)
-      ]
-
-example2Of2 =
-  MultiSig 2 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
-
-example2Of2_verify =
-    verifyCases
-      example2Of2
-      [ (mkVKeyHashSet [],      False)
-      , (mkVKeyHashSet [1],     False)
-      , (mkVKeyHashSet [2],     False)
-      , (mkVKeyHashSet [1,2],   True)
-      , (mkVKeyHashSet [3],     False)
-      , (mkVKeyHashSet [1,2,3], True)
-      ]
-
-exampleNestedOrAnd =
-  MultiSig 1 [ MultiSig 2 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
-             , MultiSig 2 [SingleSig (VKeyHash 3), SingleSig (VKeyHash 4)]
-             ]
-
-exampleNestedAndOr =
-  MultiSig 2 [ MultiSig 1 [SingleSig (VKeyHash 1), SingleSig (VKeyHash 2)]
-             , MultiSig 1 [SingleSig (VKeyHash 3), SingleSig (VKeyHash 4)]
-             ]
-
-exampleNestedOrAnd_verify =
-    verifyCases
-      exampleNestedOrAnd
-      [ (keysset, expected)
-      | has1 <- [False, True]
-      , has2 <- [False, True]
-      , has3 <- [False, True]
-      , has4 <- [False, True]
-      , has5 <- [False, True]
-      , let keysset = mkVKeyHashSet $ [ 1 | has1 ]
-                                   ++ [ 2 | has2 ]
-                                   ++ [ 3 | has3 ]
-                                   ++ [ 4 | has4 ]
-                                   ++ [ 5 | has5 ]
-            expected = (has1 && has2)
-                    || (has3 && has4)
-      ]
-
-exampleNestedAndOr_verify =
-    verifyCases
-      exampleNestedAndOr
-      [ (keysset, expected)
-      | has1 <- [False, True]
-      , has2 <- [False, True]
-      , has3 <- [False, True]
-      , has4 <- [False, True]
-      , has5 <- [False, True]
-      , let keysset = mkVKeyHashSet $ [ 1 | has1 ]
-                                   ++ [ 2 | has2 ]
-                                   ++ [ 3 | has3 ]
-                                   ++ [ 4 | has4 ]
-                                   ++ [ 5 | has5 ]
-            expected = (has1 || has2)
-                    && (has3 || has4)
-      ]
-\end{verbatim}
 
 \addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
 \bibliography{references}
