@@ -1,24 +1,31 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module Cardano.Spec.Chain.STS.Properties where
 
-import           Control.Lens ((^.), (^..))
+import           Control.Arrow ((***))
+import           Control.Lens (view, (&), (^.), (^..), _1, _5)
 import           Data.Foldable (traverse_)
 import           Data.List.Ordered (nubSortBy)
 import           Data.Ord (Down (Down), comparing)
-import           Hedgehog (MonadTest, Property, assert, failure, forAll, property, withTests, (===))
+
+import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, property, withTests,
+                     (===))
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (TraceLength (Maximum), classifyTraceLength,
-                     traceSigGen)
+import           Control.State.Transition.Generator (TraceLength (Desired, Maximum),
+                     classifyTraceLength, traceSigGen)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace
 
+import           Ledger.Core (BlockCount (BlockCount), Epoch, Slot (unSlot))
 import           Ledger.Delegation
+import           Ledger.GlobalParams (slotsPerEpoch)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.Chain
-import           Ledger.Core (BlockCount (BlockCount))
+import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 
 slotsIncrease :: Property
 slotsIncrease = property $ do
@@ -78,3 +85,110 @@ signersListIsBoundedByK = property $ do
         signersListIsBoundedByKInState :: MonadTest m => BlockCount -> State CHAIN -> m ()
         signersListIsBoundedByKInState (BlockCount k') (_sLast, sgs, _h, _utxoSt, _ds, _us) =
           assert $ length sgs <= fromIntegral k'
+
+
+relevantCasesAreCovered :: Property
+relevantCasesAreCovered = withTests 400 $ property $ do
+  tr <- forAll $ traceSigGen (Desired 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
+  let certs = traceDCerts tr
+
+  -- for at least 1% of traces...
+  cover 1
+        "there are more certificates than blocks"
+        (traceLength tr <= length certs)
+
+  -- for at least 10% of traces...
+  cover 10
+        "at most 75% of blocks have no certificates"
+        (emptyDelegationPayloadRatio (traceDCertsByBlock tr) <= 0.75)
+
+  -- for at least 25% of traces...
+  cover 25
+        "at least 25% of delegates will delegate to this epoch"
+        (0.25 <= thisEpochDelegationsRatio (epochDelegationEpoch tr))
+
+  -- for at least 60% of traces...
+  cover 60
+        "at least 50% of delegations will delegate to the next epoch"
+        (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
+
+  -- for at least 10% of traces...
+  cover 10
+       "at most 30% of certificates will self-delegate"
+       (selfDelegationsRatio certs <= 0.30)
+
+  -- for at least 60% of traces...
+  cover 60
+        "at least 25% delegates have multiple delegators"
+        (0.25 <= multipleDelegationsRatio certs)
+
+  -- for at least 20% of traces...
+  cover 20
+        "some delegates have at least 5 corresponding delegators"
+        (5 <= maxDelegationsTo certs)
+
+  -- for at least 5% of traces...
+  cover 5
+        "at most 50% of delegators change their delegation"
+        (changedDelegationsRatio certs <= 0.5)
+
+  -- for at least 20% of traces...
+  cover 20
+        "some delegators have changed their delegation 5 or more times"
+        (5 <= maxChangedDelegations certs)
+
+  -- for at least 2% of traces...
+  cover 2
+        "at most 25% of delegations are repeats"
+        (repeatedDelegationsRatio certs <= 0.25)
+
+  -- for at least 30% of traces...
+  cover 30
+        "some delegations are repeated 10 or more times"
+        (10 <= maxRepeatedDelegations certs)
+
+  -- for at least 15% of traces...
+  cover 15
+        "some blocks have 5 or more certificates"
+        (5 <= maxCertsPerBlock (traceDCertsByBlock tr))
+
+  -- for at least 50% of traces...
+  cover 50
+        "there is at least one change of epoch in the trace"
+        (2 <= epochBoundariesInTrace tr)
+
+  -- for at least 30% of traces...
+  cover 30
+        "there are at least 5 epoch changes in the trace"
+        (5 <= epochBoundariesInTrace tr)
+  where
+   -- Get the epoch in which the delegation certificates of the trace were
+   -- applied, paired with the epoch of the delegation certificate.
+   epochDelegationEpoch :: Trace CHAIN -> [(Epoch, Epoch)]
+   epochDelegationEpoch tr = preStatesAndSignals @CHAIN OldestFirst tr
+                           & fmap (sEpoch_ . view _1 *** (fmap depoch . (_bDCerts . _bBody)))
+                           & fmap (\(e, es) -> zip (repeat e) es)
+                           & concat
+                           where
+                             blockCount = _traceEnv tr ^. _5
+                             sEpoch_ = flip sEpoch blockCount
+
+   -- Count the number of epoch boundaries in the trace
+   epochBoundariesInTrace :: Trace CHAIN -> Int
+   epochBoundariesInTrace tr
+     = length $
+         filter (== 0) (isAtBoundary <$> slots)
+     where blocks = traceSignals NewestFirst tr
+           slots = blocks ^.. traverse . bHeader . bhSlot
+           k = _traceEnv tr ^. _5
+           isAtBoundary = (`rem` slotsPerEpoch k) . unSlot
+
+-- | Extract the delegation certificates in the blocks, in the order they would
+-- have been applied.
+traceDCertsByBlock :: Trace CHAIN -> [[DCert]]
+traceDCertsByBlock tr = _bDCerts . _bBody <$> traceSignals OldestFirst tr
+
+-- | Flattended list of DCerts for the given Trace
+traceDCerts :: Trace CHAIN -> [DCert]
+traceDCerts = concat . traceDCertsByBlock
+

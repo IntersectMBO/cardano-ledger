@@ -54,6 +54,6 @@ relevantKValuesAreGenerated = withTests 500 $ property $ do
     --
     -- And if we round this value down we get 100 epochs.
 
-    cover 10
+    cover 6
       "100 epochs "
       (epochs == 100)
