@@ -32,6 +32,8 @@
 \newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
 \newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
 \newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
+\newcommand{\bnonce}[1]{\fun{bnonce}~\var{#1}}
+\newcommand{\bleader}[1]{\fun{bleader}~\var{#1}}
 \newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
 \newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
 \newcommand{\overlaySchedule}[3]{\fun{overlaySchedule}~\var{#1}~{#2}~\var{#3}}
@@ -89,7 +91,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
   %
   \emph{Derived Types}
   \begin{align*}
-    \PoolDistr = \KeyHash \mapsto [0, 1] \text{ \hspace{3cm}stake pool distribution}
+    \PoolDistr = \KeyHash_{pool} \mapsto \left([0, 1]\times\KeyHash_{vrf}\right)
+      \text{ \hspace{1cm}stake pool distribution}
   \end{align*}
   %
 
@@ -150,6 +153,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \begin{array}{r@{~\in~}lr}
         \var{prev} & \HashHeader & \text{hash of previous block body}\\
         \var{vk} & \VKey & \text{block issuer}\\
+        \var{vrfVk} & \VKey & \text{VRF verification key}\\
         \var{slot} & \Slot & \text{block slot}\\
         \eta & \Seed & \text{nonce}\\
         \var{prf}_{\eta} & \Proof & \text{nonce proof}\\
@@ -199,6 +203,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{hsig} & \BHeader \to \Sig\\
       \fun{bbody} & \Block \to \seqof{\Tx} \\
       \fun{bvkcold} & \BHBody \to \VKey\\
+      \fun{bvkvrf} & \BHBody \to \VKey\\
       \fun{bprev} & \BHBody \to \HashHeader\\
       \fun{bslot} & \BHBody \to \Slot\\
       \fun{bnonce} & \BHBody \to \Seed\\
@@ -344,14 +349,24 @@ In the second case, the new epoch state is updated as follows:
       \\~\\~\\
       {\begin{array}{r@{~\leteq~}l}
           (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'} \\
-         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard,~\wcard,~\wcard) & \var{ss} \\
+         (\wcard,~\var{pstake_{set}},~\wcard,~\var{pools},~\wcard,~\wcard) & \var{ss} \\
          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
-          \var{pd'} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
+          \var{sd} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
                      \left\{
                      (\var{hk}, \frac{\var{c}}{\var{total}}) \vert (\var{hk},
                      \var{c}) \in \var{stake}
                  \right\}\right) \\
+          \var{pd'} &
+            \left\{\var{hk}\mapsto(\sigma,~\fun{poolVRF}~\var{p})
+            ~\Big\vert~
+            {
+              \begin{array}{r@{~\in~}l}
+                \var{hk}\mapsto\sigma & \var{sd} \\
+                \var{hk}\mapsto\var{p} & \var{pools}
+              \end{array}
+            }
+            \right\}\\
           \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
           \eta_e & \fun{extraEntropy}~\var{pp} \\
           \var{es''} & (\var{acnt},
@@ -842,18 +857,19 @@ parameters. The function checks:
       & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
       & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
       & \begin{array}{cl}
-        ~~~~ & \var{hk}\mapsto \sigma\in\var{pd} \\
+        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
         ~~~~ \land &
-             \verifyVrf{\Seed}{vk}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb})} \\
+             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
-             \verifyVrf{\unitInterval}{vk}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb})} \\
+             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb},~\bleader{bhb}}) \\
         ~~~~ \land &
              \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
+      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
       & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      & ~~~~~~~~~~\var{vk} \leteq \fun{bvkcold}~\var{bhb} \\
+      & ~~~~~~~~~~\var{vrfVk} \leteq (\fun{bvkvrf}~\var{bhb}) \\
   \end{align*}
   \label{fig:vrf-checks}
 \end{figure}
@@ -887,6 +903,26 @@ The environments for this transition are:
 \end{itemize}
 
 The states for this transition consist only of the mapping of certificate issue numbers.
+
+This transition establishes that a block producer is in fact authorized.
+Since there are three key pairs involved (cold keys, vrf keys, and hot KES keys)
+it is worth examinng the interaction in Equation~\ref{eq:decentralized} closely.
+
+\begin{itemize}
+  \item First we check the operational certificate with $\mathsf{OCERT}$.
+  This uses the cold verification key given in the block header.
+  We do not yet trust that this key is a registered pool key.
+  If this transition is successful, we know that the cold key in the block header has authorized
+  the block.
+\item  Next, in the $\fun{vrfChecks}$ predicate, we check that the hash of this cold key is in the
+  mapping $\var{pd}$, and that it maps to $(\sigma,~\var{hk_{vrf}})$, where
+  $(\sigma,~\var{hk_{vrf}})$ is the hash of the VRF key in the header.
+  If $\fun{vrfChecks}$ returns true, then we know that the cold key in the block header was a
+  registered stake pool at the beginning of the previous epoch, and that it is indeed registered
+  with the VRF key listed in the header.
+\item Finally, we use the VRF verification key in the header, along with the VRF proofs in the
+  header, to check that the operator is allowed to produce the block.
+\end{itemize}
 
 \begin{figure}
   \emph{Overlay environments}
