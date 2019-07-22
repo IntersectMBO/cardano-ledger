@@ -112,10 +112,10 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         "at least 50% of delegations will delegate to the next epoch"
         (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
 
-  -- for at least 20% of traces...
-  cover 20
+  -- for at least 10% of traces...
+  cover 10
        "at most 30% of certificates will self-delegate"
-       (selfDelegationsRatio certs <= 0.3)
+       (selfDelegationsRatio certs <= 0.30)
 
   -- for at least 60% of traces...
   cover 60
@@ -127,7 +127,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         "some delegates have at least 5 corresponding delegators"
         (5 <= maxDelegationsTo certs)
 
-  -- for at least ?% of traces...
+  -- for at least 5% of traces...
   cover 5
         "at most 50% of delegators change their delegation"
         (changedDelegationsRatio certs <= 0.5)
