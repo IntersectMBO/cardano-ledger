@@ -94,7 +94,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
     cover 20 "avg. nr. of tx outputs (1,5]" (1 <= avgOutputs && avgOutputs <= 5)
     cover 20 "avg. nr. of tx outputs (5,10]" (5 < avgOutputs && avgOutputs <= 10)
 
-    cover 80 "starting UTxO has no future outputs" (all (== empty) (futureOutputs tr))
+    cover 80 "starting UTxO has no future inputs" (all (== empty) (futureInputs tr))
   where
     -- | The average "fee surplus" for transactions in the trace.
     --   Could be zero if all the transactions had zero surplus fee.
@@ -120,8 +120,8 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
     -- | The intersection of the starting UTxO and each transaction in
     -- a trace
-    futureOutputs :: Trace UTXOW -> [Set TxIn]
-    futureOutputs tr =
+    futureInputs :: Trace UTXOW -> [Set TxIn]
+    futureInputs tr =
       let
         UTxOState {utxo = utxo0} = _traceInitState tr
         txs = body <$> traceSignals OldestFirst tr
