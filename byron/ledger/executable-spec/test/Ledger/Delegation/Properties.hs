@@ -17,12 +17,12 @@ module Ledger.Delegation.Properties
   )
 where
 
-import           Control.Arrow (first, (&&&), (***))
+import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.List (foldl', last, nub)
-import           Data.List.Unique (count, repeated)
+import           Data.List (foldl', last)
+import           Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Hedgehog (Gen, MonadTest, Property, assert, cover, forAll, property, success,
@@ -36,7 +36,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
                      failures, isTrivial, nonTrivialTrace, proportionOfInvalidSignals,
-                     proportionOfValidSignals, ratio, sigGen, suchThatLastState, trace,
+                     proportionOfValidSignals, sigGen, suchThatLastState, trace,
                      traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
@@ -45,14 +45,16 @@ import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, Slo
                      VKey (VKey), VKeyGenesis, addSlot, mkVKeyGenesis, owner, signWithGenesisKey,
                      unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
-                     DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
+                     DSEnv (DSEnv, _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK),
+                     DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
                      PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
-                     delegate, delegationMap, delegator, depoch, epoch, liveAfter, mkDCert,
-                     scheduledDelegations, slot, _dIStateDelegationMap,
-                     _dIStateKeyEpochDelegations, _dIStateLastDelegation,
-                     _dIStateScheduledDelegations, _dSEnvAllowedDelegators,
-                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
+                     delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
+                     liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
+                     scheduledDelegations, selfDelegationsRatio, slot, thisEpochDelegationsRatio,
+                     _dIStateDelegationMap, _dIStateKeyEpochDelegations, _dIStateLastDelegation,
+                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
+                     _dSStateScheduledDelegations)
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -214,9 +216,6 @@ expectedDms s d sbs =
     activationSlot :: Int
     activationSlot = s - d
 
-delegatorDelegate :: DCert -> (VKeyGenesis, VKey)
-delegatorDelegate = delegator &&& delegate
-
 -- | Check that there are no duplicated certificates in the trace.
 dcertsAreNotReplayed :: Property
 dcertsAreNotReplayed = withTests 300 $ property $ do
@@ -325,88 +324,50 @@ dblockTracesAreClassified = withTests 200 $ property $ do
 
 -- | Extract the delegation certificates in the blocks, in the order they would
 -- have been applied.
+traceDCertsByBlock :: Trace DBLOCK -> [[DCert]]
+traceDCertsByBlock tr = _blockCerts <$> traceSignals OldestFirst tr
+
+-- | Flattended list of DCerts for the given Trace
 traceDCerts :: Trace DBLOCK -> [DCert]
-traceDCerts tr = concat $ _blockCerts <$> traceSignals OldestFirst tr
+traceDCerts = concat . traceDCertsByBlock
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
   let tl = 1000
   tr <- forAll (trace @DBLOCK tl)
 
-  -- 70% of the traces must contain are as many delegation certificates as
-  -- blocks.
-  cover 50
+  -- 40% of the traces must contain as many delegation certificates as blocks.
+  cover 40
         "there are at least as many delegation certificates as blocks"
         (traceLength tr <= length (traceDCerts tr))
 
-  -- 70% of the traces must contain at most 25% of blocks with empty delegation
-  -- payload.
-  cover 70
+  -- 50% of the traces must contain at most 25% of blocks with empty delegation payload.
+  cover 50
         "at most 25% of the blocks can contain empty delegation payload"
-        (ratio emptyDelegationPayload tr <= 0.25)
+        (0.25 >= emptyDelegationPayloadRatio (traceDCertsByBlock tr))
 
   -- 50% of the traces must contain at least 30% of delegations to this epoch.
   cover 50
-        "at least 30% of the certificates delegate in this epoch"
-        (0.3 <= ratio thisEpochDelegations tr)
+        "at least 30% of all certificates delegate in this epoch"
+        (0.3 <= thisEpochDelegationsRatio (epochDelegationEpoch tr))
 
-  -- 50% of the traces must contain at least 50% of delegations to the next
+  -- 70% of the traces must contain at least 50% of delegations to the next
   -- epoch.
-  cover 50
+  cover 70
         "at least 50% of the certificates delegate in the next epoch"
-        (0.5 <= ratio nextEpochDelegations tr)
+        (0.5 <= nextEpochDelegationsRatio (epochDelegationEpoch tr))
 
-  -- 80% of the traces must contain at least 30% of self-delegations.
-  cover 80
+  -- 30% of the traces must contain at least 30% of self-delegations.
+  cover 30
        "at least 30% of the certificates self delegate"
-       (0.3 <= ratio selfDelegations tr)
+       (0.3 <= selfDelegationsRatio (traceDCerts tr))
 
   -- 15% of the traces must contain at least 10% of delegations to the same
   -- delegate.
-  cover 15
-        "at least 5% of the certificates delegate to the same key"
-        (0.05 <= ratio multipleDelegations tr)
+  cover 50
+        "at least 25% of delegates have multiple delegators"
+        (0.05 <= multipleDelegationsRatio (traceDCerts tr))
   where
-    selfDelegations :: Trace DBLOCK -> Int
-    selfDelegations tr = length
-                       $ filter idDeleg
-                       $ fmap delegatorDelegate (traceDCerts tr)
-      where
-        idDeleg (vks, vk) = owner vks == owner vk
-
-    -- Count the number of delegations to the same key in a given trace.
-    multipleDelegations :: Trace DBLOCK -> Int
-    multipleDelegations tr = -- Get the (delegator, delegate) pairs
-                             fmap delegatorDelegate (traceDCerts tr)
-                             -- Remove duplicated elements, since we're not
-                             -- interested in the same genesis key delegating
-                             -- to the same key, i.e. if we have more than one
-                             -- @(vkg, vk)@, for the same genesis key @vkg@ and
-                             -- key @vk@ we keep only one of them.
-                           & nub
-                             -- Keep the delegators. Since we applied nub
-                             -- before, we know that if there are two keys in
-                             -- the result of 'fmap snd' then we know for sure
-                             -- that they were delegated by different keys.
-                           & fmap snd
-                             -- Count the occurrences. If we have more than one
-                             -- occurrence of a key, then we know that it must
-                             -- be because two different genesis keys delegated
-                             -- to it.
-                           & count
-                           & filter ((2 <=) . snd)
-                           & length
-
-    emptyDelegationPayload  :: Trace DBLOCK -> Int
-    emptyDelegationPayload tr =  _blockCerts <$> traceSignals OldestFirst tr
-                              & filter null
-                              & length
-
-    thisEpochDelegations  :: Trace DBLOCK -> Int
-    thisEpochDelegations tr = epochDelegationEpoch tr
-                            & filter (uncurry (==))
-                            & length
-
     -- Get the epoch in which the delegation certificates of the trace were
     -- applied, paired with the epoch of the delegation certificate.
     epochDelegationEpoch :: Trace DBLOCK -> [(Epoch, Epoch)]
@@ -414,13 +375,6 @@ relevantCasesAreCovered = withTests 400 $ property $ do
                             & fmap (_dSEnvEpoch . fst *** (fmap depoch . _blockCerts))
                             & fmap (\(e, es) -> zip (repeat e) es)
                             & concat
-
-
-    nextEpochDelegations  :: Trace DBLOCK -> Int
-    nextEpochDelegations tr =  epochDelegationEpoch tr
-                            & filter (\(e0, e1) -> e0 + 1 == e1)
-                            & length
-
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =

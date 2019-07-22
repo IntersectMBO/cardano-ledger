@@ -41,6 +41,7 @@ library
                      , hashable
                      , hedgehog >= 1.0
                      , lens
+                     , Unique >= 0.4.7.6
                      -- Local deps
                      , small-steps
   default-language:    Haskell2010

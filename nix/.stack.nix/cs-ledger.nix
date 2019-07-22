@@ -23,6 +23,7 @@
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
+          (hsPkgs.Unique)
           (hsPkgs.small-steps)
           ];
         };
