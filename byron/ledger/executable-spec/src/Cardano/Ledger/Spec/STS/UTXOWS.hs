@@ -15,7 +15,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed)
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
-import           Control.State.Transition.Trace (TraceOrder (NewestFirst), traceSignals)
+import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.UTxO (TxWits)
 
 data UTXOWS
@@ -40,8 +40,8 @@ instance STS UTXOWS where
         case (txWits :: [TxWits]) of
           []     -> return utxo
           (tx:gamma) -> do
-            utxo'  <- trans @UTXOWS $ TRC (env, utxo, gamma)
-            utxo'' <- trans @UTXOW  $ TRC (env, utxo', tx)
+            utxo'  <- trans @UTXOW  $ TRC (env, utxo, tx)
+            utxo'' <- trans @UTXOWS $ TRC (env, utxo', gamma)
             return utxo''
     ]
 
@@ -53,4 +53,4 @@ instance HasTrace UTXOWS where
 
   -- We generate signal for UTXOWS as a list of signals from UTXOW
   sigGen _ env st =
-    traceSignals NewestFirst <$> genTrace @UTXOW 20 env st (sigGen @UTXOW)
+    traceSignals OldestFirst <$> genTrace @UTXOW 20 env st (sigGen @UTXOW)
