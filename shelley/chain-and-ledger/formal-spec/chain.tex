@@ -358,12 +358,12 @@ In the second case, the new epoch state is updated as follows:
                      \var{c}) \in \var{stake}
                  \right\}\right) \\
           \var{pd'} &
-            \left\{\var{hk}\mapsto(\sigma,~\fun{poolVRF}~\var{p})
+            \left\{\var{hk_p}\mapsto(\sigma,~\fun{poolVRF}~\var{p})
             ~\Big\vert~
             {
               \begin{array}{r@{~\in~}l}
-                \var{hk}\mapsto\sigma & \var{sd} \\
-                \var{hk}\mapsto\var{p} & \var{pools}
+                \var{hk_p}\mapsto\sigma & \var{sd} \\
+                \var{hk_p}\mapsto\var{p} & \var{pools}
               \end{array}
             }
             \right\}\\
@@ -867,9 +867,9 @@ parameters. The function checks:
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
-      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{vrfVk} \\
       & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      & ~~~~~~~~~~\var{vrfVk} \leteq (\fun{bvkvrf}~\var{bhb}) \\
+      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
   \end{align*}
   \label{fig:vrf-checks}
 \end{figure}
@@ -905,7 +905,7 @@ The environments for this transition are:
 The states for this transition consist only of the mapping of certificate issue numbers.
 
 This transition establishes that a block producer is in fact authorized.
-Since there are three key pairs involved (cold keys, vrf keys, and hot KES keys)
+Since there are three key pairs involved (cold keys, VRF keys, and hot KES keys)
 it is worth examinng the interaction in Equation~\ref{eq:decentralized} closely.
 
 \begin{itemize}
