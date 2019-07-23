@@ -362,7 +362,8 @@ functions:
       (\var{an}, \var{av}) \leteq \upSwVer{up}
       & \fun{apNameValid}~\var{an}\\
       & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
-      & (\var{an}, \var{av}, \wcard) \notin \range~\var{raus}
+      & (\var{an}, \var{av}, \wcard) \notin \range~\var{raus}\\
+      \forall \var{t} \in \fun{upSTags}~\var{up} \cdot \fun{sTagValid}~t
     }
     {
       {\left(
@@ -398,8 +399,7 @@ functions:
       & \var{nv} \leteq \upPV{up}
       & \fun{pvCanFollow}~\var{nv}~\var{pv}\\
       & \upSize{up} \leq \var{pps}~\var{maxProposalSize}
-      & \var{nv} \notin \dom~(\range~\var{rpus})\\
-      \forall \var{t} \in \fun{upSTags}~\var{up} \cdot \fun{sTagValid}~t
+      & \var{nv} \notin \dom~(\range~\var{rpus})
     }
     {
       {\left(

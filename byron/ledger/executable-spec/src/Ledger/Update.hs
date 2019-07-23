@@ -304,6 +304,7 @@ instance STS UPSVV where
     = AlreadyProposedSv
     | CannotFollowSv
     | InvalidApplicationName
+    | InvalidSystemTags
     deriving (Eq, Show)
 
   initialRules = []
@@ -314,11 +315,13 @@ instance STS UPSVV where
         apNameValid an ?! InvalidApplicationName
         svCanFollow avs (an,av) ?! CannotFollowSv
         (an, av) `notElem` fmap fstSnd (Map.elems raus) ?! AlreadyProposedSv
+        all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! raus ⨃ [(up ^. upId, (an, av, up ^. upMdt))]
     ]
     where
       apNameValid (ApName n) = all isAscii n && length n <= 12
       fstSnd (x, y, _) = (x, y)
+      sTagValid tag = all isAscii tag && length tag <= 10
 
 
 data UPPVV
@@ -335,7 +338,6 @@ instance STS UPPVV where
     = CannotFollowPv
     | CannotUpdatePv [UpdateConstraintViolation]
     | AlreadyProposedPv
-    | InvalidSystemTags
     deriving (Eq, Show)
 
   initialRules = []
@@ -348,11 +350,8 @@ instance STS UPPVV where
         pvCanFollow nv pv ?! CannotFollowPv
         canUpdate pps up
         nv `notElem` (fst <$> Map.elems rpus) ?! AlreadyProposedPv
-        all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! rpus ⨃ [(pid, (nv, ppsn))]
     ]
-    where
-      sTagValid tag = all isAscii tag && length tag <= 10
 
 
 -- | Update proposal validity
