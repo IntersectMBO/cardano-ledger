@@ -37,12 +37,12 @@ cwitness
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => DCert hashAlgo dsignAlgo
   -> StakeCredential hashAlgo dsignAlgo
-cwitness (RegKey hk)           = hk
-cwitness (DeRegKey hk)         = hk
-cwitness (RegPool pool)        = KeyHashStake $ hashKey $ pool ^. poolPubKey
-cwitness (RetirePool k _)      = KeyHashStake k
-cwitness (Delegate delegation) = delegation ^. delegator
-cwitness (GenesisDelegate (gk, _)) = KeyHashStake $ hashGenesisKey gk
+cwitness (RegKey hk)               = hk
+cwitness (DeRegKey hk)             = hk
+cwitness (RegPool pool)            = KeyHashObj $ hashKey $ pool ^. poolPubKey
+cwitness (RetirePool k _)          = KeyHashObj k
+cwitness (Delegate delegation)     = delegation ^. delegator
+cwitness (GenesisDelegate (gk, _)) = KeyHashObj $ hashGenesisKey gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin

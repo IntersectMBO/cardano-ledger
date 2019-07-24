@@ -559,7 +559,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
     inputAuthors = Set.foldr insertHK Set.empty (txbody ^. inputs)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (AddrVKey pay _) _) -> Set.insert pay hkeys
+        Just (TxOut (AddrBase (KeyHashObj pay) _) _) -> Set.insert pay hkeys
         _                               -> hkeys
 
     wdrlAuthors =
@@ -932,10 +932,11 @@ delegatedStake
 delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
-    addStake delegs (TxOut (AddrVKey _ hsk) c) = do
-      pool <- Map.lookup (KeyHashStake hsk) delegs
+    addStake delegs (TxOut (AddrBase _ (KeyHashObj hsk)) c) = do
+      pool <- Map.lookup (KeyHashObj hsk) delegs
       return (pool, c)
-    addStake _ (TxOut (AddrScr _ _) _) = undefined -- TODO: script addresses
+    addStake _ (TxOut (AddrBase _ _) _) = undefined -- TODO: script addresses
+    addStake _ (TxOut (AddrEnterprise _) _) = undefined -- TODO: script addresses
     addStake delegs (TxOut (AddrPtr ptr) c) = do
       key  <- Map.lookup ptr $ ds ^. dstate . ptrs
       pool <- Map.lookup key delegs
@@ -1050,7 +1051,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
       ]
     results =
       [ ( hk
-        , rewardOnePool pp r n totalBlocks (KeyHashStake hk) pool actgr total addrsRew)
+        , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
       | (hk, (pool, n, actgr)) <- pdata
       ]
     rewards' = foldl (\m (_, r') -> Map.union m r') Map.empty results

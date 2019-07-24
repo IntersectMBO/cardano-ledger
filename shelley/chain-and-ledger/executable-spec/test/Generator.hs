@@ -33,7 +33,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen    as Gen
 import qualified Hedgehog.Range  as Range
 
-import           TxData (pattern AddrVKey, pattern KeyHashStake, pattern Delegation,
+import           TxData (pattern AddrBase, pattern KeyHashObj, pattern Delegation,
                          pattern PoolParams, RewardAcnt(..), pattern Delegate,
                          pattern DeRegKey, pattern RegKey, pattern RegPool,
                          pattern RetirePool, StakeKeys(..))
@@ -77,14 +77,14 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: KeyPairs -> [(KeyHash, KeyHash)]
+hashKeyPairs :: KeyPairs -> [(Credential, Credential)]
 hashKeyPairs keyPairs =
-    (\(a, b) -> (hashKey $ vKey a, hashKey $ vKey b)) <$> keyPairs
+    (\(a, b) -> (KeyHashObj . hashKey $ vKey a, KeyHashObj . hashKey $ vKey b)) <$> keyPairs
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
-addrTxins keyPairs = uncurry AddrVKey <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry AddrBase <$> hashKeyPairs keyPairs
 
 genBool :: Gen Bool
 genBool = Gen.enumBounded
@@ -143,7 +143,7 @@ genTx keyList (UTxO m) cslot = do
   let realN                = length receipients
   let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
-          (\(p, d) -> AddrVKey (hashKey $ vKey p) (hashKey $ vKey d)) receipients
+          (\(p, d) -> AddrBase (KeyHashObj . hashKey $ vKey p) (KeyHashObj . hashKey $ vKey d)) receipients
   txttl <- genNatural 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
@@ -233,13 +233,13 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrVKey addr _) keyList =
+findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
     fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair
-findStakeKeyPair (KeyHashStake hk) keyList =
+findStakeKeyPair (KeyHashObj hk) keyList =
     snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
@@ -303,11 +303,11 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
+  RegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> (KeyHashStake . hashKey) <$> getAnyStakeKey keys
+    DeRegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do
@@ -324,13 +324,13 @@ genStakePool keys = do
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ KeyHashStake $ hashKey acntKey) Set.empty
+  pure $ PoolParams poolKey pledge Map.empty cost interval Nothing (RewardAcnt $ KeyHashObj $ hashKey acntKey) Set.empty
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stKeys'
   delegatorKey <- getAnyStakeKey keys
-  pure $ Delegation (KeyHashStake $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
+  pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeKeys stKeys') = d ^. dstate . stKeys
 
 genDCertRegPool :: KeyPairs -> Gen DCert

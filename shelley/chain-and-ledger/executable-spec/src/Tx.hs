@@ -122,7 +122,7 @@ extractKeyHash
   -> [KeyHash hashAlgo dsignAlgo]
 extractKeyHash l =
   Maybe.catMaybes $ map (\so -> case so of
-                                 KeyHashStake hk -> Just hk
+                                 KeyHashObj hk -> Just hk
                                  _ -> Nothing) l
 
 extractScriptHash
@@ -130,5 +130,5 @@ extractScriptHash
   -> [ScriptHash hashAlgo dsignAlgo]
 extractScriptHash l =
   Maybe.catMaybes $ map (\so -> case so of
-                                 ScriptHashStake hk -> Just hk
+                                 ScriptHashObj hk -> Just hk
                                  _ -> Nothing) l

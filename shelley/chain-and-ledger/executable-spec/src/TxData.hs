@@ -24,7 +24,7 @@ import           Updates
 
 -- |The delegation of one stake key to another.
 data Delegation hashAlgo dsignAlgo = Delegation
-  { _delegator :: StakeCredential hashAlgo dsignAlgo
+  { _delegator :: Credential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
   } deriving (Show, Eq, Ord)
 
@@ -43,20 +43,23 @@ data PoolParams hashAlgo dsignAlgo =
 
 -- |An account based address for a rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: StakeCredential hashAlgo signAlgo
+  { getRwdHK :: Credential hashAlgo signAlgo
   } deriving (Show, Eq, Ord)
+
+-- | Script hash or key hash for a payment or a staking object.
+data Credential hashAlgo dsignAlgo =
+    ScriptHashObj { _validatorHash :: ScriptHash hashAlgo dsignAlgo }
+  | KeyHashObj    { _vkeyHash      :: KeyHash hashAlgo dsignAlgo }
+    deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
-  = AddrVKey
-      { _payHK       :: KeyHash hashAlgo dsignAlgo
-      , _stakeCredHK :: KeyHash hashAlgo dsignAlgo
+  = AddrBase
+      { _paymentObj :: Credential hashAlgo dsignAlgo
+      , _stakingObj :: Credential hashAlgo dsignAlgo
       }
-  | AddrScr                     -- TODO generalize to any type of script
-                                -- add `validatorHash` function
-    { _payScr       :: ScriptHash hashAlgo dsignAlgo
-    , _stakeCredScr :: ScriptHash hashAlgo dsignAlgo
-    }
+  | AddrEnterprise
+    { _enterprisePayment :: Credential hashAlgo dsignAlgo }
   | AddrPtr
       { _stakePtr :: Ptr
       }
@@ -120,10 +123,7 @@ data TxOut hashAlgo dsignAlgo
   = TxOut (Addr hashAlgo dsignAlgo) Coin
   deriving (Show, Eq, Ord)
 
-data StakeCredential hashAlgo dsignAlgo =
-    KeyHashStake (KeyHash hashAlgo dsignAlgo)
-  | ScriptHashStake (ScriptHash hashAlgo dsignAlgo)
-  deriving (Show, Eq, Ord)
+type StakeCredential hashAlgo dsignAlgo = Credential hashAlgo dsignAlgo
 
 -- | A heavyweight certificate.
 data DCert hashAlgo dsignAlgo
@@ -298,22 +298,32 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
         pure $ RequireMOf m msigs
       _ -> error "pattern no supported"
 
+instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
+  => ToCBOR (Credential hashAlgo dsignAlgo) where
+  toCBOR = \case
+    ScriptHashObj hs ->
+      encodeListLen 2
+      <> toCBOR (0 :: Word8)
+      <> toCBOR hs
+    KeyHashObj kh ->
+      encodeListLen 2
+      <> toCBOR (1 :: Word8)
+      <> toCBOR kh
 
 instance
   (Typeable dsignAlgo, HashAlgorithm hashAlgo)
   => ToCBOR (Addr hashAlgo dsignAlgo)
  where
   toCBOR = \case
-    AddrVKey payHK stakeHK ->
+    AddrBase pay stake ->
       encodeListLen 3
         <> toCBOR (0 :: Word8)
-        <> toCBOR payHK
-        <> toCBOR stakeHK
-    AddrScr payScr stakeScr ->
-      encodeListLen 3
+        <> toCBOR pay
+        <> toCBOR stake
+    AddrEnterprise pay ->
+      encodeListLen 2
         <> toCBOR (1 :: Word8)
-        <> toCBOR payScr
-        <> toCBOR stakeScr
+        <> toCBOR pay
     AddrPtr stakePtr ->
       encodeListLen 2
         <> toCBOR (2 :: Word8)
@@ -325,19 +335,6 @@ instance ToCBOR Ptr where
       <> toCBOR sl
       <> toCBOR txIx
       <> toCBOR certIx
-
-instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (StakeCredential hashAlgo dsignAlgo) where
-  toCBOR = \case
-     KeyHashStake kh ->
-       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR kh
-     ScriptHashStake sc ->
-       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR sc
-
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
   ToCBOR (Delegation hashAlgo dsignAlgo) where
