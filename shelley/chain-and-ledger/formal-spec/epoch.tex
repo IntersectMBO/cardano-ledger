@@ -17,16 +17,16 @@
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\reward}[7]{\fun{reward}
   ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}}
-\newcommand{\rewardOnePool}[8]{\fun{rewardOnePool}
-  ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}}
+\newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
+  ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
 \newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\poolStake}[3]{\fun{poolStake}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
-\newcommand{\lReward}[4]{\fun{r_{leader}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
+\newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
-\newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}}
+\newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
 \newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
@@ -735,13 +735,6 @@ for ease of reading.
   \begin{equation}\label{eq:new-pc-denied}
     \inference[New-Proto-Param-Denied]
     {
-      {\begin{array}{rcl}
-          \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
-          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
-      \end{array}}
-      \\~\\~\\
       \left({\begin{array}{c}
             \var{pp_{new}}=\Nothing \\
         \lor \\
@@ -749,14 +742,21 @@ for ease of reading.
         \lor \\
         \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} \geq
           \fun{maxBlockSize}~\var{pp_{new}}
-    \end{array}}\right)
+      \end{array}}\right)
+      \\~\\~\\
+      {\begin{array}{rcl}
+          \var{slot} & \leteq & \firstSlot{e} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
+      \end{array}}
       \\~\\~\\
       \var{utxoSt'} \leteq
       \left(
         {
           \begin{array}{r}
             \var{utxo} \\
-            \var{oblg_{new}} \\
+            \var{deposits} \\
             \var{fees} \\
             \left(\begin{array}{r}
               \varUpdate{\emptyset} \\
@@ -1009,12 +1009,12 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
   %
   \begin{align*}
       & \fun{poolReward} \in \unitInterval \to \unitInterval \to \N \to \N \to \Coin \to \Coin \\
-      & \poolReward{d}{s}{n}{\overline{N}}{f} =
+      & \poolReward{d}{\sigma}{n}{\overline{N}}{f} =
       \floor*{\overline{p}\cdot\var{f}}\\
       & ~~~\where \\
       & ~~~~~~~\overline{p} =
         \begin{cases}
-          \frac{\beta}{s} & \text{if } d < 0.8 \\
+          \frac{\beta}{\sigma} & \text{if } d < 0.8 \\
           1 & \text{otherwise}
         \end{cases} \\
       & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
@@ -1031,7 +1031,7 @@ The portion of rewards allocated to the pool operator and owners is different
 than that of the members.
 
 \begin{itemize}
-  \item The $\fun{r_{leader}}$ function calculates the leader reward, based on the pool cost,
+  \item The $\fun{r_{operator}}$ function calculates the leader reward, based on the pool cost,
     margin and the proportion of the pool's total stake.  Note that this reward will go to the
     reward account specified in the pool registration certificate.
   \item The $\fun{r_{member}}$ function calculates the member reward, proportionally to their
@@ -1042,10 +1042,10 @@ than that of the members.
 %% Figure - Functions for the Reward Splitting
 %%
 \begin{figure}[htb]
-  \emph{Pool leader reward, from section 6.5.2 of \cite{delegation_design}}
+  \emph{Pool leader reward, from section 5.5.3 of \cite{delegation_design}}
   %
   \begin{align*}
-      & \fun{r_{leader}} \in \Coin \to \PoolParam \to \unitInterval \to \unitIntervalNonNull \to \Coin \\
+      & \fun{r_{operator}} \in \Coin \to \PoolParam \to \unitInterval \to \unitIntervalNonNull \to \Coin \\
       & \lReward{\hat{f}}{pool}{s}{\sigma} =
         \begin{cases}
         \hat{f} & \hat{f} \leq c\\
@@ -1057,7 +1057,7 @@ than that of the members.
       & ~~~~~~~m = \fun{poolMargin}~pool \\
   \end{align*}
 
-  \emph{Pool member reward, from section 6.5.2 of \cite{delegation_design}}
+  \emph{Pool member reward, from section 5.5.3 of \cite{delegation_design}}
   %
   \begin{align*}
     & \fun{r_{member}} \in \Coin \to \PoolParam \to \unitInterval \to \unitIntervalNonNull \to \Coin \\
@@ -1131,7 +1131,7 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{poolR} = \poolReward{(\fun{d}~pp)}{s}{n}{\overline{N}}{maxP} \\
+      & ~~~~~~~\var{poolR} = \poolReward{(\fun{d}~pp)}{\sigma}{n}{\overline{N}}{maxP} \\
       & ~~~~~~~\var{mRewards} = \left\{
                                   \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
                                   ~\Big\vert~
@@ -1139,7 +1139,7 @@ The calculation is done pool-by-pool.
                                \right\}\\
       & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{ostake}}{tot}}{\sigma} \\
       & ~~~~~~~\var{potentialRewards} =
-                 \var{mReward} \cup
+                 \var{mRewards} \cup
                  \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
       & ~~~~~~~\var{rewards} = \var{addrs_{rew}}\restrictdom{\var{potentialRewards}} \\
   \end{align*}
@@ -1324,15 +1324,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       & \createRUpd{b}{es} = \left(
         \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS} \right) \\
       & ~~~\where \\
-      &~~~~~~~~(\var{acnt},~\var{pp},~\var{ss},~\var{ls}) = \var{es} \\
-      & ~~~~~~~(\wcard,~\wcard,~\var{pstate_{go}},~\var{poolsSS},~\var{blocksSS},~\var{feeSS})
+      &~~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
+      & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{blocksSS},~\var{feeSS})
         = \var{ss}\\
       & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
       & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
       & ~~~~~~~\left(
                  \wcard,~
                  \left(
-                   \left(\wcard,~\var{rewards},~\wcard,~\wcard\right)~
+                   \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard\right)~
                    \wcard
                  \right)
                \right) = \var{ls} \\
