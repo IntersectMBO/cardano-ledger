@@ -38,7 +38,7 @@ import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                       _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
                       _witnessVKeySet, _witnessMSigMap)
-import           TxData (StakeCredential(..), PoolParams(..), pattern Delegation)
+import           TxData (Credential(..), PoolParams(..), pattern Delegation)
 
 import           MockTypes
 
@@ -155,10 +155,10 @@ mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
 -- from the supplied list of keypairs.
 mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
 mutateDCert keys _ (RegKey _) =
-  RegKey . KeyHashStake . hashKey . vKey . snd <$> Gen.element keys
+  RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (DeRegKey _) =
-  DeRegKey . KeyHashStake . hashKey . vKey . snd <$> Gen.element keys
+  DeRegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 
 mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
     epoch' <- mutateEpoch 0 e epoch
@@ -175,7 +175,7 @@ mutateDCert keys _ (RegPool (PoolParams _ pledge pledges cost margin altacnt rwd
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ Delegate $ Delegation (KeyHashStake $ hashKey delegator') (hashKey delegatee')
+  pure $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (hashKey delegatee')
 
 mutateDCert keys _ (GenesisDelegate (gk, _)) = do
   _delegatee <- getAnyStakeKey keys
