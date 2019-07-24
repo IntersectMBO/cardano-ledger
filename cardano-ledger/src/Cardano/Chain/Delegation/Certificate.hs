@@ -111,7 +111,9 @@ mkCertificate pm ss delegateVK e = UnsafeACertificate
 unsafeCertificate
   :: EpochNumber
   -> VerificationKey
+  -- ^ The issuer of the certificate. See 'UnsafeACertificate'.
   -> VerificationKey
+  -- ^ The delegate of the certificate. See 'UnsafeACertificate'.
   -> Signature EpochNumber
   -> Certificate
 unsafeCertificate e = UnsafeACertificate (Annotated e ())
