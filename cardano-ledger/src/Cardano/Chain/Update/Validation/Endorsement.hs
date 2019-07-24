@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting (SlotNumber, twice)
+import Cardano.Chain.Slotting (SlotNumber, twice, subSlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
@@ -148,7 +148,7 @@ register env st endorsement =
    where
     -- Stable and confirmed proposals.
     scps     = M.filter (<= stableAt) confirmedProposals
-    stableAt = currentSlot - twice k
+    stableAt = currentSlot `subSlotNumber` twice k
 
   numberOfEndorsements :: Int
   numberOfEndorsements = length $ Set.filter

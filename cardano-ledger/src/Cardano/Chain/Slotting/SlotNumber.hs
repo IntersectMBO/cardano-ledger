@@ -11,6 +11,7 @@ module Cardano.Chain.Slotting.SlotNumber
   ( SlotNumber(..)
   , addSlotCount
   , subSlotCount
+  , subSlotNumber
   , twice
   )
 where
@@ -61,6 +62,19 @@ addSlotCount (SlotCount a) (SlotNumber b) = SlotNumber $ a + b
 subSlotCount :: SlotCount -> SlotNumber -> SlotNumber
 subSlotCount (SlotCount a) (SlotNumber b) =
   if a > b then SlotNumber 0 else SlotNumber (b - a)
+
+-- | Subtract a slot number, going no lower than 0.
+--
+-- Note that:
+--
+-- > subSlotNumber a b
+--
+-- Subtracts @b@ from @a@
+--
+subSlotNumber :: SlotNumber -> SlotNumber -> SlotNumber
+subSlotNumber (SlotNumber a) (SlotNumber b) =
+  if a <= b then SlotNumber 0 else SlotNumber (a - b)
+
 
 -- | Compute the number of slots after which a block becomes stable as @2 * k@,
 -- where @k@ is the chain security parameter, which is expressed in number of

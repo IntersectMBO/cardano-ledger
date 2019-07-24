@@ -47,8 +47,8 @@ tests = $$discoverPropArg
 -- | Every abstract trace of transaction that was generated according to the
 --   inference rules, after being elaborated must be validated by the concrete
 --   UTxO validator.
-ts_prop_generatedChainsAreValidated :: TSProperty
-ts_prop_generatedChainsAreValidated =
+ts_prop_generatedUTxOChainsAreValidated :: TSProperty
+ts_prop_generatedUTxOChainsAreValidated =
   withTestsTS 200 $ property $ do
     tr <- forAll $ trace @UTXOW 200
     classifyTraceLength tr 200 50

@@ -32,6 +32,8 @@ module Cardano.Chain.Update.Validation.Interface
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
@@ -49,7 +51,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -154,7 +156,7 @@ instance ToCBOR State where
 
 data Error
   = Registration Registration.Error
-  | Voting Voting.Error
+  | Voting State Voting.Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
   deriving (Eq, Show)
@@ -194,13 +196,28 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
   -- Register proposal if it exists
   st' <- case proposal of
     Nothing -> pure st
-    Just p  -> registerProposal env st p
+    Just p  -> do
+      -- Debug.traceShowM "Registering proposal:"
+      -- Debug.traceShowM p
+      registerProposal env st p
+
+  -- Debug.traceShowM "State after proposal registration:"
+  -- Debug.traceShowM st'
+
 
   -- Register the votes
   st'' <- foldM (registerVote env) st' votes
 
+  -- Debug.traceShowM "State after proposal voting:"
+  -- Debug.traceShowM st''
+
+
   -- Register endorsement
-  registerEndorsement env st'' endorsement
+  st''' <- registerEndorsement env st'' endorsement
+  -- Debug.traceShowM "State after endorsement registration:"
+  -- Debug.traceShowM st'''
+  pure st'''
+
 
 
 -- | Register an update proposal.
@@ -269,7 +286,7 @@ registerVote
 registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals'
     <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
-      `wrapError` Voting
+      `wrapError` Voting st
   let
     appVersions' =
       currentSlot `seq`
@@ -342,7 +359,10 @@ registerEndorsement env st endorsement = do
     pidsKeep = nonExpiredPids `union` confirmedPids
 
     nonExpiredPids =
-      M.keysSet $ M.filter (currentSlot - u <=) proposalRegistrationSlot
+      M.keysSet $ M.filter (currentSlot `subSlotNumber` u <=) proposalRegistrationSlot
+      -- where
+      --   msg =  "Current Slot: " <> show currentSlot
+      --       <> "Update proposal TTL: " <> show u
 
     confirmedPids = M.keysSet confirmedProposals
 

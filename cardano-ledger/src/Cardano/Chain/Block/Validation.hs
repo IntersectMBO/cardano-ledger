@@ -37,6 +37,8 @@ module Cardano.Chain.Block.Validation
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO)
@@ -615,12 +617,15 @@ updateBlock config cvs b = do
       }
 
   BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
+  -- Debug.traceShowM "State after body update: \n\n"
+  -- Debug.traceShowM updateState
+  -- Debug.traceShowM "END State after body update: \n\n"
 
   pure $ cvs
     { cvsLastSlot     = blockSlot b
     , cvsPreviousHash = Right $! blockHashAnnotated b
     , cvsUtxo         = utxo
-    , cvsUpdateState  = updateState'
+    , cvsUpdateState  = updateState
     , cvsDelegationState = delegationState
     }
  where

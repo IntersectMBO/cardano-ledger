@@ -86,10 +86,10 @@ data Error
   = DuplicateProtocolVersion ProtocolVersion
   | DuplicateSoftwareVersion SoftwareVersion
   | InvalidProposer KeyHash
-  | InvalidProtocolVersion ProtocolVersion
+  | InvalidProtocolVersion ProtocolVersion Adopted
   | InvalidScriptVersion Word16 Word16
   | InvalidSignature
-  | InvalidSoftwareVersion SoftwareVersion
+  | InvalidSoftwareVersion ApplicationVersions SoftwareVersion
   | MaxBlockSizeTooLarge (TooLarge Natural)
   | MaxTxSizeTooLarge (TooLarge Natural)
   | ProposalAttributesUnknown
@@ -103,6 +103,8 @@ data TooLarge n = TooLarge
   , tlMaxBound :: n
   } deriving (Eq, Show)
 
+newtype Adopted = Adopted ProtocolVersion
+  deriving (Eq, Show)
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.
@@ -216,7 +218,8 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
     `orThrowError` DuplicateProtocolVersion newPV
 
   -- Check that this protocol version is a valid next version
-  pvCanFollow newPV adoptedPV `orThrowError` InvalidProtocolVersion newPV
+  pvCanFollow newPV adoptedPV
+    `orThrowError` InvalidProtocolVersion newPV (Adopted adoptedPV)
 
   canUpdate adoptedPP newPP proposal
 
@@ -312,7 +315,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
   -- Check that this software version is a valid next version
   svCanFollow appVersions softwareVersion
-    `orThrowError` InvalidSoftwareVersion softwareVersion
+    `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
   pure $ M.insert (recoverUpId proposal) softwareVersion registeredSUPs
@@ -325,6 +328,6 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
 svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 1
+  Nothing -> appVersion == 0
   Just (currentAppVersion, _) -> appVersion == currentAppVersion + 1
   where SoftwareVersion appName appVersion = softwareVersion

@@ -61,8 +61,10 @@ elaboratePParams pps = Concrete.ProtocolParameters
       }
   , Concrete.ppTxFeePolicy        = Concrete.TxFeePolicyTxSizeLinear
     (Concrete.TxSizeLinear
-      (intToLovelace (Abstract._factorA pps))
-      (intToLovelace (Abstract._factorB pps))
+      (intToLovelace 0)
+      (intToLovelace 0)
+      -- (intToLovelace (Abstract._factorA pps))
+      -- (intToLovelace (Abstract._factorB pps))
     )
   , Concrete.ppUnlockStakeEpoch   = Concrete.EpochNumber maxBound
   }

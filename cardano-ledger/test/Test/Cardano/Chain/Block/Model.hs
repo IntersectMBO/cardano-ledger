@@ -38,6 +38,7 @@ import Hedgehog
   , forAll
   , property
   )
+import qualified Hedgehog.Gen as Gen
 
 import Cardano.Chain.Block
   ( BlockValidationMode (..)
@@ -50,9 +51,9 @@ import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
+import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, ShouldGenDelegation(..), ShouldGenUTxO (..), ShouldGenUpdate (..), sigGenChain)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace)
+import Control.State.Transition.Generator (classifyTraceLength, trace, traceSigGen, TraceLength (Maximum, Desired))
 import Control.State.Transition (State)
 import Control.State.Transition.Trace
   ( Trace
@@ -85,9 +86,14 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 100 $ property $ do
-    let (traceLength, step) = (100 :: Word64, 10 :: Word64)
-    tr <- forAll $ trace @CHAIN traceLength
-    classifyTraceLength tr traceLength step
+    let (traceLength, step) = (49 :: Word64, 10 :: Word64)
+--    tr <- forAll $ trace @CHAIN traceLength
+    tr <- forAll -- $ Gen.prune
+                 $ traceSigGen
+                     @CHAIN
+                     (Maximum traceLength)
+                     (sigGenChain NoGenDelegation NoGenUTxO GenUpdate)
+--    classifyTraceLength tr traceLength step
     printAdditionalInfoOnFailure tr
     passConcreteValidation tr
   where

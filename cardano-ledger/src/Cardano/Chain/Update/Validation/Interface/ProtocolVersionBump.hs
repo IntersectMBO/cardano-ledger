@@ -10,7 +10,7 @@ where
 import Cardano.Prelude hiding (State)
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber, twice)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, twice, subSlotNumber)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -62,4 +62,4 @@ tryBumpVersion env st lastSeenEpoch =
     State { currentEpoch } = st
 
     stableCandidates =
-      filter ((<= currentSlot - twice k) . cpuSlot) candidateProtocolVersions
+      filter ((<= currentSlot `subSlotNumber` twice k) . cpuSlot) candidateProtocolVersions

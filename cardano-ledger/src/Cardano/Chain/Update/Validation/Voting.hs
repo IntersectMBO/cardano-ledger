@@ -65,7 +65,7 @@ type RegisteredVotes = Map UpId (Set KeyHash)
 -- | Error captures the ways in which vote registration could fail
 data Error
   = VotingInvalidSignature
-  | VotingProposalNotRegistered UpId
+  | VotingProposalNotRegistered UpId (Set UpId)
   | VotingVoterNotDelegate KeyHash
   deriving (Eq, Show)
 
@@ -127,7 +127,7 @@ registerVote
 registerVote pm vre votes vote = do
   -- Check that the proposal being voted on is registered
   (upId `Set.member` registeredProposals)
-    `orThrowError` VotingProposalNotRegistered upId
+    `orThrowError` VotingProposalNotRegistered upId registeredProposals
 
   -- Check that the set of genesis keys is not empty
   delegator <- case Delegation.lookupR voter delegationMap of
