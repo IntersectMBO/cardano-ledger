@@ -92,10 +92,24 @@ encToVerification :: EncryptedSigningKey -> VerificationKey
 encToVerification = toVerification . encToSigning
 
 -- | Re-wrap unencrypted signing key as an encrypted one.
---   NB: for testing purposes only
+--
+--   Note: for testing purposes only
+--
 noPassEncrypt :: SigningKey -> EncryptedSigningKey
 noPassEncrypt (SigningKey k) =
-  mkEncSecretWithSaltUnsafe S.emptySalt emptyPassphrase k
+  EncryptedSigningKey k emptyEncryptedPass
+
+-- | Only for testing. Only used when wrapping unencrypted signing keys as
+-- encrypted ones.
+--
+-- We cache the empty EncryptedPass as a top level CAF here because generating
+-- them is very expensive (using scrypt) and in testing we sometimes need to
+-- generate a lot of them.
+--
+emptyEncryptedPass :: S.EncryptedPass
+emptyEncryptedPass =
+  S.encryptPassWithSalt passScryptParam S.emptySalt emptyPassphrase
+
 
 -- Here with types to avoid module import cycles:
 checkPassMatches :: (Alternative f) => PassPhrase -> EncryptedSigningKey -> f ()
