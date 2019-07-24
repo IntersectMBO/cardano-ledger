@@ -36,11 +36,11 @@ import           Slot (Epoch (..), Slot (..))
 import           STS.Updn (UPDN)
 import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
-import           TxData (pattern AddrScr, pattern AddrVKey, pattern RequireAllOf,
+import           TxData (pattern AddrBase, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
                      pattern StakeKeys, pattern StakePools, pattern Tx, pattern TxBody,
-                     pattern TxIn, pattern TxOut, _body, pattern ScriptHashStake,
-                     pattern RewardAcnt)
+                     pattern TxIn, pattern TxOut, _body, pattern ScriptHashObj,
+                     pattern RewardAcnt, pattern KeyHashObj)
 import           Updates (emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), makeWitnessesVKey, txid)
 
@@ -194,8 +194,12 @@ aliceStake :: KeyPair
 aliceStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
+mkAddr :: (KeyPair, KeyPair) -> Addr
+mkAddr (payKey, stakeKey) =
+  AddrBase (KeyHashObj . hashKey $ vKey payKey) (KeyHashObj . hashKey $ vKey stakeKey)
+
 aliceAddr :: Addr
-aliceAddr = AddrVKey (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
+aliceAddr = mkAddr (alicePay, aliceStake)
 
 
 bobPay :: KeyPair
@@ -207,7 +211,7 @@ bobStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 bobAddr :: Addr
-bobAddr = AddrVKey (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
+bobAddr = mkAddr (bobPay, bobStake)
 
 
 carlPay :: KeyPair
@@ -219,7 +223,7 @@ carlStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 carlAddr :: Addr
-carlAddr = AddrVKey (hashKey (vKey carlPay)) (hashKey (vKey carlStake))
+carlAddr = mkAddr (carlPay, carlStake)
 
 
 dariaPay :: KeyPair
@@ -231,11 +235,12 @@ dariaStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 dariaAddr :: Addr
-dariaAddr = AddrVKey (hashKey (vKey dariaPay)) (hashKey (vKey dariaStake))
+dariaAddr = mkAddr (dariaPay, dariaStake)
+
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (AddrVKey pk _ ) = RequireSignature pk
+singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
@@ -309,7 +314,10 @@ initialUTxOState
 initialUTxOState aliceKeep msigs =
   let addresses =
         (if aliceKeep > 0 then [(aliceAddr, aliceKeep)] else []) ++
-        (map (\(msig, c) -> (AddrScr (hashScript msig) (hashScript msig), c)) msigs)
+        (map (\(msig, c) ->
+                (AddrBase
+                 (ScriptHashObj $ hashScript msig)
+                 (ScriptHashObj $ hashScript msig), c)) msigs)
   in
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
@@ -533,21 +541,21 @@ testRwdAliceSignsAlone :: Assertion
 testRwdAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript aliceOnly)) 1000) 0 [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript bobOnly)) 1000) 0 [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay]
         bobOnly = singleKeyOnly bobAddr
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
         bobOnly = singleKeyOnly bobAddr
         s = "problem: " ++ show utxoSt'
 
@@ -555,5 +563,5 @@ testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashStake $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
         bobOnly = singleKeyOnly bobAddr

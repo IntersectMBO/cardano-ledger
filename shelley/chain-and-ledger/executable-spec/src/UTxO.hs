@@ -173,14 +173,15 @@ txup (Tx txbody _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr hashAlgo dsignAlgo -> Maybe (ScriptHash hashAlgo dsignAlgo)
-getScriptHash (AddrScr hs _) = Just hs
-getScriptHash _              = Nothing
+getScriptHash (AddrBase (ScriptHashObj hs) _)     = Just hs
+getScriptHash (AddrEnterprise (ScriptHashObj hs)) = Just hs
+getScriptHash _                                   = Nothing
 
 scriptStakeCred
   :: StakeCredential hashAlgo dsignAlgo
   -> Maybe (ScriptHash hashAlgo dsignAlgo)
-scriptStakeCred (KeyHashStake _ )    =  Nothing
-scriptStakeCred (ScriptHashStake hs) = Just hs
+scriptStakeCred (KeyHashObj _ )    =  Nothing
+scriptStakeCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
@@ -208,6 +209,8 @@ txinsScript
   -> Set (TxIn hashAlgo dsignAlgo)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  (Map.keysSet $ Map.filter (\(TxOut a _) -> case a of
-                                               AddrScr _ _ -> True
-                                               _           -> False) u)
+  (Map.keysSet $ Map.filter (\(TxOut a _) ->
+                               case a of
+                                 AddrBase (ScriptHashObj _) _     -> True
+                                 AddrEnterprise (ScriptHashObj _) -> True
+                                 _                                -> False) u)

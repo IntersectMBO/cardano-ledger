@@ -15,7 +15,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Address
-import           TxData (pattern AddrVKey, pattern Ptr, StakeCredential(..),
+import           TxData (pattern AddrBase, pattern Ptr, Credential(..),
                          Delegation (..), pattern PoolParams, pattern RewardAcnt,
                          _poolAltAcnt, _poolCost, _poolMargin, _poolOwners,
                          _poolPubKey, _poolPledge, _poolPledges, _poolRAcnt)
@@ -47,7 +47,9 @@ aliceStake :: KeyPair
 aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
-aliceAddr = AddrVKey (hashKey (vKey alicePay)) (hashKey (vKey aliceStake))
+aliceAddr = AddrBase
+             (KeyHashObj . hashKey $ vKey alicePay)
+             (KeyHashObj . hashKey $ vKey aliceStake)
 
 bobPay :: KeyPair
 bobPay = KeyPair 3 3
@@ -56,7 +58,9 @@ bobStake :: KeyPair
 bobStake = KeyPair 4 4
 
 bobAddr :: Addr
-bobAddr = AddrVKey (hashKey (vKey bobPay)) (hashKey (vKey bobStake))
+bobAddr = AddrBase
+           (KeyHashObj . hashKey $ vKey bobPay)
+           (KeyHashObj . hashKey $ vKey bobStake)
 
 testPCs :: PParams
 testPCs = emptyPParams {
@@ -118,7 +122,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           utxoState'
           (stakeKeyRegistration
            & dstate . delegations .~
-                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
+                Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           (fromIntegral $ length txs))
@@ -134,17 +138,17 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
           utxoState'
           (stakeKeyRegistration
            & dstate . delegations .~
-                Map.fromList [(KeyHashStake $ hashKey $ vKey aliceStake, poolhk)]
+                Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
           3)
 
 bobWithdrawal :: Map RewardAcnt Coin
-bobWithdrawal = Map.singleton (mkRwdAcnt bobStake) (Coin 10)
+bobWithdrawal = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 10)
 
 genesisWithReward :: LedgerState
-genesisWithReward = changeReward genesis (mkRwdAcnt bobStake) (Coin 10)
+genesisWithReward = changeReward genesis (mkVKeyRwdAcnt bobStake) (Coin 10)
 
 testValidWithdrawal :: Assertion
 testValidWithdrawal =
@@ -165,7 +169,7 @@ testValidWithdrawal =
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
     expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
-                   Map.singleton (mkRwdAcnt bobStake) (Coin 0)
+                   Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyUpdateState)
                      expectedDS
@@ -211,7 +215,7 @@ testWithdrawalWrongAmt =
            [ TxOut aliceAddr (Coin 6000)
            , TxOut bobAddr (Coin 3011) ]
            []
-           (Map.singleton (mkRwdAcnt bobStake) (Coin 11))
+           (Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
            (Coin 1000)
            (Slot 0)
            emptyUpdate
@@ -261,9 +265,9 @@ tx2 :: Tx
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
-        [ RegKey $ (KeyHashStake . hashKey) $ vKey aliceStake
-        , RegKey $ (KeyHashStake . hashKey) $ vKey bobStake
-        , RegKey $ (KeyHashStake . hashKey) $ vKey stakePoolKey1]
+        [ RegKey $ (KeyHashObj . hashKey) $ vKey aliceStake
+        , RegKey $ (KeyHashObj . hashKey) $ vKey bobStake
+        , RegKey $ (KeyHashObj . hashKey) $ vKey stakePoolKey1]
         (Slot 100)
         [alicePay, aliceStake, bobStake, stakePoolKey1]
 
@@ -284,7 +288,7 @@ tx3Body = TxBody
           [ TxOut aliceAddr (Coin 3950) ]
           [ RegPool stakePool
           , Delegate (Delegation
-                       (KeyHashStake $ hashKey $ vKey aliceStake)
+                       (KeyHashObj $ hashKey $ vKey aliceStake)
                        (hashKey $ vKey stakePoolKey1))]
           Map.empty
           (Coin 1200)
@@ -308,17 +312,17 @@ utxoSt3 = UTxOState
 stakeKeyRegistration1 :: DPState
 stakeKeyRegistration1 = LedgerState.emptyDelegation
   & dstate . rewards .~
-      Map.fromList [ (mkRwdAcnt aliceStake, Coin 0)
-                   , (mkRwdAcnt bobStake, Coin 0)
-                   , (mkRwdAcnt stakePoolKey1, Coin 0)]
+      Map.fromList [ (mkVKeyRwdAcnt aliceStake, Coin 0)
+                   , (mkVKeyRwdAcnt bobStake, Coin 0)
+                   , (mkVKeyRwdAcnt stakePoolKey1, Coin 0)]
   & dstate . stKeys .~ (StakeKeys $
-      Map.fromList [ (KeyHashStake $ hashKey $ vKey aliceStake, Slot 0)
-                   , (KeyHashStake $ hashKey $ vKey bobStake, Slot 0)
-                   , (KeyHashStake $ hashKey $ vKey stakePoolKey1, Slot 0)])
+      Map.fromList [ (KeyHashObj $ hashKey $ vKey aliceStake, Slot 0)
+                   , (KeyHashObj $ hashKey $ vKey bobStake, Slot 0)
+                   , (KeyHashObj $ hashKey $ vKey stakePoolKey1, Slot 0)])
   & dstate . ptrs .~
-      Map.fromList [ (Ptr (Slot 0) 0 0, KeyHashStake $ hashKey $ vKey aliceStake)
-                   , (Ptr (Slot 0) 0 1, KeyHashStake $ hashKey $ vKey bobStake)
-                   , (Ptr (Slot 0) 0 2, KeyHashStake $ hashKey $ vKey stakePoolKey1)
+      Map.fromList [ (Ptr (Slot 0) 0 0, KeyHashObj $ hashKey $ vKey aliceStake)
+                   , (Ptr (Slot 0) 0 1, KeyHashObj $ hashKey $ vKey bobStake)
+                   , (Ptr (Slot 0) 0 2, KeyHashObj $ hashKey $ vKey stakePoolKey1)
                    ]
 
 stakePool :: PoolParams
@@ -330,7 +334,7 @@ stakePool = PoolParams
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
             , _poolAltAcnt = Nothing  --          or here?
-            , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
+            , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
             }
 
@@ -347,7 +351,7 @@ stakePoolUpdate = PoolParams
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
                    , _poolAltAcnt = Nothing  --          or here?
-                   , _poolRAcnt   = RewardAcnt (KeyHashStake . hashKey . vKey $ stakePoolKey1)
+                   , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
                    }
 
@@ -488,7 +492,7 @@ testWitnessWrongUTxO =
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
   let
-    aliceWithdrawal = Map.singleton (mkRwdAcnt aliceStake) (Coin 2000)
+    aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     tx = TxBody
            Set.empty
            [ TxOut aliceAddr (Coin 1000) ]
@@ -498,7 +502,7 @@ testEmptyInputSet =
            (Slot 0)
            emptyUpdate
     wits = makeWitnessesVKey tx [aliceStake]
-    genesisWithReward' = changeReward genesis (mkRwdAcnt aliceStake) (Coin 2000)
+    genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits Map.empty) (Dms Map.empty)
   in ls @?= Left [ InputSetEmpty ]
 

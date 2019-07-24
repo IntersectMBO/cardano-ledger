@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Address
-  ( mkRwdAcnt
+  ( mkVKeyRwdAcnt
   )
 where
 
@@ -10,10 +10,10 @@ import           Cardano.Crypto.Hash   (HashAlgorithm)
 import           Keys
 import           TxData
 
-mkRwdAcnt
+mkVKeyRwdAcnt
   :: ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      )
   => KeyPair dsignAlgo
   -> RewardAcnt hashAlgo dsignAlgo
-mkRwdAcnt keys = RewardAcnt $ KeyHashStake (hashKey $ vKey keys)
+mkVKeyRwdAcnt keys = RewardAcnt $ KeyHashObj (hashKey $ vKey keys)
