@@ -5,44 +5,35 @@ module STSTests (stsTests) where
 
 import           Data.Either (isRight)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, singleton, fromList)
-import           Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as Map (empty, fromList, singleton)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
-import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (Addr, CHAIN, KeyPair, LedgerState, MultiSig, SKey, SKeyES, ScriptHash,
-                     Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, VKey, VKeyES, VKeyGenesis, Wdrl)
+import           Examples (CHAINExample (..), ex1, ex2)
+import           MockTypes (Addr, CHAIN, KeyPair, LedgerState, MultiSig, SKey, ScriptHash, Tx,
+                     TxBody, TxId, TxIn, UTXOW, UTxOState, VKey, Wdrl)
 
-import           BaseTypes (Seed (..), mkUnitInterval)
-import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof, bhHash,
-                     bhbHash)
-import           Coin
+import           BaseTypes (Seed (..))
+import           Coin (Coin (..))
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
-import           Delegation.Certificates (PoolDistr (..))
-import           EpochBoundary (BlocksMade (..), emptySnapShots)
-import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
-import           LedgerState (pattern DPState, pattern EpochState, pattern LedgerState,
-                     pattern NewEpochState, pattern UTxOState, emptyAccount, emptyDState,
-                     emptyPState, genesisId, genesisState, _cCounters, _dms, _utxoState)
-import           OCert (KESPeriod (..), pattern OCert)
-import           PParams (PParams (..), emptyPParams)
-import           Slot (Epoch (..), Slot (..))
+import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern VKey, hashKey, vKey)
+import           LedgerState (genesisId, genesisState, _utxoState)
+import           PParams (emptyPParams)
+import           Slot (Slot (..))
 import           STS.Updn (UPDN)
 import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
-import           TxData (pattern AddrBase, pattern RequireAllOf,
+import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
-                     pattern StakeKeys, pattern StakePools, pattern Tx, pattern TxBody,
-                     pattern TxIn, pattern TxOut, _body, pattern ScriptHashObj,
-                     pattern RewardAcnt, pattern KeyHashObj)
-import           Updates (emptyUpdate, emptyUpdateState)
-import           UTxO (UTxO (..), makeWitnessesVKey, txid)
+                     pattern RewardAcnt, pattern ScriptHashObj, pattern StakeKeys,
+                     pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                     _body)
+import           Updates (emptyUpdate)
+import           UTxO (makeWitnessesVKey, txid)
 
 
 -- | The UPDN transition should update both the evolving nonce and
@@ -65,91 +56,22 @@ testUPNLate =
   in
     st @?= Right (SeedOp (Nonce 2) (Nonce 1), Nonce 3)
 
--- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
-mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyKES 90
-  return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
+testCHAINExample :: CHAINExample -> Assertion
+testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
+    applySTS @CHAIN (TRC (slotNow, initSt, block)) @?= Right expectedSt
 
--- | Apply the top-level CHAIN transition to the simplest possible initial
--- state which yields a valid transition.
-testApplyChain :: Assertion
-testApplyChain =
-  let
-    -- We set up one genesis key holder, Gerolamo,
-    -- who will produce a block with no transitions.
-    gerolamo = VKeyGenesis 1501 :: VKeyGenesis
-    kp = KeyPair 1 1 -- Gerolamo's cold keys.
-    us = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
-    ds = emptyDState { _dms = Dms (Map.singleton gerolamo (vKey kp)) }
-    ps = emptyPState { _cCounters = Map.singleton (hashKey $ vKey kp) 0}
-    ls = LedgerState us (DPState ds ps) 0
-    pps = emptyPParams { _maxBBSize = 1000
-                       , _maxBHSize = 1000 }
-    es = EpochState emptyAccount emptySnapShots ls pps
-    initChainSt =
-      ( NewEpochState
-          (Epoch 0)
-          (Nonce 0)
-          (BlocksMade Map.empty)
-          (BlocksMade Map.empty)
-          es
-          Nothing
-          (PoolDistr Map.empty)
-          (Map.singleton (Slot 1) (Just gerolamo))
-          -- The overlay schedule has one entry, setting Gerolamo to slot 1.
-      , Nonce 0
-      , Nonce 0
-      , Nothing
-      , Slot 0
-      )
-    zero = fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0
-    (sKeyES, vKeyES) = mkKESKeyPair (0, 0, 0, 0, 0) -- Gerolamo's hot keys.
-    bhb = BHBody
-            Nothing
-            (vKey kp)
-            (Slot 1)
-            (Nonce 1)
-            (Proof (vKey kp) (Nonce 0))
-            zero
-            (Proof (vKey kp) zero)
-            (sign (sKey kp) [])
-            0
-            (bhbHash [])
-            (OCert
-              vKeyES
-              (vKey kp)
-              0
-              (KESPeriod 0)
-              (sign (sKey kp) (vKeyES, 0, KESPeriod 0))
-            )
-    bh = BHeader bhb (Keys.signKES sKeyES bhb 0)
-    block = Block bh []
-    slotNow = Slot 1
-    expectedSt =
-      ( NewEpochState
-          (Epoch 0)
-          (Nonce 0)
-          (BlocksMade Map.empty)
-          (BlocksMade Map.empty)
-          -- Note that blocks in the overlay schedule do not add to this count.
-          es
-          Nothing
-          (PoolDistr Map.empty)
-          (Map.singleton (Slot 1) (Just gerolamo))
-      , SeedOp (Nonce 0) (Nonce 1)
-      , SeedOp (Nonce 0) (Nonce 1)
-      , Just (bhHash bh)
-      , Slot 1
-      )
-  in
-    applySTS @CHAIN (TRC (slotNow, initChainSt, block)) @?= Right expectedSt
+testCHAINExample1 :: Assertion
+testCHAINExample1 = testCHAINExample ex2
+
+testCHAINExample2 :: Assertion
+testCHAINExample2 = testCHAINExample ex1
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
   , testCase "update nonce late in the epoch" testUPNLate
-  , testCase "apply CHAIN transition" testApplyChain
+  , testCase "CHAIN example 1 - empty block" testCHAINExample1
+  , testCase "CHAIN example 2 - register stake key" testCHAINExample2
   , testCase "apply Transaction to genesis UTxO" testInitialUTXO
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
@@ -269,7 +191,7 @@ aliceAndBobOrCarlOrDaria =
 initTxBody :: [(Addr, Coin)] -> TxBody
 initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
-        (map (\(a, c) -> TxOut a c) addrs)
+        (map (uncurry TxOut) addrs)
         []
         Map.empty
         (Coin 0)
@@ -299,7 +221,6 @@ bobInitCoin = 1000
 
 genesis :: LedgerState
 genesis = genesisState
-           emptyPParams
            [ TxOut aliceAddr aliceInitCoin
            , TxOut bobAddr bobInitCoin]
 
@@ -313,11 +234,11 @@ initialUTxOState
   -> (TxId, Either [[PredicateFailure UTXOW]] UTxOState)
 initialUTxOState aliceKeep msigs =
   let addresses =
-        (if aliceKeep > 0 then [(aliceAddr, aliceKeep)] else []) ++
-        (map (\(msig, c) ->
-                (AddrBase
-                 (ScriptHashObj $ hashScript msig)
-                 (ScriptHashObj $ hashScript msig), c)) msigs)
+        [(aliceAddr, aliceKeep) | aliceKeep > 0] ++
+        map (\(msig, c) ->
+               (AddrBase
+                (ScriptHashObj $ hashScript msig)
+                (ScriptHashObj $ hashScript msig), c)) msigs
   in
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
@@ -359,7 +280,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                                                    ++ show initUtxo)
         txbody = scriptTxBody inputs aliceAddr wdrl (aliceInitCoin + bobInitCoin + sum wdrl)
         inputs = [TxIn txId (fromIntegral n) | n <-
-                     [0..(length lockScripts) - (if aliceKeep > 0 then 0 else 1)]]
+                     [0..length lockScripts - (if aliceKeep > 0 then 0 else 1)]]
                                  -- alice? + scripts
         tx = makeTx
               txbody
