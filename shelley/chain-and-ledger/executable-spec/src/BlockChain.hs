@@ -6,6 +6,7 @@ module BlockChain
   , BHeader(..)
   , Block(..)
   , Proof(..)
+  , ProtVer(..)
   , bhHash
   , bhbHash
   , bHeaderSize
@@ -39,7 +40,7 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkNonce, seedOp)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
-import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash, Sig, VKey,
+import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash, VKey,
                      hash, hashKey)
 import           OCert (OCert (..))
 import           Slot (Duration, Slot (..))
@@ -101,6 +102,16 @@ instance
        <> toCBOR bHBody
        <> toCBOR kESig
 
+data ProtVer = ProtVer Natural Natural Natural
+  deriving (Show, Eq, Ord)
+
+instance ToCBOR ProtVer where
+  toCBOR (ProtVer x y z) =
+     encodeListLen 3
+       <> toCBOR x
+       <> toCBOR y
+       <> toCBOR z
+
 data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
   { -- | Hash of the previous block header
     -- The first block in a chain will set this field to Nothing.
@@ -120,14 +131,14 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
   , bheaderL              :: UnitInterval
     -- | proof of leader election
   , bheaderPrfL           :: Proof dsignAlgo UnitInterval
-    -- | signature of block body
-  , bheaderBlockSignature :: Sig dsignAlgo [Tx hashAlgo dsignAlgo]
     -- | Size of the block body
   , bsize                 :: Natural
     -- | Hash of block body
   , bhash                 :: HashBBody hashAlgo dsignAlgo kesAlgo
     -- | operational certificate
   , bheaderOCert          :: OCert dsignAlgo kesAlgo
+    -- | protocol version
+  , bprotvert          :: ProtVer
   } deriving (Show, Eq)
 
 instance
@@ -143,10 +154,10 @@ instance
       <> toCBOR (bheaderPrfEta bhBody)
       <> toCBOR (bheaderL bhBody)
       <> toCBOR (bheaderPrfL bhBody)
-      <> toCBOR (bheaderBlockSignature bhBody)
       <> toCBOR (bsize bhBody)
       <> toCBOR (bhash bhBody)
       <> toCBOR (bheaderOCert bhBody)
+      <> toCBOR (bprotvert bhBody)
 
 data Block hashAlgo dsignAlgo kesAlgo
   = Block

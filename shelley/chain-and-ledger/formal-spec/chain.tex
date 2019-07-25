@@ -36,7 +36,7 @@
 \newcommand{\bleader}[1]{\fun{bleader}~\var{#1}}
 \newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
 \newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
-\newcommand{\overlaySchedule}[3]{\fun{overlaySchedule}~\var{#1}~{#2}~\var{#3}}
+\newcommand{\overlaySchedule}[4]{\fun{overlaySchedule}~\var{#1}~\var{#2}~{#3}~\var{#4}}
 
 \newcommand{\PrtclState}{\type{PrtclState}}
 \newcommand{\PrtclEnv}{\type{PrtclEnv}}
@@ -287,17 +287,18 @@ of which are active.
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{overlaySchedule} \in \powerset{\VKeyGen} \to \Seed \to \PParams
+    & \fun{overlaySchedule} \in \Epoch \to \powerset{\VKeyGen} \to \Seed \to \PParams
         \to (\Slot\mapsto\VKeyGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{osched}\leteq\overlaySchedule{gkeys}{\eta}{pp} \\
+    \text{ given: }~\var{osched}\leteq\overlaySchedule{e}{gkeys}{\eta}{pp} \\
     \range{osched}\subseteq\var{gkeys} \\
     |\var{osched}| = \floor{(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
     |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| =
     \floor{(\activeSlotCoeff{pp})\cdot(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
+    \forall s\in\dom{osched},~\epoch{s}=e\\
   \end{align*}
   %
   \emph{New Epoch Transitions}
@@ -367,7 +368,7 @@ In the second case, the new epoch state is updated as follows:
               \end{array}
             }
             \right\}\\
-          \var{osched'} & \overlaySchedule{gkeys}{\eta_1}{pp} \\
+          \var{osched'} & \overlaySchedule{e}{gkeys}{\eta_1}{pp} \\
           \eta_e & \fun{extraEntropy}~\var{pp} \\
           \var{es''} & (\var{acnt},
                        ~\var{ss},

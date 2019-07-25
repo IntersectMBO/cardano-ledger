@@ -33,10 +33,8 @@ data PoolParams hashAlgo dsignAlgo =
   PoolParams
     { _poolPubKey  :: VKey dsignAlgo
     , _poolPledge  :: Coin
-    , _poolPledges :: Map (VKey dsignAlgo) Coin -- TODO not updated currently
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
-    , _poolAltAcnt :: Maybe (KeyHash hashAlgo dsignAlgo)
     , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
     , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
     } deriving (Show, Eq, Ord)
@@ -352,10 +350,8 @@ instance
     encodeListLen 8
       <> toCBOR (_poolPubKey poolParams)
       <> toCBOR (_poolPledge poolParams)
-      <> toCBOR (_poolPledges poolParams)
       <> toCBOR (_poolCost poolParams)
       <> toCBOR (_poolMargin poolParams)
-      <> toCBOR (_poolAltAcnt poolParams)
       <> toCBOR (_poolRAcnt poolParams)
       <> toCBOR (_poolOwners poolParams)
 

@@ -48,7 +48,7 @@ epochTransition = do
     trans @(SNAP hashAlgo dsignAlgo) $ TRC ((pp, ds, ps, blocks), (ss, us), e)
   (as', ds', ps') <-
     trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, (as, ds, ps), e)
-  let ppNew = undefined -- TODO: result from votedValuePParams
+  let ppNew = Just pp -- TODO: result from votedValuePParams
   (us'', as'', pp') <-
     trans @(NEWPP hashAlgo dsignAlgo)
       $ TRC ((ppNew, ds', ps'), (us', as', pp), e)

@@ -6,6 +6,7 @@ import           Cardano.Crypto.KES (MockKES)
 
 import qualified BlockChain
 import qualified Delegation.Certificates
+import qualified EpochBoundary
 import qualified Keys
 import qualified LedgerState
 import qualified OCert
@@ -22,6 +23,8 @@ type Delegation = TxData.Delegation ShortHash MockDSIGN
 type PoolParams = TxData.PoolParams ShortHash MockDSIGN
 
 type RewardAcnt = TxData.RewardAcnt ShortHash MockDSIGN
+
+type StakePools = TxData.StakePools ShortHash MockDSIGN
 
 type KeyHash = Keys.KeyHash ShortHash MockDSIGN
 
@@ -85,6 +88,8 @@ type HashHeader = BlockChain.HashHeader ShortHash MockDSIGN MockKES
 
 type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
 
+type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
+
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
@@ -99,3 +104,5 @@ type ScriptHash = TxData.ScriptHash ShortHash MockDSIGN
 type WitVKey = TxData.WitVKey ShortHash MockDSIGN
 
 type Wdrl = TxData.Wdrl ShortHash MockDSIGN
+
+type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
