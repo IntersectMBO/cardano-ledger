@@ -13,14 +13,15 @@ module Cardano.Chain.Block.Validation
   ( updateBody
   , updateChainBlockOrBoundary
   , updateChainBoundary
-  , updateHeader
+  , epochTransition
+  , headerIsValid
   , updateBlock
   , BodyState(..)
   , BodyEnvironment(..)
+  , EpochEnvironment(..)
   , ChainValidationState(..)
   , initialChainValidationState
   , ChainValidationError
-  , HeaderEnvironment(..)
 
   -- * SigningHistory
   , SigningHistory(..)
@@ -79,7 +80,6 @@ import Cardano.Chain.Block.Header
   , HeaderHash
   , headerLength
   , headerProof
-  , headerSlot
   , wrapBoundaryBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
@@ -514,45 +514,21 @@ toNumGenKeys n
   | n > fromIntegral (maxBound :: Word8) = panic  "updateBody: Too many genesis keys"
   | otherwise = fromIntegral n
 
-data HeaderEnvironment = HeaderEnvironment
-  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
-  , k                 :: !BlockCount
-  , allowedDelegators :: !(Set KeyHash)
-  , delegationMap     :: !Delegation.Map
-  , lastSlot          :: !SlotNumber
-  }
 
-
--- | This is an implementation of the the BHEAD rule.
-updateHeader
+-- | This is an implementation of the headerIsValid function from the Byron
+--   chain specification
+headerIsValid
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
-  => HeaderEnvironment
-  -> UPI.State
+  => UPI.State
   -> AHeader ByteString
-  -> m UPI.State
-updateHeader env st h = do
+  -> m ()
+headerIsValid updateState h =
   -- Validate the header size
   headerLength h <= maxHeaderSize
     `orThrowErrorInBlockValidationMode`
       ChainValidationHeaderTooLarge maxHeaderSize (headerLength h)
-
-  -- Perform epoch transition
-  pure $! epochTransition epochEnv st (headerSlot h)
  where
-  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters st
-
-  HeaderEnvironment { protocolMagic, k, allowedDelegators, delegationMap, lastSlot }
-    = env
-
-  epochEnv = EpochEnvironment
-    { protocolMagic
-    , k
-    , allowedDelegators
-    , delegationMap
-    , currentEpoch
-    }
-
-  currentEpoch = slotNumberEpoch (kEpochSlots k) lastSlot
+  maxHeaderSize = Update.ppMaxHeaderSize $ UPI.adoptedProtocolParameters updateState
 
 
 data EpochEnvironment = EpochEnvironment
@@ -613,8 +589,11 @@ updateBlock config cvs b = do
         (blockProtocolMagicId b)
         (configProtocolMagicId config)
 
-  -- Update the header
-  updateState' <- updateHeader headerEnv (cvsUpdateState cvs) (blockHeader b)
+  -- Process a potential epoch transition
+  let updateState' = epochTransition epochEnv (cvsUpdateState cvs) (blockSlot b)
+
+  -- Process header by checking its validity
+  headerIsValid updateState' (blockHeader b)
 
   let
     bodyEnv = BodyEnvironment
@@ -643,12 +622,12 @@ updateBlock config cvs b = do
     , cvsDelegationState = delegationState
     }
  where
-  headerEnv = HeaderEnvironment
+  epochEnv = EpochEnvironment
     { protocolMagic = blockAProtocolMagicId b
-    , k          = configK config
+    , k = configK config
     , allowedDelegators
     , delegationMap
-    , lastSlot   = cvsLastSlot cvs
+    , currentEpoch = slotNumberEpoch (configEpochSlots config) (cvsLastSlot cvs)
     }
 
   allowedDelegators :: Set KeyHash
