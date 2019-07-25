@@ -114,7 +114,7 @@ module LedgerState
 import           Control.Monad (foldM)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Ratio
+import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Numeric.Natural (Natural)
@@ -123,21 +123,28 @@ import           Lens.Micro ((%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
 import           Coin (Coin (..))
-import           EpochBoundary
-import           Keys
+import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), baseStake, consolidate,
+                     emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake, rewardStake)
+import           Keys (DSIGNAlgorithm, Dms (..), HashAlgorithm, KeyHash, KeyPair, Signable, VKey,
+                     VKeyGenesis, hash, hashKey)
 import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, keyMinRefund,
                      minfeeA, minfeeB)
 import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
-import           Tx
-import           TxData
-import qualified Updates
-import           UTxO
+import           Tx (extractKeyHash)
+import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
+                     RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
+                     TxOut (..), WitVKey (..), body, certs, getRwdHK, inputs, poolOwners,
+                     poolPledge, poolPubKey, poolRAcnt, ttl, txfee, wdrls)
+import           Updates (AVUpdate (..), Applications, PPUpdate (..), Update (..), emptyUpdate,
+                     emptyUpdateState)
+import           UTxO (UTxO (..), balance, deposits, dom, txinLookup, txins, txouts, txup, union,
+                     verifyWitVKey, (</|), (<|))
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeKeys (..),
                      StakePools (..), cwitness, decayKey, refund)
-import           Delegation.PoolParams
+import           Delegation.PoolParams (poolSpec)
 
-import           BaseTypes
+import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkUnitInterval)
 
 import           Ledger.Core ((∪+), (▷), (◁))
 
@@ -273,7 +280,7 @@ emptyEpochState =
 emptyLedgerState :: LedgerState hashAlgo dsignAlgo
 emptyLedgerState =
   LedgerState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) Updates.emptyUpdateState)
+  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)
   emptyDelegation
   0
 
@@ -297,10 +304,10 @@ data UTxOState hashAlgo dsignAlgo =
     { _utxo      :: !(UTxO hashAlgo dsignAlgo)
     , _deposited :: Coin
     , _fees      :: Coin
-    , _ups       :: ( Updates.PPUpdate dsignAlgo
-                    , Updates.AVUpdate dsignAlgo
-                    , Map.Map Slot Updates.Applications
-                    , Updates.Applications)
+    , _ups       :: ( PPUpdate dsignAlgo
+                    , AVUpdate dsignAlgo
+                    , Map.Map Slot Applications
+                    , Applications)
     } deriving (Show, Eq)
 
 -- | New Epoch state and environment
@@ -360,7 +367,7 @@ genesisId =
    Map.empty
    (Coin 0)
    (Slot 0)
-   Updates.emptyUpdate)
+   emptyUpdate)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
@@ -381,7 +388,7 @@ genesisState outs = LedgerState
     (genesisCoins outs)
     (Coin 0)
     (Coin 0)
-    Updates.emptyUpdateState)
+    emptyUpdateState)
   emptyDelegation
   0
 
@@ -644,12 +651,12 @@ validRuleUTXOW tx d l = verifiedWits tx
 -- proposals.
 propWits
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Updates.Update dsignAlgo
+  => Update dsignAlgo
   -> Dms dsignAlgo
   -> Set.Set (KeyHash hashAlgo dsignAlgo)
-propWits (Updates.Update (Updates.PPUpdate pup) (Updates.AVUpdate aup)) (Dms _dms) =
+propWits (Update (PPUpdate pup) (AVUpdate aup')) (Dms _dms) =
   Set.fromList $ Map.elems $ Map.map hashKey updateKeys
-  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup) ◁ _dms
+  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _dms
 
 validTx
   :: ( HashAlgorithm hashAlgo

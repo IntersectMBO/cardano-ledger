@@ -28,7 +28,7 @@ module PParams
 
 import           Numeric.Natural (Natural)
 
-import           BaseTypes
+import           BaseTypes (Seed, UnitInterval, interval0, mkNonce)
 import           Coin (Coin (..))
 import           Slot (Epoch (..))
 

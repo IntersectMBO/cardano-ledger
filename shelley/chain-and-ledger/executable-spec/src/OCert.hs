@@ -7,10 +7,10 @@ module OCert
   , kesPeriod)
 where
 
-import           Cardano.Binary
+import           Cardano.Binary (ToCBOR, encodeListLen, toCBOR)
 
-import           Keys
-import qualified Slot
+import           Keys (DSIGNAlgorithm, KESAlgorithm, Sig, VKey, VKeyES)
+import           Slot (Slot (..))
 
 import           Numeric.Natural (Natural)
 
@@ -45,5 +45,5 @@ instance
 slotsPerKESPeriod :: Natural
 slotsPerKESPeriod = 90
 
-kesPeriod :: Slot.Slot -> KESPeriod
-kesPeriod (Slot.Slot s) = KESPeriod $ s `div` slotsPerKESPeriod
+kesPeriod :: Slot -> KESPeriod
+kesPeriod (Slot s) = KESPeriod $ s `div` slotsPerKESPeriod

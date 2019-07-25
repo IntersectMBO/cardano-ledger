@@ -8,9 +8,9 @@ module Delegation.PoolParams
 
 import           Lens.Micro ((^.))
 
-import           BaseTypes
+import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           TxData
+import           TxData (PoolParams, poolCost, poolMargin, poolPledge)
 
 poolSpec :: PoolParams hashAlgo dsignAlgo -> (Coin, UnitInterval, Coin)
 poolSpec pool = (pool ^. poolCost, pool ^. poolMargin, pool ^. poolPledge)

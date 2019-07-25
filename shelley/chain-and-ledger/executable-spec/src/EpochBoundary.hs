@@ -30,19 +30,19 @@ module EpochBoundary
   , groupByPool
   ) where
 
-import           Coin
+import           Coin (Coin (..))
 import           Delegation.Certificates (StakeKeys (..), StakePools (..), decayKey, decayPool,
                      refund)
-import           Keys
-import           PParams hiding (a0, nOpt)
-import           Slot
-import           Tx
-import           TxData
-import           UTxO hiding (dom)
+import           Keys (KeyHash)
+import           PParams (PParams (..))
+import           Slot (Epoch, Slot, slotFromEpoch, (-*))
+import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
+                     getRwdHK)
+import           UTxO (UTxO (..))
 
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
-import           Data.Ratio
+import           Data.Ratio ((%))
 import qualified Data.Set as Set
 
 import           Numeric.Natural (Natural)
