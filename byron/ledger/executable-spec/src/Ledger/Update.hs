@@ -50,8 +50,8 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
-                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
-                     minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, skey, (*.),
+                     (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 
@@ -1446,15 +1446,10 @@ instance STS PVBUMP where
   transitionRules =
     [ do
         TRC ((s_n, fads, k), (pv, pps), ()) <- judgmentContext
-        let
-          mFirstStableSlot = minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ k)
-          r = case mFirstStableSlot of
-                Nothing -> []
-                Just s  -> filter ((<= s) . fst) fads
-        if r == []
-          then pure $! (pv, pps)
-          else do
-            let (_, (pv_c, pps_c)) = last r
+        case s_n  -. 2 *. k <=◁ fads of
+          [] ->
+            pure $! (pv, pps)
+          (_s, (pv_c, pps_c)): _xs ->
             pure $! (pv_c, pps_c)
     ]
 

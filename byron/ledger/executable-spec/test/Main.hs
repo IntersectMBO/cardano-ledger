@@ -13,7 +13,7 @@ import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
 import qualified Ledger.Core.Generators.Properties as CoreGen
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
-import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, lastProposal)
+import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, firstProposal)
 import           Ledger.Relation.Properties (testRelation)
 import qualified Ledger.Update.Properties as UPDATE
 import           Ledger.UTxO.Properties (moneyIsConstant)
@@ -42,7 +42,7 @@ main = defaultMain tests
       "PVBUMP properties"
       [ testProperty "Same state for no updates"         emptyPVUpdate
       , testProperty "Same state for early on in chain"  beginningsNoUpdate
-      , testProperty "State determined by last proposal" lastProposal
+      , testProperty "State determined by first proposal" firstProposal
       ]
     , testGroup
       "UTxO properties"

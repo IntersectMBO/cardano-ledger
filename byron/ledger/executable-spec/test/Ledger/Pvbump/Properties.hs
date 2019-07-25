@@ -2,12 +2,12 @@
 
 module Ledger.Pvbump.Properties where
 
-import           Control.State.Transition (applySTS, TRC(..))
+import           Control.State.Transition (TRC (..), applySTS)
 import           Data.Maybe (fromMaybe)
-import           Ledger.Update.Generators
 import           Hedgehog
-import           Ledger.Core (BlockCount(..), SlotCount(..), minusSlotMaybe)
+import           Ledger.Core (BlockCount (..), SlotCount (..), minusSlotMaybe)
 import           Ledger.Update (PVBUMP)
+import           Ledger.Update.Generators
 
 
 -- Property #1 for the PVBUMP STS
@@ -47,11 +47,11 @@ beginningsNoUpdate = property $ do
 -- Property #3 for the PVBUMP STS
 --
 -- For s_n > 2 * k, the resulting state is exclusively determined by
--- the last pair from the list comprising a new protocol version and
+-- the first pair from the list comprising a new protocol version and
 -- protocol parameters, where the list has at least one pair for a
 -- slot s > 2 * k.
-lastProposal :: Property
-lastProposal = property $ do
+firstProposal :: Property
+firstProposal = property $ do
   judgementContext <-
     forAll $ fmap TRC $ (,,)
       <$> pvbumpAfter2kEnvGen
@@ -63,7 +63,7 @@ lastProposal = property $ do
       (error
         "An improper slot generator used! Constraint violated: s_n > 2*k")
       (minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ k))
-    expectedSt = snd . last . (filter ((<= s) . fst)) $ fads
+    expectedSt = snd . head . (filter ((<= s) . fst)) $ fads
 
   case applySTS @PVBUMP $ judgementContext of
     Right st' -> expectedSt === st'
