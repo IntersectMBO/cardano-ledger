@@ -145,11 +145,11 @@ genTx keyList (UTxO m) cslot = do
   txttl <- genNatural 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
-           ((\r -> TxOut r perReceipient) <$> receipientAddrs)
+           ((`TxOut` perReceipient) <$> receipientAddrs)
            []
            Map.empty -- TODO generate witdrawals
            txfee'
-           (cslot + (Slot txttl))
+           (cslot + Slot txttl)
            emptyUpdate
   let !txwit = makeWitnessVKey txbody selectedKeyPair
   pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty)
@@ -232,13 +232,13 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
 findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
-    fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+    fst $ head $ filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair
 findStakeKeyPair (KeyHashObj hk) keyList =
-    snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
+    snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
@@ -301,11 +301,11 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
+  RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
+    DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do

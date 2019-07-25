@@ -17,7 +17,7 @@ import           Lens.Micro ((%~), (&), (.~), (^.))
 import           Coin
 import           Delegation.Certificates
 import           Keys
-import           LedgerState hiding (dms)
+import           LedgerState
 import           PParams
 import           Slot
 import           Tx

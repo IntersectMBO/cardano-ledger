@@ -1,8 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 {-|
 Module      : UTxO
@@ -191,14 +188,14 @@ scriptsNeeded
   -> Tx hashAlgo dsignAlgo
   -> Set (ScriptHash hashAlgo dsignAlgo)
 scriptsNeeded u tx =
-  (Set.fromList $ Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
   `Set.union`
-  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
-        UTxO u'' = (txinsScript (txins $ _body tx) u) <| u
+        UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = _certs $ _body tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
@@ -209,7 +206,7 @@ txinsScript
   -> Set (TxIn hashAlgo dsignAlgo)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  (Map.keysSet $ Map.filter (\(TxOut a _) ->
+  Map.keysSet (Map.filter (\(TxOut a _) ->
                                case a of
                                  AddrBase (ScriptHashObj _) _     -> True
                                  AddrEnterprise (ScriptHashObj _) -> True

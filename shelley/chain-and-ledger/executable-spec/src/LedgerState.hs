@@ -423,7 +423,7 @@ minfee
   => PParams
   -> TxBody hashAlgo dsignAlgo
   -> Coin
-minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + (fromIntegral $ pc ^. minfeeB)
+minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
 validFee
@@ -575,7 +575,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners | RegPool pool <- txbody ^. certs]
     certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (txbody ^. certs))
-    getCertHK cert = cwitness cert
+    getCertHK = cwitness
     updateKeys = propWits (txup tx) _dms
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
@@ -871,21 +871,21 @@ applyDCert
   -> DPState hashAlgo dsignAlgo
 
 applyDCert ptr dcert@(RegKey _) ds =
-  ds & dstate %~ (applyDCertDState ptr dcert)
+  ds & dstate %~ applyDCertDState ptr dcert
 
 applyDCert ptr dcert@(DeRegKey _) ds =
-  ds & dstate %~ (applyDCertDState ptr dcert)
+  ds & dstate %~ applyDCertDState ptr dcert
 
-applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ (applyDCertPState ptr dcert)
+applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ applyDCertPState ptr dcert
 
 applyDCert ptr dcert@(RetirePool _ _) ds =
-  ds & pstate %~ (applyDCertPState ptr dcert)
+  ds & pstate %~ applyDCertPState ptr dcert
 
 applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
 
 -- TODO do we also have to check hashKey target?
 applyDCert ptr dcert@(Delegate _) ds =
-  ds & dstate %~ (applyDCertDState ptr dcert)
+  ds & dstate %~ applyDCertDState ptr dcert
 
 applyDCertDState
   :: Ptr
@@ -967,8 +967,8 @@ poolRewards
 poolRewards _ sigma blocksN blocksTotal (Coin maxP) =
   floor $ p * fromIntegral maxP
   where
-    p = beta / (intervalValue sigma)
-    beta = fromIntegral blocksN / (fromIntegral $ max 1 blocksTotal)
+    p = beta / intervalValue sigma
+    beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
 
 -- | Calculate pool leader reward
 leaderRew
@@ -1071,7 +1071,7 @@ stakeDistr
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
-stakeDistr u ds ps = Stake $ (Map.keysSet activeDelegs) ◁ stake
+stakeDistr u ds ps = Stake $ Map.keysSet activeDelegs ◁ stake
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _                   = ps
@@ -1080,7 +1080,7 @@ stakeDistr u ds ps = Stake $ (Map.keysSet activeDelegs) ◁ stake
       Stake baseStake'   = baseStake outs
       Stake pointerStake = ptrStake outs ptrs'
       Stake rewardStake' = rewardStake rewards'
-      activeDelegs       = (Map.keysSet stkeys) ◁ delegs ▷ (Map.keysSet stpools)
+      activeDelegs       = Map.keysSet stkeys ◁ delegs ▷ Map.keysSet stpools
 
 -- | Pool distribution
 poolDistr
@@ -1104,8 +1104,8 @@ applyRUpd ru (EpochState as ss ls pp) = es'
   where treasury' = _treasury as + deltaT ru
         reserves' = _reserves as + deltaR ru
         rew       = _rewards $ _dstate $ _delegationState ls
-        rewards'  = rew ∪+ (rs ru)
-        fees'     = (_fees $ _utxoState ls) + deltaF ru
+        rewards'  = rew ∪+ rs ru
+        fees'     = _fees (_utxoState ls) + deltaF ru
         dstate'   = _dstate $ _delegationState ls
         utxo'     = _utxoState ls
         ls'       =
@@ -1124,9 +1124,9 @@ createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
   RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
   where Coin reserves' = _reserves acnt
         deltaR' =
-          floor $ min 1 eta * (intervalValue $ _rho pp) * fromIntegral reserves'
-        Coin totalPot = (_feeSS ss) + deltaR'
-        deltaT1 = floor $ (intervalValue $ _tau pp) * fromIntegral totalPot
+          floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'
+        Coin totalPot = _feeSS ss + deltaR'
+        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral totalPot
         r@(Coin r') = Coin $ totalPot - deltaT1
         rewards' = _rewards $ _dstate $ _delegationState ls
         (stake', delegs') = _pstakeGo ss
@@ -1135,8 +1135,8 @@ createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
         rs' = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' stake' delegs'
         Coin c' = Map.foldr (+) (Coin 0) rs'
         blocksMade = fromIntegral $ Map.foldr (+) 0 b :: Integer
-        expectedBlocks = (intervalValue $ _activeSlotCoeff pp) * fromIntegral slotsPerEpoch
-        eta = (fromIntegral blocksMade) / expectedBlocks
+        expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
+        eta = fromIntegral blocksMade / expectedBlocks
 
 -- | Overlay schedule
 overlaySchedule

@@ -85,11 +85,11 @@ utxoWitnessed = do
   -- check multi-signature scripts
   let utxo' = _utxo u
 
-  (all (\(hs, validator) -> hashScript validator == hs
-      && validateScript validator tx) $ Map.toList $ txwitsScript tx)
+  all (\(hs, validator) -> hashScript validator == hs
+      && validateScript validator tx) (Map.toList $ txwitsScript tx)
     ?!ScriptWitnessNotValidatingUTXOW
 
-  scriptsNeeded utxo' tx == (Map.keysSet $ txwitsScript tx)
+  scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo)

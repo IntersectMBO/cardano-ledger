@@ -37,7 +37,7 @@ instance STS (NEWPP hashAlgo dsignAlgo) where
 
 initialNewPp :: InitialRule (NEWPP hashAlgo dsignAlgo)
 initialNewPp = pure
-  ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) (emptyUpdateState)
+  ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
   , emptyAccount
   , emptyPParams
   )
@@ -63,17 +63,9 @@ newPpTransition = do
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
           in  -- TODO: update mechanism
               let acnt' = acnt { _reserves = Coin $ reserves + diff }
-                                       in  pure $ (utxoSt', acnt', ppNew')
+                                       in  pure (utxoSt', acnt', ppNew')
         else
-          pure
-            $ ( (if reserves
-                     +  diff
-                     <  0
-                     || (_maxTxSize ppNew' + _maxBHSize ppNew')
-                     >= _maxBBSize ppNew'
-                  then utxoSt -- TODO update mechanism
-                  else utxoSt
-                )
+          pure ( utxoSt
               , acnt
               , pp
               )

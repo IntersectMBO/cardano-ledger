@@ -59,7 +59,7 @@ bheadTransition = do
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
-    $ TRC ((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
+    $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
   ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), ru, slot)
   let nes'' = nes' { nesRu = ru' }
