@@ -35,11 +35,17 @@ type KeyPairs = LedgerState.KeyPairs MockDSIGN
 
 type VKeyGenesis = Keys.VKeyGenesis MockDSIGN
 
+type EpochState = LedgerState.EpochState ShortHash MockDSIGN
+
 type LedgerState = LedgerState.LedgerState ShortHash MockDSIGN
 
 type LedgerValidation = LedgerState.LedgerValidation ShortHash MockDSIGN
 
 type UTxOState = LedgerState.UTxOState ShortHash MockDSIGN
+
+type DState = LedgerState.DState ShortHash MockDSIGN
+
+type PState = LedgerState.PState ShortHash MockDSIGN
 
 type DPState = LedgerState.DPState ShortHash MockDSIGN
 
