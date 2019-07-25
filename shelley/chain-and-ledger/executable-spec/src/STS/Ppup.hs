@@ -1,15 +1,15 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Ppup
   ( PPUP
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           BlockChain
 import           Keys

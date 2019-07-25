@@ -1,31 +1,29 @@
+{-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE DoAndIfThenElse #-}
 
 module PropertyTests (propertyTests) where
 
-import qualified Data.Map.Strict         as Map
-import           Data.MultiSet           (unions, fromSet, occur, filter, size)
-import qualified Data.Set                as Set
+import qualified Data.Map.Strict as Map
+import           Data.MultiSet (filter, fromSet, occur, size, unions)
+import qualified Data.Set as Set
 
-import           Lens.Micro              ((^.), (&), (%~), (.~))
+import           Lens.Micro ((%~), (&), (.~), (^.))
 
+import           Hedgehog.Internal.Property (LabelName (..))
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
-import           Hedgehog.Internal.Property (LabelName(..))
 
 import           Hedgehog
-import qualified Hedgehog.Gen    as Gen
+import qualified Hedgehog.Gen as Gen
 
 import           Coin
 import           LedgerState hiding (dms)
-import           Slot
 import           PParams
-import           Tx (pattern TxIn, pattern TxOut, _body, _witnessVKeySet, body
-                    , certs, inputs, outputs, witnessVKeySet)
-import           UTxO ( (<|),
-                     balance, deposits, makeWitnessVKey,
-                     txid, txins, txouts, verifyWitVKey)
+import           Slot
+import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
+                     _body, _witnessVKeySet)
+import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey, (<|))
 
 import           Generator
 import           MockTypes

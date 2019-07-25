@@ -1,14 +1,14 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Avup
   ( AVUP
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           BlockChain
 import           Keys

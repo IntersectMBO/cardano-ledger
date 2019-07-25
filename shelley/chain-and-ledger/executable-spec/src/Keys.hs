@@ -38,42 +38,22 @@ module Keys
   )
 where
 
-import           Crypto.Random         (drgNewSeed, seedFromInteger, withDRG)
-import           Data.Maybe            (fromJust)
-import           Data.Typeable         (Typeable)
-import           Numeric.Natural       (Natural)
+import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
+import           Data.Maybe (fromJust)
+import           Data.Typeable (Typeable)
+import           Numeric.Natural (Natural)
 
-import qualified Data.Map.Strict       as Map
-import qualified Data.Set              as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
-import           Cardano.Binary        (ToCBOR(toCBOR))
-import           Cardano.Crypto.DSIGN  ( DSIGNAlgorithm
-                                         ( Signable
-                                         , SignKeyDSIGN
-                                         , VerKeyDSIGN
-                                         , encodeSigDSIGN
-                                         , encodeVerKeyDSIGN
-                                         )
-                                       , SignedDSIGN(SignedDSIGN)
-                                       , signedDSIGN
-                                       , verifySignedDSIGN
-                                       )
-import           Cardano.Crypto.Hash   ( Hash
-                                       , HashAlgorithm
-                                       , hash
-                                       , hashWithSerialiser
-                                       )
-import qualified Cardano.Crypto.KES    as KES
-import           Cardano.Crypto.KES    ( KESAlgorithm
-                                         ( SignKeyKES
-                                         , VerKeyKES
-                                         , encodeVerKeyKES
-                                         , encodeSigKES
-                                         )
-                                       , SignedKES(SignedKES)
-                                       , signedKES
-                                       , verifySignedKES
-                                       )
+import           Cardano.Binary (ToCBOR (toCBOR))
+import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeSigDSIGN, encodeVerKeyDSIGN),
+                     SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
+import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
+import           Cardano.Crypto.KES
+                     (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
+                     SignedKES (SignedKES), signedKES, verifySignedKES)
+import qualified Cardano.Crypto.KES as KES
 
 newtype SKey dsignAlgo = SKey (SignKeyDSIGN dsignAlgo)
 

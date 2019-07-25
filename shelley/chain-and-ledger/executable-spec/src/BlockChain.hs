@@ -29,12 +29,12 @@ module BlockChain
   )
 where
 
-import qualified Data.ByteString.Char8         as BS
-import           Numeric.Natural                ( Natural )
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Map.Strict as Map
 import           Data.Ratio
-import qualified Data.Map.Strict               as Map
+import           Numeric.Natural (Natural)
 
-import           Cardano.Binary           (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 import           BaseTypes
 import           Delegation.Certificates
@@ -44,7 +44,7 @@ import           OCert
 import qualified Slot
 import           Tx
 
-import           NonIntegral                    ( (***) )
+import           NonIntegral ((***))
 
 -- |The hash of a Block Header
 newtype HashHeader hashAlgo dsignAlgo kesAlgo =

@@ -1,4 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -138,7 +139,7 @@ import           Delegation.PoolParams
 
 import           BaseTypes
 
-import           Ledger.Core ((◁), (▷), (∪+))
+import           Ledger.Core ((∪+), (▷), (◁))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs dsignAlgo = [(KeyPair dsignAlgo, KeyPair dsignAlgo)]

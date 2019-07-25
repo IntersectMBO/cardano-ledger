@@ -21,7 +21,7 @@ module BaseTypes
 import qualified Data.Fixed as FP
 import           Data.Word (Word8)
 
-import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 data E34
 

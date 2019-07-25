@@ -3,40 +3,36 @@
 
 module UnitTests (unitTests) where
 
-import           Control.Monad           (foldM)
-import           Data.Map.Strict         (Map)
-import qualified Data.Map.Strict         as Map
-import qualified Data.Set                as Set
-import           Data.Maybe              (fromMaybe)
+import           Control.Monad (foldM)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 
-import           Lens.Micro              ((^.), (&), (.~))
+import           Lens.Micro ((&), (.~), (^.))
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Address
-import           TxData (pattern AddrBase, pattern Ptr, Credential(..),
-                         Delegation (..), pattern PoolParams, pattern RewardAcnt,
-                         _poolAltAcnt, _poolCost, _poolMargin, _poolOwners,
-                         _poolPubKey, _poolPledge, _poolPledges, _poolRAcnt)
 import           BaseTypes
 import           Coin
-import           Delegation.Certificates (pattern Delegate, pattern RegKey,
-                     pattern RegPool, pattern RetirePool, StakePools(..),
-                     StakeKeys(..))
+import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
+                     pattern RetirePool, StakeKeys (..), StakePools (..))
+import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
+                     pattern Ptr, pattern RewardAcnt, _poolAltAcnt, _poolCost, _poolMargin,
+                     _poolOwners, _poolPledge, _poolPledges, _poolPubKey, _poolRAcnt)
 
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerState, pattern UTxOState,
-                     ValidationError(..), _delegationState, _dms, _dstate,
-                     asStateTransition, delegations, delegationState, dstate,
-                     emptyDelegation, genesisId, genesisState, minfee, pParams,
-                     pstate, ptrs, retiring, rewards, stKeys, stPools)
+import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
+                     asStateTransition, delegationState, delegations, dstate, emptyDelegation,
+                     genesisId, genesisState, minfee, pParams, pstate, ptrs, retiring, rewards,
+                     stKeys, stPools, _delegationState, _dms, _dstate)
 import           PParams
 import           Slot
+import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
 import           Updates
-import           UTxO
-                     (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
-import           Tx (pattern TxBody, pattern TxIn, pattern TxOut, pattern Tx, body, ttl)
+import           UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
 import           MockTypes
 

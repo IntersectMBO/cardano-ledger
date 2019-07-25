@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -38,20 +38,20 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
-import           Data.Map.Strict         (Map)
-import qualified Data.Map.Strict         as Map
-import qualified Data.Maybe              as Maybe
-import           Data.Set                (Set)
-import qualified Data.Set                as Set
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
-import           Coin                    (Coin (..))
+import           Coin (Coin (..))
 import           Keys
-import           PParams                 (PParams(..))
-import           Updates                 (Update)
+import           PParams (PParams (..))
 import           Tx
 import           TxData
+import           Updates (Update)
 
-import           Delegation.Certificates (StakePools(..), DCert (..), dvalue, cwitness)
+import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo

@@ -1,5 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Slot
   ( Slot(..)
@@ -16,21 +17,32 @@ module Slot
   , slotShelleyToByron
   ) where
 
-import           Data.Monoid             (Sum(..))
-import           Numeric.Natural         (Natural)
+import           Numeric.Natural (Natural)
 
-import           Cardano.Binary          (ToCBOR)
+import           Cardano.Binary (ToCBOR)
 
-import qualified Ledger.Core           as Byron (Slot(..))
+import qualified Ledger.Core as Byron (Slot (..))
 
 -- |A Slot
 newtype Slot = Slot Natural
   deriving (Show, Eq, Ord, Num, ToCBOR)
-  deriving (Semigroup, Monoid) via (Sum Natural)
+
+instance Semigroup Slot where
+  (Slot x) <> (Slot y) = Slot $ x + y
+
+instance Monoid Slot where
+  mempty = Slot 0
+  mappend = (<>)
 
 newtype Duration = Duration Natural
   deriving (Show, Eq, Ord, Num, Integral, Real, Enum)
-  deriving (Semigroup, Monoid) via (Sum Natural)
+
+instance Semigroup Duration where
+  (Duration x) <> (Duration y) = Duration $ x + y
+
+instance Monoid Duration where
+  mempty = Duration 0
+  mappend = (<>)
 
 (-*) :: Slot -> Slot -> Duration
 (Slot s) -* (Slot t) = Duration (if s > t then s - t else t - s)
@@ -45,7 +57,13 @@ newtype Duration = Duration Natural
 -- |An Epoch
 newtype Epoch = Epoch Natural
   deriving (Show, Eq, Ord, ToCBOR)
-  deriving (Semigroup, Monoid) via (Sum Natural)
+
+instance Semigroup Epoch where
+  (Epoch x) <> (Epoch y) = Epoch $ x + y
+
+instance Monoid Epoch where
+  mempty = Epoch 0
+  mappend = (<>)
 
 slotFromEpoch :: Epoch -> Slot
 slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n

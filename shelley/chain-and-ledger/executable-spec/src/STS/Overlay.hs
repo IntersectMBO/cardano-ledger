@@ -1,17 +1,18 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Overlay
   ( OVERLAY
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import           Numeric.Natural                ( Natural )
+import qualified Data.Map.Strict as Map
+import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
