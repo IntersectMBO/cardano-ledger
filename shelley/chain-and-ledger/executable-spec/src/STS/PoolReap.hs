@@ -1,25 +1,25 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.PoolReap
   ( POOLREAP
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
-import           Lens.Micro                     ((^.))
+import           Lens.Micro ((^.))
 
+import           Coin
+import           Delegation.Certificates
 import           LedgerState
 import           PParams
 import           Slot
-import           Delegation.Certificates
-import           Coin
 
 import           Control.State.Transition
 
-import           Ledger.Core ((◁), (⋪), (∪+))
+import           Ledger.Core ((∪+), (⋪), (◁))
 
 data POOLREAP hashAlgo dsignAlgo
 

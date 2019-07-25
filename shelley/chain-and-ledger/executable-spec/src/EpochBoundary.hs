@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 {-|
 Module      : EpochBoundary
@@ -31,8 +31,8 @@ module EpochBoundary
   ) where
 
 import           Coin
-import           Delegation.Certificates (StakeKeys (..), StakePools (..),
-                                          decayKey, decayPool, refund)
+import           Delegation.Certificates (StakeKeys (..), StakePools (..), decayKey, decayPool,
+                     refund)
 import           Keys
 import           PParams hiding (a0, nOpt)
 import           Slot
@@ -40,16 +40,16 @@ import           Tx
 import           TxData
 import           UTxO hiding (dom)
 
-import qualified Data.Map.Strict         as Map
-import           Data.Maybe              (mapMaybe)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (mapMaybe)
 import           Data.Ratio
-import qualified Data.Set                as Set
+import qualified Data.Set as Set
 
-import           Numeric.Natural         (Natural)
+import           Numeric.Natural (Natural)
 
-import           Lens.Micro.TH           (makeLenses)
+import           Lens.Micro.TH (makeLenses)
 
-import           Ledger.Core ((◁), (▷), dom)
+import           Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
 newtype BlocksMade hashAlgo dsignAlgo

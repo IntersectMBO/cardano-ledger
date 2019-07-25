@@ -18,13 +18,12 @@ module Updates
   )
 where
 
-import           Data.ByteString                  (ByteString)
-import qualified Data.Map.Strict               as Map
-import qualified Data.List                     as List
-                                                ( group )
+import           Data.ByteString (ByteString)
+import qualified Data.List as List (group)
+import qualified Data.Map.Strict as Map
 import           Data.Word (Word8)
 
-import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 import           BaseTypes
 import           Coin

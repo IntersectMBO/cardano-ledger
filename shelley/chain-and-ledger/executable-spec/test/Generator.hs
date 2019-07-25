@@ -22,33 +22,31 @@ module Generator
     ) where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set        as Set
-import Data.Ratio
+import           Data.Ratio
+import qualified Data.Set as Set
 
-import           Lens.Micro              ((^.))
+import           Lens.Micro ((^.))
 
 import           Numeric.Natural
 
 import           Hedgehog
-import qualified Hedgehog.Gen    as Gen
-import qualified Hedgehog.Range  as Range
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern Delegation,
-                         pattern PoolParams, RewardAcnt(..), pattern Delegate,
-                         pattern DeRegKey, pattern RegKey, pattern RegPool,
-                         pattern RetirePool, StakeKeys(..))
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerValidation, ValidationError (..),
-                     _delegationState, _dstate, asStateTransition,
-                     asStateTransition', genesisState, DState(..), utxoState,
-                     utxo, dstate, stKeys)
+import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
+                     asStateTransition, asStateTransition', dstate, genesisState, stKeys, utxo,
+                     utxoState, _delegationState, _dstate)
+import           PParams (PParams (..), emptyPParams)
 import           Slot
+import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
+import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
+                     pattern KeyHashObj, pattern PoolParams, pattern RegKey, pattern RegPool,
+                     pattern RetirePool, RewardAcnt (..), StakeKeys (..))
 import           Updates
-import           Tx(pattern Tx, pattern TxBody, pattern TxOut)
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
-import           PParams (PParams(..), emptyPParams)
 
 import           MockTypes
 import           Mutator

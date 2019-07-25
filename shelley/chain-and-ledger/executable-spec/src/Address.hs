@@ -5,7 +5,7 @@ module Address
   )
 where
 
-import           Cardano.Crypto.Hash   (HashAlgorithm)
+import           Cardano.Crypto.Hash (HashAlgorithm)
 
 import           Keys
 import           TxData

@@ -1,22 +1,22 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Newpp
   ( NEWPP
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import qualified Data.Map.Strict as Map
 
-import           Lens.Micro                     ( (^.) )
+import           Lens.Micro ((^.))
 
+import           Coin
 import           EpochBoundary
 import           LedgerState hiding (reserves)
 import           PParams
 import           Slot
 import           Updates
 import           UTxO
-import           Coin
 
 import           Control.State.Transition
 

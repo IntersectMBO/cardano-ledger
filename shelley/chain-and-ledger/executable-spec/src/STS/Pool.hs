@@ -1,12 +1,12 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Pool
   ( POOL
   )
 where
 
-import           Lens.Micro                     ( (^.) )
+import           Lens.Micro ((^.))
 
 import           Delegation.Certificates
 import           Keys

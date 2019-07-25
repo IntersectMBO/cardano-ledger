@@ -1,17 +1,17 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Delpl
   ( DELPL
   )
 where
 
+import           Delegation.Certificates
 import           Keys
 import           LedgerState
-import           Delegation.Certificates
 import           PParams hiding (d)
 import           Slot
 import           TxData

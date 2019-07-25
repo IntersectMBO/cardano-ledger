@@ -1,4 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,13 +10,9 @@ module STS.Utxo
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import qualified Data.Map.Strict as Map
 
-import           Lens.Micro                     ( (%~)
-                                                , (&)
-                                                , (^.)
-                                                , (.~)
-                                                )
+import           Lens.Micro ((%~), (&), (.~), (^.))
 
 import           Coin
 import           Delegation.Certificates

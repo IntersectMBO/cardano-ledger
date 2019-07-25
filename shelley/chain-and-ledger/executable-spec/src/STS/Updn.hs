@@ -1,5 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Updn
   ( UPDN

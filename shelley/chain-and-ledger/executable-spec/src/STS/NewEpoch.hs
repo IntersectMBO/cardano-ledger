@@ -1,17 +1,16 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.NewEpoch
   ( NEWEPOCH
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Maybe                    as Maybe
-                                                ( fromMaybe )
+import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (fromMaybe)
 
 import           BaseTypes
 import           Coin

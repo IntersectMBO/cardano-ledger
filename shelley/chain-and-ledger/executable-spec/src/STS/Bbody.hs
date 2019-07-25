@@ -1,17 +1,18 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Bbody
   ( BBODY
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           BlockChain
 import           EpochBoundary
