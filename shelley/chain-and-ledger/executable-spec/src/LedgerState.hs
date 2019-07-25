@@ -127,9 +127,10 @@ import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), bas
                      emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake, rewardStake)
 import           Keys (DSIGNAlgorithm, Dms (..), HashAlgorithm, KeyHash, KeyPair, Signable, VKey,
                      VKeyGenesis, hash, hashKey)
-import           PParams (PParams (..), emptyPParams, keyDecayRate, keyDeposit, keyMinRefund,
-                     minfeeA, minfeeB)
-import           Slot (Epoch (..), Slot (..), epochFromSlot, firstSlot, slotsPerEpoch, (-*))
+import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
+                     keyMinRefund, minfeeA, minfeeB)
+import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firstSlot,
+                     slotsPerEpoch, (+*), (-*))
 import           Tx (extractKeyHash)
 import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
                      RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
@@ -610,8 +611,8 @@ enoughWits
   -> Dms dsignAlgo
   -> UTxOState hashAlgo dsignAlgo
   -> Validity
-enoughWits tx@(Tx _ wits _) d u =
-  if witsVKeyNeeded (u ^. utxo) tx d `Set.isSubsetOf` signers
+enoughWits tx@(Tx _ wits _) d' u =
+  if witsVKeyNeeded (u ^. utxo) tx d' `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
@@ -644,8 +645,8 @@ validRuleUTXOW
   -> Dms dsignAlgo
   -> LedgerState hashAlgo dsignAlgo
   -> Validity
-validRuleUTXOW tx d l = verifiedWits tx
-                   <> enoughWits tx d (l ^. utxoState)
+validRuleUTXOW tx d' l = verifiedWits tx
+                   <> enoughWits tx d' (l ^. utxoState)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
@@ -669,7 +670,7 @@ validTx
   -> PParams
   -> LedgerState hashAlgo dsignAlgo
   -> Validity
-validTx tx d slot pp l =
+validTx tx d' slot pp l =
     validRuleUTXO  (l ^. delegationState . dstate . rewards)
                    (l ^. delegationState . pstate . stPools)
                    (l ^. delegationState . dstate . stKeys)
@@ -677,7 +678,7 @@ validTx tx d slot pp l =
                    slot
                    (tx ^. body)
                    (l ^. utxoState)
- <> validRuleUTXOW tx d l
+ <> validRuleUTXOW tx d' l
 
 -- The rules for checking validiy of stake delegation transitions return
 -- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
@@ -762,8 +763,8 @@ asStateTransition
   -> Tx hashAlgo dsignAlgo
   -> Dms dsignAlgo
   -> Either [ValidationError] (LedgerState hashAlgo dsignAlgo)
-asStateTransition slot pp ls tx d =
-  case validTx tx d slot pp ls of
+asStateTransition slot pp ls tx d' =
+  case validTx tx d' slot pp ls of
     Invalid errors -> Left errors
     Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
       where
@@ -798,9 +799,9 @@ asStateTransition'
   -> Tx hashAlgo dsignAlgo
   -> Dms dsignAlgo
   -> LedgerValidation hashAlgo dsignAlgo
-asStateTransition' slot pp (LedgerValidation valErrors ls) tx d =
+asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
     let ls' = applyTxBody ls pp (tx ^. body) in
-    case validTx tx d slot pp ls of
+    case validTx tx d' slot pp ls of
       Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
       Valid          -> LedgerValidation valErrors ls'
 
@@ -1146,12 +1147,38 @@ createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
         eta = fromIntegral blocksMade / expectedBlocks
 
 -- | Overlay schedule
+-- This is just a very simple round-robin, evenly spaced schedule.
+-- The real implementation should probably use randomization.
 overlaySchedule
-  :: Set (VKeyGenesis dsignAlgo)
+  :: Epoch
+  -> Set (VKeyGenesis dsignAlgo)
   -> Seed
   -> PParams
   -> Map.Map Slot (Maybe (VKeyGenesis dsignAlgo))
-overlaySchedule = undefined
+overlaySchedule e gkeys _ pp = Map.union active inactive
+  where
+    numActive = floor $ dval * fromIntegral slotsPerEpoch
+    dval = intervalValue $ pp ^. d
+    dInv = 1 / dval
+    asc = intervalValue $ pp ^. activeSlotCoeff
+
+    toRelativeSlot x = (Duration . floor) (dInv * fromInteger x)
+    toSlot x = firstSlot e +* toRelativeSlot x
+
+    genesisSlots = [ toSlot x | x <-[0..numActive] ]
+
+    numInactivePerActive = floor (fromRational (asc * (numActive % 1)) :: Rational) - 1
+    activitySchedule =  cycle (True:replicate numInactivePerActive False)
+    unassignedSched = zip activitySchedule genesisSlots
+
+    active =
+      Map.fromList $ fmap
+        (\(gk,(_,s))->(s, Just gk))
+        (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
+    inactive =
+      Map.fromList $ fmap
+        (\x -> (snd x, Nothing))
+        (filter (not . fst) unassignedSched)
 
 -- | Set issue numbers
 setIssueNumbers
