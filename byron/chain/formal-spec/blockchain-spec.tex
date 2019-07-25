@@ -811,22 +811,11 @@ of block bodies.
 
 \subsection{Block header processing}
 
-Figure \ref{fig:ts-types:bhead} gives the transition system types for block
-header processing. The $\maxheadersize{}$ protocol parameter is defined in
-\cite{byron_ledger_spec}. The header state contains the current update state
-and historical epoch length map, which must be updated along the epoch
-boundary. Figure \ref{fig:rules:bhead} gives the corresponding transition
-rules. During header processing we verify the following things:
-
-\begin{enumerate}
-  \item We compute whether this block is the first block in a new epoch.
-    If so, we apply the epoch transition updates. Unlike other cases, we use the
-    resulting update state in all downstream verification for this block, since
-    the epoch transition is not contingent on the block itself, but simply a
-    recognition that this is a block in a new epoch.
-  \item We verify that the block header does not exceed the maximum size
-    specified in the protocol parameters.
-\end{enumerate}
+Processing headers doesn't require any changes to the state, so we simply check
+predicates. Figure \ref{eq:func:header-is-valid} gives the validity
+predicate for a header. We verify that the block header does not exceed the
+maximum size specified in the protocol parameters. The $\maxheadersize{}$
+protocol parameter is defined in \cite{byron_ledger_spec}.
 
 \begin{figure}[ht]
   \emph{Abstract types}
@@ -851,82 +840,11 @@ rules. During header processing we verify the following things:
 \end{figure}
 
 \begin{figure}[ht]
-  \emph{Block header processing environments}
-  \begin{align*}
-    & \BHEnv
-      = \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{dms} & \VKeyGen \mapsto \VKey & \text{delegation map}\\
-        \var{s_{last}} & \Slot & \text{slot of the last seen block}
-      \end{array}\right)
-  \end{align*}
-
-  \emph{Block header processing states}
-  \begin{equation*}
-    \BHState =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{us} & \UPIState & \text{update state}
-      \end{array}
-    \right)
-  \end{equation*}
-  \emph{Block header processing transitions}
-  \begin{equation*}
-    \var{\_} \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\BHEnv \times \BHState \times \Bhead \times \BHState)
-  \end{equation*}
-  \caption{Block header processing transition-system types}
-  \label{fig:ts-types:bhead}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{equation*}
-    \inference
-    {
-      {\left(
-        \begin{array}{l}
-          \var{dms}\\
-          \sepoch{s_{last}}{k}\\
-        \end{array}
-      \right)}
-      \vdash
-      {\left(
-          \begin{array}{l}
-            us
-          \end{array}
-        \right)}
-      \trans{\hyperref[fig:rules:epoch]{epoch}}{\bslot{b}}
-      {\left(
-          \begin{array}{l}
-            us'
-          \end{array}
-        \right)}
-      \\
-      \\ \maxheadersize \mapsto \var{s_{max}} \in \fun{pps}~\var{us'} & \bhdrsize{bh} \leq \var{s_{max}}
-    }
-    {
-      {\left(
-        \begin{array}{l}
-          \var{dms}\\
-          \var{s_{last}}
-        \end{array}
-        \right)}
-      \vdash
-      \left(
-        {\begin{array}{c}
-           \var{us}
-         \end{array}}
-     \right)
-     \trans{bhead}{\var{bh}}
-     \left(
-       {\begin{array}{c}
-          \var{us'}
-        \end{array}}
-    \right)
-  }
-\end{equation*}
-\caption{Block header processing rules}
-\label{fig:rules:bhead}
+  \begin{equation}
+    \label{eq:func:header-is-valid}
+    \fun{headerIsValid}~\var{us}~\var{bh} = \maxheadersize \mapsto \var{s_{max}} \in \fun{pps}~\var{us} \Rightarrow \bhdrsize{bh} \leq \var{s_{max}}
+  \end{equation}
+  \caption{Block header validity functions}
 \end{figure}
 
 \clearpage
@@ -1108,9 +1026,14 @@ the contents of an epoch boundary block, we check that it does not exceed some
 suitably large size, and otherwise simply update the header hash to the block
 hash.
 
-If the block is not an epoch boundary block, then we process both the header and
-body according to the rules in figures \ref{fig:rules:bhead} and
-\ref{fig:rules:bbody} respectively.
+If the block is not an epoch boundary block, then we process:
+\begin{itemize}
+  \item a potential epoch change according to the rules in figure
+    \ref{fig:rules:epoch},
+  \item the header using the validity predicate of equation
+    \ref{eq:func:header-is-valid}, and
+  \item the body according to the rules in figure \ref{fig:rules:bbody}.
+\end{itemize}
 
 \begin{figure}[ht]
   \emph{Abstract functions}
@@ -1207,44 +1130,26 @@ body according to the rules in figures \ref{fig:rules:bhead} and
     {
       \begin{array}{r@{~\vdash~}l}
         {\left(
-        \begin{array}{l}
-          \fun{dms}~\var{ds}\\
-          \var{s_{last}}
-        \end{array}
+          \begin{array}{l}
+            \fun{dms}~\var{ds}\\
+            \sepoch{s_{last}}{k}\\
+          \end{array}
         \right)}
         &
-        \left(
-          {\begin{array}{c}
-             \var{us}
-           \end{array}
-        }\right)
-        \trans{\hyperref[fig:rules:bhead]{bhead}}{\bhead{b}}
-        \left(
-        {\begin{array}{c}
-           \var{us'}
-         \end{array}}
-        \right)\\
-        \left(
-        {\begin{array}{l}
-           \var{ds} \\
-           \var{s_{last}} \\
-           \var{s_{now}} \\
-         \end{array}}
-        \right)
-        &
-        \left(
-          {\begin{array}{c}
-             \var{h} \\
-             \var{sgs}
-           \end{array}}
-        \right)
-        \trans{\hyperref[fig:rules:pbft]{pbft}}{\bhead{b}}
-        \left(
-        {\begin{array}{c}
-           \var{h'} \\
-           \var{sgs}'
-         \end{array}}
-        \right)\\
+        {\left(
+          \begin{array}{l}
+            us
+          \end{array}
+        \right)}
+        \trans{\hyperref[fig:rules:epoch]{epoch}}{\bslot{b}}
+        {\left(
+          \begin{array}{l}
+            us'
+          \end{array}
+          \right)}\\
+        \multicolumn{1}{l}{~}\\
+        \multicolumn{2}{c}{\fun{headerIsValid}~\var{us'}~(\bhead{b})}\\
+        \multicolumn{1}{l}{~}\\
         {\left(
         \begin{array}{l}
           \fun{pps} ~  us' \\
@@ -1267,7 +1172,29 @@ body according to the rules in figures \ref{fig:rules:bhead} and
              \var{ds'} \\
              \var{us''}
            \end{array}}
-        \right)}
+        \right)}\\
+        \multicolumn{1}{l}{~}\\
+        \left(
+        {\begin{array}{l}
+           \var{ds} \\
+           \var{s_{last}} \\
+           \var{s_{now}} \\
+         \end{array}}
+        \right)
+        &
+        \left(
+          {\begin{array}{c}
+             \var{h} \\
+             \var{sgs}
+           \end{array}}
+        \right)
+        \trans{\hyperref[fig:rules:pbft]{pbft}}{\bhead{b}}
+        \left(
+        {\begin{array}{c}
+           \var{h'} \\
+           \var{sgs}'
+         \end{array}}
+        \right)
       \end{array}
     }
   }
@@ -1317,30 +1244,32 @@ body according to the rules in figures \ref{fig:rules:bhead} and
 The following transition system is used in the properties enunciated in this
 section.
 
-\begin{definition}[PBFT+BHEAD STS]\label{def:rule:pbft+bhead}
+\begin{definition}[EPOCH+BHEAD+PBFT STS]\label{def:rule:epoch+bhead+pbft}
   $$
   \inference
   {
     {\begin{array}{r@{~\vdash~}l}
         {\left(
-        \begin{array}{l}
-          \fun{dms}~\var{ds}\\
-          \var{s_{last}}
-        \end{array}
+          \begin{array}{l}
+            \fun{dms}~\var{ds}\\
+            \sepoch{s_{last}}{k}\\
+          \end{array}
         \right)}
         &
-        \left(
-          {\begin{array}{c}
-             \var{us}
-           \end{array}
-        }\right)
-        \trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}
-        \left(
-        {\begin{array}{c}
-           \var{us'}
-         \end{array}}
-        \right)\\
-       %
+        {\left(
+          \begin{array}{l}
+            us
+          \end{array}
+        \right)}
+        \trans{\hyperref[fig:rules:epoch]{epoch}}{\bslot{b}}
+        {\left(
+          \begin{array}{l}
+            us'
+          \end{array}
+        \right)}\\
+        \multicolumn{1}{l}{~}\\
+        \multicolumn{2}{c}{\fun{headerIsValid}~\var{us'}~(\bhead{b})}\\
+        \multicolumn{1}{l}{~}\\
         \left(
         {\begin{array}{l}
            \var{ds} \\
@@ -1380,7 +1309,7 @@ section.
              \var{us}
            \end{array}}
        \right)
-       \trans{pbft+bhead}{\var{bh}}
+       \trans{epoch+bhead+pbft}{\var{bh}}
         \left(
         {\begin{array}{c}
            \var{h'} \\
@@ -1414,12 +1343,12 @@ will not pass either.
   we have:
   %
   $$
-  e \vdash s \transtar{chain}{E} s' \implies e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
+  e \vdash s \transtar{chain}{E} s' \implies e_h \vdash s_h \transtar{epoch+bhead+pbft}{H} s'_h
   $$
   where $t_E$ is the maximum slot number appearing in the blocks contained in
   $E$, $e_h \leteq \fun{h_e}~e~s$ and $s_h \leteq \fun{h_s}~e~s$, and functions $\fun{h_e}$
   and $\fun{h_s}$ select the appropriate environment and state components
-  needed by the $\stslabel{pbft+bhead}$ transition system in the obvious way.
+  needed by the $\stslabel{epoch+bhead+pbft}$ transition system in the obvious way.
 \end{property}
 
 Property~\ref{prop:body-only-validation} states that if we validate a sequence
@@ -1427,10 +1356,10 @@ of headers, we can validate their bodies independently and be sure that the
 blocks will pass the chain validation rule. To see this, given an environment
 $e$ and initial state $s$, assume that a sequence of headers
 $H = [h_0, \ldots, h_n]$ corresponding to blocks in $E = [b_0, \ldots, b_n]$ is
-valid according to the $\stslabel{pbft+bhead}$ transition system:
+valid according to the $\stslabel{epoch+bhead+pbft}$ transition system:
 %
 $$
-e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
+e_h \vdash s_h \transtar{epoch+bhead+pbft}{H} s'_h
 $$
 %
 where $e_h$ and $s_h$ are obtained from $e$ and $s$ as described in
@@ -1441,12 +1370,12 @@ the $\stslabel{chain}$ rule. Assume that there is a $b_j \in E$ such that it is
 validation. Then:
 %
 $$
-e \vdash s \transtar{CHAIN}{[b_0, \ldots b_{j-1}]} s_j
+e \vdash s \transtar{chain}{[b_0, \ldots b_{j-1}]} s_j
 $$
 But by Property~\ref{prop:body-only-validation} we know that
 %
 $$
-e_{h_j} \vdash s_{h_j} \trans{pbft+bhead}{h_j} s_{h_{j+1}}
+e_{h_j} \vdash s_{h_j} \trans{epoch+bhead+pbft}{h_j} s_{h_{j+1}}
 $$
 which means that block $b_j$ has valid headers, and this in turn means that the
 validation of $b_j$ according to the chain rules must have failed because it
@@ -1461,11 +1390,11 @@ block bodies were valid.
   $$
   we have that for all $i \in [1, n]$:
   $$
-  e_h \vdash s_h \transtar{pbft+bhead}{H} s'_h
+  e_h \vdash s_h \transtar{epoch+bhead+pbft}{H} s'_h
   \wedge
   e \vdash s \transtar{chain}{[b_0 \ldots b_{i-1}]} s_{i-1}
   \implies
-  e_{h_{i-1}} \vdash s_{h_{i-1}}\trans{PBFT+BHEAD}{h_i} s''_{h_{i}}
+  e_{h_{i-1}} \vdash s_{h_{i-1}}\trans{epoch+bhead+pbft}{h_i} s''_{h_{i}}
   $$
   where $t_E$ is the maximum slot number appearing in the blocks contained in
   $E$, $e_h \leteq \fun{h_e}~e~s$ and $s_h \leteq \fun{h_s}~e~s$,
@@ -1489,11 +1418,11 @@ which uses the rules presented in this document.
   we have that if for all alternative chains $C'_1$, $\size{C'_1} \leq k$, with
   corresponding headers $H'_1$
   $$
-  e \vdash s_0 \transtar{CHAIN}{C_0;b} s_1 \transtar{CHAIN}{C_1} s_2
+  e \vdash s_0 \transtar{chain}{C_0;b} s_1 \transtar{chain}{C_1} s_2
   \wedge
-  e \vdash s_1 \transtar{CHAIN}{C_1'} s'_1
+  e \vdash s_1 \transtar{chain}{C_1'} s'_1
   \implies
-  (\fun{f}~(\bhead{b})~s_2) \transtar{PBFT+BHEAD}{H'_1} s_h
+  (\fun{f}~(\bhead{b})~s_2) \transtar{epoch+bhead+pbft}{H'_1} s_h
   $$
 \end{property}
 
