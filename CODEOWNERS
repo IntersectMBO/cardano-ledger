@@ -10,6 +10,6 @@ shelley/chain-and-ledger/executable-spec/ @mgudemann @JaredCorduan
 shelley/chain-and-ledger/formal-spec/ @JaredCorduan @mgudemann
 nix/ @nc6 @ruhatch
 scripts/ @nc6 @ruhatch
-byron/chain/ @nc6 @mdimjasevic
+byron/chain/ @nc6
 byron/ledger/ @nc6 @dnadales
 byron/semantics/ @nc6 @dnadales
