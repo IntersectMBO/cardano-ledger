@@ -25,12 +25,12 @@ import           Data.Word (Word8)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
-import           BaseTypes
-import           Coin
-import           Keys
-import           Slot
+import           BaseTypes (Seed, UnitInterval)
+import           Coin (Coin)
+import           Keys (DSIGNAlgorithm, Dms, VKeyGenesis)
+import           Slot (Epoch, Slot)
 
-import           Numeric.Natural
+import           Numeric.Natural (Natural)
 
 import           Ledger.Core ((∪))
 

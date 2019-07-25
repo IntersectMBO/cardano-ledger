@@ -42,10 +42,12 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Coin (Coin (..))
-import           Keys
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
+                     vKey, verify)
 import           PParams (PParams (..))
-import           Tx
-import           TxData
+import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdHK, inputs,
+                     outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)

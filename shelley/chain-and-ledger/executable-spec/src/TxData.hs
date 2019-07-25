@@ -16,11 +16,11 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes
-import           Coin
-import           Keys
-import           Slot
-import           Updates
+import           BaseTypes (UnitInterval)
+import           Coin (Coin)
+import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KeyHash (..), Sig, VKey, VKeyGenesis)
+import           Slot (Epoch, Slot)
+import           Updates (Update)
 
 -- |The delegation of one stake key to another.
 data Delegation hashAlgo dsignAlgo = Delegation

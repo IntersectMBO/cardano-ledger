@@ -33,7 +33,7 @@ module Tx
 where
 
 
-import           Keys
+import           Keys (KeyHash, Sig, VKey, hashKey)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 
@@ -48,7 +48,9 @@ import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
-import           TxData
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
+                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witnessMSigMap, witnessVKeySet)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.

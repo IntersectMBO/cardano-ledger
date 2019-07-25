@@ -18,16 +18,17 @@ module Delegation.Certificates
   ) where
 
 import           Coin (Coin (..))
-import           Keys
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyHash, hashGenesisKey, hashKey)
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
-import           TxData
+import           TxData (Credential (..), DCert (..), StakeCredential, StakeKeys (..),
+                     StakePools (..), delegator, poolPubKey)
 
-import           BaseTypes
+import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           NonIntegral (exp')
 
-import qualified Data.Map.Strict as Map
+import           Data.Map.Strict as Map (Map)
 import           Data.Ratio (approxRational)
 
 import           Lens.Micro ((^.))

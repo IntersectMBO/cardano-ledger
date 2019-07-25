@@ -29,20 +29,21 @@ module BlockChain
   )
 where
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Map.Strict as Map
-import           Data.Ratio
+import qualified Data.ByteString.Char8 as BS (length, pack)
+import qualified Data.Map.Strict as Map (insert, lookup)
+import           Data.Ratio (denominator, numerator)
 import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
-import           BaseTypes
-import           Delegation.Certificates
-import           EpochBoundary
-import           Keys
-import           OCert
-import qualified Slot
-import           Tx
+import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkNonce, seedOp)
+import           Delegation.Certificates (PoolDistr (..))
+import           EpochBoundary (BlocksMade (..))
+import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash, Sig, VKey,
+                     hash, hashKey)
+import           OCert (OCert (..))
+import           Slot (Duration, Slot (..))
+import           Tx (Tx (..))
 
 import           NonIntegral ((***))
 
@@ -110,7 +111,7 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
     -- | verification key of block issuer
   , bheaderVk             :: VKey dsignAlgo
     -- | block slot
-  , bheaderSlot           :: Slot.Slot
+  , bheaderSlot           :: Slot
     -- | block nonce
   , bheaderEta            :: Seed
     -- | proof of nonce
@@ -162,8 +163,8 @@ bHeaderSize = BS.length . BS.pack . show
 bBodySize :: DSIGNAlgorithm dsignAlgo => [Tx hashAlgo dsignAlgo] -> Int
 bBodySize txs = sum (map (BS.length . BS.pack . show) txs)
 
-slotToSeed :: Slot.Slot -> Seed
-slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
+slotToSeed :: Slot -> Seed
+slotToSeed (Slot s) = mkNonce (fromIntegral s)
 
 bheader :: Block hashAlgo dsignAlgo kesAlgo -> BHeader hashAlgo dsignAlgo kesAlgo
 bheader (Block bh _) = bh
@@ -179,10 +180,10 @@ hsig
   -> KESig kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
 hsig (BHeader _ s) = s
 
-slotsPrior :: Slot.Duration
+slotsPrior :: Duration
 slotsPrior = 33 -- one third of slots per epoch
 
-startRewards :: Slot.Duration
+startRewards :: Duration
 startRewards = 33 -- see above
 
 verifyVrf
