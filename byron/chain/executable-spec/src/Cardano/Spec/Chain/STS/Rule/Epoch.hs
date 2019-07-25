@@ -37,22 +37,14 @@ instance STS EPOCH where
 
   transitionRules =
     [ do
-        TRC ((e_c, k), _, s) <- judgmentContext
-        case e_c >= sEpoch s k of
-          True  -> onOrAfterCurrentEpoch
-          False -> beforeCurrentEpoch
+        TRC ((e_c, k), us, s) <- judgmentContext
+        if sEpoch s k <= e_c
+          then do
+            pure $! us
+          else do
+            us' <- trans @UPIEC $ TRC ((s, k), us, ())
+            pure $! us'
     ]
-   where
-    beforeCurrentEpoch :: TransitionRule EPOCH
-    beforeCurrentEpoch = do
-      TRC ((_, k), us, s) <- judgmentContext
-      us' <- trans @UPIEC $ TRC ((s, k), us, ())
-      return $! us'
-
-    onOrAfterCurrentEpoch :: TransitionRule EPOCH
-    onOrAfterCurrentEpoch = do
-      TRC (_, us, _) <- judgmentContext
-      return $! us
 
 instance Embed UPIEC EPOCH where
   wrapFailed = UPIECFailure

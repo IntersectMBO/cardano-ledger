@@ -1437,9 +1437,9 @@ instance STS PVBUMP where
     (ProtVer, PParams)
 
   type Signal PVBUMP = ()
-  data PredicateFailure PVBUMP
-    = NewEpoch
-    | OldEpoch
+
+  -- PVBUMP has no predicate failures
+  data PredicateFailure PVBUMP = NoPVBUMPFailure
     deriving (Eq, Show)
 
   initialRules = []
