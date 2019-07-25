@@ -120,7 +120,7 @@ poolStake
   -> Stake hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
-  Stake $ (dom (delegs ▷ (Set.singleton hk))) ◁ stake
+  Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
 
 -- | Calculate pool refunds
 poolRefunds
@@ -174,7 +174,7 @@ groupByPool
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (delegs Map.! hk, (Set.singleton hk) ◁ active)
+    [ (delegs Map.! hk, Set.singleton hk ◁ active)
     | hk <- Map.keys delegs
     ]
 

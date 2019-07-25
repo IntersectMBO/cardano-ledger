@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell #-}
+
 
 module Tx
   ( -- transaction
@@ -44,7 +44,7 @@ import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
 import           Data.Word (Word8)
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
+import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -65,9 +65,9 @@ evalNativeMultiSigScript
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
-  all (flip evalNativeMultiSigScript vhks) msigs
+  all (`evalNativeMultiSigScript` vhks) msigs
 evalNativeMultiSigScript (RequireAnyOf msigs) vhks =
-  any (flip evalNativeMultiSigScript vhks) msigs
+  any (`evalNativeMultiSigScript` vhks) msigs
 evalNativeMultiSigScript (RequireMOf m msigs) vhks =
   m <= sum [if evalNativeMultiSigScript msig vhks then 1 else 0 | msig <- msigs]
 
@@ -115,20 +115,20 @@ txwitsVKey tx =
 txwitsScript
   :: Tx hashAlgo dsignAlgo
   -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
-txwitsScript tx = _witnessMSigMap tx
+txwitsScript = _witnessMSigMap
 
 extractKeyHash
   :: [StakeCredential hashAlgo dsignAlgo]
   -> [KeyHash hashAlgo dsignAlgo]
-extractKeyHash l =
-  Maybe.catMaybes $ map (\so -> case so of
-                                 KeyHashObj hk -> Just hk
-                                 _ -> Nothing) l
+extractKeyHash =
+  mapMaybe (\case
+                KeyHashObj hk -> Just hk
+                _ -> Nothing)
 
 extractScriptHash
   :: [StakeCredential hashAlgo dsignAlgo]
   -> [ScriptHash hashAlgo dsignAlgo]
-extractScriptHash l =
-  Maybe.catMaybes $ map (\so -> case so of
-                                 ScriptHashObj hk -> Just hk
-                                 _ -> Nothing) l
+extractScriptHash =
+  mapMaybe (\case
+                ScriptHashObj hk -> Just hk
+                _ -> Nothing)

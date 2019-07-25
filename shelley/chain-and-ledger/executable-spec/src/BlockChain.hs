@@ -160,7 +160,7 @@ bHeaderSize
 bHeaderSize = BS.length . BS.pack . show
 
 bBodySize :: DSIGNAlgorithm dsignAlgo => [Tx hashAlgo dsignAlgo] -> Int
-bBodySize txs = foldl (+) 0 (map (BS.length . BS.pack . show) txs)
+bBodySize txs = sum (map (BS.length . BS.pack . show) txs)
 
 slotToSeed :: Slot.Slot -> Seed
 slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
@@ -197,7 +197,7 @@ instance VrfProof Seed where
   toSeed = id
 
 instance VrfProof UnitInterval where
-  toSeed u = mkNonce $ (numerator r * denominator r)
+  toSeed u = mkNonce (numerator r * denominator r)
     where r = intervalValue u
 
 vrfChecks
@@ -218,14 +218,14 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
                          (bheaderPrfL bhb)
             && intervalValue (bheaderL bhb)
             <  1
-            -  ((1 - activeSlotsCoeff) *** (fromRational sigma))
+            -  ((1 - activeSlotsCoeff) *** fromRational sigma)
  where
   vk = bvkcold bhb
   hk = hashKey vk
   ss = slotToSeed $ bheaderSlot bhb
   f' = intervalValue f
   activeSlotsCoeff =
-    (fromIntegral $ numerator f') / (fromIntegral $ denominator f')
+    fromIntegral (numerator f') / fromIntegral (denominator f')
 
 seedEta :: Seed
 seedEta = mkNonce 0

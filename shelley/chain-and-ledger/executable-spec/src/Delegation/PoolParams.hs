@@ -1,6 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
+
+
+
 
 module Delegation.PoolParams
   ( poolSpec

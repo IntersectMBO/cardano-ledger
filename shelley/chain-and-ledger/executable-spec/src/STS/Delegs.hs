@@ -14,7 +14,7 @@ import qualified Data.Map.Strict as Map
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
-import           PParams hiding (d)
+import           PParams
 import           Slot
 import           Tx
 import           TxData
@@ -49,7 +49,7 @@ delegsTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEGS hashAlgo dsignAlgo)
 delegsTransition = do
-  TRC (env@(_slot, txIx, pp, (Tx txbody _ _)), dpstate, certificates) <- judgmentContext
+  TRC (env@(_slot, txIx, pp, Tx txbody _ _), dpstate, certificates) <- judgmentContext
   case certificates of
     [] -> do
       let wdrls' = _wdrls txbody

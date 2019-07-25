@@ -42,7 +42,7 @@ insertOrUpdate (TxOut a c) m =
 isNotDustDist :: UTxO -> UTxO -> Bool
 isNotDustDist initUtxo utxo' =
     utxoSize initUtxo <=
-           2 * (Map.size $ Map.filter (> Coin 1) coinMap)
+           2 *Map.size (Map.filter (> Coin 1) coinMap)
         where coinMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo')
 
 -- | This property states that a non-empty UTxO set in the genesis state has a
@@ -77,7 +77,7 @@ propBalanceTxInTxOut = property $ do
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
     (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
-  (balance $ inps <| (l ^. utxoState . utxo)) === ((balance $ txouts tx) + fee)
+  (balance $ inps <| (l ^. utxoState . utxo)) === (balance (txouts tx) + fee)
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
@@ -105,14 +105,14 @@ propUniqueTxIds :: Property
 propUniqueTxIds = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
   let tx                    = txwits ^. body
-  let origTxIds             = collectIds <$> (Map.keys $ utxoMap (l ^. utxoState . utxo))
-  let newTxIds              = collectIds <$> (Map.keys $ utxoMap (txouts tx))
+  let origTxIds             = collectIds <$> Map.keys (utxoMap (l ^. utxoState . utxo))
+  let newTxIds              = collectIds <$> Map.keys (utxoMap (txouts tx))
   let txId                  = txid tx
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
     (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
-  True === ((all (== txId) newTxIds) &&
-            (not $ any (== txId) origTxIds) &&
+  True === (all (== txId) newTxIds &&
+             notElem txId origTxIds &&
             Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo))
          where collectIds (TxIn txId _) = txId
 
@@ -125,7 +125,7 @@ propNoDoubleSpend = withTests 1000 $ property $ do
         Left _  -> failure
         Right _ -> do
           let inputIndicesSet = unions $ map (\txwit -> fromSet $ txwit ^. body . inputs) txs
-          0 === (Data.MultiSet.size $ Data.MultiSet.filter
+          0 === Data.MultiSet.size (Data.MultiSet.filter
                      (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                      inputIndicesSet)
 
@@ -137,14 +137,14 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       (_, _, _, _, txs, LedgerValidation validationErrors _)
           <- forAll genNonEmptyAndAdvanceTx'
       let inputIndicesSet  = unions $ map (\txwit -> fromSet $ txwit ^. body . inputs) txs
-      let multiSpentInputs = (Data.MultiSet.size $ Data.MultiSet.filter
+      let multiSpentInputs = Data.MultiSet.size $ Data.MultiSet.filter
                                    (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
-                                   inputIndicesSet)
+                                   inputIndicesSet
       let isMultiSpend = 0 < multiSpentInputs
-      classify "multi-spend, validation OK" (isMultiSpend && validationErrors == [])
+      classify "multi-spend, validation OK" (null validationErrors)
       classify "multi-spend, validation KO" (isMultiSpend && validationErrors /= [])
-      classify "multi-spend" (isMultiSpend)
-      True === ((not isMultiSpend) || validationErrors /= [])
+      classify "multi-spend" isMultiSpend
+      True === (not isMultiSpend || validationErrors /= [])
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
@@ -201,24 +201,24 @@ propBalanceTxInTxOut' =
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
   let balanceSource            = balance $ inps <| (l ^. utxoState . utxo)
-  let balanceTarget            = (balance $ txouts tx)
+  let balanceTarget            = balance $ txouts tx
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
   let balanceOk                = balanceSource == balanceTarget + fee
   classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
   if valErrors /= [] && balanceOk && nonTrivial
 
-  then label $ LabelName (   "inputs: "     ++ (show $ Set.size $ tx ^. inputs)
-              ++ " outputs: "   ++ (show $ length $ tx ^. outputs)
-              ++ " balance l "  ++ (show balanceSource)
-              ++ " balance l' " ++ (show balanceTarget)
+  then label $ LabelName (   "inputs: "     ++ show (show $ Set.size $ tx ^. inputs)
+              ++ " outputs: "   ++ show (show $ length $ tx ^. outputs)
+              ++ " balance l "  ++ show balanceSource
+              ++ " balance l' " ++ show balanceTarget
               ++ " txfee " ++ show fee
               ++ "\n  validationErrors: " ++ show valErrors)
   else (if valErrors /= [] && balanceOk
-        then label ("non-validated, OK, trivial")
+        then label "non-validated, OK, trivial"
         else (if valErrors /= []
-              then label ("non-validated, KO")
-              else label ("validated")
+              then label "non-validated, KO"
+              else label "validated"
         ))
   success
 
@@ -233,15 +233,15 @@ propCheckRedundantWitnessSet = property $ do
   let keyPair                  = fst $ head keyPairs
   let tx                       = txwits ^. body
   let witness                  = makeWitnessVKey tx keyPair
-  let txwits'                  = txwits & witnessVKeySet %~ (Set.insert witness)
+  let txwits'                  = txwits & witnessVKeySet %~ Set.insert witness
   let dms                      = _dms $ _dstate $ _delegationState l
-  let l''                      = asStateTransition (Slot (steps)) emptyPParams l txwits' dms
+  let l''                      = asStateTransition (Slot steps) emptyPParams l txwits' dms
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessVKeySet))
   case l'' of
     Right _                    ->
-        True === (Set.null $
-         Set.filter (\wit -> not $ verifyWitVKey tx wit) (_witnessVKeySet txwits'))
+        True === Set.null (
+         Set.filter (not . verifyWitVKey tx) (_witnessVKeySet txwits'))
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.
@@ -256,7 +256,7 @@ propCheckMissingWitness = property $ do
   let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') dms
   let isRealSubset          = witnessVKeySet' `Set.isSubsetOf` witnessVKeySet'' &&
                               witnessVKeySet' /= witnessVKeySet''
-  classify "real subset" (isRealSubset)
+  classify "real subset" isRealSubset
   label $ LabelName ("witnesses:" ++ show (Set.size witnessVKeySet''))
   case l' of
     Left [MissingWitnesses] -> isRealSubset === True
@@ -268,10 +268,10 @@ propPreserveBalance :: Property
 propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
-           (balance (l ^. utxoState . utxo))
+           balance (l ^. utxoState . utxo)
         + (keyRefunds emptyPParams (l ^. delegationState . dstate . stKeys) $ tx ^. body)
   let created =
-           (balance (l' ^. utxoState . utxo))
+           balance (l' ^. utxoState . utxo)
         + fee
         + (deposits emptyPParams (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
   destroyed === created

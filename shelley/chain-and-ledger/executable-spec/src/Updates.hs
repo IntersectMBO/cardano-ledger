@@ -152,7 +152,7 @@ updatePPup
   => PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
-updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ (pup1' ∪ pup0')
+updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
 newAVs :: Applications -> Map.Map Slot Applications -> Applications
 newAVs avs favs = if not $ Map.null favs
