@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -37,7 +38,6 @@ import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.BBody
-import           Cardano.Spec.Chain.STS.Rule.BHead
 import           Cardano.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
 import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
@@ -70,7 +70,8 @@ instance STS CHAIN where
   type Signal CHAIN = Block
 
   data PredicateFailure CHAIN
-    = BHeadFailure (PredicateFailure BHEAD)
+    = EpochFailure (PredicateFailure EPOCH)
+    | HeaderSizeTooBig BlockHeader Natural (Threshold Natural)
     | BBodyFailure (PredicateFailure BBODY)
     | PBFTFailure (PredicateFailure PBFT)
     | MaximumBlockSize Natural Natural
@@ -133,14 +134,13 @@ instance STS CHAIN where
       TRC ((sNow, utxoGenesis, ads, _pps, k), (sLast, sgs, h, utxoSt, ds, us), b) <- judgmentContext
       let dm = _dIStateDelegationMap ds :: Bimap VKeyGenesis VKey
       us' <-
-        trans @BHEAD $ TRC ((dm, sLast, k), us, b ^. bHeader)
+        trans @EPOCH $ TRC ((sEpoch sLast k, k), us, bSlot b)
+      headerIsValid us' (b ^. bHeader)
       let ppsUs' = snd (us' ^. _1)
-      (h', sgs') <-
-        trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow, k), (h, sgs), b ^. bHeader)
       (utxoSt', ds', us'') <- trans @BBODY $ TRC
         (
           ( ppsUs'
-          , sEpoch (b ^. bHeader ^. bhSlot) k
+          , sEpoch (bSlot b) k
           , utxoGenesis
           , fromIntegral (Set.size ads)
           , k
@@ -148,10 +148,12 @@ instance STS CHAIN where
         , (utxoSt, ds, us')
         , b
         )
-      pure $! (b ^. bHeader ^. bhSlot, sgs', h', utxoSt', ds', us'')
+      (h', sgs') <-
+        trans @PBFT  $ TRC ((ppsUs', dm, sLast, sNow, k), (h, sgs), b ^. bHeader)
+      pure $! (bSlot b, sgs', h', utxoSt', ds', us'')
 
-instance Embed BHEAD CHAIN where
-  wrapFailed = BHeadFailure
+instance Embed EPOCH CHAIN where
+  wrapFailed = EpochFailure
 
 instance Embed BBODY CHAIN where
   wrapFailed = BBodyFailure
@@ -168,6 +170,12 @@ instance Embed UTXOWS CHAIN where
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
 genesisHash = Hash $ H.hash ("" :: ByteString)
+
+headerIsValid :: UPIState -> BlockHeader -> Rule CHAIN 'Transition ()
+headerIsValid us bh = do
+  let sMax = snd (us ^. _1) ^. maxHdrSz
+  bHeaderSize bh <= sMax
+    ?! HeaderSizeTooBig bh (bHeaderSize bh) (Threshold sMax)
 
 -- | Lens for the delegation interface state contained in the chain state.
 disL :: Lens' (State CHAIN) DIState
