@@ -35,15 +35,6 @@ fromByteStringToScrubbedBytes = BA.convert
 toByteString :: (BA.ByteArrayAccess bin) => bin -> ByteString
 toByteString = BA.convert
 
-instance Ord Ed25519.PublicKey where
-  compare x1 x2 = compare (toByteString x1) (toByteString x2)
-
-instance Ord Ed25519.SecretKey where
-  compare x1 x2 = compare (toByteString x1) (toByteString x2)
-
-instance Ord Ed25519.Signature where
-  compare x1 x2 = compare (toByteString x1) (toByteString x2)
-
 fromCryptoFailable :: T.Text -> CryptoFailable a -> Either T.Text a
 fromCryptoFailable item (CryptoFailed e) =
   Left $ "Cardano.Crypto.Orphan." <> item <> " failed because " <> show e

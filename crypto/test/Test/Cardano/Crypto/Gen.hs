@@ -84,6 +84,7 @@ import Cardano.Crypto.Signing.Redeem
   , redeemDeterministicKeyGen
   , redeemSign
   )
+import Test.Cardano.Crypto.Orphans ()
 
 
 --------------------------------------------------------------------------------

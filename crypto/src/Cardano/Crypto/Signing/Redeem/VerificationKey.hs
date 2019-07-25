@@ -50,7 +50,18 @@ import Cardano.Crypto.Orphans ()
 -- | Wrapper around 'Ed25519.PublicKey'.
 newtype RedeemVerificationKey =
   RedeemVerificationKey Ed25519.PublicKey
-  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+
+-- Note that normally we would not provide any Ord instances.
+-- The crypto libraries encourage using key /hashes/ not keys for
+-- things like sets, map etc. However due to a historical mistake the
+-- AVVM balances use whole keys, not key hashes. So we compromise here
+-- and provide Ord instances so we can use RedeemVerificationKey
+-- as the key type in a Data.Map.
+
+instance Ord RedeemVerificationKey where
+  RedeemVerificationKey a `compare` RedeemVerificationKey b =
+    BA.convert a `compare` (BA.convert b :: ByteString)
 
 instance Monad m => ToObjectKey m RedeemVerificationKey where
   toObjectKey = pure . toJSString . formatToString redeemVKB64UrlF

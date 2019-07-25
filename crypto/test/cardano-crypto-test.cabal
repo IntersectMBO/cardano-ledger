@@ -23,6 +23,7 @@ library
                        Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen
                        Test.Cardano.Crypto.Json
+                       Test.Cardano.Crypto.Orphans
 
   build-depends:       base
                      , bytestring
