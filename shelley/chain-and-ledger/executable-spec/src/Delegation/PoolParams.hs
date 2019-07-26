@@ -1,7 +1,3 @@
-
-
-
-
 module Delegation.PoolParams
   ( poolSpec
   ) where

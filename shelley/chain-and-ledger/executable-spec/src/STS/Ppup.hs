@@ -1,6 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Ppup

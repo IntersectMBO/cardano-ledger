@@ -1,5 +1,3 @@
-
-
 module Delegation.Certificates
   (
     DCert(..)
