@@ -1,12 +1,12 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Pool
   ( POOL
   )
 where
 
-import           Lens.Micro                     ( (^.) )
+import           Lens.Micro ((^.))
 
 import           Delegation.Certificates
 import           Keys
@@ -39,7 +39,7 @@ poolDelegationTransition
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (POOL hashAlgo dsignAlgo)
 poolDelegationTransition = do
-  TRC ((slot, p@(Ptr _ _ _), pp), ps, c) <- judgmentContext
+  TRC ((slot, p@Ptr{}, pp), ps, c) <- judgmentContext
   case c of
     RegPool _              -> pure $ applyDCertPState p c ps
     RetirePool _ (Epoch e) -> do

@@ -1,15 +1,15 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Up
   ( UP
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import qualified Data.Map.Strict as Map
 
 import           Keys
 import           Slot

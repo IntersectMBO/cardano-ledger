@@ -17,28 +17,26 @@ module Mutator
     , getAnyStakeKey
     ) where
 
-import Data.Maybe                (fromMaybe)
-import Data.Ratio
-import Data.Set                  as Set
-import Numeric.Natural
+import           Data.Maybe (fromMaybe)
+import           Data.Ratio
+import           Data.Set as Set
+import           Numeric.Natural
 
-import Hedgehog
-import qualified Hedgehog.Gen    as Gen
-import qualified Hedgehog.Range  as Range
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           BaseTypes
 import           Coin
-import           Delegation.Certificates  (pattern Delegate, pattern DeRegKey,
-                     pattern GenesisDelegate, pattern RegKey, pattern RegPool,
-                     pattern RetirePool)
-import           Keys (vKey, hashKey)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+                     pattern GenesisDelegate, pattern RegKey, pattern RegPool, pattern RetirePool)
+import           Keys (hashKey, vKey)
 import           Updates
 
 import           Slot
-import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                      _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls,
-                      _witnessVKeySet, _witnessMSigMap)
-import           TxData (Credential(..), PoolParams(..), pattern Delegation)
+import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, _body, _certs,
+                     _inputs, _outputs, _ttl, _txfee, _wdrls, _witnessMSigMap, _witnessVKeySet)
+import           TxData (Credential (..), pattern Delegation, PoolParams (..))
 
 import           MockTypes
 

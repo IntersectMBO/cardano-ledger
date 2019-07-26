@@ -18,10 +18,10 @@ module BaseTypes
   ) where
 
 
-import qualified Data.Fixed as FP
+import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Word (Word8)
 
-import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 data E34
 

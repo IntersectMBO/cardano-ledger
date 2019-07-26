@@ -1,8 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 {-|
 Module      : UTxO
@@ -38,20 +35,22 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
-import           Data.Map.Strict         (Map)
-import qualified Data.Map.Strict         as Map
-import qualified Data.Maybe              as Maybe
-import           Data.Set                (Set)
-import qualified Data.Set                as Set
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
-import           Coin                    (Coin (..))
-import           Keys
-import           PParams                 (PParams(..))
-import           Updates                 (Update)
-import           Tx
-import           TxData
+import           Coin (Coin (..))
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
+                     vKey, verify)
+import           PParams (PParams (..))
+import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdHK, inputs,
+                     outputs, poolPubKey, txUpdate)
+import           Updates (Update)
 
-import           Delegation.Certificates (StakePools(..), DCert (..), dvalue, cwitness)
+import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo
@@ -191,14 +190,14 @@ scriptsNeeded
   -> Tx hashAlgo dsignAlgo
   -> Set (ScriptHash hashAlgo dsignAlgo)
 scriptsNeeded u tx =
-  (Set.fromList $ Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
   `Set.union`
-  (Set.fromList $ Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
-        UTxO u'' = (txinsScript (txins $ _body tx) u) <| u
+        UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = _certs $ _body tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
@@ -209,7 +208,7 @@ txinsScript
   -> Set (TxIn hashAlgo dsignAlgo)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  (Map.keysSet $ Map.filter (\(TxOut a _) ->
+  Map.keysSet (Map.filter (\(TxOut a _) ->
                                case a of
                                  AddrBase (ScriptHashObj _) _     -> True
                                  AddrEnterprise (ScriptHashObj _) -> True

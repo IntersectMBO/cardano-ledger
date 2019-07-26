@@ -18,20 +18,19 @@ module Updates
   )
 where
 
-import           Data.ByteString                  (ByteString)
-import qualified Data.Map.Strict               as Map
-import qualified Data.List                     as List
-                                                ( group )
+import           Data.ByteString (ByteString)
+import qualified Data.List as List (group)
+import qualified Data.Map.Strict as Map
 import           Data.Word (Word8)
 
-import           Cardano.Binary (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
-import           BaseTypes
-import           Coin
-import           Keys
-import           Slot
+import           BaseTypes (Seed, UnitInterval)
+import           Coin (Coin)
+import           Keys (DSIGNAlgorithm, Dms, VKeyGenesis)
+import           Slot (Epoch, Slot)
 
-import           Numeric.Natural
+import           Numeric.Natural (Natural)
 
 import           Ledger.Core ((∪))
 
@@ -153,7 +152,7 @@ updatePPup
   => PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
   -> PPUpdate dsignAlgo
-updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate $ (pup1' ∪ pup0')
+updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
 newAVs :: Applications -> Map.Map Slot Applications -> Applications
 newAVs avs favs = if not $ Map.null favs

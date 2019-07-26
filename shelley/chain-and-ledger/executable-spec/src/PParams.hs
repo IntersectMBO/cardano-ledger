@@ -28,11 +28,11 @@ module PParams
 
 import           Numeric.Natural (Natural)
 
-import           BaseTypes
-import           Coin            (Coin (..))
-import           Slot            (Epoch(..))
+import           BaseTypes (Seed, UnitInterval, interval0, mkNonce)
+import           Coin (Coin (..))
+import           Slot (Epoch (..))
 
-import           Lens.Micro.TH   (makeLenses)
+import           Lens.Micro.TH (makeLenses)
 
 data PParams = PParams
   { -- |The linear factor for the minimum fee calculation

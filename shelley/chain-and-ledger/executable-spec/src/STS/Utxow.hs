@@ -1,9 +1,10 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Utxow
   ( UTXOW
@@ -11,8 +12,8 @@ module STS.Utxow
   )
 where
 
-import qualified Data.Set                  as Set
-import qualified Data.Map.Strict           as Map
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           Delegation.Certificates
 import           Keys
@@ -84,11 +85,11 @@ utxoWitnessed = do
   -- check multi-signature scripts
   let utxo' = _utxo u
 
-  (all (\(hs, validator) -> hashScript validator == hs
-      && validateScript validator tx) $ Map.toList $ txwitsScript tx)
+  all (\(hs, validator) -> hashScript validator == hs
+      && validateScript validator tx) (Map.toList $ txwitsScript tx)
     ?!ScriptWitnessNotValidatingUTXOW
 
-  scriptsNeeded utxo' tx == (Map.keysSet $ txwitsScript tx)
+  scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo)

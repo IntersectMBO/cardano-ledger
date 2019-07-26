@@ -1,17 +1,16 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.NewEpoch
   ( NEWEPOCH
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Maybe                    as Maybe
-                                                ( fromMaybe )
+import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (fromMaybe)
 
 import           BaseTypes
 import           Coin
@@ -43,15 +42,15 @@ instance STS (NEWEPOCH hashAlgo dsignAlgo) where
         (mkNonce 0)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (emptyEpochState)
-        (Nothing)
+        emptyEpochState
+        Nothing
         (PoolDistr Map.empty)
-        (Map.empty)]
+        Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
 ocertTransition = do
-  TRC ( (NewEpochEnv eta1 _s gkeys)
+  TRC ( NewEpochEnv eta1 _s gkeys
       , src@(NewEpochState (Epoch eL') _ bprev bcur es ru _pd _osched)
       , e@(Epoch e')) <- judgmentContext
   if eL' /= e' + 1
@@ -68,8 +67,8 @@ ocertTransition = do
       let osched'                  = overlaySchedule gkeys eta1 pp
       let es'' = EpochState acnt ss ls (pp { _extraEntropy = neutralSeed })
       let pd' = foldr
-            (\(hk, (Coin c)) m ->
-              Map.insertWith (+) hk ((fromIntegral c) / fromIntegral total) m
+            (\(hk, Coin c) m ->
+              Map.insertWith (+) hk (fromIntegral c / fromIntegral total) m
             )
             Map.empty
             [ (poolKey, Maybe.fromMaybe (Coin 0) (Map.lookup stakeKey stake))
