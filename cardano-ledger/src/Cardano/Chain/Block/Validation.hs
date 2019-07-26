@@ -599,6 +599,7 @@ updateBlock config cvs b = do
   -- Process header by checking its validity
   headerIsValid updateState' (blockHeader b)
 
+
   let
     bodyEnv = BodyEnvironment
       { protocolMagic = AProtocolMagic

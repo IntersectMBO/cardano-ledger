@@ -56,7 +56,7 @@ elaboratePParams pps = Concrete.ProtocolParameters
       , Concrete.srMinThd = panic . show ||| identity
                           $ Concrete.mkLovelacePortion
                           $ floor
-                          $ Abstract._cfmThd pps * 1e15
+                          $ Abstract._upAdptThd pps * 1e15
       , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
       }
   , Concrete.ppTxFeePolicy        = Concrete.TxFeePolicyTxSizeLinear

@@ -214,8 +214,9 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
 
   -- Register endorsement
   st''' <- registerEndorsement env st'' endorsement
-  -- Debug.traceShowM "State after endorsement registration:"
-  -- Debug.traceShowM st'''
+  -- Debug.traceShowM "Candidate protocol updates after endorsement registration:\n"
+  -- Debug.traceShowM (candidateProtocolUpdates st''')
+  -- Debug.traceShowM "\n"
   pure st'''
 
 
