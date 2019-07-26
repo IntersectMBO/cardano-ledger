@@ -22,33 +22,31 @@ module Generator
     ) where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set        as Set
-import Data.Ratio
+import           Data.Ratio
+import qualified Data.Set as Set
 
-import           Lens.Micro              ((^.))
+import           Lens.Micro ((^.))
 
 import           Numeric.Natural
 
 import           Hedgehog
-import qualified Hedgehog.Gen    as Gen
-import qualified Hedgehog.Range  as Range
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern Delegation,
-                         pattern PoolParams, RewardAcnt(..), pattern Delegate,
-                         pattern DeRegKey, pattern RegKey, pattern RegPool,
-                         pattern RetirePool, StakeKeys(..))
 import           BaseTypes
 import           Coin
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerValidation, ValidationError (..),
-                     _delegationState, _dstate, asStateTransition,
-                     asStateTransition', genesisState, DState(..), utxoState,
-                     utxo, dstate, stKeys)
+import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
+                     asStateTransition, asStateTransition', dstate, genesisState, stKeys, utxo,
+                     utxoState, _delegationState, _dstate)
+import           PParams (PParams (..), emptyPParams)
 import           Slot
+import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
+import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
+                     pattern KeyHashObj, pattern PoolParams, pattern RegKey, pattern RegPool,
+                     pattern RetirePool, RewardAcnt (..), StakeKeys (..))
 import           Updates
-import           Tx(pattern Tx, pattern TxBody, pattern TxOut)
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
-import           PParams (PParams(..), emptyPParams)
 
 import           MockTypes
 import           Mutator
@@ -147,11 +145,11 @@ genTx keyList (UTxO m) cslot = do
   txttl <- genNatural 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
-           ((\r -> TxOut r perReceipient) <$> receipientAddrs)
+           ((`TxOut` perReceipient) <$> receipientAddrs)
            []
            Map.empty -- TODO generate witdrawals
            txfee'
-           (cslot + (Slot txttl))
+           (cslot + Slot txttl)
            emptyUpdate
   let !txwit = makeWitnessVKey txbody selectedKeyPair
   pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty)
@@ -234,13 +232,13 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
 findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
-    fst $ head $ filter (\(pay, _) -> addr == (hashKey $ vKey pay)) keyList
+    fst $ head $ filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
 findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair
 findStakeKeyPair (KeyHashObj hk) keyList =
-    snd $ head $ filter (\(_, stake) -> hk == (hashKey $ vKey stake)) keyList
+    snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
@@ -303,11 +301,11 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
+  RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey <$> (KeyHashObj . hashKey) <$> getAnyStakeKey keys
+    DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> Epoch -> Gen DCert
 genDCertRetirePool keys epoch = do

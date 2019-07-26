@@ -1,17 +1,18 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Bbody
   ( BBODY
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           BlockChain
 import           EpochBoundary
@@ -58,9 +59,9 @@ bbodyTransition
      )
   => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
 bbodyTransition = do
-  TRC ((oslots, pp), (ls, b), (Block (BHeader bhb _) txs)) <- judgmentContext
+  TRC ((oslots, pp), (ls, b), Block (BHeader bhb _) txs) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
-  bBodySize txs == (fromIntegral $ hBbsize bhb) ?! WrongBlockBodySizeBBODY
+  bBodySize txs == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
   ls' <-
     trans @(LEDGERS hashAlgo dsignAlgo) $ TRC ((bheaderSlot bhb, pp), ls, txs)

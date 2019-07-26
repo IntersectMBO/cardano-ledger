@@ -1,5 +1,6 @@
-{-# LANGUAGE EmptyDataDecls       #-}
-{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module STS.Ocert
@@ -7,8 +8,8 @@ module STS.Ocert
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import           Numeric.Natural                ( Natural )
+import qualified Data.Map.Strict as Map
+import           Numeric.Natural (Natural)
 
 import           BlockChain
 import           Keys

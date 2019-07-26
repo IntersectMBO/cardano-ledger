@@ -1,5 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Updn
   ( UPDN
@@ -20,7 +20,7 @@ instance STS UPDN where
   type Environment UPDN = Seed
   data PredicateFailure UPDN = FailureUPDN
                                deriving (Show, Eq)
-  initialRules = [pure $ (mkNonce 0, mkNonce 0)]
+  initialRules = [pure (mkNonce 0, mkNonce 0)]
   transitionRules = [updTransition]
 
 updTransition :: TransitionRule UPDN

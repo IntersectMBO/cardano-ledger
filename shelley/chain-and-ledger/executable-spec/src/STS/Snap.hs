@@ -1,25 +1,21 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Snap
   ( SNAP
   )
 where
 
-import qualified Data.Map.Strict               as Map
+import qualified Data.Map.Strict as Map
 
-import           Lens.Micro                     ( (^.)
-                                                , (&)
-                                                , (.~)
-                                                , (%~)
-                                                )
+import           Lens.Micro ((%~), (&), (.~), (^.))
 
 import           Coin
 import           EpochBoundary
 import           LedgerState
 import           PParams hiding (d)
-import           Updates
 import           Slot
+import           Updates
 import           UTxO
 
 import           Control.State.Transition

@@ -29,22 +29,23 @@ module BlockChain
   )
 where
 
-import qualified Data.ByteString.Char8         as BS
-import           Numeric.Natural                ( Natural )
-import           Data.Ratio
-import qualified Data.Map.Strict               as Map
+import qualified Data.ByteString.Char8 as BS (length, pack)
+import qualified Data.Map.Strict as Map (insert, lookup)
+import           Data.Ratio (denominator, numerator)
+import           Numeric.Natural (Natural)
 
-import           Cardano.Binary           (ToCBOR(toCBOR), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
-import           BaseTypes
-import           Delegation.Certificates
-import           EpochBoundary
-import           Keys
-import           OCert
-import qualified Slot
-import           Tx
+import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkNonce, seedOp)
+import           Delegation.Certificates (PoolDistr (..))
+import           EpochBoundary (BlocksMade (..))
+import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash, Sig, VKey,
+                     hash, hashKey)
+import           OCert (OCert (..))
+import           Slot (Duration, Slot (..))
+import           Tx (Tx (..))
 
-import           NonIntegral                    ( (***) )
+import           NonIntegral ((***))
 
 -- |The hash of a Block Header
 newtype HashHeader hashAlgo dsignAlgo kesAlgo =
@@ -110,7 +111,7 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
     -- | verification key of block issuer
   , bheaderVk             :: VKey dsignAlgo
     -- | block slot
-  , bheaderSlot           :: Slot.Slot
+  , bheaderSlot           :: Slot
     -- | block nonce
   , bheaderEta            :: Seed
     -- | proof of nonce
@@ -160,10 +161,10 @@ bHeaderSize
 bHeaderSize = BS.length . BS.pack . show
 
 bBodySize :: DSIGNAlgorithm dsignAlgo => [Tx hashAlgo dsignAlgo] -> Int
-bBodySize txs = foldl (+) 0 (map (BS.length . BS.pack . show) txs)
+bBodySize txs = sum (map (BS.length . BS.pack . show) txs)
 
-slotToSeed :: Slot.Slot -> Seed
-slotToSeed (Slot.Slot s) = mkNonce (fromIntegral s)
+slotToSeed :: Slot -> Seed
+slotToSeed (Slot s) = mkNonce (fromIntegral s)
 
 bheader :: Block hashAlgo dsignAlgo kesAlgo -> BHeader hashAlgo dsignAlgo kesAlgo
 bheader (Block bh _) = bh
@@ -179,10 +180,10 @@ hsig
   -> KESig kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
 hsig (BHeader _ s) = s
 
-slotsPrior :: Slot.Duration
+slotsPrior :: Duration
 slotsPrior = 33 -- one third of slots per epoch
 
-startRewards :: Slot.Duration
+startRewards :: Duration
 startRewards = 33 -- see above
 
 verifyVrf
@@ -197,7 +198,7 @@ instance VrfProof Seed where
   toSeed = id
 
 instance VrfProof UnitInterval where
-  toSeed u = mkNonce $ (numerator r * denominator r)
+  toSeed u = mkNonce (numerator r * denominator r)
     where r = intervalValue u
 
 vrfChecks
@@ -218,14 +219,14 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
                          (bheaderPrfL bhb)
             && intervalValue (bheaderL bhb)
             <  1
-            -  ((1 - activeSlotsCoeff) *** (fromRational sigma))
+            -  ((1 - activeSlotsCoeff) *** fromRational sigma)
  where
   vk = bvkcold bhb
   hk = hashKey vk
   ss = slotToSeed $ bheaderSlot bhb
   f' = intervalValue f
   activeSlotsCoeff =
-    (fromIntegral $ numerator f') / (fromIntegral $ denominator f')
+    fromIntegral (numerator f') / fromIntegral (denominator f')
 
 seedEta :: Seed
 seedEta = mkNonce 0

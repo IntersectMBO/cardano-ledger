@@ -1,14 +1,12 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Address
   ( mkVKeyRwdAcnt
   )
 where
 
-import           Cardano.Crypto.Hash   (HashAlgorithm)
+import           Cardano.Crypto.Hash (HashAlgorithm)
 
-import           Keys
-import           TxData
+import           Keys (DSIGNAlgorithm, KeyPair, hashKey, vKey)
+import           TxData (Credential (..), RewardAcnt (..))
 
 mkVKeyRwdAcnt
   :: ( HashAlgorithm hashAlgo

@@ -1,15 +1,15 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Bhead
   ( BHEAD
   )
 where
 
-import qualified Data.Set                      as Set
+import qualified Data.Set as Set
 
 import           BaseTypes
 import           BlockChain
@@ -59,7 +59,7 @@ bheadTransition = do
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
-    $ TRC ((NewEpochEnv etaC slot gkeys), nes, epochFromSlot slot)
+    $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
   ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), ru, slot)
   let nes'' = nes' { nesRu = ru' }

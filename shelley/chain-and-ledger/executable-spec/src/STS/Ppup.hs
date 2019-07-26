@@ -1,15 +1,14 @@
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Ppup
   ( PPUP
   )
 where
 
-import qualified Data.Map.Strict               as Map
-import qualified Data.Set                      as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           BlockChain
 import           Keys
@@ -40,7 +39,7 @@ ppupTransition = do
   if Map.null pupS'
     then pure pupS
     else do
-      (not $ Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
+      not (Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
         ?! NonGenesisUpdatePPUP
       let Epoch slotEpoch = epochFromSlot (Slot 1)
       s

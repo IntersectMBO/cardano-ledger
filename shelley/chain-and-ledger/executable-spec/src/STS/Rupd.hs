@@ -1,5 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module STS.Rupd
   ( RUPD
@@ -30,9 +30,9 @@ instance STS (RUPD hashAlgo dsignAlgo) where
 rupdTransition :: TransitionRule (RUPD hashAlgo dsignAlgo)
 rupdTransition = do
   TRC ((b, es), ru, s) <- judgmentContext
-  let slot = (firstSlot $ epochFromSlot s) +* startRewards
+  let slot = firstSlot (epochFromSlot s) +* startRewards
   if s <= slot
     then pure ru
     else case ru of
       Nothing -> pure $ Just (createRUpd b es)
-      Just _  -> pure $ ru
+      Just _  -> pure ru

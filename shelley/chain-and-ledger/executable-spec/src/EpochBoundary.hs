@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 {-|
 Module      : EpochBoundary
@@ -30,26 +30,26 @@ module EpochBoundary
   , groupByPool
   ) where
 
-import           Coin
-import           Delegation.Certificates (StakeKeys (..), StakePools (..),
-                                          decayKey, decayPool, refund)
-import           Keys
-import           PParams hiding (a0, nOpt)
-import           Slot
-import           Tx
-import           TxData
-import           UTxO hiding (dom)
+import           Coin (Coin (..))
+import           Delegation.Certificates (StakeKeys (..), StakePools (..), decayKey, decayPool,
+                     refund)
+import           Keys (KeyHash)
+import           PParams (PParams (..))
+import           Slot (Epoch, Slot, slotFromEpoch, (-*))
+import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
+                     getRwdHK)
+import           UTxO (UTxO (..))
 
-import qualified Data.Map.Strict         as Map
-import           Data.Maybe              (mapMaybe)
-import           Data.Ratio
-import qualified Data.Set                as Set
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (mapMaybe)
+import           Data.Ratio ((%))
+import qualified Data.Set as Set
 
-import           Numeric.Natural         (Natural)
+import           Numeric.Natural (Natural)
 
-import           Lens.Micro.TH           (makeLenses)
+import           Lens.Micro.TH (makeLenses)
 
-import           Ledger.Core ((◁), (▷), dom)
+import           Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
 newtype BlocksMade hashAlgo dsignAlgo
@@ -120,7 +120,7 @@ poolStake
   -> Stake hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
 poolStake hk delegs (Stake stake) =
-  Stake $ (dom (delegs ▷ (Set.singleton hk))) ◁ stake
+  Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
 
 -- | Calculate pool refunds
 poolRefunds
@@ -174,7 +174,7 @@ groupByPool
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (delegs Map.! hk, (Set.singleton hk) ◁ active)
+    [ (delegs Map.! hk, Set.singleton hk ◁ active)
     | hk <- Map.keys delegs
     ]
 
