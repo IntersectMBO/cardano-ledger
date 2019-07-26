@@ -78,11 +78,11 @@ initTxBody addrs = TxBody
         (Slot 0)
         emptyUpdate
 
-scriptTxBody :: [TxIn] -> Addr -> Wdrl -> Coin -> TxBody
-scriptTxBody inp addr wdrl c =
+makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
+makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
-    [TxOut addr c]
+    [uncurry TxOut addrC | addrC <- addrCs]
     []
     wdrl
     (Coin 0)
@@ -151,7 +151,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                    Right utxoSt'' -> utxoSt''
                    _                      -> error ("must fail test before"
                                                    ++ show initUtxo)
-        txbody = scriptTxBody inputs aliceAddr wdrl (aliceInitCoin + bobInitCoin + sum wdrl)
+        txbody = makeTxBody inputs [(aliceAddr, aliceInitCoin + bobInitCoin + sum wdrl)] wdrl
         inputs = [TxIn txId (fromIntegral n) | n <-
                      [0..length lockScripts - (if aliceKeep > 0 then 0 else 1)]]
                                  -- alice? + scripts
