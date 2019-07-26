@@ -43,7 +43,10 @@ module Cardano.Chain.Block.Header
   , renderHeader
 
   -- * Boundary Header
-  , dropBoundaryHeader
+  , ABoundaryHeader(..)
+  , toCBORABoundaryHeader
+  , fromCBORABoundaryHeader
+  , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes
 
   -- * HeaderHash
@@ -67,6 +70,7 @@ import Cardano.Prelude
 
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
+import qualified Data.Map.Strict as Map (singleton)
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, int)
 import qualified Formatting.Buildable as B
@@ -90,7 +94,7 @@ import Cardano.Binary
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
-  (fromCBORBoundaryConsensusData, dropBoundaryExtraHeaderData)
+  (fromCBORBoundaryConsensusData, dropBoundaryExtraHeaderDataRetainGenesisTag)
 import Cardano.Chain.Block.Proof (Proof(..), mkProof)
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
@@ -112,6 +116,7 @@ import Cardano.Crypto
   , SignTag(..)
   , SigningKey
   , VerificationKey
+  , hash
   , hashDecoded
   , hashHexF
   , hashRaw
@@ -360,7 +365,7 @@ fromCBORHeaderToHash epochSlots = do
   enforceSize "Header" 2
   fromCBOR @Word >>= \case
     0 -> do
-      void dropBoundaryHeader
+      void fromCBORABoundaryHeader
       pure Nothing
     1 -> Just <$!> fromCBORHeader epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
@@ -438,17 +443,76 @@ headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 -- BoundaryHeader
 --------------------------------------------------------------------------------
 
-dropBoundaryHeader :: Decoder s (HeaderHash, Word64, ChainDifficulty)
-dropBoundaryHeader = do
-  enforceSize "BoundaryHeader" 5
-  dropInt32
-  -- HeaderHash
-  hh <- fromCBOR
-  -- BoundaryBodyProof
-  dropBytes
-  (epoch, difficulty) <- fromCBORBoundaryConsensusData
-  dropBoundaryExtraHeaderData
-  pure (hh, epoch, difficulty)
+data ABoundaryHeader a = ABoundaryHeader
+  { boundaryPrevHash         :: !(Either GenesisHash HeaderHash)
+  , boundaryEpoch            :: !Word64
+  , boundaryDifficulty       :: !ChainDifficulty
+  , boundaryHeaderAnnotation :: !a
+  } deriving (Eq, Show, Functor)
+
+instance Decoded (ABoundaryHeader ByteString) where
+  type BaseType (ABoundaryHeader ByteString) = ABoundaryHeader ()
+  recoverBytes = boundaryHeaderAnnotation
+
+-- | Compute the hash of a boundary block header from its annotation.
+-- It uses `wrapBoundaryBytes`, for the hash must be computed on the header
+-- bytes tagged with the CBOR list length and tag discriminator, which is
+-- the encoding chosen by cardano-sl.
+boundaryHeaderHashAnnotated :: ABoundaryHeader ByteString -> HeaderHash
+boundaryHeaderHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
+
+-- | Encode from a boundary header with any annotation. This does not
+-- necessarily invert `fromCBORBoundaryHeader`, because that decoder drops
+-- information that this encoder replaces, such as the body proof (assumes
+-- the body is empty) and the extra header data (sets it to empty map).
+toCBORABoundaryHeader :: ProtocolMagicId -> ABoundaryHeader a -> Encoding
+toCBORABoundaryHeader pm hdr =
+    encodeListLen 5
+      <> toCBOR pm
+      <> ( case boundaryPrevHash hdr of
+             Left  gh -> toCBOR (genesisHeaderHash gh)
+             Right hh -> toCBOR hh
+         )
+      -- Body proof
+      <> toCBOR (hash (mempty :: LByteString))
+      -- Consensus data
+      <> ( encodeListLen 2
+          -- Epoch
+          <> toCBOR (boundaryEpoch hdr)
+          -- Chain difficulty
+          <> toCBOR (boundaryDifficulty hdr)
+         )
+      -- Extra data
+      <> ( encodeListLen 1
+          <> toCBOR genesisTag
+         )
+  where
+    -- Genesis tag to indicate the presence of a genesis hash in a non-zero
+    -- epoch. See 'dropBoundaryExtraHeaderDataRetainGenesisTag' for more
+    -- details on this.
+    genesisTag = case (boundaryPrevHash hdr, boundaryEpoch hdr) of
+      (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
+      _ -> mempty :: Map Word8 LByteString
+
+fromCBORABoundaryHeader :: Decoder s (ABoundaryHeader ByteSpan)
+fromCBORABoundaryHeader = do
+  Annotated header bytespan <- annotatedDecoder $ do
+    enforceSize "BoundaryHeader" 5
+    dropInt32
+    -- HeaderHash
+    hh <- fromCBOR
+    -- BoundaryBodyProof
+    dropBytes
+    (epoch, difficulty) <- fromCBORBoundaryConsensusData
+    isGen <- dropBoundaryExtraHeaderDataRetainGenesisTag
+    let hh' = if epoch == 0 || isGen then Left (coerce hh) else Right hh
+    pure $ ABoundaryHeader
+      { boundaryPrevHash         = hh'
+      , boundaryEpoch            = epoch
+      , boundaryDifficulty       = difficulty
+      , boundaryHeaderAnnotation = ()
+      }
+  pure (header { boundaryHeaderAnnotation = bytespan })
 
 -- | These bytes must be prepended when hashing raw boundary header data
 --
