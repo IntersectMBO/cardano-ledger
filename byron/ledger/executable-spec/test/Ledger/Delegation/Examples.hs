@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeApplications #-}
+
 -- | Examples of the application of the delegation rules.
 module Ledger.Delegation.Examples
   ( deleg
