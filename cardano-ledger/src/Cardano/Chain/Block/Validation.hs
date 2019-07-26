@@ -625,7 +625,7 @@ updateBlock config cvs b = do
     { cvsLastSlot     = blockSlot b
     , cvsPreviousHash = Right $! blockHashAnnotated b
     , cvsUtxo         = utxo
-    , cvsUpdateState  = updateState'
+    , cvsUpdateState  = updateState
     , cvsDelegationState = delegationState
     }
  where
