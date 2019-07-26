@@ -86,7 +86,7 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 200 $ property $ do
-    let (traceLength, step) = (40 :: Word64, 10 :: Word64)
+    let (traceLength, step) = (1000 :: Word64, 10 :: Word64)
 --    tr <- forAll $ trace @CHAIN traceLength
     tr <- forAll $ traceSigGen
                      @CHAIN

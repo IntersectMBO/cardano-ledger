@@ -38,7 +38,7 @@ elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
 elaboratePParams pps = Concrete.ProtocolParameters
   { Concrete.ppScriptVersion      = fromIntegral $ Abstract._scriptVersion pps
   , Concrete.ppSlotDuration       = 0 -- TODO: was Concrete.ppSlotDuration dummyProtocolParameters
-  , Concrete.ppMaxBlockSize       = 748 * Abstract._maxBkSz pps
+  , Concrete.ppMaxBlockSize       = 4096 * Abstract._maxBkSz pps --748 * Abstract._maxBkSz pps
   , Concrete.ppMaxHeaderSize      = 95 * Abstract._maxHdrSz pps
   , Concrete.ppMaxTxSize          = 4096 * Abstract._maxTxSz pps
   , Concrete.ppMaxProposalSize    = 4096 * Abstract._maxPropSz pps
