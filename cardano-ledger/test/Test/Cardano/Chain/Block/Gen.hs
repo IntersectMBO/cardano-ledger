@@ -10,7 +10,8 @@ module Test.Cardano.Chain.Block.Gen
   , genToSign
   , genBlock
   , genBlockWithEpochSlots
-  , genBoundaryValidationData
+  , genBoundaryBlock
+  , genBoundaryHeader
   )
 where
 
@@ -26,7 +27,9 @@ import Cardano.Chain.Block
   , Block
   , BlockSignature
   , Body
-  , BoundaryValidationData(..)
+  , ABoundaryBlock(..)
+  , ABoundaryBody(..)
+  , ABoundaryHeader(..)
   , pattern Body
   , Header
   , HeaderHash
@@ -202,12 +205,18 @@ genBlock protocolMagicId epochSlots =
         )
         body
 
-genBoundaryValidationData :: Gen (BoundaryValidationData ())
-genBoundaryValidationData = 
-  BoundaryValidationData
+genBoundaryBlock :: Gen (ABoundaryBlock ())
+genBoundaryBlock = 
+  ABoundaryBlock
     <$> pure 0
-    <*> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
+    <*> genBoundaryHeader
+    <*> pure (ABoundaryBody ())
+    <*> pure ()
+
+genBoundaryHeader :: Gen (ABoundaryHeader ())
+genBoundaryHeader =
+  ABoundaryHeader
+    <$> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
     <*> (Gen.word64 (Range.constantFrom 10 0 1000))
     <*> genChainDifficulty
-    <*> pure ()
     <*> pure ()

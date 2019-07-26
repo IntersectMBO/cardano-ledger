@@ -52,21 +52,22 @@ module Cardano.Chain.Block.Block
   , toCBORABOBBlock
   , fromCBORABOBBlock
   , fromCBORABlockOrBoundary
+  , toCBORABlockOrBoundary
 
-  -- * BoundaryValidationData
-  , BoundaryValidationData(..)
+  -- * ABoundaryBlock
+  , ABoundaryBlock(..)
   , boundaryHashAnnotated
-  , dropBoundaryBlock
+  , fromCBORABoundaryBlock
+  , toCBORABoundaryBlock
   , toCBORABOBBoundary
-  , toCBORBoundaryBlock
+
+  , ABoundaryBody(..)
   )
 where
 
 import Cardano.Prelude
 
-import Data.Coerce (coerce)
 import qualified Data.ByteString as BS
-import qualified Data.Map.Strict as Map
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
 import qualified Formatting.Buildable as B
@@ -96,14 +97,16 @@ import Cardano.Chain.Block.Body
   , bodyUpdatePayload
   )
 import Cardano.Chain.Block.Boundary
-  (dropBoundaryBody, dropBoundaryExtraBodyDataRetainGenesisTag)
+  (dropBoundaryBody, dropBoundaryExtraBodyData)
 import Cardano.Chain.Block.Header
   ( ABlockSignature
   , AHeader(..)
+  , ABoundaryHeader(..)
   , Header
   , HeaderHash
   , ToSign
-  , dropBoundaryHeader
+  , boundaryHeaderHashAnnotated
+  , fromCBORABoundaryHeader
   , fromCBORAHeader
   , genesisHeaderHash
   , hashHeader
@@ -121,7 +124,7 @@ import Cardano.Chain.Block.Header
   , headerToSign
   , mkHeaderExplicit
   , toCBORHeader
-  , wrapBoundaryBytes
+  , toCBORABoundaryHeader
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
@@ -137,7 +140,7 @@ import Cardano.Chain.UTxO.TxPayload (ATxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
-import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey, hashDecoded, hash)
+import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 
 
 --------------------------------------------------------------------------------
@@ -340,15 +343,22 @@ renderBlock es block =
 
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
-  | ABOBBoundary (BoundaryValidationData a)
+  | ABOBBoundary (ABoundaryBlock a)
   deriving (Eq, Show, Functor)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-toCBORABOBBlock :: EpochSlots -> Block -> Encoding
+toCBORABOBBlock :: EpochSlots -> ABlock a -> Encoding
 toCBORABOBBlock epochSlots block =
   encodeListLen 2
     <> toCBOR (1 :: Word)
-    <> toCBORBlock epochSlots block
+    <> toCBORBlock epochSlots (fmap (const ()) block)
+
+-- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
+toCBORABOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
+toCBORABOBBoundary pm bvd =
+  encodeListLen 2
+    <> toCBOR (0 :: Word)
+    <> toCBORABoundaryBlock pm bvd
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 fromCBORABOBBlock :: EpochSlots -> Decoder s (Maybe Block)
@@ -369,115 +379,101 @@ fromCBORABlockOrBoundary
 fromCBORABlockOrBoundary epochSlots = do
   enforceSize "Block" 2
   fromCBOR @Word >>= \case
-    0 -> ABOBBoundary <$> dropBoundaryBlock
+    0 -> ABOBBoundary <$> fromCBORABoundaryBlock
     1 -> ABOBBlock <$> fromCBORABlock epochSlots
     t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
+toCBORABlockOrBoundary
+  :: ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Encoding
+toCBORABlockOrBoundary pm epochSlots abob = case abob of
+  ABOBBlock    blk -> toCBORABOBBlock epochSlots blk
+  ABOBBoundary ebb -> toCBORABOBBoundary pm ebb
 
 --------------------------------------------------------------------------------
--- BoundaryValidationData
+-- ABoundaryBlock
 --------------------------------------------------------------------------------
 
-data BoundaryValidationData a = BoundaryValidationData
-  { boundaryBlockLength :: !Int64
-  -- ^ The length of the boundary block in bytes
-  , boundaryPrevHash    :: !(Either GenesisHash HeaderHash)
-  -- ^ The hash of the previous block. Should only be GenesisHash for the
-  -- initial boundary block.
-  , boundaryEpoch       :: !Word64
-  , boundaryDifficulty  :: !ChainDifficulty
-  -- ^ Block number
-  , boundaryHeaderBytes :: !a
-  -- ^ Annotation representing the header bytes
-  , boundaryBlockBytes  :: !a
-  -- ^ Annotation representing the bytes that encode the entire boundary block
+-- | For boundary body data, we only keep an annotation. It's the body and
+-- extra body data.
+data ABoundaryBody a = ABoundaryBody
+  { boundaryBodyAnnotation :: !a
   } deriving (Eq, Show, Functor)
 
-instance Decoded (BoundaryValidationData ByteString) where
-  type BaseType (BoundaryValidationData ByteString) = BoundaryValidationData ()
-  recoverBytes = boundaryHeaderBytes
+instance Decoded (ABoundaryBody ByteString) where
+  type BaseType (ABoundaryBody ByteString) = ABoundaryBody ()
+  recoverBytes = boundaryBodyAnnotation
 
--- | Extract the hash of a boundary block from its annotation.
-boundaryHashAnnotated :: BoundaryValidationData ByteString -> HeaderHash
-boundaryHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
-
--- | A decoder that drops the boundary block, but preserves the 'ByteSpan' of
---   the header for hashing
-dropBoundaryBlock :: Decoder s (BoundaryValidationData ByteSpan)
-dropBoundaryBlock = do
-  Annotated (isGen, (Annotated (hh, epoch, difficulty) hbs)) bs@(ByteSpan start end) <- annotatedDecoder $ do
-    enforceSize "BoundaryBlock" 3
-    aHeaderStuff <- annotatedDecoder dropBoundaryHeader
+fromCBORABoundaryBody :: Decoder s (ABoundaryBody ByteSpan)
+fromCBORABoundaryBody = do
+  Annotated _ bs <- annotatedDecoder $ do
     dropBoundaryBody
-    isGen <- dropBoundaryExtraBodyDataRetainGenesisTag
-    pure (isGen, aHeaderStuff)
-  pure $ BoundaryValidationData
-    { boundaryBlockLength = end - start
-    -- For the zeroth boundary block this field needs to be a 'GenesisHash'
-    -- and for all subsequent blocks it's a 'HeaderHash'.
-    , boundaryPrevHash    = if epoch == 0 || isGen then Left (coerce hh) else Right hh
-    , boundaryEpoch       = epoch
-    , boundaryDifficulty  = difficulty
-    , boundaryHeaderBytes = hbs
-    , boundaryBlockBytes  = bs
-    }
+    dropBoundaryExtraBodyData
+  pure $ ABoundaryBody bs
 
-toCBORABOBBoundary :: ProtocolMagicId -> BoundaryValidationData a -> Encoding
-toCBORABOBBoundary pm bvd =
-  encodeListLen 2
-    <> toCBOR (0 :: Word)
-    <> toCBORBoundaryBlock pm bvd
-
--- See https://github.com/input-output-hk/cardano-sl/blob/develop/docs/on-the-wire/current-spec.cddl
-toCBORBoundaryBlock :: ProtocolMagicId -> BoundaryValidationData a -> Encoding
-toCBORBoundaryBlock pm bvd = let
-    bodyProof = hash (mempty :: LByteString)
-    -- Genesis tag to indicate the presence of a genesis hash in a non-zero
-    -- epoch. See 'dropBoundaryExtraBodyDataRetainGenesisTag' for more details
-    -- on this.
-    genesisTag = case (boundaryPrevHash bvd, boundaryEpoch bvd) of
-      (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
-      _ -> mempty :: Map Word8 LByteString
-  in encodeListLen 3
-    -- Header
-    <> ( encodeListLen 5
-        -- Protocol magic
-        <> toCBOR pm
-        -- Previous block
-        <>  ( case boundaryPrevHash bvd of
-                Left gh -> toCBOR (genesisHeaderHash gh)
-                Right hh -> toCBOR hh
-            )
-        -- Body proof
-        <> toCBOR bodyProof
-        -- Consensus data
-        <> ( encodeListLen 2
-            -- Epoch
-            <> toCBOR (boundaryEpoch bvd)
-            -- Chain difficulty
-            <> toCBOR (boundaryDifficulty bvd)
-           )
-        -- Extra data
-        <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
-      )
-    -- Body
-    <> (encodeListLenIndef <> encodeBreak)
-    -- Attributes
+-- | Every boundary body has the same encoding: empty.
+toCBORABoundaryBody :: ABoundaryBody a -> Encoding
+toCBORABoundaryBody _ =
+  (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-        <> toCBOR genesisTag
+        <> toCBOR (mempty :: Map Word8 LByteString)
        )
 
-instance B.Buildable (BoundaryValidationData a) where
+-- | For a boundary block, we keep the header, body, and an annotation for
+-- the whole thing (commonly the bytes from which it was decoded).
+data ABoundaryBlock a = ABoundaryBlock
+  { boundaryBlockLength     :: !Int64
+  -- ^ Needed for validation.
+  , boundaryHeader          :: !(ABoundaryHeader a)
+  , boundaryBody            :: !(ABoundaryBody a)
+  , boundaryAnnotation      :: !a
+  } deriving (Eq, Show, Functor)
+
+instance Decoded (ABoundaryBlock ByteString) where
+  type BaseType (ABoundaryBlock ByteString) = ABoundaryBlock ()
+  recoverBytes = boundaryAnnotation
+
+-- | Extract the hash of a boundary block from its annotation.
+boundaryHashAnnotated :: ABoundaryBlock ByteString -> HeaderHash
+boundaryHashAnnotated = boundaryHeaderHashAnnotated . boundaryHeader
+
+fromCBORABoundaryBlock :: Decoder s (ABoundaryBlock ByteSpan)
+fromCBORABoundaryBlock = do
+  Annotated (hdr, bod) bytespan@(ByteSpan start end) <- annotatedDecoder $ do
+    enforceSize "BoundaryBlock" 3
+    -- 1 item (list of 5)
+    hdr <- fromCBORABoundaryHeader
+    -- 2 items (body and extra body data)
+    bod <- fromCBORABoundaryBody
+    pure (hdr, bod)
+  pure $ ABoundaryBlock
+    { boundaryBlockLength = end - start
+    , boundaryHeader      = hdr
+    , boundaryBody        = bod
+    , boundaryAnnotation  = bytespan
+    }
+
+-- | See note on `toCBORABoundaryHeader`. This as well does not necessarily
+-- invert the decoder `fromCBORABoundaryBlock`.
+toCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
+toCBORABoundaryBlock pm ebb =
+    encodeListLen 3
+      -- 1 item (list of 5)
+      <> toCBORABoundaryHeader pm (boundaryHeader ebb)
+      -- 2 items (body and extra body data)
+      <> toCBORABoundaryBody (boundaryBody ebb)
+
+instance B.Buildable (ABoundaryBlock a) where
   build bvd = bprint
     ( "Boundary:\n"
     . "  Starting epoch: " . int . "\n"
     . "  " . later buildBoundaryHash . "\n"
     . "  Block number: " . build
     )
-    (boundaryEpoch bvd)
-    (boundaryPrevHash bvd)
-    (boundaryDifficulty bvd)
+    (boundaryEpoch hdr)
+    (boundaryPrevHash hdr)
+    (boundaryDifficulty hdr)
     where
+      hdr = boundaryHeader bvd
       buildBoundaryHash :: Either GenesisHash HeaderHash -> Builder
       buildBoundaryHash (Left (GenesisHash _)) = fromText "Genesis"
       buildBoundaryHash (Right h) = B.build h

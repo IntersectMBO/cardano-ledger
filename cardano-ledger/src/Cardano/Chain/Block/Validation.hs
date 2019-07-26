@@ -60,7 +60,7 @@ import Cardano.Chain.Block.Body (ABody (..))
 import Cardano.Chain.Block.Block
   ( ABlock(..)
   , ABlockOrBoundary(..)
-  , BoundaryValidationData(..)
+  , ABoundaryBlock(..)
   , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
@@ -75,6 +75,7 @@ import Cardano.Chain.Block.Block
   )
 import Cardano.Chain.Block.Header
   ( AHeader (..)
+  , ABoundaryHeader (..)
   , BlockSignature
   , HeaderHash
   , headerLength
@@ -347,10 +348,10 @@ updateChainBlockOrBoundary config c b = case b of
 updateChainBoundary
   :: MonadError ChainValidationError m
   => ChainValidationState
-  -> BoundaryValidationData ByteString
+  -> ABoundaryBlock ByteString
   -> m ChainValidationState
 updateChainBoundary cvs bvd = do
-  case (cvsPreviousHash cvs, boundaryPrevHash bvd) of
+  case (cvsPreviousHash cvs, boundaryPrevHash (boundaryHeader bvd)) of
     (Left expected, Left actual) ->
         (expected == actual)
           `orThrowError` ChainValidationGenesisHashMismatch expected actual
@@ -375,7 +376,7 @@ updateChainBoundary cvs bvd = do
       . hashRaw
       . BSL.fromStrict
       . wrapBoundaryBytes
-      $ boundaryHeaderBytes bvd
+      $ boundaryHeaderAnnotation (boundaryHeader bvd)
     }
 
 

@@ -31,22 +31,22 @@ import Cardano.Chain.Block
   , Block
   , BlockSignature
   , Body
-  , BoundaryValidationData(boundaryBlockLength)
+  , ABoundaryBlock(boundaryBlockLength)
   , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
   , ToSign(..)
   , dropBoundaryBody
-  , dropBoundaryBlock
+  , fromCBORABoundaryBlock
   , fromCBORBoundaryConsensusData
-  , dropBoundaryHeader
+  , fromCBORABoundaryHeader
   , fromCBORABOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
   , toCBORABOBBlock
-  , toCBORBoundaryBlock
+  , toCBORABoundaryBlock
   , toCBORHeader
   , toCBORHeaderToHash
   )
@@ -159,7 +159,7 @@ ts_roundTripBlockSignatureCBOR =
 goldenDeprecatedBoundaryBlockHeader :: Property
 goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   "BoundaryBlockHeader"
-  (void dropBoundaryHeader)
+  (void fromCBORABoundaryHeader)
   "test/golden/cbor/block/BoundaryBlockHeader"
 
 ts_roundTripBoundaryBlock :: TSProperty
@@ -169,16 +169,16 @@ ts_roundTripBoundaryBlock = eachOfTS
     roundTripsBVD
   where
     -- We ignore the size of the BVD here, since calculating it is annoying.
-    roundTripsBVD :: (ProtocolMagicId, BoundaryValidationData ()) -> H.PropertyT IO ()
+    roundTripsBVD :: (ProtocolMagicId, ABoundaryBlock ()) -> H.PropertyT IO ()
     roundTripsBVD (pm, bvd) = trippingBuildable
       bvd
-      (serializeEncoding . toCBORBoundaryBlock pm)
-      (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryValidationData" dropBoundaryBlock)
+      (serializeEncoding . toCBORABoundaryBlock pm)
+      (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryBlock" fromCBORABoundaryBlock)
 
-    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, BoundaryValidationData ())
-    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryValidationData
+    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
+    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock
 
-    dropSize :: BoundaryValidationData a -> BoundaryValidationData a
+    dropSize :: ABoundaryBlock a -> ABoundaryBlock a
     dropSize bvd = bvd { boundaryBlockLength = 0 }
 
 
