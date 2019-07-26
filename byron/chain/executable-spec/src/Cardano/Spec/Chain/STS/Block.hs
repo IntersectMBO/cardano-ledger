@@ -83,14 +83,17 @@ data Block
 instance HasTypeReps Block
 makeLenses ''Block
 
--- | Block update payload
-bUpdPayload :: Block -> (Maybe UProp, [Vote])
-bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
-
-
 -- | Protocol version endorsment
 bEndorsment :: Block -> (ProtVer, VKey)
 bEndorsment b = (b ^. bBody ^. bProtVer, b ^. bHeader ^. bhIssuer)
+
+-- | Slot the block is published in
+bSlot :: Block -> Slot
+bSlot b = b ^. bHeader ^. bhSlot
+
+-- | Block update payload
+bUpdPayload :: Block -> (Maybe UProp, [Vote])
+bUpdPayload b = (b ^. bBody ^. bUpdProp, b ^. bBody ^. bUpdVotes)
 
 -- | Compute the abstract size (in words) that a block takes.
 bSize :: Block -> Natural
