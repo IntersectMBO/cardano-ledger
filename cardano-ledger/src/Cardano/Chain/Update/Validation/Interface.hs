@@ -51,7 +51,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotNumber)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotNumber, twice)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -288,13 +288,15 @@ registerVote env st vote = do
     <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting st
   let
+    stableProposals = M.filter (<= stableAt) confirmedProposals'
+    stableAt = currentSlot `subSlotNumber` twice (k env)
     appVersions' =
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
                           !svNumber'  = svNumber sv
                       in (svAppName', (svNumber', currentSlot))
                     | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys confirmedProposals'
+                    , pid `elem` M.keys stableProposals
                     ]
   pure $!
     st { confirmedProposals = confirmedProposals'
@@ -306,9 +308,9 @@ registerVote env st vote = do
        , registeredSoftwareUpdateProposals =
            M.withoutKeys
              registeredSoftwareUpdateProposals
-             (M.keysSet confirmedProposals)
+             (M.keysSet stableProposals)
        }
-       -- TODO: consider using the `Relation` instances from `fm-ledger-rules` (see `Ledger.Core`)
+       -- TODO: consider using the `Relation` instances from `cardano-ledger-specs` (see `Ledger.Core`)
 
   where
     Environment
