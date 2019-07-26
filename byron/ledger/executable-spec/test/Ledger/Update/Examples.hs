@@ -29,7 +29,6 @@ upiendExamples =
           , _bkSlotsPerEpoch = SlotCount { unSlotCount = 10 }
           , _upTtl = SlotCount { unSlotCount = 10 }
           , _scriptVersion = 0
-          , _cfmThd = 0.6
           , _upAdptThd = 0.6
           , _factorA = 1
           , _factorB = 2
@@ -44,7 +43,6 @@ upiendExamples =
           , _bkSlotsPerEpoch = SlotCount { unSlotCount = 10 }
           , _upTtl = SlotCount { unSlotCount = 2 }
           , _scriptVersion = 0
-          , _cfmThd = 0.0
           , _upAdptThd = 0.0
           , _factorA = 0
           , _factorB = 0

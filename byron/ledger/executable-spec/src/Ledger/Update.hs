@@ -21,6 +21,8 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
+-- import qualified Debug.Trace as Debug
+
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
 import           Data.Bimap (Bimap, empty, lookupR)
@@ -80,9 +82,6 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: !Double
-  -- ^ Update proposal confirmation threshold (number of votes)
-  -- TODO: we should merge @upAdptThd@ and @cfmThd@ into one.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
@@ -660,7 +659,7 @@ instance STS UPEND where
             pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            size ([bv] ◁ bvs) < t ?! CanAdopt bv
+            size ([bv] ◁ bvs') < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
                 pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
@@ -680,7 +679,7 @@ instance STS UPEND where
             pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
+            t <= size ([bv] ◁ bvs') ?! CannotAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, (_, ppsc)) -> do
                 pid ∈ dom (cps  ▷<= sn -. 2 *. k) ?! UnconfirmedProposal pid
@@ -718,15 +717,15 @@ delegationMap (_, dms, _, _) = dms
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
 type UPIState =
-  ( (ProtVer, PParams)
-  , [(Core.Slot, (ProtVer, PParams))]
-  , Map ApName (ApVer, Core.Slot, Metadata)
-  , Map UpId (ProtVer, PParams)
-  , Map UpId (ApName, ApVer, Metadata)
-  , Map UpId Core.Slot
-  , Set (UpId, Core.VKeyGenesis)
-  , Set (ProtVer, Core.VKeyGenesis)
-  , Map UpId Core.Slot
+  ( (ProtVer, PParams) -- pv
+  , [(Core.Slot, (ProtVer, PParams))] -- pps
+  , Map ApName (ApVer, Core.Slot, Metadata) -- avs
+  , Map UpId (ProtVer, PParams) -- rpus
+  , Map UpId (ApName, ApVer, Metadata) -- raus
+  , Map UpId Core.Slot -- cps
+  , Set (UpId, Core.VKeyGenesis) -- vts
+  , Set (ProtVer, Core.VKeyGenesis) -- bvs
+  , Map UpId Core.Slot -- pws
   )
 
 emptyUPIState :: UPIState
@@ -757,7 +756,6 @@ initialPParams =
      , _upTtl = 10           -- The proposal time to live needs to be related to @k@ (or the number
                              -- of slots in an epoch). We pick an arbitrary value here.
      , _scriptVersion = 0
-     , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
 
      -- To determine the factors @A@ and @B@ used in the calculation of the
@@ -1082,7 +1080,6 @@ ppsUpdateFrom pps = do
     <*> pure _bkSlotsPerEpoch -- This parameter should be removed from 'PParams'
     <*> nextUpTtl
     <*> nextScriptVersion
-    <*> nextCfmThd
     <*> nextUpAdptThd
     <*> nextFactorA
     <*> nextFactorB
@@ -1096,7 +1093,6 @@ ppsUpdateFrom pps = do
            , _bkSlotsPerEpoch
            , _upTtl
            , _scriptVersion
-           , _cfmThd
            , _upAdptThd
            , _factorA
            , _factorB
@@ -1142,9 +1138,6 @@ ppsUpdateFrom pps = do
     -- The new script version can be increased at most 1 unit
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
-
-    nextCfmThd :: Gen Double
-    nextCfmThd = nextUpAdptThd  -- Using the same generator since we want to unify these parameters.
 
     nextUpAdptThd :: Gen Double
     nextUpAdptThd =
@@ -1206,7 +1199,7 @@ instance STS UPIVOTE where
               , bvs
               , pws)
             , v) <- judgmentContext
-        let q = pps ^. cfmThd
+        let q = pps ^. upAdptThd
         (cps', vts') <- trans @UPVOTE $ TRC (( sn
                                              , floor $ q * fromIntegral ngk
                                              , dom pws
