@@ -187,6 +187,11 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   SoftwareVersion appName appVersion = softwareVersion
 
   softwareVersionChanged =
+    -- Debug.trace ("Checking if software version changed: \n"
+    --              ++ "appName: " ++ show appName ++ "\n"
+    --              ++ "appVersion: " ++ show appVersion ++ "\n"
+    --              ++ "appVersions: " ++ show appVersions ++ "\n"
+    --             ) $
     maybe True ((/= appVersion) . fst) $ M.lookup appName appVersions
 
   protocolVersionChanged =
