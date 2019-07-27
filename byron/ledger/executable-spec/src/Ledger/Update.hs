@@ -717,8 +717,8 @@ delegationMap (_, dms, _, _) = dms
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
 type UPIState =
-  ( (ProtVer, PParams) -- pv
-  , [(Core.Slot, (ProtVer, PParams))] -- pps
+  ( (ProtVer, PParams) -- (pv, pps)
+  , [(Core.Slot, (ProtVer, PParams))] -- fads
   , Map ApName (ApVer, Core.Slot, Metadata) -- avs
   , Map UpId (ProtVer, PParams) -- rpus
   , Map UpId (ApName, ApVer, Metadata) -- raus
