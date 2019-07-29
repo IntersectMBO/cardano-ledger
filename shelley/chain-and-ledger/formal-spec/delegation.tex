@@ -1037,4 +1037,13 @@ will be invalid.
   \label{fig:rules:delegation-sequence}
 \end{figure}
 
+The DELEGS rule has two predicate failures:
+\begin{itemize}
+\item In the case of a key delegation certificate, if the pool key is not
+  registered, there is a \em{DelegateeNotRegistered} failure.
+\item If the withdrawals mapping of the transaction is not a subset of the
+  rewards mapping of the delegation state, there is a
+  \em{WithdrawalsNotInRewards} failure.
+\end{itemize}
+
 \clearpage
