@@ -1232,14 +1232,14 @@ instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
 
 
-data UPIVOTES
+data APPLYVOTES
 
-instance STS UPIVOTES where
-  type Environment UPIVOTES = UPIEnv
-  type State UPIVOTES = UPIState
-  type Signal UPIVOTES = [Vote]
+instance STS APPLYVOTES where
+  type Environment APPLYVOTES = UPIEnv
+  type State APPLYVOTES = UPIState
+  type Signal APPLYVOTES = [Vote]
 
-  data PredicateFailure UPIVOTES
+  data PredicateFailure APPLYVOTES
     = UpivoteFailure (PredicateFailure UPIVOTE)
     deriving (Eq, Show)
 
@@ -1252,12 +1252,35 @@ instance STS UPIVOTES where
           []     -> return us
           (x:xs) -> do
             us'  <- trans @UPIVOTE $ TRC (env, us, x)
-            us'' <- trans @UPIVOTES  $ TRC (env, us', xs)
+            us'' <- trans @APPLYVOTES  $ TRC (env, us', xs)
             return us''
     ]
 
-instance Embed UPIVOTE UPIVOTES where
+instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
+
+data UPIVOTES
+
+instance STS UPIVOTES where
+  type Environment UPIVOTES = UPIEnv
+  type State UPIVOTES = UPIState
+  type Signal UPIVOTES = [Vote]
+
+  data PredicateFailure UPIVOTES
+    = ApplyVotesFailure (PredicateFailure APPLYVOTES)
+    deriving (Eq, Show)
+
+  initialRules = [ return $! emptyUPIState ]
+
+  transitionRules =
+    [ do
+        TRC (env, us, xs) <- judgmentContext
+        us' <- trans @APPLYVOTES  $ TRC (env, us, xs)
+        return us'
+    ]
+
+instance Embed APPLYVOTES UPIVOTES where
+  wrapFailed = ApplyVotesFailure
 
 instance HasTrace UPIVOTES where
 
