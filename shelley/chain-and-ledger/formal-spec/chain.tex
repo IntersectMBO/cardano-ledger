@@ -1175,6 +1175,15 @@ The states for this transition consists of:
   \label{fig:rules:prtcl}
 \end{figure}
 
+The PRTCL rule has two predicate failures:
+\begin{itemize}
+\item If the slot of the block header body is not larger than the last slot or
+  greater than the current slot, there is a \em{WrongSlotInterval} failure.
+\item If the hash of the previous header of the block header body is not equal
+  to the hash given in the environment, there is a \em{WrongBlockSequence}
+  failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Block Body Transition}
