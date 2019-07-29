@@ -1043,6 +1043,20 @@ it is worth examinng the interaction in Equation~\ref{eq:decentralized} closely.
   \label{fig:rules:overlay}
 \end{figure}
 
+The OVERLAY rule has four predicate failures:
+\begin{itemize}
+\item In the case of the slot not being part of a OBFT schedule, if the VRF
+  leader check does not verify, there is a \em{NotPraosLeader} failure.
+\item In the case of the slot being in the OBFT schedule, but without genesis
+  key (i.e., $Nothing$), there is a \em{NotActiveSlot} failure.
+\item In the case of the slot being in the OBFT schedule, if there is a
+  specified key, but this key is not in the genesis delegation map, there is a
+  \em{NoGenesisStaking} failure.
+\item In the case of the slot being in the OBFT schedule, if there is a
+  specified genesis key which is not the same key as in the bock header body,
+  there is a \em{NoGenesisColdKey} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Protocol Transition}
