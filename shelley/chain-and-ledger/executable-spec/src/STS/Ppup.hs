@@ -25,7 +25,8 @@ instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
   type Environment (PPUP dsignAlgo) = (Slot, Dms dsignAlgo)
   data PredicateFailure (PPUP dsignAlgo)
     = NonGenesisUpdatePPUP
-    | PPUpdateTooLatePPUP
+    | PPUpdateTooEarlyPPUP
+    | PVCannotFollowPPUP
     deriving (Show, Eq)
 
   initialRules = []
@@ -44,5 +45,5 @@ ppupTransition = do
       let Epoch slotEpoch = epochFromSlot (Slot 1)
       s
         <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-        ?! PPUpdateTooLatePPUP
+        ?! PPUpdateTooEarlyPPUP
       pure $ updatePPup pupS pup
