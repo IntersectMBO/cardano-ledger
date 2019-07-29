@@ -500,6 +500,21 @@ a stake pool, though these concerns are independent of the ledger rules.
   \label{fig:delegation-rules}
 \end{figure}
 
+The DELEG rule has five predicate failures:
+\begin{itemize}
+\item In the case of a key registration certificate, if the staking key is already
+  registered, there is a a \em{StakeKeyAlreadyRegistered} failure.
+\item In the case of a key deregistration certificate, if the key is not
+  registered, there is a \em{StakeKeyNotRegistered} failure.
+\item In the case of a non-existing stake pool key in a delegation certificate,
+  there is a \em{StakeDelegationImpossible} failure.
+\item In the case of a pool delegation certificate, there is a
+  \em{WrongCertificateType} failure.
+\item  In the case of a genesis key delegation certificate, if the key is not
+  in the domain of the genesis delegation mapping, there is a
+  \em{GenesisKeyNotInMapping} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Stake Pool Rules}
