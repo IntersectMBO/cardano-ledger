@@ -640,4 +640,12 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
   \label{fig:rules:utxow-shelley}
 \end{figure}
 
+The UTXOW rule has two predicate failures:
+\begin{itemize}                 %TODO: add multi-sig script failure predicates
+\item In the case of an incorrect witness, there is a \em{InvalidWitnesses}
+  failure.
+\item In the case of a missing witness, there is a \em{MissingVKeyWitnesses}
+  failure.
+\end{itemize}
+
 \clearpage
