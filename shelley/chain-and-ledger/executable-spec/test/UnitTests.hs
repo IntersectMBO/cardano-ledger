@@ -21,13 +21,13 @@ import           Delegation.Certificates (pattern Delegate, pattern RegKey, patt
                      pattern RetirePool, StakeKeys (..), StakePools (..))
 import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
-                     _poolPledge, _poolPubKey, _poolRAcnt)
+                     _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
-                     asStateTransition, delegationState, delegations, dstate, emptyDelegation,
-                     genesisId, genesisState, minfee, pParams, pstate, ptrs, retiring, rewards,
-                     stKeys, stPools, _delegationState, _dms, _dstate)
+                     asStateTransition, cCounters, delegationState, delegations, dstate,
+                     emptyDelegation, genesisId, genesisState, minfee, pParams, pstate, ptrs,
+                     retiring, rewards, stKeys, stPools, _delegationState, _dms, _dstate)
 import           PParams
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
@@ -83,6 +83,10 @@ changeReward ls acnt c = ls & delegationState . dstate . rewards .~ newAccounts
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = KeyPair 5 5
 
+stakePoolVRFKey1 :: KeyPair
+stakePoolVRFKey1 = KeyPair 15 15
+
+
 ledgerState :: [Tx] -> Either [ValidationError] LedgerState
 ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t dms') genesis
   where dms' = _dms $ _dstate $ _delegationState genesis
@@ -119,6 +123,7 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
            & dstate . delegations .~
                 Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
+           & pstate . cCounters .~ (Map.fromList [(poolhk, 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           (fromIntegral $ length txs))
 
@@ -135,6 +140,7 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
            & dstate . delegations .~
                 Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
+           & pstate . cCounters .~ (Map.fromList [(poolhk, 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
           3)
@@ -324,6 +330,7 @@ stakePool :: PoolParams
 stakePool = PoolParams
             {
               _poolPubKey = vKey stakePoolKey1
+            , _poolVrf = hashKey $ vKey stakePoolVRFKey1
             , _poolPledge  = Coin 0
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
@@ -339,6 +346,7 @@ stakePoolUpdate :: PoolParams
 stakePoolUpdate = PoolParams
                    {
                      _poolPubKey = vKey stakePoolKey1
+                   , _poolVrf = hashKey $ vKey stakePoolVRFKey1
                    , _poolPledge  = Coin 0
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?

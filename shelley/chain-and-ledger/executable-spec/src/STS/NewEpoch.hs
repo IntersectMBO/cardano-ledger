@@ -18,6 +18,7 @@ import           EpochBoundary
 import           LedgerState
 import           PParams
 import           Slot
+import           TxData
 
 import           STS.Epoch
 
@@ -66,7 +67,7 @@ newEpochTransition = do
       let etaE                     = _extraEntropy pp
       let osched'                  = overlaySchedule e gkeys eta1 pp
       let es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralSeed })
-      let pd' = foldr
+      let sd = foldr
             (\(hk, Coin c) m ->
               Map.insertWith (+) hk (fromIntegral c / fromIntegral total) m
             )
@@ -74,6 +75,7 @@ newEpochTransition = do
             [ (poolKey, Maybe.fromMaybe (Coin 0) (Map.lookup stakeKey stake))
             | (stakeKey, poolKey) <- Map.toList delegs
             ]
+      let pd' = Map.intersectionWith (,) sd (Map.map _poolVrf (_poolsSS ss))
       pure $ NewEpochState e
                            (seedOp eta1 etaE)
                            bcur

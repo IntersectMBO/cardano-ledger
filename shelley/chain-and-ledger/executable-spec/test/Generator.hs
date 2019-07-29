@@ -312,17 +312,25 @@ genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ RetirePool (hashKey key) epoch
 
-genStakePool :: KeyPairs -> Gen PoolParams
-genStakePool keys = do
-  poolKey       <- getAnyStakeKey keys
+genStakePool :: KeyPairs -> KeyPairs -> Gen PoolParams
+genStakePool skeys vrfKeys = do
+  poolKey       <- getAnyStakeKey skeys
+  vrfKey        <- getAnyStakeKey vrfKeys
   cost          <- Coin <$> genInteger 1 100
   pledge        <- Coin <$> genInteger 1 100
   marginPercent <- genNatural 0 100
-  acntKey       <- getAnyStakeKey keys
+  acntKey       <- getAnyStakeKey skeys
   let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
                    Just i  -> i
                    Nothing -> interval0
-  pure $ PoolParams poolKey pledge cost interval (RewardAcnt $ KeyHashObj $ hashKey acntKey) Set.empty
+  pure $ PoolParams
+           poolKey
+           (hashKey vrfKey)
+           pledge
+           cost
+           interval
+           (RewardAcnt $ KeyHashObj $ hashKey acntKey)
+           Set.empty
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
@@ -331,8 +339,8 @@ genDelegation keys d = do
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeKeys stKeys') = d ^. dstate . stKeys
 
-genDCertRegPool :: KeyPairs -> Gen DCert
-genDCertRegPool keys = RegPool <$> genStakePool keys
+genDCertRegPool :: KeyPairs -> KeyPairs -> Gen DCert
+genDCertRegPool skeys vrfKeys = RegPool <$> genStakePool skeys vrfKeys
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
 genDCertDelegate keys ds = Delegate <$> genDelegation keys ds

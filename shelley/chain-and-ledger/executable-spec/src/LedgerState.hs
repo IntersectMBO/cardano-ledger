@@ -99,7 +99,6 @@ module LedgerState
   , rewardOnePool
   , reward
   , stakeDistr
-  , poolDistr
   , applyRUpd
   , createRUpd
   --
@@ -929,10 +928,12 @@ applyDCertPState
 applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
     ps & stPools  .~ (StakePools $ Map.insert hsk slot' pools)
        & pParams  %~ Map.insert hsk sp
+       & cCounters  %~ Map.insert hsk c
        & retiring %~ Map.delete hsk
   where hsk = hashKey $ sp ^. poolPubKey
         (StakePools pools) = ps ^. stPools
         slot' = fromMaybe slot (Map.lookup hsk pools)
+        c = fromMaybe 0 (Map.lookup hsk (ps ^. cCounters))
 
 -- TODO check epoch (not in new doc atm.)
 applyDCertPState _ (RetirePool key epoch) ps =
@@ -1078,8 +1079,10 @@ stakeDistr
   :: UTxO hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
-  -> Stake hashAlgo dsignAlgo
-stakeDistr u ds ps = Stake $ Map.keysSet activeDelegs ◁ stake
+  -> ( Stake hashAlgo dsignAlgo
+     , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+     )
+stakeDistr u ds ps = (Stake $ Map.keysSet activeDelegs ◁ stake, delegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _                   = ps
@@ -1089,19 +1092,6 @@ stakeDistr u ds ps = Stake $ Map.keysSet activeDelegs ◁ stake
       Stake pointerStake = ptrStake outs ptrs'
       Stake rewardStake' = rewardStake rewards'
       activeDelegs       = Map.keysSet stkeys ◁ delegs ▷ Map.keysSet stpools
-
--- | Pool distribution
-poolDistr
-  :: UTxO hashAlgo dsignAlgo
-  -> DState hashAlgo dsignAlgo
-  -> PState hashAlgo dsignAlgo
-  -> ( Stake hashAlgo dsignAlgo
-     , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
-     )
-poolDistr u ds ps = (stake, delegs)
-    where
-      delegs     = ds ^. delegations
-      stake      = stakeDistr u ds ps
 
 -- | Apply a reward update
 applyRUpd

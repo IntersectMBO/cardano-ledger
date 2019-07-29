@@ -9,13 +9,14 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2, ex3,
-                     ex4)
+                     ex4, ex5, ex6, ex7)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
 
 import           BaseTypes (Seed (..))
 import           Control.State.Transition (TRC (..), applySTS)
+import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Slot (Slot (..))
 import           STS.Updn (UPDN)
 import           STS.Utxow (PredicateFailure (..))
@@ -44,7 +45,7 @@ testUPNLate =
 
 testCHAINExample :: CHAINExample -> Assertion
 testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
-    applySTS @CHAIN (TRC (slotNow, initSt, block)) @?= Right expectedSt
+  checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
 
 testCHAINExample1 :: Assertion
 testCHAINExample1 = testCHAINExample ex1
@@ -58,14 +59,26 @@ testCHAINExample3 = testCHAINExample ex3
 testCHAINExample4 :: Assertion
 testCHAINExample4 = testCHAINExample ex4
 
+testCHAINExample5 :: Assertion
+testCHAINExample5 = testCHAINExample ex5
+
+testCHAINExample6 :: Assertion
+testCHAINExample6 = testCHAINExample ex6
+
+testCHAINExample7 :: Assertion
+testCHAINExample7 = testCHAINExample ex7
+
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
   , testCase "update nonce late in the epoch" testUPNLate
   , testCase "CHAIN example 1 - empty block" testCHAINExample1
   , testCase "CHAIN example 2 - register stake key" testCHAINExample2
-  , testCase "CHAIN example 3 - create reward update" testCHAINExample3
+  , testCase "CHAIN example 3 - delegate stake and create reward update" testCHAINExample3
   , testCase "CHAIN example 4 - new epoch changes" testCHAINExample4
+  , testCase "CHAIN example 5 - second reward update" testCHAINExample5
+  , testCase "CHAIN example 6 - nonempty pool distr" testCHAINExample6
+  , testCase "CHAIN example 7 - decentralized block" testCHAINExample7
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns
