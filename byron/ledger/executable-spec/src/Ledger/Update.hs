@@ -868,7 +868,7 @@ instance HasTrace UPIREG where
 
   envGen _ = upiEnvGen
 
-  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -904,7 +904,7 @@ instance HasTrace UPIREG where
         -- Chose an increment for the maximum version seen in the update
         -- proposal IDs.
         inc <- Gen.integral (Range.constant 1 10)
-        case Set.toDescList $ dom rpus of
+        case Set.toDescList $ dom pws of
           [] -> UpId <$> Gen.element [0 .. inc]
           (UpId maxId:_) -> pure $ UpId (maxId + inc)
 
@@ -1521,7 +1521,11 @@ instance STS UPIEC where
             , []          :: [(Core.Slot, (ProtVer, PParams))]
             , us ^. _3    :: Map ApName (ApVer, Core.Slot, Metadata)
             , Map.empty   :: Map UpId (ProtVer, PParams)
-            , us ^. _5    :: Map UpId (ApName, ApVer, Metadata)
+            -- Note that delete the registered application proposals from the
+            -- state on epoch change, since adopting these depend on the @cps@
+            -- and @pws@ sets, which are deleted as well. So it doesn't seem
+            -- sensible to keep @raus@ around.
+            , Map.empty   :: Map UpId (ApName, ApVer, Metadata)
             , Map.empty   :: Map UpId Core.Slot
             , Set.empty   :: Set (UpId, Core.VKeyGenesis)
             , Set.empty   :: Set (ProtVer, Core.VKeyGenesis)
