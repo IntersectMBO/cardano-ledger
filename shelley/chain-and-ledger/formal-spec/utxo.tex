@@ -354,6 +354,19 @@ requests).
   \label{fig:rules:utxo-shelley}
 \end{figure}
 
+The UTXO rule has five predicate failures:
+\begin{itemize}
+\item In the case of any input not being valid, there is a \em{BadInput} failure.
+\item In the case of the current slot being greater than the time-to-live of the
+  current transaction, there is an \em{Expired} failure.
+\item In the case of an empty input set, there is a \em{InputSetEmpty} failure,
+  in order to prevent replay attacks.
+\item If the fees are smaller than the minimal transaction fees, there is a
+  \em{FeeTooSmall} failure.
+\item If the transaction does not correctly conserve the balance, there is a
+  \em{ValueNotConserved} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Deposits and Refunds}
@@ -626,5 +639,13 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
   \caption{UTxO with witnesses inference rules}
   \label{fig:rules:utxow-shelley}
 \end{figure}
+
+The UTXOW rule has two predicate failures:
+\begin{itemize}                 %TODO: add multi-sig script failure predicates
+\item In the case of an incorrect witness, there is a \em{InvalidWitnesses}
+  failure.
+\item In the case of a missing witness, there is a \em{MissingVKeyWitnesses}
+  failure.
+\end{itemize}
 
 \clearpage

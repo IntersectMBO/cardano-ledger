@@ -500,6 +500,21 @@ a stake pool, though these concerns are independent of the ledger rules.
   \label{fig:delegation-rules}
 \end{figure}
 
+The DELEG rule has five predicate failures:
+\begin{itemize}
+\item In the case of a key registration certificate, if the staking key is already
+  registered, there is a a \em{StakeKeyAlreadyRegistered} failure.
+\item In the case of a key deregistration certificate, if the key is not
+  registered, there is a \em{StakeKeyNotRegistered} failure.
+\item In the case of a non-existing stake pool key in a delegation certificate,
+  there is a \em{StakeDelegationImpossible} failure.
+\item In the case of a pool delegation certificate, there is a
+  \em{WrongCertificateType} failure.
+\item  In the case of a genesis key delegation certificate, if the key is not
+  in the domain of the genesis delegation mapping, there is a
+  \em{GenesisKeyNotInMapping} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Stake Pool Rules}
@@ -671,6 +686,18 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
   \label{fig:pool-rules}
 
 \end{figure}
+
+The POOL rule has three predicate failures:
+\begin{itemize}
+\item In the case of a pool retirement certificate, if the pool key is not in
+  the domain of the stake pools mapping, there is a
+  \em{StakePoolNotRegisteredOnKey} failure.
+\item In the case of a pool retirement certificate, if the retirement epoch is
+  not between the current epoch and the relative maximal epoch from the current
+  epoch, there is a \em{StakePoolRetirementWrongEpoch} failure.
+\item If the delegation certificate is not of one of the pool types, there is a
+  \em{WrongCertificateType} failure.
+\end{itemize}
 
 \clearpage
 
@@ -1009,5 +1036,14 @@ will be invalid.
   \caption{Delegation sequence rules}
   \label{fig:rules:delegation-sequence}
 \end{figure}
+
+The DELEGS rule has two predicate failures:
+\begin{itemize}
+\item In the case of a key delegation certificate, if the pool key is not
+  registered, there is a \em{DelegateeNotRegistered} failure.
+\item If the withdrawals mapping of the transaction is not a subset of the
+  rewards mapping of the delegation state, there is a
+  \em{WithdrawalsNotInRewards} failure.
+\end{itemize}
 
 \clearpage

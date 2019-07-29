@@ -90,6 +90,18 @@ $\mathsf{UTXOW}$ transition.
   \label{fig:rules:pp-update}
 \end{figure}
 
+The PPUP rule has three predicate failures:
+\begin{itemize}
+\item In the case of \var{slot} being smaller than
+  $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
+  a \em{PPUpdateTooEarly} failure.
+\item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
+  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+  can be used in the protocol parameter update.
+\item If a protocol parameter update in \var{pup} cannot follow the current
+  protocol paramter, there is a \em{PVCannotFollow} failure.
+\end{itemize}
+
 \clearpage
 
 Figure~\ref{fig:funcs:helper-updates} gives some helper functions for the
@@ -302,6 +314,13 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \label{fig:rules:av-update}
 \end{figure}
 
+The AVUP rule has one predicate failure:
+\begin{itemize}
+\item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
+  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+  can be used in the application version update.
+\end{itemize}
+
 \clearpage
 
 \begin{figure}[htb]
@@ -417,3 +436,8 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \caption{Update inference rules}
   \label{fig:rules:update}
 \end{figure}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
