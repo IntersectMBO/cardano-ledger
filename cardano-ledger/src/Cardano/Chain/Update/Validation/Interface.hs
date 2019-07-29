@@ -197,28 +197,13 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
   st' <- case proposal of
     Nothing -> pure st
     Just p  -> do
-      -- Debug.traceShowM "Registering proposal:"
-      -- Debug.traceShowM p
       registerProposal env st p
 
-  -- Debug.traceShowM "State after proposal registration:"
-  -- Debug.traceShowM st'
-
-
   -- Register the votes
-  st'' <- foldM (registerVote env) st' votes
-
-  -- Debug.traceShowM "State after proposal voting:"
-  -- Debug.traceShowM st''
-
+  st'' <- registerVotes env st' votes
 
   -- Register endorsement
-  st''' <- registerEndorsement env st'' endorsement
-  -- Debug.traceShowM "Candidate protocol updates after endorsement registration:\n"
-  -- Debug.traceShowM (candidateProtocolUpdates st''')
-  -- Debug.traceShowM "\n"
-  pure st'''
-
+  registerEndorsement env st'' endorsement
 
 
 -- | Register an update proposal.
@@ -270,14 +255,59 @@ registerProposal env st proposal = do
         registeredProtocolUpdateProposals
         registeredSoftwareUpdateProposals
 
--- | Register a vote for the given proposal.
+-- | Register a sequence of votes.
 --
--- If the proposal gets enough confirmations after adding the given vote, then
--- it will get added to the set of confirmed proposals.
+-- After applying the votes, we check for confirmed proposals, and update the
+-- application versions according to the proposals that, in the new state, are
+-- confirmed and stable.
 --
--- This corresponds to the @UPIVOTE@ rule in the Byron ledger
+-- This corresponds to the @UPIVOTES@ rule in the Byron ledger
 -- specification.
 --
+registerVotes
+  :: MonadError Error m
+  => Environment
+  -> State
+  -> [AVote ByteString]
+  -> m State
+registerVotes env st votes = do
+  st' <- foldM (registerVote env) st votes
+  let
+    Environment
+      { currentSlot
+      } = env
+
+    State
+      { confirmedProposals
+      , appVersions
+      , registeredSoftwareUpdateProposals
+      } = st'
+    stableProposals = M.filter (<= stableAt) confirmedProposals
+    stableAt = currentSlot `subSlotNumber` twice (k env)
+    appVersions' =
+      currentSlot `seq`
+      M.fromList $! [ let !svAppName' = svAppName sv
+                          !svNumber'  = svNumber sv
+                      in (svAppName', (svNumber', currentSlot))
+                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
+                    , pid `elem` M.keys stableProposals
+                    ]
+
+  pure $!
+    st' { -- Note that it's important that the new application versions are passed
+          -- as the first argument of @M.union@, since the values in this first
+          -- argument overwrite the values in the second.
+          appVersions = M.union appVersions' appVersions
+          -- TODO: consider using the `Relation` instances from `cardano-ledger-specs` (see `Ledger.Core`)
+        , registeredSoftwareUpdateProposals =
+            M.withoutKeys
+              registeredSoftwareUpdateProposals
+              (M.keysSet stableProposals)
+        }
+
+-- | Register a vote for the given proposal.
+--
+-- This corresponds to the @UPIVOTE@ rule in the Byron ledger
 registerVote
   :: MonadError Error m
   => Environment
@@ -288,30 +318,10 @@ registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals'
     <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting st
-  let
-    stableProposals = M.filter (<= stableAt) confirmedProposals'
-    stableAt = currentSlot `subSlotNumber` twice (k env)
-    appVersions' =
-      currentSlot `seq`
-      M.fromList $! [ let !svAppName' = svAppName sv
-                          !svNumber'  = svNumber sv
-                      in (svAppName', (svNumber', currentSlot))
-                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys stableProposals
-                    ]
   pure $!
     st { confirmedProposals = confirmedProposals'
        , proposalVotes = proposalVotes'
-       -- Note that it's important that the new application versions are passed
-       -- as the first argument of @M.union@, since the values in this first
-       -- argument overwrite the values in the second.
-       , appVersions = M.union appVersions' appVersions
-       , registeredSoftwareUpdateProposals =
-           M.withoutKeys
-             registeredSoftwareUpdateProposals
-             (M.keysSet stableProposals)
        }
-       -- TODO: consider using the `Relation` instances from `cardano-ledger-specs` (see `Ledger.Core`)
 
   where
     Environment
@@ -326,8 +336,6 @@ registerVote env st vote = do
       , proposalRegistrationSlot
       , proposalVotes
       , confirmedProposals
-      , appVersions
-      , registeredSoftwareUpdateProposals
       } = st
 
     rups = M.keysSet proposalRegistrationSlot

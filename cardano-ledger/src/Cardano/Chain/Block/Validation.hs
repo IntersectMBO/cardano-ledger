@@ -321,7 +321,7 @@ data ChainValidationError
   | ChainValidationTooManyDelegations VerificationKey
   -- ^ The delegator for this block has delegated in too many recent blocks
 
-  | ChainValidationUpdateError UPI.Error
+  | ChainValidationUpdateError SlotNumber UPI.Error
   -- ^ Something failed to register in the update interface
 
   | ChainValidationUTxOValidationError UTxO.UTxOValidationError
@@ -464,7 +464,7 @@ updateBody env bs b = do
   -- Update the update state
   updateState' <-
     UPI.registerUpdate updateEnv updateState updateSignal
-      `wrapError` ChainValidationUpdateError
+      `wrapError` ChainValidationUpdateError currentSlot
 
   pure $ BodyState
     { utxo        = utxo'
@@ -585,6 +585,13 @@ updateBlock
   -> ABlock ByteString
   -> m ChainValidationState
 updateBlock config cvs b = do
+
+  -- Debug.traceM $ "Slot = " ++ show (cvsLastSlot cvs)
+  -- Debug.traceM $ "rpus = " ++ (show . UPI.registeredProtocolUpdateProposals . cvsUpdateState $ cvs)
+  -- Debug.traceM $ "avs = " ++ (show . UPI.appVersions . cvsUpdateState $ cvs)
+  -- Debug.traceM $ "raus = " ++ (show . UPI.registeredSoftwareUpdateProposals . cvsUpdateState $ cvs)
+  -- Debug.traceM $ "cps = " ++ (show . UPI.confirmedProposals . cvsUpdateState $ cvs)
+  -- Debug.traceM $ "Drums!\n"
 
   -- Compare the block's 'ProtocolMagic' to the configured value
   blockProtocolMagicId b == configProtocolMagicId config
