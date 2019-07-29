@@ -1314,6 +1314,12 @@ current slot is not an overlay slot.
   \label{fig:rules:bbody}
 \end{figure}
 
+The BBODY rule has one predicate failure:
+\begin{itemize}
+\item if the size of the block body in the header is not equal to the real size
+  of the block body, there is a \em{WrongBlockBodySize} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Chain Transition}
