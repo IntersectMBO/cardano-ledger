@@ -13,7 +13,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Crypto.Random (drgNewTest, withDRG)
-import           Examples (CHAINExample (..), ex1, ex2)
+import           Examples (CHAINExample (..), ex1, ex2, ex3, ex4)
 import           MockTypes (Addr, CHAIN, KeyPair, LedgerState, MultiSig, SKey, ScriptHash, Tx,
                      TxBody, TxId, TxIn, UTXOW, UTxOState, VKey, Wdrl)
 
@@ -61,10 +61,16 @@ testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
     applySTS @CHAIN (TRC (slotNow, initSt, block)) @?= Right expectedSt
 
 testCHAINExample1 :: Assertion
-testCHAINExample1 = testCHAINExample ex2
+testCHAINExample1 = testCHAINExample ex1
 
 testCHAINExample2 :: Assertion
-testCHAINExample2 = testCHAINExample ex1
+testCHAINExample2 = testCHAINExample ex2
+
+testCHAINExample3 :: Assertion
+testCHAINExample3 = testCHAINExample ex3
+
+testCHAINExample4 :: Assertion
+testCHAINExample4 = testCHAINExample ex4
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
@@ -72,6 +78,8 @@ stsTests = testGroup "STS Tests"
   , testCase "update nonce late in the epoch" testUPNLate
   , testCase "CHAIN example 1 - empty block" testCHAINExample1
   , testCase "CHAIN example 2 - register stake key" testCHAINExample2
+  , testCase "CHAIN example 3 - create reward update" testCHAINExample3
+  , testCase "CHAIN example 4 - new epoch changes" testCHAINExample4
   , testCase "apply Transaction to genesis UTxO" testInitialUTXO
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign

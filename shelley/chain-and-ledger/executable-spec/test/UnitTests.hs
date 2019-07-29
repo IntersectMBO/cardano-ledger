@@ -20,8 +20,8 @@ import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool, StakeKeys (..), StakePools (..))
 import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
-                     pattern Ptr, pattern RewardAcnt, _poolAltAcnt, _poolCost, _poolMargin,
-                     _poolOwners, _poolPledge, _poolPledges, _poolPubKey, _poolRAcnt)
+                     pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
+                     _poolPledge, _poolPubKey, _poolRAcnt)
 
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
@@ -325,10 +325,8 @@ stakePool = PoolParams
             {
               _poolPubKey = vKey stakePoolKey1
             , _poolPledge  = Coin 0
-            , _poolPledges = Map.empty
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
-            , _poolAltAcnt = Nothing  --          or here?
             , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
             }
@@ -342,10 +340,8 @@ stakePoolUpdate = PoolParams
                    {
                      _poolPubKey = vKey stakePoolKey1
                    , _poolPledge  = Coin 0
-                   , _poolPledges = Map.empty
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
-                   , _poolAltAcnt = Nothing  --          or here?
                    , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
                    }
