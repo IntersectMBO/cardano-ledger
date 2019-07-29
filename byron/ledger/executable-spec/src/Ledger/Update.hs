@@ -1188,7 +1188,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms, k, ngk)
+        TRC ( (sn, dms, _k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1209,17 +1209,11 @@ instance STS UPIVOTE where
                                               , vts
                                               )
                                             , v)
-        let
-          stblCps = dom (cps' ▷<= sn -. 2 *. k)
-          stblRaus = stblCps ◁ raus
-          avsnew = [ (an, (av, sn, m))
-                   | (an, av, m) <- toList stblRaus
-                   ]
         pure $! ( (pv, pps)
                 , fads
-                , avs ⨃ avsnew
+                , avs
                 , rpus
-                , stblCps ⋪ raus
+                , raus
                 , cps'
                 , vts'
                 , bvs
@@ -1276,7 +1270,34 @@ instance STS UPIVOTES where
     [ do
         TRC (env, us, xs) <- judgmentContext
         us' <- trans @APPLYVOTES  $ TRC (env, us, xs)
-        return us'
+        -- Check which proposals are confirmed and stable, and update the
+        -- application versions map.
+        let
+          (sn, _dms, k, _ngk) = env
+          ( (pv, pps)
+            , fads
+            , avs
+            , rpus
+            , raus
+            , cps
+            , vts
+            , bvs
+            , pws) = us'
+          stblCps = dom (cps ▷<= sn -. 2 *. k)
+          stblRaus = stblCps ◁ raus
+          avsNew = [ (an, (av, sn, m))
+                   | (an, av, m) <- toList stblRaus
+                   ]
+        pure $! ( (pv, pps)
+                , fads
+                , avs ⨃ avsNew
+                , rpus
+                , stblCps ⋪ raus
+                , cps
+                , vts
+                , bvs
+                , pws
+                )
     ]
 
 instance Embed APPLYVOTES UPIVOTES where
