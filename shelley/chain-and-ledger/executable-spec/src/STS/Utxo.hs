@@ -49,9 +49,10 @@ instance
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
-    | UnexpectedFailureUTXO [ValidationError]
+    | UnexpectedFailureUTXO [ValidationError] -- TODO maybe restructure Validity
+                                              -- to prevent these predicate
+                                              -- failures?
     | UnexpectedSuccessUTXO
-    | BadExtraEntropyUTxO
     | UpdateFailure (PredicateFailure (UP dsignAlgo))
     deriving (Eq, Show)
   transitionRules = [utxoInductive]
