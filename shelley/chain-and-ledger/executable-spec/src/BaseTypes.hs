@@ -14,7 +14,6 @@ module BaseTypes
   , Seed(..)
   , mkNonce
   , seedOp
-  , neutralSeed
   ) where
 
 
@@ -80,9 +79,6 @@ seedOp :: Seed -> Seed -> Seed
 seedOp NeutralSeed s = s
 seedOp s NeutralSeed = s
 seedOp a b = SeedOp a b
-
-neutralSeed :: Seed
-neutralSeed = NeutralSeed
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce

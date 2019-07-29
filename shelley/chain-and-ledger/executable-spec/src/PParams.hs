@@ -28,7 +28,7 @@ module PParams
 
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Seed, UnitInterval, interval0, mkNonce)
+import           BaseTypes (Seed (NeutralSeed), UnitInterval, interval0)
 import           Coin (Coin (..))
 import           Slot (Epoch (..))
 
@@ -101,6 +101,6 @@ emptyPParams =
      , _tau = interval0
      , _activeSlotCoeff = interval0
      , _d = interval0
-     , _extraEntropy = mkNonce 0
+     , _extraEntropy = NeutralSeed
      , _protocolVersion = (0, 0, 0)
      }

@@ -50,7 +50,7 @@ bheadTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
   => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo)
 bheadTransition = do
-  TRC ((etaC, gkeys), nes@(NewEpochState _ _ bprev _ es ru _ _), bh@(BHeader bhb _)) <-
+  TRC ((etaC, gkeys), nes@(NewEpochState _ _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
     judgmentContext
   let slot                = bheaderSlot bhb
   let EpochState _ _ _ pp = es
@@ -61,7 +61,7 @@ bheadTransition = do
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
     $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
-  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), ru, slot)
+  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), (nesRu nes'), slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 

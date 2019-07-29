@@ -46,14 +46,14 @@ instance STS (NEWEPOCH hashAlgo dsignAlgo) where
         Nothing
         (PoolDistr Map.empty)
         Map.empty]
-  transitionRules = [ocertTransition]
+  transitionRules = [newEpochTransition]
 
-ocertTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
-ocertTransition = do
+newEpochTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
+newEpochTransition = do
   TRC ( NewEpochEnv eta1 _s gkeys
       , src@(NewEpochState (Epoch eL') _ bprev bcur es ru _pd _osched)
       , e@(Epoch e')) <- judgmentContext
-  if eL' /= e' + 1
+  if eL' + 1 /= e'
     then pure src
     else do
       let es_ = case ru of
@@ -64,8 +64,8 @@ ocertTransition = do
       let (Stake stake, delegs)    = _pstakeSet ss
       let Coin total               = Map.foldl (+) (Coin 0) stake
       let etaE                     = _extraEntropy pp
-      let osched'                  = overlaySchedule gkeys eta1 pp
-      let es'' = EpochState acnt ss ls (pp { _extraEntropy = neutralSeed })
+      let osched'                  = overlaySchedule e gkeys eta1 pp
+      let es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralSeed })
       let pd' = foldr
             (\(hk, Coin c) m ->
               Map.insertWith (+) hk (fromIntegral c / fromIntegral total) m
