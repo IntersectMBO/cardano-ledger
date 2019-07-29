@@ -842,6 +842,23 @@ of the key \var{hk} with the KES period \var{n}.
   \label{fig:rules:ocert}
 \end{figure}
 
+The OCERT rule has six predicate failures:
+\begin{itemize}
+\item If the KES period is less than the KES period start in the certificate,
+  there is a \em{KESBeforeStart} failure.
+\item If the KES period is greater than or equal to the KES period end (start +
+  90) in the certificate, there is a \em{KESAfterEnd} failure.
+\item If the period counter in the original key hash counter mapping is larger
+  than the period number in the certificate, there is a \em{KESPeriodWrong}
+  failure.
+\item If the signature of the hot key, KES period number and period start is
+  incorrect, there is an \em{InvalidSignature} failure.
+\item I the KES signature using the hot key of the block header body is
+  incorrect, there is an \em{InvalideKesSignature} failure.
+\item If there is no entry in the key hash to counter mapping for the cold key,
+  there is a \em{NoCounterForKeyHash} failure.
+\end{itemize}
+
 \subsection{Verifiable Random Function}
 \label{sec:verif-rand-funct}
 
