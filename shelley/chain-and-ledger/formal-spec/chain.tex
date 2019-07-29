@@ -752,6 +752,14 @@ If the size checks pass, then three transitions are done:
   \label{fig:rules:bhead}
 \end{figure}
 
+The BHEAD rule has two predicate failures:
+\begin{itemize}
+\item If the size of the block header is larger than the maximally allowed size,
+  there is a \em{HeaderSizeTooLarge} failure.
+\item If the size of the block body is larger than the maximally allowed size,
+  there is a \em{BlockSizeTooLarge} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Operational Certificate Transition}
