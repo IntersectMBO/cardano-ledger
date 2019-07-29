@@ -193,6 +193,8 @@ initialState config = State
 registerUpdate
   :: MonadError Error m => Environment -> State -> Signal -> m State
 registerUpdate env st Signal { proposal, votes, endorsement } = do
+--  Debug.traceM $ "registerUpdate: currentSlot = " ++ show (currentSlot env)
+
   -- Register proposal if it exists
   st' <- case proposal of
     Nothing -> pure st
@@ -201,10 +203,13 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
 
   -- Register the votes
   st'' <- registerVotes env st' votes
+  -- Debug.traceM $ "registerUpdate: confirmedProposals = " ++  show (confirmedProposals st'')
+  -- Debug.traceM $ "registerUpdate: registeredSoftwareUpdateProposals = " ++  show (registeredSoftwareUpdateProposals st'')
+
 
   -- Register endorsement
-  registerEndorsement env st'' endorsement
-
+  st''' <- registerEndorsement env st'' endorsement
+  pure $! st'''
 
 -- | Register an update proposal.
 --
@@ -287,12 +292,11 @@ registerVotes env st votes = do
     appVersions' =
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
-                          !svNumber'  = svNumber sv
+                          !svNumber' = svNumber sv
                       in (svAppName', (svNumber', currentSlot))
                     | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
                     , pid `elem` M.keys stableProposals
                     ]
-
   pure $!
     st' { -- Note that it's important that the new application versions are passed
           -- as the first argument of @M.union@, since the values in this first
@@ -465,6 +469,7 @@ registerEpoch env st lastSeenEpoch = do
          , adoptedProtocolParameters = nextProtocolParameters'
          , candidateProtocolUpdates = []
          , registeredProtocolUpdateProposals = M.empty
+         , registeredSoftwareUpdateProposals = M.empty
          , confirmedProposals = M.empty
          , proposalVotes = M.empty
          , registeredEndorsements = S.empty

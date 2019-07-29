@@ -17,6 +17,8 @@ module Cardano.Chain.Update.Validation.Voting
   )
 where
 
+import qualified Debug.Trace as Debug
+
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
@@ -85,11 +87,16 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
   votes' <- registerVote pm voteRegEnv votes vote
 
   -- Confirm the proposal if it passes the threshold and isn't confirmed
+  -- Debug.traceM $ "registerVoteWithConfirmation: slot: " ++ show slot
+  -- Debug.traceM $ "registerVoteWithConfirmation: upid: " ++ show upId
+  -- Debug.traceM $ "registerVoteWithConfirmation: votes': " ++ show votes'
+  -- Debug.traceM $ "registerVoteWithConfirmation: threshold: " ++ show threshold
   let
     confirmedProposals' = if pastThreshold votes' && not (isConfirmed upId)
       then M.insert upId slot confirmedProposals
       else confirmedProposals
-
+  -- Debug.traceM $ "registerVoteWithConfirmation: confirmedProposals': " ++ show confirmedProposals'
+  -- Debug.traceM "\n"
   -- Return the new state with additional vote and maybe confirmation
   pure $ State
     { vsVotes = votes'

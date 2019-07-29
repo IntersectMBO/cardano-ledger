@@ -462,6 +462,7 @@ updateBody env bs b = do
       `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
 
   -- Update the update state
+  -- Debug.traceM $ "updateBody: raus updateState = " ++ (show . UPI.registeredSoftwareUpdateProposals $ updateState)
   updateState' <-
     UPI.registerUpdate updateEnv updateState updateSignal
       `wrapError` ChainValidationUpdateError currentSlot
@@ -586,12 +587,14 @@ updateBlock
   -> m ChainValidationState
 updateBlock config cvs b = do
 
+  -- Debug.traceM  ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
   -- Debug.traceM $ "Slot = " ++ show (cvsLastSlot cvs)
   -- Debug.traceM $ "rpus = " ++ (show . UPI.registeredProtocolUpdateProposals . cvsUpdateState $ cvs)
   -- Debug.traceM $ "avs = " ++ (show . UPI.appVersions . cvsUpdateState $ cvs)
   -- Debug.traceM $ "raus = " ++ (show . UPI.registeredSoftwareUpdateProposals . cvsUpdateState $ cvs)
   -- Debug.traceM $ "cps = " ++ (show . UPI.confirmedProposals . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "Drums!\n"
+  -- Debug.traceM $ "rws = " ++ (show . UPI.proposalRegistrationSlot . cvsUpdateState $ cvs)
+  -- Debug.traceM $ "\n"
 
   -- Compare the block's 'ProtocolMagic' to the configured value
   blockProtocolMagicId b == configProtocolMagicId config

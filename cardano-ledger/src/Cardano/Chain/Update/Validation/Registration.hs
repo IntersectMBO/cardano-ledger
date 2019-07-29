@@ -333,6 +333,6 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
 svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 0
+  Nothing -> appVersion == 1 || appVersion == 0
   Just (currentAppVersion, _) -> appVersion == currentAppVersion + 1
   where SoftwareVersion appName appVersion = softwareVersion
