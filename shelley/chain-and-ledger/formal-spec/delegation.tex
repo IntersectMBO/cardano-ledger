@@ -687,6 +687,18 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
 
 \end{figure}
 
+The POOL rule has three predicate failures:
+\begin{itemize}
+\item In the case of a pool retirement certificate, if the pool key is not in
+  the domain of the stake pools mapping, there is a
+  \em{StakePoolNotRegisteredOnKey} failure.
+\item In the case of a pool retirement certificate, if the retirement epoch is
+  not between the current epoch and the relative maximal epoch from the current
+  epoch, there is a \em{StakePoolRetirementWrongEpoch} failure.
+\item If the delegation certificate is not of one of the pool types, there is a
+  \em{WrongCertificateType} failure.
+\end{itemize}
+
 \clearpage
 
 \subsection{Delegation and Pool Combined Rules}
