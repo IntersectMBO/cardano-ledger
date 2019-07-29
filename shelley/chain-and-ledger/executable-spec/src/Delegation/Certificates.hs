@@ -91,5 +91,5 @@ decayPool pc = (pval, pmin, lambdap)
           lambdap = pc ^. poolDecayRate
 
 newtype PoolDistr hashAlgo dsignAlgo =
-  PoolDistr (Map.Map (KeyHash hashAlgo dsignAlgo) Rational)
+  PoolDistr (Map.Map (KeyHash hashAlgo dsignAlgo) (Rational, KeyHash hashAlgo dsignAlgo))
   deriving (Show, Eq)

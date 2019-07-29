@@ -18,6 +18,8 @@ import qualified UTxO
 
 type DCert = Delegation.Certificates.DCert ShortHash MockDSIGN
 
+type PoolDistr = Delegation.Certificates.PoolDistr ShortHash MockDSIGN
+
 type Delegation = TxData.Delegation ShortHash MockDSIGN
 
 type PoolParams = TxData.PoolParams ShortHash MockDSIGN
