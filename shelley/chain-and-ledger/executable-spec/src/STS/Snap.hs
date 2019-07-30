@@ -43,7 +43,7 @@ instance STS (SNAP hashAlgo dsignAlgo) where
 snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo)
 snapTransition = do
   TRC ((pparams, d, p, blocks), (s, u), eNew) <- judgmentContext
-  let pooledStake = poolDistr (u ^. utxo) d p
+  let pooledStake = stakeDistr (u ^. utxo) d p
   let _slot       = firstSlot eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) _slot
   let decayed     = (u ^. deposited) - oblg

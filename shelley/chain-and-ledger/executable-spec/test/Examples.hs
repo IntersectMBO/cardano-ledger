@@ -6,6 +6,9 @@ module Examples
   , ex2
   , ex3
   , ex4
+  , ex5
+  , ex6
+  , ex7
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -32,30 +35,34 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
 import           MockTypes (Addr, Block, Credential, DState, EpochState, HashHeader, KeyHash,
-                     KeyPair, LedgerState, NewEpochState, PState, PoolParams, SKey, SKeyES,
-                     SnapShots, Tx, TxBody, UTxO, UTxOState, VKey, VKeyES, VKeyGenesis)
+                     KeyPair, LedgerState, NewEpochState, PState, PoolDistr, PoolParams, SKey,
+                     SKeyES, SnapShots, Tx, TxBody, UTxO, UTxOState, VKey, VKeyES, VKeyGenesis)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval)
+import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, seedOp)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof,
-                     ProtVer (..), bBodySize, bhHash, bhbHash, bheader)
+                     ProtVer (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
 import           Coin (Coin (..))
-import           Delegation.Certificates (PoolDistr (..), pattern RegKey, pattern RegPool)
-import           EpochBoundary (BlocksMade (..), emptySnapShots, _feeSS, _poolsSS)
+import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, pattern RegKey,
+                     pattern RegPool)
+import           EpochBoundary (BlocksMade (..), pattern Stake, emptySnapShots, _feeSS, _poolsSS,
+                     _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
                      pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
-import           LedgerState (pattern DPState, pattern EpochState, pattern LedgerState,
-                     pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
-                     deltaR, deltaT, emptyAccount, emptyDState, emptyPState, genesisCoins,
-                     genesisId, overlaySchedule, rs, _cCounters, _dms, _pParams, _ptrs, _rewards,
-                     _stKeys, _stPools)
+import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
+                     pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
+                     pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
+                     emptyPState, genesisCoins, genesisId, overlaySchedule, rs, _cCounters,
+                     _delegations, _dms, _pParams, _ptrs, _reserves, _rewards, _stKeys, _stPools,
+                     _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern PoolParams, Ptr (..),
-                     pattern RewardAcnt, pattern StakeKeys, pattern StakePools, pattern Tx,
-                     pattern TxBody, pattern TxIn, pattern TxOut, _poolCost, _poolMargin,
-                     _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt)
+import           TxData (pattern AddrBase, pattern Delegation, pattern KeyHashObj,
+                     pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeKeys,
+                     pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                     _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
+                     _poolVrf)
 import           Updates (emptyUpdate, emptyUpdateState)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
@@ -89,6 +96,9 @@ gerolamoVKG = VKeyGenesis 1501 :: VKeyGenesis
 gerolamoCold :: KeyPair
 gerolamoCold = KeyPair 1 1
 
+gerolamoVRF :: KeyPair
+gerolamoVRF = KeyPair 11 11
+
 gerolamoHot :: (SKeyES, VKeyES)
 gerolamoHot = mkKESKeyPair (0, 0, 0, 0, 0)
 
@@ -104,8 +114,15 @@ aliceOperator :: KeyPair
 aliceOperator = KeyPair vk sk
   where (sk, vk) = mkKeyPair (10, 10, 10, 10, 10)
 
+aliceVRF :: KeyPair
+aliceVRF = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (20, 20, 20, 20, 20)
+
 aliceOperatorHK :: KeyHash
 aliceOperatorHK = hashKey $ vKey aliceOperator
+
+aliceHot :: (SKeyES, VKeyES)
+aliceHot = mkKESKeyPair (0, 0, 0, 0, 1)
 
 aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
@@ -134,6 +151,7 @@ alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
     { _poolPubKey = vKey aliceOperator
+    , _poolVrf = hashKey $ vKey aliceVRF
     , _poolPledge = Coin 1
     , _poolCost = Coin 5
     , _poolMargin = unsafeMkUnitInterval 0.1
@@ -144,19 +162,21 @@ alicePoolParams =
 
 -- | Helper Functions
 
-
-mkBlock :: Maybe HashHeader -> KeyPair -> (SKeyES, VKeyES) -> [Tx] -> Slot -> Seed -> Seed
-  -> UnitInterval -> Natural -> Block
-mkBlock prev cold (shot, vhot) txns s enonce bnonce l kesPeriod =
+mkBlock :: Maybe HashHeader -> KeyPair -> KeyPair -> (SKeyES, VKeyES) -> [Tx] -> Slot
+  -> Seed -> Seed -> UnitInterval -> Natural -> Block
+mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
   let
+    nonceSeed = (enonce `seedOp` (slotToSeed s)) `seedOp` SeedEta
+    leaderSeed = (enonce `seedOp` (slotToSeed s)) `seedOp` SeedL
     bhb = BHBody
             prev
             (vKey cold)
+            (vKey vrf)
             s
             bnonce
-            (Proof (vKey cold) enonce)
+            (Proof (vKey vrf) nonceSeed bnonce)
             l
-            (Proof (vKey cold) l)
+            (Proof (vKey vrf) leaderSeed l)
             (fromIntegral $ bBodySize txns)
             (bhbHash [txEx2])
             (OCert
@@ -246,7 +266,7 @@ zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
 
 blockEx1 :: Block
-blockEx1 = mkBlock Nothing gerolamoCold gerolamoHot [] slot1 (Nonce 0) (Nonce 1) zero 0
+blockEx1 = mkBlock Nothing gerolamoCold gerolamoVRF gerolamoHot [] slot1 (Nonce 0) (Nonce 1) zero 0
 
 expectedStEx1 :: ChainState
 expectedStEx1 =
@@ -285,8 +305,8 @@ txbodyEx2 :: TxBody
 txbodyEx2 = TxBody
            (Set.fromList [TxIn genesisId 0])
            [TxOut aliceAddr (Coin 9740)]
-           [ RegKey $ (KeyHashObj . hashKey) $ vKey aliceStake
-           ,RegPool alicePoolParams
+           [ RegKey aliceSHK
+           , RegPool alicePoolParams
            ]
            Map.empty
            (Coin 3)
@@ -329,7 +349,33 @@ initStEx2 =
   )
 
 blockEx2 :: Block
-blockEx2 = mkBlock Nothing gerolamoCold gerolamoHot [txEx2] slot1 (Nonce 0) (Nonce 1) zero 0
+blockEx2 = mkBlock
+             Nothing
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             [txEx2]
+             slot1
+             (Nonce 0)
+             (Nonce 1)
+             zero
+             0
+
+dsEx2 :: DState
+dsEx2 = dsEx1
+          { _ptrs = Map.singleton (Ptr (Slot 1) 0 1) aliceSHK
+          , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 1)
+          , _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 0)
+          }
+
+psEx2 :: PState
+psEx2 = psEx1
+          { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 1)
+          , _pParams = Map.singleton aliceOperatorHK alicePoolParams
+          , _cCounters = Map.fromList [ (hashKey $ vKey gerolamoCold, 0)
+                                      , (aliceOperatorHK, 0)
+                                      ]
+          }
 
 expectedLSEx2 :: LedgerState
 expectedLSEx2 = LedgerState
@@ -341,16 +387,7 @@ expectedLSEx2 = LedgerState
                  (Coin 257)
                  (Coin 3)
                  emptyUpdateState)
-               (DPState
-                 (dsEx1
-                     { _ptrs = Map.singleton (Ptr (Slot 1) 0 1) aliceSHK
-                     , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 1)
-                     , _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 0)
-                 })
-                 psEx1
-                     { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 1)
-                     , _pParams = Map.singleton aliceOperatorHK alicePoolParams
-                 })
+               (DPState dsEx2 psEx2)
                0
 
 blockEx2Hash :: Maybe HashHeader
@@ -363,7 +400,6 @@ expectedStEx2 =
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      -- Note that blocks in the overlay schedule do not add to this count.
       (EpochState emptyAccount emptySnapShots expectedLSEx2 ppsEx1)
       Nothing
       (PoolDistr Map.empty)
@@ -378,15 +414,57 @@ ex2 :: CHAINExample
 ex2 = CHAINExample slot1 initStEx2 blockEx2 expectedStEx2
 
 
--- | Example 3 - continuing on after example 2, process an empty block late enough
--- in the epoch in order to create a reward update
+-- | Example 3 - continuing on after example 2, process a block late enough
+-- in the epoch in order to create a reward update.
+-- The block delegates Alice's stake to Alice's pool.
 
+txbodyEx3 :: TxBody
+txbodyEx3 = TxBody
+           (Set.fromList [TxIn (txid txbodyEx2) 0])
+           [TxOut aliceAddr (Coin 9736)]
+           [ Delegate $ Delegation aliceSHK aliceOperatorHK ]
+           Map.empty
+           (Coin 4)
+           (Slot 99)
+           emptyUpdate
+
+txEx3 :: Tx
+txEx3 = Tx txbodyEx3 (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake]) Map.empty
 
 blockEx3 :: Block
-blockEx3 = mkBlock blockEx2Hash gerolamoCold gerolamoHot [] (Slot 89) (Nonce 0) (Nonce 2) zero 0
+blockEx3 = mkBlock
+             blockEx2Hash
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             [txEx3]
+             (Slot 89)
+             (Nonce 0)
+             (Nonce 2)
+             zero
+             0
 
 blockEx3Hash :: Maybe HashHeader
 blockEx3Hash = Just (bhHash (bheader blockEx3))
+
+utxoEx3 :: UTxO
+utxoEx3 = UTxO . Map.fromList $
+                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                   , (TxIn (txid txbodyEx3) 0, TxOut aliceAddr (Coin 9736))
+                   ]
+
+dsEx3 :: DState
+dsEx3 = dsEx2 { _delegations = Map.singleton aliceSHK aliceOperatorHK }
+
+expectedLSEx3 :: LedgerState
+expectedLSEx3 = LedgerState
+               (UTxOState
+                 utxoEx3
+                 (Coin 257)
+                 (Coin 7)
+                 emptyUpdateState)
+               (DPState dsEx3 psEx2)
+               0
 
 expectedStEx3 :: ChainState
 expectedStEx3 =
@@ -395,13 +473,12 @@ expectedStEx3 =
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      -- Note that blocks in the overlay schedule do not add to this count.
-      (EpochState emptyAccount emptySnapShots expectedLSEx2 ppsEx1)
+      (EpochState emptyAccount emptySnapShots expectedLSEx3 ppsEx1)
       (Just RewardUpdate { deltaT = Coin 0
-                           , deltaR = Coin 0
-                           , rs     = Map.empty
-                           , deltaF = Coin 0
-                           })
+                         , deltaR = Coin 0
+                         , rs     = Map.empty
+                         , deltaF = Coin 0
+                         })
       (PoolDistr Map.empty)
       overlayEx2
   , SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)
@@ -422,14 +499,17 @@ blockEx4 :: Block
 blockEx4 = mkBlock
              blockEx3Hash
              gerolamoCold
+             gerolamoVRF
              gerolamoHot
              []
              (Slot 110)
-             (Nonce 77)
+             (Nonce 0)
              (Nonce 88)
              zero
              1
 
+-- | This overlay schedule creates BFT slots on the even slot
+-- with Gerolamo assigned to the multiples of ten.
 epoch1OSchedEx4 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx4 = overlaySchedule
                     (Epoch 1)
@@ -438,31 +518,26 @@ epoch1OSchedEx4 = overlaySchedule
                     ppsEx1
 
 snapsEx4 :: SnapShots
-snapsEx4 = emptySnapShots { _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
-                          , _feeSS = Coin 260
+snapsEx4 = emptySnapShots { _pstakeMark =
+                              (Stake
+                                 ( Map.singleton aliceSHK (Coin 9736))
+                                 , Map.singleton aliceSHK aliceOperatorHK )
+                          , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
+                          , _feeSS = Coin 264
                           }
 
 expectedLSEx4 :: LedgerState
 expectedLSEx4 = LedgerState
                (UTxOState
-                 (UTxO . Map.fromList $
-                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2) 0, TxOut aliceAddr (Coin 9740))
-                   ])
+                 utxoEx3
                  (Coin 0)   -- TODO check that both deposits really decayed completely
-                 (Coin 260) -- TODO shouldn't this pot have moved to the treasury?
+                 (Coin 264) -- TODO shouldn't this pot have moved to the treasury?
                  emptyUpdateState)
-               (DPState
-                 (dsEx1
-                     { _ptrs = Map.singleton (Ptr (Slot 1) 0 1) aliceSHK
-                     , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 1)
-                     , _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 0)
-                 })
-                 psEx1
-                     { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 1)
-                     , _pParams = Map.singleton aliceOperatorHK alicePoolParams
-                 })
+               (DPState dsEx3 psEx2)
                0
+
+blockEx4Hash :: Maybe HashHeader
+blockEx4Hash = Just (bhHash (bheader blockEx4))
 
 expectedStEx4 :: ChainState
 expectedStEx4 =
@@ -471,16 +546,192 @@ expectedStEx4 =
       (SeedOp (Nonce 0) (Nonce 1))
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      -- Note that blocks in the overlay schedule do not add to this count.
       (EpochState emptyAccount snapsEx4 expectedLSEx4 ppsEx1)
       Nothing
       (PoolDistr Map.empty)
       epoch1OSchedEx4
   , SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)
   , SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)
-  , Just (bhHash (bheader blockEx4))
+  , blockEx4Hash
   , Slot 110
   )
 
 ex4 :: CHAINExample
 ex4 = CHAINExample (Slot 110) expectedStEx3 blockEx4 expectedStEx4
+
+
+-- | Example 5 - continuing on after example 4, process an empty block late enough
+-- in the epoch in order to create a second reward update, preparing the way for
+-- the first non-empty pool distribution in this running example.
+
+
+blockEx5 :: Block
+blockEx5 = mkBlock
+             blockEx4Hash
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             []
+             (Slot 190)
+             (Nonce 0)
+             (Nonce 13)
+             zero
+             2
+
+blockEx5Hash :: Maybe HashHeader
+blockEx5Hash = Just (bhHash (bheader blockEx5))
+
+expectedStEx5 :: ChainState
+expectedStEx5 =
+  ( NewEpochState
+      (Epoch 1)
+      (SeedOp (Nonce 0) (Nonce 1))
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState emptyAccount snapsEx4 expectedLSEx4 ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 264
+                         , deltaR = Coin 0
+                         , rs     = Map.empty
+                         , deltaF = Coin (-264)
+                         })
+      (PoolDistr Map.empty)
+      epoch1OSchedEx4
+  , SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)) (Nonce 13)
+  , SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)
+  , blockEx5Hash
+  , Slot 190
+  )
+
+ex5 :: CHAINExample
+ex5 = CHAINExample (Slot 190) expectedStEx4 blockEx5 expectedStEx5
+
+
+-- | Example 6 - continuing on after example 5, create the first non-empty pool distribution
+-- by creating a block in the third epoch of this running example.
+
+
+blockEx6 :: Block
+blockEx6 = mkBlock
+             blockEx5Hash
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             []
+             (Slot 210)
+             (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+             (Nonce 987)
+             zero
+             2
+
+-- | This overlay schedule creates BFT slots on the even slot
+-- with Gerolamo assigned to the multiples of ten.
+epoch1OSchedEx6 :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx6 = overlaySchedule
+                    (Epoch 2)
+                    (Set.singleton gerolamoVKG)
+                    (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+                    ppsEx1
+
+snapsEx6 :: SnapShots
+snapsEx6 = emptySnapShots { _pstakeMark =
+                              (Stake
+                                 ( Map.singleton aliceSHK (Coin 9736))
+                                 , Map.singleton aliceSHK aliceOperatorHK )
+                          , _pstakeSet =
+                              (Stake
+                                 ( Map.singleton aliceSHK (Coin 9736))
+                                 , Map.singleton aliceSHK aliceOperatorHK )
+                          , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
+                          , _feeSS = Coin 0
+                          }
+
+expectedLSEx6 :: LedgerState
+expectedLSEx6 = LedgerState
+               (UTxOState
+                 utxoEx3
+                 (Coin 0)
+                 (Coin 0)
+                 emptyUpdateState)
+               (DPState dsEx3 psEx2)
+               0
+
+blockEx6Hash :: Maybe HashHeader
+blockEx6Hash = Just (bhHash (bheader blockEx6))
+
+acntEx6 :: AccountState
+acntEx6 = AccountState
+            { _treasury = Coin 264
+            , _reserves = Coin 0
+            }
+
+expectedStEx6 :: ChainState
+expectedStEx6 =
+  ( NewEpochState
+      (Epoch 2)
+      (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
+      Nothing
+      (PoolDistr
+        (Map.singleton
+           aliceOperatorHK
+           (1, hashKey (vKey aliceVRF))))
+      epoch1OSchedEx6
+  , SeedOp
+      (SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)) (Nonce 13))
+      (Nonce 987)
+  , SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)
+  , blockEx6Hash
+  , Slot 210
+  )
+
+ex6 :: CHAINExample
+ex6 = CHAINExample (Slot 210) expectedStEx5 blockEx6 expectedStEx6
+
+
+--  | Example 7 - create a decentralized Praos block (ie one not in the overlay schedule)
+
+
+blockEx7 :: Block
+blockEx7 = mkBlock
+             blockEx6Hash
+             aliceOperator
+             aliceVRF
+             aliceHot
+             []
+             (Slot 215) -- slot 15 is not even, and hence open for decentralization in epoch1OSchedEx6
+             (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+             (Nonce 100)
+             zero
+             2
+
+blockEx7Hash :: Maybe HashHeader
+blockEx7Hash = Just (bhHash (bheader blockEx7))
+
+pdEx7 :: PoolDistr
+pdEx7 = PoolDistr $ Map.singleton aliceOperatorHK (1, hashKey (vKey aliceVRF))
+
+expectedStEx7 :: ChainState
+expectedStEx7 =
+  ( NewEpochState
+      (Epoch 2)
+      (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+      (BlocksMade Map.empty)
+      (BlocksMade $ Map.singleton aliceOperatorHK 1)
+      (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
+      Nothing
+      pdEx7
+      epoch1OSchedEx6
+  , SeedOp
+      (SeedOp
+        (SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)) (Nonce 13))
+        (Nonce 987))
+      (Nonce 100)
+  , SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)) (Nonce 100)
+  , blockEx7Hash
+  , Slot 215
+  )
+
+ex7 :: CHAINExample
+ex7 = CHAINExample (Slot 215) expectedStEx6 blockEx7 expectedStEx7

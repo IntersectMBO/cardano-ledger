@@ -72,19 +72,15 @@ bhbHash
   -> HashBBody hashAlgo dsignAlgo kesAlgo
 bhbHash = HashBBody . hash
 
--- | TODO: This is just a mock implementation wihtout too much insight into how
--- VRF actually will work.
-class VrfProof a where
-  toSeed :: a -> Seed
-
 data Proof dsignAlgo a =
-  Proof (VKey dsignAlgo) a
+  Proof (VKey dsignAlgo) Seed a
   deriving (Show, Eq)
 
 instance (DSIGNAlgorithm dsignAlgo, ToCBOR a) => ToCBOR (Proof dsignAlgo a) where
-  toCBOR (Proof key a) =
-    encodeListLen 2
+  toCBOR (Proof key s a) =
+    encodeListLen 3
       <> toCBOR key
+      <> toCBOR s
       <> toCBOR a
 
 data BHeader hashAlgo dsignAlgo kesAlgo
@@ -121,6 +117,8 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
     bheaderPrev           :: Maybe (HashHeader hashAlgo dsignAlgo kesAlgo)
     -- | verification key of block issuer
   , bheaderVk             :: VKey dsignAlgo
+    -- | VRF verification key for block issuer
+  , bheaderVrfVk          :: VKey dsignAlgo
     -- | block slot
   , bheaderSlot           :: Slot
     -- | block nonce
@@ -146,9 +144,10 @@ instance
   => ToCBOR (BHBody hashAlgo dsignAlgo kesAlgo)
  where
   toCBOR bhBody =
-    encodeListLen 11
+    encodeListLen 12
       <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
+      <> toCBOR (bheaderVrfVk bhBody)
       <> toCBOR (bheaderSlot bhBody)
       <> toCBOR (bheaderEta bhBody)
       <> toCBOR (bheaderPrfEta bhBody)
@@ -198,19 +197,12 @@ startRewards :: Duration
 startRewards = 33 -- see above
 
 verifyVrf
-  :: (DSIGNAlgorithm dsignAlgo, VrfProof a)
+  :: (DSIGNAlgorithm dsignAlgo, Eq a)
   => VKey dsignAlgo
   -> Seed
-  -> Proof dsignAlgo a
+  -> (a, Proof dsignAlgo a)
   -> Bool
-verifyVrf vk seed (Proof k s) = vk == k && seed == toSeed s
-
-instance VrfProof Seed where
-  toSeed = id
-
-instance VrfProof UnitInterval where
-  toSeed u = mkNonce (numerator r * denominator r)
-    where r = intervalValue u
+verifyVrf vk seed (val, Proof k s v) = vk == k && seed == s && val == v
 
 vrfChecks
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
@@ -223,17 +215,20 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
   let sigma' = Map.lookup hk pd
   in  case sigma' of
         Nothing -> False
-        Just sigma ->
-          verifyVrf vk ((eta0 `seedOp` ss) `seedOp` SeedEta) (bheaderPrfEta bhb)
-            && verifyVrf vk
+        Just (sigma, vrfHK) ->
+          vrfHK == hashKey vrfK
+            && verifyVrf vrfK
+                         ((eta0 `seedOp` ss) `seedOp` SeedEta)
+                         (bheaderEta bhb, bheaderPrfEta bhb)
+            && verifyVrf vrfK
                          ((eta0 `seedOp` ss) `seedOp` SeedL)
-                         (bheaderPrfL bhb)
+                         (bheaderL bhb, bheaderPrfL bhb)
             && intervalValue (bheaderL bhb)
             <  1
             -  ((1 - activeSlotsCoeff) *** fromRational sigma)
  where
-  vk = bvkcold bhb
-  hk = hashKey vk
+  hk = hashKey $ bvkcold bhb
+  vrfK = bheaderVrfVk bhb
   ss = slotToSeed $ bheaderSlot bhb
   f' = intervalValue f
   activeSlotsCoeff =

@@ -61,7 +61,7 @@ bheadTransition = do
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
     $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
-  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), (nesRu nes'), slot)
+  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 
