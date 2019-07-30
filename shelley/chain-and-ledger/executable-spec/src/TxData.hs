@@ -32,6 +32,7 @@ data Delegation hashAlgo dsignAlgo = Delegation
 data PoolParams hashAlgo dsignAlgo =
   PoolParams
     { _poolPubKey  :: VKey dsignAlgo
+    , _poolVrf     :: KeyHash hashAlgo dsignAlgo
     , _poolPledge  :: Coin
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
@@ -347,8 +348,9 @@ instance
   => ToCBOR (PoolParams hashAlgo dsignAlgo)
  where
   toCBOR poolParams =
-    encodeListLen 8
+    encodeListLen 7
       <> toCBOR (_poolPubKey poolParams)
+      <> toCBOR (_poolVrf poolParams)
       <> toCBOR (_poolPledge poolParams)
       <> toCBOR (_poolCost poolParams)
       <> toCBOR (_poolMargin poolParams)
