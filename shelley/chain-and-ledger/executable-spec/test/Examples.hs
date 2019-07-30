@@ -27,7 +27,7 @@ module Examples
 where
 
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, fromList, singleton)
+import qualified Data.Map.Strict as Map (empty, fromList, insert, keysSet, singleton, elems)
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
@@ -95,13 +95,43 @@ gerolamoVKG :: VKeyGenesis
 gerolamoVKG = VKeyGenesis 1501 :: VKeyGenesis
 
 gerolamoCold :: KeyPair
-gerolamoCold = KeyPair 1 1
+gerolamoCold = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1501, 0, 0, 0, 0)
 
 gerolamoVRF :: KeyPair
-gerolamoVRF = KeyPair 11 11
+gerolamoVRF = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1501, 0, 0, 0, 1)
 
 gerolamoHot :: (SKeyES, VKeyES)
 gerolamoHot = mkKESKeyPair (0, 0, 0, 0, 0)
+
+lodovicoVKG :: VKeyGenesis
+lodovicoVKG = VKeyGenesis 1521 :: VKeyGenesis
+
+lodovicoCold :: KeyPair
+lodovicoCold = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1521, 0, 0, 0, 0)
+
+lodovicoVRF :: KeyPair
+lodovicoVRF = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1521, 0, 0, 0, 1)
+
+lodovicoHot :: (SKeyES, VKeyES)
+lodovicoHot = mkKESKeyPair (1, 0, 0, 0, 0)
+
+nicoloVKG :: VKeyGenesis
+nicoloVKG = VKeyGenesis 1499 :: VKeyGenesis
+
+nicoloCold :: KeyPair
+nicoloCold = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1499, 0, 0, 0, 0)
+
+nicoloVRF :: KeyPair
+nicoloVRF = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (1499, 0, 0, 0, 1)
+
+nicoloHot :: (SKeyES, VKeyES)
+nicoloHot = mkKESKeyPair (1, 0, 0, 0, 0)
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -225,11 +255,17 @@ dariaAddr = mkAddr (dariaPay, dariaStake)
 utxostEx1 :: UTxOState
 utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
+genesisDelegations :: Map VKeyGenesis VKey
+genesisDelegations = Map.fromList [ (gerolamoVKG, vKey gerolamoCold)
+                                  , (lodovicoVKG, vKey lodovicoCold)
+                                  , (nicoloVKG,   vKey nicoloCold) ]
+
 dsEx1 :: DState
-dsEx1 = emptyDState { _dms = Dms (Map.singleton gerolamoVKG (vKey gerolamoCold)) }
+dsEx1 = emptyDState { _dms = Dms genesisDelegations }
 
 psEx1 :: PState
-psEx1 = emptyPState { _cCounters = Map.singleton (hashKey $ vKey gerolamoCold) 0}
+psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genesisDelegations)) }
+  where f vk = (hashKey vk, 0)
 
 lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
@@ -329,7 +365,7 @@ esEx2 = EpochState emptyAccount emptySnapShots lsEx2 ppsEx1
 overlayEx2 :: Map Slot (Maybe VKeyGenesis)
 overlayEx2 =
   Map.fromList [ (Slot 1, Just gerolamoVKG)
-                , (Slot 89, Just gerolamoVKG)
+                , (Slot 89, Just lodovicoVKG)
                 ]
 
 initStEx2 :: ChainState
@@ -373,9 +409,7 @@ psEx2 :: PState
 psEx2 = psEx1
           { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 1)
           , _pParams = Map.singleton aliceOperatorHK alicePoolParams
-          , _cCounters = Map.fromList [ (hashKey $ vKey gerolamoCold, 0)
-                                      , (aliceOperatorHK, 0)
-                                      ]
+          , _cCounters = Map.insert aliceOperatorHK 0 (_cCounters psEx1)
           }
 
 expectedLSEx2 :: LedgerState
@@ -435,9 +469,9 @@ txEx3 = Tx txbodyEx3 (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake]) Map.em
 blockEx3 :: Block
 blockEx3 = mkBlock
              blockEx2Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             lodovicoCold
+             lodovicoVRF
+             lodovicoHot
              [txEx3]
              (Slot 89)
              (Nonce 0)
@@ -514,7 +548,7 @@ blockEx4 = mkBlock
 epoch1OSchedEx4 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx4 = overlaySchedule
                     (Epoch 1)
-                    (Set.singleton gerolamoVKG)
+                    (Map.keysSet genesisDelegations)
                     (SeedOp (Nonce 0) (Nonce 1))
                     ppsEx1
 
@@ -569,9 +603,9 @@ ex4 = CHAINExample (Slot 110) expectedStEx3 blockEx4 expectedStEx4
 blockEx5 :: Block
 blockEx5 = mkBlock
              blockEx4Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             nicoloCold
+             nicoloVRF
+             nicoloHot
              []
              (Slot 190)
              (Nonce 0)
@@ -614,11 +648,11 @@ ex5 = CHAINExample (Slot 190) expectedStEx4 blockEx5 expectedStEx5
 blockEx6 :: Block
 blockEx6 = mkBlock
              blockEx5Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             lodovicoCold
+             lodovicoVRF
+             lodovicoHot
              []
-             (Slot 210)
+             (Slot 220)
              (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
              (Nonce 987)
              zero
@@ -629,7 +663,7 @@ blockEx6 = mkBlock
 epoch1OSchedEx6 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx6 = overlaySchedule
                     (Epoch 2)
-                    (Set.singleton gerolamoVKG)
+                    (Map.keysSet genesisDelegations)
                     (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
                     ppsEx1
 
@@ -684,11 +718,11 @@ expectedStEx6 =
       (Nonce 987)
   , SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)
   , blockEx6Hash
-  , Slot 210
+  , Slot 220
   )
 
 ex6 :: CHAINExample
-ex6 = CHAINExample (Slot 210) expectedStEx5 blockEx6 expectedStEx6
+ex6 = CHAINExample (Slot 220) expectedStEx5 blockEx6 expectedStEx6
 
 
 --  | Example 7 - create a decentralized Praos block (ie one not in the overlay schedule)
@@ -701,7 +735,7 @@ blockEx7 = mkBlock
              aliceVRF
              aliceHot
              []
-             (Slot 215) -- slot 15 is not even, and hence open for decentralization in epoch1OSchedEx6
+             (Slot 225) -- odd slots open for decentralization in epoch1OSchedEx6
              (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
              (Nonce 100)
              zero
@@ -731,11 +765,11 @@ expectedStEx7 =
       (Nonce 100)
   , SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)) (Nonce 100)
   , blockEx7Hash
-  , Slot 215
+  , Slot 225
   )
 
 ex7 :: CHAINExample
-ex7 = CHAINExample (Slot 215) expectedStEx6 blockEx7 expectedStEx7
+ex7 = CHAINExample (Slot 225) expectedStEx6 blockEx7 expectedStEx7
 
 
 --  | Example 8 - create the first non-trivial reward update by processing an
@@ -745,9 +779,9 @@ ex7 = CHAINExample (Slot 215) expectedStEx6 blockEx7 expectedStEx7
 blockEx8 :: Block
 blockEx8 = mkBlock
              blockEx7Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             nicoloCold
+             nicoloVRF
+             nicoloHot
              []
              (Slot 290)
              (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
