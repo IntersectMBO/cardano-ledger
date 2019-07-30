@@ -642,7 +642,7 @@ system entities.
     \node (owner)   [concept]                    {Owner};
     \node (valaddr)    [entity, left = of owner]    {Value address};
     \node (registeredStakeAddr)    [entity, below = of owner]   {Registered stake address};
-    \node (pkey)    [entity, left = of registeredStakeAddr]     {Payment key (hash)\\or script (hash)};
+    \node (pkey)    [entity, left = of registeredStakeAddr]     {Payment key or script hash};
     \node (racc)    [entity, right = of registeredStakeAddr]    {Reward account};
     \node (rewards) [concept, below = of racc]   {Rewards};
     \node (funds)   [concept, below = of pkey]   {Funds};
@@ -768,6 +768,35 @@ two concerns, we distinguish between \emph{value addresses} and \emph{stake
   addresses}. Value addresses and stake addresses are building blocks for
 (overall) addresses: an address contains a value address, and may also contain a
 stake address.
+
+\todo[inline]{Suggest restructuring this subsection based on the following subsubsections. So instead of the description list for key addresses, and stake addresses, turn those into their own subsubsections.
+
+Also clearly document the structure of value and script addresses. Suggest that if we're uising $\beta$ for the staking reference we use $\alpha$ for the payment credential!}
+
+\subsubsection{Key addresses}
+
+\subsubsection{Script addresses}
+
+\subsubsection{Value addresses}
+
+\subsubsection{Stake addresses}
+
+\subsubsection{Terminology of addresses}
+
+\begin{description}
+\item[value address] is either a bootstrap address or a new Shelley address which consists of a payment credential and a staking reference.
+\item[stake address] consists of a staking credential
+\item[payment credential] is either the hash of a verification key or the hash of a validation script
+\item[staking credential] is either the hash of a verification key or the hash of a validation script
+\item[staking reference] is a reference to a stake address is either a base form, a pointer form or a null form
+\item[key address] is a value or stake address where the contained credential uses a single key pair
+\item[script address] is a value or stake address where the contained credential uses a validation script
+\item[base address] is a value address where the staking reference use the base form
+\item[pointer address] is a value address where the staking reference use the pointer form
+\item[enterprise address] is a value address where the staking reference use the null form
+\item[bootstrap address] is a value address as introduced in Byron.
+\item[AVVM address] are special addresses used in the initial distribution of Ada.
+\end{description}
 
 Both value and stake addresses can take one of two forms:
 \begin{description}
