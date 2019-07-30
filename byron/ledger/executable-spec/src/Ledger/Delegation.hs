@@ -22,6 +22,7 @@ module Ledger.Delegation
   , depoch
   , dwho
   , mkDCert
+  , signature
     -- * Delegation activation
   , ADELEG
   , ADELEGS
