@@ -157,9 +157,9 @@ updateDelegation env is certificates = do
   let
     ss' = Scheduling.State
       { Scheduling.scheduledDelegations = Seq.filter
-        (inWindow . Scheduling.sdSlot)
+        ((currentSlot + 1 <=) . Scheduling.sdSlot)
         delegations
-      , Scheduling.keyEpochDelegations  = Set.filter
+      , Scheduling.keyEpochDelegations = Set.filter
         ((>= currentEpoch) . fst)
         keyEpochs
       }
@@ -168,10 +168,6 @@ updateDelegation env is certificates = do
  where
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env
-
-  inWindow s = subSlotCount d currentSlot <= s && s <= addSlotCount d currentSlot
-
-  d = kSlotSecurityParam k
 
   schedulingEnv = Scheduling.Environment
     { Scheduling.protocolMagic = protocolMagic
