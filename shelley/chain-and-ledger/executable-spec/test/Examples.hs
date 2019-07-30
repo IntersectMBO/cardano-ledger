@@ -6,6 +6,19 @@ module Examples
   , ex2
   , ex3
   , ex4
+  -- key pairs and example addresses
+  , alicePay
+  , aliceStake
+  , aliceAddr
+  , bobPay
+  , bobStake
+  , bobAddr
+  , carlPay
+  , carlStake
+  , carlAddr
+  , dariaPay
+  , dariaStake
+  , dariaAddr
   )
 where
 
@@ -162,6 +175,28 @@ unsafeMkUnitInterval :: Rational -> UnitInterval
 unsafeMkUnitInterval r =
   fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
 
+carlPay :: KeyPair
+carlPay = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
+
+carlStake :: KeyPair
+carlStake = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
+
+carlAddr :: Addr
+carlAddr = mkAddr (carlPay, carlStake)
+
+
+dariaPay :: KeyPair
+dariaPay = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
+
+dariaStake :: KeyPair
+dariaStake = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
+
+dariaAddr :: Addr
+dariaAddr = mkAddr (dariaPay, dariaStake)
 
 -- | Example 1 - apply CHAIN transition to an empty block
 
