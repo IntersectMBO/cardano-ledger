@@ -9,6 +9,7 @@ module Examples
   , ex5
   , ex6
   , ex7
+  , ex8
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -735,3 +736,56 @@ expectedStEx7 =
 
 ex7 :: CHAINExample
 ex7 = CHAINExample (Slot 215) expectedStEx6 blockEx7 expectedStEx7
+
+
+--  | Example 8 - create the first non-trivial reward update by processing an
+--  empty block late in the epoch.
+
+
+blockEx8 :: Block
+blockEx8 = mkBlock
+             blockEx7Hash
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             []
+             (Slot 290)
+             (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+             (Nonce 888)
+             zero
+             3
+
+blockEx8Hash :: Maybe HashHeader
+blockEx8Hash = Just (bhHash (bheader blockEx8))
+
+expectedStEx8 :: ChainState
+expectedStEx8 =
+  ( NewEpochState
+      (Epoch 2)
+      (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88))
+      (BlocksMade Map.empty)
+      (BlocksMade $ Map.singleton aliceOperatorHK 1)
+      (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 0
+                         , deltaR = Coin 0
+                         , rs     = Map.empty
+                         , deltaF = Coin 0
+                         })
+      pdEx7
+      epoch1OSchedEx6
+  , SeedOp
+      (SeedOp
+        (SeedOp
+          (SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)) (Nonce 13))
+          (Nonce 987))
+        (Nonce 100))
+      (Nonce 888)
+  , SeedOp
+      (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987))
+      (Nonce 100)
+  , blockEx8Hash
+  , Slot 290
+  )
+
+ex8 :: CHAINExample
+ex8 = CHAINExample (Slot 290) expectedStEx7 blockEx8 expectedStEx8

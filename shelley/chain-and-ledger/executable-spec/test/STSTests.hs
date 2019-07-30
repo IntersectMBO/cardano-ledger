@@ -9,7 +9,7 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2, ex3,
-                     ex4, ex5, ex6, ex7)
+                     ex4, ex5, ex6, ex7, ex8)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -68,6 +68,9 @@ testCHAINExample6 = testCHAINExample ex6
 testCHAINExample7 :: Assertion
 testCHAINExample7 = testCHAINExample ex7
 
+testCHAINExample8 :: Assertion
+testCHAINExample8 = testCHAINExample ex8
+
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
@@ -79,6 +82,7 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 5 - second reward update" testCHAINExample5
   , testCase "CHAIN example 6 - nonempty pool distr" testCHAINExample6
   , testCase "CHAIN example 7 - decentralized block" testCHAINExample7
+  , testCase "CHAIN example 8 - non-trivial rewards" testCHAINExample8
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns
