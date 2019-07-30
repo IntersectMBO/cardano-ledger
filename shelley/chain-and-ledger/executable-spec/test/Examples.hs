@@ -11,6 +11,7 @@ module Examples
   , ex7
   , ex8
   , ex9
+  , ex10
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -895,3 +896,74 @@ ex9 = CHAINExample (Slot 390) expectedStEx8 blockEx9 expectedStEx9
 
 
 -- | Example 10 - continuing on after example 9, apply the first non-trivial reward update
+
+
+blockEx10 :: Block
+blockEx10 = mkBlock
+              blockEx9Hash
+              gerolamoCold
+              gerolamoVRF
+              gerolamoHot
+              []
+              (Slot 410)
+              (SeedOp
+                (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987))
+                (Nonce 888))
+              (Nonce 410)
+              zero
+              4
+
+blockEx10Hash :: Maybe HashHeader
+blockEx10Hash = Just (bhHash (bheader blockEx10))
+
+epoch1OSchedEx10 :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx10 = overlaySchedule
+                     (Epoch 4)
+                     (Map.keysSet genesisDelegations)
+                     (SeedOp
+                       (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987))
+                       (Nonce 888))
+                     ppsEx1
+
+acntEx10 :: AccountState
+acntEx10 = AccountState
+            { _treasury = Coin 9374400000264
+            , _reserves = Coin 44990550000000000
+            }
+
+dsEx10 :: DState
+dsEx10 = dsEx3 { _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 75600000000) }
+
+expectedLSEx10 :: LedgerState
+expectedLSEx10 = LedgerState
+               (UTxOState
+                 utxoEx3
+                 (Coin 0)
+                 (Coin 0)
+                 emptyUpdateState)
+               (DPState dsEx10 psEx2)
+               0
+
+expectedStEx10 :: ChainState
+expectedStEx10 =
+  ( NewEpochState
+      (Epoch 4)
+      (SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)) (Nonce 888))
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx10 snapsEx8 expectedLSEx10 ppsEx1)
+      Nothing
+      pdEx7
+      epoch1OSchedEx10
+  , SeedOp (SeedOp (SeedOp (SeedOp (SeedOp (SeedOp (SeedOp (SeedOp (SeedOp
+      (Nonce 0) (Nonce 1)) (Nonce 2)) (Nonce 88)) (Nonce 13)) (Nonce 987)) (Nonce 100))
+        (Nonce 888)) (Nonce 889)) (Nonce 410)
+  , SeedOp
+      (SeedOp (SeedOp (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 88)) (Nonce 987)) (Nonce 888))
+      (Nonce 410)
+  , blockEx10Hash
+  , Slot 410
+  )
+
+ex10 :: CHAINExample
+ex10 = CHAINExample (Slot 410) expectedStEx9 blockEx10 expectedStEx10

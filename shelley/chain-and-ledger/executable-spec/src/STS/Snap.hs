@@ -30,7 +30,6 @@ instance STS (SNAP hashAlgo dsignAlgo) where
     = ( PParams
       , DState hashAlgo dsignAlgo
       , PState hashAlgo dsignAlgo
-      , BlocksMade hashAlgo dsignAlgo
       )
   data PredicateFailure (SNAP hashAlgo dsignAlgo)
     = FailureSNAP
@@ -42,7 +41,7 @@ instance STS (SNAP hashAlgo dsignAlgo) where
 
 snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo)
 snapTransition = do
-  TRC ((pparams, d, p, blocks), (s, u), eNew) <- judgmentContext
+  TRC ((pparams, d, p), (s, u), eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p
   let _slot       = firstSlot eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) _slot
@@ -57,8 +56,6 @@ snapTransition = do
     .~ (s ^. pstakeSet)
     &  poolsSS
     .~ (p ^. pParams)
-    &  blocksSS
-    .~ blocks
     &  feeSS
     .~ (u ^. fees)
     +  decayed
