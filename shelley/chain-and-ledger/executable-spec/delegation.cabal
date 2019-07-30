@@ -85,6 +85,7 @@ test-suite delegation-test
     main-is:             Tests.hs
     other-modules:       UnitTests
                          MockTypes
+                         MultiSigExamples
                          Mutator
                          Generator
                          PropertyTests
