@@ -156,7 +156,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
   (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
     txIdMap
-    (reverse $ abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
+    (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
   updatePayload :: Update.APayload ()
   updatePayload =

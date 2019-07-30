@@ -49,8 +49,8 @@ tests = $$discoverPropArg
 --   UTxO validator.
 ts_prop_generatedUTxOChainsAreValidated :: TSProperty
 ts_prop_generatedUTxOChainsAreValidated =
-  withTestsTS 200 $ property $ do
-    tr <- forAll $ trace @UTXOW 200
+  withTestsTS 300 $ property $ do
+    tr <- forAll $ trace @UTXOW 500
     classifyTraceLength tr 200 50
     passConcreteValidation tr
 
