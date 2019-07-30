@@ -17,7 +17,7 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import Data.Sequence (Seq, (<|))
+import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
@@ -142,7 +142,7 @@ scheduleCertificate env st cert = do
 
   -- Schedule the new delegation and register the epoch/delegator pair
   pure $ State
-    { scheduledDelegations = delegation <| scheduledDelegations
+    { scheduledDelegations = scheduledDelegations |> delegation
     , keyEpochDelegations  = Set.insert
       (delegationEpoch, delegatorHash)
       keyEpochDelegations
