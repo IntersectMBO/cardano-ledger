@@ -406,7 +406,7 @@ be a staking reference.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
-      \fun{txwitsScripts} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}
+      \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}
     \end{array}
   \end{equation*}
 
@@ -592,21 +592,22 @@ spent inputs locked by scripts and consumed withdrawals locked by scripts.
     & \text{required keyhashes} \\
     &  \hspace{-1cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \} \\
-    \cup & ~~\{\fun{stakeCred_r}~a \mid a\mapsto \wcard \in \AddrRWDVKey
-      \restrictdom \txwdrls{tx}\} \\
+    \cup & ~~
+           \left(\{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\} \cap \KeyHash_{Stake}  \right)\\
     \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
     \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
   \begin{align*}
-    & \hspace{-1.5cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
+    & \hspace{-0.5cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
       \powerset{\HashScr}
     & \text{required script hashes} \\
-    &  \hspace{-1.5cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    &  \hspace{-0.5cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
     & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
     & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{tx}})}~{utxo}\} \\
-    \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
-           \restrictdom \fun{txwdrls}~\var{tx}) \} \\
+    \cup & ~~\left(\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{tx}) \} \cap \HashScr\right) \\
     \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in \fun{txcerts}~\var{tx}\}
   \end{align*}
   \caption{Required Witnesses}
@@ -662,7 +663,7 @@ parameters of unit type and one parameter of type $\PendingTx$; its return type
 is Boolean. The first two input parameters correspond to the redeemer and the
 data scripts which are used in the full extended UTxO model for
 Plutus~\cite{plutus_eutxo}. As those values are not required for simple
-multi-signature, we the unit type for them. The Boolean return type signals
+multi-signature, we use the unit type for them. The Boolean return type signals
 whether the script succeeded in validating the transaction. The function
 $\fun{validateScript}$ specialized for $\ScriptPlutus$ takes a Plutus script
 representation and a $\PendingTx$ value, and evaluates the script using the
@@ -696,7 +697,7 @@ which indicates how many of the keys are required as signatures. When the
 validation script is called, it computes the list of keys in $keys$ which signed
 the transaction. If the length of that list is greater than or equal to $num$,
 then enough signatures for the multi-signature are present. Therefore, with
-\var{hkeys} being a value of type \type{MultiSig}, partially application of
+\var{hkeys} being a value of type \type{MultiSig}, partial application of
 $\fun{validate}~multisig$ will return a validator script with the correct type
 according to Figure~\ref{fig:types_defs_plutus}.
 
