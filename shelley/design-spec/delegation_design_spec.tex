@@ -564,26 +564,27 @@ pool operators.
 \label{overview-of-delegation}
 
 Delegation is a separation of the control over the movements of funds
-and the rights in the Proof of Stake protocol that are associated with
-those funds. We achieve this separation by introducing another type of
-key: while the rights to move funds are tied to a \emph{payment key
-pair} \(K^p=(skp, vkp)\), the rights to take part in the PoS are tied to
-the \emph{staking key pair} \(K^s=(sks, vks)\). Here, \(skp\) and
-\(sks\) are the private keys used for signing, and \(vkp\) and \(vks\)
-are the public keys used to verify signatures.
+and the rights (and obligations) in the Proof of Stake protocol that are
+associated with those funds. We achieve this separation by introducing
+another type of address: while the right to move funds are tied to a
+\emph{value address}, the right (and obligation) to take part in the PoS
+is tied to a \emph{stake address}. The association between the two is
+that a value address can contain a reference to a stake address.
 
-Except for special classes of addresses with no stake rights\footnote{Enterprise,
+Except for special classes of value addresses with no stake
+rights\footnote{Enterprise,
   bootstrap era and AVVM addresses have no corresponding stake
   rights. AVVM is an acronym for ``Ada Virtual Vending Machine'', and AVVM
-  addresses are special addresses used in the initial distribution of Ada.}, all
-addresses have stake rights corresponding to the funds
+  addresses are special addresses used in the initial distribution of Ada.},
+all value addresses have stake rights corresponding to the funds
 at the address. To exercise these stake rights, and to receive staking
-rewards, each address must be associated with a \emph{registered} stake
-key. This involves registering a stake key on the chain and using
-addresses that refer to this stake key. Each registered stake key has a
-corresponding \emph{reward account} which is used to collect and claim
-staking rewards. To exercise stake rights associated with a registered
-stake key, those rights must be \emph{delegated} to a registered stake pool.
+rewards, each value address must be associated with a \emph{registered}
+stake address. This involves registering a stake address on the chain
+and using value addresses that refer to this stake address. Each
+registered stake address has a corresponding \emph{reward account} which
+is used to hold accumulated staking rewards. To exercise stake rights
+associated with a registered stake address, those rights must be
+\emph{delegated} to a registered stake pool.
 This involves posting a delegation certificate on the chain identifying
 the chosen stake pool. Registered stake pools participate in the Proof
 of Stake protocol using the key for their stake pool to sign blocks.
@@ -591,14 +592,29 @@ Only registered stake pools participate in the PoS protocol, but anyone
 can register a private stake pool for ``self staking''. For each stake
 pool, the set of stake keys that delegate to it are known, and staking
 rewards can be paid into the reward accounts associated with each stake
-key. Rewards can accumulate in reward accounts over multiple epochs and
-can be reclaimed as part of a transaction using a special input type.
+key. Rewards can accumulate in the reward account of the stake addresses
+over multiple epochs and can be reclaimed as part of a transaction using
+the stake address as an input.
 
-Thus, the overall structure is that addresses with stake rights are
-associated with a stake key, and the stake key delegates to a stake
-pool, and the stake pool takes part in the PoS protocol. Private staking
-works in exactly the same way, using a stake key, and delegating, but
-using a private stake pool.
+Thus, the overall structure is that value addresses with stake rights
+are associated with a stake address, and the stake address delegates to
+a stake pool, and the stake pool takes part in the PoS protocol. Private
+staking works in exactly the same way, using a stake address, and
+delegating, but using a private stake pool.
+
+To control the conditions of use of an address, value addresses and
+stake addresses can be based on a cryptographic key pair. In this case
+the holder of the single private key controls the use of the address,
+as their signature is required to spend from the value address, or
+delegate or withdraw rewards from a stake address.
+
+Value addresses and stake addresses can also be based on scripts, where
+the script provides the conditions in which the address can be used. In
+the Shelley release the only\footnote{The Goguen release will extend this
+with Plutus Core, allowing scripts written in Plutus, Marlowe, or other
+languages that compile to Plutus Core.} available script language is one
+that is specialised to express multi-signature conditions: such that N
+out of M cryptographic keys are required to sign to use the address.
 
 Figure~\ref{fig:overview-delegation} shows some of the concepts involved in
 delegation, and their relationships. The light-blue nodes represent concepts, which
