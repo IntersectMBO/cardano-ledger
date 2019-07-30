@@ -337,6 +337,7 @@ instance STS ADELEG where
         , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
         }
     ]
+
   transitionRules =
     [ do
         TRC ( _env
