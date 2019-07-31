@@ -52,7 +52,7 @@ instance STS (NEWEPOCH hashAlgo dsignAlgo) where
 newEpochTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
 newEpochTransition = do
   TRC ( NewEpochEnv eta1 _s gkeys
-      , src@(NewEpochState (Epoch eL') _ bprev bcur es ru _pd _osched)
+      , src@(NewEpochState (Epoch eL') _ _ bcur es ru _pd _osched)
       , e@(Epoch e')) <- judgmentContext
   if eL' + 1 /= e'
     then pure src
@@ -60,7 +60,7 @@ newEpochTransition = do
       let es_ = case ru of
             Nothing  -> es
             Just ru' -> applyRUpd ru' es
-      es' <- trans @(EPOCH hashAlgo dsignAlgo) $ TRC (bprev, es_, e)
+      es' <- trans @(EPOCH hashAlgo dsignAlgo) $ TRC ((), es_, e)
       let EpochState acnt ss ls pp = es'
       let (Stake stake, delegs)    = _pstakeSet ss
       let Coin total               = Map.foldl (+) (Coin 0) stake

@@ -310,7 +310,6 @@ information needing to be saved on the epoch boundary:
     stake distribution snapshots (paired with the corresponding delegation map),
     as explained in Section~\ref{sec:reward-overview}.
   \item $\var{poolsSS}$ stores the pool parameters from the epoch boundary.
-  \item $\var{blocksSS}$ stores the performance of the completed epoch.
   \item $\var{feeSS}$ stores the fees and decayed deposit amounts at the epoch boundary.
 \end{itemize}
 
@@ -326,7 +325,6 @@ information needing to be saved on the epoch boundary:
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
-        \var{blocks} & \BlocksMade & \text{blocks made}\\
       \end{array}
     \right)
   \end{equation*}
@@ -343,7 +341,6 @@ information needing to be saved on the epoch boundary:
         \var{pstake_{go}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
                           & \text{oldest stake}\\
         \var{poolsSS} & \KeyHash \mapsto \PoolParam & \text{pool parameters }\\
-        \var{blocksSS} & \BlocksMade & \text{blocks made }\\
         \var{feeSS} & \Coin & \text{fee snapshot}\\
       \end{array}
     \right)
@@ -412,7 +409,6 @@ This transition has no preconditions and results in the following state change:
         \var{pp} \\
         \var{dstate} \\
         \var{pstate} \\
-        \var{blocks} \\
       \end{array}
       \vdash
       \left(
@@ -421,7 +417,6 @@ This transition has no preconditions and results in the following state change:
           \var{pstake_{set}}\\
           \var{pstake_{go}}\\
           \var{poolsSS}\\
-          \var{blocksSS}\\
           \var{feeSS} \\
           ~ \\
           \var{utxo} \\
@@ -437,7 +432,6 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{pstake_{mark}}} \\
           \varUpdate{\var{pstake_{set}}} \\
           \varUpdate{\var{poolParams}} \\
-          \varUpdate{\var{blocks}} \\
           \varUpdate{\var{fees} + \var{decayed}} \\
           ~ \\
           \var{utxo} \\
@@ -803,7 +797,7 @@ for ease of reading.
 
 Finally, it is possible to define the complete epoch boundary transition type,
 which is defined in Figure~\ref{fig:ts-types:epoch}.
-The environment of this transition consists of the blocks made during this epoch.
+The transition has no evironment.
 The state is made up of the the accounting state, the snapshots, the ledger state and the
 protocol parameters.
 
@@ -826,9 +820,9 @@ protocol parameters.
   %
   \emph{Epoch transitions}
   \begin{equation*}
-    \_ \vdash
+    \vdash
     \var{\_} \trans{epoch}{\_} \var{\_}
-    \subseteq \powerset (\BlocksMade \times \EpochState \times \Epoch \times \EpochState)
+    \subseteq \powerset (\EpochState \times \Epoch \times \EpochState)
   \end{equation*}
   %
   \caption{Epoch transition-system types}
@@ -851,7 +845,6 @@ in sequence.
           \var{pp}\\
           \var{dstate} \\
           \var{pstate} \\
-          \var{blocks}\\
         \end{array}
       }
       \vdash
@@ -932,7 +925,6 @@ in sequence.
       \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'))
     }
     {
-      \var{blocks}
       \vdash
       \left(
       \begin{array}{r}
@@ -1325,8 +1317,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
         \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS} \right) \\
       & ~~~\where \\
       &~~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
-      & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{blocksSS},~\var{feeSS})
-        = \var{ss}\\
+      & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
       & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
       & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
       & ~~~~~~~\left(
@@ -1343,7 +1334,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
       & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
       & ~~~~~~~\var{rs}
-           = \reward{pp}{blocksSS}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
+           = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
       & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
       & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}

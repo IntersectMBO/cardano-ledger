@@ -108,3 +108,5 @@ type WitVKey = TxData.WitVKey ShortHash MockDSIGN
 type Wdrl = TxData.Wdrl ShortHash MockDSIGN
 
 type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
+
+type Stake = EpochBoundary.Stake ShortHash MockDSIGN

@@ -25,7 +25,7 @@ data EPOCH hashAlgo dsignAlgo
 instance STS (EPOCH hashAlgo dsignAlgo) where
     type State (EPOCH hashAlgo dsignAlgo) = EpochState hashAlgo dsignAlgo
     type Signal (EPOCH hashAlgo dsignAlgo) = Epoch
-    type Environment (EPOCH hashAlgo dsignAlgo) = BlocksMade hashAlgo dsignAlgo
+    type Environment (EPOCH hashAlgo dsignAlgo) = ()
     data PredicateFailure (EPOCH hashAlgo dsignAlgo)
       = PoolReapFailure (PredicateFailure (POOLREAP hashAlgo dsignAlgo))
       | SnapFailure (PredicateFailure (SNAP hashAlgo dsignAlgo))
@@ -41,11 +41,11 @@ initialEpoch =
 
 epochTransition :: forall hashAlgo dsignAlgo . TransitionRule (EPOCH hashAlgo dsignAlgo)
 epochTransition = do
-  TRC (blocks, EpochState as ss ls pp, e) <- judgmentContext
+  TRC (_, EpochState as ss ls pp, e) <- judgmentContext
   let us            = _utxoState ls
   let DPState ds ps = _delegationState ls
   (ss', us') <-
-    trans @(SNAP hashAlgo dsignAlgo) $ TRC ((pp, ds, ps, blocks), (ss, us), e)
+    trans @(SNAP hashAlgo dsignAlgo) $ TRC ((pp, ds, ps), (ss, us), e)
   (as', ds', ps') <-
     trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, (as, ds, ps), e)
   let ppNew = Just pp -- TODO: result from votedValuePParams
