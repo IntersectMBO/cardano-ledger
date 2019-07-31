@@ -34,7 +34,7 @@ convertConfig
 convertConfig cc = do
 
     -- Genesis hash
-    let mainnetGenFp = geSrc . coGenesis $ ccCore cc
+    let mainnetGenFp = coGenesisFile $ ccCore cc
     gHash <- decodeGenesisHash genesisHash `wrapError` GenesisHashDecodeError
 
     mkConfigFromFile (cvtRNM . coRequiresNetworkMagic $ ccCore cc) mainnetGenFp gHash
@@ -42,8 +42,10 @@ convertConfig cc = do
  where
   decodeGenesisHash :: Text -> Either Text (Hash Raw)
   decodeGenesisHash genHash = decodeAbstractHash genHash
+
   genesisHash :: Text
-  genesisHash = geGenesisHash . coGenesis $ ccCore cc
+  genesisHash = coGenesisHash $ ccCore cc
+
   cvtRNM :: Shell.RequireNetworkMagic -> RequiresNetworkMagic
   cvtRNM Shell.NoRequireNetworkMagic = RequiresNoMagic
   cvtRNM Shell.RequireNetworkMagic   = RequiresMagic
