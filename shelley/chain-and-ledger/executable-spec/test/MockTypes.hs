@@ -14,6 +14,7 @@ import qualified STS.Chain
 import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
+import qualified Updates
 import qualified UTxO
 
 type DCert = Delegation.Certificates.DCert ShortHash MockDSIGN
@@ -110,3 +111,9 @@ type Wdrl = TxData.Wdrl ShortHash MockDSIGN
 type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
 
 type Stake = EpochBoundary.Stake ShortHash MockDSIGN
+
+type Update = Updates.Update MockDSIGN
+
+type PPUpdate = Updates.PPUpdate MockDSIGN
+
+type AVUpdate = Updates.AVUpdate MockDSIGN

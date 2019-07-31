@@ -38,10 +38,10 @@ import           Data.Word (Word64)
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (Addr, Block, Credential, DState, EpochState, HashHeader, KeyHash,
-                     KeyPair, LedgerState, NewEpochState, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
-                     SKeyES, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, VKey, VKeyES,
-                     VKeyGenesis)
+import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, HashHeader,
+                     KeyHash, KeyPair, LedgerState, NewEpochState, PPUpdate, PState, PoolDistr,
+                     PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody, UTxO,
+                     UTxOState, Update, VKey, VKeyES, VKeyGenesis)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, (⭒))
@@ -68,7 +68,8 @@ import           TxData (pattern AddrBase, pattern Delegation, pattern KeyHashOb
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
                      _poolVrf)
-import           Updates (emptyUpdate, emptyUpdateState)
+import           Updates (pattern AVUpdate, Applications (..), pattern PPUpdate, Ppm (..),
+                     pattern Update, emptyUpdate, emptyUpdateState)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
 
@@ -317,7 +318,17 @@ zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
 
 blockEx1 :: Block
-blockEx1 = mkBlock Nothing gerolamoCold gerolamoVRF gerolamoHot [] slot1 (Nonce 0) (Nonce 1) zero 0
+blockEx1 = mkBlock
+             Nothing
+             gerolamoCold
+             gerolamoVRF
+             gerolamoHot
+             []
+             (Slot 1)
+             (Nonce 0)
+             (Nonce 1)
+             zero
+             0
 
 expectedStEx1 :: ChainState
 expectedStEx1 =
@@ -337,11 +348,8 @@ expectedStEx1 =
   , Slot 1
   )
 
-slot1 :: Slot
-slot1 = Slot 1
-
 ex1 :: CHAINExample
-ex1 = CHAINExample slot1 initStEx1 blockEx1 expectedStEx1
+ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 expectedStEx1
 
 
 -- | Example 2 - apply CHAIN transition to register a stake keys and a pool
@@ -351,6 +359,12 @@ utxoEx2 :: UTxO
 utxoEx2 = genesisCoins
        [ TxOut aliceAddr aliceInitCoin
        , TxOut bobAddr bobInitCoin]
+
+ppupEx2 :: PPUpdate
+ppupEx2 = PPUpdate $ Map.singleton gerolamoVKG (Set.singleton (PoolDeposit 255))
+
+updateEx2 :: Update
+updateEx2 = Update ppupEx2 (AVUpdate Map.empty)
 
 txbodyEx2 :: TxBody
 txbodyEx2 = TxBody
@@ -363,12 +377,14 @@ txbodyEx2 = TxBody
            Map.empty
            (Coin 3)
            (Slot 10)
-           emptyUpdate
+           updateEx2
 
 txEx2 :: Tx
 txEx2 = Tx
           txbodyEx2
-          (makeWitnessesVKey txbodyEx2 [alicePay, aliceStake, bobStake, aliceOperator])
+          (makeWitnessesVKey
+            txbodyEx2
+            [alicePay, aliceStake, bobStake, aliceOperator, gerolamoCold])
           Map.empty
 
 utxostEx2 :: UTxOState
@@ -386,11 +402,15 @@ acntEx2 = AccountState
 esEx2 :: EpochState
 esEx2 = EpochState acntEx2 emptySnapShots lsEx2 ppsEx1
 
+
+-- | This overlay schedule creates BFT slots on the even slot
+-- with Gerolamo assigned to the multiples of ten.
 overlayEx2 :: Map Slot (Maybe VKeyGenesis)
-overlayEx2 =
-  Map.fromList [ (Slot 1, Just gerolamoVKG)
-                , (Slot 89, Just lodovicoVKG)
-                ]
+overlayEx2 = overlaySchedule
+                    (Epoch 0)
+                    (Map.keysSet genesisDelegations)
+                    NeutralSeed
+                    ppsEx1
 
 initStEx2 :: ChainState
 initStEx2 =
@@ -416,7 +436,7 @@ blockEx2 = mkBlock
              gerolamoVRF
              gerolamoHot
              [txEx2]
-             slot1
+             (Slot 10)
              (Nonce 0)
              (Nonce 1)
              zero
@@ -424,20 +444,30 @@ blockEx2 = mkBlock
 
 dsEx2 :: DState
 dsEx2 = dsEx1
-          { _ptrs = Map.fromList [ (Ptr (Slot 1) 0 0, aliceSHK)
-                                 , (Ptr (Slot 1) 0 1, bobSHK) ]
-          , _stKeys = StakeKeys $ Map.fromList [ (aliceSHK, Slot 1)
-                                               , (bobSHK, Slot 1) ]
+          { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
+                                 , (Ptr (Slot 10) 0 1, bobSHK) ]
+          , _stKeys = StakeKeys $ Map.fromList [ (aliceSHK, Slot 10)
+                                               , (bobSHK, Slot 10) ]
           , _rewards = Map.fromList [ (RewardAcnt aliceSHK, Coin 0)
                                     , (RewardAcnt bobSHK, Coin 0) ]
           }
 
 psEx2 :: PState
 psEx2 = psEx1
-          { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 1)
+          { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 10)
           , _pParams = Map.singleton aliceOperatorHK alicePoolParams
           , _cCounters = Map.insert aliceOperatorHK 0 (_cCounters psEx1)
           }
+
+updateStEx2 :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx2 =
+  ( ppupEx2
+  , AVUpdate Map.empty
+  , Map.empty
+  , Applications Map.empty)
 
 expectedLSEx2 :: LedgerState
 expectedLSEx2 = LedgerState
@@ -448,7 +478,7 @@ expectedLSEx2 = LedgerState
                    ])
                  (Coin 264)
                  (Coin 3)
-                 emptyUpdateState)
+                 updateStEx2)
                (DPState dsEx2 psEx2)
                0
 
@@ -469,11 +499,11 @@ expectedStEx2 =
   , Nonce 0 ⭒ Nonce 1
   , Nonce 0 ⭒ Nonce 1
   , blockEx2Hash
-  , Slot 1
+  , Slot 10
   )
 
 ex2 :: CHAINExample
-ex2 = CHAINExample slot1 initStEx2 blockEx2 expectedStEx2
+ex2 = CHAINExample (Slot 10) initStEx2 blockEx2 expectedStEx2
 
 
 -- | Example 3 - continuing on after example 2, process a block late enough
@@ -493,20 +523,23 @@ txbodyEx3 = TxBody
            emptyUpdate
 
 txEx3 :: Tx
-txEx3 = Tx txbodyEx3 (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake]) Map.empty
+txEx3 = Tx
+          txbodyEx3
+          (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake, gerolamoCold])
+          Map.empty
 
 blockEx3 :: Block
 blockEx3 = mkBlock
              blockEx2Hash
-             lodovicoCold
-             lodovicoVRF
-             lodovicoHot
+             nicoloCold
+             nicoloVRF
+             nicoloHot
              [txEx3]
-             (Slot 89)
+             (Slot 90)
              (Nonce 0)
              (Nonce 2)
              zero
-             0
+             1
 
 blockEx3Hash :: Maybe HashHeader
 blockEx3Hash = Just (bhHash (bheader blockEx3))
@@ -532,7 +565,7 @@ expectedLSEx3 = LedgerState
                  utxoEx3
                  (Coin 264)
                  (Coin 7)
-                 emptyUpdateState)
+                 updateStEx2)
                (DPState dsEx3 psEx2)
                0
 
@@ -554,11 +587,11 @@ expectedStEx3 =
   , Nonce 0 ⭒ Nonce 1 ⭒ Nonce 2
   , Nonce 0 ⭒ Nonce 1
   , blockEx3Hash
-  , Slot 89
+  , Slot 90
   )
 
 ex3 :: CHAINExample
-ex3 = CHAINExample (Slot 89) expectedStEx2 blockEx3 expectedStEx3
+ex3 = CHAINExample (Slot 90) expectedStEx2 blockEx3 expectedStEx3
 
 
 -- | Example 4 - continuing on after example 3, process an empty block in the next epoch
@@ -578,8 +611,6 @@ blockEx4 = mkBlock
              zero
              1
 
--- | This overlay schedule creates BFT slots on the even slot
--- with Gerolamo assigned to the multiples of ten.
 epoch1OSchedEx4 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx4 = overlaySchedule
                     (Epoch 1)
@@ -603,7 +634,7 @@ expectedLSEx4 = LedgerState
                  utxoEx3
                  (Coin 0)   -- TODO check that both deposits really decayed completely
                  (Coin 271) -- TODO shouldn't this pot have moved to the treasury?
-                 emptyUpdateState)
+                 emptyUpdateState) -- Note that the ppup is gone now
                (DPState dsEx3 psEx2)
                0
 
