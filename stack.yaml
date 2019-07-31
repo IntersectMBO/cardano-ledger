@@ -23,7 +23,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 6b808ad5506cb097cdf5832e1cd5cad0c83c58d6
+    commit: f73df8f35da5e322cf14cf50f118d76b2aa8a423
     subdirs:
       - binary
       - binary/test
@@ -45,7 +45,7 @@ extra-deps:
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
+    commit: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
     subdirs:
       - contra-tracer
       - iohk-monitoring

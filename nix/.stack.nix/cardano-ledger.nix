@@ -35,6 +35,7 @@
           (hsPkgs.cryptonite)
           (hsPkgs.Cabal)
           (hsPkgs.deepseq)
+          (hsPkgs.digest)
           (hsPkgs.directory)
           (hsPkgs.filepath)
           (hsPkgs.formatting)

@@ -63,6 +63,7 @@ library
                        Cardano.Chain.Common.AddressHash
                        Cardano.Chain.Common.Attributes
                        Cardano.Chain.Common.BlockCount
+                       Cardano.Chain.Common.CBOR
                        Cardano.Chain.Common.ChainDifficulty
                        Cardano.Chain.Common.Compact
                        Cardano.Chain.Common.KeyHash
@@ -140,6 +141,7 @@ library
                      , cryptonite
                      , Cabal
                      , deepseq
+                     , digest
                      , directory
                      , filepath
                      , formatting
