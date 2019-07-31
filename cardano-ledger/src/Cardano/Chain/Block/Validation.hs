@@ -15,6 +15,7 @@ module Cardano.Chain.Block.Validation
   , updateChainBoundary
   , epochTransition
   , headerIsValid
+  , validateHeaderMatchesBody
   , updateBlock
   , BodyState(..)
   , BodyEnvironment(..)
