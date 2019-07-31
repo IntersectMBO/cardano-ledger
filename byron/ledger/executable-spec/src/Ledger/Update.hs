@@ -56,6 +56,7 @@ import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation 
                      (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
+import qualified Ledger.GlobalParams as GP
 
 import           Prelude
 
@@ -85,7 +86,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int
+  , _factorA :: !Int -- TODO: shouldn't these be unsigned ints like Word64? In the concrete implementation they are Word64!
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
@@ -762,41 +763,40 @@ initialPParams =
      -- transaction fees we need to know the constant @C@ that we use to bound
      -- the size of a transaction.
      --
-     -- We have that for all transactions @tx@
+     -- We have that for all transactions @tx@:
      --
      -- > size (elaborate tx) <= C * abstractSize tx
      --
      -- where @elaborate@ elaborates an abstract transaction into a concrete
      -- one.
      --
-     -- Then we would expect that the concrete fee is also bounded by the
-     -- concrete fee, this is:
+     -- We have that the (concrete) minimum fee is calculated as follows:
      --
-     -- > A_C + B_C * size (elaborate tx) <= C * (A + B * abstractSize tx)
+     -- > minFee tx = A_C + B_C * C
      --
-     -- where @A_C@ and @B_C@ are the concrete factors that correspond to @A@
-     -- and @B@. Now consider:
+     -- where @A_C@ and @B_C@ are the concrete constants that correspond to
+     -- abstract constants @A@ and @B@.
      --
-     -- > C * (A + B * abstractSize tx)
-     -- > =
-     -- > C * A + B * C * abstractSize tx
-     -- > >=
-     -- > C * A + B * size (elaborate tx)
-     -- = { Choosing A_C = C * A, B_C = B}
-     -- > A_C + B_C * size (elaborate tx)
+     -- We need to guarantee that the abstract minimum fee we use for
+     -- transactions is no less than the concrete minimum fee, since otherwise
+     -- we run the risk that in the elaboration we end up paying a fee to low.
      --
-     -- Which means that given C /= 0, we should set:
+     -- Now consider the minimum fee for an elaborated transaction:
      --
-     -- > _factorA = A_C / C
-     -- > _factorB = B_C
+     -- > A_C + B_C * (size (elaborate tx))
+     -- > <= { size (elaborate tx) <= C * abstractSize tx }
+     -- > A_C + B_C * C * abstractSize tx
      --
-     -- TODO: But if the derivation above is correct the value of B would be
-     -- quite large (if we take the value used in mainet, i.e.
-     -- 155381000000000).
+     -- Which means that we should set:
      --
-     -- For now we choose arbitrary numbers here.
-     , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
-     , _factorB = 2 -- In mainet this value is set to 155381000000000
+     -- > _factorA = A_C
+     -- > _factorB = B_C * C
+     --
+     -- For now we choose small numbers here so that we do not need a high UTxO
+     -- balance when generating the initial UTxO (see @module
+     -- Ledger.UTxO.Generators@).
+     , _factorA = 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
+     , _factorB = 10 * fromIntegral GP.c -- In mainet this value is set to 43946000000
      }
 
 protocolVersion :: UPIState -> ProtVer
@@ -1150,11 +1150,15 @@ ppsUpdateFrom pps = do
       Gen.integral (Range.exponentialFrom _factorA 0 10)
       `increasingProbabilityAt` (0, 10)
 
+    -- The next value of the factor B shouldn't drop below 'GP.c' since when
+    -- elaborating this factor we divide it by 'GP.c' (see 'initialPParams').
     nextFactorB :: Gen Int
     nextFactorB =
-      -- TODO: we choose arbitrary numbers here for now.
-      Gen.integral (Range.exponentialFrom _factorB 0 10)
-      `increasingProbabilityAt` (0, 10)
+      Gen.integral (Range.exponentialFrom _factorB minFactorB maxFactorB)
+      `increasingProbabilityAt` (minFactorB, maxFactorB)
+      where
+        minFactorB = 5 * fromIntegral GP.c
+        maxFactorB = 15 * fromIntegral GP.c
 
     (-?) :: Natural -> Natural -> Natural
     n -? m = if n < m then 0 else n - m
