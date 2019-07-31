@@ -39,7 +39,7 @@ instance STS EPOCH where
     [ do
         TRC ((e_c, k), us, s) <- judgmentContext
         if sEpoch s k <= e_c
-          then do
+          then
             pure $! us
           else do
             us' <- trans @UPIEC $ TRC ((s, k), us, ())

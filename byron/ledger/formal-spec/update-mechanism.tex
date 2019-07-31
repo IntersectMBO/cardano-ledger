@@ -166,21 +166,16 @@ keys, some of which correspond with fields of the
 \item Transaction fee policy: $\var{txFeePolicy}$
 \item Script version: $\var{scriptVersion}$
 \item Update adoption threshold: $\var{upAdptThd}$. This represents the minimum
-  percentage of the total number of genesis keys that have to endorse a
-  protocol version to be able to become adopted. There is no corresponding
-  parameter in the `cardano-sl` protocol parameters, however we do have a
-  soft-fork minimum threshold parameter (`srMinThd` in `bvdSoftforkRule`). When
-  divided by, $1\times 10^{15}$, it determines the minimum portion of the total
-  stake that is needed for the adoption of a new protocol version. On mainnet,
-  this number is set to $6 \times 10^{14}$, so the minimum portion becomes
-  $0.6$. This number can be multiplied by the total number of genesis keys to
-  obtain how many keys are needed to reach a majority.
-\item Confirmation threshold $\var{cfmThd}$: This represents the minimum
-  percentage of the total number of genesis keys that have to vote on a
-  proposal for it to become confirmed. As with $\var{upAdptThd}$ there is no
-  corresponding protocol parameter in the `cardano-sl` protocol parameters, so
-  in the implementation we will be using `srMinThd` as well to get the portion
-  of keys that need to vote on a proposal to be confirmed.
+  percentage of the total number of genesis keys that have to endorse a protocol
+  version to be able to become adopted. We use this parameter to determine the
+  confirmation threshold as well. There is no corresponding parameter in the
+  `cardano-sl` protocol parameters, however we do have a soft-fork minimum
+  threshold parameter (`srMinThd` in `bvdSoftforkRule`). When divided by,
+  $1\times 10^{15}$, it determines the minimum portion of the total stake that
+  is needed for the adoption of a new protocol version. On mainnet, this number
+  is set to $6 \times 10^{14}$, so the minimum portion becomes $0.6$. This
+  number can be multiplied by the total number of genesis keys to obtain how
+  many keys are needed to reach a majority.
 \item Update proposal time-to-live: $\var{upropTTL}$. This would correspond to
   the number of slots specified by `bvdUpdateImplicit`. In `cardano-sl` the
   rule was that after `bvdUpdateImplicit` slots, if a proposal did not reach a
@@ -204,7 +199,6 @@ The protocol parameters are formally defined in \cref{fig:prot-params-defs}.
       \var{maxHeaderSize} \mapsto \mathbb{N} & \PPMMap & \text{maximum header size}\\
       \var{scriptVersion} \mapsto \mathbb{N} & \PPMMap & \text{script version}\\
       \var{upAdptThd} \mapsto \mathbb{Q} & \PPMMap & \text{update proposal adoption threshold}\\
-      \var{cfmThd} \mapsto \mathbb{Q} & \PPMMap & \text{update proposal confirmation threshold}\\
       \var{upropTTL} \mapsto \mathbb{\Slot} & \PPMMap & \text{update proposal time-to-live}\\
     \end{array}
   \end{equation*}
@@ -1215,7 +1209,7 @@ rule by $\var{bv}$:
     {
       \var{bvs'} \leteq \var{bvs} \cup
       \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
-      & \size{\{\var{bv}\} \restrictdom \var{bvs}} < t\\
+      & \size{\{\var{bv}\} \restrictdom \var{bvs'}} < t\\
       \var{pid} \mapsto (\var{bv}, \wcard) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])
     }
@@ -1258,7 +1252,7 @@ rule by $\var{bv}$:
     {
       \var{bvs'} \leteq \var{bvs} \cup
       \{ (\var{bv}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \}
-      & t \leq \size{\{\var{bv}\} \restrictdom \var{bvs}}\\
+      & t \leq \size{\{\var{bv}\} \restrictdom \var{bvs'}}\\
       \var{pid} \mapsto (\var{bv}, \var{pps_c}) \in \var{rpus}
       & \var{pid} \in \dom~(\var{cps} \restrictrange [.., s_n - 2 \cdot k])\\
       (\var{fads}) \trans{fads}{(s_n, (\var{bv}, \var{pps_c}))} (\var{fads'})

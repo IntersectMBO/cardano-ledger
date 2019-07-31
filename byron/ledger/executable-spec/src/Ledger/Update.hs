@@ -21,8 +21,6 @@ module Ledger.Update
   (module Ledger.Update)
 where
 
--- import qualified Debug.Trace as Debug
-
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
 import           Data.Bimap (Bimap, empty, lookupR)
