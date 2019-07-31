@@ -71,15 +71,17 @@ delegsTransition = do
                                     , _fdms = fdms''
                                     , _dms = Dms $ dms'' ∪ dms'}}
     cert:_certs -> do
+      dpstate' <-
+        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
+
       let ptr = Ptr _slot txIx (fromIntegral $ length _certs)
       let isDelegationRegistered = case cert of
             Delegate deleg ->
-              let StakePools sp = _stPools $ _pstate dpstate in
+              let StakePools sp = _stPools $ _pstate dpstate' in
               Map.member (_delegatee deleg) sp
             _ -> True
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
-      dpstate' <-
-        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
+
       dpstate'' <-
         trans @(DELPL hashAlgo dsignAlgo)
           $ TRC ((_slot, ptr, pp), dpstate', cert)
