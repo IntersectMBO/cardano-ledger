@@ -65,7 +65,7 @@ exampleProtocolVersion = ProtocolVersion 1 1 1
 exampleProtocolParameters :: ProtocolParameters
 exampleProtocolParameters = ProtocolParameters
   (999 :: Word16)
-  (999e-6 :: NominalDiffTime)
+  (999e-3 :: NominalDiffTime)
   (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
