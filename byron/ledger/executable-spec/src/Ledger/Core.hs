@@ -407,7 +407,7 @@ instance Relation [(a, b)] where
 
   s ⋪ r = filter ((`Set.notMember` toSet s) . fst) r
 
-  r ▷ s = filter ((`Set.notMember` toSet s) . snd) r
+  r ▷ s = filter ((`Set.member` toSet s) . snd) r
 
   (∪) = (++)
 
