@@ -40,13 +40,12 @@ import Cardano.Binary
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
   , ToCBOR(..)
-  , decodeKnownCborDataItem
-  , encodeKnownCborDataItem
   , encodeListLen
   , enforceSize
-  , knownCborDataItemSizeExpr
   , szCases
   )
+import Cardano.Chain.Common.CBOR
+  (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace

@@ -80,14 +80,13 @@ import Cardano.Binary
   , Encoding
   , FromCBOR(..)
   , ToCBOR(..)
-  , decodeCrcProtected
   , decodeFull'
   , decodeListLenCanonical
-  , encodeCrcProtected
-  , encodedCrcProtectedSizeExpr
   , matchSize
   , serialize'
   )
+import Cardano.Chain.Common.CBOR
+  (encodeCrcProtected, encodedCrcProtectedSizeExpr, decodeCrcProtected)
 import Cardano.Chain.Common.AddrAttributes (AddrAttributes(..))
 import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData

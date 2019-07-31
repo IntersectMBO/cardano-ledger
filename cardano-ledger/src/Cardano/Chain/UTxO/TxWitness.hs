@@ -30,15 +30,14 @@ import Cardano.Binary
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
   , ToCBOR(..)
-  , decodeKnownCborDataItem
   , decodeListLen
-  , encodeKnownCborDataItem
   , encodeListLen
-  , knownCborDataItemSizeExpr
   , matchSize
   , serialize'
   , szCases
   )
+import Cardano.Chain.Common.CBOR
+  (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Crypto

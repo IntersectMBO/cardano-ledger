@@ -70,10 +70,27 @@ import Test.Cardano.Chain.Common.Gen
   , genTxFeePolicy
   , genTxSizeLinear
   )
+
+import Cardano.Binary
+  (serializeEncoding, decodeFullDecoder)
+import Cardano.Chain.Common
+  (encodeCrcProtected, decodeCrcProtected)
+
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
+import Hedgehog  (property, forAll, (===))
 
+
+--------------------------------------------------------------------------------
+-- CRC encoding
+--------------------------------------------------------------------------------
+
+prop_roundTripCrcProtected :: Property
+prop_roundTripCrcProtected = property $ do
+  x <- forAll genAddress
+  let crcEncodedBS = serializeEncoding . encodeCrcProtected $ x
+  decodeFullDecoder "" decodeCrcProtected crcEncodedBS === Right x
 
 --------------------------------------------------------------------------------
 -- Address

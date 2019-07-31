@@ -30,11 +30,11 @@ import Cardano.Binary
   ( DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
   , ToCBOR(..)
-  , decodeKnownCborDataItem
-  , encodeKnownCborDataItem
   , encodeListLen
   , enforceSize
   )
+import Cardano.Chain.Common.CBOR
+  (decodeKnownCborDataItem, encodeKnownCborDataItem)
 import Cardano.Chain.Common.Lovelace
   (Lovelace, LovelaceError, lovelaceToInteger, mkLovelace)
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear(..))
