@@ -77,7 +77,7 @@ newEpochTransition = do
             ]
       let pd' = Map.intersectionWith (,) sd (Map.map _poolVrf (_poolsSS ss))
       pure $ NewEpochState e
-                           (seedOp eta1 etaE)
+                           (eta1 ⭒ etaE)
                            bcur
                            (BlocksMade Map.empty)
                            es''
