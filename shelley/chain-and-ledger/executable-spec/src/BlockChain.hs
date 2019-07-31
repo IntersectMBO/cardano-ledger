@@ -41,7 +41,7 @@ import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
-import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkNonce, seedOp)
+import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkNonce, (⭒))
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash, VKey,
@@ -229,10 +229,10 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
         Just (sigma, vrfHK) ->
           vrfHK == hashKey vrfK
             && verifyVrf vrfK
-                         ((eta0 `seedOp` ss) `seedOp` SeedEta)
+                         ((eta0 ⭒ ss) ⭒ SeedEta)
                          (bheaderEta bhb, bheaderPrfEta bhb)
             && verifyVrf vrfK
-                         ((eta0 `seedOp` ss) `seedOp` SeedL)
+                         ((eta0 ⭒ ss) ⭒ SeedL)
                          (bheaderL bhb, bheaderPrfL bhb)
             && intervalValue (bheaderL bhb)
             <  1

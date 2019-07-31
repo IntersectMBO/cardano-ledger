@@ -13,7 +13,7 @@ module BaseTypes
   , interval1
   , Seed(..)
   , mkNonce
-  , seedOp
+  , (⭒)
   ) where
 
 
@@ -75,10 +75,10 @@ instance ToCBOR Seed where
     SeedOp s1 s2 ->
       encodeListLen 3 <> toCBOR (4 :: Word8) <> toCBOR s1 <> toCBOR s2
 
-seedOp :: Seed -> Seed -> Seed
-seedOp NeutralSeed s = s
-seedOp s NeutralSeed = s
-seedOp a b = SeedOp a b
+(⭒) :: Seed -> Seed -> Seed
+NeutralSeed ⭒ s = s
+s ⭒ NeutralSeed = s
+a ⭒ b = SeedOp a b
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce
