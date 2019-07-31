@@ -283,7 +283,7 @@ svCanFollow avs (an,av) =
     (case Map.lookup an avs of
       Nothing -> True
       Just (x, _, _) -> av == x + 1
-    ) && (an `Set.notMember` dom avs ==> av == ApVer 0)
+    ) && (an `Set.notMember` dom avs ==> av == ApVer 1)
   where
 
 ------------------------------------------------------------------------
@@ -972,7 +972,7 @@ instance HasTrace UPIREG where
           -- Generate a new application
           genNewApp :: Gen SwVer
           genNewApp
-            =  (`SwVer` 0) . ApName
+            =  (`SwVer` 1) . ApName
            <$> Gen.filter ((`notElem` usedNames) . ApName)
                           (Gen.list (Range.constant 0 12) Gen.ascii)
             where
