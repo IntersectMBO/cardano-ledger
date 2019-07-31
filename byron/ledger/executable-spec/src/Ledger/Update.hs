@@ -84,7 +84,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int -- TODO: shouldn't these be unsigned ints like Word64? In the concrete implementation they are Word64!
+  , _factorA :: !Int -- TODO: these should have type 'Word64', like in the implementation.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
@@ -1523,8 +1523,8 @@ instance STS UPIEC where
             , []          :: [(Core.Slot, (ProtVer, PParams))]
             , us ^. _3    :: Map ApName (ApVer, Core.Slot, Metadata)
             , Map.empty   :: Map UpId (ProtVer, PParams)
-            -- Note that delete the registered application proposals from the
-            -- state on epoch change, since adopting these depend on the @cps@
+            -- Note that we delete the registered application proposals from the
+            -- state on epoch change, since adopting these depends on the @cps@
             -- and @pws@ sets, which are deleted as well. So it doesn't seem
             -- sensible to keep @raus@ around.
             , Map.empty   :: Map UpId (ApName, ApVer, Metadata)

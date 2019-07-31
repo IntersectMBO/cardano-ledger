@@ -9,8 +9,13 @@ import           GHC.Exts (fromList)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (testCase)
 
-import           Ledger.Core
-import           Ledger.Update
+import           Ledger.Core (BlockCount (BlockCount), Owner (Owner), Slot (Slot),
+                     SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis), unBlockCount,
+                     unOwner, unSlot, unSlotCount, unVKeyGenesis)
+import           Ledger.Update (ApName (ApName), ApVer (ApVer), Metadata (Metadata),
+                     PParams (PParams), ProtVer (ProtVer), UPIEND, UpId (UpId), _bkSgnCntT,
+                     _bkSlotsPerEpoch, _factorA, _factorB, _maxBkSz, _maxHdrSz, _maxPropSz,
+                     _maxTxSz, _pvAlt, _pvMaj, _pvMin, _scriptVersion, _upAdptThd, _upTtl)
 
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 
