@@ -16,7 +16,6 @@ module EpochBoundary
   , pstakeSet
   , pstakeGo
   , poolsSS
-  , blocksSS
   , feeSS
   , emptySnapShots
   , rewardStake
@@ -194,7 +193,6 @@ data SnapShots hashAlgo dsignAlgo
          )
     , _poolsSS
       :: Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
-    , _blocksSS :: BlocksMade hashAlgo dsignAlgo
     , _feeSS :: Coin
     } deriving (Show, Eq)
 
@@ -202,8 +200,7 @@ makeLenses ''SnapShots
 
 emptySnapShots :: SnapShots hashAlgo dsignAlgo
 emptySnapShots =
-    SnapShots snapEmpty snapEmpty snapEmpty Map.empty blocksEmpty (Coin 0)
+    SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Coin 0)
     where pooledEmpty = Map.empty
-          blocksEmpty = BlocksMade Map.empty
           stakeEmpty  = Stake Map.empty
           snapEmpty   = (stakeEmpty, pooledEmpty)

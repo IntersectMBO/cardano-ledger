@@ -1024,9 +1024,11 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
   rewards'
   where
     Coin pstake = Map.foldl (+) (Coin 0) stake
-    Coin ostake = stake Map.! poolHK
+    Coin ostake = Set.foldl
+                    (\c o -> c + (stake Map.! KeyHashObj o))
+                    (Coin 0)
+                    (pool ^. poolOwners)
     sigma = fromIntegral pstake % fromIntegral total
-    _expectedSlots = sigma * fromIntegral slotsPerEpoch
     Coin pledge = pool ^. poolPledge
     pr = fromIntegral pledge % fromIntegral total
     maxP =
@@ -1040,8 +1042,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
      [(RewardAcnt hk,
        memberRew poolR pool (StakeShare (fromIntegral c% tot)) (StakeShare sigma))
      | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
-    Coin hkStake = stake Map.! poolHK
-    iReward  = leaderRew poolR pool (StakeShare $ fromIntegral hkStake % tot) (StakeShare sigma)
+    iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
     rewards' = addrsRew ◁ potentialRewards
 
@@ -1118,7 +1119,7 @@ createRUpd
   :: BlocksMade hashAlgo dsignAlgo
   -> EpochState hashAlgo dsignAlgo
   -> RewardUpdate hashAlgo dsignAlgo
-createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
+createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
   RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
   where Coin reserves' = _reserves acnt
         deltaR' =
@@ -1130,9 +1131,9 @@ createRUpd (BlocksMade b) (EpochState acnt ss ls pp) =
         (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
         deltaT2 = r' - c'
-        rs' = reward pp (_blocksSS ss) r (Map.keysSet rewards') poolsSS' stake' delegs'
+        rs' = reward pp b r (Map.keysSet rewards') poolsSS' stake' delegs'
         Coin c' = Map.foldr (+) (Coin 0) rs'
-        blocksMade = fromIntegral $ Map.foldr (+) 0 b :: Integer
+        blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
         expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
