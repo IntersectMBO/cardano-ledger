@@ -39,7 +39,7 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
 import           MockTypes (Addr, Block, Credential, DState, EpochState, HashHeader, KeyHash,
-                     KeyPair, LedgerState, NewEpochState, PState, PoolDistr, PoolParams, SKey,
+                     KeyPair, LedgerState, NewEpochState, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
                      SKeyES, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, VKey, VKeyES,
                      VKeyGenesis)
 import           Numeric.Natural (Natural)
@@ -175,6 +175,9 @@ bobStake = KeyPair vk sk
 
 bobAddr :: Addr
 bobAddr = mkAddr (bobPay, bobStake)
+
+bobSHK :: Credential
+bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000
@@ -341,7 +344,7 @@ ex1 :: CHAINExample
 ex1 = CHAINExample slot1 initStEx1 blockEx1 expectedStEx1
 
 
--- | Example 2 - apply CHAIN transition to register a stake key and a pool
+-- | Example 2 - apply CHAIN transition to register a stake keys and a pool
 
 
 utxoEx2 :: UTxO
@@ -352,16 +355,21 @@ utxoEx2 = genesisCoins
 txbodyEx2 :: TxBody
 txbodyEx2 = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [TxOut aliceAddr (Coin 9740)]
-           (fromList [ RegPool alicePoolParams
-                     , RegKey aliceSHK])
+           [TxOut aliceAddr (Coin 9733)]
+           (fromList [ RegKey aliceSHK
+           , RegKey bobSHK
+           , RegPool alicePoolParams
+           ])
            Map.empty
            (Coin 3)
            (Slot 10)
            emptyUpdate
 
 txEx2 :: Tx
-txEx2 = Tx txbodyEx2 (makeWitnessesVKey txbodyEx2 [alicePay, aliceStake, aliceOperator]) Map.empty
+txEx2 = Tx
+          txbodyEx2
+          (makeWitnessesVKey txbodyEx2 [alicePay, aliceStake, bobStake, aliceOperator])
+          Map.empty
 
 utxostEx2 :: UTxOState
 utxostEx2 = UTxOState utxoEx2 (Coin 0) (Coin 0) emptyUpdateState
@@ -416,9 +424,12 @@ blockEx2 = mkBlock
 
 dsEx2 :: DState
 dsEx2 = dsEx1
-          { _ptrs = Map.singleton (Ptr (Slot 1) 0 1) aliceSHK
-          , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 1)
-          , _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 0)
+          { _ptrs = Map.fromList [ (Ptr (Slot 1) 0 0, aliceSHK)
+                                 , (Ptr (Slot 1) 0 1, bobSHK) ]
+          , _stKeys = StakeKeys $ Map.fromList [ (aliceSHK, Slot 1)
+                                               , (bobSHK, Slot 1) ]
+          , _rewards = Map.fromList [ (RewardAcnt aliceSHK, Coin 0)
+                                    , (RewardAcnt bobSHK, Coin 0) ]
           }
 
 psEx2 :: PState
@@ -433,9 +444,9 @@ expectedLSEx2 = LedgerState
                (UTxOState
                  (UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2) 0, TxOut aliceAddr (Coin 9740))
+                   , (TxIn (txid txbodyEx2) 0, TxOut aliceAddr (Coin 9733))
                    ])
-                 (Coin 257)
+                 (Coin 264)
                  (Coin 3)
                  emptyUpdateState)
                (DPState dsEx2 psEx2)
@@ -467,20 +478,22 @@ ex2 = CHAINExample slot1 initStEx2 blockEx2 expectedStEx2
 
 -- | Example 3 - continuing on after example 2, process a block late enough
 -- in the epoch in order to create a reward update.
--- The block delegates Alice's stake to Alice's pool.
+-- The block delegates Alice's and Bob's stake to Alice's pool.
 
 txbodyEx3 :: TxBody
 txbodyEx3 = TxBody
            (Set.fromList [TxIn (txid txbodyEx2) 0])
-           [TxOut aliceAddr (Coin 9736)]
-           (fromList [ Delegate $ Delegation aliceSHK aliceOperatorHK ])
+           [TxOut aliceAddr (Coin 9729)]
+           (fromList [ Delegate $ Delegation aliceSHK aliceOperatorHK
+           , Delegate $ Delegation bobSHK aliceOperatorHK
+           ])
            Map.empty
            (Coin 4)
            (Slot 99)
            emptyUpdate
 
 txEx3 :: Tx
-txEx3 = Tx txbodyEx3 (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake]) Map.empty
+txEx3 = Tx txbodyEx3 (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake]) Map.empty
 
 blockEx3 :: Block
 blockEx3 = mkBlock
@@ -501,17 +514,23 @@ blockEx3Hash = Just (bhHash (bheader blockEx3))
 utxoEx3 :: UTxO
 utxoEx3 = UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx3) 0, TxOut aliceAddr (Coin 9736))
+                   , (TxIn (txid txbodyEx3) 0, TxOut aliceAddr (Coin 9729))
                    ]
 
+delegsEx3 :: Map Credential KeyHash
+delegsEx3 = Map.fromList
+              [ (aliceSHK, aliceOperatorHK)
+              , (bobSHK, aliceOperatorHK)
+              ]
+
 dsEx3 :: DState
-dsEx3 = dsEx2 { _delegations = Map.singleton aliceSHK aliceOperatorHK }
+dsEx3 = dsEx2 { _delegations = delegsEx3 }
 
 expectedLSEx3 :: LedgerState
 expectedLSEx3 = LedgerState
                (UTxOState
                  utxoEx3
-                 (Coin 257)
+                 (Coin 264)
                  (Coin 7)
                  emptyUpdateState)
                (DPState dsEx3 psEx2)
@@ -568,14 +587,14 @@ epoch1OSchedEx4 = overlaySchedule
                     (Nonce 0 ⭒ Nonce 1)
                     ppsEx1
 
-aliceStakeEx4 :: (Stake, Map Credential KeyHash)
-aliceStakeEx4 = ( Stake ( Map.singleton aliceSHK (Coin 9736))
-                , Map.singleton aliceSHK aliceOperatorHK )
+snapEx4 :: (Stake, Map Credential KeyHash)
+snapEx4 = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
+          , delegsEx3 )
 
 snapsEx4 :: SnapShots
-snapsEx4 = emptySnapShots { _pstakeMark = aliceStakeEx4
+snapsEx4 = emptySnapShots { _pstakeMark = snapEx4
                           , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
-                          , _feeSS = Coin 264
+                          , _feeSS = Coin 271
                           }
 
 expectedLSEx4 :: LedgerState
@@ -583,7 +602,7 @@ expectedLSEx4 = LedgerState
                (UTxOState
                  utxoEx3
                  (Coin 0)   -- TODO check that both deposits really decayed completely
-                 (Coin 264) -- TODO shouldn't this pot have moved to the treasury?
+                 (Coin 271) -- TODO shouldn't this pot have moved to the treasury?
                  emptyUpdateState)
                (DPState dsEx3 psEx2)
                0
@@ -641,10 +660,10 @@ expectedStEx5 =
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       (EpochState acntEx2 snapsEx4 expectedLSEx4 ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 264
+      (Just RewardUpdate { deltaT = Coin 271
                          , deltaR = Coin 0
                          , rs     = Map.empty
-                         , deltaF = Coin (-264)
+                         , deltaF = Coin (-271)
                          })
       (PoolDistr Map.empty)
       epoch1OSchedEx4
@@ -681,12 +700,12 @@ epoch1OSchedEx6 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx6 = overlaySchedule
                     (Epoch 2)
                     (Map.keysSet genesisDelegations)
-                    (SeedOp (SeedOp (Nonce 0) (Nonce 1)) (Nonce 3))
+                    (mkSeqNonce 3)
                     ppsEx1
 
 snapsEx6 :: SnapShots
-snapsEx6 = emptySnapShots { _pstakeMark = aliceStakeEx4
-                          , _pstakeSet = aliceStakeEx4
+snapsEx6 = emptySnapShots { _pstakeMark = snapEx4
+                          , _pstakeSet = snapEx4
                           , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
                           , _feeSS = Coin 0
                           }
@@ -706,7 +725,7 @@ blockEx6Hash = Just (bhHash (bheader blockEx6))
 
 acntEx6 :: AccountState
 acntEx6 = AccountState
-            { _treasury = Coin 264
+            { _treasury = Coin 271
             , _reserves = Coin 45*1000*1000*1000*1000*1000
             }
 
@@ -909,12 +928,12 @@ epoch1OSchedEx10 = overlaySchedule
 
 acntEx10 :: AccountState
 acntEx10 = AccountState
-            { _treasury = Coin 9374400000264
+            { _treasury = Coin 8637405315806
             , _reserves = Coin 44990550000000000
             }
 
 dsEx10 :: DState
-dsEx10 = dsEx3 { _rewards = Map.singleton (RewardAcnt aliceSHK) (Coin 75600000000) }
+dsEx10 = dsEx3 { _rewards = rewardsEx9 }
 
 expectedLSEx10 :: LedgerState
 expectedLSEx10 = LedgerState
