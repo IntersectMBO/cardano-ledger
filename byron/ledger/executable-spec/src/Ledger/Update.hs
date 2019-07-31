@@ -84,7 +84,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int -- TODO: these should have type 'Word64', like in the implementation.
+  , _factorA :: !Int -- TODO: these should have type 'Word64', like in `cardano-ledger`.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
