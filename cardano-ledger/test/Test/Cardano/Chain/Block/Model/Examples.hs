@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- Here it is ok to disable these warnings, since the purpose of this module is
--- to bring the identifiers needed for trace debugging in scope.
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
 
 -- | Module containing the imports needed to test that a given abstract trace
 -- passes the concrete validation. This is useful when debugging
@@ -37,6 +36,11 @@ import Cardano.Spec.Chain.STS.Rule.Chain
 trace0 :: Trace CHAIN
 trace0 = mkTrace traceEnv0 traceInitState0 traceTrans0
   where
+    traceEnv0 :: Environment CHAIN
     traceEnv0 = panic "Add the trace environment here."
+
+    traceInitState0 :: State CHAIN
     traceInitState0 = panic "Add the trace initial state here."
+
+    traceTrans0 :: [(State CHAIN, Signal CHAIN)]
     traceTrans0 = panic "Add the trace transitions here."

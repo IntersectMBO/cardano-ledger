@@ -232,7 +232,7 @@ initialChainValidationState
 initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
-    { cvsLastSlot       = SlotNumber 0
+    { cvsLastSlot       = 0
     , cvsSigningHistory = SigningHistory
       { shK = configK config
       , shKeyHashCounts = M.fromSet (const $ BlockCount 0)
