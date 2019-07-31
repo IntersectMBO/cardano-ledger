@@ -15,8 +15,6 @@ module Cardano.Chain.Update.Validation.Registration
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Cardano.Prelude hiding (State)
 
 import qualified Data.ByteString as BS
@@ -187,11 +185,6 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   SoftwareVersion appName appVersion = softwareVersion
 
   softwareVersionChanged =
-    -- Debug.trace ("Checking if software version changed: \n"
-    --              ++ "appName: " ++ show appName ++ "\n"
-    --              ++ "appVersion: " ++ show appVersion ++ "\n"
-    --              ++ "appVersions: " ++ show appVersions ++ "\n"
-    --             ) $
     maybe True ((/= appVersion) . fst) $ M.lookup appName appVersions
 
   protocolVersionChanged =
@@ -333,6 +326,6 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
 svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 1 || appVersion == 0
+  Nothing -> appVersion == 1
   Just (currentAppVersion, _) -> appVersion == currentAppVersion + 1
   where SoftwareVersion appName appVersion = softwareVersion

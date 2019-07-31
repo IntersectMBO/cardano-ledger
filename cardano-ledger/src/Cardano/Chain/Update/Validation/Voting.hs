@@ -17,8 +17,6 @@ module Cardano.Chain.Update.Validation.Voting
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
@@ -67,7 +65,7 @@ type RegisteredVotes = Map UpId (Set KeyHash)
 -- | Error captures the ways in which vote registration could fail
 data Error
   = VotingInvalidSignature
-  | VotingProposalNotRegistered UpId (Set UpId)
+  | VotingProposalNotRegistered UpId
   | VotingVoterNotDelegate KeyHash
   deriving (Eq, Show)
 
@@ -134,7 +132,7 @@ registerVote
 registerVote pm vre votes vote = do
   -- Check that the proposal being voted on is registered
   (upId `Set.member` registeredProposals)
-    `orThrowError` VotingProposalNotRegistered upId registeredProposals
+    `orThrowError` VotingProposalNotRegistered upId
 
   -- Check that the set of genesis keys is not empty
   delegator <- case Delegation.lookupR voter delegationMap of

@@ -38,7 +38,6 @@ import Hedgehog
   , forAll
   , property
   )
-import qualified Hedgehog.Gen as Gen
 
 import Cardano.Chain.Block
   ( BlockValidationMode (..)
@@ -51,9 +50,9 @@ import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, ShouldGenDelegation(..), ShouldGenUTxO (..), ShouldGenUpdate (..), sigGenChain)
+import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace, traceSigGen, TraceLength (Maximum, Desired))
+import Control.State.Transition.Generator (classifyTraceLength, trace)
 import Control.State.Transition (State)
 import Control.State.Transition.Trace
   ( Trace

@@ -7,8 +7,6 @@ module Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Cardano.Prelude hiding (State)
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
@@ -45,14 +43,6 @@ tryBumpVersion
   -> EpochNumber
   -> State
 tryBumpVersion env st lastSeenEpoch =
-  -- let msg = "Current epoch: " ++ show currentEpoch ++ "\n"
-  --         ++ "Last seen epoch: " ++ show lastSeenEpoch
-  --         ++ "\n"
-  -- in
-  -- Debug.trace ("Current slot: " ++ show currentSlot) $
-  -- Debug.trace ("k: " ++ show k) $
-  -- Debug.trace msg $
-  -- Debug.trace ("Stable candidates: " ++ show stableCandidates ++ "\n") $
   case (currentEpoch < lastSeenEpoch, stableCandidates) of
     (True, newestStable:_) ->
       let CandidateProtocolUpdate

@@ -38,7 +38,7 @@ import Test.Cardano.Chain.Genesis.Dummy (dummyProtocolParameters)
 elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
 elaboratePParams pps = Concrete.ProtocolParameters
   { Concrete.ppScriptVersion      = fromIntegral $ Abstract._scriptVersion pps
-  , Concrete.ppSlotDuration       = 0 -- TODO: was Concrete.ppSlotDuration dummyProtocolParameters
+  , Concrete.ppSlotDuration       = Concrete.ppSlotDuration dummyProtocolParameters
   , Concrete.ppMaxBlockSize       = 4096 * Abstract._maxBkSz pps --748 * Abstract._maxBkSz pps
   , Concrete.ppMaxHeaderSize      = 95 * Abstract._maxHdrSz pps
   , Concrete.ppMaxTxSize          = 4096 * Abstract._maxTxSz pps
@@ -69,14 +69,15 @@ elaborateFeePolicy
   :: Int
   -> Int
   -> Concrete.TxFeePolicy
--- TODO: we should pass the factors wrapped in some type, to avoid errors.
+-- TODO: we should pass the factors wrapped in some type, to avoid errors
+-- resulting from mixing the order of these parameters.
 elaborateFeePolicy a b =
   Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
   where
     aC = intToLovelace a
     bC = intToLovelace
        $ floor
-       $ fromIntegral b / fromIntegral GP.c
+       $ fromIntegral b / (fromIntegral GP.c :: Double)
 
     intToLovelace :: Int -> Concrete.Lovelace
     intToLovelace x =

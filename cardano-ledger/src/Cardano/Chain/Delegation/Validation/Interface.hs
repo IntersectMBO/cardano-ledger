@@ -37,12 +37,9 @@ import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
-import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochNumber
   , SlotNumber(..)
-  , addSlotCount
-  , subSlotCount
   )
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 

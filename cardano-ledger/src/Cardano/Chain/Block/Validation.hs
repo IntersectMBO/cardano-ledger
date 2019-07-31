@@ -37,8 +37,6 @@ module Cardano.Chain.Block.Validation
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO)
@@ -234,7 +232,7 @@ initialChainValidationState
 initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
-    { cvsLastSlot       = 0
+    { cvsLastSlot       = SlotNumber 0
     , cvsSigningHistory = SigningHistory
       { shK = configK config
       , shKeyHashCounts = M.fromSet (const $ BlockCount 0)
@@ -462,7 +460,6 @@ updateBody env bs b = do
       `wrapErrorWithValidationMode` ChainValidationUTxOValidationError
 
   -- Update the update state
-  -- Debug.traceM $ "updateBody: raus updateState = " ++ (show . UPI.registeredSoftwareUpdateProposals $ updateState)
   updateState' <-
     UPI.registerUpdate updateEnv updateState updateSignal
       `wrapError` ChainValidationUpdateError currentSlot
@@ -587,15 +584,6 @@ updateBlock
   -> m ChainValidationState
 updateBlock config cvs b = do
 
-  -- Debug.traceM  ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-  -- Debug.traceM $ "Slot = " ++ show (cvsLastSlot cvs)
-  -- Debug.traceM $ "rpus = " ++ (show . UPI.registeredProtocolUpdateProposals . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "avs = " ++ (show . UPI.appVersions . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "raus = " ++ (show . UPI.registeredSoftwareUpdateProposals . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "cps = " ++ (show . UPI.confirmedProposals . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "rws = " ++ (show . UPI.proposalRegistrationSlot . cvsUpdateState $ cvs)
-  -- Debug.traceM $ "\n"
-
   -- Compare the block's 'ProtocolMagic' to the configured value
   blockProtocolMagicId b == configProtocolMagicId config
     `orThrowErrorInBlockValidationMode`
@@ -628,9 +616,6 @@ updateBlock config cvs b = do
       }
 
   BodyState { utxo, updateState, delegationState } <- updateBody bodyEnv bs b
-  -- Debug.traceShowM "State after body update: \n\n"
-  -- Debug.traceShowM updateState
-  -- Debug.traceShowM "END State after body update: \n\n"
 
   pure $ cvs
     { cvsLastSlot     = blockSlot b

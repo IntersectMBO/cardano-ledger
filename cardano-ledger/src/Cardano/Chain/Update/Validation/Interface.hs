@@ -32,8 +32,6 @@ module Cardano.Chain.Update.Validation.Interface
   )
 where
 
-import qualified Debug.Trace as Debug
-
 import Cardano.Prelude hiding (State)
 
 import qualified Data.Map.Strict as M
@@ -156,7 +154,7 @@ instance ToCBOR State where
 
 data Error
   = Registration Registration.Error
-  | Voting State Voting.Error
+  | Voting Voting.Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
   deriving (Eq, Show)
@@ -193,8 +191,6 @@ initialState config = State
 registerUpdate
   :: MonadError Error m => Environment -> State -> Signal -> m State
 registerUpdate env st Signal { proposal, votes, endorsement } = do
---  Debug.traceM $ "registerUpdate: currentSlot = " ++ show (currentSlot env)
-
   -- Register proposal if it exists
   st' <- case proposal of
     Nothing -> pure st
@@ -203,13 +199,9 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
 
   -- Register the votes
   st'' <- registerVotes env st' votes
-  -- Debug.traceM $ "registerUpdate: confirmedProposals = " ++  show (confirmedProposals st'')
-  -- Debug.traceM $ "registerUpdate: registeredSoftwareUpdateProposals = " ++  show (registeredSoftwareUpdateProposals st'')
-
 
   -- Register endorsement
-  st''' <- registerEndorsement env st'' endorsement
-  pure $! st'''
+  registerEndorsement env st'' endorsement
 
 -- | Register an update proposal.
 --
@@ -321,7 +313,7 @@ registerVote
 registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals'
     <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
-      `wrapError` Voting st
+      `wrapError` Voting
   pure $!
     st { confirmedProposals = confirmedProposals'
        , proposalVotes = proposalVotes'
@@ -375,9 +367,6 @@ registerEndorsement env st endorsement = do
 
     nonExpiredPids =
       M.keysSet $ M.filter (currentSlot `subSlotNumber` u <=) proposalRegistrationSlot
-      -- where
-      --   msg =  "Current Slot: " <> show currentSlot
-      --       <> "Update proposal TTL: " <> show u
 
     confirmedPids = M.keysSet confirmedProposals
 

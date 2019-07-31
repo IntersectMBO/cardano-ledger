@@ -69,7 +69,7 @@ subSlotCount (SlotCount a) (SlotNumber b) =
 --
 -- > subSlotNumber a b
 --
--- Subtracts @b@ from @a@
+-- subtracts @b@ from @a@
 --
 subSlotNumber :: SlotNumber -> SlotNumber -> SlotNumber
 subSlotNumber (SlotNumber a) (SlotNumber b) =
