@@ -29,6 +29,7 @@ import qualified Cardano.Chain.Update.Proposal as Proposal
 
 import Ledger.Core (unSlotCount)
 import qualified Ledger.Update as Abstract
+import qualified Ledger.GlobalParams as GP
 
 
 import Test.Cardano.Chain.Elaboration.Keys (vKeyToSafeSigner)
@@ -59,21 +60,29 @@ elaboratePParams pps = Concrete.ProtocolParameters
                           $ Abstract._upAdptThd pps * 1e15
       , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
       }
-  , Concrete.ppTxFeePolicy        = Concrete.TxFeePolicyTxSizeLinear
-    (Concrete.TxSizeLinear
-      (intToLovelace 0)
-      (intToLovelace 0)
-      -- (intToLovelace (Abstract._factorA pps))
-      -- (intToLovelace (Abstract._factorB pps))
-    )
+  , Concrete.ppTxFeePolicy        =
+      elaborateFeePolicy (Abstract._factorA pps) (Abstract._factorB pps)
   , Concrete.ppUnlockStakeEpoch   = Concrete.EpochNumber maxBound
   }
- where
-  intToLovelace :: Int -> Concrete.Lovelace
-  intToLovelace x =
-    case Concrete.mkLovelace (fromIntegral x) of
-    Left err -> panic $ "intToLovelace: " <> show err
-    Right l -> l
+
+elaborateFeePolicy
+  :: Int
+  -> Int
+  -> Concrete.TxFeePolicy
+-- TODO: we should pass the factors wrapped in some type, to avoid errors.
+elaborateFeePolicy a b =
+  Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
+  where
+    aC = intToLovelace a
+    bC = intToLovelace
+       $ floor
+       $ fromIntegral b / fromIntegral GP.c
+
+    intToLovelace :: Int -> Concrete.Lovelace
+    intToLovelace x =
+      case Concrete.mkLovelace (fromIntegral x) of
+        Left err -> panic $ "intToLovelace: " <> show err
+        Right l -> l
 
 elaborateProtocolVersion
   :: Abstract.ProtVer
