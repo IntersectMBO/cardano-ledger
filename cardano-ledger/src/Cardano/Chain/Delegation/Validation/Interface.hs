@@ -37,12 +37,9 @@ import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
-import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
   ( EpochNumber
   , SlotNumber(..)
-  , addSlotCount
-  , subSlotCount
   )
 import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 
@@ -157,9 +154,9 @@ updateDelegation env is certificates = do
   let
     ss' = Scheduling.State
       { Scheduling.scheduledDelegations = Seq.filter
-        (inWindow . Scheduling.sdSlot)
+        ((currentSlot + 1 <=) . Scheduling.sdSlot)
         delegations
-      , Scheduling.keyEpochDelegations  = Set.filter
+      , Scheduling.keyEpochDelegations = Set.filter
         ((>= currentEpoch) . fst)
         keyEpochs
       }
@@ -168,10 +165,6 @@ updateDelegation env is certificates = do
  where
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env
-
-  inWindow s = subSlotCount d currentSlot <= s && s <= addSlotCount d currentSlot
-
-  d = kSlotSecurityParam k
 
   schedulingEnv = Scheduling.Environment
     { Scheduling.protocolMagic = protocolMagic

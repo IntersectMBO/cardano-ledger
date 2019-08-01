@@ -84,8 +84,8 @@ tests = $$discoverPropArg
 -- after being elaborated must be validated by the concrete block validator.
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
-  withTestsTS 100 $ property $ do
-    let (traceLength, step) = (100 :: Word64, 10 :: Word64)
+  withTestsTS 300  $ property $ do
+    let (traceLength, step) = (500 :: Word64, 10 :: Word64)
     tr <- forAll $ trace @CHAIN traceLength
     classifyTraceLength tr traceLength step
     printAdditionalInfoOnFailure tr

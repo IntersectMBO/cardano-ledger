@@ -7,6 +7,7 @@ module Cardano.Chain.Delegation.Map
 
   -- * Query
   , memberR
+  , notMemberR
   , pairMember
   , lookupR
 
@@ -46,6 +47,11 @@ instance ToCBOR Map where
 
 memberR :: KeyHash -> Map -> Bool
 memberR b = Bimap.memberR b . unMap
+
+-- TODO: maybe we should call these @delegate@ and @notADelegate@ (and add also a @delegator@) function.
+
+notMemberR :: KeyHash -> Map -> Bool
+notMemberR b = Bimap.notMemberR b . unMap
 
 pairMember :: (KeyHash, KeyHash) -> Map -> Bool
 pairMember p = Bimap.pairMember p . unMap

@@ -319,7 +319,7 @@ data ChainValidationError
   | ChainValidationTooManyDelegations VerificationKey
   -- ^ The delegator for this block has delegated in too many recent blocks
 
-  | ChainValidationUpdateError UPI.Error
+  | ChainValidationUpdateError SlotNumber UPI.Error
   -- ^ Something failed to register in the update interface
 
   | ChainValidationUTxOValidationError UTxO.UTxOValidationError
@@ -462,7 +462,7 @@ updateBody env bs b = do
   -- Update the update state
   updateState' <-
     UPI.registerUpdate updateEnv updateState updateSignal
-      `wrapError` ChainValidationUpdateError
+      `wrapError` ChainValidationUpdateError currentSlot
 
   pure $ BodyState
     { utxo        = utxo'
@@ -596,6 +596,7 @@ updateBlock config cvs b = do
 
   -- Process header by checking its validity
   headerIsValid updateState' (blockHeader b)
+
 
   let
     bodyEnv = BodyEnvironment

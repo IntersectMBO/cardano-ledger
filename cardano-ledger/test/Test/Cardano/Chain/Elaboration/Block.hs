@@ -56,16 +56,11 @@ import qualified Cardano.Spec.Chain.STS.Rule.Epoch as Abstract
 import qualified Ledger.Core as Abstract
 import Ledger.Delegation
   (DCert, delegationMap, delegatorOf, mkDCert)
-import Ledger.Update (maxBkSz, maxHdrSz, maxTxSz)
 import qualified Ledger.Update as Abstract.Update
 import qualified Ledger.UTxO as Abstract
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , ChainDifficulty(ChainDifficulty)
-  , LovelacePortion(LovelacePortion)
-  , TxFeePolicy(TxFeePolicyTxSizeLinear)
-  , TxSizeLinear(TxSizeLinear)
-  , mkKnownLovelace
   , hashKey
   )
 
@@ -77,6 +72,7 @@ import Test.Cardano.Chain.Elaboration.Update
   , elaborateSoftwareVersion
   , elaborateUpdateProposal
   , elaborateVote
+  , elaboratePParams
   )
 import Test.Cardano.Chain.UTxO.Model (elaborateTxWitnesses)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -155,7 +151,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
   (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
     txIdMap
-    (reverse $ abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
+    (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
   updatePayload :: Update.APayload ()
   updatePayload =
@@ -271,26 +267,7 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
   -- implemented.
   genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
 
-  gPps        = Update.ProtocolParameters
-    { Update.ppScriptVersion    = 0
-    , Update.ppSlotDuration     = 0
-    , Update.ppMaxBlockSize     = 832 * protocolParams ^. maxBkSz
-    , Update.ppMaxHeaderSize    = 569 * protocolParams ^. maxHdrSz
-    , Update.ppMaxTxSize        = 318 * protocolParams ^. maxTxSz
-    , Update.ppMaxProposalSize  = 0
-    , Update.ppMpcThd           = LovelacePortion 0
-    , Update.ppHeavyDelThd      = LovelacePortion 0
-    , Update.ppUpdateVoteThd    = LovelacePortion 0
-    , Update.ppUpdateProposalThd = LovelacePortion 0
-    , Update.ppUpdateProposalTTL = 0
-    , Update.ppSoftforkRule      = Update.SoftforkRule
-      (LovelacePortion 0)
-      (LovelacePortion 0)
-      (LovelacePortion 0)
-    , Update.ppTxFeePolicy       = TxFeePolicyTxSizeLinear
-      $ TxSizeLinear (mkKnownLovelace @0) (mkKnownLovelace @0)
-    , Update.ppUnlockStakeEpoch  = 0
-    }
+  gPps = elaboratePParams protocolParams
 
   genesisKeyHashes :: Set Common.KeyHash
   genesisKeyHashes =

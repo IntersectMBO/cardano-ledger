@@ -178,6 +178,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.CBOR
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Model
+                       Test.Cardano.Chain.Block.Model.Examples
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
 
@@ -282,7 +283,7 @@ test-suite cardano-ledger-test
                        -fno-warn-missing-import-lists
                        -fno-warn-safe
                        -fno-warn-unsafe
-                       "-with-rtsopts=-K450K -M500M"
+                       "-with-rtsopts=-K5M -M500M"
 
   if (!flag(development))
     ghc-options:         -Werror

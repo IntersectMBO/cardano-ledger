@@ -84,10 +84,10 @@ data Error
   = DuplicateProtocolVersion ProtocolVersion
   | DuplicateSoftwareVersion SoftwareVersion
   | InvalidProposer KeyHash
-  | InvalidProtocolVersion ProtocolVersion
+  | InvalidProtocolVersion ProtocolVersion Adopted
   | InvalidScriptVersion Word16 Word16
   | InvalidSignature
-  | InvalidSoftwareVersion SoftwareVersion
+  | InvalidSoftwareVersion ApplicationVersions SoftwareVersion
   | MaxBlockSizeTooLarge (TooLarge Natural)
   | MaxTxSizeTooLarge (TooLarge Natural)
   | ProposalAttributesUnknown
@@ -101,6 +101,8 @@ data TooLarge n = TooLarge
   , tlMaxBound :: n
   } deriving (Eq, Show)
 
+newtype Adopted = Adopted ProtocolVersion
+  deriving (Eq, Show)
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.
@@ -214,7 +216,8 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
     `orThrowError` DuplicateProtocolVersion newPV
 
   -- Check that this protocol version is a valid next version
-  pvCanFollow newPV adoptedPV `orThrowError` InvalidProtocolVersion newPV
+  pvCanFollow newPV adoptedPV
+    `orThrowError` InvalidProtocolVersion newPV (Adopted adoptedPV)
 
   canUpdate adoptedPP newPP proposal
 
@@ -310,7 +313,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
   -- Check that this software version is a valid next version
   svCanFollow appVersions softwareVersion
-    `orThrowError` InvalidSoftwareVersion softwareVersion
+    `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
   pure $ M.insert (recoverUpId proposal) softwareVersion registeredSUPs

@@ -8,6 +8,7 @@
         "generic-monoid" = (((hackage.generic-monoid)."0.1.0.0").revisions).default;
         "bimap" = (((hackage.bimap)."0.4.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
+        "Unique" = (((hackage.Unique)."0.4.7.6").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;

@@ -52,13 +52,15 @@ instance ToCBOR State where
 --   specification.
 activateDelegation :: State -> ScheduledDelegation -> State
 activateDelegation as delegation
-  | prevDelegationSlot < slot || unSlotNumber slot == 0 = State
-    { delegationMap   = Delegation.insert delegator delegate delegationMap
+  |    (delegate `Delegation.notMemberR` delegationMap)
+    && (prevDelegationSlot < slot || unSlotNumber slot == 0)
+  = State
+    { delegationMap = Delegation.insert delegator delegate delegationMap
     , delegationSlots = M.insert delegator slot delegationSlots
     }
   | otherwise = as
  where
-  State { delegationMap, delegationSlots }    = as
+  State { delegationMap, delegationSlots } = as
   ScheduledDelegation slot delegator delegate = delegation
 
   prevDelegationSlot =

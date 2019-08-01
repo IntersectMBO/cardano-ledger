@@ -49,7 +49,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount, SlotCount(SlotCount), unSlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -197,11 +197,10 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
     Just p  -> registerProposal env st p
 
   -- Register the votes
-  st'' <- foldM (registerVote env) st' votes
+  st'' <- registerVotes env st' votes
 
   -- Register endorsement
   registerEndorsement env st'' endorsement
-
 
 -- | Register an update proposal.
 --
@@ -252,14 +251,61 @@ registerProposal env st proposal = do
         registeredProtocolUpdateProposals
         registeredSoftwareUpdateProposals
 
--- | Register a vote for the given proposal.
+-- | Register a sequence of votes.
 --
--- If the proposal gets enough confirmations after adding the given vote, then
--- it will get added to the set of confirmed proposals.
+-- After applying the votes, we check for confirmed proposals, and update the
+-- application versions according to the proposals that, in the new state, are
+-- confirmed and stable.
 --
--- This corresponds to the @UPIVOTE@ rule in the Byron ledger
+-- This corresponds to the @UPIVOTES@ rule in the Byron ledger
 -- specification.
 --
+registerVotes
+  :: MonadError Error m
+  => Environment
+  -> State
+  -> [AVote ByteString]
+  -> m State
+registerVotes env st votes = do
+  st' <- foldM (registerVote env) st votes
+  let
+    Environment
+      { currentSlot
+      } = env
+
+    State
+      { confirmedProposals
+      , appVersions
+      , registeredSoftwareUpdateProposals
+      } = st'
+
+    confirmedApplicationUpdates =
+      M.restrictKeys
+        registeredSoftwareUpdateProposals
+        (M.keysSet confirmedProposals)
+    appVersions' =
+      currentSlot `seq`
+      M.fromList $! [ let !svAppName' = svAppName sv
+                          !svNumber' = svNumber sv
+                      in (svAppName', (svNumber', currentSlot))
+                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
+                    , pid `elem` M.keys confirmedApplicationUpdates
+                    ]
+  pure $!
+    st' { -- Note that it's important that the new application versions are passed
+          -- as the first argument of @M.union@, since the values in this first
+          -- argument overwrite the values in the second.
+          appVersions = M.union appVersions' appVersions
+          -- TODO: consider using the `Relation` instances from `cardano-ledger-specs` (see `Ledger.Core`)
+        , registeredSoftwareUpdateProposals =
+            M.withoutKeys
+              registeredSoftwareUpdateProposals
+              (M.keysSet confirmedProposals)
+        }
+
+-- | Register a vote for the given proposal.
+--
+-- This corresponds to the @UPIVOTE@ rule in the Byron ledger
 registerVote
   :: MonadError Error m
   => Environment
@@ -270,28 +316,10 @@ registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals'
     <- Voting.registerVoteWithConfirmation protocolMagic subEnv subSt vote
       `wrapError` Voting
-  let
-    appVersions' =
-      currentSlot `seq`
-      M.fromList $! [ let !svAppName' = svAppName sv
-                          !svNumber'  = svNumber sv
-                      in (svAppName', (svNumber', currentSlot))
-                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys confirmedProposals'
-                    ]
   pure $!
     st { confirmedProposals = confirmedProposals'
        , proposalVotes = proposalVotes'
-       -- Note that it's important that the new application versions are passed
-       -- as the first argument of @M.union@, since the values in this first
-       -- argument overwrite the values in the second.
-       , appVersions = M.union appVersions' appVersions
-       , registeredSoftwareUpdateProposals =
-           M.withoutKeys
-             registeredSoftwareUpdateProposals
-             (M.keysSet confirmedProposals)
        }
-       -- TODO: consider using the `Relation` instances from `fm-ledger-rules` (see `Ledger.Core`)
 
   where
     Environment
@@ -306,8 +334,6 @@ registerVote env st vote = do
       , proposalRegistrationSlot
       , proposalVotes
       , confirmedProposals
-      , appVersions
-      , registeredSoftwareUpdateProposals
       } = st
 
     rups = M.keysSet proposalRegistrationSlot
@@ -342,7 +368,7 @@ registerEndorsement env st endorsement = do
     pidsKeep = nonExpiredPids `union` confirmedPids
 
     nonExpiredPids =
-      M.keysSet $ M.filter (currentSlot - u <=) proposalRegistrationSlot
+      M.keysSet $ M.filter (subSlotCount u currentSlot <=) proposalRegistrationSlot
 
     confirmedPids = M.keysSet confirmedProposals
 
@@ -397,7 +423,7 @@ registerEndorsement env st endorsement = do
         candidateProtocolUpdates
         registeredEndorsements
 
-    u = ppUpdateProposalTTL adoptedProtocolParameters
+    u = SlotCount . unSlotNumber . ppUpdateProposalTTL $ adoptedProtocolParameters
 
 -- | Register an epoch. Whenever an epoch number is seen on a block this epoch
 -- number should be passed to this function so that on epoch change the
@@ -434,6 +460,7 @@ registerEpoch env st lastSeenEpoch = do
          , adoptedProtocolParameters = nextProtocolParameters'
          , candidateProtocolUpdates = []
          , registeredProtocolUpdateProposals = M.empty
+         , registeredSoftwareUpdateProposals = M.empty
          , confirmedProposals = M.empty
          , proposalVotes = M.empty
          , registeredEndorsements = S.empty
