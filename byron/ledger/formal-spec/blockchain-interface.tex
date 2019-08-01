@@ -487,13 +487,14 @@ inference rules for them are presented in \cref{fig:rules:apply-votes}. After
 applying a sequence of votes, proposals might get confirmed, which means that
 they will be added to the set $\var{cps'}$. In such case, the mapping of
 application names to their latest version known to the ledger will be updated to
-include the information about the confirmed proposals. Note that, unlike protocol
-updates, software updates take effect as soon as a proposal is confirmed and
-stable (i.e. its confirmation occurred at least $2\cdot k$ slots ago). In this
-rule, we also delete the confirmed and stable proposals id's from the set of
-registered application update proposals ($\var{raus}$), since this information
-is no longer needed once the application-name to software-version map
-($\var{avs}$) is updated.
+include the information about the confirmed proposals. Note that, unlike
+protocol updates, software updates take effect as soon as a proposal is
+confirmed (we cannot wait for stability since we need to preserve compatibility
+with the existing chain, where there are software update proposals that were
+adopted without waiting for $2\cdot k$ slots). In this rule, we also delete the
+confirmed id's from the set of registered application update proposals
+($\var{raus}$), since this information is no longer needed once the
+application-name to software-version map ($\var{avs}$) is updated.
 
 Also note that, unlike the rules of \cref{fig:rules:upi-ec}, we need not remove
 other update proposals that refer to the software names whose versions were
@@ -607,10 +608,9 @@ given application name $\var{an}$.
       \right)}\\
       %
       {\begin{array}{r@{~\leteq~}l}
-        \var{stbl_{cps}} & \dom~(cps' \restrictrange [.., s_n - 2 \cdot k])\\
-        \var{stbl_{raus}} & \var{stbl_{cps}} \restrictdom \var{raus}\\
+        \var{cfm_{raus}} & \dom~(cps') \restrictdom \var{raus'}\\
         \var{avs_{new}} & \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
-        \mid (\var{an}, \var{av}, m) \in \var{stbl_{raus}} \}
+        \mid (\var{an}, \var{av}, m) \in \var{cfm_{raus}} \}
       \end{array}}
     }{
       {\left(
@@ -640,7 +640,7 @@ given application name $\var{an}$.
             \var{fads'}\\
             \var{avs'} \unionoverrideRight \var{avs_{new}}\\
             \var{rpus'}\\
-            \var{stbl_{cps}} \subtractdom \var{raus'}\\
+            \dom~(cps') \subtractdom \var{raus'}\\
             \var{cps'}\\
             \var{vts'}\\
             \var{bvs'}\\

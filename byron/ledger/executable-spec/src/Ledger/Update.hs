@@ -1275,7 +1275,7 @@ instance STS UPIVOTES where
         -- Check which proposals are confirmed and stable, and update the
         -- application versions map.
         let
-          (sn, _dms, k, _ngk) = env
+          (sn, _dms, _k, _ngk) = env
           ( (pv, pps)
             , fads
             , avs
@@ -1285,16 +1285,23 @@ instance STS UPIVOTES where
             , vts
             , bvs
             , pws) = us'
-          stblCps = dom (cps ▷<= sn -. 2 *. k)
-          stblRaus = stblCps ◁ raus
+          -- Ideally we could bump application versions for those proposals that
+          -- are stable, i.e. in:
+          --
+          -- > dom (cps ▷<= sn -. 2 *. k)
+          --
+          -- However in the legacy code, application versions are adopted as
+          -- soon as they are confirmed. The mainnet chain already contains such
+          -- proposal, so we cannot improve this.
+          cfmRaus = (dom cps) ◁ raus
           avsNew = [ (an, (av, sn, m))
-                   | (an, av, m) <- toList stblRaus
+                   | (an, av, m) <- toList cfmRaus
                    ]
         pure $! ( (pv, pps)
                 , fads
                 , avs ⨃ avsNew
                 , rpus
-                , stblCps ⋪ raus
+                , (dom cps) ⋪ raus
                 , cps
                 , vts
                 , bvs
