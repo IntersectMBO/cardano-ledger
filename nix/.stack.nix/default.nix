@@ -8,13 +8,13 @@
         "generic-monoid" = (((hackage.generic-monoid)."0.1.0.0").revisions).default;
         "bimap" = (((hackage.bimap)."0.4.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
+        "Unique" = (((hackage.Unique)."0.4.7.6").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "cborg" = (((hackage.cborg)."0.2.2.0").revisions).default;
         "canonical-json" = (((hackage.canonical-json)."0.6.0.0").revisions).default;
-        "Unique" = (((hackage.Unique)."0.4.7.6").revisions)."a1ff411f4d68c756e01e8d532fbe8e57f1ac77f2cc0ee8a999770be2bca185c5";
         } // {
         cardano-ledger = ./cardano-ledger.nix;
         cardano-ledger-test = ./cardano-ledger-test.nix;
