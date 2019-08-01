@@ -279,13 +279,17 @@ registerVotes env st votes = do
       , registeredSoftwareUpdateProposals
       } = st'
 
+    confirmedApplicationUpdates =
+      M.restrictKeys
+        registeredSoftwareUpdateProposals
+        (M.keysSet confirmedProposals)
     appVersions' =
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
                           !svNumber' = svNumber sv
                       in (svAppName', (svNumber', currentSlot))
                     | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys confirmedProposals
+                    , pid `elem` M.keys confirmedApplicationUpdates
                     ]
   pure $!
     st' { -- Note that it's important that the new application versions are passed
