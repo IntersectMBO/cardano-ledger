@@ -22,6 +22,7 @@ module Ledger.Delegation
   , depoch
   , dwho
   , mkDCert
+  , signature
     -- * Delegation activation
   , ADELEG
   , ADELEGS
@@ -337,6 +338,7 @@ instance STS ADELEG where
         , _dStateLastDelegation = Map.fromSet (const (Slot 0)) env
         }
     ]
+
   transitionRules =
     [ do
         TRC ( _env

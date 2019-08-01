@@ -57,7 +57,6 @@ pparamsGen =
       bkSlotsPerEpoch
       upTtl
       scriptVersion
-      upAdptThd -- We want to unify @cfmThd@ and @upAdptThd@.
       upAdptThd
       factorA
       factorB

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeApplications #-}
+
 -- | Examples of the application of the delegation rules.
 module Ledger.Delegation.Examples
   ( deleg
@@ -15,8 +16,11 @@ import           Test.Tasty.HUnit (testCase)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Ledger.Core (BlockCount (BlockCount), Epoch (Epoch), Owner (Owner), Sig (Sig),
                      Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis), owner)
-import           Ledger.Delegation (ADELEG, ADELEGS, DCert (DCert), DSEnv (DSEnv),
-                     DSState (DSState), DState (DState), SDELEG)
+import           Ledger.Delegation (ADELEG, ADELEGS, DCert (DCert), DELEG, DIState (DIState),
+                     DSEnv (DSEnv), DSState (DSState), DState (DState), SDELEG,
+                     _dIStateDelegationMap, _dIStateKeyEpochDelegations, _dIStateLastDelegation,
+                     _dIStateScheduledDelegations, _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK,
+                     _dSEnvSlot)
 
 -- | Delegation examples.
 deleg :: [TestTree]
@@ -94,6 +98,57 @@ deleg =
 
     .- dc (gk 2) (k 10) (e 8) .-> DSState [(s 4322, (gk 0, k 10)), (s 4322, (gk 1, k 11)), (s 4322, (gk 2, k 10))]
                                           [(e 8, gk 0), (e 8, gk 1), (e 8, gk 2)]
+    ]
+  , testGroup "Interface"
+    [ testCase "Non-injective scheduled delegations are ignored." $
+      let
+        env = DSEnv
+                { _dSEnvAllowedDelegators = [gk 0, gk 1]
+                , _dSEnvEpoch = e 0
+                , _dSEnvSlot = s 21
+                , _dSEnvK = bk 5
+                }
+        st = DIState
+              { _dIStateDelegationMap =
+                    [ ( gk 0
+                      , k 0
+                      )
+                    , ( gk 1
+                      , k 1
+                      )
+                    ]
+              , _dIStateLastDelegation =
+                    [ ( gk 0
+                      , s 15
+                      )
+                    , ( gk 1
+                      , s 0
+                      )
+                    ]
+              , _dIStateScheduledDelegations =
+                  [ ( s 21
+                    , ( gk 1
+                      , k 0
+                      )
+                    )
+                  ]
+              , _dIStateKeyEpochDelegations =
+                  fromList
+                    [ ( e 0
+                      , gk 0
+                      )
+                    , ( e 0
+                      , gk 1
+                      )
+                    , ( e 1
+                      , gk 0
+                      )
+                    ]
+              }
+      in
+      checkTrace @DELEG env $
+        pure st .- [] .-> st { _dIStateScheduledDelegations = [] }
+
     ]
   ]
   where

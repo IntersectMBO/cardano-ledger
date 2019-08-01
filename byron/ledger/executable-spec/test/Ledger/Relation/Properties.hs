@@ -1,28 +1,27 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ledger.Relation.Properties
     (testRelation)
   where
 
-import           Data.Bimap          (Bimap)
-import qualified Data.Bimap          as Bimap
-import           Data.Map.Strict     (Map)
-import           Data.Set            (Set, union, (\\))
+import           Data.Bimap (Bimap)
+import qualified Data.Bimap as Bimap
+import           Data.Map.Strict (Map)
+import           Data.Set (Set, union, (\\))
 
-import           Hedgehog            (Gen, MonadTest, Property, PropertyT,
-                                      forAll, property, withTests, (===))
+import           Hedgehog (Gen, MonadTest, Property, PropertyT, forAll, property, withTests, (===))
 
-import qualified Hedgehog.Gen        as Gen
-import qualified Hedgehog.Range      as Range
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Test.Tasty.Hedgehog
 
-import           Ledger.Core         hiding ((<|))
+import           Ledger.Core hiding ((<|))
 
-import           Test.Tasty          (TestTree, testGroup)
+import           Test.Tasty (TestTree, testGroup)
 
 --------------------------------------------------------------------------------
 -- Properties on Relations
@@ -143,8 +142,12 @@ genMap = Gen.map aRange $ (,) <$> genInt <*> genInt
 genSet :: Gen (Set (Int, Int))
 genSet = genSetOf ((,) <$> genInt <*> genInt)
 
+genPairsList :: Gen [(Int, Int)]
+genPairsList = Gen.list aRange ((,) <$> genInt <*> genInt)
+
+
 genBimap :: Gen (Bimap Int Int)
-genBimap = Bimap.fromList <$> Gen.list aRange ((,) <$> genInt <*> genInt)
+genBimap = Bimap.fromList <$> genPairsList
 
 --------------------------------------------------------------------------------
 -- Property Tests
@@ -187,6 +190,18 @@ testRelation = testGroup "Test Relation instances"
                    (propRelation genIntS genBimap propRangeRestrictionAndIntersection)
     , testProperty "RangeRestrictionAndIntersectionB"
                    (propRelation genIntS genBimap propRangeRestrictionAndIntersectionB) ]
+
+  , testGroup "Relation - Pairs list"
+    [ testProperty "DomainRestrictionAndIntersection"
+                   (propRelation genIntS genPairsList propDomainRestrictionAndIntersection)
+    , testProperty "DomainRestrictionAndIntersectionB"
+                   (propRelation genIntS genPairsList propDomainRestrictionAndIntersectionB)
+    , testProperty "DomainExclusionAndSetDifference"
+                   (propRelation genIntS genPairsList propDomainExclusionAndSetDifference)
+    , testProperty "RangeRestrictionAndIntersection"
+                   (propRelation genIntS genPairsList propRangeRestrictionAndIntersection)
+    , testProperty "RangeRestrictionAndIntersectionB"
+                   (propRelation genIntS genPairsList propRangeRestrictionAndIntersectionB) ]
 
   , testGroup "Relations"
     [ testProperty "Set instance"
