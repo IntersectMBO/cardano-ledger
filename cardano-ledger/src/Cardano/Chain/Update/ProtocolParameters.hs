@@ -53,6 +53,8 @@ data ProtocolParameters = ProtocolParameters
   -- the number of slots a proposal has to gather a majority of votes. If a
   -- majority of votes has not been reached before this period, then the
   -- proposal is rejected.
+  --
+  -- -- TODO: it seems this should be a slot count.
   , ppSoftforkRule      :: !SoftforkRule
   , ppTxFeePolicy       :: !TxFeePolicy
   , ppUnlockStakeEpoch  :: !EpochNumber

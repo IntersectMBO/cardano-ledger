@@ -49,7 +49,7 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotNumber, twice)
+import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount, SlotCount(SlotCount), unSlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
@@ -194,8 +194,7 @@ registerUpdate env st Signal { proposal, votes, endorsement } = do
   -- Register proposal if it exists
   st' <- case proposal of
     Nothing -> pure st
-    Just p  -> do
-      registerProposal env st p
+    Just p  -> registerProposal env st p
 
   -- Register the votes
   st'' <- registerVotes env st' votes
@@ -279,15 +278,14 @@ registerVotes env st votes = do
       , appVersions
       , registeredSoftwareUpdateProposals
       } = st'
-    stableProposals = M.filter (<= stableAt) confirmedProposals
-    stableAt = currentSlot `subSlotNumber` twice (k env)
+    confirmedProposals
     appVersions' =
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
                           !svNumber' = svNumber sv
                       in (svAppName', (svNumber', currentSlot))
                     | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
-                    , pid `elem` M.keys stableProposals
+                    , pid `elem` M.keys confirmedProposals
                     ]
   pure $!
     st' { -- Note that it's important that the new application versions are passed
@@ -298,7 +296,7 @@ registerVotes env st votes = do
         , registeredSoftwareUpdateProposals =
             M.withoutKeys
               registeredSoftwareUpdateProposals
-              (M.keysSet stableProposals)
+              (M.keysSet confirmedProposals)
         }
 
 -- | Register a vote for the given proposal.
@@ -366,7 +364,7 @@ registerEndorsement env st endorsement = do
     pidsKeep = nonExpiredPids `union` confirmedPids
 
     nonExpiredPids =
-      M.keysSet $ M.filter (currentSlot `subSlotNumber` u <=) proposalRegistrationSlot
+      M.keysSet $ M.filter (subSlotCount u currentSlot <=) proposalRegistrationSlot
 
     confirmedPids = M.keysSet confirmedProposals
 
@@ -421,7 +419,7 @@ registerEndorsement env st endorsement = do
         candidateProtocolUpdates
         registeredEndorsements
 
-    u = ppUpdateProposalTTL adoptedProtocolParameters
+    u = SlotCount . unSlotNumber . ppUpdateProposalTTL $ adoptedProtocolParameters
 
 -- | Register an epoch. Whenever an epoch number is seen on a block this epoch
 -- number should be passed to this function so that on epoch change the

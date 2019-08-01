@@ -39,7 +39,7 @@ elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
 elaboratePParams pps = Concrete.ProtocolParameters
   { Concrete.ppScriptVersion      = fromIntegral $ Abstract._scriptVersion pps
   , Concrete.ppSlotDuration       = Concrete.ppSlotDuration dummyProtocolParameters
-  , Concrete.ppMaxBlockSize       = 4096 * Abstract._maxBkSz pps --748 * Abstract._maxBkSz pps
+  , Concrete.ppMaxBlockSize       = 4096 * Abstract._maxBkSz pps
   , Concrete.ppMaxHeaderSize      = 95 * Abstract._maxHdrSz pps
   , Concrete.ppMaxTxSize          = 4096 * Abstract._maxTxSz pps
   , Concrete.ppMaxProposalSize    = 4096 * Abstract._maxPropSz pps
@@ -61,17 +61,23 @@ elaboratePParams pps = Concrete.ProtocolParameters
       , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
       }
   , Concrete.ppTxFeePolicy        =
-      elaborateFeePolicy (Abstract._factorA pps) (Abstract._factorB pps)
+      elaborateFeePolicy
+        (FeeConstant $ Abstract._factorA pps)
+        (FeeCoefficient $ Abstract._factorB pps)
   , Concrete.ppUnlockStakeEpoch   = Concrete.EpochNumber maxBound
   }
 
+newtype FeeConstant = FeeConstant Int
+
+newtype FeeCoefficient = FeeCoefficient Int
+
 elaborateFeePolicy
-  :: Int
-  -> Int
+  :: FeeConstant
+  -> FeeCoefficient
   -> Concrete.TxFeePolicy
 -- TODO: we should pass the factors wrapped in some type, to avoid errors
 -- resulting from mixing the order of these parameters.
-elaborateFeePolicy a b =
+elaborateFeePolicy (FeeConstant a) (FeeCoefficient b) =
   Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
   where
     aC = intToLovelace a
