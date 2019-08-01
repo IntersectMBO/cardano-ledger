@@ -33,6 +33,7 @@ where
 import qualified Data.ByteString.Char8 as BS (length, pack)
 import qualified Data.Map.Strict as Map (insert, lookup)
 import           Data.Ratio (denominator, numerator)
+import           Data.Sequence (Seq)
 import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
@@ -55,7 +56,7 @@ newtype HashHeader hashAlgo dsignAlgo kesAlgo =
 
 -- | Hash of block body
 newtype HashBBody hashAlgo dsignAlgo kesAlgo =
-  HashBBody (Hash hashAlgo [Tx hashAlgo dsignAlgo])
+  HashBBody (Hash hashAlgo (Seq (Tx hashAlgo dsignAlgo)))
   deriving (Show, Eq, Ord, ToCBOR)
 
 -- |Hash a given block header
