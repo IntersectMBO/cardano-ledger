@@ -35,6 +35,7 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
+import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
@@ -198,7 +199,7 @@ scriptsNeeded u tx =
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
-        certificates = _certs $ _body tx
+        certificates = (toList . _certs . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

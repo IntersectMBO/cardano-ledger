@@ -7,6 +7,7 @@ import           Control.Monad (foldM)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Sequence (Seq (..), fromList)
 import qualified Data.Set as Set
 
 import           Lens.Micro ((&), (.~), (^.))
@@ -158,7 +159,7 @@ testValidWithdrawal =
            (Set.fromList [TxIn genesisId 0])
            [ TxOut aliceAddr (Coin 6000)
            , TxOut bobAddr (Coin 3010) ]
-           []
+           Empty
            bobWithdrawal
            (Coin 1000)
            (Slot 0)
@@ -183,7 +184,7 @@ testInvalidWintess =
            (Set.fromList [TxIn genesisId 0])
            [ TxOut aliceAddr (Coin 6000)
            , TxOut bobAddr (Coin 3000) ]
-           []
+           Empty
            Map.empty
            (Coin 1000)
            (Slot 1)
@@ -199,7 +200,7 @@ testWithdrawalNoWit =
            (Set.fromList [TxIn genesisId 0])
            [ TxOut aliceAddr (Coin 6000)
            , TxOut bobAddr (Coin 3010) ]
-           []
+           Empty
            bobWithdrawal
            (Coin 1000)
            (Slot 0)
@@ -215,7 +216,7 @@ testWithdrawalWrongAmt =
            (Set.fromList [TxIn genesisId 0])
            [ TxOut aliceAddr (Coin 6000)
            , TxOut bobAddr (Coin 3011) ]
-           []
+           Empty
            (Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
            (Coin 1000)
            (Slot 0)
@@ -233,7 +234,7 @@ aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits 
                (Set.fromList [txin])
                [ TxOut aliceAddr aliceCoin
                , TxOut bobAddr coin ]
-               cs
+               (fromList cs)
                Map.empty
                fee
                s
@@ -287,10 +288,10 @@ tx3Body :: TxBody
 tx3Body = TxBody
           (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
           [ TxOut aliceAddr (Coin 3950) ]
-          [ RegPool stakePool
-          , Delegate (Delegation
-                       (KeyHashObj $ hashKey $ vKey aliceStake)
-                       (hashKey $ vKey stakePoolKey1))]
+          (fromList [ RegPool stakePool
+                    , Delegate (Delegation
+                                (KeyHashObj $ hashKey $ vKey aliceStake)
+                                (hashKey $ vKey stakePoolKey1))])
           Map.empty
           (Coin 1200)
           (Slot 100)
@@ -358,7 +359,7 @@ tx4Body :: TxBody
 tx4Body = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
-          [ RegPool stakePoolUpdate ]
+          (fromList [ RegPool stakePoolUpdate ])
           Map.empty
           (Coin 1000)
           (Slot 100)
@@ -391,7 +392,7 @@ tx5Body :: Epoch -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ]
-          [ RetirePool (hashKey $ vKey stakePoolKey1) e ]
+          (fromList [ RetirePool (hashKey $ vKey stakePoolKey1) e ])
           Map.empty
           (Coin 1000)
           (Slot 100)
@@ -441,7 +442,7 @@ testWitnessNotIncluded =
               (Set.fromList [TxIn genesisId 0])
               [ TxOut aliceAddr (Coin 6404)
               , TxOut bobAddr (Coin 3000) ]
-              []
+              Empty
               Map.empty
               (Coin 596)
               (Slot 100)
@@ -455,7 +456,7 @@ testSpendNotOwnedUTxO =
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 232)]
-              []
+              Empty
               Map.empty
               (Coin 768)
               (Slot 100)
@@ -470,7 +471,7 @@ testWitnessWrongUTxO =
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 230)]
-              []
+              Empty
               Map.empty
               (Coin 770)
               (Slot 100)
@@ -478,7 +479,7 @@ testWitnessWrongUTxO =
     tx2body = TxBody
               (Set.fromList [TxIn genesisId 1])
               [ TxOut aliceAddr (Coin 230)]
-              []
+              Empty
               Map.empty
               (Coin 770)
               (Slot 101)
@@ -495,7 +496,7 @@ testEmptyInputSet =
     tx = TxBody
            Set.empty
            [ TxOut aliceAddr (Coin 1000) ]
-           []
+           Empty
            aliceWithdrawal
            (Coin 1000)
            (Slot 0)
