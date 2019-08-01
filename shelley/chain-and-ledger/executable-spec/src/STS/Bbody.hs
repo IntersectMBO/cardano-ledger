@@ -59,9 +59,9 @@ bbodyTransition
      )
   => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
 bbodyTransition = do
-  TRC ((oslots, pp), (ls, b), Block (BHeader bhb _) txs) <- judgmentContext
+  TRC ((oslots, pp), (ls, b), Block (BHeader bhb _) txs'@(TxSeq txs)) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
-  bBodySize txs == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
+  bBodySize txs' == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
   ls' <-
     trans @(LEDGERS hashAlgo dsignAlgo) $ TRC ((bheaderSlot bhb, pp), ls, txs)

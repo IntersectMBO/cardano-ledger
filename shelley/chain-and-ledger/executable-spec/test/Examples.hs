@@ -46,7 +46,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, seedOp)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof,
-                     ProtVer (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
+                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, pattern RegKey,
                      pattern RegPool)
@@ -211,9 +211,10 @@ mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
             bnonce
             (Proof (vKey vrf) nonceSeed bnonce)
             l
+
             (Proof (vKey vrf) leaderSeed l)
-            (fromIntegral $ bBodySize txns)
-            (bhbHash [txEx2])
+            (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
+            (bhbHash $ TxSeq $ fromList [txEx2])
             (OCert
               vhot
               (vKey cold)
@@ -224,7 +225,7 @@ mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
             (ProtVer 0 0 0)
     bh = BHeader bhb (Keys.signKES shot bhb kesPeriod)
   in
-    Block bh txns
+    Block bh (TxSeq $ fromList txns)
 
 unsafeMkUnitInterval :: Rational -> UnitInterval
 unsafeMkUnitInterval r =

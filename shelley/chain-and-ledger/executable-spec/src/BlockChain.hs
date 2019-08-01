@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module BlockChain
@@ -7,6 +8,7 @@ module BlockChain
   , Block(..)
   , Proof(..)
   , ProtVer(..)
+  , TxSeq(..)
   , bhHash
   , bhbHash
   , bHeaderSize
@@ -31,6 +33,7 @@ module BlockChain
 where
 
 import qualified Data.ByteString.Char8 as BS (length, pack)
+import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (insert, lookup)
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
@@ -54,9 +57,16 @@ newtype HashHeader hashAlgo dsignAlgo kesAlgo =
   HashHeader (Hash hashAlgo (BHeader hashAlgo dsignAlgo kesAlgo))
   deriving (Show, Eq, Ord, ToCBOR)
 
+newtype TxSeq hashAlgo dsignAlgo = TxSeq (Seq (Tx hashAlgo dsignAlgo))
+  deriving (Eq, Ord, Show)
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
+  ToCBOR (TxSeq hashAlgo dsignAlgo)  where
+  toCBOR (TxSeq s) = toCBOR $ toList s
+
 -- | Hash of block body
 newtype HashBBody hashAlgo dsignAlgo kesAlgo =
-  HashBBody (Hash hashAlgo (Seq (Tx hashAlgo dsignAlgo)))
+  HashBBody (Hash hashAlgo (TxSeq hashAlgo dsignAlgo))
   deriving (Show, Eq, Ord, ToCBOR)
 
 -- |Hash a given block header
@@ -69,7 +79,7 @@ bhHash = HashHeader . hash
 -- |Hash a given block body
 bhbHash
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => [Tx hashAlgo dsignAlgo]
+  => TxSeq hashAlgo dsignAlgo
   -> HashBBody hashAlgo dsignAlgo kesAlgo
 bhbHash = HashBBody . hash
 
@@ -162,7 +172,7 @@ instance
 data Block hashAlgo dsignAlgo kesAlgo
   = Block
     (BHeader hashAlgo dsignAlgo kesAlgo)
-    [Tx hashAlgo dsignAlgo]
+    (TxSeq hashAlgo dsignAlgo)
   deriving (Show, Eq)
 
 bHeaderSize
@@ -171,8 +181,8 @@ bHeaderSize
   -> Int
 bHeaderSize = BS.length . BS.pack . show
 
-bBodySize :: DSIGNAlgorithm dsignAlgo => [Tx hashAlgo dsignAlgo] -> Int
-bBodySize txs = sum (map (BS.length . BS.pack . show) txs)
+bBodySize :: DSIGNAlgorithm dsignAlgo => TxSeq hashAlgo dsignAlgo -> Int
+bBodySize (TxSeq txs) = sum (map (BS.length . BS.pack . show) $ toList txs)
 
 slotToSeed :: Slot -> Seed
 slotToSeed (Slot s) = mkNonce (fromIntegral s)
@@ -180,7 +190,7 @@ slotToSeed (Slot s) = mkNonce (fromIntegral s)
 bheader :: Block hashAlgo dsignAlgo kesAlgo -> BHeader hashAlgo dsignAlgo kesAlgo
 bheader (Block bh _) = bh
 
-bbody :: Block hashAlgo dsignAlgo kesAlgo -> [Tx hashAlgo dsignAlgo]
+bbody :: Block hashAlgo dsignAlgo kesAlgo -> TxSeq hashAlgo dsignAlgo
 bbody (Block _ txs) = txs
 
 bhbody :: BHeader hashAlgo dsignAlgo kesAlgo -> BHBody hashAlgo dsignAlgo kesAlgo
