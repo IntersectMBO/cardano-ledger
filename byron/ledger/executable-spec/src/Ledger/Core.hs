@@ -269,6 +269,12 @@ class Relation m where
   -- | Union Override
   (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
 
+  -- | Restrict domain to values less or equal than the given value.
+  --
+  -- Unicode: 25c1
+  (<=◁) :: Ord (Domain m) => Domain m -> m -> m
+  infixl 5 <=◁
+
   -- | Restrict range to values less or equal than the given value
   --
   -- Unicode: 25b7
@@ -317,9 +323,11 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
   d0 ∪ d1 = Bimap.fold Bimap.insert d0 d1
   d0 ⨃ d1 = foldr (uncurry Bimap.insert) d0 (toList d1)
 
+  vmax <=◁ r = Bimap.filter (\v _ -> v <= vmax) r
+
   r ▷<= vmax = Bimap.filter (\_ v -> v <= vmax) r
 
-  r ▷>= vmax = Bimap.filter (\_ v -> v >= vmax) r
+  r ▷>= vmin = Bimap.filter (\_ v -> v >= vmin) r
 
   size = fromIntegral . Bimap.size
 
@@ -343,9 +351,11 @@ instance Relation (Map k v) where
   -- left biased.
   d0 ⨃ d1 = Map.union (Map.fromList . toList $ d1) d0
 
+  vmax <=◁ r = Map.filterWithKey (\k _ -> k <= vmax) r
+
   r ▷<= vmax = Map.filter (<= vmax) r
 
-  r ▷>= vmax = Map.filter (>= vmax) r
+  r ▷>= vmin = Map.filter (>= vmin) r
 
   size = fromIntegral . Map.size
 
@@ -360,6 +370,7 @@ instance Relation (Set (a, b)) where
   singleton a b = Set.singleton (a,b)
 
   dom = Set.map fst
+
   range = Set.map snd
 
   s ◁ r = Set.filter (\(k,_) -> k `Set.member` toSet s) r
@@ -374,12 +385,42 @@ instance Relation (Set (a, b)) where
     where
       d1' = toSet d1
 
+  vmax <=◁ r = Set.filter ((<= vmax) . fst) $ r
+
   r ▷<= vmax = Set.filter ((<= vmax) . snd) $ r
 
   r ▷>= vmax = Set.filter ((>= vmax) . snd) $ r
 
   size = fromIntegral . Set.size
 
+instance Relation [(a, b)] where
+  type Domain [(a, b)] = a
+  type Range [(a, b)] = b
+
+  singleton a b = [(a, b)]
+
+  dom = toSet . fmap fst
+
+  range = toSet . fmap snd
+
+  s ◁ r = filter ((`Set.member` toSet s) . fst) r
+
+  s ⋪ r = filter ((`Set.notMember` toSet s) . fst) r
+
+  r ▷ s = filter ((`Set.member` toSet s) . snd) r
+
+  (∪) = (++)
+
+  -- In principle a list of pairs allows for duplicated keys.
+  d0 ⨃ d1 = d0 ++ toList d1
+
+  vmax <=◁ r = filter ((<= vmax) . fst) r
+
+  r ▷<= vmax = filter ((<= vmax) . snd) r
+
+  r ▷>= vmin = filter ((vmin <=) . snd) r
+
+  size = fromIntegral . length
 
 ---------------------------------------------------------------------------------
 -- Aliases

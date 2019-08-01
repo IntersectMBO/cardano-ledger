@@ -347,32 +347,14 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
 
 \clearpage
 
-Rule~\ref{eq:rule:upi-vote} models the effect of voting on an update proposal:
-after a vote, a proposal might get confirmed, which means that it will be added
-to the set $\var{cps'}$. In such case, the mapping of application names to
-their latest version known to the ledger will be updated to include the
-information in the confirmed proposal. Note that, unlike protocol updates,
-software updates take effect as soon as a proposal is confirmed and stable
-(i.e. its confirmation occurred at least $2\cdot k$ slots ago). In this rule,
-we also delete the confirmed and stable proposals id's from the set of
-registered application update proposals ($\var{raus}$), since this information
-is no longer needed once the application-name to software-version map
-($\var{avs}$) is updated.
-
-Also note that, unlike the rules of \cref{fig:rules:upi-ec}, we need not remove
-other update proposals that refer to the software names whose versions were
-changed in $\var{avs_{new}}$. The reason for this is that the map $\var{raus}$
-can contain only one pair of the form $(\var{an}, \wcard)$ for any given
-application name $\var{an}$: in Rule~\ref{eq:rule:up-av-validity} function
-$\fun{svCanFollow}$ ensures that there is only one allowed version for any
-given application name $\var{an}$.
+Rule~\ref{eq:rule:upi-vote} models the effect of voting on an update proposal.
 
 \begin{figure}[htb]
   \begin{equation}
     \label{eq:rule:upi-vote}
     \inference
     {
-      \var{cfmThd} \mapsto q \in \var{pps}\\
+      \var{upAdptThd} \mapsto q \in \var{pps}\\
       {\left(
         \begin{array}{l}
           s_n\\
@@ -398,13 +380,7 @@ given application name $\var{an}$.
             \var{vts'}
           \end{array}
         \right)
-      }\\
-      {\begin{array}{r@{~\leteq~}l}
-        \var{stbl_{cps}} & \dom~(cps' \restrictrange [.., s_n - 2 \cdot k])\\
-        \var{stbl_{raus}} & \var{stbl_{cps}} \restrictdom \var{raus}\\
-        \var{avs_{new}} & \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
-        \mid (\var{an}, \var{av}, m) \in \var{stbl_{raus}} \}
-      \end{array}}
+      }
     }
     {
       {\left(
@@ -435,9 +411,9 @@ given application name $\var{an}$.
           \begin{array}{l}
             (\var{pv}, \var{pps})\\
             \var{fads}\\
-            \var{avs} \unionoverrideRight \var{avs_{new}}\\
+            \var{avs}\\
             \var{rpus}\\
-            \var{stbl_{cps}} \subtractdom \var{raus}\\
+            \var{raus}\\
             \var{cps'}\\
             \var{vts'}\\
             \var{bvs}\\
@@ -507,11 +483,30 @@ Figure~\ref{fig:st-diagram-pt-up}.
 \clearpage
 
 A sequence of votes can be applied using $\trans{upivotes}{}$ transitions. The
-inference rules for them are presented in \cref{fig:rules:upi-votes}.
+inference rules for them are presented in \cref{fig:rules:apply-votes}. After
+applying a sequence of votes, proposals might get confirmed, which means that
+they will be added to the set $\var{cps'}$. In such case, the mapping of
+application names to their latest version known to the ledger will be updated to
+include the information about the confirmed proposals. Note that, unlike protocol
+updates, software updates take effect as soon as a proposal is confirmed and
+stable (i.e. its confirmation occurred at least $2\cdot k$ slots ago). In this
+rule, we also delete the confirmed and stable proposals id's from the set of
+registered application update proposals ($\var{raus}$), since this information
+is no longer needed once the application-name to software-version map
+($\var{avs}$) is updated.
+
+Also note that, unlike the rules of \cref{fig:rules:upi-ec}, we need not remove
+other update proposals that refer to the software names whose versions were
+changed in $\var{avs_{new}}$. The reason for this is that the map $\var{raus}$
+can contain only one pair of the form $(\var{an}, \wcard)$ for any given
+application name $\var{an}$: in Rule~\ref{eq:rule:up-av-validity} function
+$\fun{svCanFollow}$ ensures that there is only one allowed version for any
+given application name $\var{an}$.
+
 
 \begin{figure}[htb]
   \begin{equation}
-    \label{eq:rule:upi-votes-base}
+    \label{eq:rule:apply-votes-base}
     \inference
     {
     }
@@ -524,13 +519,15 @@ inference rules for them are presented in \cref{fig:rules:upi-votes}.
       \right)}
       \vdash
       \var{us}
-      \trans{upivotes}{\epsilon}
+      \trans{applyvotes}{\epsilon}
       \var{us}
     }
   \end{equation}
   %
+  \nextdef
+  %
   \begin{equation}
-    \label{eq:rule:upi-votes-ind}
+    \label{eq:rule:apply-votes-ind}
     \inference
     {
       {\left(
@@ -541,7 +538,7 @@ inference rules for them are presented in \cref{fig:rules:upi-votes}.
       \right)}
       \vdash
       \var{us}
-      \trans{upivotes}{\Gamma}
+      \trans{applyvotes}{\Gamma}
       \var{us'}
       &
       {\left(
@@ -564,12 +561,96 @@ inference rules for them are presented in \cref{fig:rules:upi-votes}.
       \right)}
       \vdash
       \var{us}
-      \trans{upivotes}{\Gamma;v}
+      \trans{applyvotes}{\Gamma;v}
       \var{us''}
     }
   \end{equation}
+  %
+  \nextdef
+  %
+  \begin{equation}
+    \label{eq:rule:upivotes}
+    \inference{
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      {\left(
+          \begin{array}{l}
+            (\var{pv}, \var{pps})\\
+            \var{fads}\\
+            \var{avs}\\
+            \var{rpus}\\
+            \var{raus}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+        \right)}
+      \trans{applyvotes}{\Gamma}
+      {\left(
+          \begin{array}{l}
+            (\var{pv'}, \var{pps'})\\
+            \var{fads'}\\
+            \var{avs'}\\
+            \var{rpus'}\\
+            \var{raus'}\\
+            \var{cps'}\\
+            \var{vts'}\\
+            \var{bvs'}\\
+            \var{pws'}
+          \end{array}
+      \right)}\\
+      %
+      {\begin{array}{r@{~\leteq~}l}
+        \var{stbl_{cps}} & \dom~(cps' \restrictrange [.., s_n - 2 \cdot k])\\
+        \var{stbl_{raus}} & \var{stbl_{cps}} \restrictdom \var{raus}\\
+        \var{avs_{new}} & \{ \var{an} \mapsto (\var{av}, \var{s_n}, m)
+        \mid (\var{an}, \var{av}, m) \in \var{stbl_{raus}} \}
+      \end{array}}
+    }{
+      {\left(
+        \begin{array}{l}
+          s_n\\
+          \var{dms}
+        \end{array}
+      \right)}
+      \vdash
+      {\left(
+          \begin{array}{l}
+            (\var{pv}, \var{pps})\\
+            \var{fads}\\
+            \var{avs}\\
+            \var{rpus}\\
+            \var{raus}\\
+            \var{cps}\\
+            \var{vts}\\
+            \var{bvs}\\
+            \var{pws}
+          \end{array}
+      \right)}
+      \trans{upivotes}{\Gamma}
+      {\left(
+          \begin{array}{l}
+            (\var{pv'}, \var{pps'})\\
+            \var{fads'}\\
+            \var{avs'} \unionoverrideRight \var{avs_{new}}\\
+            \var{rpus'}\\
+            \var{stbl_{cps}} \subtractdom \var{raus'}\\
+            \var{cps'}\\
+            \var{vts'}\\
+            \var{bvs'}\\
+            \var{pws'}
+          \end{array}
+      \right)}
+    }
+  \end{equation}
   \caption{Applying multiple votes on update-proposals rules}
-  \label{fig:rules:upi-votes}
+  \label{fig:rules:apply-votes}
 \end{figure}
 \clearpage
 

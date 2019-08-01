@@ -1,24 +1,24 @@
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ledger.UTxO.Generators where
 
-import Control.Applicative (empty)
-import Data.Bitraversable (bitraverse)
+import           Control.Applicative (empty)
+import           Data.Bitraversable (bitraverse)
 import qualified Data.Map.Strict as M
 
-import Ledger.Core hiding (Range, range)
-import Ledger.UTxO
+import           Ledger.Core hiding (Range, range)
+import           Ledger.UTxO
 
-import Hedgehog (Gen, Property, Range, (===), assert, forAll, property)
+import           Hedgehog (Gen, Property, Range, assert, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Hedgehog.Internal.Gen
-  (atLeast, ensure, mapGenT, runDiscardEffectT, toTree, toTreeMaybeT)
-import Hedgehog.Internal.Tree (NodeT(..), TreeT(..), treeValue)
+import           Hedgehog.Internal.Gen (atLeast, ensure, mapGenT, runDiscardEffectT, toTree,
+                     toTreeMaybeT)
+import           Hedgehog.Internal.Tree (NodeT (..), TreeT (..), treeValue)
 import qualified Hedgehog.Internal.Tree as Tree
 
 
@@ -32,7 +32,12 @@ genInitialTxOuts = Gen.filter (not . null)
   . genTraverseSubsequence (\a -> TxOut a <$> genLovelace)
 
 genLovelace :: Gen Lovelace
-genLovelace = Lovelace . fromIntegral <$> Gen.word32 (Range.linear 1 10000)
+genLovelace =
+  Lovelace . fromIntegral <$> Gen.word32 (Range.linearFrom mid mn mx)
+  where
+    mn = 1
+    mx = 10000
+    mid = floor (fromIntegral (mx - mn) / 2 :: Double)
 
 -- | Generate a subsequence of a list of values and traverse the subsequence
 --   with a generator producer

@@ -50,10 +50,11 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
-                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash,
-                     minusSlotMaybe, skey, (*.), (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, skey, (*.),
+                     (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
+import qualified Ledger.GlobalParams as GP
 
 import           Prelude
 
@@ -80,13 +81,10 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _cfmThd :: !Double
-  -- ^ Update proposal confirmation threshold (number of votes)
-  -- TODO: we should merge @upAdptThd@ and @cfmThd@ into one.
   , _upAdptThd :: !Double
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int
+  , _factorA :: !Int -- TODO: these should have type 'Word64', like in `cardano-ledger`.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
@@ -285,7 +283,7 @@ svCanFollow avs (an,av) =
     (case Map.lookup an avs of
       Nothing -> True
       Just (x, _, _) -> av == x + 1
-    ) && (an `Set.notMember` dom avs ==> av == ApVer 0)
+    ) && (an `Set.notMember` dom avs ==> av == ApVer 1)
   where
 
 ------------------------------------------------------------------------
@@ -660,7 +658,7 @@ instance STS UPEND where
             pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            size ([bv] ◁ bvs) < t ?! CanAdopt bv
+            size ([bv] ◁ bvs') < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
                 pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
@@ -680,7 +678,7 @@ instance STS UPEND where
             pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
-            t <= size ([bv] ◁ bvs) ?! CannotAdopt bv
+            t <= size ([bv] ◁ bvs') ?! CannotAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, (_, ppsc)) -> do
                 pid ∈ dom (cps  ▷<= sn -. 2 *. k) ?! UnconfirmedProposal pid
@@ -718,15 +716,15 @@ delegationMap (_, dms, _, _) = dms
 -- | The update interface state is shared amongst various rules, so we define it
 -- as an alias here.
 type UPIState =
-  ( (ProtVer, PParams)
-  , [(Core.Slot, (ProtVer, PParams))]
-  , Map ApName (ApVer, Core.Slot, Metadata)
-  , Map UpId (ProtVer, PParams)
-  , Map UpId (ApName, ApVer, Metadata)
-  , Map UpId Core.Slot
-  , Set (UpId, Core.VKeyGenesis)
-  , Set (ProtVer, Core.VKeyGenesis)
-  , Map UpId Core.Slot
+  ( (ProtVer, PParams) -- (pv, pps)
+  , [(Core.Slot, (ProtVer, PParams))] -- fads
+  , Map ApName (ApVer, Core.Slot, Metadata) -- avs
+  , Map UpId (ProtVer, PParams) -- rpus
+  , Map UpId (ApName, ApVer, Metadata) -- raus
+  , Map UpId Core.Slot -- cps
+  , Set (UpId, Core.VKeyGenesis) -- vts
+  , Set (ProtVer, Core.VKeyGenesis) -- bvs
+  , Map UpId Core.Slot -- pws
   )
 
 emptyUPIState :: UPIState
@@ -757,48 +755,46 @@ initialPParams =
      , _upTtl = 10           -- The proposal time to live needs to be related to @k@ (or the number
                              -- of slots in an epoch). We pick an arbitrary value here.
      , _scriptVersion = 0
-     , _cfmThd = 0.6
      , _upAdptThd = 0.6      -- Value currently used in mainet
 
      -- To determine the factors @A@ and @B@ used in the calculation of the
      -- transaction fees we need to know the constant @C@ that we use to bound
      -- the size of a transaction.
      --
-     -- We have that for all transactions @tx@
+     -- We have that for all transactions @tx@:
      --
      -- > size (elaborate tx) <= C * abstractSize tx
      --
      -- where @elaborate@ elaborates an abstract transaction into a concrete
      -- one.
      --
-     -- Then we would expect that the concrete fee is also bounded by the
-     -- concrete fee, this is:
+     -- We have that the (concrete) minimum fee is calculated as follows:
      --
-     -- > A_C + B_C * size (elaborate tx) <= C * (A + B * abstractSize tx)
+     -- > minFee tx = A_C + B_C * C
      --
-     -- where @A_C@ and @B_C@ are the concrete factors that correspond to @A@
-     -- and @B@. Now consider:
+     -- where @A_C@ and @B_C@ are the concrete constants that correspond to
+     -- abstract constants @A@ and @B@.
      --
-     -- > C * (A + B * abstractSize tx)
-     -- > =
-     -- > C * A + B * C * abstractSize tx
-     -- > >=
-     -- > C * A + B * size (elaborate tx)
-     -- = { Choosing A_C = C * A, B_C = B}
-     -- > A_C + B_C * size (elaborate tx)
+     -- We need to guarantee that the abstract minimum fee we use for
+     -- transactions is no less than the concrete minimum fee, since otherwise
+     -- we run the risk that in the elaboration we end up paying a fee to low.
      --
-     -- Which means that given C /= 0, we should set:
+     -- Now consider the minimum fee for an elaborated transaction:
      --
-     -- > _factorA = A_C / C
-     -- > _factorB = B_C
+     -- > A_C + B_C * (size (elaborate tx))
+     -- > <= { size (elaborate tx) <= C * abstractSize tx }
+     -- > A_C + B_C * C * abstractSize tx
      --
-     -- TODO: But if the derivation above is correct the value of B would be
-     -- quite large (if we take the value used in mainet, i.e.
-     -- 155381000000000).
+     -- Which means that we should set:
      --
-     -- For now we choose arbitrary numbers here.
-     , _factorA = 1 -- In mainet this value is set to 43946000000 (A_C in the derivation above)
-     , _factorB = 2 -- In mainet this value is set to 155381000000000
+     -- > _factorA = A_C
+     -- > _factorB = B_C * C
+     --
+     -- For now we choose small numbers here so that we do not need a high UTxO
+     -- balance when generating the initial UTxO (see @module
+     -- Ledger.UTxO.Generators@).
+     , _factorA = 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
+     , _factorB = 10 * fromIntegral GP.c -- In mainet this value is set to 43946000000
      }
 
 protocolVersion :: UPIState -> ProtVer
@@ -870,7 +866,7 @@ instance HasTrace UPIREG where
 
   envGen _ = upiEnvGen
 
-  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, _pws)
+  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -906,7 +902,7 @@ instance HasTrace UPIREG where
         -- Chose an increment for the maximum version seen in the update
         -- proposal IDs.
         inc <- Gen.integral (Range.constant 1 10)
-        case Set.toDescList $ dom rpus of
+        case Set.toDescList $ dom pws of
           [] -> UpId <$> Gen.element [0 .. inc]
           (UpId maxId:_) -> pure $ UpId (maxId + inc)
 
@@ -976,7 +972,7 @@ instance HasTrace UPIREG where
           -- Generate a new application
           genNewApp :: Gen SwVer
           genNewApp
-            =  (`SwVer` 0) . ApName
+            =  (`SwVer` 1) . ApName
            <$> Gen.filter ((`notElem` usedNames) . ApName)
                           (Gen.list (Range.constant 0 12) Gen.ascii)
             where
@@ -1082,7 +1078,6 @@ ppsUpdateFrom pps = do
     <*> pure _bkSlotsPerEpoch -- This parameter should be removed from 'PParams'
     <*> nextUpTtl
     <*> nextScriptVersion
-    <*> nextCfmThd
     <*> nextUpAdptThd
     <*> nextFactorA
     <*> nextFactorB
@@ -1096,7 +1091,6 @@ ppsUpdateFrom pps = do
            , _bkSlotsPerEpoch
            , _upTtl
            , _scriptVersion
-           , _cfmThd
            , _upAdptThd
            , _factorA
            , _factorB
@@ -1143,9 +1137,6 @@ ppsUpdateFrom pps = do
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
 
-    nextCfmThd :: Gen Double
-    nextCfmThd = nextUpAdptThd  -- Using the same generator since we want to unify these parameters.
-
     nextUpAdptThd :: Gen Double
     nextUpAdptThd =
       Gen.double (Range.exponentialFloatFrom _upAdptThd 0 1)
@@ -1157,11 +1148,15 @@ ppsUpdateFrom pps = do
       Gen.integral (Range.exponentialFrom _factorA 0 10)
       `increasingProbabilityAt` (0, 10)
 
+    -- The next value of the factor B shouldn't drop below 'GP.c' since when
+    -- elaborating this factor we divide it by 'GP.c' (see 'initialPParams').
     nextFactorB :: Gen Int
     nextFactorB =
-      -- TODO: we choose arbitrary numbers here for now.
-      Gen.integral (Range.exponentialFrom _factorB 0 10)
-      `increasingProbabilityAt` (0, 10)
+      Gen.integral (Range.exponentialFrom _factorB minFactorB maxFactorB)
+      `increasingProbabilityAt` (minFactorB, maxFactorB)
+      where
+        minFactorB = 5 * fromIntegral GP.c
+        maxFactorB = 15 * fromIntegral GP.c
 
     (-?) :: Natural -> Natural -> Natural
     n -? m = if n < m then 0 else n - m
@@ -1195,7 +1190,7 @@ instance STS UPIVOTE where
   initialRules = []
   transitionRules =
     [ do
-        TRC ( (sn, dms, k, ngk)
+        TRC ( (sn, dms, _k, ngk)
             , ( (pv, pps)
               , fads
               , avs
@@ -1206,7 +1201,7 @@ instance STS UPIVOTE where
               , bvs
               , pws)
             , v) <- judgmentContext
-        let q = pps ^. cfmThd
+        let q = pps ^. upAdptThd
         (cps', vts') <- trans @UPVOTE $ TRC (( sn
                                              , floor $ q * fromIntegral ngk
                                              , dom pws
@@ -1216,17 +1211,11 @@ instance STS UPIVOTE where
                                               , vts
                                               )
                                             , v)
-        let
-          stblCps = dom (cps' ▷<= sn -. 2 *. k)
-          stblRaus = stblCps ◁ raus
-          avsnew = [ (an, (av, sn, m))
-                   | (an, av, m) <- toList stblRaus
-                   ]
         pure $! ( (pv, pps)
                 , fads
-                , avs ⨃ avsnew
+                , avs
                 , rpus
-                , stblCps ⋪ raus
+                , raus
                 , cps'
                 , vts'
                 , bvs
@@ -1239,14 +1228,14 @@ instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
 
 
-data UPIVOTES
+data APPLYVOTES
 
-instance STS UPIVOTES where
-  type Environment UPIVOTES = UPIEnv
-  type State UPIVOTES = UPIState
-  type Signal UPIVOTES = [Vote]
+instance STS APPLYVOTES where
+  type Environment APPLYVOTES = UPIEnv
+  type State APPLYVOTES = UPIState
+  type Signal APPLYVOTES = [Vote]
 
-  data PredicateFailure UPIVOTES
+  data PredicateFailure APPLYVOTES
     = UpivoteFailure (PredicateFailure UPIVOTE)
     deriving (Eq, Show)
 
@@ -1259,12 +1248,62 @@ instance STS UPIVOTES where
           []     -> return us
           (x:xs) -> do
             us'  <- trans @UPIVOTE $ TRC (env, us, x)
-            us'' <- trans @UPIVOTES  $ TRC (env, us', xs)
+            us'' <- trans @APPLYVOTES  $ TRC (env, us', xs)
             return us''
     ]
 
-instance Embed UPIVOTE UPIVOTES where
+instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
+
+data UPIVOTES
+
+instance STS UPIVOTES where
+  type Environment UPIVOTES = UPIEnv
+  type State UPIVOTES = UPIState
+  type Signal UPIVOTES = [Vote]
+
+  data PredicateFailure UPIVOTES
+    = ApplyVotesFailure (PredicateFailure APPLYVOTES)
+    deriving (Eq, Show)
+
+  initialRules = [ return $! emptyUPIState ]
+
+  transitionRules =
+    [ do
+        TRC (env, us, xs) <- judgmentContext
+        us' <- trans @APPLYVOTES  $ TRC (env, us, xs)
+        -- Check which proposals are confirmed and stable, and update the
+        -- application versions map.
+        let
+          (sn, _dms, k, _ngk) = env
+          ( (pv, pps)
+            , fads
+            , avs
+            , rpus
+            , raus
+            , cps
+            , vts
+            , bvs
+            , pws) = us'
+          stblCps = dom (cps ▷<= sn -. 2 *. k)
+          stblRaus = stblCps ◁ raus
+          avsNew = [ (an, (av, sn, m))
+                   | (an, av, m) <- toList stblRaus
+                   ]
+        pure $! ( (pv, pps)
+                , fads
+                , avs ⨃ avsNew
+                , rpus
+                , stblCps ⋪ raus
+                , cps
+                , vts
+                , bvs
+                , pws
+                )
+    ]
+
+instance Embed APPLYVOTES UPIVOTES where
+  wrapFailed = ApplyVotesFailure
 
 instance HasTrace UPIVOTES where
 
@@ -1437,24 +1476,19 @@ instance STS PVBUMP where
     (ProtVer, PParams)
 
   type Signal PVBUMP = ()
-  data PredicateFailure PVBUMP
-    = NewEpoch
-    | OldEpoch
+
+  -- PVBUMP has no predicate failures
+  data PredicateFailure PVBUMP = NoPVBUMPFailure
     deriving (Eq, Show)
 
   initialRules = []
   transitionRules =
     [ do
         TRC ((s_n, fads, k), (pv, pps), ()) <- judgmentContext
-        let
-          mFirstStableSlot = minusSlotMaybe s_n (SlotCount . (2 *) . unBlockCount $ k)
-          r = case mFirstStableSlot of
-                Nothing -> []
-                Just s  -> filter ((<= s) . fst) fads
-        if r == []
-          then pure $! (pv, pps)
-          else do
-            let (_, (pv_c, pps_c)) = last r
+        case s_n  -. 2 *. k <=◁ fads of
+          [] ->
+            pure $! (pv, pps)
+          (_s, (pv_c, pps_c)): _xs ->
             pure $! (pv_c, pps_c)
     ]
 
@@ -1489,7 +1523,11 @@ instance STS UPIEC where
             , []          :: [(Core.Slot, (ProtVer, PParams))]
             , us ^. _3    :: Map ApName (ApVer, Core.Slot, Metadata)
             , Map.empty   :: Map UpId (ProtVer, PParams)
-            , us ^. _5    :: Map UpId (ApName, ApVer, Metadata)
+            -- Note that we delete the registered application proposals from the
+            -- state on epoch change, since adopting these depends on the @cps@
+            -- and @pws@ sets, which are deleted as well. So it doesn't seem
+            -- sensible to keep @raus@ around.
+            , Map.empty   :: Map UpId (ApName, ApVer, Metadata)
             , Map.empty   :: Map UpId Core.Slot
             , Set.empty   :: Set (UpId, Core.VKeyGenesis)
             , Set.empty   :: Set (ProtVer, Core.VKeyGenesis)

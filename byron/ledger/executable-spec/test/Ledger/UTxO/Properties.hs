@@ -9,19 +9,20 @@ import           Control.Arrow ((***))
 import           Control.Lens (view, (&), (^.), _2)
 import           Control.Monad (when)
 import           Data.Foldable (foldl', traverse_)
-import           Hedgehog (Property, classify, cover, forAll, property, success, withTests, (===), MonadTest)
+import           Hedgehog (MonadTest, Property, classify, cover, forAll, property, success,
+                     withTests, (===))
 
-import           Control.State.Transition.Generator (classifyTraceLength, trace)
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState, _traceInitState,
-                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
+import           Control.State.Transition.Generator (classifyTraceLength, trace, traceOfLength)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), firstAndLastState,
+                     preStatesAndSignals, traceEnv, traceLength, traceSignals, _traceInitState)
 
-import           Cardano.Ledger.Spec.STS.UTXO (UTxOState(UTxOState), pps, reserves, utxo)
+import           Cardano.Ledger.Spec.STS.UTXO (UTxOState (UTxOState), pps, reserves, utxo)
 import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set, empty, fromList, union)
-import           Ledger.Core (Lovelace, unLovelace, (◁), (⋪), (∪), (∩), dom)
-import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, UTxO(UTxO), balance, body, inputs,
-                     outputs, pcMinFee, txins, txouts)
+import           Ledger.Core (Lovelace, dom, unLovelace, (∩), (∪), (⋪), (◁))
+import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, UTxO (UTxO), balance,
+                     body, inputs, outputs, pcMinFee, txins, txouts)
 
 --------------------------------------------------------------------------------
 -- UTxO Properties
@@ -72,8 +73,8 @@ utxoDiff = property $ do
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
-  let tl = 100
-  tr <- forAll (trace @UTXOW tl)
+  let tl = 300
+  tr <- forAll (traceOfLength @UTXOW tl)
   let n :: Integer
       n = fromIntegral $ traceLength tr
 

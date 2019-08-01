@@ -89,6 +89,7 @@ test-suite ledger-rules-test
                , Ledger.Delegation.Examples
                , Ledger.Delegation.Properties
                , Ledger.AbstractSize.Properties
+               , Ledger.Update.Examples
                , Ledger.Update.Properties
                , Ledger.Pvbump.Properties
                , Ledger.Relation.Properties
