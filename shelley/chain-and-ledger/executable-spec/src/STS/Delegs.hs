@@ -10,6 +10,7 @@ module STS.Delegs
 where
 
 import qualified Data.Map.Strict as Map
+import           Data.Sequence (Seq (..))
 
 import           Delegation.Certificates
 import           Keys
@@ -32,7 +33,7 @@ instance
   => STS (DELEGS hashAlgo dsignAlgo)
  where
   type State (DELEGS hashAlgo dsignAlgo) = DPState hashAlgo dsignAlgo
-  type Signal (DELEGS hashAlgo dsignAlgo) = [DCert hashAlgo dsignAlgo]
+  type Signal (DELEGS hashAlgo dsignAlgo) = Seq (DCert hashAlgo dsignAlgo)
   type Environment (DELEGS hashAlgo dsignAlgo)
     = (Slot, Ix, PParams, Tx hashAlgo dsignAlgo)
   data PredicateFailure (DELEGS hashAlgo dsignAlgo)
@@ -51,7 +52,7 @@ delegsTransition
 delegsTransition = do
   TRC (env@(_slot, txIx, pp, Tx txbody _ _), dpstate, certificates) <- judgmentContext
   case certificates of
-    [] -> do
+    Empty -> do
       let wdrls' = _wdrls txbody
       let rews = _rewards $ _dstate dpstate
       wdrls' `Map.isSubmapOf` rews ?! WithrawalsNotInRewardsDELEGS
@@ -70,7 +71,7 @@ delegsTransition = do
       pure $ dpstate { _dstate = ds { _rewards = rewards'
                                     , _fdms = fdms''
                                     , _dms = Dms $ dms'' ∪ dms'}}
-    cert:_certs -> do
+    _certs :|> cert -> do
       dpstate' <-
         trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
 

@@ -23,6 +23,7 @@ module Generator
 
 import qualified Data.Map.Strict as Map
 import           Data.Ratio
+import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 
 import           Lens.Micro ((^.))
@@ -146,7 +147,7 @@ genTx keyList (UTxO m) cslot = do
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
            ((`TxOut` perReceipient) <$> receipientAddrs)
-           []
+           Empty
            Map.empty -- TODO generate witdrawals
            txfee'
            (cslot + Slot txttl)

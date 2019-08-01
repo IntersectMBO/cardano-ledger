@@ -4,6 +4,7 @@
 
 module PropertyTests (propertyTests) where
 
+import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.MultiSet (filter, fromSet, occur, size, unions)
 import qualified Data.Set as Set
@@ -273,5 +274,5 @@ propPreserveBalance = property $ do
   let created =
            balance (l' ^. utxoState . utxo)
         + fee
-        + (deposits emptyPParams (l' ^. delegationState . pstate . stPools) $ tx ^.body . certs)
+        + (deposits emptyPParams (l' ^. delegationState . pstate . stPools) $ toList $ tx ^.body . certs)
   destroyed === created

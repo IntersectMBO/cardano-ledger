@@ -31,6 +31,7 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
+import           Data.Sequence (fromList)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -348,9 +349,8 @@ txbodyEx2 :: TxBody
 txbodyEx2 = TxBody
            (Set.fromList [TxIn genesisId 0])
            [TxOut aliceAddr (Coin 9740)]
-           [ RegKey aliceSHK
-           , RegPool alicePoolParams
-           ]
+           (fromList [ RegPool alicePoolParams
+                     , RegKey aliceSHK])
            Map.empty
            (Coin 3)
            (Slot 10)
@@ -469,7 +469,7 @@ txbodyEx3 :: TxBody
 txbodyEx3 = TxBody
            (Set.fromList [TxIn (txid txbodyEx2) 0])
            [TxOut aliceAddr (Coin 9736)]
-           [ Delegate $ Delegation aliceSHK aliceOperatorHK ]
+           (fromList [ Delegate $ Delegation aliceSHK aliceOperatorHK ])
            Map.empty
            (Coin 4)
            (Slot 99)
