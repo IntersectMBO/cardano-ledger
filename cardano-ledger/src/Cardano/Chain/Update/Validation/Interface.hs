@@ -278,7 +278,7 @@ registerVotes env st votes = do
       , appVersions
       , registeredSoftwareUpdateProposals
       } = st'
-    confirmedProposals
+
     appVersions' =
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
